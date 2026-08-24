@@ -1,16 +1,16 @@
 BEGIN;
 
-INSERT INTO "Workspace" ("id", "name", "createdAt")
-VALUES ('ws_default', 'Default', '2026-07-01 00:00:00');
+INSERT INTO "Workspace" ("id", "name", "plan", "createdAt")
+VALUES ('ws_default', 'Default', 'free', '2026-07-01 00:00:00');
 
-INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "plan", "sessionVersion", "createdAt", "updatedAt")
-VALUES ('usr_owner', 'ws_default', 'owner@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Owner', 'owner', 'free', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
+INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "sessionVersion", "createdAt", "updatedAt")
+VALUES ('usr_owner', 'ws_default', 'owner@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Owner', 'owner', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
 
-INSERT INTO "Workspace" ("id", "name", "createdAt")
-VALUES ('ws_paid', 'Paid', '2026-07-01 00:00:00');
+INSERT INTO "Workspace" ("id", "name", "plan", "planExpiresAt", "billingCustomerId", "createdAt")
+VALUES ('ws_paid', 'Paid', 'premium', NULL, 'cus_drill', '2026-07-01 00:00:00');
 
-INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "plan", "planExpiresAt", "billingCustomerId", "sessionVersion", "createdAt", "updatedAt")
-VALUES ('usr_paid', 'ws_paid', 'paid@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Payer', 'owner', 'premium', NULL, 'cus_drill', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
+INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "sessionVersion", "createdAt", "updatedAt")
+VALUES ('usr_paid', 'ws_paid', 'paid@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Payer', 'owner', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
 
 INSERT INTO "ApiToken" ("id", "userId", "name", "tokenHash", "prefix", "createdAt")
 VALUES ('tok_drill', 'usr_owner', 'drill', 'c17c674b21ca3368525ec4a1333a69e16352b4503055b96d530ead5523b5a175', 'asob_0123456', '2026-07-01 00:00:00');
@@ -51,14 +51,14 @@ VALUES
   ('kw_ios_gb', '2026-07-01', 41, 35, NULL, NULL, NULL, NULL, NULL, '2026-07-01 00:00:00'),
   ('kw_play_us', '2026-07-01', 55, 52, NULL, NULL, NULL, NULL, NULL, '2026-07-01 00:00:00');
 
-INSERT INTO "KeywordRanking" ("appId", "keywordId", "date", "position", "depth", "createdAt")
+INSERT INTO "KeywordRanking" ("appId", "workspaceId", "keywordId", "date", "position", "depth", "createdAt")
 VALUES
-  ('app_ios', 'kw_ios_us', '2026-07-14', 12, 200, '2026-07-14 03:00:00'),
-  ('app_ios', 'kw_ios_us', '2026-07-15', 9, 200, '2026-07-15 03:00:00'),
-  ('app_ios', 'kw_ios_gb', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
-  ('app_ios', 'kw_ios_us_alt', '2026-07-15', NULL, 100, '2026-07-15 03:00:00'),
-  ('app_rival', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
-  ('app_play', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00');
+  ('app_ios', 'ws_default', 'kw_ios_us', '2026-07-14', 12, 200, '2026-07-14 03:00:00'),
+  ('app_ios', 'ws_default', 'kw_ios_us', '2026-07-15', 9, 200, '2026-07-15 03:00:00'),
+  ('app_ios', 'ws_default', 'kw_ios_gb', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_ios', 'ws_default', 'kw_ios_us_alt', '2026-07-15', NULL, 100, '2026-07-15 03:00:00'),
+  ('app_rival', 'ws_default', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00');
 
 INSERT INTO "CategoryRank" ("appId", "date", "collection", "genre", "position", "depth", "createdAt")
 VALUES
@@ -83,8 +83,8 @@ VALUES
   ('rev_ios_2', 'app_ios', 'r-2', 'lifter', 2, 'Crashes', 'Crashes when I sync.', '1.1.0', '2026-07-14 00:00:00', '2026-07-15 03:00:00'),
   ('rev_play_1', 'app_play', 'r-3', 'walker', 4, 'Solid', 'Works well on Android.', '1.1.0', '2026-07-14 00:00:00', '2026-07-15 03:00:00');
 
-INSERT INTO "SuggestProbe" ("appId", "term", "day", "probe", "results", "createdAt")
-VALUES ('app_ios', 'workout', '2026-07-15', 'wo', '["workout tracker","workout log"]', '2026-07-15 03:00:00');
+INSERT INTO "SuggestProbe" ("appId", "term", "country", "day", "probe", "results", "createdAt")
+VALUES ('app_ios', 'workout', 'us', '2026-07-15', 'wo', '["workout tracker","workout log"]', '2026-07-15 03:00:00');
 
 INSERT INTO "AuditInsight" ("appId", "model", "checks", "generatedAt", "updatedAt")
 VALUES ('app_ios', 'gpt-4o', '{"title":{"verdict":"pass"}}', '2026-07-15 06:00:00', '2026-07-15 06:00:00');
