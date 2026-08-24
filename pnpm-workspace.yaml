@@ -1,0 +1,14 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+overrides:
+  fast-uri: ">=4.1.2"
+  hono: ">=4.12.34"
+  js-yaml: ">=5.2.2"
+  next>postcss: ">=8.5.18"
+  next>sharp: ">=0.35.0"
+
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

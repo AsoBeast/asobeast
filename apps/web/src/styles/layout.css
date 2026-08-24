@@ -1,0 +1,20 @@
+@utility page-gutter {
+  padding-inline: calc(var(--gutter, 1rem) + env(safe-area-inset-left, 0px))
+    calc(var(--gutter, 1rem) + env(safe-area-inset-right, 0px));
+}
+
+@utility page-full {
+  width: 100%;
+}
+
+@utility page-wide {
+  width: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+}
+
+@utility page-reading {
+  width: 100%;
+  max-width: 45rem;
+  margin-inline: auto;
+}

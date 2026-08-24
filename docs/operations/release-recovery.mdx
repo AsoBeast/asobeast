@@ -1,0 +1,182 @@
+---
+title: Recover a wedged release
+sidebarTitle: Release recovery
+description: "Two ways a release stops shipping: Release Please advances the version manifest without creating the tag, or no workflow starts at all. Recognize each, then finish the release by hand."
+icon: package-x
+keywords: ["release please","wedged release","autorelease pending","missing tag","ghcr","spending limit","manual release"]
+---
+
+Release automation can advance the version manifest without ever creating the tag that goes with it. The workflow still reports success, so the repository looks healthy while it publishes nothing at all. Separately, the runner itself can be unavailable, in which case no workflow starts and no release happens for a reason that has nothing to do with the code.
+
+This page names both states, explains what causes them and gives the sequence that finishes a release by hand.
+
+## Signature
+
+Three signals appear together. One alone is not conclusive, but all three at once mean the pipeline is wedged.
+
+| Where to look | What a wedged pipeline shows |
+| --- | --- |
+| The merged `chore: release main` pull request | Still labelled `autorelease: pending` long after the merge |
+| The Release workflow log | `Expected 1 releases, only found 0`, with the job still green |
+| `git ls-remote --tags origin` | No tag matching the version in `.release-please-manifest.json` |
+
+Confirm it in one pass:
+
+```bash
+jq -r '."."' .release-please-manifest.json
+git ls-remote --tags origin
+gh release list
+gh pr list --state merged --search "chore: release main" --json number,labels
+```
+
+A version in the manifest with no matching tag on `origin` is the whole diagnosis.
+
+## Cause
+
+Release Please decides what work remains from two places: the version in `.release-please-manifest.json` and the label on the release pull request. Merging the release pull request updates the manifest in the same commit, but creating the tag and the GitHub release is a separate step that runs afterwards.
+
+When that second step does not complete, the two disagree permanently. The manifest claims a version that was never tagged, and the pull request keeps its `autorelease: pending` label. Every later run finds the same merged pull request, decides the release is still outstanding, warns and stops. It never opens the next release pull request, so the repository silently stops releasing.
+
+Because `docker-publish.yml` runs only when `release_created` is `true`, no images are built either. Documentation that tells operators to pull a published tag then points at something that does not exist.
+
+## When no workflow starts at all
+
+A wedged pipeline is a pipeline that ran. A different failure looks similar from the release page and is not the same thing: every job in every workflow fails within a few seconds with the annotation `The job was not started because recent account payments have failed or your spending limit needs to be increased`. Nothing ran, so nothing tagged, nothing published and no test result means anything.
+
+```bash
+gh run list --limit 10
+gh run view <id> --json jobs --jq '.jobs[]|"\(.name) \(.conclusion) \(.startedAt)"'
+```
+
+Jobs that conclude in two or three seconds, across unrelated workflows, are the signature. Fix the billing state first. Release Please then resumes on the next push and needs none of the recovery below.
+
+### Releasing by hand while the runner is unavailable
+
+Do this only when the release cannot wait for the billing fix, and run the full suite locally first, because no CI evidence exists for the commit.
+
+```bash
+pnpm lint && pnpm test && pnpm build
+pnpm --filter api test:e2e && pnpm --filter api test:isolation && pnpm --filter web test:e2e
+pnpm check:rate-classes && pnpm check:compose-limits && pnpm check:env-documented && pnpm docs:mcp-tools:check
+```
+
+Then bump the version everywhere Release Please would have. Six manifests move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run:
+
+| File | Why |
+| --- | --- |
+| `package.json` | The root version |
+| `apps/api/package.json` | Reported by the API and by `/health` |
+| `apps/web/package.json` | The web application version |
+| `apps/mcp/package.json` | Reported to MCP clients in the server manifest |
+| `packages/shared/package.json` | Contract package version |
+| `packages/mcp-tools/package.json` | Tool catalog package version |
+| `.release-please-manifest.json` | What Release Please believes is released |
+
+Write the `CHANGELOG.md` section by hand in the same shape Release Please produces, then tag the release commit directly. There is no release pull request in this path, so take the commit that carries the version bump rather than looking one up:
+
+```bash
+git tag -a v<version> -m "v<version>"
+git push origin v<version>
+awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.md
+gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
+```
+
+Nothing needs relabelling, because no release pull request exists. Publishing the images cannot run until the runner is available, so they arrive late; say so in the release notes rather than leaving operators to discover that a documented tag does not resolve. Dispatch `docker-publish.yml` as described in step 4 of [Recovery](#recovery) as soon as the runner works again.
+
+## Recovery
+
+Run these in order, from an up to date `main`. Steps 1 and 2 are public and effectively irreversible, so verify the commit before pushing.
+
+<Steps>
+  <Step title="Tag the commit the release pull request merged">
+    Take the merge commit of the release pull request, not the current tip of `main`. Everything after it belongs to the next release.
+
+    ```bash
+    release_commit="$(gh pr view <number> --json mergeCommit --jq .mergeCommit.oid)"
+    git merge-base --is-ancestor "$release_commit" origin/main && echo ancestor
+    git tag -a v<version> "$release_commit" -m "v<version>"
+    git push origin v<version>
+    ```
+
+    The ancestor check must print `ancestor` before you tag.
+  </Step>
+  <Step title="Create the release from the changelog section">
+    Release Please already wrote the notes. Extract them rather than retyping them, so the release and the changelog cannot disagree.
+
+    ```bash
+    awk '/^## \[<version>\]/{f=1} /^## <previous>/{f=0} f' CHANGELOG.md > notes.md
+    gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
+    ```
+
+    `--verify-tag` fails rather than inventing a tag if the push in step 1 did not land.
+  </Step>
+  <Step title="Relabel the release pull request">
+    This is what tells Release Please the release is finished. Without it the tool keeps reprocessing the same pull request and never proposes the next version.
+
+    ```bash
+    gh label create "autorelease: tagged" --color ededed --description "" || true
+    gh pr edit <number> --remove-label "autorelease: pending" --add-label "autorelease: tagged"
+    ```
+  </Step>
+  <Step title="Publish the images">
+    `docker-publish.yml` accepts a manual dispatch with a tag input.
+
+    ```bash
+    gh workflow run docker-publish.yml -f tag=v<version>
+    gh run watch "$(gh run list --workflow=docker-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+    docker buildx imagetools inspect ghcr.io/asobeast/asobeast-api:<version>
+    docker buildx imagetools inspect ghcr.io/asobeast/asobeast-web:<version>
+    ```
+
+    Both manifests must list `linux/amd64` and `linux/arm64`.
+  </Step>
+  <Step title="Confirm the tool recovers">
+    Merge any pull request into `main`, then check that a fresh release pull request opens for the next version and that the warning is gone.
+
+    ```bash
+    gh run list --workflow=release.yml --limit 1
+    gh pr list --state open --search "chore: release main"
+    ```
+
+    A fresh release pull request proves the tool moved on. It does not prove the next release will tag itself: while the component mismatch above stands, that release wedges too and the guardrail fails the run again.
+  </Step>
+</Steps>
+
+<Warning>
+  A recovery dispatch builds the tag you pass rather than the tip of `main`, and it publishes the same tag shapes a normal release does, including `latest`. Dispatching a version older than the newest published release therefore moves `latest`, `0` and the minor tag **backwards** onto it.
+
+  Recover the newest release first, or accept that you have to re-dispatch the newest version afterwards to put the moving tags back. Verify the version tag resolves before you tell anyone to pull it.
+</Warning>
+
+## The release pull request needs its workflows approved
+
+A release pull request is opened by `github-actions[bot]`, and its workflow runs land in the `action_required` state rather than starting on their own. `main` requires the `checks`, `e2e`, `web-e2e` and `compose-smoke` contexts, so until those runs are approved the release pull request reports no checks at all and cannot be merged.
+
+This looks like a wedged pipeline but is not one. Approve the waiting runs, let them finish, then merge:
+
+```bash
+gh run list --branch release-please--branches--main --limit 4 \
+  --json databaseId,workflowName,conclusion \
+  --jq '.[]|select(.conclusion=="action_required")|"\(.databaseId) \(.workflowName)"'
+gh api -X POST "repos/AsoBeast/asobeast/actions/runs/<id>/approve"
+```
+
+Approving is preferable to merging with administrator privileges, because it runs the checks the branch rules ask for rather than skipping them.
+
+## Prevention
+
+`release.yml` runs a `verify-release-state` job on every push that does not create a release. It asserts that the version in `.release-please-manifest.json` exists as a tag on `origin` and fails the workflow with an annotation when it does not. A wedged state that would otherwise report success stops the pipeline the first time it appears.
+
+`ci.yml` reports the same invariant as a warning on every pull request, so an author sees an unhealthy release pipeline before merging rather than after.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Run a published release" icon="package" href="/install/published-images">
+    Which tags are published for each release, and how to pin one.
+  </Card>
+
+  <Card title="Troubleshooting" icon="life-buoy" href="/operations/troubleshooting">
+    Symptoms a running instance produces, with causes and fixes.
+  </Card>
+</CardGroup>

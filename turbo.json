@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "db:generate": { "cache": false },
+    "build": {
+      "dependsOn": ["^build", "db:generate"],
+      "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build", "db:generate"],
+      "persistent": true,
+      "cache": false
+    },
+    "lint": { "dependsOn": ["db:generate"] },
+    "test": { "dependsOn": ["^build", "db:generate"] },
+    "test:cov": {
+      "dependsOn": ["^build", "db:generate"],
+      "outputs": ["coverage/**"]
+    },
+    "test:e2e": { "dependsOn": ["^build", "db:generate"], "cache": false }
+  }
+}

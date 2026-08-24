@@ -1,0 +1,73 @@
+:root {
+  --neutral-50: oklch(0.985 0.003 75);
+  --neutral-100: oklch(0.962 0.004 75);
+  --neutral-200: oklch(0.92 0.005 75);
+  --neutral-300: oklch(0.858 0.006 75);
+  --neutral-400: oklch(0.742 0.008 75);
+  --neutral-500: oklch(0.62 0.009 75);
+  --neutral-600: oklch(0.508 0.01 75);
+  --neutral-700: oklch(0.4 0.01 75);
+  --neutral-800: oklch(0.305 0.009 75);
+  --neutral-850: oklch(0.258 0.008 75);
+  --neutral-900: oklch(0.212 0.008 75);
+  --neutral-950: oklch(0.168 0.007 75);
+  --neutral-white: oklch(1 0 0);
+
+  --accent-300: oklch(0.82 0.088 240);
+  --accent-400: oklch(0.73 0.122 240);
+  --accent-500: oklch(0.638 0.15 240);
+  --accent-600: oklch(0.545 0.152 240);
+  --accent-700: oklch(0.452 0.132 240);
+
+  --green-400: oklch(0.75 0.16 152);
+  --green-600: oklch(0.52 0.14 152);
+  --red-400: oklch(0.7 0.17 22);
+  --red-600: oklch(0.53 0.19 22);
+  --crimson-400: oklch(0.66 0.19 20);
+  --crimson-600: oklch(0.53 0.2 20);
+  --amber-400: oklch(0.75 0.15 55);
+  --amber-600: oklch(0.55 0.13 55);
+  --yellow-400: oklch(0.82 0.12 90);
+  --yellow-600: oklch(0.56 0.11 90);
+
+  --score-low-400: oklch(0.62 0.05 240);
+  --score-mid-400: oklch(0.7 0.11 240);
+  --score-high-400: oklch(0.79 0.16 240);
+  --score-low-600: oklch(0.56 0.06 240);
+  --score-mid-600: oklch(0.55 0.13 240);
+  --score-high-600: oklch(0.46 0.15 240);
+
+  --band-1-400: oklch(0.9 0.1 240);
+  --band-2-400: oklch(0.79 0.14 238);
+  --band-3-400: oklch(0.68 0.15 236);
+  --band-4-400: oklch(0.58 0.14 234);
+  --band-5-400: oklch(0.48 0.12 232);
+  --band-1-600: oklch(0.3 0.12 240);
+  --band-2-600: oklch(0.38 0.15 238);
+  --band-3-600: oklch(0.46 0.16 236);
+  --band-4-600: oklch(0.54 0.14 234);
+  --band-5-600: oklch(0.62 0.11 232);
+
+  --series-1-400: oklch(0.7 0.15 240);
+  --series-2-400: oklch(0.78 0.15 65);
+  --series-3-400: oklch(0.62 0.13 165);
+  --series-4-400: oklch(0.84 0.13 350);
+  --series-5-400: oklch(0.74 0.11 200);
+  --series-6-400: oklch(0.66 0.16 40);
+  --series-7-400: oklch(0.9 0.14 105);
+  --series-8-400: oklch(0.68 0.15 305);
+  --series-1-600: oklch(0.52 0.15 240);
+  --series-2-600: oklch(0.63 0.15 65);
+  --series-3-600: oklch(0.48 0.13 165);
+  --series-4-600: oklch(0.66 0.13 350);
+  --series-5-600: oklch(0.58 0.11 200);
+  --series-6-600: oklch(0.53 0.16 40);
+  --series-7-600: oklch(0.6 0.14 105);
+  --series-8-600: oklch(0.46 0.15 305);
+
+  --hairline-8: oklch(1 0 0 / 8%);
+  --hairline-10: oklch(1 0 0 / 10%);
+  --hairline-15: oklch(1 0 0 / 15%);
+
+  --radius: 0.5rem;
+}

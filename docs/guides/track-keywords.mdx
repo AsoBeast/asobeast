@@ -1,0 +1,105 @@
+---
+title: Track keywords
+description: "Add keywords per storefront on the keyword monitor, paste the private iOS keyword field by hand, and watch the request budget that every added market draws on."
+icon: key
+keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget"]
+---
+
+The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and the total across markets is what your daily request budget is spent on.
+
+## Before you start
+
+You need an imported app. See [Import an app](/guides/import-an-app).
+
+## Add a keyword
+
+<Steps>
+  <Step title="Select the market">
+    The country filter at the top of the keyword monitor sets the storefront every add applies to, and shows the keyword count per market.
+  </Step>
+  <Step title="Add one keyword or paste several">
+    A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market.
+  </Step>
+  <Step title="Wait for the next daily run">
+    Positions appear after the next daily pipeline, which defaults to 03:00 UTC.
+  </Step>
+</Steps>
+
+Every added keyword carries a source, which sets its starting relevance. A keyword you type is `MANUAL`. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## Track the same keyword in a second market
+
+Switch the country filter and add the phrase again. That creates a second keyword row, checked by a second search.
+
+The two rows are genuinely independent: positions, traffic and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Paste the iOS keyword field
+
+The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. Paste it yourself.
+
+<Steps>
+  <Step title="Copy the field from App Store Connect">
+    Take the comma separated value exactly as you entered it there.
+  </Step>
+  <Step title="Paste it in the metadata workbench">
+    asobeast splits it, tracks the keywords with the source `KEYWORD_FIELD` and lints the field against its 100 character limit.
+  </Step>
+</Steps>
+
+This is home market only in v1, and it is App Store only. Google Play has no keyword field. See [App Store and Google Play](/concepts/stores).
+
+Leaving it empty makes coverage report the field as uncovered, because asobeast has no evidence about what is in it.
+
+## Get keyword suggestions
+
+Suggestions come from three places.
+
+| Source | Where it comes from |
+| --- | --- |
+| Store suggest | A live lookup against the store suggestion endpoint |
+| Competitor listings | Phrases that competitors index and you do not |
+| Review mining | Language that appears repeatedly in your own reviews |
+
+A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but it does consume request budget.
+
+Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
+
+## Bulk manage keywords
+
+Select rows to untrack them, deactivate them or queue a rescore. Deactivating keeps the history and stops the daily check, which is the right move for a keyword you may want back. Untracking removes the link between the app and the keyword.
+
+Buckets classify scored keywords automatically so a large list stays readable.
+
+| Bucket | Meaning |
+| --- | --- |
+| `primary` | The five highest opportunity keywords that are not aspirational |
+| `aspirational` | Volume at or above 70 and difficulty at or above 70 |
+| `longtail` | Three words or more, or volume below 30 |
+| `secondary` | Everything else that has been scored |
+
+An unscored keyword has no bucket until the weekly scoring run reaches it.
+
+## Watch your request budget
+
+Every keyword and every market adds daily requests against a fixed capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`.
+
+The settings page carries a daily request budget card with the estimate broken down by kind, your capacity and a utilization meter. `GET /jobs/budget` returns the same numbers, and the dashboard warns at 85 percent of capacity.
+
+## Troubleshooting
+
+- **A new keyword shows no position.** The first check happens on the next daily pipeline run. Nothing is wrong on the day you add it.
+- **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
+- **Traffic and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
+- **The budget card warns you are over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Read rankings and SERPs" icon="chart-line" href="/guides/read-rankings">
+    Charts, SERP snapshots, volatility and movers.
+  </Card>
+
+  <Card title="Export data" icon="file-down" href="/guides/export-data">
+    Take the keyword table out as CSV.
+  </Card>
+</CardGroup>

@@ -1,0 +1,68 @@
+---
+title: Daily run overrun
+sidebarTitle: Daily run overrun
+description: "The daily run did not finish before the next trigger. Decide whether to skip, resume or truncate, and keep one heavy tenant from starving everyone else."
+icon: clock-alert
+keywords: ["daily run","pipeline","backlog","fair scheduling","capacity"]
+---
+
+The daily pipeline has one job: capture every tracked keyword market once per UTC day. An overrun means the previous run is still working when the next one is due, and left alone that backlog compounds until nobody's data is current.
+
+## Symptoms
+
+- `daily.run.incomplete` pages, naming the workspaces that fell short.
+- `asobeast_workspace_daily_run_completed_seconds` sits well after the trigger, or does not move at all.
+- The health badge reports a stale pipeline, and `/admin/queues` shows waiting counts that do not drain.
+- `dependency.redis.unavailable` pages, which is a different fault with the same symptom.
+
+## Triage
+
+<Steps>
+  <Step title="Rule out the dependencies first">
+    ```bash
+    curl --silent http://127.0.0.1:3000/api/backend/health | jq '{db, redis, pipeline}'
+    ```
+
+    A `redis` of `down` means nothing is running at all. Restore Redis before reading anything else.
+  </Step>
+  <Step title="Ask whether it is demand or throughput">
+    `GET /jobs/budget` estimates the fan out against capacity. Compare the total demand with `asobeast_pool_endpoints_healthy` multiplied by the configured requests per minute.
+
+    | Reading | Cause |
+    | --- | --- |
+    | Demand grew and capacity held | A tenant added markets or keywords |
+    | Capacity fell and demand held | Pool degradation. See [Proxy pool degradation](/operations/runbooks/proxy-pool-degradation) |
+    | Both steady, jobs failing | A parser break. See [Hosted parser breakage](/operations/runbooks/hosted-parser-breakage) |
+  </Step>
+  <Step title="Find who grew">
+    Sort `asobeast_workspace_daily_requests_estimated` descending. Google Play keyword checks cost roughly eight requests each against one for the App Store, so a store mix change moves this number far more than a keyword count change.
+  </Step>
+</Steps>
+
+## Containment
+
+The pipeline already sheds load under pressure, dropping the least valuable stages first and keeping keyword checks longest. It plans each store separately, because the App Store and Google Play budgets are separate: a buried Google Play queue never sheds healthy App Store work, and spare Google Play capacity never hides an App Store queue that is already over. Your decisions sit on top of that.
+
+1. **Skip rather than stack.** Let the running flow finish and allow the next trigger to be missed. Two overlapping runs halve the throughput of both.
+2. **Truncate the tail.** Category ranks, reviews and app refreshes can wait a day. Keyword rankings are the product.
+3. **Do not raise the requests per minute** to catch up. That is how a slow day becomes a blocked pool.
+4. If one workspace is over its plan limit, the keyword limiter already covers a rotating subset. Confirm with `asobeast_workspace_keyword_markets` against `asobeast_workspace_quota_keyword_markets_limit`.
+
+## Recovery
+
+1. Once the cause is fixed, requeue the affected workspaces one at a time from the support surface:
+
+   ```bash
+   curl --silent --request POST \
+     --header 'Content-Type: application/json' \
+     --data '{"confirm":true,"reason":"catching up after an overrun"}' \
+     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/run-daily
+   ```
+2. Watch `asobeast_workspace_rankings_captured` reach `asobeast_workspace_keyword_markets` for each one before queuing the next.
+3. If the overrun was demand rather than a fault, the fix is capacity, not scheduling. See [Capacity exhaustion](/operations/runbooks/capacity-exhaustion).
+
+## Who to tell
+
+- Affected customers, once, in app, naming the store and the delay. The delay notice already appears for a workspace whose own run is behind.
+- Everyone, on a status page, only when the run missed a full day for most tenants.
+- Nobody, for a run that finished late but complete. A late complete run is not an incident.

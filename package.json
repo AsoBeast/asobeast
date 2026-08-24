@@ -1,0 +1,71 @@
+{
+  "name": "asobeast",
+  "version": "1.0.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AsoBeast/asobeast.git"
+  },
+  "homepage": "https://docs.asobeast.com",
+  "bugs": {
+    "url": "https://github.com/AsoBeast/asobeast/issues"
+  },
+  "packageManager": "pnpm@10.18.2",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "build:packages": "turbo run build --filter=./packages/*",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:cov": "turbo run test:cov",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:rate-classes": "node .github/scripts/verify-rate-classes.mjs",
+    "check:compose-limits": "node .github/scripts/verify-compose-limits.mjs",
+    "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
+    "check:image-defaults": "node .github/scripts/verify-image-defaults.mjs",
+    "bench:stack": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml up -d --wait",
+    "bench:stack:down": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml down -v",
+    "docs:dev": "cd docs && pnpm dlx mint@4 dev",
+    "docs:check": "cd docs && pnpm dlx mint@4 validate && pnpm dlx mint@4 broken-links --check-anchors --check-redirects && pnpm dlx mint@4 a11y",
+    "docs:format": "cd docs && pnpm dlx mint@4 format",
+    "docs:links": "cd docs && pnpm dlx mint@4 broken-links --check-anchors --check-external --check-redirects",
+    "docs:prose": "cd docs && vale .",
+    "check:readme-prose": "vale --config=docs/.vale.ini README.md",
+    "docs:openapi": "node docs/scripts/capture-openapi.mjs",
+    "docs:openapi:check": "node docs/scripts/capture-openapi.mjs --check",
+    "docs:mcp-tools": "node docs/scripts/capture-mcp-tools.mjs",
+    "docs:mcp-tools:check": "node docs/scripts/capture-mcp-tools.mjs --check",
+    "migrate:dev": "npx prisma migrate dev",
+    "migrate:dev:create": "npx prisma migrate dev --create-only",
+    "migrate:deploy": "npx prisma migrate deploy",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:studio": "prisma studio",
+    "db:seed": "prisma db seed",
+    "compose:up:dev": "docker compose -f docker-compose.dev.yml up",
+    "compose:up:prod": "docker compose -f docker-compose.yml up",
+    "compose:build:dev": "docker compose -f docker-compose.dev.yml up --build -d",
+    "compose:build:prod": "docker compose -f docker-compose.yml up --build -d",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.10"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "overrides": {
+      "deepmerge-ts": "^8.0.2"
+    }
+  }
+}

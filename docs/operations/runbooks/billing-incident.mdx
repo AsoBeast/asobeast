@@ -1,0 +1,66 @@
+---
+title: Billing incident
+sidebarTitle: Billing incident
+description: "Webhooks are failing, or a customer is wrongly locked out or wrongly served. Reconcile against the provider rather than editing plans by hand."
+icon: credit-card
+keywords: ["billing","stripe","webhook","reconcile","entitlement"]
+---
+
+Local plan state is a cache of what the billing provider says. Every billing incident is therefore the same shape: the cache and the provider disagree, and a customer is on the wrong side of it.
+
+Two failures matter and they are not equally urgent. A customer wrongly locked out is losing something they paid for. A customer wrongly served is costing you capacity. Fix the first one first.
+
+## Symptoms
+
+- `billing.webhooks.failing` pages, from a stored billing event that recorded a failure.
+- `billing.reconcile.discrepancy` arrives when events pile up unprocessed.
+- `asobeast_billing_events_unprocessed` climbs and does not drain.
+- A customer reports a `402` after paying, or keeps full access after cancelling.
+
+## Triage
+
+<Steps>
+  <Step title="Check the webhook secret before anything else">
+    An unverified endpoint refuses every delivery, so a paid subscription never provisions. If `STRIPE_WEBHOOK_SECRET` is empty or stale, nothing else you do will hold.
+  </Step>
+  <Step title="Read the workspace">
+    ```bash
+    curl --silent http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id> \
+      | jq '{storedPlan, plan, subscriptionStatus, hasSubscription, planExpiresAt, trialEndsAt}'
+    ```
+
+    `storedPlan` is what the database holds. `plan` is what entitlement resolves right now, which is what the customer actually experiences.
+  </Step>
+  <Step title="Compare with the provider">
+    Open the same customer in the provider dashboard. The provider is the source of truth for the subscription; the database is not.
+  </Step>
+</Steps>
+
+## Containment
+
+<Warning>
+  Never edit a workspace plan directly in the database. It drifts back at the next reconciliation and you lose the record of why it changed.
+</Warning>
+
+1. Reconcile the one workspace, which corrects local state from the provider and records who did it and why:
+
+   ```bash
+   curl --silent --request POST \
+     --header 'Content-Type: application/json' \
+     --data '{"confirm":true,"reason":"customer locked out after a successful payment"}' \
+     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/reconcile
+   ```
+2. If many workspaces are wrong, fix the webhook path first. Reconciling everyone against a broken cause just delays the same incident.
+3. Replayed events are safe. Webhook handling is idempotent and a stored event is processed once.
+
+## Recovery
+
+1. Confirm the daily reconciliation from `CRON_BILLING_RECONCILE` runs clean, with `asobeast_billing_events_unprocessed` back at zero.
+2. Confirm `asobeast_billing_events_failed` is zero. It pages precisely so that a single failure does not sit unnoticed.
+3. Re-register the webhook endpoint with the provider if the secret changed, and verify with one test delivery.
+
+## Who to tell
+
+- The affected customer, directly, the same day. Say what happened, that access is restored, and whether they were charged.
+- Every customer, only when checkout itself was down. A lockout affecting a handful of accounts is handled account by account.
+- Nobody, for a payment that failed for the customer's own reason. Dunning already emails them a portal link.

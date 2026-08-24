@@ -1,0 +1,77 @@
+---
+title: Import an app
+description: "Paste an App Store or Google Play URL and asobeast captures the first snapshot, extracts keywords and tracks them in the home storefront."
+icon: download
+keywords: ["import","app store url","google play url","snapshot","refresh","home storefront"]
+---
+
+When you finish this guide you have one tracked app, its first metadata snapshot and a set of keywords already tracking in its home storefront.
+
+## Import from a store URL
+
+<Steps>
+  <Step title="Copy the store URL">
+    Any public listing URL works, for either store.
+
+    ```text
+    https://apps.apple.com/de/app/example/id123456789
+    https://play.google.com/store/apps/details?id=com.example.app
+    ```
+
+    A bare iTunes numeric id is also accepted.
+  </Step>
+  <Step title="Paste it into the import dialog">
+    asobeast parses the store and the storefront from the URL.
+  </Step>
+  <Step title="Confirm the home storefront">
+    The country segment in the URL becomes the home storefront. `apps.apple.com/de/...` imports a `de` home market. A bare id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`. The dialog lets you override it before importing.
+  </Step>
+</Steps>
+
+The home storefront is not just a label. It decides where snapshots, category ranks and reviews are collected. See [Countries and markets](/concepts/countries).
+
+## What happens on import?
+
+Three things, in order.
+
+1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it.
+2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from.
+3. **The first checks are enqueued.** Positions appear after the next daily pipeline run rather than immediately.
+
+Auto tracked sources differ by store, because the stores index different fields.
+
+| Source | App Store | Google Play |
+| --- | --- | --- |
+| `TITLE` | Yes | Yes |
+| `SUBTITLE` | Yes | Not present |
+| `DESCRIPTION` | Not indexed | Yes, from the 80 character short description |
+| `KEYWORD_FIELD` | Only when you paste it | Not present |
+
+See [App Store and Google Play](/concepts/stores) for the full field comparison.
+
+## Refresh a listing
+
+Refreshing fetches the listing again, writes a new snapshot and returns the difference against the previous one, so the response is meant to be read rather than discarded.
+
+Refresh is the only way to ask for a listing on demand, and it is rate limited per plan. Importing a url you already track returns the app you have without reaching the store: a second import would otherwise write a snapshot that quietly became the new baseline, and the change it captured would never appear in the changes feed.
+
+Field level changes also land in the changes feed, where they are kept alongside changes asobeast detected on its own schedule. See [Watch listing changes](/guides/listing-changes).
+
+## Troubleshooting
+
+- **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs and bare iTunes ids. A search result URL, a developer page or a shortened link will not parse. Open the listing in a browser and copy the address bar.
+- **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
+- **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
+- **Positions are empty after importing.** Expected. The first position check runs on the next daily pipeline, which defaults to 03:00 UTC.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="key" href="/guides/track-keywords">
+    Add keywords, add markets and paste the iOS keyword field.
+  </Card>
+
+  <Card title="Track competitors" icon="users" href="/guides/competitors">
+    Competitors cost no extra store requests on keywords you already track.
+  </Card>
+</CardGroup>

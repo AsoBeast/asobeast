@@ -1,0 +1,106 @@
+---
+title: Quickstart
+description: "Run asobeast with Docker Compose, create the owner account and import your first App Store or Google Play app in about five minutes."
+icon: rocket
+keywords: ["quickstart","docker compose","getting started","import app","owner account"]
+boost: 3
+---
+
+By the end of this page you have asobeast running on your own machine, an owner account, and one app importing its metadata and tracking its first keywords.
+
+<Note>
+  The only prerequisite is Docker with the Compose plugin. See [System requirements](/install/requirements) for memory, disk and network detail.
+</Note>
+
+## Install and start asobeast
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AsoBeast/asobeast.git
+    cd asobeast
+    ```
+  </Step>
+  <Step title="Generate the two required secrets">
+    ```bash
+    printf 'POSTGRES_PASSWORD=%s\nAUTH_SECRET=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+    chmod 600 .env
+    ```
+
+    Compose refuses to start when either value is missing or empty.
+  </Step>
+  <Step title="Start the stack">
+    ```bash
+    docker compose up --build -d --wait
+    ```
+
+    The first build takes a few minutes. `--wait` returns only after every health check passes.
+  </Step>
+  <Step title="Open the dashboard">
+    Go to `http://localhost:3001`.
+  </Step>
+</Steps>
+
+## Create the owner account
+
+A fresh installation redirects to registration. The first account you create becomes the owner, and registration closes automatically once it exists.
+
+Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay available. Behind TLS on any hosted deployment, also set `AUTH_COOKIE_SECURE=true`. See [Authentication and accounts](/security/authentication).
+
+## Import your first app
+
+Paste an App Store or Google Play URL into the import dialog. asobeast then does the following, in order.
+
+1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
+2. Fetches the listing and writes the first metadata snapshot, keeping the raw payload so a later parser fix can reprocess it.
+3. Extracts keywords from the indexed fields and starts tracking them in the home storefront.
+
+Positions are not instant. The first ranking check happens on the next daily pipeline run, so the app detail page shows metadata and tracked keywords immediately and positions from the following morning. See [Import an app](/guides/import-an-app).
+
+<Tip>
+  The iOS keyword field holds 100 characters, never appears on the public store page and cannot be collected. Paste it by hand in the [metadata workbench](/guides/metadata-workbench) so coverage and audit checks can see it.
+</Tip>
+
+## Complete the guided setup
+
+After the first import the dashboard offers a resumable checklist that walks through the decisions worth making early: which markets to track, which competitors to watch, which keywords to add, how much daily request capacity you have, and whether to send alerts anywhere. The checklist is stored in your browser, so you can leave it and come back.
+
+## Check that collection is running
+
+| Check | URL |
+| --- | --- |
+| Web liveness | `http://localhost:3001/api/health` |
+| API health through the proxy | `http://localhost:3001/api/backend/health` |
+| Queue dashboard, platform operator only | `http://localhost:3001/admin/queues` |
+
+A healthy queue has no jobs in the failed list and shows the daily pipeline as scheduled rather than running around the clock. `/admin/queues` answers 404 to anyone who is not the [platform operator](/security/admin-surfaces#who-the-platform-operator-is), which is deliberate. See [Health checks and monitoring](/operations/health-checks).
+
+## What happens on day two?
+
+The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *`, meaning 03:00 UTC. It checks every tracked keyword in every tracked market, captures SERP snapshots and category ranks, syncs reviews, generates action items and then flushes batched alerts.
+
+So the first positions, the first movers and the first action items all appear the morning after the import. An empty ranking chart on the day you install is expected. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+<Tip>
+  Daily request volume scales with tracked keywords multiplied by tracked markets, against a fixed budget set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. The settings page shows a daily request budget card, and `GET /jobs/budget` returns the same estimate.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="key" href="/guides/track-keywords">
+    Add keywords, add markets and paste the iOS keyword field.
+  </Card>
+
+  <Card title="Work the Action Center" icon="list-checks" href="/guides/action-center">
+    Turn the collected history into a prioritized queue of work.
+  </Card>
+
+  <Card title="Configuration reference" icon="sliders" href="/configuration/reference">
+    Every environment variable with its default and its effect.
+  </Card>
+
+  <Card title="Send alerts" icon="bell" href="/guides/alerts">
+    Signed webhooks or SMTP email for rank, review and action events.
+  </Card>
+</CardGroup>

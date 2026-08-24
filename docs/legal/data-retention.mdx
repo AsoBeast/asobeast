@@ -1,0 +1,96 @@
+---
+title: "Data export, deletion and retention"
+sidebarTitle: Export and deletion
+description: "Export every row your workspace owns, delete the workspace with a reversible grace period, and read the two honest limits on what deletion can reach."
+icon: database
+keywords: ["export","deletion","gdpr","retention","backups","ndjson"]
+---
+
+Your data is yours. This page says exactly how to take it out, how to erase it, and where erasure stops.
+
+## Export everything
+
+`GET /account/export` streams every row your workspace owns as newline delimited JSON. No support ticket, no waiting, no partial archive.
+
+```bash
+curl --silent --location \
+  --header 'Authorization: Bearer asob_your_token' \
+  --output asobeast-export.ndjson \
+  https://app.asobeast.com/api/backend/account/export
+```
+
+The first line is a manifest naming every table and its row count. Every line after it is one row:
+
+```json
+{"manifest":{"workspaceId":"ws_...","exportedAt":"2026-08-15T09:00:00.000Z","format":"ndjson","tables":[{"table":"app","rows":5}]}}
+{"table":"app","row":{"id":"...","store":"APP_STORE","name":"Focus Timer"}}
+```
+
+What the archive contains:
+
+| Included | Excluded |
+| --- | --- |
+| Workspace, users, personal API tokens, invites | Password hashes |
+| Apps, groups, snapshots, tracked keywords with their phrases | Personal API token hashes |
+| Rankings, category ranks, reviews, listing changes | Webhook signing secrets |
+| Audits, audit scores, action items | Anything owned by another workspace |
+| Webhooks, email alerts, delivery log, alert events |  |
+
+Export stays available while a workspace is suspended, unentitled or scheduled for deletion. Losing access to capacity never means losing access to your data.
+
+<Note>
+  A large workspace produces a large stream. Call the API directly with a personal API token rather than through the web origin proxy, which applies a per request timeout.
+</Note>
+
+Per resource CSV and JSON export is still available in the application. See [Export your data](/guides/export-data).
+
+## Delete the workspace
+
+Deletion is confirmed, delayed and reversible. An immediate irreversible delete behind one click is a support incident waiting to happen.
+
+<Steps>
+  <Step title="Request it">
+    `POST /account/deletion` with `{"confirm":"DELETE"}`, as the workspace owner. Anything other than the literal `DELETE` is refused.
+  </Step>
+  <Step title="Nothing happens yet">
+    The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. `GET /account/deletion` reports who asked, when, and when it falls due.
+  </Step>
+  <Step title="Change your mind">
+    `DELETE /account/deletion` cancels it. Nothing was removed, so nothing needs restoring.
+  </Step>
+  <Step title="Erasure">
+    On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it.
+  </Step>
+</Steps>
+
+### What erasure removes
+
+Everything the workspace owns: the workspace, its users, personal API tokens and invites, apps and groups, snapshots, tracked keywords, rankings, category ranks, reviews, listing changes, audits, audit scores, action items, webhooks, email alerts, the delivery log and alert events.
+
+An end to end test seeds a row in **every** tenant owned table, deletes the workspace, and asserts each one is gone. The same test fails if a future table is added without being covered, which is what keeps this list true rather than aspirational.
+
+### What erasure does not remove
+
+Three things survive, deliberately, and pretending otherwise would be dishonest.
+
+| Survives | Why | For how long |
+| --- | --- | --- |
+| Stored billing events | The link to your workspace is removed, but the payment provider's event record is kept for accounting and idempotency | 90 days, then pruned |
+| Support access records | An audit trail of operator access that expired with the account would not be an audit trail | Indefinitely. It holds an operator email, an action and a reason, never your data |
+| Keyword rows | One search serves every workspace tracking that phrase and market. The row is shared and carries no owner | While anyone tracks it |
+
+Beyond the application:
+
+- **Your payment provider keeps its own records.** Stripe retains payment and invoice data under its own legal obligations, and we cannot delete what a subprocessor is required to keep. Ask them directly.
+- **Backups contain deleted data until they rotate.** This is the real deletion horizon and it is worth stating plainly: erasure removes your data from the live database immediately, and from backups after the backup retention window passes. The shipped schedule keeps 14 daily and 8 weekly archives, and the offsite copies default to the same window, so that window is 56 days. See [Backups](/operations/backups), which is where a deployment records its own window if it changed it.
+- **Server logs** carry workspace identifiers, never your keywords or listings, and rotate with the hosting platform.
+
+## Retention while the workspace is alive
+
+Every retention window is listed in the [privacy policy](/legal/privacy) and configured by the `RETENTION_*` variables in the [configuration reference](/configuration/reference). A daily job prunes rows past their window.
+
+Retention prunes by age. Deletion removes everything at once. They are separate paths, and neither one rewrites history: a pruned day is gone, never replaced by an estimate.
+
+## Self hosted
+
+Everything above describes the code, so it applies to your own installation too. The endpoints are the same, the grace period is your `ACCOUNT_DELETION_GRACE_DAYS`, and the backup horizon is whatever your own backup schedule makes it. Nobody else holds a copy, because a self hosted deployment reports to nobody.

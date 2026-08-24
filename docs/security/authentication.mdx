@@ -1,0 +1,143 @@
+---
+title: Authentication and accounts
+sidebarTitle: Authentication
+description: "Every request is authenticated. The first account on a fresh instance becomes the owner, and registration closes automatically afterwards."
+icon: lock
+keywords: ["authentication","owner account","registration","session cookie","AUTH_SECRET","entitlement"]
+---
+
+Authentication is always on and cannot be disabled. The same image runs on `localhost` and on a public host, so a disable switch would be a setting somebody forgets to change on the day the instance becomes reachable.
+
+## First run
+
+A fresh installation redirects to registration. The account you create there becomes the owner.
+
+The first account always bootstraps as owner regardless of `AUTH_ALLOW_REGISTRATION`, so a locked down deployment can still create its first user.
+
+Set `AUTH_SECRET` before the first boot. The API refuses to start with fewer than 32 characters.
+
+```bash
+openssl rand -hex 32
+```
+
+## Registration
+
+`AUTH_ALLOW_REGISTRATION` defaults to `false`, which closes registration the moment the owner account exists. That is the right default for a single operator deployment.
+
+Set it to `true` when more people need to sign themselves up.
+
+### Where a self registration lands
+
+Opening registration decides who may create an account. `AUTH_REGISTRATION_WORKSPACE` decides what that account can see, and it defaults to `own`.
+
+| Value | Effect |
+| --- | --- |
+| `own` (default) | Every sign up after the owner gets a workspace of its own and owns it. Someone who registers starts empty and never sees the apps, keywords and rankings already tracked on the instance |
+| `shared` | Every sign up joins the bootstrap workspace as a member, with read and write access to everything in it |
+
+Pick `shared` only when everyone who can reach the registration form is already trusted with the data on the instance. Anyone who finds an internet reachable instance with open registration and `shared` can read and edit the whole workspace, so the safe combination for a public host is open registration on `own`, or registration closed.
+
+A hosted instance refuses to start on `shared`, because `BILLING_ENABLED=true` opens registration to strangers by design.
+
+### Add somebody to your own workspace
+
+Self registration is not how a teammate joins you. Invite them from **Settings**, which sends a link that creates their account inside your workspace as a member. That works on `own` and needs no change to registration at all.
+
+## Sessions
+
+A session is a JWT in an `httpOnly`, `SameSite=Lax` cookie named `asobeast_session`, signed with `AUTH_SECRET`.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `AUTH_SESSION_DAYS` | `7` | Cookie lifetime in days |
+| `AUTH_COOKIE_SECURE` | `false` | Must be `true` behind TLS so the cookie is sent only over HTTPS |
+
+Because the browser talks only to the web origin and the proxy forwards the cookie, there is nothing cross site to configure. A JSON only API plus `SameSite=Lax` is the CSRF story.
+
+Rotating `AUTH_SECRET` invalidates every existing session, so everyone is signed out. See [Rotate secrets](/operations/rotate-secrets).
+
+## Rotate a password
+
+Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost.
+
+The auth endpoints, including register, login, password change and token creation, are rate limited per client IP address.
+
+## Recover a forgotten password
+
+Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open. See [Account recovery](/security/account-recovery).
+
+## How is a request authorized?
+
+Two guards run in order on every request.
+
+| Guard | Accepts | Rejects with |
+| --- | --- | --- |
+| `AuthGuard` | A session cookie or an `asob_` bearer token | `401` |
+| `EntitlementGuard` | An entitled account | `402` |
+
+A small set of routes is marked public, and account plus paywall routes stay reachable even for an unentitled account so an expired user can sign in and pay.
+
+On a self hosted instance all users share the seeded default workspace. With billing enabled every registration creates its own workspace, so accounts never see each other's apps.
+
+## Entitlements and the paid plan seam
+
+`BILLING_ENABLED` defaults to `false`, which means every account is entitled and nothing is gated.
+
+Setting it to `true` turns on an entitlement check without wiring a payment provider. Registration stays open, each new account is stamped with a `TRIAL_DAYS` trial defaulting to 7, and an unentitled request answers `402` through the standard error envelope, which the web app catches and turns into the upgrade page.
+
+Entitlement lives on the workspace, not the user, because a workspace has one plan whatever the size of the team. The seam writes only `plan`, `trialEndsAt`, `planExpiresAt`, `billingCustomerId` and `subscriptionId` on `Workspace`. The plans are `free`, `trial`, `indie` and `ultimate`; `indie` and `ultimate` are the paid tiers and carry the quota limits, so setting `plan` to either one in the database restores access with no code change. `premium` is accepted as a legacy spelling of `indie` so accounts written before the tiers were named keep working.
+
+The plan in force is derived, not just stored. A paid plan past its `planExpiresAt` falls back to the trial if one is still running, and to `free` otherwise, so an expired subscription never keeps the limits it paid for.
+
+## Email confirmation and the trial
+
+With billing enabled and SMTP configured, registration creates the account but withholds the trial until the address is confirmed. asobeast emails a single use link; opening it stamps the address as confirmed and starts the trial on the workspace. Only a hash of the link token is stored.
+
+A workspace gets one trial, ever. `trialStartedAt` records it and is never cleared, so a cancelled customer who returns resumes on a paid plan rather than on a second free week. Where SMTP is not configured the trial starts at registration, because there is no way to deliver a confirmation.
+
+Registration survives a confirmation email that could not be sent, so a mail outage never costs the account. The signed in account asks for a fresh link with `POST /auth/verify/resend`, which retires the previous one; the confirmation page offers it whenever a link is refused. Opening a link while signed in as someone else is refused before the link is spent, so it stays usable for the account it belongs to. A deployment with billing and SMTP but no `WEB_PUBLIC_URL` refuses to boot, because every link it sent would carry no host.
+
+## What an unentitled workspace keeps
+
+Data belongs to the customer; capacity is what the plan pays for. An unentitled workspace therefore keeps every read:
+
+| Still available | Refused with `402` |
+| --- | --- |
+| Reading apps, keywords, rankings, audits and reviews in the web app | Importing an app, tracking a keyword, adding a competitor |
+| Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring and keyword suggestions |
+| Reaching the account, plan and upgrade routes | Every request authenticated with a personal API token, including the MCP server |
+
+Reads stay open only to a browser session. A personal API token is refused outright, because the token surface is part of what the plan sells. Nothing is deleted when entitlement lapses.
+
+## Team members
+
+A workspace has one owner and any number of members. The owner manages billing and the team; a member does everything else. Nobody belongs to two workspaces.
+
+- The owner invites by email from **Settings, Team**. The invitation expires after seven days.
+- asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. Otherwise the dialog shows the link for the owner to pass on.
+- The invitee opens the link, chooses a password, and joins the existing workspace as a member. The token is single use.
+- The owner can revoke a pending invitation or remove a member. A workspace always keeps its owner.
+
+Invitations are the way to add a teammate when registration is closed, which is the normal self hosted setting.
+
+## Troubleshooting
+
+- **You are signed out after a restart.** `AUTH_SECRET` changed. Sessions are signed with it.
+- **You cannot register a second account.** Registration closed after the owner account. Set `AUTH_ALLOW_REGISTRATION=true`.
+- **Sessions do not persist behind a proxy.** Check `AUTH_COOKIE_SECURE` against whether the browser reaches you over HTTPS. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Personal API tokens" icon="key-round" href="/security/api-tokens">
+    Authenticate a script or an agent.
+  </Card>
+
+  <Card title="Hosting behind TLS and a reverse proxy" icon="shield" href="/security/hosting">
+    The checklist before exposing an instance.
+  </Card>
+
+  <Card title="Account recovery" icon="key-round" href="/security/account-recovery">
+    What a customer does when they forget their password.
+  </Card>
+</CardGroup>

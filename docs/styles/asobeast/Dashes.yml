@@ -1,0 +1,9 @@
+extends: existence
+message: "Do not use a dash as punctuation. Use a comma, a colon, parentheses, or split the sentence."
+level: error
+nonword: true
+tokens:
+  - "—"
+  - "–"
+  - '\s+-\s+'
+  - '\s+--\s+'

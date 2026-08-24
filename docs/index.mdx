@@ -1,0 +1,78 @@
+---
+title: asobeast documentation
+sidebarTitle: Introduction
+description: "asobeast is an open source, self hosted App Store Optimization toolkit. It tracks an App Store or Google Play listing on hardware you control."
+icon: book-open
+keywords: ["ASO","App Store Optimization","self hosted","open source","keyword tracking","App Store","Google Play"]
+boost: 3
+mode: wide
+---
+
+asobeast is an open source, self hosted App Store Optimization toolkit for indie developers and small teams. Point it at an App Store or Google Play URL and it imports the listing, snapshots the metadata, extracts and tracks keywords, checks positions daily, scores each keyword for traffic and difficulty, and turns the accumulated history into a prioritized queue of work.
+
+Every store request runs on the machine that hosts asobeast. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email alerts or OpenAI assistance.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Run asobeast with Docker Compose and import your first app in about five minutes.
+  </Card>
+
+  <Card title="How asobeast works" icon="workflow" href="/concepts/architecture">
+    The daily pipeline, the queue, the provider layer and where every number comes from.
+  </Card>
+
+  <Card title="API reference" icon="terminal" href="/api-reference/introduction">
+    Every endpoint, generated from the API's own OpenAPI document.
+  </Card>
+
+  <Card title="MCP server" icon="plug" href="/mcp/introduction">
+    Point Claude Code or Claude Desktop at your instance and ask it about your positions.
+  </Card>
+</CardGroup>
+
+## What does asobeast do?
+
+<AccordionGroup>
+  <Accordion title="Tracks two live stores" icon="store">
+    Import Apple App Store and Google Play URLs, capture the first metadata snapshot, refresh on demand and review field level changes. See [App Store and Google Play](/concepts/stores) for the differences that matter.
+  </Accordion>
+
+  <Accordion title="Monitors keywords per market" icon="globe">
+    One app is a single tracking entity. Keyword tracking carries its own country, so one app tracks keywords across many storefronts. See [Countries and markets](/concepts/countries).
+  </Accordion>
+
+  <Accordion title="Scores keywords transparently" icon="gauge">
+    Traffic and difficulty carry their evidence source, calculation version, capture date and confidence. See [Traffic, difficulty and opportunity](/concepts/scoring).
+  </Accordion>
+
+  <Accordion title="Produces an explainable work queue" icon="list-checks">
+    Eight deterministic rules run over stored history and return recommendations with a priority, an estimated impact and the exact numbers behind them. See [Work the Action Center](/guides/action-center).
+  </Accordion>
+</AccordionGroup>
+
+## Who is asobeast for?
+
+asobeast is built for people who ship apps and want their ASO data to stay theirs. It fits if any of the following is true.
+
+- You want ASO tracking without a per keyword subscription.
+- You need the data on your own infrastructure for policy or privacy reasons.
+- You want to query your own ASO history from an agent or a script instead of a dashboard.
+- You track a handful of apps across several storefronts and want one place to see them.
+
+asobeast is not a replacement for a large commercial ASO suite. It collects from the public store endpoints at a deliberately modest rate, so it suits a portfolio measured in apps rather than hundreds.
+
+## Where should you go next?
+
+<Columns cols={3}>
+  <Card title="Install" icon="download" href="/install/docker-compose">
+    Docker Compose, published images or a development environment.
+  </Card>
+
+  <Card title="Guides" icon="compass" href="/guides/import-an-app">
+    One guide per surface, from importing an app to sending alerts.
+  </Card>
+
+  <Card title="Configuration" icon="sliders" href="/configuration/reference">
+    Every environment variable with its default and its effect.
+  </Card>
+</Columns>

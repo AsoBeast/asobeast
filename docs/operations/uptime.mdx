@@ -1,0 +1,91 @@
+---
+title: Uptime probes and the status page
+sidebarTitle: Uptime and status
+description: "Every alert asobeast evaluates runs inside asobeast. Something outside the machine has to watch it, and customers need somewhere to look when the answer is no."
+icon: activity
+keywords: ["uptime","monitoring","status page","health check","incident","probe"]
+---
+
+Every rule in the [alert catalogue](/operations/hosted-observability) is evaluated by the API, during a scrape of the API. That is the right place for a rule about keyword capture or queue memory, and the wrong place for a rule about the machine being on.
+
+When the mini PC is off, the connection is down, the tunnel is not running, or Docker did not come back after a kernel upgrade, there is no scrape, no evaluation and no alert. The monitoring is entirely inside the thing being monitored.
+
+For a single machine, those are the outages that actually happen.
+
+## What to watch
+
+Two endpoints, both already public and both cheap.
+
+| Endpoint | Answers | What a failure means |
+| --- | --- | --- |
+| `https://<your host>/api/health` | The web app | Next.js is not serving. The tunnel, the container or the machine |
+| `https://<your host>/api/backend/health` | The API through the web proxy | The API, PostgreSQL, Redis or the pipeline. The body names which |
+
+Watch the customer facing origin, not the container. A probe against `localhost` on the machine tells you the container is up while every customer sees nothing.
+
+The second endpoint reports each dependency separately rather than as one boolean, so a probe that records the body distinguishes a database outage from a stalled pipeline without anyone opening a terminal.
+
+```json
+{"status":"ok","db":"up","redis":"up","pipeline":{"lastDailyRunAt":"2026-08-20T03:12:00.000Z","stale":false,"failedJobs":0}}
+```
+
+## The interval
+
+**One minute.** Both endpoints touch PostgreSQL and Redis on every request and neither is authenticated, so a five second interval from several regions is a self inflicted load test against the smallest part of the deployment.
+
+One minute from two or three regions is enough to tell an outage from a blip, and cheap enough that the probe never shows up in the capacity numbers.
+
+## Where the alert has to land
+
+**A device that is not the mini PC.** This is the part that is easy to get wrong.
+
+An email alert is worthless if the SMTP relay is configured in the instance that just went down, or if the notification is delivered to a mailbox you read on a laptop that is off at 3am. Route the probe's alerts to a phone: push, SMS or a chat app that pushes.
+
+The probe is a hosted service, so its alerts leave from somewhere unaffected by your outage. That is the entire point of it being outside.
+
+## Certificates
+
+With the shipped [Cloudflare Tunnel](/security/hosting), the certificate is Cloudflare's and renews without you. There is nothing on the machine to expire.
+
+If you brought your own reverse proxy, add a certificate expiry check to the same probe. An expired certificate is an outage that every uptime check reports as a connection failure, and every hour spent diagnosing it is an hour not spent on the one line that fixes it.
+
+## The status page
+
+Host it **off the machine**. A status page that shares a power supply with the service is decoration: the outage that takes down the service takes down the page that would have explained it.
+
+Every hosted status page provider will drive the page from the same probe. Point the probe at the two endpoints above, publish the page, and put the URL in three places:
+
+1. `STATUS_PAGE_URL` in the web app environment, which links the app's own error states to it. See [Web app configuration](/configuration/web).
+2. [Support](/support), so somebody looking for help finds the page before they find the contact address.
+3. The terms, so the availability you promise and the availability you publish are the same document trail.
+
+## What to write during an incident
+
+Decide this before the incident, because during one you will not.
+
+| Question | Answer to fix now |
+| --- | --- |
+| Who writes the update? | The operator. On a single host deployment there is nobody else |
+| How fast? | Within fifteen minutes of the probe alerting, even if the update is only that you are looking |
+| What goes in it? | What is broken, what still works, and when the next update comes. Never a cause you have not confirmed |
+| When does it close? | When the service is verified working, not when the fix is deployed |
+
+The first update costs nothing and is the only one that matters to somebody deciding whether to open a support ticket.
+
+## Verify it
+
+Unplug the network on the machine.
+
+The probe must alert within its stated interval, to a device that is not on that network. That is the whole test and it takes two minutes. A probe nobody has watched fire is a belief, not a signal.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Hosted observability" icon="radar" href="/operations/hosted-observability">
+    The alerts asobeast evaluates about itself.
+  </Card>
+
+  <Card title="Health checks" icon="heart-pulse" href="/operations/health-checks">
+    What each endpoint reports and why.
+  </Card>
+</CardGroup>

@@ -1,0 +1,22 @@
+import { Skeleton } from "@/components/ui/skeleton";
+
+export function KeywordsTableSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="overflow-hidden rounded-xl border">
+        <div className="flex items-center gap-4 border-b px-4 py-3">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <Skeleton key={index} className="h-4 w-16" />
+          ))}
+        </div>
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div key={index} className="flex items-center gap-4 px-4 py-3">
+            {Array.from({ length: 7 }).map((__, cell) => (
+              <Skeleton key={cell} className="h-5 w-16" />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

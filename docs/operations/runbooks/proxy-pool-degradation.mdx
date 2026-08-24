@@ -1,0 +1,60 @@
+---
+title: Proxy pool degradation
+sidebarTitle: Proxy pool degradation
+description: "Healthy endpoints fall below the threshold. Tell blocking apart from a transport fault, decide between waiting, buying more and falling back, and recover without burning residential budget."
+icon: shield-alert
+keywords: ["proxy","webshare","blocked","silent failure","residential"]
+---
+
+Every hosted store request leaves through the egress pool. When the pool degrades, collection slows for every customer at once, and the worst version of the failure is the quiet one: endpoints that answer with plausible but wrong results.
+
+## Symptoms
+
+- `pool.healthy.low` pages, or `pool.blocked.rising` and `pool.silent.rising` arrive for the same day.
+- `asobeast_pool_endpoints_healthy` falls while `asobeast_pool_endpoints` holds steady.
+- `asobeast_workspace_rankings_unresolved` climbs across many workspaces at once, which is what a silent failure looks like from the customer side.
+- Worker concurrency drops on its own, because it tracks the healthy pool size.
+
+## Triage
+
+<Steps>
+  <Step title="Read the pool">
+    `GET /admin/proxy-pool` reports per store health, per endpoint outcomes and residential spend. The `alerts` array repeats what fired.
+  </Step>
+  <Step title="Classify the outcome that dominates">
+    | Last outcome | Cause | First move |
+    | --- | --- | --- |
+    | `TRANSPORT` | The provider or the network, not the store | Wait one cycle, then open a provider ticket |
+    | `RATE_LIMITED` | The pool is being paced too hard | Lower `SCRAPE_ITUNES_RPM` or `SCRAPE_GPLAY_RPM` |
+    | `BLOCKED` | A store is refusing the address range | Continue below |
+    | `SILENT` | Requests succeed and return results that are not real | Treat as the most serious. Continue below |
+  </Step>
+  <Step title="Separate one store from both">
+    Blocking on one store with the other healthy is a store decision about the range. Both stores failing at once is almost always the provider.
+  </Step>
+</Steps>
+
+## Containment
+
+<Warning>
+  A silent failure writes wrong data. Contain it before you fix it, because every hour it runs adds ranking rows a customer will act on.
+</Warning>
+
+1. **Silent failures**: pause the affected store's queue from `/admin/queues`. No capture is better than a wrong capture.
+2. **Blocking**: leave the pool to cool down. Blocked endpoints are already parked, and forcing them back accelerates the block.
+3. **Rate limiting**: reduce the store's requests per minute and let the current run finish late rather than fail.
+4. Do not raise the residential cap to ride out a datacenter block. Residential egress is metered and priced per gigabyte, and a mixed customer costs several times their subscription there.
+
+## Recovery
+
+1. Buy more datacenter endpoints from the provider and let `CRON_PROXY_SYNC` add them, or run the sync early.
+2. Confirm `asobeast_pool_endpoints_healthy` recovers above half of `asobeast_pool_endpoints` for both stores.
+3. If a store blocks the whole range, the options in order of preference are: a different datacenter range, reduced Google Play depth, and residential egress for a small share of traffic with `PROXY_RESIDENTIAL_MONTHLY_CAP_USD` set.
+4. Delete ranking rows captured during a confirmed silent window. They are worse than a gap.
+5. Unpause the queue and watch one full daily cycle.
+
+## Who to tell
+
+- Customers, if collection paused for longer than one daily cycle. Say which store is delayed. A delay that is explained reads as a delay; silence reads as broken data.
+- The proxy provider, with endpoint addresses and outcome counts, for anything that looks like a transport fault.
+- Nobody outside, for a block. It is a normal cost of the business and does not affect customer data.

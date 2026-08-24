@@ -1,0 +1,32 @@
+name: Feature request
+description: Propose a product improvement for the 1.x line.
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe the user problem and who experiences it.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: true
+  - type: checkboxes
+    id: roadmap
+    attributes:
+      label: Compatibility acknowledgement
+      options:
+        - label: I understand that the HTTP contract, the shared contract types and the MCP tool surface stay compatible throughout 1.x, so a proposal that removes, renames or narrows any of them cannot ship before 2.0.0. See https://docs.asobeast.com/install/upgrade for what the promise covers, and the README roadmap for what is already planned.
+          required: true

@@ -1,0 +1,13 @@
+{
+  "extends": "@asobeast/typescript-config/nest.json",
+  "compilerOptions": {
+    "moduleResolution": "node",
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "sourceMap": true,
+    "incremental": true,
+    "removeComments": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true
+  }
+}

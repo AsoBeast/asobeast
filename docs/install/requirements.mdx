@@ -1,0 +1,94 @@
+---
+title: System requirements
+description: "asobeast needs Docker with Compose, roughly 2 GB of memory and an outbound internet connection. PostgreSQL 18 and Redis 8 ship with the stack."
+icon: server
+keywords: ["requirements","docker","memory","postgresql","redis","self hosted"]
+---
+
+Docker with the Compose plugin is the only hard requirement. PostgreSQL, Redis, the API and the web app all ship inside the stack, so there is nothing else to install.
+
+## What do you need to run asobeast?
+
+| Requirement | Value | Why |
+| --- | --- | --- |
+| Docker Engine | Current release with the Compose plugin | Runs every service. `docker compose version` must succeed |
+| Memory | Roughly 2 GB free | Four containers with memory ceilings summing to about 1.8 GB, of which the API is the largest. See [Capacity](/operations/capacity) |
+| Disk | Roughly 5 GB free | The PostgreSQL volume grows with ranking history. Retention settings bound it, and container logs are capped at 30 MB per service |
+| Network | Outbound HTTPS | Store collection runs from this machine |
+| Architecture | `linux/amd64` or `linux/arm64` | Published images are multi architecture |
+
+A single instance tracking a handful of apps runs comfortably on the smallest cloud instance most providers sell.
+
+### What one host actually carries
+
+Memory and disk are not what runs out first. The store rate limits are, and they bind at very different points depending on which store your keywords are on. These come from a measured run against the shipped memory ceilings; see [Capacity and limits](/operations/capacity).
+
+| Store mix | Keyword markets a day | Disk after a year of history |
+| --- | --- | --- |
+| Apple only | Roughly 20,000 | Grows with captures. 8,000 markets at 90 days measured 227 MB |
+| Even split | Roughly 3,600 | The same, for a quarter of the markets |
+| Play only | Roughly 1,800 | The same again |
+
+A workload of 75,000 keyword markets with 90 days of history measured 2 GB of database and took PostgreSQL to 94 percent of its 384 MB ceiling, so plan disk from your own market count rather than from the 5 GB above once you pass a few thousand markets.
+
+## What ships with the stack?
+
+You install none of these separately. Compose pulls or builds all four.
+
+| Service | Image | Role |
+| --- | --- | --- |
+| `postgres` | `postgres:18-alpine` | Durable system of record for every app, keyword, position and action item |
+| `redis` | `redis:8-alpine` | BullMQ queue state, which is reconstructible and never needs an application backup |
+| `api` | Built from `apps/api/Dockerfile` | NestJS API, the queue workers and the daily pipeline |
+| `web` | Built from `apps/web/Dockerfile` | Next.js dashboard and the same origin proxy to the API |
+
+Published releases replace the two built images with `ghcr.io/asobeast/asobeast-api` and `ghcr.io/asobeast/asobeast-web`. See [Run a published release](/install/published-images).
+
+## What do you need only for development?
+
+Working on the source needs the toolchain as well as Docker.
+
+| Requirement | Value | Source |
+| --- | --- | --- |
+| Node.js | 22 or newer | The images build on `node:24-alpine` |
+| pnpm | 10.18.2 | `packageManager` in the root `package.json` |
+| Docker | For PostgreSQL and Redis only | `docker-compose.dev.yml` |
+
+See [Set up a development environment](/install/local-development).
+
+## Which hosts does asobeast reach?
+
+Every store request runs on the machine that hosts asobeast, so that machine needs outbound HTTPS to the Apple and Google endpoints. There is no asobeast cloud service in the path and no telemetry.
+
+A host behind a strict egress policy needs the Apple iTunes endpoints and the Google Play endpoints allowed. Without them imports, ranking checks and scoring jobs fail while the rest of the application keeps serving requests.
+
+Outbound connections to your own SMTP relay, your own webhook endpoints and the OpenAI API happen only when you configure those optional features.
+
+## Which ports does asobeast publish?
+
+One. The web container publishes `3000` and nothing else is reachable from outside the Docker network.
+
+| Port | Service | Published |
+| --- | --- | --- |
+| 3000 | `web` | Yes, this is the only entry point |
+| 4000 | `api` | No, private to the Compose network |
+| 5432 | `postgres` | No, the backend network is marked internal |
+| 6379 | `redis` | No, the backend network is marked internal |
+
+The browser reaches the API through `/api/backend/*` on the web origin, which forwards to `API_INTERNAL_URL`. The development Compose file is different on purpose: it publishes `5432` and `6379` so a locally running API can reach them.
+
+<Warning>
+  Publishing host port 3001 to the internet without TLS in front of it sends session cookies in the clear. Terminate TLS at a reverse proxy and set `AUTH_COOKIE_SECURE=true`.
+</Warning>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Self host with Docker Compose" icon="container" href="/install/docker-compose">
+    The install path for almost everyone.
+  </Card>
+
+  <Card title="Run a published release" icon="package" href="/install/published-images">
+    Pinned images from GitHub Container Registry without cloning.
+  </Card>
+</CardGroup>

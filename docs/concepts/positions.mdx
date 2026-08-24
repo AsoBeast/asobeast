@@ -1,0 +1,50 @@
+---
+title: Positions and rank depth
+sidebarTitle: Positions
+description: "Positions are 1 based. A null position means the keyword was checked and the app was not found within the captured depth, which defaults to 200."
+icon: list-ordered
+keywords: ["position","rank","depth","null","not ranked","1 based"]
+---
+
+Positions are 1 based, so position 1 is the top result. A `null` position means asobeast checked the keyword and did not find the app within the captured depth. It never means zero.
+
+## How is a position recorded?
+
+Each check writes one row per app, keyword and UTC date, and stores the depth that check covered alongside the position. The default depth is 200.
+
+| Field | Meaning |
+| --- | --- |
+| `position` | 1 based rank, or `null` when the app was not found |
+| `depth` | How deep the search looked for that observation, default 200 |
+| `date` | The UTC date of the observation |
+
+The row is written even when the app was not found. That is deliberate: an absent row and a `null` position mean different things, and only storing both lets you tell "we did not look" apart from "we looked and it was not there".
+
+## What does null mean?
+
+Checked, and not found within `depth`. It does not mean any of the following.
+
+| `null` does not mean | Which is instead |
+| --- | --- |
+| Position zero | Positions start at 1 |
+| The keyword is untracked | An untracked keyword has no rows at all |
+| The check failed | A failed job writes no row and is retried |
+| The app was removed | Nothing in a position row says that |
+
+## How is null displayed?
+
+As a bound derived from that row's own depth, never as `0`. A row captured at depth 200 renders as `>200`, and a row captured at depth 100 renders as `>100`.
+
+Reading the bound from the row rather than from a constant matters, because historical rows may have been captured at a different depth than today's.
+
+## How are positions charted?
+
+Ranking charts use a reversed Y axis, so position 1 sits at the top and an improving line rises. A `null` breaks the series rather than dropping it to the bottom of the chart.
+
+<Warning>
+  If you consume the API, treat `null` as absent rather than as `0`. Coercing `null` to zero makes every unranked keyword look like the best possible result and inverts every trend, average and delta you compute.
+</Warning>
+
+## How deep does the SERP snapshot go?
+
+Position checks capture to depth 200. The stored SERP snapshot, which is what powers volatility, entrants and competitor discovery, keeps the top 10 results for each keyword and date.

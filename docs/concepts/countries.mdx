@@ -1,0 +1,50 @@
+---
+title: Countries and markets
+sidebarTitle: Countries
+description: "An app is one row with a home storefront. Each tracked keyword carries its own country, and one search serves the app and every competitor at once."
+icon: globe
+keywords: ["country","storefront","market","multi country","keyword tracking","DEFAULT_COUNTRY"]
+---
+
+You import an app once. The app row carries one home storefront, and every tracked keyword carries its own country, so a single app tracks keywords across as many markets as you want.
+
+## What is the home storefront?
+
+The home storefront is `app.country`, and it comes from the URL you imported. A URL such as `apps.apple.com/de/app/...` imports a `de` home market, and the import dialog lets you override it. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
+
+Country codes are two lowercase letters validated by shape rather than against a fixed list, so any live storefront works without asobeast maintaining a country table.
+
+The home storefront drives everything that asobeast stores once per app.
+
+| Stays on the home market | Per market |
+| --- | --- |
+| Metadata snapshots | Tracked keywords |
+| Category ranks | Positions and SERP snapshots |
+| Reviews and ratings history | Traffic and difficulty scores |
+| The iOS keyword field | Market comparison in the Action Center |
+| Auto tracked keywords from the listing |  |
+
+A full per market app detail switcher is backlog, not a shipped feature.
+
+## How does one search serve everyone?
+
+A position check searches `keyword.country`, not `app.country`. From that single search asobeast records positions for the primary app and for every competitor attached to it in that storefront.
+
+That is why adding a competitor costs no extra store requests. Ten competitors on a keyword are still one search.
+
+## What does a market cost?
+
+The same phrase tracked in `us` and in `pl` is two keyword rows, checked by two searches. Markets multiply, keywords multiply, and both draw on the same fixed request budget.
+
+Rankings, difficulty and traffic all differ per storefront, so the second market is real data rather than a copy.
+
+Two places show you the cost before it bites.
+
+- The settings page carries a daily request budget card with the estimated requests broken down by kind, your capacity and a utilization meter.
+- `GET /jobs/budget` returns the same estimate, and the dashboard warns when the daily pipeline would exceed 85 percent of capacity.
+
+When you are over budget, remove keywords or markets, or raise `SCRAPE_ITUNES_RPM` and accept the risk. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## How do you add a market?
+
+On the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button.

@@ -1,0 +1,330 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "asobeast",
+  "description": "asobeast is a self hosted App Store Optimization toolkit. Point it at an App Store or Google Play URL and it tracks that listing's keywords, rankings, competitors, reviews and metadata on hardware you control.",
+  "colors": {
+    "primary": "#A85D05",
+    "light": "#FBB04D",
+    "dark": "#B26206"
+  },
+  "favicon": "/images/favicon.ico",
+  "logo": {
+    "light": "/images/logo-light.svg",
+    "dark": "/images/logo-dark.svg",
+    "href": "https://docs.asobeast.com"
+  },
+  "icons": {
+    "library": "lucide"
+  },
+  "appearance": {
+    "default": "system"
+  },
+  "search": {
+    "prompt": "Search the asobeast docs"
+  },
+  "metadata": {
+    "timestamp": true
+  },
+  "seo": {
+    "indexing": "navigable",
+    "metatags": {
+      "canonical": "https://docs.asobeast.com",
+      "og:site_name": "asobeast documentation",
+      "og:locale": "en_US"
+    },
+    "organization": {
+      "name": "asobeast",
+      "url": "https://docs.asobeast.com",
+      "logo": "https://docs.asobeast.com/images/logo-light.svg",
+      "sameAs": ["https://github.com/AsoBeast/asobeast"]
+    }
+  },
+  "contextual": {
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode",
+      "download-spec"
+    ],
+    "display": "header"
+  },
+  "thumbnails": {
+    "background": "/images/og-background.png",
+    "appearance": "dark"
+  },
+  "redirects": [
+    {
+      "source": "/docs",
+      "destination": "/"
+    },
+    {
+      "source": "/getting-started",
+      "destination": "/quickstart"
+    },
+    {
+      "source": "/api",
+      "destination": "/api-reference/introduction"
+    },
+    {
+      "source": "/self-hosting",
+      "destination": "/install/docker-compose"
+    },
+    {
+      "source": "/configuration",
+      "destination": "/configuration/reference"
+    }
+  ],
+  "api": {
+    "openapi": "api-reference/openapi.json",
+    "playground": {
+      "display": "interactive"
+    },
+    "params": {
+      "expanded": "closed"
+    },
+    "examples": {
+      "languages": ["curl", "javascript", "python"]
+    },
+    "mdx": {
+      "auth": {
+        "method": "bearer"
+      }
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "icon": "rocket",
+            "boost": 2,
+            "pages": ["index", "quickstart"]
+          },
+          {
+            "group": "Install",
+            "icon": "download",
+            "pages": [
+              "install/requirements",
+              "install/docker-compose",
+              "install/published-images",
+              "install/local-development",
+              "install/upgrade"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "icon": "lightbulb",
+            "pages": [
+              "concepts/architecture",
+              "concepts/data-model",
+              "concepts/stores",
+              "concepts/countries",
+              "concepts/positions",
+              "concepts/scoring",
+              "concepts/pipeline"
+            ]
+          },
+          {
+            "group": "Guides",
+            "icon": "compass",
+            "pages": [
+              "guides/import-an-app",
+              "guides/track-keywords",
+              "guides/read-rankings",
+              "guides/competitors",
+              "guides/aso-audit",
+              "guides/metadata-workbench",
+              "guides/reviews",
+              "guides/listing-changes",
+              "guides/action-center",
+              "guides/category-ranks",
+              "guides/portfolio",
+              "guides/alerts",
+              "guides/ai-features",
+              "guides/export-data"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "icon": "settings",
+            "pages": [
+              "configuration/reference",
+              "configuration/web",
+              "security/authentication",
+              "security/account-recovery",
+              "security/api-tokens",
+              "security/hosting",
+              "security/admin-surfaces"
+            ]
+          },
+          {
+            "group": "Operations",
+            "icon": "activity",
+            "pages": [
+              "operations/health-checks",
+              "operations/uptime",
+              "operations/upgrades",
+              "operations/backups",
+              "operations/restore",
+              "operations/rotate-secrets",
+              "operations/release-recovery",
+              "operations/capacity",
+              "operations/billing",
+              "operations/scraper-breakage",
+              "operations/troubleshooting"
+            ]
+          },
+          {
+            "group": "Hosted operations",
+            "icon": "radar",
+            "pages": [
+              "operations/hosted-observability",
+              "operations/runbooks/proxy-pool-degradation",
+              "operations/runbooks/daily-run-overrun",
+              "operations/runbooks/hosted-parser-breakage",
+              "operations/runbooks/billing-incident",
+              "operations/runbooks/isolation-incident",
+              "operations/runbooks/capacity-exhaustion"
+            ]
+          },
+          {
+            "group": "Legal",
+            "icon": "scale",
+            "pages": [
+              "legal/pricing",
+              "legal/terms",
+              "legal/privacy",
+              "legal/subprocessors",
+              "legal/data-retention",
+              "legal/data-collection"
+            ]
+          },
+          {
+            "group": "Reference",
+            "icon": "book-marked",
+            "pages": ["glossary", "changelog", "support"]
+          }
+        ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "icon": "book-open",
+            "pages": [
+              "api-reference/introduction",
+              "api-reference/authentication",
+              "api-reference/errors",
+              "api-reference/rate-limits",
+              "api-reference/conventions"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "icon": "terminal",
+            "openapi": "api-reference/openapi.json"
+          }
+        ]
+      },
+      {
+        "tab": "MCP",
+        "groups": [
+          {
+            "group": "MCP server",
+            "icon": "plug",
+            "pages": [
+              "mcp/introduction",
+              "mcp/setup",
+              "mcp/tools",
+              "mcp/recipes"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "type": "github",
+        "href": "https://github.com/AsoBeast/asobeast"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Self host asobeast",
+      "href": "https://docs.asobeast.com/quickstart"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/AsoBeast/asobeast"
+    },
+    "links": [
+      {
+        "header": "Documentation",
+        "items": [
+          {
+            "label": "Quickstart",
+            "href": "https://docs.asobeast.com/quickstart"
+          },
+          {
+            "label": "Configuration",
+            "href": "https://docs.asobeast.com/configuration/reference"
+          },
+          {
+            "label": "API reference",
+            "href": "https://docs.asobeast.com/api-reference/introduction"
+          },
+          {
+            "label": "MCP server",
+            "href": "https://docs.asobeast.com/mcp/introduction"
+          }
+        ]
+      },
+      {
+        "header": "Project",
+        "items": [
+          {
+            "label": "GitHub",
+            "href": "https://github.com/AsoBeast/asobeast"
+          },
+          {
+            "label": "Releases",
+            "href": "https://github.com/AsoBeast/asobeast/releases"
+          },
+          {
+            "label": "Issues",
+            "href": "https://github.com/AsoBeast/asobeast/issues"
+          }
+        ]
+      },
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "License",
+            "href": "https://github.com/AsoBeast/asobeast/blob/main/LICENSE"
+          },
+          {
+            "label": "Security policy",
+            "href": "https://github.com/AsoBeast/asobeast/blob/main/SECURITY.md"
+          },
+          {
+            "label": "Code of conduct",
+            "href": "https://github.com/AsoBeast/asobeast/blob/main/CODE_OF_CONDUCT.md"
+          }
+        ]
+      }
+    ]
+  }
+}

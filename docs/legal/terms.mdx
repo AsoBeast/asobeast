@@ -1,0 +1,138 @@
+---
+title: Terms of service
+sidebarTitle: Terms of service
+description: "The terms that apply to the hosted asobeast service: acceptable use, limits, suspension, data ownership, service levels and the accuracy of store data."
+icon: scale
+keywords: ["terms","acceptable use","sla","suspension","hosted"]
+---
+
+<Info>
+  These terms cover the **hosted** service at asobeast.com. A self hosted installation is governed by [AGPL-3.0-only](https://github.com/AsoBeast/asobeast/blob/main/LICENSE) and nothing on this page applies to it, because there is no service between you and your own deployment.
+</Info>
+
+<Warning>
+  This document describes how the system actually behaves. It is not legal advice and it has not replaced review by a qualified lawyer in your jurisdiction. The **Governing law** section below is deliberately unfinished until that review is complete.
+</Warning>
+
+## Who the service is for and what it does
+
+asobeast is an App Store Optimization toolkit for developers and small teams. On your behalf it collects publicly visible App Store and Google Play search results and listing metadata, stores them, and derives keyword scores, rankings, competitor comparisons, audits and recommendations from what it collected.
+
+You need an account to use it. You are responsible for the accounts in your workspace and for what they do.
+
+## Acceptable use
+
+You may use the service to research, monitor and improve apps, whether they are yours or a competitor's.
+
+You may not:
+
+- **Resell, redistribute or sublicense the data** the service produces, in bulk or as a feed.
+- **Build a competing dataset or a competing product** out of the collected data.
+- Automate access beyond the limits below, or work around those limits with more accounts or more tokens.
+- Use the service to attack, overload or probe any third party, including the stores.
+- Share account credentials outside your workspace, or resell access to your workspace.
+
+The first two clauses matter most. The value here is the collection, not the interface, and the terms exist to stop the collection being taken wholesale.
+
+## Limits and quotas
+
+Plan limits are contractual, not advisory. They are enforced in code and they are stated exactly on the [pricing page](/legal/pricing).
+
+A limit worth stating twice: **a keyword counts once per market.** Tracking one phrase in five countries counts as five keyword markets against your plan, because it is five searches every day.
+
+Rate limits are per workspace and split across three classes: reads, writes and the endpoints that reach a store. Every response carries `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset` for the tightest limit it touched. Minting more personal API tokens does not buy more capacity.
+
+Exceeding a rate limit returns `429` with `Retry-After`. Exceeding a plan capacity limit returns `403` with a quota object. Losing entitlement returns `402`. See [Rate limits](/api-reference/rate-limits).
+
+## Suspension
+
+We may suspend a workspace when:
+
+- It sustains rate limit abuse after being throttled, which the service detects and flags automatically.
+- It breaches the acceptable use rules above.
+- Payment fails and remains unresolved after the dunning notices we send.
+- We are required to by law.
+
+A suspension refuses every write and every on demand action. **It never deletes your data, and export stays available**, because your data is yours whatever the state of the account. Every suspension is recorded with a reason and an operator, and we will tell you which reason applies.
+
+## Your data is yours
+
+You own the apps, keywords and settings you configure, and the rankings, snapshots, reviews and audits the service derives for you.
+
+You can export everything at any time, and you can request deletion of your workspace. See [Data export, deletion and retention](/legal/data-retention) for what deletion reaches, what it cannot reach and how long the horizon really is.
+
+We do not sell your data, and we do not use one customer's tracked keywords to build a product for another.
+
+What we collect, who receives it and how long it is kept is set out in the [privacy policy](/legal/privacy) and the [subprocessor list](/legal/subprocessors).
+
+## Service levels
+
+**Best effort, with no service level agreement.** We do not promise an uptime percentage, because we have not measured one long enough to promise it honestly, and a promise we cannot keep is worse than no promise.
+
+What we do commit to:
+
+- The daily run is scheduled once per UTC day for every workspace.
+- When your own run is delayed, the app tells you so, naming the store that is behind.
+- Incidents that affect collection are communicated rather than left to be discovered, on a status page hosted away from the service at [status.asobeast.com](https://status.asobeast.com).
+- A first incident update within fifteen minutes of detection, even when it says only that we are looking, and an incident closed only when the service is verified working.
+
+Collection can pause. Stored history is never rewritten, so a pause leaves a gap and not a wrong number.
+
+### What one machine promises
+
+The hosted service runs on **one machine**. There is no second one waiting, no failover and no high availability, and describing it any other way would be a promise we could not keep. In numbers:
+
+| Promise | Value | What it means |
+| --- | --- | --- |
+| Availability target | None | Best effort. We publish what happens rather than a percentage we have not earned |
+| Planned downtime | Minutes, announced | Upgrades stop the stack, apply migrations and start it again |
+| Recovery point objective | Up to 24 hours | One backup a day. Losing the machine loses at most a day of collection, and never your account or your app list, which change rarely |
+| Recovery time objective from the local archive | Minutes | Restoring on the same machine is a database restore and a restart |
+| Recovery time objective from the offsite archive | Hours | Rebuilding on another machine is bounded by transferring the archive, not by the restore |
+| Backup retention | 56 days | 14 daily and 8 weekly archives, encrypted, held both on the machine and offsite |
+
+Backups leave the machine encrypted, to storage whose provider cannot read them. That is the difference between losing a disk and losing a service. See [Backups](/operations/backups).
+
+Promising less than we deliver is recoverable. The reverse is not, which is why this section is numbers rather than adjectives.
+
+## Accuracy of the data
+
+This section is not boilerplate. Read it before you make a decision on this data.
+
+Rankings come from public store search results, collected through third party network infrastructure, at one point in each day. That means:
+
+- **The stores can change without notice.** A response shape change stops collection until the parser is fixed.
+- **Results are personalized, regional and time dependent** at the store's discretion. A position we recorded is one observation, not the only truth.
+- **Silent failures are reduced, not eliminated.** We detect endpoints that return plausible but wrong results and take them out of rotation, and we still cannot promise every captured row is correct.
+- A position of `null` means checked and not found within the searched depth. It never means position zero.
+
+**Treat this data as a signal, not a system of record.** We disclaim liability for decisions made on it to the extent the law allows.
+
+## Dependence on Apple and Google
+
+The service depends on Apple and Google continuing to serve public store pages and search results. If either changes what it serves, restricts it, or objects to the collection, the service changes with it. That may mean reduced depth, a delayed store, or a store that is no longer covered.
+
+We will tell you what changed and what it means for your plan. We cannot promise a store will remain available, because that is not ours to promise. Our position on collection is written out in full in [How asobeast collects data](/legal/data-collection).
+
+## Payment, termination and refunds
+
+- Plans are billed monthly or annually in advance through our payment provider.
+- The trial is 7 days, needs no card, and ends by simply not renewing. Nothing is charged automatically at the end of a trial.
+- Cancel at any time. Cancellation takes effect at the end of the paid period, and access continues until then.
+- **After access lapses, every read and every export keeps working.** Capacity is what you pay for; the data stays yours.
+- Refunds are handled case by case. Ask, and expect a straight answer rather than a policy recitation.
+- We may end the service. If we do, you get at least 60 days notice and an export window inside it.
+
+## Changes to these terms
+
+We will publish changes here and note them in the changelog. A change that reduces what you get takes effect at your next renewal, not immediately.
+
+## Governing law
+
+<Warning>
+  **Unfinished.** The governing law and the venue for disputes must be set by the operator with legal advice in their own jurisdiction before the hosted service takes money. Do not launch with this section as it stands.
+</Warning>
+
+## Contact
+
+Questions about these terms belong in [support](/support). Security reports follow [SECURITY.md](https://github.com/AsoBeast/asobeast/blob/main/SECURITY.md).

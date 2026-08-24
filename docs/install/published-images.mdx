@@ -1,0 +1,135 @@
+---
+title: Run a published release
+description: "Every GitHub release publishes multi architecture API and web images to GitHub Container Registry, tagged by version, minor, major, commit and latest."
+icon: package
+keywords: ["ghcr","container images","release","docker run","latest","pinned version"]
+---
+
+Every release publishes a `latest` tag that follows the newest version, so a deployment that names no tag tracks the current release.
+
+Pin an explicit version when you want an upgrade to be a decision rather than a restart. A release can carry a schema migration, and `latest` moving underneath an unattended `docker pull` applies that migration on the next restart.
+
+## Which images are published?
+
+Each GitHub release builds both applications for `linux/amd64` and `linux/arm64`, signs a build provenance attestation and pushes them to GitHub Container Registry.
+
+| Image | Contents |
+| --- | --- |
+| `ghcr.io/asobeast/asobeast-api` | NestJS API, queue workers, Prisma migrations |
+| `ghcr.io/asobeast/asobeast-web` | Next.js dashboard and the same origin proxy |
+
+Five tag shapes are published for every release. Pick the narrowest one your upgrade policy allows.
+
+| Tag shape | Example for release `v1.0.0` | Moves when |
+| --- | --- | --- |
+| Version | `1.0.0` | Never |
+| Minor | `1.0` | A patch release ships |
+| Major | `1` | Any release in that major ships |
+| Commit | `sha-<commit>` | Never |
+| Latest | `latest` | Any release ships |
+
+## Run the stack
+
+The sequence below creates the networks and volumes, starts PostgreSQL and Redis on an internal network, attaches the API to both networks and publishes only the web app.
+
+```bash
+export ASOBEAST_IMAGE_TAG=1.0.0
+export ASOBEAST_POSTGRES_PASSWORD="$(openssl rand -hex 32)"
+export ASOBEAST_AUTH_SECRET="$(openssl rand -hex 32)"
+
+docker network create --internal asobeast-backend
+docker network create asobeast-frontend
+docker volume create asobeast-pgdata
+docker volume create asobeast-redisdata
+
+docker run -d --name asobeast-postgres --restart unless-stopped \
+  --network asobeast-backend \
+  --volume asobeast-pgdata:/var/lib/postgresql \
+  --env POSTGRES_USER=asobeast \
+  --env POSTGRES_PASSWORD="$ASOBEAST_POSTGRES_PASSWORD" \
+  --env POSTGRES_DB=asobeast \
+  postgres:18-alpine
+
+docker run -d --name asobeast-redis --restart unless-stopped \
+  --network asobeast-backend \
+  --volume asobeast-redisdata:/data \
+  redis:8-alpine
+
+docker run -d --name asobeast-api --restart unless-stopped \
+  --network asobeast-backend \
+  --env DATABASE_URL="postgresql://asobeast:$ASOBEAST_POSTGRES_PASSWORD@asobeast-postgres:5432/asobeast" \
+  --env REDIS_HOST=asobeast-redis \
+  --env REDIS_PORT=6379 \
+  --env PORT=4000 \
+  --env DEFAULT_COUNTRY=us \
+  --env AUTH_SECRET="$ASOBEAST_AUTH_SECRET" \
+  "ghcr.io/asobeast/asobeast-api:$ASOBEAST_IMAGE_TAG"
+
+docker network connect asobeast-frontend asobeast-api
+
+docker run -d --name asobeast-web --restart unless-stopped \
+  --network asobeast-frontend \
+  --publish 3001:3000 \
+  --env API_INTERNAL_URL=http://asobeast-api:4000 \
+  --env HOSTNAME=0.0.0.0 \
+  "ghcr.io/asobeast/asobeast-web:$ASOBEAST_IMAGE_TAG"
+```
+
+The API image applies database migrations and seeds the default workspace when it starts. Add any optional API setting as a further `--env` flag on the API container.
+
+## Why two networks?
+
+Separating them is what keeps the datastores unreachable. `asobeast-backend` is created with `--internal`, so containers on it have no route off the host.
+
+| Container | `asobeast-backend` | `asobeast-frontend` |
+| --- | --- | --- |
+| `asobeast-postgres` | Yes | No |
+| `asobeast-redis` | Yes | No |
+| `asobeast-api` | Yes | Yes, attached after creation |
+| `asobeast-web` | No | Yes |
+
+The web container therefore reaches the API and nothing else, while PostgreSQL and Redis are reachable only from the API. This mirrors what `docker-compose.yml` does with its `frontend` and `backend` networks.
+
+## Run the same images from Compose
+
+`docker-compose.pull.yml` is the supported Compose path for published images. It declares the identical stack as `docker-compose.yml`, with the same project name, volumes, memory limits, log limits and health checks, and differs only in running the published images instead of building them. An installation can move between the two without touching its data.
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/AsoBeast/asobeast/main/docker-compose.pull.yml
+printf 'POSTGRES_PASSWORD=%s\nAUTH_SECRET=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+chmod 600 .env
+docker compose -f docker-compose.pull.yml up -d --wait
+```
+
+Downloading from `main` gets the current file, and that file defaults to the release it was published with, so the copy on your disk is pinned even though the download URL is not. Release Please bumps that default on every release and continuous integration fails when it drifts, so the file you fetch today runs today's release and keeps running it until you say otherwise.
+
+Two variables in the root `.env` change what it pulls. `ASOBEAST_IMAGE_TAG` selects a different release, which is how you pin an older one or roll back. `ASOBEAST_IMAGE_OWNER` selects the registry namespace and exists for forks. Both are read only by this file.
+
+The file declares no pull policy, so Compose fetches an image it does not already have and otherwise starts what is on disk. Changing the tag is therefore enough to upgrade, and a restart with the tag unchanged never needs the registry, which matters on a machine that reboots without network. Only a moving tag such as `latest` needs an explicit fetch:
+
+```bash
+docker compose -f docker-compose.pull.yml pull
+docker compose -f docker-compose.pull.yml up -d --wait
+```
+
+The Cloudflare Tunnel overlay composes onto it exactly as it does onto the build from source stack:
+
+```bash
+docker compose -f docker-compose.pull.yml -f docker-compose.tunnel.yml up -d --wait
+```
+
+<Note>
+  The checked in `docker-compose.yml` builds both images from source and declares no `image`, so `docker compose pull` cannot move it onto a published tag. Use `docker-compose.pull.yml` for pinned images, or the `docker run` sequence above when you want no Compose file at all.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Self host with Docker Compose" icon="container" href="/install/docker-compose">
+    The build from source path, with health checks and volumes handled for you.
+  </Card>
+
+  <Card title="Upgrade and roll back" icon="circle-arrow-up" href="/install/upgrade">
+    Moving a pinned tag forward, and what to do when it goes wrong.
+  </Card>
+</CardGroup>

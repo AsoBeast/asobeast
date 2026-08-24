@@ -1,0 +1,68 @@
+---
+title: "Traffic, difficulty and opportunity"
+sidebarTitle: Scoring
+description: Traffic and difficulty are 0 to 100 scores persisted with their evidence. Opportunity is computed per app on read and is never stored anywhere.
+icon: gauge
+keywords: ["traffic score","difficulty","opportunity","keyword metric","confidence","calculation version"]
+---
+
+Traffic and difficulty describe a keyword and are stored. Opportunity describes the fit between a keyword and one specific app, so it is computed when you read it and never stored.
+
+## What are the three scores?
+
+| Score | Range | Persisted | Scope | Meaning |
+| --- | --- | --- | --- | --- |
+| Traffic | 0 to 100 | Yes, in `KeywordMetric` | Keyword | How much search demand the evidence suggests |
+| Difficulty | 0 to 100 | Yes, in `KeywordMetric` | Keyword | How hard the current top results are to displace |
+| Opportunity | 0 to 100 | No | Keyword and app | Whether this keyword is worth this app's effort |
+
+Opportunity weights volume at 0.4, difficulty at 0.3 and relevance at 0.3.
+
+## What evidence does a score carry?
+
+Every persisted score is stored with the provenance needed to audit or recompute it.
+
+| Field | Example | Why it is stored |
+| --- | --- | --- |
+| Scoring source | `APPLE_SUGGEST_SEARCH`, `GOOGLE_PLAY_PREFIX_SEARCH` | Which public evidence produced the number |
+| Formula version | `app-store-v1`, `google-play-v1` | Which calculation produced it, so old rows stay interpretable |
+| Captured at | A timestamp | When the evidence was collected |
+| Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
+
+Confidence falls when part of the evidence was unavailable. On the App Store it reflects whether the search returned a full result set and whether the suggest lookup completed. On Google Play it additionally reflects whether the prefix sweep and the detail enrichments completed.
+
+A score without provenance cannot be audited, so asobeast never shows one.
+
+## Why is opportunity per app and not per keyword?
+
+Because relevance is a property of the pairing, not of the phrase.
+
+Traffic and difficulty are the same number for every app that tracks a keyword, because they describe the search result page. Relevance is different for each app: the same phrase is core to one listing and incidental to another. asobeast derives relevance from the tracked keyword's source and from how much of the phrase appears in that app's own snapshot text, then combines it with volume and difficulty in the read layer.
+
+Storing opportunity would mean storing one row per app per keyword and recomputing all of them whenever a listing changed. Deriving it on read keeps one keyword row and always reflects the current metadata.
+
+The read layer says so in the response, so a consumer can tell a derived score from a stored one.
+
+## Where does relevance start?
+
+The tracked keyword's source sets the starting relevance, which is then adjusted by how the phrase overlaps the app's snapshot text.
+
+| Source | Starting relevance |
+| --- | --- |
+| `TITLE`, `SUBTITLE`, `KEYWORD_FIELD` | 90 |
+| `MANUAL` | 80 |
+| `DESCRIPTION` | 70 |
+| `SUGGESTED` | 60 |
+| `COMPETITOR` | 50 |
+
+Full overlap with the snapshot text adds 10 and no overlap subtracts 10, clamped to the range 1 to 100. You can override relevance per tracked keyword.
+
+## Are scores comparable across stores?
+
+No. Apple and Google Play scores come from different public evidence and are store specific signals. See [App Store and Google Play](/concepts/stores).
+
+They are also not a substitute for first party acquisition or conversion data. asobeast has no download or revenue data and never presents one.
+
+## When are scores recalculated?
+
+Weekly, on the `CRON_SCORING` schedule, which defaults to `0 4 * * 0`, meaning 04:00 UTC on Sunday. Scoring is the most expensive job per keyword on Google Play, which is why it is weekly rather than daily. See [The daily pipeline and rate limits](/concepts/pipeline).

@@ -1,0 +1,87 @@
+---
+title: Billing and the subscription lifecycle
+sidebarTitle: Billing
+description: "How a hosted workspace moves from trial to paid, what happens when a card fails, and what a downgrade or cancellation does to the data already collected."
+icon: credit-card
+keywords: ["billing","stripe","trial","subscription","dunning","downgrade","cancellation"]
+---
+
+Billing is off unless `BILLING_ENABLED` is `true` and `STRIPE_SECRET_KEY` is set. A self hosted instance never reaches any of this. See [Configuration reference](/configuration/reference) for the variables.
+
+## The catalog
+
+Two products and four prices, created from a committed script rather than by hand, so a test account can be rebuilt exactly:
+
+```bash
+pnpm --filter api stripe:catalog
+```
+
+The script prints the four `STRIPE_PRICE_*` values to put in the environment. It is idempotent: rerunning it reuses the products and prices it already created. A price id asobeast does not recognise is refused loudly rather than falling back to a free plan, because a silent fallback means a paying customer gets nothing.
+
+## The webhook endpoint
+
+Stripe posts every subscription event to one endpoint, and the URL is the web origin followed by the same `/api/backend/` prefix every other API call uses:
+
+```text
+https://your-host/api/backend/billing/webhook
+```
+
+Register that in the Stripe dashboard, put the signing secret it gives you in `STRIPE_WEBHOOK_SECRET`, and send one test delivery before you take a payment. Without the secret the endpoint refuses every delivery and checkout stays closed, so nobody pays for access that could never be provisioned.
+
+The endpoint is the one billing route that is public, because Stripe has no session. It authenticates the delivery instead: each request carries a `stripe-signature` header computed over the exact bytes of the body, and a delivery whose signature does not verify is refused with 400. The web app forwards that header and the body untouched, so the API verifies what Stripe actually signed.
+
+A refused delivery is logged. Look for `rejected a webhook delivery` in the API log, which names the reason, and check the endpoint's own delivery history in the Stripe dashboard. Stripe retries a failed delivery, so a secret you fix within the retry window costs nothing.
+
+## States a workspace moves through
+
+| State | Entitled | What runs |
+| --- | --- | --- |
+| Trial | Yes | Everything, at Indie limits |
+| Active | Yes | Everything, at the plan limits |
+| Past due | Yes | Everything, while Stripe retries the charge |
+| Unpaid or canceled | No | Reads and exports only |
+| Free, never subscribed | No | Reads and exports only |
+
+The plan in force is derived rather than trusted: a paid plan past its period end falls back to the trial if one is still running, and to free otherwise.
+
+## Trial
+
+Seven days, Indie limits, no card. With SMTP configured the trial starts when the customer confirms their email, not at registration. A workspace gets one trial ever, recorded by `trialStartedAt`, so a returning customer resumes on a paid plan rather than a second free week.
+
+Milestone emails go out on days 0, 3, 5, 7 and 8 through the same SMTP transport and delivery log the product alerts use. The day 3 message is the one that matters: three days of positions is the first point at which the keyword monitor shows movement rather than a single reading.
+
+## Dunning
+
+A failed charge moves the subscription to `past_due`, which **stays entitled**. Revoking on the first decline turns an expired card into churn. asobeast emails the owner once, points them at the billing portal, and then follows Stripe's own retry schedule. Recovery is automatic: the next `invoice.paid` clears the warning and restores the plan with no manual step.
+
+## Downgrade and cancellation
+
+Both are self service through the Stripe customer portal, and both take effect at period end, so the customer keeps what they paid for. A plan change is a portal change, never a second checkout: a workspace that already names a live subscription is refused a checkout session with 409 and sent to the portal, so one workspace is never charged twice.
+
+A workspace also gets at most one checkout session it can complete. Opening a session claims a short lease, so two requests in flight together cannot both create one, and the previous session is expired at Stripe before a new one opens, so a page left open in another tab cannot be paid afterwards. Stripe itself is asked for the customer's subscriptions before any session is created, which closes the window between a completed payment and the webhook that records it.
+
+- asobeast reads the scheduled phase from Stripe and records the plan the workspace will land on.
+- Within a week of the effective date, if the workspace would be over the smaller plan's limits, the owner is emailed with the exact numbers.
+- At the effective date the daily run covers the first items in a stable order and leaves the rest untouched. **Nothing is deleted.**
+
+Configure the portal in the Stripe dashboard to allow plan switching, cancellation, payment method updates and invoice history, and turn on the cancellation reason prompt. It costs nothing and is the highest quality product feedback available.
+
+## Reconciliation
+
+Webhooks are reliable but not guaranteed, and stale local state means either a paying customer locked out or a churned one still served. A daily job compares every workspace against Stripe, treats Stripe as authoritative, corrects the difference and logs every correction at error level, because a reconciliation that quietly fixes drift hides a webhook bug. It also reports subscriptions Stripe knows about that belong to no workspace.
+
+Only an authoritative answer revokes a plan. A subscription Stripe reports as missing is gone and the workspace drops to free, but a timeout, a rate limit, a rejected key, an outage or a price the local catalog cannot name leaves the workspace exactly as it is and is reported as unreconciled, because a provider that cannot answer is not the same as a customer who stopped paying.
+
+An owner can reconcile their own workspace immediately with `POST /billing/reconcile`, so support can resolve a single stuck customer without waiting for the next run. That call answers 503 rather than a report when Stripe cannot be reached.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    Sessions, workspaces and what an unentitled workspace keeps.
+  </Card>
+
+  <Card title="Configuration reference" icon="sliders" href="/configuration/reference">
+    Every Stripe variable and its default.
+  </Card>
+</CardGroup>

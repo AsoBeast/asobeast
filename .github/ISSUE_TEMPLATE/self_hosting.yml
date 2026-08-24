@@ -1,0 +1,47 @@
+name: Self-hosting problem
+description: Get help diagnosing an asobeast deployment.
+title: "ops: "
+labels:
+  - self-hosting
+body:
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Deployment method
+      options:
+        - Docker Compose
+        - Manual
+    validations:
+      required: true
+  - type: textarea
+    id: compose-ps
+    attributes:
+      label: docker compose ps output
+      description: Enter not applicable for a manual deployment.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: health-check
+    attributes:
+      label: Failing health check
+      placeholder: api, web, postgres, or redis
+    validations:
+      required: true
+  - type: dropdown
+    id: compose-config
+    attributes:
+      label: Does docker compose config pass?
+      options:
+        - "Yes"
+        - "No"
+        - Not applicable
+    validations:
+      required: true
+  - type: checkboxes
+    id: secrets
+    attributes:
+      label: Secret safety
+      options:
+        - label: I have not pasted AUTH_SECRET, POSTGRES_PASSWORD, or an asob_ token into this public issue.
+          required: true

@@ -1,0 +1,53 @@
+---
+title: Web app configuration
+sidebarTitle: Web app
+description: "The web app reads API_INTERNAL_URL and TRUST_PROXY at runtime and proxies browser traffic to the API, so one image can target any API without a rebuild."
+icon: globe
+keywords: ["API_INTERNAL_URL","API_PROXY_TIMEOUT_MS","TRUST_PROXY","runtime configuration","proxy"]
+---
+
+The web app reads three variables, all at runtime. Nothing about the API address is baked into the image, so the same image can point at a different API by changing an environment variable and restarting.
+
+## Variables
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `API_INTERNAL_URL` | `http://localhost:4000` | No | API base URL. Server rendered pages call it directly, and browser requests reach it through the `/api/backend/*` proxy |
+| `API_PROXY_TIMEOUT_MS` | `30000` | No | Upper bound for a single proxied request. A timeout returns a `504` error envelope instead of hanging |
+| `TRUST_PROXY` | `0` | No | How many proxies you control sit between the internet and the web app. `true` means 1 and `false` means 0. Decides which `X-Forwarded-For` entry the proxy passes to the API, and therefore what auth throttling keys on. An unparseable value is refused rather than interpreted. See [Hosting](/security/hosting) |
+| `STATUS_PAGE_URL` | Empty | No | An `http` or `https` status page hosted away from this machine. Set it and every error boundary offers a link to it; leave it empty and nothing is shown. A value that is not an http origin is ignored rather than linked, so a misconfiguration cannot turn into a `javascript:` link. See [Uptime probes and the status page](/operations/uptime) |
+
+Compose sets `API_INTERNAL_URL` to `http://api:4000`, which resolves on the Docker network rather than on your machine.
+
+## How the proxy works
+
+The browser only ever talks to the web origin. A call to `/api/backend/apps` is handled by a Next.js route handler, which forwards the request, the session cookie and any bearer header to `API_INTERNAL_URL` and streams the answer back.
+
+Two consequences follow from that, and both are the reason it works this way.
+
+- The browser never makes a cross origin request, so no CORS headers are involved on this path at all. The API still keeps its own allowlist for callers that do reach it directly. See [Hosting](/security/hosting).
+- The API never needs to be published. In the Compose stack it stays on a private network and only host port 3001 is exposed to port 3000 in the web container.
+
+## What the proxy does with the client address
+
+The proxy never passes a caller supplied `X-Forwarded-For` or `X-Real-IP` through to the API, because a caller can write either one and the API keys authentication throttling on what it reads there.
+
+Instead it sends exactly one address, the one `TRUST_PROXY` says it can trust, taken that many entries back from the right of the incoming header. At `0` it sends no address at all, so the API sees the web container as the client and throttles every browser client as one connection. That is blunt but safe, and it is why the documented deployment sets `TRUST_PROXY=1` on both apps.
+
+See [How asobeast works](/concepts/architecture).
+
+## What a timeout looks like
+
+When the API does not answer within `API_PROXY_TIMEOUT_MS`, the proxy returns a `504` in the standard error envelope rather than leaving the request open. Raise the value if you run a slow upstream, but a proxy timeout usually points at a saturated API rather than at a bound that is too tight.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration reference" icon="sliders" href="/configuration/reference">
+    Every API variable with its default.
+  </Card>
+
+  <Card title="Hosting behind TLS and a reverse proxy" icon="shield" href="/security/hosting">
+    What to set before exposing host port 3001.
+  </Card>
+</CardGroup>

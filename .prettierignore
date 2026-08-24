@@ -1,0 +1,13 @@
+pnpm-lock.yaml
+dist
+.next
+.turbo
+coverage
+apps/api/prisma/migrations
+apps/web/playwright-report
+apps/web/test-results
+CHANGELOG.md
+.release-please-manifest.json
+release-please-config.json
+docs/**/*.mdx
+docs/api-reference/openapi.json

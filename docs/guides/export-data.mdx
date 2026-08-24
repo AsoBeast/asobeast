@@ -1,0 +1,50 @@
+---
+title: Export data
+description: The keyword monitor and the rankings view both export CSV. Keyword exports carry the score provenance columns alongside every number.
+icon: file-down
+keywords: ["export","CSV","keywords","rankings","spreadsheet","provenance"]
+---
+
+Both the keyword monitor and the rankings view export the table you are looking at, with the filters you have applied, as a CSV file.
+
+## Export keywords to CSV
+
+The export writes one row per tracked keyword, named `keywords-<appId>-<date>.csv`.
+
+| Column group | Columns |
+| --- | --- |
+| Identity | `keyword`, `source`, `active`, `bucket`, `relevance` |
+| Position | `position`, `delta1d`, `delta7d`, `volatility` |
+| Scores | `traffic`, `difficulty`, `opportunity` |
+| Provenance | `scoredAt`, `scoringSource`, `formulaVersion`, `confidence`, `capturedAt` |
+| Caveat | `scoreComparability` |
+
+The provenance columns travel with the scores on purpose. A spreadsheet that carries `formulaVersion` and `confidence` can still be audited months later, while one that carries only a number cannot.
+
+The last column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
+
+`position` is formatted the same way the table shows it, so an unranked keyword exports as `>200` rather than as an empty cell or a zero. See [Positions and rank depth](/concepts/positions).
+
+## Export rankings to CSV
+
+The rankings view exports the charted window as one row per date and one column per keyword, named `rankings-<appId>-<from>-<to>.csv`.
+
+## Are the files safe to open?
+
+Yes. Every field that begins with `=`, `+`, `-`, `@`, a tab or a carriage return is prefixed with an apostrophe before it is written, so a spreadsheet treats it as text rather than as a formula. Fields containing quotes, commas or newlines are quoted and escaped, and the file carries a byte order mark so spreadsheets read it as UTF-8.
+
+## Use the API instead
+
+For anything scripted, read the API rather than parsing an export. It returns typed JSON and it does not depend on which filters happened to be applied in a browser. See [asobeast API](/api-reference/introduction).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="key" href="/guides/track-keywords">
+    The table the keyword export is taken from.
+  </Card>
+
+  <Card title="Read rankings and SERPs" icon="chart-line" href="/guides/read-rankings">
+    The chart the rankings export is taken from.
+  </Card>
+</CardGroup>

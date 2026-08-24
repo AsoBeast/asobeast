@@ -1,0 +1,56 @@
+---
+title: Capacity exhaustion
+sidebarTitle: Capacity exhaustion
+description: Demand is approaching the pool ceiling. Gate registration rather than degrade the customers who already pay.
+icon: gauge
+keywords: ["capacity","registration","signup gate","pool","growth"]
+---
+
+Capacity exhaustion is the failure that arrives disguised as success. A front page post drives hundreds of signups into a pool sized for a fraction of that, and every paying customer's collection degrades at once. First impressions do not get a retry.
+
+The decision is settled in advance: **gate registration rather than degrade paying customers.**
+
+## Symptoms
+
+- `capacity.headroom.low` arrives in the weekly review, with total demand past 80 percent of pool capacity.
+- `daily.run.incomplete` starts appearing for workspaces that were fine last week.
+- `asobeast_workspace_daily_requests_estimated` grows faster than `asobeast_pool_endpoints`.
+- Registrations answer `503` because the signup gate is already holding the line.
+
+## Triage
+
+<Steps>
+  <Step title="Measure the ceiling, do not estimate it">
+    ```bash
+    curl --silent http://127.0.0.1:3000/api/backend/admin/capacity | jq
+    ```
+
+    This reports demand against capacity for both stores. `GET /jobs/budget` gives the same view for one workspace.
+  </Step>
+  <Step title="Separate growth from a store mix change">
+    A Google Play keyword check costs roughly eight store requests against one for the App Store, so a handful of customers moving to Play can multiply demand without any change in customer count. Compare the two `store` labels on `asobeast_workspace_daily_requests_estimated` week over week.
+  </Step>
+  <Step title="Name the heaviest tenants">
+    Sort the same metric descending, then check `workspace.cost.unpaid` and `workspace.cost.exceeds-revenue`. A trial workspace taking a tenth of the pool is a different problem from healthy paid growth.
+  </Step>
+</Steps>
+
+## Containment
+
+1. **Close the door before the room fills.** Set `SIGNUP_CAPACITY_MAX_UTILIZATION` so that registration is refused once tracked collection passes that share of daily capacity. It only applies when billing is enabled, so self hosted installs are never gated.
+2. Leave existing customers untouched. Shedding work from paying tenants to admit new ones is the wrong trade in every direction.
+3. If one unpaid workspace dominates the pool, suspend it with a written reason rather than degrading everyone. Suspension stops collection for that workspace even on keywords another tenant also tracks, because a shared search is judged per workspace before any row is written.
+4. Do not lower the depth of Google Play searches as a first move. It changes the data customers already have and is hard to explain.
+
+## Recovery
+
+1. Buy datacenter endpoints ahead of demand. They are the cheapest input in the business by a wide margin, and the sync job adds them on its next run.
+2. Confirm capacity with `/admin/capacity` before raising the registration gate.
+3. Raise the gate in steps and watch one full daily cycle at each step.
+4. Revisit the plan limits if a single plan repeatedly reaches the pool ceiling on its own. A limit that never bites is not a limit.
+
+## Who to tell
+
+- People who could not register, in the refusal itself. A waiting list is a better outcome than a broken product.
+- Existing customers, only if their collection was actually affected.
+- Nobody, for a gate that held. A gate doing its job is not an incident, it is the plan working.

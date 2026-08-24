@@ -1,0 +1,77 @@
+---
+title: Personal API tokens
+sidebarTitle: API tokens
+description: Mint a revocable personal API token in Settings and send it as a bearer header. The plaintext value is shown once and stored only as a hash.
+icon: key-round
+keywords: ["personal API token","asob_","bearer","revoke","automation","MCP"]
+---
+
+A personal API token authenticates a script, a scheduled job or the MCP server exactly like a signed in session, without a browser.
+
+## Create a token
+
+<Steps>
+  <Step title="Open the API tokens card in Settings">
+    Sign in first. A token belongs to your account.
+  </Step>
+  <Step title="Name it after what will use it">
+    A name such as `backup-script` or `laptop-mcp` makes revoking the right one possible later.
+  </Step>
+  <Step title="Choose a scope and an expiry">
+    Read only is the default and is all the MCP server or a reporting script needs. Choose read and write only for something that has to change data. An expiry of 30, 90 or 365 days beats a permanent credential sitting in a continuous integration configuration.
+  </Step>
+  <Step title="Copy the value immediately">
+    The plaintext value, which starts with `asob_`, is shown once. asobeast stores only a SHA-256 hash of it and can never show it again.
+  </Step>
+</Steps>
+
+## Scope and expiry
+
+| Setting | Values | Default | Behaviour |
+| --- | --- | --- | --- |
+| Scope | `read` or `write` | `read` | A read only token is refused with `403` on anything that changes data |
+| Expiry | 30, 90 or 365 days, or never | Never | An expired token fails authentication with `401`, exactly like a revoked one |
+
+The tokens card shows each token's scope, expiry, last use and request count, so the one consuming your budget is easy to find.
+
+## Use a token
+
+Send it as a bearer header on every request.
+
+```bash
+curl -H "Authorization: Bearer asob_…" https://your-host/api/backend/health
+```
+
+The path matters. `/api/backend/*` on the web origin is the same proxy the browser uses, and it forwards the bearer header to the API. When your script runs on the same host as the API, you can call the API directly instead.
+
+## Revoke a token
+
+Delete it from the same card. Revocation is immediate: the next request carrying that token fails authentication.
+
+Rate limits count per workspace rather than per token, so a second token adds no capacity and revoking one does not free any. See [Rate limits and quotas](/api-reference/rate-limits).
+
+Revoke rather than rotate `AUTH_SECRET` when a single token leaks. Rotating the secret signs out every browser session and does not affect tokens at all, because tokens are hashes rather than signed values.
+
+## Where tokens are used
+
+| Use | Notes |
+| --- | --- |
+| Scripts and scheduled jobs | Anything that reads the API without a browser |
+| The MCP server | `ASOBEAST_API_TOKEN` is mandatory, and a boot preflight fails without a valid one. Every tool is read only, so a read scoped token is enough |
+| Continuous integration | Store it as a secret, never in the repository |
+
+<Warning>
+  A write scoped personal API token carries the same access as the account that created it, including owner access to the admin surfaces when the owner created it. Never commit one, never paste one into an issue, and give each consumer its own token so a single revocation is enough.
+</Warning>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    How a request is authenticated and authorized.
+  </Card>
+
+  <Card title="The queue dashboard and the OpenAPI surface" icon="shield" href="/security/admin-surfaces">
+    What an owner token unlocks.
+  </Card>
+</CardGroup>

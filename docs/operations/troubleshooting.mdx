@@ -1,0 +1,122 @@
+---
+title: Troubleshooting
+description: "Sixteen symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
+icon: life-buoy
+keywords: ["troubleshooting","404","409","no rankings","alerts not arriving","signed out"]
+---
+
+Each entry below names the symptom the way you would describe it, then gives the cause and the fix.
+
+## Startup and access
+
+<AccordionGroup>
+  <Accordion title="The stack refuses to start">
+    Compose exits with a message about `POSTGRES_PASSWORD` or `AUTH_SECRET`. Both are required in the root `.env` and Compose refuses to start when either is missing or empty. Generate them, then start again.
+
+    ```bash
+    printf 'POSTGRES_PASSWORD=%s\nAUTH_SECRET=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+    ```
+  </Accordion>
+
+  <Accordion title="The API exits immediately on boot">
+    `AUTH_SECRET` is shorter than 32 characters. The API validates it at boot and refuses to run with a weak signing secret. Generate one with `openssl rand -hex 32` and recreate the API container.
+  </Accordion>
+
+  <Accordion title="I cannot register a second account">
+    Registration closed automatically once the owner account existed, which is the default. Set `AUTH_ALLOW_REGISTRATION=true` and restart the API. See [Authentication and accounts](/security/authentication).
+  </Accordion>
+
+  <Accordion title="I am signed out after a restart">
+    `AUTH_SECRET` changed, which invalidates every session signature. Personal API tokens are unaffected. See [Rotate secrets](/operations/rotate-secrets).
+  </Accordion>
+
+  <Accordion title="Sessions do not persist behind a proxy">
+    `AUTH_COOKIE_SECURE=true` marks the cookie `Secure`, so a browser reaching the site over plain HTTP discards it. Terminate TLS, or set it to `false` while you are on HTTP. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+  </Accordion>
+</AccordionGroup>
+
+## Admin surfaces
+
+<AccordionGroup>
+  <Accordion title="/admin/queues returns 404">
+    You are not signed in as the owner in that browser. The surface answers `404` rather than `403` so it does not confirm it exists. Sign in and reload, or check that `BULL_BOARD_ENABLED` is not `false`. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+
+  <Accordion title="/docs returns 404">
+    `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+</AccordionGroup>
+
+## Collection
+
+<AccordionGroup>
+  <Accordion title="No rankings appeared overnight">
+    The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *` and is evaluated in UTC rather than in your local timezone. Check `pipeline.lastDailyRunAt` on `/api/backend/health`, then look at the queue dashboard for stuck or failed jobs. See [The daily pipeline and rate limits](/concepts/pipeline).
+  </Accordion>
+
+  <Accordion title="Rankings show >200 instead of a number">
+    Not a failure. The keyword was checked and the app was not found within the captured depth, which defaults to 200. The bound is read from that row's own depth. See [Positions and rank depth](/concepts/positions).
+  </Accordion>
+
+  <Accordion title="Collection is slow or jobs are backing up">
+    Both workers run at concurrency 1 behind a rate limiter, so a large keyword and market count simply takes longer. Check the request budget card on the settings page or `GET /jobs/budget`. Remove keywords or markets rather than raising the limits, which risks the store throttling your IP address. See [The daily pipeline and rate limits](/concepts/pipeline).
+  </Accordion>
+
+  <Accordion title="A store import fails to parse">
+    A store changed a response shape. The failure is contained to the provider layer, the job fails, and BullMQ retries it with backoff while request handling continues. See [Recover from a broken store parser](/operations/scraper-breakage) for triage, containment and recovery.
+  </Accordion>
+</AccordionGroup>
+
+## Alerts and AI
+
+<AccordionGroup>
+  <Accordion title="Webhook alerts never arrive">
+    The endpoint returned a non 2xx status, which the delivery log records per channel on the settings page. Fix the endpoint, then use flush now to claim the facts currently pending. See [Send alerts](/guides/alerts).
+  </Accordion>
+
+  <Accordion title="Email alerts never arrive">
+    Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. One without the other leaves it off. Check the delivery log for a relay rejection, which usually means the envelope sender is not on a domain the relay accepts.
+  </Accordion>
+
+  <Accordion title="A confirmation, recovery or invitation email never arrives">
+    Account email is recorded like alert email. Every attempt writes a row to the delivery log on the `account` channel, with the event naming what it was for, `verification`, `recovery` or `invitation`, and one of three outcomes.
+
+    | Outcome | What it means |
+    | --- | --- |
+    | `delivered` | The relay accepted the envelope. Anything after that is the recipient's mail provider |
+    | `failed` | The relay refused it, and `detail` carries its response with credentials and link tokens scrubbed out |
+    | `skipped` | The instance has no SMTP transport, so nothing was attempted. See [Hosting behind TLS and a reverse proxy](/security/hosting) |
+
+    Read the rows with the database the deployment already has.
+
+    ```bash
+    docker compose exec -T postgres psql --username asobeast --dbname asobeast \
+      --command "select \"createdAt\", event, status, detail from \"AlertDelivery\" where channel = 'account' order by \"createdAt\" desc limit 20;"
+    ```
+
+    The same outcomes are counted in `/metrics` as `asobeast_account_mail_attempts` over the last day, and `mail.failures.clustered` fires once a fifth of the attempts are being refused. See [Hosted observability](/operations/hosted-observability).
+
+    The relay is verified once before the first message of a process, so a wrong host, port or credential fails with the relay's own response rather than being discovered by a customer who never got their link.
+  </Accordion>
+
+  <Accordion title="Alert links point at localhost or are missing">
+    `WEB_PUBLIC_URL` is unset, so the `link` field is `null` by design rather than a guess that would not open. Set it to your public origin. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+  </Accordion>
+
+  <Accordion title="The AI endpoints return 409">
+    `OPENAI_API_KEY` is unset, which disables the AI audit, the metadata drafts card and action explanations. Every other feature works without it. See [Enable the optional AI features](/guides/ai-features).
+  </Accordion>
+</AccordionGroup>
+
+## Still stuck?
+
+Collect the bounded diagnostics below and open an issue with them.
+
+```bash
+docker compose ps
+docker compose logs --no-color --tail=200 api web
+```
+
+<Warning>
+  Never paste the output of `docker compose config` into an issue. It contains the resolved database password, and with the tunnel overlay composed it also contains the Cloudflare Tunnel token, which is enough to route traffic through your tunnel.
+</Warning>

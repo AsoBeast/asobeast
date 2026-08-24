@@ -1,0 +1,55 @@
+---
+title: Store parser breakage on the hosted service
+sidebarTitle: Hosted parser breakage
+description: "A store changed its response shape and every customer is affected at once. Communication comes first, the one module fix comes second."
+icon: unplug
+keywords: ["parser","store breakage","incident","communication","hosted"]
+---
+
+The self hosted version of this incident is covered in [Recover from a broken store parser](/operations/scraper-breakage). The triage and the fix are identical. What changes on the hosted service is the blast radius: every customer stops collecting at the same moment, and they find out from their own dashboards before they hear from you.
+
+**On the hosted service, communication is the first step, not the last.**
+
+## Symptoms
+
+Everything in the self hosted runbook, plus:
+
+- `asobeast_workspace_rankings_captured` falls to near zero across every workspace that tracks the affected store, while the other store keeps working.
+- `daily.run.incomplete` pages for many workspaces at once rather than one.
+- Error reports arrive tagged with many different workspaces and one repeated error type.
+
+One workspace failing is not this incident. Every workspace on one store failing is.
+
+## Triage
+
+<Steps>
+  <Step title="Confirm the blast radius before anything else">
+    Count the workspaces reporting `daily.run.incomplete`. Many workspaces on one store is a parser break. Many workspaces on both stores is the pool, not the parser.
+  </Step>
+  <Step title="Read one failed job">
+    Open `/admin/queues`, pick the failed set for that store, and read `failedReason`. It names the store, the provider method and the original message, which is where the fix starts.
+  </Step>
+  <Step title="Reproduce outside the queue">
+    Run the provider smoke check against the affected store. A parse failure reproduces immediately and consistently. A rate limit does not.
+  </Step>
+</Steps>
+
+## Containment
+
+1. **Tell customers within the hour.** Post the incident, and say which store is affected and that stored data is untouched.
+2. Pause that store's queue. Failed jobs retry with backoff and add load to a pool that cannot use it.
+3. Leave the other store running. Half a product is much better than none, and the stores fail independently by design.
+4. Do not roll back the database. Collection pauses; it never rewrites history.
+
+## Recovery
+
+1. Fix the parser inside `apps/api/src/store-providers/`. No other module parses store responses, so the change is contained there by design.
+2. Add a regression test built from the response shape that broke, taken from the stored raw payload.
+3. Deploy, unpause the queue, and confirm one workspace captures cleanly before requeueing the rest.
+4. Backfill nothing automatically. Ranking history is a daily series and a synthetic fill would be a lie. Leave the gap and say it is a gap.
+
+## Who to tell
+
+- **Customers, first and in public.** Name the store, state that stored data is safe, and give the next update time rather than an estimate you cannot keep.
+- Customers again when collection resumes, naming the days that will stay empty.
+- Self hosted users, through the release notes, since the same fix reaches them as an upgrade.

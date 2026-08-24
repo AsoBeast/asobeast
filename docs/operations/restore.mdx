@@ -1,0 +1,155 @@
+---
+title: Restore PostgreSQL
+sidebarTitle: Restore
+description: "Restoring replaces the current database. Stop the applications, drop and recreate it, restore the verified archive, then check both health endpoints."
+icon: database
+keywords: ["restore","pg_restore","disaster recovery","rollback","maintenance window"]
+---
+
+A restore replaces the current database entirely. Schedule a maintenance window, confirm which Compose project you are pointing at, and take a fresh pre restore backup before you start.
+
+<Warning>
+  Migrations are forward only. Starting a newer application image against an older restored database applies the pending migrations, which is fine, but starting an older image against a newer database is not supported. Restore the code revision that matches the archive. See [Upgrade and roll back](/install/upgrade).
+</Warning>
+
+## Restore into a running stack
+
+```bash
+set -eu
+restore_file="$HOME/asobeast-backups/asobeast-YYYYMMDDTHHMMSSZ.dump"
+test -s "$restore_file"
+docker compose exec -T postgres pg_restore --list < "$restore_file" > /dev/null
+docker compose stop web api
+docker compose exec -T postgres dropdb --username asobeast --if-exists asobeast
+docker compose exec -T postgres createdb --username asobeast asobeast
+docker compose exec -T postgres pg_restore --username asobeast --dbname asobeast --clean --if-exists --no-owner --exit-on-error < "$restore_file"
+docker compose up -d --wait
+curl --fail --silent --show-error http://127.0.0.1:3000/api/health
+curl --fail --silent --show-error http://127.0.0.1:3000/api/backend/health
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "App";'
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "Keyword";'
+```
+
+The `pg_restore --list` at the top is the important line. It reads the archive before anything is dropped, so a corrupt file fails while the current database is still intact. A truncated archive fails there with `pg_restore: error: could not read from input file: end of file`, and the running database is untouched.
+
+`docker compose stop web api` is not optional. With the API running, `dropdb` refuses with `database "asobeast" is being accessed by other users`, because the API holds a connection pool open.
+
+Like the backup, both commands run inside the `postgres` container, so the client matches the server. See [Back up PostgreSQL](/operations/backups).
+
+Starting the stack applies any migrations the checked out application version requires.
+
+## Restore into a fresh host
+
+Same sequence, with two steps in front.
+
+<Steps>
+  <Step title="Bring up an empty stack">
+    Install asobeast normally and let it boot once, so the volumes and the schema exist. See [Self host with Docker Compose](/install/docker-compose).
+  </Step>
+  <Step title="Check out the matching code revision">
+    Use the revision the archive was taken from, or a newer one. Never an older one.
+  </Step>
+  <Step title="Run the restore block above">
+    Then verify as below.
+  </Step>
+</Steps>
+
+Use a fresh `AUTH_SECRET` on the new host only if you accept that every session is invalidated. Account records come from the archive either way.
+
+## Restore from the offsite copy
+
+This is the path that matters after a disk failure, a theft or a fire, and it is the one nobody rehearses. Rehearse it: fetch the archive onto a **different machine**, with the original powered off, and time the whole thing.
+
+<Steps>
+  <Step title="Fetch the encrypted object">
+    ```bash
+    rclone copyto offsite:asobeast-backups/daily/asobeast-YYYYMMDDTHHMMSSZ.dump.age ./asobeast.dump.age
+    ```
+
+    `rclone lsf offsite:asobeast-backups/daily` lists what is there. The newest name sorts last, because the name carries a UTC timestamp.
+  </Step>
+  <Step title="Decrypt it with the identity you kept off the host">
+    ```bash
+    age --decrypt --identity asobeast-backup-identity.txt --output asobeast.dump asobeast.dump.age
+    ```
+
+    If this fails, the identity file is not the one the recipient key belongs to, and no other copy of it exists. See [Back up PostgreSQL](/operations/backups).
+  </Step>
+  <Step title="Verify before you drop anything">
+    ```bash
+    docker compose exec -T postgres pg_restore --list < ./asobeast.dump > /dev/null
+    ```
+  </Step>
+  <Step title="Restore it">
+    Run the fresh host sequence above with `restore_file` pointing at the decrypted archive.
+  </Step>
+</Steps>
+
+### Recovery objectives
+
+State both as numbers, because at 3am nobody derives them from a cron expression.
+
+| Objective | Value | Where it comes from |
+| --- | --- | --- |
+| Recovery point, RPO | Up to 24 hours | One archive per day. Losing the host loses everything since the last run |
+| Recovery time, RTO from the local archive | Minutes | Measured at 0.20 seconds of `pg_restore` on an 11 MB database, plus the stack restart |
+| Recovery time, RTO from the offsite copy | Transfer time plus minutes | Decryption is negligible, measured at 0.014 seconds for a 101 KB object. The transfer dominates |
+
+The offsite number is bandwidth, not compute. Divide the archive size by the download speed of the machine doing the restoring, add the local restore time, and add the time it takes you to find the identity file. Write the total down here after your own drill, on your own hardware, and repeat it whenever the database grows by an order of magnitude.
+
+An offsite copy nobody has restored is not a backup. Do the drill with the source host genuinely powered off, because that is the only way to prove the drill is not quietly reading the local copy.
+
+## Restore an older archive onto the current image
+
+This is the ordinary disaster recovery path: last month's archive, today's image. It works, and it is exercised in CI on every pull request.
+
+Restore the archive as above, then let the stack start. `prisma migrate deploy` runs on boot and applies every migration added since the archive was taken. Row counts and row contents are preserved; migrations are additive and forward only.
+
+The reverse is not supported. An older image against a newer database has no way to undo a migration, which is what the warning at the top of this page means.
+
+## After a restore
+
+Check three things, in this order.
+
+| Check | Where | Expected |
+| --- | --- | --- |
+| Apps and keywords | The app list, or the two `psql` counts above | Matches what the instance had |
+| Health | `/api/backend/health` | `status` is `ok`, `db` and `redis` are `up` |
+| Collection | The queue dashboard, or `pipeline.lastDailyRunAt` | The next daily run enqueues normally |
+
+`pipeline.lastDailyRunAt` lives in Redis rather than in PostgreSQL, so after a restore onto a fresh Redis it starts empty and fills on the next run. That is expected and is not data loss. See [Health checks and monitoring](/operations/health-checks).
+
+### Verify the schema came back whole
+
+Row counts prove the data arrived. These four queries prove the structure did, which is what decides whether the next boot behaves.
+
+```bash
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command \
+  'select count(*) from "_prisma_migrations" where finished_at is not null;'
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command \
+  'select count(*) from pg_constraint where connamespace = '"'"'public'"'"'::regnamespace and not convalidated;'
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command \
+  'select indexname from pg_indexes where schemaname = '"'"'public'"'"' and indexname like '"'"'%_key'"'"' order by 1;'
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command \
+  'select count(*) from pg_sequences where schemaname = '"'"'public'"'"';'
+```
+
+The first must match the migration count of the image you are running, or the next boot tries to replay migrations over an existing schema. The second must be zero. The third must list the unique indexes, including `AlertEvent_workspaceId_dedupeKey_key` and `ActionItem_workspaceId_fingerprint_key`. The fourth is zero, because every identifier is a cuid rather than a serial, so there is no sequence to fall behind.
+
+Then write something. Add a keyword through the app and confirm it saves. A restore can report success and still leave the database unable to accept an insert, and only a write finds that.
+
+## If the restore fails
+
+Keep the applications stopped. Read `docker compose logs postgres`, then restore the pre restore archive you took at the start before reopening service.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Back up PostgreSQL" icon="database-backup" href="/operations/backups">
+    Where the archive comes from.
+  </Card>
+
+  <Card title="Troubleshooting" icon="life-buoy" href="/operations/troubleshooting">
+    Symptoms after a restore.
+  </Card>
+</CardGroup>

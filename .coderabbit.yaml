@@ -1,0 +1,105 @@
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: true
+  sequence_diagrams: false
+  changed_files_summary: true
+  suggested_labels: false
+  suggested_reviewers: false
+  auto_apply_labels: false
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!**/dist/**"
+    - "!**/.next/**"
+    - "!apps/web/playwright-report/**"
+    - "!docs/**"
+  path_instructions:
+    - path: "{apps,packages}/**"
+      instructions: |
+        This codebase forbids all comments: no line comments, block comments, JSDoc or TODOs. Never suggest adding comments or docstrings; suggest better naming or an extracted function instead.
+        TypeScript strict everywhere. Flag `any`, non-null assertions and `as` assertions outside apps/api/src/store-providers, where untyped scraper payloads enter and must be mapped to typed structures immediately.
+        Never import across packages by relative path. `@asobeast/shared` is imported by package name.
+        Soft size budget: ~400 lines per source file, ~80 lines per API function, ~150 per web function. Treat a breach as a missing seam, not a reason to pad or to shatter a cohesive module.
+        `max-params` warnings on NestJS DI constructors are accepted. Never suggest a facade or a grouped options object to silence one; if a constructor is long, suggest splitting the provider.
+    - path: "apps/api/**"
+      instructions: |
+        Controllers stay thin, services own logic, scoring and scoring-adjacent functions stay pure and unit tested.
+        Every controller input is a DTO validated with class-validator. Response DTOs implement a contract type from @asobeast/shared.
+        Prisma types must never leave apps/api. Flag any Prisma type in a shared contract or an exported signature crossing the boundary.
+        All scraping goes through the StoreProvider interface in apps/api/src/store-providers. Flag any scraper import elsewhere.
+        Raw scraper payloads belong in `raw` JSON columns. All dates are UTC; daily granularity uses Postgres `date`.
+        Store request volume is rate limited per store. Flag any new store call that is not enqueued through the appropriate queue.
+    - path: "apps/web/**"
+      instructions: |
+        src/lib/api is the only place that talks to the API, and every call is typed by an @asobeast/shared contract. Flag a locally redefined response shape.
+        Cache freshness is owned by src/lib/queries.ts. `router.refresh()` is banned; after a mutation, invalidate or seed the cache.
+        View state (sort, ranges, selected ids, filters) lives in searchParams through nuqs parsers, not in duplicate useState.
+        Every route segment needs loading.tsx and error.tsx; every useSuspenseQuery consumer sits under a local Suspense boundary.
+        Position is 1-based. `null` means checked but not found within the depth that row was captured at; render `>{depth}`, never 0. Ranking charts use a reversed Y axis.
+        Icon-only buttons need aria-label, dialogs need a description, tables need a caption, charts keep accessibilityLayer, and colour is never the only signal.
+    - path: "packages/shared/**"
+      instructions: |
+        This package must stay runtime agnostic and dependency light: no Nest, no Next, no Prisma, no Node-only APIs.
+        It owns contract types, the Store union, the store URL parser, normalization helpers and shared constants. Flag anything else.
+    - path: "apps/mcp/**"
+      instructions: |
+        The MCP server is a consumer like the web app: HTTP only, typed by @asobeast/shared. No Prisma, Nest or scraper imports.
+        Every tool is a GET annotated readOnlyHint: true. Flag any mutation tool.
+        stdout belongs to the JSON-RPC stream. All diagnostics go to stderr and the API token is never logged.
+    - path: "{apps/api/test,apps/web/e2e}/**"
+      instructions: |
+        No test may make a real store network call. Providers are mocked; the browser suite runs against the typed mock API.
+        Flag weakened assertions, removed cases, skipped tests or loosened types introduced to make a suite pass.
+        Tests may use `as` assertions. Comments are still forbidden.
+  auto_review:
+    enabled: true
+    drafts: false
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+  pre_merge_checks:
+    docstrings:
+      mode: "off"
+    title:
+      mode: warning
+      requirements: |
+        Title must follow Conventional Commits 1.0.0: type(scope): subject, imperative lowercase subject, max 72 characters. Allowed types: feat, fix, refactor, test, docs, chore, ci, build, perf, revert. Scope must be one of: repo, api, web, mcp, shared, docker, ci, docs, db, providers, apps, keywords, rankings, scoring, competitors, analytics, jobs, audit, metadata, changes, alerts, auth, actions, deps, deps-dev.
+    description:
+      mode: "off"
+  tools:
+    eslint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    yamllint:
+      enabled: true
+    actionlint:
+      enabled: true
+    markdownlint:
+      enabled: false
+chat:
+  art: false
+  auto_reply: true
+knowledge_base:
+  opt_out: false
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "AGENTS.md"
+      - "CONTRIBUTING.md"
+  learnings:
+    scope: local
+  pull_requests:
+    scope: local
+code_generation:
+  docstrings:
+    path_instructions:
+      - path: "**"
+        instructions: |
+          Do not generate docstrings or comments anywhere in this repository. The project forbids all comments.

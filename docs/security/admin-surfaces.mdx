@@ -1,0 +1,100 @@
+---
+title: The queue dashboard and the OpenAPI surface
+sidebarTitle: Admin surfaces
+description: "The queue dashboard and the OpenAPI routes answer 404 to anyone who is not the platform operator, because the surface does not confirm it exists."
+icon: shield
+keywords: ["admin","queue dashboard","Bull Board","API_DOCS","Swagger","404","platform operator"]
+---
+
+Four administrative surfaces ship with asobeast: the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`.
+
+The last two matter to a hosted operator rather than a self hoster, and [Observability for a hosted instance](/operations/hosted-observability) describes what they serve.
+
+## Who the platform operator is
+
+The platform operator is the owner of the bootstrap workspace, the first account the instance ever created. It is a different principal from a workspace owner.
+
+That distinction matters because the two deployment shapes hand out the `owner` role differently. Self hosted puts every account in one workspace, so its first account is both the workspace owner and the operator. Hosted gives every registration its own workspace and makes that customer the `owner` of it, so `owner` alone cannot authorize an instance wide surface. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page.
+
+Owning your own workspace still authorizes everything inside it, including scheduling its deletion and managing its team. Only the cross tenant surfaces require the operator.
+
+## Why 404 and not 403?
+
+A `403` confirms that the thing you asked for exists. A `404` does not.
+
+Anonymous callers therefore get the same answer whether the surface is present, disabled or was never built. There is no login prompt to attack, and a scanner learns nothing from the response.
+
+If you expected a sign in page on `/admin/queues` and got a not found page, nothing is broken. Sign in as the operator in the same browser and reload.
+
+## The queue dashboard
+
+`/admin/queues` serves Bull Board, which shows every queue, its waiting, active, completed and failed jobs, and lets the operator retry a failed job.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `BULL_BOARD_ENABLED` | `true` | `false` removes the dashboard entirely |
+
+The operator gate is unconditional. There is no configuration that opens the queue dashboard to anonymous callers.
+
+## The OpenAPI surface
+
+`API_DOCS` controls who may read `/docs`, `/docs-json` and `/docs-yaml`.
+
+| Value | Behaviour |
+| --- | --- |
+| `owner` | Default. Requires an operator session or an operator personal API token, and answers `404` otherwise |
+| `public` | Serves the documentation and the OpenAPI document to anyone |
+| `off` | Never registers the routes at all |
+
+`public` is a deliberate choice, not an accident, and it is reasonable when the API surface is meant to be read by people you have not given accounts to.
+
+## Both are reached through the web origin
+
+You never reach either surface on the API port. The web app serves route handlers at the identical paths and proxies them through.
+
+Identical paths matter: both surfaces are single page applications that build their asset URLs from the path they are mounted on, so serving `/admin/queues` at any other path breaks its own assets.
+
+The gate itself runs before the application framework's guards, because both surfaces register their own routing outside them. It resolves the session cookie or the `asob_` token itself, and the queue dashboard re asserts the grant afterwards, so a deployment that forgot the wiring fails closed rather than open.
+
+The web app hides the links to both surfaces from anyone who is not the platform operator, using a capability the API computes and returns with the signed in user. That is presentation only. Authorization is the gate above, and a customer who follows a link anyway still gets `404`.
+
+## A read scoped token cannot change queue state
+
+The queue dashboard is the one admin surface that writes. Pausing, resuming, retrying, promoting, cleaning and obliterating a queue all arrive as `PUT`, `POST` or `DELETE`, so the gate applies the token scope the rest of the API applies, and a read scoped token gets `404` on any of them.
+
+| Credential | Read the dashboard | Change queue state |
+| --- | --- | --- |
+| Operator session | Served | Served |
+| Operator token, write scope | Served | Served |
+| Operator token, read scope | Served | `404` |
+
+A reporting or MCP integration therefore only needs a read scoped token, and a leaked one cannot stop the daily run. See [Personal API tokens](/security/api-tokens).
+
+## A suspended workspace loses the queue dashboard
+
+The gate applies the same suspension rules the rest of the API applies, because running outside the guards would otherwise mean running outside the policy.
+
+| Credential | `/admin/queues` | `/docs` |
+| --- | --- | --- |
+| Operator session, workspace suspended | `404`, because the dashboard is an operational surface rather than a read | Served, because reading stays open |
+| Operator token, workspace suspended | `404` | `404` |
+
+A suspended account keeps reading and exporting its data, and keeps billing, so the account can always pay and always leave. See [Rate limits and quotas](/api-reference/rate-limits).
+
+## Retired variables
+
+`BULL_BOARD_USER` and `BULL_BOARD_PASSWORD` are ignored. The dashboard used to use basic authentication and now requires an operator session or a personal API token instead.
+
+The API logs a warning at boot if either is still set. Remove them from your environment.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Personal API tokens" icon="key-round" href="/security/api-tokens">
+    An operator token reaches both surfaces.
+  </Card>
+
+  <Card title="Health checks and monitoring" icon="activity" href="/operations/health-checks">
+    Queue health without opening the dashboard.
+  </Card>
+</CardGroup>

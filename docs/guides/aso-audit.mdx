@@ -1,0 +1,74 @@
+---
+title: Run an ASO audit
+description: The audit scores ten weighted factors from stored data and your answers. Subtitle and keyword field carry weight 0 for a Google Play app.
+icon: clipboard-check
+keywords: ["audit","audit score","rubric","factors","weights","audit history"]
+---
+
+The audit turns a listing into a weighted score out of 100 across ten factors, and tells you which factor is costing you the most.
+
+## Run an audit
+
+Open the audit tab on an app and run it. The rubric is deterministic: the same stored data and the same answers always produce the same score, so a change in the number means a change in the listing rather than a change of mood.
+
+Factors asobeast can measure by itself are computed from stored data, including character usage against the field limits, keyword field hygiene, live positions, rating numbers and freshness. The remaining subjective factors come from a short questionnaire, or from the optional AI pass. See [Enable the optional AI features](/guides/ai-features).
+
+## Read the score
+
+Ten factors, each scored 0 to 10 and multiplied by a store specific weight.
+
+| Factor | App Store weight | Google Play weight |
+| --- | --- | --- |
+| Title | 20 | 20 |
+| Subtitle | 15 | 0 |
+| Keyword field | 15 | 0 |
+| Description | 5 | 15 |
+| Screenshots | 15 | 15 |
+| Preview video | 5 | 5 |
+| Ratings | 15 | 15 |
+| Icon | 5 | 5 |
+| Rankings | 10 | 10 |
+| Conversion | 5 | 5 |
+
+The two zeros are the important row. Subtitle and keyword field do not exist on Google Play, so scoring them would penalise a listing for lacking a field the store does not have. The description carries more weight instead, rising from 5 to 15 because Google Play actually indexes it.
+
+The totals therefore differ: 110 on the App Store and 90 on Google Play. The overall score stays on a 0 to 100 scale because it is a weighted average over the factors that were actually scored, which is also why an unanswered check never drags it down. See [App Store and Google Play](/concepts/stores).
+
+Recommendations are grouped so you can act on the cheap ones first.
+
+| Group | Meaning |
+| --- | --- |
+| Quick wins | Text edits you control directly |
+| High impact | Creative and reputation work that moves the score most |
+
+An unanswered check is left unscored rather than guessed, and never counts against you.
+
+## Follow the audit history
+
+A score snapshot is written daily on `CRON_AUDIT`, which defaults to `0 6 * * *`, meaning 06:00 UTC, after the daily pipeline. The history chart is what tells you whether an edit worked.
+
+Audit score rows follow `RETENTION_AUDIT_SCORES_DAYS`, which defaults to `0` and therefore keeps them forever.
+
+## Optional AI evidence
+
+With `OPENAI_API_KEY` set, the audit tab offers a single AI pass that reads the listing text plus the store icon and screenshots and scores the subjective factors with a rationale. It runs only when you click, and the result is cached per app so the nightly snapshot reuses it.
+
+With no key the deterministic factors still score and the AI only checks stay pending. See [Enable the optional AI features](/guides/ai-features).
+
+## Troubleshooting
+
+- **The score dropped without an edit.** Ratings, freshness and live positions are inputs. A slipping position or an aging release lowers the score on its own.
+- **A factor shows as pending.** It is an AI only or questionnaire check that has not been answered. Pending never counts against the score.
+- **The score differs between an iOS and an Android listing of the same product.** Expected. The weights differ.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
+    Fix what the audit found.
+  </Card>
+
+  <Card title="Work the Action Center" icon="list-checks" href="/guides/action-center">
+    Weak audit factors become action items automatically.
+  </Card>
+</CardGroup>

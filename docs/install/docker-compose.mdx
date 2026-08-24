@@ -1,0 +1,121 @@
+---
+title: Self host with Docker Compose
+description: "Clone the repository, generate the two required secrets and run docker compose up. The API applies migrations and seeds the default workspace on first boot."
+icon: container
+keywords: ["docker compose","self host","install","POSTGRES_PASSWORD","AUTH_SECRET"]
+---
+
+Docker Compose is the supported way to run asobeast. Three commands take you from a clone to a running instance, because the API applies its own database migrations and seeds the default workspace when it boots.
+
+## Install asobeast
+
+<Steps>
+  <Step title="Clone the repository">
+    ```bash
+    git clone https://github.com/AsoBeast/asobeast.git
+    cd asobeast
+    ```
+  </Step>
+  <Step title="Generate the two required secrets">
+    ```bash
+    printf 'POSTGRES_PASSWORD=%s\nAUTH_SECRET=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+    chmod 600 .env
+    ```
+
+    Both values are URL safe and stay in the ignored root `.env`. Compose refuses to start when either one is missing or empty, so a half configured instance never boots. `chmod 600` keeps the file readable only by its owner.
+  </Step>
+  <Step title="Start the stack">
+    ```bash
+    docker compose up --build -d --wait
+    ```
+
+    `--wait` returns only once every health check passes, so a successful exit means the stack is actually serving.
+  </Step>
+  <Step title="Create the owner account">
+    Open `http://localhost:3001`. A fresh installation redirects to registration. The first account becomes the owner, and registration closes automatically afterwards unless you set `AUTH_ALLOW_REGISTRATION=true`.
+  </Step>
+</Steps>
+
+## Run the published images instead
+
+`docker compose up --build` compiles both applications from your clone. `docker-compose.pull.yml` runs the images published for each release instead, which needs neither a clone nor a build:
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/AsoBeast/asobeast/main/docker-compose.pull.yml
+printf 'POSTGRES_PASSWORD=%s\nAUTH_SECRET=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)" > .env
+chmod 600 .env
+docker compose -f docker-compose.pull.yml up -d --wait
+```
+
+Both files declare the same project name, the same volumes and the same limits, so an installation can move between them without touching its data. See [Run a published release](/install/published-images) for the tag shapes and for `ASOBEAST_IMAGE_TAG`.
+
+## What does each service do?
+
+| Service | Role | Notes |
+| --- | --- | --- |
+| `postgres` | Durable system of record | Volume `pgdata`. Back this up |
+| `redis` | BullMQ queue state | Volume `redisdata`. Reconstructible, so it needs no application backup |
+| `api` | NestJS API, queue workers, daily pipeline | Applies Prisma migrations and seeds the default workspace on boot |
+| `web` | Next.js dashboard and same origin proxy | The only service that publishes a port |
+
+There is no manual migration step. The API waits for PostgreSQL and Redis to report healthy, applies every pending forward migration, seeds the default workspace and then listens.
+
+## What is exposed?
+
+Only host port 3001, published to port 3000 in the `web` container. The API, PostgreSQL and Redis stay on Docker networks that are not reachable from the host, and the `backend` network is marked `internal`.
+
+The browser never talks to the API directly. It calls `/api/backend/*` on the web origin, and the Next.js proxy forwards those requests to `API_INTERNAL_URL`, which Compose sets to `http://api:4000`. The web image reads that value at runtime, so pointing it at a different API needs no rebuild.
+
+Every service has a health check and a restart policy, and the application containers run as non root users.
+
+## Verify the installation
+
+| URL | What it tells you |
+| --- | --- |
+| `http://localhost:3001` | The dashboard is serving |
+| `http://localhost:3001/api/health` | The web container is alive |
+| `http://localhost:3001/api/backend/health` | The API is alive and reachable through the proxy |
+| `http://localhost:3001/admin/queues` | The queue dashboard, for a signed in owner |
+| `http://localhost:3001/docs` | The OpenAPI surface, for a signed in owner under the default `API_DOCS=owner` |
+
+<Warning>
+  `/admin/queues` and `/docs` answer 404 to anyone who is not a signed in owner. That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.
+</Warning>
+
+## Customize the installation
+
+The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default.
+
+Copy `apps/api/.env.example` to `apps/api/.env` only when you want an optional feature such as email alerts, the AI assisted audit, a different collection schedule or different retention windows. Compose loads that file when it exists and ignores it when it does not. See [Configuration reference](/configuration/reference).
+
+Values set directly in `docker-compose.yml`, including `DATABASE_URL`, `REDIS_HOST` and `REDIS_PORT`, override anything an older `apps/api/.env` sets for the same keys. Run `docker compose config` to inspect the resolved topology.
+
+## Common operations
+
+```bash
+docker compose ps
+docker compose logs --no-color --tail=200 api web
+docker compose down
+```
+
+Never paste resolved Compose configuration into an issue, because it contains the database password.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Import an app" icon="download" href="/guides/import-an-app">
+    Paste a store URL and start tracking.
+  </Card>
+
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    The owner bootstrap, sessions and registration.
+  </Card>
+
+  <Card title="Back up PostgreSQL" icon="database-backup" href="/operations/backups">
+    The only thing in the stack that needs backing up.
+  </Card>
+
+  <Card title="Upgrade and roll back" icon="circle-arrow-up" href="/install/upgrade">
+    Forward migrations, pinned tags and what a rollback really means.
+  </Card>
+</CardGroup>

@@ -1,0 +1,11 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "maxWorkers": 1,
+  "testEnvironment": "node",
+  "testRegex": ".bench-spec.ts$",
+  "setupFiles": ["<rootDir>/setup-load.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  }
+}

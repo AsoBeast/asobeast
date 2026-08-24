@@ -1,0 +1,61 @@
+name: Store breakage
+description: Report a store response or layout change that broke a provider.
+title: "fix: "
+labels:
+  - bug
+  - store-breakage
+body:
+  - type: dropdown
+    id: store
+    attributes:
+      label: Store
+      options:
+        - Apple App Store
+        - Google Play
+    validations:
+      required: true
+  - type: dropdown
+    id: provider-method
+    attributes:
+      label: Provider method
+      options:
+        - getApp
+        - search
+        - suggest
+        - similar
+        - topCharts
+        - reviews
+        - availability
+        - developerApps
+    validations:
+      required: true
+  - type: input
+    id: country
+    attributes:
+      label: Country
+      placeholder: us
+    validations:
+      required: true
+  - type: input
+    id: target
+    attributes:
+      label: Failing app or keyword
+      description: Provide the store URL, app identifier, or keyword.
+    validations:
+      required: true
+  - type: textarea
+    id: error
+    attributes:
+      label: StoreRequestError message
+      render: shell
+    validations:
+      required: true
+  - type: dropdown
+    id: extent
+    attributes:
+      label: Failure extent
+      options:
+        - Total failure
+        - Partial failure
+    validations:
+      required: true

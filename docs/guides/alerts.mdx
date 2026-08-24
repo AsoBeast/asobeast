@@ -1,0 +1,149 @@
+---
+title: Send alerts
+description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
+icon: bell
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY"]
+---
+
+Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
+
+## Choose a delivery mode
+
+`ALERT_DELIVERY` has two values and defaults to `batched`.
+
+| Mode | Behaviour | Suits |
+| --- | --- | --- |
+| `batched` | Up to two scoped reports per channel, sent after the daily pipeline reports every child job settled | Almost everyone, because the underlying facts have daily granularity |
+| `instant` | One notification per event | A consumer that needs a per event stream, or an existing integration built on it |
+
+In batched mode each subscribed channel receives the owned app report first and the competitor report second. Subscription filters apply to both scopes independently, so an owned only channel receives one report and a competitor only channel receives the other. An empty scope produces no notification at all.
+
+Batched delivery is durable. A flush claims a fixed snapshot of pending rows before sending, so a queue or process failure leaves that claim resumable with the same rows, timestamp and delivery identifiers. Later facts wait for a later claim rather than joining the retry. Re runs and multi market checks deduplicate the same fact before it is claimed, with the latest values winning.
+
+There is no separate alert schedule. `CRON_DAILY` controls when processing starts, while workload and retry duration decide when the report goes out.
+
+## Subscribe to events
+
+| Event | Fires when | Threshold setting |
+| --- | --- | --- |
+| `rank.dropped` | An owned app position falls | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
+| `rank.improved` | An owned app position rises | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
+| `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
+| `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
+| `metadata.changed` | A snapshot differs from the previous one | None |
+| `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
+| `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST`, webhook only |
+
+Existing subscribers are unaffected by `action.opened` until they opt into it on the settings page.
+
+## Webhook delivery
+
+A webhook receives a JSON POST with two headers, plus a signature header when the subscription has a secret.
+
+| Header | Value |
+| --- | --- |
+| `X-Asobeast-Event` | The event name, for example `alerts.batch` |
+| `X-Asobeast-Signature` | `sha256=<hex>`, an HMAC-SHA256 of the exact request body |
+
+Verify the signature by computing an HMAC-SHA256 of the raw request body with your subscription secret and comparing it, in constant time, with the header value. Compute it over the bytes you received rather than over a re serialized object.
+
+### Which endpoints a webhook may reach
+
+A webhook url must be `http` or `https`, must not embed credentials, and must resolve to a public address. Loopback, private, carrier grade NAT, link local and cloud metadata ranges are refused, in both their IPv4 and their IPv6 mapped forms. The check runs twice, once when the subscription is saved and again on the socket as it connects, so a hostname that answers with a public address and then with an internal one is still refused. Redirects are never followed, which keeps the payload and its signature on the origin you registered.
+
+Set `WEBHOOK_ALLOW_PRIVATE_TARGETS` to `true` to deliver to your own network from a self hosted instance. See the [configuration reference](/configuration/reference) for what that changes.
+
+A granular event looks like this.
+
+```json
+{
+  "event": "action.opened",
+  "occurredAt": "2026-07-30T03:10:00.000Z",
+  "app": {
+    "id": "cl…",
+    "name": "Habit Tracker",
+    "store": "APP_STORE",
+    "country": "us"
+  },
+  "action": {
+    "id": "cl…",
+    "rule": "keyword.add_uncovered",
+    "category": "metadata",
+    "priority": "high",
+    "impact": 71,
+    "firstSeenAt": "2026-07-30T03:10:00.000Z",
+    "reopened": false
+  },
+  "keyword": { "id": "cl…", "text": "budget planner" },
+  "evidence": {
+    "rule": "keyword.add_uncovered",
+    "opportunity": 66.5,
+    "volume": 62,
+    "relevance": 80,
+    "indexedFields": ["title", "subtitle", "keywordField"],
+    "uncoveredFields": ["title", "subtitle", "keywordField"],
+    "keywordFieldCharsFree": 18
+  },
+  "link": "https://aso.example.com/actions?action=cl…"
+}
+```
+
+A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
+
+```json
+{
+  "event": "alerts.batch",
+  "scope": "owned_apps",
+  "occurredAt": "2026-07-30T04:12:00.000Z",
+  "window": { "from": "2026-07-29", "to": "2026-07-30" },
+  "totals": { "events": 12, "apps": 2 },
+  "apps": [],
+  "events": []
+}
+```
+
+`link` is present only when `WEB_PUBLIC_URL` is set. That variable is used for nothing else. When it is unset the link is `null` rather than a broken `localhost` guess.
+
+Slack, Discord and ntfy all accept a plain webhook endpoint, and asobeast formats for the first two.
+
+## Email delivery
+
+Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one alone enables it.
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `SMTP_HOST` | Empty | Required to enable email |
+| `SMTP_FROM` | Empty | Required to enable email, for example `asobeast <alerts@example.com>` |
+| `SMTP_PORT` | 587 | Use 465 with `SMTP_SECURE=true`, otherwise 587 or 25 |
+| `SMTP_SECURE` | `false` | `true` wraps the connection in TLS from the start, which is what port 465 expects |
+| `SMTP_USER` | Empty | Leave empty for an unauthenticated relay |
+| `SMTP_PASSWORD` | Empty | Paired with `SMTP_USER` |
+
+To try it locally, run a throwaway SMTP sink. See [Set up a development environment](/install/local-development).
+
+## Read the delivery history
+
+Every attempt on every channel is logged with its outcome and surfaced per channel on the settings page. Rows follow `RETENTION_DELIVERIES_DAYS`, which defaults to 30 days.
+
+Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by default. Claims that have not finished are retained regardless, so a stuck flush is never pruned out from under its retry.
+
+## Troubleshooting
+
+- **The webhook endpoint returns a non 2xx status.** The delivery is logged as failed with the status. Fix the endpoint and use flush now to make an early claim of the facts currently pending.
+- **The signature does not verify.** Compute the HMAC over the raw request body bytes. Re serializing the parsed JSON changes whitespace and key order, which changes the digest.
+- **Email never sends.** Check that both `SMTP_HOST` and `SMTP_FROM` are set. One without the other leaves email disabled.
+- **The relay rejects the sender.** Many relays require the envelope sender to match an authorized domain. Set `SMTP_FROM` to an address on the domain the relay accepts.
+- **Deep links are missing.** `WEB_PUBLIC_URL` is unset, so `link` is `null` by design.
+- **Reports arrive at an unpredictable hour.** In batched mode the flush waits for every child job to settle, including retries. `CRON_DAILY` sets the start, not the delivery time.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Work the Action Center" icon="list-checks" href="/guides/action-center">
+    Where `action.opened` comes from.
+  </Card>
+
+  <Card title="Compare a portfolio" icon="layers" href="/guides/portfolio">
+    Where the weekly digest comes from.
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: Connect an agent
+sidebarTitle: Setup
+description: "Connect straight to the hosted endpoint, or run the stdio server yourself. Both transports expose the identical read only tool surface."
+icon: cable
+keywords: ["MCP setup","Claude Code","Claude Desktop","remote MCP","ASOBEAST_API_TOKEN","ASOBEAST_API_URL","stdio"]
+---
+
+There are two transports and they expose the same tools.
+
+| Transport | What runs where | Use it when |
+| --- | --- | --- |
+| Hosted endpoint | Your client connects to `POST /mcp` on your instance. Nothing to install | You want the shortest path, and your instance is reachable from the agent |
+| Local stdio server | Your client launches `apps/mcp/dist/index.js` on your own machine, which calls the HTTP API | You are running from a checkout, or your client has no remote transport |
+
+The tool catalog is one set of definitions consumed by both, so there is no hosted only tool and no self hosted only tool. See [MCP tool reference](/mcp/tools).
+
+Both transports serve MCP `2026-07-28` and the 2025 revisions, and none of the commands below carry a protocol version, so none of them change with the revision your client picks. See [The asobeast MCP server](/mcp/introduction).
+
+Either way the Settings card writes the configuration for you. The manual path is the same thing typed by hand.
+
+## Connect to the hosted endpoint
+
+<Steps>
+  <Step title="Mint a read only token">
+    Open the MCP server card in Settings and click connect an agent. The token is read only, which is all any tool needs.
+  </Step>
+  <Step title="Copy the hosted snippet">
+    The card shows the endpoint and a ready to paste command, pre filled with the origin you are browsing.
+  </Step>
+</Steps>
+
+```bash
+claude mcp add --transport http asobeast https://your-host/api/backend/mcp --header "Authorization: Bearer asob_…"
+```
+
+```json claude_desktop_config.json
+{
+  "mcpServers": {
+    "asobeast": {
+      "type": "http",
+      "url": "https://your-host/api/backend/mcp",
+      "headers": { "Authorization": "Bearer asob_…" }
+    }
+  }
+}
+```
+
+The endpoint authenticates with the same `asob_` token as the REST API, so there is no second credential to manage. Every request is authenticated, entitled and rate limited exactly like a REST call. See [Rate limits and quotas](/api-reference/rate-limits).
+
+A token is the only credential it takes. A browser session cookie is answered with `401` even when it belongs to a signed in owner, so the endpoint carries no ambient authority a page could borrow.
+
+## The quick path for the stdio server
+
+<Steps>
+  <Step title="Open the MCP server card in Settings">
+    Sign in to your instance first.
+  </Step>
+  <Step title="Click connect an agent and name a token">
+    asobeast mints the token and shows two ready to paste snippets, the Claude Code command and the Claude Desktop configuration, pre filled with the origin you are browsing.
+  </Step>
+  <Step title="Replace the entrypoint with an absolute path">
+    The snippet cannot know where your checkout lives. Substitute the absolute path to `apps/mcp/dist/index.js`.
+  </Step>
+</Steps>
+
+The token is shown once. Copy it before you leave the page.
+
+## The manual path
+
+<Steps>
+  <Step title="Build the server">
+    ```bash
+    pnpm build
+    ```
+
+    This produces `apps/mcp/dist/index.js`.
+  </Step>
+  <Step title="Mint a personal API token">
+    Use the API tokens card in Settings. See [Personal API tokens](/security/api-tokens).
+  </Step>
+  <Step title="Register the server with your client">
+    Use the configuration below.
+  </Step>
+</Steps>
+
+## Client configuration for stdio
+
+<Tabs>
+  <Tab title="Claude Code">
+    ```bash
+    claude mcp add asobeast --env ASOBEAST_API_URL=http://localhost:4000 --env ASOBEAST_API_TOKEN=asob_… -- node /absolute/path/to/asobeast/apps/mcp/dist/index.js
+    ```
+  </Tab>
+  <Tab title="Claude Desktop">
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "command": "node",
+          "args": ["/absolute/path/to/asobeast/apps/mcp/dist/index.js"],
+          "env": {
+            "ASOBEAST_API_URL": "http://localhost:4000",
+            "ASOBEAST_API_TOKEN": "asob_…"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Any stdio client">
+    ```bash
+    ASOBEAST_API_URL=http://localhost:4000 \
+    ASOBEAST_API_TOKEN=asob_… \
+    node /absolute/path/to/asobeast/apps/mcp/dist/index.js
+    ```
+  </Tab>
+</Tabs>
+
+<Warning>
+  Always use an absolute path to the entrypoint. Claude Desktop and Claude Code do not necessarily launch the process from your repository root, so a relative path fails with `MODULE_NOT_FOUND`. This is the most common setup failure.
+</Warning>
+
+## Choosing ASOBEAST\_API\_URL
+
+`ASOBEAST_API_URL` is resolved on the machine the agent runs on, not by a browser. That is the second most common failure, because the value that works in your address bar is often not the value the agent needs.
+
+| Where the agent runs | Value |
+| --- | --- |
+| The same host as the instance | `http://localhost:4000` |
+| Anywhere else | Your public web origin plus `/api/backend` |
+
+The proxy path is not a fallback. In a Compose deployment the API is on a private network and is never published, so `https://your-host/api/backend` is the only route in from another machine. The proxy forwards the bearer header to the API unchanged. See [How asobeast works](/concepts/architecture).
+
+It defaults to `http://localhost:4000`. There is no default for the token.
+
+## Verify the connection
+
+At startup the server calls `/auth/me` on your instance before it registers a single tool. Three outcomes end the process with a non zero exit status and a readable message.
+
+| Situation | What you see |
+| --- | --- |
+| `ASOBEAST_API_TOKEN` unset or empty | A message telling you to set it to a personal API token |
+| The token was rejected | A `401` message telling you to mint a fresh token in Settings |
+| The account is not entitled | A message that the trial expired or a plan is required |
+
+Diagnostics go to stderr, because on stdio the JSON-RPC stream owns stdout. The token is never logged.
+
+When the preflight passes, the server logs the instance it connected to and the tools appear in your client.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="MODULE_NOT_FOUND on startup">
+    The entrypoint path is relative, or the server has not been built. Run `pnpm build` and register the absolute path to `apps/mcp/dist/index.js`.
+  </Accordion>
+
+  <Accordion title="The process exits immediately">
+    The preflight failed. Read the stderr output in your client's MCP log, which names the exact cause: a missing token, a rejected token, or an unentitled account.
+  </Accordion>
+
+  <Accordion title="The tools do not appear in the client">
+    The client did not start the process, or it exited during preflight. Confirm the command runs on its own in a terminal with the same environment variables, which surfaces the error directly.
+  </Accordion>
+
+  <Accordion title="The agent cannot reach localhost">
+    The agent is on a different machine than the instance. `localhost` there means that machine. Set `ASOBEAST_API_URL` to your public web origin plus `/api/backend`, or use the hosted endpoint instead, which needs no local process at all.
+  </Accordion>
+
+  <Accordion title="Connecting spends requests from the MCP budget">
+    A client configured to probe for the newer protocol revision sends one `server/discover` request before anything else, and it counts against your workspace's `mcpRequestsPerMinute` budget like any other request. Connecting and listing the tools costs two requests, so a client that reconnects often spends more of the budget than one that stays connected. See [Rate limits and quotas](/api-reference/rate-limits).
+  </Accordion>
+
+  <Accordion title="The hosted endpoint answers 401, 402, 403 or 429">
+    Each one is a different problem. A `401` means the token is missing, revoked or expired. A `402` means the workspace has no live plan. A `403` means the workspace is suspended. A `429` means a rate limit is spent, and the response says when it reopens. See [Rate limits and quotas](/api-reference/rate-limits).
+  </Accordion>
+</AccordionGroup>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
+    Every tool and its parameters, generated from the catalog.
+  </Card>
+
+  <Card title="MCP recipes" icon="sparkles" href="/mcp/recipes">
+    Prompts that work well once you are connected.
+  </Card>
+</CardGroup>

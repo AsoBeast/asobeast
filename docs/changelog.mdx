@@ -1,0 +1,37 @@
+---
+title: Changelog
+description: "Release Please owns versions, tags and CHANGELOG.md for asobeast, and every release publishes multi architecture container images to GHCR."
+icon: history
+mode: center
+keywords: ["changelog","releases","versions","release please"]
+---
+
+Release Please owns versions, tags and `CHANGELOG.md`. The generated file in the repository is the complete record, and this page deliberately does not copy it, because a second copy would drift.
+
+## Current release line
+
+`1.0.0` is the first release.
+
+It ships multi-tenancy enforced by PostgreSQL row level security, typed plans with quotas, Stripe billing, a proxy pool with a cost capped residential fallback, per workspace rate limits, a remote MCP endpoint alongside the stdio binary, structured logging and per workspace metrics, account recovery, and complete workspace export and deletion. None of it changes a self hosted installation by default, because `BILLING_ENABLED` is `false`, `PROXY_PROVIDER` is `none`, and every variable has a working default.
+
+The `1.x` line takes normal feature work, constrained by the compatibility promise below.
+
+## What does 1.0.0 promise?
+
+Compatibility for three surfaces throughout the `1.x` line: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface. Breaking any of them requires `2.0.0`.
+
+Environment variables, the database schema and internal modules are outside that promise, and every schema change ships as a forward Prisma migration. See [Upgrade and roll back](/install/upgrade).
+
+## Read the release notes
+
+<CardGroup cols={2}>
+  <Card title="Releases" icon="tag" href="https://github.com/AsoBeast/asobeast/releases">
+    Every tagged release with its notes and its container images.
+  </Card>
+
+  <Card title="CHANGELOG.md" icon="file-text" href="https://github.com/AsoBeast/asobeast/blob/main/CHANGELOG.md">
+    The full generated changelog in the repository.
+  </Card>
+</CardGroup>
+
+Read the notes before every upgrade. Anything an operator must act on appears in a commit subject or a breaking change footer, which is what reaches the changelog.

@@ -1,0 +1,30 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.8.2
+    restart: unless-stopped
+    command: ["tunnel", "--no-autoupdate", "run"]
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env}
+      TUNNEL_METRICS: 127.0.0.1:2000
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - frontend
+  web:
+    ports: !reset []
+    environment:
+      TRUST_PROXY: "1"
+  api:
+    environment:
+      AUTH_COOKIE_SECURE: "true"
+      WEB_PUBLIC_URL: https://${ASOBEAST_DOMAIN:?Set ASOBEAST_DOMAIN in .env}

@@ -1,0 +1,525 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+            turbo-${{ runner.os }}-
+      - run: pnpm turbo run lint test build
+      - run: pnpm check:rate-classes
+      - run: pnpm check:compose-limits
+      - run: pnpm check:env-documented
+      - run: pnpm check:image-defaults
+      - run: pnpm docs:mcp-tools:check
+      - run: pnpm turbo run test:cov
+      - name: Summarize coverage
+        if: always()
+        run: |
+          for report in apps/api/coverage apps/web/coverage packages/shared/coverage; do
+            summary="${report}/coverage-summary.json"
+            test -f "${summary}" || continue
+            echo "### ${report}" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.total | to_entries[] | select(.key != "branchesTrue") | "- \(.key): \(.value.pct)%"' "${summary}" >> "$GITHUB_STEP_SUMMARY"
+          done
+      - name: Report release state
+        if: github.event_name == 'pull_request'
+        env:
+          MODE: warn
+        run: .github/scripts/verify-release-state.sh
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: asobeast
+          POSTGRES_PASSWORD: asobeast
+          POSTGRES_DB: asobeast_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asobeast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_test
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api run db:deploy
+      - run: pnpm --filter api test:e2e
+
+  isolation:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: asobeast
+          POSTGRES_PASSWORD: asobeast
+          POSTGRES_DB: asobeast_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asobeast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_test
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api run db:deploy
+      - run: pnpm --filter api test:isolation
+
+  openapi-drift:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: asobeast
+          POSTGRES_PASSWORD: asobeast
+          POSTGRES_DB: asobeast_openapi
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asobeast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_openapi
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+      API_DOCS: public
+      BULL_BOARD_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api run db:deploy
+      - run: pnpm turbo run build --filter=api
+      - name: Start the api
+        run: |
+          node apps/api/dist/main.js &
+          api_pid=$!
+          echo "${api_pid}" > /tmp/api.pid
+          for _ in $(seq 1 60); do
+            if ! kill -0 "${api_pid}" 2>/dev/null; then
+              echo "The api exited before it became healthy." >&2
+              exit 1
+            fi
+            curl --silent --fail http://127.0.0.1:4000/health && exit 0
+            sleep 1
+          done
+          echo "The api did not report healthy within 60 seconds." >&2
+          exit 1
+      - run: pnpm docs:openapi:check
+      - name: Stop the api
+        if: always()
+        run: kill "$(cat /tmp/api.pid)" || true
+
+  upgrade-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: asobeast
+          POSTGRES_PASSWORD: asobeast
+          POSTGRES_DB: asobeast_upgrade
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asobeast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_upgrade
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm run build:packages
+      - name: Resolve the upgrade baseline
+        id: baseline
+        env:
+          UPGRADE_FROM_TAG: v1.0.0
+        run: |
+          sha="$(git rev-parse --verify --quiet "${UPGRADE_FROM_TAG}^{commit}" || true)"
+          if [ -z "${sha}" ] || [ "${sha}" = "$(git rev-parse --verify HEAD)" ]; then
+            echo "run=false" >>"${GITHUB_OUTPUT}"
+            echo "::notice::${UPGRADE_FROM_TAG} is not an earlier release, so there is nothing to upgrade from. Bump UPGRADE_FROM_TAG once a later version ships."
+          else
+            echo "run=true" >>"${GITHUB_OUTPUT}"
+          fi
+      - if: steps.baseline.outputs.run == 'true'
+        run: apps/api/test/upgrade/run-drill.sh
+        env:
+          UPGRADE_FROM_TAG: v1.0.0
+          UPGRADE_DRILL_REQUIRE_TAG: "1"
+      - if: steps.baseline.outputs.run == 'true'
+        run: apps/api/test/upgrade/verify-boot.sh
+      - if: steps.baseline.outputs.run == 'true'
+        run: pnpm --filter api run test:upgrade
+
+  shutdown-drill:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: asobeast
+          POSTGRES_PASSWORD: asobeast
+          POSTGRES_DB: asobeast_shutdown
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U asobeast"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_shutdown
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm --filter api run db:deploy
+      - run: pnpm --filter api run test:shutdown
+
+  pipeline-benchmark:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://asobeast:asobeast@localhost:5433/asobeast_bench
+      AUTH_SECRET: test-secret-test-secret-test-secret-0123456789
+      POSTGRES_PASSWORD: asobeast
+      BENCH_MAX_FANOUT_MS: "60000"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm run build:packages
+      - name: Start the stack under the limits it ships with
+        run: pnpm run bench:stack
+      - run: pnpm --filter api run db:deploy
+      - run: pnpm --filter api run bench:small
+      - name: Report what the constrained services took
+        if: always()
+        run: docker stats --no-stream --format '{{.Name}} {{.MemUsage}} {{.MemPerc}}'
+      - name: Print database diagnostics
+        if: failure()
+        run: docker compose -f docker-compose.bench.yml logs --no-color --tail=100
+      - name: Remove the stack
+        if: always()
+        run: pnpm run bench:stack:down
+
+  backup-drill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+      - run: pnpm run build:packages
+      - name: Install the offsite backup tooling
+        run: sudo apt-get update && sudo apt-get install -y age rclone
+      - name: Start the development services
+        run: docker compose -f docker-compose.dev.yml up -d --wait
+      - name: Start object storage off the host
+        run: |
+          docker run -d --name offsite -p 9000:9000 \
+            -e MINIO_ROOT_USER=asobeast \
+            -e MINIO_ROOT_PASSWORD=asobeast-offsite-secret \
+            minio/minio:latest server /data
+          for _ in $(seq 1 60); do
+            curl --silent --fail http://127.0.0.1:9000/minio/health/live && exit 0
+            sleep 1
+          done
+          echo "MinIO did not report live within 60 seconds." >&2
+          docker logs offsite
+          exit 1
+      - run: apps/api/test/backup/run-drill.sh
+        env:
+          UPGRADE_FROM_TAG: v1.0.0
+          BACKUP_DRILL_REMOTE: offsite:asobeast-backups
+          RCLONE_CONFIG_OFFSITE_TYPE: s3
+          RCLONE_CONFIG_OFFSITE_PROVIDER: Minio
+          RCLONE_CONFIG_OFFSITE_ENDPOINT: http://127.0.0.1:9000
+          RCLONE_CONFIG_OFFSITE_REGION: us-east-1
+          RCLONE_CONFIG_OFFSITE_FORCE_PATH_STYLE: "true"
+          RCLONE_CONFIG_OFFSITE_ACCESS_KEY_ID: asobeast
+          RCLONE_CONFIG_OFFSITE_SECRET_ACCESS_KEY: asobeast-offsite-secret
+      - name: Print database diagnostics
+        if: failure()
+        run: docker compose -f docker-compose.dev.yml logs --no-color --tail=100 postgres
+      - name: Print object storage diagnostics
+        if: failure()
+        run: docker logs --tail=100 offsite
+      - name: Remove object storage
+        if: always()
+        run: docker rm -f offsite || true
+      - name: Remove the development services
+        if: always()
+        run: docker compose -f docker-compose.dev.yml down -v
+
+  web-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm run build:packages
+      - run: pnpm --filter web test:e2e
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
+
+  compose-smoke:
+    needs: checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Generate secrets
+        run: |
+          {
+            echo "POSTGRES_PASSWORD=$(openssl rand -hex 32)"
+            echo "AUTH_SECRET=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
+      - name: Validate production configuration
+        run: docker compose -p asobeast config --quiet
+      - name: Verify the development stack cannot reach production data
+        run: |
+          docker compose -p asobeast config --format json >production.json
+          docker compose -f docker-compose.dev.yml config --format json >development.json
+          test "$(jq -r '.name' production.json)" != "$(jq -r '.name' development.json)"
+          jq -e '[.services[].container_name? | select(. != null)] | length == 0' production.json
+          jq -e '[.services[].container_name? | select(. != null)] | length == 0' development.json
+          jq -r '.volumes | to_entries[] | .value.name // .key' production.json | sort >production.volumes
+          jq -r '.volumes | to_entries[] | .value.name // .key' development.json | sort >development.volumes
+          test -z "$(comm -12 production.volumes development.volumes)"
+          jq -e '.services.web.ports[] | select(.target == 3000 and .published == "3001")' production.json
+          jq -e '.services.postgres.ports[] | select(.host_ip == "127.0.0.1" and .target == 5432 and .published == "5433")' development.json
+          jq -e '.services.redis.ports[] | select(.host_ip == "127.0.0.1" and .target == 6379 and .published == "6380")' development.json
+      - name: Build production images
+        run: docker compose -p asobeast build
+      - name: Start production stack
+        run: docker compose -p asobeast up -d --wait
+      - name: Verify health and isolation
+        run: |
+          curl --fail --silent --show-error http://127.0.0.1:3001/api/health
+          curl --fail --silent --show-error http://127.0.0.1:3001/api/backend/health
+          docker compose -p asobeast config --format json | jq -e '.services.api.ports == null'
+          docker compose -p asobeast exec -T web node -e "require('node:dns').promises.lookup('api').then(()=>process.exit(0)).catch(()=>process.exit(1))"
+          docker compose -p asobeast exec -T web node -e "require('node:dns').promises.lookup('postgres').then(()=>process.exit(1)).catch(()=>process.exit(0))"
+          for service in postgres redis api web; do
+            uid="$(docker compose -p asobeast exec -T "$service" awk '/^Uid:/{print $2}' /proc/1/status)"
+            test "$uid" -ne 0
+          done
+      - name: Verify the tunnel overlay leaves no inbound surface
+        env:
+          ASOBEAST_DOMAIN: aso.example.com
+          TUNNEL_TOKEN: verify
+          TRUST_PROXY: "0"
+        run: |
+          set -euo pipefail
+          docker compose -p asobeast -f docker-compose.yml -f docker-compose.tunnel.yml \
+            config --format json >tunnel.json
+
+          echo "==> composing the overlay publishes no port at all"
+          jq -e '[.services[].ports? // [] | .[]] | length == 0' tunnel.json
+
+          echo "==> the hop is counted even though the root env says it is not"
+          jq -e '.services.web.environment.TRUST_PROXY == "1"' tunnel.json
+          jq -e '.services.api.environment.AUTH_COOKIE_SECURE == "true"' tunnel.json
+          jq -e '.services.api.environment.WEB_PUBLIC_URL == "https://aso.example.com"' tunnel.json
+
+          echo "==> cloudflared is bounded like every other service"
+          jq -e '.services.cloudflared.deploy.resources.limits.memory != null' tunnel.json
+          jq -e '.services.cloudflared.logging.driver == "json-file"' tunnel.json
+          jq -e '[.services.cloudflared.networks | keys[]] == ["frontend"]' tunnel.json
+
+          echo "==> every image names a version, so two hosts install the same one"
+          jq -e '[.services[].image | select(. != null) | (split("/") | last) | select(endswith(":latest") or (contains(":") | not))] | length == 0' tunnel.json
+      - name: Verify the origin still serves with nothing published
+        env:
+          ASOBEAST_DOMAIN: aso.example.com
+          TUNNEL_TOKEN: verify
+        run: |
+          set -euo pipefail
+          compose() {
+            docker compose -p asobeast -f docker-compose.yml -f docker-compose.tunnel.yml "$@"
+          }
+          compose up -d --wait postgres redis api web
+
+          echo "==> the host reaches nothing"
+          ! curl --silent --fail --max-time 5 http://127.0.0.1:3001/api/health
+
+          echo "==> the origin answers where cloudflared reaches it"
+          compose exec -T api node -e "fetch('http://web:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+          compose exec -T api node -e "fetch('http://web:3000/api/backend/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+      - name: Print production stack diagnostics
+        if: always()
+        run: |
+          docker compose -p asobeast ps
+          docker compose -p asobeast logs --no-color --tail=200
+      - name: Remove production stack
+        if: always()
+        env:
+          ASOBEAST_DOMAIN: aso.example.com
+          TUNNEL_TOKEN: verify
+        run: |
+          docker compose -p asobeast -f docker-compose.yml -f docker-compose.tunnel.yml \
+            down -v --remove-orphans

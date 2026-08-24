@@ -1,0 +1,120 @@
+---
+title: Privacy policy
+sidebarTitle: Privacy policy
+description: "What the hosted service collects, what it never sees, who it shares with, how long it keeps each kind of row, and the separate statement that covers a self hosted installation."
+icon: lock
+keywords: ["privacy","gdpr","retention","cookies","openai","self hosted"]
+---
+
+<Warning>
+  This policy describes exactly what the code does. It is not legal advice and it does not replace review by a qualified lawyer in your jurisdiction before the hosted service takes money.
+</Warning>
+
+## The short version
+
+We collect what is needed to track app rankings for you, we tell you every third party that receives any of it, and we never receive your app's users. There is no analytics and no advertising, so there is nothing to opt out of.
+
+A self hosted installation collects nothing and reports to nobody. That statement has [its own section](#a-self-hosted-installation) and its own test.
+
+## What the hosted service collects
+
+**From you, directly**
+
+| Data | Why |
+| --- | --- |
+| Email address and password hash | To sign you in and to send confirmation, alerts and billing notices |
+| Display name, optional | To label you inside your workspace |
+| Store URLs and app identifiers | To know which listings to track |
+| Keyword phrases and the markets you track them in | To run the searches your plan pays for |
+| Alert subscriptions, webhook URLs and settings | To deliver what you asked for |
+| The iOS keyword field, when you paste it | It is private to your store account, cannot be scraped, and is only ever entered by you |
+
+**Derived, on your behalf**
+
+Rankings, SERP entries, listing snapshots, category ranks, public reviews of the apps you track, metadata audits, keyword scores and action recommendations. All of it comes from publicly visible store pages and search results.
+
+**Automatically, as a consequence of running a service**
+
+Server logs carrying the request path, the workspace, a correlation identifier and timing. Logs are scrubbed of secrets before they are written.
+
+## What we never collect
+
+- **Your app's users.** asobeast reads public store listings. It has no SDK, no tracking pixel and no route by which your users could reach us.
+- **Card numbers.** Payment details are entered inside Stripe's own interface and never touch our servers.
+- **Analytics or advertising identifiers.** There is no analytics product on the site or in the application.
+
+## Who receives it
+
+Every third party is named on the [subprocessors](/legal/subprocessors) page, with what reaches each one. Two deserve to be spelled out here.
+
+### Error tracking
+
+Server errors are reported to an error tracking provider **only on the hosted service**. The report carries the error type, a message and stack with every configured secret replaced by `[redacted]`, the workspace and correlation identifiers, and the request method with a path whose identifiers are masked to `:id`. It carries no headers, no cookies, no query strings, no request bodies and no account details.
+
+A stack or an error message can still mention an internal identifier. It is not designed to carry your keyword phrases, and we do not put them there deliberately.
+
+### OpenAI
+
+AI features are optional and are the only place where your listing content leaves for a purpose other than collecting it.
+
+- If the operator has not configured a key, the AI endpoints refuse and the drafts card is hidden. Nothing is sent.
+- When they are available, **a request is made only at the moment you invoke an AI feature**, never on a schedule and never in the background.
+- What is sent is the listing metadata of the app you ran the feature on: title, subtitle, description, and the keyword context that feature needs.
+- On the hosted service those requests use our key, which means the content is processed under OpenAI's terms and retention rather than yours. If you would rather that never happens, do not use the AI features, or self host with your own key.
+
+## How long we keep it
+
+Retention is enforced by a daily pruning job and is configurable. The hosted service runs these values:
+
+| Data | Kept for |
+| --- | --- |
+| Keyword rankings | 365 days |
+| SERP entries | 90 days |
+| App snapshots | 180 days, and the newest snapshot per app is always kept |
+| Category ranks | 365 days |
+| Reviews | Kept while you track the app |
+| Listing change events | Kept while you track the app |
+| Audit scores | Kept while you track the app |
+| Closed action items | 180 days. Open and snoozed items are never pruned by age |
+| Alert delivery log | 30 days |
+| Completed alert claims | 30 days |
+| Stored billing events | 90 days, because they carry billing details |
+| Support access records | Kept indefinitely, because an audit trail that expires is not an audit trail |
+| Server logs | As long as the hosting platform keeps them, currently 30 days |
+
+Deleting your workspace removes your data ahead of these horizons. What deletion reaches, and the places it cannot, is described in [Data export, deletion and retention](/legal/data-retention).
+
+Backups are the one horizon deletion does not shorten. The hosted service takes one archive a day and keeps 14 daily and 8 weekly archives, on the host and encrypted in object storage on the same window, which makes **56 days** the longest an archive can still hold a row you asked us to erase. The archives are encrypted with a key that is not stored on the server they came from, and nothing is copied anywhere in plaintext. See [Backups](/operations/backups).
+
+## Your rights
+
+| Right | How |
+| --- | --- |
+| Access | Everything about your workspace is visible in the application |
+| Export | CSV and JSON export from every table, plus a complete workspace archive |
+| Correction | Edit your account and settings in the application, or ask us |
+| Deletion | Request workspace deletion, which is confirmed, delayed by a grace period and reversible inside it |
+| Objection and restriction | Contact us. Suspending processing means suspending the daily run, which we can do without deleting anything |
+
+## Cookies
+
+One cookie, `asobeast_session`, which holds your signed in session. It is strictly necessary: without it you cannot stay signed in. It is `HttpOnly`, `SameSite` restricted and marked `Secure` in production.
+
+A second cookie remembers whether your sidebar is open. It carries no identifier.
+
+**There is no analytics cookie, no advertising cookie and no third party cookie**, which is why the application shows you no consent banner. That is a design decision and not an oversight.
+
+## A self hosted installation
+
+If you run asobeast yourself, none of the above describes your deployment, and **we are not a processor of your data in any capacity**.
+
+- The software collects nothing about you and phones home to nothing.
+- Error tracking is ignored unless billing is enabled, which self hosting does not use.
+- No outbound integration runs until you configure it: SMTP, a proxy provider, webhooks and AI are each off until you turn them on.
+- You are the data controller for everything the deployment holds, including the public review text it collects.
+
+The end to end suite boots an installation with no cloud configuration and asserts that no connection is attempted beyond its own database and queue. That test exists so this claim stays true as the hosted code grows, rather than being a promise nobody checks.
+
+## Changes and contact
+
+Material changes are announced in the changelog before they take effect. Questions and requests go through [support](/support).

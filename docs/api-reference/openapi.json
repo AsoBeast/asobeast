@@ -1,0 +1,4056 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register an account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Log in",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Log out",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/me": {
+      "get": {
+        "operationId": "AuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Current authenticated user",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/plan": {
+      "get": {
+        "operationId": "AuthController_plan",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Workspace plan, limits and usage against them",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify": {
+      "post": {
+        "operationId": "AuthController_verify",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Confirm an email address and start the trial",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/verify/resend": {
+      "post": {
+        "operationId": "AuthController_resendVerification",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Send a fresh confirmation link to this account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password": {
+      "post": {
+        "operationId": "AuthController_changePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Change password and reset other sessions",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password/forgot": {
+      "post": {
+        "operationId": "AuthController_requestPasswordReset",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPasswordResetDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Email a recovery link to an account that exists",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/password/reset": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Redeem a recovery link and end every session",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/status": {
+      "get": {
+        "operationId": "AuthController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Public auth configuration and session state",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/tokens": {
+      "get": {
+        "operationId": "AuthController_listTokens",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List personal api tokens",
+        "tags": [
+          "auth"
+        ]
+      },
+      "post": {
+        "operationId": "AuthController_createToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a personal api token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/auth/tokens/{id}": {
+      "delete": {
+        "operationId": "AuthController_revokeToken",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Revoke a personal api token",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/workspace/team": {
+      "get": {
+        "operationId": "WorkspaceTeamController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Members of this workspace and pending invites",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/workspace/invites": {
+      "post": {
+        "operationId": "WorkspaceTeamController_invite",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InviteMemberDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Invite a member into this workspace",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/workspace/invites/{id}": {
+      "delete": {
+        "operationId": "WorkspaceTeamController_revoke",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Revoke a pending invitation",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/workspace/members/{id}": {
+      "delete": {
+        "operationId": "WorkspaceTeamController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove a member from this workspace",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/workspace/invites/accept": {
+      "post": {
+        "operationId": "WorkspaceTeamController_accept",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptInviteDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Accept an invitation and create the account",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "operationId": "WebhooksController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List configured alert webhooks",
+        "tags": [
+          "webhooks"
+        ]
+      },
+      "post": {
+        "operationId": "WebhooksController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register an alert webhook",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/webhooks/{id}": {
+      "patch": {
+        "operationId": "WebhooksController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update an alert webhook",
+        "tags": [
+          "webhooks"
+        ]
+      },
+      "delete": {
+        "operationId": "WebhooksController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an alert webhook",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/webhooks/{id}/test": {
+      "post": {
+        "operationId": "WebhooksController_test",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Send a sample payload to a webhook",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    },
+    "/email-alerts": {
+      "get": {
+        "operationId": "EmailAlertsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List configured email alerts",
+        "tags": [
+          "email-alerts"
+        ]
+      },
+      "post": {
+        "operationId": "EmailAlertsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEmailAlertDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Register an email alert",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
+    "/email-alerts/{id}": {
+      "patch": {
+        "operationId": "EmailAlertsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateEmailAlertDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update an email alert",
+        "tags": [
+          "email-alerts"
+        ]
+      },
+      "delete": {
+        "operationId": "EmailAlertsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an email alert",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
+    "/email-alerts/{id}/test": {
+      "post": {
+        "operationId": "EmailAlertsController_test",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Send a sample email to an alert recipient",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
+    "/alerts/config": {
+      "get": {
+        "operationId": "AlertsController_config",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Probe which alert channels are available",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/delivery": {
+      "get": {
+        "operationId": "AlertsController_delivery",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Report the alert delivery mode and outbox status",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/flush": {
+      "post": {
+        "operationId": "AlertsController_flushNow",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Flush the alert outbox into grouped deliveries",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/alerts/deliveries": {
+      "get": {
+        "operationId": "AlertsController_listDeliveries",
+        "parameters": [
+          {
+            "name": "webhookId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "emailAlertId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List recent alert deliveries for one channel",
+        "tags": [
+          "alerts"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "HealthController_check",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness, database and pipeline health check",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/apps/{id}/run-daily": {
+      "post": {
+        "operationId": "JobsController_runDaily",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Manually run the daily pipeline for one app",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/jobs/budget": {
+      "get": {
+        "operationId": "BudgetController_estimate",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Estimate the daily store request budget",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/jobs/run-status": {
+      "get": {
+        "operationId": "BudgetController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Progress of this workspace's own daily run",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
+    "/admin/capacity": {
+      "get": {
+        "operationId": "CapacityController_report",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Total daily demand against pool capacity",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/keywords/{keywordId}/score": {
+      "post": {
+        "operationId": "ScoringController_score",
+        "parameters": [
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Enqueue an on demand keyword score",
+        "tags": [
+          "scoring"
+        ]
+      }
+    },
+    "/account/export": {
+      "get": {
+        "operationId": "AccountController_export",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Stream every row this workspace owns as newline delimited JSON",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/account/deletion": {
+      "get": {
+        "operationId": "AccountController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Whether this workspace is scheduled for deletion",
+        "tags": [
+          "account"
+        ]
+      },
+      "post": {
+        "operationId": "AccountController_request",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestDeletionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Schedule this workspace for deletion after a grace period",
+        "tags": [
+          "account"
+        ]
+      },
+      "delete": {
+        "operationId": "AccountController_cancel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Cancel a scheduled deletion during its grace period",
+        "tags": [
+          "account"
+        ]
+      }
+    },
+    "/apps": {
+      "post": {
+        "operationId": "AppsController_import",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportAppDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Import an app from a store URL",
+        "tags": [
+          "apps"
+        ]
+      },
+      "get": {
+        "operationId": "AppsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List imported apps",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}": {
+      "get": {
+        "operationId": "AppsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get an app with its latest snapshot and competitors",
+        "tags": [
+          "apps"
+        ]
+      },
+      "delete": {
+        "operationId": "AppsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Delete an app",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}/market-availability": {
+      "get": {
+        "operationId": "AppsController_marketAvailability",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Probe whether an app is published in a storefront",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}/refresh": {
+      "post": {
+        "operationId": "AppsController_refresh",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Refresh an app and return the snapshot diff",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}/link": {
+      "post": {
+        "operationId": "AppsController_link",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkAppDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Link an app to its counterpart on the other store",
+        "tags": [
+          "apps"
+        ]
+      },
+      "delete": {
+        "operationId": "AppsController_unlink",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Unlink an app from its group",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}/keywords": {
+      "get": {
+        "operationId": "KeywordsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "opportunity",
+                "traffic",
+                "difficulty",
+                "position",
+                "volatility"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "pl",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List tracked keywords for an app",
+        "tags": [
+          "keywords"
+        ]
+      },
+      "post": {
+        "operationId": "KeywordsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddKeywordsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add manual keywords",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-countries": {
+      "get": {
+        "operationId": "KeywordsController_countries",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the markets an app tracks keywords in",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keywords/compare": {
+      "get": {
+        "operationId": "KeywordsController_compare",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "onlyGaps",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": false,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Compare keyword positions against competitors",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keywords/suggestions": {
+      "get": {
+        "operationId": "KeywordsController_suggestions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "strategy",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": "metadata",
+              "type": "string",
+              "enum": [
+                "metadata",
+                "search",
+                "similar",
+                "developer",
+                "competitors",
+                "seasonal",
+                "reviews"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "pl",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 100,
+              "default": 30,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Suggest keywords via metadata, search or similar",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keywords/spider": {
+      "get": {
+        "operationId": "KeywordsController_spiderStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "term",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minLength": 2,
+              "maxLength": 40,
+              "example": "habit tracker",
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "pl",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Aggregate suggest spider probes for a term",
+        "tags": [
+          "keywords"
+        ]
+      },
+      "post": {
+        "operationId": "KeywordsController_startSpider",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SpiderStartDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Enqueue suggest spider probes for a term",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keywords/{keywordId}": {
+      "patch": {
+        "operationId": "KeywordsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateKeywordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Update a tracked keyword active flag or relevance",
+        "tags": [
+          "keywords"
+        ]
+      },
+      "delete": {
+        "operationId": "KeywordsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Stop tracking a keyword",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-field": {
+      "put": {
+        "operationId": "KeywordsController_setKeywordField",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordFieldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Set the manual iOS keyword field",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/changes": {
+      "get": {
+        "operationId": "ChangesController_timeline",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Metadata change timeline for an app and its competitors",
+        "tags": [
+          "changes"
+        ]
+      }
+    },
+    "/changes/recent": {
+      "get": {
+        "operationId": "RecentChangesController_recent",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Recent metadata changes across the workspace",
+        "tags": [
+          "changes"
+        ]
+      }
+    },
+    "/apps/{id}/rankings": {
+      "get": {
+        "operationId": "RankingsController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordIds",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ranking history series for an app",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/apps/{id}/serp-movers": {
+      "get": {
+        "operationId": "RankingsController_serpMovers",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 30,
+              "default": 7,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Apps that broke into the top 10 for tracked keywords",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/keywords/{keywordId}/serp": {
+      "get": {
+        "operationId": "SerpController_serp",
+        "parameters": [
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "date",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "example": "2026-08-21",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Top search results captured for a keyword",
+        "tags": [
+          "rankings"
+        ]
+      }
+    },
+    "/apps/{id}/category-ranks": {
+      "get": {
+        "operationId": "CategoryRanksController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Category rank history series for an app",
+        "tags": [
+          "category-ranks"
+        ]
+      }
+    },
+    "/apps/{id}/summary": {
+      "get": {
+        "operationId": "AnalyticsController_getSummary",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dashboard summary for an app",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/apps/{id}/visibility-history": {
+      "get": {
+        "operationId": "AnalyticsController_getVisibilityHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Visibility score history series for an app",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/apps/{id}/rank-distribution-history": {
+      "get": {
+        "operationId": "AnalyticsController_getRankDistributionHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Rank distribution history bands for an app",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/apps/{id}/ratings-history": {
+      "get": {
+        "operationId": "AnalyticsController_getRatingsHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ratings average and count history for an app",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/portfolio": {
+      "get": {
+        "operationId": "PortfolioController_getPortfolio",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Portfolio dashboard summary for the workspace",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/apps/{id}/reviews": {
+      "get": {
+        "operationId": "ReviewsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "score",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 5,
+              "type": "number"
+            }
+          },
+          {
+            "name": "version",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Stored reviews for an app, filtered by star and version",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/reviews/histogram": {
+      "get": {
+        "operationId": "ReviewsController_histogram",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Ratings distribution from the latest snapshot (Google Play only)",
+        "tags": [
+          "reviews"
+        ]
+      }
+    },
+    "/apps/{id}/audit": {
+      "get": {
+        "operationId": "AuditController_getAudit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "ASO audit score card for an app",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/apps/{id}/audit/history": {
+      "get": {
+        "operationId": "AuditController_history",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "ASO audit score history series for an app",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/apps/{id}/audit/ai": {
+      "post": {
+        "operationId": "AuditController_runAi",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Run the AI audit for an app and recompute",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/apps/{id}/metadata/audit": {
+      "get": {
+        "operationId": "MetadataController_audit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Metadata lint and keyword coverage matrix",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/metadata/assistant": {
+      "get": {
+        "operationId": "MetadataAssistantController_status",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "AI metadata assistant availability",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/apps/{id}/metadata/assistant": {
+      "post": {
+        "operationId": "MetadataAssistantController_generate",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MetadataAssistantDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Generate AI metadata drafts for an app",
+        "tags": [
+          "metadata"
+        ]
+      }
+    },
+    "/admin/proxy-pool": {
+      "get": {
+        "operationId": "ProxyPoolController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Egress proxy pool health for operators",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/actions": {
+      "get": {
+        "operationId": "ActionsController_list",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "OPEN",
+                  "SNOOZED",
+                  "DONE",
+                  "DISMISSED",
+                  "RESOLVED"
+                ]
+              }
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              }
+            }
+          },
+          {
+            "name": "rule",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "keyword.add_uncovered",
+                  "keyword.defend",
+                  "keyword.prune",
+                  "rank.investigate_drop",
+                  "serp.hold_volatile",
+                  "audit.fix_factor",
+                  "reviews.investigate_theme",
+                  "market.improve_country"
+                ]
+              }
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metadata",
+                "competition",
+                "regression",
+                "conversion",
+                "reputation",
+                "markets",
+                "hygiene"
+              ]
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The prioritized action queue"
+          }
+        },
+        "summary": "List actions across every tracked app",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/actions/summary": {
+      "get": {
+        "operationId": "ActionsController_summary",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Open and snoozed action counts"
+          }
+        },
+        "summary": "Summarize the action queue",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/actions/ai-status": {
+      "get": {
+        "operationId": "ActionsController_aiStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Whether the optional AI seam is configured"
+          }
+        },
+        "summary": "Report AI explanation availability",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/actions/{id}": {
+      "patch": {
+        "operationId": "ActionsController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated action"
+          }
+        },
+        "summary": "Change the state of one action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/actions/{id}/explain": {
+      "post": {
+        "operationId": "ActionsController_explain",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A plain-language summary of the evidence"
+          }
+        },
+        "summary": "Summarize one action with the optional AI seam",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/actions/run": {
+      "post": {
+        "operationId": "ActionsController_run",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "Generation was queued"
+          }
+        },
+        "summary": "Queue an action generation run",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/apps/{id}/actions": {
+      "get": {
+        "operationId": "AppActionsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "OPEN",
+                  "SNOOZED",
+                  "DONE",
+                  "DISMISSED",
+                  "RESOLVED"
+                ]
+              }
+            }
+          },
+          {
+            "name": "priority",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              }
+            }
+          },
+          {
+            "name": "rule",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "keyword.add_uncovered",
+                  "keyword.defend",
+                  "keyword.prune",
+                  "rank.investigate_drop",
+                  "serp.hold_volatile",
+                  "audit.fix_factor",
+                  "reviews.investigate_theme",
+                  "market.improve_country"
+                ]
+              }
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metadata",
+                "competition",
+                "regression",
+                "conversion",
+                "reputation",
+                "markets",
+                "hygiene"
+              ]
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The action queue for one app"
+          }
+        },
+        "summary": "List actions for one tracked app",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/apps/{id}/competitors/analysis": {
+      "get": {
+        "operationId": "CompetitorsController_analysis",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Keyword gap and positioning analysis",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
+    "/apps/{id}/competitors/discovery": {
+      "get": {
+        "operationId": "CompetitorsController_discovery",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 7,
+              "maximum": 90,
+              "default": 30,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Untracked apps recurring in your keyword results",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
+    "/apps/{id}/competitors": {
+      "post": {
+        "operationId": "CompetitorsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCompetitorDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add a competitor app from a store URL",
+        "tags": [
+          "competitors"
+        ]
+      },
+      "get": {
+        "operationId": "CompetitorsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List competitors for an app",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
+    "/apps/{id}/competitors/{competitorId}": {
+      "delete": {
+        "operationId": "CompetitorsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "competitorId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove a competitor from an app",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
+    "/billing/catalog": {
+      "get": {
+        "operationId": "BillingController_catalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Plans available to buy and their price ids",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "operationId": "BillingController_checkout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start a Stripe Checkout session for a plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "operationId": "BillingController_portal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Open the Stripe customer portal for this workspace",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/reconcile": {
+      "post": {
+        "operationId": "BillingController_reconcile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reconcile this workspace against Stripe now",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/admin/support/workspaces": {
+      "get": {
+        "operationId": "SupportController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List every workspace with its operational state",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/workspaces/{workspaceId}": {
+      "get": {
+        "operationId": "SupportController_detail",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Operational detail for one workspace",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/workspaces/{workspaceId}/reconcile": {
+      "post": {
+        "operationId": "SupportController_reconcile",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reconcile one workspace against the billing provider",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/workspaces/{workspaceId}/suspend": {
+      "post": {
+        "operationId": "SupportController_suspend",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Suspend a workspace",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/workspaces/{workspaceId}/restore": {
+      "post": {
+        "operationId": "SupportController_restore",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Restore a suspended workspace",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/workspaces/{workspaceId}/run-daily": {
+      "post": {
+        "operationId": "SupportController_runDaily",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Queue the daily run for one workspace",
+        "tags": [
+          "admin"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "asobeast API",
+    "description": "Self hosted ASO toolkit API.\n\nEvery response carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset for the tightest limit the request touched. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.\n\nA 429 carries Retry-After and a rateLimit object naming the window that closed. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.\n\nPositions are 1-based and null means checked but not found within the captured depth, never zero. Daily granularity uses UTC dates.",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/backend",
+      "description": "Web origin proxy"
+    },
+    {
+      "url": "http://localhost:4000",
+      "description": "Direct API"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "personalApiToken": {
+        "scheme": "bearer",
+        "bearerFormat": "asob",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ChangePasswordDto": {
+        "type": "object",
+        "properties": {
+          "current": {
+            "type": "string",
+            "maxLength": 128
+          },
+          "next": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "current",
+          "next"
+        ]
+      },
+      "RequestPasswordResetDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ]
+      },
+      "CreateTokenDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "scope": {
+            "enum": [
+              "read",
+              "write"
+            ],
+            "type": "string",
+            "default": "read"
+          },
+          "expiresInDays": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 365
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "InviteMemberDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "AcceptInviteDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128
+          },
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "token",
+          "password"
+        ]
+      },
+      "CreateWebhookDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "metadata.changed",
+                "rank.dropped",
+                "rank.improved",
+                "review.negative",
+                "digest.weekly",
+                "serp.entrant",
+                "action.opened"
+              ]
+            }
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 8
+          }
+        },
+        "required": [
+          "url",
+          "events"
+        ]
+      },
+      "UpdateWebhookDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "metadata.changed",
+                "rank.dropped",
+                "rank.improved",
+                "review.negative",
+                "digest.weekly",
+                "serp.entrant",
+                "action.opened"
+              ]
+            }
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 8
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CreateEmailAlertDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "metadata.changed",
+                "rank.dropped",
+                "rank.improved",
+                "review.negative",
+                "digest.weekly",
+                "serp.entrant",
+                "action.opened"
+              ]
+            }
+          }
+        },
+        "required": [
+          "email",
+          "events"
+        ]
+      },
+      "UpdateEmailAlertDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "events": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "enum": [
+                "metadata.changed",
+                "rank.dropped",
+                "rank.improved",
+                "review.negative",
+                "digest.weekly",
+                "serp.entrant",
+                "action.opened"
+              ]
+            }
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Object": {
+        "type": "object",
+        "properties": {}
+      },
+      "RequestDeletionDto": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "string",
+            "description": "Must be the literal DELETE",
+            "enum": [
+              "DELETE"
+            ]
+          }
+        },
+        "required": [
+          "confirm"
+        ]
+      },
+      "ImportAppDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "https://apps.apple.com/us/app/where-am-i-geoguess-map-quiz/id6657987209"
+          },
+          "country": {
+            "type": "string",
+            "example": "de",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "LinkAppDto": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "example": "clx0abcd1234"
+          }
+        },
+        "required": [
+          "appId"
+        ]
+      },
+      "SpiderStartDto": {
+        "type": "object",
+        "properties": {
+          "term": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40,
+            "example": "habit tracker"
+          },
+          "country": {
+            "type": "string",
+            "example": "pl",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "term"
+        ]
+      },
+      "AddKeywordsDto": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "minItems": 1,
+            "example": [
+              "habit tracker",
+              "streak counter"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "country": {
+            "type": "string",
+            "example": "pl",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "keywords"
+        ]
+      },
+      "UpdateKeywordDto": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean",
+            "example": false
+          },
+          "relevance": {
+            "type": "number",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 100,
+            "example": 80
+          }
+        }
+      },
+      "KeywordFieldDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "example": "habit,tracker,streak,daily goals"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "MetadataAssistantDto": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "title",
+                "subtitle",
+                "keywordField",
+                "description",
+                "promotionalText",
+                "whatsNew",
+                "shortDescription"
+              ]
+            }
+          },
+          "instructions": {
+            "type": "string",
+            "maxLength": 500
+          }
+        }
+      },
+      "UpdateActionDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "OPEN",
+              "SNOOZED",
+              "DONE",
+              "DISMISSED"
+            ],
+            "type": "string"
+          },
+          "snoozedUntil": {
+            "type": "string",
+            "example": "2026-08-15T00:00:00.000Z"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "AddCompetitorDto": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "example": "https://apps.apple.com/us/app/rival-app/id1234567890"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "CheckoutDto": {
+        "type": "object",
+        "properties": {
+          "priceId": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "priceId"
+        ]
+      },
+      "SupportActionDto": {
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "type": "boolean",
+            "description": "Must be true. A support action is never taken by accident"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 200,
+            "description": "Why the action was taken. Stored in the support audit trail"
+          }
+        },
+        "required": [
+          "confirm",
+          "reason"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "personalApiToken": []
+    }
+  ]
+}

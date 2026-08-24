@@ -1,0 +1,91 @@
+---
+title: asobeast API
+sidebarTitle: Introduction
+description: "The asobeast API is a REST API over HTTP. Every endpoint requires authentication with a session cookie or a personal API token, and every response is JSON."
+icon: terminal
+keywords: ["API","REST","base URL","authentication","OpenAPI","self hosted"]
+---
+
+The asobeast API is the same API the dashboard uses. Every endpoint on it requires authentication, and the endpoint pages in this tab are generated from the API's own OpenAPI document.
+
+## Base URL
+
+There are two, and which one you use depends on where your code runs.
+
+| Base URL | Use when |
+| --- | --- |
+| `https://your-host/api/backend` | Almost always. This is the web origin proxy, which is reachable from anywhere the dashboard is |
+| `http://localhost:4000` | Only when your code runs on the same host as the API container |
+
+The proxy path is not a convenience wrapper. In the Compose stack the API stays on a private network and is never published, so the web origin is the only way in from outside the host. The proxy forwards your `Authorization` header unchanged.
+
+## Authentication
+
+Send a personal API token as a bearer header on every request. See [Authenticate API requests](/api-reference/authentication).
+
+## Content type
+
+JSON in, JSON out. Send `Content-Type: application/json` on any request with a body. Errors are JSON too, in a consistent envelope. See [Error responses](/api-reference/errors).
+
+## The OpenAPI document
+
+Your own instance serves it at `/docs-json`, with human readable documentation at `/docs`.
+
+Both are gated by `API_DOCS`, which defaults to `owner`. An unauthenticated request answers `404` rather than `401`, because the surface does not confirm it exists. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+
+The copy powering the endpoint pages in this tab is committed in the repository, so this documentation site never needs a running instance to build.
+
+## A worked example
+
+Authenticate, list apps, pull a ranking history and write it out. Every step uses the same bearer header.
+
+```bash
+export ASOBEAST_URL=https://your-host/api/backend
+export ASOBEAST_API_TOKEN=asob_…
+auth=(-H "Authorization: Bearer ${ASOBEAST_API_TOKEN}")
+
+curl --silent --fail "${auth[@]}" "${ASOBEAST_URL}/auth/me"
+
+app=$(curl --silent --fail "${auth[@]}" "${ASOBEAST_URL}/apps" | jq -r '.[0].id')
+
+curl --silent --fail "${auth[@]}" \
+  "${ASOBEAST_URL}/apps/${app}/rankings?from=2026-07-01&to=2026-07-31" \
+  > rankings.json
+
+jq -r '.series[] | [.text, (.points[-1].position // ">200")] | @csv' \
+  rankings.json > latest-positions.csv
+```
+
+Two things to carry into your own code. A position of `null` means the keyword was checked and the app was not found within that row's `depth`, so never read it as zero. Every daily value is a UTC `date` string, so compare the strings rather than parsing them into local time. See [API conventions](/api-reference/conventions).
+
+## Export formats
+
+The API speaks JSON only, which is what a script should read. CSV is a dashboard feature: the keyword monitor and the rankings view export the table you are looking at, with the filters you applied. See [Export data](/guides/export-data).
+
+Read `RateLimit-Remaining` on the way through if the instance is metered, and honour `Retry-After` on a `429`. See [Rate limits and quotas](/api-reference/rate-limits).
+
+## Generate a client
+
+Any OpenAPI generator works against the document.
+
+```bash
+curl -H "Authorization: Bearer asob_…" \
+  https://your-host/api/backend/docs-json > openapi.json
+
+npx @openapitools/openapi-generator-cli generate \
+  -i openapi.json -g typescript-fetch -o ./asobeast-client
+```
+
+If you write TypeScript, consider using `@asobeast/shared` directly instead. It holds the same contract types the API and the dashboard are built from, which is what the MCP server does.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="API conventions" icon="ruler" href="/api-reference/conventions">
+    UTC dates, 1 based positions, 202 for queued work.
+  </Card>
+
+  <Card title="Rate limits and quotas" icon="gauge" href="/api-reference/rate-limits">
+    What a metered instance allows and what a 429 means.
+  </Card>
+</CardGroup>

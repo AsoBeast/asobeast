@@ -1,0 +1,80 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "apps/api/src/**"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "apps/api/src/**"
+      - "README.md"
+      - ".github/workflows/docs.yml"
+  schedule:
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MINT_VERSION: 4.2.768
+  VALE_VERSION: 3.16.0
+  VALE_SHA256: 1049f4a585ccd1af96dcf4bdc16800cb3ce426b432da2b27893def42dcfe0ccb
+
+jobs:
+  docs-checks:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Validate the documentation build
+        run: pnpm dlx mint@${{ env.MINT_VERSION }} validate
+      - name: Check internal links
+        run: pnpm dlx mint@${{ env.MINT_VERSION }} broken-links --check-anchors --check-redirects
+      - name: Check accessibility
+        run: pnpm dlx mint@${{ env.MINT_VERSION }} a11y
+      - name: Install Vale
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/vale.tar.gz" "https://github.com/vale-cli/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
+          echo "${VALE_SHA256}  $RUNNER_TEMP/vale.tar.gz" | sha256sum --check --status
+          tar -xzf "$RUNNER_TEMP/vale.tar.gz" -C "$RUNNER_TEMP" vale
+      - name: Lint prose
+        run: "$RUNNER_TEMP/vale ."
+      - name: Lint the README against the same prose rules
+        working-directory: ${{ github.workspace }}
+        run: "$RUNNER_TEMP/vale --config=docs/.vale.ini README.md"
+
+  external-links:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Check external links
+        run: pnpm dlx mint@${{ env.MINT_VERSION }} broken-links --check-external

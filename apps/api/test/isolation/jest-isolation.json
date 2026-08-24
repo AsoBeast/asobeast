@@ -1,0 +1,11 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "maxWorkers": 1,
+  "testEnvironment": "node",
+  "testRegex": ".isolation-spec.ts$",
+  "setupFiles": ["<rootDir>/setup-isolation.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  }
+}

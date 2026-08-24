@@ -1,0 +1,55 @@
+---
+title: Track competitors
+description: Add a competitor from a store URL or from a stored SERP snapshot. Competitors cost no extra store requests on keywords you already track.
+icon: users
+keywords: ["competitors","comparison","gap analysis","SERP","no extra requests"]
+---
+
+A competitor is a listing asobeast tracks alongside yours so you can compare metadata and see where it ranks on the keywords you care about.
+
+## Add a competitor
+
+Two paths, both on the competitors tab of an app.
+
+| Path | When to use it |
+| --- | --- |
+| From a store URL | You already know which app you want to watch |
+| From a stored SERP snapshot | You want the apps that actually outrank you on a keyword |
+
+The second path is usually better, because it names the apps the store already puts in front of your users rather than the ones you assume are competitors.
+
+One listing in one storefront is either an app you track or a competitor of one app, never both and never two at once. Adding a listing you already track as an app, importing one you already watch as a competitor, or attaching a competitor that already belongs to another app all answer `409` and change nothing. Remove the listing from where it is first.
+
+## Why are competitors free to track?
+
+A position check searches the keyword's storefront once and records positions for the primary app and for every competitor attached to it from that single search.
+
+So adding a competitor costs zero extra store requests on keywords you already track. Ten competitors on a keyword are still one search per day. Adding a _keyword_, or a market, is what costs budget. See [Countries and markets](/concepts/countries).
+
+## Compare listings
+
+The comparison view puts your listing beside each competitor field by field, with character counts against the store limits.
+
+The gap analysis is the useful half: it shows phrases competitors index that you do not, so you can decide whether they belong in your own title, subtitle, keyword field or short description. Adding one from there tracks it with the source `COMPETITOR`, which starts its relevance lower than a keyword drawn from your own listing. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## Watch competitor metadata changes
+
+Competitor listings are snapshotted on the same schedule as your own, and a field level change appears in the changes feed marked as a competitor change. Alerts can carry them in a separate competitor report. See [Watch listing changes](/guides/listing-changes).
+
+## Troubleshooting
+
+- **A competitor shows no positions.** It only gets positions on keywords you track, in the storefronts you track them in.
+- **A competitor's ratings column is empty on Google Play.** Google Play search results carry no rating counts.
+- **You added the wrong app.** Removing a competitor removes its position history with it, so confirm the store id before adding.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Read rankings and SERPs" icon="chart-line" href="/guides/read-rankings">
+    Where the competitor list comes from.
+  </Card>
+
+  <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
+    Turn a gap into a metadata change.
+  </Card>
+</CardGroup>

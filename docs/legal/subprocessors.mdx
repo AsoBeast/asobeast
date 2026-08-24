@@ -1,0 +1,47 @@
+---
+title: Subprocessors
+sidebarTitle: Subprocessors
+description: "Every third party the hosted asobeast service sends data to, what reaches each one, and which of them a self hosted installation uses."
+icon: share-2
+keywords: ["subprocessors","gdpr","stripe","openai","proxy","hosting"]
+---
+
+A subprocessor is a third party that processes data on our behalf. This page names every one the **hosted** service uses and states what reaches it. If a party is not on this list, we do not send your data to it.
+
+## The hosted service
+
+| Subprocessor | Purpose | What reaches it |
+| --- | --- | --- |
+| Hosting provider | Runs the application, the PostgreSQL database and the Redis queue | Everything the service stores, at rest and in transit inside the deployment |
+| Stripe | Subscriptions, payments and the customer portal | Your billing email, payment details you enter in Stripe's own interface, and a workspace identifier. **We never see or store card details** |
+| Webshare | Datacenter network egress for store requests | The store request itself, which carries the keyword phrase and the storefront. No account data |
+| SMTP provider | Alert emails, email confirmation and billing notices | Recipient address and the message body, which can name your apps and keywords |
+| Object storage provider | Offsite backup archives | An encrypted database archive. The decryption key is not stored on the server that produced it and is never sent to the provider, so the provider holds ciphertext it cannot read |
+| Error tracking provider | Server errors, only when configured | Error type, a secret scrubbed message and stack, workspace and correlation identifiers, and the request method with a masked path. Never headers, cookies, query strings or request bodies |
+| OpenAI | Optional AI audit, metadata drafts and action explanations | The listing metadata of the app you run the feature on, at the moment you run it. Nothing is sent unless you invoke an AI feature |
+
+## What never leaves
+
+- **Your password.** It is stored as an Argon2 hash and is never transmitted anywhere beyond the sign in request.
+- **Your personal API tokens.** Only a hash is stored, and the plaintext is shown once at creation.
+- **Your app's users.** The service never receives them, so there is nothing to pass on. See [Privacy policy](/legal/privacy).
+
+## A self hosted installation
+
+A self hosted installation uses **none** of the above by default.
+
+| Subprocessor | Used when self hosted |
+| --- | --- |
+| Hosting provider | Your own infrastructure, not ours |
+| Stripe | No, unless you deliberately enable billing |
+| Webshare | No, unless you configure a proxy provider. Store requests otherwise leave from your own address |
+| SMTP provider | Only the server you configure, and email stays disabled until you do |
+| Object storage provider | Only the destination you configure, and archives stay on the host until you do |
+| Error tracking provider | **Never.** Error tracking is ignored unless billing is enabled, which a self hosted installation does not use |
+| OpenAI | Only when you supply your own key. AI features are otherwise hidden and the endpoints refuse |
+
+The end to end suite boots an installation with no cloud configuration and asserts it opens no connection beyond its own database and queue. That test is what keeps this table honest as the hosted code grows.
+
+## Changes
+
+New subprocessors are added here before they are used, and noted in the changelog. If a change materially affects what leaves the deployment, we will say so directly rather than only editing this page.

@@ -1,0 +1,64 @@
+---
+title: Get help
+sidebarTitle: Support
+description: "Open a GitHub issue for bugs, start a discussion for questions, and read the security policy before reporting a vulnerability privately."
+icon: life-buoy
+keywords: ["support","help","issues","discussions","security","bug report"]
+---
+
+Start with [Troubleshooting](/operations/troubleshooting). Most reports are answered by one of the sixteen symptoms listed there, and checking it first is the fastest route to an answer.
+
+## Is the hosted service down?
+
+Check the status page before anything else. It is hosted off the machine asobeast runs on, so it stays up when the service does not.
+
+<Card title="asobeast status" icon="activity" href="https://status.asobeast.com">
+  Current state, open incidents and the history behind them.
+</Card>
+
+An open incident already carries what is broken, what still works and when the next update lands, so there is nothing to report and nothing to wait for. A first update is published within fifteen minutes of the outage being detected, even when it says only that we are looking, and an incident closes when the service is verified working rather than when a fix is deployed.
+
+If the status page is green and asobeast is not working for you, that is a bug report rather than an incident, and it belongs below.
+
+Self hosted installations have no status page and no incident feed, because they have no operator but you. The same endpoints are yours to watch. See [Uptime probes and the status page](/operations/uptime).
+
+## Where do you report what?
+
+<CardGroup cols={2}>
+  <Card title="Bugs" icon="bug" href="https://github.com/AsoBeast/asobeast/issues">
+    Something behaves differently than this documentation says. Open a GitHub issue.
+  </Card>
+
+  <Card title="Questions and ideas" icon="messages-square" href="https://github.com/AsoBeast/asobeast/issues/new">
+    How do I, should I, would you consider. Open an issue and label it a question.
+  </Card>
+
+  <Card title="Security vulnerabilities" icon="shield-alert" href="https://github.com/AsoBeast/asobeast/blob/main/SECURITY.md">
+    Follow the security policy. Never open a public issue for a vulnerability.
+  </Card>
+
+  <Card title="Feature requests" icon="lightbulb" href="https://github.com/AsoBeast/asobeast/issues">
+    Feature work is frozen until `1.0.0`, so open an issue to record it rather than a pull request.
+  </Card>
+</CardGroup>
+
+## Before you open an issue
+
+Four details turn a report into something reproducible.
+
+| Include | Why |
+| --- | --- |
+| The version or image tag you run | Behaviour differs between releases |
+| How you deployed | Docker Compose, published images, or a development checkout |
+| The relevant log lines | `docker compose logs --no-color --tail=200 api web` |
+| Whether it reproduces on a fresh instance | Separates a defect from a data or configuration issue |
+
+<Warning>
+  Never paste the output of `docker compose config` into an issue. It contains your resolved database password. Redact secrets from logs before posting them.
+</Warning>
+
+## Reporting a documentation problem
+
+A page that is wrong is a bug like any other. Open an issue naming the page and the incorrect statement, or open a pull request against `/docs` directly. Both are welcome.
+
+If an AI assistant answered a question about asobeast incorrectly, that usually means a page is ambiguous rather than that the assistant is broken. Say which question you asked, and it becomes a fixable documentation issue.

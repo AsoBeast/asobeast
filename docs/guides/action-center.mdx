@@ -1,0 +1,126 @@
+---
+title: Work the Action Center
+sidebarTitle: Action Center
+description: "Eight deterministic rules run over your stored history and return a prioritized queue, each recommendation carrying the exact numbers behind it."
+icon: list-checks
+keywords: ["action center","recommendations","priority","impact","snooze","fingerprint","ASO tasks"]
+boost: 2
+---
+
+The Action Center answers one question from data asobeast already collected: what should you do this week, and why. Every recommendation is a pure function of stored data with named constants, so any of them can be reproduced by hand from the evidence panel.
+
+It reads only the database. Generation makes zero store requests and consumes none of your request budget.
+
+## The lifecycle
+
+An action is a finding with a life, not a row in a report. A stable fingerprint identifies it across runs, so re running generation refreshes the same action instead of minting a new one.
+
+| Status | Meaning | How it is reached |
+| --- | --- | --- |
+| `OPEN` | Needs attention | The rule fired, or a snooze expired |
+| `SNOOZED` | Deferred until a date | You set a date, capped by `ACTIONS_SNOOZE_MAX_DAYS` |
+| `DONE` | You acted | You closed it. It reopens only if the rule keeps firing for 14 more days |
+| `DISMISSED` | You rejected it | You closed it. It never reopens on its own, however long it stays true |
+| `RESOLVED` | The condition went away | The system closed it, because the rule stopped firing |
+
+The difference between `RESOLVED` and `DONE` is the point. Only that distinction tells you whether your fix is what removed the problem.
+
+## How are duplicate actions prevented?
+
+An action is identified by a fingerprint over its rule, app, store, country, keyword and a rule specific discriminator. It deliberately excludes every volatile magnitude: positions, scores, counts and observation dates are all left out.
+
+That exclusion is the whole design. If a position were part of the fingerprint, tomorrow's check would produce a different fingerprint, mint a brand new action, and your snooze and dismiss decisions would evaporate every night. Excluding magnitudes is what makes the lifecycle mean anything.
+
+The fingerprint is unique per workspace, so the same finding cannot open twice.
+
+## The rules
+
+Eight rules, with fixed constants.
+
+| Rule | Fires when | Resolves when |
+| --- | --- | --- |
+| `keyword.add_uncovered` | A tracked home market keyword scores opportunity at or above 60, relevance at or above 60 and volume at or above 20, and no indexed field contains it | Metadata covers it, it drops below threshold, or it is deactivated or untracked |
+| `keyword.defend` | At least 2 new apps entered the top 10 over 7 days with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you |
+| `keyword.prune` | A keyword ranked on at most 5 percent of at least 30 checks, carries volume below 20 and relevance at most 50, and pruning would help | It ranks, gains volume, is deactivated, or the budget pressure disappears |
+| `rank.investigate_drop` | An indexed field changed within 14 days and visibility fell by at least 5 points, or at least 3 tracked keywords fell by the rank alert threshold | Visibility recovers to within 2 points of its pre change value |
+| `serp.hold_volatile` | A keyword's 7 day SERP volatility is at least 45 over at least 5 observed days, and it actually damped another rule this run | Volatility falls below threshold, or it damped nothing |
+| `audit.fix_factor` | A factor weighing at least 10 scores below 5 of 10 in an audit snapshot no older than 7 days | The factor scores 5 or above in a newer snapshot, or leaves the rubric |
+| `reviews.investigate_theme` | A phrase appears in at least 3 negative reviews of the latest version and at least twice as often as in the previous version's | The version is superseded without recurrence, or mentions fall below the minimum |
+| `market.improve_country` | A non home market with at least 5 keywords and at least 7 observed days sits at least 15 visibility points behind home | The gap closes, or the market drops below the keyword minimum |
+
+Unanswered audit checks never count toward `audit.fix_factor`, and Apple only surfaces are skipped on Google Play rather than recommended impossibly.
+
+## Priority and impact
+
+Impact is a stored, versioned estimate on a 0 to 100 scale.
+
+```text
+impact = round(100 × (0.45 × reach + 0.35 × severity + 0.20 × confidence))
+```
+
+Each term is a documented 0 to 1 value per rule. Reach is how much addressable traffic or listing weight is at stake, severity is how bad the deviation is now, and confidence is how complete the evidence is.
+
+| Priority | Impact |
+| --- | --- |
+| `critical` | 80 and above |
+| `high` | 60 and above |
+| `medium` | 35 and above |
+| `low` | Below 35 |
+
+The two advisory rules, `serp.hold_volatile` and `keyword.prune`, are capped at impact 50, so hygiene can never outrank growth.
+
+Impact is stamped with `formulaVersion: actions-v1` and is never a promised outcome. asobeast has no download or revenue data, so it never presents one.
+
+## Home market rules and market rules
+
+Two rules are worded carefully because of what asobeast can and cannot see.
+
+`keyword.add_uncovered` is home market only. asobeast stores one metadata snapshot per app, so it cannot claim a keyword is missing from a localized listing it has never seen.
+
+`market.improve_country` says investigate this market rather than fix your localization, for the same reason. It reports a visibility gap, which is a fact, and leaves the diagnosis to you. See [Countries and markets](/concepts/countries).
+
+## Limits
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| `ACTIONS_MAX_OPEN_PER_APP` | 20 | New actions one run may open per app, highest impact first. Existing open and snoozed actions always refresh, and the run reports how many it withheld |
+| `ACTIONS_SNOOZE_MAX_DAYS` | 90 | Furthest a snooze may be set into the future |
+| `RETENTION_ACTIONS_DAYS` | 180 | Prunes closed actions only. Open and snoozed actions are never pruned by age |
+
+Two per rule caps also apply where a rule could flood the queue: at most 5 prune actions and at most 3 review theme actions per app.
+
+## Running it
+
+Generation runs automatically inside the daily pipeline completion barrier, before alerts flush, so a newly opened priority action rides the same batched report.
+
+`POST /actions/run` queues an extra run and returns `202`. Two runs on the same day coalesce on a shared job id. A failing generation is logged and never blocks alert delivery.
+
+## AI explanations are optional
+
+With `OPENAI_API_KEY` set, an action card gains an explain button that turns its typed evidence into two to four plain sentences.
+
+AI may only summarize an action that already exists. It can never create, rank, re order or suppress one, and the entire feature works with the key unset, which is the default. See [Enable the optional AI features](/guides/ai-features).
+
+## Get notified about new actions
+
+`ALERT_ACTIONS_MIN_PRIORITY` sets the lowest priority that fires an `action.opened` event, and defaults to `high`. Refreshed, touched and resolved actions never fire.
+
+Existing alert subscribers are unaffected until they opt into the event. See [Send alerts](/guides/alerts).
+
+## Troubleshooting
+
+- **A dismissed action came back.** It was a different finding. Check the keyword and country: the fingerprint includes both, so the same rule on a different market is a separate action.
+- **Fewer actions than you expected.** `ACTIONS_MAX_OPEN_PER_APP` caps new actions per run. The run reports how many it withheld.
+- **A rule never fires.** Most rules need a minimum number of observed days. A recently added keyword or market has not accumulated them yet.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Run an ASO audit" icon="clipboard-check" href="/guides/aso-audit">
+    Where `audit.fix_factor` gets its evidence.
+  </Card>
+
+  <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
+    Where `keyword.add_uncovered` is resolved.
+  </Card>
+</CardGroup>

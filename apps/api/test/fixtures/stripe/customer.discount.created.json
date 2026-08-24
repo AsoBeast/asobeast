@@ -1,0 +1,22 @@
+{
+  "id": "evt_TestDiscountCreated",
+  "object": "event",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1800000900,
+  "data": {
+    "object": {
+      "id": "di_TestDiscount",
+      "object": "discount",
+      "customer": "cus_TestWorkspace1",
+      "start": 1800000000,
+      "subscription": "sub_TestIndieMonthly"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_TestRequest",
+    "idempotency_key": null
+  },
+  "type": "customer.discount.created"
+}

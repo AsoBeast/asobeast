@@ -1,0 +1,76 @@
+---
+title: Enable the optional AI features
+sidebarTitle: AI features
+description: "Set OPENAI_API_KEY to enable AI audit evidence, metadata drafts and action explanations. Every other feature works with the key left unset."
+icon: sparkles
+keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","audit evidence","optional"]
+---
+
+AI in asobeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
+
+## What does the key enable?
+
+Three features, all bring your own key.
+
+| Feature | Where | What it does |
+| --- | --- | --- |
+| AI audit evidence | Audit tab | One call reads the listing text plus the store icon and screenshots and scores the subjective factors 0 to 10 with a rationale |
+| Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles |
+| Action explanations | Action card | Turns typed evidence into two to four plain sentences |
+
+Each feature is a single completion per run, and the audit result is cached per app so the nightly score snapshot reuses it. There are no background OpenAI calls.
+
+## What happens without a key?
+
+The product is fully usable. Precisely three things differ.
+
+| Surface | With no key |
+| --- | --- |
+| AI endpoints | Answer `409` |
+| Metadata drafts card | Hidden |
+| Audit tab | Shows a one line setup hint instead of the AI audit button |
+
+The deterministic audit factors still score. The AI only checks are left pending rather than guessed, and a pending check never counts against your score. See [Run an ASO audit](/guides/aso-audit).
+
+## Configure it
+
+| Variable | Default | Notes |
+| --- | --- | --- |
+| `OPENAI_API_KEY` | Empty | Empty disables all three features |
+| `AI_MODEL` | `gpt-4o` | Must support vision and structured outputs, because the audit reads screenshots |
+
+Both live in `apps/api/.env`. Restart the API after changing them.
+
+## What is AI never allowed to do?
+
+It may only summarize an action that already exists. It can never create, rank, re order or suppress one, and the explanation prompt is told it may not change the recommendation.
+
+The stored summary is labelled as an AI summary of deterministic evidence, so a reader can always tell which part of the card is computed and which part is prose. See [Work the Action Center](/guides/action-center).
+
+Metadata drafts are constrained the same way. Every draft is linted again on the server and clamped to the store field limit, and asobeast has no write path to the stores, so a draft ends at a copy button rather than being published.
+
+## What data leaves your deployment?
+
+<Warning>
+  Setting `OPENAI_API_KEY` sends data to OpenAI. Only the app being worked on is sent: its own metadata, its keyword statistics and its own store image URLs for the audit. Never other apps' data, never review text in the action explanation prompt, and never secrets. With the key unset, no request leaves your deployment for any AI feature.
+</Warning>
+
+The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
+
+## Troubleshooting
+
+- **The AI endpoints answer 409.** No key is configured, or the API was not restarted after setting it.
+- **The audit button is missing but the key is set.** Confirm the key reached the API container. `docker compose config` shows the resolved environment.
+- **The model rejects the request.** `AI_MODEL` must support vision and structured outputs. A text only model fails on the audit while drafts still work.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Run an ASO audit" icon="clipboard-check" href="/guides/aso-audit">
+    What the AI pass adds and what it leaves alone.
+  </Card>
+
+  <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
+    Where drafts appear.
+  </Card>
+</CardGroup>

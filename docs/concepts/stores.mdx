@@ -1,0 +1,66 @@
+---
+title: App Store and Google Play
+sidebarTitle: Stores
+description: "Apple indexes a title, a subtitle and a private 100 character keyword field. Google Play indexes the title, short description and long description."
+icon: store
+keywords: ["App Store","Google Play","subtitle","keyword field","short description","indexed fields"]
+---
+
+Both stores are live and equally supported. What differs is which fields each store indexes for search, and one of Apple's indexed fields cannot be read from the public listing at all.
+
+## What does each store index?
+
+| Field | App Store limit | Google Play limit | Indexed for search | Readable from the listing |
+| --- | --- | --- | --- | --- |
+| Title | 30 | 30 | Both stores | Yes |
+| Subtitle | 30 | Not present | App Store | Yes |
+| Keyword field | 100 | Not present | App Store | No |
+| Short description | Not present | 80 | Google Play | Yes |
+| Long description | 4000, not indexed | 4000, indexed | Google Play | Yes |
+| Promotional text | 170, not indexed | Not present | Neither | Yes |
+
+Google Play search therefore reads three surfaces: the title, the 80 character short description and the 4000 character long description. There is no subtitle and no keyword field on Google Play, so those two stay Apple only concepts everywhere in asobeast, including the types, the metadata lints and the audit rubric.
+
+## Why is the iOS keyword field private?
+
+The 100 character iOS keyword field never appears on the public store page, so no amount of collection can read it. It exists only in App Store Connect.
+
+asobeast handles this by asking you for it. Paste the field in the metadata workbench and asobeast stores those keywords with the source `KEYWORD_FIELD`, which lets coverage checks, the audit rubric and the Action Center reason about a surface they cannot otherwise see.
+
+Leaving it empty is not neutral. Coverage will report the field as uncovered because asobeast has no evidence that it contains anything.
+
+## Why is the Google Play short description its indexed surface?
+
+The 80 character short description, called `summary` in the store payload, is Google Play's equivalent of the surfaces Apple splits across a subtitle and a keyword field. asobeast treats it accordingly.
+
+- Its keywords are tracked automatically with the source `DESCRIPTION`.
+- The metadata workbench lints it against the 80 character limit.
+- Keyword coverage counts it as an indexed field.
+
+## What stays Apple only?
+
+The subtitle and the keyword field. On a Google Play app they carry audit weight 0 and are hidden in the web app rather than shown empty, and the Action Center skips rules that would recommend an impossible edit.
+
+## Are scores comparable across stores?
+
+No. Traffic and difficulty are derived from different public evidence on each store, so an Apple difficulty of 60 and a Google Play difficulty of 60 do not mean the same thing.
+
+Compare a keyword against other keywords in the same store. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## Where else do the stores differ?
+
+| Difference | Effect |
+| --- | --- |
+| Google Play's suggest endpoint carries no priority signal | asobeast prefix probes it instead of reading a priority value |
+| Google Play search results carry no rating counts | SERP rating columns stay empty for Google Play |
+| Google Play release dates are best effort outside the `en` storefront | Treat `released` as approximate there |
+
+## What happens when a store changes its response?
+
+A parser breaks, for every installation at once. Only the provider layer parses store responses, so the break is one module, failed jobs stay contained, and no history is lost. See [Recover from a broken store parser](/operations/scraper-breakage).
+
+## Why does a Google Play job cost more?
+
+Because one logical job fans out to many requests. A Google Play score job makes roughly 15 to 18 sequential requests: one search, up to seven prefix probe suggests and ten detail enrichments. An Apple score job makes roughly two. A depth 200 Google Play position check takes roughly eight requests against one for Apple.
+
+That is why `SCRAPE_GPLAY_RPM` spaces job starts rather than individual requests, and why its default of 10 is lower than the Apple default of 15. See [The daily pipeline and rate limits](/concepts/pipeline).

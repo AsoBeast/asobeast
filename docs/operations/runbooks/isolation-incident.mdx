@@ -1,0 +1,68 @@
+---
+title: Suspected isolation incident
+sidebarTitle: Isolation incident
+description: "One workspace may have seen another's data. Contain, assess the scope, then notify. Written before it is needed, because disclosure has deadlines."
+icon: shield-x
+keywords: ["isolation","tenancy","breach","disclosure","rls"]
+---
+
+This is the most serious incident the hosted service can have, and the least likely. Tenancy is enforced by the database: every tenant owned table carries a policy, every query runs as a role that cannot bypass it, and a query with no workspace in scope returns nothing rather than everything.
+
+That is exactly why it is instrumented. **An impossible event that happens anyway is the one you most need to hear about immediately.**
+
+<Warning>
+  Read this page before you need it. Writing an incident process under pressure produces bad decisions, and disclosure obligations have deadlines measured in hours.
+</Warning>
+
+## Symptoms
+
+- `isolation.anomaly` pages. A query scoped to one workspace returned a row owned by another, and the log line names the operation, the scope and the foreign owners.
+- `asobeast_isolation_anomalies` is above zero. It should never leave zero.
+- A customer reports seeing an app, keyword or ranking that is not theirs.
+
+A customer report with no anomaly counter is still this incident until proven otherwise. Treat the report as the signal.
+
+<Warning>
+  The counter is a second line of defence, not the boundary itself. Row level security in the database is what actually isolates tenants. The tripwire only inspects rows a query returned, so it recognises a foreign owner when the result carries a `workspaceId`, directly or on an included relation within two levels. A projection that selects neither, such as a query returning only ids or an aggregate, gives it nothing to compare, and it samples the first 500 rows of a large result. A quiet counter therefore means nothing crossed that the tripwire could see, never that nothing crossed.
+</Warning>
+
+## Triage
+
+<Steps>
+  <Step title="Preserve the evidence first">
+    Copy the anomaly log lines somewhere durable before restarting anything. They carry the operation, the workspace in scope, the foreign owners and the correlation id. The counter is in process and a restart clears it.
+  </Step>
+  <Step title="Find the request behind it">
+    Search the logs for that `correlationId`. It gives you the route, the workspace, the time and every job the request spawned.
+  </Step>
+  <Step title="Decide whether data actually left">
+    A row that crossed a scope inside the process is a defect. A row that reached an HTTP response is a disclosure. The route and the status in the same correlation trail tell you which.
+  </Step>
+</Steps>
+
+## Containment
+
+1. **Suspend the receiving workspace** if data reached a response, with a written reason. It refuses every write and every on demand action immediately.
+2. Revoke that workspace's API tokens if the path was the API or the remote MCP endpoint.
+3. Stop any deploy in progress. Do not ship a fix that has not been reasoned about.
+4. Confirm the policies are still in place, because a missing policy is the only way most of these can happen:
+
+   ```bash
+   pnpm --filter api test:isolation
+   ```
+5. Check that migrations did not leave a table without a policy. The suite asserts that every table is classified as tenant owned, shared or operator only, and a new table with no classification fails it.
+
+## Recovery
+
+1. Fix the defect and add a case to the isolation suite that fails for the exact reported symptom before the fix and passes after.
+2. Verify with a two workspace fixture that the path is closed, not merely unreachable.
+3. Deploy, then confirm `asobeast_isolation_anomalies` stays at zero across a full daily cycle.
+4. Lift the suspension and record why in the support audit trail.
+5. Write the timeline down the same day, while it is exact.
+
+## Who to tell
+
+- **The affected customers, both sides, within hours.** Say what was exposed, to whom, for how long, and what has changed. Name the data, not a category.
+- Your data protection contact immediately. Regulatory notification clocks start at awareness, not at resolution.
+- Everyone else, in a public post, once the affected customers have been told first.
+- Nobody at all is not an option here, even when the exposure was one row and one customer.

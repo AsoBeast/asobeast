@@ -1,0 +1,116 @@
+---
+title: Rate limits and quotas
+sidebarTitle: Rate limits
+description: "Limits are per workspace and sized per plan across three request classes. Every response carries RateLimit headers, and a 429 names the window that closed."
+icon: gauge
+keywords: ["rate limits","429","RateLimit-Limit","Retry-After","quota","read","write","store"]
+---
+
+Limits exist to protect two different things. Request rate protects the API and the database. Store capacity protects the proxy pool and the daily run, because an API caller that triggers a refresh spends exactly what a dashboard user spends by clicking refresh.
+
+## Limits are per workspace
+
+Every limit counts against the workspace, never against the token or the client address. Minting a second token buys no extra capacity, and several people behind one office address do not share a bucket.
+
+Counters live in Redis, so every API instance sees the same window.
+
+Two things are counted per client address instead, because no workspace is known yet when they happen: the authentication endpoints, and rejected credentials. A caller that presents a session cookie or an `asob_` token the API refuses may do so 120 times a minute from one address before the next attempt is answered with `429` without a lookup. A credential the API accepts costs nothing against that count, so a working client never meets it.
+
+## Self hosted instances are unlimited
+
+With `BILLING_ENABLED` set to `false` there are no API rate limits at all beyond the existing authentication throttle. The only cost of a read is your own machine, and the only real constraint is store collection, bounded by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+Everything below applies to a metered instance.
+
+## Three request classes
+
+| Class | What it covers | Drawn from |
+| --- | --- | --- |
+| Read | Anything that returns stored data, including exports | The generous per minute budget |
+| Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
+| Store | Refresh, run daily, score and keyword suggestions | The write budget, plus its own on demand allowance |
+
+Reading a year of stored rankings is cheap. Triggering a refresh is not, which is why store endpoints carry a separate on demand allowance on top of the request rate.
+
+Three classes do not mean three budgets. There are two per minute budgets, one for reads and one shared by writes and store requests, and a single daily allowance every class spends from. The class names how a request is priced, never how much room it buys.
+
+A class is also not a permission. A read only token may call any endpoint that does not change data, including the store touching lookups, and it spends store capacity when it does.
+
+## What each plan allows
+
+| Limit | Indie | Ultimate |
+| --- | --- | --- |
+| Read requests per minute | 60 | 300 |
+| Write requests per minute | 20 | 100 |
+| Requests per day | 10,000 | 100,000 |
+| Requests in parallel | 8 | 24 |
+| Refresh per day | 50 | 500 |
+| Run daily per day | 5 | 20 |
+| Score per day | 100 | 1,000 |
+| Keyword suggestions per hour | 60 | 300 |
+
+A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
+
+## Read the headers
+
+Every response carries the tightest limit the request touched.
+
+| Header | Meaning |
+| --- | --- |
+| `RateLimit-Limit` | The allowance for the window closest to closing |
+| `RateLimit-Remaining` | What is left in that window |
+| `RateLimit-Reset` | Seconds until that window reopens |
+| `Retry-After` | Present on `429` only. Seconds until the refused request can succeed |
+
+A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs to guess.
+
+## A 429 names the window that closed
+
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Rate limit reached: the indie plan allows 20 write requests per minute, available again in 34 seconds",
+  "path": "/apps/cl123/keywords",
+  "timestamp": "2026-08-14T10:30:26.118Z",
+  "rateLimit": {
+    "window": "minute",
+    "rateClass": "write",
+    "plan": "indie",
+    "limit": 20,
+    "resetSeconds": 34,
+    "upgradeTo": "ultimate"
+  },
+  "retryAfterSeconds": 34
+}
+```
+
+`window` is `minute`, `day` or `concurrent`. Waiting for `resetSeconds` is the whole fix for the first two. For `concurrent`, reduce how many requests you have open at once.
+
+## A rate limit is not a quota
+
+Three refusals look similar and mean different things. Conflating them makes all three unfixable.
+
+| Status | Envelope field | What it means | What fixes it |
+| --- | --- | --- | --- |
+| `429` | `rateLimit` | Too many requests too quickly | Wait for the reset, or upgrade for a larger allowance |
+| `403` | `quota` | A plan capacity limit such as apps or tracked keyword markets | Remove something, or upgrade |
+| `402` | `entitlement` | The workspace has no live plan | Start a plan at the upgrade path in the envelope |
+
+Waiting does not help a `403`, and upgrading a plan does not clear a `429` that is already in flight.
+
+## Suspension
+
+An operator can suspend a workspace after sustained abuse. A suspended workspace keeps reading and exporting its data from the dashboard and keeps full access to billing, so it can always pay and always leave with its data. API tokens stop authenticating, every write is refused with `403`, and the daily run skips the workspace.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Error responses" icon="triangle-alert" href="/api-reference/errors">
+    The envelope every failure shares.
+  </Card>
+
+  <Card title="Personal API tokens" icon="key-round" href="/security/api-tokens">
+    Scope, expiry and revocation.
+  </Card>
+</CardGroup>

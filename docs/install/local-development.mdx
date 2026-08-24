@@ -1,0 +1,119 @@
+---
+title: Set up a development environment
+description: "Start PostgreSQL and Redis with the development Compose file, install with pnpm and run the API, the web app and the shared package together with pnpm dev."
+icon: code
+keywords: ["development","pnpm","turborepo","prisma migrate","playwright"]
+---
+
+Development runs the applications on your machine and only the datastores in Docker. `pnpm dev` starts the shared package in watch mode, the API and the web app together through Turborepo.
+
+## Prerequisites
+
+| Requirement | Value |
+| --- | --- |
+| Node.js | 22 or newer |
+| pnpm | 10.18.2, pinned by `packageManager` in the root `package.json` |
+| Docker | For PostgreSQL and Redis only |
+
+## Start the development services
+
+```bash
+docker compose -f docker-compose.dev.yml up -d
+```
+
+This starts `postgres:18-alpine` on host port 5433 and `redis:8-alpine` on host port 6380, both bound to `127.0.0.1` so a locally running API can reach them without exposing either service on the network. Their container ports remain 5432 and 6379. The development database uses the password `asobeast`, which is fine because nothing is exposed beyond your machine. Never reuse it in a deployment.
+
+These services run as the `asobeast-dev` Compose project, with their own containers and their own volumes. A self hosted stack started from `docker-compose.yml` on the same machine keeps its data separately, so starting, resetting or removing the development services never touches it.
+
+## Install and run
+
+<Steps>
+  <Step title="Install the workspace">
+    ```bash
+    pnpm install
+    ```
+  </Step>
+  <Step title="Create the local environment files">
+    ```bash
+    cp apps/api/.env.example apps/api/.env
+    cp apps/web/.env.example apps/web/.env
+    ```
+
+    Set `AUTH_SECRET` in `apps/api/.env` to at least 32 characters. Generate one with `openssl rand -hex 32`. The API refuses to boot without it.
+  </Step>
+  <Step title="Apply migrations and seed">
+    ```bash
+    pnpm --filter api db:migrate
+    ```
+  </Step>
+  <Step title="Run everything">
+    ```bash
+    pnpm dev
+    ```
+
+    The API listens on 4000, the web app on 3000, and `@asobeast/shared` rebuilds on change.
+  </Step>
+</Steps>
+
+## Commands
+
+Every command runs from the repository root.
+
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Run the shared package, the API and the web app together |
+| `pnpm --filter api dev` | Run only the API |
+| `pnpm --filter web dev` | Run only the web app |
+| `pnpm build` | Build every package, respecting the dependency graph |
+| `pnpm lint` | Lint every package |
+| `pnpm test` | Run the unit suites |
+| `pnpm --filter api test:e2e` | API end to end suite with mocked store providers |
+| `pnpm --filter web test:e2e` | Playwright suite against the typed mock API |
+| `pnpm --filter api db:migrate` | Apply migrations and seed |
+| `pnpm --filter api db:studio` | Open Prisma Studio |
+| `pnpm format:check` | Check formatting without writing files |
+
+## Browser tests
+
+Install the browser once before the first Playwright run.
+
+```bash
+pnpm --filter web exec playwright install chromium
+```
+
+The browser suite is hermetic. A typed `node:http` mock API runs on port 4100 and serves both server side prefetching and browser fetches, so no PostgreSQL, Redis or store request is involved. Playwright reuses a running dev server locally and builds the production bundle in continuous integration.
+
+## Test email alerts locally
+
+Run a throwaway SMTP sink and point the API at it.
+
+```bash
+docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
+```
+
+Then set `SMTP_HOST=localhost`, `SMTP_PORT=1025` and `SMTP_FROM=asobeast <alerts@localhost>` in `apps/api/.env`, add an email alert on the settings page, and read the messages at `http://localhost:8025`.
+
+## Repository layout
+
+```text
+apps/
+  api/        NestJS + Prisma + BullMQ backend
+  mcp/        read-only local MCP server over the HTTP API
+  web/        Next.js App Router frontend
+packages/
+  shared/             @asobeast/shared: contract types, Store union, url parser, helpers
+  typescript-config/  shared base tsconfigs
+docs/                   Mintlify documentation site
+docker-compose.dev.yml  PostgreSQL + Redis for development
+docker-compose.yml      full self hosted stack
+```
+
+Every request and response shape the frontend consumes lives in `@asobeast/shared`. Prisma generated types never leave `apps/api`, and packages never import each other by relative path.
+
+All store traffic crosses the `StoreProvider` boundary in `apps/api/src/store-providers/`. No other module imports a scraper library, which contains a parser breakage to one file.
+
+## Contributing
+
+Commits follow Conventional Commits in the form `type(scope): subject`, enforced by a `commit-msg` hook. Feature work is open on the `1.x` line, and what constrains it is the compatibility promise rather than a freeze: the HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible throughout `1.x`. See [Upgrade and roll back](/install/upgrade) for what that covers.
+
+Read [CONTRIBUTING.md](https://github.com/AsoBeast/asobeast/blob/main/CONTRIBUTING.md) before opening a pull request.

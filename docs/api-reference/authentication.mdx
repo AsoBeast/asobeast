@@ -1,0 +1,89 @@
+---
+title: Authenticate API requests
+sidebarTitle: Authentication
+description: "Send a personal API token as a bearer header on every request. Create the token in Settings, where it is shown once and prefixed with asob_."
+icon: key
+keywords: ["authentication","bearer token","asob_","session cookie","401","402"]
+---
+
+Send your personal API token as a bearer header on every request. There is no public endpoint and no anonymous mode.
+
+<CodeGroup>
+
+```bash cURL
+curl -H "Authorization: Bearer asob_…" \
+  https://your-host/api/backend/health
+```
+
+```javascript JavaScript
+const response = await fetch("https://your-host/api/backend/health", {
+  headers: { Authorization: `Bearer ${process.env.ASOBEAST_API_TOKEN}` },
+});
+const health = await response.json();
+```
+
+```python Python
+import os, requests
+
+response = requests.get(
+    "https://your-host/api/backend/health",
+    headers={"Authorization": f"Bearer {os.environ['ASOBEAST_API_TOKEN']}"},
+)
+health = response.json()
+```
+
+</CodeGroup>
+
+## Two credential types
+
+| Credential | Used by | Obtained from |
+| --- | --- | --- |
+| Session cookie | The dashboard in a browser | Signing in. The proxy forwards it for you |
+| Personal API token | Scripts, the MCP server, continuous integration | The API tokens card in Settings |
+
+Both carry the same entitlement checks. A token can be narrower than a session: it carries a scope and an optional expiry, and a read only token is refused with `403` the moment it tries to change anything. Give each consumer its own token and revoke individually. See [Personal API tokens](/security/api-tokens).
+
+## Scope and expiry
+
+| Setting | Values | Default |
+| --- | --- | --- |
+| Scope | `read` or `write` | `read` |
+| Expiry | Up to 365 days, or never | Never |
+
+Read only is the right default for anything agentic, including the MCP server, which never writes. An expired token fails authentication with `401` exactly like a revoked one.
+
+Rate limits count per workspace rather than per token, so minting a second token buys no extra capacity. See [Rate limits and quotas](/api-reference/rate-limits).
+
+## Status codes you will see
+
+| Status | Meaning |
+| --- | --- |
+| `401` | The credential is missing, malformed, revoked or signed with a rotated secret |
+| `402` | The account is not entitled, which only happens when `BILLING_ENABLED` is `true` |
+| `403` | The token is read only and the request would change something, or the workspace is suspended |
+| `429` | A plan rate limit is spent. `Retry-After` says when it reopens |
+| `404` on `/docs` or `/admin/queues` | You are not an owner. These surfaces answer `404` rather than confirming they exist |
+
+A `401` after a deployment usually means `AUTH_SECRET` was rotated, which invalidates sessions. Personal API tokens survive a rotation, because they are stored as hashes rather than signed. See [Rotate secrets](/operations/rotate-secrets).
+
+## Keep the token out of your history
+
+Read it from an environment variable rather than typing it into a shell.
+
+```bash
+export ASOBEAST_API_TOKEN=asob_…
+curl -H "Authorization: Bearer $ASOBEAST_API_TOKEN" \
+  https://your-host/api/backend/apps
+```
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Error responses" icon="triangle-alert" href="/api-reference/errors">
+    The envelope every failure returns.
+  </Card>
+
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    Sessions, guards and entitlements.
+  </Card>
+</CardGroup>

@@ -1,0 +1,220 @@
+---
+title: Back up PostgreSQL
+sidebarTitle: Backups
+description: "PostgreSQL is the durable system of record, so it is the only thing that needs backing up. Redis holds reconstructible queue state only."
+icon: database-backup
+keywords: ["backup","pg_dump","PostgreSQL","retention","restore test","volume"]
+---
+
+Back up PostgreSQL and nothing else. Every app, keyword, position, score, review, change event and action item lives there.
+
+Redis holds queue state, which is reconstructible: the next daily run rebuilds it. Including Redis in an application data backup adds size and restores nothing you need.
+
+Discarding Redis does lose two things, and neither is application data. Jobs that were queued or in flight are gone, so that day's collection restarts at the next run. Alert flush claims that were taken but never completed are gone as well, which means a batch that was mid delivery is not retried. Both recover on the next daily run.
+
+## Take a backup by hand
+
+For a one off archive, before an upgrade for instance, the block below writes a compressed custom format archive, fails on any error, and verifies that PostgreSQL can read its table of contents before declaring success.
+
+For anything repeating, use the script in [Automate it](#automate-it) rather than pasting this into cron.
+
+```bash
+set -eu
+mkdir -p "$HOME/asobeast-backups"
+chmod 700 "$HOME/asobeast-backups"
+umask 077
+backup_file="$HOME/asobeast-backups/asobeast-$(date -u +%Y%m%dT%H%M%SZ).dump"
+docker compose exec -T postgres pg_dump --username asobeast --dbname asobeast --format=custom > "$backup_file"
+test -s "$backup_file"
+docker compose exec -T postgres pg_restore --list < "$backup_file" > /dev/null
+echo "$backup_file"
+```
+
+`umask 077` gives the archive restrictive permissions, which matters because the dump contains everything.
+
+Both commands run inside the `postgres` container, so the client always matches the server and there is no version to keep in step. Running `pg_dump` from the host instead needs a client at least as new as the server, which is PostgreSQL 18. An older host client stops with `server version mismatch` and writes nothing.
+
+Run it from the repository root with the same Compose project name the deployment uses. The default project name is the directory name. For a deployment started with `docker compose -p production`, add `-p production` to every command on this page.
+
+## Where does the data live?
+
+In the named volume `pgdata`, mounted at `/var/lib/postgresql` in the `postgres` container. Compose prefixes it with the project name, so it appears as `production_pgdata` under a project called `production`.
+
+Copying the volume directory while PostgreSQL is running is not a backup. Use `pg_dump`, which produces a consistent snapshot.
+
+## How long it takes
+
+Measured on a running stack, restoring an archive the scheduled script produced rather than one taken by hand for the drill.
+
+| Measure | Value |
+| --- | --- |
+| Database size | 11 MB |
+| Archive size | 158 KB |
+| Backup duration | 0.13 seconds |
+| Restore duration | 0.20 seconds |
+
+That instance holds 2 apps and 30 tracked keyword markets with 42 applied migrations. Both durations scale with row count rather than with database size, and the archive compresses well because the largest columns are repeated JSON payloads. A year of daily rankings for 20 apps at 200 keywords is roughly 1.5 million rows, so plan for minutes rather than seconds at that scale and measure your own instance before you rely on a maintenance window.
+
+The restore was verified with the full checklist in [Restore PostgreSQL](/operations/restore): the archive's table of contents read before anything was dropped, row counts matched the live database, all 42 migrations came back finished, no constraint was left unvalidated, both workspace scoped unique indexes were present, and an insert succeeded afterwards. A restore can report success and still refuse a write, which is why the write is on the list.
+
+## How long are archives kept?
+
+The window is a decision, not a detail, because a deleted workspace is not deleted until it has aged out of the last archive that holds it. Write yours down before you schedule anything.
+
+The shipped script keeps two generations.
+
+| Generation | Kept | Taken from |
+| --- | --- | --- |
+| Daily | 14 archives | Every run |
+| Weekly | 8 archives | The Sunday run, promoted rather than dumped twice |
+
+That makes **56 days** the longest an archive can hold a row, and therefore the real deletion horizon for the deployment. Erasure removes data from the live database at once and from the last archive up to 56 days later. See [Data export, deletion and retention](/legal/data-retention).
+
+Both live in `$HOME/asobeast-backups`, `daily/` and `weekly/`, on the same host by default.
+
+Change the window by editing `BACKUP_KEEP_DAILY` and `BACKUP_KEEP_WEEKLY` at the top of the script, and change the deletion horizon you publish along with it. A shorter live retention promise than the backup window is not a promise you keep.
+
+The offsite copies below carry their own window, `BACKUP_REMOTE_KEEP_DAILY` and `BACKUP_REMOTE_KEEP_WEEKLY`, which default to the local numbers so the published horizon does not move on its own. Lengthening the remote window lengthens the deletion horizon, and the horizon you publish has to be the longest one you actually keep.
+
+## Copy the archive off the host
+
+A backup on the same disk as the database survives a mistake but not a disk. On a single machine the daily archives and the `pgdata` volume are the same SSD, so one failure loses the database and every copy of it in the same second. Theft, a wiped filesystem and ransomware have the same shape.
+
+Offsite means somewhere the loss of this machine cannot reach: object storage, a different machine on a different power supply, or an external disk that is not mounted between runs. It does not mean a second directory or a second partition.
+
+Set two variables and the shipped script does the rest.
+
+```bash
+BACKUP_AGE_RECIPIENT=age1... BACKUP_REMOTE=offsite:asobeast-backups \
+  COMPOSE_FILE=/srv/asobeast/docker-compose.yml /usr/local/bin/asobeast-backup.sh
+```
+
+The run then encrypts the verified archive with [age](https://age-encryption.org), uploads the encrypted file with [rclone](https://rclone.org), reads the object size back from the remote to prove the upload landed, promotes the Sunday object to the remote weekly generation with a server side copy, prunes the remote to its own window, and removes the encrypted file from the host. The plaintext archive stays local, because restoring from local is minutes and restoring from a remote is bandwidth.
+
+### Encryption is not optional offsite
+
+`pg_dump` output contains every password hash, every session row, every billing identifier and every review the instance has collected. That is acceptable at `chmod 700` on a machine you control and unacceptable in somebody else's storage, so the script refuses to push anything unless `BACKUP_AGE_RECIPIENT` names a recipient.
+
+Generate the key pair somewhere that is **not** the machine being backed up, and put only the public half on the host.
+
+```bash
+age-keygen -o asobeast-backup-identity.txt
+```
+
+The public key on the line it prints is `BACKUP_AGE_RECIPIENT`. Keep the identity file off the host and off the remote: a compromised mini PC can then write its offsite history and never read it back. Losing that file loses every offsite archive, so store it the way you store the recovery codes for your accounts.
+
+### What the failure path does
+
+| Failure | What happens |
+| --- | --- |
+| `age` or `rclone` missing | The run stops before dumping and names the missing tool |
+| `BACKUP_REMOTE` set with no recipient | The run stops before dumping, rather than pushing plaintext |
+| Upload reports success but reads back short | The short object is deleted and the run exits non zero, so pruning cannot mistake it for a backup |
+| Remote unreachable | The run exits non zero with the local archive already written and verified |
+
+A failed upload is a failed run. The exit code is what the scheduler reports, and the completion timestamp the API watches is written only after the upload lands. See [Hosted observability](/operations/hosted-observability).
+
+## The schedule is watched
+
+A backup that silently stops running is discovered during a restore, which is the one moment it cannot be fixed. The exit code alone does not protect you, because it goes to a timer nobody reads.
+
+Every successful run therefore reports its completion time to Redis, and the API reads it back on every `/metrics` scrape. Set `BACKUP_MAX_AGE_HOURS` in the API environment to the age you consider stale, and `backup.stale` fires when the last run is older than that, escalating from `investigate` to `page` at twice the window. A run that never reported at all pages, rather than reading as fresh.
+
+Leave `BACKUP_MAX_AGE_HOURS` at `0` if you back up some other way. Nothing is watched and nothing alerts, which is better than an alert you learn to ignore.
+
+Reporting is best effort. A run that finished but could not reach Redis says so on stderr and still exits zero, because the archive is good; the instance then reports the schedule as stale until the next run gets through, which is the conservative direction to be wrong in.
+
+### Restore from the offsite copy
+
+The offsite copy is only a backup once you have restored one. See [Restore PostgreSQL](/operations/restore), which restores an archive fetched from the remote with the host powered off, and records the recovery objectives.
+
+## Automate it
+
+The repository ships the script, at `scripts/asobeast-backup.sh`. Use it rather than a copy of the block above, because a copy on the host and a block in a document drift apart and nobody notices until a restore.
+
+It dumps, verifies the archive with `pg_restore --list`, promotes the Sunday archive to the weekly generation, copies an encrypted copy offsite when one is configured, prunes every generation to its window, and exits non zero on any failure so the scheduler reports it. CI runs this same script from a directory that is not the repository, restores the archive it produces and compares it to the source, and then fetches the encrypted object back out of object storage and restores that too, so the scheduled path is the tested path. It writes to a `.partial` file and renames only after verification, so an interrupted run never leaves a truncated archive that pruning would later mistake for a good one.
+
+Install it and schedule it.
+
+```bash
+sudo install -m 700 scripts/asobeast-backup.sh /usr/local/bin/asobeast-backup.sh
+```
+
+```bash
+0 2 * * * COMPOSE_FILE=/srv/asobeast/docker-compose.yml /usr/local/bin/asobeast-backup.sh >> /var/log/asobeast-backup.log 2>&1
+```
+
+`COMPOSE_FILE` is the one variable you have to set, and it must be absolute. Compose locates a deployment through its file, not through its project name, so a run that starts anywhere but the repository has nothing to talk to. The script refuses to start without it rather than dumping whichever stack happens to be under the working directory.
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `COMPOSE_FILE` | Required | Absolute path of the deployment's compose file, passed to Compose as `-f`. Several paths joined by `COMPOSE_PATH_SEPARATOR`, `:` by default, work the same way Compose reads them, so a base file and an override both apply |
+| `BACKUP_ROOT` | `$HOME/asobeast-backups` | Where `daily/` and `weekly/` are written |
+| `BACKUP_KEEP_DAILY` | `14` | Daily archives kept |
+| `BACKUP_KEEP_WEEKLY` | `8` | Weekly archives kept |
+| `BACKUP_AGE_RECIPIENT` | Unset | age public key the archive is encrypted to. Unset means no encryption and no upload |
+| `BACKUP_REMOTE` | Unset | rclone destination for the encrypted archive, for example `offsite:asobeast-backups`. Requires `BACKUP_AGE_RECIPIENT` |
+| `BACKUP_REMOTE_KEEP_DAILY` | `BACKUP_KEEP_DAILY` | Daily objects kept offsite |
+| `BACKUP_REMOTE_KEEP_WEEKLY` | `BACKUP_KEEP_WEEKLY` | Weekly objects kept offsite |
+| `BACKUP_AGE` | `age` | Path to the age binary |
+| `BACKUP_RCLONE` | `rclone` | Path to the rclone binary |
+| `BACKUP_REDIS_SERVICE` | `redis` | Compose service the completion time is reported to |
+| `BACKUP_REDIS_DB` | `0` | Redis database index the API reads, which is `REDIS_DB` in the API environment |
+| `BACKUP_DATABASE` | `asobeast` | Database to dump, which the shipped Compose file names |
+| `BACKUP_USER` | `asobeast` | PostgreSQL role the dump runs as |
+| `COMPOSE_PROJECT` | Unset | Passes `-p` to Compose, for a deployment that named its project |
+| `WEEKLY_DAY` | `7`, Sunday | Day of the week whose archive is promoted, as `date +%u` reports it |
+
+Cron runs with a minimal environment and from a working directory that is probably not the repository. Give cron a `HOME` if `BACKUP_ROOT` depends on it, and set `COMPOSE_PROJECT` only if the deployment named its project, because the shipped Compose file already names it `asobeast`.
+
+### Check the failure path before you trust it
+
+A schedule that fails silently is worse than no schedule, because it reports success by saying nothing. Verify the failure path once, on purpose, rather than discovering it during a restore.
+
+Stop PostgreSQL and run the script.
+
+```bash
+docker compose stop postgres && COMPOSE_FILE=/srv/asobeast/docker-compose.yml /usr/local/bin/asobeast-backup.sh; echo "exit=$?"
+```
+
+It must print the reason, exit non zero, and leave nothing behind. On the shipped script that is `service "postgres" is not running` and `exit=1`, with no file written under `daily/`, because the dump goes to a `.partial` path that is removed on any failure and renamed only after `pg_restore --list` reads it. A failed run also stops before pruning, so it can never delete a good archive on its way out.
+
+Then start PostgreSQL again and confirm the next run writes an archive.
+
+```bash
+docker compose start postgres
+```
+
+Cron mails the output of a failing job to the crontab owner. Confirm that mail actually arrives on your host, or send the log somewhere you read, because the exit code is only useful if something is listening for it.
+
+## When to run it
+
+Back up shortly before the daily pipeline, not after it. `CRON_DAILY` defaults to `0 3 * * *`, so the hour before that is the quietest point in the day: the previous run finished long ago, the next has not started, and no store jobs are in flight. The schedule above uses 02:00 for that reason.
+
+Backing up during the run is not dangerous, because `pg_dump` takes a consistent snapshot, but it captures a day that is half collected. Restoring it later leaves a partial day that the next run will not revisit, since a store SERP is a point in time observation.
+
+If you change `CRON_DAILY`, move the backup with it.
+
+Keep tested generations off host. See [Copy the archive off the host](#copy-the-archive-off-the-host).
+
+<Warning>
+  Never commit a database dump or a `.env` file to version control. Both contain credentials, and a dump contains every account record.
+</Warning>
+
+## Verify a backup
+
+A backup that has never been restored is not a backup. Schedule a real restore into a disposable stack on a regular cadence and confirm the app and keyword counts match.
+
+See [Restore PostgreSQL](/operations/restore).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Restore PostgreSQL" icon="database" href="/operations/restore">
+    The other half of the drill.
+  </Card>
+
+  <Card title="Upgrade and roll back" icon="circle-arrow-up" href="/install/upgrade">
+    Why the backup has to precede the upgrade.
+  </Card>
+</CardGroup>

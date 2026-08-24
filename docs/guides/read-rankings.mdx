@@ -1,0 +1,70 @@
+---
+title: Read rankings and SERPs
+description: The ranking chart uses a reversed Y axis so position 1 sits at the top. SERP snapshots keep the top 10 results per keyword and per day.
+icon: chart-line
+keywords: ["rankings","chart","SERP","volatility","entrants","movers"]
+---
+
+The rankings view answers two questions: where you rank over time, and who else is on the page. The first comes from position history, the second from stored SERP snapshots.
+
+## Read the ranking chart
+
+The Y axis is reversed, so position 1 is at the top and a rising line is an improvement.
+
+The chart covers every market the app tracks, so each series is named with its storefront, as in `habit tracker (US)`. The same phrase in two markets is two keyword rows checked by two searches, and the labels are what keeps them apart on the chart, in its legend and in the CSV export. Rank alerts name the market the same way.
+
+| What you see | What it means |
+| --- | --- |
+| A line rising toward the top | Position improving |
+| A gap in the line | The app was checked and not found within the captured depth |
+| `>200` in the table | Same thing, expressed as a bound from that row's own depth |
+
+A gap is never zero. See [Positions and rank depth](/concepts/positions) for why treating it as zero inverts every trend.
+
+Use the range picker to change the window. Dates are UTC, so a chart point labelled with a date is the observation for that UTC day.
+
+## Inspect a SERP snapshot
+
+For every tracked keyword and day, asobeast keeps the top 10 search results with the app, its position and the listing signals the store returned.
+
+That snapshot is what makes the rest of the page possible.
+
+| Derived signal | What it measures |
+| --- | --- |
+| Entrants | Apps that appeared in the top 10 that were not there before |
+| Movers | Apps whose position changed materially between snapshots |
+| Volatility | How much of the top 10 changed hands over the recent window |
+
+Google Play search results carry no rating counts, so the rating columns stay empty for Google Play keywords. That is a store limitation rather than a missing sync.
+
+SERP entries are pruned on `RETENTION_SERP_DAYS`, which defaults to 90 days.
+
+## Understand volatility
+
+Volatility scores how much a keyword's top 10 changes membership, on a 0 to 100 scale. asobeast averages the difference between consecutive observed days over an eight day window, so 0 means the same ten apps every day and 100 means a completely different ten each day.
+
+It measures which apps are present rather than the order they sit in, so a top 10 that reorders without anyone entering or leaving scores 0. High volatility means the result page turns over on its own, which makes a single day's change weak evidence.
+
+The Action Center uses this directly. A volatile keyword damps rules that would otherwise fire on a one day movement, and `serp.hold_volatile` tells you when that happened. See [Work the Action Center](/guides/action-center).
+
+## Discover competitors from a SERP
+
+Any app in a stored SERP snapshot can be added as a competitor in one step, which is usually a better starting list than guessing. See [Track competitors](/guides/competitors).
+
+## Troubleshooting
+
+- **The chart is empty for a new keyword.** No daily run has covered it yet.
+- **A line stops and restarts.** The app left and re entered the captured depth. The gap is real data.
+- **Volatility is missing.** It needs several observed days in the window. A keyword added yesterday has none.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Positions and rank depth" icon="list-ordered" href="/concepts/positions">
+    What 1 based, null and depth mean precisely.
+  </Card>
+
+  <Card title="Follow category ranks" icon="trophy" href="/guides/category-ranks">
+    Free, paid and grossing chart positions.
+  </Card>
+</CardGroup>

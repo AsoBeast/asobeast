@@ -1,0 +1,203 @@
+---
+title: "How much can one instance collect?"
+sidebarTitle: Capacity
+description: "Measured orchestration cost and projected daily wall clock at three scales, the configuration where a run stops finishing inside a day, and what the per market multiplier really costs."
+icon: gauge
+keywords: ["capacity","rate limit","daily pipeline","benchmark","scale","budget"]
+---
+
+Collection is bounded by rate limits, not by hardware. asobeast asks the stores for one thing at a time on purpose, so the honest question is not how fast your server is, it is how many store requests a day you have room for.
+
+Every number here was measured on a deterministic fixture and can be reproduced with `pnpm --filter api run bench:target`.
+
+## What the pipeline costs to orchestrate
+
+This is the code's own overhead: building the target list, estimating the budget, and enqueueing the whole fan-out with a provider that returns instantly.
+
+| Scale | Apps | Tracked keywords | Ranking rows | Budget query | Fan-out | Jobs enqueued | Redis growth |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `small` | 3 | 75 | 525 | 12 ms | 11 ms | 81 | 0.4 MB |
+| `target` | 20 | 8,000 | 720,000 | 91 ms | 468 ms | 8,040 | 9.5 MB |
+| `stress` | 50 | 75,000 | 6,750,000 | 547 ms | 4,029 ms | 75,100 | 77 MB |
+
+Orchestration is not the constraint and never becomes one. Enqueueing 75,100 jobs takes four seconds, against a run that will take days. Budget Redis at roughly 1 KB per queued job.
+
+## What the pipeline costs in wall clock
+
+These are measurements, taken against the memory ceilings the stack ships rather than against an unconstrained runner. The full record, including how to reproduce them, is in `apps/api/test/load/MEASUREMENTS.md`.
+
+| Scale | Keyword markets | App Store requests | At 15 rpm | Google Play requests | At 10 rpm | Utilization |
+| --- | --- | --- | --- | --- | --- | --- |
+| `small` | 75 | 81 | 0.1 hours | 0 | 0 hours | 0.4% |
+| `target` | 8,000 | 4,020 | 4.5 hours | 32,020 | 53.4 hours | 222% |
+| `stress` | 75,000 | 37,550 | 41.7 hours | 300,050 | 500.1 hours | 2,084% |
+
+Both columns count **requests**, which is what the store sees and what risks throttling. A depth 200 Google Play keyword search costs about eight requests where the Apple equivalent costs one, so a workload split evenly between the stores spends roughly eight times as long on Play as on Apple for the same number of keywords.
+
+The `target` row does not finish inside a day. Apple's share does, comfortably; Play's does not, by a factor of two. That is the measured answer to whether one host carries 20 apps at 200 keywords across two storefronts and two stores: **it does not**, and the reason is `SCRAPE_GPLAY_RPM`, not the machine.
+
+Orchestration is not what you wait for. Building the daily job set at target scale costs 110 ms to price the day and 443 ms to enqueue it, against a window measured in hours.
+
+### What the guard does when the day is too small
+
+The daily run does not simply overrun. At 222% pressure it sheds review syncing, and past 150% it sheds app refreshes as well, keeping the keyword captures that are the product. Both were observed in the measurement runs. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Where the day runs out
+
+A run stops finishing inside 24 hours at:
+
+| Store | Ceiling per day | What that is |
+| --- | --- | --- |
+| App Store | **21,600 requests** | `SCRAPE_ITUNES_RPM` of 15, times 60, times 24 |
+| Google Play | **14,400 job starts** | `SCRAPE_GPLAY_RPM` of 10, times 60, times 24 |
+
+Keywords dominate the count, and a keyword is counted once per market. What that ceiling buys depends entirely on which store the keywords are on.
+
+| Store mix | Keyword markets one host carries a day | Why |
+| --- | --- | --- |
+| Apple only | Roughly **20,000** | One request a search against 21,600 requests, minus the app, review and category work |
+| Even split | Roughly **3,600** | The Play half costs 8 requests a search, so 1,800 Play markets exhaust 14,400 requests while 1,800 Apple markets use a tenth of theirs |
+| Play only | Roughly **1,800** | 14,400 requests at 8 requests a search |
+
+Some Apple only shapes that reach the ceiling:
+
+- 20 apps, 200 keywords each, 5 markets is 20,000 searches, about 22 hours. A sixth market does not fit.
+- 50 apps, 200 keywords each, 2 markets is 20,000 searches, the same wall from a different direction.
+- 10 apps, 400 keywords each, 5 markets is 20,000 searches again.
+
+The shape does not matter. The product does, and so does the store.
+
+Raising this ceiling is not a matter of a bigger machine. Every number above is a rate limit on one egress address, so more capacity means more addresses, which is what the egress proxy pool is for. See [Configuration reference](/configuration/reference).
+
+## The per market multiplier
+
+Adding a storefront for a keyword set you already track **doubles** the searches for that set. The same phrase in two markets is two keyword rows, checked by two searches, because rankings differ per storefront and one search cannot answer for both.
+
+At the `target` scale, dropping from two markets to one halves the App Store projection from 4.5 hours to about 2.3. Adding a third takes it to about 6.7.
+
+This is the single most expensive decision you make, and it is invisible until the run stops finishing. Check it before you add a market, not after.
+
+## Check your own numbers
+
+`GET /jobs/budget` estimates the fan-out from your real data, broken down per store, and the settings page renders the same figures as a budget card. The estimate is verified against the actual fan-out in CI on every pull request, so the number the card shows is the number of jobs the pipeline will enqueue.
+
+```bash
+curl --silent http://127.0.0.1:3000/api/backend/jobs/budget | jq '{total, utilization, stores}'
+```
+
+`utilization` is the fraction of a day the run will occupy at your configured limits. Above 1.0 the run cannot finish before the next one starts.
+
+`completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count rather than the single host budget, so the projection degrades honestly as endpoints cool down.
+
+`quota` is present only when `BILLING_ENABLED` is true. It reports the plan, the apps and keyword markets used against their limits, and `overLimitSince` once a workspace has been over its keyword limit long enough for daily checks to cover only the first N keyword markets in a stable order.
+
+Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which sums demand across every workspace the daily run visits and names the ones consuming most. It is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) and answers `404` to anyone else, including a customer who owns their own workspace.
+
+## Under pressure
+
+When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
+
+On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily and keyword scoring are capped per day; suggestion lookups are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
+
+## What each container is allowed on the host
+
+Everything above bounds how much work the day can do. This bounds what one container can take from the machine while it does it, because on a single host PostgreSQL, Redis, the API and the web app are neighbours rather than isolated tenants.
+
+Compose sets a memory ceiling per service and rotates every container log.
+
+| Service | Memory ceiling | Measured at rest | What happens at the ceiling |
+| --- | --- | --- | --- |
+| `api` | 768 MB | ~230 MB | The kernel stops the container and `restart: unless-stopped` brings it back. In flight jobs are retried on the next run |
+| `web` | 384 MB | ~58 MB | The kernel stops the container and Compose restarts it. The API keeps running, so nothing is lost |
+| `postgres` | 384 MB | ~48 MB | The kernel stops the container. This is the one to watch, because recovery on the next start replays the write ahead log |
+| `redis` | 320 MB | ~14 MB | Redis refuses writes before the kernel gets involved. See below |
+
+The ceilings sum to roughly 1.8 GB, which is why [System requirements](/install/requirements) asks for about 2 GB. The at rest figures come from an idle stack with a small portfolio.
+
+Under load the picture is tighter, and it was measured rather than assumed.
+
+| Workload | Database size | Peak PostgreSQL | Peak Redis against its 192 MB ceiling | Killed |
+| --- | --- | --- | --- | --- |
+| 75 keyword markets | 10 MB | 25 MB, 6% of 384 MB | 12 MB, 6% | No |
+| 8,000 keyword markets, 90 days of history | 227 MB | 306 MB, 80% of 384 MB | 60 MB, 31% | No |
+| 75,000 keyword markets, 90 days of history | 2,060 MB | 362 MB, 94% of 384 MB | 190 MB, 99% | No |
+
+Nothing was OOM killed at any scale, and the largest workload leaves almost no headroom in either service. `storage.headroom.low` and `queue.memory.high` alert at 80 percent and page at 90, so both would have fired on the way to that last row rather than after it.
+
+### Why Redis refuses instead of evicting
+
+Redis runs with `maxmemory 192mb` and `maxmemory-policy noeviction`, well under its container ceiling.
+
+BullMQ job state is not a cache. Under an eviction policy Redis would silently discard queued work to make room, and the run would simply not happen with nothing to show for it. Under `noeviction` a write past the ceiling fails with `OOM command not allowed when used memory > 'maxmemory'`, the API answers `500` on the affected request, and previously queued state stays readable. Loud and recoverable beats quiet and lost.
+
+Do not change this to `allkeys-lru` for convenience.
+
+### Every container log is rotated
+
+Each service writes to the `json-file` driver capped at 10 MB across 3 files, so no container can grow past 30 MB of logs and the four together cannot pass 120 MB.
+
+The Compose stack also lowers `LOG_LEVEL` to `log`. At `debug` the API records every request, which on a busy pipeline day fills the rotation window fast enough that yesterday's evidence is gone before you go looking for it.
+
+### The ceilings are watched
+
+Every ceiling above used to be detected only by the symptom it produced, which on a single host means the service is already stopping. The API now measures what it can reach and alerts before that.
+
+| Reading | Metric | Alert |
+| --- | --- | --- |
+| Database size on disk | `asobeast_database_bytes` | `storage.headroom.low` at 80 percent of `DISK_BUDGET_BYTES`, paging at 90 |
+| Storage budget | `asobeast_disk_budget_bytes` | Its own value is the denominator |
+| Redis memory in use | `asobeast_queue_memory_bytes` | `queue.memory.high` at 80 percent of the ceiling, paging at 90 |
+| Redis memory ceiling | `asobeast_queue_memory_max_bytes` | Its own value is the denominator |
+
+The API container cannot see the host filesystem, so it does not pretend to measure free space. It measures the database, which is the thing that grows, and compares it against `DISK_BUDGET_BYTES`, which you set to what the partition can spare. Set it and you get a true headroom alert; leave it at `0` and you get no alert rather than a false one.
+
+Redis reports its own ceiling, so `queue.memory.high` needs no configuration. An unlimited Redis reports `maxmemory` as `0` and is left alone rather than compared against nothing.
+
+A reading that cannot be taken is left out of the scrape instead of being reported as zero, and one failing collector never takes the rest of `/metrics` down with it. See [Hosted observability](/operations/hosted-observability).
+
+### Which symptom points at which limit
+
+| Symptom | Cause | What to do |
+| --- | --- | --- |
+| PostgreSQL refuses to write and the disk is full | Container logs are not the cause once rotation is on. Look at the `pgdata` volume | Tighten the `RETENTION_*` windows and re run the retention job |
+| A container restarts on its own with no error in its log | The kernel stopped it at its memory ceiling | `docker inspect <container>` and read `State.OOMKilled` |
+| Jobs fail with `OOM command not allowed` | Redis reached `maxmemory` | Check for a retention gap leaving completed jobs behind, then raise the ceiling if the working set is genuinely larger |
+| The API answers but the queue never drains | Not a memory limit. See [Troubleshooting](/operations/troubleshooting) |  |
+
+## Should you raise the limits?
+
+Usually not.
+
+`SCRAPE_ITUNES_RPM` defaults to 15 against an informal ceiling of roughly 20 requests per minute per IP address. There is headroom, and there is not much of it. Going past what the store tolerates does not produce an error you can plan around: requests start failing, jobs land in the failed set, and in the worst case the store stops answering that IP address for a while. That cost falls on you, not on the project, and the recovery is waiting.
+
+Prefer, in this order:
+
+1. Remove keywords you do not act on. Most tracked sets have a long tail nobody reads.
+2. Remove markets you do not sell in. This is the multiplier.
+3. Only then consider raising `SCRAPE_ITUNES_RPM`, in small steps, watching the failed job count on the health endpoint after each change.
+
+Both workers run at concurrency 1 behind their limiter deliberately. That is not a performance oversight, it is the thing keeping your address in good standing. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## The read path holds up
+
+Query plans were captured at the `target` scale, with 720,000 ranking rows loaded, after `ANALYZE`:
+
+| Query | Rows examined | Time |
+| --- | --- | --- |
+| 90 days of rankings for one app | 36,000 | 4.1 ms |
+| Latest position per keyword | 36,000 | 46.5 ms |
+| Visibility aggregate over 90 days | 36,000 | 7.5 ms |
+
+All three use the existing `("appId", date)` index rather than scanning the table, so no index was added. The dashboard stays responsive at the benchmark scale; the collection window is the thing that runs out first.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="The daily pipeline and rate limits" icon="timer" href="/concepts/pipeline">
+    Why concurrency is 1 and what the limiter does.
+  </Card>
+
+  <Card title="Countries and markets" icon="globe" href="/concepts/countries">
+    Why a market multiplies rather than adds.
+  </Card>
+</CardGroup>

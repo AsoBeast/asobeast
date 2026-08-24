@@ -1,0 +1,95 @@
+---
+title: Upgrade and roll back
+description: "Pull the new image tag, restart the stack and let the API apply forward migrations on boot. Roll back by restoring a database backup taken before the upgrade."
+icon: circle-arrow-up
+keywords: ["upgrade","rollback","migrations","backup","version pin"]
+---
+
+Every schema change ships as a forward Prisma migration. There are no down migrations, so a rollback means restoring a database archive taken before the upgrade, not reversing one.
+
+That single rule shapes the whole page. Take the backup first, because after the migration runs it is the only way back.
+
+## Before you upgrade
+
+<Steps>
+  <Step title="Record what you are on">
+    ```bash
+    git rev-parse HEAD
+    ```
+
+    Note the Compose project name as well. It defaults to the repository directory name, and volumes are prefixed with it, such as `production_pgdata`. Keep it stable across upgrades.
+  </Step>
+  <Step title="Take a verified backup">
+    A backup is not proven until it restores. Create the archive and confirm PostgreSQL can read its table of contents before you continue. See [Back up PostgreSQL](/operations/backups).
+  </Step>
+</Steps>
+
+## Upgrade
+
+```bash
+git pull
+docker compose config --quiet
+docker compose build --pull
+docker compose up -d --wait
+docker compose ps
+docker compose logs --no-color --tail=200 api web
+```
+
+The API applies every pending migration on boot, so `--wait` returning success means the schema is current and both services are healthy.
+
+When you run pinned images instead of building from source, upgrade with `docker-compose.pull.yml`. Set the new tag and bring the stack up; the API applies every pending migration on boot exactly as it does from source.
+
+```bash
+ASOBEAST_IMAGE_TAG=1.0.0 docker compose -f docker-compose.pull.yml up -d --wait
+```
+
+Put the tag in the root `.env` instead of the command line when you want it to persist across restarts. The checked in `docker-compose.yml` builds both applications from source and declares no `image`, so `docker compose pull` cannot move that file onto a published tag. See [Run a published release](/install/published-images) for the tag shapes and for the `docker run` sequence when you want no Compose file at all.
+
+## Verify the upgrade
+
+```bash
+curl --fail --silent --show-error http://127.0.0.1:3000/api/health
+curl --fail --silent --show-error http://127.0.0.1:3000/api/backend/health
+```
+
+Then check representative row counts against what you expect.
+
+```bash
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "App";'
+docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "Keyword";'
+```
+
+## Roll back
+
+A migration can make older application code incompatible with the migrated schema. Restoring only the previous image is therefore not a rollback. Restore both.
+
+<Steps>
+  <Step title="Stop the applications">
+    ```bash
+    docker compose stop web api
+    ```
+  </Step>
+  <Step title="Restore the pre upgrade archive">
+    Drop and recreate the database, then restore the archive you took before the upgrade. See [Restore PostgreSQL](/operations/restore).
+  </Step>
+  <Step title="Start the previous revision">
+    Check out the previous code revision, or set the previous pinned image tag, then bring the stack back up and verify both health URLs.
+  </Step>
+</Steps>
+
+## What does 1.0.0 promise?
+
+`1.0.0` promises compatibility for three surfaces throughout the `1.x` line. Breaking any of them requires `2.0.0`.
+
+| Surface | Covered by the promise |
+| --- | --- |
+| The HTTP contract | Yes |
+| `@asobeast/shared` contract types | Yes |
+| The MCP tool surface | Yes |
+| Environment variables | No |
+| The database schema | No, changes ship as forward migrations |
+| Internal modules | No |
+
+The promise starts at `1.0.0` and holds for every later `1.x` release. Additive change is allowed inside it, so a new endpoint, a new optional response field or a new MCP tool can arrive in a minor release. Removal, renaming and narrowing cannot.
+
+Release Please owns tags, versions and `CHANGELOG.md`. Read the [release notes](https://github.com/AsoBeast/asobeast/releases) before every upgrade, because an operator facing change appears in a commit subject or a breaking change footer.

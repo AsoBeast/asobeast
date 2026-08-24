@@ -1,0 +1,77 @@
+---
+title: Upgrade an installation
+sidebarTitle: Upgrades
+description: "Which versions upgrade directly to the current release, what the API container does to your database on boot, and how the upgrade path is proven in CI before it reaches you."
+icon: circle-fedora
+keywords: ["upgrade","migration","prisma migrate deploy","supported versions","upgrade drill"]
+---
+
+The API container runs `prisma migrate deploy` on boot. A migration that cannot apply to your data stops the container rather than warning, so an upgrade either completes or the old version keeps running. Nothing is applied halfway.
+
+This page states which versions upgrade directly, and how that claim is tested.
+
+## Supported upgrade baselines
+
+| From | To | Supported |
+| --- | --- | --- |
+| `1.x` | current | Yes, proven on every pull request |
+
+`1.0.0` is the first release, so it is also the oldest baseline the project verifies. Migrations are additive and forward only.
+
+## What the upgrade does
+
+Migrations run in order against your existing rows. They never rewrite history:
+
+- Existing rows are preserved. The drill fails the build if any table's row count changes across an upgrade.
+- `_prisma_migrations` records what has already been applied, so a restart never replays a migration.
+- An applied migration is never edited. A correction ships as a new forward migration.
+
+## Before you upgrade
+
+Take a backup. See [Back up your data](/operations/backups). A backup taken shortly before the daily pipeline window is the cheapest point, because the least work is in flight.
+
+Then pull the new image and restart. Watch the API container's first log lines: `prisma migrate deploy` reports each migration it applies.
+
+## What a restart does to a job in flight
+
+`docker stop`, `docker compose restart` and a host reboot all send `SIGTERM`. The API answers it by taking no further jobs and letting the job that is already running finish, then disconnecting from PostgreSQL and Redis. A running job is drained, not abandoned.
+
+One stage is cut short rather than waited out. A job that has not yet been given a proxy endpoint stops waiting for one the moment the signal arrives, instead of sitting out the `PROXY_ACQUIRE_TIMEOUT_MS` budget, which is longer on its own than the whole shutdown allowance below. See [Configuration reference](/configuration/reference). That job fails its attempt and the queue retries it with backoff, which is the same path a saturated pool already takes.
+
+What is left to wait for is the store work itself. Compose allows the API 90 seconds through `stop_grace_period`, and only sends `SIGKILL` afterwards. The number comes from the slowest single job: a Google Play rank check at depth 200 is roughly eight sequential store requests under `SCRAPE_GPLAY_RPM`, so about a minute in the worst case. Docker's ten second default is shorter than that, which is why the stack sets its own.
+
+A job that still has not finished when the budget runs out is killed with the process. Nothing is lost, but the recovery is slower than a drain: the job keeps its lock until the lock expires, and the stalled job check on the next start returns it to the queue. A job that stalls a second time is failed rather than retried forever, so it appears in the failed list on the queue dashboard instead of cycling.
+
+You do not need to drain the queues by hand before an ordinary restart. You do need to for the release named below.
+
+## Drain the queues before upgrading to a tenancy-aware release
+
+Every queued job now names the workspace that owns it. A job queued by an older release carries no workspace, so the new workers reject it as unrecoverable: it fails once, without retries, and appears in the failed list on the queue dashboard. Nothing is silently retried and no work runs against the wrong workspace.
+
+Let the queues empty before you swap the image. The cheapest window is well after the daily pipeline has finished, when the waiting and delayed counts on the queue dashboard are zero. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces) for how to reach it.
+
+If you upgrade with jobs still queued, the affected jobs fail immediately and the next daily run schedules their replacements, so the only cost is one lost day for the drained jobs. Alert jobs are the exception worth watching: their source events may already be marked flushed, so a batch that fails this way is not sent again. Check the failed list after the first boot and clear it once you have read it.
+
+## How the upgrade path is proven
+
+Every pull request runs an upgrade drill in CI. It builds a database at the schema of the oldest supported baseline, loads a fixture carrying multi store and multi market data, applies every migration added since, and then asserts:
+
+- `prisma migrate status` reports the database up to date.
+- `prisma migrate diff` reports no drift between the migrations and the schema.
+- Per table row counts are identical before and after. A migration that resolved a collision by deleting rows fails here.
+- The API boots against the upgraded database and serves authenticated reads across apps, keywords, rankings, reviews, changes, actions and alerts.
+- Data retention prunes only what its windows allow, and never prunes open or snoozed actions by age.
+
+The baseline is a variable, so the same drill covers a new baseline once one is declared. While the baseline tag is the current commit there is nothing to upgrade from, and the drill says so and skips:
+
+```bash
+UPGRADE_FROM_TAG=v1.0.0 \
+  DATABASE_URL=postgresql://asobeast:asobeast@localhost:5432/asobeast_upgrade \
+  apps/api/test/upgrade/run-drill.sh
+```
+
+The script refuses to run unless the database name ends in `_upgrade`, because it drops the public schema before it starts.
+
+## If a migration fails
+
+The container exits and your data is untouched, because a failed migration is rolled back. Roll back to the previous image tag to restore service, then report the failure with the migration name and the database error code from the container log. See [Troubleshooting](/operations/troubleshooting).

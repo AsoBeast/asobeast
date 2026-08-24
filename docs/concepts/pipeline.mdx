@@ -1,0 +1,82 @@
+---
+title: The daily pipeline and rate limits
+sidebarTitle: Pipeline and limits
+description: "A daily cron enqueues rank checks, snapshots, reviews and category ranks. Two workers run at concurrency 1 behind per store rate limiters."
+icon: clock
+keywords: ["cron","daily pipeline","BullMQ","rate limit","SCRAPE_ITUNES_RPM","SCRAPE_GPLAY_RPM","retention"]
+---
+
+Collection is scheduled, not on demand. A daily cron enqueues every position check, snapshot, review sync and category rank, and two rate limited workers drain those queues over the following hours.
+
+## What runs and when?
+
+Every schedule is a cron expression evaluated in UTC. The defaults below come from `apps/api/.env.example`.
+
+| Variable | Default | Meaning | What it does |
+| --- | --- | --- | --- |
+| `CRON_DAILY` | `0 3 * * *` | Daily 03:00 | Enqueues position checks, snapshots, reviews and category ranks, then generates actions and flushes batched alerts |
+| `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes traffic and difficulty for tracked keywords |
+| `CRON_RETENTION` | `0 5 * * *` | Daily 05:00 | Prunes rows past their retention window |
+| `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
+| `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |
+
+Batched alerts do not have their own schedule. They send once the daily pipeline reports every child job settled, so the delivery time depends on workload and retries rather than on a fixed clock.
+
+## What are the two workers?
+
+| Worker | Concurrency | Limiter | Default |
+| --- | --- | --- | --- |
+| `appstore` | 1 | `SCRAPE_ITUNES_RPM` requests per minute | 15 |
+| `gplay` | 1 | `SCRAPE_GPLAY_RPM` job starts per minute | 10 |
+
+The difference matters. The Apple limiter spaces requests, while the Google Play limiter spaces job starts, because one Google Play job fans out into many sequential requests of its own.
+
+## Why are the limits conservative?
+
+The iTunes endpoints informally tolerate roughly 20 requests per minute per IP address. Google Play is more sensitive still. Neither store publishes a limit or an error you can negotiate with, so asobeast stays well underneath by default.
+
+Raising `SCRAPE_ITUNES_RPM` or `SCRAPE_GPLAY_RPM` puts the host IP address at risk of being throttled or blocked by the store, which stops collection for every app on that host. Do not point several instances at the stores from one IP address.
+
+## How do you estimate your daily budget?
+
+Daily request volume is roughly tracked keywords multiplied by tracked markets, plus per app work for snapshots, reviews and category ranks.
+
+| Job | Approximate cost |
+| --- | --- |
+| Apple position check at depth 200 | 1 request |
+| Google Play position check at depth 200 | Roughly 8 requests |
+| Apple score job | Roughly 2 requests |
+| Google Play score job | Roughly 15 to 18 requests |
+| Category ranks per app | Two charts, the grossing chart plus its free or paid chart |
+
+`GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity.
+
+Category charts are the smallest slice of the daily budget, but they count, because every app is scheduled against the grossing chart as well as its own free or paid chart.
+
+## Can you call the store outside the queue?
+
+No, with one exception. All collection goes through the queue so the limiters apply. The single exception is a small, user initiated suggestion lookup, which is bounded by a person clicking rather than by a schedule.
+
+## What is retained?
+
+The retention job prunes each table on its own window. `0` means keep forever. Every variable is described in the [configuration reference](/configuration/reference).
+
+| Variable | Default | Prunes |
+| --- | --- | --- |
+| `RETENTION_RANKINGS_DAYS` | 365 | Keyword positions |
+| `RETENTION_SERP_DAYS` | 90 | SERP entries |
+| `RETENTION_SNAPSHOTS_DAYS` | 180 | App snapshots, keeping the newest per app |
+| `RETENTION_CATEGORY_RANKS_DAYS` | 365 | Category ranks |
+| `RETENTION_CHANGE_EVENTS_DAYS` | 0 | Metadata change events |
+| `RETENTION_DELIVERIES_DAYS` | 30 | Alert delivery log rows |
+| `RETENTION_ALERT_EVENTS_DAYS` | 30 | Completed alert claims, keeping unfinished ones |
+| `RETENTION_AUDIT_SCORES_DAYS` | 0 | Audit score history |
+| `RETENTION_ACTIONS_DAYS` | 180 | Closed action items only |
+
+Two exceptions are worth remembering. The newest snapshot per app is always kept regardless of age, and open or snoozed action items are never pruned by age.
+
+## What happens when a job fails?
+
+A parse failure fails the job. BullMQ retries it with backoff, and request handling is never affected, so a broken parser degrades collection rather than taking the instance down.
+
+Failed jobs are visible on the queue dashboard at `/admin/queues`, which answers only to the owner account. See [Troubleshooting](/operations/troubleshooting).

@@ -1,0 +1,223 @@
+---
+title: Configuration reference
+sidebarTitle: Reference
+description: "Every environment variable the asobeast API reads, with its default and its effect. AUTH_SECRET is required and must be at least 32 characters."
+icon: sliders
+keywords: ["environment variables","configuration","AUTH_SECRET","DATABASE_URL","cron","retention","SMTP","defaults"]
+boost: 3
+mode: wide
+---
+
+Every variable below is read by the API from `apps/api/.env`, or from the environment of the API container. Everything except `DATABASE_URL` and `AUTH_SECRET` has a working default.
+
+<Warning>
+  Three settings stop a deployment cold. `AUTH_SECRET` must be at least 32 characters or the API refuses to boot, and changing it signs out every user. Compose refuses to start when `POSTGRES_PASSWORD` or `AUTH_SECRET` is missing or empty from the root `.env`.
+</Warning>
+
+## Required
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `DATABASE_URL` | `postgresql://asobeast:asobeast@localhost:5433/asobeast` | Yes | PostgreSQL connection string. Compose sets it from `POSTGRES_PASSWORD` |
+| `AUTH_SECRET` | None | Yes | Signs session cookies. At least 32 characters. Generate with `openssl rand -hex 32` |
+
+## Core
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `REDIS_HOST` | `localhost` | No | Host holding the BullMQ queues |
+| `REDIS_PORT` | `6380` | No | Redis port |
+| `REDIS_DB` | `0` | No | Redis database index for the queues. The end to end suite uses a separate index |
+| `PORT` | `4000` | No | Port the API listens on |
+| `DEFAULT_COUNTRY` | `us` | No | Home storefront used when an import URL carries no country segment |
+| `LOG_LEVEL` | `debug`, and `log` in the Compose stack | No | One of `error`, `warn`, `log`, `debug`, `verbose`. Logs are JSON in production and human readable in development, and every line inside a request or job carries its workspace and correlation id. Compose lowers it to `log` because `debug` records every request, and container logs rotate at 10 MB across 3 files |
+| `ACCOUNT_DELETION_GRACE_DAYS` | `7` | No | Days a scheduled workspace deletion stays reversible. The retention job erases the workspace on the first run after the grace period ends |
+| `ERROR_TRACKING_DSN` | Empty | No | Sentry compatible endpoint for scrubbed error reports. Ignored unless `BILLING_ENABLED` is `true`, so a self hosted deployment never reports its errors to anyone else. Reports carry the error type, a secret scrubbed message and stack, the workspace and correlation id, and the request method with identifiers masked out of the path. They never carry headers, cookies, query strings, request bodies or account details |
+
+## Scheduling
+
+Every cron expression is evaluated in UTC. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `CRON_DAILY` | `0 3 * * *` | No | Starts the daily pipeline. Batched alerts flush after its processing completes, not on a clock |
+| `CRON_SCORING` | `0 4 * * 0` | No | Recomputes traffic and difficulty weekly on Sunday |
+| `CRON_RETENTION` | `0 5 * * *` | No | Prunes rows past their retention window |
+| `CRON_AUDIT` | `0 6 * * *` | No | Writes the daily audit score snapshot |
+| `CRON_DIGEST` | `0 8 * * 1` | No | Sends the weekly digest webhook on Monday |
+| `CRON_PROXY_SYNC` | `0 2 * * *` | No | Reconciles the egress proxy pool against the provider. Never scheduled while `PROXY_PROVIDER` is `none` |
+
+## Collection rate limits
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `SCRAPE_ITUNES_RPM` | `15` | No | iTunes requests per minute. The App Store worker runs concurrency 1 behind this limiter |
+| `SCRAPE_GPLAY_RPM` | `10` | No | Google Play job starts per minute, not requests, because one job fans out to many |
+
+Raising either value risks the host IP address being throttled by the store. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Egress proxy pool
+
+Optional. With `PROXY_PROVIDER` left at `none` every store request leaves from the host address, which is what a self hosted instance wants. Point it at a provider only when one address cannot carry the collection volume.
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `PROXY_PROVIDER` | `none` | No | `none` disables the pool. `webshare` reconciles the pool against that account's proxy list |
+| `PROXY_API_URL` | `https://proxy.webshare.io/api/v2` | No | Provider API base URL |
+| `PROXY_API_KEY` | Empty | When a provider is set | Provider API key. The API refuses to boot when a provider is configured without one |
+| `PROXY_USERNAME` | Empty | No | Credentials shared across the pool. Leave empty for an IP authorized account |
+| `PROXY_PASSWORD` | Empty | No | Password for `PROXY_USERNAME` |
+| `PROXY_ENDPOINT_RPM` | `15` | No | Requests per minute allowed per pool endpoint. This is the limiter that replaces the single host budget once the pool is on |
+| `PROXY_ACQUIRE_TIMEOUT_MS` | `120000` | No | How long a job waits for a free endpoint. A saturated pool delays work rather than dropping it, and only fails once this budget runs out so the queue can retry with backoff. A shutdown ends the wait at once, so the budget never holds up a drain |
+| `PROXY_WORKER_MAX_CONCURRENCY` | `8` | No | Ceiling for store worker concurrency once the pool is on. Actual concurrency tracks the healthy endpoint count and falls back as endpoints cool down. Ignored while `PROXY_PROVIDER` is `none` |
+
+With `PROXY_PROVIDER` at `none` the store workers keep concurrency 1 behind `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. Those two variables never change meaning: they describe the budget of a single egress address, which is exactly what a self hosted instance has.
+
+Credentials stay in configuration. The database records only which credential a pool endpoint uses, never the secret itself.
+
+### Residential fallback
+
+Datacenter addresses carry the traffic. A residential gateway is an emergency path for a single request that a datacenter address was blocked on, never a primary route, because residential bandwidth is metered and costs orders of magnitude more per request.
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `PROXY_RESIDENTIAL_URL` | Empty | No | Gateway used only after a datacenter address is blocked. Empty disables the fallback |
+| `PROXY_RESIDENTIAL_USERNAME` | Empty | No | Gateway credentials |
+| `PROXY_RESIDENTIAL_PASSWORD` | Empty | No | Password for `PROXY_RESIDENTIAL_USERNAME` |
+| `PROXY_RESIDENTIAL_MONTHLY_CAP_USD` | `0` | No | Hard monthly ceiling. Every residential request is claimed against it before it leaves, so a job that fans out to many requests stops at the ceiling rather than crossing it. At `0` every fallback is refused, so a broad block cannot turn into an unbounded bill |
+| `PROXY_RESIDENTIAL_COST_PER_GB` | `3` | No | Provider list price, used to price the cap |
+| `PROXY_RESIDENTIAL_MB_PER_REQUEST` | `1.2` | No | Measured average response size. With the price per gigabyte this estimates month to date spend |
+| `SIGNUP_CAPACITY_MAX_UTILIZATION` | `0` | No | `0` disables the gate. Above `0`, registration is refused with `503` once tracked collection passes this share of daily capacity. Applied only when `BILLING_ENABLED` is `true`, so a self hosted instance is never gated |
+
+## Alerts
+
+See [Send alerts](/guides/alerts).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `ALERT_DELIVERY` | `batched` | No | `batched` sends up to two scoped reports per channel after daily processing completes. `instant` sends one notification per event. Warns in production when `instant` has no SMTP configured. Webhook subscriptions live in the database, so configuration validation cannot see them |
+| `ALERT_RANK_DROP_THRESHOLD` | `5` | No | Positions a primary app must move before a rank alert fires |
+| `ALERT_REVIEW_SCORE_MAX` | `2` | No | Highest star rating treated as a negative review. Accepts 1 to 4 |
+| `ALERT_ACTIONS_MIN_PRIORITY` | `high` | No | Lowest priority that fires `action.opened`. One of `critical`, `high`, `medium`, `low` |
+| `WEBHOOK_ALLOW_PRIVATE_TARGETS` | `false` | No | `false` keeps alert webhooks on public addresses. Loopback, private, carrier grade NAT, link local and cloud metadata targets are refused when the webhook is registered and again when the connection is made, so a hostname that resolves to an internal address cannot reach it either. `true` opts a self hosted instance in to delivery on its own network. Refuses to boot when `true` with `BILLING_ENABLED` set to `true`, because the url belongs to the customer, and warns in production otherwise |
+| `WEB_PUBLIC_URL` | Empty | No | Public web origin, `http` or `https` only, and any other scheme refuses to boot. Builds deep links inside alert payloads, the Stripe return address and the email confirmation and recovery links, and is the single origin CORS allows. Unset leaves an alert link `null`, closes checkout, sends no CORS headers, refuses account recovery with `503` because its link would carry no host, and refuses to boot when `BILLING_ENABLED` is `true` with SMTP configured, because confirmation is mandatory there |
+
+## Email delivery
+
+Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set.
+
+Email is optional on a self hosted instance and mandatory on a metered one. With `BILLING_ENABLED=true` in production and no mail path, the API warns at boot that it can confirm no address, warn nobody before a trial ends, and recover no forgotten password. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `SMTP_HOST` | Empty | No | SMTP server host. Required to enable email |
+| `SMTP_PORT` | `587` | No | Use `465` with `SMTP_SECURE=true`, otherwise 587 or 25 |
+| `SMTP_SECURE` | `false` | No | `true` wraps the connection in TLS from the start, which port 465 expects. Warns in production when `true` on any other port |
+| `SMTP_USER` | Empty | No | Leave empty for an unauthenticated relay |
+| `SMTP_PASSWORD` | Empty | No | Paired with `SMTP_USER` |
+| `SMTP_FROM` | Empty | No | From address such as `asobeast <alerts@example.com>`. Required to enable email |
+
+## Action Center
+
+See [Work the Action Center](/guides/action-center).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `ACTIONS_MAX_OPEN_PER_APP` | `20` | No | New actions one generation run may open per app, highest impact first. Existing open and snoozed actions always refresh |
+| `ACTIONS_SNOOZE_MAX_DAYS` | `90` | No | Furthest a snooze may be set into the future |
+
+## Data retention
+
+`0` means keep forever. Pruning runs on `CRON_RETENTION`.
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `RETENTION_RANKINGS_DAYS` | `365` | No | Prunes keyword positions older than N days |
+| `RETENTION_SERP_DAYS` | `90` | No | Prunes SERP entries older than N days |
+| `RETENTION_SNAPSHOTS_DAYS` | `180` | No | Prunes app snapshots older than N days. The newest snapshot per app is always kept |
+| `RETENTION_CATEGORY_RANKS_DAYS` | `365` | No | Prunes category ranks older than N days |
+| `RETENTION_CHANGE_EVENTS_DAYS` | `0` | No | Prunes metadata change events older than N days |
+| `RETENTION_DELIVERIES_DAYS` | `30` | No | Prunes alert delivery log rows older than N days |
+| `RETENTION_ALERT_EVENTS_DAYS` | `30` | No | Prunes completed alert claims older than N days. Unfinished claims are always retained |
+| `RETENTION_AUDIT_SCORES_DAYS` | `0` | No | Prunes audit score history older than N days |
+| `RETENTION_ACTIONS_DAYS` | `180` | No | Prunes closed action items only. Open and snoozed actions are never pruned by age |
+| `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
+
+## Runtime
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `NODE_ENV` | `development` | No | `development`, `test` or `production`. The Docker image sets `production`, which turns on the configuration guards below |
+
+Two combinations are individually valid and jointly unsafe, so the API refuses to start on them rather than logging a warning nobody reads. Five more warn at startup. See [Hosting and network exposure](/security/hosting).
+
+## Authentication
+
+See [Authentication and accounts](/security/authentication).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `AUTH_SESSION_DAYS` | `7` | No | Session cookie lifetime in days |
+| `AUTH_ALLOW_REGISTRATION` | `false` | No | `true` keeps signups open. `false` closes registration once the first account exists. The first account always bootstraps as owner |
+| `AUTH_REGISTRATION_WORKSPACE` | `own` | No | Where a self registration lands. `own` gives every sign up a workspace of its own, so someone who registers never sees the apps, keywords and rankings already tracked on the instance. `shared` puts every sign up in the bootstrap workspace as a member, which suits an instance whose sign ups are all trusted with that data. Refuses to boot when `shared` and `BILLING_ENABLED` is `true`. Warns in production when `shared` and `AUTH_ALLOW_REGISTRATION` is `true`. See [Authentication and accounts](/security/authentication) |
+| `STRIPE_SECRET_KEY` | empty | No | Enables billing. Absent, every Stripe path is inert and the API boots normally. Never logged |
+| `STRIPE_WEBHOOK_SECRET` | empty | No | Verifies [the webhook endpoint](/operations/billing#the-webhook-endpoint). Absent, the endpoint refuses every delivery, because an unverified endpoint hands out subscriptions, and checkout stays closed so nobody pays for access that could never be provisioned |
+| `STRIPE_PORTAL_RETURN_URL` | empty | No | Where the customer portal returns to. Falls back to `WEB_PUBLIC_URL` plus `/settings` |
+| `STRIPE_PRICE_INDIE_MONTHLY` | empty | No | Price id for Indie monthly. Create the catalog with `pnpm --filter api stripe:catalog` |
+| `STRIPE_PRICE_INDIE_YEARLY` | empty | No | Price id for Indie annual |
+| `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly |
+| `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Price id for Ultimate annual |
+| `CRON_BILLING_RECONCILE` | `0 7 * * *` | No | Daily reconciliation of local subscription state against Stripe, UTC |
+| `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, UTC |
+| `AUTH_COOKIE_SECURE` | `false` | No | Marks the session cookie `Secure`. **Refuses to boot** when `false` and `NODE_ENV` is `production`. The Docker image sets `NODE_ENV=production`, so the Compose stack defaults this to `true` |
+| `TRUST_PROXY` | `0`, and `1` pinned in the Compose stack | No | How many proxies you control sit between the internet and the API, counting the web app as one. Compose pins it to `1` because the web app is always exactly one hop in front of the API there. `true` means 1 and `false` means 0. The API reads that many entries back from the right of `X-Forwarded-For`, so auth throttling keys on the real client address. Both apps warn at startup in production when `0`. See [Hosting](/security/hosting) |
+
+## Entitlements
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `BILLING_ENABLED` | `false` | No | `true` starts every new account on a trial and answers `402` once it lapses, until the plan is `indie` or `ultimate` |
+| `TRIAL_DAYS` | `7` | No | Trial length in days when `BILLING_ENABLED=true`. **Refuses to boot** at `0` with billing enabled, because every new account would be locked out immediately |
+
+## Optional AI
+
+See [Enable the optional AI features](/guides/ai-features).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `OPENAI_API_KEY` | Empty | No | Empty disables the AI audit, metadata drafts and action explanations |
+| `AI_MODEL` | `gpt-4o` | No | Must support vision and structured outputs, because the audit reads screenshots |
+
+## Admin surfaces
+
+See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `BULL_BOARD_ENABLED` | `true` | No | Serves the queue dashboard at `/admin/queues`. `false` removes it entirely |
+| `API_DOCS` | `owner` | No | Who may read `/docs`, `/docs-json` and `/docs-yaml`. `owner`, `public` or `off`. Warns in production when `public` |
+| `METRICS_CACHE_SECONDS` | `30` | No | How long one `/metrics` scrape is reused before the collectors run again. `0` collects on every scrape |
+| `BACKUP_MAX_AGE_HOURS` | `0` | No | Hours a backup may go without reporting a completed run before `backup.stale` fires. `0` expects no backup and never alerts. See [Backups](/operations/backups) |
+| `DISK_BUDGET_BYTES` | `0` | No | Bytes the database may occupy before `storage.headroom.low` fires, which is what the partition can spare rather than what it holds. `0` declares no budget and never alerts. See [Capacity and limits](/operations/capacity) |
+
+## Compose only
+
+These live in the root `.env` and are read by Compose, not by the API directly.
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `POSTGRES_PASSWORD` | None | Yes | Sets the PostgreSQL role password and is interpolated into `DATABASE_URL` |
+| `AUTH_SECRET` | None | Yes | Passed through to the API container |
+| `TRUST_PROXY` | `0` | No | Hops you control in front of the web app. The tunnel overlay pins `1` for the web app whatever this file says, because the tunnel is always exactly one hop. Set it yourself when you run `cloudflared` on the host or bring your own proxy |
+| `TUNNEL_TOKEN` | None | With the tunnel overlay | Token of the Cloudflare Tunnel you created in the dashboard. Read only by `docker-compose.tunnel.yml` |
+| `ASOBEAST_DOMAIN` | None | With the tunnel overlay | Public hostname attached to that tunnel. Becomes `WEB_PUBLIC_URL` |
+
+See [Hosting behind TLS and a reverse proxy](/security/hosting) for the overlay and for how to verify the hop count against the real chain.
+
+## Retired variables
+
+`BULL_BOARD_USER` and `BULL_BOARD_PASSWORD` are ignored. The queue dashboard now requires an owner session or a personal API token instead of basic authentication, and the API logs a warning at boot if either variable is still set. Remove them.
+
+## Keeping this page correct
+
+This page and the `.env.example` files change in the same commit. If a default here disagrees with `apps/api/.env.example`, the file is right and this page is a bug.

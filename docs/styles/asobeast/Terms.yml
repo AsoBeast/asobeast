@@ -1,0 +1,14 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: false
+swap:
+  "App store": "App Store"
+  "Google play": "Google Play"
+  "app-store": "App Store"
+  "api key": "personal API token"
+  "access token": "personal API token"
+  "ASO score": "audit score"
+  "keyword rank": "position"
+  "Postgres ": "PostgreSQL "
+  "docker-compose ": "docker compose "

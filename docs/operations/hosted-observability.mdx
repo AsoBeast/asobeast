@@ -1,0 +1,129 @@
+---
+title: Observability for a hosted instance
+sidebarTitle: Hosted observability
+description: "Structured logs, per workspace metrics, the alert catalogue and the support surface. What a hosted operator watches, and where each signal comes from."
+icon: radar
+keywords: ["observability","metrics","alerts","logs","support","multi tenant"]
+---
+
+A self hosted instance has one tenant and one blast radius. A hosted instance has many, and the questions that need answering at 03:00 are per tenant: is the daily run completing for everyone, who is consuming the pool, is anyone losing data quality, is anyone costing more than they pay, and did anything cross a workspace boundary.
+
+Everything below is built into the API. There is no separate metrics pipeline, log stack or dashboard to run.
+
+## Structured logs
+
+Logs are JSON on stdout in production and human readable in development, controlled by `LOG_LEVEL`. Any hosting platform or log service can consume them without extra software.
+
+Every line emitted inside a request or a job carries:
+
+| Field | Meaning |
+| --- | --- |
+| `workspaceId` | The workspace in scope, taken from the async context that also scopes the database |
+| `correlationId` | One id per request, propagated into every job that request enqueues |
+| `context` | The class that logged the line |
+
+Send `X-Correlation-Id` on a request to choose the id yourself, which lets a customer report carry the exact key you need to search on. An id that is missing, too long or carries characters that could forge a log line is replaced with a generated one.
+
+<Warning>
+  Secrets are redacted before a line is written, not by remembering to leave them out. Personal API tokens, session cookies, Stripe keys, proxy credentials, `AUTH_SECRET`, `OPENAI_API_KEY` and the SMTP password are replaced with `[redacted]` wherever they appear, including inside an error message or a stack.
+</Warning>
+
+## The metrics endpoint
+
+`GET /metrics` serves the Prometheus text format. It is gated exactly like the queue dashboard: anything other than the entitled [platform operator](/security/admin-surfaces#who-the-platform-operator-is) receives **404**, never 401 or 403, so the endpoint never confirms it exists. A customer who owns their own workspace is not an operator and receives **404**. Reach it through the web origin at `/metrics`, the same way you reach `/admin/queues`.
+
+Per workspace, one series per metric:
+
+| Metric | Answers |
+| --- | --- |
+| `asobeast_workspace_plan_info` | Which plan is in force |
+| `asobeast_workspace_apps`, `asobeast_workspace_competitors` | How much is tracked |
+| `asobeast_workspace_keyword_markets` | Keyword market pairs, the unit quota counts |
+| `asobeast_workspace_quota_apps_limit`, `asobeast_workspace_quota_keyword_markets_limit` | The plan limit, `-1` when unlimited |
+| `asobeast_workspace_daily_requests_estimated` | Store requests one daily run demands, split by store |
+| `asobeast_workspace_on_demand_used` | On demand operations spent in the current window |
+| `asobeast_workspace_rankings_captured` | Captures since the last daily trigger |
+| `asobeast_workspace_rankings_captured_yesterday` | The same figure for the previous UTC date, for a day over day comparison |
+| `asobeast_workspace_rankings_unresolved` | Captures with no position inside the searched depth |
+| `asobeast_workspace_daily_run_completed_seconds` | When the last ranking landed |
+| `asobeast_workspace_daily_run_incomplete` | Whether fewer keywords were captured than are tracked |
+| `asobeast_workspace_stored_rankings`, `asobeast_workspace_stored_reviews` | Stored rows, the storage side of cost |
+
+Instance wide, the pool and the money: `asobeast_pool_endpoints`, `asobeast_pool_endpoints_healthy`, `asobeast_pool_success_rate`, `asobeast_pool_endpoints_blocked`, `asobeast_pool_endpoints_silent`, `asobeast_proxy_requests_month`, `asobeast_residential_spend_usd`, `asobeast_residential_cap_usd`, `asobeast_billing_workspaces`, `asobeast_billing_subscriptions`, `asobeast_billing_trials_active`, `asobeast_billing_events_unprocessed`, `asobeast_billing_events_failed`, `asobeast_backup_last_completed_seconds`, `asobeast_backup_max_age_hours`, `asobeast_database_bytes`, `asobeast_disk_budget_bytes`, `asobeast_queue_memory_bytes`, `asobeast_queue_memory_max_bytes`, `asobeast_account_mail_attempts` and `asobeast_isolation_anomalies`.
+
+The four resource series are the only ones that can be absent while the instance is healthy. A reading the API could not take is omitted rather than reported as zero, because a zero here reads as an empty database or an idle queue, which is the opposite of what a failed measurement means. One collector failing degrades its own series and nothing else, so a scrape still carries everything the operator needs to see the failure.
+
+Backup freshness is exposed as the completion time rather than as an age, so `time() - asobeast_backup_last_completed_seconds` graphs it correctly whatever `METRICS_CACHE_SECONDS` is set to. A cached age would be stale by up to the cache window; a cached timestamp is not.
+
+Cardinality is bounded on purpose. There is one series per workspace per metric, and never one per keyword.
+
+## The alert catalogue
+
+Every scrape evaluates the rules below and exposes each firing alert as `asobeast_operator_alert{alert,severity}` with the value `1`. The same alert is written to the log at a matching level, so an instance with no scraper still leaves a trail. Absence of the series means the alert is not firing.
+
+### Page immediately
+
+| Alert | Fires when | Runbook |
+| --- | --- | --- |
+| `isolation.anomaly` | A query scoped to one workspace returned a row owned by another | [Suspected isolation incident](/operations/runbooks/isolation-incident) |
+| `dependency.redis.unavailable` | Redis did not answer, so no queue work is running | [Daily run overrun](/operations/runbooks/daily-run-overrun) |
+| `daily.run.incomplete` | A workspace captured fewer keywords than it tracks, 20 hours past the trigger | [Daily run overrun](/operations/runbooks/daily-run-overrun) |
+| `billing.webhooks.failing` | A stored billing event recorded a failure | [Billing incident](/operations/runbooks/billing-incident) |
+| `pool.healthy.low` | Fewer than half the endpoints serving a store are healthy | [Proxy pool degradation](/operations/runbooks/proxy-pool-degradation) |
+| `backup.stale` | No backup has ever reported in, the last one reported a time in the future, or the last one is more than twice `BACKUP_MAX_AGE_HOURS` old | [Backups](/operations/backups) |
+| `storage.headroom.low` | The database passed 90 percent of `DISK_BUDGET_BYTES` | [Capacity and limits](/operations/capacity) |
+| `queue.memory.high` | Redis passed 90 percent of its memory ceiling, where it refuses writes | [Capacity and limits](/operations/capacity) |
+| `mail.failures.clustered` | Half or more of the account emails attempted in the last day were refused | [Troubleshooting](/operations/troubleshooting) |
+
+The database being unreachable does not need an alert rule. The scrape itself fails, and so does `/health`, which is what an uptime check watches. That check is not part of asobeast and cannot be, because every rule below is evaluated by the API during a scrape of the API. See [Uptime probes and the status page](/operations/uptime) for what watches the machine from outside it.
+
+`backup.stale` is the one rule that watches something outside the API. The backup script writes its completion time to a Redis key when a run finishes, including the offsite upload, and the scrape reads it back. That makes a timer somebody disabled, a disk too full for `pg_dump`, and a remote that stopped accepting uploads all look the same from here: the age stops moving. It says nothing until `BACKUP_MAX_AGE_HOURS` declares a window, because an instance that backs up some other way should not be told it is broken, and it stays quiet while `dependency.redis.unavailable` is firing, because the key it reads lives in the Redis that is down. Set the window to comfortably more than one backup interval, for example `36` for a daily schedule, so a single skipped run is not a page.
+
+### Investigate the same day
+
+| Alert | Fires when |
+| --- | --- |
+| `pool.silent.rising` | Endpoints are returning plausible but wrong results |
+| `pool.blocked.rising` | Endpoints are being refused by a store |
+| `residential.spend.near-cap` | Residential fallback spend passed 80 percent of its cap |
+| `billing.reconcile.discrepancy` | Ten or more billing events are still waiting to be processed |
+| `workspace.suspended` | A workspace is suspended and every write is refused |
+| `workspace.cost.unpaid` | An unpaid workspace takes a tenth or more of daily pool demand |
+| `workspace.cost.exceeds-revenue` | A paying workspace takes three times more pool demand than its share of revenue |
+| `backup.stale` | The last backup is older than `BACKUP_MAX_AGE_HOURS` |
+| `storage.headroom.low` | The database passed 80 percent of `DISK_BUDGET_BYTES` |
+| `queue.memory.high` | Redis passed 80 percent of its memory ceiling |
+| `mail.failures.clustered` | A fifth or more of at least five account emails attempted in the last day were refused |
+
+### Review weekly
+
+| Alert | Fires when |
+| --- | --- |
+| `capacity.headroom.low` | Total daily demand passed 80 percent of pool capacity |
+| `trial.conversion.low` | Fewer than a fifth of at least ten started trials converted |
+
+## Error reporting
+
+`ERROR_TRACKING_DSN` sends server errors to a Sentry compatible endpoint. It is ignored unless `BILLING_ENABLED` is `true`, so **a self hosted deployment never reports its errors to anyone**, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+
+A report carries the error type, a secret scrubbed message and stack, the workspace and correlation id, the request method, and the request path with identifiers replaced by `:id`. It never carries headers, cookies, query strings, request bodies or account details.
+
+## Support tooling
+
+`/admin/support` answers operational questions about one workspace without browsing what that workspace tracks. It is gated exactly like the queue dashboard and answers 404 to anyone else.
+
+| Route | Does |
+| --- | --- |
+| `GET /admin/support/workspaces` | Lists every workspace with plan, subscription state and counts |
+| `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail |
+| `POST /admin/support/workspaces/{id}/reconcile` | Reconciles one workspace against Stripe |
+| `POST /admin/support/workspaces/{id}/suspend` | Suspends a workspace |
+| `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
+| `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |
+
+Two rules hold the surface honest:
+
+- **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored.
+- **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
+
+There is deliberately no way to read a customer's keywords, apps, rankings or reviews from this surface. A question that needs their data needs their consent first.

@@ -1,0 +1,83 @@
+---
+title: Optimize listing metadata
+description: "The workbench lints each indexed field against its store limit, reports keyword coverage, and holds the pasted private iOS keyword field."
+icon: pencil-ruler
+keywords: ["metadata","lint","coverage","character limit","keyword field","drafts"]
+---
+
+The workbench is where you see your listing the way search sees it: field by field, against the limits, and against the keywords you claim to be targeting.
+
+## Lint your metadata
+
+Each field is checked against the limit for its store, and the lint reports characters used, characters left and anything wasteful such as a duplicated word across indexed fields.
+
+| Field | App Store | Google Play |
+| --- | --- | --- |
+| Title | 30 | 30 |
+| Subtitle | 30 | Not present |
+| Keyword field | 100 | Not present |
+| Short description | Not present | 80 |
+| Description | 4000, not indexed | 4000, indexed |
+| Promotional text | 170, not indexed | Not present |
+
+Fields a store does not have are hidden rather than shown empty. See [App Store and Google Play](/concepts/stores).
+
+## Check keyword coverage
+
+Coverage answers one question per tracked keyword: does any indexed field of this listing contain it?
+
+| Store | Fields that count toward coverage |
+| --- | --- |
+| App Store | Title, subtitle, keyword field |
+| Google Play | Title, short description, description |
+
+A keyword with high opportunity and no coverage is the single most actionable state in the product, which is why the Action Center has a rule for exactly that. See [Work the Action Center](/guides/action-center).
+
+Coverage is home market only, because asobeast stores one metadata snapshot per app.
+
+## Paste the iOS keyword field
+
+The 100 character field is private and cannot be collected, so paste it here. asobeast splits it, tracks the keywords with the source `KEYWORD_FIELD` and lints the field against its limit.
+
+<Warning>
+  Leaving the field empty is not neutral. Coverage reports every keyword as uncovered by the keyword field, because asobeast has no evidence about what it contains, and the audit scores keyword field hygiene as unset.
+</Warning>
+
+## Group keywords into buckets
+
+Buckets classify scored keywords so a long list stays readable and so you can see whether your targeting is balanced.
+
+| Bucket | Definition |
+| --- | --- |
+| `primary` | The five highest opportunity keywords that are not aspirational |
+| `aspirational` | Volume at or above 70 and difficulty at or above 70 |
+| `longtail` | Three words or more, or volume below 30 |
+| `secondary` | Every other scored keyword |
+
+A listing whose indexed fields cover only aspirational keywords will rank for none of them. A listing that covers only longtail will rank for many things nobody searches. The buckets make that visible in one glance.
+
+## Generate a metadata draft
+
+With `OPENAI_API_KEY` set, a drafts card proposes title, subtitle and keyword field values on the App Store, or title, short description and description values on Google Play, grounded in your tracked keywords, your coverage gaps and competitor titles.
+
+Every draft is linted again on the server and clamped to the field limit, so a draft can never exceed a store limit. asobeast has no write path to the stores: a draft ends at a copy button.
+
+With no key the card is hidden entirely. See [Enable the optional AI features](/guides/ai-features).
+
+## Troubleshooting
+
+- **A keyword you added to the title still shows as uncovered.** Coverage reads the latest snapshot. Refresh the listing after the store publishes the change.
+- **The subtitle card is missing.** You are looking at a Google Play app. It has no subtitle.
+- **Character counts differ from App Store Connect.** asobeast counts characters, so an emoji or an accented character counts as the store counts it in the stored value.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Run an ASO audit" icon="clipboard-check" href="/guides/aso-audit">
+    Score the listing across ten weighted factors.
+  </Card>
+
+  <Card title="Track competitors" icon="users" href="/guides/competitors">
+    Find phrases competitors index and you do not.
+  </Card>
+</CardGroup>

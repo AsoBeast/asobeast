@@ -1,0 +1,144 @@
+---
+title: Recover from a broken store parser
+sidebarTitle: Scraper breakage
+description: "Apple and Google can change a response shape without notice. Recognize it, tell it apart from rate limiting, contain it, and ship the one module change that fixes it."
+icon: unplug
+keywords: ["scraper","parser","store breakage","failed jobs","rate limit","incident"]
+---
+
+asobeast reads two stores that never promised it a stable response. Apple and Google can change a shape whenever they like, and when they do, every installation is affected at once.
+
+The blast radius is contained on purpose. Only `apps/api/src/store-providers/` parses store responses, so a break is one module, not the application. **Historical data is never lost.** Collection pauses, it does not roll back.
+
+This page is what to do between the break and the fix.
+
+## Symptoms
+
+In the order a user meets them:
+
+1. Rankings stop advancing. The most recent date on the keyword monitor stays fixed while the calendar moves.
+2. The health badge in the header turns amber and names a failed job count.
+3. Failed jobs accumulate in the queue dashboard at `/admin/queues`.
+4. **No alerts fire.** This is the most misleading symptom, and it is worth stating plainly: alerts are generated from captured data, so when nothing is captured, nothing alerts. Silence is not health.
+
+## Triage
+
+Three causes look identical from the outside. This tells them apart.
+
+<Steps>
+  <Step title="Read the failure count">
+    ```bash
+    curl --silent http://127.0.0.1:3000/api/backend/health | jq '.pipeline'
+    ```
+
+    `failedJobs` counts the App Store, Google Play and alert queues together. A non zero value that keeps climbing across daily runs is the signal. A single failure that clears on retry is not an incident.
+  </Step>
+  <Step title="Open a failed job and read its message">
+    Go to `/admin/queues`, choose the failed set, and read `failedReason`. Every store failure is wrapped the same way, which makes the message the primary evidence:
+
+    ```text
+    APP_STORE getApp failed: <the underlying message>
+    ```
+
+    The store, the provider method and the original message are all there. Note the method: it names the parser to start from.
+  </Step>
+  <Step title="Classify it">
+    | Pattern in the failed set | Cause | What to do |
+    | --- | --- | --- |
+    | Failures across all apps, on both stores, with transport messages such as HTTP 429 or a connection reset | Rate limiting | Check `GET /jobs/budget` against recent market or keyword additions. See [The daily pipeline and rate limits](/concepts/pipeline) |
+    | Failures across all apps of **one** store, with type or parse messages, while the other store keeps working | Parser breakage | Continue below |
+    | Failures for one app only | Not an incident. Usually a delisting, a region restriction or a changed store id | Check the app in the store, then remove or re-import it |
+
+    The distinguishing signal for a parser break is that it is confined to one store and the messages are structural rather than transport. Both stores failing at once is almost always rate limiting or a network problem, because Apple and Google do not change their markup on the same night.
+  </Step>
+</Steps>
+
+<Warning>
+  The provider layer does not classify errors. A transport failure, a parse failure and a delisted app all arrive as `StoreRequestError`, so the message text is what you read, not the error type. Only the market availability probe distinguishes a missing app, and it does that by matching the words "not found".
+</Warning>
+
+## Containment
+
+What to do immediately, without waiting for a fix.
+
+- **Failed jobs do not block the queue.** The natural assumption is the opposite, so it is worth being explicit: each app, keyword and category is its own job. A job that fails is retried with backoff and then set aside, and the rest of the run continues. If Google Play is broken, the App Store still collects that night.
+- **Nothing is lost.** Every position, review and snapshot already captured stays exactly as it was. A break pauses collection.
+- **Decide whether to pause the daily run.** Leaving it on against a broken parser spends rate limit budget on requests that cannot succeed and fills the failed set. If the break is confirmed and a fix is days away, set `CRON_DAILY` to a schedule that will not fire, restart the API, and put it back afterwards. If a fix is hours away, leave it alone.
+- **Clear the failed set once resolved.** Retry the failed jobs from `/admin/queues` if the day still matters, or discard them if the next daily run will cover it. Retrying a rank check for a date that has passed captures today's SERP under today's date, not the missed one.
+
+## Recovery
+
+For whoever ships the fix.
+
+<Steps>
+  <Step title="Reproduce outside the application">
+    Confirm whether the fault is the scraper library or the integration:
+
+    ```bash
+    pnpm --filter api run smoke:providers
+    ```
+
+    It is opt in and never runs in CI. See [Check the parsers directly](#check-the-parsers-directly).
+  </Step>
+  <Step title="Check upstream">
+    Look for an open issue or a release on the library the failing store uses. An upstream fix is usually a dependency bump rather than a code change here.
+
+    ```text
+    Apple        @perttu/app-store-scraper
+    Google Play  @mradex77/google-play-scraper
+    ```
+  </Step>
+  <Step title="Change one module">
+    Only the provider directory needs to change. Start from the file for the failing store, and the method the failed job named.
+
+    ```text
+    apps/api/src/store-providers/app-store.provider.ts
+    apps/api/src/store-providers/google-play.provider.ts
+    ```
+  </Step>
+  <Step title="Ship it with a regression test">
+    Build the test from the captured raw payload, so it fails for the reported reason before the fix and passes after. Commit as `fix(providers)`.
+  </Step>
+</Steps>
+
+### Reprocess history from stored payloads
+
+Raw scraper responses are stored in `raw` JSON columns precisely so a corrected parser can be re-run over them. Nobody would guess this is available, so it is worth saying: `AppSnapshot.raw` holds the full store response for every snapshot ever captured.
+
+That means a parser bug which mapped a field wrongly, rather than one which failed outright, can be corrected retroactively. Re-read the stored payload and rewrite the derived columns. A parser that threw captured nothing, so there is nothing to reprocess for those days.
+
+## Backfill
+
+Whether the missed days come back, honestly:
+
+| Data | Recoverable |
+| --- | --- |
+| Keyword positions | **No.** A store SERP is a point in time observation. Yesterday's ranking is gone |
+| Category ranks | **No.** Same reason |
+| Metadata snapshots | Current state, yes, with a refresh. The intermediate changes between the break and the fix are gone |
+| Reviews | Mostly. Reviews stay on the store, so a review sync collects what was missed |
+| Scores | Yes. Traffic and difficulty are recomputed from the data that is present |
+
+The honest summary is that a gap in ranking history stays a gap. Charts will show it. This is inherent to observing a search result rather than being handed a dataset.
+
+## Check the parsers directly
+
+One command that answers "is the parser working right now" without running the pipeline or waiting for cron:
+
+```bash
+SMOKE_PROVIDERS=1 pnpm --filter api run smoke:providers
+```
+
+It performs a single live request per store and asserts the parsed shape. It is the only thing in the repository that talks to a real store, so it is gated twice: it is not part of any test run, and it exits without doing anything unless `SMOKE_PROVIDERS=1` is set. CI never runs it, because a build must not depend on a third party.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="The daily pipeline and rate limits" icon="timer" href="/concepts/pipeline">
+    Why both workers run at concurrency 1.
+  </Card>
+
+  <Card title="Health checks and monitoring" icon="activity" href="/operations/health-checks">
+    Where the failed job count comes from.
+  </Card>
+</CardGroup>

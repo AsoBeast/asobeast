@@ -1,0 +1,213 @@
+---
+title: Hosting behind TLS and a reverse proxy
+sidebarTitle: Hosting
+description: "Reach the stack through a Cloudflare Tunnel or your own reverse proxy, set AUTH_COOKIE_SECURE to true, and verify TRUST_PROXY against the real chain."
+icon: shield
+keywords: ["TLS","cloudflare tunnel","reverse proxy","AUTH_COOKIE_SECURE","TRUST_PROXY","WEB_PUBLIC_URL"]
+---
+
+One setting decides whether a public deployment is safe: `AUTH_COOKIE_SECURE` must be `true` on any instance reachable over TLS, so the session cookie is never sent over plain HTTP.
+
+## Put asobeast behind TLS
+
+asobeast does not terminate TLS itself. The shipped path is a Cloudflare Tunnel, which terminates TLS at Cloudflare's edge and reaches the stack over an outbound connection.
+
+That choice is about the host, not about certificates. A tunnel needs **no inbound port at all**, so a machine behind CGNAT or an ISP that blocks port 80 works unchanged, there is no certificate to obtain or renew on the host, and nothing on the machine is reachable from the internet except through the tunnel.
+
+Create the tunnel in the Cloudflare dashboard, point its public hostname at `http://web:3000`, and put its token in the root `.env` beside the domain.
+
+```bash
+TUNNEL_TOKEN=eyJhIjoi...
+ASOBEAST_DOMAIN=aso.example.com
+```
+
+Then compose the overlay on top of the stack.
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d --wait
+```
+
+That one command adds `cloudflared` to the stack, stops publishing host port 3001 so nothing is left listening beside the tunnel, and sets the three settings that depend on the hop: `TRUST_PROXY=1` for the web app, `AUTH_COOKIE_SECURE=true`, and `WEB_PUBLIC_URL=https://$ASOBEAST_DOMAIN`. The overlay pins all three literally, so a value you set in the root `.env` cannot leave the web app counting no hop while the tunnel is in front of it.
+
+`cloudflared` is pinned to a tested version, so two hosts built on different days run the same ingress binary and a rollback goes back to something known. Cloudflare does deprecate old builds, and the container runs with `--no-autoupdate`, so the pin is bumped by hand in `docker-compose.tunnel.yml` the same way `MINT_VERSION` and `VALE_VERSION` are. Treat a new cloudflared release as maintenance rather than something the deployment picks up on its own.
+
+CI composes the same overlay with the root `.env` value for `TRUST_PROXY` set to `0`, and asserts that the resolved configuration publishes no port at all, that the web app still counts the hop, that the other two settings arrive with it, that `cloudflared` carries the same memory and log ceilings as every other service, that no service image floats on a tag like `latest`, and that the origin still answers where `cloudflared` reaches it. What CI cannot do is stand up a real tunnel, so verify the hop count on your own deployment once. See [Verify the hop count](#verify-the-hop-count).
+
+### Run cloudflared on the host
+
+The overlay is a convenience, not a requirement. When `cloudflared` already runs as a service on the machine, as a Windows service or a systemd unit, keep the base stack and let the host binary reach it over the published port.
+
+Point the tunnel's public hostname at `http://localhost:3001` rather than at `http://web:3000`, because the host binary is outside the Compose network and reaches the web app the same way any other local client does.
+
+The overlay is what normally pins the three settings that depend on the hop, so set them yourself. Two live in the root `.env`, which Compose passes to the web service:
+
+```bash
+AUTH_COOKIE_SECURE=true
+TRUST_PROXY=1
+```
+
+`WEB_PUBLIC_URL` belongs in `apps/api/.env`, which the API service reads as an env file:
+
+```bash
+WEB_PUBLIC_URL=https://aso.example.com
+```
+
+`TRUST_PROXY` is still `1` here. The chain is the same as with the overlay: Cloudflare appends the address it observed and `cloudflared` adds no entry, so exactly one hop you control sits in front of the web app. The web app warns at startup when it runs in production counting no hop, which is the check the overlay used to make unnecessary.
+
+Host port 3001 is published on this path, so bind it to the loopback or firewall it. Nothing else about the stack changes.
+
+### Bring your own proxy
+
+A tunnel is not the only way. Put any reverse proxy in front of host port 3001 instead, and set the same three variables yourself. The proxy must forward the `Host` header and the request path unchanged, because the web app serves the admin surfaces at identical paths.
+
+```caddyfile
+aso.example.com {
+  reverse_proxy 127.0.0.1:3001
+}
+```
+
+```bash
+AUTH_COOKIE_SECURE=true
+TRUST_PROXY=1
+WEB_PUBLIC_URL=https://aso.example.com
+```
+
+nginx and Traefik work the same way. Whatever you choose, host port 3001 is then reachable on the machine, so bind it to the loopback or firewall it. The tunnel overlay exists partly to remove that step.
+
+## Set TRUST\_PROXY correctly
+
+`TRUST_PROXY` is a hop count, and both apps read their own. The value is the number of proxies **you control** between the internet and that app. `true` still means 1 and `false` still means 0, so an existing setting keeps working.
+
+The API reads that many entries back from the right of `X-Forwarded-For`. Every proxy you control appends after the entries a client wrote, so the entry that many hops from the right is the first one the client could not have written.
+
+| App | Value in the documented deployment | Why |
+| --- | --- | --- |
+| Web | `1`, which the tunnel overlay pins and you set yourself on any other path | Cloudflare appends the address it observed, so the rightmost entry is the real client, and `cloudflared` adds no entry of its own |
+| API | `1`, which Compose pins | The web app is always exactly one hop in front of the API on this stack |
+
+Set the web value in the root `.env`, which Compose passes to the web service. You do not set the API value on this stack, because the topology decides it.
+
+```bash
+TRUST_PROXY=1
+```
+
+<Warning>
+  Count only hops you control. A count higher than the real chain reaches past your own proxies into the part of `X-Forwarded-For` the client wrote, which lets any caller spread login attempts across fabricated addresses and defeats the auth rate limiter.
+</Warning>
+
+Leaving it `0` is safe but blunt: the API sees the web container as the client, so every browser client shares one bucket. That is fine for a single operator instance and wrong for anything with real users. Both apps say so at startup, warning once when they run in production counting no hop.
+
+### Verify the hop count
+
+The hop count is the one setting that is wrong silently. Too high and any caller spoofs `X-Forwarded-For` to spread login attempts across fabricated addresses; too low and every browser shares one bucket. Nothing in the stack can tell the difference on its own, because both look like a working site.
+
+Verify it once, on the real deployment, with two devices on different networks. A phone on mobile data and a laptop on the office connection are enough.
+
+<Steps>
+  <Step title="Spend the login allowance from one device">
+    Present a wrong password to the sign in form until it is refused with a rate limit message.
+  </Step>
+  <Step title="Try the second device immediately">
+    From the other network, present a wrong password once.
+  </Step>
+</Steps>
+
+If the second device is refused straight away, the count is **too low**: both devices share one bucket, so the app is not seeing the real client address. If it gets its own allowance, the count is right.
+
+Then check the other direction, which is the dangerous one. From a single device, spend the allowance while sending a made up `X-Forwarded-For` on every request.
+
+```bash
+for attempt in $(seq 1 12); do
+  curl --silent --output /dev/null --write-out '%{http_code}\n' \
+    --header "x-forwarded-for: 203.0.113.${attempt}" \
+    --header 'content-type: application/json' \
+    --data '{"email":"you@example.com","password":"wrong"}' \
+    "https://${ASOBEAST_DOMAIN}/api/backend/auth/login"
+done
+```
+
+The last responses must be `429`. If every one is `401`, the count is **too high** and the forged header is buying an unlimited supply of addresses. Lower it until they are not.
+
+### What the web app forwards
+
+The web proxy never passes a caller supplied `X-Forwarded-For` or `X-Real-IP` through to the API. A caller can write either header, and Next.js keeps an incoming `X-Forwarded-For` rather than replacing it, so the proxy cannot tell a forged value from an observed one.
+
+Instead it sends exactly one address, the one its own `TRUST_PROXY` says it can trust. At `0` it sends none, and the API falls back to the connection. See [Web app configuration](/configuration/web).
+
+## Set WEB\_PUBLIC\_URL
+
+`WEB_PUBLIC_URL` builds absolute deep links inside alert payloads, and it is also the single origin the API allows through CORS. Set it to the origin a person would type. Only `http` and `https` are accepted, and the API refuses to boot on anything else, because a scheme the browser gives no origin to would otherwise become the allowed origin.
+
+Unset, the `link` field is `null` rather than a `localhost` guess that would not open for anyone, and the API sends no CORS headers at all. See [Send alerts](/guides/alerts).
+
+Sending nothing is the right default here. The browser only ever talks to the web origin, and a same origin request needs no CORS headers, so the shipped topology is unaffected either way. What it does break is a custom frontend on another origin calling the API directly. That breaks loudly, in the browser console, with a message naming the cause, which is a better outcome than the wildcard the API used to send to every origin on earth.
+
+## What does Compose expose?
+
+The base stack publishes only host port 3001, mapped to port 3000 in the web container. The API, PostgreSQL and Redis stay on Docker networks, and the backend network is marked `internal`.
+
+Composing `docker-compose.tunnel.yml` removes even that, so the machine publishes nothing at all and `cloudflared` reaches the web container over the `frontend` network. A reverse proxy on the host needs port 3001; a tunnel does not. See [Self host with Docker Compose](/install/docker-compose).
+
+## Checklist before going public
+
+<Steps>
+  <Step title="Compose the tunnel overlay, or terminate TLS yourself">
+    Confirm the site loads over HTTPS with a valid certificate, and that nothing answers on host port 3001.
+  </Step>
+  <Step title="Set AUTH_COOKIE_SECURE=true">
+    The tunnel overlay sets it. Set it yourself if you brought your own proxy, then restart the API and sign in again.
+  </Step>
+  <Step title="Verify TRUST_PROXY against the real chain">
+    Reading it is not verifying it. Run the two device check in [Verify the hop count](#verify-the-hop-count).
+  </Step>
+  <Step title="Generate AUTH_SECRET properly">
+    `openssl rand -hex 32`. Never a memorable string, never reused from development.
+  </Step>
+  <Step title="Leave registration closed">
+    `AUTH_ALLOW_REGISTRATION=false` once the owner account exists. If you do open it, leave `AUTH_REGISTRATION_WORKSPACE=own` so a stranger who signs up lands in an empty workspace of their own. See [Registration](/security/authentication#registration).
+  </Step>
+  <Step title="Schedule and test backups">
+    A backup that has never been restored is not a backup. See [Back up PostgreSQL](/operations/backups).
+  </Step>
+</Steps>
+
+## What the API refuses to start with
+
+Some settings are individually valid and jointly unsafe. The API checks those combinations at startup and stops rather than logging a warning that nobody reads, because both failures below are silent and expensive.
+
+| Combination | What would happen |
+| --- | --- |
+| `NODE_ENV=production` with `AUTH_COOKIE_SECURE=false` | Session cookies ship without the `Secure` attribute, so anything on the network path can read them |
+| `BILLING_ENABLED=true` with `TRIAL_DAYS=0` | Every new account is locked out the moment it registers, with no route to the paywall |
+| `BILLING_ENABLED=true` with `AUTH_REGISTRATION_WORKSPACE=shared` | Hosted registration is open to strangers, so every one of them would land in the bootstrap workspace with read and write access to the data already there |
+
+The Docker image sets `NODE_ENV=production`, so the first check is live on every self hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Browsers treat `http://localhost` as a secure context, so evaluating locally over plain HTTP still works.
+
+The error names the variable, the required value and the reason. Fix the variable and start again.
+
+## What the API warns about
+
+These cannot be decided from configuration alone, so they log a warning at startup and let you proceed.
+
+The mail warning is the one to read twice. Every individual mail guard is satisfied when SMTP is absent, because each of them is conditioned on SMTP being present, so a metered instance with no relay starts perfectly clean and cannot email a paying customer. It warns rather than refuses because bringing a hosted instance up before the relay credentials exist, with registration closed, is a legitimate step. Half a configuration warns as loudly as none, because `SMTP_HOST` without `SMTP_FROM` is the likelier mistake.
+
+| Setting | Why it is worth reading |
+| --- | --- |
+| `TRUST_PROXY=0` in production | Authentication throttling keys on the connecting address, so every client behind the web app shares one bucket. Counting a hop you do not control is worse: any client can then spoof `X-Forwarded-For` |
+| `AUTH_ALLOW_REGISTRATION=true` with `AUTH_REGISTRATION_WORKSPACE=shared` in production | Anyone who registers joins the bootstrap workspace as a member, so they see and can edit every tracked app, keyword and ranking in it |
+| `API_DOCS=public` in production | The whole OpenAPI surface is served to anonymous callers |
+| `ALERT_DELIVERY=instant` with no SMTP | Email alerts are generated and discarded. Webhook subscriptions live in the database, so this cannot see them |
+| `BILLING_ENABLED=true` with no SMTP | The instance can send no account email at all. Nobody confirms an address, so no registration reaches its trial; nobody is warned before a trial ends; and nobody who forgets a password can recover without you editing the database |
+| `SMTP_SECURE=true` on a port other than 465 | Implicit TLS is port 465. Ports 587 and 25 expect STARTTLS, so the connection usually hangs |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    Sessions, registration and the guards.
+  </Card>
+
+  <Card title="The queue dashboard and the OpenAPI surface" icon="shield" href="/security/admin-surfaces">
+    Why those routes answer 404.
+  </Card>
+</CardGroup>

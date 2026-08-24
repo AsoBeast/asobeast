@@ -1,0 +1,57 @@
+---
+title: Compare a portfolio
+description: "Link the App Store and Google Play listings of one product into a group, compare visibility across it and receive a weekly portfolio digest."
+icon: layers
+keywords: ["portfolio","app group","linked listings","visibility","weekly digest","trends"]
+---
+
+A portfolio view exists because most products ship on both stores, and reading two disconnected app pages hides the thing you actually want to know: whether the product is gaining visibility overall.
+
+## Group linked listings
+
+A linked app group holds at most one app per store, so the App Store and the Google Play listing of the same product belong in exactly one group together.
+
+Grouping does not merge their data. Scores stay store specific and are never averaged across stores, because Apple and Google Play scores come from different public evidence. See [App Store and Google Play](/concepts/stores).
+
+What grouping gives you is a single row for the product, with each store's numbers side by side.
+
+## Compare group visibility
+
+Visibility rolls a set of keyword positions into one number, so a group's visibility is comparable with itself over time rather than with another group.
+
+Use it as a trend, not as a score out of 100. A visibility fall is what `rank.investigate_drop` and `market.improve_country` both key off. See [Work the Action Center](/guides/action-center).
+
+## Follow trends
+
+Two levels of trend are available.
+
+| Level | Answers |
+| --- | --- |
+| Per app | Did this listing gain or lose visibility over the window |
+| Portfolio | Did the whole set move, or only one listing |
+
+The portfolio level is what separates a market wide shift from a problem with one listing. If every app fell on the same day, look at the store rather than at your metadata.
+
+## Receive the weekly digest
+
+The digest is sent by webhook on `CRON_DIGEST`, which defaults to `0 8 * * 1`, meaning 08:00 UTC on Monday.
+
+It has its own schedule and bypasses the batched alert outbox entirely, so it arrives on time regardless of how long the daily pipeline ran. Subscribe a webhook channel to `digest.weekly`. See [Send alerts](/guides/alerts).
+
+## Troubleshooting
+
+- **A group refuses a second app.** A group holds one app per store. Two App Store listings cannot share a group.
+- **Visibility is missing for a market.** Visibility needs observed days. A market added this week does not have them yet.
+- **The digest never arrives.** It is webhook only. An email channel does not receive it.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Follow category ranks" icon="trophy" href="/guides/category-ranks">
+    Chart positions alongside search positions.
+  </Card>
+
+  <Card title="Send alerts" icon="bell" href="/guides/alerts">
+    Where the digest is subscribed.
+  </Card>
+</CardGroup>

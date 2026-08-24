@@ -1,0 +1,11 @@
+{
+  "moduleFileExtensions": ["js", "json", "ts"],
+  "rootDir": ".",
+  "maxWorkers": 1,
+  "testEnvironment": "node",
+  "testRegex": ".drill-spec.ts$",
+  "setupFiles": ["<rootDir>/setup-upgrade.ts"],
+  "transform": {
+    "^.+\\.(t|j)s$": "ts-jest"
+  }
+}

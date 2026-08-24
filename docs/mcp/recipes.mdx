@@ -1,0 +1,90 @@
+---
+title: MCP recipes
+sidebarTitle: Recipes
+description: "Six prompts that work well against the asobeast MCP server, each with the tools it exercises, from a weekly review to a metadata draft."
+icon: sparkles
+keywords: ["MCP prompts","examples","agent","weekly review","keyword triage"]
+---
+
+Six prompts that produce useful answers, each with the tools it exercises. Naming the app, the market and the window is what separates a good answer from a vague one.
+
+## Run a weekly ASO review
+
+```text
+Give me a weekly ASO review. Start with the portfolio roll-up, then the action summary,
+then visibility over the last 14 days for any app that lost ground. Tell me the single
+thing to do first and why.
+```
+
+Exercises `portfolio`, `actions_summary` and `visibility_history`.
+
+## Triage this week's keyword losses
+
+```text
+For app <id>, list the tracked keywords in the us storefront whose position fell over the
+last 7 days. For each, say whether the SERP itself shifted or only my position did.
+```
+
+Exercises `list_keywords`, `ranking_history` and `serp_movers`.
+
+## Explain why a keyword moved
+
+```text
+Keyword <id> dropped this week. Show its position history for the last 30 days, the most
+recent SERP snapshot, and any change events on the app in that window. Then give me the
+two most likely explanations.
+```
+
+Exercises `ranking_history`, `serp_snapshot` and `changes_timeline`.
+
+## Compare against a competitor in one market
+
+```text
+Compare app <id> with the top ranked competitor on keyword <id> in Germany. Use the SERP
+snapshot for who is ahead, and visibility history for the trend over 30 days.
+```
+
+Exercises `app_summary`, `serp_snapshot` and `visibility_history`.
+
+## Check whether another market fits the budget
+
+```text
+Show the current daily request budget. If I add the 12 keywords I already track in us to
+the de storefront as well, will I exceed capacity? Show your arithmetic.
+```
+
+Exercises `daily_budget` and `list_keywords`.
+
+Budget arithmetic is the one place an agent is genuinely better than the dashboard, because it can reason about a change you have not made yet. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Draft the next metadata iteration
+
+```text
+For app <id>, show the metadata audit and the latest ASO audit, then pull keyword
+suggestions from the competitors strategy. Propose a title and subtitle that stay inside
+the character limits and cover the highest opportunity uncovered keywords.
+```
+
+Exercises `metadata_audit`, `app_audit` and `keyword_suggestions`.
+
+The server cannot apply a draft, and neither can asobeast. Every metadata change is published by you in App Store Connect or Google Play Console. See [Optimize listing metadata](/guides/metadata-workbench).
+
+## Writing better prompts
+
+Three habits do most of the work.
+
+- Name the app and the market. Keywords are per storefront, so an unqualified question makes the agent guess.
+- Give a window. `last 30 days` maps directly onto the `from` and `to` parameters.
+- Ask for the reasoning. The tools return evidence, so asking the agent to show its arithmetic makes a wrong answer visible rather than plausible.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="MCP tool reference" icon="wrench" href="/mcp/tools">
+    Every tool and its parameters.
+  </Card>
+
+  <Card title="Work the Action Center" icon="list-checks" href="/guides/action-center">
+    Where the prioritized queue comes from.
+  </Card>
+</CardGroup>

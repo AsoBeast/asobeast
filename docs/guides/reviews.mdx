@@ -1,0 +1,54 @@
+---
+title: Sync reviews and mine keyword ideas
+description: Reviews sync in the daily pipeline for the home storefront. Repeated language in negative reviews becomes keyword ideas and action items.
+icon: message-square
+keywords: ["reviews","ratings history","review mining","negative reviews","themes"]
+---
+
+Reviews give asobeast two things a listing cannot: the words your users actually use, and an early signal that something in the latest release is going wrong.
+
+## Sync reviews
+
+Reviews sync as part of the daily pipeline, which starts at `CRON_DAILY` and defaults to 03:00 UTC. Each review is stored once, keyed by the app and the store review id, so re running a sync does not duplicate rows.
+
+Review sync is home market only in v1, like snapshots and category ranks. See [Countries and markets](/concepts/countries).
+
+## Read the ratings history
+
+The ratings chart tracks the average rating and the rating count over time, taken from each snapshot rather than recomputed from individual reviews. It is the fastest way to see whether a release damaged your rating, and it feeds the ratings factor of the audit. See [Run an ASO audit](/guides/aso-audit).
+
+## Mine reviews for keyword ideas
+
+asobeast extracts repeated phrases from review text and offers them as keyword suggestions, alongside store suggest and competitor derived ideas. Adding one tracks it like any other keyword.
+
+These ideas are worth a look because they are phrased the way users search rather than the way you describe your own product.
+
+## Watch for a growing theme
+
+A phrase becomes an action item when it appears in at least 3 negative reviews of the latest version and at least twice as often as it did in the previous version's reviews. The rule needs at least 5 reviews on the version before it will fire, so a single angry review is never enough.
+
+The action resolves when the version is superseded without the theme recurring, or when mentions fall below the minimum. At most 3 review themes open per app per run. See [Work the Action Center](/guides/action-center).
+
+## Alert on negative reviews
+
+`ALERT_REVIEW_SCORE_MAX` sets the highest star rating treated as negative. It defaults to `2` and accepts 1 to 4, so the default fires on one and two star reviews.
+
+Subscribe a webhook or an email channel to `review.negative` to receive them. See [Send alerts](/guides/alerts).
+
+## Troubleshooting
+
+- **No reviews appear.** The store returns reviews for the home storefront, and a new or low volume app may genuinely have none in the window the store exposes.
+- **The rating count moves without new reviews.** Ratings and reviews are different things. Users can rate without writing.
+- **A theme did not fire.** Check that the version has at least 5 reviews and that the phrase reached 3 negative mentions with twice the previous version's rate.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track keywords" icon="key" href="/guides/track-keywords">
+    Turn a mined phrase into a tracked keyword.
+  </Card>
+
+  <Card title="Send alerts" icon="bell" href="/guides/alerts">
+    Get told about a negative review the day it lands.
+  </Card>
+</CardGroup>

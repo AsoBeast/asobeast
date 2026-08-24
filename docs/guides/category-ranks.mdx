@@ -1,0 +1,54 @@
+---
+title: Follow category ranks
+description: "asobeast captures free, paid and grossing chart positions daily for the home storefront, so a chart move reads alongside keyword positions."
+icon: trophy
+keywords: ["category ranks","charts","free","paid","grossing","genre"]
+---
+
+Category ranks are your position in a store chart rather than in a search result. They move for reasons keywords do not, which makes them a useful control when reading a ranking change.
+
+## What is captured?
+
+Every app is scheduled daily against the grossing chart and against its own free or paid chart, depending on its price. Each observation records the app, the date, the collection and the genre.
+
+| Field | Meaning |
+| --- | --- |
+| Collection | Free, paid or grossing |
+| Genre | The store category the chart belongs to |
+| Date | The UTC date of the observation |
+
+Capture is home market only in v1, like snapshots and reviews. See [Countries and markets](/concepts/countries).
+
+## Read the chart
+
+Chart positions use the same convention as keyword positions: 1 based, with an absent position meaning the app was not found within the captured chart depth rather than zero. See [Positions and rank depth](/concepts/positions).
+
+Read a chart movement against your keyword positions on the same dates. A chart fall with stable keyword positions usually points at conversion or at a competitor's promotion rather than at your metadata.
+
+## What does it cost?
+
+Two jobs per app per day, because every app is scheduled against the grossing chart as well as its own free or paid chart. That is roughly twice the count of price collection alone.
+
+Category jobs remain the smallest slice of the daily budget, and the settings budget card reports the real number. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## How long are they kept?
+
+`RETENTION_CATEGORY_RANKS_DAYS` defaults to 365 days. Set it to `0` to keep chart history forever.
+
+## Troubleshooting
+
+- **No chart position at all.** The app is outside the captured chart depth for that category, which is common outside the top categories.
+- **The app appears on the grossing chart but not the free chart.** A paid app is charted against paid and grossing, not free.
+- **A gap in the history.** The daily job for that date failed and its retries were exhausted. Check the queue dashboard at `/admin/queues`.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Read rankings and SERPs" icon="chart-line" href="/guides/read-rankings">
+    Keyword positions over the same dates.
+  </Card>
+
+  <Card title="Compare a portfolio" icon="layers" href="/guides/portfolio">
+    Roll several apps up into one view.
+  </Card>
+</CardGroup>

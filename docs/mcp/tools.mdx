@@ -1,0 +1,79 @@
+---
+title: MCP tool reference
+sidebarTitle: Tools
+description: "21 read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics, the request budget and the Action Center queue."
+icon: wrench
+keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","daily_budget","read only"]
+mode: wide
+---
+
+This page is generated from the tool catalog both transports share, so it cannot drift. 21 tools, every one of them a `GET` annotated `readOnlyHint: true`. Almost all of them take an `appId`, which you get from `list_apps`.
+
+## Apps
+
+| Tool | Title | Returns | Parameters |
+| --- | --- | --- | --- |
+| `list_apps` | List apps | List every tracked app with its store, home country, latest visibility score and keyword count | None |
+| `get_app` | Get app | Full detail for one app: store metadata, home storefront, latest snapshot and category | `appId` (required) |
+| `app_summary` | App summary | Headline metrics for one app: tracked keyword count, visibility, average position and recent movement | `appId` (required) |
+| `portfolio` | Portfolio summary | Cross-app portfolio roll-up: totals and per-app visibility, keyword and movement figures across every tracked app | None |
+
+Start with `list_apps`. Nothing else works without an app id.
+
+## Keywords
+
+| Tool | Title | Returns | Parameters |
+| --- | --- | --- | --- |
+| `list_keywords` | List tracked keywords | Tracked keywords for one app with traffic, difficulty and opportunity scores (0-100) and the latest checked position | `appId` (required), `sort`, `country` |
+| `keyword_suggestions` | Keyword suggestions | Suggested keywords for one app from a chosen strategy (metadata, search, similar, developer, competitors, seasonal or reviews) | `appId` (required), `strategy` (required), `limit`, `country` |
+
+Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews.
+
+Every parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.
+
+## Insights
+
+| Tool | Title | Returns | Parameters |
+| --- | --- | --- | --- |
+| `ranking_history` | Ranking history | Daily position history for one app's tracked keywords over a date window | `appId` (required), `keywordIds`, `from`, `to` |
+| `serp_snapshot` | SERP snapshot | The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day | `keywordId` (required), `date` |
+| `serp_movers` | SERP movers | Keywords whose search-results order shifted most for one app over the last N days | `appId` (required), `days` |
+| `visibility_history` | Visibility history | Daily visibility score (0-100) history for one app over a date window | `appId` (required), `from`, `to` |
+| `rank_distribution_history` | Rank distribution history | Daily counts of tracked keywords by rank band (top 1-3, 4-10, 11-50, etc.) for one app over a date window | `appId` (required), `from`, `to` |
+| `ratings_history` | Ratings history | Daily average rating and rating-count history for one app over a date window (App Store home market) | `appId` (required), `from`, `to` |
+| `app_audit` | ASO audit | The latest ASO audit for one app: an overall score plus per-check findings and recommendations across the rubric | `appId` (required) |
+| `audit_history` | Audit history | Historical ASO audit scores for one app over a date window | `appId` (required), `from`, `to` |
+| `metadata_audit` | Metadata audit | Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings | `appId` (required) |
+| `list_reviews` | List reviews | Recent store reviews for one app, optionally filtered by star score or app version | `appId` (required), `score`, `version`, `limit` |
+| `changes_timeline` | Changes timeline | Detected change events for one app over the last N days | `appId` (required), `days` |
+| `daily_budget` | Daily request budget | The estimated daily store-request fan-out for the whole instance against the configured rate limits | None |
+
+`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.
+
+## Actions
+
+| Tool | Title | Returns | Parameters |
+| --- | --- | --- | --- |
+| `list_actions` | List actions | The prioritized ASO work queue across every tracked app: what to do next and why | `status`, `priority`, `rule`, `category`, `appId`, `country`, `store`, `limit` |
+| `app_actions` | App actions | The prioritized ASO work queue for one tracked app | `appId` (required), `status`, `priority`, `rule`, `category`, `country`, `store`, `limit` |
+| `actions_summary` | Actions summary | Counts for the whole action queue: open and snoozed totals, counts per priority band and per category, and the most common rules | None |
+
+`status` defaults to `OPEN` and `SNOOZED`, and `limit` defaults to 100 with a maximum of 200. Actions exist only for tracked primary apps, never for competitors, which appear only inside evidence. See [Work the Action Center](/guides/action-center).
+
+## Reading the results
+
+Two conventions matter more than the rest when an agent is interpreting output.
+
+A position is 1 based, and `null` means the keyword was checked and the app was not found within that row's depth. Never read `null` as zero. See [Positions and rank depth](/concepts/positions).
+
+Apple and Google Play scores come from different public evidence and are not comparable, so never rank one store's keyword against another's. See [App Store and Google Play](/concepts/stores).
+
+## Every tool maps to an endpoint
+
+Each tool wraps one `GET` on the HTTP API, so the data an agent can reach is exactly the data the endpoint returns and nothing more. Both transports read the same catalog, so the hosted endpoint and the local stdio server expose an identical surface. See [asobeast API](/api-reference/introduction).
+
+## What is deliberately missing
+
+There are no write tools. No tool imports, tracks, untracks, edits metadata, closes an action or queues a job.
+
+Mutations stay backlog behind an explicit opt in. Until then an agent proposes work and you decide.

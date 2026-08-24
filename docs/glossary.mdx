@@ -1,0 +1,132 @@
+---
+title: Glossary
+description: "Definitions of the ASO and asobeast terms used across this documentation, from home storefront and keyword field to opportunity and fingerprint."
+icon: book-a
+keywords: ["glossary","definitions","ASO terms","terminology"]
+---
+
+One definition per term, in the wording the rest of this site uses.
+
+## ASO
+
+App Store Optimization: the practice of improving how an app listing ranks and converts in store search and charts. asobeast measures it from public store data.
+
+## Storefront
+
+One country's version of a store, identified by a two lowercase letter code such as `us`, `gb` or `de`. Catalogs, search results and rankings differ between storefronts.
+
+## Home storefront
+
+The single storefront recorded on an app row, taken from the imported URL or from `DEFAULT_COUNTRY`. It drives metadata snapshots, category ranks and reviews. See [Countries and markets](/concepts/countries).
+
+## Market
+
+A storefront you track keywords in. An app has one home storefront but can track keywords in many markets.
+
+## Tracked keyword
+
+The link between one app and one keyword row, carrying the source it came from and an optional relevance override. See [Track keywords](/guides/track-keywords).
+
+## Keyword field
+
+The private 100 character App Store field that never appears on the public listing. It cannot be collected, so you paste it manually. Google Play has no equivalent. See [App Store and Google Play](/concepts/stores).
+
+## Subtitle
+
+The 30 character indexed App Store field below the title. App Store only. Its audit weight is 0 on Google Play.
+
+## Short description
+
+The 80 character indexed Google Play field, called `summary` in the store payload. Google Play only, and asobeast tracks its keywords automatically with the source `DESCRIPTION`.
+
+## Position
+
+An app's 1 based rank for one keyword on one UTC date. `null` means checked and not found within that row's depth. See [Positions and rank depth](/concepts/positions).
+
+## Depth
+
+How far a position check looked, stored on each observation. The default is 200, which is why an unranked keyword renders as `>200`.
+
+## SERP
+
+The search results page for one keyword. asobeast stores the top 10 results per keyword and date, which is what powers volatility, entrants and movers.
+
+## Volatility
+
+A 0 to 100 measure of how much a keyword's top 10 changes membership, averaged across consecutive observed days over an eight day window. Reordering alone scores 0.
+
+## Mover
+
+An app whose position on a tracked keyword changed materially between SERP snapshots.
+
+## Entrant
+
+An app that appeared in a keyword's top 10 without having been there before. Entrants fire the `serp.entrant` alert.
+
+## Traffic score
+
+A persisted 0 to 100 estimate of a keyword's search demand, stored with its evidence source, formula version, capture date and confidence. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## Difficulty
+
+A persisted 0 to 100 estimate of how hard a keyword's current top results are to displace.
+
+## Opportunity
+
+A 0 to 100 score describing the fit between one keyword and one app, weighting volume at 0.4, difficulty at 0.3 and relevance at 0.3. It is computed on read and never stored, because relevance is a property of the pairing.
+
+## Visibility
+
+A single number rolling up an app's positions across its tracked keywords. Compare it with itself over time rather than between apps.
+
+## Category rank
+
+An app's position in a store chart rather than in search. asobeast captures free, paid and grossing charts daily for the home storefront. See [Follow category ranks](/guides/category-ranks).
+
+## Snapshot
+
+A captured copy of a listing's metadata at one moment, stored with the raw store payload so a corrected parser can reprocess it.
+
+## Change event
+
+A field level difference between two consecutive snapshots, recorded for your own apps and for competitors. See [Watch listing changes](/guides/listing-changes).
+
+## Audit score
+
+The weighted result of the ten factor audit rubric, out of 100. Weights differ per store. See [Run an ASO audit](/guides/aso-audit).
+
+## Action item
+
+One recommendation from the Action Center, carrying a rule, a priority, an estimated impact, its evidence and a lifecycle state. See [Work the Action Center](/guides/action-center).
+
+## Fingerprint
+
+The stable identity of an action, derived from its rule, app, store, country, keyword and discriminator. It excludes every volatile magnitude, which is what lets a snooze or a dismissal survive the next run.
+
+## Linked app group
+
+A group holding at most one app per store, used to compare the App Store and Google Play listings of the same product. See [Compare a portfolio](/guides/portfolio).
+
+## Portfolio
+
+Every tracked app in the workspace, rolled up into shared totals and trends.
+
+## Workspace
+
+The tenant boundary on every owned row. asobeast seeds one default workspace and every account shares it, so multi tenancy is prepared rather than implemented.
+
+## Owner
+
+The first account created on a fresh instance. Only the owner reaches the queue dashboard and the OpenAPI surface. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+
+## Personal API token
+
+A revocable credential prefixed with `asob_`, minted in Settings and sent as a bearer header. Stored as a SHA-256 hash, shown once. See [Personal API tokens](/security/api-tokens).
+
+## Daily pipeline
+
+The scheduled run that enqueues position checks, snapshots, reviews and category ranks, then generates actions and flushes batched alerts. It starts at `CRON_DAILY`, defaulting to 03:00 UTC.
+
+## Request budget
+
+The estimated daily store request fan out against the capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. `GET /jobs/budget` returns it. See [The daily pipeline and rate limits](/concepts/pipeline).

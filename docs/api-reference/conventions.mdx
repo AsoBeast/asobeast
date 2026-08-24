@@ -1,0 +1,76 @@
+---
+title: API conventions
+sidebarTitle: Conventions
+description: Dates are UTC and daily granularity uses a date string. Positions are 1 based and null means checked and not found. Queued operations return 202.
+icon: ruler
+keywords: ["conventions","UTC","dates","positions","202","queued","pagination","BigInt"]
+---
+
+Seven conventions apply across every endpoint. A specification cannot express most of them, and each one has caused a wrong integration at least once.
+
+## Dates are UTC
+
+Every timestamp is UTC ISO 8601. Every daily value is a `date` string such as `2026-07-30`, with no time and no offset, because the underlying column is a PostgreSQL `date`.
+
+Today means the UTC date. An instance in Auckland and an instance in Los Angeles agree on which day a position belongs to, which is what makes histories comparable.
+
+Do not localize a `date` string before comparing it. Parsing `2026-07-30` as local midnight and formatting it back can shift it by a day.
+
+## Positions are 1 based and null is meaningful
+
+Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`, which defaults to 200.
+
+<Warning>
+  Never coerce `null` to `0`. Zero is a better position than 1, so treating a missing app as zero makes every unranked keyword look like the best result and inverts every average, delta and trend you compute.
+</Warning>
+
+Render `null` as a bound derived from the row's own `depth`, such as `>200`. See [Positions and rank depth](/concepts/positions).
+
+## Queued operations return 202
+
+Anything that enqueues store work answers immediately with `202` and a job reference rather than waiting for a result.
+
+| Operation | Returns |
+| --- | --- |
+| `POST /apps/{id}/run-daily` | `202`, the daily work is queued |
+| `POST /keywords/{keywordId}/score` | `202`, the scoring job is queued |
+| `POST /actions/run` | `202`, generation is queued. Two runs the same day coalesce |
+| `POST /apps/{id}/refresh` | `200` with a snapshot diff, synchronously |
+
+Poll the resource afterwards rather than expecting the response to carry the result. A `202` is not a promise that the job succeeded, only that it was accepted.
+
+## Scores are 0 to 100
+
+Traffic, difficulty and opportunity are all 0 to 100. Traffic and difficulty are stored with their provenance, while opportunity is computed per app on read and never persisted.
+
+Apple and Google Play scores come from different public evidence and are not directly comparable. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## installs is a BigInt
+
+`installs` exceeds the safe integer range in the database, so it is stored as a `BigInt` and serialized as a JSON number. A client reading it into a 64 bit integer type is fine. A client reading it into a JavaScript number is also fine at realistic install counts.
+
+## Country codes are two letters
+
+A country is two lowercase letters such as `us`, `gb` or `de`, validated by shape rather than against a fixed list, so any live storefront works. Uppercase is rejected.
+
+Country belongs to the keyword, not to the app, which is why so many endpoints take one. See [Countries and markets](/concepts/countries).
+
+## Rate limits depend on how the instance is run
+
+A self hosted instance applies no API rate limits beyond the authentication throttle. What is limited there is store collection, by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`, so a script may read as often as it likes while queuing work has a real cost.
+
+A metered instance limits requests per workspace and per plan, in three classes, and every response carries `RateLimit` headers. See [Rate limits and quotas](/api-reference/rate-limits).
+
+Either way, `GET /jobs/budget` returns the estimated daily fan out broken down by kind alongside your capacity, which is the right thing to check before adding keywords or markets programmatically. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Error responses" icon="triangle-alert" href="/api-reference/errors">
+    What a failure looks like.
+  </Card>
+
+  <Card title="Rate limits and quotas" icon="gauge" href="/api-reference/rate-limits">
+    What a metered instance allows.
+  </Card>
+</CardGroup>

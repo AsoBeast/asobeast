@@ -1,0 +1,31 @@
+{
+  "id": "evt_TestCheckoutCompleted",
+  "object": "event",
+  "api_version": "2026-07-29.dahlia",
+  "created": 1800000100,
+  "data": {
+    "object": {
+      "id": "cs_test_TestSession",
+      "object": "checkout.session",
+      "amount_total": 1000,
+      "client_reference_id": "ws_stripe_fixture",
+      "currency": "usd",
+      "customer": "cus_TestWorkspace1",
+      "customer_email": null,
+      "livemode": false,
+      "metadata": {},
+      "mode": "subscription",
+      "payment_status": "paid",
+      "status": "complete",
+      "subscription": "sub_TestIndieMonthly",
+      "url": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": "req_TestRequest",
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}

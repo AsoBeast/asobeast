@@ -1,0 +1,100 @@
+---
+title: Health checks and monitoring
+sidebarTitle: Health checks
+description: "The API health endpoint reports the database, Redis, the last daily pipeline run, the failed job count and the open action count in one response."
+icon: activity
+keywords: ["health","monitoring","uptime","liveness","pipeline health","failed jobs"]
+---
+
+Two endpoints answer two different questions. One says the web container is alive. The other says the whole pipeline is working.
+
+## Endpoints
+
+| URL | Answers | Authentication |
+| --- | --- | --- |
+| `/api/health` | Is the web container serving | None |
+| `/api/backend/health` | Is the API alive, and is collection healthy | None |
+
+Both are reachable on the web origin, so an uptime check needs no credentials and no access to the API port.
+
+## What does a healthy instance look like?
+
+```json
+{
+  "status": "ok",
+  "db": "up",
+  "redis": "up",
+  "pipeline": {
+    "lastDailyRunAt": "2026-07-30T03:00:12.000Z",
+    "stale": false,
+    "failedJobs": 0,
+    "actions": {
+      "generatedAt": "2026-07-30T04:11:02.000Z",
+      "open": 7
+    }
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `status` | `ok` when the database answers. The endpoint returns `503` when it does not |
+| `db` | `up` or `down`, from a real query rather than a connection count |
+| `redis` | `up` or `down`. A Redis read that exceeds one second reports `down` |
+| `pipeline.lastDailyRunAt` | When the daily pipeline last started, or `null` |
+| `pipeline.stale` | `true` when the last run is more than 26 hours old and at least one app is tracked |
+| `pipeline.failedJobs` | Failed jobs across the App Store, Google Play and alert queues. A count that keeps climbing across daily runs points at [a broken store parser](/operations/scraper-breakage) |
+| `pipeline.actions` | When actions were last generated, and how many are open |
+
+The 26 hour window is deliberate. A daily schedule plus a slow night should not page you, so `stale` only fires once a run has genuinely been missed. A fresh instance with no apps never reports stale, because there is nothing to collect.
+
+## Monitor it
+
+One command is enough for an uptime check.
+
+```bash
+curl --fail --silent --show-error https://your-host/api/backend/health
+```
+
+`--fail` turns the `503` into a non zero exit status, which is what most monitoring agents key on.
+
+To alert on a stalled pipeline rather than on a dead API, check the `stale` and `failedJobs` fields rather than the status code. A stale pipeline still answers `200`, because the API itself is healthy.
+
+## Egress proxy pool
+
+Only relevant when `PROXY_PROVIDER` is set. `GET /api/backend/admin/proxy-pool` answers with the pool's shape and is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is): any other account gets `404`, the same answer the queue dashboard gives, so the surface never confirms it exists.
+
+The response carries pool size, per store healthy and cooling down counts, per endpoint success rate over a rolling hour, the distribution of the last failure classification, residential fallback rate and month to date spend, and requests per hour against capacity.
+
+The `alerts` array is the part to watch. It is empty on a healthy pool.
+
+| Alert | Meaning | First response |
+| --- | --- | --- |
+| `pool.healthy.low` | Fewer than half the serving endpoints are usable for a store | Check the failure distribution, then the provider dashboard |
+| `pool.blocked.rising` | A tenth of the pool was last seen blocked | The store is refusing that address range. Rotate the pool |
+| `pool.silent.rising` | An endpoint returned a plausible looking empty result | Treat as urgent. This is the only signal that data quality is degrading |
+| `residential.spend.near-cap` | Fallback spend passed 80 percent of the monthly cap | Fix the datacenter block. At the cap the fallback stops rather than spends |
+
+The same alerts are written to the API log on every pool reconciliation, so an operator with no dashboard still sees them.
+
+## Container health checks
+
+Every Compose service defines its own health check, and the dependency order uses them: the API waits for PostgreSQL and Redis to report healthy, and the web app waits for the API.
+
+```bash
+docker compose ps
+```
+
+`docker compose up --wait` blocks until every check passes, so a successful exit is a real signal rather than a process start.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="The daily pipeline and rate limits" icon="clock" href="/concepts/pipeline">
+    What the pipeline does and when.
+  </Card>
+
+  <Card title="Troubleshooting" icon="life-buoy" href="/operations/troubleshooting">
+    What to do when a field goes the wrong way.
+  </Card>
+</CardGroup>

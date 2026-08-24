@@ -1,0 +1,68 @@
+---
+title: The asobeast MCP server
+sidebarTitle: Introduction
+description: "asobeast ships a read only Model Context Protocol surface. Connect to the hosted endpoint or run the stdio server yourself, both with the same tools."
+icon: plug
+keywords: ["MCP","Model Context Protocol","Claude Code","Claude Desktop","read only","stdio","remote MCP","agent"]
+boost: 2
+---
+
+asobeast ships a Model Context Protocol surface. It is read only, it authenticates with a personal API token, and it exposes twenty one tools covering apps, keywords, positions, SERPs, audits, reviews, analytics, the request budget and the Action Center queue.
+
+That means you can point Claude Code or Claude Desktop at your asobeast and ask it questions in plain language instead of clicking through the dashboard.
+
+## Two transports, one tool surface
+
+Your client can connect straight to `POST /mcp` on your instance, or launch the stdio server on your own machine. Both read one catalog of tool definitions, so the names, schemas and descriptions are identical and neither transport has a tool the other lacks.
+
+The hosted endpoint runs inside the API, so it inherits the same authentication, the same workspace isolation and the same per workspace rate limits as every REST call, rather than reimplementing them. The stdio server is an HTTP client because it runs somewhere else. See [Connect an agent](/mcp/setup).
+
+## Which protocol revision do they speak?
+
+Both transports serve MCP `2026-07-28` and the 2025 revisions from the same tool definitions. A client that probes for the newer revision is served it, and a client that opens with the 2025 handshake keeps negotiating the revision it always did, so nothing you have already configured needs to change.
+
+One thing on the wire did change when both transports moved to version 2 of the MCP TypeScript SDK. Every tool now advertises its parameters as JSON Schema 2020-12 rather than draft-07, and the `execution` hint the previous SDK attached to each tool is gone. The parameters themselves are identical, so a client that reads a schema without validating its dialect needs no change, while a client that validates needs a validator that understands 2020-12. Both revisions receive the same schemas, so neither era is served a narrower contract than the other.
+
+Neither transport holds a session. The hosted endpoint builds one server instance per request and keeps nothing between requests, and `2026-07-28` removes the session concept from the protocol outright, so there is no session identifier to send, store or expire. For what the revisions differ on, see the [MCP TypeScript SDK documentation](https://ts.sdk.modelcontextprotocol.io/v2/).
+
+## What can you ask?
+
+Specific questions work best, because the tools take app ids, countries and date windows.
+
+```text
+Which of my tracked keywords lost more than five positions this week?
+```
+
+```text
+Summarize the open critical actions across my portfolio and tell me which app to work on first.
+```
+
+```text
+Compare my visibility against my top competitor in Germany over the last 30 days.
+```
+
+## Every tool is read only
+
+Every tool wraps a `GET` on the HTTP API and is annotated `readOnlyHint: true`. There is no write path at all.
+
+Marking an action done is deliberately unavailable. An agent that can close its own recommendations can quietly clear a queue you never read, so the server proposes work and leaves the decision with you.
+
+That constraint is why the integration is safe to hand to an agent with broad permissions. The worst case is a wrong answer, not a changed instance.
+
+## What it is not
+
+The MCP server holds no database, imports no scraper and contains no server framework code. It is a consumer of the HTTP API exactly like the web app, typed with the same `@asobeast/shared` contracts, which is what keeps its tool descriptions from drifting away from the API.
+
+## Requirements
+
+| Requirement | Notes |
+| --- | --- |
+| A running asobeast instance | Reachable from the machine the agent runs on |
+| A personal API token | Mandatory. A boot preflight exits non zero without a valid one |
+| An MCP capable client | Claude Code and Claude Desktop are documented here. Any stdio client works |
+
+## Next
+
+<Card title="Connect an agent" icon="cable" href="/mcp/setup">
+  Both setup paths, client configuration and the two failures that catch everyone.
+</Card>

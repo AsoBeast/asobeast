@@ -1,0 +1,53 @@
+---
+title: Watch listing changes
+description: "Every snapshot is compared with the previous one, so a changed title, subtitle or description becomes a dated event for your apps and competitors."
+icon: git-compare
+keywords: ["changes","metadata changed","diff","competitor changes","change events"]
+---
+
+The changes feed is the answer to "what did they change, and when". It records field level differences between consecutive snapshots for your own apps and for every competitor you track.
+
+## Read the changes feed
+
+Each event names the app, the field, the previous value, the new value and the date it was detected.
+
+| Column | Meaning |
+| --- | --- |
+| App | Yours or a competitor's |
+| Field | The metadata field that changed |
+| From and to | The two values, so you can read the edit itself |
+| Detected | The UTC date the change was observed |
+
+Detection is snapshot based, so the date is when asobeast noticed rather than when the store published. A refresh you trigger yourself narrows that gap. See [Import an app](/guides/import-an-app).
+
+## Why competitor changes matter most
+
+Your own changes you already know about. A competitor rewriting a title is the interesting row, because it usually precedes a position shift on the keywords that title covers.
+
+Pair a competitor change with a position drop on the same keywords and you have the beginning of an explanation. The Action Center formalises this in `rank.investigate_drop`, which looks for an indexed field change within 14 days of a visibility fall. See [Work the Action Center](/guides/action-center).
+
+## Get notified
+
+Subscribe a channel to `metadata.changed`. In the default batched delivery mode, owned app changes and competitor changes arrive as two separate reports, so a channel can subscribe to one scope without the other. See [Send alerts](/guides/alerts).
+
+## How long are changes kept?
+
+`RETENTION_CHANGE_EVENTS_DAYS` defaults to `0`, which keeps change events forever. See [Configuration reference](/configuration/reference). That default is deliberate: change history is small, and it is the record you most want years later when explaining a ranking trend.
+
+## Troubleshooting
+
+- **A change you made is not listed.** No snapshot has been captured since the store published it. Refresh the listing.
+- **A change appears with no visible difference.** Stores sometimes reformat whitespace or punctuation. The diff shows exactly what differed.
+- **Competitor changes stopped.** Confirm the competitor is still tracked and that its listing has not been removed from the storefront.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Track competitors" icon="users" href="/guides/competitors">
+    Add the listings whose changes you want to see.
+  </Card>
+
+  <Card title="Work the Action Center" icon="list-checks" href="/guides/action-center">
+    Where a change plus a drop becomes an investigation.
+  </Card>
+</CardGroup>

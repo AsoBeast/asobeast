@@ -1,0 +1,64 @@
+---
+title: How asobeast collects data
+sidebarTitle: Data collection posture
+description: "What the service reads from Apple and Google, what it refuses to do, why the self hosted and hosted cases differ, and what happens if a store objects."
+icon: telescope
+keywords: ["scraping","posture","rate limits","captcha","apple","google play"]
+---
+
+asobeast is built on public store data. A product built that way and unwilling to discuss how looks evasive, so this page states the position plainly and in advance. The code is open, so anyone can check that the position matches the behaviour.
+
+## What the service does
+
+It collects **publicly visible store search results and listing metadata** on a customer's behalf: the same search result pages and app pages any visitor sees, read on a schedule and stored so that changes over time become visible.
+
+Concretely, per tracked keyword and market, one search per day. Per tracked app, a listing snapshot, its public reviews and its category positions.
+
+## What the service does not do
+
+These are commitments, not aspirations, and each is visible in the code.
+
+- **No authenticated access.** Nothing signs in to a store, uses a developer account, or reads anything behind a login.
+- **No private data.** The one private field asobeast handles, the iOS keyword field, is typed in by the app's owner because it cannot be read from anywhere. That is the exception that proves the rule.
+- **No circumvention of access controls.** No paywall bypass, no token forging, no undocumented internal endpoint that a store protects.
+- **No CAPTCHA solving.** If a store challenges a request, the request fails and the job retries later. There is no solver, no third party solving service and no plan to add either.
+- **No republishing.** Collected data is shown to the customer who asked for it. It is not sold, syndicated or offered as a dataset, and the terms forbid customers doing so.
+
+## Rate limiting is good citizenship, not just cost control
+
+Collection is deliberately slow. The App Store worker runs one job at a time behind a limiter defaulting to 15 requests per minute; Google Play runs at 10 job starts per minute, and a Play job fans out to several requests, so its effective ceiling is lower still.
+
+Those limits exist because a store serving a request for free should not have to absorb a burst. They also happen to protect the collection, since an address that gets throttled stops producing data. The two interests point the same way, which is the comfortable case.
+
+The daily run sheds load rather than pushing harder. When demand passes capacity it drops the least valuable work first and lets the run finish late, and registration on the hosted service is gated before capacity is exceeded rather than after.
+
+## Self hosted and hosted are not the same thing
+
+Pretending they are would not be credible.
+
+|  | Self hosted | Hosted |
+| --- | --- | --- |
+| Who is asking | One developer, about their own apps and their competitors | A service, on behalf of many customers |
+| Where requests leave from | The operator's own address | A pool of datacenter addresses |
+| Volume | The volume of one small portfolio | The sum of every customer |
+| Who is responsible | The operator | Us |
+
+A developer checking their own app's rank from their own machine is an ordinary use of a public page. A service making a large volume of requests through a proxy pool is a different thing, and it carries obligations that the first case does not: keeping the rate down, keeping the volume attributable, and answering for it.
+
+The hosted service uses datacenter addresses, not residential ones. Residential egress routes requests through other people's connections, and beyond the cost, borrowing a stranger's address to make a request they did not ask for is not a position worth defending. It stays configured as a small emergency fallback with a hard monthly cap, never as the primary path.
+
+## If a store objects
+
+The honest answer is that Apple and Google decide what they serve, and neither owes this service anything.
+
+- If a store blocks the collection, collection stops. There is no escalation, no evasion and no rotation designed to defeat a block.
+- If a store asks the service to stop, it stops, and customers are told what changed and what it means for their plan.
+- If a store changes what it serves, the service changes with it, which may mean reduced depth or a store that is no longer covered.
+
+That is also why the [terms of service](/legal/terms) disclaim accuracy and state the dependence on Apple and Google directly rather than in a footnote. A product whose input can be withdrawn should say so before a customer depends on it.
+
+## Why the licence matters here
+
+The code is [AGPL-3.0-only](https://github.com/AsoBeast/asobeast/blob/main/LICENSE). Every claim on this page is checkable against the source, including the ones that would be convenient to break quietly.
+
+It also means the collection is available without paying anyone: a developer who wants only their own data can run the whole thing themselves, from their own address, at their own volume. Charging for hosting rather than for features keeps that path real, and a real self hosted path is what makes this posture something other than a marketing statement.

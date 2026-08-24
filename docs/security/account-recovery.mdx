@@ -1,0 +1,74 @@
+---
+title: Account recovery
+sidebarTitle: Account recovery
+description: "A customer who forgot their password recovers by email, without the operator touching the database."
+icon: key-round
+keywords: ["password reset","account recovery","forgot password","locked out","recovery link"]
+---
+
+Somebody who cannot remember their password recovers on their own. The operator is never asked to edit a password hash, which matters on a hosted instance where the customer has no access to PostgreSQL and no relationship with you beyond a support address.
+
+Recovery needs a mail transport and a public web address, because the message carries a link and the link needs a host. With either one missing the request is refused with `503` and says so, rather than accepting the request and discarding the message. See [Configuration reference](/configuration/reference) for the SMTP block and for `WEB_PUBLIC_URL`.
+
+## The flow
+
+1. The sign in card links to **Forgot password?**, which asks for an email address.
+2. asobeast emails a single use link to that address when it belongs to an account.
+3. Opening the link asks for a new password and sets it.
+4. Every session that account had open is signed out, including the attacker's if the password was the reason for the recovery.
+
+The link expires one hour after it is minted. Asking for another link retires the previous one.
+
+## What the request does not reveal
+
+The response to a recovery request is identical for an address that has an account and one that does not: the same status code, the same body and the same confirmation on screen. A reset form that answers differently is an account enumeration oracle, so this one does not.
+
+Timing is part of that answer. The message is handed to the relay after the response is written, so a slow or unreachable relay delays no request and an address with an account is answered as quickly as one without.
+
+That is also why nothing on the page reports whether the message was sent. A customer who typed the wrong address sees the same reassurance as one who typed the right one, and finds out when no message arrives.
+
+## Limits
+
+| Limit | Value | Why |
+| --- | --- | --- |
+| Requests per client address | 10 per hour | Stops one client flooding many mailboxes |
+| Requests per account | 3 per hour | Stops one mailbox being flooded from many clients |
+| Link lifetime | 1 hour | A recovery link is a password equivalent |
+
+Requests past the per account allowance are dropped silently, because refusing them out loud would answer the question the identical response exists to hide.
+
+## What is stored
+
+Only a SHA-256 hash of the token, alongside its expiry, on the user row. The plaintext exists in the email and nowhere else, so a stolen database backup carries no usable recovery links. Redeeming a link clears both columns, which is what makes it single use.
+
+The clearing and the new password are one conditional write, matched on the stored hash and an expiry still in the future. Two requests arriving on the same link at the same moment therefore settle rather than race: one is accepted, the other is answered `404`, and the password is the one the accepted request chose.
+
+Recovery never grants entitlement and never spends store capacity. It is an account action, so it works while a workspace is unentitled, which is exactly when a customer needs to sign in to export their data or to pay.
+
+## Endpoints
+
+| Route | Purpose |
+| --- | --- |
+| `POST /auth/password/forgot` | Ask for a recovery link. `204` once recovery is configured, `503` while it is not |
+| `POST /auth/password/reset` | Redeem a link and set the new password. `204`, or `404` for a spent link and `410` for an expired one |
+
+Both are public. Neither accepts a session, and neither returns one: after recovery the customer signs in with the password they just chose.
+
+## Troubleshooting
+
+- **No message arrives.** Confirm SMTP is configured and read the delivery outcome. See [Troubleshooting](/operations/troubleshooting).
+- **The link says it is no longer valid.** It was already redeemed, or a newer link retired it. Ask for another one.
+- **The link says it has expired.** More than an hour passed. Ask for another one.
+- **Recovery is refused with `503`.** The instance has no mail transport, or no `WEB_PUBLIC_URL` for the link to point at. See [Configuration reference](/configuration/reference).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Authentication and accounts" icon="lock" href="/security/authentication">
+    Sessions, registration and entitlement.
+  </Card>
+
+  <Card title="Rotate secrets" icon="refresh-cw" href="/operations/rotate-secrets">
+    What changing `AUTH_SECRET` signs out.
+  </Card>
+</CardGroup>

@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.next/
+.turbo/
+coverage/
+.env
+.env.*.local
+*.log
+.DS_Store
+# Local agent and editor state
+.claude
+.cursor
+.aider*
+/plan/
+apps/web/e2e/__baseline__/
+proxy

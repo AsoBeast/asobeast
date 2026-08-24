@@ -1,0 +1,31 @@
+name: asobeast-bench
+
+services:
+  postgres:
+    extends:
+      file: docker-compose.yml
+      service: postgres
+    environment:
+      POSTGRES_DB: asobeast_bench
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - benchpgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asobeast -d asobeast_bench"]
+  redis:
+    extends:
+      file: docker-compose.yml
+      service: redis
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - benchredisdata:/data
+
+volumes:
+  benchpgdata:
+  benchredisdata:
+
+networks:
+  backend:
+    driver: bridge

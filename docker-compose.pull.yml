@@ -1,0 +1,149 @@
+name: asobeast
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      POSTGRES_USER: asobeast
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: asobeast
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asobeast -d asobeast"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - backend
+  redis:
+    image: redis:8-alpine
+    restart: unless-stopped
+    command:
+      [
+        "redis-server",
+        "--maxmemory",
+        "192mb",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    deploy:
+      resources:
+        limits:
+          memory: 320M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - backend
+  api:
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-api:${ASOBEAST_IMAGE_TAG:-1.0.0} # x-release-please-version
+    restart: unless-stopped
+    stop_grace_period: 90s
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    env_file:
+      - path: apps/api/.env
+        required: false
+    environment:
+      DATABASE_URL: postgresql://asobeast:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/asobeast
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 4000
+      DEFAULT_COUNTRY: us
+      NODE_ENV: production
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+      TRUST_PROXY: 1
+      LOG_LEVEL: ${LOG_LEVEL:-log}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - frontend
+      - backend
+  web:
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-web:${ASOBEAST_IMAGE_TAG:-1.0.0} # x-release-please-version
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    environment:
+      API_INTERNAL_URL: http://api:4000
+      HOSTNAME: 0.0.0.0
+      TRUST_PROXY: ${TRUST_PROXY:-0}
+      STATUS_PAGE_URL: ${STATUS_PAGE_URL:-}
+    ports:
+      - "3001:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    networks:
+      - frontend
+volumes:
+  pgdata:
+  redisdata:
+networks:
+  frontend:
+  backend:
+    internal: true
