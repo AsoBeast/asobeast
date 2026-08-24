@@ -67,41 +67,7 @@ recreate_database "${SOURCE_DB}"
   pnpm exec prisma migrate deploy >/dev/null)
 
 echo "==> Loading the fixture"
-compose_psql "${SOURCE_DB}" <<'SQL' >/dev/null
-ALTER TABLE "KeywordRanking" ALTER COLUMN "workspaceId" DROP NOT NULL;
-ALTER TABLE "User" ADD COLUMN "plan" TEXT NOT NULL DEFAULT 'free',
-  ADD COLUMN "trialEndsAt" TIMESTAMP(3),
-  ADD COLUMN "planExpiresAt" TIMESTAMP(3),
-  ADD COLUMN "billingCustomerId" TEXT;
-SQL
 compose_psql "${SOURCE_DB}" <"${FIXTURE}" >/dev/null
-compose_psql "${SOURCE_DB}" <<'SQL' >/dev/null
-UPDATE "KeywordRanking" AS r
-SET "workspaceId" = a."workspaceId"
-FROM "App" AS a
-WHERE a."id" = r."appId" AND r."workspaceId" IS NULL;
-ALTER TABLE "KeywordRanking" ALTER COLUMN "workspaceId" SET NOT NULL;
-
-UPDATE "Workspace" w
-SET "plan" = o."plan",
-    "trialEndsAt" = o."trialEndsAt",
-    "planExpiresAt" = o."planExpiresAt",
-    "billingCustomerId" = o."billingCustomerId"
-FROM (
-  SELECT DISTINCT ON ("workspaceId")
-         "workspaceId", "plan", "trialEndsAt", "planExpiresAt", "billingCustomerId"
-  FROM "User"
-  ORDER BY "workspaceId", ("role" = 'owner') DESC, "createdAt" ASC
-) o
-WHERE o."workspaceId" = w."id";
-
-ALTER TABLE "User" DROP COLUMN "plan",
-  DROP COLUMN "trialEndsAt",
-  DROP COLUMN "planExpiresAt",
-  DROP COLUMN "billingCustomerId";
-
-UPDATE "ApiToken" SET "scope" = 'write';
-SQL
 
 echo "==> Fingerprinting the source"
 fingerprint "${SOURCE_DB}" >"${WORK}/source.txt"

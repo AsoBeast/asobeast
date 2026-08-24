@@ -12,8 +12,8 @@ VALUES ('ws_paid', 'Paid', 'premium', NULL, 'cus_drill', '2026-07-01 00:00:00');
 INSERT INTO "User" ("id", "workspaceId", "email", "passwordHash", "name", "role", "sessionVersion", "createdAt", "updatedAt")
 VALUES ('usr_paid', 'ws_paid', 'paid@asobeast.test', '$argon2id$v=19$m=65536,p=4,t=3$2IvW/k4zrYISwGU8gtJ1mg$uX4IjxOXBQ/mFJ00RvtEsTYYZqtWQcjrIgcumQ3vq3I', 'Drill Payer', 'owner', 0, '2026-07-01 00:00:00', '2026-07-01 00:00:00');
 
-INSERT INTO "ApiToken" ("id", "userId", "name", "tokenHash", "prefix", "createdAt")
-VALUES ('tok_drill', 'usr_owner', 'drill', 'c17c674b21ca3368525ec4a1333a69e16352b4503055b96d530ead5523b5a175', 'asob_0123456', '2026-07-01 00:00:00');
+INSERT INTO "ApiToken" ("id", "userId", "name", "tokenHash", "prefix", "scope", "createdAt")
+VALUES ('tok_drill', 'usr_owner', 'drill', 'c17c674b21ca3368525ec4a1333a69e16352b4503055b96d530ead5523b5a175', 'asob_0123456', 'write', '2026-07-01 00:00:00');
 
 INSERT INTO "AppGroup" ("id", "workspaceId", "name", "createdAt")
 VALUES ('grp_fitness', 'ws_default', 'Fitness', '2026-07-01 00:00:00');
