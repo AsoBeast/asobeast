@@ -40,10 +40,10 @@ A class is also not a permission. A read only token may call any endpoint that d
 
 | Limit | Indie | Ultimate |
 | --- | --- | --- |
-| Read requests per minute | 60 | 300 |
-| Write requests per minute | 20 | 100 |
-| Requests per day | 10,000 | 100,000 |
-| Requests in parallel | 8 | 24 |
+| Read requests per minute | 300 | 900 |
+| Write requests per minute | 60 | 200 |
+| Requests per day | 40,000 | 400,000 |
+| Requests in parallel | 16 | 48 |
 | Refresh per day | 50 | 500 |
 | Run daily per day | 5 | 20 |
 | Score per day | 100 | 1,000 |
@@ -70,14 +70,14 @@ A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs 
 {
   "statusCode": 429,
   "error": "Too Many Requests",
-  "message": "Rate limit reached: the indie plan allows 20 write requests per minute, available again in 34 seconds",
+  "message": "Rate limit reached: the indie plan allows 60 write requests per minute. Wait 34 seconds before the next one, because retrying before then will fail.",
   "path": "/apps/cl123/keywords",
   "timestamp": "2026-08-14T10:30:26.118Z",
   "rateLimit": {
     "window": "minute",
     "rateClass": "write",
     "plan": "indie",
-    "limit": 20,
+    "limit": 60,
     "resetSeconds": 34,
     "upgradeTo": "ultimate"
   },
