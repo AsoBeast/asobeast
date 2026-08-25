@@ -1,4 +1,5 @@
 export * from "./client";
+export * from "./error-digest";
 export * from "./apps";
 export * from "./keywords";
 export * from "./rankings";

@@ -1,5 +1,6 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { isPublicRoute } from "@/lib/auth-routes";
+import { writeApiErrorDigest } from "./error-digest";
 
 const INTERNAL_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 
@@ -23,9 +24,12 @@ async function serverForwardHeaders(): Promise<Record<string, string>> {
 }
 
 export class ApiError extends Error {
+  readonly digest: string;
+
   constructor(public readonly envelope: ApiErrorEnvelope) {
     super(envelope.message);
     this.name = "ApiError";
+    this.digest = writeApiErrorDigest(envelope);
   }
 }
 

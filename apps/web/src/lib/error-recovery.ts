@@ -1,4 +1,4 @@
-import { ApiError } from "@/lib/api";
+import { ApiError, readApiErrorDigest } from "@/lib/api";
 
 export type RecoveryAction =
   { kind: "retry" } | { kind: "link"; href: string; label: string };
@@ -36,11 +36,6 @@ const BY_STATUS: Record<number, Recovery> = {
     body: "This app or record no longer exists. It may have been deleted.",
     action: { kind: "link", href: "/", label: "Back to apps" },
   },
-  429: {
-    title: "Too many requests",
-    body: "The store rate limiter is holding requests back. Wait a moment and try again.",
-    action: { kind: "retry" },
-  },
   504: {
     title: "The API did not answer in time",
     body: "asobeast runs on your own machine. Check that the api container is up and that the database and Redis are reachable, then try again.",
@@ -48,19 +43,47 @@ const BY_STATUS: Record<number, Recovery> = {
   },
 };
 
+function rateLimited(retryAfterSeconds: number | null): Recovery {
+  const wait =
+    retryAfterSeconds === null
+      ? "Wait a moment and try again."
+      : `Wait ${retryAfterSeconds} second${retryAfterSeconds === 1 ? "" : "s"} and try again.`;
+  return {
+    title: "Your plan's request budget is spent",
+    body: `This workspace has used the API requests its plan allows. ${wait}`,
+    action: { kind: "retry" },
+  };
+}
+
+function byStatus(
+  statusCode: number,
+  retryAfterSeconds: number | null,
+): Recovery | null {
+  if (statusCode === 429) return rateLimited(retryAfterSeconds);
+  return BY_STATUS[statusCode] ?? null;
+}
+
+function digestOf(error: unknown): string | undefined {
+  const digest: unknown = (error as { digest?: unknown })?.digest;
+  return typeof digest === "string" ? digest : undefined;
+}
+
 export function recoveryFor(error: unknown): Recovery {
-  if (!(error instanceof ApiError)) return GENERIC;
-
-  const known = BY_STATUS[error.envelope.statusCode];
-  if (known) return known;
-
-  if (error.envelope.statusCode >= 500) {
-    return {
-      title: "The API failed to answer",
-      body: error.envelope.message,
-      action: { kind: "retry" },
-    };
+  if (error instanceof ApiError) {
+    const { statusCode, message, retryAfterSeconds } = error.envelope;
+    const known = byStatus(statusCode, retryAfterSeconds ?? null);
+    if (known) return known;
+    if (statusCode >= 500) {
+      return {
+        title: "The API failed to answer",
+        body: message,
+        action: { kind: "retry" },
+      };
+    }
+    return { ...GENERIC, body: message };
   }
 
-  return { ...GENERIC, body: error.envelope.message };
+  const digest = readApiErrorDigest(digestOf(error));
+  if (!digest) return GENERIC;
+  return byStatus(digest.statusCode, digest.retryAfterSeconds) ?? GENERIC;
 }

@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@/lib/api";
 import { recoveryFor } from "./error-recovery";
 
-function apiError(statusCode: number, message = "boom"): ApiError {
+function apiError(
+  statusCode: number,
+  message = "boom",
+  retryAfterSeconds?: number,
+): ApiError {
   return new ApiError({
     statusCode,
     error: "Error",
     message,
     path: "/health",
     timestamp: new Date().toISOString(),
+    ...(retryAfterSeconds === undefined ? {} : { retryAfterSeconds }),
   });
 }
 
@@ -41,6 +46,58 @@ describe("recoveryFor", () => {
     expect(recoveryFor(apiError(500, "database down")).body).toBe(
       "database down",
     );
+  });
+
+  it("names the plan budget and the wait when the API refuses a read", () => {
+    const recovery = recoveryFor(apiError(429, "Rate limit reached", 4));
+
+    expect(recovery.title).toContain("plan");
+    expect(recovery.body).toContain("plan allows");
+    expect(recovery.body).toContain("Wait 4 seconds");
+    expect(recovery.body).not.toContain("store rate limiter");
+  });
+
+  it("promises no wait the refusal did not carry", () => {
+    const recovery = recoveryFor(apiError(429, "Too many refreshes"));
+
+    expect(recovery.body).toContain("Wait a moment");
+    expect(recovery.body).not.toMatch(/\d+ seconds/);
+  });
+
+  it("counts a one second wait in the singular", () => {
+    expect(recoveryFor(apiError(429, "Rate limit reached", 1)).body).toContain(
+      "Wait 1 second and",
+    );
+  });
+
+  it("reads the refusal off a server render that lost its message", () => {
+    const crossed = Object.assign(new Error("An error occurred"), {
+      digest: apiError(429, "Rate limit reached", 4).digest,
+    });
+
+    expect(recoveryFor(crossed)).toEqual(
+      recoveryFor(apiError(429, "Rate limit reached", 4)),
+    );
+  });
+
+  it("sends a server rendered session expiry to the login page", () => {
+    const crossed = Object.assign(new Error("An error occurred"), {
+      digest: apiError(401).digest,
+    });
+
+    expect(recoveryFor(crossed).action).toEqual({
+      kind: "link",
+      href: "/login",
+      label: "Sign in",
+    });
+  });
+
+  it("stays generic for a server rendered failure it cannot name", () => {
+    const crossed = Object.assign(new Error("An error occurred"), {
+      digest: apiError(500, "database down").digest,
+    });
+
+    expect(recoveryFor(crossed).body).toBe(recoveryFor(new Error("x")).body);
   });
 
   it("never surfaces an internal identifier", () => {
