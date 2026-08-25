@@ -82,6 +82,13 @@ describe('Rate limits (billing mode)', () => {
     for (let i = 0; i < times; i += 1) await write(cookie);
   };
 
+  const read = (cookie: string) =>
+    request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
+
+  const burnReads = async (cookie: string, times: number): Promise<void> => {
+    for (let i = 0; i < times; i += 1) await read(cookie);
+  };
+
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
       cwd: join(__dirname, '..'),
@@ -182,6 +189,26 @@ describe('Rate limits (billing mode)', () => {
     );
     expect(refused.headers['ratelimit-remaining']).toBe('0');
     expect(refused.headers['ratelimit-limit']).toBe(String(WRITES_PER_MINUTE));
+  });
+
+  it('refuses a read burst past the plan allowance', async () => {
+    const cookie = await register('dashboards@example.com');
+    await burnReads(cookie, READS_PER_MINUTE - 1);
+
+    await read(cookie).expect(200);
+    const refused = await read(cookie).expect(429);
+    const envelope = refused.body as ApiErrorEnvelope;
+
+    expect(envelope.rateLimit).toMatchObject({
+      window: 'minute',
+      rateClass: 'read',
+      plan: 'indie',
+      limit: READS_PER_MINUTE,
+      upgradeTo: 'ultimate',
+    });
+    expect(refused.headers['retry-after']).toBe(
+      String(envelope.rateLimit?.resetSeconds),
+    );
   });
 
   it('keeps reads flowing while the write budget is spent', async () => {
