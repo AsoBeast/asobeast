@@ -1435,8 +1435,7 @@ const ERROR_MESSAGES: Record<number, string> = {
   501: "Google Play is not supported yet.",
 };
 
-export const TRIAL_READS_PER_MINUTE = PLAN_LIMITS.trial
-  .apiRequestsPerMinute as number;
+const TRIAL_READS_PER_MINUTE = PLAN_LIMITS.trial.apiRequestsPerMinute as number;
 
 export const RATE_LIMIT_RESET_SECONDS = 4;
 

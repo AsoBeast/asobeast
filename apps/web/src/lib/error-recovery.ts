@@ -1,4 +1,10 @@
-import { ApiError, readApiErrorDigest } from "@/lib/api";
+import {
+  ApiError,
+  apiErrorDigestOf,
+  readApiErrorDigest,
+  type ApiErrorDigest,
+} from "@/lib/api";
+import { formatRelativeTime } from "@/lib/format";
 
 export type RecoveryAction =
   { kind: "retry" } | { kind: "link"; href: string; label: string };
@@ -43,24 +49,27 @@ const BY_STATUS: Record<number, Recovery> = {
   },
 };
 
-function rateLimited(retryAfterSeconds: number | null): Recovery {
-  const wait =
-    retryAfterSeconds === null
-      ? "Wait a moment and try again."
-      : `Wait ${retryAfterSeconds} second${retryAfterSeconds === 1 ? "" : "s"} and try again.`;
+function reopens(retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds === null) return "Try again in a moment.";
+  const at = new Date(Date.now() + retryAfterSeconds * 1000);
+  return `Try again ${formatRelativeTime(at.toISOString())}.`;
+}
+
+function refused({ planRefusal, retryAfterSeconds }: ApiErrorDigest): Recovery {
   return {
-    title: "Your plan's request budget is spent",
-    body: `This workspace has used the API requests its plan allows. ${wait}`,
+    title: planRefusal
+      ? "Your plan's request budget is spent"
+      : "Too many requests",
+    body: planRefusal
+      ? `This workspace has used the API requests its plan allows. ${reopens(retryAfterSeconds)}`
+      : `The API refused this request because too many arrived in a short time. ${reopens(retryAfterSeconds)}`,
     action: { kind: "retry" },
   };
 }
 
-function byStatus(
-  statusCode: number,
-  retryAfterSeconds: number | null,
-): Recovery | null {
-  if (statusCode === 429) return rateLimited(retryAfterSeconds);
-  return BY_STATUS[statusCode] ?? null;
+function byStatus(digest: ApiErrorDigest): Recovery | null {
+  if (digest.statusCode === 429) return refused(digest);
+  return BY_STATUS[digest.statusCode] ?? null;
 }
 
 function digestOf(error: unknown): string | undefined {
@@ -70,8 +79,8 @@ function digestOf(error: unknown): string | undefined {
 
 export function recoveryFor(error: unknown): Recovery {
   if (error instanceof ApiError) {
-    const { statusCode, message, retryAfterSeconds } = error.envelope;
-    const known = byStatus(statusCode, retryAfterSeconds ?? null);
+    const { statusCode, message } = error.envelope;
+    const known = byStatus(apiErrorDigestOf(error.envelope));
     if (known) return known;
     if (statusCode >= 500) {
       return {
@@ -84,6 +93,5 @@ export function recoveryFor(error: unknown): Recovery {
   }
 
   const digest = readApiErrorDigest(digestOf(error));
-  if (!digest) return GENERIC;
-  return byStatus(digest.statusCode, digest.retryAfterSeconds) ?? GENERIC;
+  return (digest && byStatus(digest)) ?? GENERIC;
 }
