@@ -264,7 +264,19 @@ function withBody<T>(
   handle: (body: T) => void,
 ): void {
   void readBody(req)
-    .then((raw) => handle(JSON.parse(raw || "{}") as T))
+    .then((raw) => {
+      let body: T;
+      try {
+        body = JSON.parse(raw || "{}") as T;
+      } catch {
+        return json(
+          res,
+          400,
+          errorEnvelope(400, req.url ?? "/", "Malformed JSON body"),
+        );
+      }
+      handle(body);
+    })
     .catch(() => {
       if (!res.writableEnded) {
         json(res, 500, errorEnvelope(500, req.url ?? "/"));
