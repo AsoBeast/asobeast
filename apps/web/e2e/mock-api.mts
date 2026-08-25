@@ -46,7 +46,6 @@ import type {
 } from "@asobeast/shared";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
-  RANK_DEPTH,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
@@ -143,13 +142,6 @@ function resetState(): void {
     0,
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
-  );
-  apps.splice(0, apps.length, ...INITIAL_APPS);
-  portfolioApps.splice(
-    0,
-    portfolioApps.length,
-    ...PORTFOLIO.apps,
-    PENDING_PORTFOLIO_APP,
   );
   webhooks.splice(0, webhooks.length, ...WEBHOOKS);
   emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
@@ -266,8 +258,18 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-function withBody<T>(req: IncomingMessage, handle: (body: T) => void): void {
-  void readBody(req).then((raw) => handle(JSON.parse(raw || "{}") as T));
+function withBody<T>(
+  req: IncomingMessage,
+  res: ServerResponse,
+  handle: (body: T) => void,
+): void {
+  void readBody(req)
+    .then((raw) => handle(JSON.parse(raw || "{}") as T))
+    .catch(() => {
+      if (!res.writableEnded) {
+        json(res, 500, errorEnvelope(500, req.url ?? "/"));
+      }
+    });
 }
 
 function trackedFromKeywordField(
@@ -282,7 +284,7 @@ function trackedFromKeywordField(
     source: "KEYWORD_FIELD",
     active: true,
     latestPosition: null,
-    latestDepth: RANK_DEPTH,
+    latestDepth: null,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -297,7 +299,7 @@ function trackedFromKeywordField(
   };
 }
 
-function keywordFieldResult(country: string, text: string): KeywordFieldResult {
+function keywordFieldResult(text: string, country: string): KeywordFieldResult {
   const parsed = text
     .split(",")
     .map((part) => normalizeText(part))
@@ -311,6 +313,10 @@ function keywordFieldResult(country: string, text: string): KeywordFieldResult {
     duplicatesRemoved: parsed.length - unique.length,
   };
 }
+
+const CAPTURED_SUBTITLE = "Focus timer and planner";
+const CAPTURED_SHORT_DESCRIPTION =
+  "Focus timer and planner for deep work, study blocks and real breaks";
 
 function capturedCompetitor(
   dataset: (typeof DATASETS)[string],
@@ -329,8 +335,9 @@ function capturedCompetitor(
     latestSnapshot: {
       id: `snap-comp-${parsed.storeAppId}`,
       title,
-      subtitle: null,
-      summary: null,
+      subtitle: parsed.store === "APP_STORE" ? CAPTURED_SUBTITLE : null,
+      summary:
+        parsed.store === "GOOGLE_PLAY" ? CAPTURED_SHORT_DESCRIPTION : null,
       ratingAvg: discovered?.ratingAvg ?? null,
       ratingCount: discovered?.ratingCount ?? null,
       installs: null,
@@ -460,7 +467,7 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/webhooks$/,
     handler: (_p, req, res) => {
-      withBody<WebhookCreateRequest>(req, (body) => {
+      withBody<WebhookCreateRequest>(req, res, (body) => {
         const webhook: WebhookItem = {
           id: `hook-${webhooks.length + 1}`,
           url: body.url,
@@ -469,7 +476,7 @@ const routes: Route[] = [
           hasSecret: Boolean(body.secret),
           createdAt: new Date().toISOString(),
         };
-        webhooks.push(webhook);
+        webhooks.unshift(webhook);
         json(res, 201, webhook);
       });
     },
@@ -527,7 +534,7 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/email-alerts$/,
     handler: (_p, req, res) => {
-      withBody<EmailAlertCreateRequest>(req, (body) => {
+      withBody<EmailAlertCreateRequest>(req, res, (body) => {
         const alert: EmailAlertItem = {
           id: `email-${emailAlerts.length + 1}`,
           email: body.email,
@@ -535,7 +542,7 @@ const routes: Route[] = [
           active: true,
           createdAt: new Date().toISOString(),
         };
-        emailAlerts.push(alert);
+        emailAlerts.unshift(alert);
         json(res, 201, alert);
       });
     },
@@ -677,10 +684,16 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/competitors$/,
     handler: ([id], req, res) => {
-      withBody<CompetitorAddRequest>(req, (body) => {
+      withBody<CompetitorAddRequest>(req, res, (body) => {
         const path = req.url ?? "/";
         const dataset = DATASETS[id];
-        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (!dataset) {
+          return json(
+            res,
+            404,
+            errorEnvelope(404, path, `App ${id} not found`),
+          );
+        }
 
         let parsed: ParsedStoreUrl;
         try {
@@ -705,11 +718,12 @@ const routes: Route[] = [
           );
         }
 
-        const competitor = capturedCompetitor(dataset, parsed);
-        if (!dataset.competitors.some((row) => row.id === competitor.id)) {
-          dataset.competitors.push(competitor);
-        }
-        json(res, 201, competitor);
+        const captured = capturedCompetitor(dataset, parsed);
+        const existing = dataset.competitors.find(
+          (row) => row.id === captured.id,
+        );
+        if (!existing) dataset.competitors.push(captured);
+        json(res, 201, existing ?? captured);
       });
     },
   },
@@ -717,10 +731,16 @@ const routes: Route[] = [
     method: "PUT",
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
-      withBody<KeywordFieldRequest>(req, (body) => {
+      withBody<KeywordFieldRequest>(req, res, (body) => {
         const path = req.url ?? "/";
         const dataset = DATASETS[id];
-        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (!dataset) {
+          return json(
+            res,
+            404,
+            errorEnvelope(404, path, `App ${id} not found`),
+          );
+        }
         if (dataset.detail.store !== "APP_STORE") {
           return json(
             res,
@@ -735,7 +755,7 @@ const routes: Route[] = [
         json(
           res,
           200,
-          keywordFieldResult(dataset.detail.country, body.text ?? ""),
+          keywordFieldResult(body.text ?? "", dataset.detail.country),
         );
       });
     },
@@ -817,6 +837,7 @@ const routes: Route[] = [
     handler: (params, req, res) => {
       withBody<{ status: ActionStatus; snoozedUntil?: string; note?: string }>(
         req,
+        res,
         (body) => {
           const path = req.url ?? "/";
           const action = actions.find((row) => row.id === params[0]);

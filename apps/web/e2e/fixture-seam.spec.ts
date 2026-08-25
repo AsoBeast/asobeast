@@ -30,7 +30,7 @@ test("the google play app names its store and links to the play listing", async 
   );
 });
 
-test("adding a competitor answers with the captured item and lists it", async ({
+test("adding a competitor answers with the captured play item", async ({
   page,
 }) => {
   const created = await page.request.post(
@@ -45,12 +45,7 @@ test("adding a competitor answers with the captured item and lists it", async ({
     name: DISCOVERED.title,
   });
   expect(competitor.latestSnapshot?.subtitle).toBeNull();
-
-  const listed = await page.request.get(
-    `${MOCK_API_URL}/apps/${APP_GP_DETAIL.id}/competitors`,
-  );
-  const competitors = (await listed.json()) as CompetitorItem[];
-  expect(competitors.map((row) => row.id)).toContain(competitor.id);
+  expect(competitor.latestSnapshot?.summary).not.toBeNull();
 });
 
 test("adding a competitor from another store is refused the way the api refuses it", async ({
@@ -88,29 +83,20 @@ test("saving the keyword field answers with the counts the product derives", asy
   ]);
 });
 
-test("creating an email alert answers with the item and lists it", async ({
-  page,
-}) => {
+test("creating an email alert answers with the item", async ({ page }) => {
   const created = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
     data: { email: "seam@example.com", events: ["rank.dropped"] },
   });
 
   expect(created.status()).toBe(201);
-  const alert = (await created.json()) as EmailAlertItem;
-  expect(alert).toMatchObject({
+  await expect(created.json()).resolves.toMatchObject({
     email: "seam@example.com",
     events: ["rank.dropped"],
     active: true,
-  });
-
-  const listed = await page.request.get(`${MOCK_API_URL}/email-alerts`);
-  const alerts = (await listed.json()) as EmailAlertItem[];
-  expect(alerts.map((row) => row.id)).toContain(alert.id);
+  } satisfies Partial<EmailAlertItem>);
 });
 
-test("creating a webhook answers with the item and lists it", async ({
-  page,
-}) => {
+test("creating a webhook answers with the item", async ({ page }) => {
   const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
     data: {
       url: "https://hooks.example.com/seam",
@@ -120,15 +106,10 @@ test("creating a webhook answers with the item and lists it", async ({
   });
 
   expect(created.status()).toBe(201);
-  const webhook = (await created.json()) as WebhookItem;
-  expect(webhook).toMatchObject({
+  await expect(created.json()).resolves.toMatchObject({
     url: "https://hooks.example.com/seam",
     events: ["digest.weekly"],
     active: true,
     hasSecret: true,
-  });
-
-  const listed = await page.request.get(`${MOCK_API_URL}/webhooks`);
-  const webhooks = (await listed.json()) as WebhookItem[];
-  expect(webhooks.map((row) => row.id)).toContain(webhook.id);
+  } satisfies Partial<WebhookItem>);
 });

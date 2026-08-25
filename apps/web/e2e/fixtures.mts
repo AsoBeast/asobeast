@@ -832,7 +832,7 @@ export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
     latestDepth: RANK_DEPTH,
     previousPosition: 6,
     positionDelta1d: -2,
-    positionDelta7d: -3,
+    positionDelta7d: -5,
     traffic: 48,
     difficulty: 5,
     volume: 4200,
@@ -930,8 +930,8 @@ export const APP_GP_SERP_MOVERS: SerpMovers = {
       keywordId: "kw-gp-1",
       text: "pomodoro timer",
       position: 3,
-      storeAppId: "com.nordlys.deepwork",
-      title: "Deep Work Sessions",
+      storeAppId: "com.nordlys.tiefenfokus",
+      title: "Tiefenfokus",
       appId: "comp-gp-1",
       isCompetitor: true,
     },
@@ -983,7 +983,7 @@ export const APP_GP_SUMMARY: AppSummary = {
   coverage: {
     inTitle: 2,
     inSubtitle: 0,
-    inDescription: 3,
+    inDescription: 2,
     uncoveredHighOpportunity: [
       { keywordId: "kw-gp-3", text: "fokus app", opportunity: 74 },
     ],
@@ -1034,11 +1034,11 @@ export const APP_GP_COMPETITORS: CompetitorItem[] = [
   {
     id: "comp-gp-1",
     store: "GOOGLE_PLAY",
-    name: "Deep Work Sessions",
+    name: "Tiefenfokus",
     iconUrl: null,
     latestSnapshot: {
       id: "snap-comp-gp-1",
-      title: "Deep Work Sessions",
+      title: "Tiefenfokus",
       subtitle: null,
       summary: "Tiefe Arbeitsblöcke, klare Pausen und ein ruhiger Fokus Timer",
       ratingAvg: 4.6,
