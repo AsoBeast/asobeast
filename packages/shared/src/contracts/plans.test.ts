@@ -203,6 +203,29 @@ describe('plan limits', () => {
   });
 });
 
+describe('metered request budgets', () => {
+  const DASHBOARD_REQUESTS_PER_VIEW = 12;
+  const DASHBOARD_VIEWS_PER_MINUTE = 20;
+  const DASHBOARD_PARALLEL_REQUESTS = 5;
+  const METERED_PLANS = ['trial', ...PAID_PLAN_NAMES] as const;
+
+  it('lets a workspace load the dashboard as often as a team needs to', () => {
+    for (const plan of METERED_PLANS) {
+      expect(PLAN_LIMITS[plan].apiRequestsPerMinute).toBeGreaterThanOrEqual(
+        DASHBOARD_REQUESTS_PER_VIEW * DASHBOARD_VIEWS_PER_MINUTE,
+      );
+    }
+  });
+
+  it('admits every request one server render issues at once', () => {
+    for (const plan of METERED_PLANS) {
+      expect(PLAN_LIMITS[plan].apiConcurrentRequests).toBeGreaterThanOrEqual(
+        DASHBOARD_PARALLEL_REQUESTS,
+      );
+    }
+  });
+});
+
 describe('plan definitions', () => {
   it('prices the paid plans at two months free on the annual term', () => {
     for (const plan of PAID_PLAN_NAMES) {
