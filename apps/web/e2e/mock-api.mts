@@ -31,14 +31,26 @@ import type {
   WorkspaceTeam,
   ActionStatus,
   AuthUser,
+  CompetitorAddRequest,
+  CompetitorItem,
+  EmailAlertCreateRequest,
+  EmailAlertItem,
+  KeywordFieldRequest,
+  KeywordFieldResult,
   KeywordSort,
+  ParsedStoreUrl,
   PortfolioSummary,
   TrackedKeywordItem,
+  WebhookCreateRequest,
+  WebhookItem,
 } from "@asobeast/shared";
 import {
+  KEYWORD_FIELD_CHAR_LIMIT,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
+  normalizeText,
+  parseStoreUrl,
 } from "@asobeast/shared";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
@@ -46,6 +58,14 @@ const ERROR_ID = "err-app";
 const apps = [...INITIAL_APPS];
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
+const webhooks = [...WEBHOOKS];
+const emailAlerts = [...EMAIL_ALERTS];
+const INITIAL_COMPETITORS = new Map(
+  Object.entries(DATASETS).map(([id, dataset]) => [
+    id,
+    [...dataset.competitors],
+  ]),
+);
 const AUTH_USER: AuthUser = {
   id: "u1",
   email: "owner@example.com",
@@ -117,12 +137,18 @@ interface Route {
   handler: Handler;
 }
 
-function resetActions(): void {
+function resetState(): void {
   actions.splice(
     0,
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
   );
+  webhooks.splice(0, webhooks.length, ...WEBHOOKS);
+  emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
+  for (const [id, initial] of INITIAL_COMPETITORS) {
+    const list = DATASETS[id].competitors;
+    list.splice(0, list.length, ...initial);
+  }
 }
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
@@ -232,12 +258,114 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
+function withBody<T>(
+  req: IncomingMessage,
+  res: ServerResponse,
+  handle: (body: T) => void,
+): void {
+  void readBody(req)
+    .then((raw) => {
+      let body: T;
+      try {
+        body = JSON.parse(raw || "{}") as T;
+      } catch {
+        return json(
+          res,
+          400,
+          errorEnvelope(400, req.url ?? "/", "Malformed JSON body"),
+        );
+      }
+      handle(body);
+    })
+    .catch(() => {
+      if (!res.writableEnded) {
+        json(res, 500, errorEnvelope(500, req.url ?? "/"));
+      }
+    });
+}
+
+function trackedFromKeywordField(
+  text: string,
+  country: string,
+): TrackedKeywordItem {
+  return {
+    keywordId: `kw-field-${text.replace(/ /g, "-")}`,
+    text,
+    country,
+    serpVolatility7d: null,
+    source: "KEYWORD_FIELD",
+    active: true,
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+  };
+}
+
+function keywordFieldResult(text: string, country: string): KeywordFieldResult {
+  const parsed = text
+    .split(",")
+    .map((part) => normalizeText(part))
+    .filter((part) => part.length > 0);
+  const unique = [...new Set(parsed)];
+
+  return {
+    tracked: unique.map((value) => trackedFromKeywordField(value, country)),
+    charactersUsed: unique.join(",").length,
+    charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+    duplicatesRemoved: parsed.length - unique.length,
+  };
+}
+
+const CAPTURED_SUBTITLE = "Focus timer and planner";
+const CAPTURED_SHORT_DESCRIPTION =
+  "Focus timer and planner for deep work, study blocks and real breaks";
+
+function capturedCompetitor(
+  dataset: (typeof DATASETS)[string],
+  parsed: ParsedStoreUrl,
+): CompetitorItem {
+  const discovered = dataset.discovery.items.find(
+    (item) => item.storeAppId === parsed.storeAppId,
+  );
+  const title = discovered?.title ?? parsed.storeAppId;
+
+  return {
+    id: `comp-${parsed.storeAppId}`,
+    store: parsed.store,
+    name: title,
+    iconUrl: null,
+    latestSnapshot: {
+      id: `snap-comp-${parsed.storeAppId}`,
+      title,
+      subtitle: parsed.store === "APP_STORE" ? CAPTURED_SUBTITLE : null,
+      summary:
+        parsed.store === "GOOGLE_PLAY" ? CAPTURED_SHORT_DESCRIPTION : null,
+      ratingAvg: discovered?.ratingAvg ?? null,
+      ratingCount: discovered?.ratingCount ?? null,
+      installs: null,
+      price: 0,
+      version: "1.0.0",
+      capturedAt: new Date().toISOString(),
+    },
+  };
+}
+
 const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/__reset$/,
     handler: (_p, _req, res) => {
-      resetActions();
+      resetState();
       json(res, 200, { reset: true });
     },
   },
@@ -345,7 +473,25 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/webhooks$/,
     handler: (_p, req, res) =>
-      json(res, 200, hasCookie(req, "e2e-empty-alerts", "1") ? [] : WEBHOOKS),
+      json(res, 200, hasCookie(req, "e2e-empty-alerts", "1") ? [] : webhooks),
+  },
+  {
+    method: "POST",
+    pattern: /^\/webhooks$/,
+    handler: (_p, req, res) => {
+      withBody<WebhookCreateRequest>(req, res, (body) => {
+        const webhook: WebhookItem = {
+          id: `hook-${webhooks.length + 1}`,
+          url: body.url,
+          events: body.events,
+          active: true,
+          hasSecret: Boolean(body.secret),
+          createdAt: new Date().toISOString(),
+        };
+        webhooks.unshift(webhook);
+        json(res, 201, webhook);
+      });
+    },
   },
   {
     method: "GET",
@@ -393,8 +539,25 @@ const routes: Route[] = [
       json(
         res,
         200,
-        hasCookie(req, "e2e-empty-alerts", "1") ? [] : EMAIL_ALERTS,
+        hasCookie(req, "e2e-empty-alerts", "1") ? [] : emailAlerts,
       ),
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts$/,
+    handler: (_p, req, res) => {
+      withBody<EmailAlertCreateRequest>(req, res, (body) => {
+        const alert: EmailAlertItem = {
+          id: `email-${emailAlerts.length + 1}`,
+          email: body.email,
+          events: body.events,
+          active: true,
+          createdAt: new Date().toISOString(),
+        };
+        emailAlerts.unshift(alert);
+        json(res, 201, alert);
+      });
+    },
   },
   {
     method: "GET",
@@ -529,6 +692,86 @@ const routes: Route[] = [
       json(res, 200, dataset.competitors);
     },
   },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/competitors$/,
+    handler: ([id], req, res) => {
+      withBody<CompetitorAddRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) {
+          return json(
+            res,
+            404,
+            errorEnvelope(404, path, `App ${id} not found`),
+          );
+        }
+
+        let parsed: ParsedStoreUrl;
+        try {
+          parsed = parseStoreUrl(body.url ?? "");
+        } catch (error) {
+          return json(
+            res,
+            400,
+            errorEnvelope(400, path, (error as Error).message),
+          );
+        }
+
+        if (parsed.store !== dataset.detail.store) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "Competitor must be on the same store as the primary app",
+            ),
+          );
+        }
+
+        const captured = capturedCompetitor(dataset, parsed);
+        const existing = dataset.competitors.find(
+          (row) => row.id === captured.id,
+        );
+        if (!existing) dataset.competitors.push(captured);
+        json(res, 201, existing ?? captured);
+      });
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/apps\/([^/]+)\/keyword-field$/,
+    handler: ([id], req, res) => {
+      withBody<KeywordFieldRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) {
+          return json(
+            res,
+            404,
+            errorEnvelope(404, path, `App ${id} not found`),
+          );
+        }
+        if (dataset.detail.store !== "APP_STORE") {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "The keyword field is only available for App Store apps",
+            ),
+          );
+        }
+        json(
+          res,
+          200,
+          keywordFieldResult(body.text ?? "", dataset.detail.country),
+        );
+      });
+    },
+  },
   appRoute(
     /^\/apps\/([^/]+)\/ratings-history$/,
     (dataset) => dataset.ratingsHistory,
@@ -604,28 +847,27 @@ const routes: Route[] = [
     method: "PATCH",
     pattern: /^\/actions\/([^/]+)$/,
     handler: (params, req, res) => {
-      void readBody(req).then((raw) => {
-        const path = req.url ?? "/";
-        const action = actions.find((row) => row.id === params[0]);
-        if (!action) return json(res, 404, errorEnvelope(404, path));
-        if (action.id === "act-degraded") {
-          return json(res, 500, errorEnvelope(500, path));
-        }
-        const body = JSON.parse(raw || "{}") as {
-          status: ActionStatus;
-          snoozedUntil?: string;
-          note?: string;
-        };
-        action.status = body.status;
-        action.snoozedUntil =
-          body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
-        action.closedAt =
-          body.status === "DONE" || body.status === "DISMISSED"
-            ? new Date().toISOString()
-            : null;
-        if (body.status === "OPEN") action.reopenCount += 1;
-        json(res, 200, action);
-      });
+      withBody<{ status: ActionStatus; snoozedUntil?: string; note?: string }>(
+        req,
+        res,
+        (body) => {
+          const path = req.url ?? "/";
+          const action = actions.find((row) => row.id === params[0]);
+          if (!action) return json(res, 404, errorEnvelope(404, path));
+          if (action.id === "act-degraded") {
+            return json(res, 500, errorEnvelope(500, path));
+          }
+          action.status = body.status;
+          action.snoozedUntil =
+            body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
+          action.closedAt =
+            body.status === "DONE" || body.status === "DISMISSED"
+              ? new Date().toISOString()
+              : null;
+          if (body.status === "OPEN") action.reopenCount += 1;
+          json(res, 200, action);
+        },
+      );
     },
   },
   {
