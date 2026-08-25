@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { PortfolioApp } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +9,7 @@ import {
   formatNumber,
   storeLabel,
 } from "@/lib/format";
+import { AppCardLink } from "./AppCardLink";
 import { DeleteAppMenu } from "./DeleteAppMenu";
 import { Sparkline } from "./Sparkline";
 
@@ -45,12 +45,11 @@ export function PortfolioAppCard({ app }: { app: PortfolioApp }) {
 
   return (
     <Card className="relative gap-0 p-4 transition-colors hover:bg-muted/40">
-      <Link
-        href={`/apps/${app.id}`}
+      <AppCardLink
+        id={app.id}
+        name={name}
         className="absolute inset-0 z-10 rounded-xl focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <span className="sr-only">{name}</span>
-      </Link>
+      />
 
       <div className="absolute top-2 right-2 z-20">
         <DeleteAppMenu id={app.id} name={name} />
@@ -95,12 +94,11 @@ export function PortfolioGroupMember({ app }: { app: PortfolioApp }) {
 
   return (
     <div className="relative flex flex-col gap-2 py-3 first:pt-0 last:pb-0">
-      <Link
-        href={`/apps/${app.id}`}
+      <AppCardLink
+        id={app.id}
+        name={name}
         className="absolute inset-0 z-10 rounded-lg focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-      >
-        <span className="sr-only">{name}</span>
-      </Link>
+      />
 
       <div className="absolute top-2 right-0 z-20">
         <DeleteAppMenu id={app.id} name={name} />

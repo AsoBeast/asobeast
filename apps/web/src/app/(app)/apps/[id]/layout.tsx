@@ -5,7 +5,7 @@ import { AppHeader } from "@/components/app-detail/AppHeader";
 import { AppHeaderSkeleton } from "@/components/app-detail/skeletons";
 import { ApiError } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
-import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
+import { appDetailOptions } from "@/lib/queries";
 
 export default async function AppDetailLayout({
   params,
@@ -25,8 +25,6 @@ export default async function AppDetailLayout({
     }
     throw error;
   }
-
-  void queryClient.prefetchQuery(appSummaryOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
