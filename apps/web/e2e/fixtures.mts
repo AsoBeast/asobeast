@@ -1000,7 +1000,7 @@ export const APP_GP_VISIBILITY: VisibilityHistory = {
   })),
 };
 
-const APP_GP_DISCOVERY: CompetitorDiscovery = {
+export const APP_GP_DISCOVERY: CompetitorDiscovery = {
   windowDays: 30,
   items: [
     {
