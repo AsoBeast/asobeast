@@ -48,4 +48,9 @@ describe("retryDelayFor", () => {
   it("caps its own backoff at thirty seconds", () => {
     expect(retryDelayFor(20, new Error("offline"))).toBe(30_000);
   });
+
+  it("backs off itself rather than trust a wait it cannot use", () => {
+    expect(retryDelayFor(0, apiError(503, 0))).toBe(1_000);
+    expect(retryDelayFor(0, apiError(503, -4))).toBe(1_000);
+  });
 });

@@ -11,7 +11,7 @@ function makeQueryClient(): QueryClient {
       queries: {
         staleTime: 30 * 1000,
         refetchOnWindowFocus: false,
-        retry: shouldRetry,
+        retry: isServer ? 0 : shouldRetry,
         retryDelay: retryDelayFor,
       },
       dehydrate: {

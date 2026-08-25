@@ -17,8 +17,10 @@ export function shouldRetry(failureCount: number, error: unknown): boolean {
 }
 
 export function retryDelayFor(failureCount: number, error: unknown): number {
-  const retryAfterSeconds =
+  const seconds =
     error instanceof ApiError ? error.envelope.retryAfterSeconds : undefined;
-  if (retryAfterSeconds !== undefined) return retryAfterSeconds * 1000;
+  if (seconds !== undefined && Number.isInteger(seconds) && seconds > 0) {
+    return seconds * 1000;
+  }
   return Math.min(1000 * 2 ** failureCount, MAX_DELAY_MS);
 }
