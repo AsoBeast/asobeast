@@ -39,6 +39,8 @@ function sessionCookie(res: request.Response): string {
 }
 
 describe('Rate limits (billing mode)', () => {
+  jest.setTimeout(30_000);
+
   let app: INestApplication<App>;
   let prisma: PrismaClient;
 
@@ -209,6 +211,8 @@ describe('Rate limits (billing mode)', () => {
     expect(refused.headers['retry-after']).toBe(
       String(envelope.rateLimit?.resetSeconds),
     );
+    expect(refused.headers['ratelimit-remaining']).toBe('0');
+    expect(refused.headers['ratelimit-limit']).toBe(String(READS_PER_MINUTE));
   });
 
   it('keeps reads flowing while the write budget is spent', async () => {
