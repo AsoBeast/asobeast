@@ -817,6 +817,278 @@ export const APP_LONG: AppListItem = {
   groupId: null,
 };
 
+const GP_SHORT_DESCRIPTION =
+  "Fokus Timer für Pomodoro Sessions, ruhige Lernphasen und produktive Arbeitswoche";
+
+export const APP_GP_KEYWORDS: TrackedKeywordItem[] = [
+  {
+    keywordId: "kw-gp-1",
+    text: "pomodoro timer",
+    country: "de",
+    serpVolatility7d: 12,
+    source: "TITLE",
+    active: true,
+    latestPosition: 4,
+    latestDepth: RANK_DEPTH,
+    previousPosition: 6,
+    positionDelta1d: -2,
+    positionDelta7d: -3,
+    traffic: 48,
+    difficulty: 5,
+    volume: 4200,
+    relevance: 88,
+    opportunity: 76,
+    bucket: "primary",
+    scoredAt: utcTimestampDaysAgo(0),
+    scoreProvenance: {
+      source: "GOOGLE_PLAY_PREFIX_SEARCH",
+      formulaVersion: "google-play-v1",
+      confidence: "HIGH",
+      capturedAt: utcTimestampDaysAgo(0),
+    },
+  },
+  {
+    keywordId: "kw-gp-2",
+    text: "lernphasen timer",
+    country: "de",
+    serpVolatility7d: 28,
+    source: "DESCRIPTION",
+    active: true,
+    latestPosition: 18,
+    latestDepth: RANK_DEPTH,
+    previousPosition: 15,
+    positionDelta1d: 3,
+    positionDelta7d: 4,
+    traffic: 32,
+    difficulty: 4,
+    volume: 1800,
+    relevance: 64,
+    opportunity: 52,
+    bucket: "secondary",
+    scoredAt: utcTimestampDaysAgo(0),
+    scoreProvenance: {
+      source: "GOOGLE_PLAY_PREFIX_SEARCH",
+      formulaVersion: "google-play-v1",
+      confidence: "MEDIUM",
+      capturedAt: utcTimestampDaysAgo(1),
+    },
+  },
+  {
+    keywordId: "kw-gp-3",
+    text: "fokus app",
+    country: "de",
+    serpVolatility7d: null,
+    source: "MANUAL",
+    active: true,
+    latestPosition: null,
+    latestDepth: RANK_DEPTH,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: 58,
+    difficulty: 7,
+    volume: 6100,
+    relevance: 72,
+    opportunity: 74,
+    bucket: "aspirational",
+    scoredAt: utcTimestampDaysAgo(0),
+    scoreProvenance: null,
+  },
+];
+
+export const APP_GP_RANKINGS: RankingSeries = {
+  series: [
+    {
+      keywordId: "kw-gp-1",
+      text: "pomodoro timer",
+      store: "GOOGLE_PLAY" as const,
+      country: "de",
+      points: pointsFrom([9, 8, 8, 7, 6, 6, 6, 4]),
+    },
+    {
+      keywordId: "kw-gp-2",
+      text: "lernphasen timer",
+      store: "GOOGLE_PLAY" as const,
+      country: "de",
+      points: pointsFrom([14, 14, 15, 15, 16, 16, 15, 18]),
+    },
+    {
+      keywordId: "kw-gp-3",
+      text: "fokus app",
+      store: "GOOGLE_PLAY" as const,
+      country: "de",
+      points: pointsFrom([null, null, null, null, null, null, null, null]),
+    },
+  ],
+};
+
+export const APP_GP_SERP_MOVERS: SerpMovers = {
+  windowDays: 7,
+  items: [
+    {
+      date: utcDaysAgo(1),
+      keywordId: "kw-gp-1",
+      text: "pomodoro timer",
+      position: 3,
+      storeAppId: "com.nordlys.deepwork",
+      title: "Deep Work Sessions",
+      appId: "comp-gp-1",
+      isCompetitor: true,
+    },
+    {
+      date: utcDaysAgo(2),
+      keywordId: "kw-gp-2",
+      text: "lernphasen timer",
+      position: 8,
+      storeAppId: "com.silberapps.lernzeit",
+      title: "Lernzeit",
+      appId: null,
+      isCompetitor: false,
+    },
+  ],
+};
+
+export const APP_GP_SUMMARY: AppSummary = {
+  visibility: { current: 24.8, delta7d: 3, delta30d: 6 },
+  rankDistribution: {
+    top1: 0,
+    top3: 0,
+    top10: 1,
+    top50: 2,
+    beyond: 0,
+    unranked: 1,
+  },
+  movers: {
+    up: [
+      {
+        keywordId: "kw-gp-1",
+        text: "pomodoro timer",
+        from: 9,
+        fromDepth: RANK_DEPTH,
+        to: 4,
+        toDepth: RANK_DEPTH,
+      },
+    ],
+    down: [
+      {
+        keywordId: "kw-gp-2",
+        text: "lernphasen timer",
+        from: 14,
+        fromDepth: RANK_DEPTH,
+        to: 18,
+        toDepth: RANK_DEPTH,
+      },
+    ],
+  },
+  coverage: {
+    inTitle: 2,
+    inSubtitle: 0,
+    inDescription: 3,
+    uncoveredHighOpportunity: [
+      { keywordId: "kw-gp-3", text: "fokus app", opportunity: 74 },
+    ],
+  },
+  lastRefreshAt: utcTimestampDaysAgo(0),
+  trackedKeywords: 3,
+  competitors: 1,
+};
+
+export const APP_GP_VISIBILITY: VisibilityHistory = {
+  points: Array.from({ length: 30 }, (_, index) => ({
+    date: utcDaysAgo(29 - index),
+    visibility: 18 + (index % 9),
+  })),
+};
+
+const APP_GP_DISCOVERY: CompetitorDiscovery = {
+  windowDays: 30,
+  items: [
+    {
+      storeAppId: "com.silberapps.lernzeit",
+      title: "Lernzeit",
+      developer: "Silber Apps",
+      ratingAvg: 4.3,
+      ratingCount: 6100,
+      appearances: 11,
+      keywordCount: 2,
+      bestPosition: 6,
+      avgPosition: 9.5,
+      keywords: ["pomodoro timer", "lernphasen timer"],
+    },
+    {
+      storeAppId: "com.hafen.konzentration",
+      title: "Konzentration Pur",
+      developer: "Hafen Software",
+      ratingAvg: 4.0,
+      ratingCount: 900,
+      appearances: 6,
+      keywordCount: 1,
+      bestPosition: 12,
+      avgPosition: 17,
+      keywords: ["fokus app"],
+    },
+  ],
+};
+
+export const APP_GP_COMPETITORS: CompetitorItem[] = [
+  {
+    id: "comp-gp-1",
+    store: "GOOGLE_PLAY",
+    name: "Deep Work Sessions",
+    iconUrl: null,
+    latestSnapshot: {
+      id: "snap-comp-gp-1",
+      title: "Deep Work Sessions",
+      subtitle: null,
+      summary: "Tiefe Arbeitsblöcke, klare Pausen und ein ruhiger Fokus Timer",
+      ratingAvg: 4.6,
+      ratingCount: 21000,
+      installs: 1200000,
+      price: 0,
+      version: "5.2.0",
+      capturedAt: utcTimestampDaysAgo(0),
+    },
+  },
+];
+
+export const APP_GP_DETAIL: AppDetail = {
+  id: "app-gp",
+  store: "GOOGLE_PLAY",
+  storeAppId: "com.bitwise.tomatoclock",
+  country: "de",
+  name: "Tomato Clock",
+  iconUrl: null,
+  createdAt: utcTimestampDaysAgo(25),
+  latestSnapshot: {
+    id: "snap-gp",
+    title: "Tomato Clock",
+    subtitle: null,
+    summary: GP_SHORT_DESCRIPTION,
+    ratingAvg: 4.4,
+    ratingCount: 5200,
+    installs: 500000,
+    price: 0,
+    version: "2.8.0",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  competitors: APP_GP_COMPETITORS,
+  group: null,
+};
+
+export const APP_GP: AppListItem = {
+  id: "app-gp",
+  store: "GOOGLE_PLAY",
+  country: "de",
+  name: "Tomato Clock",
+  iconUrl: null,
+  ratingAvg: 4.4,
+  ratingCount: 5200,
+  capturedAt: utcTimestampDaysAgo(0),
+  trackedKeywordCount: 3,
+  competitorCount: 1,
+  groupId: null,
+};
+
 export interface AppDataset {
   detail: AppDetail;
   summary: AppSummary;
@@ -899,6 +1171,22 @@ export const DATASETS: Record<string, AppDataset> = {
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
+  "app-gp": {
+    detail: APP_GP_DETAIL,
+    summary: APP_GP_SUMMARY,
+    keywords: APP_GP_KEYWORDS,
+    rankings: APP_GP_RANKINGS,
+    serpMovers: APP_GP_SERP_MOVERS,
+    visibility: APP_GP_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: APP_GP_COMPETITORS,
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    changes: EMPTY_CHANGES,
+    discovery: APP_GP_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
   "app-new": {
     detail: IMPORTED_APP_DETAIL,
     summary: APP_2_SUMMARY,
@@ -917,7 +1205,7 @@ export const DATASETS: Record<string, AppDataset> = {
   },
 };
 
-export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG];
+export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];
 
 export const PORTFOLIO: PortfolioSummary = {
   apps: [
@@ -966,9 +1254,24 @@ export const PORTFOLIO: PortfolioSummary = {
       competitors: 0,
       lastCapturedAt: utcTimestampDaysAgo(0),
     },
+    {
+      id: "app-gp",
+      store: "GOOGLE_PLAY",
+      storeAppId: "com.bitwise.tomatoclock",
+      country: "de",
+      name: "Tomato Clock",
+      iconUrl: null,
+      groupId: null,
+      groupName: null,
+      visibility: { current: 24.8, delta7d: 3 },
+      sparkline: APP_GP_VISIBILITY.points,
+      trackedKeywords: 3,
+      competitors: 1,
+      lastCapturedAt: utcTimestampDaysAgo(0),
+    },
   ],
   groups: [],
-  totals: { apps: 3, competitors: 1, trackedKeywords: 8, changes7d: 3 },
+  totals: { apps: 4, competitors: 2, trackedKeywords: 11, changes7d: 3 },
 };
 
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
