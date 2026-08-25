@@ -21,9 +21,11 @@ import {
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
   PORTFOLIO,
+  RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
   WEBHOOKS,
   errorEnvelope,
+  rateLimitedEnvelope,
 } from "./fixtures.mts";
 import type {
   AccountPlan,
@@ -170,8 +172,13 @@ function hasCookie(
   return actual !== undefined && (value === undefined || actual === value);
 }
 
-function json(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { "content-type": "application/json" });
+function json(
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {},
+): void {
+  res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
 }
 
@@ -452,6 +459,12 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/portfolio$/,
     handler: (_p, req, res) => {
+      const path = req.url ?? "/portfolio";
+      if (hasCookie(req, "portfolio_rate_limited", "1")) {
+        return json(res, 429, rateLimitedEnvelope(path), {
+          "retry-after": String(RATE_LIMIT_RESET_SECONDS),
+        });
+      }
       const empty = hasCookie(req, "portfolio_empty", "1");
       json(res, 200, {
         ...PORTFOLIO,

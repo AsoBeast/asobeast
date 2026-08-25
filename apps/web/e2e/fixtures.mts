@@ -29,7 +29,7 @@ import type {
   VisibilityHistory,
   WebhookItem,
 } from "@asobeast/shared";
-import { RANK_DEPTH } from "@asobeast/shared";
+import { PLAN_LIMITS, RANK_DEPTH } from "@asobeast/shared";
 
 function utcDaysAgo(days: number): string {
   const date = new Date();
@@ -1434,6 +1434,30 @@ const ERROR_MESSAGES: Record<number, string> = {
   404: "The requested resource was not found.",
   501: "Google Play is not supported yet.",
 };
+
+export const TRIAL_READS_PER_MINUTE = PLAN_LIMITS.trial
+  .apiRequestsPerMinute as number;
+
+export const RATE_LIMIT_RESET_SECONDS = 4;
+
+export function rateLimitedEnvelope(path: string): ApiErrorEnvelope {
+  return {
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: `Rate limit reached: the trial plan allows ${TRIAL_READS_PER_MINUTE} read requests per minute. Wait ${RATE_LIMIT_RESET_SECONDS} seconds before the next one, because retrying before then will fail.`,
+    path,
+    timestamp: new Date().toISOString(),
+    rateLimit: {
+      window: "minute",
+      rateClass: "read",
+      plan: "trial",
+      limit: TRIAL_READS_PER_MINUTE,
+      resetSeconds: RATE_LIMIT_RESET_SECONDS,
+      upgradeTo: "indie",
+    },
+    retryAfterSeconds: RATE_LIMIT_RESET_SECONDS,
+  };
+}
 
 export function errorEnvelope(
   statusCode: number,
