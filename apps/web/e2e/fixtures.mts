@@ -1421,27 +1421,32 @@ export const IMPORTED_PORTFOLIO_APP: PortfolioSummary["apps"][number] = {
   lastCapturedAt: null,
 };
 
+const ERROR_TITLES: Record<number, string> = {
+  400: "Bad Request",
+  401: "Unauthorized",
+  404: "Not Found",
+  500: "Internal Server Error",
+  501: "Not Implemented",
+};
+
+const ERROR_MESSAGES: Record<number, string> = {
+  401: "Not authenticated",
+  404: "The requested resource was not found.",
+  501: "Google Play is not supported yet.",
+};
+
 export function errorEnvelope(
   statusCode: number,
   path: string,
+  message?: string,
 ): ApiErrorEnvelope {
-  const errors: Record<number, string> = {
-    401: "Unauthorized",
-    404: "Not Found",
-    500: "Internal Server Error",
-    501: "Not Implemented",
-  };
   return {
     statusCode,
-    error: errors[statusCode] ?? "Error",
+    error: ERROR_TITLES[statusCode] ?? "Error",
     message:
-      statusCode === 401
-        ? "Not authenticated"
-        : statusCode === 404
-          ? "The requested resource was not found."
-          : statusCode === 501
-            ? "Google Play is not supported yet."
-            : "The server encountered an unexpected error.",
+      message ??
+      ERROR_MESSAGES[statusCode] ??
+      "The server encountered an unexpected error.",
     path,
     timestamp: new Date().toISOString(),
   };
