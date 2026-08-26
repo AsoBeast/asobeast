@@ -4,7 +4,7 @@ import { WEBHOOK_EVENTS } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { openSettledDialog } from "./dialog.mts";
 
-const SELECTED_ATTRIBUTE = "aria-pressed";
+const SELECTED_ATTRIBUTE = "aria-checked";
 const SERP_ENTRANT = "SERP entrant";
 
 const VIEWPORTS = [
@@ -26,11 +26,11 @@ const CHANNELS = [
 ] as const;
 
 function eventOptions(dialog: Locator): Locator {
-  return dialog.locator('[data-slot="dialog-body"] button');
+  return dialog.getByRole("group", { name: "Events" }).getByRole("checkbox");
 }
 
 function eventOption(dialog: Locator, name: string): Locator {
-  return dialog.getByRole("button", { name, exact: true });
+  return dialog.getByRole("checkbox", { name, exact: true });
 }
 
 async function setSelected(option: Locator, selected: boolean): Promise<void> {

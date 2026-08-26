@@ -23,7 +23,7 @@ import {
   emailAlertsOptions,
   invalidateEmailAlertMutation,
 } from "@/lib/queries";
-import { EventToggles } from "./alert-events";
+import { EventSelection } from "./alert-events";
 import {
   AlertChannelCard,
   AlertChannelEmpty,
@@ -104,10 +104,7 @@ function AddEmailAlertDialog() {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label>Events</Label>
-        <EventToggles value={events} onChange={setEvents} />
-      </div>
+      <EventSelection value={events} onChange={setEvents} />
     </AlertChannelDialog>
   );
 }
