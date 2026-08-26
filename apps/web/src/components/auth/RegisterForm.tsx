@@ -59,7 +59,9 @@ export function RegisterForm() {
     <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Create account</CardTitle>
+          <CardTitle asChild>
+            <h1>Create account</h1>
+          </CardTitle>
           <CardDescription>Set up your asobeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>
