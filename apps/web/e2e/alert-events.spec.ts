@@ -40,10 +40,28 @@ async function setSelected(option: Locator, selected: boolean): Promise<void> {
   await expect(option).toHaveAttribute(SELECTED_ATTRIBUTE, String(selected));
 }
 
-async function boxOf(option: Locator): Promise<{ x: number; y: number }> {
-  const box = await option.boundingBox();
-  if (box === null) throw new Error("the event toggle has no layout box");
+interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+async function boxOf(locator: Locator): Promise<Box> {
+  const box = await locator.boundingBox();
+  if (box === null) throw new Error("the element has no layout box");
+  return box;
+}
+
+function centerOf(box: Box): { x: number; y: number } {
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
+function expectSameBox(actual: Box, expected: Box, message: string): void {
+  expect(actual.x, message).toBeCloseTo(expected.x, 1);
+  expect(actual.y, message).toBeCloseTo(expected.y, 1);
+  expect(actual.width, message).toBeCloseTo(expected.width, 1);
+  expect(actual.height, message).toBeCloseTo(expected.height, 1);
 }
 
 for (const channel of CHANNELS) {
@@ -108,35 +126,40 @@ for (const channel of CHANNELS) {
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`${channel.trigger} keeps ${SERP_ENTRANT} still at ${viewport.width}x${viewport.height}`, async ({
+    test(`${channel.trigger} keeps the group still while ${SERP_ENTRANT} is pressed at ${viewport.width}x${viewport.height}`, async ({
       page,
     }) => {
       await page.setViewportSize(viewport);
       await page.goto("/settings");
       const dialog = await openSettledDialog(page, channel.trigger);
 
+      const group = dialog.getByRole("group", { name: "Events" });
       const option = eventOption(dialog, SERP_ENTRANT);
-      const before = await boxOf(option);
+      const optionBox = await boxOf(option);
+      const groupBox = await boxOf(group);
+      const center = centerOf(optionBox);
 
-      await page.mouse.move(before.x, before.y);
+      await page.mouse.move(center.x, center.y);
       await page.mouse.down();
-      const pressed = await boxOf(option);
+      const pressedBox = await boxOf(option);
       await page.mouse.up();
 
-      expect(
-        pressed.y,
+      expectSameBox(
+        pressedBox,
+        optionBox,
         "the toggle must not move under the pointer",
-      ).toBeCloseTo(before.y, 1);
+      );
 
       await expect(option).toHaveAttribute(SELECTED_ATTRIBUTE, "true");
-      const after = await boxOf(option);
-      expect(after.y, "the toggle must not move once selected").toBeCloseTo(
-        before.y,
-        1,
+      expectSameBox(
+        await boxOf(option),
+        optionBox,
+        "the toggle must not move once selected",
       );
-      expect(after.x, "the toggle must not reflow once selected").toBeCloseTo(
-        before.x,
-        1,
+      expectSameBox(
+        await boxOf(group),
+        groupBox,
+        "the group must not reflow once selected",
       );
     });
   }
