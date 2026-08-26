@@ -13,10 +13,8 @@ interface TrackedRow {
   active: boolean;
 }
 
-interface UpsertArgs {
-  where: { appId_keywordId: { keywordId: string } };
-  create: { source: string; active: boolean };
-  update: { source: string; active: boolean };
+interface CreateManyArgs<T> {
+  data: T[];
 }
 
 interface FindManyArgs {
@@ -24,8 +22,8 @@ interface FindManyArgs {
 }
 
 interface UpdateManyArgs {
-  where: { keywordId: { in: string[] } };
-  data: { active: boolean };
+  where: { keywordId: string | { in: string[] } };
+  data: { active?: boolean; source?: string };
 }
 
 const APP = {
@@ -53,29 +51,34 @@ function buildPrisma() {
       findMany: () => Promise.resolve([]),
     },
     keyword: {
-      upsert: ({
-        where,
-      }: {
-        where: { text_store_country: { text: string } };
-      }) => {
-        const { text } = where.text_store_country;
-        if (!keywordIds.has(text)) {
+      createMany: ({ data }: CreateManyArgs<{ text: string }>) => {
+        const created = data.filter(({ text }) => !keywordIds.has(text));
+        for (const { text } of created) {
           keywordIds.set(text, `kw${keywordIds.size + 1}`);
         }
-        return Promise.resolve({ id: keywordIds.get(text) });
+        return Promise.resolve({ count: created.length });
       },
+      findMany: ({ where }: { where: { text: { in: string[] } } }) =>
+        Promise.resolve(
+          where.text.in
+            .filter((text) => keywordIds.has(text))
+            .map((text) => ({ id: keywordIds.get(text), text })),
+        ),
     },
     trackedKeyword: {
-      upsert: ({ where, create, update }: UpsertArgs) => {
-        const { keywordId } = where.appId_keywordId;
-        const existing = rows.find((row) => row.keywordId === keywordId);
-        if (existing) {
-          existing.source = update.source;
-          existing.active = update.active;
-        } else {
-          rows.push({ keywordId, ...create });
-        }
-        return Promise.resolve(undefined);
+      createMany: ({ data }: CreateManyArgs<TrackedRow>) => {
+        const created = data.filter(
+          (row) =>
+            !rows.some((existing) => existing.keywordId === row.keywordId),
+        );
+        rows.push(
+          ...created.map(({ keywordId, source, active }) => ({
+            keywordId,
+            source,
+            active,
+          })),
+        );
+        return Promise.resolve({ count: created.length });
       },
       findMany: ({ where }: FindManyArgs) => {
         const matching = rows.filter(
@@ -99,12 +102,15 @@ function buildPrisma() {
         );
       },
       updateMany: ({ where, data }: UpdateManyArgs) => {
-        for (const row of rows) {
-          if (where.keywordId.in.includes(row.keywordId)) {
-            row.active = data.active;
-          }
+        const ids =
+          typeof where.keywordId === 'string'
+            ? [where.keywordId]
+            : where.keywordId.in;
+        for (const row of rows.filter((row) => ids.includes(row.keywordId))) {
+          row.active = data.active ?? row.active;
+          row.source = data.source ?? row.source;
         }
-        return Promise.resolve({ count: where.keywordId.in.length });
+        return Promise.resolve({ count: ids.length });
       },
     },
   };
