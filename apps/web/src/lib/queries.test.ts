@@ -236,6 +236,7 @@ describe("invalidation sets", () => {
     ).toEqual([
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
+      appKeys.keywordField(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
     ]);

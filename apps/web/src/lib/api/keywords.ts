@@ -111,6 +111,10 @@ export function getComparison(
   );
 }
 
+export function getKeywordField(appId: string): Promise<KeywordFieldResult> {
+  return apiFetch<KeywordFieldResult>(`/apps/${appId}/keyword-field`);
+}
+
 export function setKeywordField(
   appId: string,
   text: string,

@@ -270,16 +270,62 @@ export class KeywordsService {
     });
   }
 
-  async setKeywordField(
-    appId: string,
-    text: string,
-  ): Promise<KeywordFieldResult> {
-    const app = await ensureApp(this.prisma, appId);
+  private ensureKeywordFieldStore(app: KeywordApp): void {
     if (app.store !== Store.APP_STORE) {
       throw new BadRequestException(
         'The keyword field is only available for App Store apps',
       );
     }
+  }
+
+  private async keywordFieldResult(
+    app: KeywordApp,
+    duplicatesRemoved: number,
+  ): Promise<KeywordFieldResult> {
+    const rows = await this.prisma.trackedKeyword.findMany({
+      where: {
+        appId: app.id,
+        source: 'KEYWORD_FIELD',
+        active: true,
+        keyword: { is: { country: app.country } },
+      },
+      ...trackedArgs(app.id),
+    });
+    const [snapshotText, volatility] = await Promise.all([
+      this.snapshotText(app.id),
+      serpVolatilities(
+        this.prisma,
+        rows.map((row) => row.keywordId),
+      ),
+    ]);
+    const tracked = rows.map((row) =>
+      toTrackedKeywordItem(
+        row,
+        snapshotText,
+        volatility.get(row.keywordId) ?? null,
+      ),
+    );
+
+    return {
+      tracked,
+      charactersUsed: tracked.map((item) => item.text).join(',').length,
+      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+      duplicatesRemoved,
+    };
+  }
+
+  async getKeywordField(appId: string): Promise<KeywordFieldResult> {
+    const app = await ensureApp(this.prisma, appId);
+    this.ensureKeywordFieldStore(app);
+    return this.keywordFieldResult(app, 0);
+  }
+
+  async setKeywordField(
+    appId: string,
+    text: string,
+  ): Promise<KeywordFieldResult> {
+    const app = await ensureApp(this.prisma, appId);
+    this.ensureKeywordFieldStore(app);
 
     const parsed = text
       .split(',')
@@ -330,31 +376,7 @@ export class KeywordsService {
       });
     }
 
-    const rows = await this.prisma.trackedKeyword.findMany({
-      where: { appId, source: 'KEYWORD_FIELD', active: true },
-      ...trackedArgs(appId),
-    });
-    const [snapshotText, volatility] = await Promise.all([
-      this.snapshotText(appId),
-      serpVolatilities(
-        this.prisma,
-        rows.map((row) => row.keywordId),
-      ),
-    ]);
-    const tracked = rows.map((row) =>
-      toTrackedKeywordItem(
-        row,
-        snapshotText,
-        volatility.get(row.keywordId) ?? null,
-      ),
-    );
-
-    return {
-      tracked,
-      charactersUsed: unique.join(',').length,
-      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-      duplicatesRemoved,
-    };
+    return this.keywordFieldResult(app, duplicatesRemoved);
   }
 
   async syncFromSnapshot(appId: string): Promise<void> {
