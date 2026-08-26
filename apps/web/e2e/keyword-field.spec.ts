@@ -39,33 +39,65 @@ test("the keyword field refuses to save past its character limit", async ({
   await expect(editor).toHaveAttribute("aria-invalid", "true");
 });
 
-test("the saved keyword field survives a reload", async ({ page }) => {
-  await storeField(page, "app-2", "");
-  await page.goto("/apps/app-2/keywords");
+test.describe("the stored keyword field", () => {
+  test.describe.configure({ mode: "serial" });
 
-  const editor = page.getByRole("textbox", { name: "App Store keyword field" });
-  const save = page.getByRole("button", { name: "Save keyword field" });
-  const counter = page.locator("#keyword-field-count");
-  const characters = page.getByText("Characters used");
+  test("survives a reload", async ({ page }) => {
+    await storeField(page, "app-2", "");
+    await page.goto("/apps/app-2/keywords");
 
-  await typeInto(editor, STORED);
-  await save.click();
+    const editor = page.getByRole("textbox", {
+      name: "App Store keyword field",
+    });
+    const save = page.getByRole("button", { name: "Save keyword field" });
+    const counter = page.locator("#keyword-field-count");
+    const characters = page.getByText("Characters used");
 
-  await expect(page.getByText("Saved keyword field")).toBeVisible();
-  await expect(characters).toBeVisible();
-  await expect(counter).toHaveText(
-    `${STORED.length}/${KEYWORD_FIELD_CHAR_LIMIT}`,
-  );
+    await typeInto(editor, STORED);
+    await save.click();
 
-  await page.reload();
+    await expect(page.getByText("Saved keyword field")).toBeVisible();
+    await expect(characters).toBeVisible();
+    await expect(counter).toHaveText(
+      `${STORED.length}/${KEYWORD_FIELD_CHAR_LIMIT}`,
+    );
 
-  await expect(editor).toHaveValue(STORED);
-  await expect(counter).toHaveText(
-    `${STORED.length}/${KEYWORD_FIELD_CHAR_LIMIT}`,
-  );
-  await expect(characters).toBeVisible();
-  for (const phrase of STORED.split(",")) {
-    await expect(page.getByText(phrase, { exact: true })).toBeVisible();
-  }
-  await expect(save).toBeDisabled();
+    await page.reload();
+
+    await expect(editor).toHaveValue(STORED);
+    await expect(counter).toHaveText(
+      `${STORED.length}/${KEYWORD_FIELD_CHAR_LIMIT}`,
+    );
+    await expect(characters).toBeVisible();
+    for (const phrase of STORED.split(",")) {
+      await expect(page.getByText(phrase, { exact: true })).toBeVisible();
+    }
+    await expect(save).toBeDisabled();
+  });
+
+  test("can be emptied, which is how its phrases are untracked", async ({
+    page,
+  }) => {
+    await storeField(page, "app-2", STORED);
+    await page.goto("/apps/app-2/keywords");
+
+    const editor = page.getByRole("textbox", {
+      name: "App Store keyword field",
+    });
+    const save = page.getByRole("button", { name: "Save keyword field" });
+
+    await expect(editor).toHaveValue(STORED);
+    await expect(save).toBeDisabled();
+
+    await typeInto(editor, "");
+    await expect(save).toBeEnabled();
+    await save.click();
+
+    await expect(page.getByText("Saved keyword field")).toBeVisible();
+    await expect(page.getByText("Characters used")).toBeHidden();
+    await expect(save).toBeDisabled();
+
+    await page.reload();
+    await expect(editor).toHaveValue("");
+  });
 });

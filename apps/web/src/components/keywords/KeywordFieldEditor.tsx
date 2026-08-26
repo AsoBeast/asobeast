@@ -94,6 +94,7 @@ function KeywordFieldForm({ id }: { id: string }) {
   const storedText = stored.tracked.map((keyword) => keyword.text).join(",");
   const text = draft ?? storedText;
   const over = text.length > KEYWORD_FIELD_CHAR_LIMIT;
+  const nothingToSave = text.trim() === "" && storedText === "";
   const result = saved ?? stored;
 
   const mutation = useMutation({
@@ -170,10 +171,7 @@ function KeywordFieldForm({ id }: { id: string }) {
       <div>
         <Button
           disabled={
-            mutation.isPending ||
-            text.trim() === "" ||
-            over ||
-            text === storedText
+            mutation.isPending || over || nothingToSave || text === storedText
           }
           onClick={() => mutation.mutate()}
         >
