@@ -116,7 +116,7 @@ export class ReviewsService {
     });
     const implausible = isImplausiblyEmpty({
       resultCount: 0,
-      lastRankedOn: newest?.reviewedAt ?? null,
+      lastSeenOn: newest?.reviewedAt ?? null,
       today: new Date(),
     });
     if (!implausible) return;

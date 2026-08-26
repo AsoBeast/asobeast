@@ -129,7 +129,7 @@ export class RankingsService {
     });
     if (!previous) return;
     if (
-      !isImplausiblyEmpty({ resultCount, lastRankedOn: previous.date, today })
+      !isImplausiblyEmpty({ resultCount, lastSeenOn: previous.date, today })
     ) {
       return;
     }
