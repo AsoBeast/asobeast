@@ -1,7 +1,7 @@
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
-export const DAY_MS = 24 * 60 * 60 * 1000;
+export { DAY_MS } from '../store-providers/result-plausibility';
 
 export function utcToday(): Date {
   const now = new Date();

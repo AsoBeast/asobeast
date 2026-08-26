@@ -11,6 +11,10 @@ import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
+import {
+  IMPLAUSIBLE_LOOKBACK_DAYS,
+  isImplausiblyEmpty,
+} from '../store-providers/result-plausibility';
 import { ratingHistogram } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ReviewResult } from '../store-providers/types';
@@ -105,14 +109,20 @@ export class ReviewsService {
     store: Store;
     storeAppId: string;
   }): Promise<void> {
-    const known = await this.prisma.review.findFirst({
-      where: { appId: app.id },
-      select: { id: true },
+    const newest = await this.prisma.review.findFirst({
+      where: { appId: app.id, reviewedAt: { not: null } },
+      orderBy: { reviewedAt: 'desc' },
+      select: { reviewedAt: true },
     });
-    if (!known) return;
+    const implausible = isImplausiblyEmpty({
+      resultCount: 0,
+      lastSeenOn: newest?.reviewedAt ?? null,
+      today: new Date(),
+    });
+    if (!implausible) return;
     throw new ImplausibleResultError(
       app.store,
-      `the review feed for ${app.storeAppId} came back empty for an app that already has stored reviews`,
+      `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
     );
   }
 

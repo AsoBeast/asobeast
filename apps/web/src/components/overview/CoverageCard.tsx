@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { appSummaryOptions } from "@/lib/queries";
+import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 function CoverageStat({ label, value }: { label: string; value: number }) {
   return (
@@ -17,7 +18,16 @@ function CoverageStat({ label, value }: { label: string; value: number }) {
 
 export function CoverageCard({ id }: { id: string }) {
   const { data: summary } = useSuspenseQuery(appSummaryOptions(id));
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const coverage = summary.coverage;
+
+  const stats = [
+    { label: "Title", value: coverage.inTitle },
+    ...(detail.store === "APP_STORE"
+      ? [{ label: "Subtitle", value: coverage.inSubtitle }]
+      : []),
+    { label: "Description", value: coverage.inDescription },
+  ];
 
   return (
     <Card>
@@ -25,10 +35,19 @@ export function CoverageCard({ id }: { id: string }) {
         <CardTitle>Metadata coverage</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="grid grid-cols-3 gap-2">
-          <CoverageStat label="Title" value={coverage.inTitle} />
-          <CoverageStat label="Subtitle" value={coverage.inSubtitle} />
-          <CoverageStat label="Description" value={coverage.inDescription} />
+        <div
+          className={cn(
+            "grid gap-2",
+            stats.length === 3 ? "grid-cols-3" : "grid-cols-2",
+          )}
+        >
+          {stats.map((stat) => (
+            <CoverageStat
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+            />
+          ))}
         </div>
 
         <div className="flex flex-col gap-2">

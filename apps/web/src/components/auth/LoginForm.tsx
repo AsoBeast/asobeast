@@ -65,7 +65,9 @@ export function LoginForm() {
     <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Sign in</CardTitle>
+          <CardTitle asChild>
+            <h1>Sign in</h1>
+          </CardTitle>
           <CardDescription>Sign in to your asobeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>

@@ -11,11 +11,11 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
+import { isImplausiblyEmpty } from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { RankingHistoryQueryDto } from './dto/ranking-history-query.dto';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
-import { isImplausiblyEmpty } from './result-plausibility';
 import { SerpSnapshotDay } from './serp-movers';
 
 const HISTORY_DAYS = 30;
@@ -129,7 +129,7 @@ export class RankingsService {
     });
     if (!previous) return;
     if (
-      !isImplausiblyEmpty({ resultCount, lastRankedOn: previous.date, today })
+      !isImplausiblyEmpty({ resultCount, lastSeenOn: previous.date, today })
     ) {
       return;
     }

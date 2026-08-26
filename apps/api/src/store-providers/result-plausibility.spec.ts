@@ -1,5 +1,5 @@
-import { DAY_MS } from './rankings.support';
 import {
+  DAY_MS,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
 } from './result-plausibility';
@@ -12,7 +12,7 @@ describe('isImplausiblyEmpty', () => {
     expect(
       isImplausiblyEmpty({
         resultCount: 12,
-        lastRankedOn: daysAgo(1),
+        lastSeenOn: daysAgo(1),
         today: TODAY,
       }),
     ).toBe(false);
@@ -22,7 +22,7 @@ describe('isImplausiblyEmpty', () => {
     expect(
       isImplausiblyEmpty({
         resultCount: 0,
-        lastRankedOn: daysAgo(1),
+        lastSeenOn: daysAgo(1),
         today: TODAY,
       }),
     ).toBe(true);
@@ -30,7 +30,7 @@ describe('isImplausiblyEmpty', () => {
 
   it('accepts nothing found for a phrase that never ranked anything', () => {
     expect(
-      isImplausiblyEmpty({ resultCount: 0, lastRankedOn: null, today: TODAY }),
+      isImplausiblyEmpty({ resultCount: 0, lastSeenOn: null, today: TODAY }),
     ).toBe(false);
   });
 
@@ -38,14 +38,14 @@ describe('isImplausiblyEmpty', () => {
     expect(
       isImplausiblyEmpty({
         resultCount: 0,
-        lastRankedOn: daysAgo(IMPLAUSIBLE_LOOKBACK_DAYS),
+        lastSeenOn: daysAgo(IMPLAUSIBLE_LOOKBACK_DAYS),
         today: TODAY,
       }),
     ).toBe(true);
     expect(
       isImplausiblyEmpty({
         resultCount: 0,
-        lastRankedOn: daysAgo(IMPLAUSIBLE_LOOKBACK_DAYS + 1),
+        lastSeenOn: daysAgo(IMPLAUSIBLE_LOOKBACK_DAYS + 1),
         today: TODAY,
       }),
     ).toBe(false);
@@ -55,7 +55,7 @@ describe('isImplausiblyEmpty', () => {
     expect(
       isImplausiblyEmpty({
         resultCount: 0,
-        lastRankedOn: TODAY,
+        lastSeenOn: TODAY,
         today: TODAY,
       }),
     ).toBe(false);

@@ -10,6 +10,9 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { ReviewResult } from '../store-providers/types';
 import { ReviewsService } from './reviews.service';
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
+
 const makeReview = (reviewId: string, score = 5): ReviewResult => ({
   reviewId,
   userName: 'User',
@@ -25,7 +28,12 @@ const buildDeps = (options: {
   existing: string[];
   scoreMax?: number;
   storedAlready?: boolean;
+  storedReviewedAt?: Date | null;
 }) => {
+  const storedReviewedAt =
+    options.storedReviewedAt === undefined
+      ? daysAgo(1)
+      : options.storedReviewedAt;
   const reviews = jest.fn();
   options.pages.forEach((page) => reviews.mockResolvedValueOnce(page));
   const createMany = jest
@@ -45,9 +53,13 @@ const buildDeps = (options: {
       findMany: jest
         .fn()
         .mockResolvedValue(options.existing.map((reviewId) => ({ reviewId }))),
-      findFirst: jest
-        .fn()
-        .mockResolvedValue(options.storedAlready ? { id: 'r1' } : null),
+      findFirst: jest.fn((args: { where: { reviewedAt?: unknown } }) => {
+        if (!options.storedAlready) return Promise.resolve(null);
+        if (args.where.reviewedAt !== undefined && storedReviewedAt === null) {
+          return Promise.resolve(null);
+        }
+        return Promise.resolve({ id: 'r1', reviewedAt: storedReviewedAt });
+      }),
       createMany,
     },
   };
@@ -172,6 +184,36 @@ describe('ReviewsService silent block detection', () => {
     await expect(
       service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
     ).resolves.toEqual([]);
+  });
+
+  it('accepts an empty feed for an app whose newest review predates the lookback window', async () => {
+    const { service, createMany } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      storedReviewedAt: daysAgo(365),
+    });
+
+    await expect(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+    ).resolves.toEqual([]);
+
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('accepts an empty feed for an app whose stored reviews carry no date', async () => {
+    const { service, createMany } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      storedReviewedAt: null,
+    });
+
+    await expect(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+    ).resolves.toEqual([]);
+
+    expect(createMany).not.toHaveBeenCalled();
   });
 });
 
