@@ -29,6 +29,7 @@ import {
   getCompetitors,
   getHealth,
   getKeywordCountries,
+  getKeywordField,
   getKeywords,
   getMarketAvailability,
   getPortfolio,
@@ -65,6 +66,8 @@ export const appKeys = {
     [...appKeys.detail(id), "keywords", { sort, country }] as const,
   keywordCountries: (id: string) =>
     [...appKeys.detail(id), "keyword-countries"] as const,
+  keywordField: (id: string) =>
+    [...appKeys.detail(id), "keyword-field"] as const,
   suggestions: (
     id: string,
     strategy: KeywordSuggestionStrategy,
@@ -284,6 +287,12 @@ export const keywordCountriesOptions = (id: string) =>
     queryFn: () => getKeywordCountries(id),
   });
 
+export const keywordFieldOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordField(id),
+    queryFn: () => getKeywordField(id),
+  });
+
 export const suggestionsOptions = (
   id: string,
   strategy: KeywordSuggestionStrategy,
@@ -450,6 +459,7 @@ export function invalidateKeywordMutation(
 ): void {
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordCountries(id) });
+  void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
 }
