@@ -68,18 +68,18 @@ const HOUR_SECONDS = 60 * 60;
 const NO_PRICE: PlanPrices = { monthlyUsd: null, annualUsd: null };
 
 const INDIE_RATES: PlanRates = {
-  apiRequestsPerMinute: 60,
-  apiWritesPerMinute: 20,
-  apiRequestsPerDay: 10_000,
-  apiConcurrentRequests: 8,
+  apiRequestsPerMinute: 300,
+  apiWritesPerMinute: 60,
+  apiRequestsPerDay: 40_000,
+  apiConcurrentRequests: 16,
   mcpRequestsPerMinute: 60,
 };
 
 const ULTIMATE_RATES: PlanRates = {
-  apiRequestsPerMinute: 300,
-  apiWritesPerMinute: 100,
-  apiRequestsPerDay: 100_000,
-  apiConcurrentRequests: 24,
+  apiRequestsPerMinute: 900,
+  apiWritesPerMinute: 200,
+  apiRequestsPerDay: 400_000,
+  apiConcurrentRequests: 48,
   mcpRequestsPerMinute: 300,
 };
 

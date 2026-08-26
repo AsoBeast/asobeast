@@ -1,4 +1,10 @@
-import { ApiError } from "@/lib/api";
+import {
+  ApiError,
+  apiErrorDigestOf,
+  readApiErrorDigest,
+  type ApiErrorDigest,
+} from "@/lib/api";
+import { formatRelativeTime } from "@/lib/format";
 
 export type RecoveryAction =
   { kind: "retry" } | { kind: "link"; href: string; label: string };
@@ -36,11 +42,6 @@ const BY_STATUS: Record<number, Recovery> = {
     body: "This app or record no longer exists. It may have been deleted.",
     action: { kind: "link", href: "/", label: "Back to apps" },
   },
-  429: {
-    title: "Too many requests",
-    body: "The store rate limiter is holding requests back. Wait a moment and try again.",
-    action: { kind: "retry" },
-  },
   504: {
     title: "The API did not answer in time",
     body: "asobeast runs on your own machine. Check that the api container is up and that the database and Redis are reachable, then try again.",
@@ -48,19 +49,49 @@ const BY_STATUS: Record<number, Recovery> = {
   },
 };
 
+function reopens(retryAfterSeconds: number | null): string {
+  if (retryAfterSeconds === null) return "Try again in a moment.";
+  const at = new Date(Date.now() + retryAfterSeconds * 1000);
+  return `Try again ${formatRelativeTime(at.toISOString())}.`;
+}
+
+function refused({ planRefusal, retryAfterSeconds }: ApiErrorDigest): Recovery {
+  return {
+    title: planRefusal
+      ? "Your plan's request budget is spent"
+      : "Too many requests",
+    body: planRefusal
+      ? `This workspace has used the API requests its plan allows. ${reopens(retryAfterSeconds)}`
+      : `The API refused this request because too many arrived in a short time. ${reopens(retryAfterSeconds)}`,
+    action: { kind: "retry" },
+  };
+}
+
+function byStatus(digest: ApiErrorDigest): Recovery | null {
+  if (digest.statusCode === 429) return refused(digest);
+  return BY_STATUS[digest.statusCode] ?? null;
+}
+
+function digestOf(error: unknown): string | undefined {
+  const digest: unknown = (error as { digest?: unknown })?.digest;
+  return typeof digest === "string" ? digest : undefined;
+}
+
 export function recoveryFor(error: unknown): Recovery {
-  if (!(error instanceof ApiError)) return GENERIC;
-
-  const known = BY_STATUS[error.envelope.statusCode];
-  if (known) return known;
-
-  if (error.envelope.statusCode >= 500) {
-    return {
-      title: "The API failed to answer",
-      body: error.envelope.message,
-      action: { kind: "retry" },
-    };
+  if (error instanceof ApiError) {
+    const { statusCode, message } = error.envelope;
+    const known = byStatus(apiErrorDigestOf(error.envelope));
+    if (known) return known;
+    if (statusCode >= 500) {
+      return {
+        title: "The API failed to answer",
+        body: message,
+        action: { kind: "retry" },
+      };
+    }
+    return { ...GENERIC, body: message };
   }
 
-  return { ...GENERIC, body: error.envelope.message };
+  const digest = readApiErrorDigest(digestOf(error));
+  return (digest && byStatus(digest)) ?? GENERIC;
 }

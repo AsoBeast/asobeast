@@ -3,6 +3,7 @@ import {
   isServer,
   QueryClient,
 } from "@tanstack/react-query";
+import { retryDelayFor, shouldRetry } from "@/lib/query-retry";
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -10,6 +11,8 @@ function makeQueryClient(): QueryClient {
       queries: {
         staleTime: 30 * 1000,
         refetchOnWindowFocus: false,
+        retry: isServer ? 0 : shouldRetry,
+        retryDelay: retryDelayFor,
       },
       dehydrate: {
         shouldDehydrateQuery: (query) =>

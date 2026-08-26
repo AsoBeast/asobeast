@@ -15,13 +15,13 @@ describe('rateRules', () => {
       {
         window: 'minute',
         budget: 'read',
-        limit: 60,
+        limit: PLAN_LIMITS.indie.apiRequestsPerMinute,
         windowSeconds: MINUTE_SECONDS,
       },
       {
         window: 'day',
         budget: 'all',
-        limit: 10_000,
+        limit: PLAN_LIMITS.indie.apiRequestsPerDay,
         windowSeconds: DAY_SECONDS,
       },
     ]);
