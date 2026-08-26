@@ -55,6 +55,9 @@ export function RankingsView({ id }: { id: string }) {
     .map((event) => event.capturedAt.slice(0, 10));
 
   const widest = RANGE_PRESETS[RANGE_PRESETS.length - 1];
+  const everChecked = tracked.some(
+    (item) => effective.includes(item.keywordId) && item.latestDepth !== null,
+  );
 
   const chart = buildRankingChart(data.series);
   const labels = new Map(
@@ -112,10 +115,14 @@ export function RankingsView({ id }: { id: string }) {
         {tracked.length === 0 ? (
           <NoKeywordsTracked id={id} />
         ) : chart.rows.length === 0 ? (
-          range === widest ? (
-            <NoPositionsYet />
+          everChecked ? (
+            <NoDataInRange
+              onWiden={
+                range === widest ? undefined : () => void setRange(widest)
+              }
+            />
           ) : (
-            <NoDataInRange onWiden={() => void setRange(widest)} />
+            <NoPositionsYet />
           )
         ) : chart.rows.length < MIN_TREND_POINTS ? (
           <InsufficientHistory data={chart} />

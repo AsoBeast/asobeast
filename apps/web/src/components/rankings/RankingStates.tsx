@@ -56,15 +56,17 @@ export function NoPositionsYet() {
   );
 }
 
-export function NoDataInRange({ onWiden }: { onWiden: () => void }) {
+export function NoDataInRange({ onWiden }: { onWiden?: () => void }) {
   return (
     <Frame
       title="Nothing captured in this range"
       body="These keywords have history outside the selected window."
       action={
-        <Button size="sm" variant="outline" onClick={onWiden}>
-          Widen to 90 days
-        </Button>
+        onWiden ? (
+          <Button size="sm" variant="outline" onClick={onWiden}>
+            Widen to 90 days
+          </Button>
+        ) : null
       }
     />
   );
