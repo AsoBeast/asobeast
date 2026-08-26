@@ -355,9 +355,15 @@ export class KeywordsService {
   async syncFromSnapshot(appId: string): Promise<void> {
     const app = await this.prisma.app.findUnique({
       where: { id: appId },
-      select: { id: true, workspaceId: true, store: true, country: true },
+      select: {
+        id: true,
+        workspaceId: true,
+        store: true,
+        country: true,
+        isCompetitor: true,
+      },
     });
-    if (!app) {
+    if (!app || app.isCompetitor) {
       return;
     }
 
