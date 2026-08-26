@@ -284,7 +284,7 @@ describe('KeywordsService country tracking', () => {
 
   it('adds a keyword into the requested market, not the app home country', async () => {
     const queue = { add: jest.fn() };
-    const keywordUpsert = jest.fn().mockResolvedValue({ id: 'kw1' });
+    const keywordCreateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prisma = {
       app: {
         findFirst: jest.fn().mockResolvedValue({
@@ -294,10 +294,14 @@ describe('KeywordsService country tracking', () => {
           storeAppId: 's',
         }),
       },
-      keyword: { upsert: keywordUpsert },
+      keyword: {
+        createMany: keywordCreateMany,
+        findMany: jest.fn().mockResolvedValue([{ id: 'kw1', text: 'fitness' }]),
+      },
       keywordMetric: { findFirst: jest.fn().mockResolvedValue(null) },
       trackedKeyword: {
-        upsert: jest.fn().mockResolvedValue(undefined),
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
       },
       appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -306,16 +310,16 @@ describe('KeywordsService country tracking', () => {
 
     await buildService(prisma, queue).addManual('app1', ['fitness'], 'pl');
 
-    const calls = keywordUpsert.mock.calls as Array<
-      [
-        {
-          where: { text_store_country: { country: string } };
-          create: { country: string };
-        },
-      ]
+    const calls = keywordCreateMany.mock.calls as Array<
+      [{ data: { country: string }[] }]
     >;
-    expect(calls[0][0].where.text_store_country.country).toBe('pl');
-    expect(calls[0][0].create.country).toBe('pl');
+    expect(calls[0][0].data[0].country).toBe('pl');
+    const lookup = (
+      prisma.keyword.findMany.mock.calls as Array<
+        [{ where: { country: string } }]
+      >
+    )[0][0];
+    expect(lookup.where.country).toBe('pl');
   });
 
   it('summarizes tracked markets home-first with counts including an empty home', async () => {

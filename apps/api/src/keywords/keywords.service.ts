@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { KeywordSource, Store } from '@prisma/client';
+import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   KeywordComparison,
@@ -205,26 +205,15 @@ export class KeywordsService {
     const market = country ?? app.country;
     const texts = new Set(rawKeywords.map((raw) => normalizeKeyword(raw)));
 
-    const keywordIds: string[] = [];
-    for (const text of texts) {
-      const keyword = await this.prisma.keyword.upsert({
-        where: {
-          text_store_country: { text, store: app.store, country: market },
-        },
-        create: { text, store: app.store, country: market },
-        update: {},
-        select: { id: true },
-      });
-      keywordIds.push(keyword.id);
-    }
+    const keywordIds = await this.keywordIdsFor([...texts], app.store, market);
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       for (const keywordId of keywordIds) {
-        await tx.trackedKeyword.upsert({
-          where: { appId_keywordId: { appId, keywordId } },
-          create: { appId, keywordId, source: 'MANUAL', active: true },
-          update: { active: true },
-        });
+        await this.trackKeyword(
+          tx,
+          { appId, keywordId, source: 'MANUAL', active: true },
+          { active: true },
+        );
       }
     });
 
@@ -339,30 +328,14 @@ export class KeywordsService {
       select: { keywordId: true, keyword: { select: { text: true } } },
     });
 
-    for (const value of unique) {
-      const keyword = await this.prisma.keyword.upsert({
-        where: {
-          text_store_country: {
-            text: value,
-            store: app.store,
-            country: app.country,
-          },
-        },
-        create: { text: value, store: app.store, country: app.country },
-        update: {},
-        select: { id: true },
-      });
-      await this.prisma.trackedKeyword.upsert({
-        where: { appId_keywordId: { appId, keywordId: keyword.id } },
-        create: {
-          appId,
-          keywordId: keyword.id,
-          source: 'KEYWORD_FIELD',
-          active: true,
-        },
-        update: { source: 'KEYWORD_FIELD', active: true },
-      });
-      await this.enqueueFirstScore(keyword.id, app);
+    const keywordIds = await this.keywordIdsFor(unique, app.store, app.country);
+    for (const keywordId of keywordIds) {
+      await this.trackKeyword(
+        this.prisma,
+        { appId, keywordId, source: 'KEYWORD_FIELD', active: true },
+        { source: 'KEYWORD_FIELD', active: true },
+      );
+      await this.enqueueFirstScore(keywordId, app);
     }
 
     const uniqueSet = new Set(unique);
@@ -440,6 +413,48 @@ export class KeywordsService {
       });
       await this.enqueueFirstScore(keyword.id, app);
     }
+  }
+
+  private async keywordIdsFor(
+    texts: string[],
+    store: Store,
+    country: string,
+  ): Promise<string[]> {
+    await this.prisma.keyword.createMany({
+      data: texts.map((text) => ({ text, store, country })),
+      skipDuplicates: true,
+    });
+
+    const keywords = await this.prisma.keyword.findMany({
+      where: { store, country, text: { in: texts } },
+      select: { id: true, text: true },
+    });
+    const idByText = new Map(
+      keywords.map((keyword) => [keyword.text, keyword.id]),
+    );
+
+    return texts.flatMap((text) => {
+      const id = idByText.get(text);
+      return id ? [id] : [];
+    });
+  }
+
+  private async trackKeyword(
+    client: Prisma.TransactionClient | PrismaService,
+    row: Prisma.TrackedKeywordCreateManyInput,
+    onExisting: Prisma.TrackedKeywordUpdateManyMutationInput,
+  ): Promise<void> {
+    const { count } = await client.trackedKeyword.createMany({
+      data: [row],
+      skipDuplicates: true,
+    });
+    if (count > 0) {
+      return;
+    }
+    await client.trackedKeyword.updateMany({
+      where: { appId: row.appId, keywordId: row.keywordId },
+      data: onExisting,
+    });
   }
 
   private async ensureTracked(appId: string, keywordId: string): Promise<void> {
