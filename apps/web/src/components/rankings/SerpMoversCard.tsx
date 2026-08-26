@@ -1,17 +1,10 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { toast } from "sonner";
 import type { SerpMoverItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,43 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { addCompetitor, ApiError } from "@/lib/api";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TrackButton } from "@/components/competitors/TrackButton";
 import { formatDate } from "@/lib/format";
-import { invalidateCompetitorMutation, serpMoversOptions } from "@/lib/queries";
+import { serpMoversOptions } from "@/lib/queries";
 import { MOVER_WINDOWS } from "@/lib/ranges";
 import { moverDaysParser } from "@/lib/search-params";
-
-function TrackButton({ id, item }: { id: string; item: SerpMoverItem }) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () =>
-      addCompetitor(id, `https://apps.apple.com/us/app/id${item.storeAppId}`),
-    onSuccess: (competitor) => {
-      invalidateCompetitorMutation(queryClient, id);
-      toast.success(`Now tracking ${competitor.name ?? item.title}`);
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : `Could not track ${item.title}`,
-      );
-    },
-  });
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={mutation.isPending}
-      onClick={() => mutation.mutate()}
-    >
-      {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-      Track
-    </Button>
-  );
-}
 
 function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
   const groups = new Map<string, SerpMoverItem[]>();
@@ -112,7 +74,11 @@ function SerpMoversList({ id, days }: { id: string; days: number }) {
                   </span>
                 </div>
                 {item.appId === null ? (
-                  <TrackButton id={id} item={item} />
+                  <TrackButton
+                    id={id}
+                    storeAppId={item.storeAppId}
+                    title={item.title}
+                  />
                 ) : null}
               </li>
             ))}

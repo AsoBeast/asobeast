@@ -2,18 +2,29 @@
 
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Info, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { parseStoreUrl } from "@asobeast/shared";
+import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { addCompetitor, ApiError } from "@/lib/api";
-import { invalidateCompetitorMutation } from "@/lib/queries";
+import { storeLabel } from "@/lib/format";
+import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
+
+const STORE_URL_EXAMPLES: Record<Store, string> = {
+  APP_STORE: "https://apps.apple.com/us/app/name/id123456789",
+  GOOGLE_PLAY: "https://play.google.com/store/apps/details?id=com.example.app",
+};
 
 export function AddCompetitorForm({ id }: { id: string }) {
   const queryClient = useQueryClient();
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -59,9 +70,9 @@ export function AddCompetitorForm({ id }: { id: string }) {
         <Input
           value={url}
           onChange={(event) => setUrl(event.target.value)}
-          placeholder="https://apps.apple.com/us/app/name/id123456789"
+          placeholder={STORE_URL_EXAMPLES[detail.store]}
           aria-invalid={error !== null}
-          aria-label="Competitor App Store URL"
+          aria-label={`Competitor ${storeLabel(detail.store)} URL`}
         />
         <Button
           type="submit"

@@ -486,6 +486,30 @@ export const APP_1: AppListItem = {
   groupId: null,
 };
 
+export const APP_1_DE_DETAIL: AppDetail = {
+  id: "app-1-de",
+  store: "APP_STORE",
+  storeAppId: "123456789",
+  country: "de",
+  name: "Focus Timer",
+  iconUrl: null,
+  createdAt: utcTimestampDaysAgo(24),
+  latestSnapshot: {
+    id: "snap-1-de",
+    title: "Focus Timer",
+    subtitle: "Pomodoro & Tiefenarbeit",
+    summary: "Bleib fokussiert mit getakteten Arbeitsphasen.",
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+    installs: null,
+    price: 0,
+    version: "3.4.1",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  competitors: [],
+  group: null,
+};
+
 export const APP_2_SUMMARY: AppSummary = {
   visibility: { current: 10, delta7d: null, delta30d: null },
   rankDistribution: {
@@ -589,6 +613,24 @@ const EMPTY_SERP_MOVERS: SerpMovers = { windowDays: 7, items: [] };
 const EMPTY_CHANGES: ChangeTimeline = { events: [] };
 const EMPTY_DISCOVERY: CompetitorDiscovery = { windowDays: 30, items: [] };
 const EMPTY_COMPARISON: KeywordComparison = { competitors: [], rows: [] };
+
+export const APP_1_DE_DISCOVERY: CompetitorDiscovery = {
+  windowDays: 30,
+  items: [
+    {
+      storeAppId: "555000333",
+      title: "Fokus Meister",
+      developer: "Nordlys Labs",
+      ratingAvg: 4.5,
+      ratingCount: 2200,
+      appearances: 8,
+      keywordCount: 2,
+      bestPosition: 4,
+      avgPosition: 8.5,
+      keywords: ["fokus timer", "pomodoro"],
+    },
+  ],
+};
 
 const APP_1_DISCOVERY: CompetitorDiscovery = {
   windowDays: 30,
@@ -1169,6 +1211,22 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  "app-1-de": {
+    detail: APP_1_DE_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: [],
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    changes: EMPTY_CHANGES,
+    discovery: APP_1_DE_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
   "app-gp": {

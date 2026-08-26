@@ -1,16 +1,9 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { toast } from "sonner";
-import type { CompetitorDiscoveryItem } from "@asobeast/shared";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -34,51 +27,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { addCompetitor, ApiError } from "@/lib/api";
-import { discoveryOptions, invalidateCompetitorMutation } from "@/lib/queries";
-import { formatNumber, formatRating } from "@/lib/format";
+import { appDetailOptions, discoveryOptions } from "@/lib/queries";
+import { formatNumber, formatRating, storeLabel } from "@/lib/format";
 import { DISCOVERY_WINDOWS } from "@/lib/ranges";
 import { discoveryDaysParser } from "@/lib/search-params";
 import { DiscoveryPanelSkeleton } from "./skeletons";
+import { TrackButton } from "./TrackButton";
 
-function TrackButton({
+function DiscoveryTable({
   id,
-  item,
+  days,
+  storeName,
 }: {
   id: string;
-  item: CompetitorDiscoveryItem;
+  days: number;
+  storeName: string;
 }) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () =>
-      addCompetitor(id, `https://apps.apple.com/us/app/id${item.storeAppId}`),
-    onSuccess: (competitor) => {
-      invalidateCompetitorMutation(queryClient, id);
-      toast.success(`Now tracking ${competitor.name ?? item.title}`);
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : `Could not track ${item.title}`,
-      );
-    },
-  });
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={mutation.isPending}
-      onClick={() => mutation.mutate()}
-    >
-      {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-      Track
-    </Button>
-  );
-}
-
-function DiscoveryTable({ id, days }: { id: string; days: number }) {
   const { data } = useSuspenseQuery(discoveryOptions(id, days));
 
   if (data.items.length === 0) {
@@ -94,8 +58,8 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
     <div className="overflow-x-auto rounded-xl border">
       <Table>
         <TableCaption className="sr-only">
-          Untracked apps appearing in your keyword search results over the last{" "}
-          {days} days.
+          Untracked {storeName} apps appearing in your keyword search results
+          over the last {days} days.
         </TableCaption>
         <TableHeader>
           <TableRow>
@@ -151,7 +115,11 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
               </TableCell>
               <TableCell>
                 <div className="flex justify-end">
-                  <TrackButton id={id} item={item} />
+                  <TrackButton
+                    id={id}
+                    storeAppId={item.storeAppId}
+                    title={item.title}
+                  />
                 </div>
               </TableCell>
             </TableRow>
@@ -164,13 +132,18 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
 
 export function DiscoveryPanel({ id }: { id: string }) {
   const [days, setDays] = useQueryState("days", discoveryDaysParser);
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const storeName = storeLabel(detail.store);
 
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <CardDescription>Discovery</CardDescription>
-          <CardTitle>Apps you don’t track yet</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>Apps you don’t track yet</CardTitle>
+            <Badge variant="secondary">{storeName}</Badge>
+          </div>
         </div>
         <Tabs
           value={String(days)}
@@ -187,7 +160,7 @@ export function DiscoveryPanel({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<DiscoveryPanelSkeleton />}>
-          <DiscoveryTable id={id} days={days} />
+          <DiscoveryTable id={id} days={days} storeName={storeName} />
         </Suspense>
       </CardContent>
     </Card>
