@@ -1,5 +1,5 @@
-import { DAY_MS } from './rankings.support';
 import {
+  DAY_MS,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
 } from './result-plausibility';

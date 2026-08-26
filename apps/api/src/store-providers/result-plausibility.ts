@@ -1,4 +1,4 @@
-import { DAY_MS } from './rankings.support';
+export const DAY_MS = 24 * 60 * 60 * 1000;
 
 export const IMPLAUSIBLE_LOOKBACK_DAYS = 7;
 
