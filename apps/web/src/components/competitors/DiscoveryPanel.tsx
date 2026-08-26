@@ -1,16 +1,8 @@
 "use client";
 
 import { Suspense } from "react";
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query";
-import { Loader2, Plus } from "lucide-react";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import { toast } from "sonner";
-import type { CompetitorDiscoveryItem } from "@asobeast/shared";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -34,49 +26,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { addCompetitor, ApiError } from "@/lib/api";
-import { discoveryOptions, invalidateCompetitorMutation } from "@/lib/queries";
+import { discoveryOptions } from "@/lib/queries";
 import { formatNumber, formatRating } from "@/lib/format";
 import { DISCOVERY_WINDOWS } from "@/lib/ranges";
 import { discoveryDaysParser } from "@/lib/search-params";
 import { DiscoveryPanelSkeleton } from "./skeletons";
-
-function TrackButton({
-  id,
-  item,
-}: {
-  id: string;
-  item: CompetitorDiscoveryItem;
-}) {
-  const queryClient = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: () =>
-      addCompetitor(id, `https://apps.apple.com/us/app/id${item.storeAppId}`),
-    onSuccess: (competitor) => {
-      invalidateCompetitorMutation(queryClient, id);
-      toast.success(`Now tracking ${competitor.name ?? item.title}`);
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : `Could not track ${item.title}`,
-      );
-    },
-  });
-
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      disabled={mutation.isPending}
-      onClick={() => mutation.mutate()}
-    >
-      {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
-      Track
-    </Button>
-  );
-}
+import { TrackButton } from "./TrackButton";
 
 function DiscoveryTable({ id, days }: { id: string; days: number }) {
   const { data } = useSuspenseQuery(discoveryOptions(id, days));
@@ -151,7 +106,11 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
               </TableCell>
               <TableCell>
                 <div className="flex justify-end">
-                  <TrackButton id={id} item={item} />
+                  <TrackButton
+                    id={id}
+                    storeAppId={item.storeAppId}
+                    title={item.title}
+                  />
                 </div>
               </TableCell>
             </TableRow>
