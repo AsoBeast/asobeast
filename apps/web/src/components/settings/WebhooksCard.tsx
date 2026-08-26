@@ -21,7 +21,7 @@ import {
   updateWebhook,
 } from "@/lib/api";
 import { invalidateWebhookMutation, webhooksOptions } from "@/lib/queries";
-import { EventToggles } from "./alert-events";
+import { EventSelection } from "./alert-events";
 import {
   AlertChannelCard,
   AlertChannelEmpty,
@@ -108,10 +108,7 @@ function AddWebhookDialog() {
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label>Events</Label>
-        <EventToggles value={events} onChange={setEvents} />
-      </div>
+      <EventSelection value={events} onChange={setEvents} />
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-secret">Secret (optional)</Label>
