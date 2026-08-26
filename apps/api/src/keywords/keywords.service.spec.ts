@@ -25,7 +25,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
 
   const buildPrisma = () => {
-    let keywordId = 0;
+    const created: { text: string }[] = [];
     return {
       keywordMetric: {
         findFirst: jest.fn().mockResolvedValue(null),
@@ -45,37 +45,54 @@ describe('KeywordsService.syncFromSnapshot', () => {
         }),
       },
       keyword: {
-        upsert: jest.fn().mockImplementation(() => {
-          keywordId += 1;
-          return Promise.resolve({ id: `kw${keywordId}` });
-        }),
+        createMany: jest
+          .fn<Promise<{ count: number }>, [{ data: { text: string }[] }]>()
+          .mockImplementation(({ data }) => {
+            created.push(...data);
+            return Promise.resolve({ count: data.length });
+          }),
+        findMany: jest.fn().mockImplementation(() =>
+          Promise.resolve(
+            created.map((keyword, index) => ({
+              id: `kw${index + 1}`,
+              text: keyword.text,
+            })),
+          ),
+        ),
       },
       trackedKeyword: {
-        upsert: jest.fn<
-          Promise<void>,
-          [{ create: { source: string; active: boolean }; update: object }]
+        createMany: jest.fn<
+          Promise<{ count: number }>,
+          [
+            {
+              data: { source: string; active: boolean }[];
+              skipDuplicates: boolean;
+            },
+          ]
         >(),
       },
     };
   };
 
-  it('tracks only title and subtitle candidates with create-only upserts', async () => {
+  it('tracks only title and subtitle candidates without touching existing rows', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());
 
     await service.syncFromSnapshot('app1');
 
-    const trackedSources = prisma.trackedKeyword.upsert.mock.calls.map(
-      ([args]) => args.create.source,
-    );
+    const [tracked] = prisma.trackedKeyword.createMany.mock.calls[0];
+    const trackedSources = tracked.data.map((row) => row.source);
     expect(trackedSources).toContain('TITLE');
     expect(trackedSources).toContain('SUBTITLE');
     expect(trackedSources).not.toContain('DESCRIPTION');
 
-    for (const [args] of prisma.trackedKeyword.upsert.mock.calls) {
-      expect(args.create.active).toBe(true);
-      expect(args.update).toEqual({});
+    for (const row of tracked.data) {
+      expect(row.active).toBe(true);
     }
+    expect(tracked.skipDuplicates).toBe(true);
+    expect(prisma.keyword.createMany.mock.calls[0][0].skipDuplicates).toBe(
+      true,
+    );
   });
 
   it('tracks title and summary candidates for google play, not subtitle', async () => {
@@ -89,9 +106,8 @@ describe('KeywordsService.syncFromSnapshot', () => {
 
     await service.syncFromSnapshot('app1');
 
-    const trackedSources = prisma.trackedKeyword.upsert.mock.calls.map(
-      ([args]) => args.create.source,
-    );
+    const [tracked] = prisma.trackedKeyword.createMany.mock.calls[0];
+    const trackedSources = tracked.data.map((row) => row.source);
     expect(trackedSources).toContain('TITLE');
     expect(trackedSources).toContain('DESCRIPTION');
     expect(trackedSources).not.toContain('SUBTITLE');
@@ -108,7 +124,9 @@ describe('KeywordsService.syncFromSnapshot', () => {
 
     await service.syncFromSnapshot('app1');
 
-    expect(prisma.trackedKeyword.upsert).toHaveBeenCalledTimes(15);
+    expect(prisma.trackedKeyword.createMany.mock.calls[0][0].data).toHaveLength(
+      15,
+    );
   });
 
   it('does nothing when the app has no snapshot', async () => {
@@ -118,7 +136,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
 
     await service.syncFromSnapshot('app1');
 
-    expect(prisma.trackedKeyword.upsert).not.toHaveBeenCalled();
+    expect(prisma.trackedKeyword.createMany).not.toHaveBeenCalled();
   });
 });
 

@@ -410,35 +410,48 @@ export class KeywordsService {
       .filter((candidate) => autoTrackSources.includes(candidate.source))
       .slice(0, AUTO_TRACK_LIMIT);
 
-    for (const candidate of candidates) {
-      const keyword = await this.prisma.keyword.upsert({
-        where: {
-          text_store_country: {
-            text: candidate.text,
-            store: app.store,
-            country: app.country,
-          },
-        },
-        create: {
-          text: candidate.text,
-          store: app.store,
-          country: app.country,
-        },
-        update: {},
-        select: { id: true },
-      });
+    await this.prisma.keyword.createMany({
+      data: candidates.map((candidate) => ({
+        text: candidate.text,
+        store: app.store,
+        country: app.country,
+      })),
+      skipDuplicates: true,
+    });
 
-      await this.prisma.trackedKeyword.upsert({
-        where: { appId_keywordId: { appId: app.id, keywordId: keyword.id } },
-        create: {
-          appId: app.id,
-          keywordId: keyword.id,
-          source: candidate.source,
-          active: true,
-        },
-        update: {},
-      });
-      await this.enqueueFirstScore(keyword.id, app);
+    const keywords = await this.prisma.keyword.findMany({
+      where: {
+        store: app.store,
+        country: app.country,
+        text: { in: candidates.map((candidate) => candidate.text) },
+      },
+      select: { id: true, text: true },
+    });
+    const keywordIdByText = new Map(
+      keywords.map((keyword) => [keyword.text, keyword.id]),
+    );
+
+    const tracked = candidates.flatMap((candidate) => {
+      const keywordId = keywordIdByText.get(candidate.text);
+      return keywordId
+        ? [
+            {
+              appId: app.id,
+              keywordId,
+              source: candidate.source,
+              active: true,
+            },
+          ]
+        : [];
+    });
+
+    await this.prisma.trackedKeyword.createMany({
+      data: tracked,
+      skipDuplicates: true,
+    });
+
+    for (const row of tracked) {
+      await this.enqueueFirstScore(row.keywordId, app);
     }
   }
 
