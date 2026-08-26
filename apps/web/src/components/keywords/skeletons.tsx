@@ -20,3 +20,17 @@ export function KeywordsTableSkeleton() {
     </div>
   );
 }
+
+export function KeywordFieldSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <Skeleton className="h-20 w-full rounded-lg" />
+      <Skeleton className="h-1 w-full rounded-full" />
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-4 w-16" />
+      </div>
+      <Skeleton className="h-9 w-40 rounded-lg" />
+    </div>
+  );
+}
