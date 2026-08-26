@@ -1,34 +1,76 @@
+import {
+  test as signedOut,
+  type BrowserContext,
+  type Page,
+} from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { SIGNED_IN_ROUTES } from "./routes.mts";
+import { SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
+
+async function expectOneMainAndOneTopHeading(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+}
+
+async function expectNoSkippedHeadingLevel(page: Page, path: string) {
+  await page.goto(path);
+  await page.waitForLoadState("networkidle");
+
+  const levels = await page.evaluate(() =>
+    Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).map(
+      (heading) => Number(heading.tagName.slice(1)),
+    ),
+  );
+  expect(levels.length).toBeGreaterThan(0);
+
+  const skipped = levels.filter((level, index) => {
+    const previous = levels[index - 1];
+    return previous !== undefined && level - previous > 1;
+  });
+  expect(skipped, `heading outline was ${levels.join(", ")}`).toEqual([]);
+}
+
+function seedCookies(
+  context: BrowserContext,
+  cookies: Readonly<Record<string, string>>,
+) {
+  return context.addCookies(
+    Object.entries(cookies).map(([name, value]) => ({
+      name,
+      value,
+      domain: "localhost",
+      path: "/",
+    })),
+  );
+}
 
 for (const [name, path] of SIGNED_IN_ROUTES) {
-  test(`${name} exposes one main landmark and one level one heading`, async ({
+  test(`${name} exposes one main landmark and one level one heading`, ({
     page,
-  }) => {
-    await page.goto(path);
-    await page.waitForLoadState("networkidle");
+  }) => expectOneMainAndOneTopHeading(page, path));
 
-    await expect(page.getByRole("main")).toHaveCount(1);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
-  });
+  test(`${name} descends heading levels without skipping`, ({ page }) =>
+    expectNoSkippedHeadingLevel(page, path));
+}
 
-  test(`${name} descends heading levels without skipping`, async ({ page }) => {
-    await page.goto(path);
-    await page.waitForLoadState("networkidle");
+for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
+  signedOut(
+    `${name} exposes one main landmark and one level one heading`,
+    async ({ page, context }) => {
+      await seedCookies(context, cookies);
+      await expectOneMainAndOneTopHeading(page, path);
+    },
+  );
 
-    const levels = await page.evaluate(() =>
-      Array.from(document.querySelectorAll("h1, h2, h3, h4, h5, h6")).map(
-        (heading) => Number(heading.tagName.slice(1)),
-      ),
-    );
-    expect(levels.length).toBeGreaterThan(0);
-
-    const skipped = levels.filter((level, index) => {
-      const previous = levels[index - 1];
-      return previous !== undefined && level - previous > 1;
-    });
-    expect(skipped, `heading outline was ${levels.join(", ")}`).toEqual([]);
-  });
+  signedOut(
+    `${name} descends heading levels without skipping`,
+    async ({ page, context }) => {
+      await seedCookies(context, cookies);
+      await expectNoSkippedHeadingLevel(page, path);
+    },
+  );
 }
 
 test("a skip link is the first tabbable control and targets the main region", async ({
