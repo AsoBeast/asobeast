@@ -20,6 +20,7 @@ import { QuotaExceededError } from '../auth/quota.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import {
+  StoreAppNotFoundError,
   StoreNotSupportedError,
   StoreRequestError,
 } from '../store-providers/errors';
@@ -81,6 +82,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: HttpStatus.NOT_IMPLEMENTED,
         error: 'Not Implemented',
         message: GOOGLE_PLAY_MESSAGE,
+      };
+    }
+    if (exception instanceof StoreAppNotFoundError) {
+      return {
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+        message: exception.message,
       };
     }
     if (exception instanceof StoreRequestError) {

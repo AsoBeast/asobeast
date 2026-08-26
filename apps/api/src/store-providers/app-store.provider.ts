@@ -14,7 +14,11 @@ import {
   AppStoreReviewResult,
   AppStoreSearchResult,
 } from './app-store.lib';
-import { StoreRequestError } from './errors';
+import {
+  isMissingApp,
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from './errors';
 import {
   ChartItem,
   NormalizedApp,
@@ -26,7 +30,6 @@ import {
 
 const RETRY_DELAYS_MS = [2000, 5000];
 const CHART_MAX = 200;
-const NOT_FOUND_PATTERN = /not found/i;
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -42,8 +45,10 @@ export class AppStoreProvider implements StoreProvider {
   constructor(@Inject(APP_STORE_LIB) private readonly lib: AppStoreLib) {}
 
   async getApp(storeAppId: string, country: string): Promise<NormalizedApp> {
-    const raw = await this.withRetry('getApp', () =>
-      this.lib.app({ id: Number(storeAppId), country, ratings: true }),
+    const raw = await this.withRetry(
+      'getApp',
+      () => this.lib.app({ id: Number(storeAppId), country, ratings: true }),
+      storeAppId,
     );
     const subtitle =
       raw.subtitle ?? (await this.fetchSubtitle(storeAppId, country));
@@ -136,12 +141,11 @@ export class AppStoreProvider implements StoreProvider {
       await this.lib.app({ id: Number(storeAppId), country, ratings: false });
       return 'available';
     } catch (error) {
-      const message = messageOf(error);
-      if (NOT_FOUND_PATTERN.test(message)) {
+      if (isMissingApp(error)) {
         return 'unavailable';
       }
       this.logger.warn(
-        `availability probe failed for ${storeAppId} in ${country}: ${message}`,
+        `availability probe failed for ${storeAppId} in ${country}: ${messageOf(error)}`,
       );
       return 'unknown';
     }
@@ -212,6 +216,7 @@ export class AppStoreProvider implements StoreProvider {
   private async withRetry<T>(
     method: string,
     call: () => Promise<T>,
+    missingAppId?: string,
   ): Promise<T> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
@@ -219,6 +224,9 @@ export class AppStoreProvider implements StoreProvider {
         return await call();
       } catch (error) {
         lastError = error;
+        if (missingAppId !== undefined && isMissingApp(error)) {
+          throw new StoreAppNotFoundError(this.store, missingAppId);
+        }
         const delay = RETRY_DELAYS_MS[attempt];
         if (delay === undefined) break;
         await sleep(delay);

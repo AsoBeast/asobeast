@@ -1,8 +1,12 @@
 import { UnrecoverableError } from 'bullmq';
-import { ImplausibleResultError } from '../store-providers/errors';
+import {
+  ImplausibleResultError,
+  StoreAppNotFoundError,
+} from '../store-providers/errors';
 
 export function withoutRetry(error: unknown): unknown {
-  return error instanceof ImplausibleResultError
+  return error instanceof ImplausibleResultError ||
+    error instanceof StoreAppNotFoundError
     ? new UnrecoverableError(error.message)
     : error;
 }

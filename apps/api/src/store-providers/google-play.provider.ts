@@ -6,7 +6,11 @@ import {
   OVERALL_GENRE,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
-import { StoreRequestError } from './errors';
+import {
+  isMissingApp,
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from './errors';
 import {
   GOOGLE_PLAY_LIB,
   GPLAY_COLLECTIONS,
@@ -102,8 +106,10 @@ export class GooglePlayProvider implements StoreProvider {
 
   async getApp(storeAppId: string, country: string): Promise<NormalizedApp> {
     const lang = googlePlayLanguage(country);
-    const raw = await this.call('getApp', () =>
-      this.lib.app({ appId: storeAppId, country, lang }),
+    const raw = await this.call(
+      'getApp',
+      () => this.lib.app({ appId: storeAppId, country, lang }),
+      storeAppId,
     );
     return {
       store: this.store,
@@ -265,10 +271,17 @@ export class GooglePlayProvider implements StoreProvider {
     };
   }
 
-  private async call<T>(method: string, fn: () => Promise<T>): Promise<T> {
+  private async call<T>(
+    method: string,
+    fn: () => Promise<T>,
+    missingAppId?: string,
+  ): Promise<T> {
     try {
       return await fn();
     } catch (error) {
+      if (missingAppId !== undefined && isMissingApp(error)) {
+        throw new StoreAppNotFoundError(this.store, missingAppId);
+      }
       throw new StoreRequestError(this.store, method, messageOf(error));
     }
   }
