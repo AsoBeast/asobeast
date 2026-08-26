@@ -6,6 +6,7 @@ import { QUEUES, queueNameForStore } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_KEYWORD_WORDS = 5;
+const MAX_KEYWORD_CHARS = 100;
 const RANKING_HISTORY_LIMIT = 60;
 
 export interface KeywordApp {
@@ -20,6 +21,11 @@ export function normalizeKeyword(raw: string): string {
   const text = normalizeText(raw);
   if (!text) {
     throw new BadRequestException('Keyword must not be empty');
+  }
+  if (text.length > MAX_KEYWORD_CHARS) {
+    throw new BadRequestException(
+      `Keyword exceeds ${MAX_KEYWORD_CHARS} characters`,
+    );
   }
   if (text.split(' ').length > MAX_KEYWORD_WORDS) {
     throw new BadRequestException(
