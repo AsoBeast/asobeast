@@ -17,7 +17,7 @@ const BEARER_SCHEME = 'personalApiToken';
 const API_DESCRIPTION = [
   'Self hosted ASO toolkit API.',
   '',
-  'Every response carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset for the tightest limit the request touched. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.',
+  'A metered instance carries RateLimit-Limit, RateLimit-Remaining and RateLimit-Reset on every response, for the tightest limit the request touched. A self hosted instance has no request rate limits and sends no such header. Limits are per workspace, so minting more tokens does not buy more capacity, and they are sized per plan across three classes: read for stored data, write for configuration changes and store for the endpoints that reach the App Store or Google Play.',
   '',
   'A 429 carries Retry-After and a rateLimit object naming the window that closed. A 403 with a quota object means a plan capacity limit such as apps or tracked keyword markets, which is a different problem from a rate limit. A 402 with an entitlement object means the workspace needs a plan.',
   '',
