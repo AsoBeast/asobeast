@@ -62,6 +62,7 @@ const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
+const keywordFields = new Map<string, string>();
 const INITIAL_COMPETITORS = new Map(
   Object.entries(DATASETS).map(([id, dataset]) => [
     id,
@@ -331,6 +332,32 @@ function keywordFieldResult(text: string, country: string): KeywordFieldResult {
     charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
     duplicatesRemoved: parsed.length - unique.length,
   };
+}
+
+function keywordFieldDataset(
+  id: string,
+  req: IncomingMessage,
+  res: ServerResponse,
+): (typeof DATASETS)[string] | undefined {
+  const path = req.url ?? "/";
+  const dataset = DATASETS[id];
+  if (!dataset) {
+    json(res, 404, errorEnvelope(404, path, `App ${id} not found`));
+    return undefined;
+  }
+  if (dataset.detail.store !== "APP_STORE") {
+    json(
+      res,
+      400,
+      errorEnvelope(
+        400,
+        path,
+        "The keyword field is only available for App Store apps",
+      ),
+    );
+    return undefined;
+  }
+  return dataset;
 }
 
 const CAPTURED_SUBTITLE = "Focus timer and planner";
@@ -753,35 +780,34 @@ const routes: Route[] = [
     },
   },
   {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keyword-field$/,
+    handler: ([id], req, res) => {
+      const dataset = keywordFieldDataset(id, req, res);
+      if (!dataset) return;
+      json(
+        res,
+        200,
+        keywordFieldResult(keywordFields.get(id) ?? "", dataset.detail.country),
+      );
+    },
+  },
+  {
     method: "PUT",
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
       withBody<KeywordFieldRequest>(req, res, (body) => {
-        const path = req.url ?? "/";
-        const dataset = DATASETS[id];
-        if (!dataset) {
-          return json(
-            res,
-            404,
-            errorEnvelope(404, path, `App ${id} not found`),
-          );
-        }
-        if (dataset.detail.store !== "APP_STORE") {
-          return json(
-            res,
-            400,
-            errorEnvelope(
-              400,
-              path,
-              "The keyword field is only available for App Store apps",
-            ),
-          );
-        }
-        json(
-          res,
-          200,
-          keywordFieldResult(body.text ?? "", dataset.detail.country),
+        const dataset = keywordFieldDataset(id, req, res);
+        if (!dataset) return;
+        const result = keywordFieldResult(
+          body.text ?? "",
+          dataset.detail.country,
         );
+        keywordFields.set(
+          id,
+          result.tracked.map((keyword) => keyword.text).join(","),
+        );
+        json(res, 200, result);
       });
     },
   },

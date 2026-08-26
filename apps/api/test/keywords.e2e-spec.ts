@@ -4,6 +4,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
+  ApiErrorEnvelope,
   AppDetail,
   KeywordFieldResult,
   KeywordSuggestion,
@@ -300,6 +301,82 @@ describe('KeywordsController (e2e)', () => {
       'streak',
       'tracker',
     ]);
+  });
+
+  it('reads back the stored ios keyword field with the same accounting', async () => {
+    const id = await importApp();
+
+    const written = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'habit,tracker,streak,habit' })
+      .expect(200);
+    const writtenBody = written.body as KeywordFieldResult;
+
+    const read = await api.get(`/apps/${id}/keyword-field`).expect(200);
+    const readBody = read.body as KeywordFieldResult;
+
+    expect(readBody.tracked.map((item) => item.text).sort()).toEqual([
+      'habit',
+      'streak',
+      'tracker',
+    ]);
+    expect(readBody.charactersUsed).toBe(writtenBody.charactersUsed);
+    expect(readBody.charactersLimit).toBe(writtenBody.charactersLimit);
+    expect(readBody.duplicatesRemoved).toBe(0);
+    expect(readBody.tracked.every((item) => item.active)).toBe(true);
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'habit' })
+      .expect(200);
+
+    const afterShrink = await api.get(`/apps/${id}/keyword-field`).expect(200);
+    const shrunk = afterShrink.body as KeywordFieldResult;
+
+    expect(shrunk.tracked.map((item) => item.text)).toEqual(['habit']);
+    expect(shrunk.charactersUsed).toBe('habit'.length);
+  });
+
+  it('reads an empty keyword field for an app that never had one', async () => {
+    const id = await importApp();
+
+    const response = await api.get(`/apps/${id}/keyword-field`).expect(200);
+
+    expect(response.body as KeywordFieldResult).toEqual({
+      tracked: [],
+      charactersUsed: 0,
+      charactersLimit: 100,
+      duplicatesRemoved: 0,
+    });
+  });
+
+  it('refuses to read the keyword field of a google play app', async () => {
+    const play = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.game',
+        country: 'us',
+        name: 'Idle Tower Defense',
+      },
+    });
+
+    const read = await api.get(`/apps/${play.id}/keyword-field`).expect(400);
+    const write = await api
+      .put(`/apps/${play.id}/keyword-field`)
+      .send({ text: 'tower defense' })
+      .expect(400);
+
+    expect((read.body as ApiErrorEnvelope).message).toBe(
+      'The keyword field is only available for App Store apps',
+    );
+    expect((write.body as ApiErrorEnvelope).message).toBe(
+      (read.body as ApiErrorEnvelope).message,
+    );
+  });
+
+  it('answers 404 for the keyword field of a missing app', async () => {
+    await api.get('/apps/missing-app/keyword-field').expect(404);
   });
 
   it('sorts tracked keywords by serp volatility with nulls last', async () => {

@@ -4,6 +4,7 @@ import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
   keywordCountriesOptions,
+  keywordFieldOptions,
   keywordsOptions,
 } from "@/lib/queries";
 import { countryParser, sortParser } from "@/lib/search-params";
@@ -29,6 +30,9 @@ export default async function KeywordsPage({
   await Promise.all([
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
     queryClient.prefetchQuery(keywordsOptions(id, sort, market)),
+    ...(app.store === "APP_STORE"
+      ? [queryClient.prefetchQuery(keywordFieldOptions(id))]
+      : []),
   ]);
 
   return (
