@@ -9,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { competitorsOptions } from "@/lib/queries";
 import { AddCompetitorForm } from "./AddCompetitorForm";
 import { ComparisonMatrix } from "./ComparisonMatrix";
@@ -31,7 +32,9 @@ export function CompetitorsView({ id }: { id: string }) {
           <CardTitle>Track the apps you rank against</CardTitle>
         </CardHeader>
         <CardContent>
-          <AddCompetitorForm id={id} />
+          <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+            <AddCompetitorForm id={id} />
+          </Suspense>
         </CardContent>
       </Card>
 

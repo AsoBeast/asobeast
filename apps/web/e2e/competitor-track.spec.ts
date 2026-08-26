@@ -61,3 +61,25 @@ test("tracking an app store discovery row keeps working outside the us", async (
     page.getByText(`Now tracking ${APPLE_DISCOVERED.title}`),
   ).toBeVisible();
 });
+
+test("the add competitor example names the store of the app in view", async ({
+  page,
+}) => {
+  await page.goto(`/apps/${APP_GP_DETAIL.id}/competitors`);
+
+  await expect(
+    page.getByRole("textbox", { name: "Competitor Google Play URL" }),
+  ).toHaveAttribute(
+    "placeholder",
+    "https://play.google.com/store/apps/details?id=com.example.app",
+  );
+
+  await page.goto(`/apps/${APP_1_DE_DETAIL.id}/competitors`);
+
+  await expect(
+    page.getByRole("textbox", { name: "Competitor App Store URL" }),
+  ).toHaveAttribute(
+    "placeholder",
+    "https://apps.apple.com/us/app/name/id123456789",
+  );
+});
