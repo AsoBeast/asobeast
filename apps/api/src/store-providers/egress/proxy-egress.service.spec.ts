@@ -1,6 +1,6 @@
 import { ProxyOutcome, ProxyTier, Store } from '@prisma/client';
 import { Dispatcher } from 'undici';
-import { StoreRequestError } from '../errors';
+import { ImplausibleResultError, StoreRequestError } from '../errors';
 import { currentMeter } from './egress';
 import { ProxyEgress } from './proxy-egress.service';
 import { HealthObservation, ProxyHealthTracker } from './proxy-health.service';
@@ -180,6 +180,23 @@ describe('ProxyEgress', () => {
       Store.GOOGLE_PLAY,
       expect.objectContaining({ outcome: ProxyOutcome.BLOCKED }),
     );
+  });
+
+  it('records one silent outcome and one residential retry for an implausible review feed', async () => {
+    const implausible = new ImplausibleResultError(
+      Store.APP_STORE,
+      'the review feed for 123 came back empty',
+    );
+
+    await expect(
+      egress.through(Store.APP_STORE, 'us', () => Promise.reject(implausible)),
+    ).rejects.toBe(implausible);
+
+    expect(record).toHaveBeenCalledTimes(1);
+    expect(observationOf()).toEqual(
+      expect.objectContaining({ outcome: ProxyOutcome.SILENT }),
+    );
+    expect(claim).toHaveBeenCalledTimes(1);
   });
 
   it('retries a blocked request on residential egress once', async () => {
