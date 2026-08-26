@@ -248,6 +248,34 @@ describe('KeywordsController (e2e)', () => {
     ).toBe(1);
   });
 
+  it('refuses a bulk add larger than one request may carry', async () => {
+    const id = await importApp();
+
+    await api
+      .post(`/apps/${id}/keywords`)
+      .send({
+        keywords: Array.from({ length: 5_000 }, (_, index) => `kw${index}`),
+      })
+      .expect(400);
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(items.some((item) => item.text.startsWith('kw'))).toBe(false);
+  });
+
+  it('refuses a keyword phrase longer than a store search box accepts', async () => {
+    const id = await importApp();
+
+    await api
+      .post(`/apps/${id}/keywords`)
+      .send({ keywords: ['b'.repeat(10_000)] })
+      .expect(400);
+
+    expect(
+      await prisma.keyword.count({ where: { text: 'b'.repeat(10_000) } }),
+    ).toBe(0);
+  });
+
   it('rejects an invalid market code', async () => {
     const id = await importApp();
 
