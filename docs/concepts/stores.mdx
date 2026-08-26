@@ -29,6 +29,23 @@ asobeast handles this by asking you for it. Paste the field in the metadata work
 
 Leaving it empty is not neutral. Coverage will report the field as uncovered because asobeast has no evidence that it contains anything.
 
+## How do you read and write the keyword field?
+
+The field is one endpoint pair on the app, and both answer the same `KeywordFieldResult` shape.
+
+| Operation | Endpoint |
+| --- | --- |
+| Submit the field | `PUT /apps/{id}/keyword-field` |
+| Read the stored field | `GET /apps/{id}/keyword-field` |
+
+Three things the schema cannot tell you.
+
+- **The value is the tracked set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing, casing and order can all differ from what you submitted, and the character count is the count of the normalized set.
+- **It is home market only.** The read takes no country and scopes itself to `app.country`, because the keyword field belongs to the app rather than to a storefront. See [Countries and markets](/concepts/countries).
+- **`duplicatesRemoved` is 0 on a read.** It reports what the last submission discarded, and a read submits nothing.
+
+An app that has never had a keyword field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A Google Play app refuses both operations with 400.
+
 ## Why is the Google Play short description its indexed surface?
 
 The 80 character short description, called `summary` in the store payload, is Google Play's equivalent of the surfaces Apple splits across a subtitle and a keyword field. asobeast treats it accordingly.
