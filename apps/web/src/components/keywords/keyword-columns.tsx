@@ -2,7 +2,6 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
-import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
-import { DeltaChip, PositionDeltaChip } from "@/components/ui/delta-chip";
+import { DeltaChip } from "@/components/ui/delta-chip";
 import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
+  PositionCell,
   ScoreCell,
   scoreValue,
   SortHeader,
@@ -107,21 +106,7 @@ function positionColumn({ sort, onSort }: SortState) {
         onSort={onSort}
       />
     ),
-    cell: ({ row }) => (
-      <span className="numeric font-mono inline-flex items-center gap-1.5">
-        <span
-          className={cn(
-            row.original.latestPosition === null && "text-muted-foreground",
-          )}
-        >
-          {formatRankPosition(
-            row.original.latestPosition,
-            row.original.latestDepth ?? undefined,
-          )}
-        </span>
-        <PositionDeltaChip value={row.original.positionDelta1d} />
-      </span>
-    ),
+    cell: ({ row }) => <PositionCell keyword={row.original} />,
   });
 }
 

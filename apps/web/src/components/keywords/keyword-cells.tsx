@@ -9,7 +9,9 @@ import type {
   ScoringSource,
   TrackedKeywordItem,
 } from "@asobeast/shared";
+import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
+import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { Meter, type MeterTone } from "@/components/ui/meter";
 import {
   Tooltip,
@@ -208,6 +210,42 @@ function volatilityBand(value: number): {
     text: "text-signal-down",
     dot: "bg-signal-down",
   };
+}
+
+export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
+  const label = formatCheckedPosition(
+    keyword.latestPosition,
+    keyword.latestDepth,
+  );
+  if (label === null) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            aria-label="Position: not checked yet"
+            className="text-muted-foreground"
+          >
+            —
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>
+          The daily pipeline has not checked this keyword yet
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+  return (
+    <span className="numeric font-mono inline-flex items-center gap-1.5">
+      <span
+        className={cn(
+          keyword.latestPosition === null && "text-muted-foreground",
+        )}
+      >
+        {label}
+      </span>
+      <PositionDeltaChip value={keyword.positionDelta1d} />
+    </span>
+  );
 }
 
 export function VolatilityCell({ value }: { value: number | null }) {

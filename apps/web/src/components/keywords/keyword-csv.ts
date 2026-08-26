@@ -1,4 +1,4 @@
-import { formatRankPosition } from "@asobeast/shared";
+import { formatCheckedPosition } from "@asobeast/shared";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { scoreValue } from "./keyword-cells";
@@ -36,10 +36,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     keyword.text,
     keyword.source,
     keyword.active ? "true" : "false",
-    formatRankPosition(
-      keyword.latestPosition,
-      keyword.latestDepth ?? undefined,
-    ),
+    formatCheckedPosition(keyword.latestPosition, keyword.latestDepth),
     keyword.positionDelta1d,
     keyword.positionDelta7d,
     keyword.serpVolatility7d,
