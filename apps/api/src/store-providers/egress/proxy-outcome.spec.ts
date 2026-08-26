@@ -1,5 +1,9 @@
 import { ProxyOutcome, Store } from '@prisma/client';
-import { ImplausibleResultError, StoreRequestError } from '../errors';
+import {
+  ImplausibleResultError,
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from '../errors';
 import { outcomeOf } from './proxy-health.service';
 import { classifyFailure, cooldownMs } from './proxy-outcome';
 import { ProxyPoolUnavailableError } from './proxy-pool.service';
@@ -80,6 +84,12 @@ describe('outcomeOf', () => {
   it('blames no endpoint when the pool never handed one out', () => {
     expect(
       outcomeOf(new ProxyPoolUnavailableError(Store.APP_STORE, 1)),
+    ).toBeNull();
+  });
+
+  it('blames no endpoint when the store simply has no such app', () => {
+    expect(
+      outcomeOf(new StoreAppNotFoundError(Store.GOOGLE_PLAY, 'com.proxy.app')),
     ).toBeNull();
   });
 
