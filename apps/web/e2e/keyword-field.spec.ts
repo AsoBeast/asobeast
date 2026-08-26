@@ -1,6 +1,7 @@
 import { expect, test } from "./session.mts";
 import { KEYWORD_FIELD_CHAR_LIMIT } from "@asobeast/shared";
 
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const STORED = "focus timer,pomodoro,study timer";
 
 test("the keyword field refuses to save past its character limit", async ({
@@ -24,6 +25,9 @@ test("the keyword field refuses to save past its character limit", async ({
 });
 
 test("the saved keyword field survives a reload", async ({ page }) => {
+  await page.request.put(`${MOCK_API_URL}/apps/app-2/keyword-field`, {
+    data: { text: "" },
+  });
   await page.goto("/apps/app-2/keywords");
 
   const editor = page.getByRole("textbox", { name: "App Store keyword field" });

@@ -148,7 +148,6 @@ function resetState(): void {
   );
   webhooks.splice(0, webhooks.length, ...WEBHOOKS);
   emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
-  keywordFields.clear();
   for (const [id, initial] of INITIAL_COMPETITORS) {
     const list = DATASETS[id].competitors;
     list.splice(0, list.length, ...initial);
@@ -335,7 +334,7 @@ function keywordFieldResult(text: string, country: string): KeywordFieldResult {
   };
 }
 
-function keywordFieldRoute(
+function keywordFieldDataset(
   id: string,
   req: IncomingMessage,
   res: ServerResponse,
@@ -784,7 +783,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
-      const dataset = keywordFieldRoute(id, req, res);
+      const dataset = keywordFieldDataset(id, req, res);
       if (!dataset) return;
       json(
         res,
@@ -798,7 +797,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
       withBody<KeywordFieldRequest>(req, res, (body) => {
-        const dataset = keywordFieldRoute(id, req, res);
+        const dataset = keywordFieldDataset(id, req, res);
         if (!dataset) return;
         const result = keywordFieldResult(
           body.text ?? "",
