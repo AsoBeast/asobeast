@@ -1,7 +1,11 @@
 import { Store } from '@prisma/client';
 import { AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
-import { StoreNotSupportedError, StoreRequestError } from './errors';
+import {
+  StoreAppNotFoundError,
+  StoreNotSupportedError,
+  StoreRequestError,
+} from './errors';
 import { GooglePlayLib } from './google-play.lib';
 import { GooglePlayProvider } from './google-play.provider';
 import { StoreProviderRegistry } from './store-provider.registry';
@@ -61,7 +65,6 @@ describe('provider error taxonomy', () => {
     it.each([
       ['a transport failure', TRANSPORT_ERROR],
       ['a parse failure', PARSE_ERROR],
-      ['a missing app', NOT_FOUND_ERROR],
     ])('wraps %s in a StoreRequestError', async (_name, cause) => {
       const app = jest.fn().mockRejectedValue(cause);
       const provider = new AppStoreProvider(makeAppStoreLib({ app }));
@@ -72,6 +75,27 @@ describe('provider error taxonomy', () => {
       expect((error as StoreRequestError).store).toBe(Store.APP_STORE);
       expect((error as StoreRequestError).method).toBe('getApp');
       expect((error as StoreRequestError).causeMessage).toBe(cause.message);
+    });
+
+    it('separates a missing app from an upstream failure', async () => {
+      const app = jest.fn().mockRejectedValue(NOT_FOUND_ERROR);
+      const provider = new AppStoreProvider(makeAppStoreLib({ app }));
+
+      const error = await settle(provider.getApp('1', 'us'));
+
+      expect(error).toBeInstanceOf(StoreAppNotFoundError);
+      expect(error).not.toBeInstanceOf(StoreRequestError);
+      expect((error as StoreAppNotFoundError).store).toBe(Store.APP_STORE);
+      expect((error as StoreAppNotFoundError).storeAppId).toBe('1');
+    });
+
+    it('does not retry an app the store does not have', async () => {
+      const app = jest.fn().mockRejectedValue(NOT_FOUND_ERROR);
+      const provider = new AppStoreProvider(makeAppStoreLib({ app }));
+
+      await settle(provider.getApp('1', 'us'));
+
+      expect(app).toHaveBeenCalledTimes(1);
     });
 
     it('does not distinguish a parse failure from a transport failure', async () => {
@@ -151,7 +175,6 @@ describe('provider error taxonomy', () => {
     it.each([
       ['a transport failure', TRANSPORT_ERROR],
       ['a parse failure', PARSE_ERROR],
-      ['a missing app', NOT_FOUND_ERROR],
     ])('wraps %s in a StoreRequestError', async (_name, cause) => {
       const app = jest.fn().mockRejectedValue(cause);
       const provider = new GooglePlayProvider(makeGooglePlayLib({ app }));
@@ -164,6 +187,17 @@ describe('provider error taxonomy', () => {
       expect((error as StoreRequestError).causeMessage).toBe(
         `${cause.name}: ${cause.message}`,
       );
+    });
+
+    it('separates a missing app from an upstream failure', async () => {
+      const app = jest.fn().mockRejectedValue(NOT_FOUND_ERROR);
+      const provider = new GooglePlayProvider(makeGooglePlayLib({ app }));
+
+      const error = await settle(provider.getApp('com.example', 'us'));
+
+      expect(error).toBeInstanceOf(StoreAppNotFoundError);
+      expect((error as StoreAppNotFoundError).store).toBe(Store.GOOGLE_PLAY);
+      expect((error as StoreAppNotFoundError).storeAppId).toBe('com.example');
     });
 
     it('does not retry, unlike the app store provider', async () => {
