@@ -4,6 +4,7 @@ import { Store } from '@prisma/client';
 import { Job } from 'bullmq';
 import { PoolCapacity } from '../store-providers/egress/pool-capacity.service';
 import { StoreJobsHandler } from './store-jobs.handler';
+import { withoutRetry } from './unrecoverable';
 
 export abstract class StoreQueueWorker
   extends WorkerHost
@@ -35,7 +36,7 @@ export abstract class StoreQueueWorker
       this.logger.warn(
         `failed ${job.name} #${job.id}: ${(error as Error).message}`,
       );
-      throw error;
+      throw withoutRetry(error);
     }
   }
 
