@@ -15,7 +15,11 @@ import { AddCompetitorForm } from "./AddCompetitorForm";
 import { ComparisonMatrix } from "./ComparisonMatrix";
 import { CompetitorList } from "./CompetitorList";
 import { DiscoveryPanel } from "./DiscoveryPanel";
-import { ComparisonMatrixSkeleton, CompetitorListSkeleton } from "./skeletons";
+import {
+  ComparisonMatrixSkeleton,
+  CompetitorListSkeleton,
+  DiscoveryCardSkeleton,
+} from "./skeletons";
 
 function CompetitorListSection({ id }: { id: string }) {
   const { data: competitors } = useSuspenseQuery(competitorsOptions(id));
@@ -42,7 +46,9 @@ export function CompetitorsView({ id }: { id: string }) {
         <CompetitorListSection id={id} />
       </Suspense>
 
-      <DiscoveryPanel id={id} />
+      <Suspense fallback={<DiscoveryCardSkeleton />}>
+        <DiscoveryPanel id={id} />
+      </Suspense>
 
       <Suspense fallback={<ComparisonMatrixSkeleton />}>
         <ComparisonMatrix id={id} />

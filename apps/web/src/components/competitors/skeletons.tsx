@@ -33,6 +33,20 @@ export function DiscoveryPanelSkeleton() {
   );
 }
 
+export function DiscoveryCardSkeleton() {
+  return (
+    <Card>
+      <CardHeader className="gap-2">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-5 w-56" />
+      </CardHeader>
+      <CardContent>
+        <DiscoveryPanelSkeleton />
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ComparisonMatrixSkeleton() {
   return (
     <Card>

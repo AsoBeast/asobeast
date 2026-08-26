@@ -3,6 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -26,14 +27,22 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
-import { discoveryOptions } from "@/lib/queries";
-import { formatNumber, formatRating } from "@/lib/format";
+import { appDetailOptions, discoveryOptions } from "@/lib/queries";
+import { formatNumber, formatRating, storeLabel } from "@/lib/format";
 import { DISCOVERY_WINDOWS } from "@/lib/ranges";
 import { discoveryDaysParser } from "@/lib/search-params";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 import { TrackButton } from "./TrackButton";
 
-function DiscoveryTable({ id, days }: { id: string; days: number }) {
+function DiscoveryTable({
+  id,
+  days,
+  storeName,
+}: {
+  id: string;
+  days: number;
+  storeName: string;
+}) {
   const { data } = useSuspenseQuery(discoveryOptions(id, days));
 
   if (data.items.length === 0) {
@@ -49,8 +58,8 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
     <div className="overflow-x-auto rounded-xl border">
       <Table>
         <TableCaption className="sr-only">
-          Untracked apps appearing in your keyword search results over the last{" "}
-          {days} days.
+          Untracked {storeName} apps appearing in your keyword search results
+          over the last {days} days.
         </TableCaption>
         <TableHeader>
           <TableRow>
@@ -123,13 +132,18 @@ function DiscoveryTable({ id, days }: { id: string; days: number }) {
 
 export function DiscoveryPanel({ id }: { id: string }) {
   const [days, setDays] = useQueryState("days", discoveryDaysParser);
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const storeName = storeLabel(detail.store);
 
   return (
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <CardDescription>Discovery</CardDescription>
-          <CardTitle>Apps you don’t track yet</CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle>Apps you don’t track yet</CardTitle>
+            <Badge variant="secondary">{storeName}</Badge>
+          </div>
         </div>
         <Tabs
           value={String(days)}
@@ -146,7 +160,7 @@ export function DiscoveryPanel({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <Suspense fallback={<DiscoveryPanelSkeleton />}>
-          <DiscoveryTable id={id} days={days} />
+          <DiscoveryTable id={id} days={days} storeName={storeName} />
         </Suspense>
       </CardContent>
     </Card>
