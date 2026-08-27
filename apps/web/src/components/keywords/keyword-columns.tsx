@@ -3,6 +3,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
+import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -23,7 +24,10 @@ import {
 } from "./keyword-cells";
 import { SourceBadge } from "./SourceBadge";
 
-const columnHelper = createColumnHelper<TrackedKeywordItem>();
+const columnHelper = createColumnHelper<
+  KeywordTableFeatures,
+  TrackedKeywordItem
+>();
 
 interface SortState {
   sort: KeywordSort | null;
@@ -39,14 +43,14 @@ export function keywordColumns({
   appId: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
-  return [
+  return columnHelper.columns([
     ...identityColumns(),
     positionColumn({ sort, onSort }),
     ...scoreColumns({ sort, onSort }),
     deltaColumn(),
     volatilityColumn({ sort, onSort }),
     actionsColumn({ appId, onOpenSerp }),
-  ];
+  ]);
 }
 
 function identityColumns() {

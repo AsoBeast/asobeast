@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   Table,
   TableBody,
@@ -27,7 +28,7 @@ const VIRTUALIZE_ABOVE = 50;
 export function KeywordsDataTable({
   table,
 }: {
-  table: TableInstance<TrackedKeywordItem>;
+  table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = table.getRowModel().rows;

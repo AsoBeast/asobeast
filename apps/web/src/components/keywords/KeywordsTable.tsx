@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import {
-  getCoreRowModel,
-  useReactTable,
-  type RowSelectionState,
-} from "@tanstack/react-table";
+import type { TrackedKeywordItem } from "@asobeast/shared";
+import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
 import { serpParser, sortParser } from "@/lib/search-params";
 import { keywordColumns } from "./keyword-columns";
+import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
@@ -29,7 +27,12 @@ export function KeywordsTable({
   const { data: keywords } = useSuspenseQuery(
     keywordsOptions(id, sort, country),
   );
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [selection, setSelection] = useState<RowSelectionState>({});
+
+  const rowSelection = useMemo(
+    () => selectedKeywordsStillOnScreen(selection, keywords),
+    [keywords, selection],
+  );
 
   const columns = useMemo(
     () =>
@@ -42,36 +45,17 @@ export function KeywordsTable({
     [id, sort, setSort, setSerp],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features: keywordTableFeatures,
     data: keywords,
     columns,
     state: { rowSelection },
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: setSelection,
     getRowId: (row) => row.keywordId,
-    manualSorting: true,
     enableRowSelection: true,
-    getCoreRowModel: getCoreRowModel(),
   });
 
-  useEffect(() => {
-    const ids = new Set(keywords.map((keyword) => keyword.keywordId));
-    setRowSelection((prev) => {
-      let changed = false;
-      const next: RowSelectionState = {};
-      for (const key of Object.keys(prev)) {
-        if (ids.has(key)) {
-          next[key] = prev[key];
-        } else {
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [keywords]);
-
-  const selectedIds = Object.keys(rowSelection).filter(
-    (key) => rowSelection[key],
-  );
+  const selectedIds = Object.keys(rowSelection);
   const selectedKeywords = keywords.filter(
     (keyword) => rowSelection[keyword.keywordId],
   );
@@ -90,7 +74,7 @@ export function KeywordsTable({
             <KeywordsBulkActions
               appId={id}
               selectedIds={selectedIds}
-              onClear={() => setRowSelection({})}
+              onClear={() => setSelection({})}
               onExport={() => exportKeywords(id, selectedKeywords)}
             />
           </div>
@@ -99,4 +83,17 @@ export function KeywordsTable({
       <SerpSheet appId={id} />
     </>
   );
+}
+
+function selectedKeywordsStillOnScreen(
+  selection: RowSelectionState,
+  keywords: readonly TrackedKeywordItem[],
+): RowSelectionState {
+  const onScreen = new Set(keywords.map((keyword) => keyword.keywordId));
+  const kept = Object.entries(selection).filter(
+    ([keywordId, selected]) => selected && onScreen.has(keywordId),
+  );
+  return kept.length === Object.keys(selection).length
+    ? selection
+    : Object.fromEntries(kept);
 }
