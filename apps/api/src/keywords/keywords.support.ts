@@ -1,12 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { normalizeText } from '@asobeast/shared';
+import { normalizeText, TRACKED_KEYWORD_CHAR_LIMIT } from '@asobeast/shared';
 import { QUEUES, queueNameForStore } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 
 const MAX_KEYWORD_WORDS = 5;
-const MAX_KEYWORD_CHARS = 100;
 const RANKING_HISTORY_LIMIT = 60;
 
 export interface KeywordApp {
@@ -22,9 +21,9 @@ export function normalizeKeyword(raw: string): string {
   if (!text) {
     throw new BadRequestException('Keyword must not be empty');
   }
-  if (text.length > MAX_KEYWORD_CHARS) {
+  if (text.length > TRACKED_KEYWORD_CHAR_LIMIT) {
     throw new BadRequestException(
-      `Keyword exceeds ${MAX_KEYWORD_CHARS} characters`,
+      `Keyword exceeds ${TRACKED_KEYWORD_CHAR_LIMIT} characters`,
     );
   }
   if (text.split(' ').length > MAX_KEYWORD_WORDS) {

@@ -4,7 +4,11 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { normalizeText, type TrackedKeywordItem } from "@asobeast/shared";
+import {
+  KEYWORD_BULK_ADD_LIMIT,
+  normalizeText,
+  type TrackedKeywordItem,
+} from "@asobeast/shared";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -100,6 +104,12 @@ export function AddKeywordsDialog({
       setError("Market must be a two letter code, e.g. us");
       return;
     }
+    if (chips.length > KEYWORD_BULK_ADD_LIMIT) {
+      setError(
+        `One request may add ${KEYWORD_BULK_ADD_LIMIT} keywords, so split these ${chips.length}`,
+      );
+      return;
+    }
     mutation.mutate(chips);
   }
 
@@ -149,7 +159,8 @@ export function AddKeywordsDialog({
             </div>
           ) : null}
           <p className="text-xs text-muted-foreground tabular-nums">
-            {chips.length} keyword{chips.length === 1 ? "" : "s"} ready
+            {chips.length} of {KEYWORD_BULK_ADD_LIMIT} keyword
+            {chips.length === 1 ? "" : "s"} ready
           </p>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </DialogBody>

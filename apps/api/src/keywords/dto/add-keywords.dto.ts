@@ -1,5 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { COUNTRY_PATTERN, KeywordAddRequest } from '@asobeast/shared';
+import {
+  COUNTRY_PATTERN,
+  KEYWORD_BULK_ADD_LIMIT,
+  KeywordAddRequest,
+} from '@asobeast/shared';
 import {
   ArrayMaxSize,
   ArrayNotEmpty,
@@ -9,16 +13,14 @@ import {
   Matches,
 } from 'class-validator';
 
-const MAX_KEYWORDS_PER_REQUEST = 200;
-
 export class AddKeywordsDto implements KeywordAddRequest {
   @ApiProperty({
     example: ['habit tracker', 'streak counter'],
-    maxItems: MAX_KEYWORDS_PER_REQUEST,
+    maxItems: KEYWORD_BULK_ADD_LIMIT,
   })
   @IsArray()
   @ArrayNotEmpty()
-  @ArrayMaxSize(MAX_KEYWORDS_PER_REQUEST)
+  @ArrayMaxSize(KEYWORD_BULK_ADD_LIMIT)
   @IsString({ each: true })
   keywords!: string[];
 

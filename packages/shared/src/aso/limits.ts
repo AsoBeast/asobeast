@@ -38,6 +38,10 @@ export const STORE_FIELD_LIMITS: Record<
 export const KEYWORD_FIELD_CHAR_LIMIT =
   STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;
 
+export const TRACKED_KEYWORD_CHAR_LIMIT = 100;
+
+export const KEYWORD_BULK_ADD_LIMIT = 200;
+
 export function countChars(text: string): number {
   return text.length;
 }
