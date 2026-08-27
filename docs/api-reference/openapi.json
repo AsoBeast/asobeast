@@ -3977,6 +3977,7 @@
         "properties": {
           "text": {
             "type": "string",
+            "maxLength": 1000,
             "example": "habit,tracker,streak,daily goals"
           }
         },
