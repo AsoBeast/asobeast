@@ -8,6 +8,7 @@ const secrets = [AUTH_SECRET];
 
 function eventWith(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
   return {
+    type: undefined,
     event_id: 'abc',
     exception: {
       values: [
@@ -29,7 +30,7 @@ function eventWith(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
       ],
     },
     ...overrides,
-  } as ErrorEvent;
+  };
 }
 
 describe('maskRoute', () => {
