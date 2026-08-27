@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   ApiErrorEnvelope,
   AppDetail,
+  DailyBudget,
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -246,6 +247,32 @@ describe('KeywordsController (e2e)', () => {
         where: { text: 'aplikacja treningowa', country: 'pl' },
       }),
     ).toBe(1);
+  });
+
+  it('adds no keyword searches to the budget when a competitor is refreshed', async () => {
+    const id = await importApp();
+    const before = (await api.get('/jobs/budget').expect(200))
+      .body as DailyBudget;
+
+    const competitor = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '9876543210',
+        country: 'us',
+        name: 'Rival',
+        isCompetitor: true,
+        primaryAppId: id,
+      },
+    });
+    await api.post(`/apps/${competitor.id}/refresh`).expect(200);
+
+    const after = (await api.get('/jobs/budget').expect(200))
+      .body as DailyBudget;
+    expect(after.keywords).toBe(before.keywords);
+    expect(
+      await prisma.trackedKeyword.count({ where: { appId: competitor.id } }),
+    ).toBe(0);
   });
 
   it('refuses a bulk add larger than one request may carry', async () => {
