@@ -89,13 +89,13 @@ describe('provider error taxonomy', () => {
       expect((error as StoreAppNotFoundError).storeAppId).toBe('1');
     });
 
-    it('does not retry an app the store does not have', async () => {
+    it('retries a missing app as often as any other failure', async () => {
       const app = jest.fn().mockRejectedValue(NOT_FOUND_ERROR);
       const provider = new AppStoreProvider(makeAppStoreLib({ app }));
 
       await settle(provider.getApp('1', 'us'));
 
-      expect(app).toHaveBeenCalledTimes(1);
+      expect(app).toHaveBeenCalledTimes(APP_STORE_ATTEMPTS);
     });
 
     it('does not distinguish a parse failure from a transport failure', async () => {

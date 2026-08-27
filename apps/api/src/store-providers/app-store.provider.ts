@@ -224,13 +224,13 @@ export class AppStoreProvider implements StoreProvider {
         return await call();
       } catch (error) {
         lastError = error;
-        if (missingAppId !== undefined && isMissingApp(error)) {
-          throw new StoreAppNotFoundError(this.store, missingAppId);
-        }
         const delay = RETRY_DELAYS_MS[attempt];
         if (delay === undefined) break;
         await sleep(delay);
       }
+    }
+    if (missingAppId !== undefined && isMissingApp(lastError)) {
+      throw new StoreAppNotFoundError(this.store, missingAppId);
     }
     throw new StoreRequestError(this.store, method, messageOf(lastError));
   }

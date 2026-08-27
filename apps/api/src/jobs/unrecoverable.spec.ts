@@ -20,13 +20,10 @@ describe('withoutRetry', () => {
     expect((converted as Error).message).toBe(rejection.message);
   });
 
-  it('stops a delisted app from being retried', () => {
+  it('leaves a missing app to the queue, which cannot tell it from a soft block', () => {
     const missing = new StoreAppNotFoundError(Store.APP_STORE, '9999999999');
 
-    const converted = withoutRetry(missing);
-
-    expect(converted).toBeInstanceOf(UnrecoverableError);
-    expect((converted as Error).message).toBe(missing.message);
+    expect(withoutRetry(missing)).toBe(missing);
   });
 
   it('leaves a store request failure to the queue', () => {
