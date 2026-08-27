@@ -1,4 +1,6 @@
-import type { ErrorEvent } from "@sentry/nextjs";
+import type { ErrorEvent, init } from "@sentry/nextjs";
+
+type SentryOptions = Parameters<typeof init>[0];
 
 const PRODUCTION = "production";
 const IDENTIFIER = /^(c[a-z0-9]{20,}|[0-9a-f-]{16,}|\d+)$/i;
@@ -46,7 +48,7 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
   };
 }
 
-export function reportingOptions(dsn: string) {
+export function reportingOptions(dsn: string): SentryOptions {
   return {
     dsn,
     environment: PRODUCTION,

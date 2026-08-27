@@ -70,7 +70,7 @@ describe('ErrorTracking', () => {
       { workspaceId: 'ws_a', correlationId: 'corr-1' },
       () => {
         tracking.capture(error, {
-          transaction: 'GET /apps',
+          transaction: 'check-keyword',
           tags: { store: 'APP_STORE' },
         });
         return Promise.resolve();
@@ -83,7 +83,7 @@ describe('ErrorTracking', () => {
       correlation: 'corr-1',
       store: 'APP_STORE',
     });
-    expect(setTransactionName).toHaveBeenCalledWith('GET /apps');
+    expect(setTransactionName).toHaveBeenCalledWith('check-keyword');
     expect(captureException).toHaveBeenCalledWith(error);
   });
 

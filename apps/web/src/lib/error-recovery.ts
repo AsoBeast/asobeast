@@ -16,6 +16,8 @@ export interface Recovery {
   expected: boolean;
 }
 
+type Explanation = Omit<Recovery, "expected">;
+
 const GENERIC: Recovery = {
   title: "Something went wrong",
   body: "The request could not be completed. Trying again usually clears a transient failure.",
@@ -23,7 +25,7 @@ const GENERIC: Recovery = {
   expected: false,
 };
 
-const BY_STATUS: Record<number, Omit<Recovery, "expected">> = {
+const BY_STATUS: Record<number, Explanation> = {
   401: {
     title: "Your session expired",
     body: "Sign in again to keep working — nothing was lost.",
@@ -60,7 +62,7 @@ function reopens(retryAfterSeconds: number | null): string {
 function refused({
   planRefusal,
   retryAfterSeconds,
-}: ApiErrorDigest): Omit<Recovery, "expected"> {
+}: ApiErrorDigest): Explanation {
   return {
     title: planRefusal
       ? "Your plan's request budget is spent"

@@ -50,9 +50,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = http.getResponse<Response>();
     const resolved = this.resolve(exception);
     if (resolved.statusCode >= SERVER_ERROR_STATUS) {
-      this.tracking.capture(exception, {
-        transaction: `${request.method} ${request.url}`,
-      });
+      this.tracking.capture(exception);
     }
     const envelope: ApiErrorEnvelope = {
       ...resolved,

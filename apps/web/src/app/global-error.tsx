@@ -25,6 +25,7 @@ export default function GlobalError({
           justifyContent: "center",
           gap: "1rem",
           fontFamily: "system-ui, sans-serif",
+          colorScheme: "light dark",
           textAlign: "center",
         }}
       >

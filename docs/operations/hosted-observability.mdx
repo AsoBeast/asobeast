@@ -123,7 +123,7 @@ The web dsn is read at runtime and handed to the browser by `/api/health`, the s
 | API queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store |
 | API process | An uncaught exception or an unhandled rejection outside any request or job |
 | Web server | Server Component, route handler and proxy failures, through `onRequestError` |
-| Web browser | A render failure that reaches a route error boundary and that asobeast cannot already explain. An expired session, a spent budget or a missing record is not reported |
+| Web browser | A render failure that reaches a route error boundary and that asobeast cannot already explain. An expired session, a spent budget or a missing record is not reported, and neither is a server rendered failure, which the server already reported with a real stack |
 
 Tracing is deliberately off. `GET /metrics` already answers the performance questions this instance asks, and spans from a scraping pipeline are high volume for a question nobody is asking.
 

@@ -158,7 +158,7 @@ describe("recoveryFor", () => {
       "a server rendered failure it cannot name",
       () => Object.assign(new Error("An error occurred"), { digest: "abc123" }),
     ],
-  ])("treats %s as unexpected, so it is reported", (_case, build) => {
+  ])("treats %s as unexpected", (_case, build) => {
     expect(recoveryFor(build()).expected).toBe(false);
   });
 });
