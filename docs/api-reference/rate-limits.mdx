@@ -22,6 +22,17 @@ With `BILLING_ENABLED` set to `false` there are no API rate limits at all beyond
 
 Everything below applies to a metered instance.
 
+## Request size limits apply everywhere
+
+Two ceilings are resource safety rather than plan capacity, so they hold on a self hosted instance too.
+
+| Limit | Value | Endpoint |
+| --- | --- | --- |
+| Keywords per bulk add | 200 | `POST /apps/{id}/keywords` |
+| Characters per keyword phrase | 100 | `POST /apps/{id}/keywords` |
+
+A keyword is also capped at five words. Each tracked keyword market costs one real store search every day, so a pasted spreadsheet column or a scripting mistake would otherwise multiply a workspace's daily store volume without anyone choosing to. Exceeding either ceiling returns `400` and writes nothing, so a refused batch never lands half applied. Split a larger list across several requests.
+
 ## Three request classes
 
 | Class | What it covers | Drawn from |
