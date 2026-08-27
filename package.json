@@ -62,10 +62,5 @@
     "*.{ts,tsx,mts,cts,js,jsx,mjs,cjs,json,md,yml,yaml,css}": [
       "prettier --write"
     ]
-  },
-  "pnpm": {
-    "overrides": {
-      "deepmerge-ts": "^8.0.2"
-    }
   }
 }
