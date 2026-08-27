@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
@@ -28,19 +29,10 @@ export function KeywordsTable({
   );
   const [selection, setSelection] = useState<RowSelectionState>({});
 
-  // Selection is keyed by keyword id, so a refetch that drops a keyword would
-  // leave it selected and let a bulk action target a row nobody can see.
-  // Narrowing to the ids still on screen keeps that impossible, and doing it
-  // while rendering avoids an effect writing state straight back.
-  const rowSelection = useMemo(() => {
-    const ids = new Set(keywords.map((keyword) => keyword.keywordId));
-    const live = Object.entries(selection).filter(
-      ([keywordId, selected]) => selected && ids.has(keywordId),
-    );
-    return live.length === Object.keys(selection).length
-      ? selection
-      : Object.fromEntries(live);
-  }, [keywords, selection]);
+  const rowSelection = useMemo(
+    () => selectedKeywordsStillOnScreen(selection, keywords),
+    [keywords, selection],
+  );
 
   const columns = useMemo(
     () =>
@@ -91,4 +83,17 @@ export function KeywordsTable({
       <SerpSheet appId={id} />
     </>
   );
+}
+
+function selectedKeywordsStillOnScreen(
+  selection: RowSelectionState,
+  keywords: readonly TrackedKeywordItem[],
+): RowSelectionState {
+  const onScreen = new Set(keywords.map((keyword) => keyword.keywordId));
+  const kept = Object.entries(selection).filter(
+    ([keywordId, selected]) => selected && onScreen.has(keywordId),
+  );
+  return kept.length === Object.keys(selection).length
+    ? selection
+    : Object.fromEntries(kept);
 }

@@ -43,8 +43,6 @@ export function keywordColumns({
   appId: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
-  // columns() widens the per-column value types into one list the table
-  // accepts; a bare array literal keeps them and stops matching ColumnDef.
   return columnHelper.columns([
     ...identityColumns(),
     positionColumn({ sort, onSort }),
