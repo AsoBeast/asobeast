@@ -111,7 +111,11 @@ Both apps report through the official Sentry SDK, each behind its own gate.
 | API | `ERROR_TRACKING_DSN` | The dsn is set, `NODE_ENV` is `production` and `BILLING_ENABLED` is `true` |
 | Web | `SENTRY_DSN` | The dsn is set and `NODE_ENV` is `production` |
 
-When a gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent. **A self hosted deployment never reports its errors to anyone**, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+When a gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent.
+
+**The API never reports from a self hosted deployment.** `BILLING_ENABLED` is `false` there, so `ERROR_TRACKING_DSN` is ignored even if somebody sets it, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+
+**The web app has no equivalent third condition, and one thing follows from that.** No Compose file sets `SENTRY_DSN`, so a self hosted deployment reports nothing by default. An operator who sets it anyway is opting their own browsers in, and the reports go to whichever project that dsn names. Nothing reaches the hosted service, because the dsn is never baked into the published image.
 
 The web dsn is read at runtime and handed to the browser by `/api/health`, the same way `STATUS_PAGE_URL` reaches it. It is never baked into the image, because this repository publishes one set of images that the hosted service and every self hoster run.
 
