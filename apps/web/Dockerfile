@@ -15,7 +15,12 @@ COPY --from=pruner /repo/out/json/ .
 COPY --from=pruner /repo/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
-RUN pnpm turbo run build --filter=web
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
+ARG CI
+RUN --mount=type=secret,id=sentry_auth_token \
+    SENTRY_AUTH_TOKEN="$(cat /run/secrets/sentry_auth_token 2>/dev/null || true)" \
+    pnpm turbo run build --filter=web
 
 FROM base AS runner
 WORKDIR /repo

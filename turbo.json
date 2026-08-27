@@ -4,6 +4,8 @@
     "db:generate": { "cache": false },
     "build": {
       "dependsOn": ["^build", "db:generate"],
+      "env": ["SENTRY_AUTH_TOKEN", "SENTRY_ORG", "SENTRY_PROJECT"],
+      "passThroughEnv": ["CI"],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**"]
     },
     "dev": {
