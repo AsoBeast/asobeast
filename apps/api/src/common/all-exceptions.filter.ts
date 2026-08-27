@@ -27,9 +27,6 @@ import {
 
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
 
-const GOOGLE_PLAY_MESSAGE =
-  'Google Play support is planned; asobeast currently tracks App Store apps only';
-
 type ResolvedError = Pick<
   ApiErrorEnvelope,
   | 'statusCode'
@@ -81,7 +78,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         statusCode: HttpStatus.NOT_IMPLEMENTED,
         error: 'Not Implemented',
-        message: GOOGLE_PLAY_MESSAGE,
+        message: exception.message,
       };
     }
     if (exception instanceof StoreAppNotFoundError) {
