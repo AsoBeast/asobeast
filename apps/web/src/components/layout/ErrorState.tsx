@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { recoveryFor } from "@/lib/error-recovery";
-import { worthReporting } from "@/lib/error-reporting";
+import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
 import { webHealthOptions } from "@/lib/queries";
 
 export function ErrorState({
@@ -22,10 +22,7 @@ export function ErrorState({
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
 
   useEffect(() => {
-    if (!worthReporting(error)) return;
-    void import("@sentry/nextjs").then((Sentry) =>
-      Sentry.captureException(error),
-    );
+    if (worthReporting(error)) void reportBrowserError(error);
   }, [error]);
 
   return (

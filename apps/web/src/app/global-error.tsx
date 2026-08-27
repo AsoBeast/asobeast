@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
 
 export default function GlobalError({
   error,
@@ -10,9 +11,7 @@ export default function GlobalError({
   retry: () => void;
 }) {
   useEffect(() => {
-    void import("@sentry/nextjs").then((Sentry) =>
-      Sentry.captureException(error),
-    );
+    if (worthReporting(error)) void reportBrowserError(error);
   }, [error]);
 
   return (
