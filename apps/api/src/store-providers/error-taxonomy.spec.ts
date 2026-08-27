@@ -6,6 +6,7 @@ import {
   StoreNotSupportedError,
   StoreRequestError,
 } from './errors';
+import { NotFoundError, ParseError } from '@mradex77/google-play-scraper';
 import { GooglePlayLib } from './google-play.lib';
 import { GooglePlayProvider } from './google-play.provider';
 import { StoreProviderRegistry } from './store-provider.registry';
@@ -16,7 +17,16 @@ const TRANSPORT_ERROR = new Error('Request failed with status 503');
 const PARSE_ERROR = new TypeError(
   "Cannot read properties of undefined (reading 'trackId')",
 );
-const NOT_FOUND_ERROR = new Error('App not found (404)');
+const NOT_FOUND_ERROR = new Error('App not found: 1');
+const PROXY_NOT_FOUND_ERROR = new Error(
+  'Request failed with status 404: Not Found',
+);
+const PLAY_NOT_FOUND_ERROR = new NotFoundError(
+  'App not found (404)',
+  404,
+  'https://play.google.com/store/apps/details?id=com.example',
+);
+const PLAY_PARSE_ERROR = new ParseError('title selector not found');
 
 const makeAppStoreLib = (
   overrides: Partial<AppStoreLib> = {},
@@ -87,6 +97,16 @@ describe('provider error taxonomy', () => {
       expect(error).not.toBeInstanceOf(StoreRequestError);
       expect((error as StoreAppNotFoundError).store).toBe(Store.APP_STORE);
       expect((error as StoreAppNotFoundError).storeAppId).toBe('1');
+    });
+
+    it('does not mistake an upstream 404 page for a missing app', async () => {
+      const app = jest.fn().mockRejectedValue(PROXY_NOT_FOUND_ERROR);
+      const provider = new AppStoreProvider(makeAppStoreLib({ app }));
+
+      const error = await settle(provider.getApp('1', 'us'));
+
+      expect(error).toBeInstanceOf(StoreRequestError);
+      expect(error).not.toBeInstanceOf(StoreAppNotFoundError);
     });
 
     it('retries a missing app as often as any other failure', async () => {
@@ -190,7 +210,7 @@ describe('provider error taxonomy', () => {
     });
 
     it('separates a missing app from an upstream failure', async () => {
-      const app = jest.fn().mockRejectedValue(NOT_FOUND_ERROR);
+      const app = jest.fn().mockRejectedValue(PLAY_NOT_FOUND_ERROR);
       const provider = new GooglePlayProvider(makeGooglePlayLib({ app }));
 
       const error = await settle(provider.getApp('com.example', 'us'));
@@ -198,6 +218,16 @@ describe('provider error taxonomy', () => {
       expect(error).toBeInstanceOf(StoreAppNotFoundError);
       expect((error as StoreAppNotFoundError).store).toBe(Store.GOOGLE_PLAY);
       expect((error as StoreAppNotFoundError).storeAppId).toBe('com.example');
+    });
+
+    it('keeps a parse failure that mentions a missing selector upstream', async () => {
+      const app = jest.fn().mockRejectedValue(PLAY_PARSE_ERROR);
+      const provider = new GooglePlayProvider(makeGooglePlayLib({ app }));
+
+      const error = await settle(provider.getApp('com.example', 'us'));
+
+      expect(error).toBeInstanceOf(StoreRequestError);
+      expect(error).not.toBeInstanceOf(StoreAppNotFoundError);
     });
 
     it('does not retry, unlike the app store provider', async () => {
