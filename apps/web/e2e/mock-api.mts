@@ -222,7 +222,9 @@ function appRoute(
     handler: (params, req, res) => {
       const [id] = params;
       const path = req.url ?? "/";
-      if (id === ERROR_ID) return json(res, 500, errorEnvelope(500, path));
+      if (id === ERROR_ID || hasCookie(req, "e2e-fail-app", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       json(res, 200, pick(dataset));
