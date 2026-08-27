@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatRankPosition } from "@asobeast/shared";
+import { formatCheckedPosition } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { cn } from "@/lib/utils";
@@ -91,10 +91,10 @@ export function InsufficientHistory({ data }: { data: RankingChartData }) {
                 {data.seriesLabels[keywordId] ?? keywordId}
               </dt>
               <dd className="numeric font-mono text-title">
-                {formatRankPosition(
+                {formatCheckedPosition(
                   typeof value === "number" ? value : null,
-                  depths?.[keywordId] ?? undefined,
-                )}
+                  depths?.[keywordId] ?? null,
+                ) ?? "—"}
               </dd>
             </div>
           );

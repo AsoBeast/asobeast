@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { formatRankPosition, RANK_DEPTH } from "@asobeast/shared";
+import { formatCheckedPosition, RANK_DEPTH } from "@asobeast/shared";
 import {
   ChartContainer,
   ChartLegend,
@@ -65,7 +65,7 @@ function RankingTooltip({
       index,
       color: data.config[keywordId]?.color,
       label: data.config[keywordId]?.label ?? keywordId,
-      value: formatRankPosition(position, depths[keywordId] ?? undefined),
+      value: formatCheckedPosition(position, depths[keywordId] ?? null) ?? "—",
       sortBy: position ?? Infinity,
     };
   });

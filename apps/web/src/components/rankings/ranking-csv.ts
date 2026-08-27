@@ -1,4 +1,4 @@
-import { formatRankPosition } from "@asobeast/shared";
+import { formatCheckedPosition } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import type { RankingChartData } from "./pivot";
 
@@ -13,9 +13,9 @@ export function rankingCsv(data: RankingChartData): string {
     row.date,
     ...data.keywordIds.map((keywordId) => {
       const value = row[keywordId];
-      return formatRankPosition(
+      return formatCheckedPosition(
         typeof value === "number" ? value : null,
-        data.depths[index]?.[keywordId] ?? undefined,
+        data.depths[index]?.[keywordId] ?? null,
       );
     }),
   ]);
