@@ -40,6 +40,8 @@ export const KEYWORD_FIELD_CHAR_LIMIT =
 
 export const TRACKED_KEYWORD_CHAR_LIMIT = 100;
 
+export const KEYWORD_FIELD_INPUT_LIMIT = 10 * KEYWORD_FIELD_CHAR_LIMIT;
+
 export const KEYWORD_BULK_ADD_LIMIT = 200;
 
 export function countChars(text: string): number {

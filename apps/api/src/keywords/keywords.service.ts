@@ -319,7 +319,8 @@ export class KeywordsService {
     const parsed = text
       .split(',')
       .map((part) => normalizeText(part))
-      .filter((part) => part.length > 0);
+      .filter((part) => part.length > 0)
+      .map(normalizeKeyword);
     const unique = [...new Set(parsed)];
     const duplicatesRemoved = parsed.length - unique.length;
 
@@ -329,24 +330,29 @@ export class KeywordsService {
     });
 
     const keywordIds = await this.keywordIdsFor(unique, app.store, app.country);
-    for (const keywordId of keywordIds) {
-      await this.trackKeyword(
-        this.prisma,
-        { appId, keywordId, source: 'KEYWORD_FIELD', active: true },
-        { source: 'KEYWORD_FIELD', active: true },
-      );
-      await this.enqueueFirstScore(keywordId, app);
-    }
-
     const uniqueSet = new Set(unique);
     const staleKeywordIds = previous
       .filter((row) => !uniqueSet.has(row.keyword.text))
       .map((row) => row.keywordId);
-    if (staleKeywordIds.length > 0) {
-      await this.prisma.trackedKeyword.updateMany({
-        where: { appId, keywordId: { in: staleKeywordIds } },
-        data: { active: false },
-      });
+
+    await this.quota.admitKeywordMarkets(async (tx) => {
+      for (const keywordId of keywordIds) {
+        await this.trackKeyword(
+          tx,
+          { appId, keywordId, source: 'KEYWORD_FIELD', active: true },
+          { source: 'KEYWORD_FIELD', active: true },
+        );
+      }
+      if (staleKeywordIds.length > 0) {
+        await tx.trackedKeyword.updateMany({
+          where: { appId, keywordId: { in: staleKeywordIds } },
+          data: { active: false },
+        });
+      }
+    });
+
+    for (const keywordId of keywordIds) {
+      await this.enqueueFirstScore(keywordId, app);
     }
 
     return this.keywordFieldResult(app, duplicatesRemoved);
