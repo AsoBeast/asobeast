@@ -20,10 +20,20 @@ None. `pnpm audit` reports no known vulnerabilities.
 Both advisories accepted at 1.0.0 are closed, and neither needed a direct
 dependency to move:
 
-| Package   | Was  | Closed by                                                         |
-| --------- | ---- | ----------------------------------------------------------------- |
-| `nanoid`  | High | `nanoid: ">=3.3.18"`, which `postcss` accepts under its `^3.3.16` |
-| `esbuild` | Low  | `esbuild: ">=0.28.1"`, one minor above the range `tsup` asks for  |
+| Package   | Was  | Closed by                                                            |
+| --------- | ---- | -------------------------------------------------------------------- |
+| `nanoid`  | High | `nanoid: ">=3.3.18 <4"`, which `postcss` accepts under its `^3.3.16` |
+| `esbuild` | Low  | `esbuild: ">=0.28.1 <0.29"`, one minor above what `tsup` asks for    |
+
+Both carry an upper bound, and both need one. An override replaces the range its
+consumer asked for, so an open-ended floor takes the newest release in existence
+the next time the lockfile is resolved, not the version that was tested. Left
+unbounded, `nanoid: ">=3.3.18"` resolves to 6.0.1, which is ESM only, while
+`postcss` loads `nanoid/non-secure` through `require`: that breaks the CSS build
+on whichever later change regenerates the lockfile, not on the one that
+introduced it. `esbuild` is pre-1.0, where a minor may break, and `tsup` asks for
+`^0.27.0`. Keep any override that crosses what its consumer declared inside a
+range that has been built.
 
 ### Why the overrides work now
 
