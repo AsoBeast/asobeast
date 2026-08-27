@@ -44,3 +44,31 @@ describe("rankingCsv", () => {
     expect(header).toContain("habit tracker (DE)");
   });
 });
+
+describe("a keyword that did not exist on an earlier date", () => {
+  const withGap = [
+    series({ points: [{ date: "2026-08-21", position: 4, depth: 200 }] }),
+    series({
+      keywordId: "kw-2",
+      text: "streak counter",
+      points: [
+        { date: "2026-08-20", position: 9, depth: 200 },
+        { date: "2026-08-21", position: 7, depth: 200 },
+      ],
+    }),
+  ];
+
+  it("carries no depth for the day it was not checked", () => {
+    const chart = buildRankingChart(withGap);
+
+    expect(chart.depths[0]["kw-1"]).toBeNull();
+    expect(chart.depths[1]["kw-1"]).toBe(200);
+  });
+
+  it("leaves its csv cell empty rather than claiming it ranked beyond depth", () => {
+    const csv = rankingCsv(buildRankingChart(withGap));
+    const [, firstRow] = csv.split("\r\n");
+
+    expect(firstRow).toBe("2026-08-20,,9");
+  });
+});

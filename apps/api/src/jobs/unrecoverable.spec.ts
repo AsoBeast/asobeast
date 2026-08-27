@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import { UnrecoverableError } from 'bullmq';
 import {
   ImplausibleResultError,
+  StoreAppNotFoundError,
   StoreRequestError,
 } from '../store-providers/errors';
 import { withoutRetry } from './unrecoverable';
@@ -17,6 +18,12 @@ describe('withoutRetry', () => {
 
     expect(converted).toBeInstanceOf(UnrecoverableError);
     expect((converted as Error).message).toBe(rejection.message);
+  });
+
+  it('leaves a missing app to the queue, which cannot tell it from a soft block', () => {
+    const missing = new StoreAppNotFoundError(Store.APP_STORE, '9999999999');
+
+    expect(withoutRetry(missing)).toBe(missing);
   });
 
   it('leaves a store request failure to the queue', () => {

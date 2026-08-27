@@ -2,7 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Prisma, ProxyOutcome, Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
-import { ImplausibleResultError, StoreRequestError } from '../errors';
+import {
+  ImplausibleResultError,
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from '../errors';
 import { classifyFailure, cooldownMs } from './proxy-outcome';
 import { ProxyPoolUnavailableError } from './proxy-pool.service';
 
@@ -46,6 +50,7 @@ function rollWindow(current: HealthWindow | null, now: Date): HealthWindow {
 export function outcomeOf(error: unknown): ProxyOutcome | null {
   if (error instanceof ImplausibleResultError) return ProxyOutcome.SILENT;
   if (error instanceof ProxyPoolUnavailableError) return null;
+  if (error instanceof StoreAppNotFoundError) return null;
   if (error instanceof StoreRequestError) {
     return classifyFailure(error.causeMessage);
   }

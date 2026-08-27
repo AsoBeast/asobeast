@@ -57,7 +57,7 @@ export function KeywordsWorkspace({
       <Suspense fallback={<KeywordsTableSkeleton />}>
         <KeywordsTable id={id} country={market} />
       </Suspense>
-      <SuggestionsPanel id={id} country={market} />
+      <SuggestionsPanel id={id} country={market} store={store} />
       {store === "APP_STORE" ? (
         <KeywordFieldEditor
           id={id}

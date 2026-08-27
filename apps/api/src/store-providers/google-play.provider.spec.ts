@@ -239,8 +239,8 @@ describe('GooglePlayProvider', () => {
   });
 
   it('wraps lib errors as StoreRequestError preserving the upstream name', async () => {
-    const failure = new Error('not found');
-    failure.name = 'NotFoundError';
+    const failure = new Error('socket hang up');
+    failure.name = 'RequestError';
     const app = jest.fn().mockRejectedValue(failure);
     const provider = new GooglePlayProvider(makeLib({ app }));
 
@@ -251,7 +251,7 @@ describe('GooglePlayProvider', () => {
       caught = error;
     }
     expect(caught).toBeInstanceOf(StoreRequestError);
-    expect((caught as StoreRequestError).message).toContain('NotFoundError');
+    expect((caught as StoreRequestError).message).toContain('RequestError');
   });
 
   it('maps scraper availability statuses and treats error as unknown', async () => {

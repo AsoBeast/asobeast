@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, Search } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
-import type { KeywordSuggestionStrategy } from "@asobeast/shared";
+import type { KeywordSuggestionStrategy, Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
+import { storeLabel } from "@/lib/format";
 import {
   invalidateKeywordMutation,
   keywordsOptions,
@@ -30,9 +31,11 @@ import { STRATEGIES } from "./suggestion-strategies";
 export function SuggestionsPanel({
   id,
   country,
+  store,
 }: {
   id: string;
   country: string;
+  store: Store;
 }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -84,8 +87,8 @@ export function SuggestionsPanel({
           <div className="flex flex-col gap-1">
             <CardTitle>Suggestions</CardTitle>
             <CardDescription>
-              Search and Similar apps query the App Store live, so results can
-              take a few seconds.
+              Search and Similar apps run a live {storeLabel(store)} lookup, so
+              results can take a few seconds.
             </CardDescription>
           </div>
           <ChevronDown

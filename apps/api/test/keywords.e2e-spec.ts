@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   ApiErrorEnvelope,
   AppDetail,
+  DailyBudget,
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -246,6 +247,90 @@ describe('KeywordsController (e2e)', () => {
         where: { text: 'aplikacja treningowa', country: 'pl' },
       }),
     ).toBe(1);
+  });
+
+  it('adds no keyword searches to the budget when a competitor is refreshed', async () => {
+    const id = await importApp();
+    const before = (await api.get('/jobs/budget').expect(200))
+      .body as DailyBudget;
+
+    const competitor = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '9876543210',
+        country: 'us',
+        name: 'Rival',
+        isCompetitor: true,
+        primaryAppId: id,
+      },
+    });
+    await api.post(`/apps/${competitor.id}/refresh`).expect(200);
+
+    const after = (await api.get('/jobs/budget').expect(200))
+      .body as DailyBudget;
+    expect(after.keywords).toBe(before.keywords);
+    expect(
+      await prisma.trackedKeyword.count({ where: { appId: competitor.id } }),
+    ).toBe(0);
+  });
+
+  it('refuses a bulk add larger than one request may carry', async () => {
+    const id = await importApp();
+
+    await api
+      .post(`/apps/${id}/keywords`)
+      .send({
+        keywords: Array.from({ length: 5_000 }, (_, index) => `kw${index}`),
+      })
+      .expect(400);
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    expect(items.some((item) => item.text.startsWith('kw'))).toBe(false);
+  });
+
+  it('refuses a keyword phrase longer than a store search box accepts', async () => {
+    const id = await importApp();
+
+    await api
+      .post(`/apps/${id}/keywords`)
+      .send({ keywords: ['b'.repeat(10_000)] })
+      .expect(400);
+
+    expect(
+      await prisma.keyword.count({ where: { text: 'b'.repeat(10_000) } }),
+    ).toBe(0);
+  });
+
+  it('refuses a keyword field longer than the endpoint accepts', async () => {
+    const id = await importApp();
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({
+        text: Array.from({ length: 5_000 }, (_, index) => `kw${index}`).join(
+          ',',
+        ),
+      })
+      .expect(400);
+
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
+  });
+
+  it('refuses a keyword field phrase no store search box would accept', async () => {
+    const id = await importApp();
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: `habit,${'b'.repeat(500)}` })
+      .expect(400);
+
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
   });
 
   it('rejects an invalid market code', async () => {

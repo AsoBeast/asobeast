@@ -11,6 +11,16 @@ export class StoreRequestError extends Error {
   }
 }
 
+export class StoreAppNotFoundError extends Error {
+  constructor(
+    readonly store: Store,
+    readonly storeAppId: string,
+  ) {
+    super(`${store} has no app ${storeAppId}`);
+    this.name = 'StoreAppNotFoundError';
+  }
+}
+
 export class ImplausibleResultError extends Error {
   constructor(
     readonly store: Store,

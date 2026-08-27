@@ -35,6 +35,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
           id: 'app1',
           store: Store.APP_STORE,
           country: 'us',
+          isCompetitor: false,
         }),
       },
       appSnapshot: {
@@ -101,6 +102,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
       id: 'app1',
       store: Store.GOOGLE_PLAY,
       country: 'us',
+      isCompetitor: false,
     });
     const service = buildService(prisma, buildQueue());
 
@@ -127,6 +129,22 @@ describe('KeywordsService.syncFromSnapshot', () => {
     expect(prisma.trackedKeyword.createMany.mock.calls[0][0].data).toHaveLength(
       15,
     );
+  });
+
+  it('does nothing for a competitor, whose positions ride the primary search', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'rival',
+      store: Store.APP_STORE,
+      country: 'us',
+      isCompetitor: true,
+    });
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('rival');
+
+    expect(prisma.trackedKeyword.createMany).not.toHaveBeenCalled();
+    expect(prisma.keyword.createMany).not.toHaveBeenCalled();
   });
 
   it('does nothing when the app has no snapshot', async () => {

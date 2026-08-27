@@ -19,7 +19,10 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { AppsService } from '../src/apps/apps.service';
 import { asWorkspace } from './helpers/tenancy';
-import { StoreRequestError } from '../src/store-providers/errors';
+import {
+  StoreAppNotFoundError,
+  StoreRequestError,
+} from '../src/store-providers/errors';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 
@@ -485,6 +488,21 @@ describe('AppsController (e2e)', () => {
 
     expectEnvelope(body, 502, '/apps');
     expect(body.message).toContain('boom');
+  });
+
+  it('returns a 404 envelope when the store has no such app', async () => {
+    registry.failWith = new StoreAppNotFoundError(
+      Store.APP_STORE,
+      '1234567890',
+    );
+
+    const response = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(404);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 404, '/apps');
+    expect(await prisma.app.count()).toBe(0);
   });
 
   const importApp = async (url: string): Promise<AppDetail> => {

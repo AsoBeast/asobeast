@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import { RANK_DEPTH, type TrackedKeywordItem } from "@asobeast/shared";
 import { keywordCsv } from "./keyword-csv";
 
-function keyword(text: string): TrackedKeywordItem {
+function keyword(
+  text: string,
+  latestDepth: number | null = RANK_DEPTH,
+): TrackedKeywordItem {
   return {
     keywordId: "kw-1",
     text,
@@ -10,7 +13,7 @@ function keyword(text: string): TrackedKeywordItem {
     source: "MANUAL",
     active: true,
     latestPosition: null,
-    latestDepth: RANK_DEPTH,
+    latestDepth,
     previousPosition: null,
     positionDelta1d: null,
     positionDelta7d: null,
@@ -36,6 +39,12 @@ describe("keywordCsv", () => {
   it("renders a checked but unranked position at the captured depth", () => {
     expect(keywordCsv([keyword("focus timer")])).toContain(
       `focus timer,MANUAL,true,>${RANK_DEPTH},`,
+    );
+  });
+
+  it("leaves the position empty for a keyword that was never checked", () => {
+    expect(keywordCsv([keyword("focus timer", null)])).toContain(
+      "focus timer,MANUAL,true,,",
     );
   });
 });

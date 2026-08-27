@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatRankPosition, isRanked } from './rank';
+import { formatCheckedPosition, formatRankPosition, isRanked } from './rank';
 
 describe('isRanked', () => {
   it.each([
@@ -26,5 +26,22 @@ describe('formatRankPosition', () => {
     [null, 100, '>100'],
   ])('formats position %s at depth %s as %s', (position, depth, expected) => {
     expect(formatRankPosition(position, depth)).toBe(expected);
+  });
+});
+
+describe('formatCheckedPosition', () => {
+  it.each([
+    [1, 200, '1'],
+    [null, 200, '>200'],
+    [null, 100, '>100'],
+  ])(
+    'formats the checked position %s at depth %s as %s',
+    (position, depth, expected) => {
+      expect(formatCheckedPosition(position, depth)).toBe(expected);
+    },
+  );
+
+  it('reports a keyword that was never checked as unformattable', () => {
+    expect(formatCheckedPosition(null, null)).toBeNull();
   });
 });

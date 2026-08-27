@@ -10,6 +10,12 @@ describe('normalizeKeyword', () => {
     expect(() => normalizeKeyword('   ')).toThrow(BadRequestException);
   });
 
+  it('rejects a single token longer than a store search box accepts', () => {
+    expect(() => normalizeKeyword('b'.repeat(10_000))).toThrow(
+      BadRequestException,
+    );
+  });
+
   it('rejects a keyword longer than five words', () => {
     expect(() => normalizeKeyword('one two three four five six')).toThrow(
       BadRequestException,

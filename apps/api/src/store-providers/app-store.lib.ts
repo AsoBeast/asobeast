@@ -1,6 +1,14 @@
 import * as appStore from '@perttu/app-store-scraper';
 import { egressFetch } from './egress/egress';
 
+const MISSING_APP_PATTERN = /^app not found/i;
+
+export function isMissingApp(error: unknown): boolean {
+  return MISSING_APP_PATTERN.test(
+    error instanceof Error ? error.message : String(error),
+  );
+}
+
 export interface AppStoreAppResult {
   id?: number | string;
   trackId?: number | string;

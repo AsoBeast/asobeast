@@ -106,5 +106,8 @@ test("rankings offer a wider range when the window is empty", async ({
   await page.getByRole("button", { name: "Widen to 90 days" }).click();
 
   await expect(page).toHaveURL(/range=90d/);
-  await expect(page.getByText("No positions captured yet")).toBeVisible();
+  await expect(page.getByText("Nothing captured in this range")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Widen to 90 days" }),
+  ).toHaveCount(0);
 });

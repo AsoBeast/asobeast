@@ -1,7 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { normalizeText } from '@asobeast/shared';
+import { normalizeText, TRACKED_KEYWORD_CHAR_LIMIT } from '@asobeast/shared';
 import { QUEUES, queueNameForStore } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -20,6 +20,11 @@ export function normalizeKeyword(raw: string): string {
   const text = normalizeText(raw);
   if (!text) {
     throw new BadRequestException('Keyword must not be empty');
+  }
+  if (text.length > TRACKED_KEYWORD_CHAR_LIMIT) {
+    throw new BadRequestException(
+      `Keyword exceeds ${TRACKED_KEYWORD_CHAR_LIMIT} characters`,
+    );
   }
   if (text.split(' ').length > MAX_KEYWORD_WORDS) {
     throw new BadRequestException(

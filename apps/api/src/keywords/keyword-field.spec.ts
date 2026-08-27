@@ -40,7 +40,7 @@ function buildPrisma() {
   const textOf = (keywordId: string) =>
     [...keywordIds].find(([, id]) => id === keywordId)?.[0] ?? '';
 
-  return {
+  const client = {
     rows,
     textOf,
     app: { findFirst: () => Promise.resolve(APP) },
@@ -113,6 +113,11 @@ function buildPrisma() {
         return Promise.resolve({ count: ids.length });
       },
     },
+  };
+
+  return {
+    ...client,
+    withTransaction: <T>(run: (tx: typeof client) => Promise<T>) => run(client),
   };
 }
 

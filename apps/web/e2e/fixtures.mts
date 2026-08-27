@@ -839,6 +839,52 @@ export const APP_BULK_KEYWORDS: TrackedKeywordItem[] = Array.from(
   }),
 );
 
+export const APP_UNCHECKED_TEXTS = ["geo guess game", "where am i"] as const;
+
+export const APP_UNCHECKED_KEYWORDS: TrackedKeywordItem[] =
+  APP_UNCHECKED_TEXTS.map((text, index) => ({
+    keywordId: `kw-unchecked-${index + 1}`,
+    text,
+    country: "us",
+    serpVolatility7d: null,
+    source: "TITLE" as const,
+    active: true,
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+  }));
+
+export const APP_UNCHECKED_SUMMARY: AppSummary = {
+  ...APP_2_SUMMARY,
+  trackedKeywords: APP_UNCHECKED_KEYWORDS.length,
+};
+
+export const APP_UNCHECKED_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: "app-unchecked",
+  name: "Freshly Imported App",
+};
+
+export const APP_UNCHECKED_RANKINGS: RankingSeries = {
+  series: APP_UNCHECKED_KEYWORDS.map((keyword) => ({
+    keywordId: keyword.keywordId,
+    text: keyword.text,
+    store: "APP_STORE" as const,
+    country: "us",
+    points: [],
+  })),
+};
+
 export const APP_BULK_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-bulk",
@@ -1202,6 +1248,22 @@ export const DATASETS: Record<string, AppDataset> = {
     summary: APP_2_SUMMARY,
     keywords: APP_BULK_KEYWORDS,
     rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    changes: EMPTY_CHANGES,
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  "app-unchecked": {
+    detail: APP_UNCHECKED_DETAIL,
+    summary: APP_UNCHECKED_SUMMARY,
+    keywords: APP_UNCHECKED_KEYWORDS,
+    rankings: APP_UNCHECKED_RANKINGS,
     serpMovers: EMPTY_SERP_MOVERS,
     visibility: EMPTY_VISIBILITY,
     rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,

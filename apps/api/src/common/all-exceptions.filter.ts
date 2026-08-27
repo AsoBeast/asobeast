@@ -20,14 +20,12 @@ import { QuotaExceededError } from '../auth/quota.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import {
+  StoreAppNotFoundError,
   StoreNotSupportedError,
   StoreRequestError,
 } from '../store-providers/errors';
 
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
-
-const GOOGLE_PLAY_MESSAGE =
-  'Google Play support is planned; asobeast currently tracks App Store apps only';
 
 type ResolvedError = Pick<
   ApiErrorEnvelope,
@@ -80,7 +78,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         statusCode: HttpStatus.NOT_IMPLEMENTED,
         error: 'Not Implemented',
-        message: GOOGLE_PLAY_MESSAGE,
+        message: exception.message,
+      };
+    }
+    if (exception instanceof StoreAppNotFoundError) {
+      return {
+        statusCode: HttpStatus.NOT_FOUND,
+        error: 'Not Found',
+        message: exception.message,
       };
     }
     if (exception instanceof StoreRequestError) {
