@@ -5,6 +5,8 @@ import { scrubEvent } from './error-event';
 
 const PRODUCTION = 'production';
 
+const NEST_INTEGRATION = 'Nest';
+
 const DATA_COLLECTION: NodeOptions['dataCollection'] = {
   userInfo: false,
   cookies: false,
@@ -45,6 +47,8 @@ export function reportingOptions(
     release: apiVersion(),
     dataCollection: DATA_COLLECTION,
     maxBreadcrumbs: 0,
+    integrations: (defaults) =>
+      defaults.filter((integration) => integration.name !== NEST_INTEGRATION),
     beforeSend: (event) => scrubEvent(event, secrets),
   };
 }

@@ -45,6 +45,20 @@ describe('reportingOptions', () => {
     expect(reportingOptions(open)?.maxBreadcrumbs).toBe(0);
   });
 
+  it('drops the nest integration, which reports every failed job attempt', () => {
+    const integrations = reportingOptions(open)?.integrations;
+    if (typeof integrations !== 'function') {
+      throw new Error('the options must filter the default integrations');
+    }
+
+    const kept = integrations([
+      { name: 'Nest', setupOnce: () => {} },
+      { name: 'Http', setupOnce: () => {} },
+    ]);
+
+    expect(kept.map((integration) => integration.name)).toEqual(['Http']);
+  });
+
   it('collects nothing the scrubbing promise excludes', () => {
     const options = reportingOptions(open);
 
