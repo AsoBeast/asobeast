@@ -13,12 +13,9 @@ import {
   AppStoreLib,
   AppStoreReviewResult,
   AppStoreSearchResult,
-} from './app-store.lib';
-import {
   isMissingApp,
-  StoreAppNotFoundError,
-  StoreRequestError,
-} from './errors';
+} from './app-store.lib';
+import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import {
   ChartItem,
   NormalizedApp,

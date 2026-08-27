@@ -21,14 +21,6 @@ export class StoreAppNotFoundError extends Error {
   }
 }
 
-const NOT_FOUND_PATTERN = /not found/i;
-
-export function isMissingApp(error: unknown): boolean {
-  return NOT_FOUND_PATTERN.test(
-    error instanceof Error ? error.message : String(error),
-  );
-}
-
 export class ImplausibleResultError extends Error {
   constructor(
     readonly store: Store,

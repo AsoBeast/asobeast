@@ -1,6 +1,7 @@
 import {
   app,
   availability,
+  NotFoundError,
   developer,
   reviews,
   search,
@@ -11,6 +12,10 @@ import {
   collection,
 } from '@mradex77/google-play-scraper';
 import { egressFetch } from './egress/egress';
+
+export function isMissingApp(error: unknown): boolean {
+  return error instanceof NotFoundError;
+}
 
 export interface GooglePlayAppResult {
   appId: string;
