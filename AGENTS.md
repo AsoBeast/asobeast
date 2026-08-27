@@ -284,7 +284,7 @@ BILLING_ENABLED=false               # entitlement seam: new accounts start a tri
 TRIAL_DAYS=7                        # trial length in days when BILLING_ENABLED=true. REFUSES TO BOOT at 0 with billing enabled
 TRUST_PROXY=false                   # true only behind a reverse proxy that sets a trustworthy X-Forwarded-For; lets auth throttling key on the real client IP instead of the proxy's. WARNS in production when false
 ACCOUNT_DELETION_GRACE_DAYS=7       # days a scheduled workspace deletion stays reversible before the retention job erases it
-ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry compatible dsn for scrubbed error reports. Ignored unless BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
+ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry dsn for scrubbed error reports. Ignored unless NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
 LOG_LEVEL=debug
 ```
 

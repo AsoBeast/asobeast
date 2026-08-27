@@ -3,19 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import type { Params } from 'nestjs-pino';
 import { pino, type LogFn, type LoggerOptions } from 'pino';
 import type { Env } from '../../config/env';
+import { secretLiteralsFrom } from '../../config/secret-env';
 import { WorkspaceContext } from '../tenancy/workspace-context';
 import { REDACTED, REDACTION_PATHS, scrubSecrets } from './log-redaction';
-
-export const SECRET_ENV_KEYS = [
-  'AUTH_SECRET',
-  'OPENAI_API_KEY',
-  'SMTP_PASSWORD',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'PROXY_API_KEY',
-  'PROXY_PASSWORD',
-  'PROXY_RESIDENTIAL_PASSWORD',
-] as const satisfies readonly (keyof Env)[];
 
 const PINO_LEVEL: Record<Env['LOG_LEVEL'], LoggerOptions['level']> = {
   error: 'error',
@@ -28,9 +18,7 @@ const PINO_LEVEL: Record<Env['LOG_LEVEL'], LoggerOptions['level']> = {
 const QUIET_ROUTES = ['/health', '/metrics'];
 
 export function secretLiterals(config: ConfigService<Env, true>): string[] {
-  return SECRET_ENV_KEYS.map((key) => config.get(key, { infer: true })).filter(
-    (value): value is string => typeof value === 'string' && value.length > 0,
-  );
+  return secretLiteralsFrom((key) => config.get(key, { infer: true }));
 }
 
 export function pinoOptions(

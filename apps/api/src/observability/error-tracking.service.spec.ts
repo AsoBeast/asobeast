@@ -1,25 +1,28 @@
 import type { ConfigService } from '@nestjs/config';
-import { request } from 'undici';
-import type { Env } from '../config/env';
+import * as Sentry from '@sentry/nestjs';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import type { Env } from '../config/env';
 import { ErrorTracking } from './error-tracking.service';
 
-jest.mock('undici', () => ({ request: jest.fn().mockResolvedValue({}) }));
+jest.mock('@sentry/nestjs', () => ({
+  captureException: jest.fn(),
+  withScope: jest.fn((run: (scope: unknown) => void) =>
+    run({ setTags: jest.fn(), setTransactionName: jest.fn() }),
+  ),
+}));
 
-const send = request as unknown as jest.Mock;
+const captureException = Sentry.captureException as jest.Mock;
+const withScope = Sentry.withScope as unknown as jest.Mock;
 
 const DSN = 'https://publickey@errors.example.com/7';
-const AUTH_SECRET = '0123456789abcdef0123456789abcdef';
 
 function configOf(values: Partial<Env>): ConfigService<Env, true> {
   const resolved: Record<string, unknown> = {
     NODE_ENV: 'production',
-    AUTH_SECRET,
+    BILLING_ENABLED: true,
     ...values,
   };
-  return {
-    get: (key: string) => resolved[key],
-  } as unknown as ConfigService<Env, true>;
+  return { get: (key: string) => resolved[key] } as ConfigService<Env, true>;
 }
 
 function trackerOf(values: Partial<Env>) {
@@ -30,74 +33,69 @@ function trackerOf(values: Partial<Env>) {
 }
 
 describe('ErrorTracking', () => {
-  beforeEach(() => send.mockClear());
+  beforeEach(() => {
+    captureException.mockClear();
+    withScope.mockClear();
+  });
 
-  it('stays inert with no dsn configured', () => {
-    const { tracking } = trackerOf({ BILLING_ENABLED: true });
+  it.each([
+    ['no dsn configured', {}],
+    [
+      'a self hosted instance',
+      { ERROR_TRACKING_DSN: DSN, BILLING_ENABLED: false },
+    ],
+    [
+      'an instance outside production',
+      { ERROR_TRACKING_DSN: DSN, NODE_ENV: 'development' as const },
+    ],
+  ])('stays inert on %s', (_case, values) => {
+    const { tracking } = trackerOf(values);
 
     tracking.capture(new Error('boom'));
 
     expect(tracking.enabled).toBe(false);
-    expect(send).not.toHaveBeenCalled();
+    expect(captureException).not.toHaveBeenCalled();
   });
 
-  it('stays inert on a self hosted instance even with a dsn', () => {
-    const { tracking } = trackerOf({
-      ERROR_TRACKING_DSN: DSN,
-      BILLING_ENABLED: false,
-    });
-
-    tracking.capture(new Error('boom'));
-
-    expect(tracking.enabled).toBe(false);
-    expect(send).not.toHaveBeenCalled();
-  });
-
-  it('stays inert on a dsn it cannot parse', () => {
-    const { tracking } = trackerOf({
-      ERROR_TRACKING_DSN: 'not-a-dsn',
-      BILLING_ENABLED: true,
-    });
-
-    expect(tracking.enabled).toBe(false);
-  });
-
-  it('posts a scrubbed envelope tagged with the workspace', async () => {
-    const { tracking, workspace } = trackerOf({
-      ERROR_TRACKING_DSN: DSN,
-      BILLING_ENABLED: true,
-    });
+  it('reports tagged with the workspace and the correlation in scope', async () => {
+    const setTags = jest.fn();
+    const setTransactionName = jest.fn();
+    withScope.mockImplementation((run: (scope: unknown) => void) =>
+      run({ setTags, setTransactionName }),
+    );
+    const { tracking, workspace } = trackerOf({ ERROR_TRACKING_DSN: DSN });
+    const error = new Error('boom');
 
     await workspace.runScope(
       { workspaceId: 'ws_a', correlationId: 'corr-1' },
       () => {
-        tracking.capture(new Error(`failed for ${AUTH_SECRET}`), {
-          method: 'GET',
-          path: '/apps/clx8s9k2l0000abcdefghijkl',
+        tracking.capture(error, {
+          transaction: 'GET /apps',
+          tags: { store: 'APP_STORE' },
         });
         return Promise.resolve();
       },
     );
 
     expect(tracking.enabled).toBe(true);
-    const [url, options] = send.mock.calls[0] as [
-      string,
-      { headers: Record<string, string>; body: string },
-    ];
-    expect(url).toBe('https://errors.example.com/api/7/envelope/');
-    expect(options.headers['x-sentry-auth']).toContain('sentry_key=publickey');
+    expect(setTags).toHaveBeenCalledWith({
+      workspace: 'ws_a',
+      correlation: 'corr-1',
+      store: 'APP_STORE',
+    });
+    expect(setTransactionName).toHaveBeenCalledWith('GET /apps');
+    expect(captureException).toHaveBeenCalledWith(error);
+  });
 
-    const [envelope, item, event] = options.body
-      .split('\n')
-      .map(JSON.parse) as [
-      { event_id: string },
-      { type: string },
-      { tags: Record<string, string>; request: { url: string } },
-    ];
-    expect(item.type).toBe('event');
-    expect(envelope.event_id).toHaveLength(32);
-    expect(event.tags).toEqual({ workspace: 'ws_a', correlation: 'corr-1' });
-    expect(event.request.url).toBe('/apps/:id');
-    expect(options.body).not.toContain(AUTH_SECRET);
+  it('reports without tags when nothing is in scope', () => {
+    const setTags = jest.fn();
+    withScope.mockImplementation((run: (scope: unknown) => void) =>
+      run({ setTags, setTransactionName: jest.fn() }),
+    );
+    const { tracking } = trackerOf({ ERROR_TRACKING_DSN: DSN });
+
+    tracking.capture(new Error('boom'));
+
+    expect(setTags).toHaveBeenCalledWith({});
   });
 });

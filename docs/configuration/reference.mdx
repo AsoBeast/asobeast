@@ -32,7 +32,7 @@ Every variable below is read by the API from `apps/api/.env`, or from the enviro
 | `DEFAULT_COUNTRY` | `us` | No | Home storefront used when an import URL carries no country segment |
 | `LOG_LEVEL` | `debug`, and `log` in the Compose stack | No | One of `error`, `warn`, `log`, `debug`, `verbose`. Logs are JSON in production and human readable in development, and every line inside a request or job carries its workspace and correlation id. Compose lowers it to `log` because `debug` records every request, and container logs rotate at 10 MB across 3 files |
 | `ACCOUNT_DELETION_GRACE_DAYS` | `7` | No | Days a scheduled workspace deletion stays reversible. The retention job erases the workspace on the first run after the grace period ends |
-| `ERROR_TRACKING_DSN` | Empty | No | Sentry compatible endpoint for scrubbed error reports. Ignored unless `BILLING_ENABLED` is `true`, so a self hosted deployment never reports its errors to anyone else. Reports carry the error type, a secret scrubbed message and stack, the workspace and correlation id, and the request method with identifiers masked out of the path. They never carry headers, cookies, query strings, request bodies or account details |
+| `ERROR_TRACKING_DSN` | Empty | No | Sentry dsn for scrubbed error reports. Ignored unless `NODE_ENV` is `production` **and** `BILLING_ENABLED` is `true`, so a self hosted deployment never reports its errors to anyone else. Reports carry the error type, a secret scrubbed message and stack, the workspace and correlation id, and the request method with identifiers masked out of the path. They never carry headers, cookies, query strings, request bodies or account details. See [Hosted observability](/operations/hosted-observability#error-reporting) |
 
 ## Scheduling
 
