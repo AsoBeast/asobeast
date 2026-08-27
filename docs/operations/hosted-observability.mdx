@@ -137,6 +137,8 @@ The error type, a secret scrubbed message, a structured stack with source lines,
 
 Breadcrumbs are turned off in both apps. A breadcrumb records the url of every outgoing request, and a store request carries the term a customer tracks in its query string, so the trail that would help debugging is the one place customer data would reach a report.
 
+The same reasoning covers the two places a url reaches an event by another route: the path Next.js hands to `onRequestError` and the transaction name. Both are masked, so a keyword typed into the spider or the serp filter never leaves the browser's own machine.
+
 ## Support tooling
 
 `/admin/support` answers operational questions about one workspace without browsing what that workspace tracks. It is gated exactly like the queue dashboard and answers 404 to anyone else.

@@ -62,6 +62,28 @@ describe("scrubEvent", () => {
     expect(scrubbed.transaction).toBe("/apps/:id");
   });
 
+  it("masks the path onRequestError puts in the nextjs context", () => {
+    const event = eventWith({
+      contexts: {
+        nextjs: {
+          request_path: "/apps/clx8s9k2l0000abcdefghijkl/keywords?spider=habit",
+          route_type: "render",
+        },
+      },
+    });
+
+    expect(scrubEvent(event).contexts?.nextjs).toEqual({
+      request_path: "/apps/:id/keywords",
+      route_type: "render",
+    });
+  });
+
+  it("leaves a context that carries no path alone", () => {
+    const contexts = { trace: { trace_id: "abc", span_id: "def" } };
+
+    expect(scrubEvent(eventWith({ contexts })).contexts).toEqual(contexts);
+  });
+
   it("leaves an event with no request alone", () => {
     expect(scrubEvent(eventWith({ message: "boom" }))).toEqual(
       eventWith({ message: "boom" }),

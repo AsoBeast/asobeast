@@ -1,4 +1,4 @@
-import type { ErrorEvent, init } from "@sentry/nextjs";
+import type { Contexts, ErrorEvent, init } from "@sentry/nextjs";
 
 type SentryOptions = Parameters<typeof init>[0];
 
@@ -32,6 +32,13 @@ export function maskRoute(url: string): string {
     .join("/");
 }
 
+function maskedContexts(contexts: Contexts): Contexts {
+  const nextjs = contexts.nextjs;
+  const path: unknown = nextjs?.request_path;
+  if (typeof path !== "string") return contexts;
+  return { ...contexts, nextjs: { ...nextjs, request_path: maskRoute(path) } };
+}
+
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
   const { method, url } = event.request ?? {};
   return {
@@ -45,6 +52,7 @@ export function scrubEvent(event: ErrorEvent): ErrorEvent {
         }
       : {}),
     ...(event.transaction ? { transaction: maskRoute(event.transaction) } : {}),
+    ...(event.contexts ? { contexts: maskedContexts(event.contexts) } : {}),
   };
 }
 
