@@ -113,7 +113,8 @@ When the gate is closed the SDK is never initialized, so nothing is instrumented
 | Surface | Covers |
 | --- | --- |
 | Requests | Only `5xx`. A refusal the API meant to make, such as a quota or a rate limit, is not an incident |
-| The process | An uncaught exception or an unhandled rejection outside any request |
+| Queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store. The job payload is never attached |
+| The process | An uncaught exception or an unhandled rejection outside any request or job |
 
 Tracing is deliberately off. `GET /metrics` already answers the performance questions this instance asks, and spans from a scraping pipeline are high volume for a question nobody is asking.
 

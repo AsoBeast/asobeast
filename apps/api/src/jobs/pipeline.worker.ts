@@ -1,4 +1,9 @@
-import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
+import {
+  InjectQueue,
+  OnWorkerEvent,
+  Processor,
+  WorkerHost,
+} from '@nestjs/bullmq';
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
@@ -18,9 +23,11 @@ import {
   workspaceFailure,
 } from '../common/tenancy/workspace-fanout';
 import { Env } from '../config/env';
+import { ErrorTracking } from '../observability/error-tracking.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
 import { DigestDispatcher } from './digest.dispatcher';
+import { reportJobFailure } from './job-failure';
 import { requireJobScope } from './job-workspace';
 import {
   actionsSuppressedKey,
@@ -53,6 +60,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly workspace: WorkspaceContext,
     private readonly fanOut: WorkspaceFanOut,
     private readonly proxyPool: ProxyPoolMaintenance,
+    private readonly tracking: ErrorTracking,
   ) {
     super();
   }
@@ -164,6 +172,11 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
       return;
     }
     throw new Error(`Unknown pipeline job ${job.name}`);
+  }
+
+  @OnWorkerEvent('failed')
+  onFailed(job: Job | undefined, error: Error): void {
+    reportJobFailure(this.tracking, job, error);
   }
 
   private async runActions(): Promise<ActionGenerationResult> {
