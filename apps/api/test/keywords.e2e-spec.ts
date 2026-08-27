@@ -303,6 +303,36 @@ describe('KeywordsController (e2e)', () => {
     ).toBe(0);
   });
 
+  it('refuses a keyword field longer than the endpoint accepts', async () => {
+    const id = await importApp();
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({
+        text: Array.from({ length: 5_000 }, (_, index) => `kw${index}`).join(
+          ',',
+        ),
+      })
+      .expect(400);
+
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
+  });
+
+  it('refuses a keyword field phrase no store search box would accept', async () => {
+    const id = await importApp();
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: `habit,${'b'.repeat(500)}` })
+      .expect(400);
+
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
+  });
+
   it('rejects an invalid market code', async () => {
     const id = await importApp();
 
