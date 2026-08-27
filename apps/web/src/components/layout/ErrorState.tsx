@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
+import * as Sentry from "@sentry/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +20,11 @@ export function ErrorState({
 }) {
   const recovery = recoveryFor(error);
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
+
+  useEffect(() => {
+    if (recovery.expected) return;
+    Sentry.captureException(error);
+  }, [error, recovery.expected]);
 
   return (
     <div

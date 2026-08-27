@@ -104,17 +104,26 @@ The database being unreachable does not need an alert rule. The scrape itself fa
 
 ## Error reporting
 
-The API reports through the official Sentry SDK, behind a gate that stays closed unless all three hold: `ERROR_TRACKING_DSN` is set, `NODE_ENV` is `production` and `BILLING_ENABLED` is `true`.
+Both apps report through the official Sentry SDK, each behind its own gate.
 
-When the gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent. **A self hosted deployment never reports its errors to anyone**, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+| App | Variable | Reports when |
+| --- | --- | --- |
+| API | `ERROR_TRACKING_DSN` | The dsn is set, `NODE_ENV` is `production` and `BILLING_ENABLED` is `true` |
+| Web | `SENTRY_DSN` | The dsn is set and `NODE_ENV` is `production` |
+
+When a gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent. **A self hosted deployment never reports its errors to anyone**, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+
+The web dsn is read at runtime and handed to the browser by `/api/health`, the same way `STATUS_PAGE_URL` reaches it. It is never baked into the image, because this repository publishes one set of images that the hosted service and every self hoster run.
 
 ### What is reported
 
 | Surface | Covers |
 | --- | --- |
-| Requests | Only `5xx`. A refusal the API meant to make, such as a quota or a rate limit, is not an incident |
-| Queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store. The job payload is never attached |
-| The process | An uncaught exception or an unhandled rejection outside any request or job |
+| API requests | Only `5xx`. A refusal the API meant to make, such as a quota or a rate limit, is not an incident |
+| API queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store |
+| API process | An uncaught exception or an unhandled rejection outside any request or job |
+| Web server | Server Component, route handler and proxy failures, through `onRequestError` |
+| Web browser | A render failure that reaches a route error boundary and that asobeast cannot already explain. An expired session, a spent budget or a missing record is not reported |
 
 Tracing is deliberately off. `GET /metrics` already answers the performance questions this instance asks, and spans from a scraping pipeline are high volume for a question nobody is asking.
 
@@ -126,7 +135,7 @@ The error type, a secret scrubbed message, a structured stack with source lines,
   Headers, cookies, query strings, request and response bodies, database query values, stack frame variables and user identity are all turned off at the SDK level rather than filtered afterwards, and a second pass over every event drops the request down to its method and masked path before it leaves the process.
 </Warning>
 
-Breadcrumbs are turned off. A breadcrumb records the url of every outgoing request, and a store request carries the term a customer tracks in its query string, so the trail that would help debugging is the one place customer data would reach a report.
+Breadcrumbs are turned off in both apps. A breadcrumb records the url of every outgoing request, and a store request carries the term a customer tracks in its query string, so the trail that would help debugging is the one place customer data would reach a report.
 
 ## Support tooling
 

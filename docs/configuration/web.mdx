@@ -6,7 +6,7 @@ icon: globe
 keywords: ["API_INTERNAL_URL","API_PROXY_TIMEOUT_MS","TRUST_PROXY","runtime configuration","proxy"]
 ---
 
-The web app reads three variables, all at runtime. Nothing about the API address is baked into the image, so the same image can point at a different API by changing an environment variable and restarting.
+The web app reads five variables, all at runtime. Nothing about the API address is baked into the image, so the same image can point at a different API by changing an environment variable and restarting.
 
 ## Variables
 
@@ -16,6 +16,7 @@ The web app reads three variables, all at runtime. Nothing about the API address
 | `API_PROXY_TIMEOUT_MS` | `30000` | No | Upper bound for a single proxied request. A timeout returns a `504` error envelope instead of hanging |
 | `TRUST_PROXY` | `0` | No | How many proxies you control sit between the internet and the web app. `true` means 1 and `false` means 0. Decides which `X-Forwarded-For` entry the proxy passes to the API, and therefore what auth throttling keys on. An unparseable value is refused rather than interpreted. See [Hosting](/security/hosting) |
 | `STATUS_PAGE_URL` | Empty | No | An `http` or `https` status page hosted away from this machine. Set it and every error boundary offers a link to it; leave it empty and nothing is shown. A value that is not an http origin is ignored rather than linked, so a misconfiguration cannot turn into a `javascript:` link. See [Uptime probes and the status page](/operations/uptime) |
+| `SENTRY_DSN` | Empty | No | Sentry dsn for scrubbed browser and server error reports. Ignored unless `NODE_ENV` is `production`, so a self hosted deployment never reports its errors to anyone else. Read at runtime and served to the browser by `/api/health`, never baked into the image. See [Hosted observability](/operations/hosted-observability#error-reporting) |
 
 Compose sets `API_INTERNAL_URL` to `http://api:4000`, which resolves on the Docker network rather than on your machine.
 

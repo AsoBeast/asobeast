@@ -293,6 +293,7 @@ LOG_LEVEL=debug
 ```bash
 API_INTERNAL_URL=http://localhost:4000   # read at runtime; the browser reaches it via /api/backend/*
 API_PROXY_TIMEOUT_MS=30000               # upper bound per proxy request; a timeout returns a 504 envelope
+SENTRY_DSN=                              # optional, hosted only. Read at runtime and only used when NODE_ENV=production, so a self hosted deployment never reports errors outside itself. SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are release pipeline secrets for source map upload, never runtime configuration
 ```
 
 Root `.env` (Compose only): `POSTGRES_PASSWORD` and `AUTH_SECRET`, both required and non-empty, plus `AUTH_COOKIE_SECURE`, `TRUST_PROXY`, `LOG_LEVEL` and `STATUS_PAGE_URL`. `ASOBEAST_IMAGE_OWNER` and `ASOBEAST_IMAGE_TAG` are read only by `docker-compose.pull.yml` and pick which published images that stack runs; they default to the images this repository publishes at the current version, so pinning an older release is the only reason to set them. `TUNNEL_TOKEN` and `ASOBEAST_DOMAIN` are read only by `docker-compose.tunnel.yml`, the optional Cloudflare Tunnel overlay that terminates TLS at Cloudflare's edge and stops publishing host port 3001, so the machine listens for nothing.

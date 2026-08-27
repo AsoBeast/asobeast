@@ -15,6 +15,7 @@ test("web liveness is independent from the api", async ({ request }) => {
   await expect(response.json()).resolves.toEqual({
     status: "ok",
     statusPageUrl: null,
+    errorReportingDsn: null,
   });
 });
 
