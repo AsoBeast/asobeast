@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  FirstRunStatus,
   KeywordSort,
   KeywordSuggestionStrategy,
 } from "@asobeast/shared";
@@ -453,12 +454,17 @@ export const runStatusOptions = queryOptions({
 
 export const FIRST_RUN_POLL_MS = 15_000;
 
+const collectingNow = (status: FirstRunStatus | undefined): boolean =>
+  status?.stages.some(
+    (stage) => !stage.complete && stage.stage !== "history",
+  ) ?? false;
+
 export const firstRunOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.firstRun(id),
     queryFn: () => getFirstRun(id),
     refetchInterval: (query) =>
-      query.state.data?.complete === false ? FIRST_RUN_POLL_MS : false,
+      collectingNow(query.state.data) ? FIRST_RUN_POLL_MS : false,
   });
 
 export function invalidateKeywords(client: QueryClient, id: string): void {

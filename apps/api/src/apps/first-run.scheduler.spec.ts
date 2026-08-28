@@ -82,7 +82,7 @@ describe('FirstRunScheduler', () => {
     expect(keywordIdsOf(appStore)).toEqual(['k1', 'k2']);
   });
 
-  it('reuses the identifier the daily run builds so a same-day run is a no-op', async () => {
+  it('reuses the identifier an on demand run builds so a repeat adds nothing', async () => {
     const { scheduler, appStore, inWorkspace } = schedulerWith([
       trackedRow('k1', Store.APP_STORE),
     ]);

@@ -37,6 +37,7 @@ test("an unreadable schedule is reported as queued rather than as a date", async
   await page.goto(`/apps/${FIRST_RUN_UNSCHEDULED.appId}`);
 
   const rankings = page
+    .getByRole("list", { name: /still finishing/i })
     .getByRole("listitem")
     .filter({ hasText: "Positions collected" });
 
