@@ -10,6 +10,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CapacityReport,
   DailyBudget,
+  FirstRunStatus,
   RunDailyResult,
   WorkspaceRunStatus,
 } from '@asobeast/shared';
@@ -20,6 +21,7 @@ import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { isPlatformOperator } from '../auth/platform-operator';
 import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
+import { FirstRunStatusService } from './first-run-status.service';
 import { PipelineService } from './pipeline.service';
 import { RunStatusService } from './run-status.service';
 
@@ -29,6 +31,7 @@ export class JobsController {
   constructor(
     private readonly pipeline: PipelineService,
     private readonly limiter: OnDemandLimiter,
+    private readonly firstRunStatus: FirstRunStatusService,
   ) {}
 
   @Post(':id/run-daily')
@@ -38,6 +41,14 @@ export class JobsController {
   async runDaily(@Param('id') id: string): Promise<RunDailyResult> {
     await this.limiter.consume('runDaily');
     return { enqueued: await this.pipeline.fanOutApp(id) };
+  }
+
+  @Get(':id/first-run')
+  @ApiOperation({
+    summary: 'Report what a newly imported app is still waiting for',
+  })
+  firstRun(@Param('id') id: string): Promise<FirstRunStatus> {
+    return this.firstRunStatus.forApp(id);
   }
 }
 

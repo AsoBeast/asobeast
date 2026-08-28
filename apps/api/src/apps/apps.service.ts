@@ -1,5 +1,5 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { AppSnapshot, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
@@ -31,12 +31,15 @@ import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
+import { FirstRunScheduler } from './first-run.scheduler';
 import { diffSnapshots } from './snapshot-diff';
 
 const REVIEW_BACKFILL_PAGES = 3;
 
 @Injectable()
 export class AppsService {
+  private readonly logger = new Logger(AppsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
@@ -48,6 +51,7 @@ export class AppsService {
     private readonly quota: QuotaService,
     private readonly egress: ProxyEgress,
     private readonly workspace: WorkspaceContext,
+    private readonly firstRun: FirstRunScheduler,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -97,7 +101,19 @@ export class AppsService {
       { jobId: reviewsBackfillJobId(app.id) },
     );
 
+    await this.scheduleFirstRun(app.id);
+
     return toAppDetail(app, snapshot, [], null);
+  }
+
+  private async scheduleFirstRun(appId: string): Promise<void> {
+    try {
+      await this.firstRun.schedule(appId);
+    } catch (error: unknown) {
+      this.logger.error(
+        `could not schedule the first run for ${appId}, so its positions wait for the next daily run: ${reason(error)}`,
+      );
+    }
   }
 
   async list(): Promise<AppListItem[]> {
@@ -266,4 +282,8 @@ export class AppsService {
       releaseNotes: releaseNotesFor(store, snapshot.raw),
     };
   }
+}
+
+function reason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

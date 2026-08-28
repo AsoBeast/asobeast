@@ -1,5 +1,6 @@
 import type {
   DailyBudget,
+  FirstRunStatus,
   HealthStatus,
   RunDailyResult,
   SnapshotDiffResult,
@@ -27,4 +28,8 @@ export function getBudget(): Promise<DailyBudget> {
 
 export function getRunStatus(): Promise<WorkspaceRunStatus> {
   return apiFetch<WorkspaceRunStatus>("/jobs/run-status");
+}
+
+export function getFirstRun(id: string): Promise<FirstRunStatus> {
+  return apiFetch<FirstRunStatus>(`/apps/${id}/first-run`);
 }

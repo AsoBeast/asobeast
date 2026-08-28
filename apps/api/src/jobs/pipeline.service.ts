@@ -13,6 +13,7 @@ import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   categoryJobId,
+  checkJobId,
   dailyCompleteJobId,
   DailyCompletePayload,
   FLOW_PRODUCERS,
@@ -362,7 +363,7 @@ export class PipelineService {
       await this.queueFor(keyword.store).add(
         JOBS.CHECK_KEYWORD,
         { keywordId: keyword.keywordId, ...scope },
-        { jobId: `check~${keyword.keywordId}~${date}` },
+        { jobId: checkJobId(keyword.keywordId, date) },
       );
     }
     for (const app of targets.reviewApps) {

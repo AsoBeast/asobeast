@@ -13,6 +13,9 @@ import {
   DATASETS,
   EMAIL_ALERTS,
   EMAIL_DELIVERIES,
+  FIRST_RUN_COMPLETE,
+  FIRST_RUN_MID,
+  FIRST_RUN_UNSCHEDULED,
   HEALTH,
   RUN_STATUS,
   IMPORTED_APP,
@@ -37,6 +40,7 @@ import type {
   CompetitorItem,
   EmailAlertCreateRequest,
   EmailAlertItem,
+  FirstRunStatus,
   KeywordFieldRequest,
   KeywordFieldResult,
   KeywordSort,
@@ -396,6 +400,12 @@ function capturedCompetitor(
   };
 }
 
+function firstRunFor(appId: string): FirstRunStatus {
+  if (appId === "app-new") return FIRST_RUN_MID;
+  if (appId === "app-2") return FIRST_RUN_UNSCHEDULED;
+  return { ...FIRST_RUN_COMPLETE, appId };
+}
+
 const routes: Route[] = [
   {
     method: "POST",
@@ -414,6 +424,11 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/run-status$/,
     handler: (_p, _q, res) => json(res, 200, RUN_STATUS),
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/first-run$/,
+    handler: (params, _q, res) => json(res, 200, firstRunFor(params[0])),
   },
   {
     method: "GET",

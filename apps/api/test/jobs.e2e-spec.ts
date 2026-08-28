@@ -6,8 +6,15 @@ import { BullExplorer } from '@nestjs/bullmq/dist/bull.explorer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
+import {
+  FIRST_RUN_HISTORY_DAYS,
+  FIRST_RUN_STAGES,
+  type FirstRunStageStatus,
+  type FirstRunStatus,
+} from '@asobeast/shared';
 import { AppModule } from '../src/app.module';
 import { asWorkspace } from './helpers/tenancy';
+import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -16,11 +23,14 @@ import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
 import { requestsFor } from '../src/jobs/request-weights';
 
+const OTHER_WORKSPACE_ID = 'ws_jobs_other';
+
 describe('Pipeline store routing (e2e)', () => {
   let app: INestApplication;
   let prisma: PrismaClient;
   let pipeline: PipelineService;
   let budget: DailyBudgetService;
+  let api: Awaited<ReturnType<typeof ownerAgent>>;
 
   const queue = (name: string): Queue =>
     app.get<Queue>(getQueueToken(name), { strict: false });
@@ -65,6 +75,7 @@ describe('Pipeline store routing (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
+    useCookies(app);
     await app.init();
     await app.get(BullExplorer, { strict: false }).onApplicationShutdown();
     await pauseQueues(app);
@@ -77,6 +88,7 @@ describe('Pipeline store routing (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
+    api = await ownerAgent(app);
   });
 
   beforeEach(async () => {
@@ -85,6 +97,7 @@ describe('Pipeline store routing (e2e)', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
     );
+    await prisma.workspace.deleteMany({ where: { id: OTHER_WORKSPACE_ID } });
   });
 
   afterAll(async () => {
@@ -163,5 +176,131 @@ describe('Pipeline store routing (e2e)', () => {
     expect(mixed.utilization).toBe(
       Math.max(mixedAppStore?.utilization ?? 0, mixedGplay?.utilization ?? 0),
     );
+  });
+
+  describe('first run readiness', () => {
+    const seedSnapshot = (appId: string, ratingCount: number | null) =>
+      prisma.appSnapshot.create({
+        data: {
+          appId,
+          title: 'Fixture',
+          description: 'Fixture description',
+          ratingCount,
+          raw: {},
+        },
+      });
+
+    const seedRankings = async (appId: string): Promise<number> => {
+      const tracked = await prisma.trackedKeyword.findMany({
+        where: { appId, active: true },
+        select: { keywordId: true },
+      });
+      for (const { keywordId } of tracked) {
+        await prisma.keywordRanking.create({
+          data: {
+            appId,
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            keywordId,
+            date: new Date('2026-08-10T00:00:00Z'),
+            position: 12,
+          },
+        });
+      }
+      return tracked.length;
+    };
+
+    const firstRunOf = async (appId: string): Promise<FirstRunStatus> => {
+      const response = await api.get(`/apps/${appId}/first-run`).expect(200);
+      return response.body as FirstRunStatus;
+    };
+
+    const stageOf = (
+      status: FirstRunStatus,
+      stage: string,
+    ): FirstRunStageStatus => {
+      const found = status.stages.find((row) => row.stage === stage);
+      if (!found) throw new Error(`missing stage ${stage}`);
+      return found;
+    };
+
+    it('refuses an app id it cannot resolve', async () => {
+      await api.get('/apps/does-not-exist/first-run').expect(404);
+    });
+
+    it('carries exactly the contract stages, in contract order', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-first-run');
+      await seedSnapshot(appId, 120);
+
+      const status = await firstRunOf(appId);
+
+      expect(status.appId).toBe(appId);
+      expect(status.stages.map((stage) => stage.stage)).toEqual([
+        ...FIRST_RUN_STAGES,
+      ]);
+    });
+
+    it('waits on rankings and names when the daily run collects them', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-waiting');
+      await seedSnapshot(appId, 120);
+
+      const status = await firstRunOf(appId);
+      const rankings = stageOf(status, 'rankings');
+
+      expect(status.complete).toBe(false);
+      expect(rankings).toMatchObject({ ready: 0, total: 1, complete: false });
+      expect(Number.isNaN(Date.parse(rankings.expectedBy ?? ''))).toBe(false);
+      expect(stageOf(status, 'history')).toMatchObject({
+        ready: 0,
+        total: FIRST_RUN_HISTORY_DAYS,
+        complete: false,
+      });
+    });
+
+    it('stops promising a time once the captures land', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-captured');
+      await seedSnapshot(appId, 120);
+      const tracked = await seedRankings(appId);
+
+      const rankings = stageOf(await firstRunOf(appId), 'rankings');
+
+      expect(rankings).toMatchObject({
+        ready: tracked,
+        total: tracked,
+        complete: true,
+        expectedBy: null,
+      });
+    });
+
+    it('expects no reviews from a listing the store reports no ratings for', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-unrated');
+      await seedSnapshot(appId, 0);
+
+      expect(stageOf(await firstRunOf(appId), 'reviews')).toMatchObject({
+        ready: 0,
+        total: 0,
+        complete: true,
+        expectedBy: null,
+      });
+    });
+
+    it('never reports an app owned by another workspace', async () => {
+      await prisma.workspace.upsert({
+        where: { id: OTHER_WORKSPACE_ID },
+        update: {},
+        create: { id: OTHER_WORKSPACE_ID, name: 'Other' },
+      });
+      const other = await prisma.app.create({
+        data: {
+          workspaceId: OTHER_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'apple-other',
+          country: 'us',
+          name: 'Other',
+          isCompetitor: false,
+        },
+      });
+
+      await api.get(`/apps/${other.id}/first-run`).expect(404);
+    });
   });
 });

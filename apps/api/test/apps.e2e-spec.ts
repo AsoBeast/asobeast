@@ -1,8 +1,10 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
+import { Job, Queue } from 'bullmq';
 import {
   ApiErrorEnvelope,
   AppDetail,
@@ -18,6 +20,8 @@ import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { AppsService } from '../src/apps/apps.service';
+import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
+import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
 import {
   StoreAppNotFoundError,
@@ -669,5 +673,68 @@ describe('AppsController (e2e)', () => {
       .get(`/apps/${imported.id}/market-availability`)
       .query({ country: 'GERMANY' })
       .expect(400);
+  });
+
+  describe('what an import schedules', () => {
+    const queue = (name: string): Queue =>
+      app.get<Queue>(getQueueToken(name), { strict: false });
+
+    const jobsOn = (name: string): Promise<Job[]> =>
+      queue(name).getJobs(['wait', 'paused', 'delayed']);
+
+    const countOn = async (name: string, job: string): Promise<number> =>
+      (await jobsOn(name)).filter((queued) => queued.name === job).length;
+
+    beforeEach(async () => {
+      await obliterateQueues(app);
+      await pauseQueues(app);
+    });
+
+    const trackedCount = (appId: string): Promise<number> =>
+      prisma.trackedKeyword.count({ where: { appId, active: true } });
+
+    it('reports what a fresh import puts on the queues', async () => {
+      const imported = await importApp(APP_STORE_URL);
+      const tracked = await trackedCount(imported.id);
+
+      expect(tracked).toBeGreaterThan(0);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
+    });
+
+    it('returns the app it already has rather than scheduling a second pass', async () => {
+      const imported = await importApp(APP_STORE_URL);
+      const tracked = await trackedCount(imported.id);
+
+      await importApp(APP_STORE_URL);
+
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
+    });
+
+    it('still imports when the first pass cannot be scheduled', async () => {
+      const scheduler = app.get(FirstRunScheduler);
+      const failing = jest
+        .spyOn(scheduler, 'schedule')
+        .mockRejectedValueOnce(new Error('redis is unreachable'));
+
+      const imported = await importApp(APP_STORE_URL);
+
+      expect(failing).toHaveBeenCalledTimes(1);
+      expect(imported.id).toBeDefined();
+      expect(await prisma.app.count()).toBe(1);
+      expect(await trackedCount(imported.id)).toBeGreaterThan(0);
+      failing.mockRestore();
+    });
+
+    it('keeps one action run for the workspace across two imports', async () => {
+      await importApp(APP_STORE_URL);
+      await importApp(GOOGLE_PLAY_URL);
+
+      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
+    });
   });
 });

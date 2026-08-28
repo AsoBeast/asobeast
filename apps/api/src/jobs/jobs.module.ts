@@ -34,6 +34,7 @@ import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
 import { DailyCapacity } from './daily-capacity.service';
 import { DailyTargetsCollector } from './daily-targets.service';
+import { FirstRunStatusService } from './first-run-status.service';
 import { FLOW_PRODUCERS, QUEUES } from './jobs.types';
 import { PipelineService } from './pipeline.service';
 import { PipelineWorker } from './pipeline.worker';
@@ -109,6 +110,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
     DailyBudgetService,
     DailyCapacity,
     DailyTargetsCollector,
+    FirstRunStatusService,
     JobTargetCountry,
     OverLimitRegistry,
     StoreJobsHandler,
