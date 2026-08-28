@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { nextDailyRun, nextWeeklyRun } from './daily-schedule';
 
 const DAY_MS = 24 * 60 * 60_000;
+const REVIEW_BACKFILL_GRACE_MS = DAY_MS;
 
 interface ReadyRow {
   ready: number;
@@ -35,6 +36,7 @@ export class FirstRunStatusService {
       where: { id: appId },
       select: {
         id: true,
+        createdAt: true,
         snapshots: {
           orderBy: { capturedAt: 'desc' },
           take: 1,
@@ -57,6 +59,9 @@ export class FirstRunStatusService {
     const snapshot = app.snapshots[0];
     const historyTotal = tracked === 0 ? 0 : FIRST_RUN_HISTORY_DAYS;
     const historyReady = Math.min(captureDays, historyTotal);
+    const backfillPending =
+      (snapshot?.ratingCount ?? 0) > 0 &&
+      now.getTime() - app.createdAt.getTime() < REVIEW_BACKFILL_GRACE_MS;
     const inputs: Record<FirstRunStage, StageInput> = {
       metadata: {
         ready: snapshot ? 1 : 0,
@@ -76,7 +81,7 @@ export class FirstRunStatusService {
       },
       reviews: {
         ready: reviewed === 0 ? 0 : 1,
-        total: (snapshot?.ratingCount ?? 0) > 0 ? 1 : 0,
+        total: reviewed > 0 || backfillPending ? 1 : 0,
         expectedBy: null,
       },
       history: {

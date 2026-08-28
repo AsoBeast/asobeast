@@ -15,6 +15,7 @@ const NOW = new Date('2026-08-10T09:00:00Z');
 
 interface Fixture {
   exists: boolean;
+  createdAt: Date;
   ratingCount: number | null;
   tracked: number;
   ranked: number;
@@ -27,6 +28,7 @@ interface Fixture {
 
 const DEFAULTS: Fixture = {
   exists: true,
+  createdAt: new Date('2026-08-10T08:00:00Z'),
   ratingCount: 120,
   tracked: 15,
   ranked: 0,
@@ -45,6 +47,7 @@ function serviceWith(overrides: Partial<Fixture> = {}) {
         fixture.exists
           ? {
               id: APP_ID,
+              createdAt: fixture.createdAt,
               snapshots: [{ ratingCount: fixture.ratingCount }],
             }
           : null,
@@ -196,6 +199,32 @@ describe('FirstRunStatusService', () => {
       complete: false,
     });
     expect(stageOf(arrived.stages, 'reviews')).toMatchObject({
+      ready: 1,
+      total: 1,
+      complete: true,
+    });
+  });
+
+  it('stops promising a backfill that has had its whole window', async () => {
+    const status = await serviceWith({
+      createdAt: new Date('2026-08-01T09:00:00Z'),
+    }).forApp(APP_ID, NOW);
+
+    expect(stageOf(status.stages, 'reviews')).toMatchObject({
+      ready: 0,
+      total: 0,
+      complete: true,
+      expectedBy: null,
+    });
+  });
+
+  it('keeps reporting reviews it already has after the window closes', async () => {
+    const status = await serviceWith({
+      createdAt: new Date('2026-08-01T09:00:00Z'),
+      reviewed: 40,
+    }).forApp(APP_ID, NOW);
+
+    expect(stageOf(status.stages, 'reviews')).toMatchObject({
       ready: 1,
       total: 1,
       complete: true,
