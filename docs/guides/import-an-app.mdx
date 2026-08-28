@@ -43,16 +43,18 @@ The first pass is what fills the listing. Positions and scores arrive as the que
 
 ### Importing twice costs nothing extra
 
-The first pass reuses the identifiers the on demand runs already build, so a repeat import collects nothing twice.
+Each piece of first pass work carries an identifier, so importing the same app twice collects nothing twice.
 
 | Work | Identifier | What deduplicates against it |
 | --- | --- | --- |
-| Rank check | `check~<keywordId>~<date>` | A repeat import, and **Run daily** on the same app the same UTC day |
+| Rank check | `first-run~<appId>~<keywordId>~<date>` | Another first pass for the same app the same UTC day |
 | Action run | `actions~<workspaceId>~<date>` | A repeat import, and **Generate now** the same UTC day |
 
 Two consequences follow, and both are intended. Importing a second app into the same workspace on the same day adds no second action run. **Generate now** on the actions page is also a no operation for the rest of that UTC day, because the import already generated the queue.
 
-The nightly pipeline is deliberately not on that list. It builds its own `daily~` prefixed identifiers so its flow keeps track of its own children, and it regenerates actions in place rather than queueing a job. So an import in the hours before `CRON_DAILY` fires can have a keyword checked twice that day. The second check overwrites the same stored position rather than adding a row, so the cost is one store request per keyword and nothing else.
+The rank check identifier names the app on purpose. Keywords are shared: two apps tracking the same phrase in the same storefront are one keyword row, and one search records positions for every app tracking it. That sharing is what makes a scheduled run cheap, but it only helps while the search is still queued. A search that already ran cannot record a position for an app that started tracking afterwards, so a first pass that deduplicated against it would be dropped in silence and the new app would show nothing until the next daily run. Naming the app keeps each import's promise, and costs at most one extra search per shared keyword on the day it is imported.
+
+The nightly pipeline builds its own `daily~` prefixed identifiers so its flow can keep track of its own children, and it regenerates actions in place rather than queueing a job, so it is not on that list either.
 
 Auto tracked sources differ by store, because the stores index different fields.
 

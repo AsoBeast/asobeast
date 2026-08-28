@@ -5,7 +5,12 @@ import {
   WorkspaceScope,
 } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { actionsJobId, checkJobId, JOBS, utcDateKey } from '../jobs/jobs.types';
+import {
+  actionsJobId,
+  firstRunCheckJobId,
+  JOBS,
+  utcDateKey,
+} from '../jobs/jobs.types';
 import { FirstRunScheduler } from './first-run.scheduler';
 
 const WORKSPACE_ID = 'ws_first_run';
@@ -82,7 +87,7 @@ describe('FirstRunScheduler', () => {
     expect(keywordIdsOf(appStore)).toEqual(['k1', 'k2']);
   });
 
-  it('reuses the identifier an on demand run builds so a repeat adds nothing', async () => {
+  it('names the app in the check identifier so no other check can swallow it', async () => {
     const { scheduler, appStore, inWorkspace } = schedulerWith([
       trackedRow('k1', Store.APP_STORE),
     ]);
@@ -96,8 +101,20 @@ describe('FirstRunScheduler', () => {
         workspaceId: WORKSPACE_ID,
         correlationId: CORRELATION_ID,
       },
-      { jobId: checkJobId('k1', utcDateKey()) },
+      { jobId: firstRunCheckJobId(APP_ID, 'k1', utcDateKey()) },
     );
+  });
+
+  it('gives two apps sharing one keyword a check each', async () => {
+    const { scheduler, appStore, inWorkspace } = schedulerWith([
+      trackedRow('shared', Store.APP_STORE),
+    ]);
+
+    await inWorkspace(() => scheduler.schedule('app_1'));
+    await inWorkspace(() => scheduler.schedule('app_2'));
+
+    const jobIds = appStore.add.mock.calls.map((call) => call[2].jobId);
+    expect(new Set(jobIds).size).toBe(2);
   });
 
   it('routes each keyword onto the queue for its own store', async () => {

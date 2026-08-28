@@ -9,7 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import {
   actionsJobId,
-  checkJobId,
+  firstRunCheckJobId,
   JOBS,
   QUEUES,
   queueNameForStore,
@@ -60,7 +60,7 @@ export class FirstRunScheduler {
       await this.queueFor(keyword.store).add(
         JOBS.CHECK_KEYWORD,
         { keywordId, ...scope },
-        { jobId: checkJobId(keywordId, date) },
+        { jobId: firstRunCheckJobId(appId, keywordId, date) },
       );
     }
     return tracked.length;

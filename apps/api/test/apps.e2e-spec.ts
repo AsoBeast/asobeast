@@ -703,7 +703,7 @@ describe('AppsController (e2e)', () => {
       expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
     });
 
-    it('adds nothing further when the same url is imported again', async () => {
+    it('returns the app it already has rather than scheduling a second pass', async () => {
       const imported = await importApp(APP_STORE_URL);
       const tracked = await trackedCount(imported.id);
 
