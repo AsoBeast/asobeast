@@ -160,3 +160,7 @@ export function categoryJobId(
 ): string {
   return `category~${workspaceId}~${collection}~${genre}~${country}~${date}`;
 }
+
+export function checkJobId(keywordId: string, date: string): string {
+  return `check~${keywordId}~${date}`;
+}

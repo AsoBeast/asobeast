@@ -689,18 +689,29 @@ describe('AppsController (e2e)', () => {
       await pauseQueues(app);
     });
 
+    const trackedCount = (appId: string): Promise<number> =>
+      prisma.trackedKeyword.count({ where: { appId, active: true } });
+
     it('reports what a fresh import puts on the queues', async () => {
       const imported = await importApp(APP_STORE_URL);
-
-      const tracked = await prisma.trackedKeyword.count({
-        where: { appId: imported.id, active: true },
-      });
+      const tracked = await trackedCount(imported.id);
 
       expect(tracked).toBeGreaterThan(0);
       expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
-      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(0);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
       expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
       expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(0);
+    });
+
+    it('adds nothing further when the same url is imported again', async () => {
+      const imported = await importApp(APP_STORE_URL);
+      const tracked = await trackedCount(imported.id);
+
+      await importApp(APP_STORE_URL);
+
+      expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
+      expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
     });
   });
 });

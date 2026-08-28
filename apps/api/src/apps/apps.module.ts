@@ -8,6 +8,7 @@ import { AppCaptureService } from './app-capture.service';
 import { AppGroupsService } from './app-groups.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
+import { FirstRunScheduler } from './first-run.scheduler';
 
 @Module({
   imports: [
@@ -17,10 +18,16 @@ import { AppsService } from './apps.service';
     BullModule.registerQueue(
       { name: QUEUES.APP_STORE },
       { name: QUEUES.GPLAY },
+      { name: QUEUES.PIPELINE },
     ),
   ],
   controllers: [AppsController],
-  providers: [AppsService, AppCaptureService, AppGroupsService],
+  providers: [
+    AppsService,
+    AppCaptureService,
+    AppGroupsService,
+    FirstRunScheduler,
+  ],
   exports: [AppsService, AppCaptureService],
 })
 export class AppsModule {}

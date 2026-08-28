@@ -31,6 +31,7 @@ import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
+import { FirstRunScheduler } from './first-run.scheduler';
 import { diffSnapshots } from './snapshot-diff';
 
 const REVIEW_BACKFILL_PAGES = 3;
@@ -48,6 +49,7 @@ export class AppsService {
     private readonly quota: QuotaService,
     private readonly egress: ProxyEgress,
     private readonly workspace: WorkspaceContext,
+    private readonly firstRun: FirstRunScheduler,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -96,6 +98,8 @@ export class AppsService {
       },
       { jobId: reviewsBackfillJobId(app.id) },
     );
+
+    await this.firstRun.schedule(app.id);
 
     return toAppDetail(app, snapshot, [], null);
   }
