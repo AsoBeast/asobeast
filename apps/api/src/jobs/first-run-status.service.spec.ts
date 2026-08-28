@@ -57,9 +57,10 @@ function serviceWith(overrides: Partial<Fixture> = {}) {
     review: { count: jest.fn().mockResolvedValue(fixture.reviewed) },
     $queryRaw: jest
       .fn()
-      .mockResolvedValueOnce([{ ready: fixture.ranked }])
-      .mockResolvedValueOnce([{ ready: fixture.scored }])
-      .mockResolvedValueOnce([{ ready: fixture.captureDays }]),
+      .mockResolvedValueOnce([
+        { keywords: fixture.ranked, days: fixture.captureDays },
+      ])
+      .mockResolvedValueOnce([{ ready: fixture.scored }]),
   };
   const config = {
     get: (key: 'CRON_DAILY' | 'CRON_SCORING') =>
@@ -254,6 +255,43 @@ describe('FirstRunStatusService', () => {
 
     expect(status.stages.every((stage) => stage.complete)).toBe(true);
     expect(status.complete).toBe(true);
+  });
+
+  it('expects nothing more once the first run window has closed', async () => {
+    const status = await serviceWith({
+      createdAt: new Date('2026-07-01T09:00:00Z'),
+      tracked: 15,
+      ranked: 4,
+      scored: 2,
+      captureDays: 3,
+    }).forApp(APP_ID, NOW);
+
+    expect(status.complete).toBe(true);
+    expect(stageOf(status.stages, 'rankings')).toMatchObject({
+      ready: 4,
+      total: 4,
+      complete: true,
+      expectedBy: null,
+    });
+    expect(stageOf(status.stages, 'history')).toMatchObject({
+      ready: 3,
+      total: 3,
+      complete: true,
+    });
+  });
+
+  it('keeps waiting on collection that is gated only while the window is open', async () => {
+    const status = await serviceWith({
+      tracked: 15,
+      ranked: 4,
+    }).forApp(APP_ID, NOW);
+
+    expect(status.complete).toBe(false);
+    expect(stageOf(status.stages, 'rankings')).toMatchObject({
+      ready: 4,
+      total: 15,
+      complete: false,
+    });
   });
 
   it('refuses an app this workspace cannot see', async () => {
