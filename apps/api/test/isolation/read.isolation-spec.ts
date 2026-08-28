@@ -156,6 +156,10 @@ const BY_ID = [
     name: 'GET /apps/:id/serp-movers',
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/serp-movers`,
   },
+  {
+    name: 'GET /apps/:id/first-run',
+    path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/first-run`,
+  },
 ];
 
 describe('Read isolation', () => {
