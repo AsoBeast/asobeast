@@ -32,11 +32,25 @@ The home storefront is not just a label. It decides where snapshots, category ra
 
 ## What happens on import?
 
-Three things, in order.
+Four things, in order.
 
 1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it.
-2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from.
-3. **The first checks are enqueued.** Positions appear after the next daily pipeline run rather than immediately.
+2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first traffic and difficulty score.
+3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
+4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check, and the action queue is generated for your workspace.
+
+The first pass is what fills the listing. Positions and scores arrive as the queue drains rather than waiting for the next scheduled run, so a fresh instance with an empty queue shows real numbers within minutes on the App Store and within tens of minutes on Google Play. See [The daily pipeline and rate limits](/concepts/pipeline) for the throughput those waits come from.
+
+### Importing twice costs nothing extra
+
+The first pass reuses the identifiers the scheduled runs already use, so nothing is collected twice.
+
+| Work | Identifier | What deduplicates against it |
+| --- | --- | --- |
+| Rank check | `check~<keywordId>~<date>` | The daily pipeline firing later the same UTC day |
+| Action run | `actions~<workspaceId>~<date>` | Any other action generation for that workspace that day |
+
+Two consequences follow, and both are intended. Importing a second app into the same workspace on the same day adds no second action run. **Generate now** on the actions page is also a no operation for the rest of that UTC day, because the import already generated the queue.
 
 Auto tracked sources differ by store, because the stores index different fields.
 
@@ -62,7 +76,8 @@ Field level changes also land in the changes feed, where they are kept alongside
 - **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs and bare iTunes ids. A search result URL, a developer page or a shortened link will not parse. Open the listing in a browser and copy the address bar.
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
 - **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
-- **Positions are empty after importing.** Expected. The first position check runs on the next daily pipeline, which defaults to 03:00 UTC.
+- **Positions are empty right after importing.** Expected for a moment. The rank checks are queued at import and drain at the store rate limit, so give the queue a few minutes. If they stay empty, check the queue dashboard at `/admin/queues` for failed jobs.
+- **Trend based actions stay thin for the first week.** Expected. The rules that compare a before and an after need several days of captures before they can fire at all, so the action queue grows over the first week rather than arriving full.
 
 ## Related
 
