@@ -43,14 +43,16 @@ The first pass is what fills the listing. Positions and scores arrive as the que
 
 ### Importing twice costs nothing extra
 
-The first pass reuses the identifiers the scheduled runs already use, so nothing is collected twice.
+The first pass reuses the identifiers the on demand runs already build, so a repeat import collects nothing twice.
 
 | Work | Identifier | What deduplicates against it |
 | --- | --- | --- |
-| Rank check | `check~<keywordId>~<date>` | The daily pipeline firing later the same UTC day |
-| Action run | `actions~<workspaceId>~<date>` | Any other action generation for that workspace that day |
+| Rank check | `check~<keywordId>~<date>` | A repeat import, and **Run daily** on the same app the same UTC day |
+| Action run | `actions~<workspaceId>~<date>` | A repeat import, and **Generate now** the same UTC day |
 
 Two consequences follow, and both are intended. Importing a second app into the same workspace on the same day adds no second action run. **Generate now** on the actions page is also a no operation for the rest of that UTC day, because the import already generated the queue.
+
+The nightly pipeline is deliberately not on that list. It builds its own `daily~` prefixed identifiers so its flow keeps track of its own children, and it regenerates actions in place rather than queueing a job. So an import in the hours before `CRON_DAILY` fires can have a keyword checked twice that day. The second check overwrites the same stored position rather than adding a row, so the cost is one store request per keyword and nothing else.
 
 Auto tracked sources differ by store, because the stores index different fields.
 
