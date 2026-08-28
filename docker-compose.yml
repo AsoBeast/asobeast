@@ -120,6 +120,9 @@ services:
     build:
       context: .
       dockerfile: apps/web/Dockerfile
+    env_file:
+      - path: apps/web/.env
+        required: false
     environment:
       API_INTERNAL_URL: http://api:4000
       HOSTNAME: 0.0.0.0
