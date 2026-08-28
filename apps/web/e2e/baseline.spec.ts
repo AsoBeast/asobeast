@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./reporting.mts";
 import { SESSION_COOKIE } from "@asobeast/shared";
 import { SIGNED_IN_ROUTES } from "./routes.mts";
 

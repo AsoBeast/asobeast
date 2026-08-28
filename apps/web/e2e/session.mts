@@ -1,5 +1,5 @@
-import { test as base } from "@playwright/test";
 import { SESSION_COOKIE } from "@asobeast/shared";
+import { test as base } from "./reporting.mts";
 
 export const test = base.extend<{ session: void }>({
   session: [
