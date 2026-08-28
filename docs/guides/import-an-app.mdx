@@ -81,6 +81,7 @@ Field level changes also land in the changes feed, where they are kept alongside
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
 - **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
 - **Positions are empty right after importing.** Expected for a moment. The rank checks are queued at import and drain at the store rate limit, so watch the first run panel on the app overview page rather than the clock. If they stay empty, check the queue dashboard at `/admin/queues` for failed jobs.
+- **The first pass did not run at all.** The import itself succeeds even when the queue refuses the work, because the listing, its snapshot and its keywords are already stored and only the head start is missing. The API logs why, and the next daily run collects what the first pass would have. Check `/admin/queues` if it keeps happening.
 - **Trend based actions stay thin for the first week.** Expected. The rules that compare a before and an after need several days of captures before they can fire at all, so the action queue grows over the first week rather than arriving full.
 
 ## Related
