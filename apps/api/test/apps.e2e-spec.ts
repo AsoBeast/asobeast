@@ -700,7 +700,7 @@ describe('AppsController (e2e)', () => {
       expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
       expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
       expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
-      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(0);
+      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
     });
 
     it('adds nothing further when the same url is imported again', async () => {
@@ -712,6 +712,13 @@ describe('AppsController (e2e)', () => {
       expect(await countOn(QUEUES.APP_STORE, JOBS.CHECK_KEYWORD)).toBe(tracked);
       expect(await countOn(QUEUES.APP_STORE, JOBS.SCORE_KEYWORD)).toBe(tracked);
       expect(await countOn(QUEUES.APP_STORE, JOBS.SYNC_REVIEWS)).toBe(1);
+    });
+
+    it('keeps one action run for the workspace across two imports', async () => {
+      await importApp(APP_STORE_URL);
+      await importApp(GOOGLE_PLAY_URL);
+
+      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
     });
   });
 });
