@@ -10,6 +10,7 @@ import type {
   CompetitorDiscovery,
   DailyBudget,
   EmailAlertItem,
+  FirstRunStatus,
   KeywordComparison,
   KeywordCountrySummary,
   ChangeTimeline,
@@ -29,7 +30,12 @@ import type {
   VisibilityHistory,
   WebhookItem,
 } from "@asobeast/shared";
-import { PLAN_LIMITS, RANK_DEPTH } from "@asobeast/shared";
+import {
+  FIRST_RUN_HISTORY_DAYS,
+  FIRST_RUN_STAGES,
+  PLAN_LIMITS,
+  RANK_DEPTH,
+} from "@asobeast/shared";
 
 function utcDaysAgo(days: number): string {
   const date = new Date();
@@ -87,6 +93,74 @@ export const RUN_STATUS: WorkspaceRunStatus = {
   tracked: 4,
   captured: 4,
   stores: [{ store: "APP_STORE", tracked: 4, captured: 4 }],
+};
+
+export const FIRST_RUN_MID: FirstRunStatus = {
+  appId: "app-new",
+  complete: false,
+  stages: [
+    { stage: "metadata", ready: 1, total: 1, complete: true, expectedBy: null },
+    { stage: "keywords", ready: 8, total: 8, complete: true, expectedBy: null },
+    {
+      stage: "rankings",
+      ready: 3,
+      total: 8,
+      complete: false,
+      expectedBy: utcTimestampDaysAgo(-1),
+    },
+    {
+      stage: "scores",
+      ready: 1,
+      total: 8,
+      complete: false,
+      expectedBy: utcTimestampDaysAgo(-5),
+    },
+    { stage: "reviews", ready: 1, total: 1, complete: true, expectedBy: null },
+    {
+      stage: "history",
+      ready: 1,
+      total: FIRST_RUN_HISTORY_DAYS,
+      complete: false,
+      expectedBy: utcTimestampDaysAgo(-6),
+    },
+  ],
+};
+
+export const FIRST_RUN_UNSCHEDULED: FirstRunStatus = {
+  appId: "app-2",
+  complete: false,
+  stages: [
+    { stage: "metadata", ready: 1, total: 1, complete: true, expectedBy: null },
+    { stage: "keywords", ready: 4, total: 4, complete: true, expectedBy: null },
+    {
+      stage: "rankings",
+      ready: 0,
+      total: 4,
+      complete: false,
+      expectedBy: null,
+    },
+    { stage: "scores", ready: 4, total: 4, complete: true, expectedBy: null },
+    { stage: "reviews", ready: 0, total: 0, complete: true, expectedBy: null },
+    {
+      stage: "history",
+      ready: FIRST_RUN_HISTORY_DAYS,
+      total: FIRST_RUN_HISTORY_DAYS,
+      complete: true,
+      expectedBy: null,
+    },
+  ],
+};
+
+export const FIRST_RUN_COMPLETE: FirstRunStatus = {
+  appId: "app-1",
+  complete: true,
+  stages: FIRST_RUN_STAGES.map((stage) => ({
+    stage,
+    ready: 1,
+    total: 1,
+    complete: true,
+    expectedBy: null,
+  })),
 };
 
 export const RUN_STATUS_DELAYED: WorkspaceRunStatus = {
