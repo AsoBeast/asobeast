@@ -54,8 +54,18 @@ Paste an App Store or Google Play URL into the import dialog. asobeast then does
 1. Parses the store and the home storefront from the URL. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
 2. Fetches the listing and writes the first metadata snapshot, keeping the raw payload so a later parser fix can reprocess it.
 3. Extracts keywords from the indexed fields and starts tracking them in the home storefront.
+4. Schedules its own first pass: a rank check for every tracked keyword, a score for every tracked keyword and one action generation run for your workspace.
 
-Positions are not instant. The first ranking check happens on the next daily pipeline run, so the app detail page shows metadata and tracked keywords immediately and positions from the following morning. See [Import an app](/guides/import-an-app).
+On a fresh instance with an empty queue the first positions and scores arrive within minutes on the App Store and within tens of minutes on Google Play, because the whole first pass is queued at import rather than waiting for the next scheduled run. See [Import an app](/guides/import-an-app).
+
+### The panel that says what is still running
+
+Until every stage has landed, the app overview page shows a panel naming what is still being collected and, where the schedule can be read, when the rest arrives. It stops rendering and stops polling on its own once collection is done, so there is nothing to dismiss. It is a status report rather than a notification.
+
+Two horizons are worth knowing before you read it.
+
+- **Positions and scores arrive as the queue drains**, in minutes rather than days, and the daily and weekly runs catch anything that failed on the first attempt.
+- **The trend rules need a week.** Rules that compare a before against an after cannot fire until several days of daily captures exist, so the action queue grows over the first week rather than arriving full. The panel counts those days so a thin queue reads as young rather than broken.
 
 <Tip>
   The iOS keyword field holds 100 characters, never appears on the public store page and cannot be collected. Paste it by hand in the [metadata workbench](/guides/metadata-workbench) so coverage and audit checks can see it.
@@ -79,7 +89,7 @@ A healthy queue has no jobs in the failed list and shows the daily pipeline as s
 
 The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *`, meaning 03:00 UTC. It checks every tracked keyword in every tracked market, captures SERP snapshots and category ranks, syncs reviews, generates action items and then flushes batched alerts.
 
-So the first positions, the first movers and the first action items all appear the morning after the import. An empty ranking chart on the day you install is expected. See [The daily pipeline and rate limits](/concepts/pipeline).
+The import already collected the first positions, scores and action items, so the daily run is what keeps them current rather than what produces them. What it adds on day two is the second capture, which is the first point a chart can draw a line between. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 <Tip>
   Daily request volume scales with tracked keywords multiplied by tracked markets, against a fixed budget set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. The settings page shows a daily request budget card, and `GET /jobs/budget` returns the same estimate.
