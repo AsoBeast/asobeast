@@ -4,15 +4,15 @@ import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function RankingsError({
   error,
-  unstable_retry,
+  retry,
 }: {
   error: Error & { digest?: string };
-  unstable_retry: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorState
       error={error}
-      retry={unstable_retry}
+      retry={retry}
       title="Rankings could not be loaded"
     />
   );

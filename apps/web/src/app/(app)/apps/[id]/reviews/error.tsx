@@ -4,15 +4,15 @@ import { ErrorState } from "@/components/layout/ErrorState";
 
 export default function ReviewsError({
   error,
-  unstable_retry,
+  retry,
 }: {
   error: Error & { digest?: string };
-  unstable_retry: () => void;
+  retry: () => void;
 }) {
   return (
     <ErrorState
       error={error}
-      retry={unstable_retry}
+      retry={retry}
       title="Reviews could not be loaded"
     />
   );

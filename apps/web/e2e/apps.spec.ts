@@ -168,6 +168,29 @@ test("an api error renders the error boundary with a retry control", async ({
   ).toBeVisible();
 });
 
+test("the error boundary recovers once retry is pressed and the api answers", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-fail-app",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/apps/app-1");
+
+  const boundary = page.getByRole("main").getByRole("alert");
+  await expect(boundary).toBeVisible();
+
+  await page.context().clearCookies({ name: "e2e-fail-app" });
+  await boundary.getByRole("button", { name: "Try again" }).click();
+
+  await expect(boundary).toBeHidden();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+});
+
 test("an error state stays quiet when no status page is configured", async ({
   page,
 }) => {
