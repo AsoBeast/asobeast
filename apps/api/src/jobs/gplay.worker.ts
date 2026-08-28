@@ -1,6 +1,7 @@
 import { Processor } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { ErrorTracking } from '../observability/error-tracking.service';
 import { PoolCapacity } from '../store-providers/egress/pool-capacity.service';
 import { QUEUES } from './jobs.types';
 import { StoreJobsHandler } from './store-jobs.handler';
@@ -20,7 +21,17 @@ import {
   }),
 )
 export class GplayWorker extends StoreQueueWorker {
-  constructor(handler: StoreJobsHandler, capacity: PoolCapacity) {
-    super(new Logger(GplayWorker.name), Store.GOOGLE_PLAY, handler, capacity);
+  constructor(
+    handler: StoreJobsHandler,
+    capacity: PoolCapacity,
+    tracking: ErrorTracking,
+  ) {
+    super(
+      new Logger(GplayWorker.name),
+      Store.GOOGLE_PLAY,
+      handler,
+      capacity,
+      tracking,
+    );
   }
 }

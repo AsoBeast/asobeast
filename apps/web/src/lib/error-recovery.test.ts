@@ -141,4 +141,24 @@ describe("recoveryFor", () => {
     const error = Object.assign(new Error("kaboom"), { digest: "abc123" });
     expect(JSON.stringify(recoveryFor(error))).not.toContain("abc123");
   });
+
+  it.each([
+    ["an expired session", () => apiError(401)],
+    ["a spent request budget", () => planRefusal(4)],
+    ["a missing record", () => apiError(404)],
+    ["a failure the api reported itself", () => apiError(500, "database down")],
+    ["a refusal the api explained", () => apiError(409, "already exists")],
+  ])("treats %s as expected, so it is never reported", (_case, build) => {
+    expect(recoveryFor(build()).expected).toBe(true);
+  });
+
+  it.each([
+    ["a client render failure", () => new Error("cannot read properties")],
+    [
+      "a server rendered failure it cannot name",
+      () => Object.assign(new Error("An error occurred"), { digest: "abc123" }),
+    ],
+  ])("treats %s as unexpected", (_case, build) => {
+    expect(recoveryFor(build()).expected).toBe(false);
+  });
 });

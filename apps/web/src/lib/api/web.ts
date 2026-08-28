@@ -1,6 +1,7 @@
 export interface WebHealth {
   status: string;
   statusPageUrl: string | null;
+  errorReportingDsn: string | null;
 }
 
 export async function getWebHealth(): Promise<WebHealth> {

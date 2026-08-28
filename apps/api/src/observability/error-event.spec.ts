@@ -1,17 +1,37 @@
+import type { ErrorEvent } from '@sentry/nestjs';
 import { REDACTED } from '../common/logging/log-redaction';
-import { errorEvent, maskRoute, MAX_STACK_FRAMES } from './error-event';
+import { maskRoute, scrubEvent } from './error-event';
 
 const AUTH_SECRET = '0123456789abcdef0123456789abcdef';
 
-const context = {
-  secrets: [AUTH_SECRET],
-  environment: 'production',
-  release: '1.0.0',
-  workspaceId: 'ws_a',
-  correlationId: 'corr-1',
-};
+const secrets = [AUTH_SECRET];
 
-const now = new Date('2026-08-14T12:00:00.000Z');
+function eventWith(overrides: Partial<ErrorEvent> = {}): ErrorEvent {
+  return {
+    type: undefined,
+    event_id: 'abc',
+    exception: {
+      values: [
+        {
+          type: 'Error',
+          value: 'boom',
+          stacktrace: {
+            frames: [
+              {
+                filename: '/repo/apps/api/src/apps/apps.service.ts',
+                function: 'import',
+                lineno: 42,
+                colno: 7,
+                in_app: true,
+              },
+            ],
+          },
+        },
+      ],
+    },
+    ...overrides,
+  };
+}
 
 describe('maskRoute', () => {
   it('replaces identifiers with a placeholder', () => {
@@ -32,66 +52,58 @@ describe('maskRoute', () => {
   });
 });
 
-describe('errorEvent', () => {
-  it('tags the workspace and correlation without naming the user', () => {
-    const event = errorEvent(new Error('boom'), context, 'abc', now);
+describe('scrubEvent', () => {
+  it('keeps the structured frames the sdk parsed', () => {
+    const frames = scrubEvent(eventWith(), secrets).exception?.values?.[0]
+      .stacktrace?.frames;
 
-    expect(event.tags).toEqual({ workspace: 'ws_a', correlation: 'corr-1' });
-    expect(event.environment).toBe('production');
-    expect(event.release).toBe('1.0.0');
-    expect(event.timestamp).toBe(now.getTime() / 1000);
+    expect(frames?.[0]).toMatchObject({
+      filename: '/repo/apps/api/src/apps/apps.service.ts',
+      lineno: 42,
+      colno: 7,
+      in_app: true,
+    });
   });
 
   it('scrubs configured secrets from the message and the stack', () => {
-    const event = errorEvent(
-      new Error(`connect failed for ${AUTH_SECRET}`),
-      context,
-      'abc',
-      now,
-    );
+    const event = eventWith({
+      message: `connect failed for ${AUTH_SECRET}`,
+      extra: { detail: `token ${AUTH_SECRET}` },
+    });
 
-    expect(event.exception.values[0].value).toBe(
-      `connect failed for ${REDACTED}`,
-    );
-    expect(JSON.stringify(event)).not.toContain(AUTH_SECRET);
+    const scrubbed = scrubEvent(event, secrets);
+
+    expect(scrubbed.message).toBe(`connect failed for ${REDACTED}`);
+    expect(JSON.stringify(scrubbed)).not.toContain(AUTH_SECRET);
   });
 
-  it('sends the masked route rather than the requested url', () => {
-    const event = errorEvent(
-      new Error('boom'),
-      {
-        ...context,
+  it('sends the masked route and drops headers, cookies, body and query', () => {
+    const event = eventWith({
+      request: {
         method: 'GET',
-        path: '/apps/clx8s9k2l0000abcdefghijkl?term=habit',
+        url: '/apps/clx8s9k2l0000abcdefghijkl',
+        query_string: 'term=habit+tracker',
+        headers: { authorization: 'Bearer asob_live' },
+        cookies: { asobeast_session: 'value' },
+        data: { password: 'hunter2' },
       },
-      'abc',
-      now,
-    );
+    });
 
-    expect(event.request).toEqual({ method: 'GET', url: '/apps/:id' });
+    expect(scrubEvent(event, secrets).request).toEqual({
+      method: 'GET',
+      url: '/apps/:id',
+    });
   });
 
-  it('omits the request when no route was in flight', () => {
-    expect(
-      errorEvent(new Error('boom'), context, 'abc', now).request,
-    ).toBeUndefined();
+  it('masks identifiers out of the transaction name', () => {
+    const event = eventWith({
+      transaction: 'GET /apps/clx8s9k2l0000abcdefghijkl?term=habit',
+    });
+
+    expect(scrubEvent(event, secrets).transaction).toBe('GET /apps/:id');
   });
 
-  it('bounds the stack it ships', () => {
-    const error = new Error('boom');
-    error.stack = ['Error: boom']
-      .concat(Array<string>(80).fill('    at frame'))
-      .join('\n');
-
-    expect(
-      errorEvent(error, context, 'abc', now).exception.values[0].stacktrace
-        .frames,
-    ).toHaveLength(MAX_STACK_FRAMES);
-  });
-
-  it('accepts a thrown value that is not an error', () => {
-    const event = errorEvent('plain failure', context, 'abc', now);
-
-    expect(event.exception.values[0].value).toBe('plain failure');
+  it('leaves an event with no request alone', () => {
+    expect(scrubEvent(eventWith(), secrets).request).toBeUndefined();
   });
 });

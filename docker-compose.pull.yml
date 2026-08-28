@@ -116,6 +116,9 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    env_file:
+      - path: apps/web/.env
+        required: false
     environment:
       API_INTERNAL_URL: http://api:4000
       HOSTNAME: 0.0.0.0

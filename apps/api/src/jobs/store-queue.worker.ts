@@ -1,8 +1,10 @@
-import { WorkerHost } from '@nestjs/bullmq';
+import { OnWorkerEvent, WorkerHost } from '@nestjs/bullmq';
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { Job } from 'bullmq';
+import { ErrorTracking } from '../observability/error-tracking.service';
 import { PoolCapacity } from '../store-providers/egress/pool-capacity.service';
+import { reportJobFailure } from './job-failure';
 import { StoreJobsHandler } from './store-jobs.handler';
 import { withoutRetry } from './unrecoverable';
 
@@ -15,6 +17,7 @@ export abstract class StoreQueueWorker
     private readonly store: Store,
     private readonly handler: StoreJobsHandler,
     private readonly capacity: PoolCapacity,
+    private readonly tracking: ErrorTracking,
   ) {
     super();
   }
@@ -38,6 +41,11 @@ export abstract class StoreQueueWorker
       );
       throw withoutRetry(error);
     }
+  }
+
+  @OnWorkerEvent('failed')
+  onFailed(job: Job | undefined, error: Error): void {
+    reportJobFailure(this.tracking, job, error, { store: this.store });
   }
 
   private async matchPoolCapacity(): Promise<void> {

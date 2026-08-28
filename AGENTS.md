@@ -284,7 +284,7 @@ BILLING_ENABLED=false               # entitlement seam: new accounts start a tri
 TRIAL_DAYS=7                        # trial length in days when BILLING_ENABLED=true. REFUSES TO BOOT at 0 with billing enabled
 TRUST_PROXY=false                   # true only behind a reverse proxy that sets a trustworthy X-Forwarded-For; lets auth throttling key on the real client IP instead of the proxy's. WARNS in production when false
 ACCOUNT_DELETION_GRACE_DAYS=7       # days a scheduled workspace deletion stays reversible before the retention job erases it
-ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry compatible dsn for scrubbed error reports. Ignored unless BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
+ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry dsn for scrubbed error reports. Ignored unless NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
 LOG_LEVEL=debug
 ```
 
@@ -293,6 +293,7 @@ LOG_LEVEL=debug
 ```bash
 API_INTERNAL_URL=http://localhost:4000   # read at runtime; the browser reaches it via /api/backend/*
 API_PROXY_TIMEOUT_MS=30000               # upper bound per proxy request; a timeout returns a 504 envelope
+SENTRY_DSN=                              # optional. Read at runtime and only used when NODE_ENV=production. No Compose file sets it, so a self hosted deployment reports nothing until its operator opts in with a dsn of their own. SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are release pipeline secrets for source map upload, never runtime configuration
 ```
 
 Root `.env` (Compose only): `POSTGRES_PASSWORD` and `AUTH_SECRET`, both required and non-empty, plus `AUTH_COOKIE_SECURE`, `TRUST_PROXY`, `LOG_LEVEL` and `STATUS_PAGE_URL`. `ASOBEAST_IMAGE_OWNER` and `ASOBEAST_IMAGE_TAG` are read only by `docker-compose.pull.yml` and pick which published images that stack runs; they default to the images this repository publishes at the current version, so pinning an older release is the only reason to set them. `TUNNEL_TOKEN` and `ASOBEAST_DOMAIN` are read only by `docker-compose.tunnel.yml`, the optional Cloudflare Tunnel overlay that terminates TLS at Cloudflare's edge and stops publishing host port 3001, so the machine listens for nothing.

@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 const SECURITY_HEADERS = [
   {
@@ -35,4 +36,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+const { SENTRY_AUTH_TOKEN, SENTRY_ORG, SENTRY_PROJECT } = process.env;
+
+export default SENTRY_AUTH_TOKEN && SENTRY_ORG && SENTRY_PROJECT
+  ? withSentryConfig(nextConfig, {
+      org: SENTRY_ORG,
+      project: SENTRY_PROJECT,
+      authToken: SENTRY_AUTH_TOKEN,
+      sourcemaps: { deleteSourcemapsAfterUpload: true },
+      silent: !process.env.CI,
+      telemetry: false,
+    })
+  : nextConfig;

@@ -104,9 +104,44 @@ The database being unreachable does not need an alert rule. The scrape itself fa
 
 ## Error reporting
 
-`ERROR_TRACKING_DSN` sends server errors to a Sentry compatible endpoint. It is ignored unless `BILLING_ENABLED` is `true`, so **a self hosted deployment never reports its errors to anyone**, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+Both apps report through the official Sentry SDK, each behind its own gate.
 
-A report carries the error type, a secret scrubbed message and stack, the workspace and correlation id, the request method, and the request path with identifiers replaced by `:id`. It never carries headers, cookies, query strings, request bodies or account details.
+| App | Variable | Reports when |
+| --- | --- | --- |
+| API | `ERROR_TRACKING_DSN` | The dsn is set, `NODE_ENV` is `production` and `BILLING_ENABLED` is `true` |
+| Web | `SENTRY_DSN` | The dsn is set and `NODE_ENV` is `production` |
+
+When a gate is closed the SDK is never initialized, so nothing is instrumented and nothing is sent.
+
+**The API never reports from a self hosted deployment.** `BILLING_ENABLED` is `false` there, so `ERROR_TRACKING_DSN` is ignored even if somebody sets it, and the end to end suite asserts that a deployment with no cloud configuration opens no connection beyond its own database and queue.
+
+**The web app has no equivalent third condition, and one thing follows from that.** No Compose file sets `SENTRY_DSN`, so a self hosted deployment reports nothing by default. An operator who sets it anyway is opting their own browsers in, and the reports go to whichever project that dsn names. Nothing reaches the hosted service, because the dsn is never baked into the published image.
+
+The web dsn is read at runtime and handed to the browser by `/api/health`, the same way `STATUS_PAGE_URL` reaches it. It is never baked into the image, because this repository publishes one set of images that the hosted service and every self hoster run.
+
+### What is reported
+
+| Surface | Covers |
+| --- | --- |
+| API requests | Only `5xx`. A refusal the API meant to make, such as a quota or a rate limit, is not an incident |
+| API queue work | A job whose retry chain is exhausted, once, tagged with the job, the queue and the store |
+| API process | An uncaught exception or an unhandled rejection outside any request or job |
+| Web server | Server Component, route handler and proxy failures, through `onRequestError` |
+| Web browser | A render failure that reaches a route error boundary and that asobeast cannot already explain. An expired session, a spent budget or a missing record is not reported, and neither is a server rendered failure, which the server already reported with a real stack |
+
+Tracing is deliberately off. `GET /metrics` already answers the performance questions this instance asks, and spans from a scraping pipeline are high volume for a question nobody is asking.
+
+### What a report carries
+
+The error type, a secret scrubbed message, a structured stack with source lines, the workspace and correlation id, and the request method with identifiers replaced by `:id`.
+
+<Warning>
+  Headers, cookies, query strings, request and response bodies, database query values, stack frame variables and user identity are all turned off at the SDK level rather than filtered afterwards, and a second pass over every event drops the request down to its method and masked path before it leaves the process.
+</Warning>
+
+Breadcrumbs are turned off in both apps. A breadcrumb records the url of every outgoing request, and a store request carries the term a customer tracks in its query string, so the trail that would help debugging is the one place customer data would reach a report.
+
+The same reasoning covers the two places a url reaches an event by another route: the path Next.js hands to `onRequestError` and the transaction name. Both are masked, so a keyword typed into the spider or the serp filter never leaves the browser's own machine.
 
 ## Support tooling
 

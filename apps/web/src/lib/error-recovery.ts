@@ -13,15 +13,19 @@ export interface Recovery {
   title: string;
   body: string;
   action: RecoveryAction;
+  expected: boolean;
 }
+
+type Explanation = Omit<Recovery, "expected">;
 
 const GENERIC: Recovery = {
   title: "Something went wrong",
   body: "The request could not be completed. Trying again usually clears a transient failure.",
   action: { kind: "retry" },
+  expected: false,
 };
 
-const BY_STATUS: Record<number, Recovery> = {
+const BY_STATUS: Record<number, Explanation> = {
   401: {
     title: "Your session expired",
     body: "Sign in again to keep working — nothing was lost.",
@@ -55,7 +59,10 @@ function reopens(retryAfterSeconds: number | null): string {
   return `Try again ${formatRelativeTime(at.toISOString())}.`;
 }
 
-function refused({ planRefusal, retryAfterSeconds }: ApiErrorDigest): Recovery {
+function refused({
+  planRefusal,
+  retryAfterSeconds,
+}: ApiErrorDigest): Explanation {
   return {
     title: planRefusal
       ? "Your plan's request budget is spent"
@@ -68,8 +75,9 @@ function refused({ planRefusal, retryAfterSeconds }: ApiErrorDigest): Recovery {
 }
 
 function byStatus(digest: ApiErrorDigest): Recovery | null {
-  if (digest.statusCode === 429) return refused(digest);
-  return BY_STATUS[digest.statusCode] ?? null;
+  const known =
+    digest.statusCode === 429 ? refused(digest) : BY_STATUS[digest.statusCode];
+  return known ? { ...known, expected: true } : null;
 }
 
 function digestOf(error: unknown): string | undefined {
@@ -87,9 +95,10 @@ export function recoveryFor(error: unknown): Recovery {
         title: "The API failed to answer",
         body: message,
         action: { kind: "retry" },
+        expected: true,
       };
     }
-    return { ...GENERIC, body: message };
+    return { ...GENERIC, body: message, expected: true };
   }
 
   const digest = readApiErrorDigest(digestOf(error));
