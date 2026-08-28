@@ -27,6 +27,7 @@ import {
   getComparison,
   getCompetitorDiscovery,
   getCompetitors,
+  getFirstRun,
   getHealth,
   getKeywordCountries,
   getKeywordField,
@@ -107,6 +108,7 @@ export const appKeys = {
     [...appKeys.detail(id), "ratings-histogram"] as const,
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
+  firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
 
@@ -448,6 +450,16 @@ export const runStatusOptions = queryOptions({
   queryFn: getRunStatus,
   refetchInterval: 300_000,
 });
+
+export const FIRST_RUN_POLL_MS = 15_000;
+
+export const firstRunOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.firstRun(id),
+    queryFn: () => getFirstRun(id),
+    refetchInterval: (query) =>
+      query.state.data?.complete === false ? FIRST_RUN_POLL_MS : false,
+  });
 
 export function invalidateKeywords(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
