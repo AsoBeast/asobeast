@@ -3,6 +3,7 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
+import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
 import { CategoryRankCard } from "@/components/overview/CategoryRankCard";
 import { CoverageCard } from "@/components/overview/CoverageCard";
 import { MoversCard } from "@/components/overview/MoversCard";
@@ -23,6 +24,7 @@ import {
   actionSummaryOptions,
   appSummaryOptions,
   categoryRanksOptions,
+  firstRunOptions,
   rankDistributionHistoryOptions,
   visibilityOptions,
 } from "@/lib/queries";
@@ -43,6 +45,7 @@ export default async function AppOverviewPage({
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(appSummaryOptions(id));
+  void queryClient.prefetchQuery(firstRunOptions(id));
   void queryClient.prefetchQuery(visibilityOptions(id, presetToRange("30d")));
   void queryClient.prefetchQuery(
     categoryRanksOptions(id, presetToRange(categoryRange)),
@@ -58,6 +61,8 @@ export default async function AppOverviewPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide flex flex-col gap-6">
+        <FirstRunTimeline id={id} />
+
         <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>
           <SnapshotFacts id={id} />
         </Suspense>
