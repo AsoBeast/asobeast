@@ -962,6 +962,37 @@
         ]
       }
     },
+    "/apps/{id}/first-run": {
+      "get": {
+        "operationId": "JobsController_firstRun",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Report what a newly imported app is still waiting for",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/jobs/budget": {
       "get": {
         "operationId": "BudgetController_estimate",
