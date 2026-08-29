@@ -36,6 +36,7 @@ export class PublishedStatusService implements OnModuleDestroy {
   private readonly logger = new Logger(PublishedStatusService.name);
   private readonly target: URL | null;
   private readonly dispatcher: Dispatcher;
+  readonly cron: string;
 
   constructor(
     config: ConfigService<Env, true>,
@@ -47,8 +48,6 @@ export class PublishedStatusService implements OnModuleDestroy {
     this.cron = config.get('CRON_STORE_STATUS', { infer: true });
     this.dispatcher = publicOnlyDispatcher();
   }
-
-  readonly cron: string;
 
   get enabled(): boolean {
     return this.target !== null;
@@ -118,7 +117,7 @@ export class PublishedStatusService implements OnModuleDestroy {
       const body = await readCapped(response);
       if (body === null) {
         this.logger.warn(
-          `${target.href} sent more than ${PUBLISHED_STATUS_MAX_BYTES} bytes, so it was not read`,
+          `${target.href} did not send a body within the ${PUBLISHED_STATUS_MAX_BYTES} byte cap, so it was not read`,
         );
         return null;
       }
