@@ -5,6 +5,8 @@ import {
   type StoreHealthReport,
 } from '@asobeast/shared';
 import { Injectable, Logger } from '@nestjs/common';
+import type { PublishedStoreStatus } from '../store-providers/canary/published-status';
+import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import {
   CANARY_CONFIRMATIONS,
   StoreCanaryRecord,
@@ -22,27 +24,56 @@ const UNKNOWN: Pick<StoreHealth, 'state' | 'source' | 'since' | 'checkedAt'> = {
 export class StoreHealthService {
   private readonly logger = new Logger(StoreHealthService.name);
 
-  constructor(private readonly canary: StoreCanaryService) {}
+  constructor(
+    private readonly canary: StoreCanaryService,
+    private readonly publishedStatus: PublishedStatusService,
+  ) {}
 
   async report(): Promise<StoreHealthReport> {
-    const verdicts = await this.verdicts();
-    const stores = STORES.map((store) => healthOf(store, verdicts[store]));
+    const [verdicts, published] = await Promise.all([
+      this.degradable('the canary verdicts', () => this.canary.records()),
+      this.degradable('the published store status', () =>
+        this.publishedStatus.published(),
+      ),
+    ]);
+
+    const stores = STORES.map((store) =>
+      merge(healthOf(store, verdicts[store]), published[store]),
+    );
     return {
       stores,
       degraded: stores.some((store) => store.state === 'broken'),
     };
   }
 
-  private async verdicts(): Promise<Partial<Record<Store, StoreCanaryRecord>>> {
+  private async degradable<T>(
+    source: string,
+    read: () => Promise<Partial<Record<Store, T>>>,
+  ): Promise<Partial<Record<Store, T>>> {
     try {
-      return await this.canary.records();
+      return await read();
     } catch (error) {
       this.logger.warn(
-        `the canary verdicts could not be read, so every store reports unknown: ${error instanceof Error ? error.message : String(error)}`,
+        `${source} could not be read, so this report leaves them out: ${error instanceof Error ? error.message : String(error)}`,
       );
       return {};
     }
   }
+}
+
+function merge(
+  canary: StoreHealth,
+  published: PublishedStoreStatus | undefined,
+): StoreHealth {
+  if (published?.state !== 'broken') return canary;
+
+  return {
+    ...canary,
+    state: 'broken',
+    source: 'published',
+    since: published.since ?? canary.since,
+    detail: published.summary,
+  };
 }
 
 function healthOf(

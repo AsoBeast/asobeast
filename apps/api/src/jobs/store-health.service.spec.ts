@@ -8,6 +8,8 @@ import {
   StoreCanaryRecord,
   StoreCanaryService,
 } from '../store-providers/canary/store-canary.service';
+import type { PublishedStoreStatus } from '../store-providers/canary/published-status';
+import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreHealthService } from './store-health.service';
 
 const CHECKED_AT = '2026-08-28T08:00:00.000Z';
@@ -35,8 +37,13 @@ const BROKEN = recordOf({
 
 function build(
   records: () => Promise<Partial<Record<Store, StoreCanaryRecord>>>,
+  published: () => Promise<Partial<Record<Store, PublishedStoreStatus>>> = () =>
+    Promise.resolve({}),
 ) {
-  return new StoreHealthService({ records } as unknown as StoreCanaryService);
+  return new StoreHealthService(
+    { records } as unknown as StoreCanaryService,
+    { published } as unknown as PublishedStatusService,
+  );
 }
 
 function appStore(report: { stores: { store: string }[] }) {
@@ -183,11 +190,115 @@ describe('StoreHealthService', () => {
       } as unknown as Queue,
     );
 
-    const report = await new StoreHealthService(canary).report();
+    const report = await new StoreHealthService(canary, {
+      published: () => Promise.resolve({}),
+    } as unknown as PublishedStatusService).report();
 
     expect(report.stores.map((store) => store.state)).toEqual([
       'unknown',
       'broken',
     ]);
+  });
+
+  describe('with a published status document', () => {
+    const announced: PublishedStoreStatus = {
+      state: 'broken',
+      since: '2026-08-28T01:00:00.000Z',
+      summary: 'Google Play changed the shape of its search response.',
+    };
+
+    it('lets the maintainer name a break this machine has not confirmed', async () => {
+      const report = await build(
+        () => Promise.resolve({ APP_STORE: recordOf() }),
+        () => Promise.resolve({ APP_STORE: announced }),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'broken',
+        source: 'published',
+        since: announced.since,
+        detail: announced.summary,
+        checkedAt: CHECKED_AT,
+      });
+      expect(report.degraded).toBe(true);
+    });
+
+    it('surfaces a published break on a store with no canary record at all', async () => {
+      const report = await build(
+        () => Promise.resolve({}),
+        () => Promise.resolve({ APP_STORE: announced }),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'broken',
+        source: 'published',
+        checkedAt: null,
+      });
+    });
+
+    it('lets the published sentence win the source and the detail when both fire', async () => {
+      const report = await build(
+        () => Promise.resolve({ APP_STORE: BROKEN }),
+        () => Promise.resolve({ APP_STORE: announced }),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'broken',
+        source: 'published',
+        detail: announced.summary,
+      });
+    });
+
+    it('keeps a local break when the document says the store is fine', async () => {
+      const report = await build(
+        () => Promise.resolve({ APP_STORE: BROKEN }),
+        () =>
+          Promise.resolve({
+            APP_STORE: { state: 'ok', since: null, summary: null } as const,
+          }),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'broken',
+        source: 'canary',
+        detail: 'parsed app is missing title',
+      });
+    });
+
+    it('reports the canary state when the document names no store', async () => {
+      const report = await build(
+        () =>
+          Promise.resolve({
+            APP_STORE: recordOf({ outcome: 'unreachable', detail: 'timeout' }),
+          }),
+        () => Promise.resolve({}),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'unreachable',
+        source: 'canary',
+      });
+    });
+
+    it('falls back to the canary start time when the document carries none', async () => {
+      const report = await build(
+        () => Promise.resolve({ APP_STORE: BROKEN }),
+        () => Promise.resolve({ APP_STORE: { ...announced, since: null } }),
+      ).report();
+
+      expect(appStore(report)?.since).toBe(FAILING_SINCE);
+    });
+
+    it('reports the canary state when the published read fails', async () => {
+      const report = await build(
+        () => Promise.resolve({ APP_STORE: BROKEN }),
+        () => Promise.reject(new Error('redis is down')),
+      ).report();
+
+      expect(appStore(report)).toMatchObject({
+        state: 'broken',
+        source: 'canary',
+      });
+    });
   });
 });
