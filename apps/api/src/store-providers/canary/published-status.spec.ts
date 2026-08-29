@@ -91,6 +91,9 @@ describe('parsePublishedStatus', () => {
     ['not a date', 'yesterday'],
     ['a number', 1_756_000_000],
     ['absent', undefined],
+    ['a date time with no offset', '2026-08-28T02:10:00'],
+    ['a date with no time', '2026-08-28'],
+    ['a local time with no separator', '2026-08-28 02:10:00'],
   ])('reads a since that is %s as null', (_label, since) => {
     const parsed = parsePublishedStatus(
       documentOf({ APP_STORE: { state: 'broken', since } }),
@@ -109,6 +112,34 @@ describe('parsePublishedStatus', () => {
   ])('refuses %s', (_label, input) => {
     expect(parsePublishedStatus(input)).toBeNull();
   });
+
+  it.each([
+    ['zulu', '2026-08-28T02:10:00Z', '2026-08-28T02:10:00.000Z'],
+    [
+      'a positive offset',
+      '2026-08-28T04:10:00+02:00',
+      '2026-08-28T02:10:00.000Z',
+    ],
+    [
+      'a negative offset',
+      '2026-08-27T22:10:00-04:00',
+      '2026-08-28T02:10:00.000Z',
+    ],
+    [
+      'fractional seconds',
+      '2026-08-28T02:10:00.500Z',
+      '2026-08-28T02:10:00.500Z',
+    ],
+  ])(
+    'reads a since written in %s as the same instant everywhere',
+    (_label, since, expected) => {
+      const parsed = parsePublishedStatus(
+        documentOf({ APP_STORE: { state: 'broken', since } }),
+      );
+
+      expect(parsed?.APP_STORE?.since).toBe(expected);
+    },
+  );
 
   it('reads a document that names no store as nothing published', () => {
     expect(parsePublishedStatus(documentOf({}))).toEqual({});

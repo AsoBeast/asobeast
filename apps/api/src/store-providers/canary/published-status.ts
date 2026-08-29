@@ -42,8 +42,11 @@ export function parsePublishedStatus(
   return statuses;
 }
 
+const UTC_TIMESTAMP =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+
 function isoOrNull(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
+  if (typeof value !== 'string' || !UTC_TIMESTAMP.test(value)) return null;
   const at = new Date(value);
   return Number.isNaN(at.getTime()) ? null : at.toISOString();
 }
