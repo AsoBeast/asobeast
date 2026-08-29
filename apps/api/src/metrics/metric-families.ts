@@ -3,6 +3,7 @@ import type {
   AccountMailOutcomes,
   BackupFreshness,
   InstanceMetrics,
+  StoreCanaryVerdicts,
 } from './instance-metrics.service';
 import type { ResourceUsage } from './resource-metrics.service';
 import type { OperatorAlert } from './operator-alerts';
@@ -276,10 +277,24 @@ function instanceFamilies(instance: InstanceMetrics): MetricFamily[] {
       'Stored billing events that recorded a failure',
       instance.billingEventsFailed,
     ),
+    storeCanaryFamily(instance.storeCanary),
     ...backupFamilies(instance.backup),
     ...accountMailFamilies(instance.accountMail),
     ...resourceFamilies(instance.resources),
   ];
+}
+
+function storeCanaryFamily(verdicts: StoreCanaryVerdicts): MetricFamily {
+  return {
+    name: 'asobeast_store_canary',
+    help: 'The most recent parser canary verdict for one store',
+    samples: STORES.flatMap((store) => {
+      const verdict = verdicts[store];
+      return verdict
+        ? [{ labels: { store, outcome: verdict.outcome }, value: 1 }]
+        : [];
+    }),
+  };
 }
 
 function backupFamilies(backup: BackupFreshness): MetricFamily[] {

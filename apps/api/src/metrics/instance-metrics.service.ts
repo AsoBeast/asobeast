@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ProxyTier } from '@prisma/client';
+import { ProxyTier, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import type { ProxyPoolHealth } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -9,6 +9,8 @@ import type { Env } from '../config/env';
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
 import { LAST_BACKUP_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import type { StoreCanaryRecord } from '../store-providers/canary/store-canary.service';
+import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyLedger } from '../store-providers/egress/proxy-ledger.service';
 import { ProxyPoolHealthReport } from '../store-providers/egress/proxy-pool-health.service';
 import {
@@ -82,11 +84,16 @@ export interface BackupFreshness {
   maxAgeHours: number;
 }
 
+export type StoreCanaryVerdicts = Partial<Record<Store, StoreCanaryRecord>>;
+
+const NO_CANARY: StoreCanaryVerdicts = {};
+
 export interface InstanceMetrics {
   pool: ProxyPoolHealth;
   backup: BackupFreshness;
   resources: ResourceUsage;
   accountMail: AccountMailOutcomes;
+  storeCanary: StoreCanaryVerdicts;
   redisAvailable: boolean;
   proxyRequests: Record<ProxyTier, number>;
   workspacesByPlan: Record<string, number>;
@@ -108,6 +115,7 @@ export class InstanceMetricsCollector {
     private readonly pool: ProxyPoolHealthReport,
     private readonly ledger: ProxyLedger,
     private readonly resources: ResourceMetricsCollector,
+    private readonly canary: StoreCanaryService,
     private readonly config: ConfigService<Env, true>,
     @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
   ) {}
@@ -122,6 +130,7 @@ export class InstanceMetricsCollector {
       backup,
       resources,
       accountMail,
+      storeCanary,
     ] = await Promise.all([
       this.degradable('the proxy pool', () => this.pool.build(now), NO_POOL),
       this.degradable(
@@ -155,6 +164,11 @@ export class InstanceMetricsCollector {
         () => this.accountMail(now),
         NO_ACCOUNT_MAIL,
       ),
+      this.degradable(
+        'the store parser canary',
+        () => this.canary.records(),
+        NO_CANARY,
+      ),
     ]);
 
     return {
@@ -162,6 +176,7 @@ export class InstanceMetricsCollector {
       backup,
       resources,
       accountMail,
+      storeCanary,
       redisAvailable,
       proxyRequests: {
         [ProxyTier.DATACENTER]: datacenter,
