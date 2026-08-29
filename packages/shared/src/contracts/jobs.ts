@@ -84,6 +84,33 @@ export interface WorkspaceRunStatus {
   stores: StoreRunStatus[];
 }
 
+export const STORE_HEALTH_STATES = [
+  'ok',
+  'broken',
+  'unreachable',
+  'unknown',
+] as const;
+
+export type StoreHealthState = (typeof STORE_HEALTH_STATES)[number];
+
+export const STORE_HEALTH_SOURCES = ['canary', 'published'] as const;
+
+export type StoreHealthSource = (typeof STORE_HEALTH_SOURCES)[number];
+
+export interface StoreHealth {
+  store: Store;
+  state: StoreHealthState;
+  source: StoreHealthSource;
+  since: string | null;
+  checkedAt: string | null;
+  detail: string | null;
+}
+
+export interface StoreHealthReport {
+  stores: StoreHealth[];
+  degraded: boolean;
+}
+
 export const FIRST_RUN_STAGES = [
   'metadata',
   'keywords',
