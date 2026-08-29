@@ -99,6 +99,20 @@ describe('StoreHealthService', () => {
     expect(report.degraded).toBe(false);
   });
 
+  it('keeps the egress failure text off an authenticated tenant route', async () => {
+    const report = await build(() =>
+      Promise.resolve({
+        APP_STORE: recordOf({
+          outcome: 'unreachable',
+          detail:
+            'APP_STORE getApp failed: connect EHOSTUNREACH 203.0.113.7:8080',
+        }),
+      }),
+    ).report();
+
+    expect(JSON.stringify(report)).not.toContain('203.0.113.7');
+  });
+
   it('separates an unreachable store from a broken parser', async () => {
     const report = await build(() =>
       Promise.resolve({
@@ -112,7 +126,7 @@ describe('StoreHealthService', () => {
     expect(appStore(report)).toMatchObject({
       state: 'unreachable',
       since: null,
-      detail: 'APP_STORE getApp failed: socket hang up',
+      detail: null,
     });
     expect(report.degraded).toBe(false);
   });

@@ -98,12 +98,7 @@ function healthOf(
       : { ...base, state: 'ok', since: null, detail: null };
   }
   if (record.outcome === 'unreachable') {
-    return {
-      ...base,
-      state: 'unreachable',
-      since: null,
-      detail: record.detail,
-    };
+    return { ...base, state: 'unreachable', since: null, detail: null };
   }
   if (record.outcome === 'ok') {
     return { ...base, state: 'ok', since: null, detail: null };
