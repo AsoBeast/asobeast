@@ -40,6 +40,11 @@
           "jsonpath": "$.version"
         },
         {
+          "type": "json",
+          "path": "docs/api-reference/openapi.json",
+          "jsonpath": "$.info.version"
+        },
+        {
           "type": "generic",
           "path": "docker-compose.pull.yml"
         }

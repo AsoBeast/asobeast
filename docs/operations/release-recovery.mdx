@@ -60,7 +60,7 @@ pnpm --filter api test:e2e && pnpm --filter api test:isolation && pnpm --filter 
 pnpm check:rate-classes && pnpm check:compose-limits && pnpm check:env-documented && pnpm docs:mcp-tools:check
 ```
 
-Then bump the version everywhere Release Please would have. Six manifests move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run:
+Then bump the version everywhere Release Please would have. Eight files move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run:
 
 | File | Why |
 | --- | --- |
@@ -70,6 +70,8 @@ Then bump the version everywhere Release Please would have. Six manifests move t
 | `apps/mcp/package.json` | Reported to MCP clients in the server manifest |
 | `packages/shared/package.json` | Contract package version |
 | `packages/mcp-tools/package.json` | Tool catalog package version |
+| `docs/api-reference/openapi.json` | `info.version` in the captured document, which the drift check compares against the running API |
+| `docker-compose.pull.yml` | The `ASOBEAST_IMAGE_TAG` default an installation runs when it sets no tag |
 | `.release-please-manifest.json` | What Release Please believes is released |
 
 Write the `CHANGELOG.md` section by hand in the same shape Release Please produces, then tag the release commit directly. There is no release pull request in this path, so take the commit that carries the version bump rather than looking one up:

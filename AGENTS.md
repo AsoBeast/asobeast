@@ -138,7 +138,7 @@ The public documentation lives in `/docs` and is published at `docs.asobeast.com
 - Preview with `pnpm docs:dev`. Check with `pnpm docs:check`, which runs `mint validate`, `mint broken-links` and `mint a11y`. Lint prose with `pnpm docs:prose`, which runs Vale.
 - Every page needs a `title` and a `description`. Headings use sentence case. Prose uses no dash punctuation, meaning no em dash, no en dash and no spaced hyphen standing in for a comma or colon. Hyphenated compound modifiers are correct and stay. `docs/styles/asobeast/Dashes.yml` enforces this in CI.
 - `docs/configuration/reference.mdx` is the single source of truth for environment variables on the site. A change to `apps/api/.env.example` or `apps/web/.env.example` updates it in the same commit.
-- `docs/api-reference/openapi.json` is captured from the running API with `pnpm docs:openapi`. A change to a controller, a DTO or a response shape re-runs it.
+- `docs/api-reference/openapi.json` is captured from the running API with `pnpm docs:openapi`. A change to a controller, a DTO or a response shape re-runs it. Its `info.version` is the release version, so Release Please bumps it with every other versioned file and no recapture is needed for a release.
 - A fact lives on exactly one page. The concept pages under `docs/concepts/` own the domain rules and every other page links to them.
 - Prettier does not format `docs/**/*.mdx`. Use `pnpm docs:format`, which runs Mintlify's canonical formatter.
 - Use the `docs` commit scope for the site and `repo` for repository-level documentation such as `README.md` and `CONTRIBUTING.md`.
