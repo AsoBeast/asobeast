@@ -25,6 +25,7 @@
     "check:compose-limits": "node .github/scripts/verify-compose-limits.mjs",
     "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
     "check:image-defaults": "node .github/scripts/verify-image-defaults.mjs",
+    "check:release-versions": "node .github/scripts/verify-release-versions.mjs",
     "bench:stack": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml up -d --wait",
     "bench:stack:down": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml down -v",
     "docs:dev": "cd docs && pnpm dlx mint@4 dev",
