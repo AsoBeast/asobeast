@@ -18,6 +18,9 @@ import {
   FIRST_RUN_UNSCHEDULED,
   HEALTH,
   RUN_STATUS,
+  RUN_STATUS_DELAYED,
+  STORE_HEALTH_BROKEN,
+  STORE_HEALTH_OK,
   IMPORTED_APP,
   IMPORTED_APP_DETAIL,
   IMPORTED_PORTFOLIO_APP,
@@ -45,6 +48,8 @@ import type {
   KeywordFieldResult,
   KeywordSort,
   ParsedStoreUrl,
+  StoreHealthReport,
+  WorkspaceRunStatus,
   PortfolioSummary,
   TrackedKeywordItem,
   WebhookCreateRequest,
@@ -400,6 +405,18 @@ function capturedCompetitor(
   };
 }
 
+function storeHealthFor(req: IncomingMessage): StoreHealthReport {
+  return hasCookie(req, "e2e_store_broken", "1")
+    ? STORE_HEALTH_BROKEN
+    : STORE_HEALTH_OK;
+}
+
+function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
+  return hasCookie(req, "e2e_run_delayed", "1")
+    ? RUN_STATUS_DELAYED
+    : RUN_STATUS;
+}
+
 function firstRunFor(appId: string): FirstRunStatus {
   if (appId === "app-new") return FIRST_RUN_MID;
   if (appId === "app-2") return FIRST_RUN_UNSCHEDULED;
@@ -423,7 +440,12 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/jobs\/run-status$/,
-    handler: (_p, _q, res) => json(res, 200, RUN_STATUS),
+    handler: (_p, req, res) => json(res, 200, runStatusFor(req)),
+  },
+  {
+    method: "GET",
+    pattern: /^\/jobs\/store-health$/,
+    handler: (_p, req, res) => json(res, 200, storeHealthFor(req)),
   },
   {
     method: "GET",

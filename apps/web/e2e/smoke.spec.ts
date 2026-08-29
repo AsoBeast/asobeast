@@ -2,7 +2,6 @@ import { expect, test } from "./session.mts";
 import {
   EMAIL_ALERTS,
   HEALTH_DEGRADED,
-  RUN_STATUS_DELAYED,
   PORTFOLIO,
   WEBHOOKS,
 } from "./fixtures.mts";
@@ -330,31 +329,4 @@ test("alert channels fit a narrow viewport without sideways scrolling", async ({
   );
 
   expect(scrollers).toEqual([]);
-});
-
-test("a delayed run is named for the store that is behind", async ({
-  page,
-}) => {
-  await page.route("**/api/backend/jobs/run-status", (route) =>
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(RUN_STATUS_DELAYED),
-    }),
-  );
-
-  await page.goto("/");
-
-  const notice = page.getByRole("alert").filter({ hasText: "are delayed" });
-  await expect(notice).toBeVisible();
-  await expect(notice).toContainText(
-    "Rankings for your Google Play apps are delayed",
-  );
-  await expect(notice).toContainText("50 of 100");
-});
-
-test("no delay notice appears while the run is on time", async ({ page }) => {
-  await page.goto("/");
-
-  await expect(page.getByText("are delayed")).toHaveCount(0);
 });
