@@ -14,6 +14,14 @@ It collects **publicly visible store search results and listing metadata** on a 
 
 Concretely, per tracked keyword and market, one search per day. Per tracked app, a listing snapshot, its public reviews and its category positions.
 
+### The one request that is not a store request
+
+A deployment can opt in to an hourly poll of a store status document the maintainer publishes, by setting `STORE_STATUS_URL`. It exists so a store breakage the maintainer already knows about reaches every opted in installation by editing one file, rather than arriving as issues one at a time.
+
+**It is empty by default, and while it is empty no request is ever made.** The poll is not even scheduled. `apps/api/test/no-outbound.e2e-spec.ts` asserts exactly that, and it is one of four opt in outbound integrations alongside webhook alerts, email and OpenAI assistance.
+
+When it is set, what leaves the deployment is a bare `GET` of that url. No request body, no query string, no identifying header: no instance id, no version, no workspace count, no telemetry of any kind. The maintainer's server therefore learns the requesting IP address, the same thing any web server learns, and nothing else. Changing that would be a new decision, a new paragraph here and a new consent, never an implementation detail.
+
 ## What the service does not do
 
 These are commitments, not aspirations, and each is visible in the code.

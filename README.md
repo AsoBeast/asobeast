@@ -21,7 +21,7 @@
 
 asobeast is a free, open source App Store Optimization (ASO) toolkit that you run on your own server. It imports an Apple App Store or Google Play listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work.
 
-Every store request runs on the machine hosting asobeast. There is no ASO vendor to sign up with, no API key to buy, and no third party that learns which keywords you target. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email or OpenAI assistance.
+Every store request runs on the machine hosting asobeast. There is no ASO vendor to sign up with, no API key to buy, and no third party that learns which keywords you target. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, store status updates or OpenAI assistance.
 
 ## Why asobeast?
 
