@@ -57,10 +57,11 @@ Do this only when the release cannot wait for the billing fix, and run the full 
 ```bash
 pnpm lint && pnpm test && pnpm build
 pnpm --filter api test:e2e && pnpm --filter api test:isolation && pnpm --filter web test:e2e
-pnpm check:rate-classes && pnpm check:compose-limits && pnpm check:env-documented && pnpm docs:mcp-tools:check
+pnpm check:rate-classes && pnpm check:compose-limits && pnpm check:env-documented
+pnpm check:image-defaults && pnpm check:release-versions && pnpm docs:mcp-tools:check
 ```
 
-Then bump the version everywhere Release Please would have. Eight files move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run:
+Then bump the version everywhere Release Please would have. Eight files move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run. `pnpm check:release-versions` reports any that were missed:
 
 | File | Why |
 | --- | --- |
@@ -170,6 +171,8 @@ Approving is preferable to merging with administrator privileges, because it run
 `release.yml` runs a `verify-release-state` job on every push that does not create a release. It asserts that the version in `.release-please-manifest.json` exists as a tag on `origin` and fails the workflow with an annotation when it does not. A wedged state that would otherwise report success stops the pipeline the first time it appears.
 
 `ci.yml` reports the same invariant as a warning on every pull request, so an author sees an unhealthy release pipeline before merging rather than after.
+
+A second failure shape has nothing to do with tags. Any file that states the version and is not listed in `release-please-config.json` stops moving with the release, so the release pull request carries a file that disagrees with the version it ships. The openapi document is the case that bites, because `openapi-drift` compares the captured `info.version` against the running API and reports a generic drift. `pnpm check:release-versions` runs in `checks` and names the file and the fix instead, and it fails the pull request that introduces an unregistered version rather than the release pull request months later.
 
 ## Next steps
 

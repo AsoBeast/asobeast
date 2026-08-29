@@ -39,6 +39,7 @@ jobs:
       - run: pnpm check:compose-limits
       - run: pnpm check:env-documented
       - run: pnpm check:image-defaults
+      - run: pnpm check:release-versions
       - run: pnpm docs:mcp-tools:check
       - run: pnpm turbo run test:cov
       - name: Summarize coverage
