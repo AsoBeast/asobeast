@@ -5,8 +5,6 @@ export const PUBLISHED_STATUS_SCHEMA_VERSION = 1;
 
 export const PUBLISHED_SUMMARY_MAX = 280;
 
-export const PUBLISHED_STATUS_MAX_AGE_HOURS = 48;
-
 export interface PublishedStoreStatus {
   state: 'ok' | 'broken';
   since: string | null;

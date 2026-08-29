@@ -23,6 +23,8 @@ export const LAST_DAILY_RUN_KEY = 'asobeast:last-daily-run';
 
 export const LAST_BACKUP_KEY = 'asobeast:last-backup';
 
+export const PUBLISHED_STATUS_KEY = 'asobeast:store-status:published';
+
 export function storeCanaryKey(store: Store): string {
   return `asobeast:store-canary:${store}`;
 }
@@ -53,6 +55,7 @@ export const JOBS = {
   ACTIONS: 'generate-actions',
   PROXY_SYNC: 'proxy-pool-sync',
   STORE_CANARY: 'store-canary',
+  STORE_STATUS: 'store-status',
   BILLING_EVENT: 'billing-event',
   BILLING_RECONCILE: 'billing-reconcile',
   TRIAL_NOTICES: 'trial-notices',

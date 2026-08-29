@@ -13,6 +13,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
+import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
@@ -42,7 +43,11 @@ describe('PipelineWorker', () => {
   const budget = { total: 12, utilization: 0.12 };
   const WORKSPACES = ['ws_one', 'ws_two'];
 
-  const build = (poolEnabled = false, canaryCron = '0 2,8,14,20 * * *') => {
+  const build = (
+    poolEnabled = false,
+    canaryCron = '0 2,8,14,20 * * *',
+    statusEnabled = false,
+  ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
       upsertJobScheduler: jest
@@ -91,6 +96,11 @@ describe('PipelineWorker', () => {
     );
     const deletion = { eraseDue: jest.fn().mockResolvedValue([]) };
     const storeCanary = { run: jest.fn().mockResolvedValue({}) };
+    const publishedStatus = {
+      enabled: statusEnabled,
+      cron: '17 * * * *',
+      run: jest.fn().mockResolvedValue(undefined),
+    };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -110,6 +120,7 @@ describe('PipelineWorker', () => {
       fanOut,
       proxyPool as unknown as ProxyPoolMaintenance,
       storeCanary as unknown as StoreCanaryService,
+      publishedStatus as unknown as PublishedStatusService,
     );
     return {
       worker,
@@ -125,6 +136,7 @@ describe('PipelineWorker', () => {
       actionsNotifier,
       proxyPool,
       storeCanary,
+      publishedStatus,
     };
   };
 
@@ -196,6 +208,39 @@ describe('PipelineWorker', () => {
     await worker.process(job(JOBS.STORE_CANARY));
 
     expect(storeCanary.run).toHaveBeenCalledTimes(1);
+  });
+
+  it('schedules no status poll while no status url is configured', async () => {
+    const { worker, pipelineQueue } = build();
+
+    await worker.onModuleInit();
+
+    expect(
+      pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+    ).not.toContain('store-status');
+    expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+      'store-status',
+    );
+  });
+
+  it('schedules the status poll once a status url is configured', async () => {
+    const { worker, pipelineQueue } = build(false, '0 2 * * *', true);
+
+    await worker.onModuleInit();
+
+    expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+      'store-status',
+      { pattern: '17 * * * *', tz: 'UTC' },
+      { name: JOBS.STORE_STATUS },
+    );
+  });
+
+  it('polls the published status when the status job runs', async () => {
+    const { worker, publishedStatus } = build(false, '0 2 * * *', true);
+
+    await worker.process(job(JOBS.STORE_STATUS));
+
+    expect(publishedStatus.run).toHaveBeenCalledTimes(1);
   });
 
   it('schedules no pool sync while no proxy provider is configured', async () => {
