@@ -6,6 +6,7 @@ import { ActionsNotifier } from '../actions/actions.notifier';
 import { AlertFlushService } from '../alerts/alert-flush.service';
 import { AuditService } from '../audit/audit.service';
 import { Env } from '../config/env';
+import { ErrorTracking } from '../observability/error-tracking.service';
 import { DailyBudgetService } from './daily-budget.service';
 import { DigestDispatcher } from './digest.dispatcher';
 import { actionsSuppressedKey, JOBS, LAST_DAILY_RUN_KEY } from './jobs.types';
@@ -96,6 +97,7 @@ describe('PipelineWorker', () => {
     );
     const deletion = { eraseDue: jest.fn().mockResolvedValue([]) };
     const storeCanary = { run: jest.fn().mockResolvedValue({}) };
+    const tracking = { capture: jest.fn() };
     const publishedStatus = {
       enabled: statusEnabled,
       cron: '17 * * * *',
@@ -121,6 +123,7 @@ describe('PipelineWorker', () => {
       proxyPool as unknown as ProxyPoolMaintenance,
       storeCanary as unknown as StoreCanaryService,
       publishedStatus as unknown as PublishedStatusService,
+      tracking as unknown as ErrorTracking,
     );
     return {
       worker,
@@ -137,6 +140,7 @@ describe('PipelineWorker', () => {
       proxyPool,
       storeCanary,
       publishedStatus,
+      tracking,
     };
   };
 
@@ -233,6 +237,17 @@ describe('PipelineWorker', () => {
       { pattern: '17 * * * *', tz: 'UTC' },
       { name: JOBS.STORE_STATUS },
     );
+  });
+
+  it('reports an exhausted job to error tracking rather than throwing', () => {
+    const { worker, tracking } = build();
+
+    worker.onFailed(
+      { name: JOBS.STORE_CANARY, queueName: 'pipeline', finishedOn: 1 } as Job,
+      new Error('canary failed'),
+    );
+
+    expect(tracking.capture).toHaveBeenCalledTimes(1);
   });
 
   it('polls the published status when the status job runs', async () => {
