@@ -62,7 +62,7 @@ const unregistered = workspaceGlobs()
 
 if (stale.length > 0 || unregistered.length > 0) {
   console.error(
-    `Every file carrying the release version must read ${version}.`,
+    `Registered JSON files and workspace manifests must read ${version}.`,
   );
   console.error("A file that states a version Release Please does not bump");
   console.error("goes stale at the next release, and the drift check that");
