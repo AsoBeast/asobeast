@@ -50,6 +50,7 @@ export const EnvSchema = z.object({
   PROXY_RESIDENTIAL_COST_PER_GB: z.coerce.number().min(0).default(3),
   PROXY_RESIDENTIAL_MB_PER_REQUEST: z.coerce.number().min(0).default(1.2),
   CRON_PROXY_SYNC: z.string().min(1).default('0 2 * * *'),
+  CRON_STORE_CANARY: z.string().default('0 2,8,14,20 * * *'),
   SIGNUP_CAPACITY_MAX_UTILIZATION: z.coerce.number().min(0).max(1).default(0),
   ALERT_RANK_DROP_THRESHOLD: z.coerce.number().int().positive().default(5),
   ALERT_REVIEW_SCORE_MAX: z.coerce.number().int().min(1).max(4).default(2),

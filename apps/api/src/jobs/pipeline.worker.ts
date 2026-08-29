@@ -24,6 +24,7 @@ import {
 } from '../common/tenancy/workspace-fanout';
 import { Env } from '../config/env';
 import { ErrorTracking } from '../observability/error-tracking.service';
+import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
 import { DigestDispatcher } from './digest.dispatcher';
@@ -60,6 +61,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly workspace: WorkspaceContext,
     private readonly fanOut: WorkspaceFanOut,
     private readonly proxyPool: ProxyPoolMaintenance,
+    private readonly storeCanary: StoreCanaryService,
     private readonly tracking: ErrorTracking,
   ) {
     super();
@@ -95,6 +97,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
       { name: JOBS.AUDIT_SNAPSHOT },
     );
     await this.scheduleProxySync();
+    await this.scheduleStoreCanary();
   }
 
   private async scheduleProxySync(): Promise<void> {
@@ -106,6 +109,19 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
       'proxy-sync',
       { pattern: this.proxyPool.cron, tz: 'UTC' },
       { name: JOBS.PROXY_SYNC },
+    );
+  }
+
+  private async scheduleStoreCanary(): Promise<void> {
+    const pattern = this.config.get('CRON_STORE_CANARY', { infer: true });
+    if (!pattern) {
+      await this.pipelineQueue.removeJobScheduler('store-canary');
+      return;
+    }
+    await this.pipelineQueue.upsertJobScheduler(
+      'store-canary',
+      { pattern, tz: 'UTC' },
+      { name: JOBS.STORE_CANARY },
     );
   }
 
@@ -169,6 +185,10 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     }
     if (job.name === JOBS.PROXY_SYNC) {
       await this.proxyPool.run();
+      return;
+    }
+    if (job.name === JOBS.STORE_CANARY) {
+      await this.storeCanary.run();
       return;
     }
     throw new Error(`Unknown pipeline job ${job.name}`);

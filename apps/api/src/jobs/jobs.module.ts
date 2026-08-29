@@ -19,6 +19,7 @@ import { RankingsModule } from '../rankings/rankings.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { ProxyPoolModule } from '../store-providers/egress/proxy-pool.module';
+import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppStoreWorker } from './app-store.worker';
 import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
@@ -96,6 +97,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
     AuditModule,
     ActionsEngineModule,
     ProxyPoolModule,
+    StoreProvidersModule,
     ...bullBoardModules,
   ],
   controllers: [

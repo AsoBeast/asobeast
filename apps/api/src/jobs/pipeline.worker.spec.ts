@@ -13,6 +13,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
+import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
 import { PipelineWorker } from './pipeline.worker';
@@ -41,7 +42,7 @@ describe('PipelineWorker', () => {
   const budget = { total: 12, utilization: 0.12 };
   const WORKSPACES = ['ws_one', 'ws_two'];
 
-  const build = (poolEnabled = false) => {
+  const build = (poolEnabled = false, canaryCron = '0 2,8,14,20 * * *') => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
       upsertJobScheduler: jest
@@ -56,7 +57,9 @@ describe('PipelineWorker', () => {
       run: jest.fn().mockResolvedValue(undefined),
     };
     const config = {
-      get: jest.fn((key: string) => `value:${key}`),
+      get: jest.fn((key: string) =>
+        key === 'CRON_STORE_CANARY' ? canaryCron : `value:${key}`,
+      ),
     };
     const pipeline = {
       fanOutDaily: jest.fn().mockResolvedValue(payload),
@@ -87,6 +90,7 @@ describe('PipelineWorker', () => {
       crossTenant,
     );
     const deletion = { eraseDue: jest.fn().mockResolvedValue([]) };
+    const storeCanary = { run: jest.fn().mockResolvedValue({}) };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -105,6 +109,7 @@ describe('PipelineWorker', () => {
       workspace,
       fanOut,
       proxyPool as unknown as ProxyPoolMaintenance,
+      storeCanary as unknown as StoreCanaryService,
     );
     return {
       worker,
@@ -119,6 +124,7 @@ describe('PipelineWorker', () => {
       actions,
       actionsNotifier,
       proxyPool,
+      storeCanary,
     };
   };
 
@@ -137,7 +143,14 @@ describe('PipelineWorker', () => {
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
-    ).toEqual(['daily', 'weekly', 'retention', 'digest', 'audit']);
+    ).toEqual([
+      'daily',
+      'weekly',
+      'retention',
+      'digest',
+      'audit',
+      'store-canary',
+    ]);
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(
         ([, , data]) => data.name,
@@ -148,7 +161,41 @@ describe('PipelineWorker', () => {
       JOBS.RETENTION,
       JOBS.DIGEST,
       JOBS.AUDIT_SNAPSHOT,
+      JOBS.STORE_CANARY,
     ]);
+  });
+
+  it('schedules the store canary an hour before the daily run', async () => {
+    const { worker, pipelineQueue } = build();
+
+    await worker.onModuleInit();
+
+    expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+      'store-canary',
+      { pattern: '0 2,8,14,20 * * *', tz: 'UTC' },
+      { name: JOBS.STORE_CANARY },
+    );
+  });
+
+  it('removes the canary scheduler when its pattern is emptied', async () => {
+    const { worker, pipelineQueue } = build(false, '');
+
+    await worker.onModuleInit();
+
+    expect(
+      pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+    ).not.toContain('store-canary');
+    expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+      'store-canary',
+    );
+  });
+
+  it('probes the stores when the canary job runs', async () => {
+    const { worker, storeCanary } = build();
+
+    await worker.process(job(JOBS.STORE_CANARY));
+
+    expect(storeCanary.run).toHaveBeenCalledTimes(1);
   });
 
   it('schedules no pool sync while no proxy provider is configured', async () => {
