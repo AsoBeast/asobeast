@@ -78,6 +78,18 @@ Three causes look identical from the outside. This tells them apart.
   The provider layer does not classify errors. A transport failure, a parse failure and a delisted app all arrive as `StoreRequestError`, so the message text is what you read, not the error type. Only the market availability probe distinguishes a missing app, and it does that by matching the words "not found". The canary does this classification for you, once, in `outcomeOfError`. The failed set still needs reading by eye.
 </Warning>
 
+## What the user sees
+
+A confirmed break raises one banner above every page, for every signed in user, from `GET /jobs/store-health`. It names the store, states that the cause is on asobeast rather than on the reader's configuration, says that stored data is untouched and that collection resumes on its own, and links this page.
+
+Three things about its timing are worth knowing before somebody asks why it did not appear.
+
+- **It waits for two consecutive failing canary runs.** The user facing threshold is `CANARY_CONFIRMATIONS`, so at the default schedule a break is announced within twelve hours rather than instantly. One failing run raises `store.parser.broken` for the operator and nothing for the user, which is the whole reason both signals exist.
+- **It clears on its own.** The banner polls once a minute, so it disappears within a minute of the canary returning `ok`. Nobody has to reload.
+- **It replaces the delayed run notice rather than stacking with it.** A broken parser causes a delayed run, and reading the symptom and the cause as two problems is worse than reading one. Only the highest severity notice renders.
+
+An `unreachable` verdict deliberately renders nothing. It means the pool or the network, the delayed run notice already describes what the reader can see, and a second message about a cause nobody can act on is noise.
+
 ## Containment
 
 What to do immediately, without waiting for a fix.
