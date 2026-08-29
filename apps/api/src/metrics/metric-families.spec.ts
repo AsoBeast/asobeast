@@ -28,6 +28,7 @@ const instance: InstanceMetrics = {
   redisAvailable: true,
   backup: { lastCompletedAt: null, maxAgeHours: 0 },
   accountMail: { delivered: 0, failed: 0, skipped: 0 },
+  storeCanary: {},
   resources: {
     databaseBytes: 11_534_336,
     diskBudgetBytes: 0,
@@ -254,5 +255,37 @@ describe('metricFamilies on host resources', () => {
         diskBudgetBytes: 0,
       }),
     ).toBe(0);
+  });
+});
+
+describe('store canary family', () => {
+  const canaryOf = (storeCanary: InstanceMetrics['storeCanary']) =>
+    metricFamilies([], instanceMetricsOf({ storeCanary })).find(
+      (family) => family.name === 'asobeast_store_canary',
+    );
+
+  const brokenRecord = {
+    outcome: 'broken' as const,
+    detail: 'parsed app is missing title',
+    checkedAt: '2026-08-28T02:00:00.000Z',
+    failingSince: '2026-08-28T02:00:00.000Z',
+    consecutiveFailures: 1,
+  };
+
+  it('carries the outcome as a label rather than a value', () => {
+    const family = canaryOf({
+      APP_STORE: brokenRecord,
+      GOOGLE_PLAY: { ...brokenRecord, outcome: 'ok', detail: null },
+    });
+
+    expect(family?.samples).toEqual([
+      { labels: { store: 'APP_STORE', outcome: 'broken' }, value: 1 },
+      { labels: { store: 'GOOGLE_PLAY', outcome: 'ok' }, value: 1 },
+    ]);
+  });
+
+  it('reports nothing for a store the canary has not answered for', () => {
+    expect(canaryOf({})?.samples).toEqual([]);
+    expect(canaryOf({ APP_STORE: brokenRecord })?.samples).toHaveLength(1);
   });
 });

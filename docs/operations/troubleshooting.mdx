@@ -54,6 +54,10 @@ Each entry below names the symptom the way you would describe it, then gives the
     The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *` and is evaluated in UTC rather than in your local timezone. Check `pipeline.lastDailyRunAt` on `/api/backend/health`, then look at the queue dashboard for stuck or failed jobs. See [The daily pipeline and rate limits](/concepts/pipeline).
   </Accordion>
 
+  <Accordion title="My rankings stopped moving and a banner says the store is broken">
+    The parser canary confirmed that a store stopped parsing, so collection is paused for that store. The banner appears after two consecutive failing canary runs rather than on the first, so a single blip is never announced, and it clears on its own within a minute of the canary returning `ok`. Your stored history is untouched: a break pauses collection, it does not remove anything. Nothing on your side needs changing. See [Recover from a broken store parser](/operations/scraper-breakage).
+  </Accordion>
+
   <Accordion title="Rankings show >200 instead of a number">
     Not a failure. The keyword was checked and the app was not found within the captured depth, which defaults to 200. The bound is read from that row's own depth. See [Positions and rank depth](/concepts/positions).
   </Accordion>

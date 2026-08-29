@@ -19,6 +19,7 @@ import { RankingsModule } from '../rankings/rankings.module';
 import { ReviewsModule } from '../reviews/reviews.module';
 import { ScoringModule } from '../scoring/scoring.module';
 import { ProxyPoolModule } from '../store-providers/egress/proxy-pool.module';
+import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppStoreWorker } from './app-store.worker';
 import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
@@ -41,6 +42,7 @@ import { PipelineWorker } from './pipeline.worker';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
 import { ScoringController } from './scoring.controller';
+import { StoreHealthService } from './store-health.service';
 import { StoreJobsHandler } from './store-jobs.handler';
 import { JOB_OPTIONS } from './job-options';
 
@@ -96,6 +98,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
     AuditModule,
     ActionsEngineModule,
     ProxyPoolModule,
+    StoreProvidersModule,
     ...bullBoardModules,
   ],
   controllers: [
@@ -120,6 +123,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
     PipelineService,
     RetentionService,
     RunStatusService,
+    StoreHealthService,
     DigestDispatcher,
   ],
   exports: [BullModule, PipelineService],

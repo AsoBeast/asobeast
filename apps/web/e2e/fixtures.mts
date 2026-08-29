@@ -16,6 +16,7 @@ import type {
   ChangeTimeline,
   CompetitorItem,
   HealthStatus,
+  StoreHealthReport,
   WorkspaceRunStatus,
   PortfolioSummary,
   RankDistributionHistory,
@@ -173,6 +174,43 @@ export const RUN_STATUS_DELAYED: WorkspaceRunStatus = {
     { store: "APP_STORE", tracked: 50, captured: 50 },
     { store: "GOOGLE_PLAY", tracked: 50, captured: 0 },
   ],
+};
+
+export const STORE_HEALTH_OK: StoreHealthReport = {
+  stores: [
+    {
+      store: "APP_STORE",
+      state: "ok",
+      source: "canary",
+      since: null,
+      checkedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      detail: null,
+    },
+    {
+      store: "GOOGLE_PLAY",
+      state: "ok",
+      source: "canary",
+      since: null,
+      checkedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      detail: null,
+    },
+  ],
+  degraded: false,
+};
+
+export const STORE_HEALTH_BROKEN: StoreHealthReport = {
+  stores: [
+    {
+      store: "APP_STORE",
+      state: "broken",
+      source: "canary",
+      since: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
+      checkedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      detail: "parsed app is missing title",
+    },
+    STORE_HEALTH_OK.stores[1],
+  ],
+  degraded: true,
 };
 
 export const APP_1_KEYWORDS: TrackedKeywordItem[] = [

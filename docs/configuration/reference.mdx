@@ -46,6 +46,7 @@ Every cron expression is evaluated in UTC. See [The daily pipeline and rate limi
 | `CRON_AUDIT` | `0 6 * * *` | No | Writes the daily audit score snapshot |
 | `CRON_DIGEST` | `0 8 * * 1` | No | Sends the weekly digest webhook on Monday |
 | `CRON_PROXY_SYNC` | `0 2 * * *` | No | Reconciles the egress proxy pool against the provider. Never scheduled while `PROXY_PROVIDER` is `none` |
+| `CRON_STORE_CANARY` | `0 2,8,14,20 * * *` | No | Asks each store whether it still parses, one hour before the daily run so the day's first collection meets a known state. An empty value removes the schedule and switches the canary off. See [Recover from a broken store parser](/operations/scraper-breakage) |
 
 ## Collection rate limits
 
@@ -178,6 +179,17 @@ See [Authentication and accounts](/security/authentication).
 | --- | --- | --- | --- |
 | `BILLING_ENABLED` | `false` | No | `true` starts every new account on a trial and answers `402` once it lapses, until the plan is `indie` or `ultimate` |
 | `TRIAL_DAYS` | `7` | No | Trial length in days when `BILLING_ENABLED=true`. **Refuses to boot** at `0` with billing enabled, because every new account would be locked out immediately |
+
+## Published store status
+
+An opt-in outbound integration, off by default. When `STORE_STATUS_URL` is empty **no request is ever made** and the poll is not even scheduled. See [What leaves your deployment](/legal/data-collection) and [Recover from a broken store parser](/operations/scraper-breakage).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `STORE_STATUS_URL` | Empty | No | Url of a published store status document. Setting it opts this deployment in to an hourly bare `GET` of that url, so a store breakage the maintainer already knows about can be announced without waiting for the local canary. Empty means no request is ever made. Give the final url: a redirect is not followed |
+| `CRON_STORE_STATUS` | `17 * * * *` | No | When the poll runs, UTC. The odd minute is deliberate, so installations do not all arrive at the top of the hour. Never scheduled while `STORE_STATUS_URL` is empty |
+
+The poll goes through the same public only address guard that alert webhooks use, so a url resolving to a loopback, private, link local or cloud metadata address is refused at both configuration and connection time. A failed or stale poll never changes what the local canary reported.
 
 ## Optional AI
 

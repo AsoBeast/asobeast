@@ -225,6 +225,9 @@ PROXY_ENDPOINT_RPM=15               # requests per minute per pool endpoint; rep
 PROXY_ACQUIRE_TIMEOUT_MS=120000     # how long a job waits for a free endpoint before it fails and the queue retries it; a shutdown ends the wait at once
 PROXY_WORKER_MAX_CONCURRENCY=8      # ceiling for store worker concurrency once the pool is on; actual concurrency tracks the healthy endpoint count. Ignored while PROXY_PROVIDER=none
 CRON_PROXY_SYNC=0 2 * * *           # pool reconciliation against the provider, UTC. Never scheduled while PROXY_PROVIDER=none
+CRON_STORE_CANARY=0 2,8,14,20 * * * # parser canary, UTC, one hour before the daily run. Empty removes the schedule and switches the canary off
+STORE_STATUS_URL=                   # optional, opt-in outbound. Url of a published store status document polled for store breakage announcements. Empty means no request is ever made
+CRON_STORE_STATUS=17 * * * *        # published status poll, UTC, on an odd minute so installations do not all arrive together. Never scheduled while STORE_STATUS_URL is empty
 PROXY_RESIDENTIAL_URL=              # emergency gateway used only after a datacenter endpoint is blocked. Empty disables the fallback
 PROXY_RESIDENTIAL_USERNAME=         # gateway credentials
 PROXY_RESIDENTIAL_PASSWORD=         # password for PROXY_RESIDENTIAL_USERNAME

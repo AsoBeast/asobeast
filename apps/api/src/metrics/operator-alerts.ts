@@ -1,7 +1,8 @@
-import { PLANS } from '@asobeast/shared';
+import { PLANS, STORES } from '@asobeast/shared';
 import type {
   AccountMailOutcomes,
   InstanceMetrics,
+  StoreCanaryVerdicts,
 } from './instance-metrics.service';
 import type { ResourceUsage } from './resource-metrics.service';
 import type { WorkspaceMetrics } from './workspace-metrics.service';
@@ -29,6 +30,7 @@ export const UNPAID_DEMAND_SHARE_ALERT = 0.1;
 export const CAPACITY_HEADROOM_ALERT = 0.8;
 export const TRIAL_CONVERSION_ALERT = 0.2;
 export const TRIAL_CONVERSION_MIN_SAMPLE = 10;
+export const CANARY_BROKEN_SEVERITY: OperatorAlertSeverity = 'page';
 
 export interface OperatorAlert {
   id: string;
@@ -56,6 +58,7 @@ const POOL_ALERT_SEVERITY: Record<string, OperatorAlertSeverity> = {
 export function operatorAlerts(input: OperatorAlertInput): OperatorAlert[] {
   const alerts = [
     ...pageAlerts(input),
+    ...canaryAlerts(input.instance.storeCanary),
     ...poolAlerts(input),
     ...investigateAlerts(input),
     ...costAlerts(input.workspaces),
@@ -114,6 +117,21 @@ function pageAlerts(input: OperatorAlertInput): OperatorAlert[] {
   }
 
   return alerts;
+}
+
+function canaryAlerts(verdicts: StoreCanaryVerdicts): OperatorAlert[] {
+  return STORES.flatMap((store) => {
+    const verdict = verdicts[store];
+    if (verdict?.outcome !== 'broken') return [];
+
+    return [
+      {
+        id: 'store.parser.broken',
+        severity: CANARY_BROKEN_SEVERITY,
+        summary: `the ${store} parser canary failed ${verdict.consecutiveFailures} consecutive runs, most recently with ${verdict.detail ?? 'no detail'}`,
+      },
+    ];
+  });
 }
 
 function investigateAlerts(input: OperatorAlertInput): OperatorAlert[] {

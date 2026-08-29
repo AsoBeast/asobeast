@@ -4,6 +4,7 @@ import type {
   HealthStatus,
   RunDailyResult,
   SnapshotDiffResult,
+  StoreHealthReport,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
 import { apiFetch } from "./client";
@@ -28,6 +29,10 @@ export function getBudget(): Promise<DailyBudget> {
 
 export function getRunStatus(): Promise<WorkspaceRunStatus> {
   return apiFetch<WorkspaceRunStatus>("/jobs/run-status");
+}
+
+export function getStoreHealth(): Promise<StoreHealthReport> {
+  return apiFetch<StoreHealthReport>("/jobs/store-health");
 }
 
 export function getFirstRun(id: string): Promise<FirstRunStatus> {

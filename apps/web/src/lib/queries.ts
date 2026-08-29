@@ -41,6 +41,7 @@ import {
   getRatingsHistory,
   getRecentChanges,
   getRunStatus,
+  getStoreHealth,
   getReviews,
   getSerp,
   getSerpMovers,
@@ -143,6 +144,8 @@ export const webHealthKey = ["web-health"] as const;
 export const budgetKey = ["budget"] as const;
 
 export const runStatusKey = ["run-status"] as const;
+
+export const storeHealthKey = ["store-health"] as const;
 
 export const authStatusKey = ["auth", "status"] as const;
 
@@ -450,6 +453,14 @@ export const runStatusOptions = queryOptions({
   queryKey: runStatusKey,
   queryFn: getRunStatus,
   refetchInterval: 300_000,
+});
+
+export const STORE_HEALTH_POLL_MS = 60_000;
+
+export const storeHealthOptions = queryOptions({
+  queryKey: storeHealthKey,
+  queryFn: getStoreHealth,
+  refetchInterval: STORE_HEALTH_POLL_MS,
 });
 
 export const FIRST_RUN_POLL_MS = 15_000;

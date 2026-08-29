@@ -5,6 +5,7 @@ import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProxyLedger } from '../store-providers/egress/proxy-ledger.service';
 import { ProxyPoolHealthReport } from '../store-providers/egress/proxy-pool-health.service';
+import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
 import {
   ACCOUNT_MAIL_WINDOW_HOURS,
@@ -23,6 +24,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
   const workspaceCount = jest.fn();
   const billingEventCount = jest.fn();
   const accountMailGroupBy = jest.fn();
+  const canaryRecords = jest.fn();
 
   const collector = new InstanceMetricsCollector(
     {
@@ -39,6 +41,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     { build } as unknown as ProxyPoolHealthReport,
     { count } as unknown as ProxyLedger,
     { collect: resources } as unknown as ResourceMetricsCollector,
+    { records: canaryRecords } as unknown as StoreCanaryService,
     { get: () => 0 } as unknown as ConfigService<Env, true>,
     {
       getBackend: () => ({
@@ -54,6 +57,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     groupBy.mockReset().mockResolvedValue([]);
     workspaceCount.mockReset().mockResolvedValue(0);
     billingEventCount.mockReset().mockResolvedValue(0);
+    canaryRecords.mockReset().mockResolvedValue({});
     accountMailGroupBy.mockReset().mockResolvedValue([
       { status: 'delivered', _count: { _all: 4 } },
       { status: 'failed', _count: { _all: 2 } },

@@ -1037,6 +1037,28 @@
         ]
       }
     },
+    "/jobs/store-health": {
+      "get": {
+        "operationId": "BudgetController_storeHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Report whether each store still parses",
+        "tags": [
+          "jobs"
+        ]
+      }
+    },
     "/admin/capacity": {
       "get": {
         "operationId": "CapacityController_report",

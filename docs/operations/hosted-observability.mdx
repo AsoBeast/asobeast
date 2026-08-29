@@ -49,9 +49,11 @@ Per workspace, one series per metric:
 | `asobeast_workspace_daily_run_incomplete` | Whether fewer keywords were captured than are tracked |
 | `asobeast_workspace_stored_rankings`, `asobeast_workspace_stored_reviews` | Stored rows, the storage side of cost |
 
-Instance wide, the pool and the money: `asobeast_pool_endpoints`, `asobeast_pool_endpoints_healthy`, `asobeast_pool_success_rate`, `asobeast_pool_endpoints_blocked`, `asobeast_pool_endpoints_silent`, `asobeast_proxy_requests_month`, `asobeast_residential_spend_usd`, `asobeast_residential_cap_usd`, `asobeast_billing_workspaces`, `asobeast_billing_subscriptions`, `asobeast_billing_trials_active`, `asobeast_billing_events_unprocessed`, `asobeast_billing_events_failed`, `asobeast_backup_last_completed_seconds`, `asobeast_backup_max_age_hours`, `asobeast_database_bytes`, `asobeast_disk_budget_bytes`, `asobeast_queue_memory_bytes`, `asobeast_queue_memory_max_bytes`, `asobeast_account_mail_attempts` and `asobeast_isolation_anomalies`.
+Instance wide, the pool and the money: `asobeast_pool_endpoints`, `asobeast_pool_endpoints_healthy`, `asobeast_pool_success_rate`, `asobeast_pool_endpoints_blocked`, `asobeast_pool_endpoints_silent`, `asobeast_proxy_requests_month`, `asobeast_residential_spend_usd`, `asobeast_residential_cap_usd`, `asobeast_billing_workspaces`, `asobeast_billing_subscriptions`, `asobeast_billing_trials_active`, `asobeast_billing_events_unprocessed`, `asobeast_billing_events_failed`, `asobeast_backup_last_completed_seconds`, `asobeast_backup_max_age_hours`, `asobeast_database_bytes`, `asobeast_disk_budget_bytes`, `asobeast_queue_memory_bytes`, `asobeast_queue_memory_max_bytes`, `asobeast_account_mail_attempts`, `asobeast_store_canary` and `asobeast_isolation_anomalies`.
 
-The four resource series are the only ones that can be absent while the instance is healthy. A reading the API could not take is omitted rather than reported as zero, because a zero here reads as an empty database or an idle queue, which is the opposite of what a failed measurement means. One collector failing degrades its own series and nothing else, so a scrape still carries everything the operator needs to see the failure.
+`asobeast_store_canary{store,outcome}` carries the parser canary verdict as a label rather than a number, so an alert expression reads `outcome="broken"` instead of decoding an enum. A store the canary has not answered for yet has no series at all, which is what a fresh instance looks like until the first scheduled run.
+
+The four resource series and the canary are the only ones that can be absent while the instance is healthy. A reading the API could not take is omitted rather than reported as zero, because a zero here reads as an empty database or an idle queue, which is the opposite of what a failed measurement means. One collector failing degrades its own series and nothing else, so a scrape still carries everything the operator needs to see the failure.
 
 Backup freshness is exposed as the completion time rather than as an age, so `time() - asobeast_backup_last_completed_seconds` graphs it correctly whatever `METRICS_CACHE_SECONDS` is set to. A cached age would be stale by up to the cache window; a cached timestamp is not.
 
@@ -74,6 +76,7 @@ Every scrape evaluates the rules below and exposes each firing alert as `asobeas
 | `storage.headroom.low` | The database passed 90 percent of `DISK_BUDGET_BYTES` | [Capacity and limits](/operations/capacity) |
 | `queue.memory.high` | Redis passed 90 percent of its memory ceiling, where it refuses writes | [Capacity and limits](/operations/capacity) |
 | `mail.failures.clustered` | Half or more of the account emails attempted in the last day were refused | [Troubleshooting](/operations/troubleshooting) |
+| `store.parser.broken` | A store canary run failed a shape assertion, on the first failing run rather than the confirmed second | [Scraper breakage](/operations/scraper-breakage) |
 
 The database being unreachable does not need an alert rule. The scrape itself fails, and so does `/health`, which is what an uptime check watches. That check is not part of asobeast and cannot be, because every rule below is evaluated by the API during a scrape of the API. See [Uptime probes and the status page](/operations/uptime) for what watches the machine from outside it.
 

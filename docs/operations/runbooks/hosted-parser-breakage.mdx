@@ -36,10 +36,31 @@ One workspace failing is not this incident. Every workspace on one store failing
 
 ## Containment
 
-1. **Tell customers within the hour.** Post the incident, and say which store is affected and that stored data is untouched.
-2. Pause that store's queue. Failed jobs retry with backoff and add load to a pool that cannot use it.
-3. Leave the other store running. Half a product is much better than none, and the stores fail independently by design.
-4. Do not roll back the database. Collection pauses; it never rewrites history.
+1. **Announce it to every opted in installation first.** Edit `docs/status.json` and push. The docs deployment publishes it at `https://docs.asobeast.com/status.json`, and every installation that set `STORE_STATUS_URL` picks it up within the hour, on `CRON_STORE_STATUS`. Set the affected store to `broken`, give it a `since` and a `summary` a person can read, and leave the healthy store on `ok`:
+
+    ```json
+    {
+      "schemaVersion": 1,
+      "updatedAt": "2026-08-28T09:00:00Z",
+      "stores": {
+        "APP_STORE": { "state": "ok" },
+        "GOOGLE_PLAY": {
+          "state": "broken",
+          "since": "2026-08-28T02:10:00Z",
+          "summary": "Google Play changed the shape of its search response. Collection is paused for Google Play apps. Stored data is untouched."
+        }
+      }
+    }
+    ```
+
+    Keep `summary` under 280 characters, because installations truncate it there. Do not add a `url` or a version field: the schema carries neither on purpose, and an installation that receives one ignores it. Setting the store back to `ok` when the fix ships clears the announcement within one poll interval, so remember to make that second edit.
+
+    Confirm the document is actually served before relying on it, and again after any change to the docs deployment: `curl https://docs.asobeast.com/status.json` must return the file rather than a 404, because an installation that receives one changes nothing and says nothing.
+
+2. **Tell customers within the hour.** Post the incident, and say which store is affected and that stored data is untouched.
+3. Pause that store's queue. Failed jobs retry with backoff and add load to a pool that cannot use it.
+4. Leave the other store running. Half a product is much better than none, and the stores fail independently by design.
+5. Do not roll back the database. Collection pauses; it never rewrites history.
 
 ## Recovery
 

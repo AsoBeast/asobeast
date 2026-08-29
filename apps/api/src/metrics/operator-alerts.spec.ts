@@ -12,9 +12,12 @@ import {
   DAILY_RUN_GRACE_HOURS,
   TRIAL_CONVERSION_MIN_SAMPLE,
   UNPAID_DEMAND_SHARE_ALERT,
+  CANARY_BROKEN_SEVERITY,
   operatorAlerts,
   type OperatorAlertInput,
 } from './operator-alerts';
+import { CANARY_OUTCOMES } from '../store-providers/canary/canary-outcome';
+import type { StoreCanaryRecord } from '../store-providers/canary/store-canary.service';
 
 function inputOf(overrides: Partial<OperatorAlertInput> = {}) {
   return {
@@ -423,5 +426,56 @@ describe('operatorAlerts on account email', () => {
     );
 
     expect(alert?.summary).toContain('recovery');
+  });
+});
+
+describe('store parser canary alerts', () => {
+  const verdictOf = (
+    overrides: Partial<StoreCanaryRecord> = {},
+  ): StoreCanaryRecord => ({
+    outcome: 'broken',
+    detail: 'parsed app is missing title',
+    checkedAt: '2026-08-28T02:00:00.000Z',
+    failingSince: '2026-08-28T02:00:00.000Z',
+    consecutiveFailures: 1,
+    ...overrides,
+  });
+
+  const alertsFor = (storeCanary: InstanceMetrics['storeCanary']) =>
+    operatorAlerts(inputOf({ instance: instanceMetricsOf({ storeCanary }) }));
+
+  it('pages on the first broken verdict, ahead of the user facing threshold', () => {
+    const [alert] = alertsFor({ APP_STORE: verdictOf() });
+
+    expect(alert).toMatchObject({
+      id: 'store.parser.broken',
+      severity: CANARY_BROKEN_SEVERITY,
+    });
+    expect(alert.summary).toContain('APP_STORE');
+    expect(alert.summary).toContain('parsed app is missing title');
+  });
+
+  it.each(CANARY_OUTCOMES.filter((outcome) => outcome !== 'broken'))(
+    'stays quiet on %s, which the pool alerts already cover',
+    (outcome) => {
+      expect(alertsFor({ APP_STORE: verdictOf({ outcome }) })).toEqual([]);
+    },
+  );
+
+  it('stays quiet while the canary has never run', () => {
+    expect(alertsFor({})).toEqual([]);
+  });
+
+  it('names each broken store separately', () => {
+    const alerts = alertsFor({
+      APP_STORE: verdictOf(),
+      GOOGLE_PLAY: verdictOf({ consecutiveFailures: 3 }),
+    });
+
+    expect(alerts.map((alert) => alert.id)).toEqual([
+      'store.parser.broken',
+      'store.parser.broken',
+    ]);
+    expect(alerts[1].summary).toContain('3 consecutive');
   });
 });

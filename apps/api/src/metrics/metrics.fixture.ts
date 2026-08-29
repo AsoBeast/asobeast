@@ -33,6 +33,7 @@ export function instanceMetricsOf(
     redisAvailable: true,
     backup: { lastCompletedAt: null, maxAgeHours: 0 },
     accountMail: { delivered: 0, failed: 0, skipped: 0 },
+    storeCanary: {},
     resources: {
       databaseBytes: 11_534_336,
       diskBudgetBytes: 0,

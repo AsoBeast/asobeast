@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-29T00:00:00Z",
+  "stores": {
+    "APP_STORE": { "state": "ok" },
+    "GOOGLE_PLAY": { "state": "ok" }
+  }
+}
