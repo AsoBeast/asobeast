@@ -2,6 +2,8 @@ import { NormalizedApp, SearchItem } from '../types';
 
 const REQUIRED_APP_FIELDS = ['storeAppId', 'title', 'description'] as const;
 
+const REQUIRED_SEARCH_FIELDS = ['storeAppId', 'title'] as const;
+
 export class CanaryShapeError extends Error {
   constructor(readonly detail: string) {
     super(detail);
@@ -10,22 +12,32 @@ export class CanaryShapeError extends Error {
 }
 
 export function assertParsedApp(app: NormalizedApp): void {
-  const missing = REQUIRED_APP_FIELDS.filter((field) => !app[field]);
-  if (missing.length > 0) {
-    throw new CanaryShapeError(`parsed app is missing ${missing.join(', ')}`);
-  }
-  if (typeof app.storeAppId !== 'string') {
-    throw new CanaryShapeError('storeAppId is not a string');
-  }
+  assertStringFields('parsed app', REQUIRED_APP_FIELDS, app);
 }
 
 export function assertSearchResults(results: SearchItem[]): void {
   if (results.length === 0) {
     throw new CanaryShapeError('search returned no results');
   }
-  if (results.some((item) => !item.storeAppId || !item.title)) {
+  for (const result of results) {
+    assertStringFields('a search result', REQUIRED_SEARCH_FIELDS, result);
+  }
+}
+
+function assertStringFields<T extends object>(
+  subject: string,
+  fields: readonly (keyof T & string)[],
+  parsed: T,
+): void {
+  const missing = fields.filter((field) => !parsed[field]);
+  if (missing.length > 0) {
+    throw new CanaryShapeError(`${subject} is missing ${missing.join(', ')}`);
+  }
+
+  const mistyped = fields.filter((field) => typeof parsed[field] !== 'string');
+  if (mistyped.length > 0) {
     throw new CanaryShapeError(
-      'a search result is missing storeAppId or title',
+      `${subject} has a non-string ${mistyped.join(', ')}`,
     );
   }
 }

@@ -41,11 +41,25 @@ describe('assertParsedApp', () => {
     ).toThrow('parsed app is missing title, description');
   });
 
-  it('rejects a store app id that is not a string', () => {
-    const app = appOf({ storeAppId: 284882215 as unknown as string });
+  it.each(['storeAppId', 'title', 'description'] as const)(
+    'rejects a %s the store sent as a number',
+    (field) => {
+      const app = appOf({ [field]: 284882215 as unknown as string });
+
+      expect(() => assertParsedApp(app)).toThrow(
+        new CanaryShapeError(`parsed app has a non-string ${field}`),
+      );
+    },
+  );
+
+  it('names every mistyped field at once', () => {
+    const app = appOf({
+      title: 1 as unknown as string,
+      description: 2 as unknown as string,
+    });
 
     expect(() => assertParsedApp(app)).toThrow(
-      new CanaryShapeError('storeAppId is not a string'),
+      'parsed app has a non-string title, description',
     );
   });
 
@@ -74,8 +88,20 @@ describe('assertSearchResults', () => {
     (field) => {
       expect(() =>
         assertSearchResults([searchItem(), searchItem({ [field]: '' })]),
+      ).toThrow(new CanaryShapeError(`a search result is missing ${field}`));
+    },
+  );
+
+  it.each(['storeAppId', 'title'] as const)(
+    'rejects a result whose %s the store sent as a number',
+    (field) => {
+      expect(() =>
+        assertSearchResults([
+          searchItem(),
+          searchItem({ [field]: 42 as unknown as string }),
+        ]),
       ).toThrow(
-        new CanaryShapeError('a search result is missing storeAppId or title'),
+        new CanaryShapeError(`a search result has a non-string ${field}`),
       );
     },
   );
