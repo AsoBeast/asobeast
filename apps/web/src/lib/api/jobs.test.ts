@@ -16,17 +16,18 @@ const REPORT: StoreHealthReport = {
   degraded: true,
 };
 
-function stubFetch(): ReturnType<typeof vi.fn> {
-  const fetcher = vi.fn(() =>
-    Promise.resolve(
+function stubFetch(): string[] {
+  const requested: string[] = [];
+  vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+    requested.push(String(input));
+    return Promise.resolve(
       new Response(JSON.stringify(REPORT), {
         status: 200,
         headers: { "content-type": "application/json" },
       }),
-    ),
-  );
-  vi.stubGlobal("fetch", fetcher);
-  return fetcher;
+    );
+  });
+  return requested;
 }
 
 afterEach(() => {
@@ -35,13 +36,13 @@ afterEach(() => {
 
 describe("getStoreHealth", () => {
   it("reads the authenticated jobs route rather than public health", async () => {
-    const fetcher = stubFetch();
+    const requested = stubFetch();
 
     await getStoreHealth();
 
-    const [url] = fetcher.mock.calls[0] as [string];
-    expect(url).toContain("/jobs/store-health");
-    expect(url).not.toContain("/health?");
+    expect(requested).toHaveLength(1);
+    expect(requested[0]).toContain("/jobs/store-health");
+    expect(requested[0]).not.toMatch(/\/health(\?|$)/);
   });
 
   it("returns the report the api sent", async () => {
