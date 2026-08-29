@@ -55,6 +55,8 @@ One workspace failing is not this incident. Every workspace on one store failing
 
     Keep `summary` under 280 characters, because installations truncate it there. Do not add a `url` or a version field: the schema carries neither on purpose, and an installation that receives one ignores it. Setting the store back to `ok` when the fix ships clears the announcement within one poll interval, so remember to make that second edit.
 
+    Confirm the document is actually served before relying on it, and again after any change to the docs deployment: `curl https://docs.asobeast.com/status.json` must return the file rather than a 404, because an installation that receives one changes nothing and says nothing.
+
 2. **Tell customers within the hour.** Post the incident, and say which store is affected and that stored data is untouched.
 3. Pause that store's queue. Failed jobs retry with backoff and add load to a pool that cannot use it.
 4. Leave the other store running. Half a product is much better than none, and the stores fail independently by design.
