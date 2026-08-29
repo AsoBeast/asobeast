@@ -82,9 +82,9 @@ function healthOf(
 ): StoreHealth {
   if (!record) return { store, ...UNKNOWN, detail: null };
 
-  const base = {
+  const base: Pick<StoreHealth, 'store' | 'source' | 'checkedAt'> = {
     store,
-    source: 'canary' as const,
+    source: 'canary',
     checkedAt: record.checkedAt,
   };
   if (record.outcome === 'broken') {

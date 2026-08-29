@@ -1,4 +1,5 @@
 import { Queue } from 'bullmq';
+import type { StoreHealth, StoreHealthReport } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { storeCanaryKey } from './jobs.types';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -46,7 +47,7 @@ function build(
   );
 }
 
-function appStore(report: { stores: { store: string }[] }) {
+function appStore(report: StoreHealthReport): StoreHealth | undefined {
   return report.stores.find((store) => store.store === 'APP_STORE');
 }
 
