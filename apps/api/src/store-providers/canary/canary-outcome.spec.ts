@@ -42,6 +42,29 @@ describe('outcomeOfError', () => {
     expect(outcomeOfError(requestError('econnreset'))).toBe('unreachable');
   });
 
+  it('names every marker the egress pool already treats as transport', () => {
+    expect(TRANSPORT_MESSAGES).toEqual(
+      expect.arrayContaining([
+        'ECONNRESET',
+        'ECONNREFUSED',
+        'ETIMEDOUT',
+        'EHOSTUNREACH',
+        'ENETUNREACH',
+        'EPIPE',
+        'EAI_AGAIN',
+        'ENOTFOUND',
+        'UND_ERR',
+        'tunneling socket',
+      ]),
+    );
+  });
+
+  it('blames the pool rather than the parser when an endpoint is unreachable', () => {
+    expect(
+      outcomeOfError(requestError('connect EHOSTUNREACH 203.0.113.7:8080')),
+    ).toBe('unreachable');
+  });
+
   it('calls a request failure with no transport marker broken', () => {
     expect(
       outcomeOfError(requestError('Cannot read properties of undefined')),

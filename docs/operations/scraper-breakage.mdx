@@ -41,7 +41,7 @@ Three causes look identical from the outside. This tells them apart.
     | `unreachable` | Transport, so the pool or the network, not the parser | [Proxy pool degradation](/operations/runbooks/proxy-pool-degradation) |
     | `target-missing` | The canary's own fixture app was delisted. Not an incident | Change the canary target in `CANARY_TARGETS` |
 
-    A verdict of `unreachable` is decided by matching the underlying message against a named list, `TRANSPORT_MESSAGES` in `apps/api/src/store-providers/canary/canary-outcome.ts`: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EAI_AGAIN`, `socket hang up`, `timeout`, `fetch failed`, `429` and `503`. Anything the list does not name is called `broken` on purpose, because a failure the code cannot name is likelier a shape it has never seen than a network error, and a false `broken` is corrected by a human within hours while a false `unreachable` hides a real outage for days.
+    A verdict of `unreachable` is decided by matching the underlying message against a named list, `TRANSPORT_MESSAGES` in `apps/api/src/store-providers/canary/canary-outcome.ts`: `ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EHOSTUNREACH`, `ENETUNREACH`, `EPIPE`, `EAI_AGAIN`, `ENOTFOUND`, `UND_ERR`, `socket hang up`, `tunneling socket`, `timeout`, `fetch failed`, `429` and `503`. Anything the list does not name is called `broken` on purpose, because a failure the code cannot name is likelier a shape it has never seen than a network error, and a false `broken` is corrected by a human within hours while a false `unreachable` hides a real outage for days.
 
     No series at all means the canary has not run yet, which is what a fresh instance looks like before its first scheduled check.
   </Step>
