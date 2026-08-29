@@ -12,6 +12,7 @@ import {
   DailyBudget,
   FirstRunStatus,
   RunDailyResult,
+  StoreHealthReport,
   WorkspaceRunStatus,
 } from '@asobeast/shared';
 import type { User } from '@prisma/client';
@@ -24,6 +25,7 @@ import { DailyBudgetService } from './daily-budget.service';
 import { FirstRunStatusService } from './first-run-status.service';
 import { PipelineService } from './pipeline.service';
 import { RunStatusService } from './run-status.service';
+import { StoreHealthService } from './store-health.service';
 
 @ApiTags('jobs')
 @Controller('apps')
@@ -58,6 +60,7 @@ export class BudgetController {
   constructor(
     private readonly budget: DailyBudgetService,
     private readonly runStatus: RunStatusService,
+    private readonly stores: StoreHealthService,
   ) {}
 
   @Get('budget')
@@ -72,6 +75,12 @@ export class BudgetController {
   })
   status(): Promise<WorkspaceRunStatus> {
     return this.runStatus.forWorkspace();
+  }
+
+  @Get('store-health')
+  @ApiOperation({ summary: 'Report whether each store still parses' })
+  storeHealth(): Promise<StoreHealthReport> {
+    return this.stores.report();
   }
 }
 

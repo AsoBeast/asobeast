@@ -42,6 +42,7 @@ import { PipelineWorker } from './pipeline.worker';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
 import { ScoringController } from './scoring.controller';
+import { StoreHealthService } from './store-health.service';
 import { StoreJobsHandler } from './store-jobs.handler';
 import { JOB_OPTIONS } from './job-options';
 
@@ -122,6 +123,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
     PipelineService,
     RetentionService,
     RunStatusService,
+    StoreHealthService,
     DigestDispatcher,
   ],
   exports: [BullModule, PipelineService],
