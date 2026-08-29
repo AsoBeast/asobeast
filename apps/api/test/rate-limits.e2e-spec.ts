@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import {
   API_TOKEN_PREFIX,
+  MINUTE_SECONDS,
   PLAN_LIMITS,
   type ApiErrorEnvelope,
 } from '@asobeast/shared';
@@ -17,6 +18,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
+import { secondsUntilReset } from '../src/auth/rate-limit/window';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -30,6 +32,13 @@ import {
 const PASSWORD = 'supersecret1';
 const WRITES_PER_MINUTE = PLAN_LIMITS.indie.apiWritesPerMinute as number;
 const READS_PER_MINUTE = PLAN_LIMITS.indie.apiRequestsPerMinute as number;
+const BURN_HEADROOM_SECONDS = 15;
+
+async function awaitBurnHeadroom(): Promise<void> {
+  const remaining = secondsUntilReset(MINUTE_SECONDS, new Date());
+  if (remaining >= BURN_HEADROOM_SECONDS) return;
+  await new Promise((resolve) => setTimeout(resolve, remaining * 1000 + 100));
+}
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -39,7 +48,7 @@ function sessionCookie(res: request.Response): string {
 }
 
 describe('Rate limits (billing mode)', () => {
-  jest.setTimeout(30_000);
+  jest.setTimeout(45_000);
 
   let app: INestApplication<App>;
   let prisma: PrismaClient;
@@ -80,16 +89,30 @@ describe('Rate limits (billing mode)', () => {
       .set('Cookie', cookie)
       .send({ status: 'DONE' });
 
-  const burnWrites = async (cookie: string, times: number): Promise<void> => {
-    for (let i = 0; i < times; i += 1) await write(cookie);
-  };
-
   const read = (cookie: string) =>
     request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
 
-  const burnReads = async (cookie: string, times: number): Promise<void> => {
-    for (let i = 0; i < times; i += 1) await read(cookie);
+  const burn = async (
+    send: (cookie: string) => request.Test,
+    cookie: string,
+    times: number,
+    limit: number,
+  ): Promise<void> => {
+    await awaitBurnHeadroom();
+    for (let spent = 1; spent <= times; spent += 1) {
+      const response = await send(cookie);
+      expect({
+        spent,
+        remaining: response.headers['ratelimit-remaining'],
+      }).toEqual({ spent, remaining: String(Math.max(limit - spent, 0)) });
+    }
   };
+
+  const burnWrites = (cookie: string, times: number): Promise<void> =>
+    burn(write, cookie, times, WRITES_PER_MINUTE);
+
+  const burnReads = (cookie: string, times: number): Promise<void> =>
+    burn(read, cookie, times, READS_PER_MINUTE);
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
