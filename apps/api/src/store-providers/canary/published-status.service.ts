@@ -109,6 +109,7 @@ export class PublishedStatusService implements OnModuleDestroy {
         signal: AbortSignal.timeout(PUBLISHED_STATUS_TIMEOUT_MS),
       });
       if (!response.ok) {
+        await release(response);
         this.logger.warn(
           `${target.href} answered ${response.status}, so nothing changed`,
         );
@@ -139,6 +140,7 @@ export class PublishedStatusService implements OnModuleDestroy {
 async function readCapped(response: Response): Promise<string | null> {
   const declared = Number(response.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > PUBLISHED_STATUS_MAX_BYTES) {
+    await release(response);
     return null;
   }
 
@@ -160,6 +162,14 @@ async function readCapped(response: Response): Promise<string | null> {
     text += decoder.decode(chunk.value, { stream: true });
   }
   return text + decoder.decode();
+}
+
+async function release(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    return;
+  }
 }
 
 function parseRecord(stored: string | null): PublishedStatusRecord | null {

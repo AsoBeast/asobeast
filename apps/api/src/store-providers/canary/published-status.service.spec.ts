@@ -42,19 +42,26 @@ const DOCUMENT = {
   },
 };
 
-function bodyOf(text: string): ReadableStream<Uint8Array> {
-  return new ReadableStream<Uint8Array>({
+function bodyOf(text: string): {
+  stream: ReadableStream<Uint8Array>;
+  cancelled: jest.Mock;
+} {
+  const cancelled = jest.fn();
+  const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(new TextEncoder().encode(text));
       controller.close();
     },
+    cancel: cancelled,
   });
+  return { stream, cancelled };
 }
 
 function responseOf(
   text: string,
   init: { status?: number; contentLength?: string } = {},
 ) {
+  const body = bodyOf(text);
   return {
     ok: (init.status ?? 200) < 400,
     status: init.status ?? 200,
@@ -62,7 +69,8 @@ function responseOf(
       get: (name: string) =>
         name === 'content-length' ? (init.contentLength ?? null) : null,
     },
-    body: bodyOf(text),
+    body: body.stream,
+    cancelled: body.cancelled,
   };
 }
 
@@ -256,5 +264,37 @@ describe('PublishedStatusService', () => {
     );
 
     expect(await service.published()).toEqual({});
+  });
+
+  it.each([
+    ['a non-200 answer', () => responseOf('{}', { status: 404 })],
+    [
+      'a declared length over the cap',
+      () =>
+        responseOf('{}', {
+          contentLength: String(PUBLISHED_STATUS_MAX_BYTES + 1),
+        }),
+    ],
+  ])(
+    'releases the connection after %s rather than leaking it',
+    async (_label, answer) => {
+      const { service } = build(URL_TEXT);
+      const response = answer();
+      fetchMock.mockResolvedValue(response);
+
+      await service.run();
+
+      expect(response.cancelled).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('leaves a body it read to completion alone', async () => {
+    const { service } = build(URL_TEXT);
+    const response = responseOf(JSON.stringify(DOCUMENT));
+    fetchMock.mockResolvedValue(response);
+
+    await service.run();
+
+    expect(response.cancelled).not.toHaveBeenCalled();
   });
 });
