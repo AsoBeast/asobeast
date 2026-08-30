@@ -1,0 +1,48 @@
+name: Agent task
+description: A self-contained task to hand to a Claude Code cloud session.
+title: "task: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Written for a session that starts with no context beyond this issue and
+        the repository. Everything it needs to finish and verify the work has to
+        be here, because nobody is at a keyboard to answer a follow-up question.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome
+      description: What is true once this is done, in terms of observable behaviour rather than an implementation.
+      placeholder: A workspace owner can rename a tracked app from the app detail page.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Where to start
+      description: The files, modules or endpoints involved, and anything already ruled out.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: How to verify
+      description: The command that proves it. A `fix` needs a regression test that fails for the reported reason first, per AGENTS.md.
+      placeholder: pnpm --filter api test:e2e
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit type and scope
+      description: The conventional prefix this work should land under. See the scope list in commitlint.config.mjs.
+      placeholder: "feat(apps)"
+    validations:
+      required: true
+  - type: textarea
+    id: bounds
+    attributes:
+      label: Out of scope
+      description: What the session must not touch. Optional, but it is the cheapest way to keep an unattended run narrow.
+    validations:
+      required: false

@@ -14,11 +14,10 @@ Thank you for helping improve asobeast. The project is a self-hosted App Store O
 git clone https://github.com/AsoBeast/asobeast.git
 cd asobeast
 pnpm install
-cp .env.example .env
-cp apps/api/.env.example apps/api/.env
+pnpm env:dev
 ```
 
-Generate unique values for `POSTGRES_PASSWORD` and `AUTH_SECRET`, then add them to the copied environment files. Do not reuse development secrets in a deployed instance.
+`pnpm env:dev` writes `.env`, `apps/api/.env` and `apps/web/.env` from the committed examples and generates the `POSTGRES_PASSWORD` and `AUTH_SECRET` values those examples deliberately leave empty. It keeps any file that already exists, so re-running it never overwrites your own values. The secrets it generates are for development only; never reuse them in a deployed instance.
 
 ```bash
 docker compose -f docker-compose.dev.yml up -d
@@ -38,6 +37,12 @@ pnpm dev
 | `pnpm --filter web test:e2e`       | Run the browser end-to-end suite        |
 | `pnpm test:cov`                    | Run unit tests with coverage floors     |
 | `pnpm format:check`                | Check formatting without changing files |
+
+## Cloud sessions
+
+Work can also run in a Claude Code cloud session, on an Anthropic-managed VM rather than your machine, which is how a task gets picked up from a phone. The repository carries what that needs: `scripts/cloud/setup.sh` to paste into the environment's setup script field, and a SessionStart hook in `.claude/settings.json` that runs `scripts/cloud/session-start.sh` to start the Compose services, install dependencies and apply migrations. The hook does nothing outside a cloud session, so a local checkout is unaffected. See the cloud sessions section of `AGENTS.md` for what runs there and what does not.
+
+Open work for a session with the **Agent task** issue template. It asks for the outcome, the starting point and the command that verifies the result, which is what an unattended run needs and cannot ask for.
 
 ## Contribution rules
 

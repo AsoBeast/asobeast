@@ -7,8 +7,10 @@ coverage/
 .env.*.local
 *.log
 .DS_Store
-# Local agent and editor state
-.claude
+# Local agent and editor state. .claude/settings.json is committed: it is
+# what carries the SessionStart hook into a Claude Code cloud session.
+.claude/*
+!.claude/settings.json
 .cursor
 .aider*
 /plan/

@@ -45,6 +45,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
+    "env:dev": "bash scripts/dev-env.sh",
     "compose:up:dev": "docker compose -f docker-compose.dev.yml up",
     "compose:up:prod": "docker compose -f docker-compose.yml up",
     "compose:build:dev": "docker compose -f docker-compose.dev.yml up --build -d",
