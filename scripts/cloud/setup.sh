@@ -29,15 +29,25 @@ install_node() {
     [ "$(node -p 'process.versions.node.split(".")[0]')" = "${NODE_MAJOR}" ] &&
     return 0
 
+  # Node names its arm64 build differently from what uname reports, and an
+  # image that turns out to be arm64 would otherwise fetch an x64 tarball,
+  # fail, and leave the session on the older Node without an obvious reason.
+  local arch
+  case "$(uname -m)" in
+  x86_64 | amd64) arch=x64 ;;
+  aarch64 | arm64) arch=arm64 ;;
+  *) return 1 ;;
+  esac
+
   local version
   version="$(curl -fsSL https://nodejs.org/dist/index.json |
     jq -r --arg major "v${NODE_MAJOR}." '[.[] | select(.version | startswith($major))][0].version')"
   [ -n "${version}" ] && [ "${version}" != "null" ] || return 1
 
-  curl -fsSL "https://nodejs.org/dist/${version}/node-${version}-linux-x64.tar.xz" |
+  curl -fsSL "https://nodejs.org/dist/${version}/node-${version}-linux-${arch}.tar.xz" |
     tar -xJ -C /opt || return 1
   rm -rf "/opt/node${NODE_MAJOR}"
-  mv "/opt/node-${version}-linux-x64" "/opt/node${NODE_MAJOR}"
+  mv "/opt/node-${version}-linux-${arch}" "/opt/node${NODE_MAJOR}"
 
   # /usr/local/bin is ahead of the image's own Node on PATH, so the symlinks
   # decide which node a plain `node` finds. profile.d covers login shells.
