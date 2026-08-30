@@ -11,10 +11,13 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { appVersionLabel } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
 import { SidebarNav } from "./SidebarNav";
 
 export function AppSidebar() {
+  const version = appVersionLabel();
+
   return (
     <Sidebar variant="inset" collapsible="icon">
       <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
@@ -60,9 +63,10 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <p className="px-2 pb-1 text-caption text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-            Self hosted ASO toolkit for the App Store and Google Play.
-          </p>
+          <div className="px-2 pb-1 text-caption text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+            <p>Self hosted ASO toolkit for the App Store and Google Play.</p>
+            {version ? <p translate="no">{version}</p> : null}
+          </div>
         </SidebarFooter>
       </nav>
 

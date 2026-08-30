@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
+import { version } from "./package.json";
 
 const SECURITY_HEADERS = [
   {
@@ -15,6 +16,7 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: { NEXT_PUBLIC_APP_VERSION: version },
   outputFileTracingRoot: join(__dirname, "../../"),
   outputFileTracingIncludes: {
     "**/*": [
