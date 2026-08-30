@@ -104,6 +104,59 @@ docker compose -f docker-compose.dev.yml up -d
 
 The browser suite needs its browser once: `pnpm --filter web exec playwright install chromium`.
 
+A fresh checkout needs its `.env` files before any of that runs:
+
+```bash
+pnpm env:dev                    # writes .env, apps/api/.env and apps/web/.env from the examples
+```
+
+It copies each `.env.example` and generates the secrets they leave empty, so the
+files are working development configuration rather than a template. Existing
+files are kept, so a re-run never overwrites real credentials.
+
+## Cloud sessions (Claude Code on the web)
+
+A cloud session is a Claude Code session running on an Anthropic-managed VM
+instead of a laptop: you describe a task from claude.ai/code or the mobile app,
+it works in the sandbox, and it opens a pull request. Two committed files make
+this repository work there.
+
+- `scripts/cloud/setup.sh` provisions the VM. Paste it into the **Setup script**
+  field of the cloud environment at claude.ai/code. It runs once per
+  environment, installs Node 24 over the image's Node 22 so cloud runs agree
+  with CI and both Dockerfiles, and pre-pulls the two Compose images. The result
+  is snapshotted and reused, so later sessions skip it.
+- `scripts/cloud/session-start.sh` prepares the checkout. The SessionStart hook
+  in `.claude/settings.json` runs it on every session and resume: it starts
+  `dockerd`, brings up `docker-compose.dev.yml`, runs `pnpm env:dev`, installs
+  dependencies, generates the Prisma client and applies migrations. It exits
+  immediately unless `CLAUDE_CODE_REMOTE=true`, so a local session is untouched.
+
+Postgres and Redis come from `docker-compose.dev.yml`, not from the sandbox's own
+PostgreSQL 16 and Redis 7, because this repository targets 18 and 8. The images
+bind 5433 and 6380, which is what `apps/api/.env.example` already points at.
+
+What runs in a cloud session, and what does not:
+
+| Suite                                          | Cloud         | Note                                                                                                                                                                                          |
+| ---------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm lint`, `pnpm test`, `pnpm build`         | yes           | no services needed beyond the Prisma client                                                                                                                                                   |
+| `pnpm --filter api test:e2e`, `test:isolation` | yes           | the Compose services cover both                                                                                                                                                               |
+| `docker compose` stacks and the drills         | yes           | `dockerd` runs inside the sandbox                                                                                                                                                             |
+| `pnpm --filter web test:e2e`                   | no by default | Playwright downloads Chromium from `cdn.playwright.dev`, which is not on the default network allowlist. Add it under **Custom** network access, keeping the default list, to enable the suite |
+
+Set the environment's network access to **Trusted**. That allowlist already
+covers npm, GitHub, Docker Hub, ghcr.io and nodejs.org, which is everything the
+setup script and the install need. Never put a real secret in the environment's
+**Environment variables** box: anyone using the environment can read it, and
+`pnpm env:dev` generates the development secrets in the session anyway.
+
+Two limits worth knowing before relying on this. The VM is roughly 4 vCPU, 16 GB
+RAM and 30 GB disk, so the load benchmarks are not a cloud workload. And routine
+GitHub triggers fire on pull request and release events only, not on issues, so
+"fix issue #12" is a message you send to a session, not something an issue opens
+by itself.
+
 ## Git conventions (strict)
 
 - Conventional commits: `type(scope): subject`. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `build`, `ci`, `perf`, `revert`.
