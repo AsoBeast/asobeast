@@ -46,8 +46,12 @@ install_node() {
 
   curl -fsSL "https://nodejs.org/dist/${version}/node-${version}-linux-${arch}.tar.xz" |
     tar -xJ -C /opt || return 1
-  rm -rf "/opt/node${NODE_MAJOR}"
-  mv "/opt/node-${version}-linux-${arch}" "/opt/node${NODE_MAJOR}"
+  # This runs without set -e. Unchecked, a failed move would leave the symlinks
+  # below pointing into a directory rm has already removed, and because
+  # /usr/local/bin comes first on PATH that breaks node outright rather than
+  # falling back to the image's copy.
+  rm -rf "/opt/node${NODE_MAJOR}" || return 1
+  mv "/opt/node-${version}-linux-${arch}" "/opt/node${NODE_MAJOR}" || return 1
 
   # /usr/local/bin is ahead of the image's own Node on PATH, so the symlinks
   # decide which node a plain `node` finds. profile.d covers login shells.
@@ -66,7 +70,8 @@ corepack enable || true
 
 # Pre-pull what docker-compose.dev.yml runs. The snapshot keeps the images, so
 # no session waits on a pull.
-(dockerd >/tmp/dockerd-setup.log 2>&1 &)
+dockerd_log="$(mktemp /tmp/dockerd-setup.XXXXXX)"
+(dockerd >"${dockerd_log}" 2>&1 &)
 for _ in $(seq 1 30); do
   docker info >/dev/null 2>&1 && break
   sleep 2

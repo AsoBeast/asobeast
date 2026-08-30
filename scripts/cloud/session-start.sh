@@ -32,13 +32,18 @@ start_docker() {
   docker info >/dev/null 2>&1 && return 0
 
   step "starting dockerd"
+  # mktemp rather than a fixed path: a redirect onto a name something else
+  # created first follows it wherever it points. The Xs go last because
+  # busybox mktemp rejects a template with a suffix after them.
+  local log
+  log="$(mktemp /tmp/dockerd.XXXXXX)"
   service docker start >/dev/null 2>&1 ||
-    (dockerd >/tmp/dockerd.log 2>&1 &)
+    (dockerd >"${log}" 2>&1 &)
 
   local waited=0
   until docker info >/dev/null 2>&1; do
     if [ "${waited}" -ge 60 ]; then
-      echo "dockerd did not accept connections within 60 seconds. See /tmp/dockerd.log." >&2
+      echo "dockerd did not accept connections within 60 seconds. See ${log}." >&2
       echo "Postgres and Redis come from docker-compose.dev.yml, so nothing that touches the database will work until it starts." >&2
       return 1
     fi

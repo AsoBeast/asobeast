@@ -7,6 +7,11 @@
 # Code cloud session, which is what scripts/cloud/session-start.sh does.
 set -euo pipefail
 
+# These files carry AUTH_SECRET and POSTGRES_PASSWORD. install -m 600 covers the
+# copy, but set_var rewrites through a redirect that would otherwise take the
+# caller's umask, so the mode has to be restrictive for every write here.
+umask 077
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${root}"
 
