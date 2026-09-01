@@ -1,3 +1,4 @@
+import { version } from "../package.json";
 import { expect, test } from "./session.mts";
 import { SIGNED_IN_ROUTES } from "./routes.mts";
 
@@ -78,6 +79,21 @@ test("an empty portfolio turns the switcher into an import affordance", async ({
   await expect(
     page.getByRole("navigation", { name: "App sections" }),
   ).toHaveCount(0);
+});
+
+test("the sidebar footer names the version the build shipped", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/");
+
+  const footer = page
+    .getByRole("navigation", { name: "Main" })
+    .getByText(`v${version}`);
+  await expect(footer).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+b");
+  await expect(footer).toBeHidden();
 });
 
 test("the collapsed sidebar survives a reload", async ({ page }) => {
