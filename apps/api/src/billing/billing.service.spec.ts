@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingService } from './billing.service';
 import { BillingConflictError } from './billing.errors';
+import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -113,6 +114,13 @@ describe('BillingService', () => {
       get: (key: string) => values[key],
     } as unknown as ConfigService<Env, true>;
 
+    const reconcileOne = jest.fn().mockResolvedValue({
+      checked: 1,
+      corrected: 1,
+      orphanSubscriptions: [],
+      unreconciled: [],
+    });
+
     const service = new BillingService(
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
@@ -124,6 +132,7 @@ describe('BillingService', () => {
         expireCheckoutSession,
       } as unknown as StripeService,
       new PriceCatalog(config),
+      { reconcileOne } as unknown as BillingReconciler,
       prisma,
       config,
     );
@@ -136,6 +145,7 @@ describe('BillingService', () => {
       listCustomerSubscriptions,
       retrieveCheckoutSession,
       expireCheckoutSession,
+      reconcileOne,
       row,
     };
   };
@@ -439,6 +449,36 @@ describe('BillingService', () => {
         expect(createCheckoutSession).toHaveBeenCalledTimes(1);
       },
     );
+
+    it('records what Stripe holds before it refuses the checkout', async () => {
+      const { service, listCustomerSubscriptions, reconcileOne } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([liveSubscription('active')]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+      expect(reconcileOne).toHaveBeenCalledWith(WORKSPACE);
+    });
+
+    it('still refuses the checkout when reconciliation cannot reach Stripe', async () => {
+      const { service, listCustomerSubscriptions, reconcileOne } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([liveSubscription('active')]);
+      reconcileOne.mockRejectedValue(new Error('stripe is down'));
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+    });
+
+    it('leaves the workspace alone when Stripe holds nothing', async () => {
+      const { service, reconcileOne } = build('cus_existing');
+
+      await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+      expect(reconcileOne).not.toHaveBeenCalled();
+    });
 
     it('asks about the customer it is about to charge', async () => {
       const { service, listCustomerSubscriptions } = build('cus_existing');

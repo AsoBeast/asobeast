@@ -10,6 +10,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingConflictError } from './billing.errors';
+import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
@@ -31,6 +32,7 @@ export class BillingService {
   constructor(
     private readonly stripe: StripeService,
     private readonly prices: PriceCatalog,
+    private readonly reconciler: BillingReconciler,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -47,7 +49,7 @@ export class BillingService {
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription();
     const customerId = await this.customerFor(user);
-    await this.refuseLiveSubscription(customerId);
+    await this.refuseLiveSubscription(user.workspaceId, customerId);
 
     const workspaceId = user.workspaceId;
     const attempt = randomUUID();
@@ -176,7 +178,10 @@ export class BillingService {
       );
   }
 
-  private async refuseLiveSubscription(customerId: string): Promise<void> {
+  private async refuseLiveSubscription(
+    workspaceId: string,
+    customerId: string,
+  ): Promise<void> {
     const subscriptions =
       await this.stripe.listCustomerSubscriptions(customerId);
     const live = subscriptions.some((subscription) =>
@@ -188,9 +193,20 @@ export class BillingService {
     if (!live) return;
 
     this.logger.warn(
-      `refused a checkout for ${customerId} because Stripe already holds a live subscription that no webhook has recorded yet`,
+      `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
     );
+    await this.recordWhatStripeHolds(workspaceId);
     throw new BillingConflictError('subscription_exists', ALREADY_SUBSCRIBED);
+  }
+
+  private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
+    await this.reconciler
+      .reconcileOne(workspaceId)
+      .catch((error: unknown) =>
+        this.logger.error(
+          `workspace ${workspaceId} could not be reconciled while its checkout was refused: ${reasonOf(error)}`,
+        ),
+      );
   }
 
   async portal(user: AccountUser): Promise<string> {
