@@ -436,6 +436,21 @@ const INDIE_PLAN: AccountPlan = {
   },
 };
 
+const LAPSED_PLAN: AccountPlan = {
+  ...INDIE_PLAN,
+  plan: "free",
+  displayName: "Free",
+  entitled: false,
+  subscribed: false,
+  renewsAt: null,
+  upgradeTo: "indie",
+  limits: PLAN_LIMITS.free,
+  usage: {
+    apps: { used: 3, limit: PLAN_LIMITS.free.apps },
+    keywordMarkets: { used: 240, limit: PLAN_LIMITS.free.keywordMarkets },
+  },
+};
+
 async function routePlan(page: Page, plan: AccountPlan) {
   await page.route("**/api/backend/auth/plan", (route) =>
     route.fulfill(fulfillJson(200, plan)),
@@ -509,19 +524,7 @@ test("a lapsed workspace is told what it keeps and what it must buy", async ({
     setupRequired: false,
     authenticated: true,
   });
-  await routePlan(page, {
-    ...INDIE_PLAN,
-    plan: "free",
-    displayName: "Free",
-    entitled: false,
-    renewsAt: null,
-    upgradeTo: "indie",
-    limits: PLAN_LIMITS.free,
-    usage: {
-      apps: { used: 3, limit: PLAN_LIMITS.free.apps },
-      keywordMarkets: { used: 240, limit: PLAN_LIMITS.free.keywordMarkets },
-    },
-  });
+  await routePlan(page, LAPSED_PLAN);
 
   await page.goto("/settings");
   await expect(page.getByText("Access paused")).toBeVisible();
@@ -529,6 +532,30 @@ test("a lapsed workspace is told what it keeps and what it must buy", async ({
     page.getByText("Your data stays readable and exportable", { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Choose a plan" })).toBeVisible();
+});
+
+test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, { ...LAPSED_PLAN, subscribed: true });
+
+  await page.goto("/settings");
+  await expect(
+    page.getByText("stopped collecting", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Resume plan" })).toBeVisible();
+
+  await page.goto("/upgrade");
+  await expect(
+    page.getByRole("button", { name: "Resume in the billing portal" }).first(),
+  ).toBeVisible();
 });
 
 test("the upgrade page lists both paid plans with their limits", async ({
