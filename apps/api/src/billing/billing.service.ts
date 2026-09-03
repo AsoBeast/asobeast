@@ -14,7 +14,7 @@ import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
-import { holdsSubscription } from './subscription-status';
+import { effectOf, holdsSubscription } from './subscription-status';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
@@ -24,6 +24,9 @@ const CHECKOUT_IN_FLIGHT =
 
 const ALREADY_SUBSCRIBED =
   'This workspace already has a subscription. Change the plan or cancel it in the billing portal instead of buying a second one.';
+
+const SUBSCRIPTION_NEEDS_ATTENTION =
+  'This workspace already has a subscription that is not collecting. Add a payment method in the billing portal to switch it back on rather than buying a second one.';
 
 @Injectable()
 export class BillingService {
@@ -184,7 +187,7 @@ export class BillingService {
   ): Promise<void> {
     const subscriptions =
       await this.stripe.listCustomerSubscriptions(customerId);
-    const live = subscriptions.some((subscription) =>
+    const live = subscriptions.find((subscription) =>
       holdsSubscription({
         subscriptionId: subscription.id,
         subscriptionStatus: subscription.status,
@@ -196,7 +199,7 @@ export class BillingService {
       `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
     );
     await this.recordWhatStripeHolds(workspaceId);
-    throw new BillingConflictError('subscription_exists', ALREADY_SUBSCRIBED);
+    throw subscriptionExists(live.status);
   }
 
   private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
@@ -249,7 +252,7 @@ export class BillingService {
     });
     if (!workspace || !holdsSubscription(workspace)) return;
 
-    throw new BillingConflictError('subscription_exists', ALREADY_SUBSCRIBED);
+    throw subscriptionExists(workspace.subscriptionStatus);
   }
 
   private async customerFor(user: AccountUser): Promise<string> {
@@ -298,4 +301,12 @@ export class BillingService {
 
 function minuteBucket(): number {
   return Math.floor(Date.now() / 60_000);
+}
+
+function subscriptionExists(status: string | null): BillingConflictError {
+  const message =
+    effectOf(status) === 'recoverable'
+      ? SUBSCRIPTION_NEEDS_ATTENTION
+      : ALREADY_SUBSCRIBED;
+  return new BillingConflictError('subscription_exists', message);
 }

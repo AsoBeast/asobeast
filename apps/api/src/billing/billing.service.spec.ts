@@ -532,6 +532,31 @@ describe('BillingService', () => {
     },
   );
 
+  it.each(['unpaid', 'paused'])(
+    'names the payment method a %s subscription is missing',
+    async (subscriptionStatus) => {
+      const { service } = build('cus_existing', {
+        subscriptionId: 'sub_existing',
+        subscriptionStatus,
+      });
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/add a payment method/i);
+    },
+  );
+
+  it('sends a workspace that already pays to the portal to change plan', async () => {
+    const { service } = build('cus_existing', {
+      subscriptionId: 'sub_existing',
+      subscriptionStatus: 'active',
+    });
+
+    await expect(
+      service.checkout(owner('cus_existing'), 'price_indie_month'),
+    ).rejects.toThrow(/change the plan or cancel it/i);
+  });
+
   it('refuses a second checkout when the stored subscription has no status yet', async () => {
     const { service, createCheckoutSession } = build('cus_existing', {
       subscriptionId: 'sub_existing',
