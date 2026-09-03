@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import type { Workspace } from '@prisma/client';
 import type Stripe from 'stripe';
-import { FREE_PLAN, isPaidPlan, planOf } from '@asobeast/shared';
+import {
+  FREE_PLAN,
+  isPaidPlan,
+  planOf,
+  type BillingReconcileReport,
+} from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
@@ -23,13 +28,6 @@ import { belongsToWorkspace } from './workspace-link';
 const RECONCILE_JUSTIFICATION =
   'reconciliation compares every workspace against the billing provider';
 
-export interface ReconcileReport {
-  checked: number;
-  corrected: number;
-  orphanSubscriptions: string[];
-  unreconciled: string[];
-}
-
 type Outcome = 'corrected' | 'agreed' | 'unreachable';
 
 @Injectable()
@@ -43,14 +41,14 @@ export class BillingReconciler {
     private readonly crossTenant: CrossTenantAccess,
   ) {}
 
-  reconcile(): Promise<ReconcileReport> {
+  reconcile(): Promise<BillingReconcileReport> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECONCILE_JUSTIFICATION,
       () => this.sweep(),
     );
   }
 
-  reconcileOne(workspaceId: string): Promise<ReconcileReport> {
+  reconcileOne(workspaceId: string): Promise<BillingReconcileReport> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECONCILE_JUSTIFICATION,
       async () => {
@@ -75,7 +73,7 @@ export class BillingReconciler {
     );
   }
 
-  private async sweep(): Promise<ReconcileReport> {
+  private async sweep(): Promise<BillingReconcileReport> {
     if (!this.stripe.enabled) {
       return {
         checked: 0,

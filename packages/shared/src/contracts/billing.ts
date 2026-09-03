@@ -23,3 +23,10 @@ export interface CheckoutRequest {
 export interface BillingSession {
   url: string;
 }
+
+export interface BillingReconcileReport {
+  checked: number;
+  corrected: number;
+  orphanSubscriptions: string[];
+  unreconciled: string[];
+}

@@ -4,6 +4,7 @@ import { AuthGate } from "@/components/auth/AuthGate";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import { InsetHeader } from "@/components/layout/InsetHeader";
 import { SystemBanner } from "@/components/layout/SystemBanner";
+import { CheckoutReturn } from "@/components/settings/CheckoutReturn";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import {
   SIDEBAR_COOKIE_NAME,
@@ -29,6 +30,7 @@ export default async function AppLayout({
             tabIndex={-1}
             className="page-gutter flex-1 py-6 outline-none sm:[--gutter:1.5rem]"
           >
+            <CheckoutReturn />
             <SystemBanner />
             {children}
           </main>
