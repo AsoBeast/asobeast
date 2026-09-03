@@ -11,7 +11,11 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
-import { stateOf, type SubscriptionState } from './subscription-state';
+import {
+  projectionOf,
+  stateOf,
+  type SubscriptionState,
+} from './subscription-state';
 import { StripeService } from './stripe.service';
 
 const RECONCILE_JUSTIFICATION =
@@ -127,13 +131,7 @@ export class BillingReconciler {
     );
     await this.prisma.workspace.update({
       where: { id: workspace.id },
-      data: {
-        plan: desired.plan,
-        planExpiresAt: desired.planExpiresAt,
-        subscriptionId: desired.subscriptionId,
-        subscriptionStatus: desired.status,
-        cancelAtPeriodEnd: desired.cancelAtPeriodEnd,
-      },
+      data: projectionOf(desired),
     });
     return true;
   }

@@ -129,6 +129,27 @@ describe('BillingReconciler', () => {
     });
   });
 
+  it('reopens the capacity a lapsed workspace lost when the paid plan comes back', async () => {
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'free',
+          overLimitSince: new Date('2026-01-01T00:00:00.000Z'),
+          overLimitNotifiedAt: new Date('2026-01-02T00:00:00.000Z'),
+        }),
+      ],
+    });
+
+    await reconciler.reconcile();
+
+    const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(args.data).toMatchObject({
+      plan: 'indie',
+      overLimitSince: null,
+      overLimitNotifiedAt: null,
+    });
+  });
+
   it('revokes a plan whose subscription Stripe reports as missing', async () => {
     const { reconciler, update } = build({
       workspaces: [workspaceOf()],

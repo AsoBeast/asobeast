@@ -10,7 +10,6 @@ import type Stripe from 'stripe';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { isPaidPlan, type PlanName } from '@asobeast/shared';
 import { WORKSPACE_METADATA_KEY } from './billing.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
@@ -18,7 +17,7 @@ import { entersDunning, leavesDunning } from './dunning';
 import { PriceCatalog } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
-import { stateOf } from './subscription-state';
+import { projectionOf, stateOf } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { isHandled, subscriptionIdOf, workspaceIdOf } from './webhook-events';
 
@@ -180,14 +179,9 @@ export class BillingWebhookService {
     await this.prisma.workspace.update({
       where: { id: workspace.id },
       data: {
-        plan: state.plan,
-        planExpiresAt: state.planExpiresAt,
-        subscriptionId: state.subscriptionId,
-        subscriptionStatus: state.status,
+        ...projectionOf(state),
         subscriptionEventAt: eventAt,
-        cancelAtPeriodEnd: state.cancelAtPeriodEnd,
         billingCustomerId: customerId,
-        ...reopenedCapacity(state.plan),
         ...(await this.dunning(workspace, state.status)),
         ...(await this.pending(workspace, subscription, eventAt)),
       },
@@ -264,11 +258,6 @@ export class BillingWebhookService {
       where: { billingCustomerId: customerId },
     });
   }
-}
-
-function reopenedCapacity(plan: PlanName) {
-  if (!isPaidPlan(plan)) return {};
-  return { overLimitSince: null, overLimitNotifiedAt: null };
 }
 
 function customerIdOf(subscription: Stripe.Subscription): string {

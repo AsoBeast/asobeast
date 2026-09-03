@@ -21,7 +21,8 @@ const UNKNOWN_STATUS: SubscriptionEffect = 'gone';
 
 export function effectOf(status: string | null): SubscriptionEffect {
   if (status === null) return UNREAD_STATUS;
-  return STATUS_EFFECT[status as SubscriptionStatus] ?? UNKNOWN_STATUS;
+  const known: Partial<Record<string, SubscriptionEffect>> = STATUS_EFFECT;
+  return known[status] ?? UNKNOWN_STATUS;
 }
 
 export function entitledBy(status: SubscriptionStatus): boolean {
