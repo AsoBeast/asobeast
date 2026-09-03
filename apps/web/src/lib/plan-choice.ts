@@ -17,13 +17,17 @@ const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
   resume: "Resume in the billing portal",
 };
 
+function stalled(plan: AccountPlan): boolean {
+  return plan.subscriptionStalled === true;
+}
+
 export function planAction(
   plan: AccountPlan | undefined,
   name: PaidPlanName,
 ): PlanAction {
   if (plan?.plan === name) return "current";
   if (!plan?.subscribed) return "checkout";
-  return plan.subscriptionStalled ? "resume" : "change";
+  return stalled(plan) ? "resume" : "change";
 }
 
 export function planActionLabel(
@@ -38,7 +42,7 @@ export function paywallStatusLine(plan: AccountPlan | undefined): string {
   if (plan.plan === "trial" && plan.trialEndsAt) {
     return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
   }
-  if (plan.subscriptionStalled) return STALLED_ON_THE_PAYWALL;
+  if (stalled(plan)) return STALLED_ON_THE_PAYWALL;
   if (plan.trialEndsAt && !plan.entitled) {
     return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
   }
@@ -49,7 +53,7 @@ export function paywallStatusLine(plan: AccountPlan | undefined): string {
 }
 
 export function planStatusLine(plan: AccountPlan): string {
-  if (plan.subscriptionStalled) return STALLED_IN_SETTINGS;
+  if (stalled(plan)) return STALLED_IN_SETTINGS;
   if (!plan.entitled) {
     return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
   }
@@ -65,5 +69,5 @@ export function planStatusLine(plan: AccountPlan): string {
 
 export function planCallToAction(plan: AccountPlan): string {
   if (plan.entitled) return "Upgrade plan";
-  return plan.subscriptionStalled ? "Resume plan" : "Choose a plan";
+  return stalled(plan) ? "Resume plan" : "Choose a plan";
 }

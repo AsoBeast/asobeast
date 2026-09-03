@@ -218,6 +218,42 @@ describe('BillingReconciler', () => {
       expect(rows[0]).toMatchObject({ subscriptionId: 'sub_new' });
     });
 
+    it('is adopted even when the workspace still stores a subscription Stripe cancelled', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [
+          workspaceOf({ plan: 'free', subscriptionStatus: 'canceled' }),
+        ],
+        subscription: subscriptionOf({ status: 'canceled' }),
+        customerSubscriptions: [subscriptionOf({ id: 'sub_live' })],
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+        orphanSubscriptions: [],
+      });
+      expect(rows[0]).toMatchObject({
+        plan: 'indie',
+        subscriptionId: 'sub_live',
+        subscriptionStatus: 'active',
+      });
+    });
+
+    it('keeps the cancelled subscription when the customer holds nothing else', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [workspaceOf()],
+        subscription: subscriptionOf({ status: 'canceled' }),
+        customerSubscriptions: [],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({
+        plan: 'free',
+        subscriptionId: 'sub_1',
+        subscriptionStatus: 'canceled',
+      });
+    });
+
     it('adopts one the customer holds without naming a workspace', async () => {
       const { reconciler, rows } = build({
         workspaces: [lapsed()],

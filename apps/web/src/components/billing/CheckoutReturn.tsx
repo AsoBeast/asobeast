@@ -11,12 +11,12 @@ export function CheckoutReturn() {
   const settled = useRef(false);
 
   useEffect(() => {
-    const { pathname, search } = window.location;
-    if (settled.current || !checkoutReturned(search)) return;
+    if (settled.current || !checkoutReturned(window.location.search)) return;
     settled.current = true;
 
     void reconcileBilling()
       .then(() => {
+        const { pathname, search } = window.location;
         window.history.replaceState(
           null,
           "",

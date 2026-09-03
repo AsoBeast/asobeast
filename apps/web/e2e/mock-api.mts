@@ -97,7 +97,6 @@ const ACCOUNT_PLAN: AccountPlan = {
   entitled: true,
   hasBillingAccount: false,
   subscribed: false,
-  subscriptionStalled: false,
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
   renewsAt: null,

@@ -17,13 +17,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import {
-  heldSubscription,
+  heldForWorkspace,
   projectionOf,
   stateOf,
   type SubscriptionState,
 } from './subscription-state';
 import { StripeService } from './stripe.service';
-import { belongsToWorkspace } from './workspace-link';
+import { effectOf } from './subscription-status';
 
 const RECONCILE_JUSTIFICATION =
   'reconciliation compares every workspace against the billing provider';
@@ -88,7 +88,7 @@ export class BillingReconciler {
         OR: [
           { subscriptionId: { not: null } },
           { plan: { not: FREE_PLAN } },
-          { billingCustomerId: { not: null } },
+          { billingCustomerId: { not: null }, subscriptionId: null },
         ],
       },
     });
@@ -143,12 +143,13 @@ export class BillingReconciler {
   private async desiredState(
     workspace: Workspace,
   ): Promise<SubscriptionState | null> {
-    const subscription =
-      (await this.storedSubscription(workspace)) ??
-      (await this.adoptableSubscription(workspace));
+    const stored = await this.storedSubscription(workspace);
+    const subscription = stillHeld(stored)
+      ? stored
+      : ((await this.adoptableSubscription(workspace)) ?? stored);
     if (!subscription) return null;
 
-    return stateOf(subscription, this.planFor(subscription));
+    return stateOf(subscription, this.prices.planOf(subscription));
   }
 
   private async storedSubscription(
@@ -172,21 +173,16 @@ export class BillingReconciler {
   ): Promise<Stripe.Subscription | null> {
     if (!workspace.billingCustomerId) return null;
 
-    const held = (
-      await this.stripe.listCustomerSubscriptions(workspace.billingCustomerId)
-    ).filter((subscription) => belongsToWorkspace(subscription, workspace.id));
-    const adopted = heldSubscription(held);
+    const adopted = heldForWorkspace(
+      await this.stripe.listCustomerSubscriptions(workspace.billingCustomerId),
+      workspace.id,
+    );
     if (!adopted) return null;
 
     this.logger.error(
       `workspace ${workspace.id} is billed for stripe subscription ${adopted.id} (${adopted.status}) that no webhook recorded; adopting it`,
     );
     return adopted;
-  }
-
-  private planFor(subscription: Stripe.Subscription) {
-    const priceId = subscription.items.data[0]?.price.id ?? '';
-    return this.prices.require(priceId).plan;
   }
 
   private async revokeUnknownSubscription(
@@ -238,6 +234,10 @@ const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
   'active',
   'past_due',
 ]);
+
+function stillHeld(subscription: Stripe.Subscription | null): boolean {
+  return subscription !== null && effectOf(subscription.status) !== 'gone';
+}
 
 function claimsSubscription(workspace: Workspace): boolean {
   return (

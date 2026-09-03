@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type Stripe from 'stripe';
 import {
   PAID_PLAN_NAMES,
   PLANS,
@@ -74,5 +75,9 @@ export class PriceCatalog {
     const price = this.find(priceId);
     if (!price) throw new UnknownPriceError(priceId);
     return price;
+  }
+
+  planOf(subscription: Stripe.Subscription): PaidPlanName {
+    return this.require(subscription.items.data[0]?.price.id ?? '').plan;
   }
 }

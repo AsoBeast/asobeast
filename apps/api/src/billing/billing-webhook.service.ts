@@ -176,7 +176,7 @@ export class BillingWebhookService {
       return;
     }
 
-    const state = stateOf(subscription, this.planOf(subscription));
+    const state = stateOf(subscription, this.prices.planOf(subscription));
     await this.prisma.workspace.update({
       where: { id: workspace.id },
       data: {
@@ -237,11 +237,6 @@ export class BillingWebhookService {
     );
     if (!noticeSettled(outcome)) return {};
     return { dunningNotifiedAt: new Date() };
-  }
-
-  private planOf(subscription: Stripe.Subscription) {
-    const priceId = subscription.items.data[0]?.price.id ?? '';
-    return this.prices.require(priceId).plan;
   }
 
   private async workspaceFor(

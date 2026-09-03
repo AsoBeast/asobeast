@@ -19,9 +19,13 @@ import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
-import { effectOf, holdsSubscription } from './subscription-status';
-import { heldSubscription } from './subscription-state';
-import { belongsToWorkspace, WORKSPACE_METADATA_KEY } from './workspace-link';
+import {
+  holdsSubscription,
+  stalledBy,
+  type WorkspaceSubscription,
+} from './subscription-status';
+import { heldForWorkspace, heldSubscription } from './subscription-state';
+import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 
@@ -56,7 +60,7 @@ export class BillingService {
   async checkout(user: AccountUser, priceId: string): Promise<string> {
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
-    await this.refuseSecondSubscription();
+    await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);
     await this.refuseLiveSubscription(user.workspaceId, customerId);
 
@@ -192,18 +196,22 @@ export class BillingService {
     customerId: string,
   ): Promise<void> {
     const held = await this.stripe.listCustomerSubscriptions(customerId);
-    const live = heldSubscription(
-      held.filter((subscription) =>
-        belongsToWorkspace(subscription, workspaceId),
-      ),
-    );
-    if (!live) return;
+    const live = heldForWorkspace(held, workspaceId);
+    if (live) {
+      this.logger.warn(
+        `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
+      );
+      await this.recordWhatStripeHolds(workspaceId);
+      throw subscriptionExists(live.status);
+    }
 
-    this.logger.warn(
-      `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
+    const foreign = heldSubscription(held);
+    if (!foreign) return;
+
+    this.logger.error(
+      `stripe subscription ${foreign.id} on customer ${customerId} names workspace ${workspaceNamedBy(foreign) ?? 'nobody'}, not ${workspaceId}; refusing the checkout rather than billing the customer twice`,
     );
-    await this.recordWhatStripeHolds(workspaceId);
-    throw subscriptionExists(live.status);
+    throw subscriptionExists(null);
   }
 
   private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
@@ -250,13 +258,22 @@ export class BillingService {
     );
   }
 
-  private async refuseSecondSubscription(): Promise<void> {
+  private async refuseSecondSubscription(workspaceId: string): Promise<void> {
+    if (!(await this.storedSubscription())) return;
+
+    await this.recordWhatStripeHolds(workspaceId);
+    const confirmed = await this.storedSubscription();
+    if (!confirmed) return;
+
+    throw subscriptionExists(confirmed.subscriptionStatus);
+  }
+
+  private async storedSubscription(): Promise<WorkspaceSubscription | null> {
     const workspace = await this.prisma.workspace.findFirst({
       select: { subscriptionId: true, subscriptionStatus: true },
     });
-    if (!workspace || !holdsSubscription(workspace)) return;
-
-    throw subscriptionExists(workspace.subscriptionStatus);
+    if (!workspace || !holdsSubscription(workspace)) return null;
+    return workspace;
   }
 
   private async customerFor(user: AccountUser): Promise<string> {
@@ -314,9 +331,8 @@ function minuteBucket(): number {
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {
-  const stalled = status !== null && effectOf(status) === 'recoverable';
   return new BillingConflictError(
     'subscription_exists',
-    stalled ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
+    stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
   );
 }

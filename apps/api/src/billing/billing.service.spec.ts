@@ -492,9 +492,13 @@ describe('BillingService', () => {
       expect(reconcileOne).not.toHaveBeenCalled();
     });
 
-    it('ignores a subscription whose metadata names another workspace', async () => {
-      const { service, listCustomerSubscriptions, createCheckoutSession } =
-        build('cus_existing');
+    it('refuses rather than billing a customer twice for a subscription another workspace claims', async () => {
+      const {
+        service,
+        listCustomerSubscriptions,
+        createCheckoutSession,
+        reconcileOne,
+      } = build('cus_existing');
       listCustomerSubscriptions.mockResolvedValue([
         {
           ...liveSubscription('active'),
@@ -502,9 +506,31 @@ describe('BillingService', () => {
         },
       ]);
 
-      await service.checkout(owner('cus_existing'), 'price_indie_month');
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+      expect(createCheckoutSession).not.toHaveBeenCalled();
+      expect(reconcileOne).not.toHaveBeenCalled();
+    });
 
-      expect(createCheckoutSession).toHaveBeenCalledTimes(1);
+    it('prefers the subscription this workspace is named on', async () => {
+      const { service, listCustomerSubscriptions } = build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('active'),
+          id: 'sub_theirs',
+          metadata: { [WORKSPACE_METADATA_KEY]: 'ws_someone_else' },
+        },
+        {
+          ...liveSubscription('paused'),
+          id: 'sub_ours',
+          metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+        },
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/add a payment method/i);
     });
 
     it('asks about the customer it is about to charge', async () => {

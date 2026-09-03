@@ -41,3 +41,7 @@ export function holdsSubscription(workspace: WorkspaceSubscription): boolean {
   if (!workspace.subscriptionId) return false;
   return effectOf(workspace.subscriptionStatus) !== 'gone';
 }
+
+export function stalledBy(status: string | null): boolean {
+  return status !== null && effectOf(status) === 'recoverable';
+}

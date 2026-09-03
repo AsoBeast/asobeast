@@ -5,6 +5,7 @@ import {
   entitledBy,
   type SubscriptionStatus,
 } from './subscription-status';
+import { belongsToWorkspace } from './workspace-link';
 
 export interface SubscriptionState {
   subscriptionId: string;
@@ -65,5 +66,16 @@ export function heldSubscription(
   );
   return (
     held.find((subscription) => entitledBy(subscription.status)) ?? held.at(0)
+  );
+}
+
+export function heldForWorkspace(
+  subscriptions: Stripe.Subscription[],
+  workspaceId: string,
+): Stripe.Subscription | undefined {
+  return heldSubscription(
+    subscriptions.filter((subscription) =>
+      belongsToWorkspace(subscription, workspaceId),
+    ),
   );
 }

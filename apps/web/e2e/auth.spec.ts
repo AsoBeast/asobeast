@@ -424,7 +424,6 @@ const INDIE_PLAN: AccountPlan = {
   entitled: true,
   hasBillingAccount: true,
   subscribed: true,
-  subscriptionStalled: false,
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
   renewsAt: "2026-09-09T00:00:00.000Z",
