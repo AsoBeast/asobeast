@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import type { Workspace } from '@prisma/client';
 import type Stripe from 'stripe';
-import { FREE_PLAN, planOf } from '@asobeast/shared';
+import { FREE_PLAN, isPaidPlan, planOf } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
@@ -196,9 +196,7 @@ export class BillingReconciler {
   private async revokeUnknownSubscription(
     workspace: Workspace,
   ): Promise<boolean> {
-    if (planOf(workspace.plan) === FREE_PLAN && !workspace.subscriptionId) {
-      return false;
-    }
+    if (!claimsSubscription(workspace)) return false;
     this.logger.error(
       `workspace ${workspace.id} claims ${workspace.plan} with no subscription Stripe recognises; revoking`,
     );
@@ -244,6 +242,12 @@ const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
   'active',
   'past_due',
 ]);
+
+function claimsSubscription(workspace: Workspace): boolean {
+  return (
+    workspace.subscriptionId !== null || isPaidPlan(planOf(workspace.plan))
+  );
+}
 
 function matches(workspace: Workspace, desired: SubscriptionState): boolean {
   return (

@@ -275,6 +275,39 @@ describe('BillingReconciler', () => {
     });
   });
 
+  it('leaves a trialing workspace alone rather than revoking a plan it never claimed', async () => {
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'trial',
+          planExpiresAt: null,
+          billingCustomerId: null,
+          subscriptionId: null,
+          subscriptionStatus: null,
+        }),
+      ],
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      checked: 1,
+      corrected: 0,
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('still revokes a paid plan Stripe cannot back', async () => {
+    const { reconciler, rows } = build({
+      workspaces: [
+        workspaceOf({ billingCustomerId: null, subscriptionId: null }),
+      ],
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 1,
+    });
+    expect(rows[0]).toMatchObject({ plan: 'free' });
+  });
+
   it('revokes a plan whose subscription Stripe reports as missing', async () => {
     const { reconciler, update } = build({
       workspaces: [workspaceOf()],
