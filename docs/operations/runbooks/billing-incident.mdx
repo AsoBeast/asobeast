@@ -50,8 +50,9 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
      --data '{"confirm":true,"reason":"customer locked out after a successful payment"}' \
      http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/reconcile
    ```
-2. If many workspaces are wrong, fix the webhook path first. Reconciling everyone against a broken cause just delays the same incident.
-3. Replayed events are safe. Webhook handling is idempotent and a stored event is processed once.
+2. Reconciliation looks for a subscription on the workspace customer as well as by the stored id, so a customer who paid and whose webhook never landed is repaired by this step rather than needing the id pasted in by hand.
+3. If many workspaces are wrong, fix the webhook path first. Reconciling everyone against a broken cause just delays the same incident.
+4. Replayed events are safe. Webhook handling is idempotent and a stored event is processed once.
 
 ## Recovery
 

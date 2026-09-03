@@ -34,15 +34,20 @@ A refused delivery is logged. Look for `rejected a webhook delivery` in the API 
 
 ## States a workspace moves through
 
-| State | Entitled | What runs |
-| --- | --- | --- |
-| Trial | Yes | Everything, at Indie limits |
-| Active | Yes | Everything, at the plan limits |
-| Past due | Yes | Everything, while Stripe retries the charge |
-| Unpaid or canceled | No | Reads and exports only |
-| Free, never subscribed | No | Reads and exports only |
+| State | Entitled | Buying again | What runs |
+| --- | --- | --- | --- |
+| Trial | Yes | Checkout | Everything, at Indie limits |
+| Active | Yes | Portal, to change plan | Everything, at the plan limits |
+| Past due | Yes | Portal, to change plan | Everything, while Stripe retries the charge |
+| Unpaid or paused | No | Portal, to start collecting | Reads and exports only |
+| Canceled or expired | No | Checkout | Reads and exports only |
+| Free, never subscribed | No | Checkout | Reads and exports only |
 
 The plan in force is derived rather than trusted: a paid plan past its period end falls back to the trial if one is still running, and to free otherwise.
+
+Every Stripe status lands in one of three outcomes. It **entitles** the workspace, it is **recoverable**, or it is **gone**. Recoverable is the row that used to strand a customer: an unpaid or paused subscription pays for nothing, and a second one would be a double charge, so the only way forward is the portal. A workspace in that state is told its subscription stopped collecting and is offered a resume, never a checkout that would be refused.
+
+A trial that ends with no payment method on file pauses or cancels the subscription according to the trial setting on the Stripe side. Pausing keeps the same subscription and asks for a card; cancelling frees the customer to buy again. Either is coherent, so pick one in the dashboard and leave it alone.
 
 ## Trial
 
@@ -58,7 +63,9 @@ A failed charge moves the subscription to `past_due`, which **stays entitled**. 
 
 Both are self service through the Stripe customer portal, and both take effect at period end, so the customer keeps what they paid for. A plan change is a portal change, never a second checkout: a workspace that already names a live subscription is refused a checkout session with 409 and sent to the portal, so one workspace is never charged twice.
 
-A workspace also gets at most one checkout session it can complete. Opening a session claims a short lease, so two requests in flight together cannot both create one, and the previous session is expired at Stripe before a new one opens, so a page left open in another tab cannot be paid afterwards. Stripe itself is asked for the customer's subscriptions before any session is created, which closes the window between a completed payment and the webhook that records it.
+A workspace also gets at most one checkout session it can complete. Opening a session claims a short lease, so two requests in flight together cannot both create one, and the previous session is expired at Stripe before a new one opens, so a page left open in another tab cannot be paid afterwards. Stripe itself is asked for the customer's subscriptions before any session is created, which closes the window between a completed payment and the webhook that records it. A subscription found that way is reconciled onto the workspace before the checkout is refused, so the customer keeps what they already pay for. Turn on **Limit customers to one subscription** in the Stripe dashboard as well: it is the only thing that stops two checkout tabs both completing.
+
+A refusal carries the recovery in the error body, not only in its message, so the web app can open the portal for the customer rather than showing them a dead end.
 
 - asobeast reads the scheduled phase from Stripe and records the plan the workspace will land on.
 - Within a week of the effective date, if the workspace would be over the smaller plan's limits, the owner is emailed with the exact numbers.
@@ -69,6 +76,10 @@ Configure the portal in the Stripe dashboard to allow plan switching, cancellati
 ## Reconciliation
 
 Webhooks are reliable but not guaranteed, and stale local state means either a paying customer locked out or a churned one still served. A daily job compares every workspace against Stripe, treats Stripe as authoritative, corrects the difference and logs every correction at error level, because a reconciliation that quietly fixes drift hides a webhook bug. It also reports subscriptions Stripe knows about that belong to no workspace.
+
+Reconciliation looks up a subscription two ways. The stored subscription id comes first, and when there is none, or Stripe has forgotten it, the workspace customer is asked what it holds. A subscription there that names no other workspace in its metadata is adopted, which is what rescues a customer whose checkout completed and whose webhook never landed. Only a workspace that claims something Stripe cannot back is revoked, so a running trial is left to expire on its own rather than being reset every night.
+
+The same repair runs the moment a customer comes back from checkout: the return carries a marker the app reads once, and it reconciles the workspace there and then rather than waiting for a webhook that may never arrive.
 
 Only an authoritative answer revokes a plan. A subscription Stripe reports as missing is gone and the workspace drops to free, but a timeout, a rate limit, a rejected key, an outage or a price the local catalog cannot name leaves the workspace exactly as it is and is reported as unreconciled, because a provider that cannot answer is not the same as a customer who stopped paying.
 
