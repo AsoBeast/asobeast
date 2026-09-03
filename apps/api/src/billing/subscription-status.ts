@@ -2,37 +2,38 @@ import type Stripe from 'stripe';
 
 export type SubscriptionStatus = Stripe.Subscription.Status;
 
-const ENTITLED_STATUSES: Record<SubscriptionStatus, boolean> = {
-  trialing: true,
-  active: true,
-  past_due: true,
-  unpaid: false,
-  canceled: false,
-  incomplete: false,
-  incomplete_expired: false,
-  paused: false,
+export type SubscriptionEffect = 'entitles' | 'recoverable' | 'gone';
+
+const STATUS_EFFECT: Record<SubscriptionStatus, SubscriptionEffect> = {
+  trialing: 'entitles',
+  active: 'entitles',
+  past_due: 'entitles',
+  unpaid: 'recoverable',
+  paused: 'recoverable',
+  incomplete: 'gone',
+  incomplete_expired: 'gone',
+  canceled: 'gone',
 };
 
-export function entitledBy(status: SubscriptionStatus): boolean {
-  return ENTITLED_STATUSES[status] ?? false;
+const UNREAD_STATUS: SubscriptionEffect = 'recoverable';
+
+const UNKNOWN_STATUS: SubscriptionEffect = 'gone';
+
+export function effectOf(status: string | null): SubscriptionEffect {
+  if (status === null) return UNREAD_STATUS;
+  return STATUS_EFFECT[status as SubscriptionStatus] ?? UNKNOWN_STATUS;
 }
 
-const LIVE_STATUSES: Record<SubscriptionStatus, boolean> = {
-  trialing: true,
-  active: true,
-  past_due: true,
-  unpaid: true,
-  paused: true,
-  incomplete: false,
-  incomplete_expired: false,
-  canceled: false,
-};
+export function entitledBy(status: SubscriptionStatus): boolean {
+  return effectOf(status) === 'entitles';
+}
 
-export function holdsSubscription(workspace: {
+export interface WorkspaceSubscription {
   subscriptionId: string | null;
   subscriptionStatus: string | null;
-}): boolean {
+}
+
+export function holdsSubscription(workspace: WorkspaceSubscription): boolean {
   if (!workspace.subscriptionId) return false;
-  if (workspace.subscriptionStatus === null) return true;
-  return LIVE_STATUSES[workspace.subscriptionStatus] ?? false;
+  return effectOf(workspace.subscriptionStatus) !== 'gone';
 }
