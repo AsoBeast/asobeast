@@ -1,5 +1,4 @@
 import {
-  ConflictException,
   Injectable,
   Logger,
   ServiceUnavailableException,
@@ -10,6 +9,7 @@ import { UPGRADE_PATH, type BillingCatalog } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { BillingConflictError } from './billing.errors';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
@@ -95,7 +95,7 @@ export class BillingService {
       data: { checkoutClaimedAt: now, checkoutClaimToken: attempt },
     });
     if (claimed.count === 0) {
-      throw new ConflictException(CHECKOUT_IN_FLIGHT);
+      throw new BillingConflictError('checkout_in_flight', CHECKOUT_IN_FLIGHT);
     }
   }
 
@@ -153,7 +153,7 @@ export class BillingService {
       `checkout ${attempt} lost the lease on workspace ${workspaceId} while Stripe was answering; expiring ${sessionId} rather than leaving it payable`,
     );
     await this.expireOrphan(sessionId);
-    throw new ConflictException(CHECKOUT_IN_FLIGHT);
+    throw new BillingConflictError('checkout_in_flight', CHECKOUT_IN_FLIGHT);
   }
 
   private async releaseCheckout(
@@ -190,7 +190,7 @@ export class BillingService {
     this.logger.warn(
       `refused a checkout for ${customerId} because Stripe already holds a live subscription that no webhook has recorded yet`,
     );
-    throw new ConflictException(ALREADY_SUBSCRIBED);
+    throw new BillingConflictError('subscription_exists', ALREADY_SUBSCRIBED);
   }
 
   async portal(user: AccountUser): Promise<string> {
@@ -233,7 +233,7 @@ export class BillingService {
     });
     if (!workspace || !holdsSubscription(workspace)) return;
 
-    throw new ConflictException(ALREADY_SUBSCRIBED);
+    throw new BillingConflictError('subscription_exists', ALREADY_SUBSCRIBED);
   }
 
   private async customerFor(user: AccountUser): Promise<string> {

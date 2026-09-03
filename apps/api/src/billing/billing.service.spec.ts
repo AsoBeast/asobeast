@@ -1,9 +1,10 @@
-import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingService } from './billing.service';
+import { BillingConflictError } from './billing.errors';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -319,7 +320,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(BillingConflictError);
       expect(row.checkoutSessionId).toBeNull();
       expect(row.checkoutClaimToken).toBe('newer-attempt');
       expect(expireCheckoutSession).toHaveBeenCalledWith('cs_stale_owner');
@@ -384,7 +385,7 @@ describe('BillingService', () => {
         'price_indie_month',
       );
 
-      await expect(second).rejects.toBeInstanceOf(ConflictException);
+      await expect(second).rejects.toBeInstanceOf(BillingConflictError);
       release();
       await expect(first).resolves.toBe('https://checkout.stripe.test/session');
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
@@ -421,7 +422,7 @@ describe('BillingService', () => {
 
         await expect(
           service.checkout(owner('cus_existing'), 'price_indie_month'),
-        ).rejects.toBeInstanceOf(ConflictException);
+        ).rejects.toBeInstanceOf(BillingConflictError);
         expect(createCheckoutSession).not.toHaveBeenCalled();
       },
     );
@@ -486,7 +487,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(BillingConflictError);
       expect(createCheckoutSession).not.toHaveBeenCalled();
     },
   );
@@ -499,7 +500,7 @@ describe('BillingService', () => {
 
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toBeInstanceOf(BillingConflictError);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
