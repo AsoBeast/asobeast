@@ -14,8 +14,7 @@ import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
 import { holdsSubscription } from './subscription-status';
-
-export const WORKSPACE_METADATA_KEY = 'asobeast_workspace_id';
+import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 

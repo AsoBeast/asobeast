@@ -10,7 +10,6 @@ import type Stripe from 'stripe';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { WORKSPACE_METADATA_KEY } from './billing.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
 import { entersDunning, leavesDunning } from './dunning';
@@ -20,6 +19,7 @@ import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateOf } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { isHandled, subscriptionIdOf, workspaceIdOf } from './webhook-events';
+import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const SETTINGS_PATH = '/settings';
 
@@ -248,7 +248,7 @@ export class BillingWebhookService {
   ) {
     const named =
       workspaceIdOf(event, WORKSPACE_METADATA_KEY) ??
-      subscription.metadata[WORKSPACE_METADATA_KEY];
+      workspaceNamedBy(subscription);
     if (named) {
       return this.prisma.workspace.findUnique({ where: { id: named } });
     }
