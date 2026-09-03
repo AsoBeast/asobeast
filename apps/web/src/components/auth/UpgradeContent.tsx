@@ -38,9 +38,9 @@ import {
   type PlanAction,
 } from "@/lib/plan-choice";
 import {
-  accountPlanKey,
   accountPlanOptions,
   billingCatalogOptions,
+  invalidateAuth,
 } from "@/lib/queries";
 
 const INCLUDED = [
@@ -95,9 +95,7 @@ function PlanOption({
       window.location.assign(url);
     },
     onError: (error) => {
-      if (recoversInPortal(error)) {
-        void client.invalidateQueries({ queryKey: accountPlanKey });
-      }
+      if (recoversInPortal(error)) invalidateAuth(client);
       toast.error(failureMessage(error, action));
     },
   });
