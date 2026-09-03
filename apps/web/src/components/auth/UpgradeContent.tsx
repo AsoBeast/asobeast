@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,7 +24,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApiError, changePlan, openBillingPortal } from "@/lib/api";
+import {
+  ApiError,
+  openBillingPortal,
+  recoversInPortal,
+  startCheckout,
+} from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import {
   planAction,
@@ -32,7 +37,11 @@ import {
   paywallStatusLine,
   type PlanAction,
 } from "@/lib/plan-choice";
-import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
+import {
+  accountPlanKey,
+  accountPlanOptions,
+  billingCatalogOptions,
+} from "@/lib/queries";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -76,15 +85,19 @@ function PlanOption({
   const amountUsd =
     (interval === "month" ? prices.monthlyUsd : prices.annualUsd) ?? 0;
 
+  const client = useQueryClient();
   const change = useMutation({
     mutationFn: () =>
       action === "checkout"
-        ? changePlan(price?.priceId ?? "")
+        ? startCheckout(price?.priceId ?? "")
         : openBillingPortal(),
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },
     onError: (error) => {
+      if (recoversInPortal(error)) {
+        void client.invalidateQueries({ queryKey: accountPlanKey });
+      }
       toast.error(failureMessage(error, action));
     },
   });

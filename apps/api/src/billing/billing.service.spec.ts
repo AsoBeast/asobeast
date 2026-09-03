@@ -492,6 +492,21 @@ describe('BillingService', () => {
       expect(reconcileOne).not.toHaveBeenCalled();
     });
 
+    it('ignores a subscription whose metadata names another workspace', async () => {
+      const { service, listCustomerSubscriptions, createCheckoutSession } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('active'),
+          metadata: { [WORKSPACE_METADATA_KEY]: 'ws_someone_else' },
+        },
+      ]);
+
+      await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+      expect(createCheckoutSession).toHaveBeenCalledTimes(1);
+    });
+
     it('asks about the customer it is about to charge', async () => {
       const { service, listCustomerSubscriptions } = build('cus_existing');
 
@@ -499,6 +514,36 @@ describe('BillingService', () => {
 
       expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_existing');
     });
+  });
+
+  it('marks the checkout return so the workspace reconciles when it lands', async () => {
+    const { service, createCheckoutSession } = build('cus_existing');
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/settings?checkout=complete',
+    );
+  });
+
+  it('keeps the checkout marker on a configured return url', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_PORTAL_RETURN_URL: 'https://app.example.com/account?tab=plan' },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/account?tab=plan&checkout=complete',
+    );
   });
 
   it('returns the customer to the portal rather than the paywall', async () => {

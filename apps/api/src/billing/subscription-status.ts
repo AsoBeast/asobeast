@@ -15,14 +15,17 @@ const STATUS_EFFECT: Record<SubscriptionStatus, SubscriptionEffect> = {
   canceled: 'gone',
 };
 
+const EFFECT_BY_STATUS = new Map<string, SubscriptionEffect>(
+  Object.entries(STATUS_EFFECT),
+);
+
 const UNREAD_STATUS: SubscriptionEffect = 'recoverable';
 
 const UNKNOWN_STATUS: SubscriptionEffect = 'gone';
 
 export function effectOf(status: string | null): SubscriptionEffect {
   if (status === null) return UNREAD_STATUS;
-  const known: Partial<Record<string, SubscriptionEffect>> = STATUS_EFFECT;
-  return known[status] ?? UNKNOWN_STATUS;
+  return EFFECT_BY_STATUS.get(status) ?? UNKNOWN_STATUS;
 }
 
 export function entitledBy(status: SubscriptionStatus): boolean {

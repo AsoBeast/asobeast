@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type Workspace } from '@prisma/client';
 import type Stripe from 'stripe';
+import { isPaidPlan, type PlanName } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -182,6 +183,7 @@ export class BillingWebhookService {
         ...projectionOf(state),
         subscriptionEventAt: eventAt,
         billingCustomerId: customerId,
+        ...reopenedCapacity(state.plan),
         ...(await this.dunning(workspace, state.status)),
         ...(await this.pending(workspace, subscription, eventAt)),
       },
@@ -258,6 +260,11 @@ export class BillingWebhookService {
       where: { billingCustomerId: customerId },
     });
   }
+}
+
+function reopenedCapacity(plan: PlanName) {
+  if (!isPaidPlan(plan)) return {};
+  return { overLimitSince: null, overLimitNotifiedAt: null };
 }
 
 function customerIdOf(subscription: Stripe.Subscription): string {

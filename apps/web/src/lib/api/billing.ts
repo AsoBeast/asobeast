@@ -32,12 +32,3 @@ export function recoversInPortal(error: unknown): boolean {
     error instanceof ApiError && error.envelope.billing?.recovery === "portal"
   );
 }
-
-export async function changePlan(priceId: string): Promise<BillingSession> {
-  try {
-    return await startCheckout(priceId);
-  } catch (error) {
-    if (!recoversInPortal(error)) throw error;
-    return openBillingPortal();
-  }
-}

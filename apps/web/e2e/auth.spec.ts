@@ -424,6 +424,7 @@ const INDIE_PLAN: AccountPlan = {
   entitled: true,
   hasBillingAccount: true,
   subscribed: true,
+  subscriptionStalled: false,
   cancelAtPeriodEnd: false,
   trialEndsAt: null,
   renewsAt: "2026-09-09T00:00:00.000Z",
@@ -544,7 +545,11 @@ test("a workspace whose subscription stalled is sent to the portal, not the payw
     setupRequired: false,
     authenticated: true,
   });
-  await routePlan(page, { ...LAPSED_PLAN, subscribed: true });
+  await routePlan(page, {
+    ...LAPSED_PLAN,
+    subscribed: true,
+    subscriptionStalled: true,
+  });
 
   await page.goto("/settings");
   await expect(

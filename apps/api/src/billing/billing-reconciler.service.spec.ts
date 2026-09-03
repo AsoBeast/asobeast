@@ -71,9 +71,10 @@ describe('BillingReconciler', () => {
     const listCustomerSubscriptions = jest.fn(() =>
       Promise.resolve(over.customerSubscriptions ?? []),
     );
+    const findMany = jest.fn(() => Promise.resolve(rows));
     const prisma = {
       workspace: {
-        findMany: jest.fn(() => Promise.resolve(rows)),
+        findMany,
         findUnique: jest.fn(() => Promise.resolve(rows[0] ?? null)),
         update,
       },
@@ -100,7 +101,7 @@ describe('BillingReconciler', () => {
       } as unknown as CrossTenantAccess,
     );
 
-    return { reconciler, update, listCustomerSubscriptions, rows };
+    return { reconciler, update, listCustomerSubscriptions, findMany, rows };
   };
 
   it('does nothing while Stripe is not configured', async () => {
@@ -141,13 +142,12 @@ describe('BillingReconciler', () => {
     });
   });
 
-  it('reopens the capacity a lapsed workspace lost when the paid plan comes back', async () => {
+  it('leaves the over limit clock alone when it corrects a plan', async () => {
     const { reconciler, update } = build({
       workspaces: [
         workspaceOf({
-          plan: 'free',
+          plan: 'ultimate',
           overLimitSince: new Date('2026-01-01T00:00:00.000Z'),
-          overLimitNotifiedAt: new Date('2026-01-02T00:00:00.000Z'),
         }),
       ],
     });
@@ -155,11 +155,8 @@ describe('BillingReconciler', () => {
     await reconciler.reconcile();
 
     const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
-    expect(args.data).toMatchObject({
-      plan: 'indie',
-      overLimitSince: null,
-      overLimitNotifiedAt: null,
-    });
+    expect(args.data).toMatchObject({ plan: 'indie' });
+    expect(args.data).not.toHaveProperty('overLimitSince');
   });
 
   describe('a subscription no webhook recorded', () => {
@@ -191,6 +188,34 @@ describe('BillingReconciler', () => {
         subscriptionId: 'sub_live',
         subscriptionStatus: 'active',
       });
+    });
+
+    it('is looked for even after an earlier sweep revoked the workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [{ ...lapsed(), plan: 'free' }],
+        customerSubscriptions: [subscriptionOf({ id: 'sub_live' })],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_live' });
+    });
+
+    it('replaces a stored subscription Stripe has forgotten with the live one', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [workspaceOf()],
+        retrieveFails: stripeErrorOf({
+          code: 'resource_missing',
+          statusCode: 404,
+        }),
+        customerSubscriptions: [subscriptionOf({ id: 'sub_new' })],
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+        orphanSubscriptions: [],
+      });
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_new' });
     });
 
     it('adopts one the customer holds without naming a workspace', async () => {

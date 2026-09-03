@@ -64,7 +64,7 @@ export class BillingController {
   @Post('reconcile')
   @AllowUnentitled()
   @UseGuards(OwnerGuard, ThrottlerGuard)
-  @Throttle({ default: { limit: 3, ttl: 3_600_000 } })
+  @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Reconcile this workspace against Stripe now' })
   reconcile(@CurrentUser() user: AccountUser): Promise<BillingReconcileReport> {

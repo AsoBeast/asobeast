@@ -15,10 +15,18 @@ export function CheckoutReturn() {
     if (settled.current || !checkoutReturned(search)) return;
     settled.current = true;
 
-    window.history.replaceState(null, "", urlWithoutCheckout(pathname, search));
     void reconcileBilling()
+      .then(() => {
+        window.history.replaceState(
+          null,
+          "",
+          urlWithoutCheckout(pathname, search),
+        );
+      })
       .catch(() => undefined)
-      .then(() => invalidateAuth(client));
+      .finally(() => {
+        invalidateAuth(client);
+      });
   }, [client]);
 
   return null;

@@ -1,5 +1,9 @@
 import type { PaidPlanName } from './plans';
 
+export const CHECKOUT_RETURN_PARAM = 'checkout';
+
+export const CHECKOUT_RETURN_COMPLETE = 'complete';
+
 export const BILLING_INTERVALS = ['month', 'year'] as const;
 
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];

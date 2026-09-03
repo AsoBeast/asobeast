@@ -176,4 +176,43 @@ describe('AccountPlanService', () => {
       },
     });
   });
+
+  describe('a subscription that entitles nothing', () => {
+    const describeWith = (subscriptionStatus: string | null) =>
+      build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
+        workspace({ subscriptionId: 'sub_1', subscriptionStatus }),
+        NOW,
+      );
+
+    it.each(['unpaid', 'paused'])(
+      'reports a %s subscription as stalled',
+      async (subscriptionStatus) => {
+        await expect(describeWith(subscriptionStatus)).resolves.toMatchObject({
+          subscribed: true,
+          entitled: false,
+          subscriptionStalled: true,
+        });
+      },
+    );
+
+    it('does not call a live subscription stalled when local state lags', async () => {
+      await expect(describeWith('active')).resolves.toMatchObject({
+        subscribed: true,
+        entitled: false,
+        subscriptionStalled: false,
+      });
+    });
+
+    it('holds nothing to stall without a subscription', async () => {
+      await expect(
+        build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
+          workspace(),
+          NOW,
+        ),
+      ).resolves.toMatchObject({
+        subscribed: false,
+        subscriptionStalled: false,
+      });
+    });
+  });
 });

@@ -80,6 +80,13 @@ describe('effectOf', () => {
   it('frees a workspace from a status it cannot name', () => {
     expect(effectOf('something_stripe_invented')).toBe('gone');
   });
+
+  it.each(['constructor', 'toString', '__proto__'])(
+    'reads %s as a status rather than as a property of the lookup',
+    (status) => {
+      expect(effectOf(status)).toBe('gone');
+    },
+  );
 });
 
 describe('holdsSubscription', () => {

@@ -85,7 +85,11 @@ export class BillingReconciler {
 
     const known = await this.prisma.workspace.findMany({
       where: {
-        OR: [{ subscriptionId: { not: null } }, { plan: { not: FREE_PLAN } }],
+        OR: [
+          { subscriptionId: { not: null } },
+          { plan: { not: FREE_PLAN } },
+          { billingCustomerId: { not: null } },
+        ],
       },
     });
 
@@ -243,6 +247,7 @@ function claimsSubscription(workspace: Workspace): boolean {
 
 function matches(workspace: Workspace, desired: SubscriptionState): boolean {
   return (
+    workspace.subscriptionId === desired.subscriptionId &&
     workspace.plan === desired.plan &&
     workspace.subscriptionStatus === desired.status &&
     workspace.cancelAtPeriodEnd === desired.cancelAtPeriodEnd &&

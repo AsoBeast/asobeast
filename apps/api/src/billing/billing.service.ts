@@ -5,7 +5,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { UPGRADE_PATH, type BillingCatalog } from '@asobeast/shared';
+import {
+  CHECKOUT_RETURN_COMPLETE,
+  CHECKOUT_RETURN_PARAM,
+  UPGRADE_PATH,
+  type BillingCatalog,
+} from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
@@ -16,7 +21,7 @@ import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
 import { effectOf, holdsSubscription } from './subscription-status';
 import { heldSubscription } from './subscription-state';
-import { WORKSPACE_METADATA_KEY } from './workspace-link';
+import { belongsToWorkspace, WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 
@@ -69,7 +74,7 @@ export class BillingService {
           subscription_data: {
             metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
           },
-          success_url: this.returnUrl('?checkout=complete'),
+          success_url: this.checkoutReturnUrl(),
           cancel_url: this.webUrl(UPGRADE_PATH),
           allow_promotion_codes: true,
         },
@@ -186,8 +191,11 @@ export class BillingService {
     workspaceId: string,
     customerId: string,
   ): Promise<void> {
+    const held = await this.stripe.listCustomerSubscriptions(customerId);
     const live = heldSubscription(
-      await this.stripe.listCustomerSubscriptions(customerId),
+      held.filter((subscription) =>
+        belongsToWorkspace(subscription, workspaceId),
+      ),
     );
     if (!live) return;
 
@@ -211,7 +219,7 @@ export class BillingService {
   async portal(user: AccountUser): Promise<string> {
     const customerId = await this.customerFor(user);
     const session = await this.stripe.createPortalSession(
-      { customer: customerId, return_url: this.returnUrl('') },
+      { customer: customerId, return_url: this.returnUrl() },
       `portal:${user.workspaceId}:${minuteBucket()}`,
     );
     return session.url;
@@ -282,11 +290,17 @@ export class BillingService {
     return workspace?.billingCustomerId ?? null;
   }
 
-  private returnUrl(suffix: string): string {
+  private returnUrl(): string {
     const configured = this.config.get('STRIPE_PORTAL_RETURN_URL', {
       infer: true,
     });
-    return configured ?? this.webUrl(`/settings${suffix}`);
+    return configured ?? this.webUrl('/settings');
+  }
+
+  private checkoutReturnUrl(): string {
+    const url = new URL(this.returnUrl());
+    url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
+    return url.toString();
   }
 
   private webUrl(path: string): string {

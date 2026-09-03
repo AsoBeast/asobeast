@@ -16,6 +16,7 @@ const planOf = (over: Partial<AccountPlan> = {}): AccountPlan =>
     entitled: true,
     hasBillingAccount: true,
     subscribed: true,
+    subscriptionStalled: false,
     cancelAtPeriodEnd: false,
     trialEndsAt: null,
     renewsAt: null,
@@ -26,7 +27,16 @@ const stalled = planOf({
   plan: "free",
   entitled: false,
   subscribed: true,
+  subscriptionStalled: true,
   trialEndsAt: "2026-09-01T00:00:00.000Z",
+});
+
+const drifted = planOf({
+  plan: "free",
+  entitled: false,
+  subscribed: true,
+  subscriptionStalled: false,
+  trialEndsAt: null,
 });
 
 const lapsedTrial = planOf({
@@ -56,6 +66,10 @@ describe("planAction", () => {
   it("never offers a checkout a held subscription would refuse", () => {
     expect(planAction(stalled, "indie")).toBe("resume");
     expect(planAction(stalled, "ultimate")).toBe("resume");
+  });
+
+  it("does not offer a resume for a live subscription local state lags behind", () => {
+    expect(planAction(drifted, "indie")).toBe("change");
   });
 });
 
@@ -101,6 +115,10 @@ describe("paywallStatusLine", () => {
     expect(paywallStatusLine(lapsedTrial)).toContain("trial ended");
   });
 
+  it("does not blame the payment method of a subscription that is collecting", () => {
+    expect(paywallStatusLine(drifted)).not.toContain("stopped collecting");
+  });
+
   it("names the renewal date of a paid plan", () => {
     const line = paywallStatusLine(
       planOf({ renewsAt: "2026-10-01T00:00:00.000Z" }),
@@ -140,5 +158,9 @@ describe("planCallToAction", () => {
 
   it("offers a plan to a workspace that holds none", () => {
     expect(planCallToAction(lapsedTrial)).toBe("Choose a plan");
+  });
+
+  it("does not offer a resume for a subscription that never stalled", () => {
+    expect(planCallToAction(drifted)).toBe("Choose a plan");
   });
 });

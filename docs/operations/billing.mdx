@@ -79,7 +79,7 @@ Webhooks are reliable but not guaranteed, and stale local state means either a p
 
 Reconciliation looks up a subscription two ways. The stored subscription id comes first, and when there is none, or Stripe has forgotten it, the workspace customer is asked what it holds. A subscription there that names no other workspace in its metadata is adopted, which is what rescues a customer whose checkout completed and whose webhook never landed. Only a workspace that claims something Stripe cannot back is revoked, so a running trial is left to expire on its own rather than being reset every night.
 
-The same repair runs the moment a customer comes back from checkout: the return carries a marker the app reads once, and it reconciles the workspace there and then rather than waiting for a webhook that may never arrive.
+The same repair runs the moment a customer comes back from checkout: the return carries a marker the app reads once, and it reconciles the workspace there and then rather than waiting for a webhook that may never arrive. The marker is added to `STRIPE_PORTAL_RETURN_URL` as well when that is set, so the repair does not depend on the default return page. It is only cleared once the reconciliation succeeds, so a return that arrives while Stripe is unreachable is retried on the next load.
 
 Only an authoritative answer revokes a plan. A subscription Stripe reports as missing is gone and the workspace drops to free, but a timeout, a rate limit, a rejected key, an outage or a price the local catalog cannot name leaves the workspace exactly as it is and is reported as unreconciled, because a provider that cannot answer is not the same as a customer who stopped paying.
 
