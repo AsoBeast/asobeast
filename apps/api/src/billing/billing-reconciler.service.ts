@@ -17,12 +17,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import {
+  heldSubscription,
   projectionOf,
   stateOf,
   type SubscriptionState,
 } from './subscription-state';
 import { StripeService } from './stripe.service';
-import { effectOf, entitledBy } from './subscription-status';
 import { belongsToWorkspace } from './workspace-link';
 
 const RECONCILE_JUSTIFICATION =
@@ -170,14 +170,8 @@ export class BillingReconciler {
 
     const held = (
       await this.stripe.listCustomerSubscriptions(workspace.billingCustomerId)
-    ).filter(
-      (subscription) =>
-        belongsToWorkspace(subscription, workspace.id) &&
-        effectOf(subscription.status) !== 'gone',
-    );
-    const adopted =
-      held.find((subscription) => entitledBy(subscription.status)) ??
-      held.at(0);
+    ).filter((subscription) => belongsToWorkspace(subscription, workspace.id));
+    const adopted = heldSubscription(held);
     if (!adopted) return null;
 
     this.logger.error(

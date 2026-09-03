@@ -450,6 +450,18 @@ describe('BillingService', () => {
       },
     );
 
+    it('names the subscription that pays when the customer holds more than one', async () => {
+      const { service, listCustomerSubscriptions } = build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        liveSubscription('paused'),
+        liveSubscription('active'),
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/change the plan or cancel it/i);
+    });
+
     it('records what Stripe holds before it refuses the checkout', async () => {
       const { service, listCustomerSubscriptions, reconcileOne } =
         build('cus_existing');
@@ -565,7 +577,7 @@ describe('BillingService', () => {
 
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
-    ).rejects.toBeInstanceOf(BillingConflictError);
+    ).rejects.toThrow(/change the plan or cancel it/i);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 

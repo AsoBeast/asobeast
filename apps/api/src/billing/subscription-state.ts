@@ -1,6 +1,10 @@
 import type Stripe from 'stripe';
 import { FREE_PLAN, isPaidPlan, type PlanName } from '@asobeast/shared';
-import { entitledBy, type SubscriptionStatus } from './subscription-status';
+import {
+  effectOf,
+  entitledBy,
+  type SubscriptionStatus,
+} from './subscription-status';
 
 export interface SubscriptionState {
   subscriptionId: string;
@@ -61,4 +65,15 @@ function reopenedCapacity(
 ): Pick<SubscriptionProjection, 'overLimitSince' | 'overLimitNotifiedAt'> {
   if (!isPaidPlan(plan)) return {};
   return { overLimitSince: null, overLimitNotifiedAt: null };
+}
+
+export function heldSubscription(
+  subscriptions: Stripe.Subscription[],
+): Stripe.Subscription | undefined {
+  const held = subscriptions.filter(
+    (subscription) => effectOf(subscription.status) !== 'gone',
+  );
+  return (
+    held.find((subscription) => entitledBy(subscription.status)) ?? held.at(0)
+  );
 }

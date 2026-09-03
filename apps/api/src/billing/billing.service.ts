@@ -15,6 +15,7 @@ import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
 import { effectOf, holdsSubscription } from './subscription-status';
+import { heldSubscription } from './subscription-state';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
@@ -185,13 +186,8 @@ export class BillingService {
     workspaceId: string,
     customerId: string,
   ): Promise<void> {
-    const subscriptions =
-      await this.stripe.listCustomerSubscriptions(customerId);
-    const live = subscriptions.find((subscription) =>
-      holdsSubscription({
-        subscriptionId: subscription.id,
-        subscriptionStatus: subscription.status,
-      }),
+    const live = heldSubscription(
+      await this.stripe.listCustomerSubscriptions(customerId),
     );
     if (!live) return;
 
@@ -304,9 +300,9 @@ function minuteBucket(): number {
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {
-  const message =
-    effectOf(status) === 'recoverable'
-      ? SUBSCRIPTION_NEEDS_ATTENTION
-      : ALREADY_SUBSCRIBED;
-  return new BillingConflictError('subscription_exists', message);
+  const stalled = status !== null && effectOf(status) === 'recoverable';
+  return new BillingConflictError(
+    'subscription_exists',
+    stalled ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
+  );
 }
