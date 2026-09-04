@@ -1,21 +1,31 @@
 import {
-  ConflictException,
   Injectable,
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'node:crypto';
-import { UPGRADE_PATH, type BillingCatalog } from '@asobeast/shared';
+import {
+  CHECKOUT_RETURN_COMPLETE,
+  CHECKOUT_RETURN_PARAM,
+  UPGRADE_PATH,
+  type BillingCatalog,
+} from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
+import { BillingConflictError } from './billing.errors';
+import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
-import { holdsSubscription } from './subscription-status';
-
-export const WORKSPACE_METADATA_KEY = 'asobeast_workspace_id';
+import {
+  holdsSubscription,
+  stalledBy,
+  type WorkspaceSubscription,
+} from './subscription-status';
+import { heldForWorkspace, heldSubscription } from './subscription-state';
+import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 
@@ -25,6 +35,9 @@ const CHECKOUT_IN_FLIGHT =
 const ALREADY_SUBSCRIBED =
   'This workspace already has a subscription. Change the plan or cancel it in the billing portal instead of buying a second one.';
 
+const SUBSCRIPTION_NEEDS_ATTENTION =
+  'This workspace already has a subscription that is not collecting. Add a payment method in the billing portal to switch it back on rather than buying a second one.';
+
 @Injectable()
 export class BillingService {
   private readonly logger = new Logger(BillingService.name);
@@ -32,6 +45,7 @@ export class BillingService {
   constructor(
     private readonly stripe: StripeService,
     private readonly prices: PriceCatalog,
+    private readonly reconciler: BillingReconciler,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
   ) {}
@@ -46,9 +60,9 @@ export class BillingService {
   async checkout(user: AccountUser, priceId: string): Promise<string> {
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
-    await this.refuseSecondSubscription();
+    await this.refuseSecondSubscription(user.workspaceId);
     const customerId = await this.customerFor(user);
-    await this.refuseLiveSubscription(customerId);
+    await this.refuseLiveSubscription(user.workspaceId, customerId);
 
     const workspaceId = user.workspaceId;
     const attempt = randomUUID();
@@ -64,7 +78,7 @@ export class BillingService {
           subscription_data: {
             metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
           },
-          success_url: this.returnUrl('?checkout=complete'),
+          success_url: this.checkoutReturnUrl(),
           cancel_url: this.webUrl(UPGRADE_PATH),
           allow_promotion_codes: true,
         },
@@ -96,7 +110,7 @@ export class BillingService {
       data: { checkoutClaimedAt: now, checkoutClaimToken: attempt },
     });
     if (claimed.count === 0) {
-      throw new ConflictException(CHECKOUT_IN_FLIGHT);
+      throw new BillingConflictError('checkout_in_flight', CHECKOUT_IN_FLIGHT);
     }
   }
 
@@ -154,7 +168,7 @@ export class BillingService {
       `checkout ${attempt} lost the lease on workspace ${workspaceId} while Stripe was answering; expiring ${sessionId} rather than leaving it payable`,
     );
     await this.expireOrphan(sessionId);
-    throw new ConflictException(CHECKOUT_IN_FLIGHT);
+    throw new BillingConflictError('checkout_in_flight', CHECKOUT_IN_FLIGHT);
   }
 
   private async releaseCheckout(
@@ -177,27 +191,43 @@ export class BillingService {
       );
   }
 
-  private async refuseLiveSubscription(customerId: string): Promise<void> {
-    const subscriptions =
-      await this.stripe.listCustomerSubscriptions(customerId);
-    const live = subscriptions.some((subscription) =>
-      holdsSubscription({
-        subscriptionId: subscription.id,
-        subscriptionStatus: subscription.status,
-      }),
-    );
-    if (!live) return;
+  private async refuseLiveSubscription(
+    workspaceId: string,
+    customerId: string,
+  ): Promise<void> {
+    const held = await this.stripe.listCustomerSubscriptions(customerId);
+    const live = heldForWorkspace(held, workspaceId);
+    if (live) {
+      this.logger.warn(
+        `stripe already holds a live subscription for ${customerId} that no webhook recorded; reconciling workspace ${workspaceId} before refusing the checkout`,
+      );
+      await this.recordWhatStripeHolds(workspaceId);
+      throw subscriptionExists(live.status);
+    }
 
-    this.logger.warn(
-      `refused a checkout for ${customerId} because Stripe already holds a live subscription that no webhook has recorded yet`,
+    const foreign = heldSubscription(held);
+    if (!foreign) return;
+
+    this.logger.error(
+      `stripe subscription ${foreign.id} on customer ${customerId} names workspace ${workspaceNamedBy(foreign) ?? 'nobody'}, not ${workspaceId}; refusing the checkout rather than billing the customer twice`,
     );
-    throw new ConflictException(ALREADY_SUBSCRIBED);
+    throw subscriptionExists(null);
+  }
+
+  private async recordWhatStripeHolds(workspaceId: string): Promise<void> {
+    await this.reconciler
+      .reconcileOne(workspaceId)
+      .catch((error: unknown) =>
+        this.logger.error(
+          `workspace ${workspaceId} could not be reconciled while its checkout was refused: ${reasonOf(error)}`,
+        ),
+      );
   }
 
   async portal(user: AccountUser): Promise<string> {
     const customerId = await this.customerFor(user);
     const session = await this.stripe.createPortalSession(
-      { customer: customerId, return_url: this.returnUrl('') },
+      { customer: customerId, return_url: this.returnUrl() },
       `portal:${user.workspaceId}:${minuteBucket()}`,
     );
     return session.url;
@@ -228,13 +258,22 @@ export class BillingService {
     );
   }
 
-  private async refuseSecondSubscription(): Promise<void> {
+  private async refuseSecondSubscription(workspaceId: string): Promise<void> {
+    if (!(await this.storedSubscription())) return;
+
+    await this.recordWhatStripeHolds(workspaceId);
+    const confirmed = await this.storedSubscription();
+    if (!confirmed) return;
+
+    throw subscriptionExists(confirmed.subscriptionStatus);
+  }
+
+  private async storedSubscription(): Promise<WorkspaceSubscription | null> {
     const workspace = await this.prisma.workspace.findFirst({
       select: { subscriptionId: true, subscriptionStatus: true },
     });
-    if (!workspace || !holdsSubscription(workspace)) return;
-
-    throw new ConflictException(ALREADY_SUBSCRIBED);
+    if (!workspace || !holdsSubscription(workspace)) return null;
+    return workspace;
   }
 
   private async customerFor(user: AccountUser): Promise<string> {
@@ -268,11 +307,17 @@ export class BillingService {
     return workspace?.billingCustomerId ?? null;
   }
 
-  private returnUrl(suffix: string): string {
+  private returnUrl(): string {
     const configured = this.config.get('STRIPE_PORTAL_RETURN_URL', {
       infer: true,
     });
-    return configured ?? this.webUrl(`/settings${suffix}`);
+    return configured ?? this.webUrl('/settings');
+  }
+
+  private checkoutReturnUrl(): string {
+    const url = new URL(this.returnUrl());
+    url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
+    return url.toString();
   }
 
   private webUrl(path: string): string {
@@ -283,4 +328,11 @@ export class BillingService {
 
 function minuteBucket(): number {
   return Math.floor(Date.now() / 60_000);
+}
+
+function subscriptionExists(status: string | null): BillingConflictError {
+  return new BillingConflictError(
+    'subscription_exists',
+    stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,
+  );
 }

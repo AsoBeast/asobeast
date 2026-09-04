@@ -17,6 +17,7 @@ import {
   RateLimitExceededError,
 } from '../auth/rate-limit/rate-limit.errors';
 import { QuotaExceededError } from '../auth/quota.errors';
+import { BillingConflictError } from '../billing/billing.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import {
@@ -34,6 +35,7 @@ type ResolvedError = Pick<
   | 'message'
   | 'quota'
   | 'entitlement'
+  | 'billing'
   | 'rateLimit'
   | 'retryAfterSeconds'
 >;
@@ -138,6 +140,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         error: 'Forbidden',
         message: exception.message,
         quota: exception.detail,
+      };
+    }
+    if (exception instanceof BillingConflictError) {
+      return {
+        statusCode: HttpStatus.CONFLICT,
+        error: 'Conflict',
+        message: exception.message,
+        billing: exception.detail,
       };
     }
     if (exception instanceof EntitlementRequiredError) {

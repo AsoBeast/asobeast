@@ -6,23 +6,27 @@ import {
 } from '@nestjs/common';
 import type { Workspace } from '@prisma/client';
 import type Stripe from 'stripe';
-import { FREE_PLAN, planOf } from '@asobeast/shared';
+import {
+  FREE_PLAN,
+  isPaidPlan,
+  planOf,
+  type BillingReconcileReport,
+} from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
-import { stateOf, type SubscriptionState } from './subscription-state';
+import {
+  heldForWorkspace,
+  projectionOf,
+  stateOf,
+  type SubscriptionState,
+} from './subscription-state';
 import { StripeService } from './stripe.service';
+import { effectOf } from './subscription-status';
 
 const RECONCILE_JUSTIFICATION =
   'reconciliation compares every workspace against the billing provider';
-
-export interface ReconcileReport {
-  checked: number;
-  corrected: number;
-  orphanSubscriptions: string[];
-  unreconciled: string[];
-}
 
 type Outcome = 'corrected' | 'agreed' | 'unreachable';
 
@@ -37,14 +41,14 @@ export class BillingReconciler {
     private readonly crossTenant: CrossTenantAccess,
   ) {}
 
-  reconcile(): Promise<ReconcileReport> {
+  reconcile(): Promise<BillingReconcileReport> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECONCILE_JUSTIFICATION,
       () => this.sweep(),
     );
   }
 
-  reconcileOne(workspaceId: string): Promise<ReconcileReport> {
+  reconcileOne(workspaceId: string): Promise<BillingReconcileReport> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECONCILE_JUSTIFICATION,
       async () => {
@@ -69,7 +73,7 @@ export class BillingReconciler {
     );
   }
 
-  private async sweep(): Promise<ReconcileReport> {
+  private async sweep(): Promise<BillingReconcileReport> {
     if (!this.stripe.enabled) {
       return {
         checked: 0,
@@ -81,7 +85,11 @@ export class BillingReconciler {
 
     const known = await this.prisma.workspace.findMany({
       where: {
-        OR: [{ subscriptionId: { not: null } }, { plan: { not: FREE_PLAN } }],
+        OR: [
+          { subscriptionId: { not: null } },
+          { plan: { not: FREE_PLAN } },
+          { billingCustomerId: { not: null }, subscriptionId: null },
+        ],
       },
     });
 
@@ -93,7 +101,7 @@ export class BillingReconciler {
       if (outcome === 'unreachable') unreconciled.push(workspace.id);
     }
 
-    const orphanSubscriptions = await this.orphans(known);
+    const orphanSubscriptions = await this.orphans();
     this.logger.log(
       `reconciled ${known.length} workspaces, corrected ${corrected}, left ${unreconciled.length} unreconciled, found ${orphanSubscriptions.length} orphan subscriptions`,
     );
@@ -127,13 +135,7 @@ export class BillingReconciler {
     );
     await this.prisma.workspace.update({
       where: { id: workspace.id },
-      data: {
-        plan: desired.plan,
-        planExpiresAt: desired.planExpiresAt,
-        subscriptionId: desired.subscriptionId,
-        subscriptionStatus: desired.status,
-        cancelAtPeriodEnd: desired.cancelAtPeriodEnd,
-      },
+      data: projectionOf(desired),
     });
     return true;
   }
@@ -141,13 +143,22 @@ export class BillingReconciler {
   private async desiredState(
     workspace: Workspace,
   ): Promise<SubscriptionState | null> {
+    const stored = await this.storedSubscription(workspace);
+    const subscription = stillHeld(stored)
+      ? stored
+      : ((await this.adoptableSubscription(workspace)) ?? stored);
+    if (!subscription) return null;
+
+    return stateOf(subscription, this.prices.planOf(subscription));
+  }
+
+  private async storedSubscription(
+    workspace: Workspace,
+  ): Promise<Stripe.Subscription | null> {
     if (!workspace.subscriptionId) return null;
 
-    let subscription: Stripe.Subscription;
     try {
-      subscription = await this.stripe.retrieveSubscription(
-        workspace.subscriptionId,
-      );
+      return await this.stripe.retrieveSubscription(workspace.subscriptionId);
     } catch (error) {
       if (!isMissingResource(error)) throw error;
       this.logger.error(
@@ -155,20 +166,29 @@ export class BillingReconciler {
       );
       return null;
     }
-    return stateOf(subscription, this.planFor(subscription));
   }
 
-  private planFor(subscription: Stripe.Subscription) {
-    const priceId = subscription.items.data[0]?.price.id ?? '';
-    return this.prices.require(priceId).plan;
+  private async adoptableSubscription(
+    workspace: Workspace,
+  ): Promise<Stripe.Subscription | null> {
+    if (!workspace.billingCustomerId) return null;
+
+    const adopted = heldForWorkspace(
+      await this.stripe.listCustomerSubscriptions(workspace.billingCustomerId),
+      workspace.id,
+    );
+    if (!adopted) return null;
+
+    this.logger.error(
+      `workspace ${workspace.id} is billed for stripe subscription ${adopted.id} (${adopted.status}) that no webhook recorded; adopting it`,
+    );
+    return adopted;
   }
 
   private async revokeUnknownSubscription(
     workspace: Workspace,
   ): Promise<boolean> {
-    if (planOf(workspace.plan) === FREE_PLAN && !workspace.subscriptionId) {
-      return false;
-    }
+    if (!claimsSubscription(workspace)) return false;
     this.logger.error(
       `workspace ${workspace.id} claims ${workspace.plan} with no subscription Stripe recognises; revoking`,
     );
@@ -184,10 +204,8 @@ export class BillingReconciler {
     return true;
   }
 
-  private async orphans(known: Workspace[]): Promise<string[]> {
-    const owned = new Set(
-      known.map((workspace) => workspace.subscriptionId).filter(Boolean),
-    );
+  private async orphans(): Promise<string[]> {
+    const owned = await this.ownedSubscriptions();
     const orphans: string[] = [];
     for await (const subscription of this.stripe.listActiveSubscriptions()) {
       if (owned.has(subscription.id)) continue;
@@ -199,6 +217,16 @@ export class BillingReconciler {
     }
     return orphans;
   }
+
+  private async ownedSubscriptions(): Promise<Set<string>> {
+    const rows = await this.prisma.workspace.findMany({
+      where: { subscriptionId: { not: null } },
+      select: { subscriptionId: true },
+    });
+    return new Set(
+      rows.flatMap((row) => (row.subscriptionId ? [row.subscriptionId] : [])),
+    );
+  }
 }
 
 const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
@@ -207,8 +235,19 @@ const ACTIVE_ENOUGH = new Set<Stripe.Subscription.Status>([
   'past_due',
 ]);
 
+function stillHeld(subscription: Stripe.Subscription | null): boolean {
+  return subscription !== null && effectOf(subscription.status) !== 'gone';
+}
+
+function claimsSubscription(workspace: Workspace): boolean {
+  return (
+    workspace.subscriptionId !== null || isPaidPlan(planOf(workspace.plan))
+  );
+}
+
 function matches(workspace: Workspace, desired: SubscriptionState): boolean {
   return (
+    workspace.subscriptionId === desired.subscriptionId &&
     workspace.plan === desired.plan &&
     workspace.subscriptionStatus === desired.status &&
     workspace.cancelAtPeriodEnd === desired.cancelAtPeriodEnd &&

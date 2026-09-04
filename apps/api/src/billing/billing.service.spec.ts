@@ -1,11 +1,14 @@
-import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
-import { BillingService, WORKSPACE_METADATA_KEY } from './billing.service';
+import { BillingService } from './billing.service';
+import { BillingConflictError } from './billing.errors';
+import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { StripeService } from './stripe.service';
+import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_billing';
 
@@ -111,6 +114,13 @@ describe('BillingService', () => {
       get: (key: string) => values[key],
     } as unknown as ConfigService<Env, true>;
 
+    const reconcileOne = jest.fn().mockResolvedValue({
+      checked: 1,
+      corrected: 1,
+      orphanSubscriptions: [],
+      unreconciled: [],
+    });
+
     const service = new BillingService(
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
@@ -122,6 +132,7 @@ describe('BillingService', () => {
         expireCheckoutSession,
       } as unknown as StripeService,
       new PriceCatalog(config),
+      { reconcileOne } as unknown as BillingReconciler,
       prisma,
       config,
     );
@@ -134,6 +145,7 @@ describe('BillingService', () => {
       listCustomerSubscriptions,
       retrieveCheckoutSession,
       expireCheckoutSession,
+      reconcileOne,
       row,
     };
   };
@@ -318,7 +330,7 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(BillingConflictError);
       expect(row.checkoutSessionId).toBeNull();
       expect(row.checkoutClaimToken).toBe('newer-attempt');
       expect(expireCheckoutSession).toHaveBeenCalledWith('cs_stale_owner');
@@ -383,7 +395,7 @@ describe('BillingService', () => {
         'price_indie_month',
       );
 
-      await expect(second).rejects.toBeInstanceOf(ConflictException);
+      await expect(second).rejects.toBeInstanceOf(BillingConflictError);
       release();
       await expect(first).resolves.toBe('https://checkout.stripe.test/session');
       expect(createCheckoutSession).toHaveBeenCalledTimes(1);
@@ -420,7 +432,7 @@ describe('BillingService', () => {
 
         await expect(
           service.checkout(owner('cus_existing'), 'price_indie_month'),
-        ).rejects.toBeInstanceOf(ConflictException);
+        ).rejects.toBeInstanceOf(BillingConflictError);
         expect(createCheckoutSession).not.toHaveBeenCalled();
       },
     );
@@ -438,6 +450,89 @@ describe('BillingService', () => {
       },
     );
 
+    it('names the subscription that pays when the customer holds more than one', async () => {
+      const { service, listCustomerSubscriptions } = build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        liveSubscription('paused'),
+        liveSubscription('active'),
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/change the plan or cancel it/i);
+    });
+
+    it('records what Stripe holds before it refuses the checkout', async () => {
+      const { service, listCustomerSubscriptions, reconcileOne } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([liveSubscription('active')]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+      expect(reconcileOne).toHaveBeenCalledWith(WORKSPACE);
+    });
+
+    it('still refuses the checkout when reconciliation cannot reach Stripe', async () => {
+      const { service, listCustomerSubscriptions, reconcileOne } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([liveSubscription('active')]);
+      reconcileOne.mockRejectedValue(new Error('stripe is down'));
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+    });
+
+    it('leaves the workspace alone when Stripe holds nothing', async () => {
+      const { service, reconcileOne } = build('cus_existing');
+
+      await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+      expect(reconcileOne).not.toHaveBeenCalled();
+    });
+
+    it('refuses rather than billing a customer twice for a subscription another workspace claims', async () => {
+      const {
+        service,
+        listCustomerSubscriptions,
+        createCheckoutSession,
+        reconcileOne,
+      } = build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('active'),
+          metadata: { [WORKSPACE_METADATA_KEY]: 'ws_someone_else' },
+        },
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toBeInstanceOf(BillingConflictError);
+      expect(createCheckoutSession).not.toHaveBeenCalled();
+      expect(reconcileOne).not.toHaveBeenCalled();
+    });
+
+    it('prefers the subscription this workspace is named on', async () => {
+      const { service, listCustomerSubscriptions } = build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('active'),
+          id: 'sub_theirs',
+          metadata: { [WORKSPACE_METADATA_KEY]: 'ws_someone_else' },
+        },
+        {
+          ...liveSubscription('paused'),
+          id: 'sub_ours',
+          metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+        },
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/add a payment method/i);
+    });
+
     it('asks about the customer it is about to charge', async () => {
       const { service, listCustomerSubscriptions } = build('cus_existing');
 
@@ -445,6 +540,36 @@ describe('BillingService', () => {
 
       expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_existing');
     });
+  });
+
+  it('marks the checkout return so the workspace reconciles when it lands', async () => {
+    const { service, createCheckoutSession } = build('cus_existing');
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/settings?checkout=complete',
+    );
+  });
+
+  it('keeps the checkout marker on a configured return url', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_PORTAL_RETURN_URL: 'https://app.example.com/account?tab=plan' },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/account?tab=plan&checkout=complete',
+    );
   });
 
   it('returns the customer to the portal rather than the paywall', async () => {
@@ -485,10 +610,35 @@ describe('BillingService', () => {
 
       await expect(
         service.checkout(owner('cus_existing'), 'price_indie_month'),
-      ).rejects.toBeInstanceOf(ConflictException);
+      ).rejects.toBeInstanceOf(BillingConflictError);
       expect(createCheckoutSession).not.toHaveBeenCalled();
     },
   );
+
+  it.each(['unpaid', 'paused'])(
+    'names the payment method a %s subscription is missing',
+    async (subscriptionStatus) => {
+      const { service } = build('cus_existing', {
+        subscriptionId: 'sub_existing',
+        subscriptionStatus,
+      });
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toThrow(/add a payment method/i);
+    },
+  );
+
+  it('sends a workspace that already pays to the portal to change plan', async () => {
+    const { service } = build('cus_existing', {
+      subscriptionId: 'sub_existing',
+      subscriptionStatus: 'active',
+    });
+
+    await expect(
+      service.checkout(owner('cus_existing'), 'price_indie_month'),
+    ).rejects.toThrow(/change the plan or cancel it/i);
+  });
 
   it('refuses a second checkout when the stored subscription has no status yet', async () => {
     const { service, createCheckoutSession } = build('cus_existing', {
@@ -498,7 +648,7 @@ describe('BillingService', () => {
 
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
-    ).rejects.toBeInstanceOf(ConflictException);
+    ).rejects.toThrow(/change the plan or cancel it/i);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 

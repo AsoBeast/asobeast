@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { AccountPlan, QuotaUsage } from "@asobeast/shared";
+import type { QuotaUsage } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,29 +18,14 @@ import {
 import { Meter } from "@/components/ui/meter";
 import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, openBillingPortal } from "@/lib/api";
-import { formatDate, formatNumber, formatPlanLimit } from "@/lib/format";
+import { formatNumber, formatPlanLimit } from "@/lib/format";
+import { planCallToAction, planStatusLine } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
 
 const RESOURCES = [
   { key: "apps", label: "Apps" },
   { key: "keywordMarkets", label: "Keyword markets" },
 ] as const;
-
-function statusLine(plan: AccountPlan): string {
-  if (!plan.entitled) {
-    return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
-  }
-  if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Trial active until ${formatDate(plan.trialEndsAt)}.`;
-  }
-  if (plan.cancelAtPeriodEnd && plan.renewsAt) {
-    return `Cancelled. Access continues until ${formatDate(plan.renewsAt)}.`;
-  }
-  if (plan.renewsAt) {
-    return `Renews on ${formatDate(plan.renewsAt)}.`;
-  }
-  return "Billed monthly until you cancel.";
-}
 
 function UsageRow({ label, usage }: { label: string; usage: QuotaUsage }) {
   const ratio =
@@ -102,7 +87,9 @@ export function PlanCard() {
             <Badge variant="destructive">Access paused</Badge>
           )}
         </CardTitle>
-        <p className="text-body text-muted-foreground">{statusLine(plan)}</p>
+        <p className="text-body text-muted-foreground">
+          {planStatusLine(plan)}
+        </p>
       </CardHeader>
       <CardContent>
         <dl className="flex flex-col gap-4">
@@ -114,9 +101,7 @@ export function PlanCard() {
       <CardFooter className="gap-2">
         {plan.upgradeTo ? (
           <Button asChild>
-            <Link href={plan.upgradePath}>
-              {plan.entitled ? "Upgrade plan" : "Choose a plan"}
-            </Link>
+            <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
           </Button>
         ) : null}
         {user?.role === "owner" && plan.hasBillingAccount ? (

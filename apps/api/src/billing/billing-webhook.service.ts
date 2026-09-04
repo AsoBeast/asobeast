@@ -7,20 +7,20 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type Workspace } from '@prisma/client';
 import type Stripe from 'stripe';
+import { isPaidPlan, type PlanName } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { isPaidPlan, type PlanName } from '@asobeast/shared';
-import { WORKSPACE_METADATA_KEY } from './billing.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
 import { entersDunning, leavesDunning } from './dunning';
 import { PriceCatalog } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
-import { stateOf } from './subscription-state';
+import { projectionOf, stateOf } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { isHandled, subscriptionIdOf, workspaceIdOf } from './webhook-events';
+import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const SETTINGS_PATH = '/settings';
 
@@ -176,16 +176,12 @@ export class BillingWebhookService {
       return;
     }
 
-    const state = stateOf(subscription, this.planOf(subscription));
+    const state = stateOf(subscription, this.prices.planOf(subscription));
     await this.prisma.workspace.update({
       where: { id: workspace.id },
       data: {
-        plan: state.plan,
-        planExpiresAt: state.planExpiresAt,
-        subscriptionId: state.subscriptionId,
-        subscriptionStatus: state.status,
+        ...projectionOf(state),
         subscriptionEventAt: eventAt,
-        cancelAtPeriodEnd: state.cancelAtPeriodEnd,
         billingCustomerId: customerId,
         ...reopenedCapacity(state.plan),
         ...(await this.dunning(workspace, state.status)),
@@ -243,18 +239,13 @@ export class BillingWebhookService {
     return { dunningNotifiedAt: new Date() };
   }
 
-  private planOf(subscription: Stripe.Subscription) {
-    const priceId = subscription.items.data[0]?.price.id ?? '';
-    return this.prices.require(priceId).plan;
-  }
-
   private async workspaceFor(
     event: Stripe.Event,
     subscription: Stripe.Subscription,
   ) {
     const named =
       workspaceIdOf(event, WORKSPACE_METADATA_KEY) ??
-      subscription.metadata[WORKSPACE_METADATA_KEY];
+      workspaceNamedBy(subscription);
     if (named) {
       return this.prisma.workspace.findUnique({ where: { id: named } });
     }

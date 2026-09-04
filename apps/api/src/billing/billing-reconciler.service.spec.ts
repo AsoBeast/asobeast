@@ -8,6 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
+import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const PERIOD_END = 1_800_000_000;
 const EXPIRES_AT = new Date(PERIOD_END * 1000);
@@ -22,6 +23,7 @@ const workspaceOf = (over: Partial<Workspace> = {}): Workspace =>
     id: 'ws_1',
     plan: 'indie',
     planExpiresAt: EXPIRES_AT,
+    billingCustomerId: 'cus_1',
     subscriptionId: 'sub_1',
     subscriptionStatus: 'active',
     cancelAtPeriodEnd: false,
@@ -54,16 +56,26 @@ describe('BillingReconciler', () => {
     workspaces?: Workspace[];
     subscription?: Stripe.Subscription;
     retrieveFails?: Error;
+    customerSubscriptions?: Stripe.Subscription[];
     remote?: Stripe.Subscription[];
     enabled?: boolean;
   }) => {
-    const update = jest.fn().mockResolvedValue({});
+    const rows = over.workspaces ?? [];
+    const update = jest.fn(
+      (args: { where: { id: string }; data: Partial<Workspace> }) => {
+        const row = rows.find((workspace) => workspace.id === args.where.id);
+        if (row) Object.assign(row, args.data);
+        return Promise.resolve({});
+      },
+    );
+    const listCustomerSubscriptions = jest.fn(() =>
+      Promise.resolve(over.customerSubscriptions ?? []),
+    );
+    const findMany = jest.fn(() => Promise.resolve(rows));
     const prisma = {
       workspace: {
-        findMany: jest.fn(() => Promise.resolve(over.workspaces ?? [])),
-        findUnique: jest.fn(() =>
-          Promise.resolve(over.workspaces?.[0] ?? null),
-        ),
+        findMany,
+        findUnique: jest.fn(() => Promise.resolve(rows[0] ?? null)),
         update,
       },
     } as unknown as PrismaService;
@@ -76,6 +88,7 @@ describe('BillingReconciler', () => {
             ? Promise.reject(over.retrieveFails)
             : Promise.resolve(over.subscription ?? subscriptionOf()),
         ),
+        listCustomerSubscriptions,
         listActiveSubscriptions: () => over.remote ?? [],
       } as unknown as StripeService,
       new PriceCatalog(config),
@@ -88,7 +101,7 @@ describe('BillingReconciler', () => {
       } as unknown as CrossTenantAccess,
     );
 
-    return { reconciler, update };
+    return { reconciler, update, listCustomerSubscriptions, findMany, rows };
   };
 
   it('does nothing while Stripe is not configured', async () => {
@@ -127,6 +140,233 @@ describe('BillingReconciler', () => {
       subscriptionStatus: 'active',
       planExpiresAt: EXPIRES_AT,
     });
+  });
+
+  it('leaves the over limit clock alone when it corrects a plan', async () => {
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'ultimate',
+          overLimitSince: new Date('2026-01-01T00:00:00.000Z'),
+        }),
+      ],
+    });
+
+    await reconciler.reconcile();
+
+    const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(args.data).toMatchObject({ plan: 'indie' });
+    expect(args.data).not.toHaveProperty('overLimitSince');
+  });
+
+  describe('a subscription no webhook recorded', () => {
+    const lapsed = () =>
+      workspaceOf({
+        plan: 'trial',
+        planExpiresAt: null,
+        subscriptionId: null,
+        subscriptionStatus: null,
+      });
+
+    it('adopts the one Stripe links to the workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [
+          subscriptionOf({
+            id: 'sub_live',
+            metadata: { [WORKSPACE_METADATA_KEY]: 'ws_1' },
+          }),
+        ],
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+        orphanSubscriptions: [],
+      });
+      expect(rows[0]).toMatchObject({
+        plan: 'indie',
+        subscriptionId: 'sub_live',
+        subscriptionStatus: 'active',
+      });
+    });
+
+    it('is looked for even after an earlier sweep revoked the workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [{ ...lapsed(), plan: 'free' }],
+        customerSubscriptions: [subscriptionOf({ id: 'sub_live' })],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_live' });
+    });
+
+    it('replaces a stored subscription Stripe has forgotten with the live one', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [workspaceOf()],
+        retrieveFails: stripeErrorOf({
+          code: 'resource_missing',
+          statusCode: 404,
+        }),
+        customerSubscriptions: [subscriptionOf({ id: 'sub_new' })],
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+        orphanSubscriptions: [],
+      });
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_new' });
+    });
+
+    it('is adopted even when the workspace still stores a subscription Stripe cancelled', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [
+          workspaceOf({ plan: 'free', subscriptionStatus: 'canceled' }),
+        ],
+        subscription: subscriptionOf({ status: 'canceled' }),
+        customerSubscriptions: [subscriptionOf({ id: 'sub_live' })],
+      });
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        corrected: 1,
+        orphanSubscriptions: [],
+      });
+      expect(rows[0]).toMatchObject({
+        plan: 'indie',
+        subscriptionId: 'sub_live',
+        subscriptionStatus: 'active',
+      });
+    });
+
+    it('keeps the cancelled subscription when the customer holds nothing else', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [workspaceOf()],
+        subscription: subscriptionOf({ status: 'canceled' }),
+        customerSubscriptions: [],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({
+        plan: 'free',
+        subscriptionId: 'sub_1',
+        subscriptionStatus: 'canceled',
+      });
+    });
+
+    it('adopts one the customer holds without naming a workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [subscriptionOf({ id: 'sub_live' })],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_live' });
+    });
+
+    it('refuses one whose metadata names another workspace', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [
+          subscriptionOf({
+            id: 'sub_theirs',
+            metadata: { [WORKSPACE_METADATA_KEY]: 'ws_2' },
+          }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: null });
+    });
+
+    it('prefers the subscription that pays for the plan', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [
+          subscriptionOf({ id: 'sub_paused', status: 'paused' }),
+          subscriptionOf({ id: 'sub_live' }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_live' });
+    });
+
+    it('adopts a paused subscription rather than leaving the workspace stranded', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [
+          subscriptionOf({ id: 'sub_paused', status: 'paused' }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({
+        plan: 'free',
+        subscriptionId: 'sub_paused',
+        subscriptionStatus: 'paused',
+      });
+    });
+
+    it('ignores a subscription the customer has already lost', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [lapsed()],
+        customerSubscriptions: [
+          subscriptionOf({ id: 'sub_dead', status: 'canceled' }),
+        ],
+      });
+
+      await reconciler.reconcile();
+
+      expect(rows[0]).toMatchObject({ subscriptionId: null });
+    });
+
+    it('asks Stripe nothing extra for a workspace with no billing account', async () => {
+      const { reconciler, listCustomerSubscriptions } = build({
+        workspaces: [{ ...lapsed(), billingCustomerId: null }],
+      });
+
+      await reconciler.reconcile();
+
+      expect(listCustomerSubscriptions).not.toHaveBeenCalled();
+    });
+  });
+
+  it('leaves a trialing workspace alone rather than revoking a plan it never claimed', async () => {
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'trial',
+          planExpiresAt: null,
+          billingCustomerId: null,
+          subscriptionId: null,
+          subscriptionStatus: null,
+        }),
+      ],
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      checked: 1,
+      corrected: 0,
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('still revokes a paid plan Stripe cannot back', async () => {
+    const { reconciler, rows } = build({
+      workspaces: [
+        workspaceOf({ billingCustomerId: null, subscriptionId: null }),
+      ],
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 1,
+    });
+    expect(rows[0]).toMatchObject({ plan: 'free' });
   });
 
   it('revokes a plan whose subscription Stripe reports as missing', async () => {

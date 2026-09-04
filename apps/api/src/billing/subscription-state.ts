@@ -1,6 +1,11 @@
 import type Stripe from 'stripe';
 import { FREE_PLAN, type PlanName } from '@asobeast/shared';
-import { entitledBy, type SubscriptionStatus } from './subscription-status';
+import {
+  effectOf,
+  entitledBy,
+  type SubscriptionStatus,
+} from './subscription-status';
+import { belongsToWorkspace } from './workspace-link';
 
 export interface SubscriptionState {
   subscriptionId: string;
@@ -33,4 +38,44 @@ export function stateOf(
     planExpiresAt: periodEndOf(subscription),
     cancelAtPeriodEnd: subscription.cancel_at_period_end,
   };
+}
+
+export interface SubscriptionProjection {
+  plan: PlanName;
+  planExpiresAt: Date | null;
+  subscriptionId: string;
+  subscriptionStatus: SubscriptionStatus;
+  cancelAtPeriodEnd: boolean;
+}
+
+export function projectionOf(state: SubscriptionState): SubscriptionProjection {
+  return {
+    plan: state.plan,
+    planExpiresAt: state.planExpiresAt,
+    subscriptionId: state.subscriptionId,
+    subscriptionStatus: state.status,
+    cancelAtPeriodEnd: state.cancelAtPeriodEnd,
+  };
+}
+
+export function heldSubscription(
+  subscriptions: Stripe.Subscription[],
+): Stripe.Subscription | undefined {
+  const held = subscriptions.filter(
+    (subscription) => effectOf(subscription.status) !== 'gone',
+  );
+  return (
+    held.find((subscription) => entitledBy(subscription.status)) ?? held.at(0)
+  );
+}
+
+export function heldForWorkspace(
+  subscriptions: Stripe.Subscription[],
+  workspaceId: string,
+): Stripe.Subscription | undefined {
+  return heldSubscription(
+    subscriptions.filter((subscription) =>
+      belongsToWorkspace(subscription, workspaceId),
+    ),
+  );
 }

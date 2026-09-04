@@ -9,10 +9,10 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingWebhookService } from './billing-webhook.service';
-import { WORKSPACE_METADATA_KEY } from './billing.service';
 import { AccountNotifier } from './account-notifier.service';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
+import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_paid';
 const PERIOD_END = 1_800_000_000;

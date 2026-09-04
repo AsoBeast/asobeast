@@ -30,6 +30,7 @@ Every failure returns the same JSON envelope, whatever produced it. A single exc
 | `quota` | object | Present on `403` when a plan limit refused the write. Names the resource, the plan, the limit, the usage and the tier to upgrade to |
 | `entitlement` | object | Present on `402`. Names the plan in force, the trial and renewal dates, the tier to upgrade to and the path to reach it |
 | `rateLimit` | object | Present on `429` from a plan rate limit. Names the window that closed, the request class, the plan, the limit, the seconds until it reopens and the tier to upgrade to |
+| `billing` | object | Present on `409` from a billing route. Names the reason the request was refused and the recovery that clears it, either `portal` or `retry` |
 | `retryAfterSeconds` | number | Present on `429`, mirroring the `Retry-After` header |
 
 The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client can import it rather than redeclare it.
@@ -44,7 +45,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
 | `404` | The resource does not exist, or an admin surface is refusing to confirm it exists |
 | `429` | A plan rate limit or an on demand allowance is spent. `Retry-After` says when it reopens, and `rateLimit` names the window. See [Rate limits and quotas](/api-reference/rate-limits) |
-| `409` | A unique constraint was violated, or an AI endpoint was called with `OPENAI_API_KEY` unset |
+| `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
 | `500` | An unhandled exception. The message is generic and the stack is logged server side |
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
 | `502` | A store request failed upstream, or the web proxy could not reach the API |

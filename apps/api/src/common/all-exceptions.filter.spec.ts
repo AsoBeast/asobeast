@@ -1,6 +1,7 @@
 import { ArgumentsHost, HttpStatus } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
+import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { StoreNotSupportedError } from '../store-providers/errors';
 import { AllExceptionsFilter } from './all-exceptions.filter';
@@ -45,5 +46,28 @@ describe('AllExceptionsFilter', () => {
     const { envelope } = capture(new StoreNotSupportedError(FUTURE_STORE));
 
     expect(envelope.message.toLowerCase()).not.toContain('google play');
+  });
+
+  it('tells a refused checkout where the customer can recover', () => {
+    const { status, envelope } = capture(
+      new BillingConflictError('subscription_exists', 'Already subscribed'),
+    );
+
+    expect(status).toBe(HttpStatus.CONFLICT);
+    expect(envelope.billing).toEqual({
+      reason: 'subscription_exists',
+      recovery: 'portal',
+    });
+  });
+
+  it('tells a caller to retry while a checkout is still being opened', () => {
+    const { envelope } = capture(
+      new BillingConflictError('checkout_in_flight', 'Try again shortly'),
+    );
+
+    expect(envelope.billing).toEqual({
+      reason: 'checkout_in_flight',
+      recovery: 'retry',
+    });
   });
 });

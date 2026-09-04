@@ -3,6 +3,7 @@ import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "./globals.css";
+import { CheckoutReturn } from "@/components/billing/CheckoutReturn";
 
 const sans = IBM_Plex_Sans({
   variable: "--font-plex-sans",
@@ -62,6 +63,7 @@ export default function RootLayout({
           Skip to content
         </a>
         <Providers>
+          <CheckoutReturn />
           {children}
           <Toaster />
         </Providers>

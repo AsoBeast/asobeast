@@ -1,5 +1,9 @@
 import type { PaidPlanName } from './plans';
 
+export const CHECKOUT_RETURN_PARAM = 'checkout';
+
+export const CHECKOUT_RETURN_COMPLETE = 'complete';
+
 export const BILLING_INTERVALS = ['month', 'year'] as const;
 
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];
@@ -22,4 +26,11 @@ export interface CheckoutRequest {
 
 export interface BillingSession {
   url: string;
+}
+
+export interface BillingReconcileReport {
+  checked: number;
+  corrected: number;
+  orphanSubscriptions: string[];
+  unreconciled: string[];
 }

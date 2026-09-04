@@ -78,6 +78,7 @@ export interface AccountPlan {
   entitled: boolean;
   hasBillingAccount: boolean;
   subscribed: boolean;
+  subscriptionStalled?: boolean;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: string | null;
   renewsAt: string | null;

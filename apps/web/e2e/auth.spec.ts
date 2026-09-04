@@ -436,6 +436,21 @@ const INDIE_PLAN: AccountPlan = {
   },
 };
 
+const LAPSED_PLAN: AccountPlan = {
+  ...INDIE_PLAN,
+  plan: "free",
+  displayName: "Free",
+  entitled: false,
+  subscribed: false,
+  renewsAt: null,
+  upgradeTo: "indie",
+  limits: PLAN_LIMITS.free,
+  usage: {
+    apps: { used: 3, limit: PLAN_LIMITS.free.apps },
+    keywordMarkets: { used: 240, limit: PLAN_LIMITS.free.keywordMarkets },
+  },
+};
+
 async function routePlan(page: Page, plan: AccountPlan) {
   await page.route("**/api/backend/auth/plan", (route) =>
     route.fulfill(fulfillJson(200, plan)),
@@ -509,19 +524,7 @@ test("a lapsed workspace is told what it keeps and what it must buy", async ({
     setupRequired: false,
     authenticated: true,
   });
-  await routePlan(page, {
-    ...INDIE_PLAN,
-    plan: "free",
-    displayName: "Free",
-    entitled: false,
-    renewsAt: null,
-    upgradeTo: "indie",
-    limits: PLAN_LIMITS.free,
-    usage: {
-      apps: { used: 3, limit: PLAN_LIMITS.free.apps },
-      keywordMarkets: { used: 240, limit: PLAN_LIMITS.free.keywordMarkets },
-    },
-  });
+  await routePlan(page, LAPSED_PLAN);
 
   await page.goto("/settings");
   await expect(page.getByText("Access paused")).toBeVisible();
@@ -529,6 +532,118 @@ test("a lapsed workspace is told what it keeps and what it must buy", async ({
     page.getByText("Your data stays readable and exportable", { exact: false }),
   ).toBeVisible();
   await expect(page.getByRole("link", { name: "Choose a plan" })).toBeVisible();
+});
+
+test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, {
+    ...LAPSED_PLAN,
+    subscribed: true,
+    subscriptionStalled: true,
+  });
+
+  await page.goto("/settings");
+  await expect(
+    page.getByText("stopped collecting", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Resume plan" })).toBeVisible();
+
+  let checkoutCalls = 0;
+  await page.route("**/api/backend/billing/checkout", async (route) => {
+    checkoutCalls += 1;
+    await route.fulfill(fulfillJson(200, { url: "http://localhost:4100/no" }));
+  });
+  let portalCalls = 0;
+  await page.route("**/api/backend/billing/portal", async (route) => {
+    portalCalls += 1;
+    await route.fulfill(
+      fulfillJson(200, { url: "http://localhost:4100/stripe-portal" }),
+    );
+  });
+
+  await page.goto("/upgrade");
+  const resume = page
+    .getByRole("button", { name: "Resume in the billing portal" })
+    .first();
+  await expect(resume).toBeVisible();
+
+  await resume.click();
+
+  await expect.poll(() => portalCalls).toBe(1);
+  expect(checkoutCalls).toBe(0);
+});
+
+test("returning from checkout reconciles the workspace and clears the marker", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+
+  let reconcileCalls = 0;
+  await page.route("**/api/backend/auth/plan", async (route) => {
+    await route.fulfill(
+      fulfillJson(200, reconcileCalls > 0 ? INDIE_PLAN : LAPSED_PLAN),
+    );
+  });
+  await page.route("**/api/backend/billing/reconcile", async (route) => {
+    reconcileCalls += 1;
+    await route.fulfill(
+      fulfillJson(200, {
+        checked: 1,
+        corrected: 1,
+        orphanSubscriptions: [],
+        unreconciled: [],
+      }),
+    );
+  });
+
+  await page.goto("/settings?checkout=complete");
+
+  await expect.poll(() => reconcileCalls).toBe(1);
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(page.getByText("Renews on", { exact: false })).toBeVisible();
+});
+
+test("a checkout return keeps its marker when reconciliation cannot run", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, LAPSED_PLAN);
+  await page.route("**/api/backend/billing/reconcile", (route) =>
+    route.fulfill(
+      fulfillJson(503, {
+        statusCode: 503,
+        error: "Service Unavailable",
+        message: "Stripe could not be reached",
+        path: "/billing/reconcile",
+        timestamp: new Date().toISOString(),
+      }),
+    ),
+  );
+
+  await page.goto("/settings?checkout=complete");
+
+  await expect(page.getByText("Access paused")).toBeVisible();
+  await expect(page).toHaveURL(/checkout=complete/);
 });
 
 test("the upgrade page lists both paid plans with their limits", async ({

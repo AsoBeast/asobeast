@@ -8,16 +8,17 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
-import type { BillingCatalog, BillingSession } from '@asobeast/shared';
+import type {
+  BillingCatalog,
+  BillingReconcileReport,
+  BillingSession,
+} from '@asobeast/shared';
 import { AllowUnentitled } from '../auth/decorators/allow-unentitled.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { OwnerGuard } from '../auth/guards/owner.guard';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingService } from './billing.service';
-import {
-  BillingReconciler,
-  type ReconcileReport,
-} from './billing-reconciler.service';
+import { BillingReconciler } from './billing-reconciler.service';
 import { CheckoutDto } from './dto/checkout.dto';
 
 @ApiTags('billing')
@@ -63,10 +64,10 @@ export class BillingController {
   @Post('reconcile')
   @AllowUnentitled()
   @UseGuards(OwnerGuard, ThrottlerGuard)
-  @Throttle({ default: { limit: 3, ttl: 3_600_000 } })
+  @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Reconcile this workspace against Stripe now' })
-  reconcile(@CurrentUser() user: AccountUser): Promise<ReconcileReport> {
+  reconcile(@CurrentUser() user: AccountUser): Promise<BillingReconcileReport> {
     return this.reconciler.reconcileOne(user.workspaceId);
   }
 }

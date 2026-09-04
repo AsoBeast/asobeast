@@ -1,11 +1,11 @@
 import type Stripe from 'stripe';
-import { WORKSPACE_METADATA_KEY } from './billing.service';
 import {
   HANDLED_EVENTS,
   isHandled,
   subscriptionIdOf,
   workspaceIdOf,
 } from './webhook-events';
+import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const eventOf = (type: string, object: unknown): Stripe.Event =>
   ({ id: 'evt_1', type, created: 1, data: { object } }) as Stripe.Event;

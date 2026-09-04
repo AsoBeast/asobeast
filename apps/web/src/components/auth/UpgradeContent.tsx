@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -24,9 +24,24 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ApiError, openBillingPortal, startCheckout } from "@/lib/api";
-import { formatDate, formatNumber } from "@/lib/format";
-import { accountPlanOptions, billingCatalogOptions } from "@/lib/queries";
+import {
+  ApiError,
+  openBillingPortal,
+  recoversInPortal,
+  startCheckout,
+} from "@/lib/api";
+import { formatNumber } from "@/lib/format";
+import {
+  planAction,
+  planActionLabel,
+  paywallStatusLine,
+  type PlanAction,
+} from "@/lib/plan-choice";
+import {
+  accountPlanOptions,
+  billingCatalogOptions,
+  invalidateAuth,
+} from "@/lib/queries";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -42,68 +57,46 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   year: "Annual",
 };
 
-function statusLine(plan: AccountPlan | undefined): string {
-  if (!plan) return "Choose a plan to unlock asobeast.";
-  if (plan.plan === "trial" && plan.trialEndsAt) {
-    return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
-  }
-  if (plan.trialEndsAt && !plan.entitled) {
-    return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
-  }
-  if (plan.renewsAt) {
-    return `Your ${PLANS[plan.plan].displayName} plan renews on ${formatDate(plan.renewsAt)}.`;
-  }
-  return "Choose a plan to unlock asobeast.";
-}
-
 function priceLabel(interval: BillingInterval, amountUsd: number): string {
   return interval === "month"
     ? `$${amountUsd} /month`
     : `$${amountUsd} /year, two months free`;
 }
 
-function actionLabel(
-  current: boolean,
-  subscribed: boolean,
-  displayName: string,
-): string {
-  if (current) return "Current plan";
-  if (subscribed) return "Change in the billing portal";
-  return `Choose ${displayName}`;
-}
-
-function failureMessage(error: unknown, subscribed: boolean): string {
+function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
-  return subscribed
-    ? "Could not open the billing portal. Try again."
-    : "Could not start checkout. Try again.";
+  return action === "checkout"
+    ? "Could not start checkout. Try again."
+    : "Could not open the billing portal. Try again.";
 }
 
 function PlanOption({
   name,
   interval,
   price,
-  current,
-  subscribed,
+  action,
 }: {
   name: PaidPlanName;
   interval: BillingInterval;
   price: BillingPrice | undefined;
-  current: boolean;
-  subscribed: boolean;
+  action: PlanAction;
 }) {
   const { displayName, prices, limits } = PLANS[name];
   const amountUsd =
     (interval === "month" ? prices.monthlyUsd : prices.annualUsd) ?? 0;
 
+  const client = useQueryClient();
   const change = useMutation({
     mutationFn: () =>
-      subscribed ? openBillingPortal() : startCheckout(price?.priceId ?? ""),
+      action === "checkout"
+        ? startCheckout(price?.priceId ?? "")
+        : openBillingPortal(),
     onSuccess: ({ url }) => {
       window.location.assign(url);
     },
     onError: (error) => {
-      toast.error(failureMessage(error, subscribed));
+      if (recoversInPortal(error)) invalidateAuth(client);
+      toast.error(failureMessage(error, action));
     },
   });
 
@@ -112,7 +105,9 @@ function PlanOption({
       <CardHeader>
         <CardDescription className="flex items-center gap-2">
           {displayName}
-          {current ? <Badge variant="secondary">Current</Badge> : null}
+          {action === "current" ? (
+            <Badge variant="secondary">Current</Badge>
+          ) : null}
         </CardDescription>
         <CardTitle asChild>
           <p>
@@ -151,14 +146,20 @@ function PlanOption({
       <CardFooter>
         <Button
           className="w-full"
-          disabled={current || (!subscribed && !price) || change.isPending}
+          disabled={
+            action === "current" ||
+            (action === "checkout" && !price) ||
+            change.isPending
+          }
           title={
-            subscribed || price ? undefined : "Checkout is not configured yet"
+            action !== "checkout" || price
+              ? undefined
+              : "Checkout is not configured yet"
           }
           onClick={() => change.mutate()}
         >
           {change.isPending ? <Loader2 className="animate-spin" /> : null}
-          {actionLabel(current, subscribed, displayName)}
+          {planActionLabel(action, displayName)}
         </Button>
       </CardFooter>
     </Card>
@@ -182,7 +183,9 @@ export function UpgradeContent() {
           <h1 className="text-display tracking-tight text-balance">
             Keep optimizing without limits
           </h1>
-          <p className="text-body text-muted-foreground">{statusLine(plan)}</p>
+          <p className="text-body text-muted-foreground">
+            {paywallStatusLine(plan)}
+          </p>
         </div>
         <Tabs
           value={interval}
@@ -205,8 +208,7 @@ export function UpgradeContent() {
             name={name}
             interval={interval}
             price={priceFor(name)}
-            current={plan?.plan === name}
-            subscribed={plan?.subscribed ?? false}
+            action={planAction(plan, name)}
           />
         ))}
       </div>
