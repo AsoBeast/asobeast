@@ -3,6 +3,48 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.0](https://github.com/AsoBeast/asobeast/compare/v1.2.0...v1.3.0) (2026-09-04)
+
+
+### Features
+
+* **api:** reconcile a workspace before refusing its checkout ([0a39ee3](https://github.com/AsoBeast/asobeast/commit/0a39ee304e1cfc160adc13b5c6f66ba604c4a70f))
+* **shared:** carry the recovery a billing conflict needs ([8c3a7a5](https://github.com/AsoBeast/asobeast/commit/8c3a7a548852b7cc6446bedcc68026b278ba3ab8))
+* **web:** reconcile the workspace when a checkout returns ([9118c2e](https://github.com/AsoBeast/asobeast/commit/9118c2e196809418052140eb320794510ac5831f))
+* **web:** show the release version in the sidebar footer ([972fb3f](https://github.com/AsoBeast/asobeast/commit/972fb3f4fd459953d4e7c76196d0bba541c61258))
+* **web:** show the release version in the sidebar footer ([f4e25f4](https://github.com/AsoBeast/asobeast/commit/f4e25f40dd30fb28610fb1ccefc09263d207d821))
+
+
+### Bug Fixes
+
+* **api:** adopt the subscription stripe already links to the workspace ([17e45e3](https://github.com/AsoBeast/asobeast/commit/17e45e31a086dd872123c2e241ffc581a12fc06e))
+* **api:** close the gaps a review found in the recovery path ([75f2529](https://github.com/AsoBeast/asobeast/commit/75f25294b3637a2454a0b352c6a0acb22e7900c8))
+* **api:** recover a workspace whose subscription no webhook recorded ([08225c3](https://github.com/AsoBeast/asobeast/commit/08225c3c60912d52521d849d2e01855e62e4da1a))
+* **api:** revoke only a workspace that claims a subscription ([b45f542](https://github.com/AsoBeast/asobeast/commit/b45f5424e724b993dec8d5660b6ccba846a5cd81))
+* **api:** stop a dead subscription shadowing the recovery ([470668d](https://github.com/AsoBeast/asobeast/commit/470668d833bffba3fea8b81935326ad2d5528b5e))
+* **api:** tell a stalled subscription what it is missing ([e47677e](https://github.com/AsoBeast/asobeast/commit/e47677e6ef7797697cb067d68711c8419509988d))
+* **repo:** keep generated env files private and node recoverable ([5d42222](https://github.com/AsoBeast/asobeast/commit/5d42222db01d432e1de3454969b6fb82c63eae9e))
+* **web:** offer the recovery a held subscription needs ([be2e369](https://github.com/AsoBeast/asobeast/commit/be2e36903646245bf320768c29b479a55416a039))
+
+
+### Refactoring
+
+* **api:** give a subscription status one table and three outcomes ([01319e4](https://github.com/AsoBeast/asobeast/commit/01319e4905688ca86a33c19c343ad8737f091586))
+* **api:** pick a held subscription by one rule ([9dc36e7](https://github.com/AsoBeast/asobeast/commit/9dc36e7c6312e809656a6b41095871b83b5fe84b))
+* **api:** write a workspace from one subscription projection ([68bc73d](https://github.com/AsoBeast/asobeast/commit/68bc73d604cc3ecfa8d2170491e2855b92d116df))
+
+
+### Documentation
+
+* **docs:** record how a stalled subscription recovers ([12f5fb8](https://github.com/AsoBeast/asobeast/commit/12f5fb84053f8d542a29a8305d185bfd530867c6))
+
+
+### Build and Deployment
+
+* **repo:** install node for the sandbox architecture ([4a6252f](https://github.com/AsoBeast/asobeast/commit/4a6252f0eb2187fc1648203fe97695872a7197dc))
+* **repo:** run the stack in claude code cloud sessions ([3197dcb](https://github.com/AsoBeast/asobeast/commit/3197dcb74aeb414b0afba00f7f74d84f190cb1dc))
+* **repo:** run the stack in claude code cloud sessions ([eeb3838](https://github.com/AsoBeast/asobeast/commit/eeb38380b1cf411ba5b3dc5b4a8a4f56fb7041ac))
+
 ## [1.2.0](https://github.com/AsoBeast/asobeast/compare/v1.1.0...v1.2.0) (2026-08-29)
 
 
