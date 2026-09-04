@@ -1,0 +1,3 @@
+ Image postgres:18-alpine Pulling 
+ Image redis:8-alpine Pulling 
+failed to copy: httpReadSeeker: failed open: failed to do request: Get "https://production.cloudfront.docker.com/registry-v2/docker/registry/v2/blobs/sha256/00/00c30ddf0ef8074bbc7b7e5ea655bb6d359dc66694edd57d70fe95ce6ba531aa/data?Expires=1788552870&Signature=dKwN~ZZ68zECnKzLHNZjJqiPIZfOy1CiupFAIwSIc4Dpv8GEp6xrQ4kwrGmzm2V0YfBK0-5JAmqQpQCcLoS~lrsqA5PR8kEC1HEJiSb6MaP4KAYg5bxszyYvpF33fkNTzVzununua4iEx151-5QRYWlnOS11fdrrtYGPp3YRNl7spwGuCGnmxyVDiN~HbtJmexiWPqFufnmy3R6-wik9E9UY99OglyRRhcNC~SWM~P6mpJ1wow7spyS7JtYVEcd5awfDa-7N4Fmkxg-BLdk-QtQOR4tOgNuuRyN8pq-0riM7tXIzCkoDRur36xAHRfhe-pZfG6ZaTJHhNLTscnuEzQ__&Key-Pair-Id=K2C9XPB6FLAKUF": Forbidden

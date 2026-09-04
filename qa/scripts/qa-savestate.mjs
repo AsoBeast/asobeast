@@ -1,0 +1,12 @@
+import { chromium } from '@playwright/test';
+const BASE='http://127.0.0.1:3001';
+const b=await chromium.launch({executablePath:'/opt/pw-browsers/chromium'});
+const c=await b.newContext();const p=await c.newPage();
+await p.goto(BASE+'/login',{waitUntil:'networkidle'});
+await p.fill('input[type="email"]','qa-owner@asobeast.test');
+await p.fill('input[type="password"]','QaOwnerPass123!');
+await p.click('button[type="submit"]');
+await p.waitForURL(u=>!u.pathname.includes('/login'),{timeout:20000}).catch(()=>{});
+await c.storageState({path:'/home/user/asobeast/qa/evidence/state.json'});
+console.log('saved, url=',p.url());
+await b.close();

@@ -1,0 +1,12 @@
+api:test: 
+api:test: Test Suites: 186 passed, 186 total
+api:test: Tests:       1969 passed, 1969 total
+api:test: Snapshots:   0 total
+api:test: Time:        16.195 s
+api:test: Ran all test suites.
+
+ Tasks:    8 successful, 8 total
+Cached:    2 cached, 8 total
+  Time:    22.489s 
+
+TEST_EXIT=0

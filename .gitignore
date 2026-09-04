@@ -16,3 +16,6 @@ coverage/
 /plan/
 apps/web/e2e/__baseline__/
 proxy
+
+# QA run artifacts
+dump.rdb
