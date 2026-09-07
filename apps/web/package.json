@@ -38,17 +38,17 @@
     "@asobeast/typescript-config": "workspace:*",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4.3.3",
-    "@tanstack/eslint-plugin-query": "^5.102.7",
-    "@tanstack/react-query-devtools": "^5.102.7",
-    "@types/node": "^26.4.0",
+    "@tanstack/eslint-plugin-query": "^5.102.8",
+    "@tanstack/react-query-devtools": "^5.102.8",
+    "@types/node": "^26.4.1",
     "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.5",
-    "@vitest/coverage-v8": "4.1.11",
-    "eslint": "^9.39.5",
-    "eslint-config-next": "16.3.3",
-    "shadcn": "^4.19.0",
+    "@types/react-dom": "^19.2.7",
+    "@vitest/coverage-v8": "5.0.0",
+    "eslint": "^10.9.1",
+    "eslint-config-next": "16.3.4",
+    "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3",
-    "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.0"
   }
 }
