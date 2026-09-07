@@ -19,3 +19,7 @@ proxy
 
 # QA run artifacts
 dump.rdb
+
+# QA session artifacts (contain live session tokens)
+qa/evidence/*.cookies
+qa/evidence/state.json

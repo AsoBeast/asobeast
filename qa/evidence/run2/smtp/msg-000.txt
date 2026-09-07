@@ -1,0 +1,73 @@
+{"mail_from": "<alerts@asobeast.test>", "rcpt_to": ["<alerts@asobeast.test>"]}
+
+From: asobeast <alerts@asobeast.test>
+To: alerts@asobeast.test
+Subject: =?UTF-8?Q?=5Basobeast=5D_Daily_app_update_?=
+ =?UTF-8?Q?=E2=80=94_5_changes_across_2_apps?=
+Message-ID: <1b45b612-057e-673f-0acb-4278238f0ced@asobeast.test>
+Date: Mon, 07 Sep 2026 22:04:18 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative;
+ boundary="--_NmP-943cab30f8573319-Part_1"
+
+----_NmP-943cab30f8573319-Part_1
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Daily app update =E2=80=94 5 changes across 2 apps
+Summary: 1 rank drop =
+=C2=B7 1 rank improvement =C2=B7 1 SERP entrant =C2=B7 1 metadata change =
+=C2=B7 1 negative review =C2=B7 0 new actions
+Window (UTC): 2026-07-21 =
+=E2=86=92 2026-07-22
+
+Sample App =C2=B7 App Store =C2=B7 US
+  Rank drops
+    habit tracker (US)  4 =E2=86=92 12 =E2=96=BC
+  New entrants
+    #3 =C2=B7 Newcomer
+  Metadata changes
+    title: Old title =E2=86=92 =
+New title
+  Negative reviews
+    =E2=98=85=E2=98=85=E2=98=86=E2=98=86=
+=E2=98=86 "Crashes on launch after the latest update." =E2=80=94 v3.1.0
+
+Second App =C2=B7 Google Play =C2=B7 GB
+  Rank improvements
+    budget planner (DE)  18 =E2=86=92 9 =E2=96=B2
+
+----_NmP-943cab30f8573319-Part_1
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<div style=3D"font-family:system-ui,-apple-system,sans-serif;color:#0f172a"=
+><p style=3D"font-size:18px;font-weight:700;margin:0 0 8px">Daily app =
+update =E2=80=94 5 changes across 2 apps</p><p style=3D"font-size:13px;marg=
+in:0 0 12px">Summary: 1 rank drop =C2=B7 1 rank improvement =C2=B7 1 SERP =
+entrant =C2=B7 1 metadata change =C2=B7 1 negative review =C2=B7 0 new =
+actions =C2=B7 Window (UTC): 2026-07-21 =E2=86=92 2026-07-22</p><div =
+style=3D"border:1px solid #e2e8f0;border-radius:8px;padding:12px =
+16px;margin:0 0 12px;overflow-wrap:anywhere"><p style=3D"margin:0 0 =
+4px;font-weight:700;font-size:15px">Sample App =C2=B7 App Store =C2=B7 =
+US</p><p style=3D"margin:8px 0 2px;font-weight:600;font-size:13px">Rank =
+drops</p><ul style=3D"margin:4px 0 8px;padding-left:18px"><li =
+style=3D"margin:2px 0">habit tracker (US)  4 =E2=86=92 12 =
+=E2=96=BC</li></ul><p style=3D"margin:8px 0 2px;font-weight:600;font-size:1=
+3px">New entrants</p><ul style=3D"margin:4px 0 8px;padding-left:18px"><li =
+style=3D"margin:2px 0">#3 =C2=B7 Newcomer</li></ul><p style=3D"margin:8px 0=
+ 2px;font-weight:600;font-size:13px">Metadata changes</p><ul =
+style=3D"margin:4px 0 8px;padding-left:18px"><li style=3D"margin:2px =
+0">title: Old title =E2=86=92 New title</li></ul><p style=3D"margin:8px 0 =
+2px;font-weight:600;font-size:13px">Negative reviews</p><ul =
+style=3D"margin:4px 0 8px;padding-left:18px"><li style=3D"margin:2px =
+0">=E2=98=85=E2=98=85=E2=98=86=E2=98=86=E2=98=86 &quot;Crashes on launch =
+after the latest update.&quot; =E2=80=94 v3.1.0</li></ul></div><div =
+style=3D"border:1px solid #e2e8f0;border-radius:8px;padding:12px =
+16px;margin:0 0 12px;overflow-wrap:anywhere"><p style=3D"margin:0 0 =
+4px;font-weight:700;font-size:15px">Second App =C2=B7 Google Play =C2=B7 =
+GB</p><p style=3D"margin:8px 0 2px;font-weight:600;font-size:13px">Rank =
+improvements</p><ul style=3D"margin:4px 0 8px;padding-left:18px"><li =
+style=3D"margin:2px 0">budget planner (DE)  18 =E2=86=92 9 =
+=E2=96=B2</li></ul></div></div>
+----_NmP-943cab30f8573319-Part_1--

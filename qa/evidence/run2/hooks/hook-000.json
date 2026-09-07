@@ -1,0 +1,17 @@
+{
+ "path": "/hook",
+ "headers": {
+  "host": "127.0.0.1:9099",
+  "connection": "keep-alive",
+  "Content-Type": "application/json",
+  "X-Asobeast-Event": "metadata.changed",
+  "X-Asobeast-Signature": "sha256=1186202a0a9677aee6ec60557d195cca58d953c2213f0da1c844af2ed5c5572c",
+  "accept": "*/*",
+  "accept-language": "*",
+  "sec-fetch-mode": "cors",
+  "user-agent": "undici",
+  "accept-encoding": "gzip, deflate",
+  "content-length": "202"
+ },
+ "body": "{\"event\":\"metadata.changed\",\"occurredAt\":\"2026-09-07T22:04:18.451Z\",\"app\":{\"id\":\"sample\",\"name\":\"Sample App\",\"isCompetitor\":false},\"changes\":[{\"field\":\"title\",\"before\":\"Old title\",\"after\":\"New title\"}]}"
+}
