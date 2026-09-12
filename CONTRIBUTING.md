@@ -4,8 +4,8 @@ Thank you for helping improve asobeast. The project is a self-hosted App Store O
 
 ## Prerequisites
 
-- Node.js 22 or newer
-- pnpm 10
+- Node.js 22.12 or newer
+- pnpm 12
 - Docker with Docker Compose for PostgreSQL and Redis
 
 ## Local setup
