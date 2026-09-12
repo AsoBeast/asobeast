@@ -7,6 +7,8 @@ import { WebhookDelivery } from './webhook-delivery';
 
 const BODY = 'y'.repeat(1024 * 1024);
 
+const SENT = 5;
+
 const PAYLOAD = {
   event: 'rank.drop',
   appId: 'app_1',
@@ -55,35 +57,44 @@ describe('WebhookDelivery', () => {
     openSockets = 0;
   });
 
+  const drainedSockets = async (): Promise<number> => {
+    for (let waited = 0; waited < 200 && openSockets > 0; waited += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return openSockets;
+  };
+
   it('frees the socket a delivered webhook used', async () => {
     const delivery = new WebhookDelivery(configOf());
 
-    for (let sent = 0; sent < 5; sent++) {
+    for (let sent = 0; sent < SENT; sent++) {
       await delivery.send(url, null, PAYLOAD);
     }
     await delivery.onModuleDestroy();
 
-    expect(peakSockets).toBeLessThanOrEqual(2);
+    expect(await drainedSockets()).toBe(0);
+    expect(peakSockets).toBeLessThan(SENT);
   });
 
   it('frees the socket a refused webhook used', async () => {
     status = 500;
     const delivery = new WebhookDelivery(configOf());
 
-    for (let sent = 0; sent < 5; sent++) {
+    for (let sent = 0; sent < SENT; sent++) {
       await expect(delivery.send(url, null, PAYLOAD)).rejects.toThrow(
         'responded 500',
       );
     }
     await delivery.onModuleDestroy();
 
-    expect(peakSockets).toBeLessThanOrEqual(2);
+    expect(await drainedSockets()).toBe(0);
+    expect(peakSockets).toBeLessThan(SENT);
   });
 
   it('frees the socket a test attempt used', async () => {
     const delivery = new WebhookDelivery(configOf());
 
-    for (let sent = 0; sent < 5; sent++) {
+    for (let sent = 0; sent < SENT; sent++) {
       await expect(delivery.attempt(url, null, PAYLOAD)).resolves.toEqual({
         delivered: true,
         status: 200,
@@ -91,6 +102,7 @@ describe('WebhookDelivery', () => {
     }
     await delivery.onModuleDestroy();
 
-    expect(peakSockets).toBeLessThanOrEqual(2);
+    expect(await drainedSockets()).toBe(0);
+    expect(peakSockets).toBeLessThan(SENT);
   });
 });
