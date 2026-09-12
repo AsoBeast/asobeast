@@ -2,7 +2,8 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
 import { seedCookies, SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
-import { ACTION_SUMMARY } from "./fixtures.mts";
+import { ACTION_SUMMARY, APP_1_RATINGS_HISTOGRAM } from "./fixtures.mts";
+import { formatNumber } from "../src/lib/format";
 import {
   NOT_STARTED_ONBOARDING,
   ONBOARDING_STORAGE_KEY,
@@ -96,12 +97,16 @@ for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
   );
 }
 
-function statTileText(html: string, label: string): string {
-  const tile = (html.split(`>${label}<`).at(1) ?? "").split("</div>").at(0);
-  return `<${tile ?? ""}`
+function textOf(markup: string): string {
+  return `<${markup}`
     .replace(/<[^>]*>/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function sectionText(html: string, label: string, closer: string): string {
+  const after = html.split(`>${label}<`).at(1) ?? "";
+  return textOf(after.split(closer).at(0) ?? "");
 }
 
 test("the dashboard open action count is in the html the server sent", async ({
@@ -109,7 +114,7 @@ test("the dashboard open action count is in the html the server sent", async ({
 }) => {
   const html = await page.request.get("/").then((response) => response.text());
 
-  expect(statTileText(html, "Open actions")).toBe(
+  expect(sectionText(html, "Open actions", "</div>")).toBe(
     `${ACTION_SUMMARY.open} waiting on you`,
   );
 
@@ -150,4 +155,26 @@ test("a seconds-old audit timestamp renders the same on both sides", async ({
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the audit ai card threw: ${errors.join(", ")}`).toEqual([]);
+});
+
+test("the ratings histogram is in the html the server sent", async ({
+  page,
+}) => {
+  const errors = collectPageErrors(page);
+  const total = formatNumber(APP_1_RATINGS_HISTOGRAM.total ?? 0);
+
+  const html = await page.request
+    .get("/apps/app-1/reviews")
+    .then((response) => response.text());
+  expect(sectionText(html, "Ratings distribution", "</ul>")).toContain(
+    `${total} ratings`,
+  );
+
+  await page.goto("/apps/app-1/reviews");
+  await expect(page.getByText(`${total} ratings`)).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the ratings histogram threw: ${errors.join(", ")}`).toEqual(
+    [],
+  );
 });

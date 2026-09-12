@@ -870,6 +870,10 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/ratings-history$/,
     (dataset) => dataset.ratingsHistory,
   ),
+  appRoute(
+    /^\/apps\/([^/]+)\/reviews\/histogram$/,
+    (dataset) => dataset.ratingsHistogram,
+  ),
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/reviews$/,

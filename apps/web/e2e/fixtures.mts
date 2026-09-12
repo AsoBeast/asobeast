@@ -22,6 +22,7 @@ import type {
   RankDistributionHistory,
   RankingPoint,
   RankingSeries,
+  RatingsHistogram,
   RatingsHistory,
   ReviewList,
   SerpMovers,
@@ -539,6 +540,13 @@ export const APP_1_RATINGS_HISTORY: RatingsHistory = {
   })),
 };
 
+export const APP_1_RATINGS_HISTOGRAM: RatingsHistogram = {
+  available: true,
+  counts: { 1: 420, 2: 310, 3: 940, 4: 4820, 5: 17230 },
+  total: 23720,
+  capturedAt: utcDaysAgo(1),
+};
+
 export const APP_1_COMPETITORS: CompetitorItem[] = [
   {
     id: "comp-1",
@@ -721,6 +729,13 @@ const EMPTY_RANK_DISTRIBUTION_HISTORY: RankDistributionHistory = { points: [] };
 const EMPTY_CATEGORY_RANKS: CategoryRankSeries = { series: [] };
 const EMPTY_REVIEWS: ReviewList = { reviews: [], total: 0, versions: [] };
 const EMPTY_RATINGS_HISTORY: RatingsHistory = { points: [] };
+
+const EMPTY_RATINGS_HISTOGRAM: RatingsHistogram = {
+  available: false,
+  counts: null,
+  total: null,
+  capturedAt: null,
+};
 const EMPTY_SERP_MOVERS: SerpMovers = { windowDays: 7, items: [] };
 const EMPTY_CHANGES: ChangeTimeline = { events: [] };
 const EMPTY_DISCOVERY: CompetitorDiscovery = { windowDays: 30, items: [] };
@@ -1301,6 +1316,7 @@ export interface AppDataset {
   competitors: CompetitorItem[];
   reviews: ReviewList;
   ratingsHistory: RatingsHistory;
+  ratingsHistogram: RatingsHistogram;
   changes: ChangeTimeline;
   discovery: CompetitorDiscovery;
   comparison: KeywordComparison;
@@ -1319,6 +1335,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: APP_1_COMPETITORS,
     reviews: APP_1_REVIEWS,
     ratingsHistory: APP_1_RATINGS_HISTORY,
+    ratingsHistogram: APP_1_RATINGS_HISTOGRAM,
     changes: APP_1_CHANGES,
     discovery: APP_1_DISCOVERY,
     comparison: APP_1_COMPARISON,
@@ -1335,6 +1352,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1351,6 +1369,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1367,6 +1386,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1383,6 +1403,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1399,6 +1420,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: APP_1_DE_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1415,6 +1437,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: APP_GP_COMPETITORS,
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: APP_GP_DISCOVERY,
     comparison: EMPTY_COMPARISON,
@@ -1431,6 +1454,7 @@ export const DATASETS: Record<string, AppDataset> = {
     competitors: [],
     reviews: EMPTY_REVIEWS,
     ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
