@@ -54,6 +54,9 @@ const buildPrisma = (
     reopenCount: 0,
   },
 ) => ({
+  app: {
+    findFirst: jest.fn(() => Promise.resolve({ id: 'app_1' })),
+  },
   actionItem: {
     findMany: jest.fn(() => Promise.resolve([storedRow()])),
     findFirst: jest.fn(() => Promise.resolve(current)),
@@ -171,6 +174,26 @@ describe('ActionsService reads', () => {
     await serviceFor(prisma).list(query({ appId: 'app_query' }), 'app_path');
 
     expect(whereOf(prisma).appId).toBe('app_path');
+  });
+
+  it('rejects a path app id that resolves to nothing before querying', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findFirst = jest.fn(() =>
+      Promise.resolve(null),
+    ) as unknown as typeof prisma.app.findFirst;
+
+    await expect(serviceFor(prisma).list(query(), 'app_gone')).rejects.toThrow(
+      new NotFoundException('App app_gone not found'),
+    );
+    expect(prisma.actionItem.findMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves the workspace wide queue unguarded', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).list(query());
+
+    expect(prisma.app.findFirst).not.toHaveBeenCalled();
   });
 
   it('reports no generation timestamp before the first run', async () => {

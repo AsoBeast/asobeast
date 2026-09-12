@@ -3097,6 +3097,9 @@
         "responses": {
           "200": {
             "description": "The action queue for one app"
+          },
+          "404": {
+            "description": "No such app in this workspace"
           }
         },
         "summary": "List actions for one tracked app",

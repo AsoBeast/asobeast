@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   ACTION_FORMULA_VERSION,
   ActionItem,
+  ApiErrorEnvelope,
   ActionListResult,
   ActionRunResult,
   ActionSummary,
@@ -23,6 +24,7 @@ import { obliterateQueues } from './obliterate-queues';
 import { ownerAgent, useCookies } from './helpers/session';
 
 const DAY_MS = 86_400_000;
+const FOREIGN_WORKSPACE_ID = 'ws_foreign_actions';
 
 const EVIDENCE: KeywordAddUncoveredEvidence = {
   rule: 'keyword.add_uncovered',
@@ -77,6 +79,7 @@ describe('ActionsController (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.workspace.deleteMany({ where: { id: FOREIGN_WORKSPACE_ID } });
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();
@@ -192,6 +195,45 @@ describe('ActionsController (e2e)', () => {
 
     expect((mine.body as ActionListResult).items).toHaveLength(1);
     expect((theirs.body as ActionListResult).items).toHaveLength(0);
+  });
+
+  it('answers 404 for an app id that does not exist, like its siblings', async () => {
+    const actions = await api
+      .get('/apps/totally-made-up-id/actions')
+      .expect(404);
+    const keywords = await api
+      .get('/apps/totally-made-up-id/keywords')
+      .expect(404);
+
+    expect((actions.body as ApiErrorEnvelope).message).toBe(
+      'App totally-made-up-id not found',
+    );
+    expect((keywords.body as ApiErrorEnvelope).message).toBe(
+      'App totally-made-up-id not found',
+    );
+  });
+
+  it('answers the same 404 for an app in another workspace', async () => {
+    await prisma.workspace.upsert({
+      where: { id: FOREIGN_WORKSPACE_ID },
+      update: {},
+      create: { id: FOREIGN_WORKSPACE_ID, name: 'Foreign' },
+    });
+    const foreign = await prisma.app.create({
+      data: {
+        workspaceId: FOREIGN_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '555',
+        country: 'us',
+        name: 'Foreign',
+      },
+    });
+
+    const res = await api.get(`/apps/${foreign.id}/actions`).expect(404);
+
+    expect((res.body as ApiErrorEnvelope).message).toBe(
+      `App ${foreign.id} not found`,
+    );
   });
 
   it('summarizes the queue', async () => {

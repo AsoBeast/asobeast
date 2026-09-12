@@ -22,6 +22,7 @@ import {
   isActionPriority,
   isActionRule,
 } from '@asobeast/shared';
+import { ensureAppExists } from '../apps/ensure-app';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { actionsSuppressedKey, QUEUES } from '../jobs/jobs.types';
@@ -76,6 +77,9 @@ export class ActionsService {
     query: ListActionsQueryDto,
     appId?: string,
   ): Promise<ActionListResult> {
+    if (appId) {
+      await ensureAppExists(this.prisma, appId);
+    }
     const where = this.whereFor(query, appId);
     const [rows, total, generatedAt] = await Promise.all([
       this.prisma.actionItem.findMany({
