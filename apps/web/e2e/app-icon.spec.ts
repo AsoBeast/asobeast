@@ -1,25 +1,16 @@
 import { expect, test } from "./session.mts";
-import { APP_2_ICON_URL, APP_LONG_ICON_URL } from "./fixtures.mts";
+import { ICON_PIXEL, optimizedIcon } from "./store-icons.mts";
+import { APP_2_ICON_URL } from "./fixtures.mts";
 
 const NAME = "Habit Tracker";
 const INITIAL = "H";
 const SWITCHER = /^Switch app, currently /;
 const PLACEHOLDER = "[data-slot=app-icon-placeholder]";
 
-const PIXEL = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
-  "base64",
-);
-
-function optimizerRoute(iconUrl: string) {
-  return (url: URL) =>
-    url.pathname === "/_next/image" && url.searchParams.get("url") === iconUrl;
-}
-
 test("a portfolio icon that fails before hydration falls back to the letter tile", async ({
   page,
 }) => {
-  await page.route(optimizerRoute(APP_2_ICON_URL), (route) => route.abort());
+  await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
 
   await page.goto("/");
 
@@ -37,7 +28,7 @@ test("a portfolio icon that fails before hydration falls back to the letter tile
 test("a switcher icon that fails after hydration falls back to the letter tile", async ({
   page,
 }) => {
-  await page.route(optimizerRoute(APP_2_ICON_URL), (route) => route.abort());
+  await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
 
   await page.goto("/apps/app-2");
 
@@ -59,9 +50,9 @@ test("an icon still in flight stays inside its tile and then renders", async ({
   const held = new Promise<void>((resolve) => {
     deliver = resolve;
   });
-  await page.route(optimizerRoute(APP_2_ICON_URL), async (route) => {
+  await page.route(optimizedIcon(APP_2_ICON_URL), async (route) => {
     await held;
-    await route.fulfill({ contentType: "image/png", body: PIXEL });
+    await route.fulfill({ contentType: "image/png", body: ICON_PIXEL });
   });
 
   await page.goto("/apps/app-2");
@@ -78,10 +69,7 @@ test("an icon still in flight stays inside its tile and then renders", async ({
 test("switching to another app retries an icon that already failed", async ({
   page,
 }) => {
-  await page.route(optimizerRoute(APP_2_ICON_URL), (route) => route.abort());
-  await page.route(optimizerRoute(APP_LONG_ICON_URL), (route) =>
-    route.fulfill({ contentType: "image/png", body: PIXEL }),
-  );
+  await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
 
   await page.goto("/apps/app-2");
 
