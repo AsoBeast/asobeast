@@ -50,7 +50,7 @@ describe("keywordCsv", () => {
 
   it("exports a stored difficulty past its scale clamped to 100", () => {
     const row = keywordCsv([{ ...keyword("geography quiz"), difficulty: 48.2 }])
-      .split("\n")[1]
+      .split("\r\n")[1]
       .split(",");
     expect(row[8]).toBe("100");
   });
