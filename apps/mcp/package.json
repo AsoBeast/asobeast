@@ -17,7 +17,7 @@
     "@asobeast/mcp-tools": "workspace:*",
     "@asobeast/shared": "workspace:*",
     "@modelcontextprotocol/server": "2.0.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@asobeast/typescript-config": "workspace:*",
