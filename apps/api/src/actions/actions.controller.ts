@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import {
   ApiAcceptedResponse,
+  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -101,6 +102,7 @@ export class AppActionsController {
 
   @Get()
   @ApiOkResponse({ description: 'The action queue for one app' })
+  @ApiNotFoundResponse({ description: 'No such app in this workspace' })
   @ApiOperation({ summary: 'List actions for one tracked app' })
   list(
     @Param('id') id: string,
