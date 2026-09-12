@@ -39,9 +39,9 @@ Anything that enqueues store work answers immediately with `202` and a job refer
 
 Poll the resource afterwards rather than expecting the response to carry the result. A `202` is not a promise that the job succeeded, only that it was accepted.
 
-## Scores are 0 to 100
+## Scores are shown on a 0 to 100 scale
 
-Traffic, difficulty and opportunity are all 0 to 100. Traffic and difficulty are stored with their provenance, while opportunity is computed per app on read and never persisted.
+Traffic and difficulty are stored on a 0 to 10 scale with their provenance, and some responses return them on that stored scale. Volume and opportunity are always 0 to 100, and opportunity is computed per app on read and never persisted. See [Which scale does a response use?](/concepts/scoring#which-scale-does-a-response-use) before comparing numbers across endpoints.
 
 Apple and Google Play scores come from different public evidence and are not directly comparable. See [Traffic, difficulty and opportunity](/concepts/scoring).
 

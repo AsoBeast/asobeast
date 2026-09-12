@@ -1,7 +1,7 @@
 ---
 title: "Traffic, difficulty and opportunity"
 sidebarTitle: Scoring
-description: Traffic and difficulty are 0 to 100 scores persisted with their evidence. Opportunity is computed per app on read and is never stored anywhere.
+description: Traffic and difficulty are stored on a 0 to 10 scale with their evidence and shown on a 0 to 100 scale. Opportunity is computed per app on read and is never stored anywhere.
 icon: gauge
 keywords: ["traffic score","difficulty","opportunity","keyword metric","confidence","calculation version"]
 ---
@@ -12,11 +12,24 @@ Traffic and difficulty describe a keyword and are stored. Opportunity describes 
 
 | Score | Range | Persisted | Scope | Meaning |
 | --- | --- | --- | --- | --- |
-| Traffic | 0 to 100 | Yes, in `KeywordMetric` | Keyword | How much search demand the evidence suggests |
-| Difficulty | 0 to 100 | Yes, in `KeywordMetric` | Keyword | How hard the current top results are to displace |
+| Traffic | 0 to 10 stored, 0 to 100 shown | Yes, in `KeywordMetric` | Keyword | How much search demand the evidence suggests |
+| Difficulty | 0 to 10 stored, 0 to 100 shown | Yes, in `KeywordMetric` | Keyword | How hard the current top results are to displace |
 | Opportunity | 0 to 100 | No | Keyword and app | Whether this keyword is worth this app's effort |
 
 Opportunity weights volume at 0.4, difficulty at 0.3 and relevance at 0.3.
+
+## Which scale does a response use?
+
+Traffic and difficulty are stored on a 0 to 10 scale. asobeast shows them on a 0 to 100 scale by multiplying by 10 and clamping the result to 0 to 100, and `volume` is traffic on that scale. A field name alone does not tell you which scale a response uses, so read it from this table.
+
+| Endpoint | Fields | Scale |
+| --- | --- | --- |
+| `GET /apps/{id}/keywords` | `traffic`, `difficulty` | 0 to 10, as stored |
+| `GET /apps/{id}/keywords` | `volume`, `opportunity` | 0 to 100 |
+| `GET /apps/{id}/keywords/compare` | `traffic`, `difficulty` | 0 to 10, as stored |
+| `GET /apps/{id}/competitors/analysis` | `gaps` entries `volume`, `difficulty`, `opportunity` | 0 to 100 |
+
+Convert a stored value the same way before showing it, or a row written outside the scoring job can display past 100.
 
 ## What evidence does a score carry?
 
