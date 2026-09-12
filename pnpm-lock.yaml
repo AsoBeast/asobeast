@@ -222,8 +222,8 @@ importers:
         specifier: 2.0.0
         version: 2.0.0
       '@mradex77/google-play-scraper':
-        specifier: ^1.1.0
-        version: 1.1.0
+        specifier: ^1.2.0
+        version: 1.2.0
       '@nestjs/bullmq':
         specifier: ^11.0.5
         version: 11.0.5(@nestjs/common@11.2.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(bullmq@6.3.4(ioredis@5.11.1(supports-color@8.1.1))(pg@8.23.0))
@@ -285,8 +285,8 @@ importers:
         specifier: 5.1.0
         version: 5.1.0(@nestjs/common@11.2.1(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@11.2.1)(pino-http@11.0.0)(pino@10.3.1)(rxjs@7.8.2)
       nodemailer:
-        specifier: ^10.0.3
-        version: 10.0.3
+        specifier: ^10.0.4
+        version: 10.0.4
       openai:
         specifier: ^7.15.0
         version: 7.15.0(undici@8.10.2)(zod@4.6.2)
@@ -1777,8 +1777,8 @@ packages:
     resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
 
-  '@mradex77/google-play-scraper@1.1.0':
-    resolution: {integrity: sha512-XQ1HrQRmNHUWFhYF5JT4oZNSWj3yVDR1wfS0dhz7JCi5nvkf/QOoo/c1TOouTj56Va4Pcuh78qSgYvrNU3QoJw==}
+  '@mradex77/google-play-scraper@1.2.0':
+    resolution: {integrity: sha512-40zyOcvfatylVJc+Dx7kTOhhe3kCmOzl9+kzlbtdl2xpw8HoO3pdXR+5vVeOA9SWgjoK+C4AfrROTIo/JuPUXQ==}
     engines: {node: '>=22.12.0'}
     hasBin: true
 
@@ -7065,8 +7065,8 @@ packages:
     resolution: {integrity: sha512-wRNIrw4DmVLKQlbgOMdkMx27Wrpzes2hh5Jtbi2bjPd+4wJstWIqP5A+lscnqbm0xxmT5Bpg8Lec5ItEBwx6BQ==}
     engines: {node: '>=18'}
 
-  nodemailer@10.0.3:
-    resolution: {integrity: sha512-h5c8ypcMoOIh44bIcVROvTDbjRdOJX8AXTkxMht2C92HlSjkG+/8kjoqmNPypfjQaVNaUHWyZ3tqs5I3K91F3g==}
+  nodemailer@10.0.4:
+    resolution: {integrity: sha512-hhjVvg8CyDQsYOBp5+nGPRAeHhJFu7p+EJYlHbrO2U8kqIEPFIkTn6uumnmdH7mXB/lt0WMcDZAtpALTyvVmIw==}
     engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
@@ -10168,7 +10168,7 @@ snapshots:
       '@modelcontextprotocol/core': 2.0.0
       zod: 4.6.2
 
-  '@mradex77/google-play-scraper@1.1.0':
+  '@mradex77/google-play-scraper@1.2.0':
     dependencies:
       lru-cache: 11.5.2
       zod: 4.6.2
@@ -15813,7 +15813,7 @@ snapshots:
 
   node-releases@2.0.51: {}
 
-  nodemailer@10.0.3: {}
+  nodemailer@10.0.4: {}
 
   normalize-path@3.0.0: {}
 
