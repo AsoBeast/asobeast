@@ -1,4 +1,24 @@
-import Image from "next/image";
+import { AppIconImage } from "./AppIconImage";
+import { appIconInitial } from "./app-icon-initial";
+
+function AppIconPlaceholder({
+  name,
+  size,
+}: {
+  name: string | null;
+  size: number;
+}) {
+  return (
+    <div
+      aria-hidden
+      data-slot="app-icon-placeholder"
+      style={{ width: size, height: size }}
+      className="flex shrink-0 items-center justify-center rounded-xl bg-secondary text-sm font-medium text-muted-foreground"
+    >
+      {appIconInitial(name)}
+    </div>
+  );
+}
 
 export function AppIcon({
   src,
@@ -9,24 +29,11 @@ export function AppIcon({
   name: string | null;
   size?: number;
 }) {
-  if (!src) {
-    return (
-      <div
-        style={{ width: size, height: size }}
-        className="flex shrink-0 items-center justify-center rounded-xl bg-secondary text-sm font-medium text-muted-foreground"
-      >
-        {(name?.trim()[0] ?? "?").toUpperCase()}
-      </div>
-    );
-  }
+  const placeholder = <AppIconPlaceholder name={name} size={size} />;
+
+  if (!src) return placeholder;
 
   return (
-    <Image
-      src={src}
-      alt={name ?? "app icon"}
-      width={size}
-      height={size}
-      className="shrink-0 rounded-xl"
-    />
+    <AppIconImage src={src} name={name} size={size} fallback={placeholder} />
   );
 }
