@@ -1,4 +1,4 @@
-import { test as base } from "@playwright/test";
+import { test as base } from "./store-icons.mts";
 import type { WebHealth } from "../src/lib/api/web";
 
 const UNREPORTED_HEALTH: WebHealth = {
