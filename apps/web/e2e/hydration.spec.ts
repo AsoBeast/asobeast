@@ -2,6 +2,19 @@ import type { BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
 import { SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
+import { ACTION_SUMMARY } from "./fixtures.mts";
+import {
+  NOT_STARTED_ONBOARDING,
+  ONBOARDING_STORAGE_KEY,
+  type OnboardingState,
+} from "../src/lib/onboarding";
+
+const IN_PROGRESS_ONBOARDING: OnboardingState = {
+  ...NOT_STARTED_ONBOARDING,
+  status: "in_progress",
+  appId: "app-1",
+  selectedMarkets: ["us"],
+};
 
 const DEEP_LINKS = [
   {
@@ -95,3 +108,45 @@ for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
     },
   );
 }
+
+function statTileText(html: string, label: string): string {
+  const tile = (html.split(`>${label}<`).at(1) ?? "").split("</div>").at(0);
+  return `<${tile ?? ""}`
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+test("the dashboard open action count is in the html the server sent", async ({
+  page,
+}) => {
+  const html = await page.request.get("/").then((response) => response.text());
+
+  expect(statTileText(html, "Open actions")).toBe(
+    `${ACTION_SUMMARY.open} waiting on you`,
+  );
+
+  await page.goto("/");
+  await expect(
+    page.getByText("Open actions").locator("xpath=following-sibling::span[1]"),
+  ).toHaveText(String(ACTION_SUMMARY.open));
+});
+
+test("a stored onboarding checklist hydrates without an uncaught error", async ({
+  page,
+  context,
+}) => {
+  await context.addInitScript(
+    ([key, state]) => window.localStorage.setItem(key, state),
+    [ONBOARDING_STORAGE_KEY, JSON.stringify(IN_PROGRESS_ONBOARDING)] as const,
+  );
+  const errors = collectPageErrors(page);
+
+  await page.goto("/");
+  await expect(page.getByText("Finish setting up")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the onboarding banner threw: ${errors.join(", ")}`).toEqual(
+    [],
+  );
+});
