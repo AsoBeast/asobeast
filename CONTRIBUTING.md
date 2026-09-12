@@ -4,8 +4,8 @@ Thank you for helping improve asobeast. The project is a self-hosted App Store O
 
 ## Prerequisites
 
-- Node.js 22 or newer
-- pnpm 10
+- Node.js 22.12 or newer
+- pnpm 12
 - Docker with Docker Compose for PostgreSQL and Redis
 
 ## Local setup
@@ -16,6 +16,8 @@ cd asobeast
 pnpm install
 pnpm env:dev
 ```
+
+If `pnpm install` stops with `ERR_PNPM_IGNORED_BUILDS`, a dependency that runs an install script has entered the tree and nothing has decided about it yet. pnpm names it and writes a placeholder into the `allowBuilds` map in `pnpm-workspace.yaml`. Replace the placeholder with `true` only when the package needs its script to work. `@prisma/engines` does: its script fetches the schema engine that `prisma migrate` runs on. Everything else the workspace pulls ships a usable prebuilt binary and is set to `false`.
 
 `pnpm env:dev` writes `.env`, `apps/api/.env` and `apps/web/.env` from the committed examples and generates the `POSTGRES_PASSWORD` and `AUTH_SECRET` values those examples deliberately leave empty. It keeps any file that already exists, so re-running it never overwrites your own values. The secrets it generates are for development only; never reuse them in a deployed instance.
 

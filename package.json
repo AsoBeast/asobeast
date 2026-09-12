@@ -11,7 +11,7 @@
   "bugs": {
     "url": "https://github.com/AsoBeast/asobeast/issues"
   },
-  "packageManager": "pnpm@10.18.2",
+  "packageManager": "pnpm@12.4.1",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -28,10 +28,10 @@
     "check:release-versions": "node .github/scripts/verify-release-versions.mjs",
     "bench:stack": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml up -d --wait",
     "bench:stack:down": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml down -v",
-    "docs:dev": "cd docs && pnpm dlx mint@4 dev",
-    "docs:check": "cd docs && pnpm dlx mint@4 validate && pnpm dlx mint@4 broken-links --check-anchors --check-redirects && pnpm dlx mint@4 a11y",
-    "docs:format": "cd docs && pnpm dlx mint@4 format",
-    "docs:links": "cd docs && pnpm dlx mint@4 broken-links --check-anchors --check-external --check-redirects",
+    "docs:dev": "bash scripts/mint.sh dev",
+    "docs:check": "bash scripts/mint.sh validate && bash scripts/mint.sh broken-links --check-anchors --check-redirects && bash scripts/mint.sh a11y",
+    "docs:format": "bash scripts/mint.sh format",
+    "docs:links": "bash scripts/mint.sh broken-links --check-anchors --check-external --check-redirects",
     "docs:prose": "cd docs && vale .",
     "check:readme-prose": "vale --config=docs/.vale.ini README.md",
     "docs:openapi": "node docs/scripts/capture-openapi.mjs",
@@ -56,7 +56,7 @@
     "@commitlint/cli": "^21.2.2",
     "@commitlint/config-conventional": "^21.2.2",
     "husky": "^9.1.7",
-    "lint-staged": "^17.4.1",
+    "lint-staged": "^17.5.1",
     "prettier": "^3.9.6",
     "turbo": "^2.10.12"
   },

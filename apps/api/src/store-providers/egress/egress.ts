@@ -61,15 +61,15 @@ export function throughEgress<T>(
   return storage.run(scope, work);
 }
 
-export const egressFetch = (async (input: FetchInput, init?: FetchInit) => {
+export const egressFetch = async (input: FetchInput, init?: FetchInit) => {
   const meter = storage.getStore();
   await meter?.admit();
   meter?.observe();
   try {
-    const response = await undiciFetch(
-      input as Parameters<typeof undiciFetch>[0],
-      { ...init, dispatcher: meter?.dispatcher },
-    );
+    const response = await undiciFetch(input, {
+      ...init,
+      dispatcher: meter?.dispatcher,
+    });
     if (REFUSED_BY_THE_PATH.has(response.status)) {
       meter?.refuse(new Error(`HTTP ${response.status}`));
     }
@@ -78,7 +78,7 @@ export const egressFetch = (async (input: FetchInput, init?: FetchInit) => {
     meter?.refuse(error);
     throw error;
   }
-}) as unknown as typeof fetch;
+};
 
 let directFetch: typeof fetch | undefined;
 
