@@ -1,7 +1,7 @@
 import { formatCheckedPosition } from "@asobeast/shared";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
-import { scoreValue } from "./keyword-cells";
+import { scoreValue } from "./keyword-scores";
 
 const SCORE_COMPARABILITY =
   "Apple App Store and Google Play traffic and volume scores use different public signals and are not directly comparable";

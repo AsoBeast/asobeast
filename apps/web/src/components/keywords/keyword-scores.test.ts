@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { scoreValue } from "./keyword-cells";
+import { scoreValue } from "./keyword-scores";
 
 function keyword(scores: Partial<TrackedKeywordItem>): TrackedKeywordItem {
   return {
