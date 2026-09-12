@@ -5,12 +5,10 @@ import Image from "next/image";
 
 export function AppIconImage({
   src,
-  name,
   size,
   fallback,
 }: {
   src: string;
-  name: string | null;
   size: number;
   fallback: ReactNode;
 }) {
@@ -21,7 +19,7 @@ export function AppIconImage({
   return (
     <Image
       src={src}
-      alt={name ?? "app icon"}
+      alt=""
       width={size}
       height={size}
       style={{ width: size, height: size }}
