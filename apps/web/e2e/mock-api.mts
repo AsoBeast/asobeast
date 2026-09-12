@@ -413,7 +413,7 @@ function storeHealthFor(req: IncomingMessage): StoreHealthReport {
     : STORE_HEALTH_OK;
 }
 
-function auditAi(req: IncomingMessage): AppAuditResult["ai"] {
+function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
   if (!hasCookie(req, "e2e_ai_audit", "1")) return APP_AUDIT.ai;
   return {
     configured: true,
@@ -422,7 +422,7 @@ function auditAi(req: IncomingMessage): AppAuditResult["ai"] {
   };
 }
 
-function actionSummary(req: IncomingMessage): ActionSummary {
+function actionSummaryFor(req: IncomingMessage): ActionSummary {
   if (!hasCookie(req, "e2e_actions_ungenerated", "1")) return ACTION_SUMMARY;
   return { ...ACTION_SUMMARY, open: 0, generatedAt: null };
 }
@@ -721,7 +721,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/audit$/,
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { ...APP_AUDIT, appId: id, ai: auditAi(req) })
+        ? json(res, 200, { ...APP_AUDIT, appId: id, ai: auditAiFor(req) })
         : json(res, 404, errorEnvelope(404, "App not found")),
   },
   {
@@ -910,7 +910,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, req, res) => json(res, 200, actionSummary(req)),
+    handler: (_p, req, res) => json(res, 200, actionSummaryFor(req)),
   },
   {
     method: "GET",

@@ -1,7 +1,7 @@
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
-import { SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
+import { seedCookies, SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
 import { ACTION_SUMMARY } from "./fixtures.mts";
 import {
   NOT_STARTED_ONBOARDING,
@@ -64,20 +64,6 @@ function collectPageErrors(page: Page) {
   return errors;
 }
 
-function seedCookies(
-  context: BrowserContext,
-  cookies: Readonly<Record<string, string>>,
-) {
-  return context.addCookies(
-    Object.entries(cookies).map(([name, value]) => ({
-      name,
-      value,
-      domain: "localhost",
-      path: "/",
-    })),
-  );
-}
-
 for (const [name, path] of SIGNED_IN_ROUTES) {
   test(`${name} hydrates without an uncaught error`, async ({ page }) => {
     const errors = collectPageErrors(page);
@@ -85,6 +71,7 @@ for (const [name, path] of SIGNED_IN_ROUTES) {
     await page.goto(path);
     await page.waitForLoadState("networkidle");
 
+    expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(path);
     expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual([]);
   });
 }
