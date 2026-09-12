@@ -17,7 +17,7 @@ overrides:
 
 allowBuilds:
   "@parcel/watcher": false
-  "@prisma/engines": false
+  "@prisma/engines": true
   "@scarf/scarf": false
   "@sentry/cli": false
   argon2: false
