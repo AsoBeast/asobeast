@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { SCORE_DISPLAY_MAX, toDifficulty100, toVolume } from './scores';
+import { toDifficulty100, toVolume } from './scores';
 
 describe.each([
   ['toVolume', toVolume],
@@ -9,9 +9,9 @@ describe.each([
   it.each([
     [0, 0],
     [4.1, 41],
-    [10, SCORE_DISPLAY_MAX],
-    [10.0001, SCORE_DISPLAY_MAX],
-    [48.2, SCORE_DISPLAY_MAX],
+    [10, 100],
+    [10.0001, 100],
+    [48.2, 100],
     [-1, 0],
   ])('converts a stored score of %s to %s', (score, expected) => {
     expect(toDisplay(score)).toBe(expected);

@@ -1,4 +1,4 @@
-export const SCORE_DISPLAY_MAX = 100;
+const SCORE_DISPLAY_MAX = 100;
 
 function toDisplayScale(score: number): number {
   return Math.min(SCORE_DISPLAY_MAX, Math.max(0, score * 10));
