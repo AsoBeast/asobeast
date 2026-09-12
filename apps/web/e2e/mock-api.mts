@@ -36,6 +36,7 @@ import {
 import type {
   AccountPlan,
   ActionItem,
+  ActionSummary,
   AppAuditResult,
   WorkspaceTeam,
   ActionStatus,
@@ -419,6 +420,11 @@ function auditAi(req: IncomingMessage): AppAuditResult["ai"] {
     model: "gpt-5-mini",
     generatedAt: new Date(Date.now() - 5_000).toISOString(),
   };
+}
+
+function actionSummary(req: IncomingMessage): ActionSummary {
+  if (!hasCookie(req, "e2e_actions_ungenerated", "1")) return ACTION_SUMMARY;
+  return { ...ACTION_SUMMARY, open: 0, generatedAt: null };
 }
 
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
@@ -904,7 +910,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, _req, res) => json(res, 200, ACTION_SUMMARY),
+    handler: (_p, req, res) => json(res, 200, actionSummary(req)),
   },
   {
     method: "GET",

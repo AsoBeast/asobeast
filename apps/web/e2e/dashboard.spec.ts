@@ -84,3 +84,23 @@ test("the summary tiles state the window they measure", async ({ page }) => {
   ).toBeVisible();
   await expect(page.getByText("Open actions", { exact: true })).toBeVisible();
 });
+
+test("the open actions tile says so when no action set has been generated", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e_actions_ungenerated",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+
+  await page.goto("/");
+
+  const tile = page
+    .getByText("Open actions", { exact: true })
+    .locator("xpath=..");
+  await expect(tile).toContainText("—");
+  await expect(tile).toContainText("not generated yet");
+});
