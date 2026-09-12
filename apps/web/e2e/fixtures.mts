@@ -668,12 +668,15 @@ export const APP_2_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_2_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-habit-tracker/512x512bb.png";
+
 export const APP_2: AppListItem = {
   id: "app-2",
   store: "APP_STORE",
   country: "us",
   name: "Habit Tracker",
-  iconUrl: null,
+  iconUrl: APP_2_ICON_URL,
   ratingAvg: 4.2,
   ratingCount: 800,
   capturedAt: utcTimestampDaysAgo(1),
@@ -1003,12 +1006,15 @@ export const APP_BULK_DETAIL: AppDetail = {
   name: "Bulk Keywords App",
 };
 
+export const APP_LONG_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus/512x512bb.png";
+
 export const APP_LONG: AppListItem = {
   id: "app-long",
   store: "APP_STORE",
   country: "us",
   name: LONG_NAME,
-  iconUrl: null,
+  iconUrl: APP_LONG_ICON_URL,
   ratingAvg: 4.9,
   ratingCount: 1234567,
   capturedAt: utcTimestampDaysAgo(0),
@@ -1462,7 +1468,7 @@ export const PORTFOLIO: PortfolioSummary = {
       storeAppId: "987654321",
       country: "us",
       name: "Habit Tracker",
-      iconUrl: null,
+      iconUrl: APP_2_ICON_URL,
       groupId: null,
       groupName: null,
       visibility: { current: 10, delta7d: null },
