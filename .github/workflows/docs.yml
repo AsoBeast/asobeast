@@ -41,16 +41,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
       - name: Validate the documentation build
-        run: pnpm dlx mint@${{ env.MINT_VERSION }} validate
+        run: bash ../scripts/mint.sh validate
       - name: Check internal links
-        run: pnpm dlx mint@${{ env.MINT_VERSION }} broken-links --check-anchors --check-redirects
+        run: bash ../scripts/mint.sh broken-links --check-anchors --check-redirects
       - name: Check accessibility
-        run: pnpm dlx mint@${{ env.MINT_VERSION }} a11y
+        run: bash ../scripts/mint.sh a11y
       - name: Install Vale
         run: |
           curl -sSfL -o "$RUNNER_TEMP/vale.tar.gz" "https://github.com/vale-cli/vale/releases/download/v${VALE_VERSION}/vale_${VALE_VERSION}_Linux_64-bit.tar.gz"
@@ -72,9 +71,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
       - name: Check external links
-        run: pnpm dlx mint@${{ env.MINT_VERSION }} broken-links --check-external
+        run: bash ../scripts/mint.sh broken-links --check-external
