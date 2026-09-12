@@ -33,5 +33,7 @@ export function AppIcon({
 
   if (!src) return placeholder;
 
-  return <AppIconImage src={src} size={size} fallback={placeholder} />;
+  return (
+    <AppIconImage key={src} src={src} size={size} fallback={placeholder} />
+  );
 }

@@ -12,9 +12,9 @@ export function AppIconImage({
   size: number;
   fallback: ReactNode;
 }) {
-  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  if (failedSrc === src) return fallback;
+  if (failed) return fallback;
 
   return (
     <Image
@@ -24,7 +24,7 @@ export function AppIconImage({
       height={size}
       style={{ width: size, height: size }}
       className="shrink-0 rounded-xl object-cover"
-      onError={() => setFailedSrc(src)}
+      onError={() => setFailed(true)}
     />
   );
 }

@@ -66,10 +66,15 @@ test("an icon still in flight stays inside its tile and then renders", async ({
   await expect(image).toHaveJSProperty("naturalWidth", 1);
 });
 
-test("switching to another app retries an icon that already failed", async ({
+test("a failed icon does not stick to the app or to its own url", async ({
   page,
 }) => {
-  await page.route(optimizedIcon(APP_2_ICON_URL), (route) => route.abort());
+  let failing = true;
+  await page.route(optimizedIcon(APP_2_ICON_URL), (route) =>
+    failing
+      ? route.abort()
+      : route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),
+  );
 
   await page.goto("/apps/app-2");
 
@@ -80,6 +85,14 @@ test("switching to another app retries an icon that already failed", async ({
   await page.getByRole("option", { name: /Deep Focus Pomodoro/ }).click();
 
   await expect(page).toHaveURL("/apps/app-long");
+  await expect(trigger.locator("img")).toHaveCount(1);
+
+  failing = false;
+
+  await trigger.click();
+  await page.getByRole("option", { name: /Habit Tracker/ }).click();
+
+  await expect(page).toHaveURL("/apps/app-2");
   await expect(trigger.locator("img")).toHaveCount(1);
   await expect(trigger.locator(PLACEHOLDER)).toHaveCount(0);
 });
