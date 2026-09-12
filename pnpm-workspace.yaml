@@ -12,6 +12,13 @@ overrides:
   next>postcss: ">=8.5.18"
   next>sharp: ">=0.35.0"
 
-ignoredBuiltDependencies:
-  - sharp
-  - unrs-resolver
+allowBuilds:
+  "@prisma/engines": false
+  "@scarf/scarf": false
+  "@sentry/cli": false
+  argon2: false
+  esbuild: false
+  msgpackr-extract: false
+  prisma: false
+  sharp: false
+  unrs-resolver: false
