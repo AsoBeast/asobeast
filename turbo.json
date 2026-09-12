@@ -13,7 +13,7 @@
       "persistent": true,
       "cache": false
     },
-    "lint": { "dependsOn": ["db:generate"] },
+    "lint": { "dependsOn": ["^build", "db:generate"] },
     "test": { "dependsOn": ["^build", "db:generate"] },
     "test:cov": {
       "dependsOn": ["^build", "db:generate"],
