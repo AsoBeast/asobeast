@@ -77,7 +77,7 @@ function detailOf(row: FirstRunStageStatus, now: number): string {
 
 export function firstRunRows(
   status: FirstRunStatus,
-  now: number = Date.now(),
+  now: number,
 ): FirstRunRow[] {
   return status.stages.map((row) => ({
     stage: row.stage,

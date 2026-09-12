@@ -38,7 +38,13 @@ function StatusBadge({ status }: { status: AlertDeliveryItem["status"] }) {
   );
 }
 
-function DeliveryRow({ delivery }: { delivery: AlertDeliveryItem }) {
+function DeliveryRow({
+  delivery,
+  now,
+}: {
+  delivery: AlertDeliveryItem;
+  now: number;
+}) {
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
       <StatusBadge status={delivery.status} />
@@ -52,7 +58,7 @@ function DeliveryRow({ delivery }: { delivery: AlertDeliveryItem }) {
             className="ml-auto text-muted-foreground"
             dateTime={delivery.createdAt}
           >
-            {formatRelativeTime(delivery.createdAt)}
+            {formatRelativeTime(delivery.createdAt, now)}
           </time>
         </TooltipTrigger>
         <TooltipContent>
@@ -71,7 +77,7 @@ export function DeliveriesSection({
   id: string;
 }) {
   const [open, setOpen] = useState(false);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, dataUpdatedAt } = useQuery({
     queryKey: deliveryKeys.list(channel, id),
     queryFn: () =>
       getDeliveries(
@@ -106,7 +112,11 @@ export function DeliveriesSection({
           ) : data && data.length > 0 ? (
             <ul className="divide-y">
               {data.map((delivery) => (
-                <DeliveryRow key={delivery.id} delivery={delivery} />
+                <DeliveryRow
+                  key={delivery.id}
+                  delivery={delivery}
+                  now={dataUpdatedAt}
+                />
               ))}
             </ul>
           ) : (

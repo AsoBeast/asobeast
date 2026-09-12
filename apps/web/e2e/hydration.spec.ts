@@ -150,3 +150,17 @@ test("a stored onboarding checklist hydrates without an uncaught error", async (
     [],
   );
 });
+
+test("a seconds-old audit timestamp renders the same on both sides", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_audit: "1" });
+  const errors = collectPageErrors(page);
+
+  await page.goto("/apps/app-1/audit");
+  await expect(page.getByText(/^Last run /)).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the audit ai card threw: ${errors.join(", ")}`).toEqual([]);
+});

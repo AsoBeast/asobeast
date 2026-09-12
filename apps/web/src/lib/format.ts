@@ -87,7 +87,7 @@ export function formatDateTime(value: string): string {
   return `${dateTimeFormatter.format(new Date(value))} UTC`;
 }
 
-export function formatRelativeTime(value: string, now = Date.now()): string {
+export function formatRelativeTime(value: string, now: number): string {
   const diff = new Date(value).getTime() - now;
   const magnitude = Math.abs(diff);
   for (const [unit, ms] of RELATIVE_UNITS) {

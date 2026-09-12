@@ -41,7 +41,7 @@ function StageRow({ row }: { row: FirstRunRow }) {
 
 export function FirstRunTimeline({ id }: { id: string }) {
   const headingId = useId();
-  const { data } = useQuery(firstRunOptions(id));
+  const { data, dataUpdatedAt } = useQuery(firstRunOptions(id));
 
   if (!data || data.complete) {
     return null;
@@ -56,7 +56,7 @@ export function FirstRunTimeline({ id }: { id: string }) {
       </CardHeader>
       <CardContent>
         <ul aria-labelledby={headingId} className="flex flex-col gap-3">
-          {firstRunRows(data).map((row) => (
+          {firstRunRows(data, dataUpdatedAt).map((row) => (
             <StageRow key={row.stage} row={row} />
           ))}
         </ul>
