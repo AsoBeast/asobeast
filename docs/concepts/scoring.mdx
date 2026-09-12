@@ -28,6 +28,8 @@ Traffic and difficulty are stored on a 0 to 10 scale. asobeast shows them on a 0
 | `GET /apps/{id}/keywords` | `volume`, `opportunity` | 0 to 100 |
 | `GET /apps/{id}/keywords/compare` | `traffic`, `difficulty` | 0 to 10, as stored |
 | `GET /apps/{id}/competitors/analysis` | `gaps` entries `volume`, `difficulty`, `opportunity` | 0 to 100 |
+| `GET /actions`, `GET /apps/{id}/actions` | `keyword.add_uncovered` evidence `traffic`, `difficulty` | 0 to 10, as stored |
+| `GET /actions`, `GET /apps/{id}/actions` | `keyword.add_uncovered` evidence `volume`, `opportunity` | 0 to 100 |
 
 Convert a stored value the same way before showing it, or a row written outside the scoring job can display past 100.
 
