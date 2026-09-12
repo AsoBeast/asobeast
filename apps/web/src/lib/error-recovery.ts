@@ -55,8 +55,9 @@ const BY_STATUS: Record<number, Explanation> = {
 
 function reopens(retryAfterSeconds: number | null): string {
   if (retryAfterSeconds === null) return "Try again in a moment.";
-  const at = new Date(Date.now() + retryAfterSeconds * 1000);
-  return `Try again ${formatRelativeTime(at.toISOString())}.`;
+  const now = Date.now();
+  const at = new Date(now + retryAfterSeconds * 1000);
+  return `Try again ${formatRelativeTime(at.toISOString(), now)}.`;
 }
 
 function refused({

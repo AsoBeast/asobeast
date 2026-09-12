@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { RatingsChart } from "@/components/reviews/RatingsChart";
 import { RatingsHistogramCard } from "@/components/reviews/RatingsHistogramCard";
@@ -43,7 +44,9 @@ export default async function ReviewsPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide flex flex-col gap-6">
         <RatingsChart id={id} />
-        <RatingsHistogramCard id={id} />
+        <Suspense fallback={null}>
+          <RatingsHistogramCard id={id} />
+        </Suspense>
         <ReviewsList id={id} />
       </div>
     </HydrationBoundary>

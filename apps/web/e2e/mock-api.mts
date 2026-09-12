@@ -36,6 +36,8 @@ import {
 import type {
   AccountPlan,
   ActionItem,
+  ActionSummary,
+  AppAuditResult,
   WorkspaceTeam,
   ActionStatus,
   AuthUser,
@@ -411,6 +413,20 @@ function storeHealthFor(req: IncomingMessage): StoreHealthReport {
     : STORE_HEALTH_OK;
 }
 
+function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
+  if (!hasCookie(req, "e2e_ai_audit", "1")) return APP_AUDIT.ai;
+  return {
+    configured: true,
+    model: "gpt-5-mini",
+    generatedAt: new Date(Date.now() - 5_000).toISOString(),
+  };
+}
+
+function actionSummaryFor(req: IncomingMessage): ActionSummary {
+  if (!hasCookie(req, "e2e_actions_ungenerated", "1")) return ACTION_SUMMARY;
+  return { ...ACTION_SUMMARY, open: 0, generatedAt: null };
+}
+
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
   return hasCookie(req, "e2e_run_delayed", "1")
     ? RUN_STATUS_DELAYED
@@ -703,9 +719,9 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/audit$/,
-    handler: ([id], _q, res) =>
+    handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { ...APP_AUDIT, appId: id })
+        ? json(res, 200, { ...APP_AUDIT, appId: id, ai: auditAiFor(req) })
         : json(res, 404, errorEnvelope(404, "App not found")),
   },
   {
@@ -854,6 +870,10 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/ratings-history$/,
     (dataset) => dataset.ratingsHistory,
   ),
+  appRoute(
+    /^\/apps\/([^/]+)\/reviews\/histogram$/,
+    (dataset) => dataset.ratingsHistogram,
+  ),
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/reviews$/,
@@ -894,7 +914,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, _req, res) => json(res, 200, ACTION_SUMMARY),
+    handler: (_p, req, res) => json(res, 200, actionSummaryFor(req)),
   },
   {
     method: "GET",

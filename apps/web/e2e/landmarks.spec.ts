@@ -1,10 +1,6 @@
-import {
-  test as signedOut,
-  type BrowserContext,
-  type Page,
-} from "@playwright/test";
+import { test as signedOut, type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
+import { seedCookies, SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
 
 async function expectOneMainAndOneTopHeading(page: Page, path: string) {
   await page.goto(path);
@@ -30,20 +26,6 @@ async function expectNoSkippedHeadingLevel(page: Page, path: string) {
     return previous !== undefined && level - previous > 1;
   });
   expect(skipped, `heading outline was ${levels.join(", ")}`).toEqual([]);
-}
-
-function seedCookies(
-  context: BrowserContext,
-  cookies: Readonly<Record<string, string>>,
-) {
-  return context.addCookies(
-    Object.entries(cookies).map(([name, value]) => ({
-      name,
-      value,
-      domain: "localhost",
-      path: "/",
-    })),
-  );
 }
 
 for (const [name, path] of SIGNED_IN_ROUTES) {

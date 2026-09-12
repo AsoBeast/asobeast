@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { RATING_STARS, type RatingCounts } from "@asobeast/shared";
 import {
   Card,
@@ -56,9 +56,9 @@ function HistogramBars({
 }
 
 export function RatingsHistogramCard({ id }: { id: string }) {
-  const { data } = useQuery(ratingsHistogramOptions(id));
+  const { data } = useSuspenseQuery(ratingsHistogramOptions(id));
 
-  if (!data?.available || data.counts === null || data.total === null) {
+  if (!data.available || data.counts === null || data.total === null) {
     return null;
   }
 

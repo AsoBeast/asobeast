@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiError, runAiAudit } from "@/lib/api";
 import { Meter } from "@/components/ui/meter";
-import { formatRelativeTime } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 
 type BadgeVariant = "success" | "warning" | "destructive" | "secondary";
 
@@ -191,7 +191,7 @@ function AiAuditCard({
           <span className="text-sm font-medium">AI analysis</span>
           <span className="text-xs text-muted-foreground">
             {ai.generatedAt
-              ? `Last run ${formatRelativeTime(ai.generatedAt)}${
+              ? `Last run ${formatDateTime(ai.generatedAt)}${
                   ai.model ? ` · ${ai.model}` : ""
                 }`
               : "Scores the visual and conversion factors from your listing and creative."}
