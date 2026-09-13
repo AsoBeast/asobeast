@@ -359,6 +359,7 @@ export class KeywordsService {
         where: {
           appId,
           source: 'KEYWORD_FIELD',
+          active: true,
           keywordId: { notIn: keywordIds },
         },
         data: { active: false },
