@@ -24,6 +24,7 @@ interface FindManyArgs {
 interface UpdateManyArgs {
   where: {
     source?: string;
+    active?: boolean;
     keywordId: string | { in: string[] } | { notIn: string[] };
   };
   data: { active?: boolean; source?: string };
@@ -52,10 +53,12 @@ function buildPrisma() {
   const textOf = (keywordId: string) =>
     [...keywordIds].find(([, id]) => id === keywordId)?.[0] ?? '';
 
+  const insertedTexts: string[][] = [];
   const client = {
     rows,
     textOf,
-    $executeRaw: () => Promise.resolve(1),
+    insertedTexts,
+    $executeRaw: jest.fn<Promise<number>, unknown[]>(() => Promise.resolve(1)),
     app: { findFirst: () => Promise.resolve(APP) },
     appSnapshot: { findFirst: () => Promise.resolve(null) },
     keywordMetric: { findFirst: () => Promise.resolve(null) },
@@ -65,6 +68,7 @@ function buildPrisma() {
     },
     keyword: {
       createMany: ({ data }: CreateManyArgs<{ text: string }>) => {
+        insertedTexts.push(data.map(({ text }) => text));
         const created = data.filter(({ text }) => !keywordIds.has(text));
         for (const { text } of created) {
           keywordIds.set(text, `kw${keywordIds.size + 1}`);
@@ -118,6 +122,7 @@ function buildPrisma() {
         const matching = rows.filter(
           (row) =>
             (where.source === undefined || row.source === where.source) &&
+            (where.active === undefined || row.active === where.active) &&
             matchesKeywordId(row.keywordId, where.keywordId),
         );
         for (const row of matching) {
@@ -129,9 +134,15 @@ function buildPrisma() {
     },
   };
 
+  const tx = {
+    ...client,
+    $executeRaw: jest.fn<Promise<number>, unknown[]>(() => Promise.resolve(1)),
+  };
+
   return {
     ...client,
-    withTransaction: <T>(run: (tx: typeof client) => Promise<T>) => run(client),
+    tx,
+    withTransaction: <T>(run: (scoped: typeof tx) => Promise<T>) => run(tx),
   };
 }
 
@@ -195,5 +206,38 @@ describe('KeywordsService.setKeywordField deactivation', () => {
     expect(cleared.tracked).toEqual([]);
     expect(cleared.charactersUsed).toBe(0);
     expect(deactivatedTexts(prisma)).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('KeywordsService.setKeywordField writes', () => {
+  it('locks the app inside the transaction before it writes a tracked keyword', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+    const createMany = jest.spyOn(prisma.trackedKeyword, 'createMany');
+
+    await service.setKeywordField(APP.id, 'a,b');
+
+    const [lock] = prisma.tx.$executeRaw.mock.calls;
+    expect((lock[0] as TemplateStringsArray).join(' ')).toContain(
+      'pg_advisory_xact_lock',
+    );
+    expect(lock).toContain(APP.id);
+    expect(lock).not.toContain(APP.workspaceId);
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
+    expect(prisma.tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      createMany.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('reactivates a phrase a later save restores', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+
+    await service.setKeywordField(APP.id, 'a,b,c');
+    await service.setKeywordField(APP.id, 'a,b');
+    const restored = await service.setKeywordField(APP.id, 'a,b,c');
+
+    expect(restored.tracked.map((item) => item.text)).toEqual(['a', 'b', 'c']);
+    expect(deactivatedTexts(prisma)).toEqual([]);
   });
 });
