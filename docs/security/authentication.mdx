@@ -51,7 +51,7 @@ The same rule applies everywhere a password is chosen: registration, accepting a
 
 The password is stored exactly as it was sent. Nothing is trimmed, so the characters you type at sign in are the characters that were chosen.
 
-Sign in does not apply the rule. An account created before the rule existed can still sign in with its old password and change it to one that meets the rule, and a wrong password is always answered with the same `401`.
+Sign in does not apply the rule. An account created before the rule existed can still sign in with its old password and change it to one that meets the rule, and a wrong password within the length limit is answered with the same `401` whatever it contains.
 
 ## Sessions
 
