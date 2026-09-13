@@ -3,7 +3,7 @@ title: Authentication and accounts
 sidebarTitle: Authentication
 description: "Every request is authenticated. The first account on a fresh instance becomes the owner, and registration closes automatically afterwards."
 icon: lock
-keywords: ["authentication","owner account","registration","session cookie","AUTH_SECRET","entitlement"]
+keywords: ["authentication","owner account","registration","session cookie","AUTH_SECRET","entitlement","password rules"]
 ---
 
 Authentication is always on and cannot be disabled. The same image runs on `localhost` and on a public host, so a disable switch would be a setting somebody forgets to change on the day the instance becomes reachable.
@@ -42,6 +42,16 @@ A hosted instance refuses to start on `shared`, because `BILLING_ENABLED=true` o
 ### Add somebody to your own workspace
 
 Self registration is not how a teammate joins you. Invite them from **Settings**, which sends a link that creates their account inside your workspace as a member. That works on `own` and needs no change to registration at all.
+
+## Password rules
+
+A password is between 10 and 128 characters long and must contain at least 10 characters that are not whitespace. Spaces inside a passphrase are fine, so `correct horse battery` is accepted, while a password made only of spaces, tabs or other whitespace is refused with `400`.
+
+The same rule applies everywhere a password is chosen: registration, accepting an invitation, redeeming a recovery link and changing the password from the account menu.
+
+The password is stored exactly as it was sent. Nothing is trimmed, so the characters you type at sign in are the characters that were chosen.
+
+Sign in does not apply the rule. An account created before the rule existed can still sign in with its old password and change it to one that meets the rule, and a wrong password is always answered with the same `401`.
 
 ## Sessions
 
