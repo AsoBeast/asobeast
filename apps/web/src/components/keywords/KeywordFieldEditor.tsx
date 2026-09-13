@@ -206,8 +206,8 @@ export function KeywordFieldEditor({
           This {KEYWORD_FIELD_CHAR_LIMIT}-character field is private — Apple
           never shows it and it cannot be scraped. Paste exactly what you
           submitted in App Store Connect. It applies to your home market only.
-          The field shows the phrases asobeast tracks, so spacing, casing and
-          order can differ from what you pasted.
+          The field shows the phrases asobeast tracks in the order you pasted
+          them, so only spacing and casing can differ.
         </CardDescription>
       </CardHeader>
       {!homeMarket ? (
