@@ -276,6 +276,21 @@ describe('Keyword writes under concurrency (e2e)', () => {
     expect(result.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
   });
 
+  it('reads a saved keyword field back in the order of the latest save', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () =>
+      keywords.setKeywordField(appId, 'pomodoro,deep work,focus timer'),
+    );
+
+    const saved = await asWorkspace(app, () =>
+      keywords.setKeywordField(appId, FIELD),
+    );
+    const read = await asWorkspace(app, () => keywords.getKeywordField(appId));
+
+    expect(saved.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
+    expect(read.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
+  });
+
   it('reactivates a deactivated keyword when it is added again', async () => {
     const appId = await seedApp();
     await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
