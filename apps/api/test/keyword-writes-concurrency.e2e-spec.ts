@@ -125,6 +125,43 @@ describe('Keyword writes under concurrency (e2e)', () => {
       .map((row) => row.keyword.text)
       .sort();
 
+  const waitForBlockedKeywordInsert = async () => {
+    for (let attempt = 0; attempt < 250; attempt += 1) {
+      const [{ waiting }] = await prisma.$queryRaw<{ waiting: bigint }[]>`
+        SELECT COUNT(*) AS waiting
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND query LIKE 'INSERT INTO %"Keyword"%'
+      `;
+      if (waiting > 0n) return;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    throw new Error('The keyword insert never waited on the held row');
+  };
+
+  it('saves a keyword field while another writer inserts its new phrases in the opposite order', async () => {
+    const appId = await seedApp();
+    const keyword = (text: string) => ({
+      text,
+      store: Store.APP_STORE,
+      country: 'us',
+    });
+    const blocked = await prisma.$transaction(async (tx) => {
+      await tx.keyword.create({ data: keyword('alpha') });
+      const save = asWorkspace(app, () =>
+        keywords.setKeywordField(appId, 'bravo,alpha'),
+      );
+      save.catch(() => undefined);
+      await waitForBlockedKeywordInsert();
+      await tx.keyword.create({ data: keyword('bravo') });
+      return { save };
+    });
+
+    const result = await blocked.save;
+    expect(result.tracked.map((item) => item.text)).toEqual(['bravo', 'alpha']);
+  });
+
   it('adds the same phrase once when two requests arrive together', async () => {
     const appId = await seedApp();
 
@@ -274,6 +311,21 @@ describe('Keyword writes under concurrency (e2e)', () => {
     );
 
     expect(result.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
+  });
+
+  it('reads a saved keyword field back in the order of the latest save', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () =>
+      keywords.setKeywordField(appId, 'pomodoro,deep work,focus timer'),
+    );
+
+    const saved = await asWorkspace(app, () =>
+      keywords.setKeywordField(appId, FIELD),
+    );
+    const read = await asWorkspace(app, () => keywords.getKeywordField(appId));
+
+    expect(saved.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
+    expect(read.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
   });
 
   it('reactivates a deactivated keyword when it is added again', async () => {

@@ -232,10 +232,11 @@ model TrackedKeyword {
   app       App           @relation(fields: [appId], references: [id], onDelete: Cascade)
   keywordId String
   keyword   Keyword       @relation(fields: [keywordId], references: [id], onDelete: Cascade)
-  source    KeywordSource
-  active    Boolean       @default(true)
-  relevance Int?
-  createdAt DateTime      @default(now())
+  source     KeywordSource
+  active     Boolean       @default(true)
+  relevance  Int?
+  fieldOrder Int?
+  createdAt  DateTime      @default(now())
 
   @@id([appId, keywordId])
   @@index([keywordId])

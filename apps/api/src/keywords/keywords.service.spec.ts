@@ -96,6 +96,18 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
   });
 
+  it('creates keyword rows in text order whatever order the snapshot yields them', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    const texts = data.map((row) => row.text);
+    expect(texts.length).toBeGreaterThan(1);
+    expect(texts).toEqual([...texts].sort());
+  });
+
   it('tracks title and summary candidates for google play, not subtitle', async () => {
     const prisma = buildPrisma();
     prisma.app.findUnique.mockResolvedValue({

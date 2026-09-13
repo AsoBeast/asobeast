@@ -137,7 +137,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Read the stored iOS keyword field',
     description:
-      'Returns the normalized phrases tracked from the last submission in the home market, not the string that was submitted, so spacing, casing and order may differ. duplicatesRemoved is always 0 because a read discards nothing.',
+      'Returns the normalized phrases tracked from the last submission in the home market, in the order they were submitted, not the string that was submitted, so spacing and casing may differ. duplicatesRemoved is always 0 because a read discards nothing.',
   })
   keywordField(@Param('id') id: string): Promise<KeywordFieldResult> {
     return this.keywords.getKeywordField(id);

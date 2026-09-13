@@ -37,6 +37,7 @@ import {
   normalizeKeyword,
   queueFor,
   trackedArgs,
+  trackedOrder,
 } from './keywords.support';
 
 const AUTO_TRACK_LIMIT = 15;
@@ -44,6 +45,9 @@ const KEYWORD_FIELD_LOCK = 3_958_261;
 
 const keywordFieldChars = (phrases: string[]): number =>
   countChars(phrases.join(','));
+
+const keywordRows = (texts: string[], store: Store, country: string) =>
+  [...texts].sort().map((text) => ({ text, store, country }));
 
 @Injectable()
 export class KeywordsService {
@@ -291,6 +295,10 @@ export class KeywordsService {
         keyword: { is: { country: app.country } },
       },
       ...trackedArgs(app.id),
+      orderBy: [
+        { fieldOrder: { sort: 'asc', nulls: 'last' } },
+        ...trackedOrder(),
+      ],
     });
     const [snapshotText, volatility] = await Promise.all([
       this.snapshotText(app.id),
@@ -345,11 +353,17 @@ export class KeywordsService {
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       await this.serializeKeywordField(tx, appId);
-      for (const keywordId of keywordIds) {
+      for (const [fieldOrder, keywordId] of keywordIds.entries()) {
         await this.trackKeyword(
           tx,
-          { appId, keywordId, source: 'KEYWORD_FIELD', active: true },
-          { source: 'KEYWORD_FIELD', active: true },
+          {
+            appId,
+            keywordId,
+            source: 'KEYWORD_FIELD',
+            active: true,
+            fieldOrder,
+          },
+          { source: 'KEYWORD_FIELD', active: true, fieldOrder },
         );
       }
       await tx.trackedKeyword.updateMany({
@@ -408,11 +422,11 @@ export class KeywordsService {
       .slice(0, AUTO_TRACK_LIMIT);
 
     await this.prisma.keyword.createMany({
-      data: candidates.map((candidate) => ({
-        text: candidate.text,
-        store: app.store,
-        country: app.country,
-      })),
+      data: keywordRows(
+        candidates.map((candidate) => candidate.text),
+        app.store,
+        app.country,
+      ),
       skipDuplicates: true,
     });
 
@@ -458,7 +472,7 @@ export class KeywordsService {
     country: string,
   ): Promise<string[]> {
     await this.prisma.keyword.createMany({
-      data: texts.map((text) => ({ text, store, country })),
+      data: keywordRows(texts, store, country),
       skipDuplicates: true,
     });
 
