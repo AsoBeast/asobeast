@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
-import { PASSWORD_MIN_LENGTH, PASSWORD_RULE } from "@asobeast/shared";
+import { PASSWORD_RULE } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, acceptInvite } from "@/lib/api";
+import { passwordError } from "@/lib/password";
 import { invalidateAuth } from "@/lib/queries";
 
 export function AcceptInviteForm() {
@@ -50,8 +51,9 @@ export function AcceptInviteForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (password.length < PASSWORD_MIN_LENGTH) {
-      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
+    const problem = passwordError(password);
+    if (problem) {
+      setError(problem);
       return;
     }
     mutation.mutate();
@@ -112,7 +114,9 @@ export function AcceptInviteForm() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 aria-invalid={error !== null}
-                aria-describedby="password-rule"
+                aria-describedby={
+                  error ? "password-rule password-error" : "password-rule"
+                }
                 required
               />
               <p
@@ -123,7 +127,9 @@ export function AcceptInviteForm() {
               </p>
             </div>
             {error ? (
-              <p className="text-body text-destructive">{error}</p>
+              <p id="password-error" className="text-body text-destructive">
+                {error}
+              </p>
             ) : null}
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

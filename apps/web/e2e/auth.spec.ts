@@ -1026,8 +1026,28 @@ test("recovery refuses a password shorter than the account rules allow", async (
   await page.getByLabel("New password").fill("short");
   await page.getByRole("button", { name: "Set new password" }).click();
 
-  await expect(
-    page.getByText("Password must be at least 10 characters."),
-  ).toBeVisible();
+  await expect(page.locator("#password-error")).toHaveText(
+    "Password must be between 10 and 128 characters.",
+  );
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    `${PASSWORD_RULE} Password must be between 10 and 128 characters.`,
+  );
+  expect(attempts).toBe(0);
+});
+
+test("recovery refuses a password that is only whitespace before sending it", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/api/backend/auth/password/reset", async (route) => {
+    attempts += 1;
+    await route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/reset-password?token=recovery-token-value");
+  await page.getByLabel("New password").fill(" ".repeat(10));
+  await page.getByRole("button", { name: "Set new password" }).click();
+
+  await expect(page.locator("#password-error")).toHaveText(PASSWORD_RULE);
   expect(attempts).toBe(0);
 });
