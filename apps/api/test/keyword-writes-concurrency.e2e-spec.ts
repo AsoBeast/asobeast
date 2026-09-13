@@ -142,6 +142,14 @@ describe('Keyword writes under concurrency (e2e)', () => {
       keywords.getKeywordField(appId),
     );
     expect(stored.charactersUsed).toBeLessThanOrEqual(stored.charactersLimit);
+
+    const reported = settled
+      .filter((entry) => entry.status === 'fulfilled')
+      .map((entry) => entry.value.tracked.map((item) => item.text).sort());
+    for (const texts of reported) {
+      expect([ALPHA_SET, DELTA_SET]).toContainEqual(texts);
+    }
+    expect(reported).toContainEqual(active);
   });
 
   it('leaves a manual keyword active when a keyword field save omits it', async () => {
