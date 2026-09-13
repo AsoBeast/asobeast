@@ -38,12 +38,13 @@ The field is one endpoint pair on the app, and both answer the same `KeywordFiel
 | Submit the field | `PUT /apps/{id}/keyword-field` |
 | Read the stored field | `GET /apps/{id}/keyword-field` |
 
-Five things the schema cannot tell you.
+Six things the schema cannot tell you.
 
 - **The value is the tracked set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing and casing can differ from what you submitted, a repeated phrase stays where it first appeared, and the character count is the count of the normalized set. The phrases keep the order of the latest submission.
 - **A save is held to the 100 character limit.** The limit is measured on the normalized set, the same count `charactersUsed` reports, so spacing and duplicates in the submitted text do not count against it. A save whose normalized set runs past 100 characters answers 400 and changes nothing.
 - **It is home market only.** The read takes no country and scopes itself to `app.country`, because the keyword field belongs to the app rather than to a storefront. See [Countries and markets](/concepts/countries).
 - **`duplicatesRemoved` is 0 on a read.** It reports what the last submission discarded, and a read submits nothing.
+- **A save never untracks a keyword something else tracks.** A phrase already tracked from the title, the subtitle, the short description or a manual add joins the field without losing that source, and the API reports it as `KEYWORD_FIELD` while it is in the field. A later save that leaves it out only takes it out of the field, so it stays tracked under its own source. A phrase that only the field tracks is deactivated when a save leaves it out. Adding such a phrase manually or reactivating it makes it a manual keyword, and a snapshot that finds it in the title, subtitle or short description gives it that source.
 - **The last save wins.** Saves to one app are written one at a time, so two saves that overlap never merge: the field holds the phrases of whichever save was written last. Each save answers with the field as it was stored when that save finished, so a save that overlapped another may be answered with the other save's phrases.
 
 An app that has never had a keyword field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A Google Play app refuses both operations with 400.

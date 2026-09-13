@@ -11,6 +11,7 @@ interface TrackedRow {
   keywordId: string;
   source: string;
   active: boolean;
+  fieldOrder: number | null;
 }
 
 interface CreateManyArgs<T> {
@@ -18,17 +19,21 @@ interface CreateManyArgs<T> {
 }
 
 interface FindManyArgs {
-  where: { active?: boolean };
+  where: { active?: boolean; fieldOrder?: { not: null } };
 }
 
 interface UpdateManyArgs {
   where: {
     source?: string;
     active?: boolean;
+    fieldOrder?: { not: null };
     keywordId: string | { in: string[] } | { notIn: string[] };
   };
-  data: { active?: boolean; source?: string };
+  data: { active?: boolean; source?: string; fieldOrder?: number | null };
 }
+
+const matchesMembership = (row: TrackedRow, filter?: { not: null }) =>
+  filter === undefined || row.fieldOrder !== null;
 
 const matchesKeywordId = (
   keywordId: string,
@@ -83,16 +88,21 @@ function buildPrisma() {
         ),
     },
     trackedKeyword: {
-      createMany: ({ data }: CreateManyArgs<TrackedRow>) => {
+      createMany: ({
+        data,
+      }: CreateManyArgs<
+        Omit<TrackedRow, 'fieldOrder'> & { fieldOrder?: number }
+      >) => {
         const created = data.filter(
           (row) =>
             !rows.some((existing) => existing.keywordId === row.keywordId),
         );
         rows.push(
-          ...created.map(({ keywordId, source, active }) => ({
+          ...created.map(({ keywordId, source, active, fieldOrder }) => ({
             keywordId,
             source,
             active,
+            fieldOrder: fieldOrder ?? null,
           })),
         );
         return Promise.resolve({ count: created.length });
@@ -100,13 +110,14 @@ function buildPrisma() {
       findMany: ({ where }: FindManyArgs) => {
         const matching = rows.filter(
           (row) =>
-            row.source === 'KEYWORD_FIELD' &&
+            matchesMembership(row, where.fieldOrder) &&
             (where.active === undefined || row.active === where.active),
         );
         return Promise.resolve(
           matching.map((row) => ({
             keywordId: row.keywordId,
             source: row.source,
+            fieldOrder: row.fieldOrder,
             active: row.active,
             relevance: null,
             keyword: {
@@ -123,11 +134,13 @@ function buildPrisma() {
           (row) =>
             (where.source === undefined || row.source === where.source) &&
             (where.active === undefined || row.active === where.active) &&
+            matchesMembership(row, where.fieldOrder) &&
             matchesKeywordId(row.keywordId, where.keywordId),
         );
         for (const row of matching) {
           row.active = data.active ?? row.active;
           row.source = data.source ?? row.source;
+          if ('fieldOrder' in data) row.fieldOrder = data.fieldOrder ?? null;
         }
         return Promise.resolve({ count: matching.length });
       },

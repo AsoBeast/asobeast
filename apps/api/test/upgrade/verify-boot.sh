@@ -108,6 +108,7 @@ assert_read "/apps" '[.[] | .id] | index("app_ios") != null and index("app_play"
 assert_read "/apps/app_ios" '.competitors | map(.id) | index("app_rival") != null'
 assert_read "/apps/app_ios/keywords" '[.[] | .text] | index("workout tracker") != null'
 assert_read "/apps/app_ios/keywords?country=gb" '[.[] | .country] | all(. == "gb")'
+assert_read "/apps/app_ios/keyword-field" '[.tracked[].text] == ["workout tracker"]'
 assert_read "/apps/app_ios/rankings" '.series | length > 0'
 assert_read "/apps/app_ios/reviews" '[.reviews[].reviewId] | index("r-2") != null'
 assert_read "/apps/app_ios/changes" '[.events[].field] | index("description") != null'

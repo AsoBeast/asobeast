@@ -432,14 +432,115 @@ describe('KeywordsController (e2e)', () => {
       'habit',
     ]);
 
-    const deactivated = await prisma.trackedKeyword.findMany({
-      where: { appId: id, source: 'KEYWORD_FIELD', active: false },
-      include: { keyword: true },
+    const dropped = await prisma.trackedKeyword.findMany({
+      where: { appId: id, keyword: { text: { in: ['streak', 'tracker'] } } },
+      orderBy: { keyword: { text: 'asc' } },
+      select: {
+        source: true,
+        active: true,
+        fieldOrder: true,
+        keyword: { select: { text: true } },
+      },
     });
-    expect(deactivated.map((row) => row.keyword.text).sort()).toEqual([
-      'streak',
-      'tracker',
+    expect(dropped).toEqual([
+      {
+        source: 'SUBTITLE',
+        active: true,
+        fieldOrder: null,
+        keyword: { text: 'streak' },
+      },
+      {
+        source: 'TITLE',
+        active: true,
+        fieldOrder: null,
+        keyword: { text: 'tracker' },
+      },
     ]);
+  });
+
+  const putKeywordField = (id: string, text: string) =>
+    api.put(`/apps/${id}/keyword-field`).send({ text }).expect(200);
+
+  const trackedItem = async (id: string, text: string) =>
+    (
+      (await api.get(`/apps/${id}/keywords`).expect(200))
+        .body as TrackedKeywordItem[]
+    ).find((item) => item.text === text);
+
+  const fieldTexts = async (id: string) =>
+    (
+      (await api.get(`/apps/${id}/keyword-field`).expect(200))
+        .body as KeywordFieldResult
+    ).tracked.map((item) => item.text);
+
+  it('keeps a title keyword tracked after a keyword field save leaves it out', async () => {
+    const id = await importApp();
+    await putKeywordField(id, 'habit,goals');
+    expect(await trackedItem(id, 'habit')).toMatchObject({
+      active: true,
+      source: 'KEYWORD_FIELD',
+    });
+
+    await putKeywordField(id, 'goals');
+
+    expect(await fieldTexts(id)).toEqual(['goals']);
+    expect(await trackedItem(id, 'habit')).toMatchObject({
+      active: true,
+      source: 'TITLE',
+    });
+  });
+
+  it('keeps a phrase added manually after the keyword field dropped it', async () => {
+    const id = await importApp();
+    await putKeywordField(id, 'goals,focus');
+    await putKeywordField(id, 'focus');
+
+    await api
+      .post(`/apps/${id}/keywords`)
+      .send({ keywords: ['goals'] })
+      .expect(201);
+
+    expect(await fieldTexts(id)).toEqual(['focus']);
+    await putKeywordField(id, 'deep work');
+    expect(await trackedItem(id, 'goals')).toMatchObject({
+      active: true,
+      source: 'MANUAL',
+    });
+  });
+
+  it('keeps a dropped phrase reactivated by hand out of the keyword field', async () => {
+    const id = await importApp();
+    await putKeywordField(id, 'goals,focus');
+    await putKeywordField(id, 'focus');
+    const goals = await trackedItem(id, 'goals');
+
+    await api
+      .patch(`/apps/${id}/keywords/${goals?.keywordId}`)
+      .send({ active: true })
+      .expect(200);
+
+    expect(await fieldTexts(id)).toEqual(['focus']);
+    await putKeywordField(id, 'deep work');
+    expect(await trackedItem(id, 'goals')).toMatchObject({
+      active: true,
+      source: 'MANUAL',
+    });
+  });
+
+  it('keeps a keyword field phrase tracked once a refreshed title contains it', async () => {
+    const id = await importApp();
+    await prisma.trackedKeyword.deleteMany({
+      where: { appId: id, keyword: { text: 'habit' } },
+    });
+    await putKeywordField(id, 'habit,goals');
+
+    await api.post(`/apps/${id}/refresh`).expect(200);
+    await putKeywordField(id, 'goals');
+
+    expect(await trackedItem(id, 'habit')).toMatchObject({
+      active: true,
+      source: 'TITLE',
+    });
   });
 
   it('reads back the stored ios keyword field with the same accounting', async () => {

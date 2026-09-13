@@ -11,6 +11,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { extractCandidates } from './extraction';
+import { reportedSource } from './keyword-field-membership';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { mineReviewPhrases } from './review-mining';
 import { seasonalSuggestions } from './seasonal-suggestions';
@@ -239,10 +240,17 @@ export class KeywordSuggestionService {
   private async searchSeeds(appId: string): Promise<string[]> {
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: { appId, active: true },
-      select: { source: true, keyword: { select: { text: true } } },
+      select: {
+        source: true,
+        fieldOrder: true,
+        keyword: { select: { text: true } },
+      },
     });
     return tracked
-      .sort((a, b) => SOURCE_WEIGHT[b.source] - SOURCE_WEIGHT[a.source])
+      .sort(
+        (a, b) =>
+          SOURCE_WEIGHT[reportedSource(b)] - SOURCE_WEIGHT[reportedSource(a)],
+      )
       .slice(0, SEARCH_SEED_LIMIT)
       .map((row) => row.keyword.text);
   }

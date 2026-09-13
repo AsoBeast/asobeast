@@ -11,12 +11,14 @@ import {
   toDifficulty100,
   toVolume,
 } from '../scoring/formulas';
+import { reportedSource } from './keyword-field-membership';
 
 const DELTA_WINDOW_DAYS = 7;
 
 export interface TrackedKeywordRow {
   keywordId: string;
   source: TrackedKeywordItem['source'];
+  fieldOrder: number | null;
   active: boolean;
   relevance: number | null;
   keyword: {
@@ -109,14 +111,14 @@ export function toTrackedKeywordItem(
   const volume = traffic === null ? null : toVolume(traffic);
   const difficulty100 =
     difficulty === null ? null : toDifficulty100(difficulty);
+  const source = reportedSource(row);
   const relevance =
-    row.relevance ??
-    defaultRelevance(row.source, row.keyword.text, snapshotText);
+    row.relevance ?? defaultRelevance(source, row.keyword.text, snapshotText);
   return {
     keywordId: row.keywordId,
     text: row.keyword.text,
     country: row.keyword.country,
-    source: row.source,
+    source,
     active: row.active,
     latestPosition,
     latestDepth,
