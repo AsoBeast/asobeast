@@ -13,6 +13,12 @@ describe('normalizeText', () => {
     expect(normalizeText('Kayıt İzmir')).toBe('kayıt izmir');
   });
 
+  it('lowercases a dotted I written with a combining dot to one letter', () => {
+    expect(normalizeText('I\u0307stanbul')).toBe('istanbul');
+    expect(normalizeText('I\u0307ZMI\u0307R')).toBe('izmir');
+    expect(normalizeText('i\u0307stanbul')).toBe('istanbul');
+  });
+
   it('keeps the dotless i and accented letters as they are', () => {
     expect(normalizeText('ILIK ılık')).toBe('ilik ılık');
     expect(normalizeText('Café Crème')).toBe('café crème');
