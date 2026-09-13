@@ -1870,7 +1870,7 @@
     },
     "/apps/{id}/keyword-field": {
       "get": {
-        "description": "Returns the normalized phrases tracked from the last submission in the home market, not the string that was submitted, so spacing, casing and order may differ. duplicatesRemoved is always 0 because a read discards nothing.",
+        "description": "Returns the normalized phrases tracked from the last submission in the home market, in the order they were submitted, not the string that was submitted, so spacing and casing may differ. duplicatesRemoved is always 0 because a read discards nothing.",
         "operationId": "KeywordsController_keywordField",
         "parameters": [
           {
