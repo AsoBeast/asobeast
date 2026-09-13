@@ -1,23 +1,17 @@
 import { applyDecorators } from '@nestjs/common';
 import { ApiProperty } from '@nestjs/swagger';
 import {
+  isPasswordAllowed,
+  isPasswordLengthAllowed,
   PASSWORD_MAX_LENGTH,
   PASSWORD_MIN_LENGTH,
   PASSWORD_RULE,
 } from '@asobeast/shared';
 import { IsString, MaxLength, MinLength, ValidateBy } from 'class-validator';
 
-const WHITESPACE = /\s/g;
-
-function characterCount(text: string): number {
-  return [...text].length;
-}
-
-function hasEnoughNonWhitespaceCharacters(value: unknown): boolean {
-  if (typeof value !== 'string') return true;
-  const length = characterCount(value);
-  if (length < PASSWORD_MIN_LENGTH || length > PASSWORD_MAX_LENGTH) return true;
-  return characterCount(value.replace(WHITESPACE, '')) >= PASSWORD_MIN_LENGTH;
+function meetsRuleWhenLengthIsAllowed(value: unknown): boolean {
+  if (typeof value !== 'string' || !isPasswordLengthAllowed(value)) return true;
+  return isPasswordAllowed(value);
 }
 
 export function IsPassword(): PropertyDecorator {
@@ -33,7 +27,7 @@ export function IsPassword(): PropertyDecorator {
     ValidateBy({
       name: 'isPassword',
       validator: {
-        validate: hasEnoughNonWhitespaceCharacters,
+        validate: meetsRuleWhenLengthIsAllowed,
         defaultMessage: () => PASSWORD_RULE,
       },
     }),
