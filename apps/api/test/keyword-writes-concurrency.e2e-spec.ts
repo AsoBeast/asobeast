@@ -344,14 +344,19 @@ describe('Keyword writes under concurrency (e2e)', () => {
     ]);
   });
 
-  it('takes a keyword over for the keyword field when it is tracked elsewhere', async () => {
+  it('adds a keyword tracked elsewhere to the keyword field without taking its source', async () => {
     const appId = await seedApp();
     await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
 
-    await asWorkspace(app, () => keywords.setKeywordField(appId, PHRASE));
+    const saved = await asWorkspace(app, () =>
+      keywords.setKeywordField(appId, PHRASE),
+    );
 
+    expect(saved.tracked).toEqual([
+      expect.objectContaining({ text: PHRASE, source: 'KEYWORD_FIELD' }),
+    ]);
     expect(await trackedRows(appId)).toEqual([
-      expect.objectContaining({ active: true, source: 'KEYWORD_FIELD' }),
+      expect.objectContaining({ active: true, source: 'MANUAL' }),
     ]);
   });
 });

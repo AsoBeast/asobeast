@@ -21,6 +21,7 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
+import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
 import {
   isGap,
@@ -224,6 +225,7 @@ export class KeywordsService {
           { active: true },
         );
       }
+      await this.claimForManual(tx, appId, keywordIds);
     });
 
     for (const keywordId of keywordIds) {
@@ -245,12 +247,13 @@ export class KeywordsService {
       ...('relevance' in data ? { relevance: data.relevance } : {}),
     };
     if (data.active === true) {
-      await this.quota.admitKeywordMarkets((tx) =>
-        tx.trackedKeyword.update({
+      await this.quota.admitKeywordMarkets(async (tx) => {
+        await tx.trackedKeyword.update({
           where: { appId_keywordId: { appId, keywordId } },
           data: update,
-        }),
-      );
+        });
+        await this.claimForManual(tx, appId, [keywordId]);
+      });
     } else {
       await this.prisma.trackedKeyword.update({
         where: { appId_keywordId: { appId, keywordId } },
@@ -290,15 +293,12 @@ export class KeywordsService {
     const rows = await this.prisma.trackedKeyword.findMany({
       where: {
         appId: app.id,
-        source: 'KEYWORD_FIELD',
+        ...inKeywordField,
         active: true,
         keyword: { is: { country: app.country } },
       },
       ...trackedArgs(app.id),
-      orderBy: [
-        { fieldOrder: { sort: 'asc', nulls: 'last' } },
-        ...trackedOrder(),
-      ],
+      orderBy: [{ fieldOrder: 'asc' }, ...trackedOrder()],
     });
     const [snapshotText, volatility] = await Promise.all([
       this.snapshotText(app.id),
@@ -363,17 +363,21 @@ export class KeywordsService {
             active: true,
             fieldOrder,
           },
-          { source: 'KEYWORD_FIELD', active: true, fieldOrder },
+          { active: true, fieldOrder },
         );
       }
+      const dropped = {
+        appId,
+        ...inKeywordField,
+        keywordId: { notIn: keywordIds },
+      };
       await tx.trackedKeyword.updateMany({
-        where: {
-          appId,
-          source: 'KEYWORD_FIELD',
-          active: true,
-          keywordId: { notIn: keywordIds },
-        },
-        data: { active: false },
+        where: { ...dropped, source: 'KEYWORD_FIELD' },
+        data: { active: false, fieldOrder: null },
+      });
+      await tx.trackedKeyword.updateMany({
+        where: dropped,
+        data: { fieldOrder: null },
       });
     });
 
@@ -460,6 +464,7 @@ export class KeywordsService {
       data: tracked,
       skipDuplicates: true,
     });
+    await this.claimForSnapshot(app.id, tracked);
 
     for (const row of tracked) {
       await this.enqueueFirstScore(row.keywordId, app);
@@ -487,6 +492,37 @@ export class KeywordsService {
     return texts.flatMap((text) => {
       const id = idByText.get(text);
       return id ? [id] : [];
+    });
+  }
+
+  private async claimForSnapshot(
+    appId: string,
+    tracked: { keywordId: string; source: KeywordSource }[],
+  ): Promise<void> {
+    for (const source of new Set(tracked.map((row) => row.source))) {
+      await this.prisma.trackedKeyword.updateMany({
+        where: {
+          appId,
+          source: 'KEYWORD_FIELD',
+          keywordId: {
+            in: tracked
+              .filter((row) => row.source === source)
+              .map((row) => row.keywordId),
+          },
+        },
+        data: { source },
+      });
+    }
+  }
+
+  private claimForManual(
+    client: Prisma.TransactionClient,
+    appId: string,
+    keywordIds: string[],
+  ): Promise<Prisma.BatchPayload> {
+    return client.trackedKeyword.updateMany({
+      where: { appId, keywordId: { in: keywordIds }, source: 'KEYWORD_FIELD' },
+      data: { source: 'MANUAL' },
     });
   }
 

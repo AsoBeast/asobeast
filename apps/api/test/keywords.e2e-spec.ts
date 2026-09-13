@@ -432,13 +432,29 @@ describe('KeywordsController (e2e)', () => {
       'habit',
     ]);
 
-    const deactivated = await prisma.trackedKeyword.findMany({
-      where: { appId: id, source: 'KEYWORD_FIELD', active: false },
-      include: { keyword: true },
+    const dropped = await prisma.trackedKeyword.findMany({
+      where: { appId: id, keyword: { text: { in: ['streak', 'tracker'] } } },
+      orderBy: { keyword: { text: 'asc' } },
+      select: {
+        source: true,
+        active: true,
+        fieldOrder: true,
+        keyword: { select: { text: true } },
+      },
     });
-    expect(deactivated.map((row) => row.keyword.text).sort()).toEqual([
-      'streak',
-      'tracker',
+    expect(dropped).toEqual([
+      {
+        source: 'SUBTITLE',
+        active: true,
+        fieldOrder: null,
+        keyword: { text: 'streak' },
+      },
+      {
+        source: 'TITLE',
+        active: true,
+        fieldOrder: null,
+        keyword: { text: 'tracker' },
+      },
     ]);
   });
 

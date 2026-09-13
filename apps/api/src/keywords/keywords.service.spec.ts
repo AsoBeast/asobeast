@@ -71,6 +71,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
             },
           ]
         >(),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
   };

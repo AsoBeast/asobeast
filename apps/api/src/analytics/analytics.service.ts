@@ -14,6 +14,7 @@ import {
   VisibilityHistory,
   VisibilitySummary,
 } from '@asobeast/shared';
+import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   computeOpportunity,
@@ -62,7 +63,7 @@ const rowOpportunity = (
   const difficulty = metric?.difficulty ?? null;
   const relevance =
     row.relevance ??
-    defaultRelevance(row.source, row.keyword.text, snapshotText);
+    defaultRelevance(reportedSource(row), row.keyword.text, snapshotText);
   return computeOpportunity(
     traffic === null ? null : toVolume(traffic),
     difficulty === null ? null : toDifficulty100(difficulty),

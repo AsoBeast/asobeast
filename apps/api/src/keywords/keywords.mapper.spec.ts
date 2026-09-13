@@ -5,6 +5,7 @@ const row = (
 ): TrackedKeywordRow => ({
   keywordId: 'k1',
   source: 'COMPETITOR',
+  fieldOrder: null,
   active: true,
   relevance: null,
   keyword: {
@@ -33,6 +34,23 @@ describe('toTrackedKeywordItem', () => {
     expect(item.relevance).toBe(60);
     expect(item.opportunity).toBeCloseTo(80 * 0.4 + 60 * 0.3 + 60 * 0.3, 1);
     expect(item.latestDepth).toBeNull();
+  });
+
+  it('reports a keyword field member as the keyword field whatever else tracks it', () => {
+    const member = toTrackedKeywordItem(
+      row({ source: 'MANUAL', fieldOrder: 0 }),
+      'daily habit tracker',
+    );
+    const field = toTrackedKeywordItem(
+      row({ source: 'KEYWORD_FIELD' }),
+      'daily habit tracker',
+    );
+
+    expect(member.source).toBe('KEYWORD_FIELD');
+    expect(member.relevance).toBe(field.relevance);
+    expect(toTrackedKeywordItem(row({ source: 'MANUAL' })).source).toBe(
+      'MANUAL',
+    );
   });
 
   it('lets a manual relevance override beat the default', () => {
