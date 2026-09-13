@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -49,8 +50,8 @@ export function AcceptInviteForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (password.length < 10) {
-      setError("Password must be at least 10 characters.");
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
     mutation.mutate();
@@ -111,10 +112,14 @@ export function AcceptInviteForm() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 aria-invalid={error !== null}
+                aria-describedby="password-rule"
                 required
               />
-              <p className="text-caption text-muted-foreground">
-                At least 10 characters.
+              <p
+                id="password-rule"
+                className="text-caption text-muted-foreground"
+              >
+                {PASSWORD_RULE}
               </p>
             </div>
             {error ? (

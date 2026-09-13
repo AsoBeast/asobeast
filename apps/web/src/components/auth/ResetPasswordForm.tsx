@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE } from "@asobeast/shared";
 import { ApiError, resetPassword } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +18,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const MIN_PASSWORD = 10;
 
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
@@ -39,8 +38,8 @@ export function ResetPasswordForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (password.length < MIN_PASSWORD) {
-      setError(`Password must be at least ${MIN_PASSWORD} characters.`);
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
     mutation.mutate();
@@ -101,10 +100,11 @@ export function ResetPasswordForm() {
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   aria-invalid={error !== null}
+                  aria-describedby="password-rule"
                   required
                 />
-                <p className="text-xs text-muted-foreground">
-                  At least {MIN_PASSWORD} characters.
+                <p id="password-rule" className="text-xs text-muted-foreground">
+                  {PASSWORD_RULE}
                 </p>
               </div>
               {error ? (

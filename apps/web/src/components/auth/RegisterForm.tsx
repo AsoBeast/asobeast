@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE } from "@asobeast/shared";
 import { ApiError, register } from "@/lib/api";
 import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -48,8 +49,8 @@ export function RegisterForm() {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (password.length < 10) {
-      setError("Password must be at least 10 characters.");
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      setError(`Password must be at least ${PASSWORD_MIN_LENGTH} characters.`);
       return;
     }
     mutation.mutate();
@@ -101,10 +102,11 @@ export function RegisterForm() {
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 aria-invalid={error !== null}
+                aria-describedby="password-rule"
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                At least 10 characters.
+              <p id="password-rule" className="text-xs text-muted-foreground">
+                {PASSWORD_RULE}
               </p>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}

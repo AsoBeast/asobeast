@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "./reporting.mts";
 import {
+  PASSWORD_RULE,
   PLAN_LIMITS,
   SESSION_COOKIE,
   UPGRADE_PATH,
@@ -962,6 +963,54 @@ test("a recovered account signs in with the password it just chose", async ({
   await page.getByRole("button", { name: "Sign in" }).click();
 
   await expect(page).toHaveURL(/localhost:3000\/$/);
+});
+
+test("every form that sets a password states the rule beside the field", async ({
+  page,
+}) => {
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: true,
+    setupRequired: true,
+    authenticated: false,
+  });
+  await page.context().addCookies([
+    {
+      name: "e2e_setup_required",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/register");
+  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+
+  await page.goto("/invite?token=invitation-token-value");
+  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+
+  await page.goto("/reset-password?token=recovery-token-value");
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+});
+
+test("the change password dialog states the rule beside the new password", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeMe(page, TRIAL_USER);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Change password" }).click();
+
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
 });
 
 test("recovery refuses a password shorter than the account rules allow", async ({

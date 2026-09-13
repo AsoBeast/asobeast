@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { PASSWORD_MIN_LENGTH, PASSWORD_RULE } from "@asobeast/shared";
 import { toast } from "sonner";
 import { ApiError, changePassword } from "@/lib/api";
 import { invalidateAuth } from "@/lib/queries";
@@ -56,8 +57,10 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (next.length < 10) {
-      setError("New password must be at least 10 characters.");
+    if (next.length < PASSWORD_MIN_LENGTH) {
+      setError(
+        `New password must be at least ${PASSWORD_MIN_LENGTH} characters.`,
+      );
       return;
     }
     mutation.mutate();
@@ -95,8 +98,15 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 value={next}
                 onChange={(event) => setNext(event.target.value)}
                 aria-invalid={error !== null}
+                aria-describedby="next-password-rule"
                 required
               />
+              <p
+                id="next-password-rule"
+                className="text-xs text-muted-foreground"
+              >
+                {PASSWORD_RULE}
+              </p>
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
           </DialogBody>
