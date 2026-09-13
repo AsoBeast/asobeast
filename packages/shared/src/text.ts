@@ -134,8 +134,11 @@ export const STOPWORDS: ReadonlySet<string> = new Set([
   'download',
 ]);
 
+const DOTTED_CAPITAL_I = '\u0130';
+
 export function normalizeText(input: string): string {
   return input
+    .replaceAll(DOTTED_CAPITAL_I, 'i')
     .toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
     .trim()
