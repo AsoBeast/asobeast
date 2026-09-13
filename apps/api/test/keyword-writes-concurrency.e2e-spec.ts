@@ -13,6 +13,10 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const PHRASE = 'focus timer';
 const FIELD = 'focus timer,deep work,pomodoro';
+const phraseSet = (word: string) =>
+  Array.from({ length: 9 }, (_, index) => `${word} ${index}`);
+const ALPHA_SET = phraseSet('alpha');
+const DELTA_SET = phraseSet('delta');
 
 describe('Keyword writes under concurrency (e2e)', () => {
   let app: INestApplication<App>;
@@ -114,6 +118,30 @@ describe('Keyword writes under concurrency (e2e)', () => {
     expect(rows).toHaveLength(FIELD.split(',').length);
     expect(rows.every((row) => row.active)).toBe(true);
     expect(rows.every((row) => row.source === 'KEYWORD_FIELD')).toBe(true);
+  });
+
+  it('keeps only one of two keyword fields saved at the same time', async () => {
+    const appId = await seedApp();
+
+    const settled = await asWorkspace(app, () =>
+      Promise.allSettled([
+        keywords.setKeywordField(appId, ALPHA_SET.join(',')),
+        keywords.setKeywordField(appId, DELTA_SET.join(',')),
+      ]),
+    );
+
+    expect(settled.filter((entry) => entry.status === 'rejected')).toEqual([]);
+
+    const active = (await trackedRows(appId))
+      .filter((row) => row.active)
+      .map((row) => row.keyword.text)
+      .sort();
+    expect([ALPHA_SET, DELTA_SET]).toContainEqual(active);
+
+    const stored = await asWorkspace(app, () =>
+      keywords.getKeywordField(appId),
+    );
+    expect(stored.charactersUsed).toBeLessThanOrEqual(stored.charactersLimit);
   });
 
   it('keeps the keyword field in the order it was typed', async () => {
