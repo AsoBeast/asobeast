@@ -144,7 +144,11 @@ export class KeywordsController {
   }
 
   @Put('keyword-field')
-  @ApiOperation({ summary: 'Set the manual iOS keyword field' })
+  @ApiOperation({
+    summary: 'Set the manual iOS keyword field',
+    description:
+      'Replaces the field with the normalized, deduplicated phrases of text and returns the stored field. Answers 400 when those phrases joined with commas run past 100 characters. Saves to one app are written one at a time, so the last save wins.',
+  })
   setKeywordField(
     @Param('id') id: string,
     @Body() dto: KeywordFieldDto,
