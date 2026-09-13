@@ -125,6 +125,44 @@ describe('Keyword writes under concurrency (e2e)', () => {
       .map((row) => row.keyword.text)
       .sort();
 
+  const waitForBlockedKeywordInsert = async () => {
+    for (let attempt = 0; attempt < 250; attempt += 1) {
+      const [{ waiting }] = await prisma.$queryRaw<{ waiting: bigint }[]>`
+        SELECT COUNT(*) AS waiting
+        FROM pg_stat_activity
+        WHERE datname = current_database()
+          AND wait_event_type = 'Lock'
+          AND query LIKE 'INSERT INTO %"Keyword"%'
+      `;
+      if (waiting > 0n) return;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    throw new Error('The keyword insert never waited on the held row');
+  };
+
+  it('saves a keyword field while another writer inserts its new phrases in the opposite order', async () => {
+    const appId = await seedApp();
+    const keyword = (text: string) => ({
+      text,
+      store: Store.APP_STORE,
+      country: 'us',
+    });
+    let saved!: ReturnType<typeof keywords.setKeywordField>;
+
+    await prisma.$transaction(async (tx) => {
+      await tx.keyword.create({ data: keyword('alpha') });
+      saved = asWorkspace(app, () =>
+        keywords.setKeywordField(appId, 'bravo,alpha'),
+      );
+      saved.catch(() => undefined);
+      await waitForBlockedKeywordInsert();
+      await tx.keyword.create({ data: keyword('bravo') });
+    });
+
+    const result = await saved;
+    expect(result.tracked.map((item) => item.text)).toEqual(['bravo', 'alpha']);
+  });
+
   it('adds the same phrase once when two requests arrive together', async () => {
     const appId = await seedApp();
 
