@@ -7,6 +7,7 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
+  countChars,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
@@ -40,6 +41,9 @@ import {
 
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
+
+const keywordFieldChars = (phrases: string[]): number =>
+  countChars(phrases.join(','));
 
 @Injectable()
 export class KeywordsService {
@@ -305,7 +309,7 @@ export class KeywordsService {
 
     return {
       tracked,
-      charactersUsed: tracked.map((item) => item.text).join(',').length,
+      charactersUsed: keywordFieldChars(tracked.map((item) => item.text)),
       charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
       duplicatesRemoved,
     };
@@ -331,6 +335,11 @@ export class KeywordsService {
       .map(normalizeKeyword);
     const unique = [...new Set(parsed)];
     const duplicatesRemoved = parsed.length - unique.length;
+    if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
+      throw new BadRequestException(
+        `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+      );
+    }
 
     const keywordIds = await this.keywordIdsFor(unique, app.store, app.country);
 

@@ -34,7 +34,7 @@ Two ceilings are resource safety rather than plan capacity, so they hold on a se
 
 A keyword is also capped at five words. Each tracked keyword market costs one real store search every day, so a pasted spreadsheet column or a scripting mistake would otherwise multiply a workspace's daily store volume without anyone choosing to. Exceeding any of these returns `400` and writes nothing, so a refused batch never lands half applied. Split a larger list across several requests.
 
-The keyword field accepts ten times the 100 characters Apple indexes, because the editor reports how far over the real limit a draft is rather than refusing to store it.
+The keyword field text may run to ten times the 100 characters Apple indexes, so spacing, casing and duplicates in a pasted field never cost a refusal. What asobeast stores is held to Apple's limit: once each phrase is normalized and the duplicates are removed, a field longer than 100 characters returns `400` and writes nothing. See [App Store and Google Play](/concepts/stores).
 
 ## Three request classes
 

@@ -272,16 +272,33 @@ describe('Quota admission under concurrency (e2e)', () => {
       data: { plan: 'indie' },
     });
 
-    const text = Array.from(
-      { length: PLAN_LIMITS.indie.keywordMarkets + 2 },
-      (_, index) => `phrase ${index}`,
-    ).join(',');
+    const limit = PLAN_LIMITS.indie.keywordMarkets;
+    await prisma.keyword.createMany({
+      data: Array.from({ length: limit }, (_, index) => ({
+        text: `tracked ${index}`,
+        store: Store.APP_STORE,
+        country: 'us',
+      })),
+    });
+    const seeded = await prisma.keyword.findMany({ select: { id: true } });
+    await prisma.trackedKeyword.createMany({
+      data: seeded.map(({ id }) => ({
+        appId: primary.id,
+        keywordId: id,
+        source: 'MANUAL' as const,
+      })),
+    });
 
     await expect(
-      asWorkspace(app, () => keywords.setKeywordField(primary.id, text)),
+      asWorkspace(app, () =>
+        keywords.setKeywordField(primary.id, 'phrase one,phrase two'),
+      ),
     ).rejects.toBeInstanceOf(QuotaExceededError);
 
-    expect(await prisma.trackedKeyword.count()).toBe(0);
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
+    expect(await prisma.trackedKeyword.count()).toBe(limit);
   });
 
   it('keeps a bulk keyword add whole rather than filling to the limit', async () => {

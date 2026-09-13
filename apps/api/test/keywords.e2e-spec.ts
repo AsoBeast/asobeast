@@ -7,6 +7,7 @@ import {
   ApiErrorEnvelope,
   AppDetail,
   DailyBudget,
+  KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -331,6 +332,41 @@ describe('KeywordsController (e2e)', () => {
     expect(
       await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
     ).toBe(0);
+  });
+
+  it('refuses a keyword field longer than apple accepts once normalized', async () => {
+    const id = await importApp();
+    const text = Array.from(
+      { length: 21 },
+      (_, index) => `kw${String(index).padStart(3, '0')}`,
+    ).join(',');
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+    );
+    expect(
+      await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
+    ).toBe(0);
+    expect(await prisma.keyword.count({ where: { text: 'kw000' } })).toBe(0);
+  });
+
+  it('accepts a keyword field at the limit once duplicates and spacing are removed', async () => {
+    const id = await importApp();
+    const phrase = 'x'.repeat(KEYWORD_FIELD_CHAR_LIMIT);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: ` ${phrase} , ${phrase.toUpperCase()} ` })
+      .expect(200);
+    const body = response.body as KeywordFieldResult;
+
+    expect(body.charactersUsed).toBe(KEYWORD_FIELD_CHAR_LIMIT);
+    expect(body.duplicatesRemoved).toBe(1);
   });
 
   it('rejects an invalid market code', async () => {
