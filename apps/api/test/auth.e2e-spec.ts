@@ -11,6 +11,7 @@ import {
   ApiTokenCreated,
   ApiTokenItem,
   AuthUser,
+  PASSWORD_RULE,
   WorkspaceInviteCreated,
   WorkspaceTeam,
 } from '@asobeast/shared';
@@ -224,10 +225,11 @@ describe('Auth (enabled, self-hosted)', () => {
     const cookie = await registerOwner();
     const invite = await inviteMember(cookie, 'blank@example.com');
 
-    await request(app.getHttpServer())
+    const refused = await request(app.getHttpServer())
       .post('/workspace/invites/accept')
       .send({ token: tokenOf(invite), password: BLANK_PASSWORD })
       .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
 
     await expect(
       prisma.user.count({ where: { email: 'blank@example.com' } }),
@@ -355,10 +357,11 @@ describe('Auth (enabled, self-hosted)', () => {
   });
 
   it('refuses to register with a whitespace-only password', async () => {
-    await request(app.getHttpServer())
+    const refused = await request(app.getHttpServer())
       .post('/auth/register')
       .send({ email: 'spaces@example.com', password: BLANK_PASSWORD })
       .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
 
     await expect(prisma.user.count()).resolves.toBe(0);
   });
@@ -394,11 +397,12 @@ describe('Auth (enabled, self-hosted)', () => {
         .expect(201),
     );
 
-    await request(app.getHttpServer())
+    const refused = await request(app.getHttpServer())
       .post('/auth/password')
       .set('Cookie', cookie)
       .send({ current: 'supersecret1', next: `${BLANK_PASSWORD}\t` })
       .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
 
     await request(app.getHttpServer())
       .post('/auth/login')
