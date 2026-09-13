@@ -46,6 +46,9 @@ const KEYWORD_FIELD_LOCK = 3_958_261;
 const keywordFieldChars = (phrases: string[]): number =>
   countChars(phrases.join(','));
 
+const keywordRows = (texts: string[], store: Store, country: string) =>
+  [...texts].sort().map((text) => ({ text, store, country }));
+
 @Injectable()
 export class KeywordsService {
   constructor(
@@ -419,11 +422,11 @@ export class KeywordsService {
       .slice(0, AUTO_TRACK_LIMIT);
 
     await this.prisma.keyword.createMany({
-      data: candidates.map((candidate) => ({
-        text: candidate.text,
-        store: app.store,
-        country: app.country,
-      })),
+      data: keywordRows(
+        candidates.map((candidate) => candidate.text),
+        app.store,
+        app.country,
+      ),
       skipDuplicates: true,
     });
 
@@ -469,7 +472,7 @@ export class KeywordsService {
     country: string,
   ): Promise<string[]> {
     await this.prisma.keyword.createMany({
-      data: texts.map((text) => ({ text, store, country })),
+      data: keywordRows(texts, store, country),
       skipDuplicates: true,
     });
 
