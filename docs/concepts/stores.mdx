@@ -43,7 +43,7 @@ Four things the schema cannot tell you.
 - **The value is the tracked set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing, casing and order can all differ from what you submitted, and the character count is the count of the normalized set.
 - **It is home market only.** The read takes no country and scopes itself to `app.country`, because the keyword field belongs to the app rather than to a storefront. See [Countries and markets](/concepts/countries).
 - **`duplicatesRemoved` is 0 on a read.** It reports what the last submission discarded, and a read submits nothing.
-- **The last save wins.** Saves to one app run one at a time, so two saves that overlap never merge: the field holds whichever finished last. Both answer 200, and because the body describes the stored field, a save that overlaps another may be answered with the other save's field.
+- **The last save wins.** Saves to one app run one at a time, so two saves that overlap never merge: the field holds whichever finished last. Neither is refused for overlapping, and because the body describes the stored field, a save that overlaps another may be answered with the other save's field.
 
 An app that has never had a keyword field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A Google Play app refuses both operations with 400.
 
