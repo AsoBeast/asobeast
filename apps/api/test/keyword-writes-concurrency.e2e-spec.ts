@@ -147,19 +147,18 @@ describe('Keyword writes under concurrency (e2e)', () => {
       store: Store.APP_STORE,
       country: 'us',
     });
-    let saved!: ReturnType<typeof keywords.setKeywordField>;
-
-    await prisma.$transaction(async (tx) => {
+    const blocked = await prisma.$transaction(async (tx) => {
       await tx.keyword.create({ data: keyword('alpha') });
-      saved = asWorkspace(app, () =>
+      const save = asWorkspace(app, () =>
         keywords.setKeywordField(appId, 'bravo,alpha'),
       );
-      saved.catch(() => undefined);
+      save.catch(() => undefined);
       await waitForBlockedKeywordInsert();
       await tx.keyword.create({ data: keyword('bravo') });
+      return { save };
     });
 
-    const result = await saved;
+    const result = await blocked.save;
     expect(result.tracked.map((item) => item.text)).toEqual(['bravo', 'alpha']);
   });
 
