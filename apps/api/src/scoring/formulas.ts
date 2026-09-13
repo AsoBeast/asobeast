@@ -1,5 +1,7 @@
 import { KeywordSource, Store, tokenize } from '@asobeast/shared';
 
+export { toDifficulty100, toVolume } from '@asobeast/shared';
+
 export const clamp = (v: number, lo = 0, hi = 10): number =>
   Math.min(hi, Math.max(lo, v));
 
@@ -189,12 +191,6 @@ export const ASOBEAST_DEFAULTS = {
   } satisfies Record<KeywordSource, number>,
   relevanceOverlapBonus: 10,
 } as const;
-
-export const toVolume = (traffic: number): number =>
-  clamp(traffic * 10, 0, 100);
-
-export const toDifficulty100 = (difficulty: number): number =>
-  clamp(difficulty * 10, 0, 100);
 
 export const defaultRelevance = (
   source: KeywordSource,

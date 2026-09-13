@@ -18,10 +18,10 @@ import {
   DerivedScoreCell,
   PositionCell,
   ScoreCell,
-  scoreValue,
   SortHeader,
   VolatilityCell,
 } from "./keyword-cells";
+import { scoreValue } from "./keyword-scores";
 import { SourceBadge } from "./SourceBadge";
 
 const columnHelper = createColumnHelper<

@@ -27,6 +27,7 @@ import {
 import { comparisonOptions, competitorsOptions } from "@/lib/queries";
 import { onlyGapsParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
+import { comparisonScoreLabel } from "./comparison-scores";
 import { positionBand } from "./position-band";
 
 function bestPosition(
@@ -68,10 +69,6 @@ function PositionCell({
       {formatRankPosition(value)}
     </span>
   );
-}
-
-function subScore(value: number | null): string {
-  return value === null ? "—" : String(Math.round(value * 10));
 }
 
 export function ComparisonMatrix({ id }: { id: string }) {
@@ -166,8 +163,8 @@ export function ComparisonMatrix({ id }: { id: string }) {
                             ) : null}
                           </span>
                           <span className="text-xs text-muted-foreground numeric font-mono">
-                            T {subScore(row.traffic)} · D{" "}
-                            {subScore(row.difficulty)}
+                            T {comparisonScoreLabel(row, "traffic")} · D{" "}
+                            {comparisonScoreLabel(row, "difficulty")}
                           </span>
                         </div>
                       </TableCell>

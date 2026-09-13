@@ -12,7 +12,7 @@ export const KEYWORD_TOOLS: ReadTool[] = [
     name: "list_keywords",
     title: "List tracked keywords",
     description:
-      "Tracked keywords for one app with traffic, difficulty and opportunity scores (0-100) and the latest checked position. Position is 1-based; null means checked but not found within the row's latestDepth (render as >latestDepth), and a null latestDepth means the keyword has never been checked. Keywords are per-market: pass country to scope to one storefront.",
+      "Tracked keywords for one app with traffic and difficulty on the stored 0 to 10 scale, volume and opportunity on a 0 to 100 scale, and the latest checked position. Position is 1-based; null means checked but not found within the row's latestDepth (render as >latestDepth), and a null latestDepth means the keyword has never been checked. Keywords are per-market: pass country to scope to one storefront.",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
       sort: z

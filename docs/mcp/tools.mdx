@@ -24,7 +24,7 @@ Start with `list_apps`. Nothing else works without an app id.
 
 | Tool | Title | Returns | Parameters |
 | --- | --- | --- | --- |
-| `list_keywords` | List tracked keywords | Tracked keywords for one app with traffic, difficulty and opportunity scores (0-100) and the latest checked position | `appId` (required), `sort`, `country` |
+| `list_keywords` | List tracked keywords | Tracked keywords for one app with traffic and difficulty on the stored 0 to 10 scale, volume and opportunity on a 0 to 100 scale, and the latest checked position | `appId` (required), `sort`, `country` |
 | `keyword_suggestions` | Keyword suggestions | Suggested keywords for one app from a chosen strategy (metadata, search, similar, developer, competitors, seasonal or reviews) | `appId` (required), `strategy` (required), `limit`, `country` |
 
 Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews.

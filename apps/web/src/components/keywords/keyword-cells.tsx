@@ -21,22 +21,6 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function scoreValue(
-  keyword: TrackedKeywordItem,
-  column: KeywordSort,
-): number | null {
-  switch (column) {
-    case "traffic":
-      return keyword.volume;
-    case "difficulty":
-      return keyword.difficulty === null ? null : keyword.difficulty * 10;
-    case "opportunity":
-      return keyword.opportunity;
-    default:
-      return null;
-  }
-}
-
 const DERIVED_SCORE_DETAIL =
   "Calculated from traffic, difficulty and this app's keyword relevance when the list loaded, so it carries no stored capture time.";
 
