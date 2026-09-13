@@ -62,12 +62,12 @@ describe('Keyword writes under concurrency (e2e)', () => {
     await prisma.$disconnect();
   });
 
-  const seedApp = async () => {
+  const seedApp = async (storeAppId = 'concurrent') => {
     const row = await prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
-        storeAppId: 'concurrent',
+        storeAppId,
         country: 'us',
         name: 'Focus Timer',
       },
@@ -142,6 +142,55 @@ describe('Keyword writes under concurrency (e2e)', () => {
       keywords.getKeywordField(appId),
     );
     expect(stored.charactersUsed).toBeLessThanOrEqual(stored.charactersLimit);
+  });
+
+  it('leaves a manual keyword active when a keyword field save omits it', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
+
+    await asWorkspace(app, () => keywords.setKeywordField(appId, 'deep work'));
+
+    expect(await trackedRows(appId)).toContainEqual(
+      expect.objectContaining({
+        active: true,
+        source: 'MANUAL',
+        keyword: { text: PHRASE },
+      }),
+    );
+  });
+
+  it('deactivates every keyword field phrase when the field is cleared', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () => keywords.setKeywordField(appId, FIELD));
+
+    await asWorkspace(app, () => keywords.setKeywordField(appId, ''));
+
+    const rows = await trackedRows(appId);
+    expect(rows).toHaveLength(FIELD.split(',').length);
+    expect(rows.some((row) => row.active)).toBe(false);
+  });
+
+  it('saves the keyword fields of two apps at the same time', async () => {
+    const [firstId, secondId] = await Promise.all([
+      seedApp('first'),
+      seedApp('second'),
+    ]);
+
+    const settled = await asWorkspace(app, () =>
+      Promise.allSettled([
+        keywords.setKeywordField(firstId, ALPHA_SET.join(',')),
+        keywords.setKeywordField(secondId, DELTA_SET.join(',')),
+      ]),
+    );
+
+    expect(settled.filter((entry) => entry.status === 'rejected')).toEqual([]);
+    const activeTexts = async (appId: string) =>
+      (await trackedRows(appId))
+        .filter((row) => row.active)
+        .map((row) => row.keyword.text)
+        .sort();
+    expect(await activeTexts(firstId)).toEqual(ALPHA_SET);
+    expect(await activeTexts(secondId)).toEqual(DELTA_SET);
   });
 
   it('keeps the keyword field in the order it was typed', async () => {

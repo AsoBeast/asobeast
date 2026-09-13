@@ -22,9 +22,21 @@ interface FindManyArgs {
 }
 
 interface UpdateManyArgs {
-  where: { keywordId: string | { in: string[] } };
+  where: {
+    source?: string;
+    keywordId: string | { in: string[] } | { notIn: string[] };
+  };
   data: { active?: boolean; source?: string };
 }
+
+const matchesKeywordId = (
+  keywordId: string,
+  filter: UpdateManyArgs['where']['keywordId'],
+) => {
+  if (typeof filter === 'string') return keywordId === filter;
+  if ('in' in filter) return filter.in.includes(keywordId);
+  return !filter.notIn.includes(keywordId);
+};
 
 const APP = {
   id: 'app1',
@@ -43,6 +55,7 @@ function buildPrisma() {
   const client = {
     rows,
     textOf,
+    $executeRaw: () => Promise.resolve(1),
     app: { findFirst: () => Promise.resolve(APP) },
     appSnapshot: { findFirst: () => Promise.resolve(null) },
     keywordMetric: { findFirst: () => Promise.resolve(null) },
@@ -102,15 +115,16 @@ function buildPrisma() {
         );
       },
       updateMany: ({ where, data }: UpdateManyArgs) => {
-        const ids =
-          typeof where.keywordId === 'string'
-            ? [where.keywordId]
-            : where.keywordId.in;
-        for (const row of rows.filter((row) => ids.includes(row.keywordId))) {
+        const matching = rows.filter(
+          (row) =>
+            (where.source === undefined || row.source === where.source) &&
+            matchesKeywordId(row.keywordId, where.keywordId),
+        );
+        for (const row of matching) {
           row.active = data.active ?? row.active;
           row.source = data.source ?? row.source;
         }
-        return Promise.resolve({ count: ids.length });
+        return Promise.resolve({ count: matching.length });
       },
     },
   };
