@@ -7,6 +7,7 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
+  countChars,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
@@ -39,6 +40,10 @@ import {
 } from './keywords.support';
 
 const AUTO_TRACK_LIMIT = 15;
+const KEYWORD_FIELD_LOCK = 3_958_261;
+
+const keywordFieldChars = (phrases: string[]): number =>
+  countChars(phrases.join(','));
 
 @Injectable()
 export class KeywordsService {
@@ -267,6 +272,13 @@ export class KeywordsService {
     }
   }
 
+  private serializeKeywordField(
+    tx: Prisma.TransactionClient,
+    appId: string,
+  ): Promise<number> {
+    return tx.$executeRaw`SELECT pg_advisory_xact_lock(${KEYWORD_FIELD_LOCK}, hashtext(${appId}))`;
+  }
+
   private async keywordFieldResult(
     app: KeywordApp,
     duplicatesRemoved: number,
@@ -297,7 +309,7 @@ export class KeywordsService {
 
     return {
       tracked,
-      charactersUsed: tracked.map((item) => item.text).join(',').length,
+      charactersUsed: keywordFieldChars(tracked.map((item) => item.text)),
       charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
       duplicatesRemoved,
     };
@@ -323,19 +335,16 @@ export class KeywordsService {
       .map(normalizeKeyword);
     const unique = [...new Set(parsed)];
     const duplicatesRemoved = parsed.length - unique.length;
-
-    const previous = await this.prisma.trackedKeyword.findMany({
-      where: { appId, source: 'KEYWORD_FIELD' },
-      select: { keywordId: true, keyword: { select: { text: true } } },
-    });
+    if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
+      throw new BadRequestException(
+        `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+      );
+    }
 
     const keywordIds = await this.keywordIdsFor(unique, app.store, app.country);
-    const uniqueSet = new Set(unique);
-    const staleKeywordIds = previous
-      .filter((row) => !uniqueSet.has(row.keyword.text))
-      .map((row) => row.keywordId);
 
     await this.quota.admitKeywordMarkets(async (tx) => {
+      await this.serializeKeywordField(tx, appId);
       for (const keywordId of keywordIds) {
         await this.trackKeyword(
           tx,
@@ -343,12 +352,15 @@ export class KeywordsService {
           { source: 'KEYWORD_FIELD', active: true },
         );
       }
-      if (staleKeywordIds.length > 0) {
-        await tx.trackedKeyword.updateMany({
-          where: { appId, keywordId: { in: staleKeywordIds } },
-          data: { active: false },
-        });
-      }
+      await tx.trackedKeyword.updateMany({
+        where: {
+          appId,
+          source: 'KEYWORD_FIELD',
+          active: true,
+          keywordId: { notIn: keywordIds },
+        },
+        data: { active: false },
+      });
     });
 
     for (const keywordId of keywordIds) {

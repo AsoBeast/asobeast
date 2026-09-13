@@ -7,6 +7,7 @@ import {
   ApiErrorEnvelope,
   AppDetail,
   DailyBudget,
+  KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -331,6 +332,59 @@ describe('KeywordsController (e2e)', () => {
     expect(
       await prisma.trackedKeyword.count({ where: { source: 'KEYWORD_FIELD' } }),
     ).toBe(0);
+  });
+
+  it('refuses a keyword field one character over the limit and keeps the stored one', async () => {
+    const id = await importApp();
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'habit' })
+      .expect(200);
+    const text = Array.from(
+      { length: 17 },
+      (_, index) => `kw${String(index).padStart(3, '0')}`,
+    ).join(',');
+    expect(text).toHaveLength(KEYWORD_FIELD_CHAR_LIMIT + 1);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+    );
+    const stored = await api.get(`/apps/${id}/keyword-field`).expect(200);
+    expect(
+      (stored.body as KeywordFieldResult).tracked.map((item) => item.text),
+    ).toEqual(['habit']);
+    expect(
+      await prisma.keyword.count({ where: { text: { startsWith: 'kw' } } }),
+    ).toBe(0);
+  });
+
+  it('accepts a keyword field at the limit once spacing, casing and duplicates are removed', async () => {
+    const id = await importApp();
+    const phrases = [
+      'kw00',
+      ...Array.from(
+        { length: 16 },
+        (_, index) => `kw${String(index + 1).padStart(3, '0')}`,
+      ),
+    ];
+    expect(phrases.join(',')).toHaveLength(KEYWORD_FIELD_CHAR_LIMIT);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: ` ${phrases.join(' , ').toUpperCase()} ,kw001` })
+      .expect(200);
+    const body = response.body as KeywordFieldResult;
+
+    expect(body.charactersUsed).toBe(KEYWORD_FIELD_CHAR_LIMIT);
+    expect(body.duplicatesRemoved).toBe(1);
+    expect(body.tracked.map((item) => item.text).sort()).toEqual(
+      [...phrases].sort(),
+    );
   });
 
   it('rejects an invalid market code', async () => {

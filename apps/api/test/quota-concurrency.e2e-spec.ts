@@ -3,7 +3,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { KeywordSource, PrismaClient, Store } from '@prisma/client';
 import { PLAN_LIMITS } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -149,6 +149,43 @@ describe('Quota admission under concurrency (e2e)', () => {
     await prisma.$disconnect();
   });
 
+  const seedFieldedApp = async (storeAppId: string, trackedCount: number) => {
+    const primary = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId,
+        country: 'us',
+      },
+      select: { id: true },
+    });
+    await prisma.keyword.createMany({
+      data: Array.from({ length: trackedCount }, (_, index) => ({
+        text: `tracked ${index}`,
+        store: Store.APP_STORE,
+        country: 'us',
+      })),
+    });
+    const seeded = await prisma.keyword.findMany({
+      where: { text: { startsWith: 'tracked ' } },
+      select: { id: true },
+    });
+    await prisma.trackedKeyword.createMany({
+      data: seeded.map(({ id }) => ({
+        appId: primary.id,
+        keywordId: id,
+        source: KeywordSource.MANUAL,
+      })),
+    });
+    return primary.id;
+  };
+
+  const fieldRows = (appId: string) =>
+    prisma.trackedKeyword.findMany({
+      where: { appId, source: KeywordSource.KEYWORD_FIELD },
+      select: { active: true, keyword: { select: { text: true } } },
+    });
+
   it('lets exactly one of two imports take the last app slot', async () => {
     const limit = PLAN_LIMITS.indie.apps;
     await prisma.app.createMany({
@@ -258,30 +295,46 @@ describe('Quota admission under concurrency (e2e)', () => {
   });
 
   it('counts a keyword field write against the same limit as a bulk add', async () => {
-    const primary = await prisma.app.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        store: Store.APP_STORE,
-        storeAppId: 'fielded',
-        country: 'us',
-      },
-      select: { id: true },
-    });
-    await prisma.workspace.update({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      data: { plan: 'indie' },
-    });
-
-    const text = Array.from(
-      { length: PLAN_LIMITS.indie.keywordMarkets + 2 },
-      (_, index) => `phrase ${index}`,
-    ).join(',');
+    const limit = PLAN_LIMITS.indie.keywordMarkets;
+    const appId = await seedFieldedApp('fielded', limit - 2);
+    await asWorkspace(app, () => keywords.setKeywordField(appId, 'kept'));
 
     await expect(
-      asWorkspace(app, () => keywords.setKeywordField(primary.id, text)),
+      asWorkspace(app, () =>
+        keywords.setKeywordField(appId, 'phrase one,phrase two,phrase three'),
+      ),
     ).rejects.toBeInstanceOf(QuotaExceededError);
 
-    expect(await prisma.trackedKeyword.count()).toBe(0);
+    expect(await prisma.trackedKeyword.count({ where: { active: true } })).toBe(
+      limit - 1,
+    );
+    expect(await fieldRows(appId)).toEqual([
+      { active: true, keyword: { text: 'kept' } },
+    ]);
+  });
+
+  it('keeps only one of two keyword fields saved together near the limit', async () => {
+    const limit = PLAN_LIMITS.indie.keywordMarkets;
+    const phrases = (word: string) =>
+      Array.from({ length: 9 }, (_, index) => `${word} ${index}`);
+    const appId = await seedFieldedApp('raced', limit - 9);
+
+    const outcome = await asWorkspace(app, () =>
+      settledOf([
+        keywords.setKeywordField(appId, phrases('alpha').join(',')),
+        keywords.setKeywordField(appId, phrases('delta').join(',')),
+      ]),
+    );
+
+    expect(outcome).toEqual({ fulfilled: 2, refused: 0 });
+    const active = (await fieldRows(appId))
+      .filter((row) => row.active)
+      .map((row) => row.keyword.text)
+      .sort();
+    expect([phrases('alpha'), phrases('delta')]).toContainEqual(active);
+    expect(await prisma.trackedKeyword.count({ where: { active: true } })).toBe(
+      limit,
+    );
   });
 
   it('keeps a bulk keyword add whole rather than filling to the limit', async () => {

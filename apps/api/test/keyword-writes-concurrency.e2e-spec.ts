@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { QuotaService } from '../src/auth/quota.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { KeywordsService } from '../src/keywords/keywords.service';
 import { asWorkspace } from './helpers/tenancy';
@@ -13,6 +14,19 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const PHRASE = 'focus timer';
 const FIELD = 'focus timer,deep work,pomodoro';
+const phraseSet = (word: string) =>
+  Array.from({ length: 9 }, (_, index) => `${word} ${index}`);
+const ALPHA_SET = phraseSet('alpha');
+const DELTA_SET = phraseSet('delta');
+
+const settlesWithin = (work: Promise<unknown>, ms: number) =>
+  Promise.race([
+    work.then(
+      () => true,
+      () => true,
+    ),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), ms)),
+  ]);
 
 describe('Keyword writes under concurrency (e2e)', () => {
   let app: INestApplication<App>;
@@ -49,6 +63,10 @@ describe('Keyword writes under concurrency (e2e)', () => {
     );
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
@@ -58,18 +76,36 @@ describe('Keyword writes under concurrency (e2e)', () => {
     await prisma.$disconnect();
   });
 
-  const seedApp = async () => {
+  const seedApp = async (storeAppId = 'concurrent') => {
     const row = await prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
-        storeAppId: 'concurrent',
+        storeAppId,
         country: 'us',
         name: 'Focus Timer',
       },
       select: { id: true },
     });
     return row.id;
+  };
+
+  const holdNextKeywordWrite = () => {
+    const quota = app.get(QuotaService);
+    const admit = quota.admitKeywordMarkets.bind(quota);
+    let enter!: () => void;
+    let release!: () => void;
+    const inside = new Promise<void>((resolve) => (enter = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    jest.spyOn(quota, 'admitKeywordMarkets').mockImplementationOnce((write) =>
+      admit(async (tx) => {
+        const result = await write(tx);
+        enter();
+        await released;
+        return result;
+      }),
+    );
+    return { inside, release };
   };
 
   const trackedRows = (appId: string) =>
@@ -82,6 +118,12 @@ describe('Keyword writes under concurrency (e2e)', () => {
         keyword: { select: { text: true } },
       },
     });
+
+  const activeTexts = async (appId: string) =>
+    (await trackedRows(appId))
+      .filter((row) => row.active)
+      .map((row) => row.keyword.text)
+      .sort();
 
   it('adds the same phrase once when two requests arrive together', async () => {
     const appId = await seedApp();
@@ -114,6 +156,114 @@ describe('Keyword writes under concurrency (e2e)', () => {
     expect(rows).toHaveLength(FIELD.split(',').length);
     expect(rows.every((row) => row.active)).toBe(true);
     expect(rows.every((row) => row.source === 'KEYWORD_FIELD')).toBe(true);
+  });
+
+  it('keeps only one of two keyword fields saved at the same time', async () => {
+    const appId = await seedApp();
+
+    const settled = await asWorkspace(app, () =>
+      Promise.allSettled([
+        keywords.setKeywordField(appId, ALPHA_SET.join(',')),
+        keywords.setKeywordField(appId, DELTA_SET.join(',')),
+      ]),
+    );
+
+    expect(settled.filter((entry) => entry.status === 'rejected')).toEqual([]);
+
+    const active = await activeTexts(appId);
+    expect([ALPHA_SET, DELTA_SET]).toContainEqual(active);
+
+    const stored = await asWorkspace(app, () =>
+      keywords.getKeywordField(appId),
+    );
+    expect(stored.tracked.map((item) => item.text).sort()).toEqual(active);
+    expect(stored.charactersUsed).toBeLessThanOrEqual(stored.charactersLimit);
+
+    const reported = settled
+      .filter((entry) => entry.status === 'fulfilled')
+      .map((entry) => entry.value.tracked.map((item) => item.text).sort());
+    for (const texts of reported) {
+      expect([ALPHA_SET, DELTA_SET]).toContainEqual(texts);
+    }
+    expect(reported).toContainEqual(active);
+  });
+
+  it('leaves a manual keyword active when a keyword field save omits it', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
+
+    await asWorkspace(app, () => keywords.setKeywordField(appId, 'deep work'));
+
+    expect(await trackedRows(appId)).toContainEqual(
+      expect.objectContaining({
+        active: true,
+        source: 'MANUAL',
+        keyword: { text: PHRASE },
+      }),
+    );
+  });
+
+  it('deactivates every keyword field phrase when the field is cleared', async () => {
+    const appId = await seedApp();
+    await asWorkspace(app, () => keywords.setKeywordField(appId, FIELD));
+
+    await asWorkspace(app, () => keywords.setKeywordField(appId, ''));
+
+    const rows = await trackedRows(appId);
+    expect(rows).toHaveLength(FIELD.split(',').length);
+    expect(rows.some((row) => row.active)).toBe(false);
+  });
+
+  it('makes a second save to the same app wait until the first commits', async () => {
+    const appId = await seedApp();
+    const hold = holdNextKeywordWrite();
+
+    await asWorkspace(app, async () => {
+      const first = keywords.setKeywordField(appId, ALPHA_SET.join(','));
+      await hold.inside;
+      const second = keywords.setKeywordField(appId, DELTA_SET.join(','));
+
+      expect(await settlesWithin(second, 300)).toBe(false);
+      hold.release();
+      await Promise.all([first, second]);
+    });
+
+    expect(await activeTexts(appId)).toEqual(DELTA_SET);
+  });
+
+  it('lets another app save its keyword field while the first app is saving', async () => {
+    const [firstId, secondId] = await Promise.all([
+      seedApp('first'),
+      seedApp('second'),
+    ]);
+    const hold = holdNextKeywordWrite();
+
+    await asWorkspace(app, async () => {
+      const first = keywords.setKeywordField(firstId, ALPHA_SET.join(','));
+      await hold.inside;
+      const second = keywords.setKeywordField(secondId, DELTA_SET.join(','));
+
+      expect(await settlesWithin(second, 2_000)).toBe(true);
+      hold.release();
+      await Promise.all([first, second]);
+    });
+
+    expect(await activeTexts(firstId)).toEqual(ALPHA_SET);
+    expect(await activeTexts(secondId)).toEqual(DELTA_SET);
+  });
+
+  it('leaves the keyword field of another app untouched', async () => {
+    const [firstId, secondId] = await Promise.all([
+      seedApp('first'),
+      seedApp('second'),
+    ]);
+
+    await asWorkspace(app, () => keywords.setKeywordField(firstId, FIELD));
+    await asWorkspace(app, () =>
+      keywords.setKeywordField(secondId, 'deep work'),
+    );
+
+    expect(await activeTexts(firstId)).toEqual(FIELD.split(',').sort());
   });
 
   it('keeps the keyword field in the order it was typed', async () => {
