@@ -58,7 +58,7 @@ services:
     networks:
       - backend
   api:
-    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-api:${ASOBEAST_IMAGE_TAG:-1.2.0} # x-release-please-version
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-api:${ASOBEAST_IMAGE_TAG:-1.3.0} # x-release-please-version
     restart: unless-stopped
     stop_grace_period: 90s
     deploy:
@@ -105,7 +105,7 @@ services:
       - frontend
       - backend
   web:
-    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-web:${ASOBEAST_IMAGE_TAG:-1.2.0} # x-release-please-version
+    image: ghcr.io/${ASOBEAST_IMAGE_OWNER:-asobeast}/asobeast-web:${ASOBEAST_IMAGE_TAG:-1.3.0} # x-release-please-version
     restart: unless-stopped
     deploy:
       resources:
