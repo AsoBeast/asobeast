@@ -338,6 +338,13 @@ describe('Account recovery for a customer who forgot their password', () => {
     await signIn(PASSWORD).expect(200);
   });
 
+  it('refuses a new password that is only whitespace', async () => {
+    const token = await issuedToken();
+
+    await reset(token, ' '.repeat(10)).expect(400);
+    await signIn(PASSWORD).expect(200);
+  });
+
   it('clears the token from the account once it is spent', async () => {
     await reset(await issuedToken()).expect(204);
 
