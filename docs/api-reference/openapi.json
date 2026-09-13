@@ -3638,14 +3638,15 @@
       "RegisterDto": {
         "type": "object",
         "properties": {
-          "email": {
-            "type": "string",
-            "format": "email"
-          },
           "password": {
             "type": "string",
             "minLength": 10,
-            "maxLength": 128
+            "maxLength": 128,
+            "description": "Password must contain at least 10 characters that are not whitespace."
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
           },
           "name": {
             "type": "string",
@@ -3653,8 +3654,8 @@
           }
         },
         "required": [
-          "email",
-          "password"
+          "password",
+          "email"
         ]
       },
       "LoginDto": {
@@ -3690,19 +3691,20 @@
       "ChangePasswordDto": {
         "type": "object",
         "properties": {
-          "current": {
-            "type": "string",
-            "maxLength": 128
-          },
           "next": {
             "type": "string",
             "minLength": 10,
+            "maxLength": 128,
+            "description": "Password must contain at least 10 characters that are not whitespace."
+          },
+          "current": {
+            "type": "string",
             "maxLength": 128
           }
         },
         "required": [
-          "current",
-          "next"
+          "next",
+          "current"
         ]
       },
       "RequestPasswordResetDto": {
@@ -3721,20 +3723,21 @@
       "ResetPasswordDto": {
         "type": "object",
         "properties": {
+          "password": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 128,
+            "description": "Password must contain at least 10 characters that are not whitespace."
+          },
           "token": {
             "type": "string",
             "minLength": 16,
             "maxLength": 128
-          },
-          "password": {
-            "type": "string",
-            "minLength": 10,
-            "maxLength": 128
           }
         },
         "required": [
-          "token",
-          "password"
+          "password",
+          "token"
         ]
       },
       "CreateTokenDto": {
@@ -3778,14 +3781,15 @@
       "AcceptInviteDto": {
         "type": "object",
         "properties": {
-          "token": {
-            "type": "string",
-            "minLength": 16,
-            "maxLength": 128
-          },
           "password": {
             "type": "string",
             "minLength": 10,
+            "maxLength": 128,
+            "description": "Password must contain at least 10 characters that are not whitespace."
+          },
+          "token": {
+            "type": "string",
+            "minLength": 16,
             "maxLength": 128
           },
           "name": {
@@ -3794,8 +3798,8 @@
           }
         },
         "required": [
-          "token",
-          "password"
+          "password",
+          "token"
         ]
       },
       "CreateWebhookDto": {

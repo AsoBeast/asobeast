@@ -4,8 +4,10 @@ import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
+import { PASSWORD_RULE } from "@asobeast/shared";
 import { toast } from "sonner";
 import { ApiError, changePassword } from "@/lib/api";
+import { passwordError } from "@/lib/password";
 import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,8 +58,9 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    if (next.length < 10) {
-      setError("New password must be at least 10 characters.");
+    const problem = passwordError(next);
+    if (problem) {
+      setError(problem);
       return;
     }
     mutation.mutate();
@@ -95,10 +98,25 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 value={next}
                 onChange={(event) => setNext(event.target.value)}
                 aria-invalid={error !== null}
+                aria-describedby={
+                  error
+                    ? "next-password-rule next-password-error"
+                    : "next-password-rule"
+                }
                 required
               />
+              <p
+                id="next-password-rule"
+                className="text-xs text-muted-foreground"
+              >
+                {PASSWORD_RULE}
+              </p>
             </div>
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error ? (
+              <p id="next-password-error" className="text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
           </DialogBody>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>

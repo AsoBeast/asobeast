@@ -1,13 +1,12 @@
 import { ChangePasswordRequest } from '@asobeast/shared';
-import { IsString, MaxLength, MinLength } from 'class-validator';
+import { IsString, MaxLength } from 'class-validator';
+import { IsPassword } from './password.decorator';
 
 export class ChangePasswordDto implements ChangePasswordRequest {
   @IsString()
   @MaxLength(128)
   current!: string;
 
-  @IsString()
-  @MinLength(10)
-  @MaxLength(128)
+  @IsPassword()
   next!: string;
 }

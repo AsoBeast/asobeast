@@ -6,6 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
+import { ApiErrorEnvelope, PASSWORD_RULE } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -335,6 +336,14 @@ describe('Account recovery for a customer who forgot their password', () => {
     const token = await issuedToken();
 
     await reset(token, 'short').expect(400);
+    await signIn(PASSWORD).expect(200);
+  });
+
+  it('refuses a new password that is only whitespace', async () => {
+    const token = await issuedToken();
+
+    const refused = await reset(token, ' '.repeat(10)).expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
     await signIn(PASSWORD).expect(200);
   });
 

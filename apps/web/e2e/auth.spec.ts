@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "./reporting.mts";
 import {
+  PASSWORD_RULE,
   PLAN_LIMITS,
   SESSION_COOKIE,
   UPGRADE_PATH,
@@ -964,6 +965,54 @@ test("a recovered account signs in with the password it just chose", async ({
   await expect(page).toHaveURL(/localhost:3000\/$/);
 });
 
+test("every form that sets a password states the rule beside the field", async ({
+  page,
+}) => {
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: true,
+    setupRequired: true,
+    authenticated: false,
+  });
+  await page.context().addCookies([
+    {
+      name: "e2e_setup_required",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/register");
+  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+
+  await page.goto("/invite?token=invitation-token-value");
+  await expect(page.getByLabel("Password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+
+  await page.goto("/reset-password?token=recovery-token-value");
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+});
+
+test("the change password dialog states the rule beside the new password", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeMe(page, TRIAL_USER);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Change password" }).click();
+
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    PASSWORD_RULE,
+  );
+});
+
 test("recovery refuses a password shorter than the account rules allow", async ({
   page,
 }) => {
@@ -977,8 +1026,28 @@ test("recovery refuses a password shorter than the account rules allow", async (
   await page.getByLabel("New password").fill("short");
   await page.getByRole("button", { name: "Set new password" }).click();
 
-  await expect(
-    page.getByText("Password must be at least 10 characters."),
-  ).toBeVisible();
+  await expect(page.locator("#password-error")).toHaveText(
+    "Password must be between 10 and 128 characters.",
+  );
+  await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
+    `${PASSWORD_RULE} Password must be between 10 and 128 characters.`,
+  );
+  expect(attempts).toBe(0);
+});
+
+test("recovery refuses a password that is only whitespace before sending it", async ({
+  page,
+}) => {
+  let attempts = 0;
+  await page.route("**/api/backend/auth/password/reset", async (route) => {
+    attempts += 1;
+    await route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/reset-password?token=recovery-token-value");
+  await page.getByLabel("New password").fill(" ".repeat(10));
+  await page.getByRole("button", { name: "Set new password" }).click();
+
+  await expect(page.locator("#password-error")).toHaveText(PASSWORD_RULE);
   expect(attempts).toBe(0);
 });

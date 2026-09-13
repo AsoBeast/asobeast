@@ -1,4 +1,5 @@
 import './helpers/enable-auth';
+import * as argon2 from 'argon2';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
@@ -10,6 +11,7 @@ import {
   ApiTokenCreated,
   ApiTokenItem,
   AuthUser,
+  PASSWORD_RULE,
   WorkspaceInviteCreated,
   WorkspaceTeam,
 } from '@asobeast/shared';
@@ -24,6 +26,8 @@ import {
 } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
+
+const BLANK_PASSWORD = ' '.repeat(10);
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -217,6 +221,21 @@ describe('Auth (enabled, self-hosted)', () => {
     await expect(prisma.workspaceInvite.count()).resolves.toBe(0);
   });
 
+  it('refuses to accept an invitation with a whitespace-only password', async () => {
+    const cookie = await registerOwner();
+    const invite = await inviteMember(cookie, 'blank@example.com');
+
+    const refused = await request(app.getHttpServer())
+      .post('/workspace/invites/accept')
+      .send({ token: tokenOf(invite), password: BLANK_PASSWORD })
+      .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
+
+    await expect(
+      prisma.user.count({ where: { email: 'blank@example.com' } }),
+    ).resolves.toBe(0);
+  });
+
   it('refuses to invite an email that already has an account', async () => {
     const cookie = await registerOwner();
 
@@ -334,6 +353,94 @@ describe('Auth (enabled, self-hosted)', () => {
     await request(app.getHttpServer())
       .get('/auth/me')
       .set('Cookie', newCookie)
+      .expect(200);
+  });
+
+  it('refuses to register with a whitespace-only password', async () => {
+    const refused = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'spaces@example.com', password: BLANK_PASSWORD })
+      .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
+
+    await expect(prisma.user.count()).resolves.toBe(0);
+  });
+
+  it('still refuses a password shorter than ten characters', async () => {
+    const refused = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'short@example.com', password: '123456789' })
+      .expect(400);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'password must be longer than or equal to 10 characters',
+    );
+  });
+
+  it('accepts a passphrase with spaces inside it', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'phrase@example.com', password: 'correct horse' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'phrase@example.com', password: 'correct horse' })
+      .expect(200);
+  });
+
+  it('refuses to change the password to one that is only whitespace', async () => {
+    const cookie = sessionCookie(
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'blankchange@example.com', password: 'supersecret1' })
+        .expect(201),
+    );
+
+    const refused = await request(app.getHttpServer())
+      .post('/auth/password')
+      .set('Cookie', cookie)
+      .send({ current: 'supersecret1', next: `${BLANK_PASSWORD}\t` })
+      .expect(400);
+    expect((refused.body as ApiErrorEnvelope).message).toBe(PASSWORD_RULE);
+
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'blankchange@example.com', password: 'supersecret1' })
+      .expect(200);
+  });
+
+  it('answers a whitespace-only sign in with the uniform 401', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'blanklogin@example.com', password: 'supersecret1' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'blanklogin@example.com', password: BLANK_PASSWORD })
+      .expect(401);
+  });
+
+  it('keeps an account that already holds a whitespace password able to sign in and change it', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'legacy@example.com', password: 'supersecret1' })
+      .expect(201);
+    await prisma.user.update({
+      where: { email: 'legacy@example.com' },
+      data: { passwordHash: await argon2.hash(BLANK_PASSWORD) },
+    });
+
+    const signedIn = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'legacy@example.com', password: BLANK_PASSWORD })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/auth/password')
+      .set('Cookie', sessionCookie(signedIn))
+      .send({ current: BLANK_PASSWORD, next: 'correct horse' })
       .expect(200);
   });
 
