@@ -74,9 +74,13 @@ export function queueFor(
   return queueNameForStore(store) === QUEUES.GPLAY ? gplayQueue : appStoreQueue;
 }
 
+export function trackedOrder() {
+  return [{ createdAt: 'asc' as const }, { keywordId: 'asc' as const }];
+}
+
 export function trackedArgs(appId: string) {
   return {
-    orderBy: { createdAt: 'asc' as const },
+    orderBy: trackedOrder(),
     select: {
       keywordId: true,
       source: true,

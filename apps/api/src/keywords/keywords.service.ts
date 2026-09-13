@@ -37,6 +37,7 @@ import {
   normalizeKeyword,
   queueFor,
   trackedArgs,
+  trackedOrder,
 } from './keywords.support';
 
 const AUTO_TRACK_LIMIT = 15;
@@ -291,6 +292,10 @@ export class KeywordsService {
         keyword: { is: { country: app.country } },
       },
       ...trackedArgs(app.id),
+      orderBy: [
+        { fieldOrder: { sort: 'asc', nulls: 'last' } },
+        ...trackedOrder(),
+      ],
     });
     const [snapshotText, volatility] = await Promise.all([
       this.snapshotText(app.id),
@@ -345,11 +350,17 @@ export class KeywordsService {
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       await this.serializeKeywordField(tx, appId);
-      for (const keywordId of keywordIds) {
+      for (const [fieldOrder, keywordId] of keywordIds.entries()) {
         await this.trackKeyword(
           tx,
-          { appId, keywordId, source: 'KEYWORD_FIELD', active: true },
-          { source: 'KEYWORD_FIELD', active: true },
+          {
+            appId,
+            keywordId,
+            source: 'KEYWORD_FIELD',
+            active: true,
+            fieldOrder,
+          },
+          { source: 'KEYWORD_FIELD', active: true, fieldOrder },
         );
       }
       await tx.trackedKeyword.updateMany({
