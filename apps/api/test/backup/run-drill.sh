@@ -5,6 +5,7 @@ DRILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API_DIR="$(cd "${DRILL_DIR}/../.." && pwd)"
 REPO_DIR="$(cd "${API_DIR}/../.." && pwd)"
 FIXTURE="${API_DIR}/test/upgrade/fixture-baseline.sql"
+MIGRATED_FIXTURE="${API_DIR}/test/upgrade/fixture-migrated.sql"
 
 SOURCE_DB="${SOURCE_DB:-asobeast_backup_source}"
 TARGET_DB="${TARGET_DB:-asobeast_backup_target}"
@@ -68,6 +69,7 @@ recreate_database "${SOURCE_DB}"
 
 echo "==> Loading the fixture"
 compose_psql "${SOURCE_DB}" <"${FIXTURE}" >/dev/null
+compose_psql "${SOURCE_DB}" <"${MIGRATED_FIXTURE}" >/dev/null
 
 echo "==> Fingerprinting the source"
 fingerprint "${SOURCE_DB}" >"${WORK}/source.txt"
