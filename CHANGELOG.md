@@ -3,6 +3,110 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.3.0](https://github.com/AsoBeast/asobeast/compare/v1.2.0...v1.3.0) (2026-09-13)
+
+
+### Features
+
+* **api:** reconcile a workspace before refusing its checkout ([0a39ee3](https://github.com/AsoBeast/asobeast/commit/0a39ee304e1cfc160adc13b5c6f66ba604c4a70f))
+* **shared:** carry the recovery a billing conflict needs ([8c3a7a5](https://github.com/AsoBeast/asobeast/commit/8c3a7a548852b7cc6446bedcc68026b278ba3ab8))
+* **web:** reconcile the workspace when a checkout returns ([9118c2e](https://github.com/AsoBeast/asobeast/commit/9118c2e196809418052140eb320794510ac5831f))
+* **web:** show the release version in the sidebar footer ([972fb3f](https://github.com/AsoBeast/asobeast/commit/972fb3f4fd459953d4e7c76196d0bba541c61258))
+* **web:** show the release version in the sidebar footer ([f4e25f4](https://github.com/AsoBeast/asobeast/commit/f4e25f40dd30fb28610fb1ccefc09263d207d821))
+
+
+### Bug Fixes
+
+* **actions:** answer 404 for an unknown app in the action route ([6bfc29c](https://github.com/AsoBeast/asobeast/commit/6bfc29cd9526a458a15eb3db1e7c531d8fc802d7))
+* **actions:** answer 404 for an unknown app in the action route ([3359ec8](https://github.com/AsoBeast/asobeast/commit/3359ec891865108f15cc8ce8f764d712b3cfc9c8))
+* **api:** adopt the subscription stripe already links to the workspace ([17e45e3](https://github.com/AsoBeast/asobeast/commit/17e45e31a086dd872123c2e241ffc581a12fc06e))
+* **api:** close the gaps a review found in the recovery path ([75f2529](https://github.com/AsoBeast/asobeast/commit/75f25294b3637a2454a0b352c6a0acb22e7900c8))
+* **api:** recover a workspace whose subscription no webhook recorded ([08225c3](https://github.com/AsoBeast/asobeast/commit/08225c3c60912d52521d849d2e01855e62e4da1a))
+* **api:** revoke only a workspace that claims a subscription ([b45f542](https://github.com/AsoBeast/asobeast/commit/b45f5424e724b993dec8d5660b6ccba846a5cd81))
+* **api:** stop a dead subscription shadowing the recovery ([470668d](https://github.com/AsoBeast/asobeast/commit/470668d833bffba3fea8b81935326ad2d5528b5e))
+* **api:** tell a stalled subscription what it is missing ([e47677e](https://github.com/AsoBeast/asobeast/commit/e47677e6ef7797697cb067d68711c8419509988d))
+* **auth:** count password characters by code point ([6b5c585](https://github.com/AsoBeast/asobeast/commit/6b5c5852718bf95ab125306b032297c2f7bd4df1))
+* **auth:** refuse a password that is only whitespace ([145c469](https://github.com/AsoBeast/asobeast/commit/145c469b8416bf5a5a96e1c09ba02debdccfdb3a))
+* **auth:** refuse a password that is only whitespace ([b5e468f](https://github.com/AsoBeast/asobeast/commit/b5e468fd5a1cb668c1c5fb2b7facd259762a057f))
+* **ci:** build workspace packages before linting ([996c368](https://github.com/AsoBeast/asobeast/commit/996c368dd275acd698c4c7d87604935678bb1d6d))
+* **keywords:** insert new keyword rows in one order so saves cannot deadlock ([ba38a0e](https://github.com/AsoBeast/asobeast/commit/ba38a0efac9340faa825c06d97037a66f064a3f2))
+* **keywords:** insert new keyword rows in text order so writes cannot deadlock ([ab3ab7b](https://github.com/AsoBeast/asobeast/commit/ab3ab7b3cc74b061856f027947fb03a453604907))
+* **keywords:** make keyword inserts deadlock free and keep the field in saved order ([0b70e22](https://github.com/AsoBeast/asobeast/commit/0b70e22dc2960d1a9d8c279458cd4b583c3fabdf))
+* **keywords:** read the keyword field in the order it was saved ([bcd801f](https://github.com/AsoBeast/asobeast/commit/bcd801fc34398063b70387b29ea8ee62fca53966))
+* **keywords:** record keyword field membership apart from the keyword source ([d4f5cf4](https://github.com/AsoBeast/asobeast/commit/d4f5cf47a05143f349b54e049f795c359021ff11))
+* **keywords:** record keyword field membership apart from the keyword source ([b4392c6](https://github.com/AsoBeast/asobeast/commit/b4392c6f9ad0099a19dac0daa8a934fb80415b31))
+* **keywords:** refuse a keyword field over the 100 character limit ([09ab7b9](https://github.com/AsoBeast/asobeast/commit/09ab7b97d28b04ff451d710c4132dc008de11d21))
+* **keywords:** serialize concurrent keyword field saves per app ([c47a0b9](https://github.com/AsoBeast/asobeast/commit/c47a0b9a1355c54b877b0fc6531fe4f589d13ef7))
+* **keywords:** serialize the keyword field write per app ([13fd4e3](https://github.com/AsoBeast/asobeast/commit/13fd4e3a9e687fb44de102c58a00128e625a55f1))
+* **repo:** close the advisories the dependency tree carries ([f842557](https://github.com/AsoBeast/asobeast/commit/f842557dcaeea387f8f446064d7237d7f892386b))
+* **repo:** keep generated env files private and node recoverable ([5d42222](https://github.com/AsoBeast/asobeast/commit/5d42222db01d432e1de3454969b6fb82c63eae9e))
+* **repo:** let prisma fetch the schema engine at install ([9263f52](https://github.com/AsoBeast/asobeast/commit/9263f524da497326382c9a9ebdc126e7120ec59d))
+* **shared:** lowercase a capital dotted I without splitting the word ([367125a](https://github.com/AsoBeast/asobeast/commit/367125adca67190a084f310df5676cd8229255fe))
+* **shared:** lowercase a capital dotted I without splitting the word ([e2faffa](https://github.com/AsoBeast/asobeast/commit/e2faffa42fcf7266565ca96a08bdea3a17f19d40))
+* **shared:** lowercase a dotted I written with a combining dot as one letter ([3da7b9c](https://github.com/AsoBeast/asobeast/commit/3da7b9c276e8bc879bd57b934dbd1a34620b1c9a))
+* **web:** check the whole password rule and link its error to the field ([ca5d5b2](https://github.com/AsoBeast/asobeast/commit/ca5d5b2341fe6ed3a5ce3cdcb2f32ec98af908c3))
+* **web:** clamp displayed keyword scores to their 0 to 100 scale ([e9831a1](https://github.com/AsoBeast/asobeast/commit/e9831a1ca8b22c1b2c98c318cebce4458371e1b3))
+* **web:** clamp the comparison matrix scores to their 0 to 100 scale ([c42bf17](https://github.com/AsoBeast/asobeast/commit/c42bf172c03836716c8c5cb0011a8982e501112e))
+* **web:** clamp the displayed difficulty to its 0 to 100 scale ([968af05](https://github.com/AsoBeast/asobeast/commit/968af0595507297e781a911b4ad96a6f2b9e9d71))
+* **web:** fall back to the letter placeholder when a store icon fails ([3f85494](https://github.com/AsoBeast/asobeast/commit/3f8549448c0e815fffd09da0e6b801e2a5be8cdc))
+* **web:** fall back to the letter placeholder when an icon fails ([377a7d5](https://github.com/AsoBeast/asobeast/commit/377a7d51b0b97bdecb118f940c6d982d16645407))
+* **web:** keep the app icon decorative whether it loads or not ([dd595b8](https://github.com/AsoBeast/asobeast/commit/dd595b84eb18842ad52ba74c4b26ea3cea173abb))
+* **web:** offer the recovery a held subscription needs ([be2e369](https://github.com/AsoBeast/asobeast/commit/be2e36903646245bf320768c29b479a55416a039))
+* **web:** read the dashboard action summary as the page prefetches it ([5f860db](https://github.com/AsoBeast/asobeast/commit/5f860dba96e728d621963aa911f9ead98912aabc))
+* **web:** read the ratings histogram as its page prefetches it ([2004584](https://github.com/AsoBeast/asobeast/commit/2004584c349fa41c72255999296985fae240e5ce))
+* **web:** render relative times from one instant ([55fefbd](https://github.com/AsoBeast/asobeast/commit/55fefbd3442eaee9126c996facf8e59ca522b2f9))
+* **web:** render the dashboard and its relative times from one server state ([44b8991](https://github.com/AsoBeast/asobeast/commit/44b89919ba9e29b3dd614882b2eaebcee9d54e90))
+* **web:** retry an icon whose url comes back after a failure ([3f44e3c](https://github.com/AsoBeast/asobeast/commit/3f44e3cd94e3edbca8ba01fa0ab15a467e649c76))
+* **web:** state the password rule beside the password field ([4ecabcc](https://github.com/AsoBeast/asobeast/commit/4ecabcc42bd914e17e9195bbfd6110415f12bc9e))
+
+
+### Performance
+
+* **keywords:** leave inactive phrases alone when a keyword field save deactivates ([83eadc5](https://github.com/AsoBeast/asobeast/commit/83eadc5a7e0a7b5e5fae754b33e6ab407831f4d8))
+
+
+### Refactoring
+
+* **api:** give a subscription status one table and three outcomes ([01319e4](https://github.com/AsoBeast/asobeast/commit/01319e4905688ca86a33c19c343ad8737f091586))
+* **api:** pick a held subscription by one rule ([9dc36e7](https://github.com/AsoBeast/asobeast/commit/9dc36e7c6312e809656a6b41095871b83b5fe84b))
+* **api:** write a workspace from one subscription projection ([68bc73d](https://github.com/AsoBeast/asobeast/commit/68bc73d604cc3ecfa8d2170491e2855b92d116df))
+* **shared:** keep the score display maximum private ([5c99263](https://github.com/AsoBeast/asobeast/commit/5c9926309ab6bab04529dc510e56f918811c841e))
+* **shared:** share the password rule predicate with the web app ([6c24708](https://github.com/AsoBeast/asobeast/commit/6c247085872ee164e951024c31229885f0a86b37))
+* **web:** move the comparison matrix score label into its own module ([0b9ad37](https://github.com/AsoBeast/asobeast/commit/0b9ad37ec891aac778bc8efa52d9a2f783a44d17))
+* **web:** share the route cookie seeding between specs ([b27d717](https://github.com/AsoBeast/asobeast/commit/b27d71707d27efde25129820db76d3062a280815))
+
+
+### Documentation
+
+* **api:** document the not found answer on the app action route ([071c166](https://github.com/AsoBeast/asobeast/commit/071c1669a799b7b16d4d0b512c04b18392003ffb))
+* **docs:** correct the stored scale for difficulty ([902cde8](https://github.com/AsoBeast/asobeast/commit/902cde8feeb65341d8d69591fba0f6e94bf3a5be))
+* **docs:** list the normalized keyword field limit ([ed98198](https://github.com/AsoBeast/asobeast/commit/ed98198ec4ef95ce87fe481599f66ff1813ce74b))
+* **docs:** record how a stalled subscription recovers ([12f5fb8](https://github.com/AsoBeast/asobeast/commit/12f5fb84053f8d542a29a8305d185bfd530867c6))
+* **docs:** record the password rule and what it does not change ([656008b](https://github.com/AsoBeast/asobeast/commit/656008be265e01fda8df1920ee4b76a58453fc40))
+* **docs:** say the keyword field keeps the order of the latest save ([0c7ed15](https://github.com/AsoBeast/asobeast/commit/0c7ed15b3dd904b6e27f419348ad4e79e9418166))
+* **docs:** scope the uniform sign in answer to the length limit ([53df47d](https://github.com/AsoBeast/asobeast/commit/53df47d4c42df26c80e861ba2b3d884814b09558))
+* **docs:** state that the last keyword field save wins ([14d1d7a](https://github.com/AsoBeast/asobeast/commit/14d1d7acedde5806a6f3326bd5afe574360b9dad))
+* **docs:** state the keyword field limit on the stores concept page ([d40ee44](https://github.com/AsoBeast/asobeast/commit/d40ee44f2e417e8ce0ba4a47855016a395f7b764))
+* **docs:** state the scale of scores in action evidence ([2f1d0b1](https://github.com/AsoBeast/asobeast/commit/2f1d0b1d097c271c81cc7b232646681dbaa432d0))
+* **docs:** state which keywords a keyword field save may untrack ([6b55794](https://github.com/AsoBeast/asobeast/commit/6b55794b31bca022cb21f29ba8d6608a33426920))
+* **keywords:** describe the keyword field save in the api reference ([3c4ece0](https://github.com/AsoBeast/asobeast/commit/3c4ece0ba8ab5378e30d182e13d1d63cb040d2c1))
+* **keywords:** state the keyword field read order in the api reference ([c4e6a51](https://github.com/AsoBeast/asobeast/commit/c4e6a51a85d4cf852b46d7639c4c2c049f1c7342))
+* **mcp:** match the list_keywords scale wording to the tools page ([120bb96](https://github.com/AsoBeast/asobeast/commit/120bb964f2418d228fe059f90c2ab9d8c420cba6))
+* **mcp:** state the scale of each score in the list_keywords tool ([c5b1483](https://github.com/AsoBeast/asobeast/commit/c5b148303694f50b0f4fd744f15914572e67eb09))
+* **repo:** record the toolchain move and the holds it leaves ([2aca297](https://github.com/AsoBeast/asobeast/commit/2aca2972bdd198a14192d4394d55c14ffd33786c))
+* **repo:** say what a blocked install script means ([c65b34b](https://github.com/AsoBeast/asobeast/commit/c65b34b52a49a35d1f243ea38e4753c32f525aa2))
+* **web:** tell the keyword field editor keeps a repeated phrase once ([66cb0ae](https://github.com/AsoBeast/asobeast/commit/66cb0ae727b518ce07aa48933b7b2c45b64621d1))
+* **web:** tell the keyword field editor keeps the pasted order ([f020b0a](https://github.com/AsoBeast/asobeast/commit/f020b0a4cda215fbd6f82ecd16f0f76f64d7aff6))
+
+
+### Build and Deployment
+
+* **docs:** run mint through npx ([e48b2b6](https://github.com/AsoBeast/asobeast/commit/e48b2b611635a8095c0ef3dbfa1e7be6cdd678eb))
+* **repo:** install node for the sandbox architecture ([4a6252f](https://github.com/AsoBeast/asobeast/commit/4a6252f0eb2187fc1648203fe97695872a7197dc))
+* **repo:** move the workspace to pnpm 12 ([e99f30d](https://github.com/AsoBeast/asobeast/commit/e99f30d621aafb393c6f2be9ef463823b36bad87))
+* **repo:** run the stack in claude code cloud sessions ([3197dcb](https://github.com/AsoBeast/asobeast/commit/3197dcb74aeb414b0afba00f7f74d84f190cb1dc))
+* **repo:** run the stack in claude code cloud sessions ([eeb3838](https://github.com/AsoBeast/asobeast/commit/eeb38380b1cf411ba5b3dc5b4a8a4f56fb7041ac))
+
 ## [1.2.0](https://github.com/AsoBeast/asobeast/compare/v1.1.0...v1.2.0) (2026-08-29)
 
 
