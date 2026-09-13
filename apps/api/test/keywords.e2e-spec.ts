@@ -337,9 +337,10 @@ describe('KeywordsController (e2e)', () => {
   it('refuses a keyword field longer than apple accepts once normalized', async () => {
     const id = await importApp();
     const text = Array.from(
-      { length: 21 },
+      { length: 17 },
       (_, index) => `kw${String(index).padStart(3, '0')}`,
     ).join(',');
+    expect(text).toHaveLength(KEYWORD_FIELD_CHAR_LIMIT + 1);
 
     const response = await api
       .put(`/apps/${id}/keyword-field`)
