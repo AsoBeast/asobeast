@@ -7,6 +7,29 @@ describe('normalizeText', () => {
     expect(normalizeText('Habit Tracker')).toBe('habit tracker');
   });
 
+  it('lowercases a capital dotted I to one letter', () => {
+    expect(normalizeText('İstanbul')).toBe('istanbul');
+    expect(normalizeText('İZMİRA')).toBe('izmira');
+    expect(normalizeText('Kayıt İzmir')).toBe('kayıt izmir');
+  });
+
+  it('keeps the dotless i and accented letters as they are', () => {
+    expect(normalizeText('ILIK ılık')).toBe('ilik ılık');
+    expect(normalizeText('Café Crème')).toBe('café crème');
+  });
+
+  it('keeps every letter joined to the letter after it', () => {
+    const split: string[] = [];
+    for (let codePoint = 0; codePoint <= 0x10ffff; codePoint += 1) {
+      if (codePoint >= 0xd800 && codePoint <= 0xdfff) continue;
+      const letter = String.fromCodePoint(codePoint);
+      if (/\p{L}/u.test(letter) && normalizeText(`${letter}a`).includes(' ')) {
+        split.push(letter);
+      }
+    }
+    expect(split).toEqual([]);
+  });
+
   it('strips punctuation and emoji', () => {
     expect(normalizeText('Streak🔥 Counter, Daily!')).toBe(
       'streak counter daily',
