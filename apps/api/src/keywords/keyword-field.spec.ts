@@ -240,4 +240,18 @@ describe('KeywordsService.setKeywordField writes', () => {
     expect(restored.tracked.map((item) => item.text)).toEqual(['a', 'b', 'c']);
     expect(deactivatedTexts(prisma)).toEqual([]);
   });
+
+  it('creates keyword rows in one order whatever order the field was typed in', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+
+    const result = await service.setKeywordField(APP.id, 'delta,alpha,charlie');
+
+    expect(prisma.insertedTexts).toEqual([['alpha', 'charlie', 'delta']]);
+    expect(result.tracked.map((item) => item.text)).toEqual([
+      'delta',
+      'alpha',
+      'charlie',
+    ]);
+  });
 });
