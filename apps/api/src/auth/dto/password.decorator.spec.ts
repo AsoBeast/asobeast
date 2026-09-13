@@ -19,6 +19,7 @@ describe('IsPassword', () => {
     ['a passphrase with internal spaces', 'correct horse'],
     ['a long enough password padded with spaces', ' supersecret1 '],
     ['the longest allowed password', 'a'.repeat(128)],
+    ['ten emoji', '\u{1F600}'.repeat(10)],
   ])('accepts %s', async (_case, password) => {
     await expect(messagesFor(password)).resolves.toEqual([]);
   });
@@ -28,8 +29,9 @@ describe('IsPassword', () => {
     ['ten spaces and a tab', `${' '.repeat(10)}\t`],
     ['ten non breaking spaces', '\u00a0'.repeat(10)],
     ['mixed unicode whitespace', ' \t\n\r\u00a0\u2003\u3000\ufeff\u2028\u202f'],
-    ['nine visible characters padded to ten', '  abc  def'],
-    ['visible characters spread across whitespace', 'a         b'],
+    ['nine characters around one space', 'abcd efghi'],
+    ['five emoji padded with spaces', `${'\u{1F600}'.repeat(5)}     `],
+    ['two characters spread across whitespace', 'a         b'],
   ])('refuses %s with the password rule', async (_case, password) => {
     await expect(messagesFor(password)).resolves.toEqual([PASSWORD_RULE]);
   });

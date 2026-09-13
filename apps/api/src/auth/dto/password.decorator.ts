@@ -9,11 +9,15 @@ import { IsString, MaxLength, MinLength, ValidateBy } from 'class-validator';
 
 const WHITESPACE = /\s/g;
 
-function hasEnoughVisibleCharacters(value: unknown): boolean {
+function characterCount(text: string): number {
+  return [...text].length;
+}
+
+function hasEnoughNonWhitespaceCharacters(value: unknown): boolean {
   if (typeof value !== 'string') return true;
-  if (value.length < PASSWORD_MIN_LENGTH) return true;
-  if (value.length > PASSWORD_MAX_LENGTH) return true;
-  return value.replace(WHITESPACE, '').length >= PASSWORD_MIN_LENGTH;
+  const length = characterCount(value);
+  if (length < PASSWORD_MIN_LENGTH || length > PASSWORD_MAX_LENGTH) return true;
+  return characterCount(value.replace(WHITESPACE, '')) >= PASSWORD_MIN_LENGTH;
 }
 
 export function IsPassword(): PropertyDecorator {
@@ -29,7 +33,7 @@ export function IsPassword(): PropertyDecorator {
     ValidateBy({
       name: 'isPassword',
       validator: {
-        validate: hasEnoughVisibleCharacters,
+        validate: hasEnoughNonWhitespaceCharacters,
         defaultMessage: () => PASSWORD_RULE,
       },
     }),
