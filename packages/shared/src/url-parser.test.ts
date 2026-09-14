@@ -127,6 +127,60 @@ describe('parseStoreUrl — canonical App Store ids', () => {
   });
 });
 
+describe('parseStoreUrl — a store url pasted without a scheme', () => {
+  it('parses an App Store listing typed the way the import dialog shows it', () => {
+    expect(parseStoreUrl('apps.apple.com/us/app/anything/id42')).toEqual({
+      store: 'APP_STORE',
+      storeAppId: '42',
+      country: 'us',
+    });
+  });
+
+  it('parses an itunes.apple.com listing without a country', () => {
+    expect(parseStoreUrl('itunes.apple.com/app/id42')).toEqual({
+      store: 'APP_STORE',
+      storeAppId: '42',
+      country: 'us',
+    });
+  });
+
+  it('parses a Google Play details url with its country', () => {
+    expect(
+      parseStoreUrl('play.google.com/store/apps/details?id=com.foo.bar&gl=DE'),
+    ).toEqual({
+      store: 'GOOGLE_PLAY',
+      storeAppId: 'com.foo.bar',
+      country: 'de',
+    });
+  });
+
+  it('keeps a legacy itunes listing url with its media type', () => {
+    expect(parseStoreUrl('https://itunes.apple.com/us/app/id42?mt=8')).toEqual({
+      store: 'APP_STORE',
+      storeAppId: '42',
+      country: 'us',
+    });
+  });
+
+  it('echoes the input as it was typed when it refuses it', () => {
+    expect(() => parseStoreUrl('apps.apple.com/us/app/anything')).toThrow(
+      'Unrecognized store URL or id: apps.apple.com/us/app/anything',
+    );
+  });
+});
+
+describe('parseStoreUrl — an Apple page that is not a listing', () => {
+  it.each([
+    'https://apps.apple.com/us/developer/anything/id42',
+    'https://itunes.apple.com/us/album/anything/id42',
+    'https://apps.apple.com/us/app-bundle/anything/id42',
+    'https://apps.apple.com/us/story/id42',
+    'example.com/app/id42',
+  ])('refuses %j', (input) => {
+    expect(() => parseStoreUrl(input)).toThrow(InvalidStoreUrlError);
+  });
+});
+
 describe('parseStoreUrl — invalid input', () => {
   it.each([
     '',
