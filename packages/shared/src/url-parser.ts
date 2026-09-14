@@ -16,11 +16,12 @@ export interface ParsedStoreUrl {
 const NUMERIC_ID = /^\d+$/;
 const PACKAGE_NAME = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
 const COUNTRY_SEGMENT = /^[a-z]{2}$/i;
-const APP_ID_PATH = /\/id(\d+)/i;
+const APP_LISTING_PATH = /(?:^|\/)app\/(?:[^/]+\/)?id(\d+)(?:\/|$)/i;
 const LEADING_ZEROS = /^0+(?=\d)/;
 
 const APP_STORE_HOSTS = new Set(['apps.apple.com', 'itunes.apple.com']);
 const GOOGLE_PLAY_HOST = 'play.google.com';
+const STORE_HOSTS = new Set([...APP_STORE_HOSTS, GOOGLE_PLAY_HOST]);
 
 export function parseStoreUrl(input: string): ParsedStoreUrl {
   const trimmed = input.trim();
@@ -42,13 +43,13 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
     };
   }
 
-  const url = safeParseUrl(trimmed);
+  const url = safeParseUrl(withScheme(trimmed));
   if (!url) throw new InvalidStoreUrlError(input);
 
   const host = url.hostname.toLowerCase();
 
   if (APP_STORE_HOSTS.has(host)) {
-    const match = url.pathname.match(APP_ID_PATH);
+    const match = url.pathname.match(APP_LISTING_PATH);
     if (!match) throw new InvalidStoreUrlError(input);
     const first = url.pathname.split('/').filter(Boolean)[0];
     const country =
@@ -83,6 +84,11 @@ function appStoreId(digits: string, input: string): string {
     throw new InvalidStoreUrlError(input);
   }
   return canonical;
+}
+
+function withScheme(input: string): string {
+  const host = input.split(/[/?#]/, 1)[0].toLowerCase();
+  return STORE_HOSTS.has(host) ? `https://${input}` : input;
 }
 
 function safeParseUrl(input: string): URL | null {
