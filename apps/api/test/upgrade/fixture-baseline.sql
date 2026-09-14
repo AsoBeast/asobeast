@@ -22,7 +22,9 @@ INSERT INTO "App" ("id", "workspaceId", "store", "storeAppId", "country", "name"
 VALUES
   ('app_ios', 'ws_default', 'APP_STORE', '111111111', 'us', 'Drill Fitness', 'https://cdn.test/ios.png', false, NULL, 'grp_fitness', '2026-07-01 00:00:00'),
   ('app_play', 'ws_default', 'GOOGLE_PLAY', 'com.drill.fitness', 'us', 'Drill Fitness', 'https://cdn.test/play.png', false, NULL, 'grp_fitness', '2026-07-01 00:00:00'),
-  ('app_rival', 'ws_default', 'APP_STORE', '222222222', 'us', 'Rival Fitness', NULL, true, 'app_ios', NULL, '2026-07-01 00:00:00');
+  ('app_rival', 'ws_default', 'APP_STORE', '222222222', 'us', 'Rival Fitness', NULL, true, 'app_ios', NULL, '2026-07-01 00:00:00'),
+  ('app_padded', 'ws_default', 'APP_STORE', '0333333333', 'us', 'Drill Padded', NULL, false, NULL, NULL, '2026-07-01 00:00:00'),
+  ('app_padded_twin', 'ws_default', 'APP_STORE', '0111111111', 'us', 'Drill Padded Twin', NULL, false, NULL, NULL, '2026-07-01 00:00:00');
 
 INSERT INTO "AppSnapshot" ("id", "appId", "title", "subtitle", "summary", "description", "ratingAvg", "ratingCount", "installs", "price", "version", "releasedAt", "storeUpdatedAt", "raw", "capturedAt")
 VALUES
