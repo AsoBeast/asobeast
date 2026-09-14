@@ -278,6 +278,34 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.appSnapshot.count()).toBe(1);
   });
 
+  it('resolves an app store id with leading zeros to the app it already tracks', async () => {
+    const first = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    registry.getAppCalls = [];
+
+    const second = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/us/app/fixture/id001234567890' })
+      .expect(201);
+
+    expect((second.body as AppDetail).id).toBe((first.body as AppDetail).id);
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(1);
+  });
+
+  it('refuses an app store id it cannot represent without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: '99999999999999999999' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
     const created = await api
       .post('/apps')
@@ -390,6 +418,21 @@ describe('AppsController (e2e)', () => {
       await api
         .post(`/apps/${primary}/competitors`)
         .send({ url: RIVAL_URL })
+        .expect(201);
+
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
+    });
+
+    it('resolves a competitor id with leading zeros to the competitor it already tracks', async () => {
+      const primary = await importedId(APP_STORE_URL);
+
+      await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: RIVAL_URL })
+        .expect(201);
+      await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: 'https://apps.apple.com/us/app/rival/id009876543210' })
         .expect(201);
 
       expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);

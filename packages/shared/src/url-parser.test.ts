@@ -102,6 +102,31 @@ describe('parseStoreUrl — bare identifiers', () => {
   });
 });
 
+describe('parseStoreUrl — canonical App Store ids', () => {
+  it.each([
+    ['0570060128', '570060128'],
+    ['https://apps.apple.com/us/app/duolingo/id0570060128', '570060128'],
+    ['https://apps.apple.com/us/app/anything/id000042', '42'],
+    ['9007199254740991', '9007199254740991'],
+  ])('resolves %j to the listing id %j', (input, storeAppId) => {
+    expect(parseStoreUrl(input)).toEqual({
+      store: 'APP_STORE',
+      storeAppId,
+      country: 'us',
+    });
+  });
+
+  it.each([
+    '0',
+    '0000',
+    'https://apps.apple.com/us/app/anything/id0000',
+    '9007199254740992',
+    '99999999999999999999',
+  ])('refuses %j, which names no listing asobeast can represent', (input) => {
+    expect(() => parseStoreUrl(input)).toThrow(InvalidStoreUrlError);
+  });
+});
+
 describe('parseStoreUrl — invalid input', () => {
   it.each([
     '',
