@@ -17,6 +17,7 @@ const NUMERIC_ID = /^\d+$/;
 const PACKAGE_NAME = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/i;
 const COUNTRY_SEGMENT = /^[a-z]{2}$/i;
 const APP_ID_PATH = /\/id(\d+)/i;
+const LEADING_ZEROS = /^0+(?=\d)/;
 
 const APP_STORE_HOSTS = new Set(['apps.apple.com', 'itunes.apple.com']);
 const GOOGLE_PLAY_HOST = 'play.google.com';
@@ -28,7 +29,7 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
   if (NUMERIC_ID.test(trimmed)) {
     return {
       store: 'APP_STORE',
-      storeAppId: trimmed,
+      storeAppId: appStoreId(trimmed, input),
       country: DEFAULT_COUNTRY,
     };
   }
@@ -54,7 +55,11 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
       first && COUNTRY_SEGMENT.test(first)
         ? first.toLowerCase()
         : DEFAULT_COUNTRY;
-    return { store: 'APP_STORE', storeAppId: match[1], country };
+    return {
+      store: 'APP_STORE',
+      storeAppId: appStoreId(match[1], input),
+      country,
+    };
   }
 
   if (host === GOOGLE_PLAY_HOST) {
@@ -69,6 +74,15 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
   }
 
   throw new InvalidStoreUrlError(input);
+}
+
+function appStoreId(digits: string, input: string): string {
+  const canonical = digits.replace(LEADING_ZEROS, '');
+  const value = Number(canonical);
+  if (value === 0 || !Number.isSafeInteger(value)) {
+    throw new InvalidStoreUrlError(input);
+  }
+  return canonical;
 }
 
 function safeParseUrl(input: string): URL | null {
