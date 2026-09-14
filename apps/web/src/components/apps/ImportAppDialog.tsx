@@ -54,13 +54,14 @@ function StoreUrlField({
       <Input
         id="import-url"
         name="store-url"
-        type="url"
+        type="text"
         inputMode="url"
         autoComplete="off"
+        autoCapitalize="none"
         spellCheck={false}
         value={url}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="apps.apple.com/us/app/name/id123…"
+        placeholder="apps.apple.com/us/app/name/id123 or com.example.app"
         autoFocus
         aria-invalid={error !== null}
         aria-describedby={error ? "import-url-error" : undefined}
