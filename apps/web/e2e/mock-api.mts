@@ -681,6 +681,16 @@ const routes: Route[] = [
     },
   },
   appRoute(/^\/apps\/([^/]+)$/, (dataset) => dataset.detail),
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)$/,
+    handler: ([id], req, res) => {
+      if (!DATASETS[id]) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      res.writeHead(204).end();
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset) => dataset.summary),
   {
     method: "GET",

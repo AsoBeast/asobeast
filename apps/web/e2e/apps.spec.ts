@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
 import {
@@ -80,6 +81,52 @@ test("the import dialog refuses an apple page that is not a listing", async ({
     page.getByText(`Unrecognized store URL or id: ${developerPage}`),
   ).toBeVisible();
   expect(imports).toEqual([]);
+});
+
+test.describe("a fast double click", () => {
+  const countRequests = (page: Page, method: string, path: RegExp) => {
+    const seen: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === method && path.test(request.url())) {
+        seen.push(request.url());
+      }
+    });
+    return seen;
+  };
+
+  test("on Import sends one import", async ({ page }) => {
+    const imports = countRequests(page, "POST", /\/api\/backend\/apps$/);
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page
+      .getByLabel("Store URL")
+      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+    await page.getByRole("button", { name: "Import", exact: true }).dblclick();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(imports).toHaveLength(1);
+  });
+
+  test("on Delete app sends one delete", async ({ page }) => {
+    const deletes = countRequests(
+      page,
+      "DELETE",
+      /\/api\/backend\/apps\/[^/]+$/,
+    );
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "App actions" }).first().click();
+    await page.getByRole("menuitem", { name: "Delete app" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete app" })
+      .dblclick();
+
+    await expect(page.getByText(/^Deleted /).first()).toBeVisible();
+    expect(deletes).toHaveLength(1);
+    await expect(page.getByText(/^Could not delete /)).toHaveCount(0);
+  });
 });
 
 test("finished setup suppresses redirects after later imports", async ({

@@ -488,16 +488,26 @@ describe('AppsController (e2e)', () => {
     it('stays idempotent when the same competitor is added twice', async () => {
       const primary = await importedId(APP_STORE_URL);
 
-      await api
+      const first = await api
         .post(`/apps/${primary}/competitors`)
         .send({ url: RIVAL_URL })
         .expect(201);
-      await api
+      registry.getAppCalls = [];
+      const second = await api
         .post(`/apps/${primary}/competitors`)
         .send({ url: RIVAL_URL })
         .expect(201);
 
+      expect((second.body as { id: string }).id).toBe(
+        (first.body as { id: string }).id,
+      );
       expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
+      expect(registry.getAppCalls).toEqual([]);
+      expect(
+        await prisma.appSnapshot.count({
+          where: { app: { isCompetitor: true } },
+        }),
+      ).toBe(1);
     });
 
     it('resolves a competitor id with leading zeros to the competitor it already tracks', async () => {
