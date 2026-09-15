@@ -57,6 +57,8 @@ The 80 character short description, called `summary` in the store payload, is Go
 - The metadata workbench lints it against the 80 character limit.
 - Keyword coverage counts it as an indexed field.
 
+The store page escapes some characters in the short description, so `Math & Music` arrives as `Math &amp; Music`. asobeast stores the short description as the plain text a user reads, keeps the payload exactly as received in `raw`, and counts characters the way Google Play does. An upgrade decodes short descriptions already stored and pauses the auto tracked keywords an escape produced, such as `amp music`, keeping their history.
+
 ## What stays Apple only?
 
 The subtitle and the keyword field. On a Google Play app they carry audit weight 0 and are hidden in the web app rather than shown empty, and the Action Center skips rules that would recommend an impossible edit.

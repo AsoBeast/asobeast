@@ -28,14 +28,21 @@ INSERT INTO "AppSnapshot" ("id", "appId", "title", "subtitle", "summary", "descr
 VALUES
   ('snap_ios_old', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'Old description.', 4.5, 1200, NULL, 0, '1.0.0', '2026-01-01 00:00:00', '2026-06-01 00:00:00', '{"trackId":111111111}', '2026-07-01 00:00:00'),
   ('snap_ios_new', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'New description.', 4.6, 1300, NULL, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"trackId":111111111}', '2026-07-15 00:00:00'),
-  ('snap_play', 'app_play', 'Drill Fitness', NULL, 'Track every workout in one place', 'Play description.', 4.4, 900, 500000, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"appId":"com.drill.fitness"}', '2026-07-15 00:00:00');
+  ('snap_play', 'app_play', 'Drill Fitness', NULL, 'Track every workout in one place', 'Play description.', 4.4, 900, 500000, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"appId":"com.drill.fitness"}', '2026-07-15 00:00:00'),
+  ('snap_play_escaped', 'app_play', 'Drill Fitness', NULL, 'Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3, &apos;fit&apos;', 'Play description.', 4.4, 910, 500000, 0, '1.2.0', '2026-01-01 00:00:00', '2026-07-17 00:00:00', '{"appId":"com.drill.fitness","summary":"Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3, &apos;fit&apos;"}', '2026-07-18 00:00:00');
 
 INSERT INTO "Keyword" ("id", "text", "store", "country", "createdAt")
 VALUES
   ('kw_ios_us', 'workout tracker', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
   ('kw_ios_gb', 'workout tracker', 'APP_STORE', 'gb', '2026-07-01 00:00:00'),
   ('kw_ios_us_alt', 'gym log', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
-  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
+  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_meals', 'amp meals', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_39_daily', '39 daily', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_tools', 'amp tools', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_lt_3', 'lt 3', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp', 'amp', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_workouts', 'workouts', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
 
 INSERT INTO "TrackedKeyword" ("appId", "keywordId", "source", "active", "relevance", "createdAt")
 VALUES
@@ -43,7 +50,13 @@ VALUES
   ('app_ios', 'kw_ios_gb', 'MANUAL', true, 80, '2026-07-01 00:00:00'),
   ('app_ios', 'kw_ios_us_alt', 'SUGGESTED', false, 40, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_us', 'DESCRIPTION', true, 70, '2026-07-01 00:00:00'),
-  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00');
+  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_meals', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_39_daily', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_tools', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_lt_3', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp', 'MANUAL', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_workouts', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00');
 
 INSERT INTO "KeywordMetric" ("keywordId", "date", "traffic", "difficulty", "stats", "scoringSource", "formulaVersion", "confidence", "capturedAt", "createdAt")
 VALUES
@@ -58,7 +71,9 @@ VALUES
   ('app_ios', 'ws_default', 'kw_ios_gb', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
   ('app_ios', 'ws_default', 'kw_ios_us_alt', '2026-07-15', NULL, 100, '2026-07-15 03:00:00'),
   ('app_rival', 'ws_default', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
-  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00');
+  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_amp_meals', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_39_daily', '2026-07-15', NULL, 200, '2026-07-15 03:00:00');
 
 INSERT INTO "CategoryRank" ("appId", "date", "collection", "genre", "position", "depth", "createdAt")
 VALUES
