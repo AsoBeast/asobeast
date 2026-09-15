@@ -119,8 +119,8 @@ export function dailyCompleteJobId(date: string): string {
   return `daily-complete~${date}`;
 }
 
-export function actionsJobId(workspaceId: string, date: string): string {
-  return `actions~${workspaceId}~${date}`;
+export function actionsRunDeduplicationId(workspaceId: string): string {
+  return `actions~${workspaceId}`;
 }
 
 export function isoWeekKey(date = new Date()): string {

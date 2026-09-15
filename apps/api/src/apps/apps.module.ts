@@ -1,5 +1,6 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { ActionRunModule } from '../actions/action-run.module';
 import { ChangesModule } from '../changes/changes.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { KeywordsModule } from '../keywords/keywords.module';
@@ -12,6 +13,7 @@ import { FirstRunScheduler } from './first-run.scheduler';
 
 @Module({
   imports: [
+    ActionRunModule,
     StoreProvidersModule,
     KeywordsModule,
     ChangesModule,

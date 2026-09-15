@@ -5,12 +5,8 @@ import {
   WorkspaceScope,
 } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  actionsJobId,
-  firstRunCheckJobId,
-  JOBS,
-  utcDateKey,
-} from '../jobs/jobs.types';
+import { ActionRunQueue } from '../actions/action-run.queue';
+import { firstRunCheckJobId, JOBS, utcDateKey } from '../jobs/jobs.types';
 import { FirstRunScheduler } from './first-run.scheduler';
 
 const WORKSPACE_ID = 'ws_first_run';
@@ -37,9 +33,10 @@ const queueDouble = () => ({
   add: jest.fn<Promise<void>, AddCall>().mockResolvedValue(undefined),
 });
 
-const pipelineDouble = () => ({
-  add: jest.fn<Promise<void>, [string, WorkspaceScope, { jobId: string }]>(),
-  getJob: jest.fn<Promise<unknown>, [string]>().mockResolvedValue(undefined),
+const actionRunsDouble = () => ({
+  request: jest
+    .fn<Promise<{ queued: true; jobId: string }>, [WorkspaceScope]>()
+    .mockResolvedValue({ queued: true, jobId: 'run_1' }),
 });
 
 const keywordIdsOf = (queue: ReturnType<typeof queueDouble>): string[] =>
@@ -50,13 +47,13 @@ function schedulerWith(tracked: TrackedRow[]) {
   findMany.mockResolvedValue(tracked);
   const appStore = queueDouble();
   const gplay = queueDouble();
-  const pipeline = pipelineDouble();
+  const actionRuns = actionRunsDouble();
   const workspace = new WorkspaceContext();
   const scheduler = new FirstRunScheduler(
     { trackedKeyword: { findMany } } as unknown as PrismaService,
     appStore as unknown as Queue,
     gplay as unknown as Queue,
-    pipeline as unknown as Queue,
+    actionRuns as unknown as ActionRunQueue,
     workspace,
   );
 
@@ -66,7 +63,7 @@ function schedulerWith(tracked: TrackedRow[]) {
       work,
     );
 
-  return { scheduler, findMany, appStore, gplay, pipeline, inWorkspace };
+  return { scheduler, findMany, appStore, gplay, actionRuns, inWorkspace };
 }
 
 describe('FirstRunScheduler', () => {
@@ -139,30 +136,17 @@ describe('FirstRunScheduler', () => {
     expect(gplay.add).not.toHaveBeenCalled();
   });
 
-  it('queues one action run for the workspace on the pipeline queue', async () => {
-    const { scheduler, pipeline, inWorkspace } = schedulerWith([
+  it('requests an action run for the workspace', async () => {
+    const { scheduler, actionRuns, inWorkspace } = schedulerWith([
       trackedRow('k1', Store.APP_STORE),
     ]);
 
     await inWorkspace(() => scheduler.schedule(APP_ID));
 
-    expect(pipeline.add).toHaveBeenCalledWith(
-      JOBS.ACTIONS,
-      { workspaceId: WORKSPACE_ID, correlationId: CORRELATION_ID },
-      { jobId: actionsJobId(WORKSPACE_ID, utcDateKey()) },
-    );
-  });
-
-  it('leaves an action run this workspace already has today alone', async () => {
-    const { scheduler, pipeline, inWorkspace } = schedulerWith([
-      trackedRow('k1', Store.APP_STORE),
-    ]);
-    pipeline.getJob.mockResolvedValue({ id: 'already-there' });
-
-    const schedule = await inWorkspace(() => scheduler.schedule(APP_ID));
-
-    expect(schedule.actionsQueued).toBe(false);
-    expect(pipeline.add).not.toHaveBeenCalled();
+    expect(actionRuns.request).toHaveBeenCalledWith({
+      workspaceId: WORKSPACE_ID,
+      correlationId: CORRELATION_ID,
+    });
   });
 
   it('refuses to schedule without a workspace in scope', async () => {

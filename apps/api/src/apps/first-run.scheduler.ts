@@ -7,8 +7,8 @@ import {
   WorkspaceScope,
 } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActionRunQueue } from '../actions/action-run.queue';
 import {
-  actionsJobId,
   firstRunCheckJobId,
   JOBS,
   QUEUES,
@@ -29,7 +29,7 @@ export class FirstRunScheduler {
     private readonly prisma: PrismaService,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
-    @InjectQueue(QUEUES.PIPELINE) private readonly pipelineQueue: Queue,
+    private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
   ) {}
 
@@ -38,7 +38,7 @@ export class FirstRunScheduler {
     const date = utcDateKey();
     const schedule: FirstRunSchedule = {
       ranked: await this.enqueueRankChecks(appId, scope, date),
-      actionsQueued: await this.enqueueActionRun(scope, date),
+      actionsQueued: await this.enqueueActionRun(scope),
     };
 
     this.logger.log(`first run ${JSON.stringify(schedule)}`);
@@ -66,16 +66,8 @@ export class FirstRunScheduler {
     return tracked.length;
   }
 
-  private async enqueueActionRun(
-    scope: WorkspaceScope,
-    date: string,
-  ): Promise<boolean> {
-    const jobId = actionsJobId(scope.workspaceId, date);
-    if (await this.pipelineQueue.getJob(jobId)) {
-      return false;
-    }
-    await this.pipelineQueue.add(JOBS.ACTIONS, scope, { jobId });
-    return true;
+  private async enqueueActionRun(scope: WorkspaceScope): Promise<boolean> {
+    return (await this.actionRuns.request(scope)).queued;
   }
 
   private queueFor(store: Store): Queue {

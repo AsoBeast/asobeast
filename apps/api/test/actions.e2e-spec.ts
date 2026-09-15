@@ -343,7 +343,7 @@ describe('ActionsController (e2e)', () => {
     expect(body.items[0]).toMatchObject({ degraded: true, evidence: null });
   });
 
-  it('queues a generation run and coalesces a same-day duplicate', async () => {
+  it('coalesces a second generation request while the first is pending', async () => {
     const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
       strict: false,
     });
