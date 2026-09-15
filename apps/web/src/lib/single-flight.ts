@@ -1,46 +1,35 @@
 import { useMemo } from "react";
 
-type Mutate<TVariables> = (
-  variables: TVariables,
-  options: { onSettled: () => void },
-) => void;
-
-export function singleFlight<TVariables>(
-  mutate: Mutate<TVariables>,
-): (variables: TVariables) => void {
-  let inFlight = false;
-  return (variables) => {
-    if (inFlight) return;
-    inFlight = true;
-    mutate(variables, {
-      onSettled: () => {
-        inFlight = false;
-      },
-    });
-  };
-}
-
-export function useSingleFlight<TVariables>(mutation: {
-  mutate: Mutate<TVariables>;
-}): (variables: TVariables) => void {
-  const { mutate } = mutation;
-  return useMemo(() => singleFlight(mutate), [mutate]);
-}
-
-export function sharedFlight<TResult>(
-  run: () => Promise<TResult>,
-): () => Promise<TResult> {
+export function sharedFlight<TVariables, TResult>(
+  run: (variables: TVariables) => Promise<TResult>,
+): (variables: TVariables) => Promise<TResult> {
   let pending: Promise<TResult> | null = null;
-  return () => {
-    pending ??= run().finally(() => {
+  return (variables) => {
+    pending ??= run(variables).finally(() => {
       pending = null;
     });
     return pending;
   };
 }
 
-export function useSharedFlight<TResult>(
-  run: () => Promise<TResult>,
-): () => Promise<TResult> {
+export function singleFlight<TVariables>(
+  run: (variables: TVariables) => Promise<unknown>,
+): (variables: TVariables) => void {
+  const shared = sharedFlight(run);
+  return (variables) => {
+    shared(variables).catch(() => undefined);
+  };
+}
+
+export function useSharedFlight<TVariables, TResult>(
+  run: (variables: TVariables) => Promise<TResult>,
+): (variables: TVariables) => Promise<TResult> {
   return useMemo(() => sharedFlight(run), [run]);
+}
+
+export function useSingleFlight<TVariables>(mutation: {
+  mutateAsync: (variables: TVariables) => Promise<unknown>;
+}): (variables: TVariables) => void {
+  const { mutateAsync } = mutation;
+  return useMemo(() => singleFlight(mutateAsync), [mutateAsync]);
 }
