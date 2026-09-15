@@ -5,8 +5,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  isStorefront,
   KEYWORD_BULK_ADD_LIMIT,
   normalizeText,
+  type Store,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
 import { CountrySelect } from "@/components/CountrySelect";
@@ -25,7 +27,6 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { addKeywords, ApiError } from "@/lib/api";
-import { COUNTRY_CODE } from "@/lib/countries";
 import { appKeys, invalidateKeywordMutation } from "@/lib/queries";
 import { MarketAvailabilityNotice } from "./MarketAvailabilityNotice";
 
@@ -44,10 +45,12 @@ function parseKeywords(input: string): string[] {
 
 export function AddKeywordsDialog({
   appId,
+  store,
   country,
   children,
 }: {
   appId: string;
+  store: Store;
   country: string;
   children: ReactNode;
 }) {
@@ -57,6 +60,7 @@ export function AddKeywordsDialog({
   const [market, setMarket] = useState(country);
   const [error, setError] = useState<string | null>(null);
   const chips = useMemo(() => parseKeywords(raw), [raw]);
+  const validMarket = isStorefront(store, market);
 
   const mutation = useMutation({
     mutationFn: (list: string[]) => addKeywords(appId, list, market),
@@ -100,10 +104,6 @@ export function AddKeywordsDialog({
 
   function submit() {
     setError(null);
-    if (!COUNTRY_CODE.test(market)) {
-      setError("Market must be a two letter code, e.g. us");
-      return;
-    }
     if (chips.length > KEYWORD_BULK_ADD_LIMIT) {
       setError(
         `One request may add ${KEYWORD_BULK_ADD_LIMIT} keywords, so split these ${chips.length}`,
@@ -130,11 +130,16 @@ export function AddKeywordsDialog({
             <Label htmlFor="add-keywords-market">Market</Label>
             <CountrySelect
               id="add-keywords-market"
+              store={store}
               value={market}
               onChange={setMarket}
               ariaLabel="Keyword market"
             />
-            <MarketAvailabilityNotice appId={appId} country={market} />
+            <MarketAvailabilityNotice
+              appId={appId}
+              store={store}
+              country={market}
+            />
           </div>
           <Textarea
             value={raw}
@@ -167,7 +172,7 @@ export function AddKeywordsDialog({
 
         <DialogFooter>
           <Button
-            disabled={mutation.isPending || chips.length === 0}
+            disabled={mutation.isPending || chips.length === 0 || !validMarket}
             onClick={submit}
           >
             {mutation.isPending ? <Loader2 className="animate-spin" /> : null}

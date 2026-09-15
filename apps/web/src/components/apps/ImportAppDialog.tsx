@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { parseStoreUrl } from "@asobeast/shared";
+import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError, importApp } from "@/lib/api";
-import { COUNTRY_CODE, COUNTRY_OPTIONS, OTHER } from "@/lib/countries";
+import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
 import { formatCountry } from "@/lib/format";
 import {
   navigateToOnboarding,
@@ -171,8 +171,9 @@ export function ImportAppDialog({
     setError(null);
     setNote(null);
 
+    let store: Store;
     try {
-      parseStoreUrl(url);
+      store = parseStoreUrl(url).store;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unrecognized store URL");
       return;
@@ -181,8 +182,9 @@ export function ImportAppDialog({
     const country = (selected === OTHER ? custom : selected)
       .trim()
       .toLowerCase();
-    if (!COUNTRY_CODE.test(country)) {
-      setError("Country must be a two letter code, e.g. us");
+    const invalidCountry = marketError(store, country);
+    if (invalidCountry) {
+      setError(invalidCountry);
       return;
     }
 
