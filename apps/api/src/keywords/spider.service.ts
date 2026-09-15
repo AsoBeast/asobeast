@@ -2,7 +2,11 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { SpiderEnqueueResult, SpiderStatus } from '@asobeast/shared';
+import {
+  assertStorefront,
+  SpiderEnqueueResult,
+  SpiderStatus,
+} from '@asobeast/shared';
 import {
   JOBS,
   QUEUES,
@@ -34,6 +38,7 @@ export class SpiderService {
   ): Promise<SpiderEnqueueResult> {
     const app = await ensureApp(this.prisma, appId);
     const market = country ?? app.country;
+    assertStorefront(app.store, market);
     const date = utcDateKey();
     const day = spiderDay(date);
 

@@ -66,6 +66,10 @@ Each entry below names the symptom the way you would describe it, then gives the
     Both workers run at concurrency 1 behind a rate limiter, so a large keyword and market count simply takes longer. Check the request budget card on the settings page or `GET /jobs/budget`. Remove keywords or markets rather than raising the limits, which risks the store throttling your IP address. See [The daily pipeline and rate limits](/concepts/pipeline).
   </Accordion>
 
+  <Accordion title="The health badge says degraded after an upgrade">
+    Failed jobs from before the upgrade are still counted. The badge reads the failed job count of the store and alert queues, and a failed job stays in that count until it is removed, so failures from a keyword the upgrade paused keep the badge degraded. Sign in as the owner, open `/admin/queues`, select the store queue, open its failed jobs and clean them. The badge recovers on the next health check. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+
   <Accordion title="A store import fails to parse">
     A store changed a response shape. The failure is contained to the provider layer, the job fails, and BullMQ retries it with backoff while request handling continues. See [Recover from a broken store parser](/operations/scraper-breakage) for triage, containment and recovery.
   </Accordion>

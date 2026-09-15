@@ -278,6 +278,60 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.appSnapshot.count()).toBe(1);
   });
 
+  it('resolves an app store id with leading zeros to the app it already tracks', async () => {
+    const first = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    registry.getAppCalls = [];
+
+    const second = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/us/app/fixture/id001234567890' })
+      .expect(201);
+
+    expect((second.body as AppDetail).id).toBe((first.body as AppDetail).id);
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(1);
+  });
+
+  it('refuses an app store id it cannot represent without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: '99999999999999999999' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
+  it('refuses a home storefront that is not a storefront without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL, country: 'zz' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'zz is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
+  it('refuses a store url whose storefront does not exist without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/xx/app/fixture/id1234567890' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'xx is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+  });
+
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
     const created = await api
       .post('/apps')
@@ -390,6 +444,21 @@ describe('AppsController (e2e)', () => {
       await api
         .post(`/apps/${primary}/competitors`)
         .send({ url: RIVAL_URL })
+        .expect(201);
+
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
+    });
+
+    it('resolves a competitor id with leading zeros to the competitor it already tracks', async () => {
+      const primary = await importedId(APP_STORE_URL);
+
+      await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: RIVAL_URL })
+        .expect(201);
+      await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: 'https://apps.apple.com/us/app/rival/id009876543210' })
         .expect(201);
 
       expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
@@ -673,6 +742,22 @@ describe('AppsController (e2e)', () => {
       .get(`/apps/${imported.id}/market-availability`)
       .query({ country: 'GERMANY' })
       .expect(400);
+  });
+
+  it('refuses a market that is not a storefront of the app store without a store request', async () => {
+    const imported = await importApp(GOOGLE_PLAY_URL);
+
+    for (const country of ['zz', 'pw']) {
+      const response = await api
+        .get(`/apps/${imported.id}/market-availability`)
+        .query({ country })
+        .expect(400);
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        `${country} is not a Google Play location`,
+      );
+    }
+
+    expect(registry.availabilityCalls).toHaveLength(0);
   });
 
   describe('what an import schedules', () => {

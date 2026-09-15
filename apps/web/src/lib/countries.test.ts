@@ -1,27 +1,14 @@
-import { DEFAULT_COUNTRY } from "@asobeast/shared";
+import { DEFAULT_COUNTRY, isStorefront, STORES } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import { COUNTRY_CODE, COUNTRY_OPTIONS, OTHER } from "./countries";
-
-describe("COUNTRY_CODE", () => {
-  it.each(["us", "gb", "jp"])("accepts the storefront %s", (code) => {
-    expect(COUNTRY_CODE.test(code)).toBe(true);
-  });
-
-  it.each(["US", "Us", "usa", "u", "", "u1", "u-", " us", "us "])(
-    "rejects %s",
-    (code) => {
-      expect(COUNTRY_CODE.test(code)).toBe(false);
-    },
-  );
-
-  it("is anchored so it cannot match inside a longer string", () => {
-    expect(COUNTRY_CODE.test("aus\nus")).toBe(false);
-  });
-});
+import { COUNTRY_OPTIONS, marketError, OTHER } from "./countries";
 
 describe("COUNTRY_OPTIONS", () => {
-  it.each(COUNTRY_OPTIONS)("offers %s as a valid storefront", (code) => {
-    expect(COUNTRY_CODE.test(code)).toBe(true);
+  it.each(
+    STORES.flatMap((store) =>
+      COUNTRY_OPTIONS.map((code) => [store, code] as const),
+    ),
+  )("offers only storefronts of %s, including %s", (store, code) => {
+    expect(isStorefront(store, code)).toBe(true);
   });
 
   it("lists the default storefront", () => {
@@ -34,11 +21,39 @@ describe("COUNTRY_OPTIONS", () => {
 });
 
 describe("OTHER", () => {
-  it("cannot collide with a storefront code", () => {
-    expect(COUNTRY_CODE.test(OTHER)).toBe(false);
+  it.each(STORES)("cannot collide with a storefront of %s", (store) => {
+    expect(isStorefront(store, OTHER)).toBe(false);
   });
 
   it("is not offered as a storefront", () => {
     expect(COUNTRY_OPTIONS).not.toContain(OTHER);
+  });
+});
+
+describe("marketError", () => {
+  it.each([
+    ["APP_STORE", "us"],
+    ["APP_STORE", "pw"],
+    ["APP_STORE", "xk"],
+    ["GOOGLE_PLAY", "ad"],
+  ] as const)("accepts the %s storefront %s", (store, code) => {
+    expect(marketError(store, code)).toBeNull();
+  });
+
+  it.each(["US", "usa", "u", "", " us", "u1"])(
+    "asks for a two letter code instead of %j",
+    (code) => {
+      expect(marketError("APP_STORE", code)).toBe(
+        "Market must be a two letter code, e.g. us",
+      );
+    },
+  );
+
+  it.each([
+    ["APP_STORE", "zz", "zz is not an App Store storefront"],
+    ["APP_STORE", "ad", "ad is not an App Store storefront"],
+    ["GOOGLE_PLAY", "pw", "pw is not a Google Play location"],
+  ] as const)("refuses the %s market %s", (store, code, message) => {
+    expect(marketError(store, code)).toBe(message);
   });
 });

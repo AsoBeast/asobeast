@@ -3,6 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Download, Plus, X } from "lucide-react";
 import { useQueryState } from "nuqs";
+import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { formatCountry } from "@/lib/format";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
@@ -13,10 +14,12 @@ import { exportKeywords } from "./keyword-csv";
 
 export function KeywordsToolbar({
   id,
+  store,
   market,
   homeCountry,
 }: {
   id: string;
+  store: Store;
   market: string;
   homeCountry: string;
 }) {
@@ -61,7 +64,7 @@ export function KeywordsToolbar({
             </button>
           );
         })}
-        <AddKeywordsDialog appId={id} country={market}>
+        <AddKeywordsDialog appId={id} store={store} country={market}>
           <Button variant="outline" size="sm" aria-label="Add a market">
             <Plus />
           </Button>

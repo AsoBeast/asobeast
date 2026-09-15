@@ -8,7 +8,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
-import { ApiErrorEnvelope, InvalidStoreUrlError } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  InvalidStoreUrlError,
+  UnknownStorefrontError,
+} from '@asobeast/shared';
 import { EntitlementRequiredError } from '../auth/auth.errors';
 import { OnDemandLimitError } from '../auth/on-demand.limiter';
 import { WorkspaceSuspendedError } from '../auth/abuse/abuse.errors';
@@ -66,7 +70,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private resolve(exception: unknown): ResolvedError {
-    if (exception instanceof InvalidStoreUrlError) {
+    if (
+      exception instanceof InvalidStoreUrlError ||
+      exception instanceof UnknownStorefrontError
+    ) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',

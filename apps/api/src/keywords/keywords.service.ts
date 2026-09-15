@@ -7,6 +7,7 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
+  assertStorefront,
   countChars,
   KeywordComparison,
   KeywordCountrySummary,
@@ -213,6 +214,7 @@ export class KeywordsService {
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const market = country ?? app.country;
+    assertStorefront(app.store, market);
     const texts = new Set(rawKeywords.map((raw) => normalizeKeyword(raw)));
 
     const keywordIds = await this.keywordIdsFor([...texts], app.store, market);
@@ -241,7 +243,10 @@ export class KeywordsService {
     data: { active?: boolean; relevance?: number | null },
   ): Promise<TrackedKeywordItem> {
     await ensureApp(this.prisma, appId);
-    await this.ensureTracked(appId, keywordId);
+    const keyword = await this.ensureTracked(appId, keywordId);
+    if (data.active === true) {
+      assertStorefront(keyword.store, keyword.country);
+    }
     const update = {
       ...(data.active === undefined ? {} : { active: data.active }),
       ...('relevance' in data ? { relevance: data.relevance } : {}),
@@ -544,14 +549,18 @@ export class KeywordsService {
     });
   }
 
-  private async ensureTracked(appId: string, keywordId: string): Promise<void> {
+  private async ensureTracked(
+    appId: string,
+    keywordId: string,
+  ): Promise<{ store: Store; country: string }> {
     const tracked = await this.prisma.trackedKeyword.findUnique({
       where: { appId_keywordId: { appId, keywordId } },
-      select: { appId: true },
+      select: { keyword: { select: { store: true, country: true } } },
     });
     if (!tracked) {
       throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
     }
+    return tracked.keyword;
   }
 
   private async getTrackedItem(

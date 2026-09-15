@@ -41,6 +41,47 @@ test("importing an app posts to the api and shows the new app", async ({
   ).toBeVisible();
 });
 
+for (const input of [
+  "com.duolingo",
+  "570060128",
+  "apps.apple.com/us/app/focus-timer/id123456789",
+]) {
+  test(`the import dialog submits ${input}`, async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page.getByLabel("Store URL").fill(input);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  });
+}
+
+test("the import dialog refuses an apple page that is not a listing", async ({
+  page,
+}) => {
+  const developerPage = "https://apps.apple.com/us/developer/focus/id123456789";
+  const imports: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/api/backend/apps")
+    ) {
+      imports.push(request.url());
+    }
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page.getByLabel("Store URL").fill(developerPage);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(
+    page.getByText(`Unrecognized store URL or id: ${developerPage}`),
+  ).toBeVisible();
+  expect(imports).toEqual([]);
+});
+
 test("finished setup suppresses redirects after later imports", async ({
   page,
 }) => {
