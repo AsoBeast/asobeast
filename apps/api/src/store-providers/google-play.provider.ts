@@ -6,6 +6,7 @@ import {
   OVERALL_GENRE,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
+import { decodeHTMLStrict } from 'entities';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import {
   isMissingApp,
@@ -112,7 +113,7 @@ export class GooglePlayProvider implements StoreProvider {
       store: this.store,
       storeAppId: raw.appId,
       title: raw.title,
-      summary: raw.summary,
+      summary: plainText(raw.summary),
       description: raw.description,
       iconUrl: raw.icon,
       ratingAvg: raw.score,
@@ -282,6 +283,10 @@ export class GooglePlayProvider implements StoreProvider {
       throw new StoreRequestError(this.store, method, messageOf(error));
     }
   }
+}
+
+function plainText(value?: string): string | undefined {
+  return value === undefined ? undefined : decodeHTMLStrict(value);
 }
 
 function parseDate(value?: string): Date | undefined {
