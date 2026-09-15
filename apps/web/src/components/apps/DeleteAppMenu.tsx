@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { deleteApp } from "@/lib/api";
 import { appKeys, portfolioKey } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
   const queryClient = useQueryClient();
@@ -41,6 +42,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
       toast.error(`Could not delete ${name}`);
     },
   });
+  const deleteOnce = useSingleFlight(mutation);
 
   return (
     <>
@@ -82,7 +84,7 @@ export function DeleteAppMenu({ id, name }: { id: string; name: string }) {
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                mutation.mutate();
+                deleteOnce();
               }}
             >
               {mutation.isPending ? "Deleting…" : "Delete app"}
