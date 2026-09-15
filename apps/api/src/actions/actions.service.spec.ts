@@ -8,6 +8,7 @@ import { Queue } from 'bullmq';
 import { ACTION_FORMULA_VERSION } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
+import { actionsGeneratedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
@@ -73,11 +74,18 @@ const buildPrisma = (
   },
 });
 
-const buildQueue = (suppressed: string | null = null) =>
+const buildQueue = (
+  suppressed: string | null = null,
+  generated: string | null = null,
+) =>
   ({
     getBackend: () => ({
       client: Promise.resolve({
-        get: jest.fn(() => Promise.resolve(suppressed)),
+        get: jest.fn((key: string) =>
+          Promise.resolve(
+            key === actionsGeneratedKey(WORKSPACE) ? generated : suppressed,
+          ),
+        ),
       }),
     }),
   }) as unknown as Queue;
@@ -269,6 +277,32 @@ describe('ActionsService reads', () => {
     }
   });
 
+  it('reports when the last run finished, even one that opened nothing', async () => {
+    const prisma = buildPrisma();
+    prisma.actionItem.aggregate.mockResolvedValue({
+      _max: { lastSeenAt: null },
+    } as never);
+
+    const summary = await serviceFor(
+      prisma,
+      buildQueue(null, '2026-08-01T09:30:00.000Z'),
+    ).summary();
+
+    expect(summary.generatedAt).toBe('2026-08-01T09:30:00.000Z');
+  });
+
+  it.each([null, '', 'yesterday'])(
+    'falls back to the newest action when the recorded run time is %j',
+    async (generated) => {
+      const summary = await serviceFor(
+        buildPrisma(),
+        buildQueue(null, generated),
+      ).summary();
+
+      expect(summary.generatedAt).toBe('2026-07-30T03:00:00.000Z');
+    },
+  );
+
   it('never fails a summary because the run key is unreachable', async () => {
     const queue = {
       getBackend: () => ({ client: Promise.reject(new Error('redis down')) }),
@@ -276,7 +310,10 @@ describe('ActionsService reads', () => {
 
     await expect(
       serviceFor(buildPrisma(), queue).summary(),
-    ).resolves.toMatchObject({ suppressedByCap: 0 });
+    ).resolves.toMatchObject({
+      suppressedByCap: 0,
+      generatedAt: '2026-07-30T03:00:00.000Z',
+    });
   });
 });
 

@@ -17,6 +17,7 @@ export const QUEUES = {
 export const FLOW_PRODUCERS = {
   ALERT_DELIVERY: 'alert-delivery',
   DAILY_PIPELINE: 'daily-pipeline',
+  FIRST_RUN: 'first-run',
 } as const;
 
 export const LAST_DAILY_RUN_KEY = 'asobeast:last-daily-run';
@@ -31,6 +32,10 @@ export function storeCanaryKey(store: Store): string {
 
 export function actionsSuppressedKey(workspaceId: string): string {
   return `asobeast:actions-suppressed:${workspaceId}`;
+}
+
+export function actionsGeneratedKey(workspaceId: string): string {
+  return `asobeast:actions-generated:${workspaceId}`;
 }
 
 export function queueNameForStore(store: Store): string {
@@ -119,8 +124,8 @@ export function dailyCompleteJobId(date: string): string {
   return `daily-complete~${date}`;
 }
 
-export function actionsJobId(workspaceId: string, date: string): string {
-  return `actions~${workspaceId}~${date}`;
+export function actionsRunDeduplicationId(workspaceId: string): string {
+  return `actions~${workspaceId}`;
 }
 
 export function isoWeekKey(date = new Date()): string {

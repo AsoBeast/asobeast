@@ -40,6 +40,15 @@ const EVIDENCE: KeywordAddUncoveredEvidence = {
   scoreProvenance: null,
 };
 
+async function waitForCompletion(queue: Queue, jobId: string): Promise<void> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    if ((await (await queue.getJob(jobId))?.getState()) === 'completed') return;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  throw new Error(`Job ${jobId} did not complete within 10 seconds`);
+}
+
 describe('ActionsController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
@@ -334,7 +343,7 @@ describe('ActionsController (e2e)', () => {
     expect(body.items[0]).toMatchObject({ degraded: true, evidence: null });
   });
 
-  it('queues a generation run and coalesces a same-day duplicate', async () => {
+  it('coalesces a second generation request while the first is pending', async () => {
     const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
       strict: false,
     });
@@ -351,6 +360,29 @@ describe('ActionsController (e2e)', () => {
       await queue.obliterate({ force: true });
       await queue.resume();
     }
+  });
+
+  it('runs again when asked after a run has finished, and records that it ran', async () => {
+    const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
+      strict: false,
+    });
+    const askedAt = Date.now();
+
+    const first = (await api.post('/actions/run').expect(202))
+      .body as ActionRunResult;
+    await waitForCompletion(queue, first.jobId);
+
+    const summary = (await api.get('/actions/summary').expect(200))
+      .body as ActionSummary;
+    expect(summary.open).toBe(0);
+    expect(Date.parse(summary.generatedAt ?? '')).toBeGreaterThanOrEqual(
+      askedAt,
+    );
+
+    const second = (await api.post('/actions/run').expect(202))
+      .body as ActionRunResult;
+    expect(second.jobId).not.toBe(first.jobId);
+    await waitForCompletion(queue, second.jobId);
   });
 
   it('reports the AI seam as unconfigured and refuses to explain', async () => {
