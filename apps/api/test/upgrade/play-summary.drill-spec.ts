@@ -21,7 +21,9 @@ describe('Google Play short descriptions against an upgraded baseline database',
   it('decodes the escapes a stored short description kept, exactly once', async () => {
     const { summary } = await snapshot('snap_play_escaped');
 
-    expect(summary).toBe("Workouts & meals 'daily', amp tools, R&D &lt;3");
+    expect(summary).toBe(
+      "Workouts & meals 'daily', amp tools, R&D &lt;3, 'fit'",
+    );
   });
 
   it('keeps the payload exactly as the store returned it', async () => {
@@ -29,7 +31,8 @@ describe('Google Play short descriptions against an upgraded baseline database',
 
     expect(raw).toEqual({
       appId: 'com.drill.fitness',
-      summary: 'Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3',
+      summary:
+        'Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3, &apos;fit&apos;',
     });
   });
 
