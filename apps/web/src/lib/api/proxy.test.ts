@@ -85,6 +85,31 @@ describe("proxyToApi", () => {
     );
   });
 
+  it("returns the wait and the rate limit window to the caller", async () => {
+    stubFetch(async () =>
+      Response.json(
+        { statusCode: 429 },
+        {
+          status: 429,
+          headers: {
+            "retry-after": "34",
+            "ratelimit-limit": "60",
+            "ratelimit-remaining": "0",
+            "ratelimit-reset": "34",
+          },
+        },
+      ),
+    );
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(request(), ["apps"]);
+
+    expect(response.headers.get("retry-after")).toBe("34");
+    expect(response.headers.get("ratelimit-limit")).toBe("60");
+    expect(response.headers.get("ratelimit-remaining")).toBe("0");
+    expect(response.headers.get("ratelimit-reset")).toBe("34");
+  });
+
   it("passes an upstream error status through untouched", async () => {
     stubFetch(async () => Response.json({ statusCode: 404 }, { status: 404 }));
     const { proxyToApi } = await loadProxy();
