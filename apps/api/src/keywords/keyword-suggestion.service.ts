@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { KeywordSource, Store } from '@prisma/client';
 import {
+  assertStorefront,
   KeywordSuggestion,
   KeywordSuggestionStrategy,
   normalizeText,
@@ -55,6 +56,7 @@ export class KeywordSuggestionService {
   ): Promise<KeywordSuggestion[]> {
     const app = await ensureApp(this.prisma, appId);
     const market = { ...app, country: country ?? app.country };
+    assertStorefront(market.store, market.country);
     const tracked = await trackedTexts(this.prisma, appId, market.country);
 
     const work = () => this.dispatch(appId, strategy, limit, market, tracked);
