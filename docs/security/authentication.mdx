@@ -134,7 +134,7 @@ Invitations are the way to add a teammate when registration is closed, which is 
 
 - **You are signed out after a restart.** `AUTH_SECRET` changed. Sessions are signed with it.
 - **You cannot register a second account.** Registration closed after the owner account. Set `AUTH_ALLOW_REGISTRATION=true`.
-- **Sessions do not persist behind a proxy.** Check `AUTH_COOKIE_SECURE` against whether the browser reaches you over HTTPS. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+- **Sessions do not persist behind a proxy.** The session cookie is `Secure`, so a browser discards it over plain HTTP from another machine. Terminate TLS in front of port 3001, compose the Cloudflare Tunnel overlay, or forward the port over SSH and browse `http://localhost:3001`. Keep `AUTH_COOKIE_SECURE=true`, because the Docker image refuses to boot without it. See [Sessions do not persist behind a proxy](/operations/troubleshooting#sessions-do-not-persist-behind-a-proxy) and [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 ## Related
 
