@@ -64,7 +64,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
-    "entities": "^7.0.1",
     "helmet": "^8.3.0",
     "nestjs-pino": "5.1.0",
     "nodemailer": "^10.0.4",

@@ -6,7 +6,6 @@ import {
   OVERALL_GENRE,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
-import { decodeHTMLStrict } from 'entities';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import {
   isMissingApp,
@@ -285,8 +284,18 @@ export class GooglePlayProvider implements StoreProvider {
   }
 }
 
+const HTML_ESCAPES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&apos;': "'",
+};
+const HTML_ESCAPE = /&(?:amp|lt|gt|quot|#39|apos);/g;
+
 function plainText(value?: string): string | undefined {
-  return value === undefined ? undefined : decodeHTMLStrict(value);
+  return value?.replace(HTML_ESCAPE, (escape) => HTML_ESCAPES[escape]);
 }
 
 function parseDate(value?: string): Date | undefined {
