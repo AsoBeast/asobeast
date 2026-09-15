@@ -40,6 +40,7 @@ import {
 import { ApiError, linkApp, unlinkApp } from "@/lib/api";
 import { appsOptions, invalidateLinkMutation } from "@/lib/queries";
 import { storeLabel } from "@/lib/format";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const OTHER_STORE: Record<Store, Store> = {
   APP_STORE: "GOOGLE_PLAY",
@@ -78,6 +79,7 @@ function LinkedControl({
         error instanceof ApiError ? error.envelope.message : "Unlink failed",
       ),
   });
+  const unlinkOnce = useSingleFlight(unlink);
 
   return (
     <div className="flex items-center gap-1">
@@ -121,7 +123,7 @@ function LinkedControl({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => unlink.mutate()}>
+            <AlertDialogAction onClick={() => unlinkOnce()}>
               Unlink
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -194,6 +196,7 @@ function LinkCandidates({
         error instanceof ApiError ? error.envelope.message : "Link failed",
       ),
   });
+  const linkOnce = useSingleFlight(mutation);
 
   if (candidates.length === 0) {
     return (
@@ -210,7 +213,7 @@ function LinkCandidates({
           <button
             type="button"
             disabled={mutation.isPending}
-            onClick={() => mutation.mutate(candidate.id)}
+            onClick={() => linkOnce(candidate.id)}
             className="flex w-full items-center gap-3 rounded-lg border p-2 text-left transition-colors hover:bg-accent disabled:opacity-50"
           >
             <AppIcon src={candidate.iconUrl} name={candidate.name} size={36} />

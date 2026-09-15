@@ -31,6 +31,7 @@ import {
 } from "./alert-channel/AlertChannelCard";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { AlertChannelRow } from "./alert-channel/AlertChannelRow";
+import { useSharedFlight, useSingleFlight } from "@/lib/single-flight";
 
 const SMTP_VARS = [
   "SMTP_HOST",
@@ -65,6 +66,7 @@ function AddEmailAlertDialog() {
       );
     },
   });
+  const createOnce = useSingleFlight(mutation);
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
@@ -79,7 +81,7 @@ function AddEmailAlertDialog() {
       return;
     }
 
-    mutation.mutate();
+    createOnce();
   }
 
   return (
@@ -138,6 +140,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     },
     onError: () => toast.error("Could not remove email alert"),
   });
+  const removeOnce = useSharedFlight(remove.mutateAsync);
 
   return (
     <AlertChannelRow
@@ -153,7 +156,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       testPending={test.isPending}
       onTest={() => test.mutate()}
       deletePending={remove.isPending}
-      onDelete={() => remove.mutateAsync()}
+      onDelete={removeOnce}
     />
   );
 }

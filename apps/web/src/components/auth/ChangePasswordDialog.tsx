@@ -28,6 +28,7 @@ import {
   type AuthFieldError,
 } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
   const queryClient = useQueryClient();
@@ -55,6 +56,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
     onError: (err) =>
       setError(authFieldError(err, "Could not change the password.")),
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -64,7 +66,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
       setError({ field: "password", message: problem });
       return;
     }
-    mutation.mutate();
+    submitOnce();
   }
 
   return (

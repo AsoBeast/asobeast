@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { addCompetitor, ApiError } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_URL_EXAMPLES: Record<Store, string> = {
   APP_STORE: "https://apps.apple.com/us/app/name/id123456789",
@@ -48,6 +49,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
       setError("Could not reach the api to add this competitor");
     },
   });
+  const addOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -61,7 +63,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
       return;
     }
 
-    mutation.mutate(url);
+    addOnce(url);
   }
 
   return (

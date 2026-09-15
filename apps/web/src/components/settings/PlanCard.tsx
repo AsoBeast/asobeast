@@ -21,6 +21,7 @@ import { ApiError, openBillingPortal } from "@/lib/api";
 import { formatNumber, formatPlanLimit } from "@/lib/format";
 import { planCallToAction, planStatusLine } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const RESOURCES = [
   { key: "apps", label: "Apps" },
@@ -58,12 +59,13 @@ function ManageBillingButton() {
       );
     },
   });
+  const portalOnce = useSingleFlight(portal);
 
   return (
     <Button
       variant="outline"
       disabled={portal.isPending}
-      onClick={() => portal.mutate()}
+      onClick={() => portalOnce()}
     >
       {portal.isPending ? <Loader2 className="animate-spin" /> : null}
       Manage billing

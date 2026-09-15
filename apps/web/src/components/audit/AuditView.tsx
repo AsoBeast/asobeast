@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ApiError, runAiAudit } from "@/lib/api";
 import { Meter } from "@/components/ui/meter";
 import { formatDateTime } from "@/lib/format";
+import { useSingleFlight } from "@/lib/single-flight";
 
 type BadgeVariant = "success" | "warning" | "destructive" | "secondary";
 
@@ -166,6 +167,7 @@ function AiAuditCard({
       );
     },
   });
+  const auditOnce = useSingleFlight(mutation);
 
   if (!ai.configured) {
     return (
@@ -197,7 +199,7 @@ function AiAuditCard({
               : "Scores the visual and conversion factors from your listing and creative."}
           </span>
         </div>
-        <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+        <Button onClick={() => auditOnce()} disabled={mutation.isPending}>
           {mutation.isPending ? (
             <Loader2 className="animate-spin" />
           ) : (
