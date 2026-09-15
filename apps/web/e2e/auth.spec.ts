@@ -1051,3 +1051,102 @@ test("recovery refuses a password that is only whitespace before sending it", as
   await expect(page.locator("#password-error")).toHaveText(PASSWORD_RULE);
   expect(attempts).toBe(0);
 });
+
+test.describe("an auth form error marks the field it is about", () => {
+  const openRegistration = async (page: Page) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_setup_required",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await routeStatus(page, {
+      billing: false,
+      registrationOpen: true,
+      setupRequired: true,
+      authenticated: false,
+    });
+  };
+
+  const envelope = (statusCode: number, message: string, path: string) =>
+    fulfillJson(statusCode, {
+      statusCode,
+      error: statusCode === 409 ? "Conflict" : "Unauthorized",
+      message,
+      path,
+      timestamp: new Date().toISOString(),
+    });
+
+  test("a password error marks only the password field invalid", async ({
+    page,
+  }) => {
+    await openRegistration(page);
+    await page.goto("/register");
+    await page.getByLabel("Email").fill("owner@example.com");
+    await page.getByLabel("Password").fill("short");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page.getByLabel("Password")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(page.getByLabel("Email")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  test("an email that is already registered marks only the email field invalid", async ({
+    page,
+  }) => {
+    await openRegistration(page);
+    await page.route("**/api/backend/auth/register", (route) =>
+      route.fulfill(
+        envelope(409, "Email already registered", "/auth/register"),
+      ),
+    );
+    await page.goto("/register");
+    await page.getByLabel("Email").fill("owner@example.com");
+    await page.getByLabel("Password").fill("supersecret1");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    const email = page.getByLabel("Email");
+    await expect(email).toHaveAttribute("aria-invalid", "true");
+    await expect(email).toHaveAccessibleDescription("Email already registered");
+    await expect(page.getByLabel("Password")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  test("a wrong current password marks only the current password field invalid", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await routeMe(page, TRIAL_USER);
+    await page.route("**/api/backend/auth/password", (route) =>
+      route.fulfill(
+        envelope(401, "Invalid current password", "/auth/password"),
+      ),
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Change password" }).click();
+    await page.getByLabel("Current password").fill("wrongsecret1");
+    await page.getByLabel("New password").fill("brandnewsecret2");
+    await page.getByRole("button", { name: "Change password" }).click();
+
+    const current = page.getByLabel("Current password");
+    await expect(current).toHaveAttribute("aria-invalid", "true");
+    await expect(current).toHaveAccessibleDescription(
+      "Invalid current password",
+    );
+    await expect(page.getByLabel("New password")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+});
