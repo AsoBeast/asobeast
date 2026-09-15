@@ -7,7 +7,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import type {
   BillingCatalog,
   BillingReconcileReport,
@@ -20,6 +20,7 @@ import type { AccountUser } from '../auth/auth.types';
 import { BillingService } from './billing.service';
 import { BillingReconciler } from './billing-reconciler.service';
 import { CheckoutDto } from './dto/checkout.dto';
+import { RetryAfterThrottlerGuard } from '../auth/rate-limit/retry-after-throttler.guard';
 
 @ApiTags('billing')
 @Controller('billing')
@@ -38,7 +39,7 @@ export class BillingController {
 
   @Post('checkout')
   @AllowUnentitled()
-  @UseGuards(OwnerGuard, ThrottlerGuard)
+  @UseGuards(OwnerGuard, RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Start a Stripe Checkout session for a plan' })
@@ -51,7 +52,7 @@ export class BillingController {
 
   @Post('portal')
   @AllowUnentitled()
-  @UseGuards(OwnerGuard, ThrottlerGuard)
+  @UseGuards(OwnerGuard, RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @HttpCode(200)
   @ApiOperation({
@@ -63,7 +64,7 @@ export class BillingController {
 
   @Post('reconcile')
   @AllowUnentitled()
-  @UseGuards(OwnerGuard, ThrottlerGuard)
+  @UseGuards(OwnerGuard, RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Reconcile this workspace against Stripe now' })

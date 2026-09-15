@@ -18,7 +18,7 @@ Two things are counted per client address instead, because no workspace is known
 
 ## Self hosted instances are unlimited
 
-With `BILLING_ENABLED` set to `false` there are no API rate limits at all beyond the existing authentication throttle. The only cost of a read is your own machine, and the only real constraint is store collection, bounded by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. See [The daily pipeline and rate limits](/concepts/pipeline).
+With `BILLING_ENABLED` set to `false` there are no API rate limits at all beyond the existing authentication throttle, which answers a refusal with the same error envelope, `retryAfterSeconds` and `Retry-After` as the plan limits. See [How are sign in attempts throttled?](/security/authentication#how-are-sign-in-attempts-throttled) The only cost of a read is your own machine, and the only real constraint is store collection, bounded by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 Everything below applies to a metered instance.
 

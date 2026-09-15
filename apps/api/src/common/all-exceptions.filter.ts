@@ -15,6 +15,7 @@ import { WorkspaceSuspendedError } from '../auth/abuse/abuse.errors';
 import {
   CredentialRateLimitError,
   RateLimitExceededError,
+  RequestThrottledError,
 } from '../auth/rate-limit/rate-limit.errors';
 import { QuotaExceededError } from '../auth/quota.errors';
 import { BillingConflictError } from '../billing/billing.errors';
@@ -109,7 +110,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: exception.message,
       };
     }
-    if (exception instanceof CredentialRateLimitError) {
+    if (
+      exception instanceof CredentialRateLimitError ||
+      exception instanceof RequestThrottledError
+    ) {
       return {
         statusCode: HttpStatus.TOO_MANY_REQUESTS,
         error: 'Too Many Requests',
