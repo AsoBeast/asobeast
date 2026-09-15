@@ -28,7 +28,8 @@ INSERT INTO "AppSnapshot" ("id", "appId", "title", "subtitle", "summary", "descr
 VALUES
   ('snap_ios_old', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'Old description.', 4.5, 1200, NULL, 0, '1.0.0', '2026-01-01 00:00:00', '2026-06-01 00:00:00', '{"trackId":111111111}', '2026-07-01 00:00:00'),
   ('snap_ios_new', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'New description.', 4.6, 1300, NULL, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"trackId":111111111}', '2026-07-15 00:00:00'),
-  ('snap_play', 'app_play', 'Drill Fitness', NULL, 'Track every workout in one place', 'Play description.', 4.4, 900, 500000, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"appId":"com.drill.fitness"}', '2026-07-15 00:00:00');
+  ('snap_play', 'app_play', 'Drill Fitness', NULL, 'Track every workout in one place', 'Play description.', 4.4, 900, 500000, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"appId":"com.drill.fitness"}', '2026-07-15 00:00:00'),
+  ('snap_play_escaped', 'app_play', 'Drill Fitness', NULL, 'Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3', 'Play description.', 4.4, 910, 500000, 0, '1.2.0', '2026-01-01 00:00:00', '2026-07-17 00:00:00', '{"appId":"com.drill.fitness","summary":"Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3"}', '2026-07-18 00:00:00');
 
 INSERT INTO "Keyword" ("id", "text", "store", "country", "createdAt")
 VALUES

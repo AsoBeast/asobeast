@@ -121,14 +121,14 @@ describe('Retention against an upgraded baseline database', () => {
   });
 
   it('keeps the newest snapshot per app regardless of age', async () => {
-    expect(deleted.appSnapshot).toBe(1);
+    expect(deleted.appSnapshot).toBe(2);
     const remaining = await prisma.appSnapshot.findMany({
       select: { id: true },
       orderBy: { id: 'asc' },
     });
     expect(remaining.map((row) => row.id)).toEqual([
       'snap_ios_new',
-      'snap_play',
+      'snap_play_escaped',
     ]);
   });
 
