@@ -306,6 +306,32 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.app.count()).toBe(0);
   });
 
+  it('refuses a home storefront that is not a storefront without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL, country: 'zz' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'zz is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
+  it('refuses a store url whose storefront does not exist without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/xx/app/fixture/id1234567890' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'xx is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+  });
+
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
     const created = await api
       .post('/apps')
@@ -716,6 +742,22 @@ describe('AppsController (e2e)', () => {
       .get(`/apps/${imported.id}/market-availability`)
       .query({ country: 'GERMANY' })
       .expect(400);
+  });
+
+  it('refuses a market that is not a storefront of the app store without a store request', async () => {
+    const imported = await importApp(GOOGLE_PLAY_URL);
+
+    for (const country of ['zz', 'pw']) {
+      const response = await api
+        .get(`/apps/${imported.id}/market-availability`)
+        .query({ country })
+        .expect(400);
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        `${country} is not a Google Play location`,
+      );
+    }
+
+    expect(registry.availabilityCalls).toHaveLength(0);
   });
 
   describe('what an import schedules', () => {

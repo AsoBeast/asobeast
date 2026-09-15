@@ -181,6 +181,35 @@ describe('parseStoreUrl — an Apple page that is not a listing', () => {
   });
 });
 
+describe('parseStoreUrl — the storefront a url names', () => {
+  it.each([
+    'https://apps.apple.com/xx/app/anything/id42',
+    'https://play.google.com/store/apps/details?id=com.foo.bar&gl=usa',
+    'https://play.google.com/store/apps/details?id=com.foo.bar&gl=zz',
+    'https://play.google.com/store/apps/details?id=com.foo.bar&gl=pw',
+  ])('refuses %j, which names no storefront of its store', (input) => {
+    expect(() => parseStoreUrl(input)).toThrow();
+  });
+
+  it('keeps an App Store storefront Google Play does not have', () => {
+    expect(
+      parseStoreUrl('https://apps.apple.com/pw/app/anything/id42'),
+    ).toEqual({ store: 'APP_STORE', storeAppId: '42', country: 'pw' });
+  });
+
+  it('keeps a Google Play location the App Store does not have', () => {
+    expect(
+      parseStoreUrl(
+        'https://play.google.com/store/apps/details?id=com.foo.bar&gl=AD',
+      ),
+    ).toEqual({
+      store: 'GOOGLE_PLAY',
+      storeAppId: 'com.foo.bar',
+      country: 'ad',
+    });
+  });
+});
+
 describe('parseStoreUrl — invalid input', () => {
   it.each([
     '',
