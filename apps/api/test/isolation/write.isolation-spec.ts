@@ -194,15 +194,15 @@ describe('Write isolation', () => {
     const response = await fixture.a.agent.post('/actions/run').expect(202);
 
     const { jobId } = response.body as { jobId: string };
-    expect(jobId).toContain(fixture.a.id);
-    expect(jobId).not.toContain(fixture.b.id);
-
     const job = await fixture.app
       .get<Queue>(getQueueToken(QUEUES.PIPELINE), { strict: false })
       .getJob(jobId);
+
     expect((job?.data as { workspaceId: string }).workspaceId).toBe(
       fixture.a.id,
     );
+    expect(job?.deduplicationId).toContain(fixture.a.id);
+    expect(job?.deduplicationId).not.toContain(fixture.b.id);
   });
 
   it('cannot move a user into another workspace through any account route', async () => {
