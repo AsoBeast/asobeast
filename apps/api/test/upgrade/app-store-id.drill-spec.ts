@@ -24,6 +24,11 @@ describe('App Store ids against an upgraded baseline database', () => {
     expect(await storeAppIdOf('app_ios')).toBe('111111111');
   });
 
+  it('renames only the first of two padded ids that share one listing', async () => {
+    expect(await storeAppIdOf('app_padded_pair_a')).toBe('444444444');
+    expect(await storeAppIdOf('app_padded_pair_b')).toBe('00444444444');
+  });
+
   it('leaves canonical ids and google play package names untouched', async () => {
     expect(await storeAppIdOf('app_rival')).toBe('222222222');
     expect(await storeAppIdOf('app_play')).toBe('com.drill.fitness');
