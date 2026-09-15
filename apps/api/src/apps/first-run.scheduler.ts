@@ -1,20 +1,21 @@
-import { InjectQueue } from '@nestjs/bullmq';
+import { InjectFlowProducer } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { Store } from '@prisma/client';
-import { Queue } from 'bullmq';
+import { FlowJobNode, FlowProducer } from 'bullmq';
+import { ActionRunQueue } from '../actions/action-run.queue';
 import {
   WorkspaceContext,
   WorkspaceScope,
 } from '../common/tenancy/workspace-context';
-import { PrismaService } from '../prisma/prisma.service';
-import { ActionRunQueue } from '../actions/action-run.queue';
+import { JOB_OPTIONS } from '../jobs/job-options';
 import {
+  FLOW_PRODUCERS,
   firstRunCheckJobId,
   JOBS,
   QUEUES,
   queueNameForStore,
   utcDateKey,
 } from '../jobs/jobs.types';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface FirstRunSchedule {
   ranked: number;
@@ -27,52 +28,65 @@ export class FirstRunScheduler {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
-    @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
+    @InjectFlowProducer(FLOW_PRODUCERS.FIRST_RUN)
+    private readonly flowProducer: FlowProducer,
     private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
   ) {}
 
   async schedule(appId: string): Promise<FirstRunSchedule> {
     const scope = this.workspace.scopeFor('the first run of an imported app');
-    const date = utcDateKey();
-    const schedule: FirstRunSchedule = {
-      ranked: await this.enqueueRankChecks(appId, scope, date),
-      actionsQueued: await this.enqueueActionRun(scope),
-    };
+    const checks = await this.rankChecks(appId, scope);
 
+    if (checks.length === 0) {
+      await this.actionRuns.request(scope);
+    } else {
+      await this.flowProducer.add(
+        {
+          name: JOBS.ACTIONS,
+          queueName: QUEUES.PIPELINE,
+          data: scope,
+          opts: JOB_OPTIONS,
+          children: checks,
+        },
+        {
+          queuesOptions: {
+            [QUEUES.PIPELINE]: { defaultJobOptions: JOB_OPTIONS },
+            [QUEUES.APP_STORE]: { defaultJobOptions: JOB_OPTIONS },
+            [QUEUES.GPLAY]: { defaultJobOptions: JOB_OPTIONS },
+          },
+        },
+      );
+    }
+
+    const schedule: FirstRunSchedule = {
+      ranked: checks.length,
+      actionsQueued: true,
+    };
     this.logger.log(`first run ${JSON.stringify(schedule)}`);
     return schedule;
   }
 
-  private async enqueueRankChecks(
+  private async rankChecks(
     appId: string,
     scope: WorkspaceScope,
-    date: string,
-  ): Promise<number> {
+  ): Promise<FlowJobNode[]> {
+    const date = utcDateKey();
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: { appId, active: true },
       select: { keywordId: true, keyword: { select: { store: true } } },
       orderBy: { createdAt: 'asc' },
     });
 
-    for (const { keywordId, keyword } of tracked) {
-      await this.queueFor(keyword.store).add(
-        JOBS.CHECK_KEYWORD,
-        { keywordId, ...scope },
-        { jobId: firstRunCheckJobId(appId, keywordId, date) },
-      );
-    }
-    return tracked.length;
-  }
-
-  private async enqueueActionRun(scope: WorkspaceScope): Promise<boolean> {
-    return (await this.actionRuns.request(scope)).queued;
-  }
-
-  private queueFor(store: Store): Queue {
-    return queueNameForStore(store) === QUEUES.GPLAY
-      ? this.gplayQueue
-      : this.appStoreQueue;
+    return tracked.map(({ keywordId, keyword }) => ({
+      name: JOBS.CHECK_KEYWORD,
+      queueName: queueNameForStore(keyword.store),
+      data: { keywordId, ...scope },
+      opts: {
+        ...JOB_OPTIONS,
+        jobId: firstRunCheckJobId(appId, keywordId, date),
+        removeDependencyOnFailure: true,
+      },
+    }));
   }
 }

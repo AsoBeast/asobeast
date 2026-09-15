@@ -17,6 +17,7 @@ export const QUEUES = {
 export const FLOW_PRODUCERS = {
   ALERT_DELIVERY: 'alert-delivery',
   DAILY_PIPELINE: 'daily-pipeline',
+  FIRST_RUN: 'first-run',
 } as const;
 
 export const LAST_DAILY_RUN_KEY = 'asobeast:last-daily-run';
