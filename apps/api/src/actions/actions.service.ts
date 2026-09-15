@@ -25,7 +25,11 @@ import {
 import { ensureAppExists } from '../apps/ensure-app';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
-import { actionsSuppressedKey, QUEUES } from '../jobs/jobs.types';
+import {
+  actionsGeneratedKey,
+  actionsSuppressedKey,
+  QUEUES,
+} from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { toActionItem } from './actions.mapper';
 import {
@@ -166,16 +170,21 @@ export class ActionsService {
   }
 
   private async suppressedByCap(): Promise<number> {
+    const stored = Number(
+      await this.readRunKey(actionsSuppressedKey, 'an action summary'),
+    );
+    return Number.isInteger(stored) && stored >= 0 ? stored : 0;
+  }
+
+  private async readRunKey(
+    key: (workspaceId: string) => string,
+    operation: string,
+  ): Promise<string | null> {
     try {
       const client = await this.pipeline.getBackend().client;
-      const stored = Number(
-        await client.get(
-          actionsSuppressedKey(this.workspace.require('an action summary')),
-        ),
-      );
-      return Number.isInteger(stored) && stored >= 0 ? stored : 0;
+      return await client.get(key(this.workspace.require(operation)));
     } catch {
-      return 0;
+      return null;
     }
   }
 
@@ -277,6 +286,13 @@ export class ActionsService {
   }
 
   private async generatedAt(): Promise<string | null> {
+    const recorded = await this.readRunKey(
+      actionsGeneratedKey,
+      'an action run time',
+    );
+    if (recorded && !Number.isNaN(Date.parse(recorded))) {
+      return new Date(recorded).toISOString();
+    }
     const latest = await this.prisma.actionItem.aggregate({
       _max: { lastSeenAt: true },
     });

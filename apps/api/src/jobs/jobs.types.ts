@@ -33,6 +33,10 @@ export function actionsSuppressedKey(workspaceId: string): string {
   return `asobeast:actions-suppressed:${workspaceId}`;
 }
 
+export function actionsGeneratedKey(workspaceId: string): string {
+  return `asobeast:actions-generated:${workspaceId}`;
+}
+
 export function queueNameForStore(store: Store): string {
   return store === 'GOOGLE_PLAY' ? QUEUES.GPLAY : QUEUES.APP_STORE;
 }
