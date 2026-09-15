@@ -1057,6 +1057,14 @@ describe('KeywordsController (e2e)', () => {
         .post(`/apps/${play.id}/keywords`)
         .send({ keywords: ['tower defense'], country: 'ad' })
         .expect(201);
+
+      const tracked = await prisma.trackedKeyword.findMany({
+        where: { appId: play.id, keyword: { country: 'ad' } },
+        select: { active: true, keyword: { select: { store: true } } },
+      });
+      expect(tracked).toEqual([
+        { active: true, keyword: { store: Store.GOOGLE_PLAY } },
+      ]);
     });
 
     it('starts no deep search in a market that is not a storefront', async () => {
@@ -1126,6 +1134,11 @@ describe('KeywordsController (e2e)', () => {
         .patch(`/apps/${id}/keywords/${keyword.id}`)
         .send({ active: false })
         .expect(200);
+
+      const tracked = await prisma.trackedKeyword.findUniqueOrThrow({
+        where: { appId_keywordId: { appId: id, keywordId: keyword.id } },
+      });
+      expect(tracked.active).toBe(false);
     });
   });
 });
