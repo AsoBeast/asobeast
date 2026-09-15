@@ -95,6 +95,12 @@ describe('GooglePlayProvider', () => {
     ['Use &amp;amp; to escape', 'Use &amp; to escape'],
     ['R&D tools for Tom & Jerry', 'R&D tools for Tom & Jerry'],
     ['&copy 2024 Studio', '&copy 2024 Studio'],
+    ['Caf&eacute; &nbsp;open', 'Caf&eacute; &nbsp;open'],
+    [
+      'Quote &#x27;hex&#x27; and &#8217;dec&#8217;',
+      'Quote &#x27;hex&#x27; and &#8217;dec&#8217;',
+    ],
+    ['Say &apos;hi&apos;', "Say 'hi'"],
     ['Short description', 'Short description'],
   ])('stores the short description %j as %j', async (received, stored) => {
     const app = jest
