@@ -17,6 +17,7 @@ export interface NormalizedApp {
   releasedAt?: Date;
   storeUpdatedAt?: Date;
   raw: unknown;
+  searchable: boolean;
 }
 
 export interface SearchItem {

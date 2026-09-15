@@ -37,6 +37,7 @@ const FIXTURE: NormalizedApp = {
   summary: 'A markdown journal',
   description: 'Fixture description',
   raw: { source: 'fixture', artistId: 284882218 },
+  searchable: true,
 };
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/fixture/id1234567890';

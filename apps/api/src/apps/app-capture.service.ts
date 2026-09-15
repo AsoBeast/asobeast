@@ -4,6 +4,7 @@ import { QuotaAdmission } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { toSnapshotData } from './apps.mapper';
 
@@ -39,6 +40,9 @@ export class AppCaptureService {
     const normalized = await this.egress.through(store, country, () =>
       this.registry.get(store).getApp(storeAppId, country),
     );
+    if (!normalized.searchable) {
+      throw new UnsearchableAppError(normalized.title);
+    }
 
     return this.prisma.withTransaction(async (tx) => {
       const persist = async () => {

@@ -30,6 +30,7 @@ const FIXTURE: NormalizedApp = {
   title: 'Fixture App',
   description: 'Fixture description',
   raw: { source: 'fixture' },
+  searchable: true,
 };
 
 class SlowRegistry {

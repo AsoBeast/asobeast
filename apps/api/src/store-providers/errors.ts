@@ -21,6 +21,15 @@ export class StoreAppNotFoundError extends Error {
   }
 }
 
+export class UnsearchableAppError extends Error {
+  constructor(readonly title: string) {
+    super(
+      `${title} is not available on iPhone or iPad, so it cannot rank in App Store search`,
+    );
+    this.name = 'UnsearchableAppError';
+  }
+}
+
 export class ImplausibleResultError extends Error {
   constructor(
     readonly store: Store,
