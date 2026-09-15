@@ -1,4 +1,5 @@
 import { DEFAULT_COUNTRY, Store } from './index';
+import { assertStorefront } from './storefronts';
 
 export class InvalidStoreUrlError extends Error {
   constructor(input: string) {
@@ -52,14 +53,13 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
     const match = url.pathname.match(APP_LISTING_PATH);
     if (!match) throw new InvalidStoreUrlError(input);
     const first = url.pathname.split('/').filter(Boolean)[0];
-    const country =
-      first && COUNTRY_SEGMENT.test(first)
-        ? first.toLowerCase()
-        : DEFAULT_COUNTRY;
     return {
       store: 'APP_STORE',
       storeAppId: appStoreId(match[1], input),
-      country,
+      country:
+        first && COUNTRY_SEGMENT.test(first)
+          ? storefront('APP_STORE', first)
+          : DEFAULT_COUNTRY,
     };
   }
 
@@ -70,7 +70,7 @@ export function parseStoreUrl(input: string): ParsedStoreUrl {
     return {
       store: 'GOOGLE_PLAY',
       storeAppId: id,
-      country: gl ? gl.toLowerCase() : DEFAULT_COUNTRY,
+      country: gl ? storefront('GOOGLE_PLAY', gl) : DEFAULT_COUNTRY,
     };
   }
 
@@ -84,6 +84,12 @@ function appStoreId(digits: string, input: string): string {
     throw new InvalidStoreUrlError(input);
   }
   return canonical;
+}
+
+function storefront(store: Store, code: string): string {
+  const country = code.toLowerCase();
+  assertStorefront(store, country);
+  return country;
 }
 
 function withScheme(input: string): string {
