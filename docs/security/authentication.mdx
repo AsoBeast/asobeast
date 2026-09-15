@@ -70,7 +70,19 @@ Rotating `AUTH_SECRET` invalidates every existing session, so everyone is signed
 
 Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost.
 
-The auth endpoints, including register, login, password change and token creation, are rate limited per client IP address.
+## How are sign in attempts throttled?
+
+The authentication endpoints are rate limited per client address.
+
+| Endpoints | Attempts allowed |
+| --- | --- |
+| Register, sign in, confirm an email address, change a password, create a token, invite and accept an invite | 10 per minute |
+| Request a recovery link and redeem it | 10 per hour |
+| Resend a confirmation link | 3 per hour |
+
+A refused attempt answers `429` with a `Retry-After` header and a `retryAfterSeconds` field in the error body, and the message names the wait, for example `Too many attempts from this address. Try again in 42 seconds.` The sign in card shows that message as it is.
+
+Behind a reverse proxy, `TRUST_PROXY` decides what the client address is. Left at `0` behind a proxy, every browser shares the proxy's address and therefore one allowance. See [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 ## Recover a forgotten password
 
