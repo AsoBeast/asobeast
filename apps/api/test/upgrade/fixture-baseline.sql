@@ -37,7 +37,9 @@ VALUES
   ('kw_ios_us', 'workout tracker', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
   ('kw_ios_gb', 'workout tracker', 'APP_STORE', 'gb', '2026-07-01 00:00:00'),
   ('kw_ios_us_alt', 'gym log', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
-  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
+  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_ios_zz', 'workout tracker', 'APP_STORE', 'zz', '2026-07-01 00:00:00'),
+  ('kw_play_pw', 'workout tracker', 'GOOGLE_PLAY', 'pw', '2026-07-01 00:00:00');
 
 INSERT INTO "TrackedKeyword" ("appId", "keywordId", "source", "active", "relevance", "createdAt")
 VALUES
@@ -45,7 +47,9 @@ VALUES
   ('app_ios', 'kw_ios_gb', 'MANUAL', true, 80, '2026-07-01 00:00:00'),
   ('app_ios', 'kw_ios_us_alt', 'SUGGESTED', false, 40, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_us', 'DESCRIPTION', true, 70, '2026-07-01 00:00:00'),
-  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00');
+  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00'),
+  ('app_ios', 'kw_ios_zz', 'MANUAL', true, 60, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_pw', 'MANUAL', true, 60, '2026-07-01 00:00:00');
 
 INSERT INTO "KeywordMetric" ("keywordId", "date", "traffic", "difficulty", "stats", "scoringSource", "formulaVersion", "confidence", "capturedAt", "createdAt")
 VALUES
@@ -60,7 +64,9 @@ VALUES
   ('app_ios', 'ws_default', 'kw_ios_gb', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
   ('app_ios', 'ws_default', 'kw_ios_us_alt', '2026-07-15', NULL, 100, '2026-07-15 03:00:00'),
   ('app_rival', 'ws_default', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
-  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00');
+  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00'),
+  ('app_ios', 'ws_default', 'kw_ios_zz', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_pw', '2026-07-15', 4, 200, '2026-07-15 03:00:00');
 
 INSERT INTO "CategoryRank" ("appId", "date", "collection", "genre", "position", "depth", "createdAt")
 VALUES

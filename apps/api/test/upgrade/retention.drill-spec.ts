@@ -114,7 +114,7 @@ describe('Retention against an upgraded baseline database', () => {
     const remaining = await prisma.keywordRanking.findMany({
       select: { date: true },
     });
-    expect(remaining).toHaveLength(5);
+    expect(remaining).toHaveLength(7);
     expect(remaining.every((row) => row.date >= new Date('2026-07-15'))).toBe(
       true,
     );
@@ -181,12 +181,12 @@ describe('Retention against an upgraded baseline database', () => {
     await expect(prisma.app.count()).resolves.toBe(5);
     await expect(
       prisma.keyword.count({ where: { id: { startsWith: 'kw_' } } }),
-    ).resolves.toBe(4);
+    ).resolves.toBe(6);
     await expect(
       prisma.trackedKeyword.count({
         where: { keywordId: { startsWith: 'kw_' } },
       }),
-    ).resolves.toBe(5);
+    ).resolves.toBe(7);
     await expect(
       prisma.keywordMetric.count({
         where: { keywordId: { startsWith: 'kw_' } },
