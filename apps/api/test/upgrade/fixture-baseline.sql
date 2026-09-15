@@ -36,7 +36,13 @@ VALUES
   ('kw_ios_us', 'workout tracker', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
   ('kw_ios_gb', 'workout tracker', 'APP_STORE', 'gb', '2026-07-01 00:00:00'),
   ('kw_ios_us_alt', 'gym log', 'APP_STORE', 'us', '2026-07-01 00:00:00'),
-  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
+  ('kw_play_us', 'workout tracker', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_meals', 'amp meals', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_39_daily', '39 daily', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_tools', 'amp tools', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_lt_3', 'lt 3', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp', 'amp', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_workouts', 'workouts', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
 
 INSERT INTO "TrackedKeyword" ("appId", "keywordId", "source", "active", "relevance", "createdAt")
 VALUES
@@ -44,7 +50,13 @@ VALUES
   ('app_ios', 'kw_ios_gb', 'MANUAL', true, 80, '2026-07-01 00:00:00'),
   ('app_ios', 'kw_ios_us_alt', 'SUGGESTED', false, 40, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_us', 'DESCRIPTION', true, 70, '2026-07-01 00:00:00'),
-  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00');
+  ('app_rival', 'kw_ios_us', 'COMPETITOR', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_meals', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_39_daily', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_tools', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_lt_3', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp', 'MANUAL', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_workouts', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00');
 
 INSERT INTO "KeywordMetric" ("keywordId", "date", "traffic", "difficulty", "stats", "scoringSource", "formulaVersion", "confidence", "capturedAt", "createdAt")
 VALUES
@@ -59,7 +71,9 @@ VALUES
   ('app_ios', 'ws_default', 'kw_ios_gb', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
   ('app_ios', 'ws_default', 'kw_ios_us_alt', '2026-07-15', NULL, 100, '2026-07-15 03:00:00'),
   ('app_rival', 'ws_default', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
-  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00');
+  ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_amp_meals', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_39_daily', '2026-07-15', NULL, 200, '2026-07-15 03:00:00');
 
 INSERT INTO "CategoryRank" ("appId", "date", "collection", "genre", "position", "depth", "createdAt")
 VALUES
