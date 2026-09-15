@@ -9,6 +9,15 @@ import {
   setOnboardingAcknowledgement,
 } from "../src/lib/onboarding";
 
+function finishedSetup() {
+  let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
+  state = setOnboardingAcknowledgement(state, "noCompetitors", true);
+  state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
+  state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
+  state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
+  return completeOnboarding(state, 0, 0);
+}
+
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
   year: "numeric",
@@ -108,6 +117,43 @@ test.describe("a fast double click", () => {
     expect(imports).toHaveLength(1);
   });
 
+  test("still lets Import run again after the dialog closed mid request", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ key, value }) => localStorage.setItem(key, value),
+      { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+    );
+    await page.route("**/api/backend/apps", async (route) => {
+      if (route.request().method() === "POST") {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      await route.fallback();
+    });
+    const imports = countRequests(page, "POST", /\/api\/backend\/apps$/);
+    await page.goto("/");
+
+    const startImport = async () => {
+      await page.getByRole("button", { name: "Import app" }).click();
+      await page
+        .getByLabel("Store URL")
+        .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+      await page.getByRole("button", { name: "Import", exact: true }).click();
+    };
+
+    const firstImport = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith("/api/backend/apps"),
+    );
+    await startImport();
+    await page.keyboard.press("Escape");
+    await firstImport;
+    await startImport();
+
+    await expect.poll(() => imports.length).toBe(2);
+  });
+
   test("on Delete app sends one delete", async ({ page }) => {
     const deletes = countRequests(
       page,
@@ -132,15 +178,9 @@ test.describe("a fast double click", () => {
 test("finished setup suppresses redirects after later imports", async ({
   page,
 }) => {
-  let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-  state = setOnboardingAcknowledgement(state, "noCompetitors", true);
-  state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
-  state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
-  state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
-  const completed = completeOnboarding(state, 0, 0);
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(completed) },
+    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
   );
   await page.goto("/");
 
