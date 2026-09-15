@@ -171,9 +171,10 @@ function DeletionControl({
 export function WorkspaceDeletionCard() {
   const { user } = useAuth();
   const { data: deletion } = useQuery(workspaceDeletionOptions);
-  const isOwner = user?.role === "owner";
 
-  if (!deletion) return null;
+  if (!deletion || !user) return null;
+
+  const isOwner = user.role === "owner";
 
   return (
     <Card>
