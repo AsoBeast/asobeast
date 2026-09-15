@@ -74,3 +74,29 @@ test("a member sees a scheduled deletion without the controls", async ({
   );
   await expect(section.getByRole("button")).toHaveCount(0);
 });
+
+test("the owner is never shown the member note while their account loads", async ({
+  page,
+}) => {
+  let releaseMe: () => void = () => undefined;
+  const meReleased = new Promise<void>((resolve) => {
+    releaseMe = resolve;
+  });
+  await page.route("**/api/backend/auth/me", async (route) => {
+    await meReleased;
+    await route.fallback();
+  });
+
+  await page.goto("/settings#workspace");
+  const section = page.getByRole("region", { name: "Workspace" });
+  await expect(section).toBeVisible();
+  await page.waitForResponse((response) =>
+    response.url().endsWith("/api/backend/account/deletion"),
+  );
+
+  await expect(section.getByText("Only the workspace owner")).toHaveCount(0);
+  releaseMe();
+  await expect(
+    section.getByRole("button", { name: "Delete workspace" }),
+  ).toBeVisible();
+});
