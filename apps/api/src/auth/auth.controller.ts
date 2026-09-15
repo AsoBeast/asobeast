@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import type { User } from '@prisma/client';
 import {
@@ -37,6 +37,7 @@ import { RegisterDto } from './dto/register.dto';
 import { RequestPasswordResetDto } from './dto/request-password-reset.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
+import { RetryAfterThrottlerGuard } from './rate-limit/retry-after-throttler.guard';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -50,7 +51,7 @@ export class AuthController {
 
   @Post('register')
   @Public()
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Register an account' })
   async register(
@@ -65,7 +66,7 @@ export class AuthController {
   @Post('login')
   @Public()
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Log in' })
   async login(
@@ -102,7 +103,7 @@ export class AuthController {
   @Post('verify')
   @Public()
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Confirm an email address and start the trial' })
   async verify(
@@ -126,7 +127,7 @@ export class AuthController {
   @Post('verify/resend')
   @AllowUnentitled()
   @HttpCode(204)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 3, ttl: 3_600_000 } })
   @ApiOperation({ summary: 'Send a fresh confirmation link to this account' })
   resendVerification(@CurrentUser() user: AccountUser): Promise<void> {
@@ -136,7 +137,7 @@ export class AuthController {
   @Post('password')
   @AllowUnentitled()
   @HttpCode(200)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Change password and reset other sessions' })
   async changePassword(
@@ -152,7 +153,7 @@ export class AuthController {
   @Post('password/forgot')
   @Public()
   @HttpCode(204)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @ApiOperation({ summary: 'Email a recovery link to an account that exists' })
   requestPasswordReset(@Body() dto: RequestPasswordResetDto): Promise<void> {
@@ -162,7 +163,7 @@ export class AuthController {
   @Post('password/reset')
   @Public()
   @HttpCode(204)
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @ApiOperation({ summary: 'Redeem a recovery link and end every session' })
   resetPassword(@Body() dto: ResetPasswordDto): Promise<void> {
@@ -184,7 +185,7 @@ export class AuthController {
   }
 
   @Post('tokens')
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a personal api token' })
   createToken(
