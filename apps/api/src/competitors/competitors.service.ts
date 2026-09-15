@@ -70,11 +70,12 @@ export class CompetitorsService {
     }
     const known = await this.prisma.app.findFirst({
       where: { primaryAppId: primary.id, storeAppId, isCompetitor: true },
-      select: { id: true },
+      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
     });
-    if (!known) {
-      await this.quota.assertRoom('competitors', primary.id);
+    if (known) {
+      return toCompetitorItem(known, known.snapshots[0] ?? null);
     }
+    await this.quota.assertRoom('competitors', primary.id);
 
     const { app, snapshot } = await this.capture.capture(
       store,

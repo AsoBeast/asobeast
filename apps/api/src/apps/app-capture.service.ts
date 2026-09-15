@@ -48,6 +48,9 @@ export class AppCaptureService {
       const persist = async () => {
         await this.serializeIdentity(tx, identity);
         await this.assertFreeToClaim(identity, primaryAppId, tx);
+        const tracked = await this.alreadyTracked(tx, identity);
+        if (tracked) return tracked;
+
         const app = await tx.app.upsert({
           where: {
             workspaceId_store_storeAppId_country: {
@@ -82,6 +85,19 @@ export class AppCaptureService {
 
       return admit ? admit(tx, persist) : persist();
     });
+  }
+
+  private async alreadyTracked(
+    tx: Prisma.TransactionClient,
+    identity: AppIdentity,
+  ): Promise<{ app: App; snapshot: AppSnapshot } | null> {
+    const existing = await tx.app.findUnique({
+      where: { workspaceId_store_storeAppId_country: identity },
+      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+    });
+    if (!existing?.snapshots[0]) return null;
+    const { snapshots, ...app } = existing;
+    return { app, snapshot: snapshots[0] };
   }
 
   private serializeIdentity(
