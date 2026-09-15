@@ -3,10 +3,16 @@ import type {
   StoreHealth,
   StoreHealthReport,
   StoreHealthState,
+  WorkspaceDeletionStatus,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
+import { formatDateTime } from "@/lib/format";
 import { runDelayNotice } from "./run-delay-notice";
-import { SCRAPER_BREAKAGE_URL, systemNotice } from "./system-notice";
+import {
+  SCRAPER_BREAKAGE_URL,
+  systemNotice,
+  WORKSPACE_DELETION_HREF,
+} from "./system-notice";
 
 function healthOf(
   states: Partial<Record<StoreHealth["store"], StoreHealthState>>,
@@ -52,6 +58,7 @@ describe("systemNotice", () => {
       detail:
         "This is on us, not your setup. Your stored data is untouched and collection resumes on its own once we ship a fix. Until then, collection is paused for App Store.",
       href: SCRAPER_BREAKAGE_URL,
+      linkLabel: "What happens next",
     });
   });
 
@@ -89,6 +96,7 @@ describe("systemNotice", () => {
       title: delay?.title,
       detail: delay?.detail,
       href: null,
+      linkLabel: null,
     });
   });
 
@@ -105,6 +113,68 @@ describe("systemNotice", () => {
     expect(
       systemNotice({ stores: healthOf({ APP_STORE: "ok" }), run: ON_TIME }),
     ).toBeNull();
+  });
+
+  describe("a scheduled workspace deletion", () => {
+    const SCHEDULED: WorkspaceDeletionStatus = {
+      scheduled: true,
+      requestedAt: "2026-08-28T09:00:00.000Z",
+      requestedBy: "owner@example.com",
+      dueAt: "2026-09-04T09:00:00.000Z",
+      graceDays: 7,
+    };
+
+    it("names the earliest erasure and links to cancelling it", () => {
+      expect(
+        systemNotice({
+          stores: healthOf({ APP_STORE: "ok" }),
+          run: ON_TIME,
+          deletion: SCHEDULED,
+        }),
+      ).toEqual({
+        variant: "destructive",
+        title: "This workspace is scheduled for deletion",
+        detail: `Every app, keyword and history in it is erased on or after ${formatDateTime(SCHEDULED.dueAt ?? "")}. The owner can cancel it until then.`,
+        href: WORKSPACE_DELETION_HREF,
+        linkLabel: "Cancel deletion",
+      });
+    });
+
+    it("outranks a broken store and a delayed run", () => {
+      const notice = systemNotice({
+        stores: healthOf({ APP_STORE: "broken" }),
+        run: DELAYED,
+        deletion: SCHEDULED,
+      });
+
+      expect(notice?.title).toBe("This workspace is scheduled for deletion");
+    });
+
+    it("changes nothing while deletion is not scheduled", () => {
+      const notice = systemNotice({
+        stores: healthOf({ APP_STORE: "broken" }),
+        run: ON_TIME,
+        deletion: {
+          ...SCHEDULED,
+          scheduled: false,
+          requestedAt: null,
+          requestedBy: null,
+          dueAt: null,
+        },
+      });
+
+      expect(notice?.title).toBe("App Store parsing looks broken");
+    });
+
+    it("announces nothing it cannot date", () => {
+      expect(
+        systemNotice({
+          stores: healthOf({ APP_STORE: "ok" }),
+          run: ON_TIME,
+          deletion: { ...SCHEDULED, dueAt: null },
+        }),
+      ).toBeNull();
+    });
   });
 
   it("says nothing while either query is still in flight", () => {

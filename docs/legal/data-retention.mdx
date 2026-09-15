@@ -50,16 +50,16 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
 
 <Steps>
   <Step title="Request it">
-    `POST /account/deletion` with `{"confirm":"DELETE"}`, as the workspace owner. Anything other than the literal `DELETE` is refused.
+    As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused.
   </Step>
   <Step title="Nothing happens yet">
-    The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. `GET /account/deletion` reports who asked, when, and when it falls due.
+    The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.
   </Step>
   <Step title="Change your mind">
-    `DELETE /account/deletion` cancels it. Nothing was removed, so nothing needs restoring.
+    The owner presses **Cancel deletion** in **Settings**, or sends `DELETE /account/deletion`. Nothing was removed, so nothing needs restoring. A member sees the status but cannot cancel it.
   </Step>
   <Step title="Erasure">
-    On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it.
+    On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it. The due date is therefore the earliest erasure, not an exact time.
   </Step>
 </Steps>
 
