@@ -45,6 +45,7 @@ const APP_STORE_FIXTURE: NormalizedApp = {
   releasedAt: new Date('2020-01-01T00:00:00Z'),
   storeUpdatedAt: new Date('2021-01-01T00:00:00Z'),
   raw: { source: 'fixture' },
+  searchable: true,
 };
 
 const GOOGLE_PLAY_FIXTURE: NormalizedApp = {
@@ -63,6 +64,7 @@ const GOOGLE_PLAY_FIXTURE: NormalizedApp = {
   releasedAt: new Date('2021-06-01T00:00:00Z'),
   storeUpdatedAt: new Date('2022-01-01T00:00:00Z'),
   raw: { source: 'fixture', genreId: 'TOOLS', recentChanges: 'Bug fixes' },
+  searchable: true,
 };
 
 const OTHER_WORKSPACE_ID = 'ws_apps_other';
@@ -76,6 +78,7 @@ class FakeStoreProviderRegistry {
   getAppCalls: Array<{ storeAppId: string; country: string }> = [];
   availabilityCalls: Array<{ storeAppId: string; countries: string[] }> = [];
   availabilityStatus: MarketAvailability = 'available';
+  searchable = true;
 
   get(store: Store): StoreProvider {
     if (store === Store.GOOGLE_PLAY) {
@@ -97,6 +100,7 @@ class FakeStoreProviderRegistry {
         : Promise.resolve({
             ...APP_STORE_FIXTURE,
             storeAppId,
+            searchable: this.searchable,
             ...(this.title ? { title: this.title } : {}),
           });
     });
@@ -165,6 +169,7 @@ describe('AppsController (e2e)', () => {
     registry.getAppCalls = [];
     registry.availabilityCalls = [];
     registry.availabilityStatus = 'available';
+    registry.searchable = true;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AppGroup" RESTART IDENTITY CASCADE',
     );
@@ -330,6 +335,52 @@ describe('AppsController (e2e)', () => {
       'xx is not an App Store storefront',
     );
     expect(registry.getAppCalls).toEqual([]);
+  });
+
+  describe('a listing that cannot appear in iPhone or iPad search', () => {
+    const MESSAGE =
+      'Fixture App is not available on iPhone or iPad, so it cannot rank in App Store search';
+
+    it('is refused on import before anything is stored', async () => {
+      registry.searchable = false;
+
+      const response = await api
+        .post('/apps')
+        .send({ url: APP_STORE_URL })
+        .expect(422);
+
+      expectEnvelope(response.body as ApiErrorEnvelope, 422, '/apps');
+      expect((response.body as ApiErrorEnvelope).message).toBe(MESSAGE);
+      expect(registry.getAppCalls).toHaveLength(1);
+      expect(await prisma.app.count()).toBe(0);
+      expect(await prisma.appSnapshot.count()).toBe(0);
+    });
+
+    it('is refused as a competitor before anything is stored', async () => {
+      const primary = (
+        (await api.post('/apps').send({ url: APP_STORE_URL }).expect(201))
+          .body as AppDetail
+      ).id;
+      registry.searchable = false;
+
+      const response = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: 'https://apps.apple.com/us/app/rival/id9876543210' })
+        .expect(422);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(MESSAGE);
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(0);
+    });
+
+    it('keeps refreshing an app imported before the listing was refused', async () => {
+      const appId = (
+        (await api.post('/apps').send({ url: APP_STORE_URL }).expect(201))
+          .body as AppDetail
+      ).id;
+      registry.searchable = false;
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+    });
   });
 
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {

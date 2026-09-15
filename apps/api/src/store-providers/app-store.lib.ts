@@ -23,6 +23,7 @@ export interface AppStoreAppResult {
   version?: string;
   released?: string;
   updated?: string;
+  supportedDevices?: string[];
 }
 
 export interface AppStoreSearchResult {

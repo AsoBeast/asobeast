@@ -50,6 +50,31 @@ describe('AppStoreProvider', () => {
     });
   });
 
+  it.each([
+    ['a Mac only app such as Xcode', [], false],
+    ['an Apple TV only app', ['AppleTV4-AppleTV4'], false],
+    ['an iPhone app', ['iPhone15-iPhone15', 'iPadAir5-iPadAir5'], true],
+    ['an iPad only app', ['iPadPro13M4-iPadPro13M4'], true],
+    ['an iPod touch app', ['iPodTouchSeventhGen-iPodTouchSeventhGen'], true],
+    ['a listing that reports no devices at all', undefined, true],
+  ])(
+    'knows whether %s can appear in App Store search',
+    async (_, supportedDevices, searchable) => {
+      const app = jest.fn().mockResolvedValue({
+        id: 497799835,
+        title: 'Xcode',
+        subtitle: 'Build apps',
+        description: 'desc',
+        supportedDevices,
+      });
+      const provider = new AppStoreProvider(makeLib({ app }));
+
+      const result = await provider.getApp('497799835', 'us');
+
+      expect(result.searchable).toBe(searchable);
+    },
+  );
+
   it('maps subtitle when present on the lookup payload', async () => {
     const app = jest.fn().mockResolvedValue({
       id: 1,

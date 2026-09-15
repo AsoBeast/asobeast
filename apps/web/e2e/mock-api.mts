@@ -59,10 +59,11 @@ import type {
 } from "@asobeast/shared";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
+  keywordFieldChars,
+  parseKeywordField,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
-  normalizeText,
   parseStoreUrl,
 } from "@asobeast/shared";
 
@@ -333,17 +334,13 @@ function trackedFromKeywordField(
 }
 
 function keywordFieldResult(text: string, country: string): KeywordFieldResult {
-  const parsed = text
-    .split(",")
-    .map((part) => normalizeText(part))
-    .filter((part) => part.length > 0);
-  const unique = [...new Set(parsed)];
+  const { phrases, duplicatesRemoved } = parseKeywordField(text);
 
   return {
-    tracked: unique.map((value) => trackedFromKeywordField(value, country)),
-    charactersUsed: unique.join(",").length,
+    tracked: phrases.map((value) => trackedFromKeywordField(value, country)),
+    charactersUsed: keywordFieldChars(phrases),
     charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-    duplicatesRemoved: parsed.length - unique.length,
+    duplicatesRemoved,
   };
 }
 

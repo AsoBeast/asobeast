@@ -8,13 +8,13 @@ import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   assertStorefront,
-  countChars,
   KeywordComparison,
   KeywordCountrySummary,
+  keywordFieldChars,
   KeywordFieldResult,
   KeywordSort,
   KEYWORD_FIELD_CHAR_LIMIT,
-  normalizeText,
+  parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { isoWeekKey, JOBS, QUEUES, scoreJobId } from '../jobs/jobs.types';
@@ -44,9 +44,6 @@ import {
 
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
-
-const keywordFieldChars = (phrases: string[]): number =>
-  countChars(phrases.join(','));
 
 const keywordRows = (texts: string[], store: Store, country: string) =>
   [...texts].sort().map((text) => ({ text, store, country }));
@@ -341,13 +338,8 @@ export class KeywordsService {
     const app = await ensureApp(this.prisma, appId);
     this.ensureKeywordFieldStore(app);
 
-    const parsed = text
-      .split(',')
-      .map((part) => normalizeText(part))
-      .filter((part) => part.length > 0)
-      .map(normalizeKeyword);
-    const unique = [...new Set(parsed)];
-    const duplicatesRemoved = parsed.length - unique.length;
+    const { phrases, duplicatesRemoved } = parseKeywordField(text);
+    const unique = phrases.map(normalizeKeyword);
     if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
       throw new BadRequestException(
         `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,

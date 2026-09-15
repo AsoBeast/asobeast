@@ -8,7 +8,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiTags,
+  ApiUnprocessableEntityResponse,
+} from '@nestjs/swagger';
 import {
   CompetitorAnalysis,
   CompetitorDiscovery,
@@ -40,6 +44,10 @@ export class CompetitorsController {
 
   @Post()
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'The listing is not available on iPhone or iPad, so it cannot rank in App Store search',
+  })
   add(
     @Param('id') id: string,
     @Body() dto: AddCompetitorDto,

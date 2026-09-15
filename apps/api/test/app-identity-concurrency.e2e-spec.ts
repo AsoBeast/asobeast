@@ -21,6 +21,7 @@ const FIXTURE: NormalizedApp = {
   title: 'Contested App',
   description: 'Contested description',
   raw: { source: 'fixture' },
+  searchable: true,
 };
 
 const CONTESTED = '5550001';

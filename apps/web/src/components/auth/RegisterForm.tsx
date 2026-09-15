@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PASSWORD_RULE } from "@asobeast/shared";
-import { ApiError, register } from "@/lib/api";
+import { register } from "@/lib/api";
 import { passwordError } from "@/lib/password";
 import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  authFieldError,
+  fieldErrorProps,
+  type AuthFieldError,
+} from "./field-error";
+import { FieldErrorMessage } from "./FieldErrorMessage";
 
 export function RegisterForm() {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFieldError | null>(null);
 
   const mutation = useMutation({
     mutationFn: () =>
@@ -38,13 +44,8 @@ export function RegisterForm() {
       invalidateAuth(queryClient);
       window.location.replace("/");
     },
-    onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not create the account. Try again.",
-      );
-    },
+    onError: (err) =>
+      setError(authFieldError(err, "Could not create the account. Try again.")),
   });
 
   function submit(event: FormEvent<HTMLFormElement>) {
@@ -52,7 +53,7 @@ export function RegisterForm() {
     setError(null);
     const problem = passwordError(password);
     if (problem) {
-      setError(problem);
+      setError({ field: "password", message: problem });
       return;
     }
     mutation.mutate();
@@ -90,9 +91,10 @@ export function RegisterForm() {
                 spellCheck={false}
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                aria-invalid={error !== null}
+                {...fieldErrorProps(error, "email", "email-error")}
                 required
               />
+              <FieldErrorMessage error={error} field="email" id="email-error" />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="password">Password</Label>
@@ -103,21 +105,24 @@ export function RegisterForm() {
                 autoComplete="new-password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                aria-invalid={error !== null}
-                aria-describedby={
-                  error ? "password-rule password-error" : "password-rule"
-                }
+                {...fieldErrorProps(
+                  error,
+                  "password",
+                  "password-error",
+                  "password-rule",
+                )}
                 required
               />
               <p id="password-rule" className="text-xs text-muted-foreground">
                 {PASSWORD_RULE}
               </p>
+              <FieldErrorMessage
+                error={error}
+                field="password"
+                id="password-error"
+              />
             </div>
-            {error ? (
-              <p id="password-error" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+            <FieldErrorMessage error={error} field="form" id="form-error" />
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Create account
