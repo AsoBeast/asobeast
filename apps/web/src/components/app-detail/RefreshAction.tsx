@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError, refreshApp } from "@/lib/api";
 import { appKeys } from "@/lib/queries";
 import { SnapshotDiffDialog } from "./SnapshotDiffDialog";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function RefreshAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
@@ -32,13 +33,14 @@ export function RefreshAction({ appId }: { appId: string }) {
       );
     },
   });
+  const refreshOnce = useSingleFlight(mutation);
 
   return (
     <>
       <Button
         variant="outline"
         disabled={busy}
-        onClick={() => mutation.mutate()}
+        onClick={() => refreshOnce()}
         aria-label="Refresh"
       >
         {mutation.isPending ? (

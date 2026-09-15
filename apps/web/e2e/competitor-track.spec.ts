@@ -29,6 +29,34 @@ test("tracking a google play discovery row adds the competitor", async ({
   ).toBeVisible();
 });
 
+test("a double click on Track sends one competitor add", async ({ page }) => {
+  const adds: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request
+        .url()
+        .endsWith(`/api/backend/apps/${APP_GP_DETAIL.id}/competitors`)
+    ) {
+      adds.push(request.url());
+    }
+  });
+  await page.goto(`/apps/${APP_GP_DETAIL.id}/competitors`);
+  await page.waitForLoadState("networkidle");
+
+  const row = page
+    .getByRole("table", { name: /appearing in your keyword search results/ })
+    .getByRole("row")
+    .filter({ hasText: PLAY_DISCOVERED.title });
+
+  await row.getByRole("button", { name: "Track" }).dblclick();
+
+  await expect(
+    page.getByText(`Now tracking ${PLAY_DISCOVERED.title}`).first(),
+  ).toBeVisible();
+  expect(adds).toHaveLength(1);
+});
+
 test("tracking a google play serp movers row adds the competitor", async ({
   page,
 }) => {

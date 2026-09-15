@@ -62,6 +62,7 @@ import { ApiError, createApiToken, deleteApiToken } from "@/lib/api";
 import { formatDate, formatNumber } from "@/lib/format";
 import { apiTokensOptions, invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const NEVER_EXPIRES = "never";
 
@@ -162,6 +163,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
       );
     },
   });
+  const createOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -170,7 +172,7 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
       setError("Give the token a name.");
       return;
     }
-    mutation.mutate();
+    createOnce();
   }
 
   return (
@@ -282,6 +284,7 @@ function RevokeTokenButton({ id, name }: { id: string; name: string }) {
     },
     onError: () => toast.error("Could not revoke the token"),
   });
+  const revokeOnce = useSingleFlight(revoke);
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -310,7 +313,7 @@ function RevokeTokenButton({ id, name }: { id: string; name: string }) {
             disabled={revoke.isPending}
             onClick={(event) => {
               event.preventDefault();
-              revoke.mutate();
+              revokeOnce();
             }}
           >
             {revoke.isPending ? "Revoking…" : "Revoke"}

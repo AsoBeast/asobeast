@@ -27,6 +27,7 @@ import {
   formatRating,
   storeLabel,
 } from "@/lib/format";
+import { useSingleFlight } from "@/lib/single-flight";
 
 function CompetitorCard({
   id,
@@ -51,6 +52,7 @@ function CompetitorCard({
       toast.error(`Could not remove ${name}`);
     },
   });
+  const removeOnce = useSingleFlight(mutation);
 
   return (
     <Card className="gap-0 p-4">
@@ -106,7 +108,7 @@ function CompetitorCard({
               disabled={mutation.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                mutation.mutate();
+                removeOnce();
               }}
             >
               {mutation.isPending ? "Removing…" : "Remove"}

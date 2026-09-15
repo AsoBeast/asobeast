@@ -10,6 +10,7 @@ import { ApiError, explainAction } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
 import { actionAiStatusOptions, invalidateActionMutation } from "@/lib/queries";
 import { ACTION_AI_DISCLAIMER } from "./action-copy";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function ActionExplain({ item }: { item: ActionItem }) {
   const queryClient = useQueryClient();
@@ -25,6 +26,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
       ),
     onSettled: () => invalidateActionMutation(queryClient, item.scope.appId),
   });
+  const explainOnce = useSingleFlight(explain);
 
   if (!status?.configured) return null;
 
@@ -39,7 +41,7 @@ export function ActionExplain({ item }: { item: ActionItem }) {
           variant="outline"
           size="sm"
           disabled={explain.isPending || item.degraded}
-          onClick={() => explain.mutate()}
+          onClick={() => explainOnce()}
         >
           <Sparkles aria-hidden className="size-4" />
           {explanation ? "Regenerate summary" : "Explain"}

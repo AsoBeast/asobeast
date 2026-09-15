@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { singleFlight } from "./single-flight";
+import { sharedFlight, singleFlight } from "./single-flight";
 
 function recordingMutate() {
   const settle: Array<() => void> = [];
@@ -56,5 +56,38 @@ describe("singleFlight", () => {
     singleFlight(mutate)("two");
 
     expect(mutate).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("sharedFlight", () => {
+  it("hands a second call the promise already in flight", async () => {
+    let resolve: (value: string) => void = () => undefined;
+    const run = vi.fn(
+      () =>
+        new Promise<string>((done) => {
+          resolve = done;
+        }),
+    );
+    const once = sharedFlight(run);
+
+    const first = once();
+    const second = once();
+    resolve("deleted");
+
+    expect(second).toBe(first);
+    await expect(second).resolves.toBe("deleted");
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs again after the promise settles, including after a failure", async () => {
+    const run = vi
+      .fn<() => Promise<string>>()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce("deleted");
+    const once = sharedFlight(run);
+
+    await expect(once()).rejects.toThrow("offline");
+    await expect(once()).resolves.toBe("deleted");
+    expect(run).toHaveBeenCalledTimes(2);
   });
 });

@@ -14,6 +14,7 @@ import {
   LINT_SEVERITY_VARIANT,
   METADATA_FIELD_LABELS,
 } from "@/lib/metadata-display";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_FIELDS: Record<Store, MetadataField[]> = {
   APP_STORE: ["title", "subtitle", "keywordField"],
@@ -103,6 +104,7 @@ export function MetadataAssistantPanel({
       );
     },
   });
+  const draftOnce = useSingleFlight(mutation);
 
   const drafts = mutation.data?.drafts ?? [];
 
@@ -152,7 +154,7 @@ export function MetadataAssistantPanel({
           </div>
           <div>
             <Button
-              onClick={() => mutation.mutate()}
+              onClick={() => draftOnce()}
               disabled={mutation.isPending || selected.length === 0}
             >
               {mutation.isPending ? (

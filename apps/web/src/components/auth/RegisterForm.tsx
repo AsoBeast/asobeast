@@ -25,6 +25,7 @@ import {
   type AuthFieldError,
 } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function RegisterForm() {
   const queryClient = useQueryClient();
@@ -47,6 +48,7 @@ export function RegisterForm() {
     onError: (err) =>
       setError(authFieldError(err, "Could not create the account. Try again.")),
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +58,7 @@ export function RegisterForm() {
       setError({ field: "password", message: problem });
       return;
     }
-    mutation.mutate();
+    submitOnce();
   }
 
   return (

@@ -43,6 +43,7 @@ import {
   invalidateWorkspaceTeamMutation,
   workspaceTeamOptions,
 } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
@@ -65,11 +66,12 @@ function InviteDialog() {
     onError: (err) =>
       setError(messageOf(err, "Could not send the invitation.")),
   });
+  const inviteOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    mutation.mutate();
+    inviteOnce();
   }
 
   function change(next: boolean) {
@@ -157,6 +159,7 @@ export function TeamCard() {
     onError: (err) =>
       toast.error(messageOf(err, "Could not revoke the invitation.")),
   });
+  const revokeOnce = useSingleFlight(revoke);
 
   const remove = useMutation({
     mutationFn: removeMember,
@@ -167,6 +170,7 @@ export function TeamCard() {
     onError: (err) =>
       toast.error(messageOf(err, "Could not remove the member.")),
   });
+  const removeOnce = useSingleFlight(remove);
 
   if (!team) return null;
 
@@ -210,7 +214,7 @@ export function TeamCard() {
                         variant="ghost"
                         aria-label={`Remove ${member.email}`}
                         disabled={remove.isPending}
-                        onClick={() => remove.mutate(member.id)}
+                        onClick={() => removeOnce(member.id)}
                       >
                         <Trash2 />
                       </Button>
@@ -250,7 +254,7 @@ export function TeamCard() {
                         variant="ghost"
                         aria-label={`Revoke the invitation for ${invite.email}`}
                         disabled={revoke.isPending}
-                        onClick={() => revoke.mutate(invite.id)}
+                        onClick={() => revokeOnce(invite.id)}
                       >
                         <Trash2 />
                       </Button>

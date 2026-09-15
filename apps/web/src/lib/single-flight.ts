@@ -26,3 +26,21 @@ export function useSingleFlight<TVariables>(mutation: {
   const { mutate } = mutation;
   return useMemo(() => singleFlight(mutate), [mutate]);
 }
+
+export function sharedFlight<TResult>(
+  run: () => Promise<TResult>,
+): () => Promise<TResult> {
+  let pending: Promise<TResult> | null = null;
+  return () => {
+    pending ??= run().finally(() => {
+      pending = null;
+    });
+    return pending;
+  };
+}
+
+export function useSharedFlight<TResult>(
+  run: () => Promise<TResult>,
+): () => Promise<TResult> {
+  return useMemo(() => sharedFlight(run), [run]);
+}
