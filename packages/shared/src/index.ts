@@ -87,6 +87,7 @@ export const DEFAULT_COUNTRY = 'us';
 export const SERP_DEPTH = 10;
 
 export * from './query-bounds';
+export * from './storefronts';
 export * from './url-parser';
 export * from './contracts';
 export * from './text';
