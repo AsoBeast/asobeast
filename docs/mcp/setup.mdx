@@ -171,8 +171,12 @@ When the preflight passes, the server logs the instance it connected to and the 
     A client configured to probe for the newer protocol revision sends one `server/discover` request before anything else, and it counts against your workspace's `mcpRequestsPerMinute` budget like any other request. Connecting and listing the tools costs two requests, so a client that reconnects often spends more of the budget than one that stays connected. See [Rate limits and quotas](/api-reference/rate-limits).
   </Accordion>
 
-  <Accordion title="The hosted endpoint answers 401, 402, 403 or 429">
-    Each one is a different problem. A `401` means the token is missing, revoked or expired. A `402` means the workspace has no live plan. A `403` means the workspace is suspended. A `429` means a rate limit is spent, and the response says when it reopens. See [Rate limits and quotas](/api-reference/rate-limits).
+  <Accordion title="The hosted endpoint answers 401, 402, 403, 405 or 429">
+    Each one is a different problem. A `401` means the token is missing, revoked or expired, and it carries a `WWW-Authenticate: Bearer` challenge. A `402` means the workspace has no live plan. A `403` means the workspace is suspended. A `405` means the client used `GET` or `DELETE`, which a stateless server does not offer. The response names `POST` in its `Allow` header, and a conforming client carries on over `POST`. A `429` means a rate limit is spent, and the response says when it reopens. See [Rate limits and quotas](/api-reference/rate-limits).
+  </Accordion>
+
+  <Accordion title="The client asks you to sign in, or says OAuth discovery failed">
+    The endpoint has no OAuth. The client did not send the token, so it answered `401` and the client went looking for OAuth metadata, which every `/.well-known` path on your instance answers with a JSON `404`. Check that the header is named `Authorization`, that its value starts with `Bearer ` followed by the `asob_` token, and, for a `.mcp.json` that reads the token from a variable, that the variable is exported in the shell that starts the client.
   </Accordion>
 </AccordionGroup>
 
