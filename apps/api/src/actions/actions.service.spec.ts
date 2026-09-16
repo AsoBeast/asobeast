@@ -62,7 +62,7 @@ const buildPrisma = (
     findMany: jest.fn(() => Promise.resolve([storedRow()])),
     findFirst: jest.fn(() => Promise.resolve(current)),
     count: jest.fn(() => Promise.resolve(1)),
-    aggregate: jest.fn(() =>
+    aggregate: jest.fn((): Promise<{ _max: { lastSeenAt: Date | null } }> =>
       Promise.resolve({
         _max: { lastSeenAt: new Date('2026-07-30T03:00:00.000Z') },
       }),
@@ -206,9 +206,9 @@ describe('ActionsService reads', () => {
 
   it('reports no generation timestamp before the first run', async () => {
     const prisma = buildPrisma();
-    prisma.actionItem.aggregate = jest.fn(() =>
-      Promise.resolve({ _max: { lastSeenAt: null } }),
-    ) as unknown as typeof prisma.actionItem.aggregate;
+    prisma.actionItem.aggregate.mockResolvedValue({
+      _max: { lastSeenAt: null },
+    });
     prisma.actionItem.findMany = jest.fn(() =>
       Promise.resolve([] as ReturnType<typeof storedRow>[]),
     );
@@ -281,7 +281,7 @@ describe('ActionsService reads', () => {
     const prisma = buildPrisma();
     prisma.actionItem.aggregate.mockResolvedValue({
       _max: { lastSeenAt: null },
-    } as never);
+    });
 
     const summary = await serviceFor(
       prisma,
