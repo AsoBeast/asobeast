@@ -17,7 +17,7 @@ export const MCP_CLIENTS = [
 
 export type McpClient = (typeof MCP_CLIENTS)[number];
 
-export type SnippetLanguage = "bash" | "json";
+export type SnippetLanguage = "bash" | "json" | "toml";
 
 export interface ConnectSnippet {
   id: string;
@@ -44,6 +44,14 @@ function json(value: unknown): string {
 
 function mcpServersFile(entry: unknown): string {
   return json({ mcpServers: { asobeast: entry } });
+}
+
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function codexTable(lines: string[]): string {
+  return ["[mcp_servers.asobeast]", ...lines].join("\n");
 }
 
 function claudeCodeEntry(authorization: string, endpoint: string) {
@@ -116,6 +124,27 @@ export function hostedSnippets(
       language: "json",
       value: mcpServersFile(claudeDesktopEntry(token, endpoint)),
     },
+    {
+      id: "codex-config",
+      client: "Codex",
+      label: "Codex configuration",
+      location:
+        "~/.codex/config.toml, which the Codex CLI, IDE extension and app share",
+      language: "toml",
+      value: codexTable([
+        `url = ${tomlString(endpoint)}`,
+        `http_headers = { Authorization = ${tomlString(`Bearer ${token}`)} }`,
+      ]),
+    },
+    {
+      id: "codex-command",
+      client: "Codex",
+      label: "Codex command",
+      location:
+        "Run in a terminal. Codex reads the token from ASOBEAST_API_TOKEN whenever it starts, so export it in your shell profile",
+      language: "bash",
+      value: `codex mcp add asobeast --url ${endpoint} --bearer-token-env-var ASOBEAST_API_TOKEN`,
+    },
   ];
 }
 
@@ -146,6 +175,19 @@ export function localSnippets(
         args: [STDIO_ENTRYPOINT],
         env: { ASOBEAST_API_URL: api, ASOBEAST_API_TOKEN: token },
       }),
+    },
+    {
+      id: "codex-stdio",
+      client: "Codex",
+      label: "Codex stdio configuration",
+      location:
+        "~/.codex/config.toml. Replace the path with the absolute path to apps/mcp/dist/index.js",
+      language: "toml",
+      value: codexTable([
+        `command = "node"`,
+        `args = [${tomlString(STDIO_ENTRYPOINT)}]`,
+        `env = { ASOBEAST_API_URL = ${tomlString(api)}, ASOBEAST_API_TOKEN = ${tomlString(token)} }`,
+      ]),
     },
   ];
 }

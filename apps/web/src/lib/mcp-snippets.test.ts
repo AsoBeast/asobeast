@@ -1,6 +1,8 @@
+import { parse } from "smol-toml";
 import { describe, expect, it } from "vitest";
 import {
   MCP_CLIENTS,
+  STDIO_ENTRYPOINT,
   apiOrigin,
   hostedSnippets,
   localSnippets,
@@ -169,6 +171,42 @@ describe("mcp snippets", () => {
       expect(
         snippetsFor(hosted, "Claude Desktop").map((snippet) => snippet.id),
       ).toEqual(["claude-desktop"]);
+    });
+  });
+
+  describe("codex", () => {
+    it("writes codex configuration toml that codex reads", () => {
+      expect(parse(hosted("codex-config"))).toEqual({
+        mcp_servers: {
+          asobeast: {
+            url: `${ORIGIN}/api/backend/mcp`,
+            http_headers: { Authorization: `Bearer ${TOKEN}` },
+          },
+        },
+      });
+    });
+
+    it("adds the server with a command that reads the token from the environment", () => {
+      expect(hosted("codex-command")).toBe(
+        `codex mcp add asobeast --url ${ORIGIN}/api/backend/mcp --bearer-token-env-var ASOBEAST_API_TOKEN`,
+      );
+      expect(hosted("codex-command")).not.toContain(TOKEN);
+    });
+
+    it("runs the stdio server from a checkout", () => {
+      expect(parse(local("codex-stdio"))).toEqual({
+        mcp_servers: {
+          asobeast: {
+            command: "node",
+            args: [STDIO_ENTRYPOINT],
+            env: {
+              ASOBEAST_API_URL: `${ORIGIN}/api/backend`,
+              ASOBEAST_API_TOKEN: TOKEN,
+            },
+          },
+        },
+      });
+      expect(local("codex-stdio")).not.toContain("/api/backend/mcp");
     });
   });
 });
