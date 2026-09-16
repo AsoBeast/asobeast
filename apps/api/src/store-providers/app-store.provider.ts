@@ -27,6 +27,7 @@ import {
 
 const RETRY_DELAYS_MS = [2000, 5000];
 const CHART_MAX = 200;
+const IOS_SEARCH_DEVICES = /^(iPhone|iPad|iPod)/;
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -196,6 +197,7 @@ export class AppStoreProvider implements StoreProvider {
       releasedAt: toDate(raw.released),
       storeUpdatedAt: toDate(raw.updated),
       raw,
+      searchable: inIosSearch(raw.supportedDevices),
     };
   }
 
@@ -231,6 +233,13 @@ export class AppStoreProvider implements StoreProvider {
     }
     throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
+}
+
+function inIosSearch(supportedDevices?: string[]): boolean {
+  return (
+    supportedDevices === undefined ||
+    supportedDevices.some((device) => IOS_SEARCH_DEVICES.test(device))
+  );
 }
 
 function toDate(value?: string): Date | undefined {

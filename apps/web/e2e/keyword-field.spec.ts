@@ -39,6 +39,45 @@ test("the keyword field refuses to save past its character limit", async ({
   await expect(editor).toHaveAttribute("aria-invalid", "true");
 });
 
+test.describe("the keyword field counts what it stores", () => {
+  const counter = (page: Page) => page.locator("#keyword-field-count");
+
+  test.beforeEach(async ({ page }) => {
+    await storeField(page, "app-1", "");
+    await page.goto("/apps/app-1/keywords");
+  });
+
+  const editorOf = (page: Page) =>
+    page.getByRole("textbox", { name: "App Store keyword field" });
+
+  test("duplicates the api drops do not count against the limit", async ({
+    page,
+  }) => {
+    await editorOf(page).fill("a,".repeat(60));
+
+    await expect(counter(page)).toHaveText(`1/${KEYWORD_FIELD_CHAR_LIMIT}`);
+    await expect(
+      page.getByRole("button", { name: "Save keyword field" }),
+    ).toBeEnabled();
+  });
+
+  test("spacing after commas is not stored", async ({ page }) => {
+    await editorOf(page).fill("fitness, workout, running");
+
+    await expect(counter(page)).toHaveText(`23/${KEYWORD_FIELD_CHAR_LIMIT}`);
+    await expect(
+      page.getByText("Stored as fitness,workout,running"),
+    ).toBeVisible();
+  });
+
+  test("case and repetition collapse into one phrase", async ({ page }) => {
+    await editorOf(page).fill("Fitness,FITNESS, fitness");
+
+    await expect(counter(page)).toHaveText(`7/${KEYWORD_FIELD_CHAR_LIMIT}`);
+    await expect(page.getByText("Stored as fitness")).toBeVisible();
+  });
+});
+
 test.describe("the stored keyword field", () => {
   test.describe.configure({ mode: "serial" });
 

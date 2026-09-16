@@ -124,6 +124,7 @@ export class GooglePlayProvider implements StoreProvider {
       releasedAt: parseDate(raw.released),
       storeUpdatedAt: new Date(raw.updated),
       raw,
+      searchable: true,
     };
   }
 

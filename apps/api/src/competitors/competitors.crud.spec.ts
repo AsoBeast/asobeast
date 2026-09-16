@@ -34,6 +34,7 @@ describe('CompetitorsService.add', () => {
       releasedAt: null,
       storeUpdatedAt: null,
       raw: {},
+      searchable: true,
     });
     const created = {
       id: 'comp1',

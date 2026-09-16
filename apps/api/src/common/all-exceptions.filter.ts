@@ -28,6 +28,7 @@ import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
   StoreRequestError,
+  UnsearchableAppError,
 } from '../store-providers/errors';
 
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -77,6 +78,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',
+        message: exception.message,
+      };
+    }
+    if (exception instanceof UnsearchableAppError) {
+      return {
+        statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        error: 'Unprocessable Entity',
         message: exception.message,
       };
     }

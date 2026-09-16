@@ -13,6 +13,7 @@ function appOf(overrides: Partial<NormalizedApp> = {}): NormalizedApp {
     title: 'Facebook',
     description: 'Connect with friends.',
     raw: {},
+    searchable: true,
     ...overrides,
   };
 }

@@ -71,6 +71,7 @@ const snapshotFor = (store: Store, storeAppId: string): NormalizedApp => ({
   releasedAt: new Date('2024-01-01T00:00:00Z'),
   storeUpdatedAt: new Date('2025-01-01T00:00:00Z'),
   raw: { source: 'isolation', primaryGenreId: 6007, price: 0 },
+  searchable: true,
 });
 
 const provider = (store: Store): StoreProvider => ({

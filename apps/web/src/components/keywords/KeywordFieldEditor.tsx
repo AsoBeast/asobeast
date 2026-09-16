@@ -10,7 +10,9 @@ import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
+  keywordFieldChars,
   type KeywordFieldResult,
+  parseKeywordField,
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,6 +86,60 @@ function ResultView({ result }: { result: KeywordFieldResult }) {
   );
 }
 
+function KeywordFieldUsage({
+  text,
+  phrases,
+  used,
+}: {
+  text: string;
+  phrases: string[];
+  used: number;
+}) {
+  const over = used > KEYWORD_FIELD_CHAR_LIMIT;
+  const storedAs = phrases.join(",");
+
+  return (
+    <>
+      <div className="flex h-1 w-full overflow-hidden rounded-full bg-muted">
+        <span
+          aria-hidden
+          className={cn(
+            "h-full rounded-full",
+            over ? "bg-destructive" : "bg-primary",
+          )}
+          style={{
+            inlineSize: `${Math.min(
+              (used / KEYWORD_FIELD_CHAR_LIMIT) * 100,
+              100,
+            )}%`,
+          }}
+        />
+      </div>
+      <div className="flex items-center justify-between text-caption">
+        <span className="text-muted-foreground">
+          Separate keywords with commas.
+        </span>
+        <span
+          id="keyword-field-count"
+          aria-live="polite"
+          className={cn(
+            "numeric font-mono",
+            over ? "font-medium text-destructive" : "text-muted-foreground",
+          )}
+        >
+          {used}/{KEYWORD_FIELD_CHAR_LIMIT}
+          {over ? ` · ${used - KEYWORD_FIELD_CHAR_LIMIT} over the limit` : ""}
+        </span>
+      </div>
+      {storedAs !== "" && storedAs !== text ? (
+        <p className="text-caption text-muted-foreground">
+          Stored as <span className="font-mono break-all">{storedAs}</span>
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 function KeywordFieldForm({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const { data: stored } = useSuspenseQuery(keywordFieldOptions(id));
@@ -93,7 +149,9 @@ function KeywordFieldForm({ id }: { id: string }) {
 
   const storedText = stored.tracked.map((keyword) => keyword.text).join(",");
   const text = draft ?? storedText;
-  const over = text.length > KEYWORD_FIELD_CHAR_LIMIT;
+  const { phrases } = parseKeywordField(text);
+  const used = keywordFieldChars(phrases);
+  const over = used > KEYWORD_FIELD_CHAR_LIMIT;
   const nothingToSave = text.trim() === "" && storedText === "";
   const result = saved ?? stored;
 
@@ -134,39 +192,7 @@ function KeywordFieldForm({ id }: { id: string }) {
         aria-invalid={over}
         aria-describedby="keyword-field-count"
       />
-      <div className="flex h-1 w-full overflow-hidden rounded-full bg-muted">
-        <span
-          aria-hidden
-          className={cn(
-            "h-full rounded-full",
-            over ? "bg-destructive" : "bg-primary",
-          )}
-          style={{
-            inlineSize: `${Math.min(
-              (text.length / KEYWORD_FIELD_CHAR_LIMIT) * 100,
-              100,
-            )}%`,
-          }}
-        />
-      </div>
-      <div className="flex items-center justify-between text-caption">
-        <span className="text-muted-foreground">
-          Separate keywords with commas.
-        </span>
-        <span
-          id="keyword-field-count"
-          aria-live="polite"
-          className={cn(
-            "numeric font-mono",
-            over ? "font-medium text-destructive" : "text-muted-foreground",
-          )}
-        >
-          {text.length}/{KEYWORD_FIELD_CHAR_LIMIT}
-          {over
-            ? ` · ${text.length - KEYWORD_FIELD_CHAR_LIMIT} over the limit`
-            : ""}
-        </span>
-      </div>
+      <KeywordFieldUsage text={text} phrases={phrases} used={used} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <div>
         <Button
