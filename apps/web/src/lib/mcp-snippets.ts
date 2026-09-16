@@ -2,6 +2,7 @@ export const STDIO_ENTRYPOINT =
   "/absolute/path/to/asobeast/apps/mcp/dist/index.js";
 
 const MCP_REMOTE_PACKAGE = "mcp-remote@0.14.2";
+const VSCODE_TOKEN_INPUT = "asobeast-token";
 const MCP_REMOTE_PLAIN_HTTP_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
 export const MCP_CLIENTS = [
@@ -68,7 +69,7 @@ function stdioEntry(token: string, api: string) {
   };
 }
 
-function claudeCodeEntry(authorization: string, endpoint: string) {
+function typedHttpEntry(authorization: string, endpoint: string) {
   return {
     type: "http",
     url: endpoint,
@@ -116,7 +117,7 @@ export function hostedSnippets(
       label: "Claude Code JSON",
       location: "Run in a macOS or Linux terminal",
       language: "bash",
-      value: `claude mcp add-json asobeast '${JSON.stringify(claudeCodeEntry(`Bearer ${token}`, endpoint))}'`,
+      value: `claude mcp add-json asobeast '${JSON.stringify(typedHttpEntry(`Bearer ${token}`, endpoint))}'`,
     },
     {
       id: "claude-code-project",
@@ -126,7 +127,7 @@ export function hostedSnippets(
         ".mcp.json in the project root. Export ASOBEAST_API_TOKEN before starting claude; the file holds no secret",
       language: "json",
       value: mcpServersFile(
-        claudeCodeEntry("Bearer ${ASOBEAST_API_TOKEN}", endpoint),
+        typedHttpEntry("Bearer ${ASOBEAST_API_TOKEN}", endpoint),
       ),
     },
     {
@@ -166,6 +167,30 @@ export function hostedSnippets(
       location: "~/.cursor/mcp.json, or .cursor/mcp.json in a project",
       language: "json",
       value: mcpServersFile(headerEntry("url", token, endpoint)),
+    },
+    {
+      id: "vscode",
+      client: "VS Code",
+      label: "VS Code",
+      location:
+        ".vscode/mcp.json. VS Code asks for the token the first time the server starts and keeps it in its secret storage",
+      language: "json",
+      value: json({
+        inputs: [
+          {
+            type: "promptString",
+            id: VSCODE_TOKEN_INPUT,
+            description: "asobeast personal API token",
+            password: true,
+          },
+        ],
+        servers: {
+          asobeast: typedHttpEntry(
+            `Bearer \${input:${VSCODE_TOKEN_INPUT}}`,
+            endpoint,
+          ),
+        },
+      }),
     },
   ];
 }

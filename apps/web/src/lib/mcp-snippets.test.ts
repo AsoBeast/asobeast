@@ -237,4 +237,32 @@ describe("mcp snippets", () => {
       });
     });
   });
+
+  describe("vs code", () => {
+    const file = () =>
+      JSON.parse(hosted("vscode")) as {
+        inputs: unknown[];
+        servers: {
+          asobeast: { type: string; headers: Record<string, string> };
+        };
+      };
+
+    it("uses the servers key with an http server", () => {
+      expect(Object.keys(file()).sort()).toEqual(["inputs", "servers"]);
+      expect(file().servers.asobeast.type).toBe("http");
+    });
+
+    it("prompts for the token once instead of writing it down", () => {
+      expect(file().inputs[0]).toEqual({
+        type: "promptString",
+        id: "asobeast-token",
+        description: "asobeast personal API token",
+        password: true,
+      });
+      expect(file().servers.asobeast.headers.Authorization).toBe(
+        "Bearer ${input:asobeast-token}",
+      );
+      expect(hosted("vscode")).not.toContain(TOKEN);
+    });
+  });
 });
