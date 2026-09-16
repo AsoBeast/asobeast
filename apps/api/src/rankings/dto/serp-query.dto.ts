@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, Matches } from 'class-validator';
+import { IsISO8601, IsOptional, Matches } from 'class-validator';
 import { UTC_DATE_PATTERN } from '@asobeast/shared';
 
 export class SerpQueryDto {
@@ -9,5 +9,6 @@ export class SerpQueryDto {
   })
   @IsOptional()
   @Matches(UTC_DATE_PATTERN)
+  @IsISO8601({ strict: true })
   date?: string;
 }

@@ -128,4 +128,53 @@ describe('SerpController (e2e)', () => {
     expect(body.entries[1].isCompetitor).toBe(true);
     expect(body.entries[2]).toMatchObject({ appId: null, isCompetitor: false });
   });
+
+  describe('the snapshot date', () => {
+    async function trackedKeywordWithSnapshotOn(date: string) {
+      const you = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'self-store',
+          country: 'us',
+          name: 'You',
+        },
+      });
+      const keyword = await prisma.keyword.create({
+        data: { text: 'meme maker', store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: { appId: you.id, keywordId: keyword.id, source: 'MANUAL' },
+      });
+      await prisma.serpEntry.create({
+        data: {
+          keywordId: keyword.id,
+          date: new Date(`${date}T00:00:00.000Z`),
+          position: 1,
+          storeAppId: 'self-store',
+          title: 'You',
+        },
+      });
+      return keyword.id;
+    }
+
+    it.each(['2026-02-30', '2026-09-31'])(
+      'refuses %s instead of answering the day it rolls over to',
+      async (date) => {
+        const keywordId = await trackedKeywordWithSnapshotOn('2026-03-02');
+
+        await api.get(`/keywords/${keywordId}/serp?date=${date}`).expect(400);
+      },
+    );
+
+    it('answers a leap day', async () => {
+      const keywordId = await trackedKeywordWithSnapshotOn('2028-02-29');
+
+      const response = await api
+        .get(`/keywords/${keywordId}/serp?date=2028-02-29`)
+        .expect(200);
+
+      expect((response.body as SerpSnapshot).date).toBe('2028-02-29');
+    });
+  });
 });
