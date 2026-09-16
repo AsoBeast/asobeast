@@ -1,6 +1,9 @@
 export const STDIO_ENTRYPOINT =
   "/absolute/path/to/asobeast/apps/mcp/dist/index.js";
 
+const MCP_REMOTE_PACKAGE = "mcp-remote@0.14.2";
+const MCP_REMOTE_PLAIN_HTTP_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
 export type SnippetLanguage = "bash" | "json";
 
 export interface ConnectSnippet {
@@ -35,6 +38,26 @@ function claudeCodeEntry(authorization: string, endpoint: string) {
     type: "http",
     url: endpoint,
     headers: { Authorization: authorization },
+  };
+}
+
+function needsAllowHttp(endpoint: string): boolean {
+  const { protocol, hostname } = new URL(endpoint);
+  return protocol === "http:" && !MCP_REMOTE_PLAIN_HTTP_HOSTS.has(hostname);
+}
+
+function claudeDesktopEntry(token: string, endpoint: string) {
+  return {
+    command: "npx",
+    args: [
+      "-y",
+      MCP_REMOTE_PACKAGE,
+      endpoint,
+      ...(needsAllowHttp(endpoint) ? ["--allow-http"] : []),
+      "--header",
+      "Authorization:${ASOBEAST_AUTH_HEADER}",
+    ],
+    env: { ASOBEAST_AUTH_HEADER: `Bearer ${token}` },
   };
 }
 
@@ -74,10 +97,11 @@ export function hostedSnippets(
     {
       id: "claude-desktop",
       client: "Claude Desktop",
-      label: "Claude Desktop config",
-      location: "",
+      label: "Claude Desktop",
+      location:
+        "claude_desktop_config.json (Settings, Developer, Edit Config). Merge into an existing mcpServers object. Needs Node 18 or newer",
       language: "json",
-      value: mcpServersFile(claudeCodeEntry(`Bearer ${token}`, endpoint)),
+      value: mcpServersFile(claudeDesktopEntry(token, endpoint)),
     },
   ];
 }

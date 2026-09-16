@@ -28,15 +28,6 @@ describe("mcp snippets", () => {
     expect(hosted("claude-code-command")).toContain(
       `--header "Authorization: Bearer ${TOKEN}"`,
     );
-    expect(JSON.parse(hosted("claude-desktop"))).toEqual({
-      mcpServers: {
-        asobeast: {
-          type: "http",
-          url: `${ORIGIN}/api/backend/mcp`,
-          headers: { Authorization: `Bearer ${TOKEN}` },
-        },
-      },
-    });
   });
 
   it("passes the token as an environment variable on stdio", () => {
@@ -84,5 +75,63 @@ describe("mcp snippets", () => {
     });
     expect(project.location).toContain(".mcp.json");
     expect(project.location).toContain("ASOBEAST_API_TOKEN");
+  });
+
+  describe("claude desktop", () => {
+    interface DesktopEntry {
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    }
+
+    function desktopEntry(origin: string): DesktopEntry {
+      const file = JSON.parse(
+        snippetById(hostedSnippets(TOKEN, origin), "claude-desktop").value,
+      ) as { mcpServers: { asobeast: DesktopEntry } };
+      return file.mcpServers.asobeast;
+    }
+
+    it("bridges the hosted endpoint through a pinned mcp-remote", () => {
+      const entry = desktopEntry(ORIGIN);
+
+      expect(entry.command).toBe("npx");
+      expect(entry.args).toEqual([
+        "-y",
+        "mcp-remote@0.14.2",
+        `${ORIGIN}/api/backend/mcp`,
+        "--header",
+        "Authorization:${ASOBEAST_AUTH_HEADER}",
+      ]);
+      expect(entry.env).toEqual({ ASOBEAST_AUTH_HEADER: `Bearer ${TOKEN}` });
+      expect(Object.keys(entry).sort()).toEqual(["args", "command", "env"]);
+    });
+
+    it("keeps spaces and the token out of every argument", () => {
+      for (const arg of desktopEntry(ORIGIN).args) {
+        expect(arg).not.toContain(" ");
+        expect(arg).not.toContain(TOKEN);
+      }
+    });
+
+    it.each([
+      ["https://aso.example.com", false],
+      ["http://localhost:3000", false],
+      ["http://127.0.0.1:3001", false],
+      ["http://192.168.1.10:3001", true],
+      ["http://[::1]:3001", true],
+      ["http://asobeast.localhost", true],
+    ])("allows plain http for %s only off this machine", (origin, allowed) => {
+      const { args } = desktopEntry(origin);
+      const endpoint = args.indexOf(`${origin}/api/backend/mcp`);
+
+      expect(args[endpoint + 1] === "--allow-http").toBe(allowed);
+      expect(args.includes("--allow-http")).toBe(allowed);
+    });
+
+    it("names the file it belongs in", () => {
+      expect(
+        snippetById(hostedSnippets(TOKEN, ORIGIN), "claude-desktop").location,
+      ).toContain("claude_desktop_config.json");
+    });
   });
 });

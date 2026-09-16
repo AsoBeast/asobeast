@@ -74,7 +74,7 @@ test("mcp card mints a token and shows both connect snippets", async ({
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("Claude Code", { exact: true })).toBeVisible();
   await expect(
-    dialog.getByText("Claude Desktop config", { exact: true }),
+    dialog.getByText("Claude Desktop", { exact: true }),
   ).toBeVisible();
   await expect(
     dialog.getByText(`--header "Authorization: Bearer ${TOKEN}"`),
