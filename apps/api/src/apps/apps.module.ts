@@ -1,7 +1,8 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { ActionRunModule } from '../actions/action-run.module';
 import { ChangesModule } from '../changes/changes.module';
-import { QUEUES } from '../jobs/jobs.types';
+import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppCaptureService } from './app-capture.service';
@@ -12,6 +13,7 @@ import { FirstRunScheduler } from './first-run.scheduler';
 
 @Module({
   imports: [
+    ActionRunModule,
     StoreProvidersModule,
     KeywordsModule,
     ChangesModule,
@@ -20,6 +22,7 @@ import { FirstRunScheduler } from './first-run.scheduler';
       { name: QUEUES.GPLAY },
       { name: QUEUES.PIPELINE },
     ),
+    BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.FIRST_RUN }),
   ],
   controllers: [AppsController],
   providers: [

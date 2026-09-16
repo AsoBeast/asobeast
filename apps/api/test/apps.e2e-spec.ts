@@ -21,7 +21,12 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import {
+  firstRunCheckJobId,
+  JOBS,
+  QUEUES,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
 import {
   StoreAppNotFoundError,
@@ -826,7 +831,7 @@ describe('AppsController (e2e)', () => {
       app.get<Queue>(getQueueToken(name), { strict: false });
 
     const jobsOn = (name: string): Promise<Job[]> =>
-      queue(name).getJobs(['wait', 'paused', 'delayed']);
+      queue(name).getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
 
     const countOn = async (name: string, job: string): Promise<number> =>
       (await jobsOn(name)).filter((queued) => queued.name === job).length;
@@ -876,11 +881,40 @@ describe('AppsController (e2e)', () => {
       failing.mockRestore();
     });
 
-    it('keeps one action run for the workspace across two imports', async () => {
-      await importApp(APP_STORE_URL);
-      await importApp(GOOGLE_PLAY_URL);
+    it('holds an action run per import until that import has its first positions', async () => {
+      const imports = [
+        await importApp(APP_STORE_URL),
+        await importApp(GOOGLE_PLAY_URL),
+      ];
+      const date = utcDateKey();
 
-      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
+      const checksOf = async (appId: string): Promise<string[]> =>
+        (
+          await prisma.trackedKeyword.findMany({
+            where: { appId, active: true },
+            select: { keywordId: true },
+          })
+        )
+          .map(({ keywordId }) => firstRunCheckJobId(appId, keywordId, date))
+          .sort();
+
+      const runs = (await jobsOn(QUEUES.PIPELINE)).filter(
+        (job) => job.name === JOBS.ACTIONS,
+      );
+      const awaited = await Promise.all(
+        runs.map(async (run) => {
+          expect(await run.getState()).toBe('waiting-children');
+          const { unprocessed = [] } = await run.getDependencies();
+          return unprocessed.map((key) => key.split(':').pop() ?? '').sort();
+        }),
+      );
+
+      expect(awaited).toHaveLength(imports.length);
+      expect(awaited).toEqual(
+        expect.arrayContaining(
+          await Promise.all(imports.map((imported) => checksOf(imported.id))),
+        ),
+      );
     });
   });
 });

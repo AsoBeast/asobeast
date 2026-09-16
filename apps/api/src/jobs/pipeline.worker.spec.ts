@@ -9,7 +9,12 @@ import { Env } from '../config/env';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { DailyBudgetService } from './daily-budget.service';
 import { DigestDispatcher } from './digest.dispatcher';
-import { actionsSuppressedKey, JOBS, LAST_DAILY_RUN_KEY } from './jobs.types';
+import {
+  actionsGeneratedKey,
+  actionsSuppressedKey,
+  JOBS,
+  LAST_DAILY_RUN_KEY,
+} from './jobs.types';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
@@ -389,6 +394,10 @@ describe('PipelineWorker', () => {
       actionsSuppressedKey('ws_two'),
       '4',
     );
+    expect(client.set).toHaveBeenCalledWith(
+      actionsGeneratedKey('ws_two'),
+      expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+    );
   });
 
   it('refuses an interactive action job that carries no workspace', async () => {
@@ -412,6 +421,10 @@ describe('PipelineWorker', () => {
       expect(client.set).toHaveBeenCalledWith(
         actionsSuppressedKey(workspaceId),
         '4',
+      );
+      expect(client.set).toHaveBeenCalledWith(
+        actionsGeneratedKey(workspaceId),
+        expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
       );
     }
   });

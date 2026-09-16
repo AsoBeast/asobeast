@@ -189,7 +189,7 @@ function json(
   res: ServerResponse,
   status: number,
   body: unknown,
-  headers: Record<string, string> = {},
+  headers: Record<string, string | string[]> = {},
 ): void {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
@@ -419,9 +419,57 @@ function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
   };
 }
 
+function actionsUngenerated(req: IncomingMessage): boolean {
+  return hasCookie(req, "e2e_actions_ungenerated", "1");
+}
+
+function actionsGeneratedAt(req: IncomingMessage): string | null {
+  return (
+    cookieValue(req, "actions_generated_at") ??
+    (actionsUngenerated(req) ? null : ACTION_SUMMARY.generatedAt)
+  );
+}
+
 function actionSummaryFor(req: IncomingMessage): ActionSummary {
-  if (!hasCookie(req, "e2e_actions_ungenerated", "1")) return ACTION_SUMMARY;
-  return { ...ACTION_SUMMARY, open: 0, generatedAt: null };
+  const generatedAt = actionsGeneratedAt(req);
+  if (!actionsUngenerated(req)) return { ...ACTION_SUMMARY, generatedAt };
+  return { ...ACTION_SUMMARY, open: 0, generatedAt };
+}
+
+function followActionRun(req: IncomingMessage, res: ServerResponse): void {
+  const finishing = cookieValue(req, "actions_run_finishing");
+  if (finishing === undefined) {
+    json(res, 200, actionSummaryFor(req));
+    return;
+  }
+  if (!hasCookie(req, "actions_run_polled", "1")) {
+    json(res, 200, actionSummaryFor(req), {
+      "set-cookie": "actions_run_polled=1; Path=/",
+    });
+    return;
+  }
+  const summary = actionSummaryFor(req);
+  json(
+    res,
+    200,
+    { ...summary, generatedAt: finishing },
+    {
+      "set-cookie": [
+        `actions_generated_at=${finishing}; Path=/`,
+        "actions_run_finishing=; Path=/; Max-Age=0",
+        "actions_run_polled=; Path=/; Max-Age=0",
+      ],
+    },
+  );
+}
+
+function actionListFor(
+  req: IncomingMessage,
+  appId?: string,
+): { items: ActionItem[]; total: number; generatedAt: string | null } {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const items = actionsUngenerated(req) ? [] : filterActions(url, appId);
+  return { items, total: items.length, generatedAt: actionsGeneratedAt(req) };
 }
 
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
@@ -908,20 +956,12 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions$/,
-    handler: (_p, req, res) => {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      const items = filterActions(url);
-      json(res, 200, {
-        items,
-        total: items.length,
-        generatedAt: ACTION_SUMMARY.generatedAt,
-      });
-    },
+    handler: (_p, req, res) => json(res, 200, actionListFor(req)),
   },
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, req, res) => json(res, 200, actionSummaryFor(req)),
+    handler: (_p, req, res) => followActionRun(req, res),
   },
   {
     method: "GET",
@@ -932,21 +972,21 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/actions$/,
-    handler: (params, req, res) => {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      const items = filterActions(url, params[0]);
-      json(res, 200, {
-        items,
-        total: items.length,
-        generatedAt: ACTION_SUMMARY.generatedAt,
-      });
-    },
+    handler: (params, req, res) =>
+      json(res, 200, actionListFor(req, params[0])),
   },
   {
     method: "POST",
     pattern: /^\/actions\/run$/,
     handler: (_p, _req, res) =>
-      json(res, 202, { queued: true, jobId: "actions~ws_default~2026-07-30" }),
+      json(
+        res,
+        202,
+        { queued: true, jobId: "actions~ws_default" },
+        {
+          "set-cookie": `actions_run_finishing=${new Date().toISOString()}; Path=/`,
+        },
+      ),
   },
   {
     method: "PATCH",
