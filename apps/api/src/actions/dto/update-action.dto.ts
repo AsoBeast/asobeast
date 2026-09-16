@@ -21,7 +21,7 @@ export class UpdateActionDto implements ActionUpdateRequest {
 
   @ApiPropertyOptional({ example: '2026-08-15T00:00:00.000Z' })
   @IsOptional()
-  @IsISO8601()
+  @IsISO8601({ strict: true })
   snoozedUntil?: string;
 
   @ApiPropertyOptional({ maxLength: ACTION_NOTE_MAX_LENGTH })
