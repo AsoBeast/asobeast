@@ -526,7 +526,13 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/mcp$/,
-    handler: (_p, _req, res) => {
+    handler: (_p, req, res) => {
+      if (!req.headers.authorization) {
+        json(res, 401, errorEnvelope(401, req.url ?? "/mcp"), {
+          "www-authenticate": 'Bearer realm="asobeast"',
+        });
+        return;
+      }
       res.writeHead(200, { "content-type": "text/event-stream" });
       res.write(": open\n\n");
       setTimeout(() => {
@@ -535,6 +541,21 @@ const routes: Route[] = [
         );
       }, MCP_STREAM_MS);
     },
+  },
+  {
+    method: "GET",
+    pattern: /^\/mcp$/,
+    handler: (_p, _req, res) =>
+      json(
+        res,
+        405,
+        {
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed." },
+          id: null,
+        },
+        { allow: "POST" },
+      ),
   },
   {
     method: "GET",
