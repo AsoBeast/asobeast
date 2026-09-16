@@ -61,6 +61,40 @@ test("guarded pages redirect to login when unauthenticated", async ({
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
+test("a throttled sign in says how long to wait", async ({ page }) => {
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: false,
+    setupRequired: false,
+    authenticated: false,
+  });
+  await page.route("**/api/backend/auth/login", (route) =>
+    route.fulfill({
+      ...fulfillJson(429, {
+        statusCode: 429,
+        error: "Too Many Requests",
+        message:
+          "Too many attempts from this address. Try again in 42 seconds.",
+        path: "/auth/login",
+        timestamp: new Date().toISOString(),
+        retryAfterSeconds: 42,
+      }),
+      headers: { "retry-after": "42" },
+    }),
+  );
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@example.com");
+  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(
+    page.getByText(
+      "Too many attempts from this address. Try again in 42 seconds.",
+    ),
+  ).toBeVisible();
+});
+
 test("guarded redirects preserve the requested query string", async ({
   page,
 }) => {

@@ -630,4 +630,30 @@ describe('Auth (enabled, self-hosted)', () => {
     }
     expect(last).toBe(429);
   });
+
+  it('tells a throttled sign in how long to wait', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'patient@example.com', password: 'supersecret1' })
+      .expect(201);
+
+    let refused: request.Response | undefined;
+    for (let i = 0; i < 12 && !refused; i += 1) {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'patient@example.com', password: 'wrong-password-1' });
+      if (res.status === 429) refused = res;
+    }
+
+    const envelope = refused?.body as ApiErrorEnvelope;
+    expect(envelope.error).toBe('Too Many Requests');
+    expect(envelope.retryAfterSeconds).toBeGreaterThan(0);
+    expect(envelope.retryAfterSeconds).toBeLessThanOrEqual(60);
+    expect(envelope.message).toBe(
+      `Too many attempts from this address. Try again in ${envelope.retryAfterSeconds} seconds.`,
+    );
+    expect(refused?.headers['retry-after']).toBe(
+      String(envelope.retryAfterSeconds),
+    );
+  });
 });

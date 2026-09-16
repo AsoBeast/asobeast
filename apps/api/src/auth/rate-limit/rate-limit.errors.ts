@@ -24,6 +24,15 @@ export class CredentialRateLimitError extends Error {
   }
 }
 
+export class RequestThrottledError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super(
+      `Too many attempts from this address. Try again in ${retryAfterSeconds} seconds.`,
+    );
+    this.name = 'RequestThrottledError';
+  }
+}
+
 export class RateLimitExceededError extends Error {
   constructor(readonly detail: RateLimitDetail) {
     super(rateLimitMessage(detail));
