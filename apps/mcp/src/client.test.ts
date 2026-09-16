@@ -81,3 +81,34 @@ describe("createClient redirects", () => {
     expect(api?.requests).toEqual(["/auth/me"]);
   });
 });
+
+describe("createClient content", () => {
+  it("names what answered when the url serves html instead of the api", async () => {
+    const result = await getMe((_req, res) => {
+      res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      res.end("<!doctype html><html></html>");
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result).toHaveProperty(
+      "message",
+      expect.stringContaining("text/html"),
+    );
+    expect(result).toHaveProperty(
+      "message",
+      expect.stringContaining("/api/backend"),
+    );
+  });
+
+  it("keeps reporting a json body that does not parse", async () => {
+    const result = await getMe((_req, res) => {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end("{");
+    });
+
+    expect(result).toHaveProperty(
+      "message",
+      expect.stringContaining("was not valid JSON"),
+    );
+  });
+});

@@ -2,6 +2,7 @@ import type { ApiErrorEnvelope } from "@asobeast/shared";
 import type { McpConfig } from "./config.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
+const JSON_CONTENT_TYPE = "application/json";
 
 export type ApiResult<T> =
   { ok: true; data: T } | { ok: false; status: number; message: string };
@@ -69,7 +70,7 @@ export function createClient(config: McpConfig): ApiClient {
         res = await fetch(url, {
           headers: {
             authorization: `Bearer ${config.token}`,
-            accept: "application/json",
+            accept: JSON_CONTENT_TYPE,
           },
           redirect: "manual",
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
@@ -106,6 +107,14 @@ export function createClient(config: McpConfig): ApiClient {
       }
 
       if (res.status === 204) return { ok: true, data: undefined as T };
+      const contentType = res.headers.get("content-type") ?? "no content type";
+      if (!contentType.includes(JSON_CONTENT_TYPE)) {
+        return {
+          ok: false,
+          status: res.status,
+          message: `ASOBEAST_API_URL answered with ${contentType} instead of the asobeast API. If it is your web address, append /api/backend.`,
+        };
+      }
       try {
         return { ok: true, data: (await res.json()) as T };
       } catch {
