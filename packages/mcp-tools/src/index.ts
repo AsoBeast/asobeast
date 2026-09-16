@@ -5,6 +5,7 @@ import { KEYWORD_TOOLS } from "./keywords";
 import type { ReadTool } from "./define";
 
 export * from "./define";
+export { toolText } from "./tool-text";
 export { ACTION_TOOLS } from "./actions";
 export { APP_TOOLS } from "./apps";
 export { INSIGHT_TOOLS } from "./insights";

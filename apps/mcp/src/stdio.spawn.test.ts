@@ -9,7 +9,7 @@ import {
   StdioClientTransport,
   getDefaultEnvironment,
 } from "@modelcontextprotocol/client/stdio";
-import { MCP_TOOLS } from "@asobeast/mcp-tools";
+import { MCP_TOOLS, toolText } from "@asobeast/mcp-tools";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -186,7 +186,7 @@ describe.each([
     });
 
     expect(result.isError).toBeFalsy();
-    expect(textOf(result)).toBe(JSON.stringify(SUMMARY, null, 2));
+    expect(textOf(result)).toBe(toolText(SUMMARY));
   });
 });
 
