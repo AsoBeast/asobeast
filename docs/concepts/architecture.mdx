@@ -16,7 +16,7 @@ A browser request never reaches the API directly in the production Compose stack
 2. The Next.js route handler proxies that request to `API_INTERNAL_URL`, which Compose sets to `http://api:4000`.
 3. The API authenticates the session cookie or the `asob_` bearer token, authorizes the request and answers.
 
-Because the browser and the API share an origin, there is no CORS configuration and no cross site cookie handling. `API_PROXY_TIMEOUT_MS` bounds each proxied request, and a request that exceeds it returns a `504` error envelope instead of hanging.
+Because the browser and the API share an origin, there is no CORS configuration and no cross site cookie handling. `API_PROXY_TIMEOUT_MS` bounds how long each proxied request waits for the API to start answering, and a request that exceeds it returns a `504` error envelope instead of hanging.
 
 Server rendered pages skip the proxy and call `API_INTERNAL_URL` directly, which is why the same variable serves both paths.
 

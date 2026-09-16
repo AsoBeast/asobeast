@@ -50,7 +50,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
 | `502` | A store request failed upstream, or the web proxy could not reach the API |
 | `503` | The health endpoint could not reach the database |
-| `504` | The web proxy timed out waiting for the API, bounded by `API_PROXY_TIMEOUT_MS` |
+| `504` | The web proxy timed out waiting for the API to start answering, bounded by `API_PROXY_TIMEOUT_MS` |
 
 Three of these are worth reading twice.
 
