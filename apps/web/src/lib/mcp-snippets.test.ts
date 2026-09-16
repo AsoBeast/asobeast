@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  MCP_CLIENTS,
   apiOrigin,
   hostedSnippets,
   localSnippets,
   remoteEndpoint,
   snippetById,
+  snippetsFor,
 } from "./mcp-snippets";
 
 const ORIGIN = "https://aso.example.com";
@@ -142,5 +144,31 @@ describe("mcp snippets", () => {
     for (const snippet of snippets) {
       expect(snippet.location).not.toBe("");
     }
+  });
+
+  describe("the agent picker", () => {
+    const all = [
+      ...hostedSnippets(TOKEN, ORIGIN),
+      ...localSnippets(TOKEN, ORIGIN),
+    ];
+
+    it("offers every agent a snippet is written for", () => {
+      for (const snippet of all) {
+        expect(MCP_CLIENTS).toContain(snippet.client);
+      }
+    });
+
+    it("shows only the chosen agent's snippets, in list order", () => {
+      const hosted = hostedSnippets(TOKEN, ORIGIN);
+
+      expect(snippetsFor(hosted, "Claude Code").map((s) => s.id)).toEqual(
+        hosted
+          .filter((snippet) => snippet.client === "Claude Code")
+          .map((snippet) => snippet.id),
+      );
+      expect(
+        snippetsFor(hosted, "Claude Desktop").map((snippet) => snippet.id),
+      ).toEqual(["claude-desktop"]);
+    });
   });
 });

@@ -32,10 +32,20 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, createApiToken } from "@/lib/api";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  MCP_CLIENTS,
   hostedSnippets,
   localSnippets,
   remoteEndpoint,
+  snippetsFor,
   type ConnectSnippet,
+  type McpClient,
 } from "@/lib/mcp-snippets";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
@@ -80,6 +90,45 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
   );
 }
 
+function AgentSnippets({
+  id,
+  snippets,
+}: {
+  id: string;
+  snippets: ConnectSnippet[];
+}) {
+  const [client, setClient] = useState<McpClient>("Claude Code");
+  const clients = MCP_CLIENTS.filter(
+    (candidate) => snippetsFor(snippets, candidate).length > 0,
+  );
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={id}>Agent</Label>
+        <Select
+          value={client}
+          onValueChange={(next) => setClient(next as McpClient)}
+        >
+          <SelectTrigger id={id}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {clients.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {snippetsFor(snippets, client).map((snippet) => (
+        <CopyBlock key={snippet.id} snippet={snippet} />
+      ))}
+    </>
+  );
+}
+
 function ConnectionSnippets({ token }: { token: string }) {
   return (
     <Tabs defaultValue="remote">
@@ -91,17 +140,13 @@ function ConnectionSnippets({ token }: { token: string }) {
         <p className="text-sm text-muted-foreground">
           Your client connects straight to this instance. Nothing to install.
         </p>
-        {hostedSnippets(token).map((snippet) => (
-          <CopyBlock key={snippet.id} snippet={snippet} />
-        ))}
+        <AgentSnippets id="mcp-hosted-agent" snippets={hostedSnippets(token)} />
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           For a checkout of the repository. Hosted users need nothing here.
         </p>
-        {localSnippets(token).map((snippet) => (
-          <CopyBlock key={snippet.id} snippet={snippet} />
-        ))}
+        <AgentSnippets id="mcp-local-agent" snippets={localSnippets(token)} />
       </TabsContent>
     </Tabs>
   );
@@ -232,8 +277,8 @@ export function McpServerCard() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Point Claude Code or Claude Desktop at this instance to ask about your
-          apps, keywords, rankings and audits in plain language. Every tool is
+          Point any MCP client at this instance to ask about your apps,
+          keywords, rankings and audits in plain language. Every tool is
           read-only and authenticated with a personal API token.{" "}
           <a
             href={DOCS_URL}

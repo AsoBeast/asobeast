@@ -4,11 +4,24 @@ export const STDIO_ENTRYPOINT =
 const MCP_REMOTE_PACKAGE = "mcp-remote@0.14.2";
 const MCP_REMOTE_PLAIN_HTTP_HOSTS = new Set(["localhost", "127.0.0.1"]);
 
+export const MCP_CLIENTS = [
+  "Claude Code",
+  "Claude Desktop",
+  "Codex",
+  "Cursor",
+  "VS Code",
+  "Gemini CLI",
+  "Windsurf",
+  "Other",
+] as const;
+
+export type McpClient = (typeof MCP_CLIENTS)[number];
+
 export type SnippetLanguage = "bash" | "json";
 
 export interface ConnectSnippet {
   id: string;
-  client: string;
+  client: McpClient;
   label: string;
   location: string;
   language: SnippetLanguage;
@@ -144,4 +157,11 @@ export function snippetById(
   const snippet = snippets.find((candidate) => candidate.id === id);
   if (!snippet) throw new Error(`no connect snippet named ${id}`);
   return snippet;
+}
+
+export function snippetsFor(
+  snippets: ConnectSnippet[],
+  client: McpClient,
+): ConnectSnippet[] {
+  return snippets.filter((snippet) => snippet.client === client);
 }
