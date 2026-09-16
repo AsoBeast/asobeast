@@ -54,6 +54,20 @@ function codexTable(lines: string[]): string {
   return ["[mcp_servers.asobeast]", ...lines].join("\n");
 }
 
+type UrlKey = "url" | "httpUrl" | "serverUrl";
+
+function headerEntry(urlKey: UrlKey, token: string, endpoint: string) {
+  return { [urlKey]: endpoint, headers: { Authorization: `Bearer ${token}` } };
+}
+
+function stdioEntry(token: string, api: string) {
+  return {
+    command: "node",
+    args: [STDIO_ENTRYPOINT],
+    env: { ASOBEAST_API_URL: api, ASOBEAST_API_TOKEN: token },
+  };
+}
+
 function claudeCodeEntry(authorization: string, endpoint: string) {
   return {
     type: "http",
@@ -145,6 +159,14 @@ export function hostedSnippets(
       language: "bash",
       value: `codex mcp add asobeast --url ${endpoint} --bearer-token-env-var ASOBEAST_API_TOKEN`,
     },
+    {
+      id: "cursor",
+      client: "Cursor",
+      label: "Cursor",
+      location: "~/.cursor/mcp.json, or .cursor/mcp.json in a project",
+      language: "json",
+      value: mcpServersFile(headerEntry("url", token, endpoint)),
+    },
   ];
 }
 
@@ -170,11 +192,7 @@ export function localSnippets(
       location:
         "claude_desktop_config.json. Replace the path, and use the absolute path to node if Claude Desktop cannot find it",
       language: "json",
-      value: mcpServersFile({
-        command: "node",
-        args: [STDIO_ENTRYPOINT],
-        env: { ASOBEAST_API_URL: api, ASOBEAST_API_TOKEN: token },
-      }),
+      value: mcpServersFile(stdioEntry(token, api)),
     },
     {
       id: "codex-stdio",
@@ -188,6 +206,15 @@ export function localSnippets(
         `args = [${tomlString(STDIO_ENTRYPOINT)}]`,
         `env = { ASOBEAST_API_URL = ${tomlString(api)}, ASOBEAST_API_TOKEN = ${tomlString(token)} }`,
       ]),
+    },
+    {
+      id: "cursor-stdio",
+      client: "Cursor",
+      label: "Cursor stdio configuration",
+      location:
+        "~/.cursor/mcp.json. Replace the path with the absolute path to apps/mcp/dist/index.js",
+      language: "json",
+      value: mcpServersFile(stdioEntry(token, api)),
     },
   ];
 }

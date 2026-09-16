@@ -209,4 +209,32 @@ describe("mcp snippets", () => {
       expect(local("codex-stdio")).not.toContain("/api/backend/mcp");
     });
   });
+
+  describe("cursor", () => {
+    it("writes an mcpServers entry with exactly a url and headers", () => {
+      expect(JSON.parse(hosted("cursor"))).toEqual({
+        mcpServers: {
+          asobeast: {
+            url: `${ORIGIN}/api/backend/mcp`,
+            headers: { Authorization: `Bearer ${TOKEN}` },
+          },
+        },
+      });
+    });
+
+    it("runs the stdio server from a checkout", () => {
+      expect(JSON.parse(local("cursor-stdio"))).toEqual({
+        mcpServers: {
+          asobeast: {
+            command: "node",
+            args: [STDIO_ENTRYPOINT],
+            env: {
+              ASOBEAST_API_URL: `${ORIGIN}/api/backend`,
+              ASOBEAST_API_TOKEN: TOKEN,
+            },
+          },
+        },
+      });
+    });
+  });
 });
