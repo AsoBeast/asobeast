@@ -50,4 +50,39 @@ describe("mcp snippets", () => {
   it("never points the stdio server at the mcp endpoint itself", () => {
     expect(local("claude-code-stdio")).not.toContain("/api/backend/mcp");
   });
+
+  it("hands add-json one server entry, not a whole file", () => {
+    const command = hosted("claude-code-add-json");
+    const entry = command.slice(
+      command.indexOf("'") + 1,
+      command.lastIndexOf("'"),
+    );
+
+    expect(command.startsWith("claude mcp add-json asobeast '")).toBe(true);
+    expect(JSON.parse(entry)).toEqual({
+      type: "http",
+      url: `${ORIGIN}/api/backend/mcp`,
+      headers: { Authorization: `Bearer ${TOKEN}` },
+    });
+  });
+
+  it("keeps the token out of the project file teams commit", () => {
+    const project = snippetById(
+      hostedSnippets(TOKEN, ORIGIN),
+      "claude-code-project",
+    );
+
+    expect(project.value).not.toContain(TOKEN);
+    expect(JSON.parse(project.value)).toEqual({
+      mcpServers: {
+        asobeast: {
+          type: "http",
+          url: `${ORIGIN}/api/backend/mcp`,
+          headers: { Authorization: "Bearer ${ASOBEAST_API_TOKEN}" },
+        },
+      },
+    });
+    expect(project.location).toContain(".mcp.json");
+    expect(project.location).toContain("ASOBEAST_API_TOKEN");
+  });
 });
