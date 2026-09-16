@@ -11,7 +11,8 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run --passWithNoTests",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "wire-check": "node --test --test-reporter=spec scripts/wire-check.mjs"
   },
   "dependencies": {
     "@asobeast/mcp-tools": "workspace:*",
