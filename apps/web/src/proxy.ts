@@ -18,6 +18,6 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!login|register|forgot-password|reset-password|invite|verify|upgrade|api|admin|docs|_next|brand|icons|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest).*)",
+    "/((?!login|register|forgot-password|reset-password|invite|verify|upgrade|api|\\.well-known|admin|docs|_next|brand|icons|favicon.ico|icon.png|apple-icon.png|manifest.webmanifest).*)",
   ],
 };
