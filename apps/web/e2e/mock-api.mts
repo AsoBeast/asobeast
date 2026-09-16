@@ -71,6 +71,7 @@ import {
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
+const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
@@ -520,6 +521,19 @@ const routes: Route[] = [
     handler: (_p, _req, res) => {
       resetState();
       json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/mcp$/,
+    handler: (_p, _req, res) => {
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(": open\n\n");
+      setTimeout(() => {
+        res.end(
+          'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"tools":[]}}\n\n',
+        );
+      }, MCP_STREAM_MS);
     },
   },
   {
