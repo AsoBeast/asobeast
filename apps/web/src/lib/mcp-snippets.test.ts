@@ -295,4 +295,12 @@ describe("mcp snippets", () => {
       },
     });
   });
+
+  it("describes the endpoint for any other client", () => {
+    const other = hosted("other");
+
+    expect(other).toContain(`${ORIGIN}/api/backend/mcp`);
+    expect(other).toContain("Streamable HTTP");
+    expect(other).toContain(`Header     Authorization: Bearer ${TOKEN}`);
+  });
 });

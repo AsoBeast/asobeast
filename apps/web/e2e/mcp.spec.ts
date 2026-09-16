@@ -120,6 +120,9 @@ test("mcp card mints a token and shows both connect snippets", async ({
       ).value,
     );
 
+  await chooseAgent("Other");
+  await expect(dialog.getByText(/Streamable HTTP/)).toBeVisible();
+
   await chooseAgent("Claude Code");
   await expect(
     dialog.getByText(/^claude mcp add --transport http/),

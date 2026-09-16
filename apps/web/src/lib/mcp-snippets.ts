@@ -18,7 +18,7 @@ export const MCP_CLIENTS = [
 
 export type McpClient = (typeof MCP_CLIENTS)[number];
 
-export type SnippetLanguage = "bash" | "json" | "toml";
+export type SnippetLanguage = "bash" | "json" | "toml" | "text";
 
 export interface ConnectSnippet {
   id: string;
@@ -215,6 +215,19 @@ export function hostedSnippets(
       location: "~/.codeium/windsurf/mcp_config.json",
       language: "json",
       value: mcpServersFile(headerEntry("serverUrl", token, endpoint)),
+    },
+    {
+      id: "other",
+      client: "Other",
+      label: "Any MCP client",
+      location:
+        "Stdio-only clients can use the Claude Desktop entry, which bridges through mcp-remote.",
+      language: "text",
+      value: [
+        `Endpoint   ${endpoint}`,
+        "Transport  Streamable HTTP",
+        `Header     Authorization: Bearer ${token}`,
+      ].join("\n"),
     },
   ];
 }
