@@ -222,6 +222,23 @@ describe("proxyToApi", () => {
     expect(response.headers.get("x-accel-buffering")).toBe("no");
   });
 
+  it.each([
+    ["allow", "POST", 405],
+    ["www-authenticate", 'Bearer realm="asobeast"', 401],
+  ])(
+    "returns the %s header the api answered with",
+    async (name, value, status) => {
+      stubFetch(async () =>
+        Response.json({}, { status, headers: { [name]: value } }),
+      );
+      const { proxyToApi } = await loadProxy();
+
+      const response = await proxyToApi(request("/api/backend/mcp"), ["mcp"]);
+
+      expect(response.headers.get(name)).toBe(value);
+    },
+  );
+
   it("forwards a caller supplied correlation id so its logs share the key", async () => {
     stubFetch(async () => Response.json({ ok: true }));
     const { proxyToApi } = await loadProxy();

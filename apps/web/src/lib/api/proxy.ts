@@ -16,12 +16,14 @@ const FORWARDED_HEADERS = [
 const FORWARDED_HEADER_PREFIX = "mcp-";
 
 const RETURNED_HEADERS = [
+  "allow",
   "cache-control",
   "content-disposition",
   "location",
   "x-robots-tag",
   "x-accel-buffering",
   "retry-after",
+  "www-authenticate",
   "ratelimit-limit",
   "ratelimit-remaining",
   "ratelimit-reset",
