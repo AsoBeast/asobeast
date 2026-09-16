@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const DEFAULT_API_URL = "http://localhost:4000";
 const WEB_PROTOCOLS = new Set(["http:", "https:"]);
+const MCP_ENDPOINT_SUFFIX = "/mcp";
 
 const schema = z.object({
   ASOBEAST_API_URL: z.string().optional(),
@@ -32,7 +33,13 @@ function apiUrlOf(raw: string | undefined): string {
       `ASOBEAST_API_URL must be an absolute http:// or https:// address such as https://your-host/api/backend, not "${value}".`,
     );
   }
-  return value.replace(/\/+$/, "");
+  const base = value.replace(/\/+$/, "");
+  if (base.endsWith(MCP_ENDPOINT_SUFFIX)) {
+    throw new ConfigError(
+      `ASOBEAST_API_URL points at the hosted MCP endpoint. The stdio server calls the REST API, so set it to ${base.slice(0, -MCP_ENDPOINT_SUFFIX.length)}.`,
+    );
+  }
+  return base;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {

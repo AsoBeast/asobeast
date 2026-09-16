@@ -25,6 +25,16 @@ describe("loadConfig api url", () => {
     },
   );
 
+  it.each(["https://host/api/backend/mcp", "https://host/api/backend/mcp/"])(
+    "names the rest api url when given the mcp endpoint %j",
+    (apiUrl) => {
+      expect(() => configWith(apiUrl)).toThrowError(ConfigError);
+      expect(() => configWith(apiUrl)).toThrowError(
+        /set it to https:\/\/host\/api\/backend\.$/,
+      );
+    },
+  );
+
   it("drops a trailing slash", () => {
     expect(configWith("https://host/api/backend/").apiUrl).toBe(
       "https://host/api/backend",
