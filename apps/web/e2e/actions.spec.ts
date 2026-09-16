@@ -109,6 +109,14 @@ test.describe("generating the queue on demand", () => {
     await page.goto("/actions");
 
     await expect(page.getByText("Nothing to do right now")).toBeVisible();
+    const lastGenerated = page.getByText(/^Last generated /);
+    const before = await lastGenerated.textContent();
+    await page.getByRole("button", { name: "Generate now" }).click();
+
+    await expect(
+      page.getByRole("button", { name: "Generating…" }),
+    ).toBeDisabled();
+    await expect(lastGenerated).not.toHaveText(before ?? "");
     await expect(
       page.getByRole("button", { name: "Generate now" }),
     ).toBeEnabled();

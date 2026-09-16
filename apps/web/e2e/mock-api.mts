@@ -188,7 +188,7 @@ function json(
   res: ServerResponse,
   status: number,
   body: unknown,
-  headers: Record<string, string> = {},
+  headers: Record<string, string | string[]> = {},
 ): void {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
@@ -437,6 +437,33 @@ function actionSummaryFor(req: IncomingMessage): ActionSummary {
   const generatedAt = actionsGeneratedAt(req);
   if (!actionsUngenerated(req)) return { ...ACTION_SUMMARY, generatedAt };
   return { ...ACTION_SUMMARY, open: 0, generatedAt };
+}
+
+function followActionRun(req: IncomingMessage, res: ServerResponse): void {
+  const finishing = cookieValue(req, "actions_run_finishing");
+  if (finishing === undefined) {
+    json(res, 200, actionSummaryFor(req));
+    return;
+  }
+  if (!hasCookie(req, "actions_run_polled", "1")) {
+    json(res, 200, actionSummaryFor(req), {
+      "set-cookie": "actions_run_polled=1; Path=/",
+    });
+    return;
+  }
+  const summary = actionSummaryFor(req);
+  json(
+    res,
+    200,
+    { ...summary, generatedAt: finishing },
+    {
+      "set-cookie": [
+        `actions_generated_at=${finishing}; Path=/`,
+        "actions_run_finishing=; Path=/; Max-Age=0",
+        "actions_run_polled=; Path=/; Max-Age=0",
+      ],
+    },
+  );
 }
 
 function actionListFor(
@@ -927,7 +954,7 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, req, res) => json(res, 200, actionSummaryFor(req)),
+    handler: (_p, req, res) => followActionRun(req, res),
   },
   {
     method: "GET",
@@ -950,7 +977,7 @@ const routes: Route[] = [
         202,
         { queued: true, jobId: "actions~ws_default" },
         {
-          "set-cookie": `actions_generated_at=${new Date().toISOString()}; Path=/`,
+          "set-cookie": `actions_run_finishing=${new Date().toISOString()}; Path=/`,
         },
       ),
   },
