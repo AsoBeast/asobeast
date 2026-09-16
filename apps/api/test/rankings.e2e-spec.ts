@@ -81,6 +81,36 @@ describe('RankingsController serp-movers (e2e)', () => {
     expect(typeof body.message).toBe('string');
   });
 
+  describe('the ranking history window', () => {
+    async function appId(): Promise<string> {
+      const app = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'history-store',
+          country: 'us',
+          name: 'History',
+        },
+      });
+      return app.id;
+    }
+
+    it.each([
+      ['a start that is not on the calendar', 'from=2026-09-31'],
+      ['an end before the start', 'from=2026-09-15&to=2026-09-01'],
+    ])('refuses %s', async (_case, query) => {
+      await api.get(`/apps/${await appId()}/rankings?${query}`).expect(400);
+    });
+
+    it('accepts a timestamp start with a date end', async () => {
+      await api
+        .get(
+          `/apps/${await appId()}/rankings?from=2026-09-01T00:00:00Z&to=2026-09-15`,
+        )
+        .expect(200);
+    });
+  });
+
   it('lists entrants excluding the first day and annotates known apps', async () => {
     const you = await prisma.app.create({
       data: {

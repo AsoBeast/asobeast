@@ -299,6 +299,21 @@ describe('Remote MCP transport (e2e)', () => {
     expect(result?.content?.[0].text).not.toContain('2026-03-02');
   });
 
+  it('refuses a ranking history window that runs backwards', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+
+    const response = await rpc('tools/call', {
+      name: 'ranking_history',
+      arguments: { appId: fixture.id, from: '2026-09-15', to: '2026-09-01' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toContain('must not be before');
+  });
+
   it('matches the rest api result for every tool it can call blind', async () => {
     const shared = [
       { tool: 'list_apps', route: '/apps' },
