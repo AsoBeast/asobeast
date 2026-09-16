@@ -284,4 +284,15 @@ describe("mcp snippets", () => {
       );
     });
   });
+
+  it("names the windsurf url key serverUrl", () => {
+    expect(JSON.parse(hosted("windsurf"))).toEqual({
+      mcpServers: {
+        asobeast: {
+          serverUrl: `${ORIGIN}/api/backend/mcp`,
+          headers: { Authorization: `Bearer ${TOKEN}` },
+        },
+      },
+    });
+  });
 });

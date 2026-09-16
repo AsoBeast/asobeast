@@ -208,6 +208,14 @@ export function hostedSnippets(
       language: "json",
       value: mcpServersFile(headerEntry("httpUrl", token, endpoint)),
     },
+    {
+      id: "windsurf",
+      client: "Windsurf",
+      label: "Windsurf",
+      location: "~/.codeium/windsurf/mcp_config.json",
+      language: "json",
+      value: mcpServersFile(headerEntry("serverUrl", token, endpoint)),
+    },
   ];
 }
 
