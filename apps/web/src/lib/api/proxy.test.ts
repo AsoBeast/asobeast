@@ -53,6 +53,7 @@ describe("proxyToApi", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -330,6 +331,63 @@ describe("proxyToApi", () => {
       error: "Gateway Timeout",
       path: "/api/backend/apps",
     });
+  });
+
+  it("streams a response body that outlives the header deadline", async () => {
+    stubFetch(async (_input, init) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          controller.enqueue(encoder.encode(": open\n\n"));
+          const finish = setTimeout(() => {
+            controller.enqueue(encoder.encode("event: message\ndata: {}\n\n"));
+            controller.close();
+          }, 60);
+          init?.signal?.addEventListener("abort", () => {
+            clearTimeout(finish);
+            controller.error(init.signal?.reason);
+          });
+        },
+      });
+      return new Response(body, {
+        headers: { "content-type": "text/event-stream" },
+      });
+    });
+    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "20" });
+
+    const response = await proxyToApi(
+      request("/api/backend/mcp", { method: "POST", body: "{}" }),
+      ["mcp"],
+    );
+
+    expect(response.headers.get("content-type")).toBe("text/event-stream");
+    await expect(response.text()).resolves.toContain("event: message");
+  });
+
+  it("clears the header deadline once the api answers", async () => {
+    vi.useFakeTimers();
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    await proxyToApi(request(), ["apps"]);
+
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("waits the documented 30 seconds for the api by default", async () => {
+    vi.useFakeTimers();
+    stubFetchUntilAborted();
+    const { proxyToApi } = await loadProxy();
+    let settled = false;
+
+    const pending = proxyToApi(request(), ["apps"]).finally(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(pending).resolves.toHaveProperty("status", 504);
   });
 });
 

@@ -71,6 +71,25 @@ function unreachable(request: NextRequest, error: unknown): Response {
   return Response.json(envelope, { status: envelope.statusCode });
 }
 
+async function fetchUpstream(
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () =>
+      deadline.abort(
+        new DOMException("upstream headers timed out", "TimeoutError"),
+      ),
+    UPSTREAM_TIMEOUT_MS,
+  );
+  try {
+    return await fetch(url, { ...init, signal: deadline.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function apiRoute(
   ...segments: string[]
 ): (request: NextRequest) => Promise<Response> {
@@ -87,7 +106,7 @@ export async function proxyToApi(
       : await request.text();
 
   try {
-    const upstream = await fetch(
+    const upstream = await fetchUpstream(
       `${API_BASE}/${segments.join("/")}${request.nextUrl.search}`,
       {
         method: request.method,
@@ -95,7 +114,6 @@ export async function proxyToApi(
         body,
         cache: "no-store",
         redirect: "manual",
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       },
     );
     return new Response(upstream.body, {
