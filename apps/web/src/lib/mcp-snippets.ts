@@ -78,6 +78,7 @@ function typedHttpEntry(authorization: string, endpoint: string) {
 }
 
 function needsAllowHttp(endpoint: string): boolean {
+  if (!URL.canParse(endpoint)) return false;
   const { protocol, hostname } = new URL(endpoint);
   return protocol === "http:" && !MCP_REMOTE_PLAIN_HTTP_HOSTS.has(hostname);
 }

@@ -132,6 +132,11 @@ describe("mcp snippets", () => {
       expect(args.includes("--allow-http")).toBe(allowed);
     });
 
+    it("writes its entry before the browser origin is known", () => {
+      expect(() => hostedSnippets(TOKEN, "")).not.toThrow();
+      expect(desktopEntry("").args).not.toContain("--allow-http");
+    });
+
     it("names the file it belongs in", () => {
       expect(
         snippetById(hostedSnippets(TOKEN, ORIGIN), "claude-desktop").location,
