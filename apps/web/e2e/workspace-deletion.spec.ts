@@ -87,12 +87,13 @@ test("the owner is never shown the member note while their account loads", async
     await route.fallback();
   });
 
+  const deletionLoaded = page.waitForResponse((response) =>
+    response.url().endsWith("/api/backend/account/deletion"),
+  );
   await page.goto("/settings#workspace");
   const section = page.getByRole("region", { name: "Workspace" });
   await expect(section).toBeVisible();
-  await page.waitForResponse((response) =>
-    response.url().endsWith("/api/backend/account/deletion"),
-  );
+  await deletionLoaded;
 
   await expect(section.getByText("Only the workspace owner")).toHaveCount(0);
   releaseMe();
