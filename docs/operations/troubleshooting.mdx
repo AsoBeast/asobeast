@@ -19,7 +19,10 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="The API exits immediately on boot">
-    `AUTH_SECRET` is shorter than 32 characters. The API validates it at boot and refuses to run with a weak signing secret. Generate one with `openssl rand -hex 32` and recreate the API container.
+    Two settings stop the API at boot.
+
+    - `AUTH_SECRET` is shorter than 32 characters. The API refuses to run with a weak signing secret. Generate one with `openssl rand -hex 32` and recreate the API container.
+    - `AUTH_COOKIE_SECURE` is `false` while `NODE_ENV` is `production`, which the Docker image always sets. The log reads `AUTH_COOKIE_SECURE must be true when NODE_ENV is production.` Set it back to `true` and see [Sessions do not persist behind a proxy](#sessions-do-not-persist-behind-a-proxy) for ways to reach the stack without TLS. See [What the API refuses to start with](/security/hosting#what-the-api-refuses-to-start-with).
   </Accordion>
 
   <Accordion title="I cannot register a second account">
@@ -31,7 +34,17 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="Sessions do not persist behind a proxy">
-    `AUTH_COOKIE_SECURE=true` marks the cookie `Secure`, so a browser reaching the site over plain HTTP discards it. Terminate TLS, or set it to `false` while you are on HTTP. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+    `AUTH_COOKIE_SECURE=true` marks the cookie `Secure`, so a browser reaching the site over plain HTTP from another machine discards it. Setting it to `false` is not an option, because the Docker image then refuses to boot. Pick one of these instead.
+
+    - Terminate TLS in front of port 3001 with your own reverse proxy and certificate.
+    - Compose the Cloudflare Tunnel overlay, which terminates TLS at Cloudflare.
+    - Forward the port over SSH and open `http://localhost:3001`. Browsers treat localhost as a secure context and keep a `Secure` cookie there without TLS.
+
+    ```bash
+    ssh -N -L 3001:localhost:3001 user@nas.local
+    ```
+
+    See [Hosting behind TLS and a reverse proxy](/security/hosting).
   </Accordion>
 </AccordionGroup>
 
