@@ -364,6 +364,30 @@ describe("proxyToApi", () => {
     await expect(response.text()).resolves.toContain("event: message");
   });
 
+  it("aborts the upstream request when the client goes away", async () => {
+    let upstreamSignal: AbortSignal | undefined;
+    stubFetch(async (_input, init) => {
+      upstreamSignal = init?.signal ?? undefined;
+      return new Response(new ReadableStream(), {
+        headers: { "content-type": "text/event-stream" },
+      });
+    });
+    const { proxyToApi } = await loadProxy();
+    const client = new AbortController();
+
+    await proxyToApi(
+      request("/api/backend/mcp", {
+        method: "POST",
+        body: "{}",
+        signal: client.signal,
+      }),
+      ["mcp"],
+    );
+    client.abort();
+
+    expect(upstreamSignal?.aborted).toBe(true);
+  });
+
   it("clears the header deadline once the api answers", async () => {
     vi.useFakeTimers();
     stubFetch(async () => Response.json({}));

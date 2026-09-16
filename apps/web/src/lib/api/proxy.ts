@@ -72,6 +72,7 @@ function unreachable(request: NextRequest, error: unknown): Response {
 }
 
 async function fetchUpstream(
+  request: NextRequest,
   url: string,
   init: RequestInit,
 ): Promise<Response> {
@@ -84,7 +85,10 @@ async function fetchUpstream(
     UPSTREAM_TIMEOUT_MS,
   );
   try {
-    return await fetch(url, { ...init, signal: deadline.signal });
+    return await fetch(url, {
+      ...init,
+      signal: AbortSignal.any([deadline.signal, request.signal]),
+    });
   } finally {
     clearTimeout(timer);
   }
@@ -107,6 +111,7 @@ export async function proxyToApi(
 
   try {
     const upstream = await fetchUpstream(
+      request,
       `${API_BASE}/${segments.join("/")}${request.nextUrl.search}`,
       {
         method: request.method,
