@@ -20,6 +20,8 @@ The second path is usually better, because it names the apps the store already p
 
 One listing in one storefront is either an app you track or a competitor of one app, never both and never two at once. Adding a listing you already track as an app, importing one you already watch as a competitor, or attaching a competitor that already belongs to another app all answer `409` and change nothing. Remove the listing from where it is first.
 
+Adding a competitor this app already tracks returns that competitor without reaching the store and without writing a snapshot, for the same reason a repeat import does. See [Importing twice costs nothing extra](/guides/import-an-app#importing-twice-costs-nothing-extra).
+
 ## Why are competitors free to track?
 
 A position check searches the keyword's storefront once and records positions for the primary app and for every competitor attached to it from that single search.

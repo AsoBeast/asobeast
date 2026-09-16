@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
 import {
@@ -7,6 +8,15 @@ import {
   ONBOARDING_STORAGE_KEY,
   setOnboardingAcknowledgement,
 } from "../src/lib/onboarding";
+
+function finishedSetup() {
+  let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
+  state = setOnboardingAcknowledgement(state, "noCompetitors", true);
+  state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
+  state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
+  state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
+  return completeOnboarding(state, 0, 0);
+}
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
@@ -41,18 +51,136 @@ test("importing an app posts to the api and shows the new app", async ({
   ).toBeVisible();
 });
 
+for (const input of [
+  "com.duolingo",
+  "570060128",
+  "apps.apple.com/us/app/focus-timer/id123456789",
+]) {
+  test(`the import dialog submits ${input}`, async ({ page }) => {
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page.getByLabel("Store URL").fill(input);
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  });
+}
+
+test("the import dialog refuses an apple page that is not a listing", async ({
+  page,
+}) => {
+  const developerPage = "https://apps.apple.com/us/developer/focus/id123456789";
+  const imports: string[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith("/api/backend/apps")
+    ) {
+      imports.push(request.url());
+    }
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page.getByLabel("Store URL").fill(developerPage);
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(
+    page.getByText(`Unrecognized store URL or id: ${developerPage}`),
+  ).toBeVisible();
+  expect(imports).toEqual([]);
+});
+
+test.describe("a fast double click", () => {
+  const countRequests = (page: Page, method: string, path: RegExp) => {
+    const seen: string[] = [];
+    page.on("request", (request) => {
+      if (request.method() === method && path.test(request.url())) {
+        seen.push(request.url());
+      }
+    });
+    return seen;
+  };
+
+  test("on Import sends one import", async ({ page }) => {
+    const imports = countRequests(page, "POST", /\/api\/backend\/apps$/);
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page
+      .getByLabel("Store URL")
+      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+    await page.getByRole("button", { name: "Import", exact: true }).dblclick();
+
+    await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+    expect(imports).toHaveLength(1);
+  });
+
+  test("still lets Import run again after the dialog closed mid request", async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      ({ key, value }) => localStorage.setItem(key, value),
+      { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+    );
+    await page.route("**/api/backend/apps", async (route) => {
+      if (route.request().method() === "POST") {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      await route.fallback();
+    });
+    const imports = countRequests(page, "POST", /\/api\/backend\/apps$/);
+    await page.goto("/");
+
+    const startImport = async () => {
+      await page.getByRole("button", { name: "Import app" }).click();
+      await page
+        .getByLabel("Store URL")
+        .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+      await page.getByRole("button", { name: "Import", exact: true }).click();
+    };
+
+    const firstImport = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        response.url().endsWith("/api/backend/apps"),
+    );
+    await startImport();
+    await page.keyboard.press("Escape");
+    await firstImport;
+    await startImport();
+
+    await expect.poll(() => imports.length).toBe(2);
+  });
+
+  test("on Delete app sends one delete", async ({ page }) => {
+    const deletes = countRequests(
+      page,
+      "DELETE",
+      /\/api\/backend\/apps\/[^/]+$/,
+    );
+    await page.goto("/");
+
+    await page.getByRole("button", { name: "App actions" }).first().click();
+    await page.getByRole("menuitem", { name: "Delete app" }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete app" })
+      .dblclick();
+
+    await expect(page.getByText(/^Deleted /).first()).toBeVisible();
+    expect(deletes).toHaveLength(1);
+    await expect(page.getByText(/^Could not delete /)).toHaveCount(0);
+  });
+});
+
 test("finished setup suppresses redirects after later imports", async ({
   page,
 }) => {
-  let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
-  state = setOnboardingAcknowledgement(state, "noCompetitors", true);
-  state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
-  state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
-  state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
-  const completed = completeOnboarding(state, 0, 0);
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(completed) },
+    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
   );
   await page.goto("/");
 

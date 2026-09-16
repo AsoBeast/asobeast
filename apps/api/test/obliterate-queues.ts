@@ -6,6 +6,9 @@ import { QUEUES } from '../src/jobs/jobs.types';
 export async function obliterateQueues(app: INestApplication): Promise<void> {
   for (const name of Object.values(QUEUES)) {
     const queue = app.get<Queue>(getQueueToken(name), { strict: false });
+    for (const parent of await queue.getJobs(['waiting-children'])) {
+      await parent.remove({ removeChildren: false });
+    }
     await queue.obliterate({ force: true });
   }
 }

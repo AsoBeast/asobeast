@@ -7,13 +7,14 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
-  countChars,
+  assertStorefront,
   KeywordComparison,
   KeywordCountrySummary,
+  keywordFieldChars,
   KeywordFieldResult,
   KeywordSort,
   KEYWORD_FIELD_CHAR_LIMIT,
-  normalizeText,
+  parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { isoWeekKey, JOBS, QUEUES, scoreJobId } from '../jobs/jobs.types';
@@ -43,9 +44,6 @@ import {
 
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
-
-const keywordFieldChars = (phrases: string[]): number =>
-  countChars(phrases.join(','));
 
 const keywordRows = (texts: string[], store: Store, country: string) =>
   [...texts].sort().map((text) => ({ text, store, country }));
@@ -213,6 +211,7 @@ export class KeywordsService {
   ): Promise<TrackedKeywordItem[]> {
     const app = await ensureApp(this.prisma, appId);
     const market = country ?? app.country;
+    assertStorefront(app.store, market);
     const texts = new Set(rawKeywords.map((raw) => normalizeKeyword(raw)));
 
     const keywordIds = await this.keywordIdsFor([...texts], app.store, market);
@@ -241,7 +240,10 @@ export class KeywordsService {
     data: { active?: boolean; relevance?: number | null },
   ): Promise<TrackedKeywordItem> {
     await ensureApp(this.prisma, appId);
-    await this.ensureTracked(appId, keywordId);
+    const keyword = await this.ensureTracked(appId, keywordId);
+    if (data.active === true) {
+      assertStorefront(keyword.store, keyword.country);
+    }
     const update = {
       ...(data.active === undefined ? {} : { active: data.active }),
       ...('relevance' in data ? { relevance: data.relevance } : {}),
@@ -336,13 +338,8 @@ export class KeywordsService {
     const app = await ensureApp(this.prisma, appId);
     this.ensureKeywordFieldStore(app);
 
-    const parsed = text
-      .split(',')
-      .map((part) => normalizeText(part))
-      .filter((part) => part.length > 0)
-      .map(normalizeKeyword);
-    const unique = [...new Set(parsed)];
-    const duplicatesRemoved = parsed.length - unique.length;
+    const { phrases, duplicatesRemoved } = parseKeywordField(text);
+    const unique = phrases.map(normalizeKeyword);
     if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
       throw new BadRequestException(
         `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
@@ -544,14 +541,18 @@ export class KeywordsService {
     });
   }
 
-  private async ensureTracked(appId: string, keywordId: string): Promise<void> {
+  private async ensureTracked(
+    appId: string,
+    keywordId: string,
+  ): Promise<{ store: Store; country: string }> {
     const tracked = await this.prisma.trackedKeyword.findUnique({
       where: { appId_keywordId: { appId, keywordId } },
-      select: { appId: true },
+      select: { keyword: { select: { store: true, country: true } } },
     });
     if (!tracked) {
       throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
     }
+    return tracked.keyword;
   }
 
   private async getTrackedItem(

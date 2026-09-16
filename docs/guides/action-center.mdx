@@ -93,7 +93,7 @@ Two per rule caps also apply where a rule could flood the queue: at most 5 prune
 
 Generation runs automatically inside the daily pipeline completion barrier, before alerts flush, so a newly opened priority action rides the same batched report.
 
-`POST /actions/run` queues an extra run and returns `202`. Two runs on the same day coalesce on a shared job id. A failing generation is logged and never blocks alert delivery.
+`POST /actions/run` queues an extra run and returns `202`. **Generate now** on the Action Center calls it, and you can press it again at any time: a request joins a run that is still waiting or running, and starts a new one once the last run finished. It reads stored data only, so it costs no store requests, and the page updates when the run finishes. A run that opens nothing still records when it ran, so the page shows when the queue was last generated. A failing generation is logged and never blocks alert delivery.
 
 ## AI explanations are optional
 

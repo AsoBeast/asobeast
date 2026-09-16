@@ -37,7 +37,7 @@ export function KeywordsWorkspace({
             The phrases you want this app to rank for, tracked per market.
           </p>
         </div>
-        <AddKeywordsDialog appId={id} country={market}>
+        <AddKeywordsDialog appId={id} store={store} country={market}>
           <Button>
             <Plus />
             Add keywords
@@ -45,7 +45,12 @@ export function KeywordsWorkspace({
         </AddKeywordsDialog>
       </div>
       <Suspense fallback={null}>
-        <KeywordsToolbar id={id} market={market} homeCountry={homeCountry} />
+        <KeywordsToolbar
+          id={id}
+          store={store}
+          market={market}
+          homeCountry={homeCountry}
+        />
       </Suspense>
       <Alert role="note">
         <Info />
@@ -55,7 +60,7 @@ export function KeywordsWorkspace({
         </AlertDescription>
       </Alert>
       <Suspense fallback={<KeywordsTableSkeleton />}>
-        <KeywordsTable id={id} country={market} />
+        <KeywordsTable id={id} store={store} country={market} />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
       {store === "APP_STORE" ? (

@@ -61,6 +61,40 @@ test("guarded pages redirect to login when unauthenticated", async ({
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
+test("a throttled sign in says how long to wait", async ({ page }) => {
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: false,
+    setupRequired: false,
+    authenticated: false,
+  });
+  await page.route("**/api/backend/auth/login", (route) =>
+    route.fulfill({
+      ...fulfillJson(429, {
+        statusCode: 429,
+        error: "Too Many Requests",
+        message:
+          "Too many attempts from this address. Try again in 42 seconds.",
+        path: "/auth/login",
+        timestamp: new Date().toISOString(),
+        retryAfterSeconds: 42,
+      }),
+      headers: { "retry-after": "42" },
+    }),
+  );
+
+  await page.goto("/login");
+  await page.getByLabel("Email").fill("owner@example.com");
+  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByRole("button", { name: "Sign in" }).click();
+
+  await expect(
+    page.getByText(
+      "Too many attempts from this address. Try again in 42 seconds.",
+    ),
+  ).toBeVisible();
+});
+
 test("guarded redirects preserve the requested query string", async ({
   page,
 }) => {
@@ -367,6 +401,59 @@ test("settings creates, reveals and revokes an api token", async ({ page }) => {
   await expect(
     page.getByRole("cell", { name: "ci", exact: true }),
   ).toBeHidden();
+});
+
+test("a double click on Create token creates one token", async ({ page }) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: false,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routeMe(page, TRIAL_USER);
+
+  const tokens: ApiTokenItem[] = [];
+  await page.route("**/api/backend/auth/tokens", async (route) => {
+    if (route.request().method() !== "POST") {
+      return route.fulfill(fulfillJson(200, tokens));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const item: ApiTokenItem = {
+      id: `t${tokens.length + 1}`,
+      name: "ci",
+      prefix: `asob_${tokens.length + 1}`,
+      scope: "read",
+      expiresAt: null,
+      expired: false,
+      lastUsedAt: null,
+      usageCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+    tokens.push(item);
+    return route.fulfill(
+      fulfillJson(201, { ...item, token: `asob_${"a".repeat(48)}` }),
+    );
+  });
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "New token" }).click();
+  await page.getByLabel("Name").fill("ci");
+  await page
+    .getByRole("button", { name: "Create token" })
+    .evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+
+  await expect(
+    page.getByRole("dialog", { name: "Copy your token" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("cell", { name: "ci", exact: true })).toHaveCount(
+    1,
+  );
+  expect(tokens).toHaveLength(1);
 });
 
 test("a lapsed workspace is told collection paused, not that it lost its data", async ({
@@ -1050,4 +1137,103 @@ test("recovery refuses a password that is only whitespace before sending it", as
 
   await expect(page.locator("#password-error")).toHaveText(PASSWORD_RULE);
   expect(attempts).toBe(0);
+});
+
+test.describe("an auth form error marks the field it is about", () => {
+  const openRegistration = async (page: Page) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_setup_required",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await routeStatus(page, {
+      billing: false,
+      registrationOpen: true,
+      setupRequired: true,
+      authenticated: false,
+    });
+  };
+
+  const envelope = (statusCode: number, message: string, path: string) =>
+    fulfillJson(statusCode, {
+      statusCode,
+      error: statusCode === 409 ? "Conflict" : "Unauthorized",
+      message,
+      path,
+      timestamp: new Date().toISOString(),
+    });
+
+  test("a password error marks only the password field invalid", async ({
+    page,
+  }) => {
+    await openRegistration(page);
+    await page.goto("/register");
+    await page.getByLabel("Email").fill("owner@example.com");
+    await page.getByLabel("Password").fill("short");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    await expect(page.getByLabel("Password")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(page.getByLabel("Email")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  test("an email that is already registered marks only the email field invalid", async ({
+    page,
+  }) => {
+    await openRegistration(page);
+    await page.route("**/api/backend/auth/register", (route) =>
+      route.fulfill(
+        envelope(409, "Email already registered", "/auth/register"),
+      ),
+    );
+    await page.goto("/register");
+    await page.getByLabel("Email").fill("owner@example.com");
+    await page.getByLabel("Password").fill("supersecret1");
+    await page.getByRole("button", { name: "Create account" }).click();
+
+    const email = page.getByLabel("Email");
+    await expect(email).toHaveAttribute("aria-invalid", "true");
+    await expect(email).toHaveAccessibleDescription("Email already registered");
+    await expect(page.getByLabel("Password")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
+
+  test("a wrong current password marks only the current password field invalid", async ({
+    page,
+  }) => {
+    await seedSession(page);
+    await routeMe(page, TRIAL_USER);
+    await page.route("**/api/backend/auth/password", (route) =>
+      route.fulfill(
+        envelope(401, "Invalid current password", "/auth/password"),
+      ),
+    );
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Change password" }).click();
+    await page.getByLabel("Current password").fill("wrongsecret1");
+    await page.getByLabel("New password").fill("brandnewsecret2");
+    await page.getByRole("button", { name: "Change password" }).click();
+
+    const current = page.getByLabel("Current password");
+    await expect(current).toHaveAttribute("aria-invalid", "true");
+    await expect(current).toHaveAccessibleDescription(
+      "Invalid current password",
+    );
+    await expect(page.getByLabel("New password")).not.toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+  });
 });

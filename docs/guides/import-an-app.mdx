@@ -18,7 +18,16 @@ When you finish this guide you have one tracked app, its first metadata snapshot
     https://play.google.com/store/apps/details?id=com.example.app
     ```
 
-    A bare iTunes numeric id is also accepted.
+    The import dialog accepts four forms of the same thing:
+
+    | Form | Example |
+    | --- | --- |
+    | A listing URL | `https://apps.apple.com/de/app/example/id123456789` |
+    | A listing URL without `https://` | `apps.apple.com/de/app/example/id123456789` |
+    | A bare App Store id | `123456789` |
+    | A bare Google Play package name | `com.example.app` |
+
+    An App Store id with leading zeros names the same listing, so `0123456789` imports `123456789`.
   </Step>
   <Step title="Paste it into the import dialog">
     asobeast parses the store and the storefront from the URL.
@@ -37,7 +46,7 @@ Four things, in order.
 1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it.
 2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first traffic and difficulty score.
 3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
-4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check, and the action queue is generated for your workspace.
+4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check. The action queue for your workspace is generated when those first rank checks finish, so the first recommendations read real positions instead of an empty database.
 
 The first pass is what fills the listing. Positions and scores arrive as the queue drains rather than waiting for the next scheduled run, so a fresh instance with an empty queue shows real numbers within minutes on the App Store and within tens of minutes on Google Play. See [The daily pipeline and rate limits](/concepts/pipeline) for the throughput those waits come from.
 
@@ -48,9 +57,9 @@ Each piece of first pass work carries an identifier, so importing the same app t
 | Work | Identifier | What deduplicates against it |
 | --- | --- | --- |
 | Rank check | `first-run~<appId>~<keywordId>~<date>` | Another first pass for the same app the same UTC day |
-| Action run | `actions~<workspaceId>~<date>` | A repeat import, and **Generate now** the same UTC day |
+| Action run | `actions~<workspaceId>` | **Generate now** while an earlier run is still waiting or running |
 
-Two consequences follow, and both are intended. Importing a second app into the same workspace on the same day adds no second action run. **Generate now** on the actions page is also a no operation for the rest of that UTC day, because the import already generated the queue.
+Each import waits for its own first rank checks before it generates actions, so importing a second app never leaves that app out of its first recommendations. **Generate now** joins a run that is still waiting or running, and starts a new run once the last one has finished.
 
 The rank check identifier names the app on purpose. Keywords are shared: two apps tracking the same phrase in the same storefront are one keyword row, and one search records positions for every app tracking it. That sharing is what makes a scheduled run cheap, but it only helps while the search is still queued. A search that already ran cannot record a position for an app that started tracking afterwards, so a first pass that deduplicated against it would be dropped in silence and the new app would show nothing until the next daily run. Naming the app keeps each import's promise, and costs at most one extra search per shared keyword on the day it is imported.
 
@@ -77,7 +86,8 @@ Field level changes also land in the changes feed, where they are kept alongside
 
 ## Troubleshooting
 
-- **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs and bare iTunes ids. A search result URL, a developer page or a shortened link will not parse. Open the listing in a browser and copy the address bar.
+- **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs, bare App Store ids and bare Google Play package names. A search result URL, a developer page, an album, a bundle, an editorial story or a shortened link is refused at once with the input echoed back, before any store request. Open the listing in a browser and copy the address bar.
+- **The import answers 422.** The App Store listing is not available on iPhone or iPad, for example an app sold only on the Mac App Store, Apple Watch or Apple Vision Pro. asobeast reads iPhone and iPad search, where such an app never ranks, so it refuses the listing before storing anything. The same applies when you add it as a competitor.
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
 - **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
 - **Positions are empty right after importing.** Expected for a moment. The rank checks are queued at import and drain at the store rate limit, so watch the first run panel on the app overview page rather than the clock. If they stay empty, check the queue dashboard at `/admin/queues` for failed jobs.

@@ -1,4 +1,3 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import {
   Body,
   Controller,
@@ -16,7 +15,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { Queue } from 'bullmq';
 import {
   ActionAiStatus,
   ActionExplanation,
@@ -26,7 +24,7 @@ import {
   ActionSummary,
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { actionsJobId, JOBS, QUEUES, utcDateKey } from '../jobs/jobs.types';
+import { ActionRunQueue } from './action-run.queue';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
@@ -38,7 +36,7 @@ export class ActionsController {
   constructor(
     private readonly actions: ActionsService,
     private readonly ai: ActionsAiService,
-    @InjectQueue(QUEUES.PIPELINE) private readonly pipeline: Queue,
+    private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
   ) {}
 
@@ -87,11 +85,8 @@ export class ActionsController {
   @HttpCode(202)
   @ApiAcceptedResponse({ description: 'Generation was queued' })
   @ApiOperation({ summary: 'Queue an action generation run' })
-  async run(): Promise<ActionRunResult> {
-    const scope = this.workspace.scopeFor('an action run');
-    const jobId = actionsJobId(scope.workspaceId, utcDateKey());
-    await this.pipeline.add(JOBS.ACTIONS, scope, { jobId });
-    return { queued: true, jobId };
+  run(): Promise<ActionRunResult> {
+    return this.actionRuns.request(this.workspace.scopeFor('an action run'));
   }
 }
 

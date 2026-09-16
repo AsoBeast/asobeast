@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { ApiError, acceptInvite } from "@/lib/api";
 import { passwordError } from "@/lib/password";
 import { invalidateAuth } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function AcceptInviteForm() {
   const queryClient = useQueryClient();
@@ -47,6 +48,7 @@ export function AcceptInviteForm() {
       );
     },
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,7 +58,7 @@ export function AcceptInviteForm() {
       setError(problem);
       return;
     }
-    mutation.mutate();
+    submitOnce();
   }
 
   if (token === "") {

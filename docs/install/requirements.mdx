@@ -78,7 +78,7 @@ One. The web container publishes `3000` and nothing else is reachable from outsi
 The browser reaches the API through `/api/backend/*` on the web origin, which forwards to `API_INTERNAL_URL`. The development Compose file is different on purpose: it publishes `5432` and `6379` so a locally running API can reach them.
 
 <Warning>
-  Publishing host port 3001 to the internet without TLS in front of it sends session cookies in the clear. Terminate TLS at a reverse proxy and set `AUTH_COOKIE_SECURE=true`.
+  Publishing host port 3001 to the internet without TLS in front of it sends session cookies in the clear. Terminate TLS at a reverse proxy. `AUTH_COOKIE_SECURE` is already `true` in the Compose stack and must stay so, because the Docker image refuses to boot without it.
 </Warning>
 
 ## Next steps

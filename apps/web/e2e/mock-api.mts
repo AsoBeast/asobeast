@@ -56,13 +56,16 @@ import type {
   TrackedKeywordItem,
   WebhookCreateRequest,
   WebhookItem,
+  WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
+  DELETION_CONFIRMATION,
   KEYWORD_FIELD_CHAR_LIMIT,
+  keywordFieldChars,
+  parseKeywordField,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
-  normalizeText,
   parseStoreUrl,
 } from "@asobeast/shared";
 
@@ -188,7 +191,7 @@ function json(
   res: ServerResponse,
   status: number,
   body: unknown,
-  headers: Record<string, string> = {},
+  headers: Record<string, string | string[]> = {},
 ): void {
   res.writeHead(status, { "content-type": "application/json", ...headers });
   res.end(JSON.stringify(body));
@@ -333,17 +336,13 @@ function trackedFromKeywordField(
 }
 
 function keywordFieldResult(text: string, country: string): KeywordFieldResult {
-  const parsed = text
-    .split(",")
-    .map((part) => normalizeText(part))
-    .filter((part) => part.length > 0);
-  const unique = [...new Set(parsed)];
+  const { phrases, duplicatesRemoved } = parseKeywordField(text);
 
   return {
-    tracked: unique.map((value) => trackedFromKeywordField(value, country)),
-    charactersUsed: unique.join(",").length,
+    tracked: phrases.map((value) => trackedFromKeywordField(value, country)),
+    charactersUsed: keywordFieldChars(phrases),
     charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-    duplicatesRemoved: parsed.length - unique.length,
+    duplicatesRemoved,
   };
 }
 
@@ -422,9 +421,84 @@ function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
   };
 }
 
+function actionsUngenerated(req: IncomingMessage): boolean {
+  return hasCookie(req, "e2e_actions_ungenerated", "1");
+}
+
+function actionsGeneratedAt(req: IncomingMessage): string | null {
+  return (
+    cookieValue(req, "actions_generated_at") ??
+    (actionsUngenerated(req) ? null : ACTION_SUMMARY.generatedAt)
+  );
+}
+
 function actionSummaryFor(req: IncomingMessage): ActionSummary {
-  if (!hasCookie(req, "e2e_actions_ungenerated", "1")) return ACTION_SUMMARY;
-  return { ...ACTION_SUMMARY, open: 0, generatedAt: null };
+  const generatedAt = actionsGeneratedAt(req);
+  if (!actionsUngenerated(req)) return { ...ACTION_SUMMARY, generatedAt };
+  return { ...ACTION_SUMMARY, open: 0, generatedAt };
+}
+
+function followActionRun(req: IncomingMessage, res: ServerResponse): void {
+  const finishing = cookieValue(req, "actions_run_finishing");
+  if (finishing === undefined) {
+    json(res, 200, actionSummaryFor(req));
+    return;
+  }
+  if (!hasCookie(req, "actions_run_polled", "1")) {
+    json(res, 200, actionSummaryFor(req), {
+      "set-cookie": "actions_run_polled=1; Path=/",
+    });
+    return;
+  }
+  const summary = actionSummaryFor(req);
+  json(
+    res,
+    200,
+    { ...summary, generatedAt: finishing },
+    {
+      "set-cookie": [
+        `actions_generated_at=${finishing}; Path=/`,
+        "actions_run_finishing=; Path=/; Max-Age=0",
+        "actions_run_polled=; Path=/; Max-Age=0",
+      ],
+    },
+  );
+}
+
+function actionListFor(
+  req: IncomingMessage,
+  appId?: string,
+): { items: ActionItem[]; total: number; generatedAt: string | null } {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const items = actionsUngenerated(req) ? [] : filterActions(url, appId);
+  return { items, total: items.length, generatedAt: actionsGeneratedAt(req) };
+}
+
+const DELETION_COOKIE = "workspace_deletion_requested";
+const DELETION_GRACE_DAYS = 7;
+const UNSCHEDULED_DELETION: WorkspaceDeletionStatus = {
+  scheduled: false,
+  requestedAt: null,
+  requestedBy: null,
+  dueAt: null,
+  graceDays: DELETION_GRACE_DAYS,
+};
+
+function scheduledDeletion(requestedAt: string): WorkspaceDeletionStatus {
+  const due = new Date(requestedAt);
+  due.setUTCDate(due.getUTCDate() + DELETION_GRACE_DAYS);
+  return {
+    scheduled: true,
+    requestedAt,
+    requestedBy: AUTH_USER.email,
+    dueAt: due.toISOString(),
+    graceDays: DELETION_GRACE_DAYS,
+  };
+}
+
+function deletionStatusFor(req: IncomingMessage): WorkspaceDeletionStatus {
+  const requestedAt = cookieValue(req, DELETION_COOKIE);
+  return requestedAt ? scheduledDeletion(requestedAt) : UNSCHEDULED_DELETION;
 }
 
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
@@ -521,6 +595,41 @@ const routes: Route[] = [
       }
       json(res, 200, TEAM);
     },
+  },
+  {
+    method: "GET",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, req, res) => json(res, 200, deletionStatusFor(req)),
+  },
+  {
+    method: "POST",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, req, res) =>
+      withBody<{ confirm?: string }>(req, res, (body) => {
+        if (body.confirm !== DELETION_CONFIRMATION) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/account/deletion",
+              `confirm must be equal to ${DELETION_CONFIRMATION}`,
+            ),
+          );
+        }
+        const requestedAt = new Date().toISOString();
+        json(res, 201, scheduledDeletion(requestedAt), {
+          "set-cookie": `${DELETION_COOKIE}=${requestedAt}; Path=/`,
+        });
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, UNSCHEDULED_DELETION, {
+        "set-cookie": `${DELETION_COOKIE}=; Path=/; Max-Age=0`,
+      }),
   },
   {
     method: "GET",
@@ -684,6 +793,16 @@ const routes: Route[] = [
     },
   },
   appRoute(/^\/apps\/([^/]+)$/, (dataset) => dataset.detail),
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)$/,
+    handler: ([id], req, res) => {
+      if (!DATASETS[id]) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      res.writeHead(204).end();
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset) => dataset.summary),
   {
     method: "GET",
@@ -901,20 +1020,12 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions$/,
-    handler: (_p, req, res) => {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      const items = filterActions(url);
-      json(res, 200, {
-        items,
-        total: items.length,
-        generatedAt: ACTION_SUMMARY.generatedAt,
-      });
-    },
+    handler: (_p, req, res) => json(res, 200, actionListFor(req)),
   },
   {
     method: "GET",
     pattern: /^\/actions\/summary$/,
-    handler: (_p, req, res) => json(res, 200, actionSummaryFor(req)),
+    handler: (_p, req, res) => followActionRun(req, res),
   },
   {
     method: "GET",
@@ -925,21 +1036,21 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/actions$/,
-    handler: (params, req, res) => {
-      const url = new URL(req.url ?? "/", "http://localhost");
-      const items = filterActions(url, params[0]);
-      json(res, 200, {
-        items,
-        total: items.length,
-        generatedAt: ACTION_SUMMARY.generatedAt,
-      });
-    },
+    handler: (params, req, res) =>
+      json(res, 200, actionListFor(req, params[0])),
   },
   {
     method: "POST",
     pattern: /^\/actions\/run$/,
     handler: (_p, _req, res) =>
-      json(res, 202, { queued: true, jobId: "actions~ws_default~2026-07-30" }),
+      json(
+        res,
+        202,
+        { queued: true, jobId: "actions~ws_default" },
+        {
+          "set-cookie": `actions_run_finishing=${new Date().toISOString()}; Path=/`,
+        },
+      ),
   },
   {
     method: "PATCH",

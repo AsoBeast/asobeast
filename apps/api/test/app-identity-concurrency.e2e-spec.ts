@@ -21,6 +21,7 @@ const FIXTURE: NormalizedApp = {
   title: 'Contested App',
   description: 'Contested description',
   raw: { source: 'fixture' },
+  searchable: true,
 };
 
 const CONTESTED = '5550001';
@@ -130,7 +131,7 @@ describe('Store identity under concurrency (e2e)', () => {
   const rowsFor = (storeAppId: string) =>
     prisma.app.findMany({
       where: { storeAppId },
-      select: { isCompetitor: true, primaryAppId: true },
+      select: { id: true, isCompetitor: true, primaryAppId: true },
     });
 
   it('lets only one of a racing import and competitor add claim the identity', async () => {
@@ -173,6 +174,9 @@ describe('Store identity under concurrency (e2e)', () => {
     const rows = await rowsFor(CONTESTED);
     expect(rows).toHaveLength(1);
     expect(rows[0].isCompetitor).toBe(false);
+    expect(
+      await prisma.appSnapshot.count({ where: { appId: rows[0].id } }),
+    ).toBe(1);
   });
 
   it('auto tracks the snapshot once when two syncs run at the same time', async () => {

@@ -12,7 +12,7 @@ You import an app once. The app row carries one home storefront, and every track
 
 The home storefront is `app.country`, and it comes from the URL you imported. A URL such as `apps.apple.com/de/app/...` imports a `de` home market, and the import dialog lets you override it. A bare iTunes id, or a URL with no country segment, falls back to `DEFAULT_COUNTRY`, which defaults to `us`.
 
-Country codes are two lowercase letters validated by shape rather than against a fixed list, so any live storefront works without asobeast maintaining a country table.
+Country codes are two lowercase letters, and each one must be a storefront of the app's store. See [Which codes are storefronts?](#which-codes-are-storefronts)
 
 The home storefront drives everything that asobeast stores once per app.
 
@@ -48,3 +48,18 @@ When you are over budget, remove keywords or markets, or raise `SCRAPE_ITUNES_RP
 ## How do you add a market?
 
 On the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button.
+
+## Which codes are storefronts?
+
+A home storefront and every keyword market must be a place where the app's store operates. asobeast checks the code against the store before it reaches it, so a code that is not a storefront is refused at once instead of failing every job it would have queued.
+
+| Store | Storefronts | Source |
+| --- | --- | --- |
+| App Store | 175 | [App Store pricing and availability start times by country or region](https://developer.apple.com/help/app-store-connect/reference/pricing-and-availability/app-store-pricing-and-availability-start-times-by-country-or-region/) |
+| Google Play | 225 | [Supported locations for distribution to Google Play users](https://play.google.com/supported-locations?hl=en) |
+
+The two lists differ, so the check is made per store. `pw` is an App Store storefront that Google Play does not list, and 51 codes such as `ad`, `bd` and `li` are Google Play locations without an App Store storefront. Kosovo is `xk` in both stores.
+
+The refusal names the store, for example `zz is not an App Store storefront` or `pw is not a Google Play location`. It applies to importing an app, adding keywords, reactivating a paused keyword, deep search, keyword suggestions and the market availability check. A store URL whose country segment or `gl` parameter names no storefront is refused the same way.
+
+An upgrade pauses any keyword that was already tracked in a code that is not a storefront. Its history stays, and it stops producing failed jobs.

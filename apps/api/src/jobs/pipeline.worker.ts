@@ -32,6 +32,7 @@ import { DigestDispatcher } from './digest.dispatcher';
 import { reportJobFailure } from './job-failure';
 import { requireJobScope } from './job-workspace';
 import {
+  actionsGeneratedKey,
   actionsSuppressedKey,
   DailyCompletePayload,
   JOBS,
@@ -240,6 +241,10 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await client.set(
       actionsSuppressedKey(workspaceId),
       String(result.suppressedByCap),
+    );
+    await client.set(
+      actionsGeneratedKey(workspaceId),
+      new Date().toISOString(),
     );
     await this.actionsNotifier.notify(result.openedActions);
     return result;

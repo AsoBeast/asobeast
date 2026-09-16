@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PASSWORD_RULE } from "@asobeast/shared";
 import { toast } from "sonner";
-import { ApiError, changePassword } from "@/lib/api";
+import { changePassword } from "@/lib/api";
 import { passwordError } from "@/lib/password";
 import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,20 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  authFieldError,
+  fieldErrorProps,
+  type AuthFieldError,
+} from "./field-error";
+import { FieldErrorMessage } from "./FieldErrorMessage";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<AuthFieldError | null>(null);
 
   function reset(nextOpen: boolean) {
     setOpen(nextOpen);
@@ -46,24 +53,20 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
       toast.success("Password changed. Other sessions were signed out.");
       reset(false);
     },
-    onError: (err) => {
-      setError(
-        err instanceof ApiError
-          ? err.envelope.message
-          : "Could not change the password.",
-      );
-    },
+    onError: (err) =>
+      setError(authFieldError(err, "Could not change the password.")),
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     const problem = passwordError(next);
     if (problem) {
-      setError(problem);
+      setError({ field: "password", message: problem });
       return;
     }
-    mutation.mutate();
+    submitOnce();
   }
 
   return (
@@ -86,7 +89,13 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 autoComplete="current-password"
                 value={current}
                 onChange={(event) => setCurrent(event.target.value)}
+                {...fieldErrorProps(error, "current", "current-password-error")}
                 required
+              />
+              <FieldErrorMessage
+                error={error}
+                field="current"
+                id="current-password-error"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -97,12 +106,12 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
                 autoComplete="new-password"
                 value={next}
                 onChange={(event) => setNext(event.target.value)}
-                aria-invalid={error !== null}
-                aria-describedby={
-                  error
-                    ? "next-password-rule next-password-error"
-                    : "next-password-rule"
-                }
+                {...fieldErrorProps(
+                  error,
+                  "password",
+                  "next-password-error",
+                  "next-password-rule",
+                )}
                 required
               />
               <p
@@ -111,12 +120,17 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
               >
                 {PASSWORD_RULE}
               </p>
+              <FieldErrorMessage
+                error={error}
+                field="password"
+                id="next-password-error"
+              />
             </div>
-            {error ? (
-              <p id="next-password-error" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
+            <FieldErrorMessage
+              error={error}
+              field="form"
+              id="change-password-error"
+            />
           </DialogBody>
           <DialogFooter>
             <Button type="submit" disabled={mutation.isPending}>

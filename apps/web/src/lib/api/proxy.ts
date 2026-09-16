@@ -21,6 +21,10 @@ const RETURNED_HEADERS = [
   "location",
   "x-robots-tag",
   "x-accel-buffering",
+  "retry-after",
+  "ratelimit-limit",
+  "ratelimit-remaining",
+  "ratelimit-reset",
 ] as const;
 
 function requestHeaders(request: NextRequest): Headers {

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function ResetPasswordForm() {
   const token = useSearchParams().get("token") ?? "";
@@ -35,6 +36,7 @@ export function ResetPasswordForm() {
       );
     },
   });
+  const submitOnce = useSingleFlight(mutation);
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -44,7 +46,7 @@ export function ResetPasswordForm() {
       setError(problem);
       return;
     }
-    mutation.mutate();
+    submitOnce();
   }
 
   if (token === "") {

@@ -19,6 +19,7 @@ import {
   getAccountPlan,
   getAuthMe,
   getAuthStatus,
+  getWorkspaceDeletion,
   getWorkspaceTeam,
   getBillingCatalog,
   getBudget,
@@ -159,6 +160,8 @@ export const apiTokenKeys = {
 
 export const workspaceTeamKey = ["auth", "team"] as const;
 
+export const workspaceDeletionKey = ["account", "deletion"] as const;
+
 export const billingCatalogKey = ["billing", "catalog"] as const;
 
 export const authStatusOptions = queryOptions({
@@ -193,6 +196,13 @@ export const workspaceTeamOptions = queryOptions({
   retry: false,
 });
 
+export const workspaceDeletionOptions = queryOptions({
+  queryKey: workspaceDeletionKey,
+  queryFn: getWorkspaceDeletion,
+  retry: false,
+  staleTime: 60 * 1000,
+});
+
 export const apiTokensOptions = queryOptions({
   queryKey: apiTokenKeys.all,
   queryFn: getApiTokens,
@@ -206,6 +216,10 @@ export function invalidateAuth(client: QueryClient): void {
 
 export function invalidateWorkspaceTeamMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: workspaceTeamKey });
+}
+
+export function invalidateWorkspaceDeletion(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: workspaceDeletionKey });
 }
 
 export function invalidateApiTokenMutation(client: QueryClient): void {

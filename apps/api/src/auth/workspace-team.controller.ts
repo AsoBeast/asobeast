@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import {
   SESSION_COOKIE,
@@ -28,6 +28,7 @@ import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { OwnerGuard } from './guards/owner.guard';
 import { WorkspaceTeamService } from './workspace-team.service';
+import { RetryAfterThrottlerGuard } from './rate-limit/retry-after-throttler.guard';
 
 @ApiTags('auth')
 @Controller('workspace')
@@ -45,7 +46,7 @@ export class WorkspaceTeamController {
   }
 
   @Post('invites')
-  @UseGuards(OwnerGuard, ThrottlerGuard)
+  @UseGuards(OwnerGuard, RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Invite a member into this workspace' })
   invite(
@@ -76,7 +77,7 @@ export class WorkspaceTeamController {
 
   @Post('invites/accept')
   @Public()
-  @UseGuards(ThrottlerGuard)
+  @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Accept an invitation and create the account' })
   async accept(

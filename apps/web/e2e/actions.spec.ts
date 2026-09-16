@@ -74,6 +74,55 @@ test("a degraded row explains itself without breaking the list", async ({
   await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
 });
 
+test.describe("generating the queue on demand", () => {
+  const cookie = (name: string, value: string) => ({
+    name,
+    value,
+    url: "http://localhost:3000",
+  });
+
+  test("generating an empty queue follows the run until it has finished", async ({
+    page,
+  }) => {
+    await page.context().addCookies([cookie("e2e_actions_ungenerated", "1")]);
+    await page.goto("/actions");
+
+    await expect(page.getByText("No actions generated yet")).toBeVisible();
+    await page.getByRole("button", { name: "Generate now" }).click();
+
+    await expect(page.getByText("Nothing to do right now")).toBeVisible();
+    await expect(page.getByText(/^Last generated /)).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Generate now" }),
+    ).toBeEnabled();
+  });
+
+  test("a queue that was generated empty can be generated again", async ({
+    page,
+  }) => {
+    await page
+      .context()
+      .addCookies([
+        cookie("e2e_actions_ungenerated", "1"),
+        cookie("actions_generated_at", "2026-07-30T03:00:00.000Z"),
+      ]);
+    await page.goto("/actions");
+
+    await expect(page.getByText("Nothing to do right now")).toBeVisible();
+    const lastGenerated = page.getByText(/^Last generated /);
+    const before = await lastGenerated.textContent();
+    await page.getByRole("button", { name: "Generate now" }).click();
+
+    await expect(
+      page.getByRole("button", { name: "Generating…" }),
+    ).toBeDisabled();
+    await expect(lastGenerated).not.toHaveText(before ?? "");
+    await expect(
+      page.getByRole("button", { name: "Generate now" }),
+    ).toBeEnabled();
+  });
+});
+
 test("an empty filter combination offers to clear the filters", async ({
   page,
 }) => {

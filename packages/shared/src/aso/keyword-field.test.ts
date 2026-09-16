@@ -1,0 +1,52 @@
+import { describe, expect, it } from 'vitest';
+
+import { keywordFieldChars, parseKeywordField } from './keyword-field';
+
+describe('parseKeywordField', () => {
+  it('removes duplicates in first occurrence order and counts them', () => {
+    expect(
+      parseKeywordField('workout,fitness,workout,running,fitness'),
+    ).toEqual({
+      phrases: ['workout', 'fitness', 'running'],
+      duplicatesRemoved: 2,
+    });
+  });
+
+  it('drops whitespace and empty parts without counting them as duplicates', () => {
+    expect(parseKeywordField(' fitness , ,, workout ,')).toEqual({
+      phrases: ['fitness', 'workout'],
+      duplicatesRemoved: 0,
+    });
+  });
+
+  it('normalizes case, the dotted capital I and punctuation inside a phrase', () => {
+    expect(
+      parseKeywordField('Fitness,FITNESS,İstanbul Run,step-counter!'),
+    ).toEqual({
+      phrases: ['fitness', 'istanbul run', 'step counter'],
+      duplicatesRemoved: 1,
+    });
+  });
+
+  it('reads nothing from an empty or comma only field', () => {
+    expect(parseKeywordField('')).toEqual({
+      phrases: [],
+      duplicatesRemoved: 0,
+    });
+    expect(parseKeywordField(' , , ')).toEqual({
+      phrases: [],
+      duplicatesRemoved: 0,
+    });
+  });
+});
+
+describe('keywordFieldChars', () => {
+  it('counts the commas the stored field joins with', () => {
+    expect(keywordFieldChars(['fitness', 'workout', 'running'])).toBe(23);
+  });
+
+  it('counts nothing for no phrases and one phrase as itself', () => {
+    expect(keywordFieldChars([])).toBe(0);
+    expect(keywordFieldChars(['a'.repeat(100)])).toBe(100);
+  });
+});

@@ -40,6 +40,7 @@ import {
 } from "@/lib/mcp-snippets";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
@@ -129,6 +130,7 @@ function ConnectDialog() {
       );
     },
   });
+  const createOnce = useSingleFlight(mutation);
 
   function reset(next: boolean) {
     setOpen(next);
@@ -146,7 +148,7 @@ function ConnectDialog() {
       setError("Give the token a name.");
       return;
     }
-    mutation.mutate();
+    createOnce();
   }
 
   return (

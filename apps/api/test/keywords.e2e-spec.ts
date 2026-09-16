@@ -1,5 +1,6 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
@@ -14,8 +15,10 @@ import {
   SpiderStatus,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { QUEUES } from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -34,6 +37,7 @@ const FIXTURE: NormalizedApp = {
   summary: 'A markdown journal',
   description: 'Fixture description',
   raw: { source: 'fixture', artistId: 284882218 },
+  searchable: true,
 };
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/fixture/id1234567890';
@@ -984,5 +988,180 @@ describe('KeywordsController (e2e)', () => {
       .post(`/apps/${id}/keywords`)
       .send({ keywords: ['one two three four five six'] })
       .expect(400);
+  });
+
+  describe('a market that is not a storefront of the app store', () => {
+    const playApp = () =>
+      prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.GOOGLE_PLAY,
+          storeAppId: 'com.example.game',
+          country: 'us',
+          name: 'Idle Tower Defense',
+        },
+      });
+
+    const storeQueue = () =>
+      app.get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false });
+
+    it.each([
+      ['zz', 'zz is not an App Store storefront'],
+      ['ad', 'ad is not an App Store storefront'],
+    ])(
+      'refuses to track an app store keyword in %j',
+      async (country, message) => {
+        const id = await importApp();
+
+        const response = await api
+          .post(`/apps/${id}/keywords`)
+          .send({ keywords: ['habit'], country })
+          .expect(400);
+
+        expect((response.body as ApiErrorEnvelope).message).toBe(message);
+        expect(await prisma.keyword.count({ where: { country } })).toBe(0);
+      },
+    );
+
+    it('refuses to track a google play keyword in an app store only storefront', async () => {
+      const play = await playApp();
+
+      const response = await api
+        .post(`/apps/${play.id}/keywords`)
+        .send({ keywords: ['tower defense'], country: 'pw' })
+        .expect(400);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'pw is not a Google Play location',
+      );
+      expect(await prisma.keyword.count({ where: { country: 'pw' } })).toBe(0);
+    });
+
+    it.each(['pw', 'xk'])(
+      'tracks an app store keyword in the storefront %j',
+      async (country) => {
+        const id = await importApp();
+
+        await api
+          .post(`/apps/${id}/keywords`)
+          .send({ keywords: ['habit'], country })
+          .expect(201);
+
+        expect(await prisma.keyword.count({ where: { country } })).toBe(1);
+      },
+    );
+
+    it('tracks a google play keyword in a location the app store does not have', async () => {
+      const play = await playApp();
+
+      await api
+        .post(`/apps/${play.id}/keywords`)
+        .send({ keywords: ['tower defense'], country: 'ad' })
+        .expect(201);
+
+      const tracked = await prisma.trackedKeyword.findMany({
+        where: { appId: play.id, keyword: { country: 'ad' } },
+        select: { active: true, keyword: { select: { store: true } } },
+      });
+      expect(tracked).toEqual([
+        { active: true, keyword: { store: Store.GOOGLE_PLAY } },
+      ]);
+    });
+
+    it('starts no deep search in a market that is not a storefront', async () => {
+      const id = await importApp();
+      const before = await storeQueue().count();
+
+      await api
+        .post(`/apps/${id}/keywords/spider`)
+        .send({ term: 'habit tracker', country: 'zz' })
+        .expect(400);
+
+      expect(await storeQueue().count()).toBe(before);
+    });
+
+    it.each(['zz', 'ad'])(
+      'discards a queued app store deep search probe for the market %j',
+      async (country) => {
+        const id = await importApp();
+        const spider = app.get(SpiderService);
+        registry.suggestCalls = [];
+
+        await asWorkspace(app, () =>
+          spider.runSpiderProbe({
+            appId: id,
+            term: 'habit tracker',
+            country,
+            probe: '',
+            workspaceId: DEFAULT_WORKSPACE_ID,
+          }),
+        );
+
+        expect(registry.suggestCalls).toEqual([]);
+        expect(await prisma.suggestProbe.count({ where: { country } })).toBe(0);
+      },
+    );
+
+    it('suggests nothing from the store for a market that is not a storefront', async () => {
+      const id = await importApp();
+      registry.suggestCalls = [];
+
+      await api
+        .get(`/apps/${id}/keywords/suggestions`)
+        .query({ strategy: 'search', country: 'zz' })
+        .expect(400);
+
+      expect(registry.suggestCalls).toEqual([]);
+    });
+
+    it('refuses to reactivate a keyword tracked in a market that is not a storefront', async () => {
+      const id = await importApp();
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit', store: Store.APP_STORE, country: 'zz' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: false,
+        },
+      });
+
+      await api
+        .patch(`/apps/${id}/keywords/${keyword.id}`)
+        .send({ active: true })
+        .expect(400);
+
+      const tracked = await prisma.trackedKeyword.findUniqueOrThrow({
+        where: { appId_keywordId: { appId: id, keywordId: keyword.id } },
+      });
+      expect(tracked.active).toBe(false);
+    });
+
+    it('still deactivates a keyword tracked in a market that is not a storefront', async () => {
+      const id = await importApp();
+      const keyword = await prisma.keyword.create({
+        data: { text: 'habit', store: Store.APP_STORE, country: 'zz' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+
+      await api
+        .patch(`/apps/${id}/keywords/${keyword.id}`)
+        .send({ active: false })
+        .expect(200);
+
+      const tracked = await prisma.trackedKeyword.findUniqueOrThrow({
+        where: { appId_keywordId: { appId: id, keywordId: keyword.id } },
+      });
+      expect(tracked.active).toBe(false);
+    });
   });
 });

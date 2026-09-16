@@ -31,6 +31,7 @@ import {
   invalidateKeywordMutation,
   invalidateKeywords,
 } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function KeywordRowActions({
   appId,
@@ -91,6 +92,7 @@ export function KeywordRowActions({
     },
     onError: () => toast.error(`Could not stop tracking ${keyword.text}`),
   });
+  const removeOnce = useSingleFlight(remove);
 
   return (
     <div className="flex items-center justify-end gap-2">
@@ -144,7 +146,7 @@ export function KeywordRowActions({
               disabled={remove.isPending}
               onClick={(event) => {
                 event.preventDefault();
-                remove.mutate();
+                removeOnce();
               }}
             >
               {remove.isPending ? "Removing…" : "Stop tracking"}

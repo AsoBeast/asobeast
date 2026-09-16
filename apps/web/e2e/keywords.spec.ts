@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
 
@@ -274,4 +275,59 @@ test("the pinned columns leave the source column visible and share the row tint"
   for (const color of backgrounds.painted) {
     expect(color).toBe(backgrounds.row);
   }
+});
+
+test.describe("a market typed into the add keywords dialog", () => {
+  const typeMarket = async (page: Page, code: string) => {
+    await page.goto("/apps/app-1/keywords");
+    await page.getByRole("button", { name: "Add keywords" }).first().click();
+    await page.getByRole("combobox", { name: "Keyword market" }).click();
+    await page.getByRole("option", { name: "Other…" }).click();
+    await page
+      .getByRole("textbox", { name: "Storefront country code" })
+      .fill(code);
+    await page.getByRole("textbox", { name: /fitness tracker/ }).fill("focus");
+  };
+
+  test("refuses a code that is not an app store storefront before sending it", async ({
+    page,
+  }) => {
+    const probes: string[] = [];
+    page.on("request", (request) => {
+      if (request.url().includes("/market-availability")) {
+        probes.push(request.url());
+      }
+    });
+
+    await typeMarket(page, "zz");
+
+    const code = page.getByRole("textbox", { name: "Storefront country code" });
+    await expect(
+      page.getByText("zz is not an App Store storefront"),
+    ).toBeVisible();
+    await expect(code).toHaveAttribute("aria-invalid", "true");
+    await expect(code).toHaveAccessibleDescription(
+      "zz is not an App Store storefront",
+    );
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
+    ).toBeDisabled();
+    expect(probes.filter((url) => url.includes("country=zz"))).toEqual([]);
+  });
+
+  test("accepts an app store storefront outside the offered list", async ({
+    page,
+  }) => {
+    await typeMarket(page, "xk");
+
+    await expect(page.getByText(/is not an App Store storefront/)).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByRole("textbox", { name: "Storefront country code" }),
+    ).not.toHaveAttribute("aria-invalid", "true");
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
+    ).toBeEnabled();
+  });
 });

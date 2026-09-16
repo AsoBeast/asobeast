@@ -4,6 +4,7 @@ import { QuotaAdmission } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { toSnapshotData } from './apps.mapper';
 
@@ -39,11 +40,17 @@ export class AppCaptureService {
     const normalized = await this.egress.through(store, country, () =>
       this.registry.get(store).getApp(storeAppId, country),
     );
+    if (!normalized.searchable) {
+      throw new UnsearchableAppError(normalized.title);
+    }
 
     return this.prisma.withTransaction(async (tx) => {
       const persist = async () => {
         await this.serializeIdentity(tx, identity);
         await this.assertFreeToClaim(identity, primaryAppId, tx);
+        const tracked = await this.alreadyTracked(tx, identity);
+        if (tracked) return tracked;
+
         const app = await tx.app.upsert({
           where: {
             workspaceId_store_storeAppId_country: {
@@ -78,6 +85,19 @@ export class AppCaptureService {
 
       return admit ? admit(tx, persist) : persist();
     });
+  }
+
+  private async alreadyTracked(
+    tx: Prisma.TransactionClient,
+    identity: AppIdentity,
+  ): Promise<{ app: App; snapshot: AppSnapshot } | null> {
+    const existing = await tx.app.findUnique({
+      where: { workspaceId_store_storeAppId_country: identity },
+      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+    });
+    if (!existing?.snapshots[0]) return null;
+    const { snapshots, ...app } = existing;
+    return { app, snapshot: snapshots[0] };
   }
 
   private serializeIdentity(

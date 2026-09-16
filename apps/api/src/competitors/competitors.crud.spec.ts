@@ -34,6 +34,7 @@ describe('CompetitorsService.add', () => {
       releasedAt: null,
       storeUpdatedAt: null,
       raw: {},
+      searchable: true,
     });
     const created = {
       id: 'comp1',
@@ -73,11 +74,13 @@ describe('CompetitorsService.add', () => {
         return Promise.resolve(created);
       });
     let competitors = competitorCount;
-    const findFirst = jest.fn().mockResolvedValue({
-      id: 'primary',
-      store: Store.APP_STORE,
-      country: 'us',
-    });
+    const findFirst = jest.fn(({ where }: { where: { id?: string } }) =>
+      Promise.resolve(
+        where.id === 'primary'
+          ? { id: 'primary', store: Store.APP_STORE, country: 'us' }
+          : null,
+      ),
+    );
     const findUnique = jest.fn().mockResolvedValue(null);
     const tx = {
       app: {

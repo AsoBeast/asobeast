@@ -45,7 +45,7 @@ By the end of this page you have asobeast running on your own machine, an owner 
 
 A fresh installation redirects to registration. The first account you create becomes the owner, and registration closes automatically once it exists.
 
-Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay available. Behind TLS on any hosted deployment, also set `AUTH_COOKIE_SECURE=true`. See [Authentication and accounts](/security/authentication).
+Set `AUTH_ALLOW_REGISTRATION=true` only when further sign ups should stay available. The Compose stack already sets `AUTH_COOKIE_SECURE=true`, which keeps working over `http://localhost` and behind TLS. Leave it there; only a development API run outside Docker sets it to `false`. See [Authentication and accounts](/security/authentication).
 
 ## Import your first app
 

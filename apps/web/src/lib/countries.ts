@@ -1,3 +1,10 @@
+import {
+  COUNTRY_PATTERN,
+  isStorefront,
+  type Store,
+  UnknownStorefrontError,
+} from "@asobeast/shared";
+
 export const COUNTRY_OPTIONS = [
   "us",
   "gb",
@@ -19,4 +26,11 @@ export const COUNTRY_OPTIONS = [
 
 export const OTHER = "other";
 
-export const COUNTRY_CODE = /^[a-z]{2}$/;
+export function marketError(store: Store, country: string): string | null {
+  if (!COUNTRY_PATTERN.test(country)) {
+    return "Market must be a two letter code, e.g. us";
+  }
+  return isStorefront(store, country)
+    ? null
+    : new UnknownStorefrontError(store, country).message;
+}

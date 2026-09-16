@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { parseStoreUrl } from "@asobeast/shared";
+import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -29,13 +29,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError, importApp } from "@/lib/api";
-import { COUNTRY_CODE, COUNTRY_OPTIONS, OTHER } from "@/lib/countries";
+import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
 import { formatCountry } from "@/lib/format";
 import {
   navigateToOnboarding,
   startOnboardingAfterImport,
 } from "@/lib/onboarding";
 import { appKeys, portfolioKey } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 function StoreUrlField({
   url,
@@ -54,13 +55,14 @@ function StoreUrlField({
       <Input
         id="import-url"
         name="store-url"
-        type="url"
+        type="text"
         inputMode="url"
         autoComplete="off"
+        autoCapitalize="none"
         spellCheck={false}
         value={url}
         onChange={(event) => onChange(event.target.value)}
-        placeholder="apps.apple.com/us/app/name/id123…"
+        placeholder="apps.apple.com/us/app/name/id123 or com.example.app"
         autoFocus
         aria-invalid={error !== null}
         aria-describedby={error ? "import-url-error" : undefined}
@@ -132,6 +134,7 @@ export function ImportAppDialog({
       setError("Could not reach the api to import this app");
     },
   });
+  const importOnce = useSingleFlight(mutation);
 
   function reset() {
     setUrl("");
@@ -170,8 +173,9 @@ export function ImportAppDialog({
     setError(null);
     setNote(null);
 
+    let store: Store;
     try {
-      parseStoreUrl(url);
+      store = parseStoreUrl(url).store;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unrecognized store URL");
       return;
@@ -180,12 +184,13 @@ export function ImportAppDialog({
     const country = (selected === OTHER ? custom : selected)
       .trim()
       .toLowerCase();
-    if (!COUNTRY_CODE.test(country)) {
-      setError("Country must be a two letter code, e.g. us");
+    const invalidCountry = marketError(store, country);
+    if (invalidCountry) {
+      setError(invalidCountry);
       return;
     }
 
-    mutation.mutate({ url, country });
+    importOnce({ url, country });
   }
 
   return (

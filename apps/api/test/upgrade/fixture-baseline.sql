@@ -22,7 +22,11 @@ INSERT INTO "App" ("id", "workspaceId", "store", "storeAppId", "country", "name"
 VALUES
   ('app_ios', 'ws_default', 'APP_STORE', '111111111', 'us', 'Drill Fitness', 'https://cdn.test/ios.png', false, NULL, 'grp_fitness', '2026-07-01 00:00:00'),
   ('app_play', 'ws_default', 'GOOGLE_PLAY', 'com.drill.fitness', 'us', 'Drill Fitness', 'https://cdn.test/play.png', false, NULL, 'grp_fitness', '2026-07-01 00:00:00'),
-  ('app_rival', 'ws_default', 'APP_STORE', '222222222', 'us', 'Rival Fitness', NULL, true, 'app_ios', NULL, '2026-07-01 00:00:00');
+  ('app_rival', 'ws_default', 'APP_STORE', '222222222', 'us', 'Rival Fitness', NULL, true, 'app_ios', NULL, '2026-07-01 00:00:00'),
+  ('app_padded', 'ws_default', 'APP_STORE', '0333333333', 'us', 'Drill Padded', NULL, false, NULL, NULL, '2026-07-01 00:00:00'),
+  ('app_padded_twin', 'ws_default', 'APP_STORE', '0111111111', 'us', 'Drill Padded Twin', NULL, false, NULL, NULL, '2026-07-01 00:00:00'),
+  ('app_padded_pair_a', 'ws_default', 'APP_STORE', '0444444444', 'us', 'Drill Padded Pair', NULL, false, NULL, NULL, '2026-07-01 00:00:00'),
+  ('app_padded_pair_b', 'ws_default', 'APP_STORE', '00444444444', 'us', 'Drill Padded Pair', NULL, false, NULL, NULL, '2026-07-01 00:00:00');
 
 INSERT INTO "AppSnapshot" ("id", "appId", "title", "subtitle", "summary", "description", "ratingAvg", "ratingCount", "installs", "price", "version", "releasedAt", "storeUpdatedAt", "raw", "capturedAt")
 VALUES
@@ -42,7 +46,9 @@ VALUES
   ('kw_play_amp_tools', 'amp tools', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
   ('kw_play_lt_3', 'lt 3', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
   ('kw_play_amp', 'amp', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
-  ('kw_play_workouts', 'workouts', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00');
+  ('kw_play_workouts', 'workouts', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_ios_zz', 'workout tracker', 'APP_STORE', 'zz', '2026-07-01 00:00:00'),
+  ('kw_play_pw', 'workout tracker', 'GOOGLE_PLAY', 'pw', '2026-07-01 00:00:00');
 
 INSERT INTO "TrackedKeyword" ("appId", "keywordId", "source", "active", "relevance", "createdAt")
 VALUES
@@ -56,7 +62,9 @@ VALUES
   ('app_play', 'kw_play_amp_tools', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_lt_3', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_amp', 'MANUAL', true, NULL, '2026-07-01 00:00:00'),
-  ('app_play', 'kw_play_workouts', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00');
+  ('app_play', 'kw_play_workouts', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_ios', 'kw_ios_zz', 'MANUAL', true, 60, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_pw', 'MANUAL', true, 60, '2026-07-01 00:00:00');
 
 INSERT INTO "KeywordMetric" ("keywordId", "date", "traffic", "difficulty", "stats", "scoringSource", "formulaVersion", "confidence", "capturedAt", "createdAt")
 VALUES
@@ -73,7 +81,9 @@ VALUES
   ('app_rival', 'ws_default', 'kw_ios_us', '2026-07-15', 3, 200, '2026-07-15 03:00:00'),
   ('app_play', 'ws_default', 'kw_play_us', '2026-07-15', 27, 200, '2026-07-15 03:00:00'),
   ('app_play', 'ws_default', 'kw_play_amp_meals', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
-  ('app_play', 'ws_default', 'kw_play_39_daily', '2026-07-15', NULL, 200, '2026-07-15 03:00:00');
+  ('app_play', 'ws_default', 'kw_play_39_daily', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_ios', 'ws_default', 'kw_ios_zz', '2026-07-15', NULL, 200, '2026-07-15 03:00:00'),
+  ('app_play', 'ws_default', 'kw_play_pw', '2026-07-15', 4, 200, '2026-07-15 03:00:00');
 
 INSERT INTO "CategoryRank" ("appId", "date", "collection", "genre", "position", "depth", "createdAt")
 VALUES

@@ -21,7 +21,12 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import {
+  firstRunCheckJobId,
+  JOBS,
+  QUEUES,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
 import {
   StoreAppNotFoundError,
@@ -45,6 +50,7 @@ const APP_STORE_FIXTURE: NormalizedApp = {
   releasedAt: new Date('2020-01-01T00:00:00Z'),
   storeUpdatedAt: new Date('2021-01-01T00:00:00Z'),
   raw: { source: 'fixture' },
+  searchable: true,
 };
 
 const GOOGLE_PLAY_FIXTURE: NormalizedApp = {
@@ -63,6 +69,7 @@ const GOOGLE_PLAY_FIXTURE: NormalizedApp = {
   releasedAt: new Date('2021-06-01T00:00:00Z'),
   storeUpdatedAt: new Date('2022-01-01T00:00:00Z'),
   raw: { source: 'fixture', genreId: 'TOOLS', recentChanges: 'Bug fixes' },
+  searchable: true,
 };
 
 const OTHER_WORKSPACE_ID = 'ws_apps_other';
@@ -76,6 +83,7 @@ class FakeStoreProviderRegistry {
   getAppCalls: Array<{ storeAppId: string; country: string }> = [];
   availabilityCalls: Array<{ storeAppId: string; countries: string[] }> = [];
   availabilityStatus: MarketAvailability = 'available';
+  searchable = true;
 
   get(store: Store): StoreProvider {
     if (store === Store.GOOGLE_PLAY) {
@@ -97,6 +105,7 @@ class FakeStoreProviderRegistry {
         : Promise.resolve({
             ...APP_STORE_FIXTURE,
             storeAppId,
+            searchable: this.searchable,
             ...(this.title ? { title: this.title } : {}),
           });
     });
@@ -165,6 +174,7 @@ describe('AppsController (e2e)', () => {
     registry.getAppCalls = [];
     registry.availabilityCalls = [];
     registry.availabilityStatus = 'available';
+    registry.searchable = true;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AppGroup" RESTART IDENTITY CASCADE',
     );
@@ -278,6 +288,106 @@ describe('AppsController (e2e)', () => {
     expect(await prisma.appSnapshot.count()).toBe(1);
   });
 
+  it('resolves an app store id with leading zeros to the app it already tracks', async () => {
+    const first = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    registry.getAppCalls = [];
+
+    const second = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/us/app/fixture/id001234567890' })
+      .expect(201);
+
+    expect((second.body as AppDetail).id).toBe((first.body as AppDetail).id);
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(1);
+  });
+
+  it('refuses an app store id it cannot represent without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: '99999999999999999999' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
+  it('refuses a home storefront that is not a storefront without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL, country: 'zz' })
+      .expect(400);
+
+    expectEnvelope(response.body as ApiErrorEnvelope, 400, '/apps');
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'zz is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+    expect(await prisma.app.count()).toBe(0);
+  });
+
+  it('refuses a store url whose storefront does not exist without asking the store', async () => {
+    const response = await api
+      .post('/apps')
+      .send({ url: 'https://apps.apple.com/xx/app/fixture/id1234567890' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'xx is not an App Store storefront',
+    );
+    expect(registry.getAppCalls).toEqual([]);
+  });
+
+  describe('a listing that cannot appear in iPhone or iPad search', () => {
+    const MESSAGE =
+      'Fixture App is not available on iPhone or iPad, so it cannot rank in App Store search';
+
+    it('is refused on import before anything is stored', async () => {
+      registry.searchable = false;
+
+      const response = await api
+        .post('/apps')
+        .send({ url: APP_STORE_URL })
+        .expect(422);
+
+      expectEnvelope(response.body as ApiErrorEnvelope, 422, '/apps');
+      expect((response.body as ApiErrorEnvelope).message).toBe(MESSAGE);
+      expect(registry.getAppCalls).toHaveLength(1);
+      expect(await prisma.app.count()).toBe(0);
+      expect(await prisma.appSnapshot.count()).toBe(0);
+    });
+
+    it('is refused as a competitor before anything is stored', async () => {
+      const primary = (
+        (await api.post('/apps').send({ url: APP_STORE_URL }).expect(201))
+          .body as AppDetail
+      ).id;
+      registry.searchable = false;
+
+      const response = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: 'https://apps.apple.com/us/app/rival/id9876543210' })
+        .expect(422);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(MESSAGE);
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(0);
+    });
+
+    it('keeps refreshing an app imported before the listing was refused', async () => {
+      const appId = (
+        (await api.post('/apps').send({ url: APP_STORE_URL }).expect(201))
+          .body as AppDetail
+      ).id;
+      registry.searchable = false;
+
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+    });
+  });
+
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
     const created = await api
       .post('/apps')
@@ -383,13 +493,38 @@ describe('AppsController (e2e)', () => {
     it('stays idempotent when the same competitor is added twice', async () => {
       const primary = await importedId(APP_STORE_URL);
 
+      const first = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: RIVAL_URL })
+        .expect(201);
+      registry.getAppCalls = [];
+      const second = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: RIVAL_URL })
+        .expect(201);
+
+      expect((second.body as { id: string }).id).toBe(
+        (first.body as { id: string }).id,
+      );
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
+      expect(registry.getAppCalls).toEqual([]);
+      expect(
+        await prisma.appSnapshot.count({
+          where: { app: { isCompetitor: true } },
+        }),
+      ).toBe(1);
+    });
+
+    it('resolves a competitor id with leading zeros to the competitor it already tracks', async () => {
+      const primary = await importedId(APP_STORE_URL);
+
       await api
         .post(`/apps/${primary}/competitors`)
         .send({ url: RIVAL_URL })
         .expect(201);
       await api
         .post(`/apps/${primary}/competitors`)
-        .send({ url: RIVAL_URL })
+        .send({ url: 'https://apps.apple.com/us/app/rival/id009876543210' })
         .expect(201);
 
       expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(1);
@@ -675,12 +810,28 @@ describe('AppsController (e2e)', () => {
       .expect(400);
   });
 
+  it('refuses a market that is not a storefront of the app store without a store request', async () => {
+    const imported = await importApp(GOOGLE_PLAY_URL);
+
+    for (const country of ['zz', 'pw']) {
+      const response = await api
+        .get(`/apps/${imported.id}/market-availability`)
+        .query({ country })
+        .expect(400);
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        `${country} is not a Google Play location`,
+      );
+    }
+
+    expect(registry.availabilityCalls).toHaveLength(0);
+  });
+
   describe('what an import schedules', () => {
     const queue = (name: string): Queue =>
       app.get<Queue>(getQueueToken(name), { strict: false });
 
     const jobsOn = (name: string): Promise<Job[]> =>
-      queue(name).getJobs(['wait', 'paused', 'delayed']);
+      queue(name).getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
 
     const countOn = async (name: string, job: string): Promise<number> =>
       (await jobsOn(name)).filter((queued) => queued.name === job).length;
@@ -730,11 +881,40 @@ describe('AppsController (e2e)', () => {
       failing.mockRestore();
     });
 
-    it('keeps one action run for the workspace across two imports', async () => {
-      await importApp(APP_STORE_URL);
-      await importApp(GOOGLE_PLAY_URL);
+    it('holds an action run per import until that import has its first positions', async () => {
+      const imports = [
+        await importApp(APP_STORE_URL),
+        await importApp(GOOGLE_PLAY_URL),
+      ];
+      const date = utcDateKey();
 
-      expect(await countOn(QUEUES.PIPELINE, JOBS.ACTIONS)).toBe(1);
+      const checksOf = async (appId: string): Promise<string[]> =>
+        (
+          await prisma.trackedKeyword.findMany({
+            where: { appId, active: true },
+            select: { keywordId: true },
+          })
+        )
+          .map(({ keywordId }) => firstRunCheckJobId(appId, keywordId, date))
+          .sort();
+
+      const runs = (await jobsOn(QUEUES.PIPELINE)).filter(
+        (job) => job.name === JOBS.ACTIONS,
+      );
+      const awaited = await Promise.all(
+        runs.map(async (run) => {
+          expect(await run.getState()).toBe('waiting-children');
+          const { unprocessed = [] } = await run.getDependencies();
+          return unprocessed.map((key) => key.split(':').pop() ?? '').sort();
+        }),
+      );
+
+      expect(awaited).toHaveLength(imports.length);
+      expect(awaited).toEqual(
+        expect.arrayContaining(
+          await Promise.all(imports.map((imported) => checksOf(imported.id))),
+        ),
+      );
     });
   });
 });

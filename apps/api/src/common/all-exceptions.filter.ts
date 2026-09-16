@@ -8,13 +8,18 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
-import { ApiErrorEnvelope, InvalidStoreUrlError } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  InvalidStoreUrlError,
+  UnknownStorefrontError,
+} from '@asobeast/shared';
 import { EntitlementRequiredError } from '../auth/auth.errors';
 import { OnDemandLimitError } from '../auth/on-demand.limiter';
 import { WorkspaceSuspendedError } from '../auth/abuse/abuse.errors';
 import {
   CredentialRateLimitError,
   RateLimitExceededError,
+  RequestThrottledError,
 } from '../auth/rate-limit/rate-limit.errors';
 import { QuotaExceededError } from '../auth/quota.errors';
 import { BillingConflictError } from '../billing/billing.errors';
@@ -24,6 +29,7 @@ import {
   StoreAppNotFoundError,
   StoreNotSupportedError,
   StoreRequestError,
+  UnsearchableAppError,
 } from '../store-providers/errors';
 
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -66,10 +72,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
   }
 
   private resolve(exception: unknown): ResolvedError {
-    if (exception instanceof InvalidStoreUrlError) {
+    if (
+      exception instanceof InvalidStoreUrlError ||
+      exception instanceof UnknownStorefrontError
+    ) {
       return {
         statusCode: HttpStatus.BAD_REQUEST,
         error: 'Bad Request',
+        message: exception.message,
+      };
+    }
+    if (exception instanceof UnsearchableAppError) {
+      return {
+        statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        error: 'Unprocessable Entity',
         message: exception.message,
       };
     }
@@ -109,7 +125,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: exception.message,
       };
     }
-    if (exception instanceof CredentialRateLimitError) {
+    if (
+      exception instanceof CredentialRateLimitError ||
+      exception instanceof RequestThrottledError
+    ) {
       return {
         statusCode: HttpStatus.TOO_MANY_REQUESTS,
         error: 'Too Many Requests',

@@ -5,6 +5,7 @@ import { Queue } from 'bullmq';
 import {
   AppDetail,
   AppListItem,
+  assertStorefront,
   MarketAvailabilityResult,
   parseStoreUrl,
   SnapshotDiffResult,
@@ -66,11 +67,13 @@ export class AppsService {
     if (!SUPPORTED_STORES.includes(store)) {
       throw new StoreNotSupportedError(store);
     }
+    const market = country ?? parsedCountry;
+    assertStorefront(store, market);
     const known = await this.prisma.app.findFirst({
       where: {
         store,
         storeAppId,
-        country: country ?? parsedCountry,
+        country: market,
         isCompetitor: false,
       },
       select: { id: true },
@@ -83,7 +86,7 @@ export class AppsService {
     const { app, snapshot } = await this.capture.capture(
       store,
       storeAppId,
-      country ?? parsedCountry,
+      market,
       { admit: this.quota.admitApp() },
     );
 
@@ -174,6 +177,7 @@ export class AppsService {
       throw new NotFoundException(`App ${id} not found`);
     }
 
+    assertStorefront(app.store, country);
     if (app.country === country) {
       return { country, status: 'available' };
     }

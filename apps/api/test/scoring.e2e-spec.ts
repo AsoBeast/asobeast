@@ -37,6 +37,7 @@ const detailFor = (storeAppId: string): NormalizedApp => ({
   installs: 5_000_000n,
   storeUpdatedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
   raw: { source: 'fixture' },
+  searchable: true,
 });
 
 class FakeGplayRegistry {
