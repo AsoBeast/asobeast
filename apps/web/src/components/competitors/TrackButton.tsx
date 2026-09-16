@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { addCompetitor, ApiError } from "@/lib/api";
 import { invalidateCompetitorMutation } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function TrackButton({
   id,
@@ -31,13 +32,14 @@ export function TrackButton({
       );
     },
   });
+  const trackOnce = useSingleFlight(mutation);
 
   return (
     <Button
       variant="outline"
       size="sm"
       disabled={mutation.isPending}
-      onClick={() => mutation.mutate()}
+      onClick={() => trackOnce()}
     >
       {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
       Track

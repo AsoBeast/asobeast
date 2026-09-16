@@ -42,6 +42,7 @@ import {
   billingCatalogOptions,
   invalidateAuth,
 } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -99,6 +100,7 @@ function PlanOption({
       toast.error(failureMessage(error, action));
     },
   });
+  const changeOnce = useSingleFlight(change);
 
   return (
     <Card className="flex-1">
@@ -156,7 +158,7 @@ function PlanOption({
               ? undefined
               : "Checkout is not configured yet"
           }
-          onClick={() => change.mutate()}
+          onClick={() => changeOnce()}
         >
           {change.isPending ? <Loader2 className="animate-spin" /> : null}
           {planActionLabel(action, displayName)}

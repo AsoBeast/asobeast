@@ -369,6 +369,59 @@ test("settings creates, reveals and revokes an api token", async ({ page }) => {
   ).toBeHidden();
 });
 
+test("a double click on Create token creates one token", async ({ page }) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: false,
+    registrationOpen: false,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routeMe(page, TRIAL_USER);
+
+  const tokens: ApiTokenItem[] = [];
+  await page.route("**/api/backend/auth/tokens", async (route) => {
+    if (route.request().method() !== "POST") {
+      return route.fulfill(fulfillJson(200, tokens));
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const item: ApiTokenItem = {
+      id: `t${tokens.length + 1}`,
+      name: "ci",
+      prefix: `asob_${tokens.length + 1}`,
+      scope: "read",
+      expiresAt: null,
+      expired: false,
+      lastUsedAt: null,
+      usageCount: 0,
+      createdAt: new Date().toISOString(),
+    };
+    tokens.push(item);
+    return route.fulfill(
+      fulfillJson(201, { ...item, token: `asob_${"a".repeat(48)}` }),
+    );
+  });
+
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "New token" }).click();
+  await page.getByLabel("Name").fill("ci");
+  await page
+    .getByRole("button", { name: "Create token" })
+    .evaluate((button: HTMLButtonElement) => {
+      button.click();
+      button.click();
+    });
+
+  await expect(
+    page.getByRole("dialog", { name: "Copy your token" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("cell", { name: "ci", exact: true })).toHaveCount(
+    1,
+  );
+  expect(tokens).toHaveLength(1);
+});
+
 test("a lapsed workspace is told collection paused, not that it lost its data", async ({
   page,
 }) => {

@@ -36,6 +36,7 @@ import {
   startOnboardingAfterImport,
 } from "@/lib/onboarding";
 import { appKeys, portfolioKey } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 
 function StoreUrlField({
   url,
@@ -133,6 +134,7 @@ export function ImportAppDialog({
       setError("Could not reach the api to import this app");
     },
   });
+  const importOnce = useSingleFlight(mutation);
 
   function reset() {
     setUrl("");
@@ -188,7 +190,7 @@ export function ImportAppDialog({
       return;
     }
 
-    mutation.mutate({ url, country });
+    importOnce({ url, country });
   }
 
   return (
