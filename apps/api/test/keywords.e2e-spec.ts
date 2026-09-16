@@ -1079,6 +1079,28 @@ describe('KeywordsController (e2e)', () => {
       expect(await storeQueue().count()).toBe(before);
     });
 
+    it.each(['zz', 'ad'])(
+      'discards a queued app store deep search probe for the market %j',
+      async (country) => {
+        const id = await importApp();
+        const spider = app.get(SpiderService);
+        registry.suggestCalls = [];
+
+        await asWorkspace(app, () =>
+          spider.runSpiderProbe({
+            appId: id,
+            term: 'habit tracker',
+            country,
+            probe: '',
+            workspaceId: DEFAULT_WORKSPACE_ID,
+          }),
+        );
+
+        expect(registry.suggestCalls).toEqual([]);
+        expect(await prisma.suggestProbe.count({ where: { country } })).toBe(0);
+      },
+    );
+
     it('suggests nothing from the store for a market that is not a storefront', async () => {
       const id = await importApp();
       registry.suggestCalls = [];
