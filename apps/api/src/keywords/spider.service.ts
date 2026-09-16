@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   assertStorefront,
+  isStorefront,
   SpiderEnqueueResult,
   SpiderStatus,
 } from '@asobeast/shared';
@@ -102,6 +103,9 @@ export class SpiderService {
     const { appId, term, probe } = payload;
     const app = await ensureApp(this.prisma, appId);
     const country = payload.country ?? app.country;
+    if (!isStorefront(app.store, country)) {
+      return;
+    }
     const provider = this.registry.get(app.store);
     const results = await provider.suggest(spiderQuery(term, probe), country);
     const day = spiderDay(utcDateKey());
