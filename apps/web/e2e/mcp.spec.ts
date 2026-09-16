@@ -1,5 +1,6 @@
 import type { Page } from "@playwright/test";
 import type { ApiTokenItem, AuthStatus, AuthUser } from "@asobeast/shared";
+import { hostedSnippets, snippetById } from "../src/lib/mcp-snippets";
 import { expect, test } from "./session.mts";
 
 const USER: AuthUser = {
@@ -33,7 +34,9 @@ async function routeStatus(page: Page, status: AuthStatus) {
 
 test("mcp card mints a token and shows both connect snippets", async ({
   page,
+  context,
 }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await routeStatus(page, {
     billing: false,
     registrationOpen: false,
@@ -72,16 +75,40 @@ test("mcp card mints a token and shows both connect snippets", async ({
   await page.getByRole("button", { name: "Mint token" }).click();
 
   const dialog = page.getByRole("dialog");
-  await expect(dialog.getByText("Claude Code", { exact: true })).toBeVisible();
-  await expect(
-    dialog.getByText("Claude Desktop", { exact: true }),
-  ).toBeVisible();
+  for (const label of [
+    "Claude Code",
+    "Claude Code JSON",
+    "Shared .mcp.json",
+    "Claude Desktop",
+  ]) {
+    await expect(dialog.getByText(label, { exact: true })).toBeVisible();
+  }
   await expect(
     dialog.getByText(`--header "Authorization: Bearer ${TOKEN}"`),
   ).toBeVisible();
   await expect(
-    dialog.getByText('"url": "http://localhost:3000/api/backend/mcp"'),
+    dialog.getByText(/^\.mcp\.json in the project root/),
   ).toBeVisible();
+  await expect(
+    dialog.getByText(/^claude_desktop_config\.json \(Settings/),
+  ).toBeVisible();
+  await expect(dialog.getByText(/"mcp-remote@0\.14\.2"/)).toBeVisible();
+  await expect(
+    dialog.getByText(/"url": "http:\/\/localhost:3000\/api\/backend\/mcp"/),
+  ).toBeVisible();
+  await expect(
+    dialog.getByText(/"Authorization:\$\{ASOBEAST_AUTH_HEADER\}"/),
+  ).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Copy Claude Desktop" }).click();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe(
+      snippetById(
+        hostedSnippets(TOKEN, "http://localhost:3000"),
+        "claude-desktop",
+      ).value,
+    );
 
   await dialog.getByRole("tab", { name: "Local server" }).click();
   await expect(

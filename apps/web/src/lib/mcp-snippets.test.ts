@@ -134,4 +134,13 @@ describe("mcp snippets", () => {
       ).toContain("claude_desktop_config.json");
     });
   });
+
+  it.each([
+    ["hosted", hostedSnippets(TOKEN, ORIGIN)],
+    ["local", localSnippets(TOKEN, ORIGIN)],
+  ])("says where every %s snippet goes", (_kind, snippets) => {
+    for (const snippet of snippets) {
+      expect(snippet.location).not.toBe("");
+    }
+  });
 });

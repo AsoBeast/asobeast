@@ -71,14 +71,14 @@ export function hostedSnippets(
       id: "claude-code-command",
       client: "Claude Code",
       label: "Claude Code",
-      location: "",
+      location: "Run in a terminal",
       language: "bash",
       value: `claude mcp add --transport http asobeast ${endpoint} --header "Authorization: Bearer ${token}"`,
     },
     {
       id: "claude-code-add-json",
       client: "Claude Code",
-      label: "Add from JSON",
+      label: "Claude Code JSON",
       location: "Run in a macOS or Linux terminal",
       language: "bash",
       value: `claude mcp add-json asobeast '${JSON.stringify(claudeCodeEntry(`Bearer ${token}`, endpoint))}'`,
@@ -86,7 +86,7 @@ export function hostedSnippets(
     {
       id: "claude-code-project",
       client: "Claude Code",
-      label: "Share with your team",
+      label: "Shared .mcp.json",
       location:
         ".mcp.json in the project root. Export ASOBEAST_API_TOKEN before starting claude; the file holds no secret",
       language: "json",
@@ -116,7 +116,8 @@ export function localSnippets(
       id: "claude-code-stdio",
       client: "Claude Code",
       label: "Claude Code stdio",
-      location: "",
+      location:
+        "Run in a terminal. Replace the path with the absolute path to apps/mcp/dist/index.js",
       language: "bash",
       value: `claude mcp add asobeast --env ASOBEAST_API_URL=${api} --env ASOBEAST_API_TOKEN=${token} -- node ${STDIO_ENTRYPOINT}`,
     },
@@ -124,7 +125,8 @@ export function localSnippets(
       id: "claude-desktop-stdio",
       client: "Claude Desktop",
       label: "Claude Desktop stdio config",
-      location: "",
+      location:
+        "claude_desktop_config.json. Replace the path, and use the absolute path to node if Claude Desktop cannot find it",
       language: "json",
       value: mcpServersFile({
         command: "node",

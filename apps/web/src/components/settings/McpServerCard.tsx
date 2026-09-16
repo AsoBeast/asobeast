@@ -44,7 +44,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
 function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
-  const { label, value } = snippet;
+  const { label, location, value } = snippet;
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -72,6 +72,7 @@ function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">{location}</p>
       <pre className="overflow-x-auto rounded-lg border bg-muted p-3 font-mono text-xs">
         {value}
       </pre>
@@ -96,8 +97,7 @@ function ConnectionSnippets({ token }: { token: string }) {
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Run the stdio server yourself, replacing the entrypoint with the
-          absolute path to your checkout. The tools are identical.
+          For a checkout of the repository. Hosted users need nothing here.
         </p>
         {localSnippets(token).map((snippet) => (
           <CopyBlock key={snippet.id} snippet={snippet} />
