@@ -1,6 +1,9 @@
-import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { ThrottlerLimitDetail, ThrottlerStorage } from '@nestjs/throttler';
+import { ExecutionContextHost } from '@nestjs/core/helpers/execution-context-host';
+import {
+  ThrottlerLimitDetail,
+  ThrottlerStorageService,
+} from '@nestjs/throttler';
 import { RequestThrottledError } from './rate-limit.errors';
 import { RetryAfterThrottlerGuard } from './retry-after-throttler.guard';
 
@@ -18,13 +21,13 @@ const DETAIL: ThrottlerLimitDetail = {
 describe('RetryAfterThrottlerGuard', () => {
   const guard = new RetryAfterThrottlerGuard(
     { throttlers: [] },
-    {} as ThrottlerStorage,
+    new ThrottlerStorageService(),
     new Reflector(),
   );
 
   it('refuses with the seconds left until the block expires', async () => {
     const refusal = guard['throwThrottlingException'](
-      {} as ExecutionContext,
+      new ExecutionContextHost([]),
       DETAIL,
     );
 
