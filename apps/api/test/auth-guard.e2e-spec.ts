@@ -105,6 +105,24 @@ describe('AuthGuard (e2e)', () => {
       .expect(200);
   });
 
+  it('accepts an api token sent with a lowercase bearer scheme', async () => {
+    const { user } = await registerOwner(app);
+    const plaintext = `asob_${'b'.repeat(48)}`;
+    await prisma.apiToken.create({
+      data: {
+        userId: user.id,
+        name: 'lowercase scheme',
+        tokenHash: sha256(plaintext),
+        prefix: plaintext.slice(0, 12),
+      },
+    });
+
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Authorization', `bearer ${plaintext}`)
+      .expect(200);
+  });
+
   it('rejects a stale session after a version bump', async () => {
     const { cookie, user } = await registerOwner(app);
     await prisma.user.update({

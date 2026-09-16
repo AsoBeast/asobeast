@@ -143,6 +143,18 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('accepts the bearer scheme in any letter case', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `bearer ${TOKEN}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .set('Content-Type', 'application/json')
+      .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      .expect(200);
+
+    expect(sseEnvelope(response).result?.tools).not.toHaveLength(0);
+  });
+
   it('initializes and names the server', async () => {
     const response = await rpc('initialize', {
       protocolVersion: PROTOCOL_VERSION,

@@ -1,5 +1,5 @@
+const BEARER_CREDENTIALS = /^bearer +([A-Za-z0-9._~+/-]+=*)$/i;
+
 export function bearerToken(authorization: string | undefined): string | null {
-  if (!authorization?.startsWith('Bearer ')) return null;
-  const token = authorization.slice('Bearer '.length).trim();
-  return token.length > 0 ? token : null;
+  return BEARER_CREDENTIALS.exec(authorization?.trim() ?? '')?.[1] ?? null;
 }
