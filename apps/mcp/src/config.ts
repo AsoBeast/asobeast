@@ -1,8 +1,11 @@
+import { API_TOKEN_PREFIX } from "@asobeast/shared";
 import { z } from "zod";
 
 const DEFAULT_API_URL = "http://localhost:4000";
 const WEB_PROTOCOLS = new Set(["http:", "https:"]);
 const MCP_ENDPOINT_SUFFIX = "/mcp";
+const SURROUNDING_QUOTES = /^(["'])(.*)\1$/;
+const BEARER_SCHEME = /^bearer\s+/i;
 
 const schema = z.object({
   ASOBEAST_API_URL: z.string().optional(),
@@ -42,6 +45,20 @@ function apiUrlOf(raw: string | undefined): string {
   return base;
 }
 
+function tokenOf(raw: string): string {
+  const token = raw
+    .trim()
+    .replace(SURROUNDING_QUOTES, "$2")
+    .trim()
+    .replace(BEARER_SCHEME, "");
+  if (!token.startsWith(API_TOKEN_PREFIX)) {
+    throw new ConfigError(
+      `ASOBEAST_API_TOKEN must be a personal API token starting with ${API_TOKEN_PREFIX}. Mint one from the MCP server card in Settings.`,
+    );
+  }
+  return token;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
@@ -52,6 +69,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   }
   return {
     apiUrl: apiUrlOf(parsed.data.ASOBEAST_API_URL),
-    token: parsed.data.ASOBEAST_API_TOKEN,
+    token: tokenOf(parsed.data.ASOBEAST_API_TOKEN),
   };
 }

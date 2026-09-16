@@ -41,3 +41,27 @@ describe("loadConfig api url", () => {
     );
   });
 });
+
+describe("loadConfig api token", () => {
+  function tokenFrom(raw: string) {
+    return loadConfig({ ASOBEAST_API_TOKEN: raw }).token;
+  }
+
+  it.each([
+    `Bearer ${TOKEN}`,
+    `bearer ${TOKEN}`,
+    `"${TOKEN}"`,
+    `'${TOKEN}'`,
+    `  ${TOKEN}\n`,
+  ])("reads the token from %j", (raw) => {
+    expect(tokenFrom(raw)).toBe(TOKEN);
+  });
+
+  it.each(["ghp_abc", "Bearer "])(
+    "refuses %j as a personal api token",
+    (raw) => {
+      expect(() => tokenFrom(raw)).toThrowError(ConfigError);
+      expect(() => tokenFrom(raw)).toThrowError(/asob_/);
+    },
+  );
+});
