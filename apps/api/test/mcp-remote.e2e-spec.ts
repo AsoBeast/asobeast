@@ -12,6 +12,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { sha256 } from '../src/auth/password-hash';
+import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -120,6 +121,39 @@ describe('Remote MCP transport (e2e)', () => {
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
       .expect(401);
+  });
+
+  it.each(['get', 'delete', 'head'] as const)(
+    'answers %s with 405 and names the method it allows',
+    async (method) => {
+      const response = await request(app.getHttpServer())
+        [method]('/mcp')
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .set('Accept', 'text/event-stream')
+        .expect(405);
+
+      expect(response.headers.allow).toBe('POST');
+    },
+  );
+
+  it('asks for a token before it refuses the method', async () => {
+    await request(app.getHttpServer()).get('/mcp').expect(401);
+  });
+
+  it('spends no mcp budget on a refused method', async () => {
+    const consume = jest.spyOn(app.get(RequestRateLimiter), 'consumeMcp');
+
+    await request(app.getHttpServer())
+      .get('/mcp')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .expect(405);
+    await request(app.getHttpServer())
+      .delete('/mcp')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .expect(405);
+
+    expect(consume).not.toHaveBeenCalled();
+    consume.mockRestore();
   });
 
   it('refuses a browser session even when it belongs to the owner', async () => {
