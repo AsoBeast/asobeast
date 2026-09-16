@@ -1,6 +1,17 @@
 export const STDIO_ENTRYPOINT =
   "/absolute/path/to/asobeast/apps/mcp/dist/index.js";
 
+export type SnippetLanguage = "bash" | "json";
+
+export interface ConnectSnippet {
+  id: string;
+  client: string;
+  label: string;
+  location: string;
+  language: SnippetLanguage;
+  value: string;
+}
+
 export function apiOrigin(origin?: string): string {
   const base =
     origin ?? (typeof window === "undefined" ? "" : window.location.origin);
@@ -11,45 +22,77 @@ export function remoteEndpoint(origin?: string): string {
   return `${apiOrigin(origin)}/mcp`;
 }
 
-export function remoteCommand(token: string, origin?: string): string {
-  return `claude mcp add --transport http asobeast ${remoteEndpoint(origin)} --header "Authorization: Bearer ${token}"`;
+function json(value: unknown): string {
+  return JSON.stringify(value, null, 2);
 }
 
-export function remoteConfig(token: string, origin?: string): string {
-  return JSON.stringify(
+function mcpServersFile(entry: unknown): string {
+  return json({ mcpServers: { asobeast: entry } });
+}
+
+export function hostedSnippets(
+  token: string,
+  origin?: string,
+): ConnectSnippet[] {
+  const endpoint = remoteEndpoint(origin);
+  return [
     {
-      mcpServers: {
-        asobeast: {
-          type: "http",
-          url: remoteEndpoint(origin),
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      },
+      id: "claude-code-command",
+      client: "Claude Code",
+      label: "Claude Code",
+      location: "",
+      language: "bash",
+      value: `claude mcp add --transport http asobeast ${endpoint} --header "Authorization: Bearer ${token}"`,
     },
-    null,
-    2,
-  );
-}
-
-export function stdioCommand(token: string, origin?: string): string {
-  return `claude mcp add asobeast --env ASOBEAST_API_URL=${apiOrigin(origin)} --env ASOBEAST_API_TOKEN=${token} -- node ${STDIO_ENTRYPOINT}`;
-}
-
-export function stdioConfig(token: string, origin?: string): string {
-  return JSON.stringify(
     {
-      mcpServers: {
-        asobeast: {
-          command: "node",
-          args: [STDIO_ENTRYPOINT],
-          env: {
-            ASOBEAST_API_URL: apiOrigin(origin),
-            ASOBEAST_API_TOKEN: token,
-          },
-        },
-      },
+      id: "claude-desktop",
+      client: "Claude Desktop",
+      label: "Claude Desktop config",
+      location: "",
+      language: "json",
+      value: mcpServersFile({
+        type: "http",
+        url: endpoint,
+        headers: { Authorization: `Bearer ${token}` },
+      }),
     },
-    null,
-    2,
-  );
+  ];
+}
+
+export function localSnippets(
+  token: string,
+  origin?: string,
+): ConnectSnippet[] {
+  const api = apiOrigin(origin);
+  return [
+    {
+      id: "claude-code-stdio",
+      client: "Claude Code",
+      label: "Claude Code stdio",
+      location: "",
+      language: "bash",
+      value: `claude mcp add asobeast --env ASOBEAST_API_URL=${api} --env ASOBEAST_API_TOKEN=${token} -- node ${STDIO_ENTRYPOINT}`,
+    },
+    {
+      id: "claude-desktop-stdio",
+      client: "Claude Desktop",
+      label: "Claude Desktop stdio config",
+      location: "",
+      language: "json",
+      value: mcpServersFile({
+        command: "node",
+        args: [STDIO_ENTRYPOINT],
+        env: { ASOBEAST_API_URL: api, ASOBEAST_API_TOKEN: token },
+      }),
+    },
+  ];
+}
+
+export function snippetById(
+  snippets: ConnectSnippet[],
+  id: string,
+): ConnectSnippet {
+  const snippet = snippets.find((candidate) => candidate.id === id);
+  if (!snippet) throw new Error(`no connect snippet named ${id}`);
+  return snippet;
 }

@@ -1,15 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
   apiOrigin,
-  remoteCommand,
-  remoteConfig,
+  hostedSnippets,
+  localSnippets,
   remoteEndpoint,
-  stdioCommand,
-  stdioConfig,
+  snippetById,
 } from "./mcp-snippets";
 
 const ORIGIN = "https://aso.example.com";
 const TOKEN = "asob_abc";
+
+function hosted(id: string): string {
+  return snippetById(hostedSnippets(TOKEN, ORIGIN), id).value;
+}
+
+function local(id: string): string {
+  return snippetById(localSnippets(TOKEN, ORIGIN), id).value;
+}
 
 describe("mcp snippets", () => {
   it("reaches the api through the web origin proxy", () => {
@@ -18,10 +25,10 @@ describe("mcp snippets", () => {
   });
 
   it("sends the token as a bearer header on the remote transport", () => {
-    expect(remoteCommand(TOKEN, ORIGIN)).toContain(
+    expect(hosted("claude-code-command")).toContain(
       `--header "Authorization: Bearer ${TOKEN}"`,
     );
-    expect(JSON.parse(remoteConfig(TOKEN, ORIGIN))).toEqual({
+    expect(JSON.parse(hosted("claude-desktop"))).toEqual({
       mcpServers: {
         asobeast: {
           type: "http",
@@ -33,16 +40,14 @@ describe("mcp snippets", () => {
   });
 
   it("passes the token as an environment variable on stdio", () => {
-    expect(stdioCommand(TOKEN, ORIGIN)).toContain(
-      `ASOBEAST_API_TOKEN=${TOKEN}`,
-    );
-    const config = JSON.parse(stdioConfig(TOKEN, ORIGIN)) as {
+    expect(local("claude-code-stdio")).toContain(`ASOBEAST_API_TOKEN=${TOKEN}`);
+    const config = JSON.parse(local("claude-desktop-stdio")) as {
       mcpServers: { asobeast: { env: Record<string, string> } };
     };
     expect(config.mcpServers.asobeast.env.ASOBEAST_API_TOKEN).toBe(TOKEN);
   });
 
   it("never points the stdio server at the mcp endpoint itself", () => {
-    expect(stdioCommand(TOKEN, ORIGIN)).not.toContain("/api/backend/mcp");
+    expect(local("claude-code-stdio")).not.toContain("/api/backend/mcp");
   });
 });

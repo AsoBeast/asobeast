@@ -32,11 +32,10 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, createApiToken } from "@/lib/api";
 import {
-  remoteCommand,
-  remoteConfig,
+  hostedSnippets,
+  localSnippets,
   remoteEndpoint,
-  stdioCommand,
-  stdioConfig,
+  type ConnectSnippet,
 } from "@/lib/mcp-snippets";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
@@ -44,7 +43,8 @@ import { useSingleFlight } from "@/lib/single-flight";
 
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
-function CopyBlock({ label, value }: { label: string; value: string }) {
+function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
+  const { label, value } = snippet;
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -90,19 +90,18 @@ function ConnectionSnippets({ token }: { token: string }) {
         <p className="text-sm text-muted-foreground">
           Your client connects straight to this instance. Nothing to install.
         </p>
-        <CopyBlock label="Claude Code" value={remoteCommand(token)} />
-        <CopyBlock label="Claude Desktop config" value={remoteConfig(token)} />
+        {hostedSnippets(token).map((snippet) => (
+          <CopyBlock key={snippet.id} snippet={snippet} />
+        ))}
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           Run the stdio server yourself, replacing the entrypoint with the
           absolute path to your checkout. The tools are identical.
         </p>
-        <CopyBlock label="Claude Code stdio" value={stdioCommand(token)} />
-        <CopyBlock
-          label="Claude Desktop stdio config"
-          value={stdioConfig(token)}
-        />
+        {localSnippets(token).map((snippet) => (
+          <CopyBlock key={snippet.id} snippet={snippet} />
+        ))}
       </TabsContent>
     </Tabs>
   );
