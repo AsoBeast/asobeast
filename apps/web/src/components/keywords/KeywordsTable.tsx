@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
@@ -17,9 +17,11 @@ import { SerpSheet } from "./SerpSheet";
 
 export function KeywordsTable({
   id,
+  store,
   country,
 }: {
   id: string;
+  store: Store;
   country: string;
 }) {
   const [sort, setSort] = useQueryState("sort", sortParser);
@@ -61,7 +63,7 @@ export function KeywordsTable({
   );
 
   if (keywords.length === 0) {
-    return <KeywordsEmptyState appId={id} country={country} />;
+    return <KeywordsEmptyState appId={id} store={store} country={country} />;
   }
 
   return (

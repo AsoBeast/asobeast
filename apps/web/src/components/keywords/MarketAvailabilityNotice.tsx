@@ -2,8 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CircleCheck, CircleHelp } from "lucide-react";
-import type { MarketAvailability } from "@asobeast/shared";
-import { COUNTRY_CODE } from "@/lib/countries";
+import {
+  isStorefront,
+  type MarketAvailability,
+  type Store,
+} from "@asobeast/shared";
 import { formatCountry } from "@/lib/format";
 import { marketAvailabilityOptions } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -36,12 +39,14 @@ function statusLabel(status: MarketAvailability, country: string): string {
 
 export function MarketAvailabilityNotice({
   appId,
+  store,
   country,
 }: {
   appId: string;
+  store: Store;
   country: string;
 }) {
-  const valid = COUNTRY_CODE.test(country);
+  const valid = isStorefront(store, country);
   const { data, isError } = useQuery({
     ...marketAvailabilityOptions(appId, country),
     enabled: valid,

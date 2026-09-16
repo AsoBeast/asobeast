@@ -18,7 +18,16 @@ When you finish this guide you have one tracked app, its first metadata snapshot
     https://play.google.com/store/apps/details?id=com.example.app
     ```
 
-    A bare iTunes numeric id is also accepted.
+    The import dialog accepts four forms of the same thing:
+
+    | Form | Example |
+    | --- | --- |
+    | A listing URL | `https://apps.apple.com/de/app/example/id123456789` |
+    | A listing URL without `https://` | `apps.apple.com/de/app/example/id123456789` |
+    | A bare App Store id | `123456789` |
+    | A bare Google Play package name | `com.example.app` |
+
+    An App Store id with leading zeros names the same listing, so `0123456789` imports `123456789`.
   </Step>
   <Step title="Paste it into the import dialog">
     asobeast parses the store and the storefront from the URL.
@@ -77,7 +86,7 @@ Field level changes also land in the changes feed, where they are kept alongside
 
 ## Troubleshooting
 
-- **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs and bare iTunes ids. A search result URL, a developer page or a shortened link will not parse. Open the listing in a browser and copy the address bar.
+- **The URL is rejected.** The parser accepts App Store listing URLs, Google Play `details` URLs, bare App Store ids and bare Google Play package names. A search result URL, a developer page, an album, a bundle, an editorial story or a shortened link is refused at once with the input echoed back, before any store request. Open the listing in a browser and copy the address bar.
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
 - **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
 - **Positions are empty right after importing.** Expected for a moment. The rank checks are queued at import and drain at the store rate limit, so watch the first run panel on the app overview page rather than the clock. If they stay empty, check the queue dashboard at `/admin/queues` for failed jobs.
