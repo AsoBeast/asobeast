@@ -29,6 +29,19 @@ function stubFetch(implementation: typeof fetch): void {
   vi.stubGlobal("fetch", vi.fn(implementation));
 }
 
+function stubFetchUntilAborted(): void {
+  stubFetch(
+    (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      }),
+  );
+}
+
 function fetchMock(): ReturnType<typeof vi.fn> {
   return globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
 }
@@ -306,24 +319,17 @@ describe("proxyToApi", () => {
     });
   });
 
-  it("bounds the upstream request with the configured timeout", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
-    stubFetch(async () => Response.json({}));
-    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "1234" });
+  it("answers an api that never responds within the configured deadline with a 504", async () => {
+    stubFetchUntilAborted();
+    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "20" });
 
-    await proxyToApi(request(), ["apps"]);
+    const response = await proxyToApi(request("/api/backend/apps"), ["apps"]);
 
-    expect(timeout).toHaveBeenCalledWith(1234);
-  });
-
-  it("bounds the upstream request with the documented default timeout", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
-    stubFetch(async () => Response.json({}));
-    const { proxyToApi } = await loadProxy();
-
-    await proxyToApi(request(), ["apps"]);
-
-    expect(timeout).toHaveBeenCalledWith(30_000);
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Gateway Timeout",
+      path: "/api/backend/apps",
+    });
   });
 });
 
