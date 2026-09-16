@@ -121,7 +121,7 @@ describe('Retention against an upgraded baseline database', () => {
   });
 
   it('keeps the newest snapshot per app regardless of age', async () => {
-    expect(deleted.appSnapshot).toBe(2);
+    expect(deleted.appSnapshot).toBe(3);
     const remaining = await prisma.appSnapshot.findMany({
       select: { id: true },
       orderBy: { id: 'asc' },
@@ -181,12 +181,12 @@ describe('Retention against an upgraded baseline database', () => {
     await expect(prisma.app.count()).resolves.toBe(7);
     await expect(
       prisma.keyword.count({ where: { id: { startsWith: 'kw_' } } }),
-    ).resolves.toBe(12);
+    ).resolves.toBe(14);
     await expect(
       prisma.trackedKeyword.count({
         where: { keywordId: { startsWith: 'kw_' } },
       }),
-    ).resolves.toBe(13);
+    ).resolves.toBe(15);
     await expect(
       prisma.keywordMetric.count({
         where: { keywordId: { startsWith: 'kw_' } },

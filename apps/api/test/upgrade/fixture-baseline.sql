@@ -33,6 +33,7 @@ VALUES
   ('snap_ios_old', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'Old description.', 4.5, 1200, NULL, 0, '1.0.0', '2026-01-01 00:00:00', '2026-06-01 00:00:00', '{"trackId":111111111}', '2026-07-01 00:00:00'),
   ('snap_ios_new', 'app_ios', 'Drill Fitness', 'Track every workout', NULL, 'New description.', 4.6, 1300, NULL, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"trackId":111111111}', '2026-07-15 00:00:00'),
   ('snap_play', 'app_play', 'Drill Fitness', NULL, 'Track every workout in one place', 'Play description.', 4.4, 900, 500000, 0, '1.1.0', '2026-01-01 00:00:00', '2026-07-10 00:00:00', '{"appId":"com.drill.fitness"}', '2026-07-15 00:00:00'),
+  ('snap_play_old_escaped', 'app_play', 'Drill Fitness', NULL, 'Yoga &amp; stretch, amp pilates', 'Play description.', 4.4, 880, 500000, 0, '1.0.0', '2026-01-01 00:00:00', '2026-07-01 00:00:00', '{"appId":"com.drill.fitness","summary":"Yoga &amp; stretch, amp pilates"}', '2026-07-05 00:00:00'),
   ('snap_play_escaped', 'app_play', 'Drill Fitness', NULL, 'Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3, &apos;fit&apos;', 'Play description.', 4.4, 910, 500000, 0, '1.2.0', '2026-01-01 00:00:00', '2026-07-17 00:00:00', '{"appId":"com.drill.fitness","summary":"Workouts &amp; meals &#39;daily&#39;, amp tools, R&D &amp;lt;3, &apos;fit&apos;"}', '2026-07-18 00:00:00');
 
 INSERT INTO "Keyword" ("id", "text", "store", "country", "createdAt")
@@ -47,6 +48,8 @@ VALUES
   ('kw_play_lt_3', 'lt 3', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
   ('kw_play_amp', 'amp', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
   ('kw_play_workouts', 'workouts', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_stretch', 'amp stretch', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
+  ('kw_play_amp_pilates', 'amp pilates', 'GOOGLE_PLAY', 'us', '2026-07-01 00:00:00'),
   ('kw_ios_zz', 'workout tracker', 'APP_STORE', 'zz', '2026-07-01 00:00:00'),
   ('kw_play_pw', 'workout tracker', 'GOOGLE_PLAY', 'pw', '2026-07-01 00:00:00');
 
@@ -63,6 +66,8 @@ VALUES
   ('app_play', 'kw_play_lt_3', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_amp', 'MANUAL', true, NULL, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_workouts', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_stretch', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
+  ('app_play', 'kw_play_amp_pilates', 'DESCRIPTION', true, NULL, '2026-07-01 00:00:00'),
   ('app_ios', 'kw_ios_zz', 'MANUAL', true, 60, '2026-07-01 00:00:00'),
   ('app_play', 'kw_play_pw', 'MANUAL', true, 60, '2026-07-01 00:00:00');
 

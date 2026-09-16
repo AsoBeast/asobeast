@@ -43,8 +43,8 @@ describe('Google Play short descriptions against an upgraded baseline database',
       })
     ).active;
 
-  it.each(['kw_play_amp_meals', 'kw_play_39_daily'])(
-    'untracks %s, which only an escape in the short description produced',
+  it.each(['kw_play_amp_meals', 'kw_play_39_daily', 'kw_play_amp_stretch'])(
+    'untracks %s, which only an escape in a short description produced',
     async (keywordId) => {
       expect(await activeOf(keywordId)).toBe(false);
     },
@@ -55,6 +55,7 @@ describe('Google Play short descriptions against an upgraded baseline database',
     'kw_play_lt_3',
     'kw_play_amp',
     'kw_play_workouts',
+    'kw_play_amp_pilates',
   ])(
     'keeps %s, which the listing says or the owner chose',
     async (keywordId) => {
