@@ -1,4 +1,4 @@
-import { API_TOKEN_PREFIX } from "@asobeast/shared";
+import { API_TOKEN_PREFIX, isLoopbackHostname } from "@asobeast/shared";
 import { z } from "zod";
 
 const DEFAULT_API_URL = "http://localhost:4000";
@@ -43,6 +43,11 @@ function apiUrlOf(raw: string | undefined): string {
     );
   }
   return base;
+}
+
+export function travelsInClearText(apiUrl: string): boolean {
+  const { protocol, hostname } = new URL(apiUrl);
+  return protocol === "http:" && !isLoopbackHostname(hostname);
 }
 
 function tokenOf(raw: string): string {

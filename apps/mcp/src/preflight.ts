@@ -14,7 +14,7 @@ export async function preflight(client: ApiClient): Promise<PreflightResult> {
       return {
         ok: false,
         message:
-          "The API token was rejected (401). Mint a fresh personal token in Settings and set ASOBEAST_API_TOKEN.",
+          "The API token was rejected (401). Mint a fresh personal token in Settings and set ASOBEAST_API_TOKEN, and check that ASOBEAST_API_URL is the instance the token was minted on.",
       };
     }
     if (me.status === 402) return { ok: false, message: UNENTITLED };

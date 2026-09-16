@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ConfigError, loadConfig } from "./config.js";
+import { ConfigError, loadConfig, travelsInClearText } from "./config.js";
 
 const TOKEN = `asob_${"a".repeat(48)}`;
 
@@ -64,4 +64,24 @@ describe("loadConfig api token", () => {
       expect(() => tokenFrom(raw)).toThrowError(/asob_/);
     },
   );
+});
+
+describe("travelsInClearText", () => {
+  it.each([
+    "http://app.asobeast.com/api/backend",
+    "http://192.168.1.10:3001/api/backend",
+    "http://api:4000",
+  ])("warns for %s", (apiUrl) => {
+    expect(travelsInClearText(apiUrl)).toBe(true);
+  });
+
+  it.each([
+    "https://app.asobeast.com/api/backend",
+    "http://localhost:4000",
+    "http://127.0.0.1:4000",
+    "http://[::1]:4000",
+    "http://asobeast.localhost",
+  ])("stays quiet for %s", (apiUrl) => {
+    expect(travelsInClearText(apiUrl)).toBe(false);
+  });
 });
