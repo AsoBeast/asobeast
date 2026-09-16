@@ -265,4 +265,23 @@ describe("mcp snippets", () => {
       expect(hosted("vscode")).not.toContain(TOKEN);
     });
   });
+
+  describe("gemini cli", () => {
+    it("names streamable http with httpUrl, never the sse url key", () => {
+      expect(JSON.parse(hosted("gemini-settings"))).toEqual({
+        mcpServers: {
+          asobeast: {
+            httpUrl: `${ORIGIN}/api/backend/mcp`,
+            headers: { Authorization: `Bearer ${TOKEN}` },
+          },
+        },
+      });
+    });
+
+    it("adds the server with one command", () => {
+      expect(hosted("gemini-command")).toBe(
+        `gemini mcp add --transport http --scope user --header "Authorization: Bearer ${TOKEN}" asobeast ${ORIGIN}/api/backend/mcp`,
+      );
+    });
+  });
 });

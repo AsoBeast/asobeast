@@ -192,6 +192,22 @@ export function hostedSnippets(
         },
       }),
     },
+    {
+      id: "gemini-command",
+      client: "Gemini CLI",
+      label: "Gemini CLI command",
+      location: "Run in a terminal",
+      language: "bash",
+      value: `gemini mcp add --transport http --scope user --header "Authorization: Bearer ${token}" asobeast ${endpoint}`,
+    },
+    {
+      id: "gemini-settings",
+      client: "Gemini CLI",
+      label: "Gemini CLI settings",
+      location: "~/.gemini/settings.json",
+      language: "json",
+      value: mcpServersFile(headerEntry("httpUrl", token, endpoint)),
+    },
   ];
 }
 
