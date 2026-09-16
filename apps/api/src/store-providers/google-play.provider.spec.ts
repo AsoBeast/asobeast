@@ -69,6 +69,62 @@ describe('GooglePlayProvider', () => {
     expect(result.storeUpdatedAt).toEqual(new Date(1719792000000));
   });
 
+  it('decodes the html entities google play leaves in the short description', async () => {
+    const app = jest.fn().mockResolvedValue({
+      ...appPayload,
+      summary:
+        'Lessons to learn Spanish, French, German, English, Online Chess, Math &amp; Music',
+    });
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const result = await provider.getApp('com.duolingo', 'us');
+
+    expect(result.summary).toBe(
+      'Lessons to learn Spanish, French, German, English, Online Chess, Math & Music',
+    );
+  });
+
+  it.each([
+    [
+      'Create &amp; share photos, stories, &amp; reels',
+      'Create & share photos, stories, & reels',
+    ],
+    ['Explore Bluey&#39;s house', "Explore Bluey's house"],
+    ['The &quot;best&quot; notes', 'The "best" notes'],
+    ['Scores &gt; 90 &lt; 100', 'Scores > 90 < 100'],
+    ['Use &amp;amp; to escape', 'Use &amp; to escape'],
+    ['R&D tools for Tom & Jerry', 'R&D tools for Tom & Jerry'],
+    ['&copy 2024 Studio', '&copy 2024 Studio'],
+    ['Caf&eacute; &nbsp;open', 'Caf&eacute; &nbsp;open'],
+    [
+      'Quote &#x27;hex&#x27; and &#8217;dec&#8217;',
+      'Quote &#x27;hex&#x27; and &#8217;dec&#8217;',
+    ],
+    ['Say &apos;hi&apos;', "Say 'hi'"],
+    ['Short description', 'Short description'],
+  ])('stores the short description %j as %j', async (received, stored) => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ ...appPayload, summary: received });
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const result = await provider.getApp('com.example.app', 'us');
+
+    expect(result.summary).toBe(stored);
+    expect((result.raw as { summary: string }).summary).toBe(received);
+  });
+
+  it('leaves an absent short description absent', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ ...appPayload, summary: undefined });
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const result = await provider.getApp('com.example.app', 'us');
+
+    expect(result.summary).toBeUndefined();
+  });
+
   it('omits installs when minInstalls is absent', async () => {
     const app = jest
       .fn()

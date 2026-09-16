@@ -114,21 +114,21 @@ describe('Retention against an upgraded baseline database', () => {
     const remaining = await prisma.keywordRanking.findMany({
       select: { date: true },
     });
-    expect(remaining).toHaveLength(7);
+    expect(remaining).toHaveLength(9);
     expect(remaining.every((row) => row.date >= new Date('2026-07-15'))).toBe(
       true,
     );
   });
 
   it('keeps the newest snapshot per app regardless of age', async () => {
-    expect(deleted.appSnapshot).toBe(1);
+    expect(deleted.appSnapshot).toBe(3);
     const remaining = await prisma.appSnapshot.findMany({
       select: { id: true },
       orderBy: { id: 'asc' },
     });
     expect(remaining.map((row) => row.id)).toEqual([
       'snap_ios_new',
-      'snap_play',
+      'snap_play_escaped',
     ]);
   });
 
@@ -181,12 +181,12 @@ describe('Retention against an upgraded baseline database', () => {
     await expect(prisma.app.count()).resolves.toBe(7);
     await expect(
       prisma.keyword.count({ where: { id: { startsWith: 'kw_' } } }),
-    ).resolves.toBe(6);
+    ).resolves.toBe(14);
     await expect(
       prisma.trackedKeyword.count({
         where: { keywordId: { startsWith: 'kw_' } },
       }),
-    ).resolves.toBe(7);
+    ).resolves.toBe(15);
     await expect(
       prisma.keywordMetric.count({
         where: { keywordId: { startsWith: 'kw_' } },

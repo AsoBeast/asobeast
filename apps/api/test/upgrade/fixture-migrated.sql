@@ -16,4 +16,16 @@ UPDATE "TrackedKeyword"
 SET "active" = false
 WHERE ("appId", "keywordId") IN (('app_ios', 'kw_ios_zz'), ('app_play', 'kw_play_pw'));
 
+UPDATE "AppSnapshot"
+SET "summary" = 'Workouts & meals ''daily'', amp tools, R&D &lt;3, ''fit'''
+WHERE "id" = 'snap_play_escaped';
+
+UPDATE "AppSnapshot"
+SET "summary" = 'Yoga & stretch, amp pilates'
+WHERE "id" = 'snap_play_old_escaped';
+
+UPDATE "TrackedKeyword"
+SET "active" = false
+WHERE ("appId", "keywordId") IN (('app_play', 'kw_play_amp_meals'), ('app_play', 'kw_play_39_daily'), ('app_play', 'kw_play_amp_stretch'));
+
 COMMIT;
