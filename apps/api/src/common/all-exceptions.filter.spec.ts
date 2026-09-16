@@ -1,4 +1,11 @@
-import { ArgumentsHost, HttpStatus } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
 import { BillingConflictError } from '../billing/billing.errors';
@@ -11,10 +18,12 @@ const FUTURE_STORE = 'AMAZON' as Store;
 function capture(exception: unknown): {
   status: number;
   envelope: ApiErrorEnvelope;
+  headers: Record<string, string>;
 } {
   const json = jest.fn<void, [ApiErrorEnvelope]>();
   const status = jest.fn<{ json: typeof json }, [number]>(() => ({ json }));
-  const response = { status, setHeader: jest.fn() };
+  const setHeader = jest.fn<void, [string, string]>();
+  const response = { status, setHeader };
   const host = {
     switchToHttp: () => ({
       getRequest: () => ({ method: 'POST', url: '/apps' }),
@@ -29,6 +38,7 @@ function capture(exception: unknown): {
   return {
     status: status.mock.calls[0][0],
     envelope: json.mock.calls[0][0],
+    headers: Object.fromEntries(setHeader.mock.calls),
   };
 }
 
@@ -69,5 +79,24 @@ describe('AllExceptionsFilter', () => {
       reason: 'checkout_in_flight',
       recovery: 'retry',
     });
+  });
+
+  it('challenges an unauthenticated caller to present a bearer token', () => {
+    const { headers } = capture(new UnauthorizedException());
+
+    expect(headers['WWW-Authenticate']).toBe('Bearer realm="asobeast"');
+  });
+
+  it.each([
+    [HttpStatus.FORBIDDEN, new ForbiddenException()],
+    [HttpStatus.NOT_FOUND, new NotFoundException()],
+    [
+      HttpStatus.TOO_MANY_REQUESTS,
+      new HttpException('Too Many Requests', HttpStatus.TOO_MANY_REQUESTS),
+    ],
+  ])('sends no challenge with a %i', (_status, exception) => {
+    const { headers } = capture(exception);
+
+    expect(headers['WWW-Authenticate']).toBeUndefined();
   });
 });

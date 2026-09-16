@@ -33,6 +33,8 @@ import {
 } from '../store-providers/errors';
 
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
+const UNAUTHORIZED_STATUS: number = HttpStatus.UNAUTHORIZED;
+const BEARER_CHALLENGE = 'Bearer realm="asobeast"';
 
 type ResolvedError = Pick<
   ApiErrorEnvelope,
@@ -65,6 +67,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       path: request.url,
       timestamp: new Date().toISOString(),
     };
+    if (resolved.statusCode === UNAUTHORIZED_STATUS) {
+      response.setHeader('WWW-Authenticate', BEARER_CHALLENGE);
+    }
     if (resolved.retryAfterSeconds !== undefined) {
       response.setHeader('Retry-After', String(resolved.retryAfterSeconds));
     }

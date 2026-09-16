@@ -116,11 +116,38 @@ describe('Remote MCP transport (e2e)', () => {
   });
 
   it('refuses an unauthenticated connection', async () => {
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post('/mcp')
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
       .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
+  });
+
+  it('challenges a rejected token to authenticate again', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `Bearer ${API_TOKEN_PREFIX}${'0'.repeat(48)}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
+  });
+
+  it('challenges an unauthenticated rest request the same way', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/apps')
+      .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
   });
 
   it.each(['get', 'delete', 'head'] as const)(
@@ -175,6 +202,7 @@ describe('Remote MCP transport (e2e)', () => {
     expect((refused.body as { message: string }).message).toContain(
       'personal API token only',
     );
+    expect(refused.headers['www-authenticate']).toBe('Bearer realm="asobeast"');
   });
 
   it('accepts the bearer scheme in any letter case', async () => {
