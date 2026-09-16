@@ -12,6 +12,7 @@ export * from "./alerts";
 export * from "./changes";
 export * from "./jobs";
 export * from "./auth";
+export * from "./account";
 export * from "./billing";
 export * from "./actions";
 export * from "./web";

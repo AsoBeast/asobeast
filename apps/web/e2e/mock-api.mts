@@ -56,8 +56,10 @@ import type {
   TrackedKeywordItem,
   WebhookCreateRequest,
   WebhookItem,
+  WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
+  DELETION_CONFIRMATION,
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
   parseKeywordField,
@@ -472,6 +474,33 @@ function actionListFor(
   return { items, total: items.length, generatedAt: actionsGeneratedAt(req) };
 }
 
+const DELETION_COOKIE = "workspace_deletion_requested";
+const DELETION_GRACE_DAYS = 7;
+const UNSCHEDULED_DELETION: WorkspaceDeletionStatus = {
+  scheduled: false,
+  requestedAt: null,
+  requestedBy: null,
+  dueAt: null,
+  graceDays: DELETION_GRACE_DAYS,
+};
+
+function scheduledDeletion(requestedAt: string): WorkspaceDeletionStatus {
+  const due = new Date(requestedAt);
+  due.setUTCDate(due.getUTCDate() + DELETION_GRACE_DAYS);
+  return {
+    scheduled: true,
+    requestedAt,
+    requestedBy: AUTH_USER.email,
+    dueAt: due.toISOString(),
+    graceDays: DELETION_GRACE_DAYS,
+  };
+}
+
+function deletionStatusFor(req: IncomingMessage): WorkspaceDeletionStatus {
+  const requestedAt = cookieValue(req, DELETION_COOKIE);
+  return requestedAt ? scheduledDeletion(requestedAt) : UNSCHEDULED_DELETION;
+}
+
 function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
   return hasCookie(req, "e2e_run_delayed", "1")
     ? RUN_STATUS_DELAYED
@@ -566,6 +595,41 @@ const routes: Route[] = [
       }
       json(res, 200, TEAM);
     },
+  },
+  {
+    method: "GET",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, req, res) => json(res, 200, deletionStatusFor(req)),
+  },
+  {
+    method: "POST",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, req, res) =>
+      withBody<{ confirm?: string }>(req, res, (body) => {
+        if (body.confirm !== DELETION_CONFIRMATION) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/account/deletion",
+              `confirm must be equal to ${DELETION_CONFIRMATION}`,
+            ),
+          );
+        }
+        const requestedAt = new Date().toISOString();
+        json(res, 201, scheduledDeletion(requestedAt), {
+          "set-cookie": `${DELETION_COOKIE}=${requestedAt}; Path=/`,
+        });
+      }),
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/account\/deletion$/,
+    handler: (_p, _req, res) =>
+      json(res, 200, UNSCHEDULED_DELETION, {
+        "set-cookie": `${DELETION_COOKIE}=; Path=/; Max-Age=0`,
+      }),
   },
   {
     method: "GET",

@@ -9,6 +9,7 @@ import { BudgetCard } from "@/components/settings/BudgetCard";
 import { DeliveryCard } from "@/components/settings/DeliveryCard";
 import { EmailAlertsCard } from "@/components/settings/EmailAlertsCard";
 import { WebhooksCard } from "@/components/settings/WebhooksCard";
+import { WorkspaceDeletionCard } from "@/components/settings/WorkspaceDeletionCard";
 import {
   BudgetCardSkeleton,
   DeliveryCardSkeleton,
@@ -91,6 +92,14 @@ export default async function SettingsPage() {
         >
           <ApiTokensCard />
           <McpServerCard />
+        </SettingsSection>
+
+        <SettingsSection
+          id="workspace"
+          title="Workspace"
+          description="Delete this workspace and everything in it, or cancel a deletion that is pending."
+        >
+          <WorkspaceDeletionCard />
         </SettingsSection>
       </div>
     </HydrationBoundary>
