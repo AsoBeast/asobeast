@@ -91,3 +91,63 @@ test("opens the place to make the change", async ({ page }) => {
     .click();
   await expect(page).toHaveURL(/\/apps\/app-1\/metadata$/);
 });
+
+for (const width of [375, 1280]) {
+  test(`aligns factor meters in a row at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-1/audit");
+
+    const lefts = await page
+      .getByRole("region", { name: "Search visibility" })
+      .locator('[data-slot="meter"]')
+      .evaluateAll((nodes) =>
+        nodes.map((node) => Math.round(node.getBoundingClientRect().left)),
+      );
+
+    expect(new Set(lefts).size).toBeLessThanOrEqual(width < 640 ? 1 : 3);
+  });
+}
+
+test("links an unanswered check to what would answer it", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+
+  const field = page.getByRole("article", { name: "Keyword field" });
+  await expect(
+    field.getByRole("link", {
+      name: "Paste your keyword field from App Store Connect",
+    }),
+  ).toHaveAttribute("href", "/apps/app-1/keywords");
+});
+
+test("speaks plainly", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+
+  await expect(page.locator("main")).not.toContainText(
+    /weight \d+|heuristic|renormalize/,
+  );
+  await expect(page.locator("main")).not.toContainText(/pending/i);
+});
+
+test("shows a Google Play listing only Google Play concepts", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/audit");
+
+  await page
+    .getByRole("button", { name: /Show checks/ })
+    .first()
+    .click();
+  await expect(page.locator("main")).not.toContainText(
+    /Subtitle|Keyword field|Promotional text/,
+  );
+  await expect(
+    page.getByRole("article", { name: "Short description" }),
+  ).toBeVisible();
+});
+
+test("says what the audit cannot see", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+
+  await page.getByText("What this audit cannot see").click();
+  await expect(page.getByText("App previews")).toBeVisible();
+});
