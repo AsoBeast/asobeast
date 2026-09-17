@@ -1,7 +1,13 @@
-import { toolText, type ReadTool } from '@asobeast/mcp-tools';
+import { toolByName, toolText, type ReadTool } from '@asobeast/mcp-tools';
 import { toolResult } from './remote-tools';
 
-const tool = { name: 'portfolio' } as ReadTool;
+function catalogTool(name: string): ReadTool {
+  const tool = toolByName(name);
+  if (!tool) throw new Error(`${name} is not in the mcp tool catalog`);
+  return tool;
+}
+
+const tool = catalogTool('portfolio');
 
 describe('toolResult', () => {
   it('answers with the same compact text the stdio server writes', () => {
