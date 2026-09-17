@@ -121,6 +121,9 @@ export type AuditCheckId =
   | 'description-cta'
   | 'description-social-proof'
   | 'description-formatting'
+  | 'description-keyword-coverage'
+  | 'description-keyword-frequency'
+  | 'description-above-fold'
   | 'screenshots-count'
   | 'screenshots-ipad'
   | 'screenshots-feature-graphic'
@@ -146,6 +149,56 @@ export type AuditCheckId =
   | 'conversion-release-notes'
   | 'conversion-localizations'
   | 'conversion-privacy-policy';
+
+export const ALL_AUDIT_CHECK_IDS = [
+  'title-keyword',
+  'title-length',
+  'title-policy',
+  'title-uniqueness',
+  'subtitle-keyword',
+  'subtitle-no-repetition',
+  'subtitle-length',
+  'keyword-field-saved',
+  'keyword-field-hygiene',
+  'keyword-field-bytes',
+  'keyword-field-relevance',
+  'short-description-keyword',
+  'short-description-length',
+  'short-description-no-repetition',
+  'short-description-policy',
+  'description-hook',
+  'description-cta',
+  'description-social-proof',
+  'description-formatting',
+  'description-keyword-coverage',
+  'description-keyword-frequency',
+  'description-above-fold',
+  'screenshots-count',
+  'screenshots-ipad',
+  'screenshots-feature-graphic',
+  'screenshots-first-three',
+  'screenshots-text-overlays',
+  'screenshots-consistent',
+  'screenshots-localized',
+  'screenshots-device-frames',
+  'preview-video-present',
+  'ratings-average',
+  'ratings-volume',
+  'ratings-recent',
+  'ratings-current-version',
+  'icon-distinctive',
+  'icon-simple',
+  'icon-category-fit',
+  'icon-no-text',
+  'rankings-visibility',
+  'rankings-top10',
+  'rankings-trend',
+  'rankings-competitor-gap',
+  'conversion-update-recency',
+  'conversion-release-notes',
+  'conversion-localizations',
+  'conversion-privacy-policy',
+] as const satisfies readonly AuditCheckId[];
 
 export interface CheckAdvice {
   title: string;

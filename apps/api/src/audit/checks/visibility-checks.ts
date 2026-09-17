@@ -66,12 +66,12 @@ export const rankingChecks = (context: AuditContext): RubricCheck[] => {
           ? 'No visibility point yet.'
           : `Visibility is ${round1(latest)}.`,
       unlock: FIRST_CHECK_UNLOCK,
-      advice: outside
-        ? {
-            title: 'Raise your search visibility',
-            fix: `Visibility is ${latest === null ? 'unknown' : round1(latest)}. Your largest keyword outside the top ${TOP_POSITION} is “${outside.text}” at ${outside.position ?? 'outside the checked depth'}.`,
-          }
-        : null,
+      advice: {
+        title: 'Raise your search visibility',
+        fix: outside
+          ? `Visibility is ${latest === null ? 'unknown' : round1(latest)}. Your largest keyword outside the top ${TOP_POSITION} is “${outside.text}” at ${outside.position ?? 'outside the checked depth'}.`
+          : `Visibility is ${latest === null ? 'unknown' : round1(latest)}. Track and score more keywords to grow it.`,
+      },
     }),
     check({
       id: 'rankings-top10',

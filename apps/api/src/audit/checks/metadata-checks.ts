@@ -289,7 +289,10 @@ export const subtitleChecks = (context: AuditContext): RubricCheck[] => {
                 : quoteList(covered.map((keyword) => keyword.text))
             } of your priority keywords; add \u201c${target}\u201d.`,
           }
-        : null,
+        : {
+            title: 'Cover more priority keywords in your subtitle',
+            fix: 'Only one priority keyword sits outside your title. Score more keywords so the subtitle can carry two.',
+          },
     }),
     check({
       id: 'subtitle-length',
@@ -422,13 +425,13 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
         rated.length /
         10,
       detail: `Average relevance of ${rated.length} keyword field entries.`,
-      advice:
-        low.length === 0
-          ? null
-          : {
-              title: 'Swap low relevance keywords out of your field',
-              fix: `${quoteList(low.map((keyword) => keyword.text))} score under ${LOW_RELEVANCE} for relevance to your listing.`,
-            },
+      advice: {
+        title: 'Swap low relevance keywords out of your field',
+        fix:
+          low.length === 0
+            ? 'Rate your keyword field entries for relevance and replace the weakest ones.'
+            : `${quoteList(low.map((keyword) => keyword.text))} score under ${LOW_RELEVANCE} for relevance to your listing.`,
+      },
     }),
   ];
 };

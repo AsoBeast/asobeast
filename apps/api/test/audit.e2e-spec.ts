@@ -234,6 +234,34 @@ describe('AuditController (e2e)', () => {
     );
   });
 
+  it('carries a fix, an effort, an impact, a lift and a target on every recommendation', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const all = [
+      ...result.recommendations.quickWins,
+      ...result.recommendations.highImpact,
+      ...result.recommendations.strategic,
+    ];
+
+    expect(all.length).toBeGreaterThan(0);
+    expect(
+      all.every(
+        (item) =>
+          typeof item.fix === 'string' &&
+          item.effort !== undefined &&
+          item.impact !== undefined &&
+          typeof item.lift === 'number' &&
+          item.target !== undefined,
+      ),
+    ).toBe(true);
+    expect(result.potential).not.toBeNull();
+    expect(result.potential as number).toBeGreaterThanOrEqual(
+      result.overall as number,
+    );
+  });
+
   it('reports the rubric version, grade, confidence and groups', async () => {
     const id = await seed();
 

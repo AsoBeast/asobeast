@@ -6,13 +6,12 @@ import {
   AuditFactorResult,
   AuditGroupId,
   AuditGroupResult,
-  AuditRecommendation,
-  AuditRecommendations,
   AuditUnlockKind,
   AuditUnlockSummary,
 } from '@asobeast/shared';
 import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
 import { limitationsFor } from './audit-limitations';
+import { buildRecommendations, RubricFactor } from './audit-recommendations';
 import { AuditContext, RubricCheck } from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
@@ -68,15 +67,12 @@ export const AUDIT_GROUP_LABELS: Readonly<Record<AuditGroupId, string>> =
   });
 
 type FactorId = keyof (typeof AUDIT_WEIGHTS)['APP_STORE'];
-type RecommendationBucket = keyof AuditRecommendations;
-
 const discoverability = (): AuditGroupId => 'discoverability';
 const conversion = (): AuditGroupId => 'conversion';
 
 interface FactorDefinition {
   id: FactorId;
   label: string;
-  bucket: RecommendationBucket;
   group: (store: Store) => AuditGroupId;
   build: (context: AuditContext) => RubricCheck[];
   labelFor?: (store: Store) => string;
@@ -86,35 +82,30 @@ const FACTORS: FactorDefinition[] = [
   {
     id: 'title',
     label: 'Title',
-    bucket: 'quickWins',
     group: discoverability,
     build: titleChecks,
   },
   {
     id: 'subtitle',
     label: 'Subtitle',
-    bucket: 'quickWins',
     group: discoverability,
     build: subtitleChecks,
   },
   {
     id: 'keywordField',
     label: 'Keyword field',
-    bucket: 'quickWins',
     group: discoverability,
     build: keywordFieldChecks,
   },
   {
     id: 'shortDescription',
     label: 'Short description',
-    bucket: 'quickWins',
     group: discoverability,
     build: shortDescriptionChecks,
   },
   {
     id: 'description',
     label: 'Description',
-    bucket: 'quickWins',
     group: (store) =>
       store === Store.GOOGLE_PLAY ? 'discoverability' : 'conversion',
     build: descriptionChecks,
@@ -122,7 +113,6 @@ const FACTORS: FactorDefinition[] = [
   {
     id: 'screenshots',
     label: 'Screenshots',
-    bucket: 'highImpact',
     group: conversion,
     build: screenshotChecks,
     labelFor: (store) =>
@@ -133,50 +123,39 @@ const FACTORS: FactorDefinition[] = [
   {
     id: 'previewVideo',
     label: 'Preview video',
-    bucket: 'highImpact',
     group: conversion,
     build: previewVideoChecks,
   },
   {
     id: 'ratings',
     label: 'Ratings & reviews',
-    bucket: 'strategic',
     group: conversion,
     build: ratingChecks,
   },
   {
     id: 'icon',
     label: 'Icon',
-    bucket: 'highImpact',
     group: conversion,
     build: iconChecks,
   },
   {
     id: 'rankings',
     label: 'Keyword rankings',
-    bucket: 'strategic',
     group: discoverability,
     build: rankingChecks,
   },
   {
     id: 'conversion',
     label: 'Freshness and trust',
-    bucket: 'strategic',
     group: conversion,
     build: conversionChecks,
   },
 ];
 
-const FACTOR_BUCKET = new Map<string, RecommendationBucket>(
-  FACTORS.map((factor) => [factor.id, factor.bucket]),
-);
-
 export const AUDIT_FACTOR_LABELS: Readonly<Record<string, string>> =
   Object.freeze(
     Object.fromEntries(FACTORS.map((factor) => [factor.id, factor.label])),
   );
-
-const SEVERITY = { fail: 2, warn: 1, pass: 0, unanswered: 0 } as const;
 
 const availabilityOf = (
   checks: RubricCheck[],
@@ -243,19 +222,27 @@ const toFactorScore = (factor: AuditFactorResult): FactorScore => ({
   measurable: factor.availability !== 'not-measurable',
 });
 
-export function computeAudit(context: AuditContext): AppAuditResult {
+export function rubricFactors(context: AuditContext): RubricFactor[] {
   const weights = AUDIT_WEIGHTS[context.store];
-  const factors: AuditFactorResult[] = [];
+  return FACTORS.filter((definition) => weights[definition.id] !== 0).map(
+    (definition) => ({
+      id: definition.id,
+      weight: weights[definition.id],
+      checks: definition.build(context),
+    }),
+  );
+}
 
-  const built: { weight: number; checks: RubricCheck[] }[] = [];
+export function computeAudit(context: AuditContext): AppAuditResult {
+  const factors: AuditFactorResult[] = [];
+  const built = rubricFactors(context);
 
   for (const definition of FACTORS) {
-    const weight = weights[definition.id];
-    if (weight === 0) {
+    const entry = built.find((item) => item.id === definition.id);
+    if (!entry) {
       continue;
     }
-    const checks = definition.build(context);
-    built.push({ weight, checks });
+    const { weight, checks } = entry;
     const { score, confidence } = scoreFactor(checks);
     factors.push({
       id: definition.id,
@@ -271,6 +258,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
   }
 
   const totals = scoreAudit(factors.map(toFactorScore));
+  const plan = buildRecommendations(built, totals.overall);
   const groups: AuditGroupResult[] = (
     Object.keys(AUDIT_GROUP_LABELS) as AuditGroupId[]
   ).map((id) => {
@@ -291,7 +279,8 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     coveredWeight: totals.coveredWeight,
     totalWeight: totals.totalWeight,
     factors,
-    recommendations: deriveRecommendations(factors),
+    recommendations: plan.recommendations,
+    potential: plan.potential,
     ai: context.aiStatus,
     generatedAt: context.now.toISOString(),
     rubricVersion: AUDIT_RUBRIC_VERSION,
@@ -301,46 +290,4 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     limitations: [...limitationsFor(context.store)],
     unlocks: deriveUnlocks(built),
   };
-}
-
-export function deriveRecommendations(
-  factors: AuditFactorResult[],
-): AuditRecommendations {
-  const ranked: Array<{
-    rec: AuditRecommendation;
-    bucket: RecommendationBucket;
-    rank: number;
-  }> = [];
-
-  for (const factor of factors) {
-    const bucket = FACTOR_BUCKET.get(factor.id) ?? 'strategic';
-    for (const item of factor.checks) {
-      const severity = SEVERITY[item.status];
-      if (severity === 0) {
-        continue;
-      }
-      ranked.push({
-        rec: {
-          factorId: factor.id,
-          checkId: item.id,
-          label: item.label,
-          detail: item.detail,
-        },
-        bucket,
-        rank: factor.weight * severity,
-      });
-    }
-  }
-
-  ranked.sort((a, b) => b.rank - a.rank);
-
-  const recommendations: AuditRecommendations = {
-    quickWins: [],
-    highImpact: [],
-    strategic: [],
-  };
-  for (const entry of ranked) {
-    recommendations[entry.bucket].push(entry.rec);
-  }
-  return recommendations;
 }
