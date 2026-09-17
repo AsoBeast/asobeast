@@ -7,6 +7,7 @@ import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
+import { effectiveRun } from './audit-run-state';
 import { AuditAiService } from './audit-ai.service';
 import {
   AuditCompetitor,
@@ -28,6 +29,7 @@ export interface AuditApp {
   store: Store;
   country: string;
   name: string | null;
+  isCompetitor: boolean;
 }
 
 export const REVIEW_WINDOW_DAYS = 90;
@@ -47,7 +49,13 @@ export class AuditContextLoader {
   async app(appId: string): Promise<AuditApp> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, country: true, name: true },
+      select: {
+        id: true,
+        store: true,
+        country: true,
+        name: true,
+        isCompetitor: true,
+      },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);
@@ -248,6 +256,7 @@ export class AuditContextLoader {
       }),
       brandTokens: tokenize(app.name ?? ''),
       creative,
+      run: effectiveRun(insight, new Date()),
       aiStatus: {
         configured: this.auditAi.configured,
         model: insight?.model ?? this.auditAi.model,

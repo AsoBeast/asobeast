@@ -168,6 +168,7 @@ const contextFor = (
     brandTokens: [],
     creative: emptyCreative(store, facts),
     aiStatus: { configured: false, model: null, generatedAt: null },
+    run: null,
     ...rest,
   };
 };

@@ -12,6 +12,7 @@ export const QUEUES = {
   GPLAY: 'gplay',
   ALERTS: 'alerts',
   BILLING: 'billing',
+  AI: 'ai',
 } as const;
 
 export const FLOW_PRODUCERS = {
@@ -59,6 +60,7 @@ export const JOBS = {
   DELIVER_EMAIL: 'deliver-email',
   DAILY_COMPLETE: 'daily-pipeline-complete',
   ACTIONS: 'generate-actions',
+  AUDIT_CREATIVE: 'audit-creative',
   PROXY_SYNC: 'proxy-pool-sync',
   STORE_CANARY: 'store-canary',
   STORE_STATUS: 'store-status',
@@ -77,6 +79,14 @@ export interface DailyCompletePayload extends FanOutSummary {
 
 export interface RefreshAppPayload extends WorkspaceJobPayload {
   appId: string;
+}
+
+export interface AuditCreativePayload extends WorkspaceJobPayload {
+  appId: string;
+}
+
+export function auditCreativeDeduplicationId(appId: string): string {
+  return `audit-creative~${appId}`;
 }
 
 export interface ResolveSubtitlePayload extends WorkspaceJobPayload {
