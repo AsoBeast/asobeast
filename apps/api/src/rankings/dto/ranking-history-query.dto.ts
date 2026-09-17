@@ -1,12 +1,14 @@
-import { IsDateString, IsOptional, IsString } from 'class-validator';
+import { IsISO8601, IsOptional, IsString } from 'class-validator';
+import { NotBefore } from '../../common/validation/not-before.decorator';
 
 export class RankingHistoryQueryDto {
   @IsOptional()
-  @IsDateString()
+  @IsISO8601({ strict: true })
   from?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsISO8601({ strict: true })
+  @NotBefore('from')
   to?: string;
 
   @IsOptional()

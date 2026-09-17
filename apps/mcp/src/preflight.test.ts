@@ -97,6 +97,12 @@ describe("preflight", () => {
     const result = await preflight(client);
     expect(result.ok).toBe(false);
     expect(result).toHaveProperty("message", expect.stringContaining("401"));
+    expect(result).toHaveProperty(
+      "message",
+      expect.stringContaining(
+        "check that ASOBEAST_API_URL is the instance the token was minted on",
+      ),
+    );
   });
 
   it("refuses an expired entitlement", async () => {

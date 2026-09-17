@@ -363,6 +363,30 @@ describe('AnalyticsController (e2e)', () => {
       .expect(400);
   });
 
+  describe.each([
+    'visibility-history',
+    'rank-distribution-history',
+    'ratings-history',
+  ])('the %s window', (route) => {
+    it.each([
+      ['a start that is not on the calendar', { from: '2026-09-31' }],
+      ['an end before the start', { from: '2026-09-15', to: '2026-09-01' }],
+    ])('refuses %s', async (_case, query) => {
+      const id = await seed();
+
+      await api.get(`/apps/${id}/${route}`).query(query).expect(400);
+    });
+
+    it('accepts a window that runs forwards', async () => {
+      const id = await seed();
+
+      await api
+        .get(`/apps/${id}/${route}`)
+        .query({ from: '2026-06-20', to: '2026-07-01' })
+        .expect(200);
+    });
+  });
+
   it('groups rank distribution into disjoint bands per day', async () => {
     const id = await seed();
 

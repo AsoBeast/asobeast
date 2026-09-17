@@ -124,4 +124,21 @@ describe('CategoryRanksController (e2e)', () => {
     const overall = body.series.find((item) => item.genre === 'overall');
     expect(overall).toMatchObject({ genreName: 'Overall', current: null });
   });
+
+  it.each([
+    ['a start that is not on the calendar', { from: '2026-09-31' }],
+    ['an end before the start', { from: '2026-09-15', to: '2026-09-01' }],
+  ])('refuses a history window with %s', async (_case, query) => {
+    const app = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'window-store',
+        country: 'us',
+        name: 'Window',
+      },
+    });
+
+    await api.get(`/apps/${app.id}/category-ranks`).query(query).expect(400);
+  });
 });

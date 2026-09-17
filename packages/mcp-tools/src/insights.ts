@@ -1,16 +1,17 @@
 import { z } from "zod";
 import { QUERY_BOUNDS, UTC_DATE_PATTERN } from "@asobeast/shared";
+import { isUtcCalendarDate } from "./calendar-date";
 import { defineReadTool, seg, type ReadTool } from "./define";
 
 const appId = z.string().describe("The app id from list_apps.");
-const from = z
+const utcDate = z
   .string()
   .regex(UTC_DATE_PATTERN)
+  .refine(isUtcCalendarDate, { error: "must be a date on the calendar" });
+const from = utcDate
   .optional()
   .describe("Inclusive start date as a UTC date string (YYYY-MM-DD).");
-const to = z
-  .string()
-  .regex(UTC_DATE_PATTERN)
+const to = utcDate
   .optional()
   .describe("Inclusive end date as a UTC date string (YYYY-MM-DD).");
 
@@ -46,9 +47,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
       "The stored search-results snapshot for one tracked keyword: the ranked apps captured on a given day. Omit date for the most recent snapshot. Dates are UTC date strings (YYYY-MM-DD).",
     inputSchema: z.object({
       keywordId: z.string().describe("The tracked keyword id."),
-      date: z
-        .string()
-        .regex(UTC_DATE_PATTERN)
+      date: utcDate
         .optional()
         .describe("UTC date string (YYYY-MM-DD) of the snapshot to fetch."),
     }),

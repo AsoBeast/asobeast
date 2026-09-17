@@ -16,6 +16,8 @@ Today means the UTC date. An instance in Auckland and an instance in Los Angeles
 
 Do not localize a `date` string before comparing it. Parsing `2026-07-30` as local midnight and formatting it back can shift it by a day.
 
+A date you send must exist on the calendar, and a window must run forwards. A day such as `2026-02-30` or a `to` that falls on an earlier UTC day than `from` answers `400` rather than another day's data or an empty series. The MCP tools refuse the same inputs with a tool error.
+
 ## Positions are 1 based and null is meaningful
 
 Position 1 is the top result. `null` means the keyword was checked and the app was not found within that row's `depth`, which defaults to 200.

@@ -132,16 +132,26 @@ The token is shown once. Copy it before you leave the page.
 
 The proxy path is not a fallback. In a Compose deployment the API is on a private network and is never published, so `https://your-host/api/backend` is the only route in from another machine. The proxy forwards the bearer header to the API unchanged. See [How asobeast works](/concepts/architecture).
 
-It defaults to `http://localhost:4000`. There is no default for the token.
+It defaults to `http://localhost:4000`, and an empty value counts as unset, so a template that leaves it blank still gets the default. There is no default for the token.
+
+The value is the REST API, so it never ends in `/mcp`. The hosted endpoint is a different transport, and the server refuses a URL copied from its snippet with the value to set instead.
+
+Plain `http://` to a host other than this machine logs a warning at startup, because the token travels unencrypted. It still connects, since a private network you trust is a legitimate place to run it. Use `https://` everywhere else.
 
 ## Verify the connection
 
-At startup the server calls `/auth/me` on your instance before it registers a single tool. Three outcomes end the process with a non zero exit status and a readable message.
+At startup the server checks its configuration and calls `/auth/me` on your instance before it registers a single tool. Each of these outcomes ends the process with a non zero exit status and a message that names the variable to change.
 
 | Situation | What you see |
 | --- | --- |
 | `ASOBEAST_API_TOKEN` unset or empty | A message telling you to set it to a personal API token |
-| The token was rejected | A `401` message telling you to mint a fresh token in Settings |
+| `ASOBEAST_API_TOKEN` does not start with `asob_` | A message that it must be a personal API token. A pasted `Bearer ` prefix or surrounding quotes are removed for you |
+| `ASOBEAST_API_URL` is not an absolute `http://` or `https://` address | A message showing the form it needs, such as `https://your-host/api/backend` |
+| `ASOBEAST_API_URL` ends in `/mcp` | A message giving the same value without `/mcp` |
+| `ASOBEAST_API_URL` has a query string, a fragment or a user name and password | A message giving the value without them. The token goes in `ASOBEAST_API_TOKEN` |
+| `ASOBEAST_API_URL` is your web address without `/api/backend` | A message giving the value with `/api/backend` appended |
+| `ASOBEAST_API_URL` answers with a redirect | A message naming the address it redirected to. The token is never sent across a redirect |
+| The token was rejected | A `401` message telling you to mint a fresh token in Settings and to check that the URL is the instance the token was minted on |
 | The account is not entitled | A message that the trial expired or a plan is required |
 
 Diagnostics go to stderr, because on stdio the JSON-RPC stream owns stdout. The token is never logged.
@@ -153,6 +163,10 @@ When the preflight passes, the server logs the instance it connected to and the 
 <AccordionGroup>
   <Accordion title="MODULE_NOT_FOUND on startup">
     The entrypoint path is relative, or the server has not been built. Run `pnpm build` and register the absolute path to `apps/mcp/dist/index.js`.
+  </Accordion>
+
+  <Accordion title="spawn node ENOENT">
+    Desktop clients such as Claude Desktop do not read your shell `PATH`, so they cannot find `node` when it was installed by a version manager. Set `command` to the absolute path that `which node` prints in your terminal.
   </Accordion>
 
   <Accordion title="The process exits immediately">

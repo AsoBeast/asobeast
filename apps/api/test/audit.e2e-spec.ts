@@ -330,6 +330,15 @@ describe('AuditController (e2e)', () => {
     expect(body.points.map((point) => point.date)).toEqual(['2026-06-15']);
   });
 
+  it.each([
+    ['a start that is not on the calendar', { from: '2026-09-31' }],
+    ['an end before the start', { from: '2026-09-15', to: '2026-09-01' }],
+  ])('refuses a history window with %s', async (_case, query) => {
+    const id = await seed();
+
+    await api.get(`/apps/${id}/audit/history`).query(query).expect(400);
+  });
+
   it('returns 404 history for an unknown app', async () => {
     await api.get('/apps/missing/audit/history').expect(404);
   });

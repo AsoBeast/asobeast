@@ -270,6 +270,50 @@ describe('Remote MCP transport (e2e)', () => {
     expect(result?.content?.[0].text).toContain('not found');
   });
 
+  it('refuses a serp snapshot date that is not on the calendar', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+    const keyword = await prisma.keyword.upsert({
+      where: {
+        text_store_country: {
+          text: 'meme maker',
+          store: Store.APP_STORE,
+          country: 'us',
+        },
+      },
+      update: {},
+      create: { text: 'meme maker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId: fixture.id, keywordId: keyword.id, source: 'MANUAL' },
+    });
+
+    const response = await rpc('tools/call', {
+      name: 'serp_snapshot',
+      arguments: { keywordId: keyword.id, date: '2026-02-30' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).not.toContain('2026-03-02');
+  });
+
+  it('refuses a ranking history window that runs backwards', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+
+    const response = await rpc('tools/call', {
+      name: 'ranking_history',
+      arguments: { appId: fixture.id, from: '2026-09-15', to: '2026-09-01' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toContain('must not be before');
+  });
+
   it('matches the rest api result for every tool it can call blind', async () => {
     const shared = [
       { tool: 'list_apps', route: '/apps' },

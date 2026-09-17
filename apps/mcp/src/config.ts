@@ -1,7 +1,15 @@
+import { API_TOKEN_PREFIX, isLoopbackHostname } from "@asobeast/shared";
 import { z } from "zod";
 
+const DEFAULT_API_URL = "http://localhost:4000";
+const WEB_PROTOCOLS = new Set(["http:", "https:"]);
+const MCP_ENDPOINT_SUFFIX = "/mcp";
+const SURROUNDING_QUOTES = /^(["'])(.*)\1$/;
+const BEARER_SCHEME = /^bearer\s+/i;
+const QUERY_OR_FRAGMENT = /[?#]/;
+
 const schema = z.object({
-  ASOBEAST_API_URL: z.string().url().default("http://localhost:4000"),
+  ASOBEAST_API_URL: z.string().optional(),
   ASOBEAST_API_TOKEN: z
     .string({
       error: "set ASOBEAST_API_TOKEN to a personal API token (asob_…)",
@@ -21,6 +29,52 @@ export class ConfigError extends Error {
   }
 }
 
+function apiUrlOf(raw: string | undefined): string {
+  const value = raw?.trim() || DEFAULT_API_URL;
+  const url = URL.canParse(value) ? new URL(value) : null;
+  if (!url || !WEB_PROTOCOLS.has(url.protocol)) {
+    throw new ConfigError(
+      `ASOBEAST_API_URL must be an absolute http:// or https:// address such as https://your-host/api/backend, not "${value}".`,
+    );
+  }
+  if (QUERY_OR_FRAGMENT.test(value)) {
+    throw new ConfigError(
+      `ASOBEAST_API_URL must not include a query string or fragment. Set it to ${url.origin}${url.pathname.replace(/\/+$/, "")}.`,
+    );
+  }
+  if (url.username || url.password) {
+    throw new ConfigError(
+      "ASOBEAST_API_URL must not include a user name or password. Pass the API token in ASOBEAST_API_TOKEN instead.",
+    );
+  }
+  const base = value.replace(/\/+$/, "");
+  if (base.endsWith(MCP_ENDPOINT_SUFFIX)) {
+    throw new ConfigError(
+      `ASOBEAST_API_URL points at the hosted MCP endpoint. The stdio server calls the REST API, so set it to ${base.slice(0, -MCP_ENDPOINT_SUFFIX.length)}.`,
+    );
+  }
+  return base;
+}
+
+export function travelsInClearText(apiUrl: string): boolean {
+  const { protocol, hostname } = new URL(apiUrl);
+  return protocol === "http:" && !isLoopbackHostname(hostname);
+}
+
+function tokenOf(raw: string): string {
+  const token = raw
+    .trim()
+    .replace(SURROUNDING_QUOTES, "$2")
+    .trim()
+    .replace(BEARER_SCHEME, "");
+  if (!token.startsWith(API_TOKEN_PREFIX)) {
+    throw new ConfigError(
+      `ASOBEAST_API_TOKEN must be a personal API token starting with ${API_TOKEN_PREFIX}. Mint one from the MCP server card in Settings.`,
+    );
+  }
+  return token;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
@@ -30,7 +84,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): McpConfig {
     throw new ConfigError(message);
   }
   return {
-    apiUrl: parsed.data.ASOBEAST_API_URL.replace(/\/+$/, ""),
-    token: parsed.data.ASOBEAST_API_TOKEN,
+    apiUrl: apiUrlOf(parsed.data.ASOBEAST_API_URL),
+    token: tokenOf(parsed.data.ASOBEAST_API_TOKEN),
   };
 }

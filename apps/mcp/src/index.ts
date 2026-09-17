@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
 import { createClient } from "./client.js";
-import { ConfigError, loadConfig } from "./config.js";
+import { ConfigError, loadConfig, travelsInClearText } from "./config.js";
 import { logError, logInfo } from "./log.js";
 import { preflight } from "./preflight.js";
 import { registerTools } from "./tools/index.js";
@@ -16,6 +16,12 @@ async function main(): Promise<void> {
     logError(error.message);
     process.exitCode = 1;
     return;
+  }
+
+  if (travelsInClearText(config.apiUrl)) {
+    logInfo(
+      `ASOBEAST_API_URL uses http:// to ${new URL(config.apiUrl).host}, so the API token travels unencrypted. Use https:// unless this is a private network you trust.`,
+    );
   }
 
   const client = createClient(config);

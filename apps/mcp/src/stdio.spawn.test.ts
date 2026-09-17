@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -42,6 +42,11 @@ function buildBinary(): void {
 function startFakeApi(): Promise<FakeApi> {
   const server = createServer((req, res) => {
     const { pathname } = new URL(req.url ?? "/", "http://127.0.0.1");
+    if (req.headers.authorization !== `Bearer ${TOKEN}`) {
+      res.writeHead(401, { "content-type": "application/json" });
+      res.end(JSON.stringify({ message: "Not authenticated" }));
+      return;
+    }
     const body = ROUTES[pathname];
     res.writeHead(body === undefined ? 404 : 200, {
       "content-type": "application/json",
@@ -66,6 +71,7 @@ function startFakeApi(): Promise<FakeApi> {
 async function spawnClient(
   apiUrl: string,
   options?: ClientOptions,
+  token = TOKEN,
 ): Promise<Client> {
   const client = new Client(
     { name: "asobeast-spawn-spec", version: "1.0.0" },
@@ -78,12 +84,31 @@ async function spawnClient(
       env: {
         ...getDefaultEnvironment(),
         ASOBEAST_API_URL: apiUrl,
-        ASOBEAST_API_TOKEN: TOKEN,
+        ASOBEAST_API_TOKEN: token,
       },
       stderr: "ignore",
     }),
   );
   return client;
+}
+
+interface ExitedBinary {
+  code: number | null;
+  stdout: string;
+  stderr: string;
+}
+
+function runBinary(env: Record<string, string>): Promise<ExitedBinary> {
+  return new Promise((resolve) => {
+    const child = execFile(
+      process.execPath,
+      [BINARY],
+      { env: { ...getDefaultEnvironment(), ...env } },
+      (_error, stdout, stderr) => {
+        resolve({ code: child.exitCode, stdout, stderr });
+      },
+    );
+  });
 }
 
 function dialectOf(schema: unknown): unknown {
@@ -173,5 +198,51 @@ describe("the stdio binary across both protocol eras", () => {
     ]);
 
     expect(served.tools).toStrictEqual(negotiated.tools);
+  });
+});
+
+describe("misconfigured", () => {
+  it.each([
+    [
+      "an api url ending in /mcp",
+      {
+        ASOBEAST_API_URL: "https://host/api/backend/mcp",
+        ASOBEAST_API_TOKEN: TOKEN,
+      },
+      "set it to https://host/api/backend.",
+    ],
+    [
+      "an api url without a scheme",
+      { ASOBEAST_API_URL: "host/api/backend", ASOBEAST_API_TOKEN: TOKEN },
+      "ASOBEAST_API_URL must be an absolute http:// or https:// address",
+    ],
+    [
+      "a token that is not a personal api token",
+      {
+        ASOBEAST_API_URL: "https://host/api/backend",
+        ASOBEAST_API_TOKEN: "ghp_abc",
+      },
+      "ASOBEAST_API_TOKEN must be a personal API token starting with asob_",
+    ],
+  ])(
+    "exits with a message naming the fix for %s",
+    async (_case, env, message) => {
+      const exited = await runBinary(env);
+
+      expect(exited.code).toBe(1);
+      expect(exited.stdout).toBe("");
+      expect(exited.stderr).toContain(message);
+    },
+  );
+
+  it("connects with a token pasted together with its bearer scheme", async () => {
+    const client = await spawnClient(api.url, undefined, `Bearer ${TOKEN}`);
+
+    try {
+      const { tools } = await client.listTools();
+      expect(tools).toHaveLength(MCP_TOOLS.length);
+    } finally {
+      await client.close();
+    }
   });
 });

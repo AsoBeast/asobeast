@@ -80,6 +80,22 @@ describe("mcp input bounds match the api", () => {
     expect(schema.safeParse("2026-08-21T00:00:00Z").success).toBe(false);
   });
 
+  const CALENDAR_FIELDS = MCP_TOOLS.flatMap((tool) =>
+    Object.keys(tool.inputSchema.shape)
+      .filter((field) => ["from", "to", "date"].includes(field))
+      .map((field): [string, string] => [tool.name, field]),
+  );
+
+  it.each(CALENDAR_FIELDS)(
+    "%s.%s refuses a date that is not on the calendar",
+    (tool, field) => {
+      const schema = fieldOf(tool, field);
+
+      expect(schema.safeParse("2026-02-30").success).toBe(false);
+      expect(schema.safeParse("2028-02-29").success).toBe(true);
+    },
+  );
+
   it("leaves no unbounded number in any tool schema", () => {
     for (const tool of MCP_TOOLS) {
       for (const [field, schema] of Object.entries(tool.inputSchema.shape)) {
