@@ -2608,7 +2608,40 @@
             }
           }
         },
-        "summary": "Run the AI audit for an app and recompute",
+        "summary": "Run the AI audit synchronously (deprecated: use POST /apps/{id}/audit/ai/runs)",
+        "tags": [
+          "audit"
+        ]
+      }
+    },
+    "/apps/{id}/audit/ai/runs": {
+      "post": {
+        "operationId": "AuditController_requestAiRun",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "The creative analysis is queued, running or already up to date"
+          },
+          "404": {
+            "description": "No such app in this workspace"
+          },
+          "409": {
+            "description": "OPENAI_API_KEY is not configured"
+          },
+          "422": {
+            "description": "A competitor row, or a listing with nothing to analyze"
+          }
+        },
+        "summary": "Queue the AI creative analysis for an app",
         "tags": [
           "audit"
         ]
