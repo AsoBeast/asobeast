@@ -278,3 +278,27 @@ test("shows a placeholder when a screenshot cannot load", async ({ page }) => {
   const strip = page.getByRole("list", { name: "Screenshots" });
   await expect(strip.getByText("Image unavailable").first()).toBeVisible();
 });
+
+test("compares the listing with its competitors in words and numbers", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/audit");
+  const table = page.getByRole("table", {
+    name: "How your listing compares with 3 competitors",
+  });
+
+  await expect(table.getByRole("row", { name: /Ratings/ })).toContainText(
+    "Behind",
+  );
+  await expect(
+    table.getByRole("row", { name: /Days since update/ }),
+  ).toContainText("Ahead");
+});
+
+test("invites adding competitors when there are none", async ({ page }) => {
+  await page.goto("/apps/app-2/audit");
+
+  await expect(
+    page.getByRole("link", { name: "Add competitors" }),
+  ).toHaveAttribute("href", "/apps/app-2/competitors");
+});

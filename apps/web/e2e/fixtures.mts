@@ -2446,7 +2446,7 @@ export const APP_AUDIT: AppAuditResult = {
         label: "Ratings",
         better: "higher",
         you: 341,
-        median: 300,
+        median: 900,
         best: 5200,
         bestAppId: "c1",
       },

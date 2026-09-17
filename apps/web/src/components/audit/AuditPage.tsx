@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AiAnalysisPanel } from "@/components/audit/AiAnalysisPanel";
 import { AuditActionPlan } from "@/components/audit/AuditActionPlan";
+import { AuditBenchmarks } from "@/components/audit/AuditBenchmarks";
 import { AuditFactorGrid } from "@/components/audit/AuditFactorGrid";
 import { AuditLimitations } from "@/components/audit/AuditLimitations";
 import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
@@ -19,10 +20,10 @@ export function AuditPage({ appId }: { appId: string }) {
   return (
     <div className="page-wide flex flex-col gap-8">
       <div className="grid gap-4 xl:grid-cols-12">
-        <div className="xl:col-span-5">
+        <div className="min-w-0 xl:col-span-5">
           <AuditScoreHero appId={appId} audit={audit} />
         </div>
-        <div className="xl:col-span-7">
+        <div className="min-w-0 xl:col-span-7">
           <AuditTopFixes recommendations={audit.recommendations} />
         </div>
       </div>
@@ -35,9 +36,18 @@ export function AuditPage({ appId }: { appId: string }) {
 
       <CreativeInsights audit={audit} />
 
-      <Suspense fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}>
-        <AuditHealthChart id={appId} />
-      </Suspense>
+      <div className="grid gap-4 xl:grid-cols-12">
+        <div className="min-w-0 xl:col-span-7">
+          <AuditBenchmarks appId={appId} benchmarks={audit.benchmarks} />
+        </div>
+        <div className="min-w-0 xl:col-span-5">
+          <Suspense
+            fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}
+          >
+            <AuditHealthChart id={appId} />
+          </Suspense>
+        </div>
+      </div>
 
       <AuditLimitations limitations={audit.limitations ?? []} />
     </div>

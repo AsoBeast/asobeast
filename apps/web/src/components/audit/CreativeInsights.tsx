@@ -88,7 +88,7 @@ export function CreativeInsights({ audit }: { audit: AppAuditResult }) {
             <ul
               aria-label="Screenshots"
               tabIndex={0}
-              className="flex snap-x gap-4 overflow-x-auto pb-2"
+              className="flex w-full min-w-0 snap-x gap-4 overflow-x-auto pb-2"
             >
               {creative.screenshots.map((screenshot) => (
                 <ScreenshotCard

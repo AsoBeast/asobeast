@@ -430,6 +430,7 @@ const runState = (
 
 function auditBase(id: string, req: IncomingMessage): AppAuditResult {
   if (id === "app-gp") return PLAY_AUDIT;
+  if (id === "app-2") return { ...APP_AUDIT, appId: id, benchmarks: null };
   if (hasCookie(req, "e2e_audit", "provisional")) {
     return { ...PROVISIONAL_AUDIT, appId: id };
   }
