@@ -123,6 +123,17 @@ test("mcp card mints a token and shows both connect snippets", async ({
   await chooseAgent("Other");
   await expect(dialog.getByText(/Streamable HTTP/)).toBeVisible();
 
+  await chooseAgent("Gemini CLI");
+  await expect(page).toHaveURL(/[?&]agent=Gemini\+CLI/);
+
+  await dialog.getByRole("tab", { name: "Local server" }).click();
+  await expect(agent).toHaveText("Claude Code");
+  await expect(
+    dialog.getByText(/^claude mcp add asobeast --env/),
+  ).toBeVisible();
+
+  await dialog.getByRole("tab", { name: "Hosted endpoint" }).click();
+  await expect(agent).toHaveText("Gemini CLI");
   await chooseAgent("Claude Code");
   await expect(
     dialog.getByText(/^claude mcp add --transport http/),

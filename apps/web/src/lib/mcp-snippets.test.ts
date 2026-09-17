@@ -5,6 +5,7 @@ import {
   STDIO_ENTRYPOINT,
   apiOrigin,
   hostedSnippets,
+  isMcpClient,
   localSnippets,
   remoteEndpoint,
   snippetById,
@@ -183,6 +184,17 @@ describe("mcp snippets", () => {
         snippetsFor(hosted, "Claude Desktop").map((snippet) => snippet.id),
       ).toEqual(["claude-desktop"]);
     });
+
+    it.each(MCP_CLIENTS)("recognises %j as an agent", (client) => {
+      expect(isMcpClient(client)).toBe(true);
+    });
+
+    it.each(["", "claude code", "Claude", "Other "])(
+      "refuses %j as an agent",
+      (value) => {
+        expect(isMcpClient(value)).toBe(false);
+      },
+    );
   });
 
   describe("codex", () => {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plug } from "lucide-react";
+import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import {
   DEFAULT_API_TOKEN_SCOPE,
@@ -41,12 +42,13 @@ import {
 import {
   MCP_CLIENTS,
   hostedSnippets,
+  isMcpClient,
   localSnippets,
   remoteEndpoint,
   snippetsFor,
   type ConnectSnippet,
-  type McpClient,
 } from "@/lib/mcp-snippets";
+import { mcpClientParser } from "@/lib/search-params";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -97,10 +99,13 @@ function AgentSnippets({
   id: string;
   snippets: ConnectSnippet[];
 }) {
-  const [client, setClient] = useState<McpClient>("Claude Code");
+  const [selected, setSelected] = useQueryState("agent", mcpClientParser);
   const clients = MCP_CLIENTS.filter(
     (candidate) => snippetsFor(snippets, candidate).length > 0,
   );
+  const client = clients.includes(selected)
+    ? selected
+    : (clients[0] ?? selected);
 
   return (
     <>
@@ -108,7 +113,9 @@ function AgentSnippets({
         <Label htmlFor={id}>Agent</Label>
         <Select
           value={client}
-          onValueChange={(next) => setClient(next as McpClient)}
+          onValueChange={(next) => {
+            if (isMcpClient(next)) void setSelected(next);
+          }}
         >
           <SelectTrigger id={id}>
             <SelectValue />

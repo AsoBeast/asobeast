@@ -18,6 +18,12 @@ export const MCP_CLIENTS = [
 
 export type McpClient = (typeof MCP_CLIENTS)[number];
 
+export const DEFAULT_MCP_CLIENT: McpClient = "Claude Code";
+
+export function isMcpClient(value: string): value is McpClient {
+  return MCP_CLIENTS.some((client) => client === value);
+}
+
 export type SnippetLanguage = "bash" | "json" | "toml" | "text";
 
 export interface ConnectSnippet {
