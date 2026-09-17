@@ -11,7 +11,7 @@ import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
 import { DAY_MS } from './audit-scoring';
 import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
-import { computeAudit } from './rubric';
+import { AUDIT_RUBRIC_VERSION, computeAudit } from './rubric';
 
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
@@ -105,20 +105,8 @@ export class AuditService {
         const result = await this.audit(id);
         await this.prisma.auditScore.upsert({
           where: { appId_date: { appId: id, date } },
-          create: {
-            appId: id,
-            date,
-            overall: result.overall,
-            coveredWeight: result.coveredWeight,
-            totalWeight: result.totalWeight,
-            factors: toSlimFactors(result),
-          },
-          update: {
-            overall: result.overall,
-            coveredWeight: result.coveredWeight,
-            totalWeight: result.totalWeight,
-            factors: toSlimFactors(result),
-          },
+          create: { appId: id, date, ...toScoreRow(result) },
+          update: toScoreRow(result),
         });
         saved += 1;
       } catch (error) {
@@ -151,6 +139,8 @@ export class AuditService {
         overall: true,
         coveredWeight: true,
         totalWeight: true,
+        rubricVersion: true,
+        confidence: true,
       },
     });
 
@@ -160,6 +150,8 @@ export class AuditService {
         overall: row.overall,
         coveredWeight: row.coveredWeight,
         totalWeight: row.totalWeight,
+        rubricVersion: row.rubricVersion,
+        confidence: row.confidence,
       })),
     };
   }
@@ -174,3 +166,12 @@ const toSlimFactors = (result: AppAuditResult): Prisma.InputJsonValue =>
     score: factor.score,
     weight: factor.weight,
   }));
+
+const toScoreRow = (result: AppAuditResult) => ({
+  overall: result.overall,
+  coveredWeight: result.coveredWeight,
+  totalWeight: result.totalWeight,
+  factors: toSlimFactors(result),
+  rubricVersion: AUDIT_RUBRIC_VERSION,
+  confidence: result.confidence ?? null,
+});

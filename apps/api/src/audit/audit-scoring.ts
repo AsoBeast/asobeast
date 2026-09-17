@@ -1,14 +1,16 @@
 import { KeywordSource, Store } from '@prisma/client';
 import {
   AuditAiStatus,
-  AuditCheckKind,
   AuditCheckResult,
+  AuditCheckSource,
   AuditCheckStatus,
+  AuditUnlock,
   KeywordBucket,
   LintIssue,
   tokenize,
 } from '@asobeast/shared';
 import { clamp } from '../scoring/formulas';
+import { round1 } from './audit-engine';
 import { RawAppFacts } from '../store-providers/raw-facts';
 import { AiAuditChecks } from './audit-ai.service';
 
@@ -61,32 +63,107 @@ export const statusFromScore = (score: number | null): AuditCheckStatus => {
   return 'fail';
 };
 
-export const check = (
-  id: string,
-  label: string,
-  kind: AuditCheckKind,
-  score: number | null,
-  detail: string,
-): AuditCheckResult => ({
-  id,
-  label,
-  kind,
-  score,
-  status: statusFromScore(score),
-  detail,
-});
+export type AuditCheckId =
+  | 'title-keyword'
+  | 'title-char-usage'
+  | 'title-lint'
+  | 'title-uniqueness'
+  | 'subtitle-keyword'
+  | 'subtitle-no-repetition'
+  | 'subtitle-char-usage'
+  | 'keyword-field-lint'
+  | 'keyword-field-char-usage'
+  | 'keyword-field-relevance'
+  | 'description-hook'
+  | 'description-cta'
+  | 'description-social-proof'
+  | 'description-formatting'
+  | 'screenshots-count'
+  | 'screenshots-first-three'
+  | 'screenshots-text-overlays'
+  | 'screenshots-consistent'
+  | 'screenshots-localized'
+  | 'screenshots-device-frames'
+  | 'preview-video-exists'
+  | 'preview-video-hook'
+  | 'preview-video-length'
+  | 'preview-video-sound'
+  | 'ratings-average'
+  | 'ratings-count'
+  | 'ratings-trend'
+  | 'ratings-responses'
+  | 'ratings-prompts'
+  | 'icon-distinctive'
+  | 'icon-simple'
+  | 'icon-category-fit'
+  | 'icon-no-text'
+  | 'rankings-top10'
+  | 'rankings-coverage'
+  | 'rankings-trend'
+  | 'rankings-gap'
+  | 'conversion-freshness'
+  | 'conversion-promo'
+  | 'conversion-events'
+  | 'conversion-cpp';
+
+export interface CheckAdvice {
+  title: string;
+  fix: string;
+}
+
+export interface RubricCheck extends AuditCheckResult {
+  id: AuditCheckId;
+  weight: number;
+  source: AuditCheckSource;
+  unlock: AuditUnlock | null;
+  advice: CheckAdvice | null;
+}
+
+export interface CheckInput {
+  id: AuditCheckId;
+  label: string;
+  source: AuditCheckSource;
+  weight: number;
+  score: number | null;
+  detail: string;
+  heuristic?: boolean;
+  unlock?: AuditUnlock | null;
+  advice?: CheckAdvice | null;
+}
+
+export const check = (input: CheckInput): RubricCheck => {
+  const score = input.score === null ? null : round1(clamp(input.score, 0, 10));
+  const status = statusFromScore(score);
+  return {
+    id: input.id,
+    label: input.label,
+    kind: input.source === 'ai' ? 'ai' : input.heuristic ? 'heuristic' : 'auto',
+    source: input.source,
+    weight: input.weight,
+    score,
+    status,
+    detail: input.detail,
+    unlock: score === null ? (input.unlock ?? null) : null,
+    advice:
+      status === 'warn' || status === 'fail' ? (input.advice ?? null) : null,
+  };
+};
 
 export const aiCheck = (
-  id: string,
+  id: AuditCheckId,
   label: string,
+  weight: number,
   ai: AiAuditChecks,
-): AuditCheckResult => {
+): RubricCheck => {
   const found = ai[id];
-  if (!found) {
-    return check(id, label, 'ai', null, 'Run the AI audit to score this.');
-  }
-  const score = found.score === null ? null : clamp(found.score, 0, 10);
-  return check(id, label, 'ai', score, found.detail);
+  return check({
+    id,
+    label,
+    source: 'ai',
+    weight,
+    score: found?.score ?? null,
+    detail: found?.detail ?? 'Run the AI audit to score this.',
+  });
 };
 
 export const lintScore = (issues: LintIssue[]): number => {

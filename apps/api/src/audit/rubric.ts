@@ -1,11 +1,16 @@
+import { Store } from '@prisma/client';
 import {
   AppAuditResult,
   AuditCheckResult,
+  AuditFactorAvailability,
   AuditFactorResult,
+  AuditGroupId,
+  AuditGroupResult,
   AuditRecommendation,
   AuditRecommendations,
 } from '@asobeast/shared';
-import { AuditContext } from './audit-scoring';
+import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
+import { AuditContext, RubricCheck } from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
   iconChecks,
@@ -48,65 +53,98 @@ export const AUDIT_WEIGHTS = {
   },
 } as const;
 
+export const AUDIT_RUBRIC_VERSION = 'v2';
+
+export const AUDIT_GROUP_LABELS: Readonly<Record<AuditGroupId, string>> =
+  Object.freeze({
+    discoverability: 'Search visibility',
+    conversion: 'Conversion',
+  });
+
 type FactorId = keyof (typeof AUDIT_WEIGHTS)['APP_STORE'];
 type RecommendationBucket = keyof AuditRecommendations;
+
+const discoverability = (): AuditGroupId => 'discoverability';
+const conversion = (): AuditGroupId => 'conversion';
 
 interface FactorDefinition {
   id: FactorId;
   label: string;
   bucket: RecommendationBucket;
-  build: (context: AuditContext) => AuditCheckResult[] | null;
+  group: (store: Store) => AuditGroupId;
+  build: (context: AuditContext) => RubricCheck[] | null;
 }
 
 const FACTORS: FactorDefinition[] = [
-  { id: 'title', label: 'Title', bucket: 'quickWins', build: titleChecks },
+  {
+    id: 'title',
+    label: 'Title',
+    bucket: 'quickWins',
+    group: discoverability,
+    build: titleChecks,
+  },
   {
     id: 'subtitle',
     label: 'Subtitle',
     bucket: 'quickWins',
+    group: discoverability,
     build: subtitleChecks,
   },
   {
     id: 'keywordField',
     label: 'Keyword field',
     bucket: 'quickWins',
+    group: discoverability,
     build: keywordFieldChecks,
   },
   {
     id: 'description',
     label: 'Description',
     bucket: 'quickWins',
+    group: (store) =>
+      store === Store.GOOGLE_PLAY ? 'discoverability' : 'conversion',
     build: descriptionChecks,
   },
   {
     id: 'screenshots',
     label: 'Screenshots',
     bucket: 'highImpact',
+    group: conversion,
     build: screenshotChecks,
   },
   {
     id: 'previewVideo',
     label: 'Preview video',
     bucket: 'highImpact',
+    group: conversion,
     build: previewVideoChecks,
   },
   {
     id: 'ratings',
     label: 'Ratings & reviews',
     bucket: 'strategic',
+    group: conversion,
     build: ratingChecks,
   },
-  { id: 'icon', label: 'Icon', bucket: 'highImpact', build: iconChecks },
+  {
+    id: 'icon',
+    label: 'Icon',
+    bucket: 'highImpact',
+    group: conversion,
+    build: iconChecks,
+  },
   {
     id: 'rankings',
     label: 'Keyword rankings',
     bucket: 'strategic',
+    group: discoverability,
     build: rankingChecks,
   },
   {
     id: 'conversion',
     label: 'Conversion signals',
     bucket: 'strategic',
+    group: conversion,
     build: conversionChecks,
   },
 ];
@@ -120,12 +158,35 @@ export const AUDIT_FACTOR_LABELS: Readonly<Record<string, string>> =
     Object.fromEntries(FACTORS.map((factor) => [factor.id, factor.label])),
   );
 
-const round1 = (value: number): number => Math.round(value * 10) / 10;
-
-const mean = (values: number[]): number =>
-  values.reduce((sum, value) => sum + value, 0) / values.length;
-
 const SEVERITY = { fail: 2, warn: 1, pass: 0, unanswered: 0 } as const;
+
+const availabilityOf = (
+  checks: RubricCheck[],
+  confidence: number,
+): AuditFactorAvailability => {
+  if (checks.length === 0) return 'not-measurable';
+  if (confidence === 0) return 'awaiting-input';
+  return confidence === 1 ? 'measured' : 'partial';
+};
+
+const toContractCheck = (item: RubricCheck): AuditCheckResult => ({
+  id: item.id,
+  label: item.label,
+  kind: item.kind,
+  status: item.status,
+  score: item.score,
+  detail: item.detail,
+  weight: item.weight,
+  source: item.source,
+  unlock: item.unlock,
+});
+
+const toFactorScore = (factor: AuditFactorResult): FactorScore => ({
+  weight: factor.weight,
+  score: factor.score,
+  confidence: factor.confidence ?? 0,
+  measurable: factor.availability !== 'not-measurable',
+});
 
 export function computeAudit(context: AuditContext): AppAuditResult {
   const weights = AUDIT_WEIGHTS[context.store];
@@ -137,47 +198,48 @@ export function computeAudit(context: AuditContext): AppAuditResult {
       continue;
     }
     const checks = definition.build(context) ?? [];
-    const scored = checks.filter(
-      (item): item is AuditCheckResult & { score: number } =>
-        item.score !== null,
-    );
-    const score =
-      scored.length === 0
-        ? null
-        : round1(mean(scored.map((item) => item.score)));
+    const { score, confidence } = scoreFactor(checks);
     factors.push({
       id: definition.id,
       label: definition.label,
       weight,
       score,
-      checks,
+      checks: checks.map(toContractCheck),
       needsInput: score === null,
+      group: definition.group(context.store),
+      confidence,
+      availability: availabilityOf(checks, confidence),
     });
   }
 
-  let weightedSum = 0;
-  let coveredWeight = 0;
-  let totalWeight = 0;
-  for (const factor of factors) {
-    totalWeight += factor.weight;
-    if (factor.score !== null) {
-      weightedSum += factor.score * factor.weight;
-      coveredWeight += factor.weight;
-    }
-  }
-  const overall =
-    coveredWeight === 0 ? null : round1((weightedSum / coveredWeight) * 10);
+  const totals = scoreAudit(factors.map(toFactorScore));
+  const groups: AuditGroupResult[] = (
+    Object.keys(AUDIT_GROUP_LABELS) as AuditGroupId[]
+  ).map((id) => {
+    const members = factors.filter((factor) => factor.group === id);
+    const scored = scoreAudit(members.map(toFactorScore));
+    return {
+      id,
+      label: AUDIT_GROUP_LABELS[id],
+      score: scored.overall === null ? null : scored.overall / 10,
+      confidence: scored.confidence,
+    };
+  });
 
   return {
     appId: context.appId,
     store: context.store,
-    overall,
-    coveredWeight,
-    totalWeight,
+    overall: totals.overall,
+    coveredWeight: totals.coveredWeight,
+    totalWeight: totals.totalWeight,
     factors,
     recommendations: deriveRecommendations(factors),
     ai: context.aiStatus,
     generatedAt: context.now.toISOString(),
+    rubricVersion: AUDIT_RUBRIC_VERSION,
+    grade: gradeFor(totals.overall),
+    confidence: totals.confidence,
+    groups,
   };
 }
 

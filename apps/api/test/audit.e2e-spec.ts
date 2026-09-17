@@ -161,10 +161,50 @@ describe('AuditController (e2e)', () => {
     expect(result.ai.generatedAt).toBeNull();
 
     const ratings = factor(result, 'ratings');
-    expect(ratings?.score).toBeCloseTo(6.7, 1);
+    expect(ratings?.score).toBeCloseTo(7.2, 1);
 
     expect(factor(result, 'keywordField')?.needsInput).toBe(true);
     expect(factor(result, 'keywordField')?.score).toBeNull();
+  });
+
+  it('reports the rubric version, grade, confidence and groups', async () => {
+    const id = await seed();
+
+    const response = await api.get(`/apps/${id}/audit`).expect(200);
+    const result = response.body as AppAuditResult;
+
+    expect(result.rubricVersion).toBe('v2');
+    expect(result.grade).not.toBeNull();
+    expect(result.confidence).toBeGreaterThan(0);
+    expect(result.confidence).toBeLessThanOrEqual(1);
+    expect(result.groups?.map((group) => group.id)).toEqual([
+      'discoverability',
+      'conversion',
+    ]);
+    expect(
+      result.factors.every(
+        (item) =>
+          typeof item.confidence === 'number' &&
+          item.availability !== undefined,
+      ),
+    ).toBe(true);
+  });
+
+  it('keeps every check status inside the published union', async () => {
+    const id = await seed();
+
+    const response = await api.get(`/apps/${id}/audit`).expect(200);
+    const result = response.body as AppAuditResult;
+    const statuses = result.factors.flatMap((item) =>
+      item.checks.map((entry) => entry.status),
+    );
+
+    expect(statuses.length).toBeGreaterThan(0);
+    expect(
+      statuses.every((status) =>
+        ['pass', 'warn', 'fail', 'unanswered'].includes(status),
+      ),
+    ).toBe(true);
   });
 
   it('runs the AI audit, caches it, and raises the overall', async () => {
@@ -257,6 +297,8 @@ describe('AuditController (e2e)', () => {
     expect(rows[0].coveredWeight).toBeGreaterThan(0);
     expect(rows[0].totalWeight).toBe(110);
     expect(Array.isArray(rows[0].factors)).toBe(true);
+    expect(rows[0].rubricVersion).toBe('v2');
+    expect(rows[0].confidence).toBeGreaterThan(0);
   });
 
   it('upserts the same day idempotently', async () => {

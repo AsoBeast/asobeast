@@ -1,4 +1,9 @@
-import { AUDIT_WEIGHTS, computeAudit } from './rubric';
+import {
+  AUDIT_GROUP_LABELS,
+  AUDIT_RUBRIC_VERSION,
+  AUDIT_WEIGHTS,
+  computeAudit,
+} from './rubric';
 import { previewVideoChecks } from './checks/creative-checks';
 import { titleChecks } from './checks/metadata-checks';
 import { ratingChecks } from './checks/reputation-checks';
@@ -181,6 +186,46 @@ describe('computeAudit', () => {
     expect(keywordField?.needsInput).toBe(true);
     expect(keywordField?.score).toBeNull();
     expect(ratings?.needsInput).toBe(true);
+  });
+
+  it('produces the same result for the same context on every call', () => {
+    const context = perfectContext();
+
+    expect(computeAudit(context)).toEqual(computeAudit(context));
+  });
+
+  it('marks needsInput exactly when the factor has no score and never covers more than it lists', () => {
+    for (const result of [
+      computeAudit(emptyContext()),
+      computeAudit(perfectContext()),
+    ]) {
+      expect(result.rubricVersion).toBe(AUDIT_RUBRIC_VERSION);
+      expect(result.coveredWeight).toBeLessThanOrEqual(result.totalWeight);
+      for (const factor of result.factors) {
+        expect(factor.needsInput).toBe(factor.score === null);
+      }
+    }
+  });
+
+  it('splits every factor between the two groups and grades the overall', () => {
+    const result = computeAudit(perfectContext());
+
+    expect(result.grade).toBe('A');
+    expect(result.confidence).toBe(1);
+    expect(result.groups?.map((group) => group.id)).toEqual([
+      'discoverability',
+      'conversion',
+    ]);
+    expect(result.groups?.map((group) => group.label)).toEqual(
+      Object.values(AUDIT_GROUP_LABELS),
+    );
+    expect(result.groups?.every((group) => group.score === 10)).toBe(true);
+    expect(result.factors.every((factor) => factor.group !== undefined)).toBe(
+      true,
+    );
+    expect(
+      result.factors.every((factor) => factor.availability === 'measured'),
+    ).toBe(true);
   });
 
   it('produces recommendations for failing checks', () => {
