@@ -32,6 +32,8 @@ const realPayload = {
   appletvScreenshots: [],
   supportedDevices: ['iPhone13-iPhone13', 'iPadAir-iPadAir'],
   developer: 'Habit Labs',
+  currentVersionScore: 4.2,
+  currentVersionReviewCount: 120,
 };
 
 const gplayPayload = {
@@ -67,6 +69,8 @@ describe('extractAppStoreRawFacts', () => {
       featureGraphicUrl: null,
       supportsIpad: true,
       developerName: 'Habit Labs',
+      currentVersionScore: 4.2,
+      currentVersionReviews: 120,
       iconUrl: 'https://example.com/icon.png',
       screenshotUrls: ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'],
     });
@@ -89,6 +93,8 @@ describe('extractAppStoreRawFacts', () => {
       featureGraphicUrl: null,
       supportsIpad: false,
       developerName: null,
+      currentVersionScore: null,
+      currentVersionReviews: null,
       iconUrl: null,
       screenshotUrls: [],
     });
@@ -123,6 +129,8 @@ describe('extractGooglePlayRawFacts', () => {
       featureGraphicUrl: 'https://play-lh.googleusercontent.com/header',
       supportsIpad: false,
       developerName: 'Example Labs',
+      currentVersionScore: null,
+      currentVersionReviews: null,
       iconUrl: null,
       screenshotUrls: ['a', 'b', 'c'],
     });
@@ -150,6 +158,8 @@ describe('extractGooglePlayRawFacts', () => {
       featureGraphicUrl: null,
       supportsIpad: false,
       developerName: null,
+      currentVersionScore: null,
+      currentVersionReviews: null,
       iconUrl: null,
       screenshotUrls: [],
     });

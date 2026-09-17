@@ -1,9 +1,11 @@
 import { Store } from '@prisma/client';
 import {
   appStoreContext,
+  competitor,
   FIXTURE_NOW,
   keyword,
   playContext,
+  reviewsFrom,
 } from './audit-context.fixture';
 import { AuditContext, AuditKeyword } from './audit-scoring';
 import { titleChecks } from './checks/metadata-checks';
@@ -70,7 +72,21 @@ const perfectContext = (): AuditContext =>
     summary:
       'Streak counter and goal log to keep every routine moving forward now',
     keywordField: perfectKeywordField,
-    competitorTitles: ['Zen Meditation Sounds'],
+    competitors: [
+      competitor({
+        id: 'c1',
+        name: 'Pomodoro Labs',
+        title: 'Pomodoro Focus Timer',
+        ratingCount: 100_000,
+      }),
+      competitor({
+        id: 'c2',
+        name: 'Timer Works',
+        title: 'Timer Works Pro',
+        ratingCount: 200_000,
+      }),
+    ],
+    reviews: reviewsFrom(FIXTURE_NOW, [5, 5, 5, 5, 5]),
     description:
       'Track your habits and reach your goals.\n• Loved by 2 million users. Download now to start today.',
     ratingAvg: 5,

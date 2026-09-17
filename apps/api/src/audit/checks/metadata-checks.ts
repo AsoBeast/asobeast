@@ -19,6 +19,7 @@ import {
   charUsageScore,
   check,
   COMPETITORS_UNLOCK,
+  competitorTitles,
   countPhrase,
   coversPhrase,
   KEYWORD_FIELD_UNLOCK,
@@ -167,7 +168,8 @@ export const titleChecks = (context: AuditContext): RubricCheck[] => {
   const titleLint = policyIssues(
     lintTitle(context.title, TITLE_LIMIT, context.store),
   );
-  const overlap = mostSimilarTitle(context.title, context.competitorTitles);
+  const titles = competitorTitles(context);
+  const overlap = mostSimilarTitle(context.title, titles);
 
   return [
     check({
@@ -225,9 +227,7 @@ export const titleChecks = (context: AuditContext): RubricCheck[] => {
       source: 'competitors',
       weight: 1,
       score:
-        context.competitorTitles.length === 0
-          ? null
-          : uniquenessScore(context.title, context.competitorTitles),
+        titles.length === 0 ? null : uniquenessScore(context.title, titles),
       detail:
         overlap === null
           ? 'No competitor titles to compare against.'

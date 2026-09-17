@@ -26,6 +26,26 @@ export interface AuditKeyword {
   opportunity: number | null;
 }
 
+export interface AuditCompetitor {
+  id: string;
+  name: string | null;
+  title: string | null;
+  subtitle: string | null;
+  ratingAvg: number | null;
+  ratingCount: number | null;
+  screenshotCount: number | null;
+  hasVideo: boolean;
+  iconUrl: string | null;
+  storeUpdatedAt: Date | null;
+}
+
+export interface AuditReview {
+  score: number;
+  title: string | null;
+  text: string;
+  reviewedAt: Date | null;
+}
+
 export interface AuditContext {
   appId: string;
   store: Store;
@@ -47,12 +67,9 @@ export interface AuditContext {
     avgDelta7d: number | null;
     gapCount: number;
   };
-  history: {
-    ratingAvgDelta30d: number | null;
-    ratingCountDelta30d: number | null;
-  };
-  competitorTitles: string[];
-  competitorNames: string[];
+  competitors: AuditCompetitor[];
+  reviews: AuditReview[];
+  reviewScoreMax: number;
   brandTokens: string[];
   aiChecks: AiAuditChecks;
   aiStatus: AuditAiStatus;
@@ -111,8 +128,9 @@ export type AuditCheckId =
   | 'screenshots-device-frames'
   | 'preview-video-present'
   | 'ratings-average'
-  | 'ratings-count'
-  | 'ratings-trend'
+  | 'ratings-volume'
+  | 'ratings-recent'
+  | 'ratings-current-version'
   | 'icon-distinctive'
   | 'icon-simple'
   | 'icon-category-fit'
@@ -320,6 +338,16 @@ export const bucketTexts = (
 ): string[] =>
   keywords.filter((keyword) => keyword.bucket === bucket).map((k) => k.text);
 
+export const competitorTitles = (context: AuditContext): string[] =>
+  context.competitors
+    .map((entry) => entry.title)
+    .filter((title): title is string => Boolean(title));
+
+export const competitorNames = (context: AuditContext): string[] =>
+  context.competitors
+    .map((entry) => entry.name)
+    .filter((name): name is string => Boolean(name));
+
 export const lintContext = (context: AuditContext) => ({
   titleWords: tokenize(context.title),
   subtitleWords: tokenize(context.subtitle ?? ''),
@@ -327,5 +355,5 @@ export const lintContext = (context: AuditContext) => ({
     ...context.brandTokens,
     ...tokenize(context.rawFacts.developerName ?? ''),
   ],
-  competitorNames: context.competitorNames,
+  competitorNames: competitorNames(context),
 });

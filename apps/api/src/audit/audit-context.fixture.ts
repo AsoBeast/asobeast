@@ -1,7 +1,12 @@
 import { Store } from '@prisma/client';
 import { KeywordBucket } from '@asobeast/shared';
 import { RawAppFacts } from '../store-providers/raw-facts';
-import { AuditContext, AuditKeyword } from './audit-scoring';
+import {
+  AuditCompetitor,
+  AuditContext,
+  AuditKeyword,
+  AuditReview,
+} from './audit-scoring';
 
 export const FIXTURE_NOW = new Date('2026-07-09T00:00:00.000Z');
 
@@ -18,9 +23,39 @@ export const emptyFacts: RawAppFacts = {
   featureGraphicUrl: null,
   supportsIpad: false,
   developerName: null,
+  currentVersionScore: null,
+  currentVersionReviews: null,
   iconUrl: null,
   screenshotUrls: [],
 };
+
+export const competitor = (
+  overrides: Partial<AuditCompetitor> = {},
+): AuditCompetitor => ({
+  id: 'rival',
+  name: 'Rival',
+  title: 'Rival Quiz',
+  subtitle: null,
+  ratingAvg: null,
+  ratingCount: null,
+  screenshotCount: null,
+  hasVideo: false,
+  iconUrl: null,
+  storeUpdatedAt: null,
+  ...overrides,
+});
+
+export const reviewsFrom = (
+  now: Date,
+  scores: number[],
+  text = 'A review',
+): AuditReview[] =>
+  scores.map((score) => ({
+    score,
+    title: null,
+    text,
+    reviewedAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+  }));
 
 export const keyword = (
   text: string,
@@ -65,8 +100,9 @@ const contextFor = (
     keywords: [],
     rankings: { top10Share: 0, rankedShare: 0, avgDelta7d: null, gapCount: 10 },
     history: { ratingAvgDelta30d: null, ratingCountDelta30d: null },
-    competitorTitles: [],
-    competitorNames: [],
+    competitors: [],
+    reviews: [],
+    reviewScoreMax: 2,
     brandTokens: [],
     aiChecks: {},
     aiStatus: { configured: false, model: null, generatedAt: null },

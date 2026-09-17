@@ -161,11 +161,77 @@ describe('AuditController (e2e)', () => {
     expect(result.ai.generatedAt).toBeNull();
 
     const ratings = factor(result, 'ratings');
-    expect(ratings?.score).toBeCloseTo(7.2, 1);
+    expect(ratings?.score).toBeCloseTo(8.2, 1);
 
     expect(factor(result, 'keywordField')?.needsInput).toBe(true);
     expect(factor(result, 'keywordField')?.score).toBeNull();
     expect(factor(result, 'keywordField')?.availability).toBe('awaiting-input');
+  });
+
+  const seedCompetitor = (
+    appId: string,
+    storeAppId: string,
+    name: string,
+    title: string,
+    ratingCount: number,
+  ) =>
+    prisma.app
+      .create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId,
+          country: 'us',
+          name,
+          isCompetitor: true,
+          primaryAppId: appId,
+        },
+      })
+      .then((competitor) =>
+        prisma.appSnapshot.create({
+          data: {
+            appId: competitor.id,
+            title,
+            description: 'A rival listing.',
+            ratingAvg: 4.3,
+            ratingCount,
+            raw: { screenshots: ['a.png'] },
+            capturedAt: D0,
+          },
+        }),
+      );
+
+  it('leaves the competitor checks unanswered without competitors', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const uniqueness = factor(result, 'title')?.checks.find(
+      (item) => item.id === 'title-uniqueness',
+    );
+
+    expect(uniqueness).toMatchObject({
+      score: null,
+      status: 'unanswered',
+      unlock: { kind: 'competitors' },
+    });
+  });
+
+  it('benchmarks the rating volume once two competitors carry counts', async () => {
+    const id = await seed();
+    await seedCompetitor(id, '1111111111', 'Rival One', 'Rival One', 1000);
+    await seedCompetitor(id, '2222222222', 'Rival Two', 'Rival Two', 3000);
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const volume = factor(result, 'ratings')?.checks.find(
+      (item) => item.id === 'ratings-volume',
+    );
+
+    expect(volume).toMatchObject({ source: 'competitors', score: 10 });
+    expect(volume?.detail).toBe(
+      'You have 5000 ratings; the median competitor has 2000.',
+    );
   });
 
   it('reports the rubric version, grade, confidence and groups', async () => {

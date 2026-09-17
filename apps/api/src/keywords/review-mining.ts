@@ -5,6 +5,8 @@ export interface MinableReview {
   text: string;
 }
 
+export const REVIEW_THEME_MIN_MENTIONS = 3;
+
 const MAX_NGRAM = 3;
 const MIN_PHRASE_LENGTH = 3;
 

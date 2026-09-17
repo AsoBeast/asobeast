@@ -1,11 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import { tokenize, TrackedKeywordItem } from '@asobeast/shared';
+import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { AiAuditChecks, AuditAiService } from './audit-ai.service';
-import { AuditContext, AuditKeyword, DAY_MS } from './audit-scoring';
+import {
+  AuditCompetitor,
+  AuditContext,
+  AuditKeyword,
+  DAY_MS,
+} from './audit-scoring';
 
 export interface AuditApp {
   id: string;
@@ -14,7 +21,7 @@ export interface AuditApp {
   name: string | null;
 }
 
-export const TREND_WINDOW_DAYS = 30;
+export const REVIEW_WINDOW_DAYS = 90;
 
 @Injectable()
 export class AuditContextLoader {
@@ -22,6 +29,7 @@ export class AuditContextLoader {
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
     private readonly auditAi: AuditAiService,
+    private readonly config: ConfigService<Env, true>,
   ) {}
 
   async app(appId: string): Promise<AuditApp> {
@@ -45,14 +53,14 @@ export class AuditContextLoader {
 
   async load(appId: string): Promise<AuditContext> {
     const app = await this.app(appId);
-    const cutoff = new Date(Date.now() - TREND_WINDOW_DAYS * DAY_MS);
+    const reviewCutoff = new Date(Date.now() - REVIEW_WINDOW_DAYS * DAY_MS);
 
     const [
       latest,
-      prior,
       tracked,
       comparison,
       competitors,
+      reviews,
       insight,
       keywordField,
     ] = await Promise.all([
@@ -60,23 +68,32 @@ export class AuditContextLoader {
         where: { appId },
         orderBy: { capturedAt: 'desc' },
       }),
-      this.prisma.appSnapshot.findFirst({
-        where: { appId, capturedAt: { lte: cutoff } },
-        orderBy: { capturedAt: 'desc' },
-        select: { ratingAvg: true, ratingCount: true },
-      }),
       this.keywords.listTracked(appId),
       this.keywords.compare(appId, false),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
         select: {
+          id: true,
           name: true,
+          store: true,
           snapshots: {
             orderBy: { capturedAt: 'desc' },
             take: 1,
-            select: { title: true },
+            select: {
+              title: true,
+              subtitle: true,
+              ratingAvg: true,
+              ratingCount: true,
+              storeUpdatedAt: true,
+              raw: true,
+            },
           },
         },
+      }),
+      this.prisma.review.findMany({
+        where: { appId, reviewedAt: { gte: reviewCutoff } },
+        orderBy: { reviewedAt: 'desc' },
+        select: { score: true, title: true, text: true, reviewedAt: true },
       }),
       this.prisma.auditInsight.findUnique({ where: { appId } }),
       this.keywordField(app),
@@ -85,7 +102,6 @@ export class AuditContextLoader {
     const active = tracked.filter(
       (item) => item.active && item.country === app.country,
     );
-    const baseline = trendBaseline(latest, prior, cutoff);
 
     return {
       appId,
@@ -103,16 +119,16 @@ export class AuditContextLoader {
       rawFacts: extractRawFacts(app.store, latest?.raw),
       keywords: active.map(toAuditKeyword),
       rankings: rankingAggregates(active, comparison.rows),
-      history: {
-        ratingAvgDelta30d: delta(latest?.ratingAvg, baseline?.ratingAvg),
-        ratingCountDelta30d: delta(latest?.ratingCount, baseline?.ratingCount),
-      },
-      competitorTitles: competitors
-        .map((competitor) => competitor.snapshots[0]?.title)
-        .filter((title): title is string => Boolean(title)),
-      competitorNames: competitors
-        .map((competitor) => competitor.name)
-        .filter((name): name is string => Boolean(name)),
+      competitors: competitors.map(toAuditCompetitor),
+      reviews: reviews.map((review) => ({
+        score: review.score,
+        title: review.title,
+        text: review.text,
+        reviewedAt: review.reviewedAt,
+      })),
+      reviewScoreMax: this.config.get('ALERT_REVIEW_SCORE_MAX', {
+        infer: true,
+      }),
       brandTokens: tokenize(app.name ?? ''),
       aiChecks: (insight?.checks as AiAuditChecks | undefined) ?? {},
       aiStatus: {
@@ -156,19 +172,31 @@ const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
   opportunity: item.opportunity,
 });
 
-const trendBaseline = <T>(
-  latest: { capturedAt: Date } | null,
-  prior: T | null,
-  cutoff: Date,
-): T | null => (latest !== null && latest.capturedAt > cutoff ? prior : null);
-
-const delta = (
-  current: number | null | undefined,
-  past: number | null | undefined,
-): number | null =>
-  current === null ||
-  current === undefined ||
-  past === null ||
-  past === undefined
-    ? null
-    : current - past;
+const toAuditCompetitor = (row: {
+  id: string;
+  name: string | null;
+  store: Store;
+  snapshots: {
+    title: string | null;
+    subtitle: string | null;
+    ratingAvg: number | null;
+    ratingCount: number | null;
+    storeUpdatedAt: Date | null;
+    raw: unknown;
+  }[];
+}): AuditCompetitor => {
+  const snapshot = row.snapshots[0];
+  const facts = extractRawFacts(row.store, snapshot?.raw);
+  return {
+    id: row.id,
+    name: row.name,
+    title: snapshot?.title ?? null,
+    subtitle: snapshot?.subtitle ?? null,
+    ratingAvg: snapshot?.ratingAvg ?? null,
+    ratingCount: snapshot?.ratingCount ?? null,
+    screenshotCount: facts.screenshotCount,
+    hasVideo: facts.videoUrl !== null,
+    iconUrl: facts.iconUrl,
+    storeUpdatedAt: snapshot?.storeUpdatedAt ?? null,
+  };
+};

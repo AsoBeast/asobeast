@@ -14,6 +14,8 @@ export interface RawAppFacts {
   featureGraphicUrl: string | null;
   supportsIpad: boolean;
   developerName: string | null;
+  currentVersionScore: number | null;
+  currentVersionReviews: number | null;
   iconUrl: string | null;
   screenshotUrls: string[];
 }
@@ -31,6 +33,8 @@ const EMPTY_FACTS: RawAppFacts = {
   featureGraphicUrl: null,
   supportsIpad: false,
   developerName: null,
+  currentVersionScore: null,
+  currentVersionReviews: null,
   iconUrl: null,
   screenshotUrls: [],
 };
@@ -176,6 +180,8 @@ export function extractAppStoreRawFacts(raw: unknown): RawAppFacts {
     featureGraphicUrl: null,
     supportsIpad: supportsIpad(record),
     developerName: trimmedString(record.developer),
+    currentVersionScore: numeric(record.currentVersionScore),
+    currentVersionReviews: countOf(record.currentVersionReviewCount),
     iconUrl: nonEmptyString(record.icon),
     screenshotUrls: stringArray(record.screenshots),
   };
@@ -199,6 +205,8 @@ export function extractGooglePlayRawFacts(raw: unknown): RawAppFacts {
     featureGraphicUrl: nonEmptyString(record.headerImage),
     supportsIpad: false,
     developerName: trimmedString(record.developer),
+    currentVersionScore: null,
+    currentVersionReviews: null,
     iconUrl: nonEmptyString(record.icon),
     screenshotUrls: stringArray(record.screenshots),
   };
