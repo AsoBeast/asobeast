@@ -6,13 +6,13 @@ import type {
   AuditCheckResult,
   AuditCheckStatus,
   AuditFactorResult,
-  AuditRecommendation,
 } from "@asobeast/shared";
 import { AiAnalysisPanel } from "@/components/audit/AiAnalysisPanel";
+import { AuditActionPlan } from "@/components/audit/AuditActionPlan";
+import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
 import { AuditHealthChart } from "@/components/audit/AuditHealthChart";
 import { AuditScoreHero } from "@/components/audit/AuditScoreHero";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { auditOptions } from "@/lib/queries";
@@ -61,32 +61,6 @@ function FactorRow({ factor }: { factor: AuditFactorResult }) {
   );
 }
 
-function RecommendationList({
-  title,
-  items,
-}: {
-  title: string;
-  items: AuditRecommendation[];
-}) {
-  return (
-    <Card>
-      <CardContent>
-        <span className="text-label uppercase text-muted-foreground">
-          {title}
-        </span>
-        <ul className="mt-2 flex flex-col gap-2 text-sm">
-          {items.slice(0, 5).map((item) => (
-            <li key={`${item.factorId}-${item.checkId}`}>
-              <span className="font-medium">{item.label}</span>
-              <span className="block text-muted-foreground">{item.detail}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function AuditPage({ appId }: { appId: string }) {
   const { data: audit } = useSuspenseQuery(auditOptions(appId));
 
@@ -96,9 +70,14 @@ export function AuditPage({ appId }: { appId: string }) {
         <div className="xl:col-span-5">
           <AuditScoreHero appId={appId} audit={audit} />
         </div>
+        <div className="xl:col-span-7">
+          <AuditTopFixes recommendations={audit.recommendations} />
+        </div>
       </div>
 
       <AiAnalysisPanel appId={appId} audit={audit} />
+
+      <AuditActionPlan appId={appId} audit={audit} />
 
       <section aria-label="Search visibility" className="flex flex-col gap-2">
         <h2 className="text-lg font-medium">Search visibility</h2>
@@ -116,24 +95,6 @@ export function AuditPage({ appId }: { appId: string }) {
           .map((factor) => (
             <FactorRow key={factor.id} factor={factor} />
           ))}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-medium">Recommendations</h2>
-        <div className="grid gap-4 md:grid-cols-3">
-          <RecommendationList
-            title="Quick wins"
-            items={audit.recommendations.quickWins}
-          />
-          <RecommendationList
-            title="High impact"
-            items={audit.recommendations.highImpact}
-          />
-          <RecommendationList
-            title="Strategic"
-            items={audit.recommendations.strategic}
-          />
-        </div>
       </section>
 
       <Suspense fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}>
