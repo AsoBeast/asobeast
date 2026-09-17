@@ -3,7 +3,7 @@ title: Connect an agent
 sidebarTitle: Setup
 description: "Connect straight to the hosted endpoint, or run the stdio server yourself. Both transports expose the identical read only tool surface."
 icon: cable
-keywords: ["MCP setup","Claude Code","Claude Desktop","remote MCP","ASOBEAST_API_TOKEN","ASOBEAST_API_URL","stdio"]
+keywords: ["MCP setup","Claude Code","Claude Desktop","Codex","Cursor","VS Code","Gemini CLI","Windsurf","remote MCP","ASOBEAST_API_TOKEN","ASOBEAST_API_URL","stdio"]
 ---
 
 There are two transports and they expose the same tools.
@@ -30,21 +30,157 @@ Either way the Settings card writes the configuration for you. The manual path i
   </Step>
 </Steps>
 
-```bash
-claude mcp add --transport http asobeast https://your-host/api/backend/mcp --header "Authorization: Bearer asob_…"
-```
+<Tabs>
+  <Tab title="Claude Code command">
+    Run in a terminal.
 
-```json claude_desktop_config.json
-{
-  "mcpServers": {
-    "asobeast": {
-      "type": "http",
-      "url": "https://your-host/api/backend/mcp",
-      "headers": { "Authorization": "Bearer asob_…" }
+    ```bash
+    claude mcp add --transport http asobeast https://your-host/api/backend/mcp --header "Authorization: Bearer asob_…"
+    ```
+  </Tab>
+  <Tab title="Claude Code JSON">
+    Run in a macOS or Linux terminal. `add-json` takes one server entry, not a whole configuration file.
+
+    ```bash
+    claude mcp add-json asobeast '{"type":"http","url":"https://your-host/api/backend/mcp","headers":{"Authorization":"Bearer asob_…"}}'
+    ```
+  </Tab>
+  <Tab title="Shared .mcp.json">
+    Put this in `.mcp.json` at the project root and commit it. It holds no secret: export `ASOBEAST_API_TOKEN` in your shell before you start `claude`, which expands the variable.
+
+    ```json .mcp.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "type": "http",
+          "url": "https://your-host/api/backend/mcp",
+          "headers": { "Authorization": "Bearer ${ASOBEAST_API_TOKEN}" }
+        }
+      }
     }
-  }
-}
-```
+    ```
+  </Tab>
+  <Tab title="Claude Desktop">
+    Claude Desktop's configuration file only runs local commands, and its Connectors screen has no field for a token. The entry below runs `mcp-remote`, a small local bridge that connects to the endpoint with your token. Open Settings, Developer, Edit Config, and merge the entry into the existing `mcpServers` object. It needs Node 18 or newer.
+
+    ```json claude_desktop_config.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "mcp-remote@0.14.2",
+            "https://your-host/api/backend/mcp",
+            "--header",
+            "Authorization:${ASOBEAST_AUTH_HEADER}"
+          ],
+          "env": { "ASOBEAST_AUTH_HEADER": "Bearer asob_…" }
+        }
+      }
+    }
+    ```
+
+    The header value lives in `env` because no argument may contain a space. For a plain `http://` origin other than `localhost` or `127.0.0.1`, add `"--allow-http"` directly after the endpoint.
+  </Tab>
+  <Tab title="Codex">
+    Codex reads `~/.codex/config.toml`, which the CLI, the IDE extension and the app share.
+
+    ```toml ~/.codex/config.toml
+    [mcp_servers.asobeast]
+    url = "https://your-host/api/backend/mcp"
+    http_headers = { Authorization = "Bearer asob_…" }
+    ```
+
+    The command form keeps the token out of the file and reads it from `ASOBEAST_API_TOKEN` whenever Codex starts. Export the variable in your shell profile. A Codex app launched from the dock does not see shell exports, so use the file above there.
+
+    ```bash
+    codex mcp add asobeast --url https://your-host/api/backend/mcp --bearer-token-env-var ASOBEAST_API_TOKEN
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    Put this in `~/.cursor/mcp.json`, or in `.cursor/mcp.json` inside a project.
+
+    ```json ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "url": "https://your-host/api/backend/mcp",
+          "headers": { "Authorization": "Bearer asob_…" }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="VS Code">
+    Put this in `.vscode/mcp.json`. The top level key is `servers`, not `mcpServers`, and `"type": "http"` is required. VS Code asks for the token the first time the server starts and keeps it in its secret storage, so the file holds no secret.
+
+    ```json .vscode/mcp.json
+    {
+      "inputs": [
+        {
+          "type": "promptString",
+          "id": "asobeast-token",
+          "description": "asobeast personal API token",
+          "password": true
+        }
+      ],
+      "servers": {
+        "asobeast": {
+          "type": "http",
+          "url": "https://your-host/api/backend/mcp",
+          "headers": { "Authorization": "Bearer ${input:asobeast-token}" }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Gemini CLI">
+    Gemini CLI names streamable HTTP `httpUrl`. A `url` key selects the older SSE transport and never connects to asobeast.
+
+    ```json ~/.gemini/settings.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "httpUrl": "https://your-host/api/backend/mcp",
+          "headers": { "Authorization": "Bearer asob_…" }
+        }
+      }
+    }
+    ```
+
+    Or add it with one command:
+
+    ```bash
+    gemini mcp add --transport http --scope user --header "Authorization: Bearer asob_…" asobeast https://your-host/api/backend/mcp
+    ```
+  </Tab>
+  <Tab title="Windsurf">
+    Windsurf names the address `serverUrl`, and ignores a `url` key.
+
+    ```json ~/.codeium/windsurf/mcp_config.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "serverUrl": "https://your-host/api/backend/mcp",
+          "headers": { "Authorization": "Bearer asob_…" }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Any other client">
+    Point the client at the endpoint over streamable HTTP and send the token as a request header.
+
+    | Setting | Value |
+    | --- | --- |
+    | Endpoint | `https://your-host/api/backend/mcp` |
+    | Transport | Streamable HTTP |
+    | Header | `Authorization: Bearer asob_…` |
+
+    A client that only runs local commands can use the Claude Desktop entry, which bridges through `mcp-remote`.
+  </Tab>
+</Tabs>
 
 The endpoint authenticates with the same `asob_` token as the REST API, so there is no second credential to manage. Every request is authenticated, entitled and rate limited exactly like a REST call. See [Rate limits and quotas](/api-reference/rate-limits).
 
@@ -89,7 +225,7 @@ The token is shown once. Copy it before you leave the page.
 <Tabs>
   <Tab title="Claude Code">
     ```bash
-    claude mcp add asobeast --env ASOBEAST_API_URL=http://localhost:4000 --env ASOBEAST_API_TOKEN=asob_… -- node /absolute/path/to/asobeast/apps/mcp/dist/index.js
+    claude mcp add asobeast --env ASOBEAST_API_URL=http://localhost:4000 --env ASOBEAST_API_TOKEN=asob_… -- node "/absolute/path/to/asobeast/apps/mcp/dist/index.js"
     ```
   </Tab>
   <Tab title="Claude Desktop">
@@ -108,11 +244,35 @@ The token is shown once. Copy it before you leave the page.
     }
     ```
   </Tab>
+  <Tab title="Codex">
+    ```toml ~/.codex/config.toml
+    [mcp_servers.asobeast]
+    command = "node"
+    args = ["/absolute/path/to/asobeast/apps/mcp/dist/index.js"]
+    env = { ASOBEAST_API_URL = "http://localhost:4000", ASOBEAST_API_TOKEN = "asob_…" }
+    ```
+  </Tab>
+  <Tab title="Cursor">
+    ```json ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "asobeast": {
+          "command": "node",
+          "args": ["/absolute/path/to/asobeast/apps/mcp/dist/index.js"],
+          "env": {
+            "ASOBEAST_API_URL": "http://localhost:4000",
+            "ASOBEAST_API_TOKEN": "asob_…"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
   <Tab title="Any stdio client">
     ```bash
     ASOBEAST_API_URL=http://localhost:4000 \
     ASOBEAST_API_TOKEN=asob_… \
-    node /absolute/path/to/asobeast/apps/mcp/dist/index.js
+    node "/absolute/path/to/asobeast/apps/mcp/dist/index.js"
     ```
   </Tab>
 </Tabs>
@@ -163,6 +323,18 @@ When the preflight passes, the server logs the instance it connected to and the 
 <AccordionGroup>
   <Accordion title="MODULE_NOT_FOUND on startup">
     The entrypoint path is relative, or the server has not been built. Run `pnpm build` and register the absolute path to `apps/mcp/dist/index.js`.
+  </Accordion>
+
+  <Accordion title="Invalid configuration: : Invalid input from claude mcp add-json">
+    The command was given a whole configuration file. Pass only the server entry, the object that starts with `"type": "http"`, as the Claude Code JSON tab shows.
+  </Accordion>
+
+  <Accordion title="spawn npx ENOENT in Claude Desktop">
+    Claude Desktop does not read your shell `PATH`, so it cannot find `npx` when Node was installed by a version manager. Install Node system wide, or set `command` to the absolute path that `which npx` prints in your terminal.
+  </Accordion>
+
+  <Accordion title="The server shows but has no tools">
+    The entry is nested one level too deep, usually an `mcpServers` object pasted inside an existing `mcpServers` object. Keep a single `mcpServers` key with `asobeast` directly inside it.
   </Accordion>
 
   <Accordion title="spawn node ENOENT">

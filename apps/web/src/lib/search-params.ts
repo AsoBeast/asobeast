@@ -24,6 +24,7 @@ import {
   type DiscoveryWindow,
   type MoverWindow,
 } from "./ranges";
+import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 
 export const sortParser =
   parseAsStringLiteral(KEYWORD_SORTS).withDefault("opportunity");
@@ -116,3 +117,6 @@ export const actionCategoryParser = parseAsStringLiteral(ACTION_CATEGORIES);
 export const actionAppParser = parseAsString.withDefault("");
 
 export const actionFocusParser = parseAsString.withDefault("");
+
+export const mcpClientParser =
+  parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);

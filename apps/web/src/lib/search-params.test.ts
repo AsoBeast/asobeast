@@ -15,6 +15,7 @@ import {
   RATINGS_RANGES,
   VISIBILITY_RANGES,
 } from "./ranges";
+import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import {
   actionCategoryParser,
   actionPriorityParser,
@@ -24,6 +25,7 @@ import {
   countryParser,
   discoveryDaysParser,
   keywordIdsParser,
+  mcpClientParser,
   moverDaysParser,
   onlyGapsParser,
   rangeParser,
@@ -61,6 +63,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
     KEYWORD_SUGGESTION_STRATEGIES,
     "metadata",
   ],
+  ["mcpClient", mcpClientParser, MCP_CLIENTS, DEFAULT_MCP_CLIENT],
 ] as const;
 
 const NUMERIC_PARSERS = [

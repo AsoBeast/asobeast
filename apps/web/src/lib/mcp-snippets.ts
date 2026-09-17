@@ -1,6 +1,40 @@
 export const STDIO_ENTRYPOINT =
   "/absolute/path/to/asobeast/apps/mcp/dist/index.js";
 
+const MCP_REMOTE_PACKAGE = "mcp-remote@0.14.2";
+const VSCODE_TOKEN_INPUT = "asobeast-token";
+const MCP_REMOTE_PLAIN_HTTP_HOSTS = new Set(["localhost", "127.0.0.1"]);
+
+export const MCP_CLIENTS = [
+  "Claude Code",
+  "Claude Desktop",
+  "Codex",
+  "Cursor",
+  "VS Code",
+  "Gemini CLI",
+  "Windsurf",
+  "Other",
+] as const;
+
+export type McpClient = (typeof MCP_CLIENTS)[number];
+
+export const DEFAULT_MCP_CLIENT: McpClient = "Claude Code";
+
+export function isMcpClient(value: string): value is McpClient {
+  return MCP_CLIENTS.some((client) => client === value);
+}
+
+export type SnippetLanguage = "bash" | "json" | "toml" | "text";
+
+export interface ConnectSnippet {
+  id: string;
+  client: McpClient;
+  label: string;
+  location: string;
+  language: SnippetLanguage;
+  value: string;
+}
+
 export function apiOrigin(origin?: string): string {
   const base =
     origin ?? (typeof window === "undefined" ? "" : window.location.origin);
@@ -11,45 +45,261 @@ export function remoteEndpoint(origin?: string): string {
   return `${apiOrigin(origin)}/mcp`;
 }
 
-export function remoteCommand(token: string, origin?: string): string {
-  return `claude mcp add --transport http asobeast ${remoteEndpoint(origin)} --header "Authorization: Bearer ${token}"`;
+function json(value: unknown): string {
+  return JSON.stringify(value, null, 2);
 }
 
-export function remoteConfig(token: string, origin?: string): string {
-  return JSON.stringify(
+function mcpServersFile(entry: unknown): string {
+  return json({ mcpServers: { asobeast: entry } });
+}
+
+function tomlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function codexTable(lines: string[]): string {
+  return ["[mcp_servers.asobeast]", ...lines].join("\n");
+}
+
+type UrlKey = "url" | "httpUrl" | "serverUrl";
+
+function headerEntry(urlKey: UrlKey, token: string, endpoint: string) {
+  return { [urlKey]: endpoint, headers: { Authorization: `Bearer ${token}` } };
+}
+
+function stdioEntry(token: string, api: string) {
+  return {
+    command: "node",
+    args: [STDIO_ENTRYPOINT],
+    env: { ASOBEAST_API_URL: api, ASOBEAST_API_TOKEN: token },
+  };
+}
+
+function typedHttpEntry(authorization: string, endpoint: string) {
+  return {
+    type: "http",
+    url: endpoint,
+    headers: { Authorization: authorization },
+  };
+}
+
+function needsAllowHttp(endpoint: string): boolean {
+  if (!URL.canParse(endpoint)) return false;
+  const { protocol, hostname } = new URL(endpoint);
+  return protocol === "http:" && !MCP_REMOTE_PLAIN_HTTP_HOSTS.has(hostname);
+}
+
+function claudeDesktopEntry(token: string, endpoint: string) {
+  return {
+    command: "npx",
+    args: [
+      "-y",
+      MCP_REMOTE_PACKAGE,
+      endpoint,
+      ...(needsAllowHttp(endpoint) ? ["--allow-http"] : []),
+      "--header",
+      "Authorization:${ASOBEAST_AUTH_HEADER}",
+    ],
+    env: { ASOBEAST_AUTH_HEADER: `Bearer ${token}` },
+  };
+}
+
+export function hostedSnippets(
+  token: string,
+  origin?: string,
+): ConnectSnippet[] {
+  const endpoint = remoteEndpoint(origin);
+  return [
     {
-      mcpServers: {
-        asobeast: {
-          type: "http",
-          url: remoteEndpoint(origin),
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      },
+      id: "claude-code-command",
+      client: "Claude Code",
+      label: "Claude Code",
+      location: "Run in a terminal",
+      language: "bash",
+      value: `claude mcp add --transport http asobeast ${endpoint} --header "Authorization: Bearer ${token}"`,
     },
-    null,
-    2,
-  );
-}
-
-export function stdioCommand(token: string, origin?: string): string {
-  return `claude mcp add asobeast --env ASOBEAST_API_URL=${apiOrigin(origin)} --env ASOBEAST_API_TOKEN=${token} -- node ${STDIO_ENTRYPOINT}`;
-}
-
-export function stdioConfig(token: string, origin?: string): string {
-  return JSON.stringify(
     {
-      mcpServers: {
-        asobeast: {
-          command: "node",
-          args: [STDIO_ENTRYPOINT],
-          env: {
-            ASOBEAST_API_URL: apiOrigin(origin),
-            ASOBEAST_API_TOKEN: token,
+      id: "claude-code-add-json",
+      client: "Claude Code",
+      label: "Claude Code JSON",
+      location: "Run in a macOS or Linux terminal",
+      language: "bash",
+      value: `claude mcp add-json asobeast '${JSON.stringify(typedHttpEntry(`Bearer ${token}`, endpoint))}'`,
+    },
+    {
+      id: "claude-code-project",
+      client: "Claude Code",
+      label: "Shared .mcp.json",
+      location:
+        ".mcp.json in the project root. Export ASOBEAST_API_TOKEN before starting claude; the file holds no secret",
+      language: "json",
+      value: mcpServersFile(
+        typedHttpEntry("Bearer ${ASOBEAST_API_TOKEN}", endpoint),
+      ),
+    },
+    {
+      id: "claude-desktop",
+      client: "Claude Desktop",
+      label: "Claude Desktop",
+      location:
+        "claude_desktop_config.json (Settings, Developer, Edit Config). Merge into an existing mcpServers object. Needs Node 18 or newer",
+      language: "json",
+      value: mcpServersFile(claudeDesktopEntry(token, endpoint)),
+    },
+    {
+      id: "codex-config",
+      client: "Codex",
+      label: "Codex configuration",
+      location:
+        "~/.codex/config.toml, which the Codex CLI, IDE extension and app share",
+      language: "toml",
+      value: codexTable([
+        `url = ${tomlString(endpoint)}`,
+        `http_headers = { Authorization = ${tomlString(`Bearer ${token}`)} }`,
+      ]),
+    },
+    {
+      id: "codex-command",
+      client: "Codex",
+      label: "Codex command",
+      location:
+        "Run in a terminal. Codex reads the token from ASOBEAST_API_TOKEN whenever it starts, so export it in your shell profile",
+      language: "bash",
+      value: `codex mcp add asobeast --url ${endpoint} --bearer-token-env-var ASOBEAST_API_TOKEN`,
+    },
+    {
+      id: "cursor",
+      client: "Cursor",
+      label: "Cursor",
+      location: "~/.cursor/mcp.json, or .cursor/mcp.json in a project",
+      language: "json",
+      value: mcpServersFile(headerEntry("url", token, endpoint)),
+    },
+    {
+      id: "vscode",
+      client: "VS Code",
+      label: "VS Code",
+      location:
+        ".vscode/mcp.json. VS Code asks for the token the first time the server starts and keeps it in its secret storage",
+      language: "json",
+      value: json({
+        inputs: [
+          {
+            type: "promptString",
+            id: VSCODE_TOKEN_INPUT,
+            description: "asobeast personal API token",
+            password: true,
           },
+        ],
+        servers: {
+          asobeast: typedHttpEntry(
+            `Bearer \${input:${VSCODE_TOKEN_INPUT}}`,
+            endpoint,
+          ),
         },
-      },
+      }),
     },
-    null,
-    2,
-  );
+    {
+      id: "gemini-command",
+      client: "Gemini CLI",
+      label: "Gemini CLI command",
+      location: "Run in a terminal",
+      language: "bash",
+      value: `gemini mcp add --transport http --scope user --header "Authorization: Bearer ${token}" asobeast ${endpoint}`,
+    },
+    {
+      id: "gemini-settings",
+      client: "Gemini CLI",
+      label: "Gemini CLI settings",
+      location: "~/.gemini/settings.json",
+      language: "json",
+      value: mcpServersFile(headerEntry("httpUrl", token, endpoint)),
+    },
+    {
+      id: "windsurf",
+      client: "Windsurf",
+      label: "Windsurf",
+      location: "~/.codeium/windsurf/mcp_config.json",
+      language: "json",
+      value: mcpServersFile(headerEntry("serverUrl", token, endpoint)),
+    },
+    {
+      id: "other",
+      client: "Other",
+      label: "Any MCP client",
+      location:
+        "Stdio-only clients can use the Claude Desktop entry, which bridges through mcp-remote.",
+      language: "text",
+      value: [
+        `Endpoint   ${endpoint}`,
+        "Transport  Streamable HTTP",
+        `Header     Authorization: Bearer ${token}`,
+      ].join("\n"),
+    },
+  ];
+}
+
+export function localSnippets(
+  token: string,
+  origin?: string,
+): ConnectSnippet[] {
+  const api = apiOrigin(origin);
+  return [
+    {
+      id: "claude-code-stdio",
+      client: "Claude Code",
+      label: "Claude Code stdio",
+      location:
+        "Run in a terminal. Replace the path with the absolute path to apps/mcp/dist/index.js",
+      language: "bash",
+      value: `claude mcp add asobeast --env ASOBEAST_API_URL=${api} --env ASOBEAST_API_TOKEN=${token} -- node "${STDIO_ENTRYPOINT}"`,
+    },
+    {
+      id: "claude-desktop-stdio",
+      client: "Claude Desktop",
+      label: "Claude Desktop stdio config",
+      location:
+        "claude_desktop_config.json. Replace the path, and use the absolute path to node if Claude Desktop cannot find it",
+      language: "json",
+      value: mcpServersFile(stdioEntry(token, api)),
+    },
+    {
+      id: "codex-stdio",
+      client: "Codex",
+      label: "Codex stdio configuration",
+      location:
+        "~/.codex/config.toml. Replace the path with the absolute path to apps/mcp/dist/index.js",
+      language: "toml",
+      value: codexTable([
+        `command = "node"`,
+        `args = [${tomlString(STDIO_ENTRYPOINT)}]`,
+        `env = { ASOBEAST_API_URL = ${tomlString(api)}, ASOBEAST_API_TOKEN = ${tomlString(token)} }`,
+      ]),
+    },
+    {
+      id: "cursor-stdio",
+      client: "Cursor",
+      label: "Cursor stdio configuration",
+      location:
+        "~/.cursor/mcp.json. Replace the path with the absolute path to apps/mcp/dist/index.js",
+      language: "json",
+      value: mcpServersFile(stdioEntry(token, api)),
+    },
+  ];
+}
+
+export function snippetById(
+  snippets: ConnectSnippet[],
+  id: string,
+): ConnectSnippet {
+  const snippet = snippets.find((candidate) => candidate.id === id);
+  if (!snippet) throw new Error(`no connect snippet named ${id}`);
+  return snippet;
+}
+
+export function snippetsFor(
+  snippets: ConnectSnippet[],
+  client: McpClient,
+): ConnectSnippet[] {
+  return snippets.filter((snippet) => snippet.client === client);
 }

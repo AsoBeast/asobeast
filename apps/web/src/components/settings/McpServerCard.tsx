@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plug } from "lucide-react";
+import { useQueryState } from "nuqs";
 import { toast } from "sonner";
 import {
   DEFAULT_API_TOKEN_SCOPE,
@@ -32,19 +33,30 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ApiError, createApiToken } from "@/lib/api";
 import {
-  remoteCommand,
-  remoteConfig,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  MCP_CLIENTS,
+  hostedSnippets,
+  isMcpClient,
+  localSnippets,
   remoteEndpoint,
-  stdioCommand,
-  stdioConfig,
+  snippetsFor,
+  type ConnectSnippet,
 } from "@/lib/mcp-snippets";
+import { mcpClientParser } from "@/lib/search-params";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
-function CopyBlock({ label, value }: { label: string; value: string }) {
+function CopyBlock({ snippet }: { snippet: ConnectSnippet }) {
+  const { label, location, value } = snippet;
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -72,10 +84,55 @@ function CopyBlock({ label, value }: { label: string; value: string }) {
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
+      <p className="text-xs text-muted-foreground">{location}</p>
       <pre className="overflow-x-auto rounded-lg border bg-muted p-3 font-mono text-xs">
         {value}
       </pre>
     </div>
+  );
+}
+
+function AgentSnippets({
+  id,
+  snippets,
+}: {
+  id: string;
+  snippets: ConnectSnippet[];
+}) {
+  const [selected, setSelected] = useQueryState("agent", mcpClientParser);
+  const clients = MCP_CLIENTS.filter(
+    (candidate) => snippetsFor(snippets, candidate).length > 0,
+  );
+  const client = clients.includes(selected)
+    ? selected
+    : (clients[0] ?? selected);
+
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={id}>Agent</Label>
+        <Select
+          value={client}
+          onValueChange={(next) => {
+            if (isMcpClient(next)) void setSelected(next);
+          }}
+        >
+          <SelectTrigger id={id}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {clients.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {snippetsFor(snippets, client).map((snippet) => (
+        <CopyBlock key={snippet.id} snippet={snippet} />
+      ))}
+    </>
   );
 }
 
@@ -90,19 +147,13 @@ function ConnectionSnippets({ token }: { token: string }) {
         <p className="text-sm text-muted-foreground">
           Your client connects straight to this instance. Nothing to install.
         </p>
-        <CopyBlock label="Claude Code" value={remoteCommand(token)} />
-        <CopyBlock label="Claude Desktop config" value={remoteConfig(token)} />
+        <AgentSnippets id="mcp-hosted-agent" snippets={hostedSnippets(token)} />
       </TabsContent>
       <TabsContent value="stdio" className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Run the stdio server yourself, replacing the entrypoint with the
-          absolute path to your checkout. The tools are identical.
+          For a checkout of the repository. Hosted users need nothing here.
         </p>
-        <CopyBlock label="Claude Code stdio" value={stdioCommand(token)} />
-        <CopyBlock
-          label="Claude Desktop stdio config"
-          value={stdioConfig(token)}
-        />
+        <AgentSnippets id="mcp-local-agent" snippets={localSnippets(token)} />
       </TabsContent>
     </Tabs>
   );
@@ -233,8 +284,8 @@ export function McpServerCard() {
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
-          Point Claude Code or Claude Desktop at this instance to ask about your
-          apps, keywords, rankings and audits in plain language. Every tool is
+          Point any MCP client at this instance to ask about your apps,
+          keywords, rankings and audits in plain language. Every tool is
           read-only and authenticated with a personal API token.{" "}
           <a
             href={DOCS_URL}
