@@ -47,3 +47,9 @@ export const KEYWORD_BULK_ADD_LIMIT = 200;
 export function countChars(text: string): number {
   return text.length;
 }
+
+export const KEYWORD_MIN_CHARS = 3;
+
+export function utf8ByteLength(text: string): number {
+  return new TextEncoder().encode(text).length;
+}

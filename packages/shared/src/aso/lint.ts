@@ -1,5 +1,5 @@
 import { isStopword, normalizeText, tokenize } from '../text';
-import { countChars } from './limits';
+import { countChars, KEYWORD_MIN_CHARS, utf8ByteLength } from './limits';
 
 export type LintSeverity = 'error' | 'warn' | 'info';
 
@@ -33,33 +33,57 @@ const contentTokens = (text: string): string[] =>
 const toSet = (words: readonly string[] | undefined): ReadonlySet<string> =>
   new Set((words ?? []).flatMap((word) => tokenize(word)));
 
-const overLimit = (text: string, limit: number): LintIssue[] => {
-  const chars = countChars(text);
-  if (chars <= limit) {
+type Measure = (text: string) => number;
+
+const overLimit = (
+  text: string,
+  limit: number,
+  measure: Measure = countChars,
+  unit = 'character',
+): LintIssue[] => {
+  const used = measure(text);
+  if (used <= limit) {
     return [];
   }
   return [
     {
       rule: 'over-limit',
       severity: 'error',
-      message: `Exceeds the ${limit} character limit (${chars}).`,
+      message: `Exceeds the ${limit} ${unit} limit (${used}).`,
     },
   ];
 };
 
-const underUtilized = (text: string, limit: number): LintIssue[] => {
-  const chars = countChars(text.trim());
-  if (chars === 0 || chars >= limit * UNDER_UTILIZED_RATIO) {
+const underUtilized = (
+  text: string,
+  limit: number,
+  measure: Measure = countChars,
+  unit = 'character',
+): LintIssue[] => {
+  const used = measure(text.trim());
+  if (used === 0 || used >= limit * UNDER_UTILIZED_RATIO) {
     return [];
   }
   return [
     {
       rule: 'under-utilized',
       severity: 'warn',
-      message: `Only ${chars} of ${limit} characters used.`,
+      message: `Only ${used} of ${limit} ${unit}s used.`,
     },
   ];
 };
+
+const shortKeywords = (field: string): LintIssue[] =>
+  field
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && countChars(part) < KEYWORD_MIN_CHARS)
+    .map((part) => ({
+      rule: 'short-keyword',
+      severity: 'warn' as const,
+      message: `"${part}" is shorter than ${KEYWORD_MIN_CHARS} characters; App Store Connect ignores it.`,
+      offendingText: part,
+    }));
 
 const keywordStuffing = (text: string): LintIssue[] => {
   const counts = new Map<string, number>();
@@ -175,8 +199,9 @@ export function lintKeywordField(
   limit = 100,
 ): LintIssue[] {
   const issues: LintIssue[] = [
-    ...overLimit(field, limit),
-    ...underUtilized(field, limit),
+    ...overLimit(field, limit, utf8ByteLength, 'byte'),
+    ...underUtilized(field, limit, utf8ByteLength, 'byte'),
+    ...shortKeywords(field),
     ...repeats(field, toSet(context.titleWords), 'repeats-title-word', 'title'),
     ...repeats(
       field,

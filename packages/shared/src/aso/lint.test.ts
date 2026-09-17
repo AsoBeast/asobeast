@@ -8,6 +8,7 @@ import {
   lintTitle,
   LintIssue,
 } from './lint';
+import { utf8ByteLength } from './limits';
 
 const rules = (issues: LintIssue[]): string[] =>
   issues.map((issue) => issue.rule);
@@ -156,6 +157,29 @@ describe('lintKeywordField', () => {
     expect(rules(lintKeywordField('spanish,learn', ctx))).not.toContain(
       'contains-competitor-brand',
     );
+  });
+
+  it('refuses a field that fits 100 characters but not 100 bytes', () => {
+    const field =
+      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
+
+    expect(field.length).toBe(83);
+    expect(utf8ByteLength(field)).toBe(111);
+    expect(rules(lintKeywordField(field))).toContain('over-limit');
+  });
+
+  it('accepts a field of exactly 100 bytes and refuses 101', () => {
+    const exact = `${'a'.repeat(98)}ą`;
+    const over = `${'a'.repeat(99)}ą`;
+
+    expect(utf8ByteLength(exact)).toBe(100);
+    expect(rules(lintKeywordField(exact))).not.toContain('over-limit');
+    expect(rules(lintKeywordField(over))).toContain('over-limit');
+  });
+
+  it('flags keywords of two characters or fewer', () => {
+    expect(rules(lintKeywordField('tv,habit'))).toContain('short-keyword');
+    expect(rules(lintKeywordField('gym,habit'))).not.toContain('short-keyword');
   });
 });
 
