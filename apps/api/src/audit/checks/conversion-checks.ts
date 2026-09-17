@@ -1,5 +1,4 @@
 import {
-  aiCheck,
   AuditContext,
   check,
   DAY_MS,
@@ -24,8 +23,5 @@ export const conversionChecks = (context: AuditContext): RubricCheck[] => {
         fresh ? 'recently' : 'over 30 days ago'
       }.`,
     }),
-    aiCheck('conversion-promo', 'Promotional text', 1, context.aiChecks),
-    aiCheck('conversion-events', 'In-app events', 1, context.aiChecks),
-    aiCheck('conversion-cpp', 'Custom product pages', 1, context.aiChecks),
   ];
 };

@@ -13,6 +13,7 @@ import {
   charUsageScore,
   check,
   keywordMatchScore,
+  KEYWORD_FIELD_UNLOCK,
   lintContext,
   lintScore,
   presenceShare,
@@ -104,14 +105,22 @@ export const subtitleChecks = (context: AuditContext): RubricCheck[] => {
   ];
 };
 
-export const keywordFieldChecks = (
-  context: AuditContext,
-): RubricCheck[] | null => {
+export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
   const entries = context.keywords.filter(
     (keyword) => keyword.source === KeywordSource.KEYWORD_FIELD,
   );
   if (entries.length === 0) {
-    return null;
+    return [
+      check({
+        id: 'keyword-field-saved',
+        label: 'Keyword field',
+        source: 'keywords',
+        weight: 1,
+        score: null,
+        detail: 'No keyword field saved.',
+        unlock: KEYWORD_FIELD_UNLOCK,
+      }),
+    ];
   }
   const value = entries.map((entry) => entry.text).join(',');
   const limit = STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;

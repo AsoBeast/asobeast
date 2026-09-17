@@ -8,8 +8,11 @@ import {
   AuditGroupResult,
   AuditRecommendation,
   AuditRecommendations,
+  AuditUnlockKind,
+  AuditUnlockSummary,
 } from '@asobeast/shared';
 import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
+import { limitationsFor } from './audit-limitations';
 import { AuditContext, RubricCheck } from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
@@ -72,7 +75,7 @@ interface FactorDefinition {
   label: string;
   bucket: RecommendationBucket;
   group: (store: Store) => AuditGroupId;
-  build: (context: AuditContext) => RubricCheck[] | null;
+  build: (context: AuditContext) => RubricCheck[];
 }
 
 const FACTORS: FactorDefinition[] = [
@@ -181,6 +184,43 @@ const toContractCheck = (item: RubricCheck): AuditCheckResult => ({
   unlock: item.unlock,
 });
 
+interface UnlockWeight {
+  label: string;
+  checks: number;
+  weight: number;
+}
+
+const deriveUnlocks = (
+  factors: { weight: number; checks: RubricCheck[] }[],
+): AuditUnlockSummary[] => {
+  const totals = new Map<AuditUnlockKind, UnlockWeight>();
+  for (const factor of factors) {
+    const listed = factor.checks.reduce((sum, item) => sum + item.weight, 0);
+    for (const item of factor.checks) {
+      if (item.status !== 'unanswered' || !item.unlock) {
+        continue;
+      }
+      const found = totals.get(item.unlock.kind) ?? {
+        label: item.unlock.label,
+        checks: 0,
+        weight: 0,
+      };
+      totals.set(item.unlock.kind, {
+        label: found.label,
+        checks: found.checks + 1,
+        weight: found.weight + (factor.weight * item.weight) / listed,
+      });
+    }
+  }
+  return [...totals]
+    .sort(([, a], [, b]) => b.weight - a.weight)
+    .map(([kind, entry]) => ({
+      kind,
+      label: entry.label,
+      checks: entry.checks,
+    }));
+};
+
 const toFactorScore = (factor: AuditFactorResult): FactorScore => ({
   weight: factor.weight,
   score: factor.score,
@@ -192,12 +232,15 @@ export function computeAudit(context: AuditContext): AppAuditResult {
   const weights = AUDIT_WEIGHTS[context.store];
   const factors: AuditFactorResult[] = [];
 
+  const built: { weight: number; checks: RubricCheck[] }[] = [];
+
   for (const definition of FACTORS) {
     const weight = weights[definition.id];
     if (weight === 0) {
       continue;
     }
-    const checks = definition.build(context) ?? [];
+    const checks = definition.build(context);
+    built.push({ weight, checks });
     const { score, confidence } = scoreFactor(checks);
     factors.push({
       id: definition.id,
@@ -240,6 +283,8 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     grade: gradeFor(totals.overall),
     confidence: totals.confidence,
     groups,
+    limitations: [...limitationsFor(context.store)],
+    unlocks: deriveUnlocks(built),
   };
 }
 

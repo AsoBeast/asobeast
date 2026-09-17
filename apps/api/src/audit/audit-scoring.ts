@@ -71,6 +71,7 @@ export type AuditCheckId =
   | 'subtitle-keyword'
   | 'subtitle-no-repetition'
   | 'subtitle-char-usage'
+  | 'keyword-field-saved'
   | 'keyword-field-lint'
   | 'keyword-field-char-usage'
   | 'keyword-field-relevance'
@@ -85,14 +86,9 @@ export type AuditCheckId =
   | 'screenshots-localized'
   | 'screenshots-device-frames'
   | 'preview-video-exists'
-  | 'preview-video-hook'
-  | 'preview-video-length'
-  | 'preview-video-sound'
   | 'ratings-average'
   | 'ratings-count'
   | 'ratings-trend'
-  | 'ratings-responses'
-  | 'ratings-prompts'
   | 'icon-distinctive'
   | 'icon-simple'
   | 'icon-category-fit'
@@ -101,10 +97,7 @@ export type AuditCheckId =
   | 'rankings-coverage'
   | 'rankings-trend'
   | 'rankings-gap'
-  | 'conversion-freshness'
-  | 'conversion-promo'
-  | 'conversion-events'
-  | 'conversion-cpp';
+  | 'conversion-freshness';
 
 export interface CheckAdvice {
   title: string;
@@ -149,13 +142,30 @@ export const check = (input: CheckInput): RubricCheck => {
   };
 };
 
+export const HISTORY_UNLOCK: AuditUnlock = {
+  kind: 'history',
+  label: 'Needs more daily history',
+};
+
+export const KEYWORD_FIELD_UNLOCK: AuditUnlock = {
+  kind: 'keyword-field',
+  label: 'Paste your keyword field from App Store Connect',
+};
+
+export const aiUnlock = (configured: boolean): AuditUnlock => ({
+  kind: 'ai-analysis',
+  label: configured
+    ? 'Run the AI creative analysis'
+    : 'Add OPENAI_API_KEY to analyze your icon and screenshots',
+});
+
 export const aiCheck = (
   id: AuditCheckId,
   label: string,
   weight: number,
-  ai: AiAuditChecks,
+  context: AuditContext,
 ): RubricCheck => {
-  const found = ai[id];
+  const found = context.aiChecks[id];
   return check({
     id,
     label,
@@ -163,6 +173,7 @@ export const aiCheck = (
     weight,
     score: found?.score ?? null,
     detail: found?.detail ?? 'Run the AI audit to score this.',
+    unlock: aiUnlock(context.aiStatus.configured),
   });
 };
 

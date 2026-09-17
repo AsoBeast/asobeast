@@ -1,4 +1,10 @@
-import { AuditContext, check, RubricCheck, trendScore } from '../audit-scoring';
+import {
+  AuditContext,
+  check,
+  HISTORY_UNLOCK,
+  RubricCheck,
+  trendScore,
+} from '../audit-scoring';
 
 export const rankingChecks = (context: AuditContext): RubricCheck[] => {
   const { top10Share, rankedShare, avgDelta7d, gapCount } = context.rankings;
@@ -29,6 +35,7 @@ export const rankingChecks = (context: AuditContext): RubricCheck[] => {
         avgDelta7d === null
           ? 'No 7 day trend yet.'
           : 'Average 7 day position change.',
+      unlock: HISTORY_UNLOCK,
     }),
     check({
       id: 'rankings-gap',

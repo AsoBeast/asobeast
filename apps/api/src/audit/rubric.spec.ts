@@ -25,30 +25,38 @@ const emptyFacts = {
 
 const NOW = new Date('2026-07-09T00:00:00.000Z');
 
-const SUBJECTIVE_IDS = [
+const OBSERVABLE_IDS = [
   'screenshots-first-three',
   'screenshots-text-overlays',
   'screenshots-consistent',
   'screenshots-localized',
   'screenshots-device-frames',
+  'icon-distinctive',
+  'icon-simple',
+  'icon-category-fit',
+  'icon-no-text',
+];
+
+const UNOBSERVABLE_IDS = [
   'preview-video-exists',
   'preview-video-hook',
   'preview-video-length',
   'preview-video-sound',
   'ratings-responses',
   'ratings-prompts',
-  'icon-distinctive',
-  'icon-simple',
-  'icon-category-fit',
-  'icon-no-text',
   'conversion-promo',
   'conversion-events',
   'conversion-cpp',
 ];
 
-const perfectAiChecks = Object.fromEntries(
-  SUBJECTIVE_IDS.map((id) => [id, { score: 10, detail: 'Excellent.' }]),
-);
+const answered = (ids: string[]) =>
+  Object.fromEntries(
+    ids.map((id) => [id, { score: 10, detail: 'Excellent.' }]),
+  );
+
+const observedAiChecks = answered(OBSERVABLE_IDS);
+
+const perfectAiChecks = answered([...OBSERVABLE_IDS, ...UNOBSERVABLE_IDS]);
 
 const emptyContext = (): AuditContext => ({
   appId: 'app1',
@@ -162,13 +170,16 @@ describe('AUDIT_WEIGHTS', () => {
 });
 
 describe('computeAudit', () => {
-  it('scores a perfect listing 100 with full coverage', () => {
+  it('scores a perfect listing 100 over every measurable factor', () => {
     const result = computeAudit(perfectContext());
+    const measurable = result.factors.filter(
+      (factor) => factor.availability !== 'not-measurable',
+    );
     expect(result.overall).toBe(100);
-    expect(result.coveredWeight).toBe(110);
+    expect(result.coveredWeight).toBe(105);
     expect(result.totalWeight).toBe(110);
-    expect(result.factors.every((factor) => factor.score === 10)).toBe(true);
-    expect(result.factors.some((factor) => factor.needsInput)).toBe(false);
+    expect(measurable.every((factor) => factor.score === 10)).toBe(true);
+    expect(measurable.some((factor) => factor.needsInput)).toBe(false);
   });
 
   it('scores an empty listing near zero and renormalizes over covered weight', () => {
@@ -224,8 +235,84 @@ describe('computeAudit', () => {
       true,
     );
     expect(
-      result.factors.every((factor) => factor.availability === 'measured'),
+      result.factors
+        .filter((factor) => factor.id !== 'previewVideo')
+        .every((factor) => factor.availability === 'measured'),
     ).toBe(true);
+  });
+
+  it('leaves no unanswered check without a way to answer it after an AI run', () => {
+    const result = computeAudit({
+      ...perfectContext(),
+      aiChecks: observedAiChecks,
+    });
+
+    const stuck = result.factors
+      .flatMap((factor) => factor.checks)
+      .filter((item) => item.status === 'unanswered' && !item.unlock);
+
+    expect(stuck.map((item) => item.id)).toEqual([]);
+  });
+
+  it('lists no preview video check on the App Store and says so in the limitations', () => {
+    const result = computeAudit(perfectContext());
+    const video = result.factors.find((factor) => factor.id === 'previewVideo');
+
+    expect(video).toMatchObject({
+      checks: [],
+      availability: 'not-measurable',
+      score: null,
+      needsInput: true,
+    });
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video',
+    );
+  });
+
+  it('waits for the keyword field instead of scoring without it', () => {
+    const withoutField = computeAudit({ ...perfectContext(), keywords: [] });
+    const field = withoutField.factors.find(
+      (factor) => factor.id === 'keywordField',
+    );
+
+    expect(field?.availability).toBe('awaiting-input');
+    expect(field?.checks).toEqual([
+      expect.objectContaining({
+        id: 'keyword-field-saved',
+        status: 'unanswered',
+        unlock: {
+          kind: 'keyword-field',
+          label: 'Paste your keyword field from App Store Connect',
+        },
+      }),
+    ]);
+  });
+
+  it('offers the AI analysis before any other unlock when nothing has run', () => {
+    const result = computeAudit(emptyContext());
+
+    expect(result.unlocks?.map((item) => item.kind)).toEqual([
+      'ai-analysis',
+      'keyword-field',
+      'history',
+    ]);
+    expect(result.unlocks?.[0]).toMatchObject({
+      kind: 'ai-analysis',
+      label: 'Add OPENAI_API_KEY to analyze your icon and screenshots',
+    });
+    expect(result.unlocks?.[0].checks).toBeGreaterThan(0);
+  });
+
+  it('lists no check for promotional text, in-app events or custom product pages', () => {
+    const ids = [
+      ...computeAudit(perfectContext()).factors,
+      ...computeAudit({ ...perfectContext(), store: 'GOOGLE_PLAY' }).factors,
+    ].flatMap((factor) => factor.checks.map((item) => item.id));
+
+    expect(ids).not.toContain('conversion-promo');
+    expect(ids).not.toContain('conversion-events');
+    expect(ids).not.toContain('conversion-cpp');
+    expect(ids).not.toContain('ratings-prompts');
   });
 
   it('produces recommendations for failing checks', () => {
@@ -280,12 +367,23 @@ describe('factor bands', () => {
   const previewExists = (context: AuditContext) =>
     previewVideoChecks(context).find((c) => c.id === 'preview-video-exists');
 
-  it('scores the preview video from data when hasVideo is known', () => {
+  const onPlay = (overrides: Partial<AuditContext>): AuditContext =>
+    withContext({ store: 'GOOGLE_PLAY', ...overrides });
+
+  it('lists no preview video check on the App Store', () => {
+    expect(
+      previewVideoChecks(
+        withContext({ rawFacts: { ...emptyFacts, hasVideo: true } }),
+      ),
+    ).toEqual([]);
+  });
+
+  it('scores the Google Play preview video from data when hasVideo is known', () => {
     const present = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: true } }),
+      onPlay({ rawFacts: { ...emptyFacts, hasVideo: true } }),
     );
     const absent = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: false } }),
+      onPlay({ rawFacts: { ...emptyFacts, hasVideo: false } }),
     );
     expect(present?.kind).toBe('auto');
     expect(present?.score).toBe(10);
@@ -295,7 +393,7 @@ describe('factor bands', () => {
 
   it('falls back to the AI check when hasVideo is null', () => {
     const answered = previewExists(
-      withContext({
+      onPlay({
         rawFacts: { ...emptyFacts, hasVideo: null },
         aiChecks: {
           'preview-video-exists': { score: 10, detail: 'Has a preview video.' },
@@ -303,7 +401,7 @@ describe('factor bands', () => {
       }),
     );
     const unscored = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: null } }),
+      onPlay({ rawFacts: { ...emptyFacts, hasVideo: null } }),
     );
     expect(answered?.kind).toBe('ai');
     expect(answered?.score).toBe(10);

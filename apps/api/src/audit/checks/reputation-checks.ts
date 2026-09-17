@@ -1,8 +1,8 @@
 import { logScale } from '../../scoring/formulas';
 import {
-  aiCheck,
   AuditContext,
   check,
+  HISTORY_UNLOCK,
   ratingAverageScore,
   RubricCheck,
   trendScore,
@@ -52,8 +52,7 @@ export const ratingChecks = (context: AuditContext): RubricCheck[] => {
         trend === null
           ? 'No 30 day history yet.'
           : 'Compared ratings to 30 days ago.',
+      unlock: HISTORY_UNLOCK,
     }),
-    aiCheck('ratings-responses', 'Responds to reviews', 1, context.aiChecks),
-    aiCheck('ratings-prompts', 'Strategic rating prompts', 1, context.aiChecks),
   ];
 };

@@ -165,6 +165,7 @@ describe('AuditController (e2e)', () => {
 
     expect(factor(result, 'keywordField')?.needsInput).toBe(true);
     expect(factor(result, 'keywordField')?.score).toBeNull();
+    expect(factor(result, 'keywordField')?.availability).toBe('awaiting-input');
   });
 
   it('reports the rubric version, grade, confidence and groups', async () => {
@@ -188,6 +189,10 @@ describe('AuditController (e2e)', () => {
           item.availability !== undefined,
       ),
     ).toBe(true);
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video',
+    );
+    expect(result.unlocks?.map((item) => item.kind)).toContain('ai-analysis');
   });
 
   it('keeps every check status inside the published union', async () => {
@@ -217,7 +222,7 @@ describe('AuditController (e2e)', () => {
     const after = (await api.post(`/apps/${id}/audit/ai`).expect(201))
       .body as AppAuditResult;
 
-    expect(factor(after, 'previewVideo')?.needsInput).toBe(false);
+    expect(factor(after, 'previewVideo')?.availability).toBe('not-measurable');
     expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
