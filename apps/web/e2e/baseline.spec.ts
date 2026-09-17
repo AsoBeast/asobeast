@@ -31,7 +31,7 @@ async function capture({ page, theme, width, name, path }: Capture) {
     path: `e2e/__baseline__/${theme}/${width}/${name}.png`,
     fullPage: true,
     animations: "disabled",
-    mask: [page.locator("time"), page.getByText(/^Last run /)],
+    mask: [page.locator("time"), page.getByText(/^Analyzed /)],
   });
 }
 

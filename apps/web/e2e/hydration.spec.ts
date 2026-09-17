@@ -147,11 +147,11 @@ test("a seconds-old audit timestamp renders the same on both sides", async ({
   page,
   context,
 }) => {
-  await seedCookies(context, { e2e_ai_audit: "1" });
+  await seedCookies(context, { e2e_ai_run: "running" });
   const errors = collectPageErrors(page);
 
   await page.goto("/apps/app-1/audit");
-  await expect(page.getByText(/^Last run /)).toBeVisible();
+  await expect(page.getByText(/^Analyzed /)).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the audit ai card threw: ${errors.join(", ")}`).toEqual([]);

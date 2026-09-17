@@ -1,5 +1,7 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import type { AppAuditResult, AuditAiRunState } from "@asobeast/shared";
+import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
   actionKeys,
   actionsOptions,
@@ -8,6 +10,7 @@ import {
   appKeys,
   appDetailOptions,
   appSummaryOptions,
+  AUDIT_RUN_POLL_MS,
   auditHistoryOptions,
   auditOptions,
   accountPlanKey,
@@ -243,6 +246,7 @@ describe("invalidation sets", () => {
     expect(
       invalidatedKeys((client) => invalidateKeywordMutation(client, APP)),
     ).toEqual([
+      appKeys.audit(APP),
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
       appKeys.keywordField(APP),
@@ -316,5 +320,32 @@ describe("standalone keys", () => {
     ["auth me", authMeKey],
   ] as const)("keeps the %s key outside the app hierarchy", (_name, key) => {
     expect(isPrefixOf(appKeys.all, key)).toBe(false);
+  });
+});
+
+describe("auditOptions polling", () => {
+  const withRun = (state: AuditAiRunState | null): AppAuditResult => ({
+    ...APP_AUDIT_EXAMPLE,
+    ai: {
+      ...APP_AUDIT_EXAMPLE.ai,
+      run: state
+        ? { state, requestedAt: null, finishedAt: null, error: null }
+        : null,
+    },
+  });
+
+  it.each([
+    [null, false],
+    ["queued", AUDIT_RUN_POLL_MS],
+    ["running", AUDIT_RUN_POLL_MS],
+    ["completed", false],
+    ["failed", false],
+  ] as const)("polls a %s run: %s", (state, interval) => {
+    const options = auditOptions("app-1");
+    const refetchInterval = options.refetchInterval as (query: {
+      state: { data: AppAuditResult };
+    }) => number | false;
+
+    expect(refetchInterval({ state: { data: withRun(state) } })).toBe(interval);
   });
 });

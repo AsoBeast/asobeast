@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  AppAuditResult,
   FirstRunStatus,
   KeywordSort,
   KeywordSuggestionStrategy,
@@ -362,11 +363,27 @@ export const categoryRanksOptions = (id: string, params: RangeParams) =>
     queryFn: () => getCategoryRanks(id, params),
   });
 
+export const AUDIT_RUN_POLL_MS = 2_000;
+
+export function auditRunActive(audit: AppAuditResult | undefined): boolean {
+  const state = audit?.ai.run?.state;
+  return state === "queued" || state === "running";
+}
+
 export const auditOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.audit(id),
     queryFn: () => getAudit(id),
+    refetchInterval: (query) =>
+      auditRunActive(query.state.data) ? AUDIT_RUN_POLL_MS : false,
   });
+
+export function invalidateAudit(
+  client: QueryClient,
+  appId: string,
+): Promise<void> {
+  return client.invalidateQueries({ queryKey: appKeys.audit(appId) });
+}
 
 export const auditHistoryOptions = (id: string, params: RangeParams = {}) =>
   queryOptions({
@@ -508,6 +525,7 @@ export function invalidateKeywordMutation(
   client: QueryClient,
   id: string,
 ): void {
+  void client.invalidateQueries({ queryKey: appKeys.audit(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordCountries(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });

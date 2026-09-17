@@ -151,3 +151,99 @@ test("says what the audit cannot see", async ({ page }) => {
   await page.getByText("What this audit cannot see").click();
   await expect(page.getByText("App previews")).toBeVisible();
 });
+
+test("explains how to enable the analysis when no key is configured", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_unconfigured: "1" });
+  await page.goto("/apps/app-1/audit");
+
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+  await expect(panel.getByText(/Add OPENAI_API_KEY/)).toBeVisible();
+  await expect(
+    panel.getByRole("link", { name: /AI features guide/ }),
+  ).toHaveAttribute("href", "https://docs.asobeast.com/guides/ai-features");
+  await expect(panel.getByRole("button")).toHaveCount(0);
+});
+
+test("queues an analysis, shows progress, then the new score", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+
+  await panel.getByRole("button", { name: "Analyze creative" }).click();
+
+  await expect(panel.getByRole("status")).toContainText(
+    "Analyzing your icon and",
+  );
+  await expect(page.getByText("Creative analysis finished")).toBeVisible({
+    timeout: 10_000,
+  });
+  await expect(panel.getByText("Up to date")).toBeVisible();
+});
+
+test("shows a failed analysis and tries again", async ({ page, context }) => {
+  await seedCookies(context, { e2e_ai_fail: "1" });
+  await page.goto("/apps/app-gp/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+
+  await panel.getByRole("button", { name: "Analyze creative" }).click();
+
+  await expect(panel.getByRole("alert")).toContainText(
+    "OpenAI rejected the API key. Check OPENAI_API_KEY.",
+  );
+  const request = page.waitForRequest(
+    (req) => req.method() === "POST" && req.url().endsWith("/audit/ai/runs"),
+  );
+  await panel.getByRole("button", { name: "Try again" }).click();
+  await request;
+});
+
+test("offers to analyze again when the creative changed", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_stale: "1" });
+  await page.goto("/apps/app-1/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+
+  await expect(panel.getByText("Outdated")).toBeVisible();
+  await expect(
+    panel.getByRole("button", { name: "Analyze again" }),
+  ).toBeEnabled();
+});
+
+test("says an unchanged listing is already analyzed", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_reused: "1" });
+  await page.goto("/apps/app-gp/audit");
+
+  await page
+    .getByRole("region", { name: "AI creative analysis" })
+    .getByRole("button", { name: "Analyze creative" })
+    .click();
+
+  await expect(page.getByText("Already up to date")).toBeVisible();
+});
+
+test("sends one request for a double click", async ({ page }) => {
+  await page.goto("/apps/app-gp/audit");
+  const posts: string[] = [];
+  page.on("request", (req) => {
+    if (req.method() === "POST" && req.url().endsWith("/audit/ai/runs")) {
+      posts.push(req.url());
+    }
+  });
+
+  await page
+    .getByRole("region", { name: "AI creative analysis" })
+    .getByRole("button", { name: "Analyze creative" })
+    .dblclick();
+  await page.waitForLoadState("networkidle");
+
+  expect(posts).toHaveLength(1);
+});
