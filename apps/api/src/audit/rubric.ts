@@ -160,7 +160,7 @@ const FACTORS: FactorDefinition[] = [
   },
   {
     id: 'conversion',
-    label: 'Conversion signals',
+    label: 'Freshness and trust',
     bucket: 'strategic',
     group: conversion,
     build: conversionChecks,

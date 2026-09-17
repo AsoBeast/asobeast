@@ -142,7 +142,10 @@ export type AuditCheckId =
   | 'rankings-top10'
   | 'rankings-trend'
   | 'rankings-competitor-gap'
-  | 'conversion-freshness';
+  | 'conversion-update-recency'
+  | 'conversion-release-notes'
+  | 'conversion-localizations'
+  | 'conversion-privacy-policy';
 
 export interface CheckAdvice {
   title: string;

@@ -52,6 +52,7 @@ const gplayPayload = {
   video: 'https://video',
   headerImage: 'https://play-lh.googleusercontent.com/header',
   developer: 'Example Labs',
+  privacyPolicy: 'https://example.com/privacy',
 };
 
 describe('extractAppStoreRawFacts', () => {
@@ -71,6 +72,7 @@ describe('extractAppStoreRawFacts', () => {
       developerName: 'Habit Labs',
       currentVersionScore: 4.2,
       currentVersionReviews: 120,
+      privacyPolicyUrl: null,
       iconUrl: 'https://example.com/icon.png',
       screenshotUrls: ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'],
     });
@@ -95,6 +97,7 @@ describe('extractAppStoreRawFacts', () => {
       developerName: null,
       currentVersionScore: null,
       currentVersionReviews: null,
+      privacyPolicyUrl: null,
       iconUrl: null,
       screenshotUrls: [],
     });
@@ -131,6 +134,7 @@ describe('extractGooglePlayRawFacts', () => {
       developerName: 'Example Labs',
       currentVersionScore: null,
       currentVersionReviews: null,
+      privacyPolicyUrl: 'https://example.com/privacy',
       iconUrl: null,
       screenshotUrls: ['a', 'b', 'c'],
     });
@@ -160,6 +164,7 @@ describe('extractGooglePlayRawFacts', () => {
       developerName: null,
       currentVersionScore: null,
       currentVersionReviews: null,
+      privacyPolicyUrl: null,
       iconUrl: null,
       screenshotUrls: [],
     });

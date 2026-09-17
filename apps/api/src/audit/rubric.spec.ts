@@ -95,7 +95,9 @@ const perfectContext = (): AuditContext =>
     facts: {
       screenshotCount: 10,
       screenshotUrls: Array.from({ length: 10 }, (_, i) => `s${i}.png`),
-      releaseNotes: 'New reminders and widgets.',
+      releaseNotes:
+        'Adds streak reminders, home screen widgets and a weekly recap.',
+      languages: ['EN', 'PL', 'DE', 'FR', 'ES', 'IT', 'PT', 'JA', 'KO', 'ZH'],
     },
     keywords: perfectKeywords,
     visibility: { latest: 60, latestDate: '2026-07-09', weekAgo: 55 },
@@ -128,9 +130,11 @@ const perfectPlayContext = (): AuditContext =>
     facts: {
       screenshotCount: 8,
       screenshotUrls: Array.from({ length: 8 }, (_, i) => `p${i}.png`),
-      releaseNotes: 'New reminders and widgets.',
+      releaseNotes:
+        'Adds streak reminders, home screen widgets and a weekly recap.',
       featureGraphicUrl: 'https://play-lh.googleusercontent.com/header',
       videoUrl: 'https://play.google.com/video/x',
+      privacyPolicyUrl: 'https://example.com/privacy',
     },
   });
 

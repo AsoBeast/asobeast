@@ -25,6 +25,7 @@ export const emptyFacts: RawAppFacts = {
   developerName: null,
   currentVersionScore: null,
   currentVersionReviews: null,
+  privacyPolicyUrl: null,
   iconUrl: null,
   screenshotUrls: [],
 };
