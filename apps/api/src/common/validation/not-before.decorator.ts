@@ -17,7 +17,7 @@ export function NotBefore(
       constraints: [property],
       validator: {
         validate: (value: unknown, args) => {
-          const earlier = (args?.object as Record<string, unknown>)[property];
+          const earlier: unknown = args && Reflect.get(args.object, property);
           if (typeof value !== 'string' || typeof earlier !== 'string') {
             return true;
           }
