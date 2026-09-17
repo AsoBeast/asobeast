@@ -42,6 +42,12 @@ describe("mcp snippets", () => {
     expect(config.mcpServers.asobeast.env.ASOBEAST_API_TOKEN).toBe(TOKEN);
   });
 
+  it("quotes the stdio entrypoint so a path with spaces stays one argument", () => {
+    expect(local("claude-code-stdio")).toMatch(
+      new RegExp(`-- node "${STDIO_ENTRYPOINT}"$`),
+    );
+  });
+
   it("never points the stdio server at the mcp endpoint itself", () => {
     expect(local("claude-code-stdio")).not.toContain("/api/backend/mcp");
   });

@@ -246,7 +246,7 @@ export function localSnippets(
       location:
         "Run in a terminal. Replace the path with the absolute path to apps/mcp/dist/index.js",
       language: "bash",
-      value: `claude mcp add asobeast --env ASOBEAST_API_URL=${api} --env ASOBEAST_API_TOKEN=${token} -- node ${STDIO_ENTRYPOINT}`,
+      value: `claude mcp add asobeast --env ASOBEAST_API_URL=${api} --env ASOBEAST_API_TOKEN=${token} -- node "${STDIO_ENTRYPOINT}"`,
     },
     {
       id: "claude-desktop-stdio",
