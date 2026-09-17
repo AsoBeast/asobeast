@@ -5,7 +5,7 @@ import { StoreRequestError } from './errors';
 
 const makeLib = (overrides: Partial<AppStoreLib> = {}): AppStoreLib => ({
   app: jest.fn(),
-  page: jest.fn().mockResolvedValue(''),
+  page: jest.fn().mockResolvedValue('<h1>App</h1>'),
   search: jest.fn(),
   suggest: jest.fn(),
   similar: jest.fn(),
@@ -122,6 +122,84 @@ describe('AppStoreProvider', () => {
     const result = await provider.getApp('1', 'us');
 
     expect(result.subtitle).toBeUndefined();
+  });
+
+  it('marks the subtitle unavailable when the product page stays throttled', async () => {
+    jest.useFakeTimers();
+    const app = jest.fn().mockResolvedValue({
+      id: 6473753684,
+      title: 'Claude',
+      description: 'desc',
+    });
+    const page = jest
+      .fn()
+      .mockRejectedValue(new Error('Request failed with status 429'));
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('6473753684', 'pl');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(true);
+    expect(page).toHaveBeenCalledTimes(3);
+    jest.useRealTimers();
+  });
+
+  it('marks the subtitle unavailable when the product page renders no listing', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<!DOCTYPE html><html><body><div class="body-container"></div></body></html>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('1', 'us');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitleUnavailable).toBe(true);
+    expect(page).toHaveBeenCalledTimes(3);
+    jest.useRealTimers();
+  });
+
+  it('reads the subtitle once a throttled product page answers', async () => {
+    jest.useFakeTimers();
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest
+      .fn()
+      .mockRejectedValueOnce(new Error('Request failed with status 429'))
+      .mockResolvedValue(
+        '<h1>App</h1><p class="subtitle svelte-kps97o">AI assistant for life and work</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const promise = provider.getApp('1', 'pl');
+    await jest.runAllTimersAsync();
+    const result = await promise;
+
+    expect(result.subtitle).toBe('AI assistant for life and work');
+    expect(result.subtitleUnavailable).toBe(false);
+    jest.useRealTimers();
+  });
+
+  it('confirms a rendered listing that has no subtitle', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'us');
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(false);
   });
 
   it('falls back to currentVersionReviews for the rating count', async () => {

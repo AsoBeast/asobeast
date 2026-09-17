@@ -6,6 +6,7 @@ export interface NormalizedApp {
   storeAppId: string;
   title: string;
   subtitle?: string;
+  subtitleUnavailable?: boolean;
   summary?: string;
   description: string;
   iconUrl?: string;

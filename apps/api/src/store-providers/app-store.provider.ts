@@ -35,6 +35,11 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   grossing: 'topgrossingapplications',
 };
 
+interface SubtitleRead {
+  subtitle?: string;
+  unavailable: boolean;
+}
+
 @Injectable()
 export class AppStoreProvider implements StoreProvider {
   readonly store = Store.APP_STORE;
@@ -48,9 +53,11 @@ export class AppStoreProvider implements StoreProvider {
       () => this.lib.app({ id: Number(storeAppId), country, ratings: true }),
       storeAppId,
     );
-    const subtitle =
-      raw.subtitle ?? (await this.fetchSubtitle(storeAppId, country));
-    return this.toNormalizedApp(raw, subtitle);
+    const read: SubtitleRead =
+      raw.subtitle === undefined
+        ? await this.readSubtitle(storeAppId, country)
+        : { subtitle: raw.subtitle, unavailable: false };
+    return this.toNormalizedApp(raw, read);
   }
 
   async search(
@@ -161,33 +168,35 @@ export class AppStoreProvider implements StoreProvider {
     };
   }
 
-  private async fetchSubtitle(
+  private async readSubtitle(
     storeAppId: string,
     country: string,
-  ): Promise<string | undefined> {
+  ): Promise<SubtitleRead> {
     try {
-      const html = await this.withRetry('page', () =>
-        this.lib.page({ id: Number(storeAppId), country }),
+      const subtitle = await this.withRetry('page', async () =>
+        listingSubtitle(
+          await this.lib.page({ id: Number(storeAppId), country }),
+        ),
       );
-      const text = cheerio.load(html)('p.subtitle').first().text().trim();
-      return text.length > 0 ? text : undefined;
+      return { subtitle, unavailable: false };
     } catch (error) {
       this.logger.warn(
         `subtitle scrape failed for ${storeAppId}: ${messageOf(error)}`,
       );
-      return undefined;
+      return { unavailable: true };
     }
   }
 
   private toNormalizedApp(
     raw: AppStoreAppResult,
-    subtitle: string | undefined,
+    read: SubtitleRead,
   ): NormalizedApp {
     return {
       store: this.store,
       storeAppId: String(raw.trackId ?? raw.id),
       title: raw.title,
-      subtitle,
+      subtitle: read.subtitle,
+      subtitleUnavailable: read.unavailable,
       description: raw.description,
       iconUrl: raw.icon,
       ratingAvg: raw.score,
@@ -233,6 +242,15 @@ export class AppStoreProvider implements StoreProvider {
     }
     throw new StoreRequestError(this.store, method, messageOf(lastError));
   }
+}
+
+function listingSubtitle(html: string): string | undefined {
+  const $ = cheerio.load(html);
+  if ($('h1').length === 0) {
+    throw new Error('product page rendered no listing');
+  }
+  const text = $('p.subtitle').first().text().trim();
+  return text.length > 0 ? text : undefined;
 }
 
 function inIosSearch(supportedDevices?: string[]): boolean {
