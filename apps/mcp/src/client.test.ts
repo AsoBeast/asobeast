@@ -100,6 +100,18 @@ describe("createClient content", () => {
     );
   });
 
+  it.each(["Application/JSON", "APPLICATION/JSON; charset=UTF-8"])(
+    "reads a json body sent as %j",
+    async (contentType) => {
+      const result = await getMe((_req, res) => {
+        res.writeHead(200, { "content-type": contentType });
+        res.end('{"id":"u1"}');
+      });
+
+      expect(result).toEqual({ ok: true, data: { id: "u1" } });
+    },
+  );
+
   it("keeps reporting a json body that does not parse", async () => {
     const result = await getMe((_req, res) => {
       res.writeHead(200, { "content-type": "application/json" });

@@ -108,7 +108,7 @@ export function createClient(config: McpConfig): ApiClient {
 
       if (res.status === 204) return { ok: true, data: undefined as T };
       const contentType = res.headers.get("content-type") ?? "no content type";
-      if (!contentType.includes(JSON_CONTENT_TYPE)) {
+      if (!contentType.toLowerCase().includes(JSON_CONTENT_TYPE)) {
         return {
           ok: false,
           status: res.status,
