@@ -61,6 +61,8 @@ export const reviewsFrom = (
     title: null,
     text,
     reviewedAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+    repliedAt: null,
+    replyCheckedAt: null,
   }));
 
 export const keyword = (

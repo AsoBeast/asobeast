@@ -199,7 +199,14 @@ export class AuditContextLoader {
       this.prisma.review.findMany({
         where: { appId, reviewedAt: { gte: reviewCutoff } },
         orderBy: { reviewedAt: 'desc' },
-        select: { score: true, title: true, text: true, reviewedAt: true },
+        select: {
+          score: true,
+          title: true,
+          text: true,
+          reviewedAt: true,
+          repliedAt: true,
+          replyCheckedAt: true,
+        },
       }),
       this.prisma.auditInsight.findUnique({ where: { appId } }),
       this.keywordField(app),
@@ -250,6 +257,8 @@ export class AuditContextLoader {
         title: review.title,
         text: review.text,
         reviewedAt: review.reviewedAt,
+        repliedAt: review.repliedAt,
+        replyCheckedAt: review.replyCheckedAt,
       })),
       reviewScoreMax: this.config.get('ALERT_REVIEW_SCORE_MAX', {
         infer: true,

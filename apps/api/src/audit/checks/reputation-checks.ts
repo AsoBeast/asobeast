@@ -34,6 +34,16 @@ export const RECENT_REVIEW_BANDS = [
   { min: 3, score: 4 },
 ] as const;
 
+export const NEGATIVE_REVIEW_MAX_SCORE = 3;
+export const RESPONSE_WINDOW_DAYS = 90;
+export const MIN_RESPONSE_SAMPLE = 5;
+
+export const RESPONSE_RATE_BANDS = [
+  { min: 0.8, score: 10 },
+  { min: 0.5, score: 7 },
+  { min: 0.2, score: 4 },
+] as const;
+
 export const CURRENT_VERSION_BANDS = [
   { min: -0.1, score: 10 },
   { min: -0.3, score: 6 },
@@ -199,6 +209,37 @@ const currentVersionCheck = (context: AuditContext): RubricCheck | null => {
   });
 };
 
+const responseRateCheck = (context: AuditContext): RubricCheck | null => {
+  if (context.store !== Store.GOOGLE_PLAY) {
+    return null;
+  }
+  const cutoff = context.now.getTime() - RESPONSE_WINDOW_DAYS * DAY_MS;
+  const known = context.reviews.filter(
+    (review) =>
+      review.score <= NEGATIVE_REVIEW_MAX_SCORE &&
+      review.replyCheckedAt !== null &&
+      review.reviewedAt !== null &&
+      review.reviewedAt.getTime() >= cutoff,
+  );
+  if (known.length < MIN_RESPONSE_SAMPLE) {
+    return null;
+  }
+  const replied = known.filter((review) => review.repliedAt !== null);
+  const share = replied.length / known.length;
+  return check({
+    id: 'ratings-responses',
+    label: 'Replies to negative reviews',
+    source: 'reviews',
+    weight: 2,
+    score: RESPONSE_RATE_BANDS.find((band) => share >= band.min)?.score ?? 1,
+    detail: `You replied to ${replied.length} of ${known.length} reviews at ${NEGATIVE_REVIEW_MAX_SCORE} stars or less.`,
+    advice: {
+      title: 'Reply to negative reviews',
+      fix: `You replied to ${replied.length} of ${known.length} reviews at ${NEGATIVE_REVIEW_MAX_SCORE} stars or less. Replies show on Google Play and reviewers can update their rating.`,
+    },
+  });
+};
+
 export const ratingChecks = (context: AuditContext): RubricCheck[] => {
   const theme = complaintTheme(recentReviews(context), context.reviewScoreMax);
   const themeClause = theme ? ` and fix “${theme.text}”` : '';
@@ -206,7 +247,7 @@ export const ratingChecks = (context: AuditContext): RubricCheck[] => {
     averageCheck(context, themeClause),
     volumeCheck(context),
     recentCheck(context),
-    ...[currentVersionCheck(context)].filter(
+    ...[currentVersionCheck(context), responseRateCheck(context)].filter(
       (item): item is RubricCheck => item !== null,
     ),
   ];

@@ -1,11 +1,12 @@
 import {
   appStoreContext,
   competitor,
+  daysAgo,
   FIXTURE_NOW,
   playContext,
   reviewsFrom,
 } from '../audit-context.fixture';
-import { DAY_MS } from '../audit-scoring';
+import { AuditReview, DAY_MS } from '../audit-scoring';
 import { ratingChecks } from './reputation-checks';
 
 const checkOf = (checks: ReturnType<typeof ratingChecks>, id: string) =>
@@ -172,5 +173,67 @@ describe('ratings-current-version', () => {
     );
 
     expect(checkOf(checks, 'ratings-current-version')).toBeUndefined();
+  });
+});
+
+describe('ratings-responses', () => {
+  const negative = (replied: boolean, checked = true): AuditReview => ({
+    score: 2,
+    title: null,
+    text: 'Crashes on start',
+    reviewedAt: daysAgo(10),
+    repliedAt: replied ? daysAgo(9) : null,
+    replyCheckedAt: checked ? daysAgo(1) : null,
+  });
+
+  it('is omitted with fewer than 5 negative reviews of known reply state', () => {
+    const reviews = [
+      negative(true),
+      negative(true),
+      negative(true),
+      negative(true),
+      negative(true, false),
+    ];
+
+    expect(
+      ratingChecks(playContext({ reviews })).map((item) => item.id),
+    ).not.toContain('ratings-responses');
+  });
+
+  it.each([
+    [1, 1],
+    [2, 4],
+    [4, 4],
+    [5, 7],
+    [7, 7],
+    [8, 10],
+  ])('scores %i replies out of 10 as %i', (replied, score) => {
+    const reviews = Array.from({ length: 10 }, (_, index) =>
+      negative(index < replied),
+    );
+
+    expect(
+      checkOf(ratingChecks(playContext({ reviews })), 'ratings-responses')
+        ?.score,
+    ).toBe(score);
+  });
+
+  it('ignores reviews outside the 90 day window', () => {
+    const reviews = Array.from({ length: 10 }, () => ({
+      ...negative(true),
+      reviewedAt: daysAgo(120),
+    }));
+
+    expect(
+      ratingChecks(playContext({ reviews })).map((item) => item.id),
+    ).not.toContain('ratings-responses');
+  });
+
+  it('is never listed on the App Store', () => {
+    const reviews = Array.from({ length: 10 }, () => negative(false));
+
+    expect(
+      ratingChecks(appStoreContext({ reviews })).map((item) => item.id),
+    ).not.toContain('ratings-responses');
   });
 });

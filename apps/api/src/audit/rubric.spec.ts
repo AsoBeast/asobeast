@@ -3,6 +3,7 @@ import {
   analyzedCreative,
   appStoreContext,
   competitor,
+  daysAgo,
   FIXTURE_NOW,
   keyword,
   observations,
@@ -10,7 +11,7 @@ import {
   reviewsFrom,
   screenshotObservation,
 } from './audit-context.fixture';
-import { AuditContext, AuditKeyword } from './audit-scoring';
+import { AuditContext, AuditKeyword, AuditReview } from './audit-scoring';
 import { titleChecks } from './checks/metadata-checks';
 import { ratingChecks } from './checks/reputation-checks';
 import {
@@ -139,6 +140,67 @@ const perfectPlayContext = (): AuditContext =>
       privacyPolicyUrl: 'https://example.com/privacy',
     },
   });
+
+const repliedReview = (index: number): AuditReview => ({
+  score: 2,
+  title: null,
+  text: 'Crashes on start',
+  reviewedAt: daysAgo(10),
+  repliedAt: index < 8 ? daysAgo(9) : null,
+  replyCheckedAt: daysAgo(1),
+});
+
+const completeContext = (store: Store): AuditContext => {
+  const factory = store === Store.GOOGLE_PLAY ? playContext : appStoreContext;
+  return factory({
+    title: 'Habit Tracker: Daily Streaks',
+    subtitle: 'Streak Counter and Goal Log',
+    summary: 'Streak counter and goal log to keep every routine moving now',
+    description: 'Track habits.\n- Loved by 2 million users. Download now.',
+    keywordField: 'meditation,mindfulness,relaxation,breathing,wellness',
+    ratingAvg: 4.6,
+    ratingCount: 5000,
+    storeUpdatedAt: FIXTURE_NOW,
+    keywords: [keyword('habit tracker', 'primary', 90, { position: 2 })],
+    competitors: [
+      competitor({ id: 'c1', ratingCount: 1000 }),
+      competitor({ id: 'c2', ratingCount: 2000 }),
+    ],
+    reviews: Array.from({ length: 10 }, (_, index) => repliedReview(index)),
+    visibility: { latest: 40, latestDate: '2026-07-09', weekAgo: 38 },
+    comparison: { competitors: [{ id: 'c1', name: 'Rival' }], rows: [] },
+    facts: {
+      screenshotCount: 8,
+      screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+      ipadScreenshotCount: 3,
+      supportsIpad: store === Store.APP_STORE,
+      languages: store === Store.APP_STORE ? ['EN', 'PL'] : [],
+      releaseNotes: 'Adds streak reminders and widgets for every routine.',
+      featureGraphicUrl: 'https://play/header',
+      videoUrl: 'https://play/video',
+      privacyPolicyUrl: 'https://example.com/privacy',
+      currentVersionScore: 4.4,
+      currentVersionReviews: 40,
+      iconUrl: 'https://cdn/icon.png',
+    },
+    creative: analyzedCreative(store, {
+      observations: observations({
+        screenshots: [1, 2, 3].map((position) =>
+          screenshotObservation(position),
+        ),
+      }),
+      inputs: {
+        store,
+        country: 'us',
+        title: 'Habit Tracker',
+        iconUrl: 'https://cdn/icon.png',
+        screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
+        competitorIconUrls: ['c1.png'],
+      },
+    }),
+    aiStatus: { configured: true, model: 'gpt-5.6-luna', generatedAt: null },
+  });
+};
 
 const ids = (context: AuditContext): string[] =>
   computeAudit(context).factors.flatMap((factor) =>
@@ -377,5 +439,91 @@ describe('factor bands', () => {
     expect(scoreFor(4.2)).toBeGreaterThanOrEqual(5);
     expect(scoreFor(4.2)).toBeLessThanOrEqual(8);
     expect(scoreFor(3.5)).toBeLessThanOrEqual(4);
+  });
+});
+
+const APP_STORE_CHECK_IDS = [
+  'conversion-localizations',
+  'conversion-release-notes',
+  'conversion-update-recency',
+  'description-cta',
+  'description-formatting',
+  'description-hook',
+  'description-social-proof',
+  'icon-contrast',
+  'icon-distinct',
+  'icon-no-text',
+  'icon-simplicity',
+  'keyword-field-bytes',
+  'keyword-field-hygiene',
+  'rankings-competitor-gap',
+  'rankings-top10',
+  'rankings-trend',
+  'rankings-visibility',
+  'ratings-average',
+  'ratings-current-version',
+  'ratings-recent',
+  'ratings-volume',
+  'screenshots-caption-keywords',
+  'screenshots-captions',
+  'screenshots-consistency',
+  'screenshots-count',
+  'screenshots-first-message',
+  'screenshots-ipad',
+  'screenshots-localized',
+  'subtitle-keyword',
+  'subtitle-length',
+  'subtitle-no-repetition',
+  'title-keyword',
+  'title-length',
+  'title-policy',
+  'title-uniqueness',
+];
+
+const GOOGLE_PLAY_CHECK_IDS = [
+  'conversion-privacy-policy',
+  'conversion-release-notes',
+  'conversion-update-recency',
+  'description-above-fold',
+  'description-cta',
+  'description-formatting',
+  'description-hook',
+  'description-keyword-coverage',
+  'description-keyword-frequency',
+  'description-social-proof',
+  'icon-contrast',
+  'icon-distinct',
+  'icon-no-text',
+  'icon-simplicity',
+  'preview-video-present',
+  'rankings-competitor-gap',
+  'rankings-top10',
+  'rankings-trend',
+  'rankings-visibility',
+  'ratings-average',
+  'ratings-recent',
+  'ratings-responses',
+  'ratings-volume',
+  'screenshots-captions',
+  'screenshots-consistency',
+  'screenshots-count',
+  'screenshots-feature-graphic',
+  'screenshots-first-message',
+  'short-description-keyword',
+  'short-description-length',
+  'short-description-no-repetition',
+  'short-description-policy',
+  'title-keyword',
+  'title-length',
+  'title-policy',
+  'title-uniqueness',
+];
+
+describe('store applicability', () => {
+  it.each([
+    [Store.APP_STORE, APP_STORE_CHECK_IDS],
+    [Store.GOOGLE_PLAY, GOOGLE_PLAY_CHECK_IDS],
+  ])('lists exactly the %s checks with complete data', (store, expected) => {
+    expect(ids(completeContext(store)).sort()).toEqual(expected);
   });
 });
