@@ -4,6 +4,7 @@ import {
   MarketAvailability,
   MarketAvailabilityResult,
   OVERALL_GENRE,
+  storefrontLanguage,
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
@@ -40,59 +41,8 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   grossing: GPLAY_COLLECTIONS.GROSSING,
 };
 
-const GPLAY_LANG_BY_COUNTRY: Record<string, string> = {
-  us: 'en',
-  gb: 'en',
-  au: 'en',
-  ca: 'en',
-  ie: 'en',
-  nz: 'en',
-  in: 'en',
-  ph: 'en',
-  sg: 'en',
-  za: 'en',
-  de: 'de',
-  at: 'de',
-  ch: 'de',
-  fr: 'fr',
-  es: 'es',
-  mx: 'es',
-  ar: 'es',
-  co: 'es',
-  cl: 'es',
-  it: 'it',
-  pt: 'pt',
-  br: 'pt',
-  nl: 'nl',
-  pl: 'pl',
-  se: 'sv',
-  no: 'no',
-  dk: 'da',
-  fi: 'fi',
-  jp: 'ja',
-  kr: 'ko',
-  tw: 'zh',
-  hk: 'zh',
-  ru: 'ru',
-  tr: 'tr',
-  ua: 'uk',
-  cz: 'cs',
-  sk: 'sk',
-  hu: 'hu',
-  ro: 'ro',
-  gr: 'el',
-  il: 'he',
-  sa: 'ar',
-  ae: 'ar',
-  eg: 'ar',
-  th: 'th',
-  vn: 'vi',
-  id: 'id',
-  my: 'ms',
-};
-
 export const googlePlayLanguage = (country: string): string =>
-  GPLAY_LANG_BY_COUNTRY[country.toLowerCase()] ?? 'en';
+  storefrontLanguage(country) ?? 'en';
 
 @Injectable()
 export class GooglePlayProvider implements StoreProvider {
