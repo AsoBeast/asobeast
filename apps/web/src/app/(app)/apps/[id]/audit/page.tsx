@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
-import { AuditView } from "@/components/audit/AuditView";
+import { AuditPage as AuditPageView } from "@/components/audit/AuditPage";
 import { ApiError } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
 import { auditHistoryOptions, auditOptions } from "@/lib/queries";
@@ -29,7 +29,7 @@ export default async function AuditPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <Suspense fallback={null}>
-        <AuditView appId={id} />
+        <AuditPageView appId={id} />
       </Suspense>
     </HydrationBoundary>
   );

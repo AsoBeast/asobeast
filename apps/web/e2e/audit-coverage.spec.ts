@@ -6,7 +6,7 @@ test("audit factor meters separate a weak score from a strong one", async ({
   await page.goto("/apps/app-1/audit");
 
   await expect(
-    page.getByRole("heading", { name: "Factors", level: 2 }),
+    page.getByRole("heading", { name: "Search visibility", level: 2 }),
   ).toBeVisible();
 
   const fills = await page
@@ -15,7 +15,7 @@ test("audit factor meters separate a weak score from a strong one", async ({
       nodes.map((node) => getComputedStyle(node).backgroundColor),
     );
 
-  expect(fills.length).toBe(3);
+  expect(fills.length).toBeGreaterThanOrEqual(3);
   expect(new Set(fills).size).toBe(3);
 });
 

@@ -7,6 +7,9 @@ import {
   ACTIONS,
   ACTION_SUMMARY,
   APP_AUDIT,
+  AUDIT_HISTORY_POINTS,
+  PLAY_AUDIT,
+  PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_KEYWORD_COUNTRIES,
   BUDGET,
@@ -419,7 +422,22 @@ function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
     configured: true,
     model: "gpt-5-mini",
     generatedAt: new Date(Date.now() - 5_000).toISOString(),
+    stale: false,
+    run: {
+      state: "completed",
+      requestedAt: new Date(Date.now() - 20_000).toISOString(),
+      finishedAt: new Date(Date.now() - 5_000).toISOString(),
+      error: null,
+    },
   };
+}
+
+function auditFor(id: string, req: IncomingMessage): AppAuditResult {
+  if (id === "app-gp") return { ...PLAY_AUDIT, ai: auditAiFor(req) };
+  const base = hasCookie(req, "e2e_audit", "provisional")
+    ? PROVISIONAL_AUDIT
+    : APP_AUDIT;
+  return { ...base, appId: id, ai: auditAiFor(req) };
 }
 
 function actionsUngenerated(req: IncomingMessage): boolean {
@@ -875,7 +893,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/audit$/,
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { ...APP_AUDIT, appId: id, ai: auditAiFor(req) })
+        ? json(res, 200, auditFor(id, req))
         : json(res, 404, errorEnvelope(404, "App not found")),
   },
   {
@@ -883,7 +901,9 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/audit\/history$/,
     handler: ([id], _q, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { points: [] })
+        ? json(res, 200, {
+            points: id === "app-gp" ? AUDIT_HISTORY_POINTS : [],
+          })
         : json(res, 404, errorEnvelope(404, "App not found")),
   },
   {

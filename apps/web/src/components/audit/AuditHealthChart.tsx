@@ -1,7 +1,14 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+} from "recharts";
 import type { AuditScorePoint } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -33,6 +40,7 @@ import {
   TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
+import { formatDate } from "@/lib/format";
 import { auditHistoryOptions } from "@/lib/queries";
 
 const chartConfig = {
@@ -58,6 +66,18 @@ function computeDelta(points: AuditScorePoint[]): number | null {
   return (current.overall as number) - (baseline.overall as number);
 }
 
+const RUBRIC_V2 = "v2";
+
+function rubricChangeDate(points: AuditScorePoint[]): string | null {
+  const versions = new Set(
+    points.map((point) => point.rubricVersion).filter(Boolean),
+  );
+  if (versions.size < 2) return null;
+  return (
+    points.find((point) => point.rubricVersion === RUBRIC_V2)?.date ?? null
+  );
+}
+
 function DeltaChip({ delta }: { delta: number | null }) {
   if (delta === null) return null;
   const rounded = Math.round(delta);
@@ -76,12 +96,16 @@ export function AuditHealthChart({ id }: { id: string }) {
   const { data } = useSuspenseQuery(auditHistoryOptions(id));
   const points = scored(data.points);
   const state = trendState(points.length);
+  const rubricChange = rubricChangeDate(data.points);
+  const lastPoint = points[points.length - 1];
 
   return (
     <Card>
       <CardHeader>
         <CardDescription>ASO health</CardDescription>
-        <CardTitle>Audit score over time</CardTitle>
+        <CardTitle asChild>
+          <h2>Score history</h2>
+        </CardTitle>
         <CardAction>
           <DeltaChip delta={computeDelta(data.points)} />
         </CardAction>
@@ -92,7 +116,7 @@ export function AuditHealthChart({ id }: { id: string }) {
             config={chartConfig}
             className={`${CHART_HEIGHT.compact} w-full`}
             role="region"
-            aria-label="Audit score over time"
+            aria-label="Score history"
           >
             <LineChart
               accessibilityLayer
@@ -105,6 +129,13 @@ export function AuditHealthChart({ id }: { id: string }) {
               <ChartTooltip
                 content={<ChartTooltipContent {...TIME_TOOLTIP_PROPS} />}
               />
+              {rubricChange ? (
+                <ReferenceLine
+                  x={rubricChange}
+                  stroke="var(--border)"
+                  label="Rubric v2"
+                />
+              ) : null}
               <Line
                 {...LINE_PROPS}
                 dataKey="overall"
@@ -122,8 +153,8 @@ export function AuditHealthChart({ id }: { id: string }) {
         ) : (
           <ChartStat
             height={CHART_HEIGHT.compact}
-            label="Latest ASO score"
-            value={String(points[points.length - 1].overall)}
+            label={`Last daily snapshot · ${formatDate(lastPoint.date)}`}
+            value={String(lastPoint.overall)}
             note="A trend needs a few more daily snapshots."
           />
         )}
