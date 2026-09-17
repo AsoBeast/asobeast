@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
+import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { SpiderService } from '../keywords/spider.service';
@@ -14,6 +15,7 @@ import {
   CheckKeywordPayload,
   JOBS,
   RefreshAppPayload,
+  ResolveSubtitlePayload,
   ScoreKeywordPayload,
   SpiderProbePayload,
   SyncReviewsPayload,
@@ -32,6 +34,7 @@ export class StoreJobsHandler {
     private readonly workspace: WorkspaceContext,
     private readonly egress: ProxyEgress,
     private readonly targetCountry: JobTargetCountry,
+    private readonly subtitles: SubtitleBackfill,
   ) {}
 
   async handle(job: Job): Promise<void> {
@@ -47,6 +50,9 @@ export class StoreJobsHandler {
     switch (job.name) {
       case JOBS.REFRESH_APP:
         await this.apps.refreshApp((job.data as RefreshAppPayload).appId);
+        return;
+      case JOBS.RESOLVE_SUBTITLE:
+        await this.subtitles.resolve(job.data as ResolveSubtitlePayload);
         return;
       case JOBS.CHECK_KEYWORD:
         await this.rankings.checkKeyword(

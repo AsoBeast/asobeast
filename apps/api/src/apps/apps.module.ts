@@ -10,6 +10,7 @@ import { AppGroupsService } from './app-groups.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
+import { SubtitleBackfill } from './subtitle-backfill.service';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { FirstRunScheduler } from './first-run.scheduler';
     AppCaptureService,
     AppGroupsService,
     FirstRunScheduler,
+    SubtitleBackfill,
   ],
-  exports: [AppsService, AppCaptureService],
+  exports: [AppsService, AppCaptureService, SubtitleBackfill],
 })
 export class AppsModule {}

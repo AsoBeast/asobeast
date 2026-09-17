@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { AppCaptureService } from '../apps/app-capture.service';
+import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { ConfigService } from '@nestjs/config';
 import { QuotaService } from '../auth/quota.service';
@@ -110,6 +111,7 @@ describe('CompetitorsService.add', () => {
       registry as unknown as StoreProviderRegistry,
       workspace,
       passThroughEgress,
+      { request: jest.fn() } as unknown as SubtitleBackfill,
     );
     const service = new CompetitorsService(
       prisma as unknown as PrismaService,

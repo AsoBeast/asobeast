@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { Job } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
+import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { SpiderService } from '../keywords/spider.service';
@@ -15,6 +16,7 @@ import { StoreJobsHandler } from './store-jobs.handler';
 
 describe('StoreJobsHandler', () => {
   const refreshApp = jest.fn();
+  const resolveSubtitle = jest.fn();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
       work(),
@@ -42,6 +44,7 @@ describe('StoreJobsHandler', () => {
       workspace,
       { through } as unknown as ProxyEgress,
       { of: countryOf } as unknown as JobTargetCountry,
+      { resolve: resolveSubtitle } as unknown as SubtitleBackfill,
     );
   });
 
@@ -86,5 +89,18 @@ describe('StoreJobsHandler', () => {
     );
 
     expect(through.mock.calls[0][0]).toBe(Store.GOOGLE_PLAY);
+  });
+
+  it('dispatches a subtitle backfill with its payload', async () => {
+    const data = { appId: 'a1', snapshotId: 's1', workspaceId: 'ws_a' };
+
+    await handler.handle({
+      name: JOBS.RESOLVE_SUBTITLE,
+      id: '2',
+      data,
+      queueName: QUEUES.APP_STORE,
+    } as Job);
+
+    expect(resolveSubtitle).toHaveBeenCalledWith(data);
   });
 });

@@ -49,6 +49,7 @@ export const JOBS = {
   DIGEST: 'weekly-digest',
   AUDIT_SNAPSHOT: 'audit-snapshot',
   REFRESH_APP: 'refresh-app',
+  RESOLVE_SUBTITLE: 'resolve-subtitle',
   CHECK_KEYWORD: 'check-keyword',
   CHECK_CATEGORY: 'check-category',
   SCORE_KEYWORD: 'score-keyword',
@@ -76,6 +77,11 @@ export interface DailyCompletePayload extends FanOutSummary {
 
 export interface RefreshAppPayload extends WorkspaceJobPayload {
   appId: string;
+}
+
+export interface ResolveSubtitlePayload extends WorkspaceJobPayload {
+  appId: string;
+  snapshotId: string;
 }
 
 export interface DeliverAlertPayload extends WorkspaceJobPayload {
@@ -162,6 +168,10 @@ export function reviewsJobId(appId: string, date: string): string {
 
 export function reviewsBackfillJobId(appId: string): string {
   return `reviews~${appId}~backfill`;
+}
+
+export function resolveSubtitleJobId(appId: string): string {
+  return `subtitle~${appId}`;
 }
 
 export function categoryJobId(
