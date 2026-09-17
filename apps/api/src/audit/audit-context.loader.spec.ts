@@ -66,6 +66,7 @@ describe('AuditService rating trend baseline', () => {
     const keywords = {
       listTracked: jest.fn().mockResolvedValue([]),
       compare: jest.fn().mockResolvedValue({ competitors: [], rows: [] }),
+      getKeywordField: jest.fn().mockResolvedValue({ tracked: [] }),
     } as unknown as KeywordsService;
     const auditAi = {
       configured: false,

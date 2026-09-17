@@ -55,14 +55,22 @@ const perfectKeywords: AuditKeyword[] = [
     source: 'SUBTITLE',
     position: 3,
   }),
+  keyword('goal log', 'secondary', 60, { source: 'SUBTITLE', position: 5 }),
   ...keywordFieldEntries,
 ];
+
+const perfectKeywordField = keywordFieldEntries
+  .map((entry) => entry.text)
+  .join(',');
 
 const perfectContext = (): AuditContext =>
   appStoreContext({
     title: 'Habit Tracker: Daily Streaks',
-    subtitle: 'Streak Counter and Reminders',
-    summary: 'Build habits with daily streaks and gentle reminders today',
+    subtitle: 'Streak Counter and Goal Log',
+    summary:
+      'Streak counter and goal log to keep every routine moving forward now',
+    keywordField: perfectKeywordField,
+    competitorTitles: ['Zen Meditation Sounds'],
     description:
       'Track your habits and reach your goals.\n• Loved by 2 million users. Download now to start today.',
     ratingAvg: 5,
@@ -257,7 +265,11 @@ describe('computeAudit', () => {
   });
 
   it('waits for the keyword field instead of scoring without it', () => {
-    const withoutField = computeAudit({ ...perfectContext(), keywords: [] });
+    const withoutField = computeAudit({
+      ...perfectContext(),
+      keywords: [],
+      keywordField: null,
+    });
     const field = withoutField.factors.find(
       (factor) => factor.id === 'keywordField',
     );

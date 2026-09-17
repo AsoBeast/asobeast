@@ -58,6 +58,17 @@ export interface AuditContext {
   aiStatus: AuditAiStatus;
 }
 
+export type BrandTier = 'dominant' | 'established' | 'challenger';
+
+export const DOMINANT_RATING_COUNT = 1_000_000;
+export const ESTABLISHED_RATING_COUNT = 100_000;
+
+export const brandTier = (ratingCount: number | null): BrandTier => {
+  if (ratingCount === null) return 'challenger';
+  if (ratingCount >= DOMINANT_RATING_COUNT) return 'dominant';
+  return ratingCount >= ESTABLISHED_RATING_COUNT ? 'established' : 'challenger';
+};
+
 export const TITLE_FULL_CHARS = 27;
 export const TITLE_PARTIAL_CHARS = 20;
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -72,27 +83,33 @@ export const statusFromScore = (score: number | null): AuditCheckStatus => {
 
 export type AuditCheckId =
   | 'title-keyword'
-  | 'title-char-usage'
-  | 'title-lint'
+  | 'title-length'
+  | 'title-policy'
   | 'title-uniqueness'
   | 'subtitle-keyword'
   | 'subtitle-no-repetition'
-  | 'subtitle-char-usage'
+  | 'subtitle-length'
   | 'keyword-field-saved'
-  | 'keyword-field-lint'
-  | 'keyword-field-char-usage'
+  | 'keyword-field-hygiene'
+  | 'keyword-field-bytes'
   | 'keyword-field-relevance'
+  | 'short-description-keyword'
+  | 'short-description-length'
+  | 'short-description-no-repetition'
+  | 'short-description-policy'
   | 'description-hook'
   | 'description-cta'
   | 'description-social-proof'
   | 'description-formatting'
   | 'screenshots-count'
+  | 'screenshots-ipad'
+  | 'screenshots-feature-graphic'
   | 'screenshots-first-three'
   | 'screenshots-text-overlays'
   | 'screenshots-consistent'
   | 'screenshots-localized'
   | 'screenshots-device-frames'
-  | 'preview-video-exists'
+  | 'preview-video-present'
   | 'ratings-average'
   | 'ratings-count'
   | 'ratings-trend'
@@ -306,6 +323,9 @@ export const bucketTexts = (
 export const lintContext = (context: AuditContext) => ({
   titleWords: tokenize(context.title),
   subtitleWords: tokenize(context.subtitle ?? ''),
-  brandTokens: context.brandTokens,
+  brandTokens: [
+    ...context.brandTokens,
+    ...tokenize(context.rawFacts.developerName ?? ''),
+  ],
   competitorNames: context.competitorNames,
 });

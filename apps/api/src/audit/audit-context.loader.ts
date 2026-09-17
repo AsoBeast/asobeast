@@ -35,36 +35,52 @@ export class AuditContextLoader {
     return app;
   }
 
+  private async keywordField(app: AuditApp): Promise<string | null> {
+    if (app.store !== Store.APP_STORE) {
+      return null;
+    }
+    const { tracked } = await this.keywords.getKeywordField(app.id);
+    return tracked.map((item) => item.text).join(',') || null;
+  }
+
   async load(appId: string): Promise<AuditContext> {
     const app = await this.app(appId);
     const cutoff = new Date(Date.now() - TREND_WINDOW_DAYS * DAY_MS);
 
-    const [latest, prior, tracked, comparison, competitors, insight] =
-      await Promise.all([
-        this.prisma.appSnapshot.findFirst({
-          where: { appId },
-          orderBy: { capturedAt: 'desc' },
-        }),
-        this.prisma.appSnapshot.findFirst({
-          where: { appId, capturedAt: { lte: cutoff } },
-          orderBy: { capturedAt: 'desc' },
-          select: { ratingAvg: true, ratingCount: true },
-        }),
-        this.keywords.listTracked(appId),
-        this.keywords.compare(appId, false),
-        this.prisma.app.findMany({
-          where: { primaryAppId: appId },
-          select: {
-            name: true,
-            snapshots: {
-              orderBy: { capturedAt: 'desc' },
-              take: 1,
-              select: { title: true },
-            },
+    const [
+      latest,
+      prior,
+      tracked,
+      comparison,
+      competitors,
+      insight,
+      keywordField,
+    ] = await Promise.all([
+      this.prisma.appSnapshot.findFirst({
+        where: { appId },
+        orderBy: { capturedAt: 'desc' },
+      }),
+      this.prisma.appSnapshot.findFirst({
+        where: { appId, capturedAt: { lte: cutoff } },
+        orderBy: { capturedAt: 'desc' },
+        select: { ratingAvg: true, ratingCount: true },
+      }),
+      this.keywords.listTracked(appId),
+      this.keywords.compare(appId, false),
+      this.prisma.app.findMany({
+        where: { primaryAppId: appId },
+        select: {
+          name: true,
+          snapshots: {
+            orderBy: { capturedAt: 'desc' },
+            take: 1,
+            select: { title: true },
           },
-        }),
-        this.prisma.auditInsight.findUnique({ where: { appId } }),
-      ]);
+        },
+      }),
+      this.prisma.auditInsight.findUnique({ where: { appId } }),
+      this.keywordField(app),
+    ]);
 
     const active = tracked.filter(
       (item) => item.active && item.country === app.country,
@@ -79,7 +95,7 @@ export class AuditContextLoader {
       subtitle: latest?.subtitle ?? null,
       summary: latest?.summary ?? null,
       description: latest?.description ?? '',
-      keywordField: null,
+      keywordField,
       ratingAvg: latest?.ratingAvg ?? null,
       ratingCount: latest?.ratingCount ?? null,
       storeUpdatedAt: latest?.storeUpdatedAt ?? null,
