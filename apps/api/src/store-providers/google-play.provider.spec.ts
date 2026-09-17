@@ -277,7 +277,43 @@ describe('GooglePlayProvider', () => {
         text: 'second',
         version: '2.0',
         updatedAt: new Date('2026-07-10T00:00:00.000Z'),
+        repliedAt: undefined,
       },
+    ]);
+  });
+
+  it('maps the developer reply date', async () => {
+    const reviews = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          userName: 'a',
+          date: '2026-09-01T10:00:00.000Z',
+          score: 2,
+          title: null,
+          text: 'Crashes',
+          version: '3.1',
+          replyDate: '2026-09-02T08:00:00.000Z',
+        },
+        {
+          id: 'r2',
+          userName: 'b',
+          date: '2026-09-01T11:00:00.000Z',
+          score: 5,
+          title: null,
+          text: 'Great',
+          version: '3.1',
+        },
+      ],
+      nextPaginationToken: null,
+    });
+    const provider = new GooglePlayProvider(makeLib({ reviews }));
+
+    const results = await provider.reviews('com.example.app', 'us', 1);
+
+    expect(results.map((review) => review.repliedAt)).toEqual([
+      new Date('2026-09-02T08:00:00.000Z'),
+      undefined,
     ]);
   });
 
