@@ -62,7 +62,7 @@ export class AuditService {
       genreName: rawFacts.genreName,
       languages: rawFacts.languages,
       releaseNotes: rawFacts.releaseNotes,
-      hasVideo: rawFacts.hasVideo,
+      videoUrl: rawFacts.videoUrl,
       ratingAvg: latest?.ratingAvg ?? null,
       ratingCount: latest?.ratingCount ?? null,
       iconUrl: rawFacts.iconUrl,

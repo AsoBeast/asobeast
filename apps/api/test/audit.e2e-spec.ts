@@ -262,7 +262,12 @@ describe('AuditController (e2e)', () => {
         ratingAvg: 4.4,
         ratingCount: 3000,
         installs: 500000n,
-        raw: { genreId: 'TOOLS' },
+        raw: {
+          genreId: 'TOOLS',
+          headerImage: 'https://play-lh.googleusercontent.com/header',
+          video: 'https://play.google.com/video/x',
+          screenshots: Array.from({ length: 24 }, (_, i) => `p${i}.png`),
+        },
         capturedAt: D0,
       },
     });
@@ -274,7 +279,22 @@ describe('AuditController (e2e)', () => {
     expect(factor(result, 'subtitle')).toBeUndefined();
     expect(factor(result, 'keywordField')).toBeUndefined();
     expect(factor(result, 'description')?.weight).toBe(15);
-    expect(result.totalWeight).toBe(90);
+    expect(result.totalWeight).toBe(105);
+
+    const shortDescription = factor(result, 'shortDescription');
+    expect(shortDescription?.weight).toBe(15);
+    expect(shortDescription?.score).not.toBeNull();
+    expect(factor(result, 'screenshots')?.label).toBe(
+      'Screenshots and feature graphic',
+    );
+    const screenshots = factor(result, 'screenshots')?.checks.find(
+      (item) => item.id === 'screenshots-count',
+    );
+    expect(screenshots?.score).toBe(10);
+    expect(screenshots?.detail).toContain('across device types');
+    expect(
+      factor(result, 'previewVideo')?.checks.map((item) => item.id),
+    ).toEqual(['preview-video-present']);
   });
 
   it('snapshots one audit score row per primary app, skipping competitors', async () => {

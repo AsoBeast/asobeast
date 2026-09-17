@@ -30,6 +30,8 @@ const realPayload = {
   screenshots: ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'],
   ipadScreenshots: ['ipad-a.png', 'ipad-b.png'],
   appletvScreenshots: [],
+  supportedDevices: ['iPhone13-iPhone13', 'iPadAir-iPadAir'],
+  developer: 'Habit Labs',
 };
 
 const gplayPayload = {
@@ -46,6 +48,8 @@ const gplayPayload = {
   recentChanges: 'New features',
   screenshots: ['a', 'b', 'c'],
   video: 'https://video',
+  headerImage: 'https://play-lh.googleusercontent.com/header',
+  developer: 'Example Labs',
 };
 
 describe('extractAppStoreRawFacts', () => {
@@ -59,7 +63,10 @@ describe('extractAppStoreRawFacts', () => {
       contentRating: '4+',
       genreKey: '6013',
       genreName: 'Health & Fitness',
-      hasVideo: null,
+      videoUrl: null,
+      featureGraphicUrl: null,
+      supportsIpad: true,
+      developerName: 'Habit Labs',
       iconUrl: 'https://example.com/icon.png',
       screenshotUrls: ['a.png', 'b.png', 'c.png', 'd.png', 'e.png'],
     });
@@ -78,7 +85,10 @@ describe('extractAppStoreRawFacts', () => {
       contentRating: null,
       genreKey: null,
       genreName: null,
-      hasVideo: null,
+      videoUrl: null,
+      featureGraphicUrl: null,
+      supportsIpad: false,
+      developerName: null,
       iconUrl: null,
       screenshotUrls: [],
     });
@@ -109,7 +119,10 @@ describe('extractGooglePlayRawFacts', () => {
       contentRating: 'Everyone',
       genreKey: 'TOOLS',
       genreName: 'Tools',
-      hasVideo: true,
+      videoUrl: 'https://video',
+      featureGraphicUrl: 'https://play-lh.googleusercontent.com/header',
+      supportsIpad: false,
+      developerName: 'Example Labs',
       iconUrl: null,
       screenshotUrls: ['a', 'b', 'c'],
     });
@@ -120,7 +133,7 @@ describe('extractGooglePlayRawFacts', () => {
       ...gplayPayload,
       video: undefined,
     });
-    expect(facts.hasVideo).toBe(false);
+    expect(facts.videoUrl).toBeNull();
   });
 
   it('returns empty facts for garbage without throwing', () => {
@@ -133,7 +146,10 @@ describe('extractGooglePlayRawFacts', () => {
       contentRating: null,
       genreKey: null,
       genreName: null,
-      hasVideo: null,
+      videoUrl: null,
+      featureGraphicUrl: null,
+      supportsIpad: false,
+      developerName: null,
       iconUrl: null,
       screenshotUrls: [],
     });
@@ -142,9 +158,9 @@ describe('extractGooglePlayRawFacts', () => {
 
 describe('extractRawFacts dispatcher', () => {
   it('routes to the store-specific extractor', () => {
-    expect(extractRawFacts(Store.APP_STORE, realPayload).hasVideo).toBeNull();
-    expect(extractRawFacts(Store.GOOGLE_PLAY, gplayPayload).hasVideo).toBe(
-      true,
+    expect(extractRawFacts(Store.APP_STORE, realPayload).videoUrl).toBeNull();
+    expect(extractRawFacts(Store.GOOGLE_PLAY, gplayPayload).videoUrl).toBe(
+      'https://video',
     );
   });
 });

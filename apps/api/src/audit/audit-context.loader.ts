@@ -66,15 +66,20 @@ export class AuditContextLoader {
         this.prisma.auditInsight.findUnique({ where: { appId } }),
       ]);
 
-    const active = tracked.filter((item) => item.active);
+    const active = tracked.filter(
+      (item) => item.active && item.country === app.country,
+    );
     const baseline = trendBaseline(latest, prior, cutoff);
 
     return {
       appId,
       store: app.store,
+      country: app.country,
       title: latest?.title ?? '',
       subtitle: latest?.subtitle ?? null,
+      summary: latest?.summary ?? null,
       description: latest?.description ?? '',
+      keywordField: null,
       ratingAvg: latest?.ratingAvg ?? null,
       ratingCount: latest?.ratingCount ?? null,
       storeUpdatedAt: latest?.storeUpdatedAt ?? null,
@@ -130,6 +135,9 @@ const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
   bucket: item.bucket,
   relevance: item.relevance ?? 0,
   position: item.latestPosition,
+  traffic: item.traffic,
+  volume: item.volume,
+  opportunity: item.opportunity,
 });
 
 const trendBaseline = <T>(

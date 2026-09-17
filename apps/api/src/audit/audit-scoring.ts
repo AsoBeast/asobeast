@@ -7,6 +7,7 @@ import {
   AuditUnlock,
   KeywordBucket,
   LintIssue,
+  normalizeText,
   tokenize,
 } from '@asobeast/shared';
 import { clamp } from '../scoring/formulas';
@@ -20,14 +21,20 @@ export interface AuditKeyword {
   bucket: KeywordBucket | null;
   relevance: number;
   position: number | null;
+  traffic: number | null;
+  volume: number | null;
+  opportunity: number | null;
 }
 
 export interface AuditContext {
   appId: string;
   store: Store;
+  country: string;
   title: string;
   subtitle: string | null;
+  summary: string | null;
   description: string;
+  keywordField: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   storeUpdatedAt: Date | null;
@@ -147,6 +154,16 @@ export const HISTORY_UNLOCK: AuditUnlock = {
   label: 'Needs more daily history',
 };
 
+export const KEYWORDS_UNLOCK: AuditUnlock = {
+  kind: 'keywords',
+  label: 'Score your tracked keywords to find your primary keywords',
+};
+
+export const COMPETITORS_UNLOCK: AuditUnlock = {
+  kind: 'competitors',
+  label: 'Add competitors to compare titles',
+};
+
 export const KEYWORD_FIELD_UNLOCK: AuditUnlock = {
   kind: 'keyword-field',
   label: 'Paste your keyword field from App Store Connect',
@@ -254,6 +271,31 @@ export const trendScore = (
   const good = goodWhenPositive ? delta > 0 : delta < 0;
   return good ? 10 : 0;
 };
+
+export const PRIORITY_BUCKETS = ['primary', 'secondary'] as const;
+
+export const priorityKeywords = (keywords: AuditKeyword[]): AuditKeyword[] =>
+  PRIORITY_BUCKETS.flatMap((bucket) =>
+    keywords
+      .filter((keyword) => keyword.bucket === bucket)
+      .sort(
+        (a, b) =>
+          (b.opportunity ?? 0) - (a.opportunity ?? 0) ||
+          a.text.localeCompare(b.text),
+      ),
+  );
+
+export const coversPhrase = (field: string, phrase: string): boolean =>
+  ` ${normalizeText(field)} `.includes(` ${normalizeText(phrase)} `);
+
+export const countPhrase = (field: string, phrase: string): number =>
+  ` ${normalizeText(field)} `.split(` ${normalizeText(phrase)} `).length - 1;
+
+export const quoteList = (texts: string[], limit = 3): string =>
+  texts
+    .slice(0, limit)
+    .map((text) => `“${text}”`)
+    .join(', ');
 
 export const bucketTexts = (
   keywords: AuditKeyword[],

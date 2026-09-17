@@ -23,6 +23,7 @@ import {
 import {
   descriptionChecks,
   keywordFieldChecks,
+  shortDescriptionChecks,
   subtitleChecks,
   titleChecks,
 } from './checks/metadata-checks';
@@ -34,6 +35,7 @@ export const AUDIT_WEIGHTS = {
     title: 20,
     subtitle: 15,
     keywordField: 15,
+    shortDescription: 0,
     description: 5,
     screenshots: 15,
     previewVideo: 5,
@@ -46,6 +48,7 @@ export const AUDIT_WEIGHTS = {
     title: 20,
     subtitle: 0,
     keywordField: 0,
+    shortDescription: 15,
     description: 15,
     screenshots: 15,
     previewVideo: 5,
@@ -76,6 +79,7 @@ interface FactorDefinition {
   bucket: RecommendationBucket;
   group: (store: Store) => AuditGroupId;
   build: (context: AuditContext) => RubricCheck[];
+  labelFor?: (store: Store) => string;
 }
 
 const FACTORS: FactorDefinition[] = [
@@ -101,6 +105,13 @@ const FACTORS: FactorDefinition[] = [
     build: keywordFieldChecks,
   },
   {
+    id: 'shortDescription',
+    label: 'Short description',
+    bucket: 'quickWins',
+    group: discoverability,
+    build: shortDescriptionChecks,
+  },
+  {
     id: 'description',
     label: 'Description',
     bucket: 'quickWins',
@@ -114,6 +125,10 @@ const FACTORS: FactorDefinition[] = [
     bucket: 'highImpact',
     group: conversion,
     build: screenshotChecks,
+    labelFor: (store) =>
+      store === Store.GOOGLE_PLAY
+        ? 'Screenshots and feature graphic'
+        : 'Screenshots',
   },
   {
     id: 'previewVideo',
@@ -244,7 +259,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     const { score, confidence } = scoreFactor(checks);
     factors.push({
       id: definition.id,
-      label: definition.label,
+      label: definition.labelFor?.(context.store) ?? definition.label,
       weight,
       score,
       checks: checks.map(toContractCheck),

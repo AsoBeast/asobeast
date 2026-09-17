@@ -13,18 +13,15 @@ import {
   MetadataAuditResult,
   MetadataField,
   MetadataFieldAudit,
-  normalizeText,
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { coversPhrase } from '../audit/audit-scoring';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 const KEYWORD_FIELD_LIMIT = STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;
-
-const covers = (field: string, keyword: string): boolean =>
-  ` ${normalizeText(field)} `.includes(` ${keyword} `);
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -189,7 +186,7 @@ export class MetadataService {
   ): KeywordCoverageRow {
     const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
       field: surface.field,
-      covered: covers(surface.value, item.text),
+      covered: coversPhrase(surface.value, item.text),
     }));
     return {
       keywordId: item.keywordId,
