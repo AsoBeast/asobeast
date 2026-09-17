@@ -58,6 +58,7 @@ async function connect(options) {
   await client.connect(
     new StreamableHTTPClientTransport(new URL(ENDPOINT), {
       requestInit: { headers: { Authorization: `Bearer ${TOKEN}` } },
+      fetch: send,
     }),
   );
   return client;
