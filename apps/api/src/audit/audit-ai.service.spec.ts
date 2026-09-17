@@ -91,7 +91,11 @@ describe('buildAuditContent', () => {
     expect(parts[0].type).toBe('text');
     const images = parts.filter((part) => part.type === 'image');
     expect(images).toHaveLength(7);
-    expect(images[0]).toEqual({ type: 'image', url: 'https://cdn/icon.png' });
+    expect(images[0]).toEqual({
+      type: 'image',
+      url: 'https://cdn/icon.png',
+      detail: 'low',
+    });
   });
 
   it('omits image parts when no creative is available', () => {

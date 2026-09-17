@@ -216,13 +216,13 @@ export const buildAuditContent = (input: AiAuditInput): AiContentPart[] => {
   const parts: AiContentPart[] = [{ type: 'text', text: lines.join('\n') }];
   if (input.iconUrl) {
     parts.push({ type: 'text', text: 'App icon:' });
-    parts.push({ type: 'image', url: input.iconUrl });
+    parts.push({ type: 'image', url: input.iconUrl, detail: 'low' });
   }
   const shots = input.screenshotUrls.slice(0, MAX_SCREENSHOTS);
   if (shots.length > 0) {
     parts.push({ type: 'text', text: `Screenshots (first ${shots.length}):` });
     for (const url of shots) {
-      parts.push({ type: 'image', url });
+      parts.push({ type: 'image', url, detail: 'high' });
     }
   }
   return parts;
