@@ -3,7 +3,9 @@ import {
   keyword,
   playContext,
 } from '../audit-context.fixture';
+import { countPhrase } from '../audit-scoring';
 import {
+  descriptionChecks,
   keywordFieldChecks,
   shortDescriptionChecks,
   subtitleChecks,
@@ -312,5 +314,107 @@ describe('keywordFieldChecks', () => {
     expect(
       keywordFieldChecks(appStoreContext()).map((item) => item.id),
     ).toEqual(['keyword-field-saved']);
+  });
+});
+
+describe('Google Play description keywords', () => {
+  const top = keyword('geo quiz', 'primary', 90);
+
+  const frequency = (description: string) =>
+    descriptionChecks(playContext({ description, keywords: [top] })).find(
+      (item) => item.id === 'description-keyword-frequency',
+    )?.score;
+
+  const aboveFold = (description: string) =>
+    descriptionChecks(playContext({ description, keywords: [top] })).find(
+      (item) => item.id === 'description-above-fold',
+    )?.score;
+
+  it.each([
+    [0, 0],
+    [1, 4],
+    [2, 7],
+    [3, 10],
+    [6, 10],
+    [7, 7],
+    [9, 7],
+    [10, 3],
+  ])(
+    'scores %i mentions of the top primary keyword as %i',
+    (mentions, score) => {
+      const description =
+        Array.from({ length: mentions }, () => 'Play the geo quiz.').join(
+          '\n',
+        ) || 'Travel the world.';
+
+      expect(frequency(description)).toBe(score);
+    },
+  );
+
+  it('does not count a keyword inside a longer word', () => {
+    expect(countPhrase('The geo quizzes are fun', 'geo quiz')).toBe(0);
+  });
+
+  it('passes a keyword that ends at character 167 and fails one that starts at 168', () => {
+    const ending = `${'a'.repeat(158)} geo quiz more text`;
+    const starting = `${'a'.repeat(167)} geo quiz`;
+
+    expect(ending.indexOf('geo quiz') + 'geo quiz'.length).toBe(167);
+    expect(aboveFold(ending)).toBe(10);
+    expect(aboveFold(starting)).toBe(0);
+  });
+
+  it('keeps the App Store description on its four conversion checks', () => {
+    const ids = descriptionChecks(
+      appStoreContext({ description: 'Build better habits.' }),
+    ).map((item) => [item.id, item.weight]);
+
+    expect(ids).toEqual([
+      ['description-hook', 2],
+      ['description-cta', 1],
+      ['description-social-proof', 1],
+      ['description-formatting', 1],
+    ]);
+  });
+
+  it('waits for priority keywords on Google Play and still scores the conversion checks', () => {
+    const checks = descriptionChecks(
+      playContext({ description: 'Travel the world.\n- Loved by users.' }),
+    );
+    const byId = new Map(checks.map((item) => [item.id, item]));
+
+    expect(byId.get('description-keyword-coverage')).toMatchObject({
+      score: null,
+      unlock: { kind: 'keywords' },
+    });
+    expect(byId.get('description-hook')?.score).not.toBeNull();
+    expect(byId.get('description-hook')?.weight).toBe(1);
+  });
+
+  it.each([
+    [['geo quiz', 'map game', 'world atlas', 'trivia night', 'flag quiz'], 10],
+    [
+      [
+        'geo quiz',
+        'map game',
+        'world atlas',
+        'flag quiz',
+        'capital cities',
+        'border game',
+      ],
+      7,
+    ],
+  ])('scores keyword coverage from the share present', (texts, score) => {
+    const keywords = texts.map((text, index) =>
+      keyword(text, 'primary', 90 - index),
+    );
+    const description =
+      'A geo quiz, a map game, a world atlas and trivia night in one app.';
+
+    expect(
+      descriptionChecks(playContext({ description, keywords })).find(
+        (item) => item.id === 'description-keyword-coverage',
+      )?.score,
+    ).toBe(score);
   });
 });

@@ -1,4 +1,4 @@
-import { KeywordSource } from '@prisma/client';
+import { KeywordSource, Store } from '@prisma/client';
 import {
   LintIssue,
   LintSeverity,
@@ -19,6 +19,7 @@ import {
   charUsageScore,
   check,
   COMPETITORS_UNLOCK,
+  countPhrase,
   coversPhrase,
   KEYWORD_FIELD_UNLOCK,
   KEYWORDS_UNLOCK,
@@ -452,20 +453,35 @@ const mostSimilarTitle = (
   return best;
 };
 
-const DESCRIPTION_CHECKS = [
-  {
-    id: 'description-hook',
-    label: 'Strong opening hook',
-    rule: 'weak-hook',
-    weight: 2,
-    detail: 'Checked the first lines for a weak hook.',
-  },
+export const DESCRIPTION_ABOVE_FOLD_CHARS = 167;
+export const DESCRIPTION_HOOK_SENTENCE_CHARS = 25;
+export const DESCRIPTION_COVERAGE_SAMPLE = 10;
+
+export const KEYWORD_FREQUENCY_BANDS = [
+  { min: 10, score: 3 },
+  { min: 7, score: 7 },
+  { min: 3, score: 10 },
+  { min: 2, score: 7 },
+  { min: 1, score: 4 },
+] as const;
+
+export const COVERAGE_SHARE_BANDS = [
+  { min: 0.8, score: 10 },
+  { min: 0.5, score: 7 },
+  { min: 0.25, score: 4 },
+] as const;
+
+const CONVERSION_CHECKS = [
   {
     id: 'description-cta',
     label: 'Call to action',
     rule: 'no-cta',
     weight: 1,
     detail: 'Checked for a clear call to action.',
+    advice: {
+      title: 'End your description with a call to action',
+      fix: 'Close with one line telling the reader what to do next.',
+    },
   },
   {
     id: 'description-social-proof',
@@ -473,6 +489,10 @@ const DESCRIPTION_CHECKS = [
     rule: 'no-social-proof',
     weight: 1,
     detail: 'Checked for awards, press or user counts.',
+    advice: {
+      title: 'Add social proof to your description',
+      fix: 'Mention ratings, downloads, awards or press you can verify.',
+    },
   },
   {
     id: 'description-formatting',
@@ -480,26 +500,158 @@ const DESCRIPTION_CHECKS = [
     rule: 'no-formatting',
     weight: 1,
     detail: 'Checked for line breaks and bullets.',
+    advice: {
+      title: 'Break your description into short sections',
+      fix: 'Use line breaks and bullets; walls of text are skipped.',
+    },
   },
 ] as const;
 
+const firstSentence = (description: string): string =>
+  description.split(/[.!?\n]/)[0]?.trim() ?? '';
+
+const frequencyScore = (count: number): number =>
+  KEYWORD_FREQUENCY_BANDS.find((band) => count >= band.min)?.score ?? 0;
+
+const coverageShareScore = (share: number): number =>
+  COVERAGE_SHARE_BANDS.find((band) => share >= band.min)?.score ??
+  round1((share / 0.25) * 4);
+
+const descriptionKeywordChecks = (context: AuditContext): RubricCheck[] => {
+  const priority = priorityKeywords(context.keywords);
+  const sample = priority.slice(0, DESCRIPTION_COVERAGE_SAMPLE);
+  const missing = sample.filter(
+    (keyword) => !coversPhrase(context.description, keyword.text),
+  );
+  const share =
+    sample.length === 0 ? 0 : (sample.length - missing.length) / sample.length;
+  const top = priority.find((keyword) => keyword.bucket === 'primary') ?? null;
+  const mentions = top ? countPhrase(context.description, top.text) : 0;
+  const aboveFold =
+    top !== null &&
+    coversPhrase(
+      context.description.slice(0, DESCRIPTION_ABOVE_FOLD_CHARS),
+      top.text,
+    );
+
+  return [
+    check({
+      id: 'description-keyword-coverage',
+      label: 'Priority keywords covered',
+      source: 'keywords',
+      weight: 3,
+      score: sample.length === 0 ? null : coverageShareScore(share),
+      detail:
+        sample.length === 0
+          ? 'No priority keywords tracked to look for.'
+          : `${sample.length - missing.length} of ${sample.length} priority keywords appear in the description.`,
+      unlock: KEYWORDS_UNLOCK,
+      advice: missing[0]
+        ? {
+            title: `Cover \u201c${missing[0].text}\u201d in your full description`,
+            fix: `Google Play indexes the full description. Missing: ${quoteList(
+              missing.map((keyword) => keyword.text),
+              5,
+            )}.`,
+          }
+        : null,
+    }),
+    check({
+      id: 'description-keyword-frequency',
+      label: 'Top keyword frequency',
+      source: 'keywords',
+      weight: 2,
+      score: top === null ? null : frequencyScore(mentions),
+      detail:
+        top === null
+          ? 'No primary keyword tracked to count.'
+          : `\u201c${top.text}\u201d appears ${mentions} times in the description.`,
+      unlock: KEYWORDS_UNLOCK,
+      advice:
+        top === null
+          ? null
+          : mentions >= 10
+            ? {
+                title: `Use \u201c${top.text}\u201d less often`,
+                fix: `It appears ${mentions} times; repetition beyond natural use reads as stuffing.`,
+              }
+            : mentions < 3
+              ? {
+                  title: `Mention \u201c${top.text}\u201d three to five times`,
+                  fix: `It appears ${mentions} times in the full description.`,
+                }
+              : null,
+    }),
+    check({
+      id: 'description-above-fold',
+      label: 'Top keyword above the fold',
+      source: 'keywords',
+      weight: 2,
+      score: top === null ? null : aboveFold ? 10 : 0,
+      detail:
+        top === null
+          ? 'No primary keyword tracked to look for.'
+          : aboveFold
+            ? `\u201c${top.text}\u201d appears in the first ${DESCRIPTION_ABOVE_FOLD_CHARS} characters.`
+            : `\u201c${top.text}\u201d is missing from the first ${DESCRIPTION_ABOVE_FOLD_CHARS} characters.`,
+      unlock: KEYWORDS_UNLOCK,
+      advice: top
+        ? {
+            title: `Mention \u201c${top.text}\u201d in the first ${DESCRIPTION_ABOVE_FOLD_CHARS} characters`,
+            fix: 'That is the part of the description Google Play shows before it is expanded.',
+          }
+        : null,
+    }),
+  ];
+};
+
 export const descriptionChecks = (context: AuditContext): RubricCheck[] => {
-  const limit = STORE_FIELD_LIMITS.APP_STORE.description!.limit;
+  const play = context.store === Store.GOOGLE_PLAY;
+  const limit = STORE_FIELD_LIMITS[context.store].description!.limit;
   const issues = lintDescription(context.description, limit);
   const empty = context.description.trim().length === 0;
   const has = (rule: string): boolean =>
     issues.some((issue) => issue.rule === rule);
-  return DESCRIPTION_CHECKS.map((definition) =>
+  const opening = firstSentence(context.description);
+
+  const hook = check({
+    id: 'description-hook',
+    label: 'Strong opening hook',
+    source: 'store',
+    weight: play ? 1 : 2,
+    heuristic: true,
+    score: empty
+      ? 0
+      : has('weak-hook')
+        ? 3
+        : opening.length < DESCRIPTION_HOOK_SENTENCE_CHARS
+          ? 6
+          : 10,
+    detail: empty
+      ? 'No description found.'
+      : `The description opens with \u201c${opening}\u201d.`,
+    advice: {
+      title: 'Open your description with the benefit',
+      fix: `It starts with \u201c${context.description.slice(0, 60)}\u201d. Only the first lines show before \u201cmore\u201d, so lead with what the user gets.`,
+    },
+  });
+
+  const conversion = CONVERSION_CHECKS.map((definition) =>
     check({
       id: definition.id,
       label: definition.label,
       source: 'store',
       weight: definition.weight,
       heuristic: true,
-      score: empty || has(definition.rule) ? 0 : 10,
+      score: empty ? 0 : has(definition.rule) ? 4 : 10,
       detail: definition.detail,
+      advice: definition.advice,
     }),
   );
+
+  return play
+    ? [hook, ...conversion, ...descriptionKeywordChecks(context)]
+    : [hook, ...conversion];
 };
 
 export const shortDescriptionChecks = (
