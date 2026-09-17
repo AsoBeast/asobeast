@@ -247,3 +247,34 @@ test("sends one request for a double click", async ({ page }) => {
 
   expect(posts).toHaveLength(1);
 });
+
+test("shows what the analysis read on each screenshot", async ({ page }) => {
+  await page.goto("/apps/app-1/audit");
+  const strip = page.getByRole("list", { name: "Screenshots" });
+
+  await expect(strip.getByRole("listitem")).toHaveCount(6);
+  const first = strip.getByRole("listitem").first();
+  await expect(first).toContainText("Guess any place");
+  await expect(first).toContainText("Benefit");
+  await expect(first.getByText("geo quiz")).toBeVisible();
+});
+
+test("labels observations of previous screenshots as outdated", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_stale: "1" });
+  await page.goto("/apps/app-1/audit");
+
+  await expect(
+    page.getByText("These observations describe your previous screenshots."),
+  ).toBeVisible();
+});
+
+test("shows a placeholder when a screenshot cannot load", async ({ page }) => {
+  await page.route("**/_next/image**", (route) => route.abort());
+  await page.goto("/apps/app-1/audit");
+
+  const strip = page.getByRole("list", { name: "Screenshots" });
+  await expect(strip.getByText("Image unavailable").first()).toBeVisible();
+});

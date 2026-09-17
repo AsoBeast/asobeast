@@ -7,6 +7,7 @@ import { AuditActionPlan } from "@/components/audit/AuditActionPlan";
 import { AuditFactorGrid } from "@/components/audit/AuditFactorGrid";
 import { AuditLimitations } from "@/components/audit/AuditLimitations";
 import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
+import { CreativeInsights } from "@/components/audit/CreativeInsights";
 import { AuditHealthChart } from "@/components/audit/AuditHealthChart";
 import { AuditScoreHero } from "@/components/audit/AuditScoreHero";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,8 @@ export function AuditPage({ appId }: { appId: string }) {
       <AuditActionPlan appId={appId} audit={audit} />
 
       <AuditFactorGrid appId={appId} audit={audit} />
+
+      <CreativeInsights audit={audit} />
 
       <Suspense fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}>
         <AuditHealthChart id={appId} />

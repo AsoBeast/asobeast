@@ -530,8 +530,10 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
   }
   json(res, 200, {
     ...base,
-    ai: { ...configured, generatedAt: null, run: null },
-    creative: null,
+    ai: {
+      ...configured,
+      run: base.creative ? runState("completed") : null,
+    },
   });
 }
 

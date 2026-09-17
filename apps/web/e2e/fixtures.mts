@@ -2486,6 +2486,14 @@ export const PLAY_AUDIT: AppAuditResult = {
   store: "GOOGLE_PLAY",
   totalWeight: 105,
   limitations: PLAY_LIMITATIONS,
+  creative: null,
+  ai: {
+    configured: false,
+    model: null,
+    generatedAt: null,
+    stale: false,
+    run: null,
+  },
   factors: [
     auditFactor("title", "Title", 20, 9.1, "discoverability", [
       auditCheck(
