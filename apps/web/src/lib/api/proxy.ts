@@ -16,12 +16,14 @@ const FORWARDED_HEADERS = [
 const FORWARDED_HEADER_PREFIX = "mcp-";
 
 const RETURNED_HEADERS = [
+  "allow",
   "cache-control",
   "content-disposition",
   "location",
   "x-robots-tag",
   "x-accel-buffering",
   "retry-after",
+  "www-authenticate",
   "ratelimit-limit",
   "ratelimit-remaining",
   "ratelimit-reset",
@@ -71,6 +73,29 @@ function unreachable(request: NextRequest, error: unknown): Response {
   return Response.json(envelope, { status: envelope.statusCode });
 }
 
+async function fetchUpstream(
+  request: NextRequest,
+  url: string,
+  init: RequestInit,
+): Promise<Response> {
+  const deadline = new AbortController();
+  const timer = setTimeout(
+    () =>
+      deadline.abort(
+        new DOMException("upstream headers timed out", "TimeoutError"),
+      ),
+    UPSTREAM_TIMEOUT_MS,
+  );
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: AbortSignal.any([deadline.signal, request.signal]),
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export function apiRoute(
   ...segments: string[]
 ): (request: NextRequest) => Promise<Response> {
@@ -87,7 +112,8 @@ export async function proxyToApi(
       : await request.text();
 
   try {
-    const upstream = await fetch(
+    const upstream = await fetchUpstream(
+      request,
       `${API_BASE}/${segments.join("/")}${request.nextUrl.search}`,
       {
         method: request.method,
@@ -95,7 +121,6 @@ export async function proxyToApi(
         body,
         cache: "no-store",
         redirect: "manual",
-        signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
       },
     );
     return new Response(upstream.body, {

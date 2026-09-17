@@ -32,6 +32,7 @@ import { alreadyTrialed } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { bearerToken } from './bearer-token';
 import { isEntitled } from './entitlement';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
@@ -335,12 +336,6 @@ export class AuthService {
 
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
-}
-
-function bearerToken(authorization: string | undefined): string | null {
-  if (!authorization?.startsWith('Bearer ')) return null;
-  const token = authorization.slice('Bearer '.length).trim();
-  return token.length > 0 ? token : null;
 }
 
 function scopeOf(row: ApiToken): ApiTokenScope {

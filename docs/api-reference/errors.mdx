@@ -40,7 +40,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | Status | What causes it in this API |
 | --- | --- |
 | `400` | A DTO failed validation, or a store URL could not be parsed |
-| `401` | The session cookie or personal API token is missing, malformed or revoked |
+| `401` | The session cookie or personal API token is missing, malformed or revoked. The response carries a `WWW-Authenticate: Bearer realm="asobeast"` challenge |
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
 | `404` | The resource does not exist, or an admin surface is refusing to confirm it exists |
@@ -50,7 +50,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
 | `502` | A store request failed upstream, or the web proxy could not reach the API |
 | `503` | The health endpoint could not reach the database |
-| `504` | The web proxy timed out waiting for the API, bounded by `API_PROXY_TIMEOUT_MS` |
+| `504` | The web proxy timed out waiting for the API to start answering, bounded by `API_PROXY_TIMEOUT_MS` |
 
 Three of these are worth reading twice.
 

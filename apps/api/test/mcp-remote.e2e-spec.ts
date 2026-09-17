@@ -12,6 +12,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { sha256 } from '../src/auth/password-hash';
+import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -115,11 +116,71 @@ describe('Remote MCP transport (e2e)', () => {
   });
 
   it('refuses an unauthenticated connection', async () => {
-    await request(app.getHttpServer())
+    const response = await request(app.getHttpServer())
       .post('/mcp')
       .set('Accept', 'application/json, text/event-stream')
       .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
       .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
+  });
+
+  it('challenges a rejected token to authenticate again', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `Bearer ${API_TOKEN_PREFIX}${'0'.repeat(48)}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
+  });
+
+  it('challenges an unauthenticated rest request the same way', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/apps')
+      .expect(401);
+
+    expect(response.headers['www-authenticate']).toBe(
+      'Bearer realm="asobeast"',
+    );
+  });
+
+  it.each(['get', 'delete', 'head'] as const)(
+    'answers %s with 405 and names the method it allows',
+    async (method) => {
+      const response = await request(app.getHttpServer())
+        [method]('/mcp')
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .set('Accept', 'text/event-stream')
+        .expect(405);
+
+      expect(response.headers.allow).toBe('POST');
+    },
+  );
+
+  it('asks for a token before it refuses the method', async () => {
+    await request(app.getHttpServer()).get('/mcp').expect(401);
+  });
+
+  it('spends no mcp budget on a refused method', async () => {
+    const consume = jest.spyOn(app.get(RequestRateLimiter), 'consumeMcp');
+
+    await request(app.getHttpServer())
+      .get('/mcp')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .expect(405);
+    await request(app.getHttpServer())
+      .delete('/mcp')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .expect(405);
+
+    expect(consume).not.toHaveBeenCalled();
+    consume.mockRestore();
   });
 
   it('refuses a browser session even when it belongs to the owner', async () => {
@@ -141,6 +202,19 @@ describe('Remote MCP transport (e2e)', () => {
     expect((refused.body as { message: string }).message).toContain(
       'personal API token only',
     );
+    expect(refused.headers['www-authenticate']).toBe('Bearer realm="asobeast"');
+  });
+
+  it('accepts the bearer scheme in any letter case', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/mcp')
+      .set('Authorization', `bearer ${TOKEN}`)
+      .set('Accept', 'application/json, text/event-stream')
+      .set('Content-Type', 'application/json')
+      .send({ jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} })
+      .expect(200);
+
+    expect(sseEnvelope(response).result?.tools).not.toHaveLength(0);
   });
 
   it('initializes and names the server', async () => {

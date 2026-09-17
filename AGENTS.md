@@ -348,7 +348,7 @@ LOG_LEVEL=debug
 
 ```bash
 API_INTERNAL_URL=http://localhost:4000   # read at runtime; the browser reaches it via /api/backend/*
-API_PROXY_TIMEOUT_MS=30000               # upper bound per proxy request; a timeout returns a 504 envelope
+API_PROXY_TIMEOUT_MS=30000               # how long the proxy waits for the api to start answering; a timeout returns a 504 envelope
 SENTRY_DSN=                              # optional. Read at runtime and only used when NODE_ENV=production. No Compose file sets it, so a self hosted deployment reports nothing until its operator opts in with a dsn of their own. SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are release pipeline secrets for source map upload, never runtime configuration
 ```
 

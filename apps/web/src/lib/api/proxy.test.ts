@@ -29,6 +29,19 @@ function stubFetch(implementation: typeof fetch): void {
   vi.stubGlobal("fetch", vi.fn(implementation));
 }
 
+function stubFetchUntilAborted(): void {
+  stubFetch(
+    (_input, init) =>
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener(
+          "abort",
+          () => reject(init.signal?.reason),
+          { once: true },
+        );
+      }),
+  );
+}
+
 function fetchMock(): ReturnType<typeof vi.fn> {
   return globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
 }
@@ -40,6 +53,7 @@ describe("proxyToApi", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -208,6 +222,23 @@ describe("proxyToApi", () => {
     expect(response.headers.get("x-accel-buffering")).toBe("no");
   });
 
+  it.each([
+    ["allow", "POST", 405],
+    ["www-authenticate", 'Bearer realm="asobeast"', 401],
+  ])(
+    "returns the %s header the api answered with",
+    async (name, value, status) => {
+      stubFetch(async () =>
+        Response.json({}, { status, headers: { [name]: value } }),
+      );
+      const { proxyToApi } = await loadProxy();
+
+      const response = await proxyToApi(request("/api/backend/mcp"), ["mcp"]);
+
+      expect(response.headers.get(name)).toBe(value);
+    },
+  );
+
   it("forwards a caller supplied correlation id so its logs share the key", async () => {
     stubFetch(async () => Response.json({ ok: true }));
     const { proxyToApi } = await loadProxy();
@@ -306,24 +337,98 @@ describe("proxyToApi", () => {
     });
   });
 
-  it("bounds the upstream request with the configured timeout", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
-    stubFetch(async () => Response.json({}));
-    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "1234" });
+  it("answers an api that never responds within the configured deadline with a 504", async () => {
+    stubFetchUntilAborted();
+    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "20" });
 
-    await proxyToApi(request(), ["apps"]);
+    const response = await proxyToApi(request("/api/backend/apps"), ["apps"]);
 
-    expect(timeout).toHaveBeenCalledWith(1234);
+    expect(response.status).toBe(504);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "Gateway Timeout",
+      path: "/api/backend/apps",
+    });
   });
 
-  it("bounds the upstream request with the documented default timeout", async () => {
-    const timeout = vi.spyOn(AbortSignal, "timeout");
+  it("streams a response body that outlives the header deadline", async () => {
+    stubFetch(async (_input, init) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(controller) {
+          const encoder = new TextEncoder();
+          controller.enqueue(encoder.encode(": open\n\n"));
+          const finish = setTimeout(() => {
+            controller.enqueue(encoder.encode("event: message\ndata: {}\n\n"));
+            controller.close();
+          }, 60);
+          init?.signal?.addEventListener("abort", () => {
+            clearTimeout(finish);
+            controller.error(init.signal?.reason);
+          });
+        },
+      });
+      return new Response(body, {
+        headers: { "content-type": "text/event-stream" },
+      });
+    });
+    const { proxyToApi } = await loadProxy({ API_PROXY_TIMEOUT_MS: "20" });
+
+    const response = await proxyToApi(
+      request("/api/backend/mcp", { method: "POST", body: "{}" }),
+      ["mcp"],
+    );
+
+    expect(response.headers.get("content-type")).toBe("text/event-stream");
+    await expect(response.text()).resolves.toContain("event: message");
+  });
+
+  it("aborts the upstream request when the client goes away", async () => {
+    let upstreamSignal: AbortSignal | undefined;
+    stubFetch(async (_input, init) => {
+      upstreamSignal = init?.signal ?? undefined;
+      return new Response(new ReadableStream(), {
+        headers: { "content-type": "text/event-stream" },
+      });
+    });
+    const { proxyToApi } = await loadProxy();
+    const client = new AbortController();
+
+    await proxyToApi(
+      request("/api/backend/mcp", {
+        method: "POST",
+        body: "{}",
+        signal: client.signal,
+      }),
+      ["mcp"],
+    );
+    client.abort();
+
+    expect(upstreamSignal?.aborted).toBe(true);
+  });
+
+  it("clears the header deadline once the api answers", async () => {
+    vi.useFakeTimers();
     stubFetch(async () => Response.json({}));
     const { proxyToApi } = await loadProxy();
 
     await proxyToApi(request(), ["apps"]);
 
-    expect(timeout).toHaveBeenCalledWith(30_000);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it("waits the documented 30 seconds for the api by default", async () => {
+    vi.useFakeTimers();
+    stubFetchUntilAborted();
+    const { proxyToApi } = await loadProxy();
+    let settled = false;
+
+    const pending = proxyToApi(request(), ["apps"]).finally(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(29_999);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+
+    await expect(pending).resolves.toHaveProperty("status", 504);
   });
 });
 
