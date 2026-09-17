@@ -469,6 +469,29 @@ jobs:
             uid="$(docker compose -p asobeast exec -T "$service" awk '/^Uid:/{print $2}' /proc/1/status)"
             test "$uid" -ne 0
           done
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build:packages
+      - name: Mint a read-only token through the proxy
+        run: |
+          set -euo pipefail
+          base=http://127.0.0.1:3001/api/backend
+          password="$(openssl rand -hex 16)"
+          cookie="$(curl --fail --silent --show-error -D - -o /dev/null -H 'content-type: application/json' \
+            -d "{\"email\":\"wire@example.com\",\"password\":\"$password\"}" "$base/auth/register" \
+            | sed -n 's/^[Ss]et-[Cc]ookie: \(asobeast_session=[^;]*\).*/\1/p')"
+          token="$(curl --fail --silent --show-error -H 'content-type: application/json' -H "cookie: $cookie" \
+            -d '{"name":"wire-check","scope":"read"}' "$base/auth/tokens" | jq -r .token)"
+          echo "::add-mask::$token"
+          echo "ASOBEAST_API_TOKEN=$token" >> "$GITHUB_ENV"
+      - name: Check the mcp endpoint through the proxy
+        env:
+          ASOBEAST_MCP_URL: http://127.0.0.1:3001/api/backend/mcp
+        run: pnpm --filter mcp wire-check
       - name: Verify the tunnel overlay leaves no inbound surface
         env:
           ASOBEAST_DOMAIN: aso.example.com

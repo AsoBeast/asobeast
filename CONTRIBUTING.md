@@ -39,6 +39,20 @@ pnpm dev
 | `pnpm --filter web test:e2e`       | Run the browser end-to-end suite        |
 | `pnpm test:cov`                    | Run unit tests with coverage floors     |
 | `pnpm format:check`                | Check formatting without changing files |
+| `pnpm --filter mcp wire-check`     | Check a running instance's MCP endpoint |
+
+### Checking the MCP endpoint of a running instance
+
+`pnpm --filter mcp wire-check` speaks MCP to a running instance the way a client does: the official SDK client in both protocol eras, plus raw HTTP for the edge answers a client relies on (`405` with `Allow`, a `401` with a `Bearer` challenge, a JSON `404` for OAuth discovery, a lowercase `bearer` scheme, and no session id). Unit and API end-to-end suites never cross the web proxy, so this is the check that proves what a client actually receives.
+
+It reads two environment variables and never takes the token as an argument, so the token stays out of shell history and logs:
+
+| Variable             | Value                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| `ASOBEAST_MCP_URL`   | The full endpoint, for example `http://127.0.0.1:3001/api/backend/mcp` |
+| `ASOBEAST_API_TOKEN` | A read-only `asob_` token minted for the check                         |
+
+CI runs it against the Compose stack in `compose-smoke`. Before tagging a release, run it against a Compose build of the release candidate and against the hosted instance, then revoke the token.
 
 ## Cloud sessions
 

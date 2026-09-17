@@ -71,6 +71,7 @@ import {
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
+const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
@@ -521,6 +522,40 @@ const routes: Route[] = [
       resetState();
       json(res, 200, { reset: true });
     },
+  },
+  {
+    method: "POST",
+    pattern: /^\/mcp$/,
+    handler: (_p, req, res) => {
+      if (!req.headers.authorization) {
+        json(res, 401, errorEnvelope(401, req.url ?? "/mcp"), {
+          "www-authenticate": 'Bearer realm="asobeast"',
+        });
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/event-stream" });
+      res.write(": open\n\n");
+      setTimeout(() => {
+        res.end(
+          'event: message\ndata: {"jsonrpc":"2.0","id":1,"result":{"tools":[]}}\n\n',
+        );
+      }, MCP_STREAM_MS);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/mcp$/,
+    handler: (_p, _req, res) =>
+      json(
+        res,
+        405,
+        {
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed." },
+          id: null,
+        },
+        { allow: "POST" },
+      ),
   },
   {
     method: "GET",
