@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -7,12 +8,21 @@ import {
   type FirstRunStageStatus,
   type FirstRunStatus,
 } from '@asobeast/shared';
+import { Queue } from 'bullmq';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { nextDailyRun, nextWeeklyRun } from './daily-schedule';
+import { QUEUES, resolveSubtitleJobId } from './jobs.types';
 
 const DAY_MS = 24 * 60 * 60_000;
 const REVIEW_BACKFILL_GRACE_MS = DAY_MS;
+const BACKFILL_PENDING = new Set<string>([
+  'waiting',
+  'delayed',
+  'prioritized',
+  'active',
+]);
+const BACKFILL_LOOKUP_TIMEOUT_MS = 1_000;
 const FIRST_RUN_WINDOW_MS = FIRST_RUN_HISTORY_DAYS * DAY_MS;
 
 interface ReadyRow {
@@ -35,6 +45,7 @@ export class FirstRunStatusService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
+    @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
   ) {}
 
   async forApp(appId: string, now = new Date()): Promise<FirstRunStatus> {
@@ -60,6 +71,7 @@ export class FirstRunStatusService {
     const captures = await this.captures(appId);
     const scored = await this.scoredKeywords(appId);
     const reviewed = await this.prisma.review.count({ where: { appId } });
+    const subtitlePending = await this.subtitleBackfillPending(appId);
 
     const snapshot = app.snapshots[0];
     const age = now.getTime() - app.createdAt.getTime();
@@ -69,7 +81,7 @@ export class FirstRunStatusService {
       (snapshot?.ratingCount ?? 0) > 0 && age < REVIEW_BACKFILL_GRACE_MS;
     const inputs: Record<FirstRunStage, StageInput> = {
       metadata: {
-        ready: snapshot ? 1 : 0,
+        ready: snapshot && !subtitlePending ? 1 : 0,
         total: 1,
         expectedBy: null,
       },
@@ -134,6 +146,26 @@ export class FirstRunStatusService {
     `;
     return row?.ready ?? 0;
   }
+
+  private async subtitleBackfillPending(appId: string): Promise<boolean> {
+    const lookup = async () => {
+      const job = await this.appStoreQueue.getJob(resolveSubtitleJobId(appId));
+      return job !== undefined && BACKFILL_PENDING.has(await job.getState());
+    };
+    try {
+      return await withTimeout(lookup(), BACKFILL_LOOKUP_TIMEOUT_MS);
+    } catch {
+      return false;
+    }
+  }
+}
+
+function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms);
+  });
+  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 
 function stageStatus(

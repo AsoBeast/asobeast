@@ -18,7 +18,7 @@ import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import { JOBS, QUEUES, resolveSubtitleJobId } from '../src/jobs/jobs.types';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
 import { requestsFor } from '../src/jobs/request-weights';
@@ -222,6 +222,21 @@ describe('Pipeline store routing (e2e)', () => {
       if (!found) throw new Error(`missing stage ${stage}`);
       return found;
     };
+
+    it('keeps the listing waiting while a subtitle backfill is queued', async () => {
+      const appId = await seedApp(Store.APP_STORE, 'apple-subtitle-backfill');
+      await seedSnapshot(appId, 120);
+      const job = await queue(QUEUES.APP_STORE).add(
+        JOBS.RESOLVE_SUBTITLE,
+        { appId, snapshotId: 'pending', workspaceId: DEFAULT_WORKSPACE_ID },
+        { jobId: resolveSubtitleJobId(appId), delay: 60_000 },
+      );
+
+      expect(stageOf(await firstRunOf(appId), 'metadata').complete).toBe(false);
+
+      await job.remove();
+      expect(stageOf(await firstRunOf(appId), 'metadata').complete).toBe(true);
+    });
 
     it('refuses an app id it cannot resolve', async () => {
       await api.get('/apps/does-not-exist/first-run').expect(404);
