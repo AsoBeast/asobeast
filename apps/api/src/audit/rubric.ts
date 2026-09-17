@@ -343,7 +343,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     factors,
     recommendations: plan.recommendations,
     potential: plan.potential,
-    ai: context.aiStatus,
+    ai: { ...context.aiStatus, run: context.run },
     generatedAt: context.now.toISOString(),
     rubricVersion: AUDIT_RUBRIC_VERSION,
     grade: gradeFor(totals.overall),

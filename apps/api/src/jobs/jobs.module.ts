@@ -61,6 +61,7 @@ const bullBoardModules: DynamicModule[] =
           { name: QUEUES.GPLAY, adapter: BullMQAdapter },
           { name: QUEUES.ALERTS, adapter: BullMQAdapter },
           { name: QUEUES.BILLING, adapter: BullMQAdapter },
+          { name: QUEUES.AI, adapter: BullMQAdapter },
         ),
       ];
 
@@ -84,6 +85,7 @@ function redisConnection(config: ConfigService<Env, true>): RedisOptions {
       { name: QUEUES.PIPELINE },
       { name: QUEUES.APP_STORE },
       { name: QUEUES.GPLAY },
+      { name: QUEUES.AI },
     ),
     BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.DAILY_PIPELINE }),
     AccountModule,

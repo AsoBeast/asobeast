@@ -1,5 +1,6 @@
 import { KeywordSource, Store } from '@prisma/client';
 import {
+  AuditAiRun,
   AuditAiStatus,
   AuditCheckResult,
   AuditCheckSource,
@@ -88,6 +89,7 @@ export interface AuditContext {
   brandTokens: string[];
   creative: AuditCreativeState;
   aiStatus: AuditAiStatus;
+  run: AuditAiRun | null;
 }
 
 export type BrandTier = 'dominant' | 'established' | 'challenger';
