@@ -6,11 +6,14 @@ import {
   workspaceFailure,
 } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
-import { extractRawFacts } from '../store-providers/raw-facts';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
 import { DAY_MS } from './audit-scoring';
 import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
+import {
+  CREATIVE_PROMPT_VERSION,
+  creativeFingerprint,
+} from './creative/creative-observations';
 import { AUDIT_RUBRIC_VERSION, computeAudit } from './rubric';
 
 const DEFAULT_HISTORY_DAYS = 90;
@@ -46,36 +49,35 @@ export class AuditService {
   }
 
   private async generateAi(appId: string): Promise<AppAuditResult> {
-    const app = await this.loader.app(appId);
-    const latest = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
-      orderBy: { capturedAt: 'desc' },
-    });
-    const rawFacts = extractRawFacts(app.store, latest?.raw);
-    const checks = await this.auditAi.generate({
-      store: app.store,
-      country: app.country,
-      title: latest?.title ?? '',
-      subtitle: latest?.subtitle ?? null,
-      summary: latest?.summary ?? null,
-      description: latest?.description ?? '',
-      genreName: rawFacts.genreName,
-      languages: rawFacts.languages,
-      releaseNotes: rawFacts.releaseNotes,
-      videoUrl: rawFacts.videoUrl,
-      ratingAvg: latest?.ratingAvg ?? null,
-      ratingCount: latest?.ratingCount ?? null,
-      iconUrl: rawFacts.iconUrl,
-      screenshotUrls: rawFacts.screenshotUrls,
-    });
+    const inputs = await this.loader.creativeInputs(appId);
+    const observations = await this.auditAi.observe(inputs);
     const model = this.auditAi.model ?? 'unknown';
-    const payload = checks as unknown as Prisma.InputJsonValue;
+    const stored = {
+      model,
+      observations: observations as unknown as Prisma.InputJsonValue,
+      inputHash: creativeFingerprint(inputs, model),
+      promptVersion: CREATIVE_PROMPT_VERSION,
+      generatedAt: new Date(),
+      runState: 'completed',
+      runError: null,
+    };
     await this.prisma.auditInsight.upsert({
       where: { appId },
-      create: { appId, model, checks: payload, generatedAt: new Date() },
-      update: { model, checks: payload, generatedAt: new Date() },
+      create: { appId, ...stored },
+      update: stored,
     });
+    await this.recordToday(appId);
     return this.audit(appId);
+  }
+
+  async recordToday(appId: string): Promise<void> {
+    const result = await this.audit(appId);
+    const date = utcDate();
+    await this.prisma.auditScore.upsert({
+      where: { appId_date: { appId, date } },
+      create: { appId, date, ...toScoreRow(result) },
+      update: toScoreRow(result),
+    });
   }
 
   async snapshotAll(): Promise<number> {
@@ -97,17 +99,11 @@ export class AuditService {
       where: { isCompetitor: false },
       select: { id: true },
     });
-    const date = utcDate();
 
     let saved = 0;
     for (const { id } of apps) {
       try {
-        const result = await this.audit(id);
-        await this.prisma.auditScore.upsert({
-          where: { appId_date: { appId: id, date } },
-          create: { appId: id, date, ...toScoreRow(result) },
-          update: toScoreRow(result),
-        });
+        await this.recordToday(id);
         saved += 1;
       } catch (error) {
         this.logger.error(`audit snapshot failed for app ${id}`, error);

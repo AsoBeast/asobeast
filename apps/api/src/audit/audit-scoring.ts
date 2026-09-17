@@ -14,7 +14,10 @@ import {
 import { clamp } from '../scoring/formulas';
 import { round1 } from './audit-engine';
 import { RawAppFacts } from '../store-providers/raw-facts';
-import { AiAuditChecks } from './audit-ai.service';
+import {
+  CreativeInputs,
+  CreativeObservations,
+} from './creative/creative-observations';
 
 export interface AuditKeyword {
   text: string;
@@ -53,6 +56,15 @@ export interface AuditVisibility {
   weekAgo: number | null;
 }
 
+export interface AuditCreativeState {
+  observations: CreativeObservations | null;
+  inputs: CreativeInputs;
+  competitorIds: string[];
+  analyzedAt: Date | null;
+  model: string | null;
+  stale: boolean;
+}
+
 export interface AuditContext {
   appId: string;
   store: Store;
@@ -74,7 +86,7 @@ export interface AuditContext {
   reviews: AuditReview[];
   reviewScoreMax: number;
   brandTokens: string[];
-  aiChecks: AiAuditChecks;
+  creative: AuditCreativeState;
   aiStatus: AuditAiStatus;
 }
 
@@ -127,20 +139,20 @@ export type AuditCheckId =
   | 'screenshots-count'
   | 'screenshots-ipad'
   | 'screenshots-feature-graphic'
-  | 'screenshots-first-three'
-  | 'screenshots-text-overlays'
-  | 'screenshots-consistent'
+  | 'screenshots-captions'
+  | 'screenshots-first-message'
+  | 'screenshots-caption-keywords'
+  | 'screenshots-consistency'
   | 'screenshots-localized'
-  | 'screenshots-device-frames'
   | 'preview-video-present'
   | 'ratings-average'
   | 'ratings-volume'
   | 'ratings-recent'
   | 'ratings-current-version'
-  | 'icon-distinctive'
-  | 'icon-simple'
-  | 'icon-category-fit'
   | 'icon-no-text'
+  | 'icon-simplicity'
+  | 'icon-contrast'
+  | 'icon-distinct'
   | 'rankings-visibility'
   | 'rankings-top10'
   | 'rankings-trend'
@@ -176,20 +188,20 @@ export const ALL_AUDIT_CHECK_IDS = [
   'screenshots-count',
   'screenshots-ipad',
   'screenshots-feature-graphic',
-  'screenshots-first-three',
-  'screenshots-text-overlays',
-  'screenshots-consistent',
+  'screenshots-captions',
+  'screenshots-first-message',
+  'screenshots-caption-keywords',
+  'screenshots-consistency',
   'screenshots-localized',
-  'screenshots-device-frames',
   'preview-video-present',
   'ratings-average',
   'ratings-volume',
   'ratings-recent',
   'ratings-current-version',
-  'icon-distinctive',
-  'icon-simple',
-  'icon-category-fit',
   'icon-no-text',
+  'icon-simplicity',
+  'icon-contrast',
+  'icon-distinct',
   'rankings-visibility',
   'rankings-top10',
   'rankings-trend',
@@ -263,30 +275,38 @@ export const KEYWORD_FIELD_UNLOCK: AuditUnlock = {
   label: 'Paste your keyword field from App Store Connect',
 };
 
-export const aiUnlock = (configured: boolean): AuditUnlock => ({
+export const STALE_ANALYSIS_LABEL =
+  'Your icon or screenshots changed. Analyze them again.';
+
+export const aiUnlock = (context: AuditContext): AuditUnlock => ({
   kind: 'ai-analysis',
-  label: configured
-    ? 'Run the AI creative analysis'
-    : 'Add OPENAI_API_KEY to analyze your icon and screenshots',
+  label: context.creative.stale
+    ? STALE_ANALYSIS_LABEL
+    : context.aiStatus.configured
+      ? 'Run the AI creative analysis'
+      : 'Add OPENAI_API_KEY to analyze your icon and screenshots',
 });
 
-export const aiCheck = (
+export const currentObservations = (
+  context: AuditContext,
+): CreativeObservations | null =>
+  context.creative.stale ? null : context.creative.observations;
+
+export const unansweredAiCheck = (
   id: AuditCheckId,
   label: string,
   weight: number,
   context: AuditContext,
-): RubricCheck => {
-  const found = context.aiChecks[id];
-  return check({
+): RubricCheck =>
+  check({
     id,
     label,
     source: 'ai',
     weight,
-    score: found?.score ?? null,
-    detail: found?.detail ?? 'Run the AI audit to score this.',
-    unlock: aiUnlock(context.aiStatus.configured),
+    score: null,
+    detail: 'No current creative analysis.',
+    unlock: aiUnlock(context),
   });
-};
 
 export const lintScore = (issues: LintIssue[]): number => {
   let score = 10;

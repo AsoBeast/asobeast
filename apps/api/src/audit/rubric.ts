@@ -5,7 +5,9 @@ import {
   AuditFactorAvailability,
   AuditFactorResult,
   AuditGroupId,
+  AuditCreative,
   AuditGroupResult,
+  AuditScreenshotObservation,
   AuditUnlockKind,
   AuditUnlockSummary,
 } from '@asobeast/shared';
@@ -13,7 +15,12 @@ import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
 import { buildBenchmarks } from './audit-benchmarks';
 import { limitationsFor } from './audit-limitations';
 import { buildRecommendations, RubricFactor } from './audit-recommendations';
-import { AuditContext, RubricCheck } from './audit-scoring';
+import {
+  AuditContext,
+  coversPhrase,
+  priorityKeywords,
+  RubricCheck,
+} from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
   iconChecks,
@@ -216,6 +223,60 @@ const deriveUnlocks = (
     }));
 };
 
+const toCreative = (context: AuditContext): AuditCreative | null => {
+  const { observations, inputs, analyzedAt, model, stale } = context.creative;
+  if (observations === null || analyzedAt === null || model === null) {
+    return null;
+  }
+  const priority = priorityKeywords(context.keywords);
+  const similar =
+    observations.icon?.similarCompetitorPosition === null ||
+    observations.icon === null
+      ? null
+      : (context.competitors[observations.icon.similarCompetitorPosition - 1] ??
+        null);
+  const screenshots: AuditScreenshotObservation[] =
+    observations.screenshots.map((item) => ({
+      position: item.position,
+      url: inputs.screenshotUrls[item.position - 1] ?? '',
+      captionText: item.captionText,
+      captionReadable: item.captionReadable,
+      captionLanguage: item.captionLanguage,
+      message: item.message,
+      keywordHits:
+        item.captionText === null
+          ? []
+          : priority
+              .filter((keyword) =>
+                coversPhrase(item.captionText as string, keyword.text),
+              )
+              .map((keyword) => keyword.text),
+    }));
+  return {
+    analyzedAt: analyzedAt.toISOString(),
+    model,
+    stale,
+    icon:
+      observations.icon === null || inputs.iconUrl === null
+        ? null
+        : {
+            url: inputs.iconUrl,
+            hasText: observations.icon.hasText,
+            elementCount: observations.icon.elementCount,
+            contrast: observations.icon.contrast,
+            similarCompetitor:
+              similar === null || similar.iconUrl === null
+                ? null
+                : {
+                    appId: similar.id,
+                    name: similar.name,
+                    iconUrl: similar.iconUrl,
+                  },
+          },
+    screenshots,
+  };
+};
+
 const toFactorScore = (factor: AuditFactorResult): FactorScore => ({
   weight: factor.weight,
   score: factor.score,
@@ -290,6 +351,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     groups,
     limitations: [...limitationsFor(context.store)],
     unlocks: deriveUnlocks(built),
+    creative: toCreative(context),
     benchmarks: buildBenchmarks(context),
   };
 }

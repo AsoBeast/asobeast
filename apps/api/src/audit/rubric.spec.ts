@@ -1,11 +1,14 @@
 import { Store } from '@prisma/client';
 import {
+  analyzedCreative,
   appStoreContext,
   competitor,
   FIXTURE_NOW,
   keyword,
+  observations,
   playContext,
   reviewsFrom,
+  screenshotObservation,
 } from './audit-context.fixture';
 import { AuditContext, AuditKeyword } from './audit-scoring';
 import { titleChecks } from './checks/metadata-checks';
@@ -16,25 +19,6 @@ import {
   AUDIT_WEIGHTS,
   computeAudit,
 } from './rubric';
-
-const OBSERVABLE_IDS = [
-  'screenshots-first-three',
-  'screenshots-text-overlays',
-  'screenshots-consistent',
-  'screenshots-localized',
-  'screenshots-device-frames',
-  'icon-distinctive',
-  'icon-simple',
-  'icon-category-fit',
-  'icon-no-text',
-];
-
-const answered = (ids: string[]) =>
-  Object.fromEntries(
-    ids.map((id) => [id, { score: 10, detail: 'Excellent.' }]),
-  );
-
-const observedAiChecks = answered(OBSERVABLE_IDS);
 
 const emptyContext = (): AuditContext => appStoreContext();
 
@@ -115,7 +99,25 @@ const perfectContext = (): AuditContext =>
         },
       ],
     },
-    aiChecks: observedAiChecks,
+    creative: analyzedCreative(Store.APP_STORE, {
+      observations: observations({
+        screenshots: [
+          'Habit tracker streaks',
+          'Streak counter daily',
+          'Goal log weekly',
+        ].map((captionText, index) =>
+          screenshotObservation(index + 1, { captionText }),
+        ),
+      }),
+      inputs: {
+        store: Store.APP_STORE,
+        country: 'us',
+        title: 'Habit Tracker: Daily Streaks',
+        iconUrl: 'https://cdn/icon.png',
+        screenshotUrls: Array.from({ length: 10 }, (_, i) => `s${i}.png`),
+        competitorIconUrls: ['c1.png', 'c2.png'],
+      },
+    }),
     aiStatus: {
       configured: true,
       model: 'gpt-5.6-luna',
