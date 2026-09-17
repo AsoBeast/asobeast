@@ -1023,6 +1023,10 @@ describe('AppsController (e2e)', () => {
         await prisma.changeEvent.count({ where: { appId: imported.id } }),
       ).toBe(0);
       expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      const checks = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.CHECK_KEYWORD,
+      );
+      expect(checks).toHaveLength(await trackedCount(imported.id));
     });
 
     it('fails the attempt while the product page stays unreadable', async () => {

@@ -38,6 +38,7 @@ function schedulerWith(tracked: TrackedRow[]) {
   findMany.mockResolvedValue(tracked);
   const flowProducer = {
     add: jest.fn<Promise<unknown>, [FlowJob, FlowOpts]>().mockResolvedValue({}),
+    addBulk: jest.fn<Promise<unknown>, [FlowJob[]]>().mockResolvedValue([]),
   };
   const actionRuns = {
     request: jest
@@ -165,6 +166,37 @@ describe('FirstRunScheduler', () => {
     expect(schedule).toEqual({ ranked: 0, actionsQueued: true });
     expect(flowProducer.add).not.toHaveBeenCalled();
     expect(actionRuns.request).toHaveBeenCalledWith(SCOPE);
+  });
+
+  it('checks only the keywords it is given, without a second actions run', async () => {
+    const { scheduler, findMany, flowProducer, actionRuns, inWorkspace } =
+      schedulerWith([trackedRow('k3', Store.APP_STORE)]);
+
+    const queued = await inWorkspace(() =>
+      scheduler.checkKeywords(APP_ID, ['k3']),
+    );
+
+    expect(queued).toBe(1);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { appId: APP_ID, active: true, keywordId: { in: ['k3'] } },
+      }),
+    );
+    const [jobs] = flowProducer.addBulk.mock.calls[0];
+    expect(jobs.map((job) => job.opts?.jobId)).toEqual([
+      firstRunCheckJobId(APP_ID, 'k3', utcDateKey()),
+    ]);
+    expect(flowProducer.add).not.toHaveBeenCalled();
+    expect(actionRuns.request).not.toHaveBeenCalled();
+  });
+
+  it('queues nothing when no keyword was added', async () => {
+    const { scheduler, flowProducer, inWorkspace } = schedulerWith([]);
+
+    expect(await inWorkspace(() => scheduler.checkKeywords(APP_ID, []))).toBe(
+      0,
+    );
+    expect(flowProducer.addBulk).not.toHaveBeenCalled();
   });
 
   it('refuses to schedule without a workspace in scope', async () => {
