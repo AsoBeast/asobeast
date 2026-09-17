@@ -43,7 +43,7 @@ The home storefront is not just a label. It decides where snapshots, category ra
 
 Four things, in order.
 
-1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it.
+1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it. The App Store subtitle is read from the public product page, and when Apple does not answer that page in time, the snapshot is stored without it and a backfill fills it in within a few minutes.
 2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first traffic and difficulty score.
 3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
 4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check. The action queue for your workspace is generated when those first rank checks finish, so the first recommendations read real positions instead of an empty database.
@@ -57,6 +57,7 @@ Each piece of first pass work carries an identifier, so importing the same app t
 | Work | Identifier | What deduplicates against it |
 | --- | --- | --- |
 | Rank check | `first-run~<appId>~<keywordId>~<date>` | Another first pass for the same app the same UTC day |
+| Subtitle backfill | `subtitle~<appId>` | Another import of the same app while its backfill is still waiting or running |
 | Action run | `actions~<workspaceId>` | **Generate now** while an earlier run is still waiting or running |
 
 Each import waits for its own first rank checks before it generates actions, so importing a second app never leaves that app out of its first recommendations. **Generate now** joins a run that is still waiting or running, and starts a new run once the last one has finished.
@@ -80,6 +81,8 @@ See [App Store and Google Play](/concepts/stores) for the full field comparison.
 
 Refreshing fetches the listing again, writes a new snapshot and returns the difference against the previous one, so the response is meant to be read rather than discarded.
 
+A refresh that cannot read the App Store product page keeps the subtitle from the previous snapshot instead of storing an empty one, so a throttled page never shows up as a removed subtitle in the changes feed or fires a change alert.
+
 Refresh is the only way to ask for a listing on demand, and it is rate limited per plan. Importing a url you already track returns the app you have without reaching the store: a second import would otherwise write a snapshot that quietly became the new baseline, and the change it captured would never appear in the changes feed.
 
 Field level changes also land in the changes feed, where they are kept alongside changes asobeast detected on its own schedule. See [Watch listing changes](/guides/listing-changes).
@@ -91,6 +94,7 @@ Field level changes also land in the changes feed, where they are kept alongside
 - **The app exists in one storefront but not another.** Storefronts carry different catalogs. Import using a URL for a storefront where the app is actually published, then track keywords in the other market.
 - **The import fails with a parse error.** A store response shape changed. The job fails and BullMQ retries it with backoff, so check the queue dashboard at `/admin/queues` for the retry state. Request handling is unaffected. See [The daily pipeline and rate limits](/concepts/pipeline).
 - **Positions are empty right after importing.** Expected for a moment. The rank checks are queued at import and drain at the store rate limit, so watch the first run panel on the app overview page rather than the clock. If they stay empty, check the queue dashboard at `/admin/queues` for failed jobs.
+- **The subtitle is empty right after importing.** Apple sometimes answers the App Store product page with HTTP 429, and the subtitle only exists on that page. The import still succeeds, the API logs `subtitle scrape failed`, and a `resolve-subtitle` job retries for up to about eight minutes. The first run panel shows **Listing captured** as waiting until it lands, and the overview reloads the listing when it does. If the job exhausts its retries, it shows as failed on `/admin/queues` and the next refresh fills the subtitle.
 - **The first pass did not run at all.** The import itself succeeds even when the queue refuses the work, because the listing, its snapshot and its keywords are already stored and only the head start is missing. The API logs why, and the next daily run collects what the first pass would have. Check `/admin/queues` if it keeps happening.
 - **Trend based actions stay thin for the first week.** Expected. The rules that compare a before and an after need several days of captures before they can fire at all, so the action queue grows over the first week rather than arriving full.
 
