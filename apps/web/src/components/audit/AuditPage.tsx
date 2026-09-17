@@ -8,14 +8,16 @@ import { AuditBenchmarks } from "@/components/audit/AuditBenchmarks";
 import { AuditFactorGrid } from "@/components/audit/AuditFactorGrid";
 import { AuditLimitations } from "@/components/audit/AuditLimitations";
 import { AuditTopFixes } from "@/components/audit/AuditTopFixes";
+import { CopyReportButton } from "@/components/audit/CopyReportButton";
 import { CreativeInsights } from "@/components/audit/CreativeInsights";
 import { AuditHealthChart } from "@/components/audit/AuditHealthChart";
 import { AuditScoreHero } from "@/components/audit/AuditScoreHero";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auditOptions } from "@/lib/queries";
+import { appDetailOptions, auditOptions } from "@/lib/queries";
 
 export function AuditPage({ appId }: { appId: string }) {
   const { data: audit } = useSuspenseQuery(auditOptions(appId));
+  const { data: app } = useSuspenseQuery(appDetailOptions(appId));
 
   return (
     <div className="page-wide flex flex-col gap-8">
@@ -49,7 +51,13 @@ export function AuditPage({ appId }: { appId: string }) {
         </div>
       </div>
 
-      <AuditLimitations limitations={audit.limitations ?? []} />
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <AuditLimitations limitations={audit.limitations ?? []} />
+        <CopyReportButton
+          audit={audit}
+          app={{ name: app.name, country: app.country }}
+        />
+      </div>
     </div>
   );
 }

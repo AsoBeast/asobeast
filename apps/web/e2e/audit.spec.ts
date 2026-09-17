@@ -302,3 +302,15 @@ test("invites adding competitors when there are none", async ({ page }) => {
     page.getByRole("link", { name: "Add competitors" }),
   ).toHaveAttribute("href", "/apps/app-2/competitors");
 });
+
+test("copies the report", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/apps/app-1/audit");
+
+  await page.getByRole("button", { name: "Copy report" }).click();
+
+  await expect(page.getByText("Report copied")).toBeVisible();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toContain(
+    "# ASO audit:",
+  );
+});
