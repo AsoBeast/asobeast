@@ -507,6 +507,10 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
 }
 
+export function invalidateAppListing(client: QueryClient, id: string): void {
+  void client.invalidateQueries({ queryKey: appKeys.detail(id) });
+}
+
 export function invalidateCompetitorMutation(
   client: QueryClient,
   id: string,
