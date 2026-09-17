@@ -7,14 +7,21 @@ import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
-import { AiAuditChecks, AuditAiService } from './audit-ai.service';
+import { AuditAiService } from './audit-ai.service';
 import {
   AuditCompetitor,
   AuditContext,
+  AuditCreativeState,
   AuditKeyword,
   AuditVisibility,
   DAY_MS,
 } from './audit-scoring';
+import {
+  CreativeInputs,
+  creativeFingerprint,
+  MAX_COMPETITOR_ICONS,
+  readStoredObservations,
+} from './creative/creative-observations';
 
 export interface AuditApp {
   id: string;
@@ -78,6 +85,69 @@ export class AuditContextLoader {
     };
   }
 
+  async creativeInputs(appId: string): Promise<CreativeInputs> {
+    const app = await this.app(appId);
+    const [latest, competitors] = await Promise.all([
+      this.prisma.appSnapshot.findFirst({
+        where: { appId },
+        orderBy: { capturedAt: 'desc' },
+      }),
+      this.prisma.app.findMany({
+        where: { primaryAppId: appId },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          store: true,
+          snapshots: {
+            orderBy: { capturedAt: 'desc' },
+            take: 1,
+            select: { raw: true },
+          },
+        },
+      }),
+    ]);
+    const facts = extractRawFacts(app.store, latest?.raw);
+    return {
+      store: app.store,
+      country: app.country,
+      title: latest?.title ?? '',
+      iconUrl: facts.iconUrl,
+      screenshotUrls: facts.screenshotUrls,
+      competitorIconUrls: competitors
+        .map(
+          (competitor) =>
+            extractRawFacts(competitor.store, competitor.snapshots[0]?.raw)
+              .iconUrl,
+        )
+        .filter((url): url is string => url !== null)
+        .slice(0, MAX_COMPETITOR_ICONS),
+    };
+  }
+
+  private creativeState(
+    inputs: CreativeInputs,
+    competitorIds: string[],
+    insight: {
+      observations: unknown;
+      inputHash: string | null;
+      generatedAt: Date | null;
+      model: string;
+    } | null,
+  ): AuditCreativeState {
+    const observations = readStoredObservations(insight?.observations ?? null);
+    const model = this.auditAi.model;
+    return {
+      observations,
+      inputs,
+      competitorIds,
+      analyzedAt: insight?.generatedAt ?? null,
+      model: insight?.model ?? null,
+      stale:
+        observations !== null &&
+        model !== null &&
+        insight?.inputHash !== creativeFingerprint(inputs, model),
+    };
+  }
+
   async load(appId: string): Promise<AuditContext> {
     const app = await this.app(appId);
     const reviewCutoff = new Date(Date.now() - REVIEW_WINDOW_DAYS * DAY_MS);
@@ -131,6 +201,23 @@ export class AuditContextLoader {
     const active = tracked.filter(
       (item) => item.active && item.country === app.country,
     );
+    const facts = extractRawFacts(app.store, latest?.raw);
+    const mapped = competitors.map(toAuditCompetitor);
+    const creative = this.creativeState(
+      {
+        store: app.store,
+        country: app.country,
+        title: latest?.title ?? '',
+        iconUrl: facts.iconUrl,
+        screenshotUrls: facts.screenshotUrls,
+        competitorIconUrls: mapped
+          .map((competitor) => competitor.iconUrl)
+          .filter((url): url is string => url !== null)
+          .slice(0, MAX_COMPETITOR_ICONS),
+      },
+      mapped.map((competitor) => competitor.id),
+      insight,
+    );
 
     return {
       appId,
@@ -145,11 +232,11 @@ export class AuditContextLoader {
       ratingCount: latest?.ratingCount ?? null,
       storeUpdatedAt: latest?.storeUpdatedAt ?? null,
       now: new Date(),
-      rawFacts: extractRawFacts(app.store, latest?.raw),
+      rawFacts: facts,
       keywords: active.map(toAuditKeyword),
       visibility,
       comparison,
-      competitors: competitors.map(toAuditCompetitor),
+      competitors: mapped,
       reviews: reviews.map((review) => ({
         score: review.score,
         title: review.title,
@@ -160,11 +247,12 @@ export class AuditContextLoader {
         infer: true,
       }),
       brandTokens: tokenize(app.name ?? ''),
-      aiChecks: (insight?.checks as AiAuditChecks | undefined) ?? {},
+      creative,
       aiStatus: {
         configured: this.auditAi.configured,
         model: insight?.model ?? this.auditAi.model,
         generatedAt: insight?.generatedAt?.toISOString() ?? null,
+        stale: creative.stale,
       },
     };
   }

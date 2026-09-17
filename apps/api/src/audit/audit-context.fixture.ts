@@ -4,9 +4,14 @@ import { RawAppFacts } from '../store-providers/raw-facts';
 import {
   AuditCompetitor,
   AuditContext,
+  AuditCreativeState,
   AuditKeyword,
   AuditReview,
 } from './audit-scoring';
+import {
+  CreativeObservations,
+  ScreenshotObservation,
+} from './creative/creative-observations';
 
 export const FIXTURE_NOW = new Date('2026-07-09T00:00:00.000Z');
 
@@ -79,6 +84,62 @@ export interface ContextOverrides extends Partial<AuditContext> {
   facts?: Partial<RawAppFacts>;
 }
 
+const emptyCreative = (
+  store: Store,
+  facts: Partial<RawAppFacts> = {},
+): AuditCreativeState => ({
+  observations: null,
+  inputs: {
+    store,
+    country: 'us',
+    title: '',
+    iconUrl: facts.iconUrl ?? null,
+    screenshotUrls: facts.screenshotUrls ?? [],
+    competitorIconUrls: [],
+  },
+  competitorIds: [],
+  analyzedAt: null,
+  model: null,
+  stale: false,
+});
+
+export const screenshotObservation = (
+  position: number,
+  overrides: Partial<ScreenshotObservation> = {},
+): ScreenshotObservation => ({
+  position,
+  captionText: `Caption ${position}`,
+  captionReadable: true,
+  captionLanguage: 'en',
+  message: 'benefit',
+  ...overrides,
+});
+
+export const observations = (
+  overrides: Partial<CreativeObservations> = {},
+): CreativeObservations => ({
+  icon: {
+    hasText: false,
+    elementCount: 'one',
+    contrast: 'high',
+    similarCompetitorPosition: null,
+  },
+  screenshots: [1, 2, 3].map((position) => screenshotObservation(position)),
+  consistentStyle: true,
+  ...overrides,
+});
+
+export const analyzedCreative = (
+  store: Store,
+  overrides: Partial<AuditCreativeState> = {},
+): AuditCreativeState => ({
+  ...emptyCreative(store),
+  observations: observations(),
+  analyzedAt: FIXTURE_NOW,
+  model: 'gpt-5.6-luna',
+  ...overrides,
+});
+
 const contextFor = (
   store: Store,
   overrides: ContextOverrides = {},
@@ -105,7 +166,7 @@ const contextFor = (
     reviews: [],
     reviewScoreMax: 2,
     brandTokens: [],
-    aiChecks: {},
+    creative: emptyCreative(store, facts),
     aiStatus: { configured: false, model: null, generatedAt: null },
     ...rest,
   };
