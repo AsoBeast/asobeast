@@ -1,5 +1,5 @@
 import { Store } from '@prisma/client';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
@@ -103,4 +103,26 @@ describe('StoreJobsHandler', () => {
 
     expect(resolveSubtitle).toHaveBeenCalledWith(data);
   });
+
+  it.each([
+    ['no app id', { snapshotId: 's1' }],
+    ['an empty app id', { appId: '', snapshotId: 's1' }],
+    ['no snapshot id', { appId: 'a1' }],
+    ['a numeric snapshot id', { appId: 'a1', snapshotId: 1 }],
+  ])(
+    'refuses a subtitle backfill with %s instead of patching an unknown app',
+    async (_case, ids) => {
+      resolveSubtitle.mockClear();
+
+      await expect(
+        handler.handle({
+          name: JOBS.RESOLVE_SUBTITLE,
+          id: '3',
+          data: { ...ids, workspaceId: 'ws_a' },
+          queueName: QUEUES.APP_STORE,
+        } as Job),
+      ).rejects.toBeInstanceOf(UnrecoverableError);
+      expect(resolveSubtitle).not.toHaveBeenCalled();
+    },
+  );
 });
