@@ -1,5 +1,5 @@
 import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
-import type { ReadTool } from "@asobeast/mcp-tools";
+import { toolText, type ReadTool } from "@asobeast/mcp-tools";
 import type { ApiClient } from "../client.js";
 
 export function registerReadTool(
@@ -29,12 +29,7 @@ export function registerReadTool(
         };
       }
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(result.data, null, 2) ?? "null",
-          },
-        ],
+        content: [{ type: "text", text: toolText(result.data) }],
       };
     },
   );

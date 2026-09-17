@@ -1,6 +1,7 @@
 import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
 import {
   MCP_TOOLS,
+  toolText,
   type ReadTool,
   type ToolRequest,
 } from '@asobeast/mcp-tools';
@@ -31,11 +32,7 @@ export function toolResult(
       content: [{ type: 'text', text: toolErrorText(tool, response) }],
     };
   }
-  return {
-    content: [
-      { type: 'text', text: JSON.stringify(response.body, null, 2) ?? 'null' },
-    ],
-  };
+  return { content: [{ type: 'text', text: toolText(response.body) }] };
 }
 
 export function createRemoteServer(
