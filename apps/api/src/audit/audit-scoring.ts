@@ -49,6 +49,8 @@ export interface AuditReview {
   title: string | null;
   text: string;
   reviewedAt: Date | null;
+  repliedAt: Date | null;
+  replyCheckedAt: Date | null;
 }
 
 export interface AuditVisibility {
@@ -151,6 +153,7 @@ export type AuditCheckId =
   | 'ratings-volume'
   | 'ratings-recent'
   | 'ratings-current-version'
+  | 'ratings-responses'
   | 'icon-no-text'
   | 'icon-simplicity'
   | 'icon-contrast'
@@ -200,6 +203,7 @@ export const ALL_AUDIT_CHECK_IDS = [
   'ratings-volume',
   'ratings-recent',
   'ratings-current-version',
+  'ratings-responses',
   'icon-no-text',
   'icon-simplicity',
   'icon-contrast',
