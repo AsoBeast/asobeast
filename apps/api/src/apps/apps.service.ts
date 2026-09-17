@@ -33,6 +33,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
+import { withKnownSubtitle } from './known-subtitle';
 import { diffSnapshots } from './snapshot-diff';
 
 const REVIEW_BACKFILL_PAGES = 3;
@@ -246,7 +247,10 @@ export class AppsService {
 
     const snapshot = await this.prisma.withTransaction(async (tx) => {
       const created = await tx.appSnapshot.create({
-        data: toSnapshotData(app.id, normalized),
+        data: toSnapshotData(
+          app.id,
+          withKnownSubtitle(normalized, previous?.subtitle ?? null),
+        ),
       });
       await tx.app.update({
         where: { id: app.id },

@@ -67,13 +67,30 @@ export class FirstRunScheduler {
     return schedule;
   }
 
+  async checkKeywords(appId: string, keywordIds: string[]): Promise<number> {
+    if (keywordIds.length === 0) return 0;
+    const scope = this.workspace.scopeFor(
+      'the first positions of new keywords',
+    );
+    const checks = await this.rankChecks(appId, scope, keywordIds);
+    if (checks.length > 0) {
+      await this.flowProducer.addBulk(checks);
+    }
+    return checks.length;
+  }
+
   private async rankChecks(
     appId: string,
     scope: WorkspaceScope,
+    keywordIds?: string[],
   ): Promise<FlowJobNode[]> {
     const date = utcDateKey();
     const tracked = await this.prisma.trackedKeyword.findMany({
-      where: { appId, active: true },
+      where: {
+        appId,
+        active: true,
+        ...(keywordIds ? { keywordId: { in: keywordIds } } : {}),
+      },
       select: { keywordId: true, keyword: { select: { store: true } } },
       orderBy: { createdAt: 'asc' },
     });

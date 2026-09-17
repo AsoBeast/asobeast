@@ -35,6 +35,15 @@ describe('JobTargetCountry', () => {
     ).resolves.toBe('de');
   });
 
+  it('takes the home storefront of the app a subtitle backfill targets', async () => {
+    await expect(
+      target.of(job(JOBS.RESOLVE_SUBTITLE, { appId: 'a1', snapshotId: 's1' })),
+    ).resolves.toBe('de');
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'a1' } }),
+    );
+  });
+
   it('takes the market of the keyword a rank check targets', async () => {
     await expect(
       target.of(job(JOBS.CHECK_KEYWORD, { keywordId: 'k1' })),

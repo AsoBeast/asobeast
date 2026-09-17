@@ -21,10 +21,13 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { AppsService } from '../src/apps/apps.service';
 import { FirstRunScheduler } from '../src/apps/first-run.scheduler';
+import { SubtitleBackfill } from '../src/apps/subtitle-backfill.service';
 import {
   firstRunCheckJobId,
   JOBS,
   QUEUES,
+  ResolveSubtitlePayload,
+  resolveSubtitleJobId,
   utcDateKey,
 } from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
@@ -84,6 +87,7 @@ class FakeStoreProviderRegistry {
   availabilityCalls: Array<{ storeAppId: string; countries: string[] }> = [];
   availabilityStatus: MarketAvailability = 'available';
   searchable = true;
+  subtitleUnavailable = false;
 
   get(store: Store): StoreProvider {
     if (store === Store.GOOGLE_PLAY) {
@@ -107,6 +111,9 @@ class FakeStoreProviderRegistry {
             storeAppId,
             searchable: this.searchable,
             ...(this.title ? { title: this.title } : {}),
+            ...(this.subtitleUnavailable
+              ? { subtitle: undefined, subtitleUnavailable: true }
+              : {}),
           });
     });
   }
@@ -175,6 +182,7 @@ describe('AppsController (e2e)', () => {
     registry.availabilityCalls = [];
     registry.availabilityStatus = 'available';
     registry.searchable = true;
+    registry.subtitleUnavailable = false;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AppGroup" RESTART IDENTITY CASCADE',
     );
@@ -386,6 +394,55 @@ describe('AppsController (e2e)', () => {
 
       await api.post(`/apps/${appId}/refresh`).expect(200);
     });
+  });
+
+  it('keeps the subtitle when a refresh cannot read the product page', async () => {
+    const created = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    const appId = (created.body as AppDetail).id;
+
+    registry.subtitleUnavailable = true;
+    const refreshed = await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    expect((refreshed.body as SnapshotDiffResult).changes).not.toContainEqual(
+      expect.objectContaining({ field: 'subtitle' }),
+    );
+    const latest = await prisma.appSnapshot.findFirst({
+      where: { appId },
+      orderBy: { capturedAt: 'desc' },
+    });
+    expect(latest?.subtitle).toBe('Fixture subtitle');
+    expect(
+      await prisma.changeEvent.count({ where: { appId, field: 'subtitle' } }),
+    ).toBe(0);
+  });
+
+  it('still records a subtitle the listing really removed', async () => {
+    const created = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    const appId = (created.body as AppDetail).id;
+
+    const provider = registry.get(Store.APP_STORE);
+    jest.spyOn(registry, 'get').mockReturnValueOnce({
+      ...provider,
+      getApp: (storeAppId: string) =>
+        Promise.resolve({
+          ...APP_STORE_FIXTURE,
+          storeAppId,
+          subtitle: undefined,
+          subtitleUnavailable: false,
+        }),
+    });
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    const event = await prisma.changeEvent.findFirst({
+      where: { appId, field: 'subtitle' },
+    });
+    expect(event).toMatchObject({ before: 'Fixture subtitle', after: null });
   });
 
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
@@ -915,6 +972,82 @@ describe('AppsController (e2e)', () => {
           await Promise.all(imports.map((imported) => checksOf(imported.id))),
         ),
       );
+    });
+
+    it('queues no subtitle backfill when the import read the product page', async () => {
+      await importApp(APP_STORE_URL);
+      await importApp(GOOGLE_PLAY_URL);
+
+      expect(await countOn(QUEUES.APP_STORE, JOBS.RESOLVE_SUBTITLE)).toBe(0);
+    });
+
+    it('queues one subtitle backfill when the import could not read the product page', async () => {
+      registry.subtitleUnavailable = true;
+
+      const imported = await importApp(APP_STORE_URL);
+      await importApp(APP_STORE_URL);
+
+      expect(imported.latestSnapshot?.subtitle).toBeNull();
+      const backfills = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+      expect(backfills).toHaveLength(1);
+      expect(backfills[0].id).toBe(resolveSubtitleJobId(imported.id));
+      expect(backfills[0].data).toMatchObject({
+        appId: imported.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+      });
+    });
+
+    it('fills the import snapshot in place once the product page answers', async () => {
+      registry.subtitleUnavailable = true;
+      const imported = await importApp(APP_STORE_URL);
+      const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+      const trackedBefore = await trackedCount(imported.id);
+
+      registry.subtitleUnavailable = false;
+      await asWorkspace(app, () =>
+        app
+          .get(SubtitleBackfill)
+          .resolve(backfill.data as ResolveSubtitlePayload),
+      );
+
+      const snapshots = await prisma.appSnapshot.findMany({
+        where: { appId: imported.id },
+      });
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0].subtitle).toBe('Fixture subtitle');
+      expect(
+        await prisma.changeEvent.count({ where: { appId: imported.id } }),
+      ).toBe(0);
+      expect(await trackedCount(imported.id)).toBeGreaterThan(trackedBefore);
+      const checks = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.CHECK_KEYWORD,
+      );
+      expect(checks).toHaveLength(await trackedCount(imported.id));
+    });
+
+    it('fails the attempt while the product page stays unreadable', async () => {
+      registry.subtitleUnavailable = true;
+      const imported = await importApp(APP_STORE_URL);
+      const [backfill] = (await jobsOn(QUEUES.APP_STORE)).filter(
+        (job) => job.name === JOBS.RESOLVE_SUBTITLE,
+      );
+
+      await expect(
+        asWorkspace(app, () =>
+          app
+            .get(SubtitleBackfill)
+            .resolve(backfill.data as ResolveSubtitlePayload),
+        ),
+      ).rejects.toBeInstanceOf(StoreRequestError);
+
+      const snapshot = await prisma.appSnapshot.findFirst({
+        where: { appId: imported.id },
+      });
+      expect(snapshot?.subtitle).toBeNull();
     });
   });
 });

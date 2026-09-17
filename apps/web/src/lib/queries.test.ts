@@ -22,6 +22,7 @@ import {
   healthKey,
   invalidateApiTokenMutation,
   invalidateActionMutation,
+  invalidateAppListing,
   invalidateAuth,
   invalidateCompetitorMutation,
   invalidateEmailAlertMutation,
@@ -224,6 +225,12 @@ describe("actionKeys", () => {
 });
 
 describe("invalidation sets", () => {
+  it("invalidates every query of the app once its listing settles", () => {
+    expect(
+      invalidatedKeys((client) => invalidateAppListing(client, APP)),
+    ).toEqual([appKeys.detail(APP)]);
+  });
+
   it("invalidates only the keyword list when keywords are refetched", () => {
     expect(
       invalidatedKeys((client) => invalidateKeywords(client, APP)),

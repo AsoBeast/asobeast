@@ -1,13 +1,14 @@
 "use client";
 
-import { useId } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useId, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { firstRunOptions } from "@/lib/queries";
+import { firstRunOptions, invalidateAppListing } from "@/lib/queries";
 import {
   firstRunHeadline,
   firstRunRows,
+  listingSettled,
   type FirstRunRow,
 } from "./first-run-timeline";
 
@@ -41,7 +42,16 @@ function StageRow({ row }: { row: FirstRunRow }) {
 
 export function FirstRunTimeline({ id }: { id: string }) {
   const headingId = useId();
+  const queryClient = useQueryClient();
   const { data, dataUpdatedAt } = useQuery(firstRunOptions(id));
+  const previous = useRef(data);
+
+  useEffect(() => {
+    if (listingSettled(previous.current, data)) {
+      invalidateAppListing(queryClient, id);
+    }
+    previous.current = data;
+  }, [data, id, queryClient]);
 
   if (!data || data.complete) {
     return null;

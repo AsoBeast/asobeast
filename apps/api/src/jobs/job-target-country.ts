@@ -29,6 +29,7 @@ export class JobTargetCountry {
           this.appCountry((job.data as SpiderProbePayload).appId)
         );
       case JOBS.REFRESH_APP:
+      case JOBS.RESOLVE_SUBTITLE:
       case JOBS.SYNC_REVIEWS:
         return this.appCountry((job.data as RefreshAppPayload).appId);
       case JOBS.CHECK_KEYWORD:

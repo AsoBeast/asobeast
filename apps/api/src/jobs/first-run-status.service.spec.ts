@@ -6,6 +6,7 @@ import {
   type FirstRunStage,
   type FirstRunStageStatus,
 } from '@asobeast/shared';
+import { JobState, Queue } from 'bullmq';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirstRunStatusService } from './first-run-status.service';
@@ -24,6 +25,7 @@ interface Fixture {
   captureDays: number;
   cronDaily: string;
   cronScoring: string;
+  subtitleJob: JobState | 'unknown' | 'redis-down' | 'redis-hung' | null;
 }
 
 const DEFAULTS: Fixture = {
@@ -37,6 +39,7 @@ const DEFAULTS: Fixture = {
   captureDays: 0,
   cronDaily: '0 3 * * *',
   cronScoring: '0 4 * * 0',
+  subtitleJob: null,
 };
 
 function serviceWith(overrides: Partial<Fixture> = {}) {
@@ -67,9 +70,25 @@ function serviceWith(overrides: Partial<Fixture> = {}) {
       key === 'CRON_DAILY' ? fixture.cronDaily : fixture.cronScoring,
   };
 
+  const appStoreQueue = {
+    getJob: jest.fn(() => {
+      if (fixture.subtitleJob === 'redis-hung') {
+        return new Promise<never>(() => undefined);
+      }
+      return fixture.subtitleJob === 'redis-down'
+        ? Promise.reject(new Error('connect ECONNREFUSED'))
+        : Promise.resolve(
+            fixture.subtitleJob === null
+              ? undefined
+              : { getState: () => Promise.resolve(fixture.subtitleJob) },
+          );
+    }),
+  };
+
   return new FirstRunStatusService(
     prisma as unknown as PrismaService,
     config as unknown as ConfigService<Env, true>,
+    appStoreQueue as unknown as Queue,
   );
 }
 
@@ -108,6 +127,49 @@ describe('FirstRunStatusService', () => {
       expectedBy: null,
     });
     expect(status.complete).toBe(false);
+  });
+
+  it.each(['waiting', 'delayed', 'prioritized', 'active'] as const)(
+    'keeps the listing waiting while its subtitle backfill is %s',
+    async (subtitleJob) => {
+      const status = await serviceWith({ subtitleJob }).forApp(APP_ID, NOW);
+
+      expect(stageOf(status.stages, 'metadata')).toMatchObject({
+        ready: 0,
+        total: 1,
+        complete: false,
+      });
+      expect(status.complete).toBe(false);
+    },
+  );
+
+  it.each(['completed', 'failed', 'unknown', 'redis-down'] as const)(
+    'reports the listing ready once the subtitle backfill is %s',
+    async (subtitleJob) => {
+      const status = await serviceWith({ subtitleJob }).forApp(APP_ID, NOW);
+
+      expect(stageOf(status.stages, 'metadata')).toMatchObject({
+        ready: 1,
+        complete: true,
+      });
+    },
+  );
+
+  it('reports the listing ready when redis stops answering', async () => {
+    jest.useFakeTimers();
+    const pending = serviceWith({ subtitleJob: 'redis-hung' }).forApp(
+      APP_ID,
+      NOW,
+    );
+
+    await jest.advanceTimersByTimeAsync(1_000);
+    const status = await pending;
+
+    expect(stageOf(status.stages, 'metadata')).toMatchObject({
+      ready: 1,
+      complete: true,
+    });
+    jest.useRealTimers();
   });
 
   it('totals rankings and scores against the tracked keywords', async () => {

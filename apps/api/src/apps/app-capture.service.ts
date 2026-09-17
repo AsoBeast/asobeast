@@ -7,6 +7,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { toSnapshotData } from './apps.mapper';
+import { SubtitleBackfill } from './subtitle-backfill.service';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -24,6 +25,7 @@ export class AppCaptureService {
     private readonly registry: StoreProviderRegistry,
     private readonly workspace: WorkspaceContext,
     private readonly egress: ProxyEgress,
+    private readonly subtitles: SubtitleBackfill,
   ) {}
 
   async capture(
@@ -44,7 +46,7 @@ export class AppCaptureService {
       throw new UnsearchableAppError(normalized.title);
     }
 
-    return this.prisma.withTransaction(async (tx) => {
+    const captured = await this.prisma.withTransaction(async (tx) => {
       const persist = async () => {
         await this.serializeIdentity(tx, identity);
         await this.assertFreeToClaim(identity, primaryAppId, tx);
@@ -85,6 +87,11 @@ export class AppCaptureService {
 
       return admit ? admit(tx, persist) : persist();
     });
+
+    if (normalized.subtitleUnavailable && captured.snapshot.subtitle === null) {
+      await this.subtitles.request(captured.app, captured.snapshot);
+    }
+    return captured;
   }
 
   private async alreadyTracked(
