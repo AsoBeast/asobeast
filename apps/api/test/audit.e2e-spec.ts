@@ -232,6 +232,19 @@ describe('AuditController (e2e)', () => {
     expect(volume?.detail).toBe(
       'You have 5000 ratings; the median competitor has 2000.',
     );
+    expect(result.benchmarks?.competitors).toBe(2);
+    expect(
+      result.benchmarks?.rows.find((row) => row.metric === 'rating-count'),
+    ).toMatchObject({ you: 5000, median: 2000, best: 3000 });
+  });
+
+  it('reports no benchmarks without competitors', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.benchmarks).toBeNull();
   });
 
   it('carries a fix, an effort, an impact, a lift and a target on every recommendation', async () => {

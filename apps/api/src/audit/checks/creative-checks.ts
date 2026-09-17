@@ -21,13 +21,23 @@ const ipadScore = (count: number): number => {
   return count >= 1 ? 5 : 0;
 };
 
+export const visibleScreenshots = (
+  store: Store,
+  count: number | null,
+): number | null =>
+  count === null
+    ? null
+    : store === Store.GOOGLE_PLAY
+      ? Math.min(count, PLAY_SCREENSHOTS_PER_DEVICE)
+      : count;
+
 const countCheck = (context: AuditContext): RubricCheck | null => {
   const total = context.rawFacts.screenshotCount;
   if (total === null) {
     return null;
   }
   const play = context.store === Store.GOOGLE_PLAY;
-  const counted = play ? Math.min(total, PLAY_SCREENSHOTS_PER_DEVICE) : total;
+  const counted = visibleScreenshots(context.store, total) as number;
   return check({
     id: 'screenshots-count',
     label: 'All slots used',

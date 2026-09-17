@@ -1,5 +1,4 @@
 import {
-  AuditCheckId,
   AuditEffort,
   AuditImpact,
   AuditRecommendation,
@@ -7,7 +6,7 @@ import {
   AuditTarget,
 } from '@asobeast/shared';
 import { FactorScore, round1, scoreAudit, scoreFactor } from './audit-engine';
-import { RubricCheck } from './audit-scoring';
+import { AuditCheckId, RubricCheck } from './audit-scoring';
 
 export const HIGH_IMPACT_LIFT = 3;
 export const MEDIUM_IMPACT_LIFT = 1;

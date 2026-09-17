@@ -75,8 +75,9 @@ export const complaintTheme = (
 ): { text: string; mentions: number } | null => {
   const negative = reviews.filter((review) => review.score <= reviewScoreMax);
   const [top] = mineReviewPhrases(negative, new Set());
-  return top && top.usedByCount >= REVIEW_THEME_MIN_MENTIONS
-    ? { text: top.text, mentions: top.usedByCount }
+  const mentions = top?.usedByCount ?? 0;
+  return top && mentions >= REVIEW_THEME_MIN_MENTIONS
+    ? { text: top.text, mentions }
     : null;
 };
 

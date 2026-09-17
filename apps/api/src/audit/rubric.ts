@@ -10,6 +10,7 @@ import {
   AuditUnlockSummary,
 } from '@asobeast/shared';
 import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
+import { buildBenchmarks } from './audit-benchmarks';
 import { limitationsFor } from './audit-limitations';
 import { buildRecommendations, RubricFactor } from './audit-recommendations';
 import { AuditContext, RubricCheck } from './audit-scoring';
@@ -289,5 +290,6 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     groups,
     limitations: [...limitationsFor(context.store)],
     unlocks: deriveUnlocks(built),
+    benchmarks: buildBenchmarks(context),
   };
 }
