@@ -50,7 +50,7 @@ function waitingDetail(row: FirstRunStageStatus, now: number): string {
 
   switch (row.stage) {
     case "metadata":
-      return "The first listing snapshot has not been captured yet.";
+      return "The listing is still being read from the store.";
     case "keywords":
       return "Keywords are still being extracted from the listing.";
     case "rankings":
@@ -97,4 +97,19 @@ export function firstRunHeadline(status: FirstRunStatus): string {
   return waiting === 1
     ? "One step is still finishing."
     : `${waiting} steps are still finishing.`;
+}
+
+const listingWaiting = (status: FirstRunStatus): boolean =>
+  status.stages.some((row) => row.stage === "metadata" && !row.complete);
+
+export function listingSettled(
+  previous: FirstRunStatus | undefined,
+  next: FirstRunStatus | undefined,
+): boolean {
+  return (
+    previous !== undefined &&
+    next !== undefined &&
+    listingWaiting(previous) &&
+    !listingWaiting(next)
+  );
 }

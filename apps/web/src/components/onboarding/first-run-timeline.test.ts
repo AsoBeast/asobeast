@@ -6,7 +6,11 @@ import {
   type FirstRunStatus,
 } from "@asobeast/shared";
 import { formatRelativeTime } from "@/lib/format";
-import { firstRunHeadline, firstRunRows } from "./first-run-timeline";
+import {
+  firstRunHeadline,
+  firstRunRows,
+  listingSettled,
+} from "./first-run-timeline";
 
 const NOW = new Date("2026-08-10T09:00:00Z").getTime();
 const TOMORROW = "2026-08-11T03:00:00.000Z";
@@ -187,4 +191,39 @@ describe("firstRunHeadline", () => {
       "This app is fully collected.",
     );
   });
+});
+
+describe("listingSettled", () => {
+  const waiting = statusOf(
+    FIRST_RUN_STAGES.map((name) =>
+      name === "metadata"
+        ? stage(name, { ready: 0, complete: false })
+        : stage(name),
+    ),
+  );
+
+  it("fires when the listing stage turns ready", () => {
+    expect(listingSettled(waiting, completeStatus)).toBe(true);
+  });
+
+  it("stays quiet while the listing is still waiting", () => {
+    expect(listingSettled(waiting, waiting)).toBe(false);
+  });
+
+  it("stays quiet for a listing that was ready from the start", () => {
+    expect(listingSettled(completeStatus, completeStatus)).toBe(false);
+    expect(listingSettled(undefined, completeStatus)).toBe(false);
+  });
+
+  it("stays quiet while the next answer is still loading", () => {
+    expect(listingSettled(waiting, undefined)).toBe(false);
+  });
+});
+
+it("says the listing is still being read while its stage waits", () => {
+  const status = statusOf([stage("metadata", { ready: 0, complete: false })]);
+
+  expect(rowFor(status, "metadata").detail).toBe(
+    "The listing is still being read from the store.",
+  );
 });
