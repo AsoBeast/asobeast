@@ -35,6 +35,25 @@ describe("loadConfig api url", () => {
     },
   );
 
+  it.each([
+    "https://host/api/backend?debug",
+    "https://host/api/backend?",
+    "https://host/api/backend#top",
+    "https://host/api/backend#",
+    "https://host/api/backend/mcp?x",
+  ])("refuses a query string or fragment in %j", (apiUrl) => {
+    expect(() => configWith(apiUrl)).toThrowError(ConfigError);
+    expect(() => configWith(apiUrl)).toThrowError(
+      /ASOBEAST_API_URL must not include a query string or fragment/,
+    );
+  });
+
+  it("refuses credentials written into the url", () => {
+    expect(() => configWith("https://user:pass@host/api/backend")).toThrowError(
+      /ASOBEAST_API_URL must not include a user name or password/,
+    );
+  });
+
   it("drops a trailing slash", () => {
     expect(configWith("https://host/api/backend/").apiUrl).toBe(
       "https://host/api/backend",

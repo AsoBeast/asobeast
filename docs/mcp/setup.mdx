@@ -148,6 +148,7 @@ At startup the server checks its configuration and calls `/auth/me` on your inst
 | `ASOBEAST_API_TOKEN` does not start with `asob_` | A message that it must be a personal API token. A pasted `Bearer ` prefix or surrounding quotes are removed for you |
 | `ASOBEAST_API_URL` is not an absolute `http://` or `https://` address | A message showing the form it needs, such as `https://your-host/api/backend` |
 | `ASOBEAST_API_URL` ends in `/mcp` | A message giving the same value without `/mcp` |
+| `ASOBEAST_API_URL` has a query string, a fragment or a user name and password | A message giving the value without them. The token goes in `ASOBEAST_API_TOKEN` |
 | `ASOBEAST_API_URL` is your web address without `/api/backend` | A message giving the value with `/api/backend` appended |
 | `ASOBEAST_API_URL` answers with a redirect | A message naming the address it redirected to. The token is never sent across a redirect |
 | The token was rejected | A `401` message telling you to mint a fresh token in Settings and to check that the URL is the instance the token was minted on |

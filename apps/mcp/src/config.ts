@@ -6,6 +6,7 @@ const WEB_PROTOCOLS = new Set(["http:", "https:"]);
 const MCP_ENDPOINT_SUFFIX = "/mcp";
 const SURROUNDING_QUOTES = /^(["'])(.*)\1$/;
 const BEARER_SCHEME = /^bearer\s+/i;
+const QUERY_OR_FRAGMENT = /[?#]/;
 
 const schema = z.object({
   ASOBEAST_API_URL: z.string().optional(),
@@ -34,6 +35,16 @@ function apiUrlOf(raw: string | undefined): string {
   if (!url || !WEB_PROTOCOLS.has(url.protocol)) {
     throw new ConfigError(
       `ASOBEAST_API_URL must be an absolute http:// or https:// address such as https://your-host/api/backend, not "${value}".`,
+    );
+  }
+  if (QUERY_OR_FRAGMENT.test(value)) {
+    throw new ConfigError(
+      `ASOBEAST_API_URL must not include a query string or fragment. Set it to ${url.origin}${url.pathname.replace(/\/+$/, "")}.`,
+    );
+  }
+  if (url.username || url.password) {
+    throw new ConfigError(
+      "ASOBEAST_API_URL must not include a user name or password. Pass the API token in ASOBEAST_API_TOKEN instead.",
     );
   }
   const base = value.replace(/\/+$/, "");
