@@ -80,7 +80,7 @@ export class MetadataService {
 
     if (app.store === Store.GOOGLE_PLAY) {
       const fields: MetadataFieldAudit[] = [
-        this.field(app.store, 'title', title, lintTitle(title, 30)),
+        this.field(app.store, 'title', title, lintTitle(title, 30, app.store)),
         this.field(
           app.store,
           'shortDescription',
@@ -119,7 +119,7 @@ export class MetadataService {
       .join(',');
 
     const fields: MetadataFieldAudit[] = [
-      this.field(app.store, 'title', title, lintTitle(title, 30)),
+      this.field(app.store, 'title', title, lintTitle(title, 30, app.store)),
       this.field(
         app.store,
         'subtitle',

@@ -1,3 +1,4 @@
+import { Store } from '../index';
 import { isStopword, normalizeText, tokenize } from '../text';
 import { countChars, KEYWORD_MIN_CHARS, utf8ByteLength } from './limits';
 
@@ -26,6 +27,28 @@ const CTA_PATTERN =
   /\b(download|try|get started|sign up|start now|start today|start free|join|subscribe|install|upgrade|get the app)\b/i;
 const SOCIAL_PROOF_PATTERN =
   /(\b(million|users|downloads|awarded?|featured|rated|press|trusted|loved by|reviews?)\b|#1|number one|\d[\d,.]*\+)/i;
+const PLAY_CLAIM_TERMS = [
+  'best',
+  'top',
+  'free',
+  'new',
+  'discount',
+  'sale',
+  'number one',
+] as const;
+const PLAY_CALL_TO_ACTION_TERMS = [
+  'download now',
+  'install now',
+  'play now',
+  'update now',
+  'get it now',
+] as const;
+const PLAY_POLICY_TERMS = [
+  ...PLAY_CLAIM_TERMS,
+  ...PLAY_CALL_TO_ACTION_TERMS,
+] as const;
+const RANK_CLAIM = /#\s?1(?!\d)/;
+const EMOJI = /\p{Extended_Pictographic}/u;
 
 const contentTokens = (text: string): string[] =>
   tokenize(text).filter((token) => !isStopword(token));
@@ -85,6 +108,37 @@ const shortKeywords = (field: string): LintIssue[] =>
       offendingText: part,
     }));
 
+const containsTerm = (text: string, term: string): boolean =>
+  ` ${normalizeText(text)} `.includes(` ${term} `);
+
+const policyTerms = (
+  text: string,
+  terms: readonly string[] = PLAY_POLICY_TERMS,
+): LintIssue[] => {
+  const found = terms.filter((term) => containsTerm(text, term));
+  const rank = RANK_CLAIM.exec(text);
+  return [...found, ...(rank ? [rank[0]] : [])].map((term) => ({
+    rule: 'policy-term',
+    severity: 'error' as const,
+    message: `Google Play does not allow "${term}" here.`,
+    offendingText: term,
+  }));
+};
+
+const emoji = (text: string): LintIssue[] => {
+  const found = EMOJI.exec(text);
+  return found
+    ? [
+        {
+          rule: 'emoji',
+          severity: 'error',
+          message: 'Google Play does not allow emoji in the title.',
+          offendingText: found[0],
+        },
+      ]
+    : [];
+};
+
 const keywordStuffing = (text: string): LintIssue[] => {
   const counts = new Map<string, number>();
   for (const token of contentTokens(text)) {
@@ -126,11 +180,18 @@ const repeats = (
   return issues;
 };
 
-export function lintTitle(title: string, limit = 30): LintIssue[] {
+export function lintTitle(
+  title: string,
+  limit = 30,
+  store: Store = 'APP_STORE',
+): LintIssue[] {
   const issues: LintIssue[] = [
     ...overLimit(title, limit),
     ...underUtilized(title, limit),
     ...keywordStuffing(title),
+    ...(store === 'GOOGLE_PLAY'
+      ? [...policyTerms(title), ...emoji(title)]
+      : []),
   ];
   const special = title.match(SPECIAL_CHARS);
   if (special) {
@@ -172,6 +233,7 @@ export function lintShortDescription(
     ...underUtilized(text, limit),
     ...repeats(text, toSet(context.titleWords), 'repeats-title-word', 'title'),
     ...keywordStuffing(text),
+    ...policyTerms(text),
   ];
 
   const tracked = context.trackedKeywords ?? [];

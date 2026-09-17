@@ -100,6 +100,52 @@ describe('lintShortDescription', () => {
   });
 });
 
+describe('store policy terms', () => {
+  it.each([
+    'Best Habit Tracker',
+    'Habit Tracker #1',
+    'Top Habits',
+    'Free Habit App',
+    'New Habit Coach',
+    'Habit Sale',
+  ])('flags "%s" on Google Play', (title) => {
+    expect(rules(lintTitle(title, 30, 'GOOGLE_PLAY'))).toContain('policy-term');
+  });
+
+  it.each(['Bestie Chat', 'Topaz Wallet', 'Freedom Journal', 'Newsroom'])(
+    'does not flag "%s", where the term is only part of a word',
+    (title) => {
+      expect(rules(lintTitle(title, 30, 'GOOGLE_PLAY'))).not.toContain(
+        'policy-term',
+      );
+    },
+  );
+
+  it('flags emoji in a Google Play title', () => {
+    expect(rules(lintTitle('Habit Tracker 🎯', 30, 'GOOGLE_PLAY'))).toContain(
+      'emoji',
+    );
+  });
+
+  it('keeps App Store titles on the existing rules', () => {
+    expect(
+      rules(lintTitle('Best Habit Tracker', 30, 'APP_STORE')),
+    ).not.toContain('policy-term');
+    expect(rules(lintTitle('Best Habit Tracker'))).toEqual(
+      rules(lintTitle('Best Habit Tracker', 30, 'APP_STORE')),
+    );
+  });
+
+  it.each([
+    'Download now and build habits',
+    'The #1 habit tracker',
+    'Install now for streaks',
+    'The best way to build habits',
+  ])('flags "%s" as a short description', (text) => {
+    expect(rules(lintShortDescription(text, {}, 80))).toContain('policy-term');
+  });
+});
+
 describe('lintKeywordField', () => {
   const base = { titleWords: ['habit'], subtitleWords: ['streak'] };
 
