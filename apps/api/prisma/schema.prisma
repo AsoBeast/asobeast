@@ -335,17 +335,19 @@ model ChangeEvent {
 }
 
 model Review {
-  id         String    @id @default(cuid())
-  appId      String
-  app        App       @relation(fields: [appId], references: [id], onDelete: Cascade)
-  reviewId   String
-  userName   String?
-  score      Int
-  title      String?
-  text       String
-  version    String?
-  reviewedAt DateTime?
-  createdAt  DateTime  @default(now())
+  id             String    @id @default(cuid())
+  appId          String
+  app            App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  reviewId       String
+  userName       String?
+  score          Int
+  title          String?
+  text           String
+  version        String?
+  reviewedAt     DateTime?
+  repliedAt      DateTime?
+  replyCheckedAt DateTime?
+  createdAt      DateTime  @default(now())
 
   @@unique([appId, reviewId])
   @@index([appId, reviewedAt])

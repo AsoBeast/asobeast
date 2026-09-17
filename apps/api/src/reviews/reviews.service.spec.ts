@@ -29,6 +29,7 @@ const buildDeps = (options: {
   scoreMax?: number;
   storedAlready?: boolean;
   storedReviewedAt?: Date | null;
+  store?: Store;
 }) => {
   const storedReviewedAt =
     options.storedReviewedAt === undefined
@@ -37,14 +38,20 @@ const buildDeps = (options: {
   const reviews = jest.fn();
   options.pages.forEach((page) => reviews.mockResolvedValueOnce(page));
   const createMany = jest
-    .fn<Promise<{ count: number }>, [{ data: { reviewId: string }[] }]>()
+    .fn<Promise<{ count: number }>, [{ data: Record<string, unknown>[] }]>()
+    .mockResolvedValue({ count: 0 });
+  const updateMany = jest
+    .fn<
+      Promise<{ count: number }>,
+      [{ where: Record<string, unknown>; data: Record<string, unknown> }]
+    >()
     .mockResolvedValue({ count: 0 });
   const prisma = {
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
         name: 'Mine',
-        store: Store.APP_STORE,
+        store: options.store ?? Store.APP_STORE,
         storeAppId: '123',
         country: 'us',
       }),
@@ -61,6 +68,7 @@ const buildDeps = (options: {
         return Promise.resolve({ id: 'r1', reviewedAt: storedReviewedAt });
       }),
       createMany,
+      updateMany,
     },
   };
   const registry = { get: () => ({ reviews }) };
@@ -75,7 +83,7 @@ const buildDeps = (options: {
     config as unknown as ConfigService<Env, true>,
     alerts as unknown as AlertsDispatcher,
   );
-  return { service, reviews, createMany, dispatch };
+  return { service, reviews, createMany, updateMany, dispatch };
 };
 
 describe('ReviewsService.syncReviews', () => {
@@ -140,6 +148,55 @@ describe('ReviewsService.syncReviews', () => {
 
     expect(inserted).toEqual([]);
     expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('records reply state on new and already stored Google Play reviews it fetched', async () => {
+    const replied = new Date('2026-09-02T08:00:00.000Z');
+    const { service, createMany, updateMany } = buildDeps({
+      store: Store.GOOGLE_PLAY,
+      pages: [
+        [
+          makeReview('new'),
+          { ...makeReview('known-now-replied'), repliedAt: replied },
+        ],
+      ],
+      existing: ['known-now-replied'],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    const [row] = createMany.mock.calls[0][0].data;
+    expect(row).toMatchObject({ reviewId: 'new', repliedAt: null });
+    expect(row.replyCheckedAt).toBeInstanceOf(Date);
+    const [firstUpdate] = updateMany.mock.calls[0];
+    expect(firstUpdate.where).toEqual({
+      appId: 'app1',
+      reviewId: { in: ['known-now-replied'] },
+    });
+    expect(firstUpdate.data.replyCheckedAt).toBeInstanceOf(Date);
+    expect(updateMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        appId: 'app1',
+        reviewId: 'known-now-replied',
+        repliedAt: null,
+      },
+      data: { repliedAt: replied },
+    });
+  });
+
+  it('records no reply state for App Store reviews', async () => {
+    const { service, createMany, updateMany } = buildDeps({
+      pages: [[makeReview('a')]],
+      existing: ['b'],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    expect(createMany.mock.calls[0][0].data[0]).toMatchObject({
+      repliedAt: null,
+      replyCheckedAt: null,
+    });
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('rejects an unknown app', async () => {

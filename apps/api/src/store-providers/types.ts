@@ -48,6 +48,7 @@ export interface ReviewResult {
   text: string;
   version?: string;
   updatedAt?: Date;
+  repliedAt?: Date;
 }
 
 export interface StoreProvider {
