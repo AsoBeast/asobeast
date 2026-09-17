@@ -1,7 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { Suspense } from "react";
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type {
@@ -12,12 +16,15 @@ import type {
   AuditFactorResult,
   AuditRecommendation,
 } from "@asobeast/shared";
+import { AuditHealthChart } from "@/components/audit/AuditHealthChart";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ApiError, runAiAudit } from "@/lib/api";
 import { Meter } from "@/components/ui/meter";
+import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime } from "@/lib/format";
+import { appKeys, auditOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
 type BadgeVariant = "success" | "warning" | "destructive" | "secondary";
@@ -212,17 +219,17 @@ function AiAuditCard({
   );
 }
 
-export function AuditView({
-  appId,
-  audit: initialAudit,
-}: {
-  appId: string;
-  audit: AppAuditResult;
-}) {
-  const [audit, setAudit] = useState(initialAudit);
+export function AuditView({ appId }: { appId: string }) {
+  const queryClient = useQueryClient();
+  const { data: audit } = useSuspenseQuery(auditOptions(appId));
+  const setAudit = (result: AppAuditResult) =>
+    queryClient.setQueryData(appKeys.audit(appId), result);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="page-reading flex flex-col gap-8">
+      <Suspense fallback={<Skeleton className="h-[336px] w-full rounded-xl" />}>
+        <AuditHealthChart id={appId} />
+      </Suspense>
       <section className="grid gap-4 sm:grid-cols-[auto_1fr] sm:items-center">
         <Card className="text-center">
           <CardContent className="flex flex-col items-center gap-2">

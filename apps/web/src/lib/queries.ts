@@ -15,6 +15,7 @@ import {
   getApiTokens,
   getApp,
   getApps,
+  getAudit,
   getAuditHistory,
   getAccountPlan,
   getAuthMe,
@@ -89,6 +90,7 @@ export const appKeys = {
     [...appKeys.detail(id), "serp-movers", { days }] as const,
   categoryRanks: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "category-ranks", params] as const,
+  audit: (id: string) => [...appKeys.detail(id), "audit"] as const,
   auditHistory: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "audit-history", params] as const,
   visibility: (id: string, params: RangeParams) =>
@@ -358,6 +360,12 @@ export const categoryRanksOptions = (id: string, params: RangeParams) =>
   queryOptions({
     queryKey: appKeys.categoryRanks(id, params),
     queryFn: () => getCategoryRanks(id, params),
+  });
+
+export const auditOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.audit(id),
+    queryFn: () => getAudit(id),
   });
 
 export const auditHistoryOptions = (id: string, params: RangeParams = {}) =>

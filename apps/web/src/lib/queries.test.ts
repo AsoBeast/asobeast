@@ -9,6 +9,7 @@ import {
   appDetailOptions,
   appSummaryOptions,
   auditHistoryOptions,
+  auditOptions,
   accountPlanKey,
   authMeKey,
   authStatusKey,
@@ -101,6 +102,7 @@ const APP_SCOPED_OPTIONS = [
     categoryRanksOptions(APP, RANGE),
     appKeys.categoryRanks(APP, RANGE),
   ],
+  ["audit", auditOptions(APP), appKeys.audit(APP)],
   [
     "auditHistory",
     auditHistoryOptions(APP, RANGE),
