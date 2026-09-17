@@ -1,5 +1,7 @@
 import { AUDIT_WEIGHTS, computeAudit } from './rubric';
-import { previewVideoChecks, ratingChecks, titleChecks } from './audit-checks';
+import { previewVideoChecks } from './checks/creative-checks';
+import { titleChecks } from './checks/metadata-checks';
+import { ratingChecks } from './checks/reputation-checks';
 import { AuditContext, AuditKeyword } from './audit-scoring';
 
 const emptyFacts = {

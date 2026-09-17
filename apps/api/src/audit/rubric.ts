@@ -6,18 +6,20 @@ import {
   AuditRecommendations,
 } from '@asobeast/shared';
 import { AuditContext } from './audit-scoring';
+import { conversionChecks } from './checks/conversion-checks';
 import {
-  conversionChecks,
-  descriptionChecks,
   iconChecks,
-  keywordFieldChecks,
   previewVideoChecks,
-  rankingChecks,
-  ratingChecks,
   screenshotChecks,
+} from './checks/creative-checks';
+import {
+  descriptionChecks,
+  keywordFieldChecks,
   subtitleChecks,
   titleChecks,
-} from './audit-checks';
+} from './checks/metadata-checks';
+import { ratingChecks } from './checks/reputation-checks';
+import { rankingChecks } from './checks/visibility-checks';
 
 export const AUDIT_WEIGHTS = {
   APP_STORE: {

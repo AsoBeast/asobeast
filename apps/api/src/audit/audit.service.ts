@@ -1,25 +1,18 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma, Store } from '@prisma/client';
-import {
-  AppAuditResult,
-  AuditHistory,
-  tokenize,
-  TrackedKeywordItem,
-} from '@asobeast/shared';
+import { Injectable, Logger } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { AppAuditResult, AuditHistory } from '@asobeast/shared';
 import {
   WorkspaceFanOut,
   workspaceFailure,
 } from '../common/tenancy/workspace-fanout';
-import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
-import { AiAuditChecks, AuditAiService } from './audit-ai.service';
-import { AuditContext, AuditKeyword } from './audit-scoring';
+import { AuditAiService } from './audit-ai.service';
+import { AuditContextLoader } from './audit-context.loader';
+import { DAY_MS } from './audit-scoring';
 import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
 import { computeAudit } from './rubric';
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const TREND_WINDOW_DAYS = 30;
 const DEFAULT_HISTORY_DAYS = 90;
 const MAX_HISTORY_DAYS = 365;
 
@@ -31,13 +24,13 @@ export class AuditService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly keywords: KeywordsService,
+    private readonly loader: AuditContextLoader,
     private readonly auditAi: AuditAiService,
     private readonly fanOut: WorkspaceFanOut,
   ) {}
 
   async audit(appId: string): Promise<AppAuditResult> {
-    return computeAudit(await this.buildContext(appId));
+    return computeAudit(await this.loader.load(appId));
   }
 
   async runAi(appId: string): Promise<AppAuditResult> {
@@ -53,7 +46,7 @@ export class AuditService {
   }
 
   private async generateAi(appId: string): Promise<AppAuditResult> {
-    const app = await this.ensureApp(appId);
+    const app = await this.loader.app(appId);
     const latest = await this.prisma.appSnapshot.findFirst({
       where: { appId },
       orderBy: { capturedAt: 'desc' },
@@ -141,7 +134,7 @@ export class AuditService {
     appId: string,
     query: AuditHistoryQueryDto,
   ): Promise<AuditHistory> {
-    await this.ensureApp(appId);
+    await this.loader.app(appId);
 
     const to = query.to ? utcDate(new Date(query.to)) : utcDate();
     const earliest = new Date(to.getTime() - MAX_HISTORY_DAYS * DAY_MS);
@@ -170,112 +163,6 @@ export class AuditService {
       })),
     };
   }
-
-  private async ensureApp(appId: string): Promise<{
-    id: string;
-    store: Store;
-    country: string;
-    name: string | null;
-  }> {
-    const app = await this.prisma.app.findFirst({
-      where: { id: appId },
-      select: { id: true, store: true, country: true, name: true },
-    });
-    if (!app) {
-      throw new NotFoundException(`App ${appId} not found`);
-    }
-    return app;
-  }
-
-  private async buildContext(appId: string): Promise<AuditContext> {
-    const app = await this.ensureApp(appId);
-    const cutoff = new Date(Date.now() - TREND_WINDOW_DAYS * DAY_MS);
-
-    const [latest, prior, tracked, comparison, competitors, insight] =
-      await Promise.all([
-        this.prisma.appSnapshot.findFirst({
-          where: { appId },
-          orderBy: { capturedAt: 'desc' },
-        }),
-        this.prisma.appSnapshot.findFirst({
-          where: { appId, capturedAt: { lte: cutoff } },
-          orderBy: { capturedAt: 'desc' },
-          select: { ratingAvg: true, ratingCount: true },
-        }),
-        this.keywords.listTracked(appId),
-        this.keywords.compare(appId, false),
-        this.prisma.app.findMany({
-          where: { primaryAppId: appId },
-          select: {
-            name: true,
-            snapshots: {
-              orderBy: { capturedAt: 'desc' },
-              take: 1,
-              select: { title: true },
-            },
-          },
-        }),
-        this.prisma.auditInsight.findUnique({ where: { appId } }),
-      ]);
-
-    const active = tracked.filter((item) => item.active);
-    const baseline = trendBaseline(latest, prior, cutoff);
-
-    return {
-      appId,
-      store: app.store,
-      title: latest?.title ?? '',
-      subtitle: latest?.subtitle ?? null,
-      description: latest?.description ?? '',
-      ratingAvg: latest?.ratingAvg ?? null,
-      ratingCount: latest?.ratingCount ?? null,
-      storeUpdatedAt: latest?.storeUpdatedAt ?? null,
-      now: new Date(),
-      rawFacts: extractRawFacts(app.store, latest?.raw),
-      keywords: active.map(toAuditKeyword),
-      rankings: this.rankingAggregates(active, comparison.rows),
-      history: {
-        ratingAvgDelta30d: delta(latest?.ratingAvg, baseline?.ratingAvg),
-        ratingCountDelta30d: delta(latest?.ratingCount, baseline?.ratingCount),
-      },
-      competitorTitles: competitors
-        .map((competitor) => competitor.snapshots[0]?.title)
-        .filter((title): title is string => Boolean(title)),
-      competitorNames: competitors
-        .map((competitor) => competitor.name)
-        .filter((name): name is string => Boolean(name)),
-      brandTokens: tokenize(app.name ?? ''),
-      aiChecks: (insight?.checks as AiAuditChecks | undefined) ?? {},
-      aiStatus: {
-        configured: this.auditAi.configured,
-        model: insight?.model ?? this.auditAi.model,
-        generatedAt: insight?.generatedAt?.toISOString() ?? null,
-      },
-    };
-  }
-
-  private rankingAggregates(
-    active: TrackedKeywordItem[],
-    comparisonRows: { gap: boolean }[],
-  ): AuditContext['rankings'] {
-    const total = active.length;
-    const ranked = active.filter((item) => item.latestPosition !== null);
-    const top10 = ranked.filter(
-      (item) => (item.latestPosition as number) <= 10,
-    );
-    const deltas = active
-      .map((item) => item.positionDelta7d)
-      .filter((value): value is number => value !== null);
-    return {
-      top10Share: total === 0 ? 0 : top10.length / total,
-      rankedShare: total === 0 ? 0 : ranked.length / total,
-      avgDelta7d:
-        deltas.length === 0
-          ? null
-          : deltas.reduce((sum, value) => sum + value, 0) / deltas.length,
-      gapCount: comparisonRows.filter((row) => row.gap).length,
-    };
-  }
 }
 
 const utcDate = (now = new Date()): Date =>
@@ -287,28 +174,3 @@ const toSlimFactors = (result: AppAuditResult): Prisma.InputJsonValue =>
     score: factor.score,
     weight: factor.weight,
   }));
-
-const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
-  text: item.text,
-  source: item.source,
-  bucket: item.bucket,
-  relevance: item.relevance ?? 0,
-  position: item.latestPosition,
-});
-
-const trendBaseline = <T>(
-  latest: { capturedAt: Date } | null,
-  prior: T | null,
-  cutoff: Date,
-): T | null => (latest !== null && latest.capturedAt > cutoff ? prior : null);
-
-const delta = (
-  current: number | null | undefined,
-  past: number | null | undefined,
-): number | null =>
-  current === null ||
-  current === undefined ||
-  past === null ||
-  past === undefined
-    ? null
-    : current - past;
