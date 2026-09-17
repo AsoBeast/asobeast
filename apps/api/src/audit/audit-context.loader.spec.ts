@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -95,11 +96,19 @@ const buildLoader = () => {
     configured: true,
     model: 'gpt-5.6-luna',
   } as unknown as AuditAiService;
+  const analytics = {
+    history: jest.fn().mockResolvedValue({
+      points: [
+        { date: '2026-09-01', visibility: 30 },
+        { date: '2026-09-10', visibility: 42 },
+      ],
+    }),
+  } as unknown as AnalyticsService;
   const config = {
     get: jest.fn().mockReturnValue(2),
   } as unknown as ConfigService<Env, true>;
 
-  return new AuditContextLoader(prisma, keywords, auditAi, config);
+  return new AuditContextLoader(prisma, keywords, auditAi, analytics, config);
 };
 
 describe('AuditContextLoader.load', () => {
@@ -148,5 +157,15 @@ describe('AuditContextLoader.load', () => {
     const context = await buildLoader().load('app-1');
 
     expect(context.keywordField).toBe('habit,streak');
+  });
+
+  it('reads the latest visibility point and the one a week before it', async () => {
+    const context = await buildLoader().load('app-1');
+
+    expect(context.visibility).toEqual({
+      latest: 42,
+      latestDate: '2026-09-10',
+      weekAgo: 30,
+    });
   });
 });

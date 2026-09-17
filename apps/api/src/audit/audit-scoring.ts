@@ -6,6 +6,7 @@ import {
   AuditCheckStatus,
   AuditUnlock,
   KeywordBucket,
+  KeywordComparison,
   LintIssue,
   normalizeText,
   tokenize,
@@ -46,6 +47,12 @@ export interface AuditReview {
   reviewedAt: Date | null;
 }
 
+export interface AuditVisibility {
+  latest: number | null;
+  latestDate: string | null;
+  weekAgo: number | null;
+}
+
 export interface AuditContext {
   appId: string;
   store: Store;
@@ -61,12 +68,8 @@ export interface AuditContext {
   now: Date;
   rawFacts: RawAppFacts;
   keywords: AuditKeyword[];
-  rankings: {
-    top10Share: number;
-    rankedShare: number;
-    avgDelta7d: number | null;
-    gapCount: number;
-  };
+  visibility: AuditVisibility;
+  comparison: KeywordComparison;
   competitors: AuditCompetitor[];
   reviews: AuditReview[];
   reviewScoreMax: number;
@@ -135,10 +138,10 @@ export type AuditCheckId =
   | 'icon-simple'
   | 'icon-category-fit'
   | 'icon-no-text'
+  | 'rankings-visibility'
   | 'rankings-top10'
-  | 'rankings-coverage'
   | 'rankings-trend'
-  | 'rankings-gap'
+  | 'rankings-competitor-gap'
   | 'conversion-freshness';
 
 export interface CheckAdvice {

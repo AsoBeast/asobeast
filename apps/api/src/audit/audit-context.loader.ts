@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Store } from '@prisma/client';
 import { tokenize, TrackedKeywordItem } from '@asobeast/shared';
+import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -11,6 +12,7 @@ import {
   AuditCompetitor,
   AuditContext,
   AuditKeyword,
+  AuditVisibility,
   DAY_MS,
 } from './audit-scoring';
 
@@ -22,6 +24,8 @@ export interface AuditApp {
 }
 
 export const REVIEW_WINDOW_DAYS = 90;
+export const VISIBILITY_WINDOW_DAYS = 8;
+export const VISIBILITY_TREND_DAYS = 7;
 
 @Injectable()
 export class AuditContextLoader {
@@ -29,6 +33,7 @@ export class AuditContextLoader {
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
     private readonly auditAi: AuditAiService,
+    private readonly analytics: AnalyticsService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -51,6 +56,28 @@ export class AuditContextLoader {
     return tracked.map((item) => item.text).join(',') || null;
   }
 
+  private async visibility(appId: string): Promise<AuditVisibility> {
+    const from = new Date(Date.now() - VISIBILITY_WINDOW_DAYS * DAY_MS);
+    const { points } = await this.analytics.history(appId, {
+      from: from.toISOString().slice(0, 10),
+    });
+    const latest = points.at(-1) ?? null;
+    if (latest === null) {
+      return { latest: null, latestDate: null, weekAgo: null };
+    }
+    const cutoff = new Date(
+      new Date(latest.date).getTime() - VISIBILITY_TREND_DAYS * DAY_MS,
+    );
+    const earlier = points.filter(
+      (point) => new Date(point.date).getTime() <= cutoff.getTime(),
+    );
+    return {
+      latest: latest.visibility,
+      latestDate: latest.date,
+      weekAgo: earlier.at(-1)?.visibility ?? null,
+    };
+  }
+
   async load(appId: string): Promise<AuditContext> {
     const app = await this.app(appId);
     const reviewCutoff = new Date(Date.now() - REVIEW_WINDOW_DAYS * DAY_MS);
@@ -63,6 +90,7 @@ export class AuditContextLoader {
       reviews,
       insight,
       keywordField,
+      visibility,
     ] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
         where: { appId },
@@ -97,6 +125,7 @@ export class AuditContextLoader {
       }),
       this.prisma.auditInsight.findUnique({ where: { appId } }),
       this.keywordField(app),
+      this.visibility(appId),
     ]);
 
     const active = tracked.filter(
@@ -118,7 +147,8 @@ export class AuditContextLoader {
       now: new Date(),
       rawFacts: extractRawFacts(app.store, latest?.raw),
       keywords: active.map(toAuditKeyword),
-      rankings: rankingAggregates(active, comparison.rows),
+      visibility,
+      comparison,
       competitors: competitors.map(toAuditCompetitor),
       reviews: reviews.map((review) => ({
         score: review.score,
@@ -139,27 +169,6 @@ export class AuditContextLoader {
     };
   }
 }
-
-const rankingAggregates = (
-  active: TrackedKeywordItem[],
-  comparisonRows: { gap: boolean }[],
-): AuditContext['rankings'] => {
-  const total = active.length;
-  const ranked = active.filter((item) => item.latestPosition !== null);
-  const top10 = ranked.filter((item) => (item.latestPosition as number) <= 10);
-  const deltas = active
-    .map((item) => item.positionDelta7d)
-    .filter((value): value is number => value !== null);
-  return {
-    top10Share: total === 0 ? 0 : top10.length / total,
-    rankedShare: total === 0 ? 0 : ranked.length / total,
-    avgDelta7d:
-      deltas.length === 0
-        ? null
-        : deltas.reduce((sum, value) => sum + value, 0) / deltas.length,
-    gapCount: comparisonRows.filter((row) => row.gap).length,
-  };
-};
 
 const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
   text: item.text,

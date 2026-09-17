@@ -98,8 +98,21 @@ const perfectContext = (): AuditContext =>
       releaseNotes: 'New reminders and widgets.',
     },
     keywords: perfectKeywords,
-    rankings: { top10Share: 1, rankedShare: 1, avgDelta7d: -1, gapCount: 0 },
-    history: { ratingAvgDelta30d: 0.1, ratingCountDelta30d: 100 },
+    visibility: { latest: 60, latestDate: '2026-07-09', weekAgo: 55 },
+    comparison: {
+      competitors: [{ id: 'c1', name: 'Pomodoro Labs' }],
+      rows: [
+        {
+          keywordId: 'k1',
+          text: 'habit tracker',
+          traffic: 8,
+          difficulty: 3,
+          you: 1,
+          positions: { c1: 12 },
+          gap: false,
+        },
+      ],
+    },
     aiChecks: observedAiChecks,
     aiStatus: {
       configured: true,
