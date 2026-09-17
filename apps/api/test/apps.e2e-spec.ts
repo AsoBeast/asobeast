@@ -84,6 +84,7 @@ class FakeStoreProviderRegistry {
   availabilityCalls: Array<{ storeAppId: string; countries: string[] }> = [];
   availabilityStatus: MarketAvailability = 'available';
   searchable = true;
+  subtitleUnavailable = false;
 
   get(store: Store): StoreProvider {
     if (store === Store.GOOGLE_PLAY) {
@@ -107,6 +108,9 @@ class FakeStoreProviderRegistry {
             storeAppId,
             searchable: this.searchable,
             ...(this.title ? { title: this.title } : {}),
+            ...(this.subtitleUnavailable
+              ? { subtitle: undefined, subtitleUnavailable: true }
+              : {}),
           });
     });
   }
@@ -175,6 +179,7 @@ describe('AppsController (e2e)', () => {
     registry.availabilityCalls = [];
     registry.availabilityStatus = 'available';
     registry.searchable = true;
+    registry.subtitleUnavailable = false;
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword", "AppGroup" RESTART IDENTITY CASCADE',
     );
@@ -386,6 +391,55 @@ describe('AppsController (e2e)', () => {
 
       await api.post(`/apps/${appId}/refresh`).expect(200);
     });
+  });
+
+  it('keeps the subtitle when a refresh cannot read the product page', async () => {
+    const created = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    const appId = (created.body as AppDetail).id;
+
+    registry.subtitleUnavailable = true;
+    const refreshed = await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    expect((refreshed.body as SnapshotDiffResult).changes).not.toContainEqual(
+      expect.objectContaining({ field: 'subtitle' }),
+    );
+    const latest = await prisma.appSnapshot.findFirst({
+      where: { appId },
+      orderBy: { capturedAt: 'desc' },
+    });
+    expect(latest?.subtitle).toBe('Fixture subtitle');
+    expect(
+      await prisma.changeEvent.count({ where: { appId, field: 'subtitle' } }),
+    ).toBe(0);
+  });
+
+  it('still records a subtitle the listing really removed', async () => {
+    const created = await api
+      .post('/apps')
+      .send({ url: APP_STORE_URL })
+      .expect(201);
+    const appId = (created.body as AppDetail).id;
+
+    const provider = registry.get(Store.APP_STORE);
+    jest.spyOn(registry, 'get').mockReturnValueOnce({
+      ...provider,
+      getApp: (storeAppId: string) =>
+        Promise.resolve({
+          ...APP_STORE_FIXTURE,
+          storeAppId,
+          subtitle: undefined,
+          subtitleUnavailable: false,
+        }),
+    });
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    const event = await prisma.changeEvent.findFirst({
+      where: { appId, field: 'subtitle' },
+    });
+    expect(event).toMatchObject({ before: 'Fixture subtitle', after: null });
   });
 
   it('leaves a metadata change for refresh to report rather than swallowing it', async () => {
