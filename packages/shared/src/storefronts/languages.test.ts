@@ -14,4 +14,11 @@ describe('storefrontLanguage', () => {
   it('returns null for a country outside the table', () => {
     expect(storefrontLanguage('zz')).toBeNull();
   });
+
+  it.each(['constructor', '__proto__'])(
+    'returns null for the inherited object key %s',
+    (country) => {
+      expect(storefrontLanguage(country)).toBeNull();
+    },
+  );
 });
