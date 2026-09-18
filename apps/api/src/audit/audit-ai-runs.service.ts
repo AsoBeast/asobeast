@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -32,6 +33,7 @@ import {
   expired,
   isActive,
   NOTHING_TO_ANALYZE_MESSAGE,
+  RUN_NOT_QUEUED_MESSAGE,
 } from './audit-run-state';
 
 export {
@@ -44,6 +46,8 @@ export {
 
 @Injectable()
 export class AuditAiRunsService {
+  private readonly logger = new Logger(AuditAiRunsService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly loader: AuditContextLoader,
@@ -97,12 +101,17 @@ export class AuditAiRunsService {
       ...this.workspace.scopeFor('a creative analysis run'),
       appId,
     };
-    await this.queue.add(JOBS.AUDIT_CREATIVE, payload, {
-      ...JOB_OPTIONS,
-      attempts: CREATIVE_RUN_ATTEMPTS,
-      backoff: { type: 'exponential', delay: CREATIVE_RUN_BACKOFF_MS },
-      deduplication: { id: auditCreativeDeduplicationId(appId) },
-    });
+    try {
+      await this.queue.add(JOBS.AUDIT_CREATIVE, payload, {
+        ...JOB_OPTIONS,
+        attempts: CREATIVE_RUN_ATTEMPTS,
+        backoff: { type: 'exponential', delay: CREATIVE_RUN_BACKOFF_MS },
+        deduplication: { id: auditCreativeDeduplicationId(appId) },
+      });
+    } catch (error) {
+      await this.failUnqueued(appId, now);
+      throw error;
+    }
 
     return {
       state: 'queued',
@@ -136,6 +145,20 @@ export class AuditAiRunsService {
       update: completed,
     });
     await this.audit.recordToday(appId);
+  }
+
+  private async failUnqueued(appId: string, requestedAt: Date): Promise<void> {
+    await this.prisma.auditInsight
+      .updateMany({
+        where: { appId, requestedAt, runState: 'queued' },
+        data: { runState: 'failed', runError: RUN_NOT_QUEUED_MESSAGE },
+      })
+      .catch((error: unknown) =>
+        this.logger.error(
+          `could not release the unqueued analysis for app ${appId}`,
+          error,
+        ),
+      );
   }
 
   async fail(appId: string, message: string): Promise<void> {
