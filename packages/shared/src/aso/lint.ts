@@ -48,7 +48,7 @@ const PLAY_POLICY_TERMS = [
   ...PLAY_CALL_TO_ACTION_TERMS,
 ] as const;
 const RANK_CLAIM = /#\s?1(?!\d)/;
-const EMOJI = /\p{Extended_Pictographic}/u;
+const EMOJI = /(?![©®™])\p{Extended_Pictographic}/u;
 
 const contentTokens = (text: string): string[] =>
   tokenize(text).filter((token) => !isStopword(token));
