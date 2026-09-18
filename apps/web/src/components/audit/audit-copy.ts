@@ -14,7 +14,9 @@ import type {
 
 export const PROVISIONAL_CONFIDENCE = 0.6;
 
-export function provisional(confidence: number | undefined): boolean {
+export function provisional(
+  confidence: number | undefined,
+): confidence is number {
   return confidence !== undefined && confidence < PROVISIONAL_CONFIDENCE;
 }
 
@@ -102,14 +104,16 @@ export const percent = (share: number): number => Math.round(share * 100);
 export const gradeLabel = (grade: AuditGrade | null | undefined): string =>
   grade ? GRADE_LABEL[grade] : NO_GRADE_LABEL;
 
-export const measuredLine = (confidence: number | undefined): string =>
-  `${percent(confidence ?? 0)}% of the rubric measured`;
+export const measuredLine = (confidence: number | undefined): string | null =>
+  confidence === undefined
+    ? null
+    : `${percent(confidence)}% of the rubric measured`;
 
 export const potentialLine = (potential: number): string =>
   `Reach ${Math.round(potential)} by finishing the plan`;
 
-export const provisionalLine = (confidence: number | undefined): string =>
-  `Provisional · ${percent(confidence ?? 0)}% measured`;
+export const provisionalLine = (confidence: number): string =>
+  `Provisional · ${percent(confidence)}% measured`;
 
 export const availabilityLabel = (
   availability: AuditFactorAvailability | undefined,
@@ -136,4 +140,11 @@ export const scoreRingLabel = (
 ): string =>
   overall === null
     ? "ASO score not available yet"
-    : `ASO score ${Math.round(overall)} out of 100, grade ${grade ?? "none"}, ${gradeLabel(grade)}, ${percent(confidence ?? 0)}% measured`;
+    : [
+        `ASO score ${Math.round(overall)} out of 100`,
+        `grade ${grade ?? "none"}`,
+        gradeLabel(grade),
+        ...(confidence === undefined
+          ? []
+          : [`${percent(confidence)}% measured`]),
+      ].join(", ");

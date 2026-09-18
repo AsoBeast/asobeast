@@ -45,6 +45,37 @@ describe("auditMarkdown", () => {
     expect(report).toContain("A \\| B");
   });
 
+  it("keeps every table row on one line and escapes backslashes", () => {
+    const report = auditMarkdown(
+      withCheckDetail(
+        APP_AUDIT_EXAMPLE,
+        "title-length",
+        "Line one\nLine two a \\| b",
+      ),
+      APP,
+    );
+
+    expect(report).toMatch(
+      /^\| Title \| .*Line one Line two a \\\\\\\| b \|$/m,
+    );
+  });
+
+  it("reports group scores on the same scale as the page", () => {
+    expect(auditMarkdown(APP_AUDIT_EXAMPLE, APP)).toContain(
+      "- Search visibility: 64/100",
+    );
+  });
+
+  it("leaves out what an older API does not send", () => {
+    const report = auditMarkdown(
+      { ...APP_AUDIT_EXAMPLE, confidence: undefined, groups: undefined },
+      APP,
+    );
+
+    expect(report).toContain("**72/100 · Grade B, Good · Potential 86**");
+    expect(report).not.toContain("% measured");
+  });
+
   it("says a bucket is empty instead of praising it", () => {
     const report = auditMarkdown(
       {

@@ -15,6 +15,7 @@ import {
   IMPACT_LABEL,
   MESSAGE_LABEL,
   provisional,
+  measuredLine,
   scoreRingLabel,
   SOURCE_LABEL,
   STATUS_LABEL,
@@ -120,6 +121,14 @@ describe("scoreRingLabel", () => {
     expect(scoreRingLabel(71.8, "B", 0.82)).toBe(
       "ASO score 72 out of 100, grade B, Good, 82% measured",
     );
+  });
+
+  it("leaves the measured share out when an older API does not send it", () => {
+    expect(scoreRingLabel(71.8, "B", undefined)).toBe(
+      "ASO score 72 out of 100, grade B, Good",
+    );
+    expect(measuredLine(undefined)).toBeNull();
+    expect(measuredLine(0.82)).toBe("82% of the rubric measured");
   });
 
   it("says nothing is scored yet without an overall", () => {

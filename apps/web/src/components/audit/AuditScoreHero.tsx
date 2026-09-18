@@ -69,9 +69,11 @@ export function AuditScoreHero({
             </div>
           ) : null}
 
-          <p className="text-body text-muted-foreground">
-            {measuredLine(confidence)}
-          </p>
+          {confidence === undefined ? null : (
+            <p className="text-body text-muted-foreground">
+              {measuredLine(confidence)}
+            </p>
+          )}
           {potential !== null && potential !== undefined ? (
             <p className="text-body text-muted-foreground">
               {potentialLine(potential)}

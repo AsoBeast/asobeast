@@ -23,8 +23,11 @@ const BUCKET_HEADINGS: Record<keyof AuditRecommendations, string> = {
   strategic: "Strategic (this month)",
 };
 
-export const escapePipes = (text: string): string =>
-  text.replaceAll("|", "\\|");
+export const escapeMarkdown = (text: string): string =>
+  text
+    .replaceAll("\\", "\\\\")
+    .replaceAll("|", "\\|")
+    .replace(/\s*\r?\n\s*/g, " ");
 
 const factorStatus = (score: number | null): string => {
   if (score === null) return STATUS_LABEL.unanswered;
@@ -33,14 +36,14 @@ const factorStatus = (score: number | null): string => {
 };
 
 const recommendationLines = (item: AuditRecommendation): string[] => [
-  `### ${escapePipes(item.label)} · ${liftLabel(item.lift)}`,
+  `### ${escapeMarkdown(item.label)} · ${liftLabel(item.lift)}`,
   "",
   `${item.impact ? IMPACT_LABEL[item.impact] : "Impact unknown"} · ${
     item.effort ? EFFORT_LABEL[item.effort] : "Effort unknown"
   }`,
   "",
-  escapePipes(item.detail),
-  ...(item.fix ? ["", escapePipes(item.fix)] : []),
+  escapeMarkdown(item.detail),
+  ...(item.fix ? ["", escapeMarkdown(item.fix)] : []),
   "",
 ];
 
@@ -49,23 +52,28 @@ export function auditMarkdown(
   app: { name: string | null; country: string },
 ): string {
   const lines: string[] = [
-    `# ASO audit: ${escapePipes(app.name ?? "this app")}`,
+    `# ASO audit: ${escapeMarkdown(app.name ?? "this app")}`,
     "",
     `${STORE_LABEL[audit.store]} · ${app.country.toUpperCase()} · ${audit.generatedAt.slice(0, 10)}`,
     "",
-    `**${audit.overall === null ? "—" : Math.round(audit.overall)}/100 · Grade ${
-      audit.grade ?? "—"
-    }, ${gradeLabel(audit.grade)} · ${percent(audit.confidence ?? 0)}% measured · Potential ${
-      audit.potential === null || audit.potential === undefined
-        ? "—"
-        : Math.round(audit.potential)
-    }**`,
+    `**${[
+      `${audit.overall === null ? "—" : Math.round(audit.overall)}/100`,
+      `Grade ${audit.grade ?? "—"}, ${gradeLabel(audit.grade)}`,
+      ...(audit.confidence === undefined
+        ? []
+        : [`${percent(audit.confidence)}% measured`]),
+      `Potential ${
+        audit.potential === null || audit.potential === undefined
+          ? "—"
+          : Math.round(audit.potential)
+      }`,
+    ].join(" · ")}**`,
     "",
   ];
 
   for (const group of audit.groups ?? []) {
     lines.push(
-      `- ${GROUP_LABEL[group.id]}: ${group.score === null ? "—" : group.score}/10`,
+      `- ${GROUP_LABEL[group.id]}: ${group.score === null ? "—" : Math.round(group.score * 10)}/100`,
     );
   }
   if ((audit.groups ?? []).length > 0) lines.push("");
@@ -86,9 +94,9 @@ export function auditMarkdown(
         ? `${firstIssue.label}: ${firstIssue.detail}`
         : `${factor.checks.filter((check) => check.score !== null).length} of ${factor.checks.length} checks scored`);
     lines.push(
-      `| ${escapePipes(factor.label)} | ${
+      `| ${escapeMarkdown(factor.label)} | ${
         factor.score === null ? "—" : `${factor.score}/10`
-      } | ${factorStatus(factor.score)} | ${escapePipes(notes)} |`,
+      } | ${factorStatus(factor.score)} | ${escapeMarkdown(notes)} |`,
     );
   }
   lines.push("");
@@ -114,7 +122,7 @@ export function auditMarkdown(
     );
     for (const row of audit.benchmarks.rows) {
       lines.push(
-        `| ${escapePipes(row.label)} | ${row.you ?? "—"} | ${row.median ?? "—"} | ${
+        `| ${escapeMarkdown(row.label)} | ${row.you ?? "—"} | ${row.median ?? "—"} | ${
           row.best ?? "—"
         } | ${COMPARISON_LABEL[comparison(row)]} |`,
       );
@@ -126,7 +134,7 @@ export function auditMarkdown(
     lines.push("## What this audit cannot see", "");
     for (const limitation of audit.limitations ?? []) {
       lines.push(
-        `- **${escapePipes(limitation.label)}**: ${escapePipes(limitation.detail)}`,
+        `- **${escapeMarkdown(limitation.label)}**: ${escapeMarkdown(limitation.detail)}`,
       );
     }
     lines.push("");
