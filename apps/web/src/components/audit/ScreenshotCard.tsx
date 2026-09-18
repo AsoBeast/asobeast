@@ -24,6 +24,8 @@ export function ScreenshotCard({
       <figure className="flex flex-col gap-2">
         {failed ? (
           <span
+            role="img"
+            aria-label={`${alt}, image unavailable`}
             style={{ height: SCREENSHOT_HEIGHT }}
             className="grid place-items-center rounded-xl bg-muted text-caption text-muted-foreground"
           >

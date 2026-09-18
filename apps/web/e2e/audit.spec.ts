@@ -347,6 +347,11 @@ test("shows a placeholder when a screenshot cannot load", async ({ page }) => {
 
   const strip = page.getByRole("list", { name: "Screenshots" });
   await expect(strip.getByText("Image unavailable").first()).toBeVisible();
+  await expect(
+    strip.getByRole("img", {
+      name: /^Screenshot 1: .+, image unavailable$/,
+    }),
+  ).toBeVisible();
 });
 
 test("compares the listing with its competitors in words and numbers", async ({
