@@ -262,11 +262,6 @@ export const check = (input: CheckInput): RubricCheck => {
   };
 };
 
-export const HISTORY_UNLOCK: AuditUnlock = {
-  kind: 'history',
-  label: 'Needs more daily history',
-};
-
 export const KEYWORDS_UNLOCK: AuditUnlock = {
   kind: 'keywords',
   label: 'Score your tracked keywords to find your primary keywords',
