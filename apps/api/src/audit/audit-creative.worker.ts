@@ -6,8 +6,16 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { requireJobScope } from '../jobs/job-workspace';
 import { AuditCreativePayload, QUEUES } from '../jobs/jobs.types';
 import { AuditAiRunsService } from './audit-ai-runs.service';
+import { RUN_UNFINISHED_MESSAGE } from './audit-run-state';
 
 export const AI_WORKER_CONCURRENCY = 2;
+
+class RefusedRunError extends UnrecoverableError {}
+
+const ownerMessage = (error: Error): string =>
+  error instanceof AiRequestError || error instanceof RefusedRunError
+    ? error.message
+    : RUN_UNFINISHED_MESSAGE;
 
 @Processor(QUEUES.AI, { concurrency: AI_WORKER_CONCURRENCY })
 export class AuditCreativeWorker extends WorkerHost {
@@ -22,11 +30,17 @@ export class AuditCreativeWorker extends WorkerHost {
 
   async process(job: Job<AuditCreativePayload>): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
+      const requestedAt = await this.runs.start(job.data.appId);
+      if (!requestedAt) return;
+      await job.updateData({
+        ...job.data,
+        requestedAt: requestedAt.toISOString(),
+      });
       try {
-        await this.runs.execute(job.data.appId);
+        await this.runs.execute(job.data.appId, requestedAt);
       } catch (error) {
         throw error instanceof AiRequestError && !error.retryable
-          ? new UnrecoverableError(error.message)
+          ? new RefusedRunError(error.message)
           : error;
       }
     });
@@ -37,21 +51,23 @@ export class AuditCreativeWorker extends WorkerHost {
     job: Job<AuditCreativePayload> | undefined,
     error: Error,
   ): Promise<void> {
-    if (!job) return;
+    if (!job?.data.requestedAt) return;
     const final =
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 1);
     if (!final) return;
+    const { appId } = job.data;
+    const requestedAt = new Date(job.data.requestedAt);
     this.logger.warn(
-      `creative analysis failed for app ${job.data.appId}: ${error.message}`,
+      `creative analysis failed for app ${appId}: ${error.message}`,
     );
     await this.workspace
       .runScope(requireJobScope(job), () =>
-        this.runs.fail(job.data.appId, error.message),
+        this.runs.fail(appId, requestedAt, ownerMessage(error)),
       )
       .catch((failure: unknown) =>
         this.logger.error(
-          `could not record the failed analysis for app ${job.data.appId}`,
+          `could not record the failed analysis for app ${appId}`,
           failure,
         ),
       );

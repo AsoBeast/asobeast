@@ -91,7 +91,7 @@ export class AuditAiRunsService {
     await this.prisma.auditInsight.upsert({
       where: { appId },
       create: { appId, model, ...queued },
-      update: { model, ...queued },
+      update: queued,
     });
     const payload: AuditCreativePayload = {
       ...this.workspace.scopeFor('a creative analysis run'),
@@ -101,7 +101,10 @@ export class AuditAiRunsService {
       ...JOB_OPTIONS,
       attempts: CREATIVE_RUN_ATTEMPTS,
       backoff: { type: 'exponential', delay: CREATIVE_RUN_BACKOFF_MS },
-      deduplication: { id: auditCreativeDeduplicationId(appId) },
+      deduplication: {
+        id: auditCreativeDeduplicationId(appId),
+        keepLastIfActive: true,
+      },
     });
 
     return {
@@ -113,35 +116,48 @@ export class AuditAiRunsService {
     };
   }
 
-  async execute(appId: string): Promise<void> {
+  async start(appId: string): Promise<Date | null> {
+    const stored = await this.prisma.auditInsight.findUnique({
+      where: { appId },
+      select: { runState: true, requestedAt: true },
+    });
+    if (!stored?.requestedAt || !isActive(stored.runState)) return null;
     await this.prisma.auditInsight.updateMany({
-      where: { appId, runState: { in: [...ACTIVE_STATES] } },
+      where: activeRun(appId, stored.requestedAt),
       data: { runState: 'running' },
     });
+    return stored.requestedAt;
+  }
+
+  async execute(appId: string, requestedAt: Date): Promise<void> {
     const inputs = await this.loader.creativeInputs(appId);
     const observations = await this.auditAi.observe(inputs);
     const model = this.auditAi.model ?? 'unknown';
-    const completed = {
-      model,
-      observations: observations as unknown as Prisma.InputJsonValue,
-      inputHash: creativeFingerprint(inputs, model),
-      promptVersion: CREATIVE_PROMPT_VERSION,
-      generatedAt: new Date(),
-      runState: 'completed',
-      runError: null,
-    };
-    await this.prisma.auditInsight.upsert({
-      where: { appId },
-      create: { appId, ...completed },
-      update: completed,
+    const { count } = await this.prisma.auditInsight.updateMany({
+      where: { appId, requestedAt },
+      data: {
+        model,
+        observations: observations as unknown as Prisma.InputJsonValue,
+        inputHash: creativeFingerprint(inputs, model),
+        promptVersion: CREATIVE_PROMPT_VERSION,
+        generatedAt: new Date(),
+        runState: 'completed',
+        runError: null,
+      },
     });
-    await this.audit.recordToday(appId);
+    if (count > 0) await this.audit.recordToday(appId);
   }
 
-  async fail(appId: string, message: string): Promise<void> {
+  async fail(appId: string, requestedAt: Date, message: string): Promise<void> {
     await this.prisma.auditInsight.updateMany({
-      where: { appId, runState: { in: [...ACTIVE_STATES] } },
+      where: activeRun(appId, requestedAt),
       data: { runState: 'failed', runError: message },
     });
   }
 }
+
+const activeRun = (appId: string, requestedAt: Date) => ({
+  appId,
+  requestedAt,
+  runState: { in: [...ACTIVE_STATES] },
+});

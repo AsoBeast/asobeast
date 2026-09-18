@@ -128,6 +128,13 @@ describe('Audit creative runs (e2e)', () => {
       screenshots: ['s0.png', 's1.png'],
     });
 
+  const runClaimed = (id: string): Promise<void> =>
+    asWorkspace(app, async () => {
+      const runs = app.get(AuditAiRunsService);
+      const requestedAt = await runs.start(id);
+      await runs.execute(id, requestedAt!);
+    });
+
   const replaceScreenshots = async (
     appId: string,
     screenshots: string[],
@@ -172,7 +179,7 @@ describe('Audit creative runs (e2e)', () => {
     const id = await seed();
 
     await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id);
     const again = await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
 
     expect(again.body as AuditAiRunResult).toMatchObject({
@@ -191,7 +198,7 @@ describe('Audit creative runs (e2e)', () => {
       .body as AppAuditResult;
     expect(queued.ai.run).toMatchObject({ state: 'queued' });
 
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id);
     const audit = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
 
@@ -206,7 +213,7 @@ describe('Audit creative runs (e2e)', () => {
     structured.mockResolvedValue(OBSERVATIONS);
     const id = await seed();
     await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id);
 
     await replaceScreenshots(id, ['n1.png', 'n2.png']);
 
@@ -224,19 +231,19 @@ describe('Audit creative runs (e2e)', () => {
     const id = await seed();
     await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
 
-    await asWorkspace(app, () =>
-      app
-        .get(AuditAiRunsService)
-        .execute(id)
+    await asWorkspace(app, async () => {
+      const runs = app.get(AuditAiRunsService);
+      const requestedAt = await runs.start(id);
+      await runs
+        .execute(id, requestedAt!)
         .catch(() =>
-          app
-            .get(AuditAiRunsService)
-            .fail(
-              id,
-              'The model returned observations that do not match the schema.',
-            ),
-        ),
-    );
+          runs.fail(
+            id,
+            requestedAt!,
+            'The model returned observations that do not match the schema.',
+          ),
+        );
+    });
 
     const audit = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;

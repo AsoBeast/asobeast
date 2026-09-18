@@ -169,17 +169,18 @@ describe('AuditAiRunsService.request', () => {
       requestedAt: NOW.toISOString(),
     });
     const [[queuedUpsert]] = prisma.auditInsight.upsert.mock.calls as Array<
-      [{ update: { runState: string; runError: string | null } }]
+      [{ update: Record<string, unknown> }]
     >;
-    expect(queuedUpsert.update).toMatchObject({
+    expect(queuedUpsert.update).toEqual({
       runState: 'queued',
+      requestedAt: NOW,
       runError: null,
     });
     expect(queue.add).toHaveBeenCalledWith(
       JOBS.AUDIT_CREATIVE,
       { workspaceId: WORKSPACE, appId: 'a' },
       expect.objectContaining({
-        deduplication: { id: 'audit-creative~a' },
+        deduplication: { id: 'audit-creative~a', keepLastIfActive: true },
         attempts: 2,
       }),
     );
@@ -202,40 +203,84 @@ describe('AuditAiRunsService.request', () => {
   });
 });
 
+describe('AuditAiRunsService.start', () => {
+  it('claims the active run and returns its request time', async () => {
+    const { service, prisma } = build({
+      insight: { runState: 'queued', requestedAt: EARLIER },
+    });
+
+    await expect(service.start('a')).resolves.toEqual(EARLIER);
+    expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'a',
+        requestedAt: EARLIER,
+        runState: { in: ['queued', 'running'] },
+      },
+      data: { runState: 'running' },
+    });
+  });
+
+  it.each([
+    ['no row', null],
+    ['a completed run', { runState: 'completed', requestedAt: EARLIER }],
+    ['a failed run', { runState: 'failed', requestedAt: EARLIER }],
+  ])('skips %s', async (_label, insight) => {
+    const { service, prisma } = build({ insight });
+
+    await expect(service.start('a')).resolves.toBeNull();
+    expect(prisma.auditInsight.updateMany).not.toHaveBeenCalled();
+  });
+});
+
 describe('AuditAiRunsService.execute', () => {
-  it('marks running, stores the observations and records today', async () => {
+  const observations = { icon: null, screenshots: [], consistentStyle: null };
+
+  it('stores the observations on the run it claimed and records today', async () => {
     const { service, prisma, auditAi, audit } = build();
-    const observations = {
-      icon: null,
-      screenshots: [],
-      consistentStyle: null,
-    };
     auditAi.observe.mockResolvedValue(observations);
 
-    await service.execute('a');
+    await service.execute('a', EARLIER);
 
-    expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { runState: 'running' },
-      }),
-    );
-    const [[upsert]] = prisma.auditInsight.upsert.mock.calls as Array<
-      [{ update: { runState: string; inputHash: string } }]
+    const [[update]] = prisma.auditInsight.updateMany.mock.calls as Array<
+      [
+        {
+          where: { appId: string; requestedAt: Date };
+          data: { runState: string; inputHash: string; model: string };
+        },
+      ]
     >;
-    expect(upsert.update.runState).toBe('completed');
-    expect(upsert.update.inputHash).toBe(FINGERPRINT);
+    expect(update.where).toEqual({ appId: 'a', requestedAt: EARLIER });
+    expect(update.data).toMatchObject({
+      runState: 'completed',
+      inputHash: FINGERPRINT,
+      model: MODEL,
+    });
     expect(audit.recordToday).toHaveBeenCalledWith('a');
+  });
+
+  it('discards the result when a newer request replaced the run', async () => {
+    const { service, prisma, auditAi, audit } = build();
+    auditAi.observe.mockResolvedValue(observations);
+    prisma.auditInsight.updateMany.mockResolvedValue({ count: 0 });
+
+    await service.execute('a', EARLIER);
+
+    expect(audit.recordToday).not.toHaveBeenCalled();
   });
 });
 
 describe('AuditAiRunsService.fail', () => {
-  it('only overwrites a run that is still active', async () => {
+  it('only overwrites the same run while it is still active', async () => {
     const { service, prisma } = build();
 
-    await service.fail('a', 'OpenAI is rate limiting requests.');
+    await service.fail('a', EARLIER, 'OpenAI is rate limiting requests.');
 
     expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
-      where: { appId: 'a', runState: { in: ['queued', 'running'] } },
+      where: {
+        appId: 'a',
+        requestedAt: EARLIER,
+        runState: { in: ['queued', 'running'] },
+      },
       data: {
         runState: 'failed',
         runError: 'OpenAI is rate limiting requests.',
