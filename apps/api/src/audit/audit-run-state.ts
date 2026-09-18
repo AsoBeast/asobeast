@@ -28,6 +28,11 @@ export const expired = (run: StoredRun, now: Date): boolean =>
   run.requestedAt === null ||
   now.getTime() - run.requestedAt.getTime() > CREATIVE_RUN_TIMEOUT_MS;
 
+export function effectiveRun(run: StoredRun, now: Date): AuditAiRun;
+export function effectiveRun(
+  run: StoredRun | null,
+  now: Date,
+): AuditAiRun | null;
 export function effectiveRun(
   run: StoredRun | null,
   now: Date,
