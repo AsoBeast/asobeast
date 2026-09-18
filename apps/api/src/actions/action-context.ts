@@ -32,6 +32,7 @@ export interface ActionAuditFactor {
   label: string;
   weight: number;
   score: number | null;
+  confidence: number;
   checks: ActionAuditCheck[];
 }
 
@@ -104,7 +105,16 @@ interface SlimFactor {
   id: string;
   score: number | null;
   weight: number;
+  confidence?: unknown;
+  checks?: unknown;
 }
+
+const AUDIT_CHECK_STATUSES: readonly AuditCheckStatus[] = [
+  'pass',
+  'warn',
+  'fail',
+  'unanswered',
+];
 
 interface RankingRow {
   appId: string;
@@ -121,15 +131,34 @@ const messageOf = (error: unknown): string =>
 const daysAgo = (now: Date, days: number): Date =>
   new Date(now.getTime() - days * 86_400_000);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 function isSlimFactor(value: unknown): value is SlimFactor {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
   return (
-    typeof row.id === 'string' &&
-    typeof row.weight === 'number' &&
-    (row.score === null || typeof row.score === 'number')
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.weight === 'number' &&
+    (value.score === null || typeof value.score === 'number')
   );
 }
+
+function isSlimCheck(value: unknown): value is ActionAuditCheck {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.label === 'string' &&
+    AUDIT_CHECK_STATUSES.some((status) => status === value.status) &&
+    (value.score === null || typeof value.score === 'number')
+  );
+}
+
+const slimChecks = (checks: unknown): ActionAuditCheck[] =>
+  Array.isArray(checks)
+    ? checks
+        .filter(isSlimCheck)
+        .map(({ id, label, status, score }) => ({ id, label, status, score }))
+    : [];
 
 function toAuditSnapshot(
   row: {
@@ -151,7 +180,8 @@ function toAuditSnapshot(
       label: AUDIT_FACTOR_LABELS[factor.id] ?? factor.id,
       weight: factor.weight,
       score: factor.score,
-      checks: [],
+      confidence: typeof factor.confidence === 'number' ? factor.confidence : 1,
+      checks: slimChecks(factor.checks),
     })),
   };
 }

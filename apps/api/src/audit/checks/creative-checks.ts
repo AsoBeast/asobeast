@@ -15,6 +15,7 @@ import {
   priorityKeywords,
   quoteList,
   RubricCheck,
+  similarCompetitor,
   unansweredAiCheck,
 } from '../audit-scoring';
 import {
@@ -415,10 +416,7 @@ export const iconChecks = (context: AuditContext): RubricCheck[] => {
       ),
     ];
   }
-  const similar =
-    icon.similarCompetitorPosition === null
-      ? null
-      : (context.competitors[icon.similarCompetitorPosition - 1] ?? null);
+  const similar = similarCompetitor(context);
   return [
     check({
       id: 'icon-no-text',
@@ -467,13 +465,13 @@ export const iconChecks = (context: AuditContext): RubricCheck[] => {
       source: 'ai',
       weight: 2,
       score:
-        context.creative.inputs.competitorIconUrls.length === 0
+        context.creative.inputs.competitorIcons.length === 0
           ? null
           : similar === null
             ? 10
             : 3,
       detail:
-        context.creative.inputs.competitorIconUrls.length === 0
+        context.creative.inputs.competitorIcons.length === 0
           ? 'No competitor icon was sent.'
           : similar === null
             ? 'No competitor icon looks like yours.'

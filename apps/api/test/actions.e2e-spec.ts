@@ -10,6 +10,7 @@ import {
   ActionListResult,
   ActionRunResult,
   ActionSummary,
+  AuditFixFactorEvidence,
   KeywordAddUncoveredEvidence,
 } from '@asobeast/shared';
 import { getQueueToken } from '@nestjs/bullmq';
@@ -383,6 +384,73 @@ describe('ActionsController (e2e)', () => {
       .body as ActionRunResult;
     expect(second.jobId).not.toBe(first.jobId);
     await waitForCompletion(queue, second.jobId);
+  });
+
+  it('opens an audit action carrying the failing checks the snapshot stored', async () => {
+    const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
+      strict: false,
+    });
+    const today = new Date(new Date().toISOString().slice(0, 10));
+    await prisma.auditScore.create({
+      data: {
+        appId,
+        date: today,
+        overall: 52,
+        coveredWeight: 90,
+        totalWeight: 110,
+        rubricVersion: 'v2',
+        confidence: 0.82,
+        factors: [
+          {
+            id: 'title',
+            score: 3,
+            weight: 20,
+            confidence: 0.9,
+            checks: [
+              {
+                id: 'title-keyword',
+                label: 'Put “habit tracker” in your title',
+                status: 'fail',
+                score: 0,
+              },
+              {
+                id: 'title-length',
+                label: 'Title length',
+                status: 'pass',
+                score: 10,
+              },
+            ],
+          },
+          {
+            id: 'screenshots',
+            score: 2,
+            weight: 15,
+            confidence: 0.3,
+            checks: [],
+          },
+        ],
+      },
+    });
+
+    const run = (await api.post('/actions/run').expect(202))
+      .body as ActionRunResult;
+    await waitForCompletion(queue, run.jobId);
+
+    const body = (
+      await api.get('/actions').query({ rule: 'audit.fix_factor' }).expect(200)
+    ).body as ActionListResult;
+
+    expect(body.items).toHaveLength(1);
+    const evidence = body.items[0].evidence as AuditFixFactorEvidence;
+    expect(evidence.factorId).toBe('title');
+    expect(evidence.failingChecks).toEqual([
+      {
+        id: 'title-keyword',
+        label: 'Put “habit tracker” in your title',
+        status: 'fail',
+        score: 0,
+      },
+    ]);
   });
 
   it('reports the AI seam as unconfigured and refuses to explain', async () => {

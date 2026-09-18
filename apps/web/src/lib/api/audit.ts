@@ -1,4 +1,8 @@
-import type { AppAuditResult, AuditHistory } from "@asobeast/shared";
+import type {
+  AppAuditResult,
+  AuditAiRunResult,
+  AuditHistory,
+} from "@asobeast/shared";
 import { apiFetch, withQuery } from "./client";
 import type { RangeParams } from "./client";
 
@@ -20,6 +24,12 @@ export function getAuditHistory(
 
 export function runAiAudit(appId: string): Promise<AppAuditResult> {
   return apiFetch<AppAuditResult>(`/apps/${appId}/audit/ai`, {
+    method: "POST",
+  });
+}
+
+export function requestAiAuditRun(appId: string): Promise<AuditAiRunResult> {
+  return apiFetch<AuditAiRunResult>(`/apps/${appId}/audit/ai/runs`, {
     method: "POST",
   });
 }

@@ -3,7 +3,8 @@ import {
   CreativeInputs,
   creativeFingerprint,
   parseObservations,
-  readStoredObservations,
+  readStoredCreative,
+  toStoredCreative,
 } from './creative-observations';
 
 describe('CREATIVE_OBSERVATIONS_JSON_SCHEMA', () => {
@@ -69,7 +70,7 @@ describe('parseObservations', () => {
         ],
         consistentStyle: true,
       },
-      { screenshots: 6, competitorIcons: 3 },
+      { icon: true, screenshots: 6, competitorIcons: 3 },
     );
 
     expect(parsed.icon?.similarCompetitorPosition).toBeNull();
@@ -104,21 +105,92 @@ describe('parseObservations', () => {
         })),
         consistentStyle: null,
       },
-      { screenshots: 6, competitorIcons: 0 },
+      { icon: true, screenshots: 6, competitorIcons: 0 },
     );
 
     expect(parsed.screenshots.map((item) => item.position)).toEqual([1, 2, 3]);
   });
 
+  it('drops what the model described but was never sent', () => {
+    const parsed = parseObservations(
+      {
+        icon: {
+          hasText: true,
+          elementCount: 'one',
+          contrast: 'low',
+          similarCompetitorPosition: null,
+        },
+        screenshots: [
+          {
+            position: 1,
+            captionText: 'Only one',
+            captionReadable: true,
+            captionLanguage: 'en',
+            message: 'benefit',
+          },
+        ],
+        consistentStyle: false,
+      },
+      { icon: false, screenshots: 1, competitorIcons: 0 },
+    );
+
+    expect(parsed.icon).toBeNull();
+    expect(parsed.consistentStyle).toBeNull();
+    expect(parsed.screenshots).toHaveLength(1);
+  });
+
   it('rejects a payload that does not match, as a retryable failure', () => {
     expect(() =>
-      parseObservations({ checks: [] }, { screenshots: 6, competitorIcons: 0 }),
+      parseObservations(
+        { checks: [] },
+        { icon: true, screenshots: 6, competitorIcons: 0 },
+      ),
     ).toThrow(expect.objectContaining({ retryable: true }));
   });
 
   it('reads legacy v1 checks as no observations', () => {
-    expect(readStoredObservations({ title: { verdict: 'pass' } })).toBeNull();
-    expect(readStoredObservations(null)).toBeNull();
+    expect(readStoredCreative({ title: { verdict: 'pass' } })).toBeNull();
+    expect(readStoredCreative(null)).toBeNull();
+  });
+});
+
+describe('stored creative', () => {
+  const inputs: CreativeInputs = {
+    store: 'APP_STORE',
+    country: 'us',
+    title: 'Where Am I?',
+    iconUrl: 'icon.png',
+    screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i + 1}.png`),
+    competitorIcons: Array.from({ length: 7 }, (_, i) => ({
+      appId: `rival-${i + 1}`,
+      iconUrl: `c${i + 1}.png`,
+    })),
+  };
+  const observed = {
+    icon: null,
+    screenshots: [],
+    consistentStyle: null,
+  };
+
+  it('reads back the observations with the media that was sent', () => {
+    expect(readStoredCreative(toStoredCreative(observed, inputs))).toEqual({
+      observations: observed,
+      media: {
+        iconUrl: 'icon.png',
+        screenshotUrls: inputs.screenshotUrls.slice(0, 6),
+        competitorAppIds: [
+          'rival-1',
+          'rival-2',
+          'rival-3',
+          'rival-4',
+          'rival-5',
+        ],
+      },
+    });
+  });
+
+  it('reads observations stored without their media as no analysis', () => {
+    expect(readStoredCreative(observed)).toBeNull();
   });
 });
 
@@ -129,16 +201,16 @@ describe('creativeFingerprint', () => {
     title: 'Where Am I?',
     iconUrl: 'https://is1-ssl.mzstatic.com/icon.png',
     screenshotUrls: ['s1', 's2', 's3'],
-    competitorIconUrls: ['c1', 'c2'],
+    competitorIcons: [
+      { appId: 'rival-1', iconUrl: 'c1' },
+      { appId: 'rival-2', iconUrl: 'c2' },
+    ],
   };
 
-  it('ignores competitor icon order and the title', () => {
-    expect(
-      creativeFingerprint(
-        { ...inputs, competitorIconUrls: ['c2', 'c1'], title: 'Other' },
-        'gpt-4o',
-      ),
-    ).toBe(creativeFingerprint(inputs, 'gpt-4o'));
+  it('ignores the title', () => {
+    expect(creativeFingerprint({ ...inputs, title: 'Other' }, 'gpt-4o')).toBe(
+      creativeFingerprint(inputs, 'gpt-4o'),
+    );
   });
 
   it.each([
@@ -155,6 +227,11 @@ describe('creativeFingerprint', () => {
     [
       'the icon',
       { ...inputs, iconUrl: 'https://is1-ssl.mzstatic.com/icon2.png' },
+      'gpt-4o',
+    ],
+    [
+      'competitor icon order',
+      { ...inputs, competitorIcons: [...inputs.competitorIcons].reverse() },
       'gpt-4o',
     ],
     ['the model', inputs, 'gpt-5.6-luna'],

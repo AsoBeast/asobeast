@@ -127,6 +127,12 @@ describe('store policy terms', () => {
     );
   });
 
+  it.each(['™', '®', '©'])('does not report %s as an emoji', (symbol) => {
+    expect(
+      rules(lintTitle(`Habit Tracker${symbol}`, 30, 'GOOGLE_PLAY')),
+    ).not.toContain('emoji');
+  });
+
   it('keeps App Store titles on the existing rules', () => {
     expect(
       rules(lintTitle('Best Habit Tracker', 30, 'APP_STORE')),

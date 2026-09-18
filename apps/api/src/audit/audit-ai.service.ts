@@ -6,8 +6,8 @@ import {
   CreativeInputs,
   CreativeObservations,
   MAX_ANALYZED_SCREENSHOTS,
-  MAX_COMPETITOR_ICONS,
   parseObservations,
+  sentCompetitorIcons,
 } from './creative/creative-observations';
 import {
   buildCreativeContent,
@@ -42,14 +42,12 @@ export class AuditAiService {
       maxOutputTokens: CREATIVE_MAX_OUTPUT_TOKENS,
     });
     return parseObservations(raw, {
+      icon: inputs.iconUrl !== null,
       screenshots: Math.min(
         inputs.screenshotUrls.length,
         MAX_ANALYZED_SCREENSHOTS,
       ),
-      competitorIcons: Math.min(
-        inputs.competitorIconUrls.length,
-        MAX_COMPETITOR_ICONS,
-      ),
+      competitorIcons: sentCompetitorIcons(inputs).length,
     });
   }
 }

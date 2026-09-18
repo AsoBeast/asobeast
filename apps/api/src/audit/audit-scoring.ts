@@ -16,11 +16,13 @@ import { clamp } from '../scoring/formulas';
 import { round1 } from './audit-engine';
 import { RawAppFacts } from '../store-providers/raw-facts';
 import {
+  AnalyzedMedia,
   CreativeInputs,
   CreativeObservations,
 } from './creative/creative-observations';
 
 export interface AuditKeyword {
+  id: string;
   text: string;
   source: KeywordSource;
   bucket: KeywordBucket | null;
@@ -61,8 +63,8 @@ export interface AuditVisibility {
 
 export interface AuditCreativeState {
   observations: CreativeObservations | null;
+  media: AnalyzedMedia | null;
   inputs: CreativeInputs;
-  competitorIds: string[];
   analyzedAt: Date | null;
   model: string | null;
   stale: boolean;
@@ -261,11 +263,6 @@ export const check = (input: CheckInput): RubricCheck => {
   };
 };
 
-export const HISTORY_UNLOCK: AuditUnlock = {
-  kind: 'history',
-  label: 'Needs more daily history',
-};
-
 export const KEYWORDS_UNLOCK: AuditUnlock = {
   kind: 'keywords',
   label: 'Score your tracked keywords to find your primary keywords',
@@ -338,14 +335,12 @@ export const keywordMatchScore = (
   title: string,
   keywords: string[],
 ): number => {
-  const haystack = title.toLowerCase();
   let best = 0;
   for (const keyword of keywords) {
-    const phrase = keyword.toLowerCase().trim();
-    if (!phrase) continue;
-    if (haystack.includes(phrase)) return 10;
-    const words = phrase.split(/\s+/);
-    const present = words.filter((word) => haystack.includes(word)).length;
+    const words = normalizeText(keyword).split(' ').filter(Boolean);
+    if (words.length === 0) continue;
+    if (coversPhrase(title, keyword)) return 10;
+    const present = words.filter((word) => coversPhrase(title, word)).length;
     if (present === words.length) best = Math.max(best, 7);
     else if (present > 0) best = Math.max(best, 4);
   }
@@ -405,11 +400,35 @@ export const priorityKeywords = (keywords: AuditKeyword[]): AuditKeyword[] =>
       ),
   );
 
+export const similarCompetitor = (
+  context: AuditContext,
+): AuditCompetitor | null => {
+  const position =
+    context.creative.observations?.icon?.similarCompetitorPosition ?? null;
+  if (position === null) return null;
+  const id = context.creative.media?.competitorAppIds[position - 1];
+  return context.competitors.find((item) => item.id === id) ?? null;
+};
+
 export const coversPhrase = (field: string, phrase: string): boolean =>
   ` ${normalizeText(field)} `.includes(` ${normalizeText(phrase)} `);
 
-export const countPhrase = (field: string, phrase: string): number =>
-  ` ${normalizeText(field)} `.split(` ${normalizeText(phrase)} `).length - 1;
+export const countPhrase = (field: string, phrase: string): number => {
+  const tokens = normalizeText(field).split(' ');
+  const target = normalizeText(phrase).split(' ').filter(Boolean);
+  if (target.length === 0) return 0;
+  let count = 0;
+  let start = 0;
+  while (start + target.length <= tokens.length) {
+    if (target.every((word, offset) => tokens[start + offset] === word)) {
+      count++;
+      start += target.length;
+    } else {
+      start++;
+    }
+  }
+  return count;
+};
 
 export const quoteList = (texts: string[], limit = 3): string =>
   texts

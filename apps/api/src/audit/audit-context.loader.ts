@@ -18,10 +18,11 @@ import {
   DAY_MS,
 } from './audit-scoring';
 import {
+  CompetitorIcon,
   CreativeInputs,
   creativeFingerprint,
   MAX_COMPETITOR_ICONS,
-  readStoredObservations,
+  readStoredCreative,
 } from './creative/creative-observations';
 
 export interface AuditApp {
@@ -35,6 +36,15 @@ export interface AuditApp {
 export const REVIEW_WINDOW_DAYS = 90;
 export const VISIBILITY_WINDOW_DAYS = 8;
 export const VISIBILITY_TREND_DAYS = 7;
+
+const iconCompetitors = (
+  competitors: { id: string; iconUrl: string | null }[],
+): CompetitorIcon[] =>
+  competitors
+    .flatMap(({ id, iconUrl }) =>
+      iconUrl === null ? [] : [{ appId: id, iconUrl }],
+    )
+    .slice(0, MAX_COMPETITOR_ICONS);
 
 @Injectable()
 export class AuditContextLoader {
@@ -104,6 +114,7 @@ export class AuditContextLoader {
         where: { primaryAppId: appId },
         orderBy: { createdAt: 'asc' },
         select: {
+          id: true,
           store: true,
           snapshots: {
             orderBy: { capturedAt: 'desc' },
@@ -120,20 +131,20 @@ export class AuditContextLoader {
       title: latest?.title ?? '',
       iconUrl: facts.iconUrl,
       screenshotUrls: facts.screenshotUrls,
-      competitorIconUrls: competitors
-        .map(
-          (competitor) =>
-            extractRawFacts(competitor.store, competitor.snapshots[0]?.raw)
-              .iconUrl,
-        )
-        .filter((url): url is string => url !== null)
-        .slice(0, MAX_COMPETITOR_ICONS),
+      competitorIcons: iconCompetitors(
+        competitors.map((competitor) => ({
+          id: competitor.id,
+          iconUrl: extractRawFacts(
+            competitor.store,
+            competitor.snapshots[0]?.raw,
+          ).iconUrl,
+        })),
+      ),
     };
   }
 
   private creativeState(
     inputs: CreativeInputs,
-    competitorIds: string[],
     insight: {
       observations: unknown;
       inputHash: string | null;
@@ -141,12 +152,13 @@ export class AuditContextLoader {
       model: string;
     } | null,
   ): AuditCreativeState {
-    const observations = readStoredObservations(insight?.observations ?? null);
+    const analysis = readStoredCreative(insight?.observations ?? null);
+    const observations = analysis?.observations ?? null;
     const model = this.auditAi.model ?? insight?.model ?? null;
     return {
       observations,
+      media: analysis?.media ?? null,
       inputs,
-      competitorIds,
       analyzedAt: insight?.generatedAt ?? null,
       model: insight?.model ?? null,
       stale:
@@ -178,6 +190,7 @@ export class AuditContextLoader {
       this.keywords.compare(appId, false),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
+        orderBy: { createdAt: 'asc' },
         select: {
           id: true,
           name: true,
@@ -225,12 +238,8 @@ export class AuditContextLoader {
         title: latest?.title ?? '',
         iconUrl: facts.iconUrl,
         screenshotUrls: facts.screenshotUrls,
-        competitorIconUrls: mapped
-          .map((competitor) => competitor.iconUrl)
-          .filter((url): url is string => url !== null)
-          .slice(0, MAX_COMPETITOR_ICONS),
+        competitorIcons: iconCompetitors(mapped),
       },
-      mapped.map((competitor) => competitor.id),
       insight,
     );
 
@@ -277,6 +286,7 @@ export class AuditContextLoader {
 }
 
 const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
+  id: item.keywordId,
   text: item.text,
   source: item.source,
   bucket: item.bucket,

@@ -11,7 +11,13 @@ import {
   AuditUnlockKind,
   AuditUnlockSummary,
 } from '@asobeast/shared';
-import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
+import {
+  FactorScore,
+  gradeFor,
+  round2,
+  scoreAudit,
+  scoreFactor,
+} from './audit-engine';
 import { buildBenchmarks } from './audit-benchmarks';
 import { limitationsFor } from './audit-limitations';
 import { buildRecommendations, RubricFactor } from './audit-recommendations';
@@ -21,6 +27,7 @@ import {
   coversPhrase,
   priorityKeywords,
   RubricCheck,
+  similarCompetitor,
 } from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
@@ -235,21 +242,21 @@ const captionKeywordHits = (
         .map((keyword) => keyword.text);
 
 const toCreative = (context: AuditContext): AuditCreative | null => {
-  const { observations, inputs, analyzedAt, model, stale } = context.creative;
-  if (observations === null || analyzedAt === null || model === null) {
+  const { observations, media, analyzedAt, model, stale } = context.creative;
+  if (
+    observations === null ||
+    media === null ||
+    analyzedAt === null ||
+    model === null
+  ) {
     return null;
   }
   const priority = priorityKeywords(context.keywords);
-  const similar =
-    observations.icon?.similarCompetitorPosition === null ||
-    observations.icon === null
-      ? null
-      : (context.competitors[observations.icon.similarCompetitorPosition - 1] ??
-        null);
+  const similar = similarCompetitor(context);
   const screenshots: AuditScreenshotObservation[] =
     observations.screenshots.map((item) => ({
       position: item.position,
-      url: inputs.screenshotUrls[item.position - 1] ?? '',
+      url: media.screenshotUrls[item.position - 1] ?? '',
       captionText: item.captionText,
       captionReadable: item.captionReadable,
       captionLanguage: item.captionLanguage,
@@ -261,10 +268,10 @@ const toCreative = (context: AuditContext): AuditCreative | null => {
     model,
     stale,
     icon:
-      observations.icon === null || inputs.iconUrl === null
+      observations.icon === null || media.iconUrl === null
         ? null
         : {
-            url: inputs.iconUrl,
+            url: media.iconUrl,
             hasText: observations.icon.hasText,
             elementCount: observations.icon.elementCount,
             contrast: observations.icon.contrast,
@@ -333,7 +340,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     return {
       id,
       label: AUDIT_GROUP_LABELS[id],
-      score: scored.overall === null ? null : scored.overall / 10,
+      score: scored.overall === null ? null : round2(scored.overall / 10),
       confidence: scored.confidence,
     };
   });

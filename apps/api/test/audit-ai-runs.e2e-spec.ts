@@ -128,6 +128,34 @@ describe('Audit creative runs (e2e)', () => {
       screenshots: ['s0.png', 's1.png'],
     });
 
+  const requestRun = async (id: string): Promise<Date> => {
+    const response = await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
+    const { requestedAt } = response.body as AuditAiRunResult;
+    if (requestedAt === null) {
+      throw new Error(`No run was requested for app ${id}`);
+    }
+    return new Date(requestedAt);
+  };
+
+  const claim = async (
+    runs: AuditAiRunsService,
+    id: string,
+    requestedAt: Date,
+  ): Promise<void> => {
+    if (!(await runs.start(id, requestedAt))) {
+      throw new Error(
+        `The run requested at ${requestedAt.toISOString()} was not claimed`,
+      );
+    }
+  };
+
+  const runClaimed = (id: string, requestedAt: Date): Promise<void> =>
+    asWorkspace(app, async () => {
+      const runs = app.get(AuditAiRunsService);
+      await claim(runs, id, requestedAt);
+      await runs.execute(id, requestedAt);
+    });
+
   const replaceScreenshots = async (
     appId: string,
     screenshots: string[],
@@ -171,8 +199,7 @@ describe('Audit creative runs (e2e)', () => {
     structured.mockResolvedValue(OBSERVATIONS);
     const id = await seed();
 
-    await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id, await requestRun(id));
     const again = await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
 
     expect(again.body as AuditAiRunResult).toMatchObject({
@@ -186,12 +213,12 @@ describe('Audit creative runs (e2e)', () => {
     structured.mockResolvedValue(OBSERVATIONS);
     const id = await seed();
 
-    await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
+    const requestedAt = await requestRun(id);
     const queued = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
     expect(queued.ai.run).toMatchObject({ state: 'queued' });
 
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id, requestedAt);
     const audit = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
 
@@ -205,8 +232,7 @@ describe('Audit creative runs (e2e)', () => {
   it('marks the analysis stale when the screenshots change, and queues again', async () => {
     structured.mockResolvedValue(OBSERVATIONS);
     const id = await seed();
-    await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
-    await asWorkspace(app, () => app.get(AuditAiRunsService).execute(id));
+    await runClaimed(id, await requestRun(id));
 
     await replaceScreenshots(id, ['n1.png', 'n2.png']);
 
@@ -222,21 +248,21 @@ describe('Audit creative runs (e2e)', () => {
   it('records a final failure as a failed run the audit reports', async () => {
     structured.mockResolvedValue({ nonsense: true });
     const id = await seed();
-    await api.post(`/apps/${id}/audit/ai/runs`).expect(202);
+    const requestedAt = await requestRun(id);
 
-    await asWorkspace(app, () =>
-      app
-        .get(AuditAiRunsService)
-        .execute(id)
+    await asWorkspace(app, async () => {
+      const runs = app.get(AuditAiRunsService);
+      await claim(runs, id, requestedAt);
+      await runs
+        .execute(id, requestedAt)
         .catch(() =>
-          app
-            .get(AuditAiRunsService)
-            .fail(
-              id,
-              'The model returned observations that do not match the schema.',
-            ),
-        ),
-    );
+          runs.fail(
+            id,
+            requestedAt,
+            'The model returned observations that do not match the schema.',
+          ),
+        );
+    });
 
     const audit = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
@@ -244,6 +270,33 @@ describe('Audit creative runs (e2e)', () => {
       state: 'failed',
       error: 'The model returned observations that do not match the schema.',
     });
+  });
+
+  it('lets a job claim only the run it was queued for', async () => {
+    structured.mockResolvedValue(OBSERVATIONS);
+    const id = await seed();
+    const first = await requestRun(id);
+    await prisma.auditInsight.update({
+      where: { appId: id },
+      data: { requestedAt: new Date(first.getTime() - 11 * 60_000) },
+    });
+
+    const second = await requestRun(id);
+    const jobs = await jobsOn(QUEUES.AI);
+    const claimed = await asWorkspace(app, () =>
+      app.get(AuditAiRunsService).start(id, first),
+    );
+
+    expect(jobs.map((job) => job.data as { requestedAt: string })).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ requestedAt: first.toISOString() }),
+        expect.objectContaining({ requestedAt: second.toISOString() }),
+      ]),
+    );
+    expect(claimed).toBe(false);
+    expect(
+      await prisma.auditInsight.findUnique({ where: { appId: id } }),
+    ).toMatchObject({ runState: 'queued', requestedAt: second });
   });
 
   it('refuses an unknown app', async () => {

@@ -5,8 +5,10 @@ import type {
   ActionContext,
   ActionContextApp,
 } from '../action-context';
+import { actionFingerprint } from '../action-fingerprint';
 import {
   AUDIT_MAX_SNAPSHOT_AGE_DAYS,
+  AUDIT_MIN_FACTOR_CONFIDENCE,
   AUDIT_MIN_WEIGHT,
   AUDIT_WEAK_SCORE,
   auditFixFactorDetector,
@@ -36,6 +38,7 @@ const factor = (
   label: 'Screenshots',
   weight: 15,
   score: 3,
+  confidence: 1,
   checks: [
     {
       id: 'screenshots-count',
@@ -274,5 +277,84 @@ describe('audit.fix_factor', () => {
     );
 
     expect(detections[0].terms.confidence).toBe(0.5);
+  });
+
+  it('lists the failing and warning checks the snapshot stored', () => {
+    const [detection] = detectAuditFixFactor(
+      context([
+        app({
+          audit: snapshot({
+            factors: [
+              factor({
+                checks: [
+                  {
+                    id: 'screenshots-count',
+                    label: 'Screenshot count',
+                    status: 'fail',
+                    score: 2,
+                  },
+                  {
+                    id: 'screenshots-localized',
+                    label: 'Localized screenshots',
+                    status: 'pass',
+                    score: 10,
+                  },
+                  {
+                    id: 'screenshots-captions',
+                    label: 'Screenshot captions',
+                    status: 'warn',
+                    score: 5,
+                  },
+                ],
+              }),
+            ],
+          }),
+        }),
+      ]),
+      NOW,
+    );
+
+    expect(detection.evidence).toMatchObject({
+      failingChecks: [
+        { id: 'screenshots-count', status: 'fail' },
+        { id: 'screenshots-captions', status: 'warn' },
+      ],
+    });
+  });
+
+  it.each([
+    [AUDIT_MIN_FACTOR_CONFIDENCE - 0.01, 0],
+    [AUDIT_MIN_FACTOR_CONFIDENCE, 1],
+    [1, 1],
+  ])(
+    'opens an action for a weak factor at confidence %s: %i actions',
+    (confidence, count) => {
+      expect(
+        detectAuditFixFactor(
+          context([
+            app({ audit: snapshot({ factors: [factor({ confidence })] }) }),
+          ]),
+          NOW,
+        ),
+      ).toHaveLength(count);
+    },
+  );
+
+  it('keeps the fingerprint of an existing action', () => {
+    const [before] = detectAuditFixFactor(
+      context([
+        app({ audit: snapshot({ factors: [factor({ checks: [] })] }) }),
+      ]),
+      NOW,
+    );
+    const [after] = detectAuditFixFactor(
+      context([
+        app({ audit: snapshot({ factors: [factor({ confidence: 0.9 })] }) }),
+      ]),
+      NOW,
+    );
+
+    expect(actionFingerprint(after)).toBe(actionFingerprint(before));
+    expect(after.terms).toEqual(before.terms);
   });
 });

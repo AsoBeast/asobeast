@@ -11,7 +11,7 @@ const inputs = (overrides: Partial<CreativeInputs> = {}): CreativeInputs => ({
   title: 'Where Am I?',
   iconUrl: 'https://cdn/icon.png',
   screenshotUrls: [],
-  competitorIconUrls: [],
+  competitorIcons: [],
   ...overrides,
 });
 
@@ -37,7 +37,10 @@ describe('buildCreativeContent', () => {
   it('caps the images and orders icon, competitor icons, screenshots', () => {
     const parts = buildCreativeContent(
       inputs({
-        competitorIconUrls: Array.from({ length: 7 }, (_, i) => `c${i}`),
+        competitorIcons: Array.from({ length: 7 }, (_, i) => ({
+          appId: `app-${i}`,
+          iconUrl: `c${i}`,
+        })),
         screenshotUrls: Array.from({ length: 9 }, (_, i) => `s${i}`),
       }),
     );

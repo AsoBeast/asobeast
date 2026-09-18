@@ -2,6 +2,8 @@ import { Store } from '@prisma/client';
 import {
   analyzedCreative,
   appStoreContext,
+  poorAppStoreContext,
+  poorPlayContext,
   competitor,
   daysAgo,
   FIXTURE_NOW,
@@ -14,6 +16,7 @@ import {
 import { AuditContext, AuditKeyword, AuditReview } from './audit-scoring';
 import { titleChecks } from './checks/metadata-checks';
 import { ratingChecks } from './checks/reputation-checks';
+import { analyzedMedia } from './creative/creative-observations';
 import {
   AUDIT_GROUP_LABELS,
   AUDIT_RUBRIC_VERSION,
@@ -90,7 +93,7 @@ const perfectContext = (): AuditContext =>
       competitors: [{ id: 'c1', name: 'Pomodoro Labs' }],
       rows: [
         {
-          keywordId: 'k1',
+          keywordId: 'habit tracker',
           text: 'habit tracker',
           traffic: 8,
           difficulty: 3,
@@ -116,7 +119,10 @@ const perfectContext = (): AuditContext =>
         title: 'Habit Tracker: Daily Streaks',
         iconUrl: 'https://cdn/icon.png',
         screenshotUrls: Array.from({ length: 10 }, (_, i) => `s${i}.png`),
-        competitorIconUrls: ['c1.png', 'c2.png'],
+        competitorIcons: [
+          { appId: 'app-c1', iconUrl: 'c1.png' },
+          { appId: 'app-c2', iconUrl: 'c2.png' },
+        ],
       },
     }),
     aiStatus: {
@@ -195,7 +201,7 @@ const completeContext = (store: Store): AuditContext => {
         title: 'Habit Tracker',
         iconUrl: 'https://cdn/icon.png',
         screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
-        competitorIconUrls: ['c1.png'],
+        competitorIcons: [{ appId: 'app-c1', iconUrl: 'c1.png' }],
       },
     }),
     aiStatus: { configured: true, model: 'gpt-5.6-luna', generatedAt: null },
@@ -525,5 +531,99 @@ describe('store applicability', () => {
     [Store.GOOGLE_PLAY, GOOGLE_PLAY_CHECK_IDS],
   ])('lists exactly the %s checks with complete data', (store, expected) => {
     expect(ids(completeContext(store)).sort()).toEqual(expected);
+  });
+});
+
+describe('computeAudit rounding and creative', () => {
+  it('reports group scores without float noise', () => {
+    for (const context of [poorAppStoreContext(), poorPlayContext()]) {
+      for (const group of computeAudit(context).groups ?? []) {
+        if (group.score !== null) {
+          expect(Math.round(group.score * 100) / 100).toBe(group.score);
+        }
+      }
+    }
+  });
+
+  it('shows the competitor whose icon was sent at the reported position', () => {
+    const context = appStoreContext({
+      competitors: [
+        competitor({ id: 'no-icon', name: 'No Icon' }),
+        competitor({ id: 'lookalike', name: 'Lookalike', iconUrl: 'l.png' }),
+      ],
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({
+          icon: {
+            hasText: false,
+            elementCount: 'one',
+            contrast: 'high',
+            similarCompetitorPosition: 1,
+          },
+        }),
+        inputs: {
+          store: Store.APP_STORE,
+          country: 'us',
+          title: 'Where Am I?',
+          iconUrl: 'https://cdn/icon.png',
+          screenshotUrls: [],
+          competitorIcons: [{ appId: 'lookalike', iconUrl: 'l.png' }],
+        },
+      }),
+    });
+
+    expect(computeAudit(context).creative?.icon?.similarCompetitor).toEqual({
+      appId: 'lookalike',
+      name: 'Lookalike',
+      iconUrl: 'l.png',
+    });
+  });
+});
+
+describe('a stale creative analysis', () => {
+  it('shows its observations with the media that was analyzed', () => {
+    const analyzed = {
+      store: Store.APP_STORE,
+      country: 'us',
+      title: 'Where Am I?',
+      iconUrl: 'old-icon.png',
+      screenshotUrls: ['old-1.png', 'old-2.png'],
+      competitorIcons: [{ appId: 'lookalike', iconUrl: 'l.png' }],
+    };
+    const context = appStoreContext({
+      competitors: [
+        competitor({ id: 'lookalike', name: 'Lookalike', iconUrl: 'l.png' }),
+      ],
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({
+          icon: {
+            hasText: false,
+            elementCount: 'one',
+            contrast: 'high',
+            similarCompetitorPosition: 1,
+          },
+          screenshots: [1, 2].map((position) =>
+            screenshotObservation(position),
+          ),
+        }),
+        media: analyzedMedia(analyzed),
+        inputs: {
+          ...analyzed,
+          iconUrl: 'new-icon.png',
+          screenshotUrls: ['new-1.png', 'new-2.png', 'new-3.png'],
+          competitorIcons: [],
+        },
+        stale: true,
+      }),
+    });
+
+    const creative = computeAudit(context).creative;
+
+    expect(creative?.stale).toBe(true);
+    expect(creative?.icon?.url).toBe('old-icon.png');
+    expect(creative?.icon?.similarCompetitor?.appId).toBe('lookalike');
+    expect(creative?.screenshots.map((item) => item.url)).toEqual([
+      'old-1.png',
+      'old-2.png',
+    ]);
   });
 });

@@ -183,7 +183,12 @@ describe('AuditContextLoader creative staleness', () => {
   const ANALYZED_WITH = 'gpt-5.6-luna';
 
   const analyzedInsight = (inputHash: string) => ({
-    observations: { icon: null, screenshots: [], consistentStyle: null },
+    observations: {
+      icon: null,
+      screenshots: [],
+      consistentStyle: null,
+      media: { iconUrl: null, screenshotUrls: [], competitorAppIds: [] },
+    },
     inputHash,
     generatedAt: D0,
     model: ANALYZED_WITH,

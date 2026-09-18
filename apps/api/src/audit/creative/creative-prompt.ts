@@ -3,7 +3,7 @@ import { AiContentPart } from '../../ai/openai.client';
 import {
   CreativeInputs,
   MAX_ANALYZED_SCREENSHOTS,
-  MAX_COMPETITOR_ICONS,
+  sentCompetitorIcons,
 } from './creative-observations';
 
 export const CREATIVE_SYSTEM_PROMPT = [
@@ -46,14 +46,11 @@ export function buildCreativeContent(inputs: CreativeInputs): AiContentPart[] {
     parts.push({ type: 'image', url: inputs.iconUrl, detail: 'low' });
   }
 
-  const competitorIcons = inputs.competitorIconUrls.slice(
-    0,
-    MAX_COMPETITOR_ICONS,
-  );
+  const competitorIcons = sentCompetitorIcons(inputs);
   if (competitorIcons.length > 0) {
     parts.push({ type: 'text', text: 'Competitor icons, in order:' });
-    for (const url of competitorIcons) {
-      parts.push({ type: 'image', url, detail: 'low' });
+    for (const { iconUrl } of competitorIcons) {
+      parts.push({ type: 'image', url: iconUrl, detail: 'low' });
     }
   }
 

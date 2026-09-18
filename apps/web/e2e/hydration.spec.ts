@@ -147,11 +147,11 @@ test("a seconds-old audit timestamp renders the same on both sides", async ({
   page,
   context,
 }) => {
-  await seedCookies(context, { e2e_ai_audit: "1" });
+  await seedCookies(context, { e2e_ai_run: "running" });
   const errors = collectPageErrors(page);
 
   await page.goto("/apps/app-1/audit");
-  await expect(page.getByText(/^Last run /)).toBeVisible();
+  await expect(page.getByText(/^Analyzed /)).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the audit ai card threw: ${errors.join(", ")}`).toEqual([]);
@@ -178,3 +178,25 @@ test("the ratings histogram is in the html the server sent", async ({
     [],
   );
 });
+
+for (const [label, cookies] of [
+  ["queued", { e2e_ai_run: "queued" }],
+  ["stale", { e2e_ai_stale: "1" }],
+  ["unconfigured", { e2e_ai_unconfigured: "1" }],
+] as const) {
+  test(`the audit page hydrates with a ${label} analysis`, async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, cookies);
+    const errors = collectPageErrors(page);
+
+    await page.goto("/apps/app-1/audit");
+    await expect(
+      page.getByRole("region", { name: "AI creative analysis" }),
+    ).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    expect(errors, `the audit page threw: ${errors.join(", ")}`).toEqual([]);
+  });
+}

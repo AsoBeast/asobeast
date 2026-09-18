@@ -315,10 +315,124 @@ describe('ActionContextLoader', () => {
         label: 'Screenshots',
         weight: 15,
         score: 3,
+        confidence: 1,
         checks: [],
       },
-      { id: 'title', label: 'Title', weight: 20, score: null, checks: [] },
+      {
+        id: 'title',
+        label: 'Title',
+        weight: 20,
+        score: null,
+        confidence: 1,
+        checks: [],
+      },
     ]);
+  });
+
+  it('reads confidence and keeps only well formed stored checks', async () => {
+    const context = await loaderFor(
+      buildPrisma({
+        auditScores: [
+          {
+            ...AUDIT_ROW,
+            factors: [
+              {
+                id: 'screenshots',
+                score: 3,
+                weight: 15,
+                confidence: 0.6,
+                checks: [
+                  {
+                    id: 'screenshots-count',
+                    label: 'Screenshot count',
+                    status: 'fail',
+                    score: 2,
+                  },
+                  {
+                    id: 'screenshots-captions',
+                    label: 'Screenshot captions',
+                    status: 'unanswered',
+                    score: null,
+                  },
+                  { id: 'broken', label: 'Broken', status: 'maybe', score: 1 },
+                  { id: 'no-label', status: 'fail', score: 0 },
+                  'not a check',
+                ],
+              },
+            ],
+          } as unknown as typeof AUDIT_ROW,
+        ],
+      }),
+      [],
+    ).load(budget, NOW);
+
+    expect(context.apps[0].audit?.factors).toEqual([
+      {
+        id: 'screenshots',
+        label: 'Screenshots',
+        weight: 15,
+        score: 3,
+        confidence: 0.6,
+        checks: [
+          {
+            id: 'screenshots-count',
+            label: 'Screenshot count',
+            status: 'fail',
+            score: 2,
+          },
+          {
+            id: 'screenshots-captions',
+            label: 'Screenshot captions',
+            status: 'unanswered',
+            score: null,
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('treats a stored factor with malformed checks or confidence as legacy', async () => {
+    const context = await loaderFor(
+      buildPrisma({
+        auditScores: [
+          {
+            ...AUDIT_ROW,
+            factors: [
+              {
+                id: 'screenshots',
+                score: 3,
+                weight: 15,
+                confidence: 'high',
+                checks: 'none',
+              },
+            ],
+          } as unknown as typeof AUDIT_ROW,
+        ],
+      }),
+      [],
+    ).load(budget, NOW);
+
+    expect(context.apps[0].audit?.factors).toEqual([
+      {
+        id: 'screenshots',
+        label: 'Screenshots',
+        weight: 15,
+        score: 3,
+        confidence: 1,
+        checks: [],
+      },
+    ]);
+  });
+
+  it('reports no audit for an object shaped legacy factors row', async () => {
+    const context = await loaderFor(
+      buildPrisma({
+        auditScores: [{ ...AUDIT_ROW, factors: { title: 8 } as unknown as [] }],
+      }),
+      [],
+    ).load(budget, NOW);
+
+    expect(context.apps[0].audit).toBeNull();
   });
 
   it('reports no audit when the stored factors are unusable', async () => {

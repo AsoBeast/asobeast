@@ -41,7 +41,7 @@ Every parameter is validated by the tool before a request leaves, against the sa
 | `visibility_history` | Visibility history | Daily visibility score (0-100) history for one app over a date window | `appId` (required), `from`, `to` |
 | `rank_distribution_history` | Rank distribution history | Daily counts of tracked keywords by rank band (top 1-3, 4-10, 11-50, etc.) for one app over a date window | `appId` (required), `from`, `to` |
 | `ratings_history` | Ratings history | Daily average rating and rating-count history for one app over a date window (App Store home market) | `appId` (required), `from`, `to` |
-| `app_audit` | ASO audit | The latest ASO audit for one app: an overall score plus per-check findings and recommendations across the rubric | `appId` (required) |
+| `app_audit` | ASO audit | The latest ASO audit for one app: an overall score out of 100 with a letter grade and a confidence (the share of the rubric that could be measured), factor and check findings with the evidence behind each, recommendations ranked by the score points they would add and the effort they take, competitor benchmarks, and what the audit cannot see | `appId` (required) |
 | `audit_history` | Audit history | Historical ASO audit scores for one app over a date window | `appId` (required), `from`, `to` |
 | `metadata_audit` | Metadata audit | Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings | `appId` (required) |
 | `list_reviews` | List reviews | Recent store reviews for one app, optionally filtered by star score or app version | `appId` (required), `score`, `version`, `limit` |

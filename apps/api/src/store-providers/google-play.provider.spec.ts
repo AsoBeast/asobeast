@@ -304,6 +304,16 @@ describe('GooglePlayProvider', () => {
           text: 'Great',
           version: '3.1',
         },
+        {
+          id: 'r3',
+          userName: 'c',
+          date: '2026-09-01T12:00:00.000Z',
+          score: 1,
+          title: null,
+          text: 'Broken',
+          version: '3.1',
+          replyDate: 'not a date',
+        },
       ],
       nextPaginationToken: null,
     });
@@ -313,6 +323,7 @@ describe('GooglePlayProvider', () => {
 
     expect(results.map((review) => review.repliedAt)).toEqual([
       new Date('2026-09-02T08:00:00.000Z'),
+      undefined,
       undefined,
     ]);
   });

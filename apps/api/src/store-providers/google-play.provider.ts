@@ -44,6 +44,11 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
 export const googlePlayLanguage = (country: string): string =>
   storefrontLanguage(country) ?? 'en';
 
+const replyDate = (value: string | null | undefined): Date | undefined => {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : undefined;
+};
+
 @Injectable()
 export class GooglePlayProvider implements StoreProvider {
   readonly store = Store.GOOGLE_PLAY;
@@ -168,7 +173,7 @@ export class GooglePlayProvider implements StoreProvider {
       text: review.text,
       version: review.version ?? undefined,
       updatedAt: new Date(review.date),
-      repliedAt: review.replyDate ? new Date(review.replyDate) : undefined,
+      repliedAt: replyDate(review.replyDate),
     }));
   }
 

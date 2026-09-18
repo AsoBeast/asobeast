@@ -146,3 +146,12 @@ test("app section navigation is a named nav landmark", async ({ page }) => {
     "/apps/app-1/keywords",
   );
 });
+
+test("the google play audit exposes one main landmark and one level one heading", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/audit");
+
+  await expect(page.getByRole("main")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+});

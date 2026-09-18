@@ -159,6 +159,21 @@ describe('titleChecks', () => {
     ).toBe(score);
   });
 
+  it('does not match a keyword hidden inside a longer word', () => {
+    expect(
+      titleCheck(
+        appStoreContext({
+          title: 'Smart Detail',
+          keywords: [
+            keyword('art', 'primary', 90),
+            keyword('ai', 'primary', 80),
+          ],
+        }),
+        'title-keyword',
+      )?.score,
+    ).toBe(0);
+  });
+
   it('waits for scored keywords instead of guessing a primary keyword', () => {
     expect(
       titleCheck(appStoreContext({ title: 'Where Am I?' }), 'title-keyword'),
@@ -310,6 +325,24 @@ describe('keywordFieldChecks', () => {
     ).toBe(score);
   });
 
+  it('never suggests a keyword the title already covers', () => {
+    const checks = keywordFieldChecks(
+      appStoreContext({
+        title: 'Budget Planner',
+        keywordField: 'money,savings',
+        keywords: [
+          keyword('budget planner', 'primary', 90),
+          keyword('expense tracker', 'secondary', 60),
+        ],
+      }),
+    );
+
+    const fix = checks.find((item) => item.id === 'keyword-field-bytes')?.advice
+      ?.fix;
+    expect(fix).toContain('expense tracker');
+    expect(fix).not.toContain('budget planner');
+  });
+
   it('waits for a saved keyword field', () => {
     expect(
       keywordFieldChecks(appStoreContext()).map((item) => item.id),
@@ -353,6 +386,17 @@ describe('Google Play description keywords', () => {
 
   it('does not count a keyword inside a longer word', () => {
     expect(countPhrase('The geo quizzes are fun', 'geo quiz')).toBe(0);
+  });
+
+  it('counts adjacent mentions of a keyword', () => {
+    expect(countPhrase('diet, diet. diet! diet', 'diet')).toBe(4);
+    expect(countPhrase('diet plan diet plan', 'diet plan')).toBe(2);
+    expect(frequency(Array(12).fill('geo quiz').join(', '))).toBe(3);
+  });
+
+  it('counts overlapping repeats of a phrase once per mention', () => {
+    expect(countPhrase('diet diet diet', 'diet diet')).toBe(1);
+    expect(countPhrase('diet diet diet diet', 'diet diet')).toBe(2);
   });
 
   it('passes a keyword that ends at character 167 and fails one that starts at 168', () => {

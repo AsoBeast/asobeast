@@ -13,6 +13,7 @@ import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
 import {
   CREATIVE_PROMPT_VERSION,
   creativeFingerprint,
+  toStoredCreative,
 } from './creative/creative-observations';
 import { AUDIT_RUBRIC_VERSION, computeAudit } from './rubric';
 
@@ -37,6 +38,7 @@ export class AuditService {
   }
 
   async runAi(appId: string): Promise<AppAuditResult> {
+    await this.loader.app(appId);
     const existing = this.inFlightAi.get(appId);
     if (existing) {
       return existing;
@@ -54,7 +56,7 @@ export class AuditService {
     const model = this.auditAi.model ?? 'unknown';
     const stored = {
       model,
-      observations,
+      observations: toStoredCreative(observations, inputs),
       inputHash: creativeFingerprint(inputs, model),
       promptVersion: CREATIVE_PROMPT_VERSION,
       generatedAt: new Date(),
@@ -161,6 +163,13 @@ const toSlimFactors = (result: AppAuditResult): Prisma.InputJsonValue =>
     id: factor.id,
     score: factor.score,
     weight: factor.weight,
+    confidence: factor.confidence ?? null,
+    checks: factor.checks.map(({ id, label, status, score }) => ({
+      id,
+      label,
+      status,
+      score,
+    })),
   }));
 
 const toScoreRow = (result: AppAuditResult) => ({

@@ -1,5 +1,6 @@
 import type {
   AlertChannel,
+  AppAuditResult,
   FirstRunStatus,
   KeywordSort,
   KeywordSuggestionStrategy,
@@ -15,6 +16,7 @@ import {
   getApiTokens,
   getApp,
   getApps,
+  getAudit,
   getAuditHistory,
   getAccountPlan,
   getAuthMe,
@@ -89,6 +91,7 @@ export const appKeys = {
     [...appKeys.detail(id), "serp-movers", { days }] as const,
   categoryRanks: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "category-ranks", params] as const,
+  audit: (id: string) => [...appKeys.detail(id), "audit"] as const,
   auditHistory: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "audit-history", params] as const,
   visibility: (id: string, params: RangeParams) =>
@@ -360,6 +363,34 @@ export const categoryRanksOptions = (id: string, params: RangeParams) =>
     queryFn: () => getCategoryRanks(id, params),
   });
 
+export const AUDIT_RUN_POLL_MS = 2_000;
+
+export function auditRunActive(audit: AppAuditResult | undefined): boolean {
+  const state = audit?.ai.run?.state;
+  return state === "queued" || state === "running";
+}
+
+export const auditOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.audit(id),
+    queryFn: () => getAudit(id),
+    refetchInterval: (query) =>
+      auditRunActive(query.state.data) ? AUDIT_RUN_POLL_MS : false,
+  });
+
+export function invalidateAudit(
+  client: QueryClient,
+  appId: string,
+): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: appKeys.audit(appId) }),
+    client.invalidateQueries({
+      queryKey: [...appKeys.detail(appId), "audit-history"],
+    }),
+    client.invalidateQueries({ queryKey: actionKeys.appRoot(appId) }),
+  ]).then(() => undefined);
+}
+
 export const auditHistoryOptions = (id: string, params: RangeParams = {}) =>
   queryOptions({
     queryKey: appKeys.auditHistory(id, params),
@@ -500,6 +531,7 @@ export function invalidateKeywordMutation(
   client: QueryClient,
   id: string,
 ): void {
+  void client.invalidateQueries({ queryKey: appKeys.audit(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordCountries(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });

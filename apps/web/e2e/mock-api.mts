@@ -7,6 +7,10 @@ import {
   ACTIONS,
   ACTION_SUMMARY,
   APP_AUDIT,
+  AUDIT_HISTORY_POINTS,
+  LONG_AUDIT,
+  PLAY_AUDIT,
+  PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_KEYWORD_COUNTRIES,
   BUDGET,
@@ -413,13 +417,172 @@ function storeHealthFor(req: IncomingMessage): StoreHealthReport {
     : STORE_HEALTH_OK;
 }
 
-function auditAiFor(req: IncomingMessage): AppAuditResult["ai"] {
-  if (!hasCookie(req, "e2e_ai_audit", "1")) return APP_AUDIT.ai;
-  return {
-    configured: true,
-    model: "gpt-5-mini",
-    generatedAt: new Date(Date.now() - 5_000).toISOString(),
-  };
+const RUN_FAILURE = "OpenAI rejected the API key. Check OPENAI_API_KEY.";
+
+const RUN_REQUESTED_AT_COOKIE = "e2e_ai_requested_at";
+const RUN_AGE_MS = 4_000;
+
+const runRequestedAt = (req: IncomingMessage): string =>
+  cookieValue(req, RUN_REQUESTED_AT_COOKIE) ??
+  new Date(Date.now() - RUN_AGE_MS).toISOString();
+
+const runState = (
+  req: IncomingMessage,
+  state: "queued" | "running" | "completed" | "failed",
+  error: string | null = null,
+): NonNullable<AppAuditResult["ai"]["run"]> => ({
+  state,
+  requestedAt: runRequestedAt(req),
+  finishedAt: state === "completed" ? new Date().toISOString() : null,
+  error,
+});
+
+function auditBase(id: string, req: IncomingMessage): AppAuditResult {
+  if (id === "app-gp") return PLAY_AUDIT;
+  if (id === "app-long") return LONG_AUDIT;
+  if (id === "app-2") return { ...APP_AUDIT, appId: id, benchmarks: null };
+  if (hasCookie(req, "e2e_audit", "provisional")) {
+    return { ...PROVISIONAL_AUDIT, appId: id };
+  }
+  return { ...APP_AUDIT, appId: id };
+}
+
+const AUDIT_SLOW_MS = 1_500;
+
+function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
+  const base = auditBase(id, req);
+  if (hasCookie(req, "e2e_ai_unconfigured", "1")) {
+    json(res, 200, {
+      ...base,
+      creative: null,
+      ai: { ...base.ai, configured: false, model: null, run: null },
+    });
+    return;
+  }
+  const configured = { ...base.ai, configured: true, model: "gpt-5.6-luna" };
+  if (hasCookie(req, "e2e_ai_stale", "1")) {
+    json(res, 200, {
+      ...base,
+      creative: base.creative ? { ...base.creative, stale: true } : null,
+      ai: { ...configured, stale: true, run: runState(req, "completed") },
+    });
+    return;
+  }
+  const run = cookieValue(req, "e2e_ai_run");
+  if (run === "queued") {
+    json(
+      res,
+      200,
+      {
+        ...base,
+        creative: null,
+        ai: { ...configured, generatedAt: null, run: runState(req, "running") },
+      },
+      { "set-cookie": "e2e_ai_run=running; Path=/" },
+    );
+    return;
+  }
+  if (run === "running") {
+    const failing = hasCookie(req, "e2e_ai_fail", "1");
+    json(
+      res,
+      200,
+      failing
+        ? {
+            ...base,
+            creative: null,
+            ai: {
+              ...configured,
+              generatedAt: null,
+              run: runState(req, "failed", RUN_FAILURE),
+            },
+          }
+        : {
+            ...base,
+            overall: (base.overall ?? 0) + 3,
+            creative: APP_AUDIT.creative,
+            ai: {
+              ...configured,
+              generatedAt: new Date().toISOString(),
+              run: runState(req, "completed"),
+            },
+          },
+      {
+        "set-cookie": [
+          "e2e_ai_run=; Path=/; Max-Age=0",
+          failing ? "e2e_ai_failed=1; Path=/" : "e2e_ai_done=1; Path=/",
+        ],
+      },
+    );
+    return;
+  }
+  if (hasCookie(req, "e2e_ai_failed", "1")) {
+    json(res, 200, {
+      ...base,
+      creative: null,
+      ai: {
+        ...configured,
+        generatedAt: null,
+        run: runState(req, "failed", RUN_FAILURE),
+      },
+    });
+    return;
+  }
+  if (hasCookie(req, "e2e_ai_done", "1")) {
+    json(res, 200, {
+      ...base,
+      overall: (base.overall ?? 0) + 3,
+      creative: APP_AUDIT.creative,
+      ai: {
+        ...configured,
+        generatedAt: new Date().toISOString(),
+        run: runState(req, "completed"),
+      },
+    });
+    return;
+  }
+  json(res, 200, {
+    ...base,
+    ai: {
+      ...configured,
+      run: base.creative ? runState(req, "completed") : null,
+    },
+  });
+}
+
+function requestAuditRun(req: IncomingMessage, res: ServerResponse): void {
+  if (hasCookie(req, "e2e_ai_unconfigured", "1")) {
+    json(
+      res,
+      409,
+      errorEnvelope(409, req.url ?? "/", "AI features require OPENAI_API_KEY"),
+    );
+    return;
+  }
+  if (hasCookie(req, "e2e_ai_reused", "1")) {
+    json(res, 202, { ...runState(req, "completed"), reused: true });
+    return;
+  }
+  const requestedAt = new Date(Date.now() - RUN_AGE_MS).toISOString();
+  json(
+    res,
+    202,
+    {
+      state: "queued",
+      requestedAt,
+      finishedAt: null,
+      error: null,
+      reused: false,
+    },
+    {
+      "set-cookie": [
+        `${RUN_REQUESTED_AT_COOKIE}=${requestedAt}; Path=/`,
+        "e2e_ai_run=queued; Path=/",
+        "e2e_ai_done=; Path=/; Max-Age=0",
+        "e2e_ai_failed=; Path=/; Max-Age=0",
+      ],
+    },
+  );
 }
 
 function actionsUngenerated(req: IncomingMessage): boolean {
@@ -859,10 +1022,10 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
-    handler: ([id], _q, res) =>
+    handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, { ...METADATA_AUDIT, appId: id })
-        : json(res, 404, errorEnvelope(404, "App not found")),
+        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
     method: "GET",
@@ -873,18 +1036,42 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/audit$/,
-    handler: ([id], req, res) =>
-      apps.some((app) => app.id === id)
-        ? json(res, 200, { ...APP_AUDIT, appId: id, ai: auditAiFor(req) })
-        : json(res, 404, errorEnvelope(404, "App not found")),
+    handler: ([id], req, res) => {
+      if (!apps.some((app) => app.id === id)) {
+        json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found"));
+        return;
+      }
+      if (hasCookie(req, "e2e_audit_fail", "1")) {
+        json(res, 500, errorEnvelope(500, req.url ?? "/"));
+        return;
+      }
+      if (hasCookie(req, "e2e_audit_slow", "1")) {
+        setTimeout(() => auditFor(id, req, res), AUDIT_SLOW_MS);
+        return;
+      }
+      auditFor(id, req, res);
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/audit\/ai\/runs$/,
+    handler: ([id], req, res) => {
+      if (!apps.some((app) => app.id === id)) {
+        json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found"));
+        return;
+      }
+      requestAuditRun(req, res);
+    },
   },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/audit\/history$/,
-    handler: ([id], _q, res) =>
+    handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { points: [] })
-        : json(res, 404, errorEnvelope(404, "App not found")),
+        ? json(res, 200, {
+            points: id === "app-gp" ? AUDIT_HISTORY_POINTS : [],
+          })
+        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
     method: "GET",
