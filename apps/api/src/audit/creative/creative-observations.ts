@@ -206,9 +206,7 @@ export function creativeFingerprint(
         inputs.country,
         inputs.iconUrl,
         inputs.screenshotUrls.slice(0, MAX_ANALYZED_SCREENSHOTS),
-        sentCompetitorIcons(inputs)
-          .map((icon) => icon.iconUrl)
-          .sort(),
+        sentCompetitorIcons(inputs).map((icon) => icon.iconUrl),
       ]),
     )
     .digest('hex');

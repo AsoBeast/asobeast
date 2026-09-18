@@ -207,17 +207,10 @@ describe('creativeFingerprint', () => {
     ],
   };
 
-  it('ignores competitor icon order and the title', () => {
-    expect(
-      creativeFingerprint(
-        {
-          ...inputs,
-          competitorIcons: [...inputs.competitorIcons].reverse(),
-          title: 'Other',
-        },
-        'gpt-4o',
-      ),
-    ).toBe(creativeFingerprint(inputs, 'gpt-4o'));
+  it('ignores the title', () => {
+    expect(creativeFingerprint({ ...inputs, title: 'Other' }, 'gpt-4o')).toBe(
+      creativeFingerprint(inputs, 'gpt-4o'),
+    );
   });
 
   it.each([
@@ -234,6 +227,11 @@ describe('creativeFingerprint', () => {
     [
       'the icon',
       { ...inputs, iconUrl: 'https://is1-ssl.mzstatic.com/icon2.png' },
+      'gpt-4o',
+    ],
+    [
+      'competitor icon order',
+      { ...inputs, competitorIcons: [...inputs.competitorIcons].reverse() },
       'gpt-4o',
     ],
     ['the model', inputs, 'gpt-5.6-luna'],
