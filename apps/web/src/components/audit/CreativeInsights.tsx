@@ -34,6 +34,8 @@ export function CreativeInsights({ audit }: { audit: AppAuditResult }) {
     );
   }
 
+  const { icon } = creative;
+
   return (
     <Card>
       <CardContent>
@@ -50,12 +52,12 @@ export function CreativeInsights({ audit }: { audit: AppAuditResult }) {
             </p>
           ) : null}
 
-          {creative.icon ? (
+          {icon ? (
             <div className="flex flex-wrap items-end gap-4">
               {ICON_SIZES.map((size) => (
                 <AppIconImage
                   key={size}
-                  src={creative.icon!.url}
+                  src={icon.url}
                   size={size}
                   fallback={
                     <span
@@ -69,15 +71,15 @@ export function CreativeInsights({ audit }: { audit: AppAuditResult }) {
               ))}
               <ul className="flex flex-col gap-1 text-sm text-muted-foreground">
                 <li>
-                  {creative.icon.hasText
+                  {icon.hasText
                     ? "The icon contains text"
                     : "No text in the icon"}
                 </li>
-                <li>{ELEMENT_COUNT_LABEL[creative.icon.elementCount]}</li>
-                <li>{creative.icon.contrast} contrast</li>
+                <li>{ELEMENT_COUNT_LABEL[icon.elementCount]}</li>
+                <li>{icon.contrast} contrast</li>
                 <li>
-                  {creative.icon.similarCompetitor
-                    ? `Looks like ${creative.icon.similarCompetitor.name ?? "a competitor"}`
+                  {icon.similarCompetitor
+                    ? `Looks like ${icon.similarCompetitor.name ?? "a competitor"}`
                     : "Distinct from the competitor icons we sent"}
                 </li>
               </ul>

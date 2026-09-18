@@ -58,6 +58,9 @@ describe("analysisState", () => {
 
   it("prefers a stale creative over a completed run", () => {
     const audit = withRun("completed");
+    if (!audit.creative) {
+      throw new Error("Expected the example audit to carry a creative");
+    }
     expect(
       analysisState(
         { ...audit, creative: staleCreative(audit.creative!) },
