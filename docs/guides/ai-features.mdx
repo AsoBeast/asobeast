@@ -87,12 +87,14 @@ A failed creative analysis shows one of these messages. Only transient failures 
 | OpenAI had an internal error. | Retried automatically; try again later |
 | OpenAI did not answer in time. | Retried automatically; try again |
 | Could not reach OpenAI. | Check the API container's outbound network |
+| OpenAI request failed. | Retried automatically when OpenAI reports a timeout, a conflict or a server error; otherwise check the API logs |
 | OpenAI refused to analyze this listing. | The model declined the images; try again or another model |
 | The model ran out of output tokens. | Try again; a model with a larger output limit avoids it |
 | OpenAI filtered the response. | The images tripped OpenAI's content filter |
 | OpenAI returned an unreadable response. | Retried automatically; try again |
 | The model returned observations that do not match the schema. | Retried automatically; a model with structured outputs avoids it |
 | The analysis did not finish. Try again. | The run took more than 10 minutes, usually because the API restarted; start it again |
+| The analysis could not be queued. Try again. | Redis did not accept the job; check the Redis container, then start it again |
 | This listing has no icon or screenshots to analyze yet. Refresh the app, then try again. | Wait for the daily pipeline or refresh the app |
 
 ## Related
