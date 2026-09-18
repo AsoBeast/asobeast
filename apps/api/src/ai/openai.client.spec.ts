@@ -3,12 +3,15 @@ import { ConfigService } from '@nestjs/config';
 import OpenAI, {
   APIConnectionError,
   APIConnectionTimeoutError,
+  APIError,
   AuthenticationError,
   BadRequestError,
+  ConflictError,
   InternalServerError,
   NotFoundError,
   PermissionDeniedError,
   RateLimitError,
+  UnprocessableEntityError,
 } from 'openai';
 import { AiClient, AiRequestError, createOpenAiClient } from './openai.client';
 import { Env } from '../config/env';
@@ -217,6 +220,27 @@ describe('AiRequestError', () => {
       'Could not reach OpenAI.',
       true,
     ],
+    [
+      new APIError(408, {}, 'request timeout', headers),
+      'OpenAI request failed.',
+      true,
+    ],
+    [
+      new ConflictError(409, {}, 'conflict', headers),
+      'OpenAI request failed.',
+      true,
+    ],
+    [
+      new APIError(413, {}, 'payload too large', headers),
+      'OpenAI request failed.',
+      false,
+    ],
+    [
+      new UnprocessableEntityError(422, {}, 'unprocessable', headers),
+      'OpenAI request failed.',
+      false,
+    ],
+    [new Error('unexpected'), 'OpenAI request failed.', false],
   ])('maps a request failure to %s', async (error, message, retryable) => {
     mockCreate.mockRejectedValue(error);
 
