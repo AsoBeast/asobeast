@@ -16,26 +16,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { comparison, COMPARISON_LABEL } from "./benchmark-comparison";
+import {
+  benchmarkRatio,
+  comparison,
+  COMPARISON_LABEL,
+} from "./benchmark-comparison";
 
 const cell = (value: number | null): string =>
   value === null ? "—" : String(value);
 
 function YouCell({ row }: { row: AuditBenchmarkRow }) {
-  const best = row.best;
-  const you = row.you;
-  const ratio =
-    best === null || you === null || best === 0
-      ? 0
-      : row.better === "higher"
-        ? you / best
-        : best / you;
-
   return (
     <TableCell>
       <span className="flex flex-col gap-1">
-        <span className="numeric font-mono">{cell(you)}</span>
-        <Meter value={Math.min(1, ratio) * 100} tone="health" />
+        <span className="numeric font-mono">{cell(row.you)}</span>
+        <Meter value={benchmarkRatio(row) * 100} tone="health" />
         <span className="text-caption text-muted-foreground">
           {COMPARISON_LABEL[comparison(row)]}
         </span>

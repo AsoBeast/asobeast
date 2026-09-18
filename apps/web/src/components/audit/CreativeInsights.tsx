@@ -92,7 +92,7 @@ export function CreativeInsights({ audit }: { audit: AppAuditResult }) {
             >
               {creative.screenshots.map((screenshot) => (
                 <ScreenshotCard
-                  key={screenshot.position}
+                  key={`${screenshot.position}-${screenshot.url}`}
                   screenshot={screenshot}
                 />
               ))}

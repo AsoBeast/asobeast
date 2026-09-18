@@ -192,13 +192,14 @@ export function AiAnalysisPanel({
   const mutation = useMutation({
     mutationKey: ["audit-ai-run", appId],
     mutationFn: () => requestAiAuditRun(appId),
-    onSuccess: (result) => {
+    onSuccess: async (result) => {
       if (result.reused) {
         toast.info("Already up to date", {
           description: "Your icon and screenshots have not changed.",
         });
         return;
       }
+      await queryClient.cancelQueries({ queryKey: appKeys.audit(appId) });
       queryClient.setQueryData(
         appKeys.audit(appId),
         (current?: AppAuditResult) =>

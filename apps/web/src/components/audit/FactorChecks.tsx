@@ -28,9 +28,11 @@ export function FactorChecks({
               </span>
             </span>
             <span className="text-muted-foreground">{check.detail}</span>
-            <span className="text-caption text-muted-foreground">
-              {check.source ? SOURCE_LABEL[check.source] : null}
-            </span>
+            {check.source ? (
+              <span className="text-caption text-muted-foreground">
+                {SOURCE_LABEL[check.source]}
+              </span>
+            ) : null}
             {check.unlock ? (
               <Link
                 href={unlockHref(appId, check.unlock.kind)}
