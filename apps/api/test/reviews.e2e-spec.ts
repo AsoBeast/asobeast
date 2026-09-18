@@ -10,6 +10,9 @@ import {
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ReviewsService } from '../src/reviews/reviews.service';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues } from './obliterate-queues';
@@ -96,6 +99,55 @@ describe('ReviewsController (e2e)', () => {
     });
     return created;
   };
+
+  it('stores the developer reply state a Google Play sync returns', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.example.app',
+        country: 'us',
+        name: 'Play App',
+      },
+    });
+    const replied = new Date('2026-09-02T08:00:00.000Z');
+    jest.spyOn(app.get(StoreProviderRegistry), 'get').mockReturnValue({
+      store: Store.GOOGLE_PLAY,
+      reviews: jest.fn().mockResolvedValue([
+        {
+          reviewId: 'g1',
+          userName: 'a',
+          score: 2,
+          text: 'Crashes',
+          updatedAt: new Date('2026-09-01T10:00:00.000Z'),
+          repliedAt: replied,
+        },
+        {
+          reviewId: 'g2',
+          userName: 'b',
+          score: 5,
+          text: 'Great',
+          updatedAt: new Date('2026-09-01T11:00:00.000Z'),
+        },
+      ]),
+    } as unknown as ReturnType<StoreProviderRegistry['get']>);
+
+    await asWorkspace(app, () =>
+      app
+        .get(ReviewsService)
+        .syncReviews({ appId: created.id, pages: 1, backfill: true }),
+    );
+
+    const rows = await prisma.review.findMany({
+      where: { appId: created.id },
+      orderBy: { reviewId: 'asc' },
+      select: { reviewId: true, repliedAt: true, replyCheckedAt: true },
+    });
+    expect(rows[0]).toMatchObject({ reviewId: 'g1', repliedAt: replied });
+    expect(rows[0].replyCheckedAt).not.toBeNull();
+    expect(rows[1]).toMatchObject({ reviewId: 'g2', repliedAt: null });
+    jest.restoreAllMocks();
+  });
 
   it('returns a 404 envelope for an unknown app id', async () => {
     const response = await api.get('/apps/missing/reviews').expect(404);

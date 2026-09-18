@@ -78,6 +78,9 @@ export class ReviewsService {
       (review) => !known.has(review.reviewId),
     );
 
+    const tracksReplies = app.store === Store.GOOGLE_PLAY;
+    const checkedAt = tracksReplies ? new Date() : null;
+
     if (inserted.length > 0) {
       await this.prisma.review.createMany({
         data: inserted.map((review) => ({
@@ -89,9 +92,15 @@ export class ReviewsService {
           text: review.text,
           version: review.version ?? null,
           reviewedAt: review.updatedAt ?? null,
+          repliedAt: tracksReplies ? (review.repliedAt ?? null) : null,
+          replyCheckedAt: checkedAt,
         })),
         skipDuplicates: true,
       });
+    }
+
+    if (checkedAt !== null && known.size > 0) {
+      await this.recordReplies(app.id, fetched, known, checkedAt);
     }
 
     if (!payload.backfill) {
@@ -102,6 +111,26 @@ export class ReviewsService {
     }
 
     return inserted;
+  }
+
+  private async recordReplies(
+    appId: string,
+    fetched: Map<string, ReviewResult>,
+    known: Set<string>,
+    checkedAt: Date,
+  ): Promise<void> {
+    await this.prisma.review.updateMany({
+      where: { appId, reviewId: { in: [...known] } },
+      data: { replyCheckedAt: checkedAt },
+    });
+    for (const reviewId of known) {
+      const repliedAt = fetched.get(reviewId)?.repliedAt;
+      if (!repliedAt) continue;
+      await this.prisma.review.updateMany({
+        where: { appId, reviewId, repliedAt: null },
+        data: { repliedAt },
+      });
+    }
   }
 
   private async rejectSilentlyEmptyFeed(app: {

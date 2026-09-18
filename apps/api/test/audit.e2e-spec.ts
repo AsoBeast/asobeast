@@ -9,7 +9,7 @@ import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
-import { SUBJECTIVE_CHECK_IDS } from '../src/audit/audit-ai.service';
+
 import { obliterateQueues } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
 import { AuditService } from '../src/audit/audit.service';
@@ -21,11 +21,27 @@ const factor = (result: AppAuditResult, id: string) =>
   result.factors.find((item) => item.id === id);
 
 const AI_RESPONSE = {
-  checks: SUBJECTIVE_CHECK_IDS.map((id) => ({
-    id,
-    score: 10,
-    detail: 'Excellent.',
+  icon: {
+    hasText: false,
+    elementCount: 'one',
+    contrast: 'high',
+    similarCompetitorPosition: null,
+  },
+  screenshots: [
+    'Habit tracker streaks',
+    'Streak counter daily',
+    'Build one habit',
+    'See your progress',
+    'Gentle reminders',
+    'Weekly recap',
+  ].map((captionText, index) => ({
+    position: index + 1,
+    captionText,
+    captionReadable: true,
+    captionLanguage: 'en',
+    message: 'benefit',
   })),
+  consistentStyle: true,
 };
 
 const fakeAiClient: AiClient = {
@@ -334,11 +350,32 @@ describe('AuditController (e2e)', () => {
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
     expect(after.ai.generatedAt).not.toBeNull();
+    expect(after.creative?.screenshots).toHaveLength(6);
+    expect(after.creative?.screenshots[0].keywordHits).toContain(
+      'habit tracker',
+    );
+    expect(after.creative?.stale).toBe(false);
+    expect(
+      factor(after, 'screenshots')?.checks.find(
+        (item) => item.id === 'screenshots-caption-keywords',
+      )?.score,
+    ).not.toBeNull();
 
     const reloaded = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
     expect(factor(reloaded, 'icon')?.score).toBe(10);
     expect(reloaded.ai.generatedAt).not.toBeNull();
+    expect(reloaded.creative?.screenshots).toHaveLength(6);
+  });
+
+  it('records the audit score of the day the legacy run completes', async () => {
+    const id = await seed();
+
+    await api.post(`/apps/${id}/audit/ai`).expect(201);
+
+    const rows = await prisma.auditScore.findMany({ where: { appId: id } });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].rubricVersion).toBe('v2');
   });
 
   it('returns 404 when running the AI audit for an unknown app', async () => {

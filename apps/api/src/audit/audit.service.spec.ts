@@ -110,3 +110,36 @@ describe('AuditService.snapshotAll', () => {
     expect(prisma.auditScore.upsert).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('AuditService.recordToday', () => {
+  afterEach(() => jest.useRealTimers());
+
+  it('upserts the UTC day with the rubric version and the confidence', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-22T06:15:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new AuditService(
+      prisma as unknown as PrismaService,
+      {} as unknown as AuditContextLoader,
+      { configured: false, model: null } as unknown as AuditAiService,
+      fanOut,
+    );
+    jest
+      .spyOn(service, 'audit')
+      .mockResolvedValue(buildResult({ appId: 'a', confidence: 0.82 }));
+
+    await service.recordToday('a');
+
+    const [{ where, create }] = prisma.auditScore.upsert.mock.calls[0] as [
+      {
+        where: { appId_date: { appId: string; date: Date } };
+        create: { rubricVersion: string; confidence: number | null };
+      },
+    ];
+    expect(where.appId_date).toEqual({
+      appId: 'a',
+      date: new Date('2026-07-22T00:00:00.000Z'),
+    });
+    expect(create.rubricVersion).toBe('v2');
+    expect(create.confidence).toBe(0.82);
+  });
+});
