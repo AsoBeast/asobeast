@@ -35,13 +35,12 @@ const job = (
           ? overrides.requestedAt
           : REQUESTED_AT.toISOString(),
     },
-    updateData: jest.fn().mockResolvedValue(undefined),
     attemptsMade: overrides.attemptsMade ?? 1,
     opts: { attempts: overrides.attempts ?? 2 },
   }) as unknown as Job<AuditCreativePayload>;
 
 const build = () => {
-  const start = jest.fn().mockResolvedValue(REQUESTED_AT);
+  const start = jest.fn().mockResolvedValue(true);
   const execute = jest.fn().mockResolvedValue(undefined);
   const fail = jest.fn().mockResolvedValue(undefined);
   const worker = new AuditCreativeWorker(
@@ -52,26 +51,30 @@ const build = () => {
 };
 
 describe('AuditCreativeWorker.process', () => {
-  it('claims the run, remembers it on the job and executes it', async () => {
-    const { worker, execute } = build();
-    const queued = job({ requestedAt: undefined });
-    const updateData = jest.spyOn(queued, 'updateData');
+  it('claims the run it was queued for and executes it', async () => {
+    const { worker, start, execute } = build();
 
-    await worker.process(queued);
+    await worker.process(job());
 
-    expect(updateData).toHaveBeenCalledWith(
-      expect.objectContaining({ requestedAt: REQUESTED_AT.toISOString() }),
-    );
+    expect(start).toHaveBeenCalledWith('a', REQUESTED_AT);
     expect(execute).toHaveBeenCalledWith('a', REQUESTED_AT);
   });
 
-  it('does nothing when no run is waiting', async () => {
+  it('does nothing when its run was replaced or already finished', async () => {
     const { worker, start, execute } = build();
-    start.mockResolvedValue(null);
+    start.mockResolvedValue(false);
 
     await worker.process(job());
 
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('ignores a job without a readable request time', async () => {
+    const { worker, start } = build();
+
+    await worker.process(job({ requestedAt: 'not a date' }));
+
+    expect(start).not.toHaveBeenCalled();
   });
 
   it('rethrows a retryable failure and turns a final one into an unrecoverable error', async () => {
@@ -158,12 +161,12 @@ describe('AuditCreativeWorker.onFailed', () => {
     );
   });
 
-  it('ignores a failure without a job or before the run was claimed', async () => {
+  it('ignores a failure without a job or a readable request time', async () => {
     const { worker, fail } = build();
 
     await worker.onFailed(undefined, new Error('boom'));
     await worker.onFailed(
-      job({ attemptsMade: 2, attempts: 2, requestedAt: undefined }),
+      job({ attemptsMade: 2, attempts: 2, requestedAt: 'not a date' }),
       new Error('boom'),
     );
 

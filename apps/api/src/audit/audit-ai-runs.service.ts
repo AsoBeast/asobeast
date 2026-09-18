@@ -99,16 +99,14 @@ export class AuditAiRunsService {
     const payload: AuditCreativePayload = {
       ...this.workspace.scopeFor('a creative analysis run'),
       appId,
+      requestedAt: now.toISOString(),
     };
     try {
       await this.queue.add(JOBS.AUDIT_CREATIVE, payload, {
         ...JOB_OPTIONS,
         attempts: CREATIVE_RUN_ATTEMPTS,
         backoff: { type: 'exponential', delay: CREATIVE_RUN_BACKOFF_MS },
-        deduplication: {
-          id: auditCreativeDeduplicationId(appId),
-          keepLastIfActive: true,
-        },
+        deduplication: { id: auditCreativeDeduplicationId(appId, now) },
       });
     } catch (error) {
       await this.failUnqueued(appId, now);
@@ -124,17 +122,12 @@ export class AuditAiRunsService {
     };
   }
 
-  async start(appId: string): Promise<Date | null> {
-    const stored = await this.prisma.auditInsight.findUnique({
-      where: { appId },
-      select: { runState: true, requestedAt: true },
-    });
-    if (!stored?.requestedAt || !isActive(stored.runState)) return null;
-    await this.prisma.auditInsight.updateMany({
-      where: activeRun(appId, stored.requestedAt),
+  async start(appId: string, requestedAt: Date): Promise<boolean> {
+    const { count } = await this.prisma.auditInsight.updateMany({
+      where: activeRun(appId, requestedAt),
       data: { runState: 'running' },
     });
-    return stored.requestedAt;
+    return count > 0;
   }
 
   async execute(appId: string, requestedAt: Date): Promise<void> {

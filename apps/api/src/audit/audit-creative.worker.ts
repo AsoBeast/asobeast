@@ -12,6 +12,11 @@ export const AI_WORKER_CONCURRENCY = 2;
 
 class RefusedRunError extends UnrecoverableError {}
 
+const requestedRun = ({ data }: Job<AuditCreativePayload>): Date | null => {
+  const requestedAt = new Date(data.requestedAt);
+  return Number.isNaN(requestedAt.getTime()) ? null : requestedAt;
+};
+
 const ownerMessage = (error: Error): string =>
   error instanceof AiRequestError || error instanceof RefusedRunError
     ? error.message
@@ -30,12 +35,9 @@ export class AuditCreativeWorker extends WorkerHost {
 
   async process(job: Job<AuditCreativePayload>): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
-      const requestedAt = await this.runs.start(job.data.appId);
+      const requestedAt = requestedRun(job);
       if (!requestedAt) return;
-      await job.updateData({
-        ...job.data,
-        requestedAt: requestedAt.toISOString(),
-      });
+      if (!(await this.runs.start(job.data.appId, requestedAt))) return;
       try {
         await this.runs.execute(job.data.appId, requestedAt);
       } catch (error) {
@@ -51,13 +53,14 @@ export class AuditCreativeWorker extends WorkerHost {
     job: Job<AuditCreativePayload> | undefined,
     error: Error,
   ): Promise<void> {
-    if (!job?.data.requestedAt) return;
+    if (!job) return;
+    const requestedAt = requestedRun(job);
+    if (!requestedAt) return;
     const final =
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 1);
     if (!final) return;
     const { appId } = job.data;
-    const requestedAt = new Date(job.data.requestedAt);
     this.logger.warn(
       `creative analysis failed for app ${appId}: ${error.message}`,
     );

@@ -83,11 +83,14 @@ export interface RefreshAppPayload extends WorkspaceJobPayload {
 
 export interface AuditCreativePayload extends WorkspaceJobPayload {
   appId: string;
-  requestedAt?: string;
+  requestedAt: string;
 }
 
-export function auditCreativeDeduplicationId(appId: string): string {
-  return `audit-creative~${appId}`;
+export function auditCreativeDeduplicationId(
+  appId: string,
+  requestedAt: Date,
+): string {
+  return `audit-creative~${appId}~${requestedAt.getTime()}`;
 }
 
 export interface ResolveSubtitlePayload extends WorkspaceJobPayload {

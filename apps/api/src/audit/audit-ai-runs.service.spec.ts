@@ -178,9 +178,9 @@ describe('AuditAiRunsService.request', () => {
     });
     expect(queue.add).toHaveBeenCalledWith(
       JOBS.AUDIT_CREATIVE,
-      { workspaceId: WORKSPACE, appId: 'a' },
+      { workspaceId: WORKSPACE, appId: 'a', requestedAt: NOW.toISOString() },
       expect.objectContaining({
-        deduplication: { id: 'audit-creative~a', keepLastIfActive: true },
+        deduplication: { id: `audit-creative~a~${NOW.getTime()}` },
         attempts: 2,
       }),
     );
@@ -225,12 +225,10 @@ describe('AuditAiRunsService.request', () => {
 });
 
 describe('AuditAiRunsService.start', () => {
-  it('claims the active run and returns its request time', async () => {
-    const { service, prisma } = build({
-      insight: { runState: 'queued', requestedAt: EARLIER },
-    });
+  it('claims only the active run the job was queued for', async () => {
+    const { service, prisma } = build();
 
-    await expect(service.start('a')).resolves.toEqual(EARLIER);
+    await expect(service.start('a', EARLIER)).resolves.toBe(true);
     expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
       where: {
         appId: 'a',
@@ -241,15 +239,11 @@ describe('AuditAiRunsService.start', () => {
     });
   });
 
-  it.each([
-    ['no row', null],
-    ['a completed run', { runState: 'completed', requestedAt: EARLIER }],
-    ['a failed run', { runState: 'failed', requestedAt: EARLIER }],
-  ])('skips %s', async (_label, insight) => {
-    const { service, prisma } = build({ insight });
+  it('declines when that run is no longer active', async () => {
+    const { service, prisma } = build();
+    prisma.auditInsight.updateMany.mockResolvedValue({ count: 0 });
 
-    await expect(service.start('a')).resolves.toBeNull();
-    expect(prisma.auditInsight.updateMany).not.toHaveBeenCalled();
+    await expect(service.start('a', EARLIER)).resolves.toBe(false);
   });
 });
 
