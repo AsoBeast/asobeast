@@ -346,7 +346,7 @@ describe('AuditController (e2e)', () => {
       .body as AppAuditResult;
 
     expect(factor(after, 'previewVideo')?.availability).toBe('not-measurable');
-    expect(factor(after, 'icon')?.score).not.toBeNull();
+    expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
     expect(after.ai.generatedAt).not.toBeNull();
@@ -363,7 +363,7 @@ describe('AuditController (e2e)', () => {
 
     const reloaded = (await api.get(`/apps/${id}/audit`).expect(200))
       .body as AppAuditResult;
-    expect(factor(reloaded, 'icon')?.score).not.toBeNull();
+    expect(factor(reloaded, 'icon')?.score).toBe(10);
     expect(reloaded.ai.generatedAt).not.toBeNull();
     expect(reloaded.creative?.screenshots).toHaveLength(6);
   });
