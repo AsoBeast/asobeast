@@ -247,6 +247,22 @@ describe('AuditAiRunsService.execute', () => {
     expect(upsert.update.inputHash).toBe(FINGERPRINT);
     expect(audit.recordToday).toHaveBeenCalledWith('a');
   });
+
+  it('completes the run when recording the daily score fails', async () => {
+    const { service, prisma, auditAi, audit } = build();
+    auditAi.observe.mockResolvedValue({
+      icon: null,
+      screenshots: [],
+      consistentStyle: null,
+    });
+    audit.recordToday.mockRejectedValue(new Error('db down'));
+
+    await expect(service.execute('a')).resolves.toBeUndefined();
+    const [[upsert]] = prisma.auditInsight.upsert.mock.calls as Array<
+      [{ update: { runState: string } }]
+    >;
+    expect(upsert.update.runState).toBe('completed');
+  });
 });
 
 describe('AuditAiRunsService.fail', () => {

@@ -144,7 +144,14 @@ export class AuditAiRunsService {
       create: { appId, ...completed },
       update: completed,
     });
-    await this.audit.recordToday(appId);
+    await this.audit
+      .recordToday(appId)
+      .catch((error: unknown) =>
+        this.logger.warn(
+          `could not record today's audit score for app ${appId}`,
+          error,
+        ),
+      );
   }
 
   private async failUnqueued(appId: string, requestedAt: Date): Promise<void> {
