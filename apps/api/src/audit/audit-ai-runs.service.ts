@@ -5,7 +5,6 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { AuditAiRunResult } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -85,10 +84,10 @@ export class AuditAiRunsService {
     });
 
     if (stored?.runState === 'completed' && stored.inputHash === fingerprint) {
-      return { ...effectiveRun(stored, now)!, reused: true };
+      return { ...effectiveRun(stored, now), reused: true };
     }
     if (stored && isActive(stored.runState) && !expired(stored, now)) {
-      return { ...effectiveRun(stored, now)!, reused: false };
+      return { ...effectiveRun(stored, now), reused: false };
     }
 
     const queued = { runState: 'queued', requestedAt: now, runError: null };
@@ -132,7 +131,7 @@ export class AuditAiRunsService {
     const model = this.auditAi.model ?? 'unknown';
     const completed = {
       model,
-      observations: observations as unknown as Prisma.InputJsonValue,
+      observations,
       inputHash: creativeFingerprint(inputs, model),
       promptVersion: CREATIVE_PROMPT_VERSION,
       generatedAt: new Date(),
