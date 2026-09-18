@@ -29,7 +29,7 @@ const baseInput = (overrides: Partial<AiAuditInput> = {}): AiAuditInput => ({
   genreName: 'Productivity',
   languages: ['EN'],
   releaseNotes: 'Bug fixes.',
-  hasVideo: null,
+  videoUrl: null,
   ratingAvg: 4.5,
   ratingCount: 100,
   iconUrl: null,

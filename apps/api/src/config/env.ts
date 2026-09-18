@@ -113,7 +113,7 @@ export const EnvSchema = z.object({
       typeof value === 'string' && value.trim().length > 0
         ? value.trim()
         : undefined,
-    z.string().min(1).default('gpt-4o'),
+    z.string().min(1).default('gpt-5.6-luna'),
   ),
   BULL_BOARD_ENABLED: z
     .enum(['true', 'false'])

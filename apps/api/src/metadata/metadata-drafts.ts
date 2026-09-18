@@ -130,14 +130,15 @@ export const buildAssistantContext = (
 };
 
 const lintFor = (
-  field: MetadataField,
-  value: string,
+  store: Store,
+  draft: { field: MetadataField; value: string },
   context: LintContext,
   limit: number,
 ): LintIssue[] => {
+  const { field, value } = draft;
   switch (field) {
     case 'title':
-      return lintTitle(value, limit);
+      return lintTitle(value, limit, store);
     case 'subtitle':
       return lintSubtitle(value, context, limit);
     case 'keywordField':
@@ -204,7 +205,7 @@ export const validateDrafts = (
       value: draft.value,
       chars: draft.value.length,
       limit,
-      issues: lintFor(draft.field, draft.value, context, limit),
+      issues: lintFor(store, draft, context, limit),
       rationale: draft.rationale,
     };
   });

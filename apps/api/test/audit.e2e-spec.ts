@@ -161,10 +161,162 @@ describe('AuditController (e2e)', () => {
     expect(result.ai.generatedAt).toBeNull();
 
     const ratings = factor(result, 'ratings');
-    expect(ratings?.score).toBeCloseTo(6.7, 1);
+    expect(ratings?.score).toBeCloseTo(8.2, 1);
 
     expect(factor(result, 'keywordField')?.needsInput).toBe(true);
     expect(factor(result, 'keywordField')?.score).toBeNull();
+    expect(factor(result, 'keywordField')?.availability).toBe('awaiting-input');
+  });
+
+  const seedCompetitor = (
+    appId: string,
+    storeAppId: string,
+    name: string,
+    title: string,
+    ratingCount: number,
+  ) =>
+    prisma.app
+      .create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId,
+          country: 'us',
+          name,
+          isCompetitor: true,
+          primaryAppId: appId,
+        },
+      })
+      .then((competitor) =>
+        prisma.appSnapshot.create({
+          data: {
+            appId: competitor.id,
+            title,
+            description: 'A rival listing.',
+            ratingAvg: 4.3,
+            ratingCount,
+            raw: { screenshots: ['a.png'] },
+            capturedAt: D0,
+          },
+        }),
+      );
+
+  it('leaves the competitor checks unanswered without competitors', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const uniqueness = factor(result, 'title')?.checks.find(
+      (item) => item.id === 'title-uniqueness',
+    );
+
+    expect(uniqueness).toMatchObject({
+      score: null,
+      status: 'unanswered',
+      unlock: { kind: 'competitors' },
+    });
+  });
+
+  it('benchmarks the rating volume once two competitors carry counts', async () => {
+    const id = await seed();
+    await seedCompetitor(id, '1111111111', 'Rival One', 'Rival One', 1000);
+    await seedCompetitor(id, '2222222222', 'Rival Two', 'Rival Two', 3000);
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const volume = factor(result, 'ratings')?.checks.find(
+      (item) => item.id === 'ratings-volume',
+    );
+
+    expect(volume).toMatchObject({ source: 'competitors', score: 10 });
+    expect(volume?.detail).toBe(
+      'You have 5000 ratings; the median competitor has 2000.',
+    );
+    expect(result.benchmarks?.competitors).toBe(2);
+    expect(
+      result.benchmarks?.rows.find((row) => row.metric === 'rating-count'),
+    ).toMatchObject({ you: 5000, median: 2000, best: 3000 });
+  });
+
+  it('reports no benchmarks without competitors', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+
+    expect(result.benchmarks).toBeNull();
+  });
+
+  it('carries a fix, an effort, an impact, a lift and a target on every recommendation', async () => {
+    const id = await seed();
+
+    const result = (await api.get(`/apps/${id}/audit`).expect(200))
+      .body as AppAuditResult;
+    const all = [
+      ...result.recommendations.quickWins,
+      ...result.recommendations.highImpact,
+      ...result.recommendations.strategic,
+    ];
+
+    expect(all.length).toBeGreaterThan(0);
+    expect(
+      all.every(
+        (item) =>
+          typeof item.fix === 'string' &&
+          item.effort !== undefined &&
+          item.impact !== undefined &&
+          typeof item.lift === 'number' &&
+          item.target !== undefined,
+      ),
+    ).toBe(true);
+    expect(result.potential).not.toBeNull();
+    expect(result.potential as number).toBeGreaterThanOrEqual(
+      result.overall as number,
+    );
+  });
+
+  it('reports the rubric version, grade, confidence and groups', async () => {
+    const id = await seed();
+
+    const response = await api.get(`/apps/${id}/audit`).expect(200);
+    const result = response.body as AppAuditResult;
+
+    expect(result.rubricVersion).toBe('v2');
+    expect(result.grade).not.toBeNull();
+    expect(result.confidence).toBeGreaterThan(0);
+    expect(result.confidence).toBeLessThanOrEqual(1);
+    expect(result.groups?.map((group) => group.id)).toEqual([
+      'discoverability',
+      'conversion',
+    ]);
+    expect(
+      result.factors.every(
+        (item) =>
+          typeof item.confidence === 'number' &&
+          item.availability !== undefined,
+      ),
+    ).toBe(true);
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video',
+    );
+    expect(result.unlocks?.map((item) => item.kind)).toContain('ai-analysis');
+  });
+
+  it('keeps every check status inside the published union', async () => {
+    const id = await seed();
+
+    const response = await api.get(`/apps/${id}/audit`).expect(200);
+    const result = response.body as AppAuditResult;
+    const statuses = result.factors.flatMap((item) =>
+      item.checks.map((entry) => entry.status),
+    );
+
+    expect(statuses.length).toBeGreaterThan(0);
+    expect(
+      statuses.every((status) =>
+        ['pass', 'warn', 'fail', 'unanswered'].includes(status),
+      ),
+    ).toBe(true);
   });
 
   it('runs the AI audit, caches it, and raises the overall', async () => {
@@ -177,7 +329,7 @@ describe('AuditController (e2e)', () => {
     const after = (await api.post(`/apps/${id}/audit/ai`).expect(201))
       .body as AppAuditResult;
 
-    expect(factor(after, 'previewVideo')?.needsInput).toBe(false);
+    expect(factor(after, 'previewVideo')?.availability).toBe('not-measurable');
     expect(factor(after, 'icon')?.score).toBe(10);
     expect((after.overall as number) > (before.overall as number)).toBe(true);
     expect(after.ai.model).toBe('gpt-4o');
@@ -217,7 +369,12 @@ describe('AuditController (e2e)', () => {
         ratingAvg: 4.4,
         ratingCount: 3000,
         installs: 500000n,
-        raw: { genreId: 'TOOLS' },
+        raw: {
+          genreId: 'TOOLS',
+          headerImage: 'https://play-lh.googleusercontent.com/header',
+          video: 'https://play.google.com/video/x',
+          screenshots: Array.from({ length: 24 }, (_, i) => `p${i}.png`),
+        },
         capturedAt: D0,
       },
     });
@@ -229,7 +386,22 @@ describe('AuditController (e2e)', () => {
     expect(factor(result, 'subtitle')).toBeUndefined();
     expect(factor(result, 'keywordField')).toBeUndefined();
     expect(factor(result, 'description')?.weight).toBe(15);
-    expect(result.totalWeight).toBe(90);
+    expect(result.totalWeight).toBe(105);
+
+    const shortDescription = factor(result, 'shortDescription');
+    expect(shortDescription?.weight).toBe(15);
+    expect(shortDescription?.score).not.toBeNull();
+    expect(factor(result, 'screenshots')?.label).toBe(
+      'Screenshots and feature graphic',
+    );
+    const screenshots = factor(result, 'screenshots')?.checks.find(
+      (item) => item.id === 'screenshots-count',
+    );
+    expect(screenshots?.score).toBe(10);
+    expect(screenshots?.detail).toContain('across device types');
+    expect(
+      factor(result, 'previewVideo')?.checks.map((item) => item.id),
+    ).toEqual(['preview-video-present']);
   });
 
   it('snapshots one audit score row per primary app, skipping competitors', async () => {
@@ -257,6 +429,8 @@ describe('AuditController (e2e)', () => {
     expect(rows[0].coveredWeight).toBeGreaterThan(0);
     expect(rows[0].totalWeight).toBe(110);
     expect(Array.isArray(rows[0].factors)).toBe(true);
+    expect(rows[0].rubricVersion).toBe('v2');
+    expect(rows[0].confidence).toBeGreaterThan(0);
   });
 
   it('upserts the same day idempotently', async () => {

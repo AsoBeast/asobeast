@@ -10,7 +10,13 @@ export interface RawAppFacts {
   contentRating: string | null;
   genreKey: string | null;
   genreName: string | null;
-  hasVideo: boolean | null;
+  videoUrl: string | null;
+  featureGraphicUrl: string | null;
+  supportsIpad: boolean;
+  developerName: string | null;
+  currentVersionScore: number | null;
+  currentVersionReviews: number | null;
+  privacyPolicyUrl: string | null;
   iconUrl: string | null;
   screenshotUrls: string[];
 }
@@ -24,7 +30,13 @@ const EMPTY_FACTS: RawAppFacts = {
   contentRating: null,
   genreKey: null,
   genreName: null,
-  hasVideo: null,
+  videoUrl: null,
+  featureGraphicUrl: null,
+  supportsIpad: false,
+  developerName: null,
+  currentVersionScore: null,
+  currentVersionReviews: null,
+  privacyPolicyUrl: null,
   iconUrl: null,
   screenshotUrls: [],
 };
@@ -78,6 +90,11 @@ const categoryNames = (value: unknown): string[] =>
         .map((entry) => asRecord(entry)?.name)
         .filter((name): name is string => typeof name === 'string')
     : [];
+
+const supportsIpad = (raw: unknown): boolean =>
+  stringArray(asRecord(raw)?.supportedDevices).some((device) =>
+    device.startsWith('iPad'),
+  );
 
 export function screenshotsCount(raw: unknown): number | null {
   return arrayLength(asRecord(raw)?.screenshots);
@@ -161,7 +178,13 @@ export function extractAppStoreRawFacts(raw: unknown): RawAppFacts {
     contentRating: nonEmptyString(record.contentRating),
     genreKey: primaryGenreKey(Store.APP_STORE, record),
     genreName: nonEmptyString(record.primaryGenre),
-    hasVideo: null,
+    videoUrl: null,
+    featureGraphicUrl: null,
+    supportsIpad: supportsIpad(record),
+    developerName: trimmedString(record.developer),
+    currentVersionScore: numeric(record.currentVersionScore),
+    currentVersionReviews: countOf(record.currentVersionReviewCount),
+    privacyPolicyUrl: null,
     iconUrl: nonEmptyString(record.icon),
     screenshotUrls: stringArray(record.screenshots),
   };
@@ -181,7 +204,13 @@ export function extractGooglePlayRawFacts(raw: unknown): RawAppFacts {
     contentRating: nonEmptyString(record.contentRating),
     genreKey: nonEmptyString(record.genreId),
     genreName: nonEmptyString(record.genre),
-    hasVideo: Boolean(record.video),
+    videoUrl: nonEmptyString(record.video),
+    featureGraphicUrl: nonEmptyString(record.headerImage),
+    supportsIpad: false,
+    developerName: trimmedString(record.developer),
+    currentVersionScore: null,
+    currentVersionReviews: null,
+    privacyPolicyUrl: nonEmptyString(record.privacyPolicy),
     iconUrl: nonEmptyString(record.icon),
     screenshotUrls: stringArray(record.screenshots),
   };

@@ -8,6 +8,7 @@ import {
   lintTitle,
   LintIssue,
 } from './lint';
+import { utf8ByteLength } from './limits';
 
 const rules = (issues: LintIssue[]): string[] =>
   issues.map((issue) => issue.rule);
@@ -99,6 +100,52 @@ describe('lintShortDescription', () => {
   });
 });
 
+describe('store policy terms', () => {
+  it.each([
+    'Best Habit Tracker',
+    'Habit Tracker #1',
+    'Top Habits',
+    'Free Habit App',
+    'New Habit Coach',
+    'Habit Sale',
+  ])('flags "%s" on Google Play', (title) => {
+    expect(rules(lintTitle(title, 30, 'GOOGLE_PLAY'))).toContain('policy-term');
+  });
+
+  it.each(['Bestie Chat', 'Topaz Wallet', 'Freedom Journal', 'Newsroom'])(
+    'does not flag "%s", where the term is only part of a word',
+    (title) => {
+      expect(rules(lintTitle(title, 30, 'GOOGLE_PLAY'))).not.toContain(
+        'policy-term',
+      );
+    },
+  );
+
+  it('flags emoji in a Google Play title', () => {
+    expect(rules(lintTitle('Habit Tracker 🎯', 30, 'GOOGLE_PLAY'))).toContain(
+      'emoji',
+    );
+  });
+
+  it('keeps App Store titles on the existing rules', () => {
+    expect(
+      rules(lintTitle('Best Habit Tracker', 30, 'APP_STORE')),
+    ).not.toContain('policy-term');
+    expect(rules(lintTitle('Best Habit Tracker'))).toEqual(
+      rules(lintTitle('Best Habit Tracker', 30, 'APP_STORE')),
+    );
+  });
+
+  it.each([
+    'Download now and build habits',
+    'The #1 habit tracker',
+    'Install now for streaks',
+    'The best way to build habits',
+  ])('flags "%s" as a short description', (text) => {
+    expect(rules(lintShortDescription(text, {}, 80))).toContain('policy-term');
+  });
+});
+
 describe('lintKeywordField', () => {
   const base = { titleWords: ['habit'], subtitleWords: ['streak'] };
 
@@ -156,6 +203,29 @@ describe('lintKeywordField', () => {
     expect(rules(lintKeywordField('spanish,learn', ctx))).not.toContain(
       'contains-competitor-brand',
     );
+  });
+
+  it('refuses a field that fits 100 characters but not 100 bytes', () => {
+    const field =
+      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
+
+    expect(field.length).toBe(83);
+    expect(utf8ByteLength(field)).toBe(111);
+    expect(rules(lintKeywordField(field))).toContain('over-limit');
+  });
+
+  it('accepts a field of exactly 100 bytes and refuses 101', () => {
+    const exact = `${'a'.repeat(98)}ą`;
+    const over = `${'a'.repeat(99)}ą`;
+
+    expect(utf8ByteLength(exact)).toBe(100);
+    expect(rules(lintKeywordField(exact))).not.toContain('over-limit');
+    expect(rules(lintKeywordField(over))).toContain('over-limit');
+  });
+
+  it('flags keywords of two characters or fewer', () => {
+    expect(rules(lintKeywordField('tv,habit'))).toContain('short-keyword');
+    expect(rules(lintKeywordField('gym,habit'))).not.toContain('short-keyword');
   });
 });
 

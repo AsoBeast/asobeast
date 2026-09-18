@@ -1,5 +1,8 @@
 import { ReviewsInvestigateThemeEvidence } from '@asobeast/shared';
-import { mineReviewPhrases } from '../../keywords/review-mining';
+import {
+  mineReviewPhrases,
+  REVIEW_THEME_MIN_MENTIONS,
+} from '../../keywords/review-mining';
 import type {
   ActionContext,
   ActionContextApp,
@@ -7,7 +10,7 @@ import type {
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 
-export const REVIEW_THEME_MIN_MENTIONS = 3;
+export { REVIEW_THEME_MIN_MENTIONS };
 export const REVIEW_THEME_GROWTH_FACTOR = 2;
 export const REVIEW_THEME_MIN_VERSION_REVIEWS = 5;
 export const REVIEW_THEME_MAX_SAMPLES = 5;

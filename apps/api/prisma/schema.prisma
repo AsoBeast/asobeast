@@ -243,12 +243,18 @@ model TrackedKeyword {
 }
 
 model AuditInsight {
-  appId       String   @id
-  app         App      @relation(fields: [appId], references: [id], onDelete: Cascade)
-  model       String
-  checks      Json
-  generatedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  appId         String    @id
+  app           App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  model         String
+  checks        Json      @default("{}")
+  observations  Json?
+  inputHash     String?
+  promptVersion String?
+  runState      String    @default("completed")
+  runError      String?
+  requestedAt   DateTime?
+  generatedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
 }
 
 model KeywordMetric {
@@ -431,6 +437,8 @@ model AuditScore {
   coveredWeight Int
   totalWeight   Int
   factors       Json
+  rubricVersion String   @default("v1")
+  confidence    Float?
   createdAt     DateTime @default(now())
 
   @@id([appId, date])

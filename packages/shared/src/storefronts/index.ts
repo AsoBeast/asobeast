@@ -1,8 +1,14 @@
 import type { Store } from '../index';
 import { APP_STORE_STOREFRONTS } from './app-store';
 import { GOOGLE_PLAY_STOREFRONTS } from './google-play';
+import { STOREFRONT_LANGUAGES, storefrontLanguage } from './languages';
 
-export { APP_STORE_STOREFRONTS, GOOGLE_PLAY_STOREFRONTS };
+export {
+  APP_STORE_STOREFRONTS,
+  GOOGLE_PLAY_STOREFRONTS,
+  STOREFRONT_LANGUAGES,
+  storefrontLanguage,
+};
 
 const STOREFRONTS: Record<Store, ReadonlySet<string>> = {
   APP_STORE: new Set(APP_STORE_STOREFRONTS),

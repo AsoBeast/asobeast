@@ -1,68 +1,42 @@
-import { AUDIT_WEIGHTS, computeAudit } from './rubric';
-import { previewVideoChecks, ratingChecks, titleChecks } from './audit-checks';
+import { Store } from '@prisma/client';
+import {
+  appStoreContext,
+  competitor,
+  FIXTURE_NOW,
+  keyword,
+  playContext,
+  reviewsFrom,
+} from './audit-context.fixture';
 import { AuditContext, AuditKeyword } from './audit-scoring';
+import { titleChecks } from './checks/metadata-checks';
+import { ratingChecks } from './checks/reputation-checks';
+import {
+  AUDIT_GROUP_LABELS,
+  AUDIT_RUBRIC_VERSION,
+  AUDIT_WEIGHTS,
+  computeAudit,
+} from './rubric';
 
-const emptyFacts = {
-  screenshotCount: null,
-  ipadScreenshotCount: null,
-  genres: [],
-  releaseNotes: null,
-  languages: [],
-  contentRating: null,
-  genreKey: null,
-  genreName: null,
-  hasVideo: null,
-  iconUrl: null,
-  screenshotUrls: [],
-};
-
-const NOW = new Date('2026-07-09T00:00:00.000Z');
-
-const SUBJECTIVE_IDS = [
+const OBSERVABLE_IDS = [
   'screenshots-first-three',
   'screenshots-text-overlays',
   'screenshots-consistent',
   'screenshots-localized',
   'screenshots-device-frames',
-  'preview-video-exists',
-  'preview-video-hook',
-  'preview-video-length',
-  'preview-video-sound',
-  'ratings-responses',
-  'ratings-prompts',
   'icon-distinctive',
   'icon-simple',
   'icon-category-fit',
   'icon-no-text',
-  'conversion-promo',
-  'conversion-events',
-  'conversion-cpp',
 ];
 
-const perfectAiChecks = Object.fromEntries(
-  SUBJECTIVE_IDS.map((id) => [id, { score: 10, detail: 'Excellent.' }]),
-);
+const answered = (ids: string[]) =>
+  Object.fromEntries(
+    ids.map((id) => [id, { score: 10, detail: 'Excellent.' }]),
+  );
 
-const emptyContext = (): AuditContext => ({
-  appId: 'app1',
-  store: 'APP_STORE',
-  title: '',
-  subtitle: null,
-  description: '',
-  ratingAvg: null,
-  ratingCount: null,
-  storeUpdatedAt: null,
-  now: NOW,
-  rawFacts: { ...emptyFacts },
-  keywords: [],
-  rankings: { top10Share: 0, rankedShare: 0, avgDelta7d: null, gapCount: 10 },
-  history: { ratingAvgDelta30d: null, ratingCountDelta30d: null },
-  competitorTitles: [],
-  competitorNames: [],
-  brandTokens: [],
-  aiChecks: {},
-  aiStatus: { configured: false, model: null, generatedAt: null },
-});
+const observedAiChecks = answered(OBSERVABLE_IDS);
+
+const emptyContext = (): AuditContext => appStoreContext();
 
 const keywordFieldEntries: AuditKeyword[] = [
   'meditation',
@@ -75,67 +49,113 @@ const keywordFieldEntries: AuditKeyword[] = [
   'motivation',
   'calmness',
   'focusflow',
-].map((text) => ({
-  text,
-  source: 'KEYWORD_FIELD',
-  bucket: 'longtail',
-  relevance: 100,
-  position: 1,
-}));
+].map((text) => keyword(text, 'longtail', 10, { source: 'KEYWORD_FIELD' }));
 
-const perfectContext = (): AuditContext => ({
-  appId: 'app1',
-  store: 'APP_STORE',
-  title: 'Habit Tracker: Daily Streaks',
-  subtitle: 'Streak Counter and Reminders',
-  description:
-    'Track your habits and reach your goals.\n• Loved by 2 million users. Download now to start today.',
-  ratingAvg: 5,
-  ratingCount: 1_000_000,
-  storeUpdatedAt: NOW,
-  now: NOW,
-  rawFacts: {
-    ...emptyFacts,
-    screenshotCount: 10,
-    releaseNotes: 'New reminders and widgets.',
-  },
-  keywords: [
-    {
-      text: 'habit tracker',
-      source: 'TITLE',
-      bucket: 'primary',
-      relevance: 100,
-      position: 1,
+const perfectKeywords: AuditKeyword[] = [
+  keyword('habit tracker', 'primary', 90, { source: 'TITLE', position: 1 }),
+  keyword('streak counter', 'secondary', 70, {
+    source: 'SUBTITLE',
+    position: 3,
+  }),
+  keyword('goal log', 'secondary', 60, { source: 'SUBTITLE', position: 5 }),
+  ...keywordFieldEntries,
+];
+
+const perfectKeywordField = keywordFieldEntries
+  .map((entry) => entry.text)
+  .join(',');
+
+const perfectContext = (): AuditContext =>
+  appStoreContext({
+    title: 'Habit Tracker: Daily Streaks',
+    subtitle: 'Streak Counter and Goal Log',
+    summary:
+      'Streak counter and goal log to keep every routine moving forward now',
+    keywordField: perfectKeywordField,
+    competitors: [
+      competitor({
+        id: 'c1',
+        name: 'Pomodoro Labs',
+        title: 'Pomodoro Focus Timer',
+        ratingCount: 100_000,
+      }),
+      competitor({
+        id: 'c2',
+        name: 'Timer Works',
+        title: 'Timer Works Pro',
+        ratingCount: 200_000,
+      }),
+    ],
+    reviews: reviewsFrom(FIXTURE_NOW, [5, 5, 5, 5, 5]),
+    description:
+      'Track your habits and reach your goals.\n• Loved by 2 million users. Download now to start today.',
+    ratingAvg: 5,
+    ratingCount: 1_000_000,
+    storeUpdatedAt: FIXTURE_NOW,
+    facts: {
+      screenshotCount: 10,
+      screenshotUrls: Array.from({ length: 10 }, (_, i) => `s${i}.png`),
+      releaseNotes:
+        'Adds streak reminders, home screen widgets and a weekly recap.',
+      languages: ['EN', 'PL', 'DE', 'FR', 'ES', 'IT', 'PT', 'JA', 'KO', 'ZH'],
     },
-    {
-      text: 'streak counter',
-      source: 'SUBTITLE',
-      bucket: 'secondary',
-      relevance: 90,
-      position: 3,
+    keywords: perfectKeywords,
+    visibility: { latest: 60, latestDate: '2026-07-09', weekAgo: 55 },
+    comparison: {
+      competitors: [{ id: 'c1', name: 'Pomodoro Labs' }],
+      rows: [
+        {
+          keywordId: 'k1',
+          text: 'habit tracker',
+          traffic: 8,
+          difficulty: 3,
+          you: 1,
+          positions: { c1: 12 },
+          gap: false,
+        },
+      ],
     },
-    ...keywordFieldEntries,
-  ],
-  rankings: { top10Share: 1, rankedShare: 1, avgDelta7d: -1, gapCount: 0 },
-  history: { ratingAvgDelta30d: 0.1, ratingCountDelta30d: 100 },
-  competitorTitles: [],
-  competitorNames: [],
-  brandTokens: [],
-  aiChecks: perfectAiChecks,
-  aiStatus: {
-    configured: true,
-    model: 'gpt-4o',
-    generatedAt: NOW.toISOString(),
-  },
-});
+    aiChecks: observedAiChecks,
+    aiStatus: {
+      configured: true,
+      model: 'gpt-5.6-luna',
+      generatedAt: FIXTURE_NOW.toISOString(),
+    },
+  });
+
+const perfectPlayContext = (): AuditContext =>
+  playContext({
+    ...perfectContext(),
+    store: Store.GOOGLE_PLAY,
+    facts: {
+      screenshotCount: 8,
+      screenshotUrls: Array.from({ length: 8 }, (_, i) => `p${i}.png`),
+      releaseNotes:
+        'Adds streak reminders, home screen widgets and a weekly recap.',
+      featureGraphicUrl: 'https://play-lh.googleusercontent.com/header',
+      videoUrl: 'https://play.google.com/video/x',
+      privacyPolicyUrl: 'https://example.com/privacy',
+    },
+  });
+
+const ids = (context: AuditContext): string[] =>
+  computeAudit(context).factors.flatMap((factor) =>
+    factor.checks.map((item) => item.id),
+  );
 
 describe('AUDIT_WEIGHTS', () => {
-  it('matches the ported factor weights', () => {
-    const ios = AUDIT_WEIGHTS.APP_STORE;
-    expect(ios).toMatchObject({
+  it('weighs the App Store at 110 and Google Play at 105', () => {
+    const total = (store: Store) =>
+      Object.values(AUDIT_WEIGHTS[store]).reduce(
+        (sum, weight) => sum + weight,
+        0,
+      );
+
+    expect(AUDIT_WEIGHTS.APP_STORE).toMatchObject({
       title: 20,
       subtitle: 15,
       keywordField: 15,
+      shortDescription: 0,
       description: 5,
       screenshots: 15,
       previewVideo: 5,
@@ -144,31 +164,28 @@ describe('AUDIT_WEIGHTS', () => {
       rankings: 10,
       conversion: 5,
     });
-    const iosSum = Object.values(ios).reduce((a, b) => a + b, 0);
-    const androidSum = Object.values(AUDIT_WEIGHTS.GOOGLE_PLAY).reduce(
-      (a, b) => a + b,
-      0,
-    );
-    expect(iosSum).toBe(110);
-    expect(androidSum).toBe(90);
+    expect(total('APP_STORE')).toBe(110);
+    expect(total('GOOGLE_PLAY')).toBe(105);
   });
 });
 
 describe('computeAudit', () => {
-  it('scores a perfect listing 100 with full coverage', () => {
+  it('scores a perfect listing 100 over every measurable factor', () => {
     const result = computeAudit(perfectContext());
+    const measurable = result.factors.filter(
+      (factor) => factor.availability !== 'not-measurable',
+    );
     expect(result.overall).toBe(100);
-    expect(result.coveredWeight).toBe(110);
+    expect(result.coveredWeight).toBe(105);
     expect(result.totalWeight).toBe(110);
-    expect(result.factors.every((factor) => factor.score === 10)).toBe(true);
-    expect(result.factors.some((factor) => factor.needsInput)).toBe(false);
+    expect(measurable.every((factor) => factor.score === 10)).toBe(true);
+    expect(measurable.some((factor) => factor.needsInput)).toBe(false);
   });
 
   it('scores an empty listing near zero and renormalizes over covered weight', () => {
     const result = computeAudit(emptyContext());
     expect(result.overall).not.toBeNull();
     expect(result.overall as number).toBeLessThan(35);
-    expect(result.coveredWeight).toBe(55);
     expect(result.totalWeight).toBe(110);
   });
 
@@ -179,6 +196,147 @@ describe('computeAudit', () => {
     expect(keywordField?.needsInput).toBe(true);
     expect(keywordField?.score).toBeNull();
     expect(ratings?.needsInput).toBe(true);
+  });
+
+  it('produces the same result for the same context on every call', () => {
+    const context = perfectContext();
+
+    expect(computeAudit(context)).toEqual(computeAudit(context));
+  });
+
+  it('marks needsInput exactly when the factor has no score and never covers more than it lists', () => {
+    for (const result of [
+      computeAudit(emptyContext()),
+      computeAudit(perfectContext()),
+    ]) {
+      expect(result.rubricVersion).toBe(AUDIT_RUBRIC_VERSION);
+      expect(result.coveredWeight).toBeLessThanOrEqual(result.totalWeight);
+      for (const factor of result.factors) {
+        expect(factor.needsInput).toBe(factor.score === null);
+      }
+    }
+  });
+
+  it('splits every factor between the two groups and grades the overall', () => {
+    const result = computeAudit(perfectContext());
+
+    expect(result.grade).toBe('A');
+    expect(result.confidence).toBe(1);
+    expect(result.groups?.map((group) => group.id)).toEqual([
+      'discoverability',
+      'conversion',
+    ]);
+    expect(result.groups?.map((group) => group.label)).toEqual(
+      Object.values(AUDIT_GROUP_LABELS),
+    );
+    expect(result.groups?.every((group) => group.score === 10)).toBe(true);
+    expect(result.factors.every((factor) => factor.group !== undefined)).toBe(
+      true,
+    );
+    expect(
+      result.factors
+        .filter((factor) => factor.id !== 'previewVideo')
+        .every((factor) => factor.availability === 'measured'),
+    ).toBe(true);
+  });
+
+  it('scores Google Play with its own fields', () => {
+    const played = ids(perfectPlayContext());
+
+    expect(played).toEqual(
+      expect.arrayContaining([
+        'short-description-keyword',
+        'short-description-length',
+        'short-description-no-repetition',
+        'short-description-policy',
+        'screenshots-feature-graphic',
+        'preview-video-present',
+      ]),
+    );
+    expect(
+      played.filter(
+        (id) => id.startsWith('subtitle-') || id.startsWith('keyword-field-'),
+      ),
+    ).toEqual([]);
+  });
+
+  it('names the Google Play screenshots factor after its feature graphic', () => {
+    const labelOf = (context: AuditContext) =>
+      computeAudit(context).factors.find(
+        (factor) => factor.id === 'screenshots',
+      )?.label;
+
+    expect(labelOf(perfectPlayContext())).toBe(
+      'Screenshots and feature graphic',
+    );
+    expect(labelOf(perfectContext())).toBe('Screenshots');
+  });
+
+  it('leaves no unanswered check without a way to answer it after an AI run', () => {
+    const result = computeAudit(perfectContext());
+
+    const stuck = result.factors
+      .flatMap((factor) => factor.checks)
+      .filter((item) => item.status === 'unanswered' && !item.unlock);
+
+    expect(stuck.map((item) => item.id)).toEqual([]);
+  });
+
+  it('lists no preview video check on the App Store and says so in the limitations', () => {
+    const result = computeAudit(perfectContext());
+    const video = result.factors.find((factor) => factor.id === 'previewVideo');
+
+    expect(video).toMatchObject({
+      checks: [],
+      availability: 'not-measurable',
+      score: null,
+      needsInput: true,
+    });
+    expect(result.limitations?.map((item) => item.id)).toContain(
+      'preview-video',
+    );
+  });
+
+  it('waits for the keyword field instead of scoring without it', () => {
+    const withoutField = computeAudit({
+      ...perfectContext(),
+      keywords: [],
+      keywordField: null,
+    });
+    const field = withoutField.factors.find(
+      (factor) => factor.id === 'keywordField',
+    );
+
+    expect(field?.availability).toBe('awaiting-input');
+    expect(field?.checks).toEqual([
+      expect.objectContaining({
+        id: 'keyword-field-saved',
+        status: 'unanswered',
+        unlock: {
+          kind: 'keyword-field',
+          label: 'Paste your keyword field from App Store Connect',
+        },
+      }),
+    ]);
+  });
+
+  it('offers the AI analysis before any other unlock when nothing has run', () => {
+    const result = computeAudit(emptyContext());
+
+    expect(result.unlocks?.[0]).toMatchObject({
+      kind: 'ai-analysis',
+      label: 'Add OPENAI_API_KEY to analyze your icon and screenshots',
+    });
+    expect(result.unlocks?.[0].checks).toBeGreaterThan(0);
+  });
+
+  it('lists no check for promotional text, in-app events or custom product pages', () => {
+    const all = [...ids(perfectContext()), ...ids(perfectPlayContext())];
+
+    expect(all).not.toContain('conversion-promo');
+    expect(all).not.toContain('conversion-events');
+    expect(all).not.toContain('conversion-cpp');
+    expect(all).not.toContain('ratings-prompts');
   });
 
   it('produces recommendations for failing checks', () => {
@@ -196,24 +354,13 @@ describe('computeAudit', () => {
 });
 
 describe('factor bands', () => {
-  const withContext = (overrides: Partial<AuditContext>): AuditContext => ({
-    ...emptyContext(),
-    ...overrides,
-  });
-
   it('scores an exact title phrase match higher than a partial match', () => {
-    const primary: AuditKeyword = {
-      text: 'habit tracker',
-      source: 'TITLE',
-      bucket: 'primary',
-      relevance: 100,
-      position: 1,
-    };
+    const primary = keyword('habit tracker', 'primary', 90);
     const phrase = titleChecks(
-      withContext({ title: 'Habit Tracker Pro', keywords: [primary] }),
+      appStoreContext({ title: 'Habit Tracker Pro', keywords: [primary] }),
     ).find((c) => c.id === 'title-keyword');
     const partial = titleChecks(
-      withContext({ title: 'Habit Builder', keywords: [primary] }),
+      appStoreContext({ title: 'Habit Builder', keywords: [primary] }),
     ).find((c) => c.id === 'title-keyword');
     expect(phrase?.score).toBe(10);
     expect(partial?.score).toBe(4);
@@ -221,45 +368,12 @@ describe('factor bands', () => {
 
   it('maps rating averages onto the skill bands', () => {
     const scoreFor = (avg: number) =>
-      ratingChecks(withContext({ ratingAvg: avg })).find(
+      ratingChecks(appStoreContext({ ratingAvg: avg })).find(
         (c) => c.id === 'ratings-average',
       )?.score ?? 0;
     expect(scoreFor(4.8)).toBeGreaterThanOrEqual(9);
     expect(scoreFor(4.2)).toBeGreaterThanOrEqual(5);
     expect(scoreFor(4.2)).toBeLessThanOrEqual(8);
     expect(scoreFor(3.5)).toBeLessThanOrEqual(4);
-  });
-
-  const previewExists = (context: AuditContext) =>
-    previewVideoChecks(context).find((c) => c.id === 'preview-video-exists');
-
-  it('scores the preview video from data when hasVideo is known', () => {
-    const present = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: true } }),
-    );
-    const absent = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: false } }),
-    );
-    expect(present?.kind).toBe('auto');
-    expect(present?.score).toBe(10);
-    expect(absent?.kind).toBe('auto');
-    expect(absent?.score).toBe(0);
-  });
-
-  it('falls back to the AI check when hasVideo is null', () => {
-    const answered = previewExists(
-      withContext({
-        rawFacts: { ...emptyFacts, hasVideo: null },
-        aiChecks: {
-          'preview-video-exists': { score: 10, detail: 'Has a preview video.' },
-        },
-      }),
-    );
-    const unscored = previewExists(
-      withContext({ rawFacts: { ...emptyFacts, hasVideo: null } }),
-    );
-    expect(answered?.kind).toBe('ai');
-    expect(answered?.score).toBe(10);
-    expect(unscored?.score).toBeNull();
   });
 });

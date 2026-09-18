@@ -316,7 +316,7 @@ SMTP_USER=                          # optional; empty for unauthenticated relays
 SMTP_PASSWORD=                      # optional
 SMTP_FROM=                          # e.g. asobeast <alerts@example.com>
 OPENAI_API_KEY=                     # optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
-AI_MODEL=gpt-4o                     # OpenAI model with vision + structured outputs
+AI_MODEL=gpt-5.6-luna               # OpenAI model with vision + structured outputs
 BULL_BOARD_ENABLED=true             # queue dashboard at /admin/queues; platform-operator only, proxied through the web app
 API_DOCS=owner                      # openapi surface: owner (platform-operator session or asob_ token), public, or off. WARNS in production when public
 METRICS_CACHE_SECONDS=30            # how long one /metrics scrape is reused before the collectors run again; 0 collects on every scrape

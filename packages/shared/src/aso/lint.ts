@@ -1,5 +1,6 @@
+import { Store } from '../index';
 import { isStopword, normalizeText, tokenize } from '../text';
-import { countChars } from './limits';
+import { countChars, KEYWORD_MIN_CHARS, utf8ByteLength } from './limits';
 
 export type LintSeverity = 'error' | 'warn' | 'info';
 
@@ -26,6 +27,28 @@ const CTA_PATTERN =
   /\b(download|try|get started|sign up|start now|start today|start free|join|subscribe|install|upgrade|get the app)\b/i;
 const SOCIAL_PROOF_PATTERN =
   /(\b(million|users|downloads|awarded?|featured|rated|press|trusted|loved by|reviews?)\b|#1|number one|\d[\d,.]*\+)/i;
+const PLAY_CLAIM_TERMS = [
+  'best',
+  'top',
+  'free',
+  'new',
+  'discount',
+  'sale',
+  'number one',
+] as const;
+const PLAY_CALL_TO_ACTION_TERMS = [
+  'download now',
+  'install now',
+  'play now',
+  'update now',
+  'get it now',
+] as const;
+const PLAY_POLICY_TERMS = [
+  ...PLAY_CLAIM_TERMS,
+  ...PLAY_CALL_TO_ACTION_TERMS,
+] as const;
+const RANK_CLAIM = /#\s?1(?!\d)/;
+const EMOJI = /\p{Extended_Pictographic}/u;
 
 const contentTokens = (text: string): string[] =>
   tokenize(text).filter((token) => !isStopword(token));
@@ -33,32 +56,87 @@ const contentTokens = (text: string): string[] =>
 const toSet = (words: readonly string[] | undefined): ReadonlySet<string> =>
   new Set((words ?? []).flatMap((word) => tokenize(word)));
 
-const overLimit = (text: string, limit: number): LintIssue[] => {
-  const chars = countChars(text);
-  if (chars <= limit) {
+type Measure = (text: string) => number;
+
+const overLimit = (
+  text: string,
+  limit: number,
+  measure: Measure = countChars,
+  unit = 'character',
+): LintIssue[] => {
+  const used = measure(text);
+  if (used <= limit) {
     return [];
   }
   return [
     {
       rule: 'over-limit',
       severity: 'error',
-      message: `Exceeds the ${limit} character limit (${chars}).`,
+      message: `Exceeds the ${limit} ${unit} limit (${used}).`,
     },
   ];
 };
 
-const underUtilized = (text: string, limit: number): LintIssue[] => {
-  const chars = countChars(text.trim());
-  if (chars === 0 || chars >= limit * UNDER_UTILIZED_RATIO) {
+const underUtilized = (
+  text: string,
+  limit: number,
+  measure: Measure = countChars,
+  unit = 'character',
+): LintIssue[] => {
+  const used = measure(text.trim());
+  if (used === 0 || used >= limit * UNDER_UTILIZED_RATIO) {
     return [];
   }
   return [
     {
       rule: 'under-utilized',
       severity: 'warn',
-      message: `Only ${chars} of ${limit} characters used.`,
+      message: `Only ${used} of ${limit} ${unit}s used.`,
     },
   ];
+};
+
+const shortKeywords = (field: string): LintIssue[] =>
+  field
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0 && countChars(part) < KEYWORD_MIN_CHARS)
+    .map((part) => ({
+      rule: 'short-keyword',
+      severity: 'warn' as const,
+      message: `"${part}" is shorter than ${KEYWORD_MIN_CHARS} characters; App Store Connect ignores it.`,
+      offendingText: part,
+    }));
+
+const containsTerm = (text: string, term: string): boolean =>
+  ` ${normalizeText(text)} `.includes(` ${term} `);
+
+const policyTerms = (
+  text: string,
+  terms: readonly string[] = PLAY_POLICY_TERMS,
+): LintIssue[] => {
+  const found = terms.filter((term) => containsTerm(text, term));
+  const rank = RANK_CLAIM.exec(text);
+  return [...found, ...(rank ? [rank[0]] : [])].map((term) => ({
+    rule: 'policy-term',
+    severity: 'error' as const,
+    message: `Google Play does not allow "${term}" here.`,
+    offendingText: term,
+  }));
+};
+
+const emoji = (text: string): LintIssue[] => {
+  const found = EMOJI.exec(text);
+  return found
+    ? [
+        {
+          rule: 'emoji',
+          severity: 'error',
+          message: 'Google Play does not allow emoji in the title.',
+          offendingText: found[0],
+        },
+      ]
+    : [];
 };
 
 const keywordStuffing = (text: string): LintIssue[] => {
@@ -102,11 +180,18 @@ const repeats = (
   return issues;
 };
 
-export function lintTitle(title: string, limit = 30): LintIssue[] {
+export function lintTitle(
+  title: string,
+  limit = 30,
+  store: Store = 'APP_STORE',
+): LintIssue[] {
   const issues: LintIssue[] = [
     ...overLimit(title, limit),
     ...underUtilized(title, limit),
     ...keywordStuffing(title),
+    ...(store === 'GOOGLE_PLAY'
+      ? [...policyTerms(title), ...emoji(title)]
+      : []),
   ];
   const special = title.match(SPECIAL_CHARS);
   if (special) {
@@ -148,6 +233,7 @@ export function lintShortDescription(
     ...underUtilized(text, limit),
     ...repeats(text, toSet(context.titleWords), 'repeats-title-word', 'title'),
     ...keywordStuffing(text),
+    ...policyTerms(text),
   ];
 
   const tracked = context.trackedKeywords ?? [];
@@ -175,8 +261,9 @@ export function lintKeywordField(
   limit = 100,
 ): LintIssue[] {
   const issues: LintIssue[] = [
-    ...overLimit(field, limit),
-    ...underUtilized(field, limit),
+    ...overLimit(field, limit, utf8ByteLength, 'byte'),
+    ...underUtilized(field, limit, utf8ByteLength, 'byte'),
+    ...shortKeywords(field),
     ...repeats(field, toSet(context.titleWords), 'repeats-title-word', 'title'),
     ...repeats(
       field,

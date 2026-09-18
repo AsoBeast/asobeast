@@ -17,7 +17,7 @@ export interface AiAuditInput {
   genreName: string | null;
   languages: string[];
   releaseNotes: string | null;
-  hasVideo: boolean | null;
+  videoUrl: string | null;
   ratingAvg: number | null;
   ratingCount: number | null;
   iconUrl: string | null;
@@ -204,7 +204,11 @@ export const buildAuditContent = (input: AiAuditInput): AiContentPart[] => {
       input.ratingCount === null ? 'an unknown number of' : input.ratingCount
     } ratings`,
     `Has preview video: ${
-      input.hasVideo === null ? 'unknown' : input.hasVideo ? 'yes' : 'no'
+      input.videoUrl
+        ? 'yes'
+        : input.store === Store.GOOGLE_PLAY
+          ? 'no'
+          : 'unknown'
     }`,
     `Release notes: ${input.releaseNotes ?? '(none)'}`,
     `Description:\n${input.description.slice(0, MAX_DESCRIPTION_CHARS)}`,
