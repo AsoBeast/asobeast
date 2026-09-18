@@ -544,7 +544,11 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
 
 function requestAuditRun(req: IncomingMessage, res: ServerResponse): void {
   if (hasCookie(req, "e2e_ai_unconfigured", "1")) {
-    json(res, 409, errorEnvelope(409, "AI features require OPENAI_API_KEY"));
+    json(
+      res,
+      409,
+      errorEnvelope(409, req.url ?? "/", "AI features require OPENAI_API_KEY"),
+    );
     return;
   }
   if (hasCookie(req, "e2e_ai_reused", "1")) {
@@ -1002,10 +1006,10 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
-    handler: ([id], _q, res) =>
+    handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, { ...METADATA_AUDIT, appId: id })
-        : json(res, 404, errorEnvelope(404, "App not found")),
+        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
     method: "GET",
@@ -1018,7 +1022,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/audit$/,
     handler: ([id], req, res) => {
       if (!apps.some((app) => app.id === id)) {
-        json(res, 404, errorEnvelope(404, "App not found"));
+        json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found"));
         return;
       }
       if (hasCookie(req, "e2e_audit_slow", "1")) {
@@ -1033,7 +1037,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/audit\/ai\/runs$/,
     handler: ([id], req, res) => {
       if (!apps.some((app) => app.id === id)) {
-        json(res, 404, errorEnvelope(404, "App not found"));
+        json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found"));
         return;
       }
       requestAuditRun(req, res);
@@ -1042,12 +1046,12 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/audit\/history$/,
-    handler: ([id], _q, res) =>
+    handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, {
             points: id === "app-gp" ? AUDIT_HISTORY_POINTS : [],
           })
-        : json(res, 404, errorEnvelope(404, "App not found")),
+        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
     method: "GET",
