@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import {
   analyzedCreative,
   appStoreContext,
+  competitor,
   ContextOverrides,
   keyword,
   observations,
@@ -265,6 +266,38 @@ describe('iconChecks', () => {
     ]);
     expect(checks.find((item) => item.id === 'icon-no-text')?.score).toBe(10);
     expect(checks.find((item) => item.id === 'icon-distinct')?.score).toBe(10);
+  });
+
+  it('names the competitor whose icon was sent at the reported position', () => {
+    const context = appStoreContext({
+      competitors: [
+        competitor({ id: 'no-icon', name: 'No Icon' }),
+        competitor({ id: 'lookalike', name: 'Lookalike', iconUrl: 'l.png' }),
+      ],
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({
+          icon: {
+            hasText: false,
+            elementCount: 'one',
+            contrast: 'high',
+            similarCompetitorPosition: 1,
+          },
+        }),
+        inputs: {
+          store: Store.APP_STORE,
+          country: 'us',
+          title: 'Where Am I?',
+          iconUrl: 'https://cdn/icon.png',
+          screenshotUrls: [],
+          competitorIconUrls: ['l.png'],
+        },
+        iconCompetitorIds: ['lookalike'],
+      }),
+    });
+
+    expect(
+      iconChecks(context).find((item) => item.id === 'icon-distinct'),
+    ).toMatchObject({ score: 3, detail: 'Lookalike has a similar icon.' });
   });
 
   it('waits for competitor icons before judging distinctness', () => {

@@ -69,7 +69,7 @@ describe('parseObservations', () => {
         ],
         consistentStyle: true,
       },
-      { screenshots: 6, competitorIcons: 3 },
+      { icon: true, screenshots: 6, competitorIcons: 3 },
     );
 
     expect(parsed.icon?.similarCompetitorPosition).toBeNull();
@@ -104,15 +104,46 @@ describe('parseObservations', () => {
         })),
         consistentStyle: null,
       },
-      { screenshots: 6, competitorIcons: 0 },
+      { icon: true, screenshots: 6, competitorIcons: 0 },
     );
 
     expect(parsed.screenshots.map((item) => item.position)).toEqual([1, 2, 3]);
   });
 
+  it('drops what the model described but was never sent', () => {
+    const parsed = parseObservations(
+      {
+        icon: {
+          hasText: true,
+          elementCount: 'one',
+          contrast: 'low',
+          similarCompetitorPosition: null,
+        },
+        screenshots: [
+          {
+            position: 1,
+            captionText: 'Only one',
+            captionReadable: true,
+            captionLanguage: 'en',
+            message: 'benefit',
+          },
+        ],
+        consistentStyle: false,
+      },
+      { icon: false, screenshots: 1, competitorIcons: 0 },
+    );
+
+    expect(parsed.icon).toBeNull();
+    expect(parsed.consistentStyle).toBeNull();
+    expect(parsed.screenshots).toHaveLength(1);
+  });
+
   it('rejects a payload that does not match, as a retryable failure', () => {
     expect(() =>
-      parseObservations({ checks: [] }, { screenshots: 6, competitorIcons: 0 }),
+      parseObservations(
+        { checks: [] },
+        { icon: true, screenshots: 6, competitorIcons: 0 },
+      ),
     ).toThrow(expect.objectContaining({ retryable: true }));
   });
 

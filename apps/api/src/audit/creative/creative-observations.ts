@@ -67,11 +67,13 @@ export interface CreativeInputs {
 }
 
 export interface SentCreative {
+  icon: boolean;
   screenshots: number;
   competitorIcons: number;
 }
 
 const LANGUAGE_CODE = /^[a-z]{2}$/;
+const MIN_STYLE_SCREENSHOTS = 2;
 
 const normalizeLanguage = (value: string | null): string | null => {
   if (value === null) {
@@ -127,7 +129,7 @@ export function parseObservations(
   const similar = icon?.similarCompetitorPosition ?? null;
   return {
     icon:
-      icon === null
+      icon === null || !sent.icon
         ? null
         : {
             ...icon,
@@ -139,7 +141,10 @@ export function parseObservations(
                 : null,
           },
     screenshots,
-    consistentStyle: parsed.data.consistentStyle,
+    consistentStyle:
+      sent.screenshots >= MIN_STYLE_SCREENSHOTS
+        ? parsed.data.consistentStyle
+        : null,
   };
 }
 

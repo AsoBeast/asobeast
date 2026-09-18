@@ -36,6 +36,13 @@ export const REVIEW_WINDOW_DAYS = 90;
 export const VISIBILITY_WINDOW_DAYS = 8;
 export const VISIBILITY_TREND_DAYS = 7;
 
+const iconCompetitors = (
+  competitors: { id: string; iconUrl: string | null }[],
+): { id: string; iconUrl: string }[] =>
+  competitors
+    .flatMap(({ id, iconUrl }) => (iconUrl === null ? [] : [{ id, iconUrl }]))
+    .slice(0, MAX_COMPETITOR_ICONS);
+
 @Injectable()
 export class AuditContextLoader {
   constructor(
@@ -104,6 +111,7 @@ export class AuditContextLoader {
         where: { primaryAppId: appId },
         orderBy: { createdAt: 'asc' },
         select: {
+          id: true,
           store: true,
           snapshots: {
             orderBy: { capturedAt: 'desc' },
@@ -120,20 +128,21 @@ export class AuditContextLoader {
       title: latest?.title ?? '',
       iconUrl: facts.iconUrl,
       screenshotUrls: facts.screenshotUrls,
-      competitorIconUrls: competitors
-        .map(
-          (competitor) =>
-            extractRawFacts(competitor.store, competitor.snapshots[0]?.raw)
-              .iconUrl,
-        )
-        .filter((url): url is string => url !== null)
-        .slice(0, MAX_COMPETITOR_ICONS),
+      competitorIconUrls: iconCompetitors(
+        competitors.map((competitor) => ({
+          id: competitor.id,
+          iconUrl: extractRawFacts(
+            competitor.store,
+            competitor.snapshots[0]?.raw,
+          ).iconUrl,
+        })),
+      ).map((competitor) => competitor.iconUrl),
     };
   }
 
   private creativeState(
     inputs: CreativeInputs,
-    competitorIds: string[],
+    iconCompetitorIds: string[],
     insight: {
       observations: unknown;
       inputHash: string | null;
@@ -146,7 +155,7 @@ export class AuditContextLoader {
     return {
       observations,
       inputs,
-      competitorIds,
+      iconCompetitorIds,
       analyzedAt: insight?.generatedAt ?? null,
       model: insight?.model ?? null,
       stale:
@@ -178,6 +187,7 @@ export class AuditContextLoader {
       this.keywords.compare(appId, false),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
+        orderBy: { createdAt: 'asc' },
         select: {
           id: true,
           name: true,
@@ -218,6 +228,7 @@ export class AuditContextLoader {
     );
     const facts = extractRawFacts(app.store, latest?.raw);
     const mapped = competitors.map(toAuditCompetitor);
+    const sent = iconCompetitors(mapped);
     const creative = this.creativeState(
       {
         store: app.store,
@@ -225,12 +236,9 @@ export class AuditContextLoader {
         title: latest?.title ?? '',
         iconUrl: facts.iconUrl,
         screenshotUrls: facts.screenshotUrls,
-        competitorIconUrls: mapped
-          .map((competitor) => competitor.iconUrl)
-          .filter((url): url is string => url !== null)
-          .slice(0, MAX_COMPETITOR_ICONS),
+        competitorIconUrls: sent.map((competitor) => competitor.iconUrl),
       },
-      mapped.map((competitor) => competitor.id),
+      sent.map((competitor) => competitor.id),
       insight,
     );
 

@@ -62,7 +62,7 @@ export interface AuditVisibility {
 export interface AuditCreativeState {
   observations: CreativeObservations | null;
   inputs: CreativeInputs;
-  competitorIds: string[];
+  iconCompetitorIds: string[];
   analyzedAt: Date | null;
   model: string | null;
   stale: boolean;

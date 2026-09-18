@@ -414,10 +414,12 @@ export const iconChecks = (context: AuditContext): RubricCheck[] => {
       ),
     ];
   }
-  const similar =
+  const similarId =
     icon.similarCompetitorPosition === null
       ? null
-      : (context.competitors[icon.similarCompetitorPosition - 1] ?? null);
+      : context.creative.iconCompetitorIds[icon.similarCompetitorPosition - 1];
+  const similar =
+    context.competitors.find((item) => item.id === similarId) ?? null;
   return [
     check({
       id: 'icon-no-text',

@@ -99,7 +99,7 @@ const emptyCreative = (
     screenshotUrls: facts.screenshotUrls ?? [],
     competitorIconUrls: [],
   },
-  competitorIds: [],
+  iconCompetitorIds: [],
   analyzedAt: null,
   model: null,
   stale: false,

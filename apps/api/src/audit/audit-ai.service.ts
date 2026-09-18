@@ -42,6 +42,7 @@ export class AuditAiService {
       maxOutputTokens: CREATIVE_MAX_OUTPUT_TOKENS,
     });
     return parseObservations(raw, {
+      icon: inputs.iconUrl !== null,
       screenshots: Math.min(
         inputs.screenshotUrls.length,
         MAX_ANALYZED_SCREENSHOTS,
