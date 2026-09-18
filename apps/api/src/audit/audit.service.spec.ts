@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { AppAuditResult } from '@asobeast/shared';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
@@ -217,5 +218,28 @@ describe('AuditService.recordToday', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('AuditService.runAi', () => {
+  it('checks the app belongs to the caller before sharing a run in flight', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValueOnce({ id: 'a' })
+      .mockRejectedValueOnce(new NotFoundException('App a not found'));
+    const service = new AuditService(
+      buildPrisma() as unknown as PrismaService,
+      {
+        app,
+        creativeInputs: () => new Promise(() => undefined),
+      } as unknown as AuditContextLoader,
+      { configured: true, model: 'gpt-5.6-luna' } as unknown as AuditAiService,
+      fanOut,
+    );
+
+    void service.runAi('a');
+    await Promise.resolve();
+
+    await expect(service.runAi('a')).rejects.toBeInstanceOf(NotFoundException);
   });
 });

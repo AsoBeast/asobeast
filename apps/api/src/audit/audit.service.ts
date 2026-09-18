@@ -37,6 +37,7 @@ export class AuditService {
   }
 
   async runAi(appId: string): Promise<AppAuditResult> {
+    await this.loader.app(appId);
     const existing = this.inFlightAi.get(appId);
     if (existing) {
       return existing;
