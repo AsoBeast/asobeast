@@ -11,7 +11,13 @@ import {
   AuditUnlockKind,
   AuditUnlockSummary,
 } from '@asobeast/shared';
-import { FactorScore, gradeFor, scoreAudit, scoreFactor } from './audit-engine';
+import {
+  FactorScore,
+  gradeFor,
+  round2,
+  scoreAudit,
+  scoreFactor,
+} from './audit-engine';
 import { buildBenchmarks } from './audit-benchmarks';
 import { limitationsFor } from './audit-limitations';
 import { buildRecommendations, RubricFactor } from './audit-recommendations';
@@ -20,6 +26,7 @@ import {
   coversPhrase,
   priorityKeywords,
   RubricCheck,
+  similarCompetitor,
 } from './audit-scoring';
 import { conversionChecks } from './checks/conversion-checks';
 import {
@@ -229,12 +236,7 @@ const toCreative = (context: AuditContext): AuditCreative | null => {
     return null;
   }
   const priority = priorityKeywords(context.keywords);
-  const similar =
-    observations.icon?.similarCompetitorPosition === null ||
-    observations.icon === null
-      ? null
-      : (context.competitors[observations.icon.similarCompetitorPosition - 1] ??
-        null);
+  const similar = similarCompetitor(context);
   const screenshots: AuditScreenshotObservation[] =
     observations.screenshots.map((item) => ({
       position: item.position,
@@ -329,7 +331,7 @@ export function computeAudit(context: AuditContext): AppAuditResult {
     return {
       id,
       label: AUDIT_GROUP_LABELS[id],
-      score: scored.overall === null ? null : scored.overall / 10,
+      score: scored.overall === null ? null : round2(scored.overall / 10),
       confidence: scored.confidence,
     };
   });

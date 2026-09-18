@@ -404,6 +404,16 @@ export const priorityKeywords = (keywords: AuditKeyword[]): AuditKeyword[] =>
       ),
   );
 
+export const similarCompetitor = (
+  context: AuditContext,
+): AuditCompetitor | null => {
+  const position =
+    context.creative.observations?.icon?.similarCompetitorPosition ?? null;
+  if (position === null) return null;
+  const id = context.creative.iconCompetitorIds[position - 1];
+  return context.competitors.find((item) => item.id === id) ?? null;
+};
+
 export const coversPhrase = (field: string, phrase: string): boolean =>
   ` ${normalizeText(field)} `.includes(` ${normalizeText(phrase)} `);
 

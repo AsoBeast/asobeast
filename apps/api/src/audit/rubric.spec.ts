@@ -2,6 +2,8 @@ import { Store } from '@prisma/client';
 import {
   analyzedCreative,
   appStoreContext,
+  poorAppStoreContext,
+  poorPlayContext,
   competitor,
   daysAgo,
   FIXTURE_NOW,
@@ -525,5 +527,51 @@ describe('store applicability', () => {
     [Store.GOOGLE_PLAY, GOOGLE_PLAY_CHECK_IDS],
   ])('lists exactly the %s checks with complete data', (store, expected) => {
     expect(ids(completeContext(store)).sort()).toEqual(expected);
+  });
+});
+
+describe('computeAudit rounding and creative', () => {
+  it('reports group scores without float noise', () => {
+    for (const context of [poorAppStoreContext(), poorPlayContext()]) {
+      for (const group of computeAudit(context).groups ?? []) {
+        if (group.score !== null) {
+          expect(Math.round(group.score * 100) / 100).toBe(group.score);
+        }
+      }
+    }
+  });
+
+  it('shows the competitor whose icon was sent at the reported position', () => {
+    const context = appStoreContext({
+      competitors: [
+        competitor({ id: 'no-icon', name: 'No Icon' }),
+        competitor({ id: 'lookalike', name: 'Lookalike', iconUrl: 'l.png' }),
+      ],
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({
+          icon: {
+            hasText: false,
+            elementCount: 'one',
+            contrast: 'high',
+            similarCompetitorPosition: 1,
+          },
+        }),
+        inputs: {
+          store: Store.APP_STORE,
+          country: 'us',
+          title: 'Where Am I?',
+          iconUrl: 'https://cdn/icon.png',
+          screenshotUrls: [],
+          competitorIconUrls: ['l.png'],
+        },
+        iconCompetitorIds: ['lookalike'],
+      }),
+    });
+
+    expect(computeAudit(context).creative?.icon?.similarCompetitor).toEqual({
+      appId: 'lookalike',
+      name: 'Lookalike',
+      iconUrl: 'l.png',
+    });
   });
 });
