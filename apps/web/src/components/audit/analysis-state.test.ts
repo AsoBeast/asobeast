@@ -63,7 +63,7 @@ describe("analysisState", () => {
     }
     expect(
       analysisState(
-        { ...audit, creative: staleCreative(audit.creative!) },
+        { ...audit, creative: staleCreative(audit.creative) },
         false,
       ),
     ).toBe("stale");
@@ -86,6 +86,11 @@ describe("analysisState", () => {
 
     expect(Object.keys(ANALYSIS_COPY).sort()).toEqual([...states].sort());
     expect(Object.keys(ANALYSIS_ACTION).sort()).toEqual([...states].sort());
+  });
+
+  it("offers no action while the analysis is current", () => {
+    expect(ANALYSIS_ACTION.current).toBeNull();
+    expect(ANALYSIS_ACTION.stale).toBe("Analyze again");
   });
 });
 

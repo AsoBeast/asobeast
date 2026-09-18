@@ -233,7 +233,7 @@ export function AiAnalysisPanel({
             {action ? (
               <Button
                 onClick={() => analyzeOnce()}
-                disabled={mutation.isPending || state === "current"}
+                disabled={mutation.isPending}
               >
                 {mutation.isPending ? (
                   <Loader2 className="animate-spin" />

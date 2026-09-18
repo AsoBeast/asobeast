@@ -40,7 +40,7 @@ export const ANALYSIS_ACTION: Record<AnalysisState, string | null> = {
   never: "Analyze creative",
   requesting: "Queuing",
   active: null,
-  current: "Analyze again",
+  current: null,
   stale: "Analyze again",
   failed: "Try again",
 };
