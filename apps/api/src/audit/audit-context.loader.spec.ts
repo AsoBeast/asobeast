@@ -5,6 +5,7 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
+import { creativeFingerprint } from './creative/creative-observations';
 
 const D0 = new Date('2026-09-10T00:00:00.000Z');
 
@@ -30,7 +31,12 @@ const trackedKeyword = (text: string, country: string, active: boolean) => ({
   serpVolatility7d: null,
 });
 
-const buildLoader = () => {
+interface LoaderOptions {
+  model?: string | null;
+  insight?: Record<string, unknown> | null;
+}
+
+const buildLoader = (options: LoaderOptions = {}) => {
   const prisma = {
     app: {
       findFirst: jest.fn().mockResolvedValue({
@@ -77,7 +83,9 @@ const buildLoader = () => {
           { score: 1, title: null, text: 'Too many ads', reviewedAt: D0 },
         ]),
     },
-    auditInsight: { findUnique: jest.fn().mockResolvedValue(null) },
+    auditInsight: {
+      findUnique: jest.fn().mockResolvedValue(options.insight ?? null),
+    },
   } as unknown as PrismaService;
   const keywords = {
     listTracked: jest
@@ -92,9 +100,10 @@ const buildLoader = () => {
       .fn()
       .mockResolvedValue({ tracked: [{ text: 'habit' }, { text: 'streak' }] }),
   } as unknown as KeywordsService;
+  const model = options.model === undefined ? 'gpt-5.6-luna' : options.model;
   const auditAi = {
-    configured: true,
-    model: 'gpt-5.6-luna',
+    configured: model !== null,
+    model,
   } as unknown as AuditAiService;
   const analytics = {
     history: jest.fn().mockResolvedValue({
@@ -167,5 +176,42 @@ describe('AuditContextLoader.load', () => {
       latestDate: '2026-09-10',
       weekAgo: 30,
     });
+  });
+});
+
+describe('AuditContextLoader creative staleness', () => {
+  const ANALYZED_WITH = 'gpt-5.6-luna';
+
+  const analyzedInsight = (inputHash: string) => ({
+    observations: { icon: null, screenshots: [], consistentStyle: null },
+    inputHash,
+    generatedAt: D0,
+    model: ANALYZED_WITH,
+    runState: 'completed',
+    runError: null,
+    requestedAt: D0,
+  });
+
+  it('flags changed creative as stale when no model is configured', async () => {
+    const loader = buildLoader({
+      model: null,
+      insight: analyzedInsight('fingerprint-of-older-creative'),
+    });
+
+    const context = await loader.load('app-1');
+
+    expect(context.creative.stale).toBe(true);
+  });
+
+  it('keeps unchanged creative current when no model is configured', async () => {
+    const inputs = await buildLoader().creativeInputs('app-1');
+    const loader = buildLoader({
+      model: null,
+      insight: analyzedInsight(creativeFingerprint(inputs, ANALYZED_WITH)),
+    });
+
+    const context = await loader.load('app-1');
+
+    expect(context.creative.stale).toBe(false);
   });
 });
