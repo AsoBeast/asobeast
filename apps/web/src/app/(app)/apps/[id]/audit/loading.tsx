@@ -5,7 +5,10 @@ export default function Loading() {
     <div className="page-wide flex flex-col gap-8">
       <div className="grid gap-4 xl:grid-cols-12">
         <div className="flex items-center gap-4 xl:col-span-5">
-          <Skeleton className="size-[132px] rounded-full" />
+          <Skeleton
+            data-slot="score-ring-skeleton"
+            className="size-[132px] rounded-full"
+          />
           <div className="flex flex-1 flex-col gap-2">
             {Array.from({ length: 3 }).map((_, index) => (
               <Skeleton key={index} className="h-4 w-full max-w-48" />

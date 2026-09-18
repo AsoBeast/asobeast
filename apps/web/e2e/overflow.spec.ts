@@ -6,6 +6,8 @@ const ROUTES = [
   ["app overview", "/apps/app-long"],
   ["keyword workspace", "/apps/app-long/keywords"],
   ["portfolio", "/"],
+  ["app audit", "/apps/app-long/audit"],
+  ["play audit", "/apps/app-gp/audit"],
 ] as const;
 
 async function overflowingElements(page: import("@playwright/test").Page) {

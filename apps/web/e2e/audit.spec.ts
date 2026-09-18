@@ -314,3 +314,40 @@ test("copies the report", async ({ page, context }) => {
     "# ASO audit:",
   );
 });
+
+for (const colorScheme of ["light", "dark"] as const) {
+  test(`paints the score ring in the ${colorScheme} theme`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme });
+    await page.goto("/apps/app-1/audit");
+
+    const stroke = await page
+      .locator('[data-slot="score-ring"] circle')
+      .last()
+      .evaluate((node) => getComputedStyle(node).stroke);
+
+    expect(stroke).not.toBe("none");
+    expect(stroke).not.toContain("rgba(0, 0, 0, 0)");
+  });
+}
+
+test("keeps the skeleton and the loaded hero the same height", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_audit_slow: "1" });
+  await page.goto("/apps/app-1/audit", { waitUntil: "commit" });
+
+  const skeleton = page.locator('[data-slot="score-ring-skeleton"]');
+  await expect(skeleton).toBeVisible();
+  const before = await skeleton.boundingBox();
+
+  const ring = page.locator('[data-slot="score-ring"]').first();
+  await expect(ring).toBeVisible();
+  const after = await ring.boundingBox();
+
+  expect(before).not.toBeNull();
+  expect(after).not.toBeNull();
+  expect(Math.abs(before!.height - after!.height)).toBeLessThanOrEqual(8);
+});

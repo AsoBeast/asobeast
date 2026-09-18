@@ -2613,6 +2613,28 @@ export const AUDIT_HISTORY_POINTS = [
   },
 ];
 
+const LONG_TEXT =
+  "Kiedy pomiar nie potwierdza oczekiwan, audyt nazywa dokladnie ten warunek, ktory nie zostal spelniony, zamiast powtarzac ogolne stwierdzenie o brakujacych danych w tym miejscu";
+
+export const LONG_AUDIT: AppAuditResult = {
+  ...APP_AUDIT,
+  appId: "app-long",
+  factors: APP_AUDIT.factors.map((factor) => ({
+    ...factor,
+    checks: factor.checks.map((check) => ({ ...check, detail: LONG_TEXT })),
+  })),
+  recommendations: {
+    quickWins: APP_AUDIT.recommendations.quickWins.map((item) => ({
+      ...item,
+      label: LONG_TEXT,
+      detail: LONG_TEXT,
+      fix: LONG_TEXT,
+    })),
+    highImpact: APP_AUDIT.recommendations.highImpact,
+    strategic: APP_AUDIT.recommendations.strategic,
+  },
+};
+
 export const PROVISIONAL_AUDIT: AppAuditResult = {
   ...APP_AUDIT,
   overall: 58.2,

@@ -8,6 +8,7 @@ import {
   ACTION_SUMMARY,
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
+  LONG_AUDIT,
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
@@ -430,12 +431,15 @@ const runState = (
 
 function auditBase(id: string, req: IncomingMessage): AppAuditResult {
   if (id === "app-gp") return PLAY_AUDIT;
+  if (id === "app-long") return LONG_AUDIT;
   if (id === "app-2") return { ...APP_AUDIT, appId: id, benchmarks: null };
   if (hasCookie(req, "e2e_audit", "provisional")) {
     return { ...PROVISIONAL_AUDIT, appId: id };
   }
   return { ...APP_AUDIT, appId: id };
 }
+
+const AUDIT_SLOW_MS = 1_500;
 
 function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
   const base = auditBase(id, req);
@@ -1015,6 +1019,10 @@ const routes: Route[] = [
     handler: ([id], req, res) => {
       if (!apps.some((app) => app.id === id)) {
         json(res, 404, errorEnvelope(404, "App not found"));
+        return;
+      }
+      if (hasCookie(req, "e2e_audit_slow", "1")) {
+        setTimeout(() => auditFor(id, req, res), AUDIT_SLOW_MS);
         return;
       }
       auditFor(id, req, res);
