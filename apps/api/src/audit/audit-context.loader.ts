@@ -18,10 +18,11 @@ import {
   DAY_MS,
 } from './audit-scoring';
 import {
+  CompetitorIcon,
   CreativeInputs,
   creativeFingerprint,
   MAX_COMPETITOR_ICONS,
-  readStoredObservations,
+  readStoredCreative,
 } from './creative/creative-observations';
 
 export interface AuditApp {
@@ -38,9 +39,11 @@ export const VISIBILITY_TREND_DAYS = 7;
 
 const iconCompetitors = (
   competitors: { id: string; iconUrl: string | null }[],
-): { id: string; iconUrl: string }[] =>
+): CompetitorIcon[] =>
   competitors
-    .flatMap(({ id, iconUrl }) => (iconUrl === null ? [] : [{ id, iconUrl }]))
+    .flatMap(({ id, iconUrl }) =>
+      iconUrl === null ? [] : [{ appId: id, iconUrl }],
+    )
     .slice(0, MAX_COMPETITOR_ICONS);
 
 @Injectable()
@@ -128,7 +131,7 @@ export class AuditContextLoader {
       title: latest?.title ?? '',
       iconUrl: facts.iconUrl,
       screenshotUrls: facts.screenshotUrls,
-      competitorIconUrls: iconCompetitors(
+      competitorIcons: iconCompetitors(
         competitors.map((competitor) => ({
           id: competitor.id,
           iconUrl: extractRawFacts(
@@ -136,13 +139,12 @@ export class AuditContextLoader {
             competitor.snapshots[0]?.raw,
           ).iconUrl,
         })),
-      ).map((competitor) => competitor.iconUrl),
+      ),
     };
   }
 
   private creativeState(
     inputs: CreativeInputs,
-    iconCompetitorIds: string[],
     insight: {
       observations: unknown;
       inputHash: string | null;
@@ -150,12 +152,13 @@ export class AuditContextLoader {
       model: string;
     } | null,
   ): AuditCreativeState {
-    const observations = readStoredObservations(insight?.observations ?? null);
+    const analysis = readStoredCreative(insight?.observations ?? null);
+    const observations = analysis?.observations ?? null;
     const model = this.auditAi.model ?? insight?.model ?? null;
     return {
       observations,
+      media: analysis?.media ?? null,
       inputs,
-      iconCompetitorIds,
       analyzedAt: insight?.generatedAt ?? null,
       model: insight?.model ?? null,
       stale:
@@ -228,7 +231,6 @@ export class AuditContextLoader {
     );
     const facts = extractRawFacts(app.store, latest?.raw);
     const mapped = competitors.map(toAuditCompetitor);
-    const sent = iconCompetitors(mapped);
     const creative = this.creativeState(
       {
         store: app.store,
@@ -236,9 +238,8 @@ export class AuditContextLoader {
         title: latest?.title ?? '',
         iconUrl: facts.iconUrl,
         screenshotUrls: facts.screenshotUrls,
-        competitorIconUrls: sent.map((competitor) => competitor.iconUrl),
+        competitorIcons: iconCompetitors(mapped),
       },
-      sent.map((competitor) => competitor.id),
       insight,
     );
 

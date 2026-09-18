@@ -22,6 +22,7 @@ import { AuditService } from './audit.service';
 import {
   CREATIVE_PROMPT_VERSION,
   creativeFingerprint,
+  toStoredCreative,
 } from './creative/creative-observations';
 import {
   ACTIVE_STATES,
@@ -138,7 +139,7 @@ export class AuditAiRunsService {
       where: { appId, requestedAt },
       data: {
         model,
-        observations,
+        observations: toStoredCreative(observations, inputs),
         inputHash: creativeFingerprint(inputs, model),
         promptVersion: CREATIVE_PROMPT_VERSION,
         generatedAt: new Date(),

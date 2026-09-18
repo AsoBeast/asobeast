@@ -242,8 +242,13 @@ const captionKeywordHits = (
         .map((keyword) => keyword.text);
 
 const toCreative = (context: AuditContext): AuditCreative | null => {
-  const { observations, inputs, analyzedAt, model, stale } = context.creative;
-  if (observations === null || analyzedAt === null || model === null) {
+  const { observations, media, analyzedAt, model, stale } = context.creative;
+  if (
+    observations === null ||
+    media === null ||
+    analyzedAt === null ||
+    model === null
+  ) {
     return null;
   }
   const priority = priorityKeywords(context.keywords);
@@ -251,7 +256,7 @@ const toCreative = (context: AuditContext): AuditCreative | null => {
   const screenshots: AuditScreenshotObservation[] =
     observations.screenshots.map((item) => ({
       position: item.position,
-      url: inputs.screenshotUrls[item.position - 1] ?? '',
+      url: media.screenshotUrls[item.position - 1] ?? '',
       captionText: item.captionText,
       captionReadable: item.captionReadable,
       captionLanguage: item.captionLanguage,
@@ -263,10 +268,10 @@ const toCreative = (context: AuditContext): AuditCreative | null => {
     model,
     stale,
     icon:
-      observations.icon === null || inputs.iconUrl === null
+      observations.icon === null || media.iconUrl === null
         ? null
         : {
-            url: inputs.iconUrl,
+            url: media.iconUrl,
             hasText: observations.icon.hasText,
             elementCount: observations.icon.elementCount,
             contrast: observations.icon.contrast,

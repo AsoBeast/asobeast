@@ -16,6 +16,7 @@ import {
 import { AuditContext, AuditKeyword, AuditReview } from './audit-scoring';
 import { titleChecks } from './checks/metadata-checks';
 import { ratingChecks } from './checks/reputation-checks';
+import { analyzedMedia } from './creative/creative-observations';
 import {
   AUDIT_GROUP_LABELS,
   AUDIT_RUBRIC_VERSION,
@@ -118,7 +119,10 @@ const perfectContext = (): AuditContext =>
         title: 'Habit Tracker: Daily Streaks',
         iconUrl: 'https://cdn/icon.png',
         screenshotUrls: Array.from({ length: 10 }, (_, i) => `s${i}.png`),
-        competitorIconUrls: ['c1.png', 'c2.png'],
+        competitorIcons: [
+          { appId: 'app-c1', iconUrl: 'c1.png' },
+          { appId: 'app-c2', iconUrl: 'c2.png' },
+        ],
       },
     }),
     aiStatus: {
@@ -197,7 +201,7 @@ const completeContext = (store: Store): AuditContext => {
         title: 'Habit Tracker',
         iconUrl: 'https://cdn/icon.png',
         screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i}.png`),
-        competitorIconUrls: ['c1.png'],
+        competitorIcons: [{ appId: 'app-c1', iconUrl: 'c1.png' }],
       },
     }),
     aiStatus: { configured: true, model: 'gpt-5.6-luna', generatedAt: null },
@@ -562,9 +566,8 @@ describe('computeAudit rounding and creative', () => {
           title: 'Where Am I?',
           iconUrl: 'https://cdn/icon.png',
           screenshotUrls: [],
-          competitorIconUrls: ['l.png'],
+          competitorIcons: [{ appId: 'lookalike', iconUrl: 'l.png' }],
         },
-        iconCompetitorIds: ['lookalike'],
       }),
     });
 
@@ -573,5 +576,54 @@ describe('computeAudit rounding and creative', () => {
       name: 'Lookalike',
       iconUrl: 'l.png',
     });
+  });
+});
+
+describe('a stale creative analysis', () => {
+  it('shows its observations with the media that was analyzed', () => {
+    const analyzed = {
+      store: Store.APP_STORE,
+      country: 'us',
+      title: 'Where Am I?',
+      iconUrl: 'old-icon.png',
+      screenshotUrls: ['old-1.png', 'old-2.png'],
+      competitorIcons: [{ appId: 'lookalike', iconUrl: 'l.png' }],
+    };
+    const context = appStoreContext({
+      competitors: [
+        competitor({ id: 'lookalike', name: 'Lookalike', iconUrl: 'l.png' }),
+      ],
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({
+          icon: {
+            hasText: false,
+            elementCount: 'one',
+            contrast: 'high',
+            similarCompetitorPosition: 1,
+          },
+          screenshots: [1, 2].map((position) =>
+            screenshotObservation(position),
+          ),
+        }),
+        media: analyzedMedia(analyzed),
+        inputs: {
+          ...analyzed,
+          iconUrl: 'new-icon.png',
+          screenshotUrls: ['new-1.png', 'new-2.png', 'new-3.png'],
+          competitorIcons: [],
+        },
+        stale: true,
+      }),
+    });
+
+    const creative = computeAudit(context).creative;
+
+    expect(creative?.stale).toBe(true);
+    expect(creative?.icon?.url).toBe('old-icon.png');
+    expect(creative?.icon?.similarCompetitor?.appId).toBe('lookalike');
+    expect(creative?.screenshots.map((item) => item.url)).toEqual([
+      'old-1.png',
+      'old-2.png',
+    ]);
   });
 });

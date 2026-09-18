@@ -28,7 +28,7 @@ const INPUTS: CreativeInputs = {
   title: 'Where Am I?',
   iconUrl: 'https://cdn/icon.png',
   screenshotUrls: ['s1.png'],
-  competitorIconUrls: [],
+  competitorIcons: [],
 };
 
 const FINGERPRINT = creativeFingerprint(INPUTS, MODEL);

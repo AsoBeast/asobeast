@@ -13,6 +13,7 @@ import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
 import {
   CREATIVE_PROMPT_VERSION,
   creativeFingerprint,
+  toStoredCreative,
 } from './creative/creative-observations';
 import { AUDIT_RUBRIC_VERSION, computeAudit } from './rubric';
 
@@ -55,7 +56,7 @@ export class AuditService {
     const model = this.auditAi.model ?? 'unknown';
     const stored = {
       model,
-      observations,
+      observations: toStoredCreative(observations, inputs),
       inputHash: creativeFingerprint(inputs, model),
       promptVersion: CREATIVE_PROMPT_VERSION,
       generatedAt: new Date(),

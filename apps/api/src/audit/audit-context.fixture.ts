@@ -9,6 +9,7 @@ import {
   AuditReview,
 } from './audit-scoring';
 import {
+  analyzedMedia,
   CreativeObservations,
   ScreenshotObservation,
 } from './creative/creative-observations';
@@ -98,9 +99,9 @@ const emptyCreative = (
     title: '',
     iconUrl: facts.iconUrl ?? null,
     screenshotUrls: facts.screenshotUrls ?? [],
-    competitorIconUrls: [],
+    competitorIcons: [],
   },
-  iconCompetitorIds: [],
+  media: null,
   analyzedAt: null,
   model: null,
   stale: false,
@@ -135,13 +136,17 @@ export const observations = (
 export const analyzedCreative = (
   store: Store,
   overrides: Partial<AuditCreativeState> = {},
-): AuditCreativeState => ({
-  ...emptyCreative(store),
-  observations: observations(),
-  analyzedAt: FIXTURE_NOW,
-  model: 'gpt-5.6-luna',
-  ...overrides,
-});
+): AuditCreativeState => {
+  const empty = emptyCreative(store);
+  return {
+    ...empty,
+    observations: observations(),
+    media: analyzedMedia(overrides.inputs ?? empty.inputs),
+    analyzedAt: FIXTURE_NOW,
+    model: 'gpt-5.6-luna',
+    ...overrides,
+  };
+};
 
 const contextFor = (
   store: Store,

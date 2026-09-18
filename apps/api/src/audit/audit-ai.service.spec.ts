@@ -14,7 +14,7 @@ const inputs: CreativeInputs = {
   title: 'Where Am I?',
   iconUrl: 'https://cdn/icon.png',
   screenshotUrls: ['s1.png', 's2.png'],
-  competitorIconUrls: ['c1.png'],
+  competitorIcons: [{ appId: 'app-c1', iconUrl: 'c1.png' }],
 };
 
 const response = {

@@ -57,14 +57,33 @@ export const CREATIVE_OBSERVATIONS_JSON_SCHEMA = withoutSchemaKeyword(
   z.toJSONSchema(creativeObservationsSchema, { target: 'draft-7' }),
 );
 
+export interface CompetitorIcon {
+  appId: string;
+  iconUrl: string;
+}
+
 export interface CreativeInputs {
   store: Store;
   country: string;
   title: string;
   iconUrl: string | null;
   screenshotUrls: string[];
-  competitorIconUrls: string[];
+  competitorIcons: CompetitorIcon[];
 }
+
+export const analyzedMediaSchema = z.object({
+  iconUrl: z.string().nullable(),
+  screenshotUrls: z.array(z.string()),
+  competitorAppIds: z.array(z.string()),
+});
+
+export type AnalyzedMedia = z.infer<typeof analyzedMediaSchema>;
+
+const storedCreativeSchema = creativeObservationsSchema.extend({
+  media: analyzedMediaSchema,
+});
+
+export type StoredCreative = z.infer<typeof storedCreativeSchema>;
 
 export interface SentCreative {
   icon: boolean;
@@ -148,11 +167,30 @@ export function parseObservations(
   };
 }
 
-export function readStoredObservations(
-  json: unknown,
-): CreativeObservations | null {
-  const parsed = creativeObservationsSchema.safeParse(json);
-  return parsed.success ? parsed.data : null;
+export const sentCompetitorIcons = (inputs: CreativeInputs): CompetitorIcon[] =>
+  inputs.competitorIcons.slice(0, MAX_COMPETITOR_ICONS);
+
+export const analyzedMedia = (inputs: CreativeInputs): AnalyzedMedia => ({
+  iconUrl: inputs.iconUrl,
+  screenshotUrls: inputs.screenshotUrls.slice(0, MAX_ANALYZED_SCREENSHOTS),
+  competitorAppIds: sentCompetitorIcons(inputs).map((icon) => icon.appId),
+});
+
+export const toStoredCreative = (
+  observations: CreativeObservations,
+  inputs: CreativeInputs,
+): StoredCreative => ({ ...observations, media: analyzedMedia(inputs) });
+
+export function readStoredCreative(json: unknown): {
+  observations: CreativeObservations;
+  media: AnalyzedMedia;
+} | null {
+  const parsed = storedCreativeSchema.safeParse(json);
+  if (!parsed.success) {
+    return null;
+  }
+  const { media, ...observations } = parsed.data;
+  return { observations, media };
 }
 
 export function creativeFingerprint(
@@ -168,7 +206,9 @@ export function creativeFingerprint(
         inputs.country,
         inputs.iconUrl,
         inputs.screenshotUrls.slice(0, MAX_ANALYZED_SCREENSHOTS),
-        [...inputs.competitorIconUrls].sort(),
+        sentCompetitorIcons(inputs)
+          .map((icon) => icon.iconUrl)
+          .sort(),
       ]),
     )
     .digest('hex');

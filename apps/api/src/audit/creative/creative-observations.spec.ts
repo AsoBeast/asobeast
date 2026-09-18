@@ -3,7 +3,8 @@ import {
   CreativeInputs,
   creativeFingerprint,
   parseObservations,
-  readStoredObservations,
+  readStoredCreative,
+  toStoredCreative,
 } from './creative-observations';
 
 describe('CREATIVE_OBSERVATIONS_JSON_SCHEMA', () => {
@@ -148,8 +149,48 @@ describe('parseObservations', () => {
   });
 
   it('reads legacy v1 checks as no observations', () => {
-    expect(readStoredObservations({ title: { verdict: 'pass' } })).toBeNull();
-    expect(readStoredObservations(null)).toBeNull();
+    expect(readStoredCreative({ title: { verdict: 'pass' } })).toBeNull();
+    expect(readStoredCreative(null)).toBeNull();
+  });
+});
+
+describe('stored creative', () => {
+  const inputs: CreativeInputs = {
+    store: 'APP_STORE',
+    country: 'us',
+    title: 'Where Am I?',
+    iconUrl: 'icon.png',
+    screenshotUrls: Array.from({ length: 8 }, (_, i) => `s${i + 1}.png`),
+    competitorIcons: Array.from({ length: 7 }, (_, i) => ({
+      appId: `rival-${i + 1}`,
+      iconUrl: `c${i + 1}.png`,
+    })),
+  };
+  const observed = {
+    icon: null,
+    screenshots: [],
+    consistentStyle: null,
+  };
+
+  it('reads back the observations with the media that was sent', () => {
+    expect(readStoredCreative(toStoredCreative(observed, inputs))).toEqual({
+      observations: observed,
+      media: {
+        iconUrl: 'icon.png',
+        screenshotUrls: inputs.screenshotUrls.slice(0, 6),
+        competitorAppIds: [
+          'rival-1',
+          'rival-2',
+          'rival-3',
+          'rival-4',
+          'rival-5',
+        ],
+      },
+    });
+  });
+
+  it('reads observations stored without their media as no analysis', () => {
+    expect(readStoredCreative(observed)).toBeNull();
   });
 });
 
@@ -160,13 +201,20 @@ describe('creativeFingerprint', () => {
     title: 'Where Am I?',
     iconUrl: 'https://is1-ssl.mzstatic.com/icon.png',
     screenshotUrls: ['s1', 's2', 's3'],
-    competitorIconUrls: ['c1', 'c2'],
+    competitorIcons: [
+      { appId: 'rival-1', iconUrl: 'c1' },
+      { appId: 'rival-2', iconUrl: 'c2' },
+    ],
   };
 
   it('ignores competitor icon order and the title', () => {
     expect(
       creativeFingerprint(
-        { ...inputs, competitorIconUrls: ['c2', 'c1'], title: 'Other' },
+        {
+          ...inputs,
+          competitorIcons: [...inputs.competitorIcons].reverse(),
+          title: 'Other',
+        },
         'gpt-4o',
       ),
     ).toBe(creativeFingerprint(inputs, 'gpt-4o'));

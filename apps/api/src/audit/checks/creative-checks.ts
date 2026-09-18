@@ -465,13 +465,13 @@ export const iconChecks = (context: AuditContext): RubricCheck[] => {
       source: 'ai',
       weight: 2,
       score:
-        context.creative.inputs.competitorIconUrls.length === 0
+        context.creative.inputs.competitorIcons.length === 0
           ? null
           : similar === null
             ? 10
             : 3,
       detail:
-        context.creative.inputs.competitorIconUrls.length === 0
+        context.creative.inputs.competitorIcons.length === 0
           ? 'No competitor icon was sent.'
           : similar === null
             ? 'No competitor icon looks like yours.'

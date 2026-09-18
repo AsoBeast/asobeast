@@ -162,7 +162,7 @@ const analyzed = (
         title: 'Where Am I?',
         iconUrl: 'https://cdn/icon.png',
         screenshotUrls: shots(6),
-        competitorIconUrls: ['c1.png'],
+        competitorIcons: [{ appId: 'app-c1', iconUrl: 'c1.png' }],
       },
     }),
   });
@@ -328,9 +328,8 @@ describe('iconChecks', () => {
           title: 'Where Am I?',
           iconUrl: 'https://cdn/icon.png',
           screenshotUrls: [],
-          competitorIconUrls: ['l.png'],
+          competitorIcons: [{ appId: 'lookalike', iconUrl: 'l.png' }],
         },
-        iconCompetitorIds: ['lookalike'],
       }),
     });
 

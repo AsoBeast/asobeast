@@ -16,6 +16,7 @@ import { clamp } from '../scoring/formulas';
 import { round1 } from './audit-engine';
 import { RawAppFacts } from '../store-providers/raw-facts';
 import {
+  AnalyzedMedia,
   CreativeInputs,
   CreativeObservations,
 } from './creative/creative-observations';
@@ -62,8 +63,8 @@ export interface AuditVisibility {
 
 export interface AuditCreativeState {
   observations: CreativeObservations | null;
+  media: AnalyzedMedia | null;
   inputs: CreativeInputs;
-  iconCompetitorIds: string[];
   analyzedAt: Date | null;
   model: string | null;
   stale: boolean;
@@ -405,7 +406,7 @@ export const similarCompetitor = (
   const position =
     context.creative.observations?.icon?.similarCompetitorPosition ?? null;
   if (position === null) return null;
-  const id = context.creative.iconCompetitorIds[position - 1];
+  const id = context.creative.media?.competitorAppIds[position - 1];
   return context.competitors.find((item) => item.id === id) ?? null;
 };
 
