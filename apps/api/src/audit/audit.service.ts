@@ -161,6 +161,13 @@ const toSlimFactors = (result: AppAuditResult): Prisma.InputJsonValue =>
     id: factor.id,
     score: factor.score,
     weight: factor.weight,
+    confidence: factor.confidence ?? null,
+    checks: factor.checks.map(({ id, label, status, score }) => ({
+      id,
+      label,
+      status,
+      score,
+    })),
   }));
 
 const toScoreRow = (result: AppAuditResult) => ({

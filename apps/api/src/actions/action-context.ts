@@ -32,6 +32,7 @@ export interface ActionAuditFactor {
   label: string;
   weight: number;
   score: number | null;
+  confidence: number;
   checks: ActionAuditCheck[];
 }
 
@@ -104,7 +105,16 @@ interface SlimFactor {
   id: string;
   score: number | null;
   weight: number;
+  confidence?: unknown;
+  checks?: unknown;
 }
+
+const AUDIT_CHECK_STATUSES: readonly AuditCheckStatus[] = [
+  'pass',
+  'warn',
+  'fail',
+  'unanswered',
+];
 
 interface RankingRow {
   appId: string;
@@ -131,6 +141,24 @@ function isSlimFactor(value: unknown): value is SlimFactor {
   );
 }
 
+function isSlimCheck(value: unknown): value is ActionAuditCheck {
+  if (typeof value !== 'object' || value === null) return false;
+  const row = value as Record<string, unknown>;
+  return (
+    typeof row.id === 'string' &&
+    typeof row.label === 'string' &&
+    AUDIT_CHECK_STATUSES.some((status) => status === row.status) &&
+    (row.score === null || typeof row.score === 'number')
+  );
+}
+
+const slimChecks = (checks: unknown): ActionAuditCheck[] =>
+  Array.isArray(checks)
+    ? checks
+        .filter(isSlimCheck)
+        .map(({ id, label, status, score }) => ({ id, label, status, score }))
+    : [];
+
 function toAuditSnapshot(
   row: {
     date: Date;
@@ -151,7 +179,8 @@ function toAuditSnapshot(
       label: AUDIT_FACTOR_LABELS[factor.id] ?? factor.id,
       weight: factor.weight,
       score: factor.score,
-      checks: [],
+      confidence: typeof factor.confidence === 'number' ? factor.confidence : 1,
+      checks: slimChecks(factor.checks),
     })),
   };
 }

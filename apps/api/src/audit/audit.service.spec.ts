@@ -83,8 +83,14 @@ describe('AuditService.snapshotAll', () => {
       date: new Date('2026-07-22T00:00:00.000Z'),
     });
     expect(create.factors).toEqual([
-      { id: 'title', score: 90, weight: 20 },
-      { id: 'reviews', score: null, weight: 15 },
+      { id: 'title', score: 90, weight: 20, confidence: null, checks: [] },
+      {
+        id: 'reviews',
+        score: null,
+        weight: 15,
+        confidence: null,
+        checks: [],
+      },
     ]);
   });
 
@@ -141,5 +147,75 @@ describe('AuditService.recordToday', () => {
     });
     expect(create.rubricVersion).toBe('v2');
     expect(create.confidence).toBe(0.82);
+  });
+
+  it('stores confidence and slim checks with each factor', async () => {
+    const prisma = buildPrisma();
+    const service = new AuditService(
+      prisma as unknown as PrismaService,
+      {} as unknown as AuditContextLoader,
+      { configured: false, model: null } as unknown as AuditAiService,
+      fanOut,
+    );
+    jest.spyOn(service, 'audit').mockResolvedValue(
+      buildResult({
+        factors: [
+          {
+            id: 'title',
+            label: 'Title',
+            weight: 20,
+            score: 4,
+            confidence: 0.875,
+            needsInput: false,
+            checks: [
+              {
+                id: 'title-keyword',
+                label: 'Put “geo quiz” in your title',
+                kind: 'auto',
+                status: 'fail',
+                score: 0,
+                detail: 'None found.',
+              },
+              {
+                id: 'title-uniqueness',
+                label: 'Title uniqueness',
+                kind: 'auto',
+                status: 'unanswered',
+                score: null,
+                detail: 'No competitors.',
+              },
+            ],
+          },
+        ],
+      }),
+    );
+
+    await service.recordToday('a');
+
+    const [{ create }] = prisma.auditScore.upsert.mock.calls[0] as [
+      { create: { factors: unknown } },
+    ];
+    expect(create.factors).toEqual([
+      {
+        id: 'title',
+        score: 4,
+        weight: 20,
+        confidence: 0.875,
+        checks: [
+          {
+            id: 'title-keyword',
+            label: 'Put “geo quiz” in your title',
+            status: 'fail',
+            score: 0,
+          },
+          {
+            id: 'title-uniqueness',
+            label: 'Title uniqueness',
+            status: 'unanswered',
+            score: null,
+          },
+        ],
+      },
+    ]);
   });
 });
