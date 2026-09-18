@@ -394,6 +394,11 @@ describe('Google Play description keywords', () => {
     expect(frequency(Array(12).fill('geo quiz').join(', '))).toBe(3);
   });
 
+  it('counts overlapping repeats of a phrase once per mention', () => {
+    expect(countPhrase('diet diet diet', 'diet diet')).toBe(1);
+    expect(countPhrase('diet diet diet diet', 'diet diet')).toBe(2);
+  });
+
   it('passes a keyword that ends at character 167 and fails one that starts at 168', () => {
     const ending = `${'a'.repeat(158)} geo quiz more text`;
     const starting = `${'a'.repeat(167)} geo quiz`;

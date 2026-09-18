@@ -417,9 +417,13 @@ export const countPhrase = (field: string, phrase: string): number => {
   const target = normalizeText(phrase).split(' ').filter(Boolean);
   if (target.length === 0) return 0;
   let count = 0;
-  for (let start = 0; start + target.length <= tokens.length; start++) {
+  let start = 0;
+  while (start + target.length <= tokens.length) {
     if (target.every((word, offset) => tokens[start + offset] === word)) {
       count++;
+      start += target.length;
+    } else {
+      start++;
     }
   }
   return count;
