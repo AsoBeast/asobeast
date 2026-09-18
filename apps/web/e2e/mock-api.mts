@@ -419,12 +419,20 @@ function storeHealthFor(req: IncomingMessage): StoreHealthReport {
 
 const RUN_FAILURE = "OpenAI rejected the API key. Check OPENAI_API_KEY.";
 
+const RUN_REQUESTED_AT_COOKIE = "e2e_ai_requested_at";
+const RUN_AGE_MS = 4_000;
+
+const runRequestedAt = (req: IncomingMessage): string =>
+  cookieValue(req, RUN_REQUESTED_AT_COOKIE) ??
+  new Date(Date.now() - RUN_AGE_MS).toISOString();
+
 const runState = (
+  req: IncomingMessage,
   state: "queued" | "running" | "completed" | "failed",
   error: string | null = null,
 ): NonNullable<AppAuditResult["ai"]["run"]> => ({
   state,
-  requestedAt: new Date(Date.now() - 4_000).toISOString(),
+  requestedAt: runRequestedAt(req),
   finishedAt: state === "completed" ? new Date().toISOString() : null,
   error,
 });
@@ -456,7 +464,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
     json(res, 200, {
       ...base,
       creative: base.creative ? { ...base.creative, stale: true } : null,
-      ai: { ...configured, stale: true, run: runState("completed") },
+      ai: { ...configured, stale: true, run: runState(req, "completed") },
     });
     return;
   }
@@ -468,7 +476,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
       {
         ...base,
         creative: null,
-        ai: { ...configured, generatedAt: null, run: runState("running") },
+        ai: { ...configured, generatedAt: null, run: runState(req, "running") },
       },
       { "set-cookie": "e2e_ai_run=running; Path=/" },
     );
@@ -486,7 +494,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
             ai: {
               ...configured,
               generatedAt: null,
-              run: runState("failed", RUN_FAILURE),
+              run: runState(req, "failed", RUN_FAILURE),
             },
           }
         : {
@@ -496,7 +504,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
             ai: {
               ...configured,
               generatedAt: new Date().toISOString(),
-              run: runState("completed"),
+              run: runState(req, "completed"),
             },
           },
       {
@@ -515,7 +523,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
       ai: {
         ...configured,
         generatedAt: null,
-        run: runState("failed", RUN_FAILURE),
+        run: runState(req, "failed", RUN_FAILURE),
       },
     });
     return;
@@ -528,7 +536,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
       ai: {
         ...configured,
         generatedAt: new Date().toISOString(),
-        run: runState("completed"),
+        run: runState(req, "completed"),
       },
     });
     return;
@@ -537,7 +545,7 @@ function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
     ...base,
     ai: {
       ...configured,
-      run: base.creative ? runState("completed") : null,
+      run: base.creative ? runState(req, "completed") : null,
     },
   });
 }
@@ -552,15 +560,23 @@ function requestAuditRun(req: IncomingMessage, res: ServerResponse): void {
     return;
   }
   if (hasCookie(req, "e2e_ai_reused", "1")) {
-    json(res, 202, { ...runState("completed"), reused: true });
+    json(res, 202, { ...runState(req, "completed"), reused: true });
     return;
   }
+  const requestedAt = new Date(Date.now() - RUN_AGE_MS).toISOString();
   json(
     res,
     202,
-    { ...runState("queued"), reused: false },
+    {
+      state: "queued",
+      requestedAt,
+      finishedAt: null,
+      error: null,
+      reused: false,
+    },
     {
       "set-cookie": [
+        `${RUN_REQUESTED_AT_COOKIE}=${requestedAt}; Path=/`,
         "e2e_ai_run=queued; Path=/",
         "e2e_ai_done=; Path=/; Max-Age=0",
         "e2e_ai_failed=; Path=/; Max-Age=0",

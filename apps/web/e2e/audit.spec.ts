@@ -1,3 +1,4 @@
+import type { AppAuditResult, AuditAiRunResult } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 
@@ -195,6 +196,37 @@ test("queues an analysis, shows progress, then the new score", async ({
     timeout: 10_000,
   });
   await expect(panel.getByText("Up to date")).toBeVisible();
+});
+
+test("reports one request time for the whole run", async ({ page }) => {
+  await page.goto("/apps/app-gp/audit");
+  const panel = page.getByRole("region", { name: "AI creative analysis" });
+  const runs: Promise<{ state: string; requestedAt: string | null } | null>[] =
+    [];
+  page.on("response", (response) => {
+    const { pathname } = new URL(response.url());
+    if (pathname === "/api/backend/apps/app-gp/audit/ai/runs") {
+      runs.push(response.json() as Promise<AuditAiRunResult>);
+    } else if (pathname === "/api/backend/apps/app-gp/audit") {
+      runs.push(
+        (response.json() as Promise<AppAuditResult>).then(
+          (audit) => audit.ai.run ?? null,
+        ),
+      );
+    }
+  });
+
+  await panel.getByRole("button", { name: "Analyze creative" }).click();
+  await expect(page.getByText("Creative analysis finished")).toBeVisible({
+    timeout: 10_000,
+  });
+
+  const lifecycle = (await Promise.all(runs)).filter((run) => run !== null);
+  expect(lifecycle.map((run) => run.state)).toEqual(
+    expect.arrayContaining(["queued", "running", "completed"]),
+  );
+  expect(new Set(lifecycle.map((run) => run.requestedAt)).size).toBe(1);
+  expect(lifecycle[0].requestedAt).not.toBeNull();
 });
 
 test("keeps focus in place when a page opens on a running analysis", async ({
