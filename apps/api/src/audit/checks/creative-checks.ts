@@ -178,7 +178,9 @@ const captionChecks = (
   context: AuditContext,
   observations: CreativeObservations,
 ): RubricCheck[] => {
-  const sample = observations.screenshots.slice(0, CAPTION_SAMPLE);
+  const sample = observations.screenshots.filter(
+    (item) => item.position <= CAPTION_SAMPLE,
+  );
   const readable = sample.filter(hasReadableCaption);
   const first = observations.screenshots.find((item) => item.position === 1);
   return [
