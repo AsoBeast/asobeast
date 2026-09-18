@@ -90,7 +90,7 @@ const perfectContext = (): AuditContext =>
       competitors: [{ id: 'c1', name: 'Pomodoro Labs' }],
       rows: [
         {
-          keywordId: 'k1',
+          keywordId: 'habit tracker',
           text: 'habit tracker',
           traffic: 8,
           difficulty: 3,

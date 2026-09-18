@@ -108,6 +108,16 @@ describe('ratings-recent', () => {
     expect(checkOf(checks, 'ratings-recent')?.score).toBe(score);
   });
 
+  it('scores the unrounded mean against the bands', () => {
+    const checks = ratingChecks(
+      appStoreContext({
+        reviews: reviewsFrom(FIXTURE_NOW, [5, 5, 4, 4, 4, 4, 4, 4]),
+      }),
+    );
+
+    expect(checkOf(checks, 'ratings-recent')?.score).toBe(7);
+  });
+
   it('ignores reviews older than 30 days', () => {
     const old = reviewsFrom(
       new Date(FIXTURE_NOW.getTime() - 40 * DAY_MS),
@@ -152,6 +162,24 @@ describe('ratings-current-version', () => {
 
     expect(checkOf(checks, 'ratings-current-version')?.score).toBe(score);
   });
+
+  it.each([
+    [4.5, 4.2, 6],
+    [4.5, 4.36, 6],
+  ])(
+    'scores an overall %s against a current %s without float noise',
+    (ratingAvg, currentVersionScore, score) => {
+      const checks = ratingChecks(
+        appStoreContext({
+          ratingAvg,
+          ratingCount: 1000,
+          facts: { currentVersionScore, currentVersionReviews: 20 },
+        }),
+      );
+
+      expect(checkOf(checks, 'ratings-current-version')?.score).toBe(score);
+    },
+  );
 
   it('omits the current version check below 5 current version reviews', () => {
     const checks = ratingChecks(

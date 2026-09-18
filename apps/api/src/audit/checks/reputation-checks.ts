@@ -5,7 +5,7 @@ import {
   REVIEW_THEME_MIN_MENTIONS,
 } from '../../keywords/review-mining';
 import { logScale } from '../../scoring/formulas';
-import { round1 } from '../audit-engine';
+import { round1, round2 } from '../audit-engine';
 import {
   AuditContext,
   AuditReview,
@@ -158,10 +158,9 @@ const recentCheck = (context: AuditContext): RubricCheck => {
   const reviews = recentReviews(context);
   const enough = reviews.length >= MIN_RECENT_REVIEWS;
   const mean = enough
-    ? round1(
-        reviews.reduce((sum, review) => sum + review.score, 0) / reviews.length,
-      )
+    ? reviews.reduce((sum, review) => sum + review.score, 0) / reviews.length
     : null;
+  const average = mean === null ? null : round1(mean);
   const theme = complaintTheme(reviews, context.reviewScoreMax);
   const themeSentence = theme
     ? ` “${theme.text}” comes up in ${theme.mentions} of them.`
@@ -173,12 +172,12 @@ const recentCheck = (context: AuditContext): RubricCheck => {
     weight: 2,
     score: mean === null ? null : recentScore(mean),
     detail: enough
-      ? `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${mean} across ${reviews.length}.${themeSentence}`
+      ? `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${average} across ${reviews.length}.${themeSentence}`
       : `Only ${reviews.length} reviews in the last ${RECENT_REVIEW_DAYS} days.`,
     unlock: REVIEWS_UNLOCK,
     advice: {
       title: 'Address what recent reviewers report',
-      fix: `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${mean} across ${reviews.length}.${themeSentence}`,
+      fix: `Reviews from the last ${RECENT_REVIEW_DAYS} days average ${average} across ${reviews.length}.${themeSentence}`,
     },
   });
 };
@@ -194,7 +193,7 @@ const currentVersionCheck = (context: AuditContext): RubricCheck | null => {
   ) {
     return null;
   }
-  const delta = round1(current - context.ratingAvg);
+  const delta = round2(current - context.ratingAvg);
   return check({
     id: 'ratings-current-version',
     label: 'Current version rating',

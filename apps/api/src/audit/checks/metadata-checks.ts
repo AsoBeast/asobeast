@@ -358,7 +358,9 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
     lintKeywordField(field, lintContext(context), KEYWORD_FIELD_BYTE_LIMIT),
   );
   const candidates = priorityKeywords(context.keywords).filter(
-    (keyword) => !coversPhrase(field, keyword.text),
+    (keyword) =>
+      !coversPhrase(field, keyword.text) &&
+      !coveredAnywhere(context, keyword.text),
   );
   const rated = context.keywords.filter(
     (keyword) =>

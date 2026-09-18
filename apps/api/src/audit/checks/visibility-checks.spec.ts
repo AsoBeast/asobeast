@@ -186,3 +186,41 @@ describe('rankings-competitor-gap', () => {
     ).toBe(5);
   });
 });
+
+describe('rankings-competitor-gap scope', () => {
+  it('ignores keywords tracked in other markets', () => {
+    const keywords = [trafficKeyword('home', 1)];
+    const rows = [row('home', 1, 5), row('abroad', null, 1)];
+
+    expect(
+      checkOf(
+        rankingChecks(
+          appStoreContext({
+            keywords,
+            comparison: comparisonOf(rows),
+            competitors: [rival],
+          }),
+        ),
+        'rankings-competitor-gap',
+      )?.score,
+    ).toBe(10);
+  });
+
+  it('counts a keyword where a competitor ranks above you inside the top 30', () => {
+    const keywords = [trafficKeyword('k1', 1)];
+    const rows = [{ ...row('k1', 25, 3), gap: false }];
+
+    expect(
+      checkOf(
+        rankingChecks(
+          appStoreContext({
+            keywords,
+            comparison: comparisonOf(rows),
+            competitors: [rival],
+          }),
+        ),
+        'rankings-competitor-gap',
+      )?.score,
+    ).toBe(0);
+  });
+});

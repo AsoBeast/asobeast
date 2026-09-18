@@ -1,4 +1,4 @@
-import { AuditUnlock } from '@asobeast/shared';
+import { AuditUnlock, KeywordComparisonRow } from '@asobeast/shared';
 import { round1 } from '../audit-engine';
 import {
   AuditContext,
@@ -30,6 +30,11 @@ export const WEEK_HISTORY_UNLOCK: AuditUnlock = {
 export const GAP_UNLOCK: AuditUnlock = {
   kind: 'competitors',
   label: 'Add competitors to find keyword gaps',
+};
+
+export const GAP_POSITIONS_UNLOCK: AuditUnlock = {
+  kind: 'keywords',
+  label: 'Track keywords in your home market to compare positions',
 };
 
 const trendScoreFor = (delta: number): number => {
@@ -124,10 +129,13 @@ export const rankingChecks = (context: AuditContext): RubricCheck[] => {
           ? null
           : 10 * (1 - Math.min(1, GAP_SHARE_FACTOR * gap.share)),
       detail:
-        gap === null
-          ? 'No competitors to compare positions against.'
-          : `${Math.round(gap.share * 100)}% of your tracked traffic sits on keywords a competitor owns.`,
-      unlock: GAP_UNLOCK,
+        gap !== null
+          ? `${Math.round(gap.share * 100)}% of your tracked traffic sits on keywords a competitor owns.`
+          : context.competitors.length === 0
+            ? 'No competitors to compare positions against.'
+            : 'No home market keyword has competitor positions yet.',
+      unlock:
+        context.competitors.length === 0 ? GAP_UNLOCK : GAP_POSITIONS_UNLOCK,
       advice: gap?.worst
         ? {
             title: `Close the gap on “${gap.worst.text}”`,
@@ -143,6 +151,14 @@ interface GapSummary {
   worst: { text: string; you: number | null; theirs: number } | null;
 }
 
+const bestCompetitorPosition = (row: KeywordComparisonRow): number | null => {
+  const ranked = Object.values(row.positions).filter(
+    (position): position is number =>
+      position !== null && position <= TOP_POSITION,
+  );
+  return ranked.length === 0 ? null : Math.min(...ranked);
+};
+
 const trafficWeightedGap = (context: AuditContext): GapSummary | null => {
   if (
     context.competitors.length === 0 ||
@@ -151,28 +167,25 @@ const trafficWeightedGap = (context: AuditContext): GapSummary | null => {
     return null;
   }
   const traffic = new Map(
-    context.keywords.map((keyword) => [keyword.text, keyword.traffic ?? 1]),
+    context.keywords.map((keyword) => [keyword.id, keyword.traffic ?? 1]),
   );
   let total = 0;
   let gapped = 0;
   let worst: GapSummary['worst'] = null;
   let worstTraffic = -1;
   for (const row of context.comparison.rows) {
-    const weight = traffic.get(row.text) ?? row.traffic ?? 1;
+    const weight = traffic.get(row.keywordId);
+    if (weight === undefined) continue;
     total += weight;
-    if (!row.gap) {
+    const theirs = bestCompetitorPosition(row);
+    if (theirs === null || (row.you !== null && row.you <= theirs)) {
       continue;
     }
     gapped += weight;
-    const theirs = Math.min(
-      ...Object.values(row.positions).filter(
-        (position): position is number => position !== null,
-      ),
-    );
     if (weight > worstTraffic) {
       worstTraffic = weight;
       worst = { text: row.text, you: row.you, theirs };
     }
   }
-  return { share: total === 0 ? 0 : gapped / total, worst };
+  return total === 0 ? null : { share: gapped / total, worst };
 };

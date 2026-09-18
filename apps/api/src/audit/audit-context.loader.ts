@@ -285,6 +285,7 @@ export class AuditContextLoader {
 }
 
 const toAuditKeyword = (item: TrackedKeywordItem): AuditKeyword => ({
+  id: item.keywordId,
   text: item.text,
   source: item.source,
   bucket: item.bucket,

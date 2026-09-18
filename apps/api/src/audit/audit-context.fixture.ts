@@ -71,6 +71,7 @@ export const keyword = (
   opportunity: number,
   overrides: Partial<AuditKeyword> = {},
 ): AuditKeyword => ({
+  id: text,
   text,
   source: 'MANUAL',
   bucket,
@@ -185,9 +186,13 @@ export const daysAgo = (days: number): Date =>
   new Date(FIXTURE_NOW.getTime() - days * 24 * 60 * 60 * 1000);
 
 const poorKeywords = (): AuditKeyword[] => [
-  keyword('geo quiz', 'primary', 90, { position: null, traffic: 9 }),
-  keyword('geography game', 'primary', 70, { position: 40, traffic: 5 }),
-  keyword('world map', 'secondary', 50, { position: 80, traffic: 3 }),
+  keyword('geo quiz', 'primary', 90, { id: 'k1', position: null, traffic: 9 }),
+  keyword('geography game', 'primary', 70, {
+    id: 'k2',
+    position: 40,
+    traffic: 5,
+  }),
+  keyword('world map', 'secondary', 50, { id: 'k3', position: 80, traffic: 3 }),
 ];
 
 const poorCompetitors = (): AuditCompetitor[] => [
