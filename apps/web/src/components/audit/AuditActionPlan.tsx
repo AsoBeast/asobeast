@@ -8,16 +8,15 @@ import type {
 } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BUCKET_LABEL, BUCKET_TAB_LABEL, emptyBucketLine } from "./audit-copy";
+import {
+  BUCKET_LABEL,
+  BUCKET_TAB_LABEL,
+  BUCKETS,
+  emptyBucketLine,
+} from "./audit-copy";
 import { RecommendationCard } from "./RecommendationCard";
 
 export const PLAN_PAGE_SIZE = 5;
-
-const BUCKETS = [
-  "quickWins",
-  "highImpact",
-  "strategic",
-] as const satisfies readonly (keyof AuditRecommendations)[];
 
 const unansweredCount = (unlocks: AuditUnlockSummary[] | undefined): number =>
   (unlocks ?? []).reduce((sum, unlock) => sum + unlock.checks, 0);

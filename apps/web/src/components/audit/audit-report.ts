@@ -1,39 +1,34 @@
 import type {
   AppAuditResult,
+  AuditFactorResult,
   AuditRecommendation,
-  AuditRecommendations,
 } from "@asobeast/shared";
 import {
   availabilityLabel,
   BUCKET_LABEL,
+  BUCKETS,
   EFFORT_LABEL,
   gradeLabel,
   GROUP_LABEL,
   IMPACT_LABEL,
   liftLabel,
   percent,
+  scoreStatus,
   STATUS_LABEL,
-  STORE_LABEL,
 } from "./audit-copy";
+import { storeLabel } from "@/lib/format";
 import { comparison, COMPARISON_LABEL } from "./benchmark-comparison";
 
-const BUCKET_HEADINGS: Record<keyof AuditRecommendations, string> = {
-  quickWins: "Quick wins (today)",
-  highImpact: "High impact (this week)",
-  strategic: "Strategic (this month)",
-};
+const DASH = "—";
+
+const rounded = (value: number | null | undefined): string =>
+  value === null || value === undefined ? DASH : String(Math.round(value));
 
 export const escapeMarkdown = (text: string): string =>
   text
     .replaceAll("\\", "\\\\")
     .replaceAll("|", "\\|")
     .replace(/\s*\r?\n\s*/g, " ");
-
-const factorStatus = (score: number | null): string => {
-  if (score === null) return STATUS_LABEL.unanswered;
-  if (score >= 7) return STATUS_LABEL.pass;
-  return score >= 4 ? STATUS_LABEL.warn : STATUS_LABEL.fail;
-};
 
 const recommendationLines = (item: AuditRecommendation): string[] => [
   `### ${escapeMarkdown(item.label)} · ${liftLabel(item.lift)}`,
@@ -47,98 +42,124 @@ const recommendationLines = (item: AuditRecommendation): string[] => [
   "",
 ];
 
+const headline = (audit: AppAuditResult): string =>
+  `**${[
+    `${rounded(audit.overall)}/100`,
+    `Grade ${audit.grade ?? DASH}, ${gradeLabel(audit.grade)}`,
+    ...(audit.confidence === undefined
+      ? []
+      : [`${percent(audit.confidence)}% measured`]),
+    `Potential ${rounded(audit.potential)}`,
+  ].join(" · ")}**`;
+
+const groupLines = (audit: AppAuditResult): string[] => {
+  const groups = audit.groups ?? [];
+  if (groups.length === 0) return [];
+  return [
+    ...groups.map(
+      (group) =>
+        `- ${GROUP_LABEL[group.id]}: ${rounded(
+          group.score === null ? null : group.score * 10,
+        )}/100`,
+    ),
+    "",
+  ];
+};
+
+const factorNotes = (
+  factor: AuditFactorResult,
+  audit: AppAuditResult,
+): string => {
+  const firstIssue = factor.checks.find(
+    (check) => check.status === "warn" || check.status === "fail",
+  );
+  const scored = factor.checks.filter((check) => check.score !== null).length;
+  return (
+    availabilityLabel(factor.availability, audit.store) ??
+    (firstIssue
+      ? `${firstIssue.label}: ${firstIssue.detail}`
+      : `${scored} of ${factor.checks.length} checks scored`)
+  );
+};
+
+const factorLines = (audit: AppAuditResult): string[] => [
+  "## Factors",
+  "",
+  "| Factor | Score | Status | Notes |",
+  "| --- | --- | --- | --- |",
+  ...audit.factors.map(
+    (factor) =>
+      `| ${escapeMarkdown(factor.label)} | ${
+        factor.score === null ? DASH : `${factor.score}/10`
+      } | ${STATUS_LABEL[scoreStatus(factor.score)]} | ${escapeMarkdown(
+        factorNotes(factor, audit),
+      )} |`,
+  ),
+  "",
+];
+
+const planLines = (audit: AppAuditResult): string[] =>
+  BUCKETS.flatMap((bucket) => {
+    const items = audit.recommendations[bucket];
+    return [
+      `## ${BUCKET_LABEL[bucket]}`,
+      "",
+      ...(items.length === 0
+        ? [`No change is waiting in ${BUCKET_LABEL[bucket]}.`, ""]
+        : items.flatMap(recommendationLines)),
+    ];
+  });
+
+const benchmarkLines = (audit: AppAuditResult): string[] =>
+  audit.benchmarks
+    ? [
+        "## Competitor comparison",
+        "",
+        `Compared with ${audit.benchmarks.competitors} competitors.`,
+        "",
+        "| Metric | You | Competitor median | Best | |",
+        "| --- | --- | --- | --- | --- |",
+        ...audit.benchmarks.rows.map(
+          (row) =>
+            `| ${escapeMarkdown(row.label)} | ${row.you ?? DASH} | ${
+              row.median ?? DASH
+            } | ${row.best ?? DASH} | ${COMPARISON_LABEL[comparison(row)]} |`,
+        ),
+        "",
+      ]
+    : [];
+
+const limitationLines = (audit: AppAuditResult): string[] => {
+  const limitations = audit.limitations ?? [];
+  if (limitations.length === 0) return [];
+  return [
+    "## What this audit cannot see",
+    "",
+    ...limitations.map(
+      (limitation) =>
+        `- **${escapeMarkdown(limitation.label)}**: ${escapeMarkdown(
+          limitation.detail,
+        )}`,
+    ),
+    "",
+  ];
+};
+
 export function auditMarkdown(
   audit: AppAuditResult,
   app: { name: string | null; country: string },
 ): string {
-  const lines: string[] = [
+  return [
     `# ASO audit: ${escapeMarkdown(app.name ?? "this app")}`,
     "",
-    `${STORE_LABEL[audit.store]} · ${app.country.toUpperCase()} · ${audit.generatedAt.slice(0, 10)}`,
+    `${storeLabel(audit.store)} · ${app.country.toUpperCase()} · ${audit.generatedAt.slice(0, 10)}`,
     "",
-    `**${[
-      `${audit.overall === null ? "—" : Math.round(audit.overall)}/100`,
-      `Grade ${audit.grade ?? "—"}, ${gradeLabel(audit.grade)}`,
-      ...(audit.confidence === undefined
-        ? []
-        : [`${percent(audit.confidence)}% measured`]),
-      `Potential ${
-        audit.potential === null || audit.potential === undefined
-          ? "—"
-          : Math.round(audit.potential)
-      }`,
-    ].join(" · ")}**`,
+    headline(audit),
     "",
-  ];
-
-  for (const group of audit.groups ?? []) {
-    lines.push(
-      `- ${GROUP_LABEL[group.id]}: ${group.score === null ? "—" : Math.round(group.score * 10)}/100`,
-    );
-  }
-  if ((audit.groups ?? []).length > 0) lines.push("");
-
-  lines.push(
-    "## Factors",
-    "",
-    "| Factor | Score | Status | Notes |",
-    "| --- | --- | --- | --- |",
-  );
-  for (const factor of audit.factors) {
-    const firstIssue = factor.checks.find(
-      (check) => check.status === "warn" || check.status === "fail",
-    );
-    const notes =
-      availabilityLabel(factor.availability, audit.store) ??
-      (firstIssue
-        ? `${firstIssue.label}: ${firstIssue.detail}`
-        : `${factor.checks.filter((check) => check.score !== null).length} of ${factor.checks.length} checks scored`);
-    lines.push(
-      `| ${escapeMarkdown(factor.label)} | ${
-        factor.score === null ? "—" : `${factor.score}/10`
-      } | ${factorStatus(factor.score)} | ${escapeMarkdown(notes)} |`,
-    );
-  }
-  lines.push("");
-
-  for (const bucket of ["quickWins", "highImpact", "strategic"] as const) {
-    lines.push(`## ${BUCKET_HEADINGS[bucket]}`, "");
-    const items = audit.recommendations[bucket];
-    if (items.length === 0) {
-      lines.push(`No change is waiting in ${BUCKET_LABEL[bucket]}.`, "");
-      continue;
-    }
-    for (const item of items) lines.push(...recommendationLines(item));
-  }
-
-  if (audit.benchmarks) {
-    lines.push(
-      "## Competitor comparison",
-      "",
-      `Compared with ${audit.benchmarks.competitors} competitors.`,
-      "",
-      "| Metric | You | Competitor median | Best | |",
-      "| --- | --- | --- | --- | --- |",
-    );
-    for (const row of audit.benchmarks.rows) {
-      lines.push(
-        `| ${escapeMarkdown(row.label)} | ${row.you ?? "—"} | ${row.median ?? "—"} | ${
-          row.best ?? "—"
-        } | ${COMPARISON_LABEL[comparison(row)]} |`,
-      );
-    }
-    lines.push("");
-  }
-
-  if ((audit.limitations ?? []).length > 0) {
-    lines.push("## What this audit cannot see", "");
-    for (const limitation of audit.limitations ?? []) {
-      lines.push(
-        `- **${escapeMarkdown(limitation.label)}**: ${escapeMarkdown(limitation.detail)}`,
-      );
-    }
-    lines.push("");
-  }
-
-  return lines.join("\n");
+    ...groupLines(audit),
+    ...factorLines(audit),
+    ...planLines(audit),
+    ...benchmarkLines(audit),
+    ...limitationLines(audit),
+  ].join("\n");
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { type RefObject, useEffect, useRef, useSyncExternalStore } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   ANALYSIS_ACTION,
   ANALYSIS_COPY,
   analysisState,
+  type AnalysisState,
   progressLine,
 } from "./analysis-state";
 
@@ -50,7 +51,7 @@ function useElapsed(
 function useFocusWhenQueued(
   requesting: boolean,
   active: boolean,
-): React.RefObject<HTMLHeadingElement | null> {
+): RefObject<HTMLHeadingElement | null> {
   const heading = useRef<HTMLHeadingElement>(null);
   const requested = useRef(false);
 
@@ -101,6 +102,85 @@ function useRunTransitions(appId: string, audit: AppAuditResult): void {
   ]);
 }
 
+function RunProgress({
+  active,
+  analyzed,
+  requestedAt,
+}: {
+  active: boolean;
+  analyzed: number | null;
+  requestedAt: string | null;
+}) {
+  const elapsed = useElapsed(active, requestedAt);
+
+  return (
+    <div role="status" aria-live="polite" className="flex flex-col gap-2">
+      {active ? (
+        <>
+          <span
+            aria-hidden
+            className="block h-1 w-full overflow-hidden rounded-full bg-muted"
+          >
+            <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {progressLine(analyzed)}
+            {elapsed === null ? null : <span aria-hidden> · {elapsed}s</span>}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            {ANALYSIS_COPY.active}
+          </span>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function AnalysisIntro({
+  state,
+  audit,
+  heading,
+}: {
+  state: AnalysisState;
+  audit: AppAuditResult;
+  heading: RefObject<HTMLHeadingElement | null>;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h2
+        id="ai-analysis-heading"
+        ref={heading}
+        tabIndex={-1}
+        className="flex items-center gap-2 text-body font-medium"
+      >
+        AI creative analysis
+        {state === "current" ? (
+          <Badge variant="success">Up to date</Badge>
+        ) : null}
+        {state === "stale" ? <Badge variant="warning">Outdated</Badge> : null}
+      </h2>
+      <p className="text-sm text-muted-foreground">
+        {state === "current" && audit.creative
+          ? `Analyzed ${formatDateTime(audit.creative.analyzedAt)} with ${audit.creative.model}`
+          : ANALYSIS_COPY[state]}
+      </p>
+      {state === "unconfigured" ? (
+        <a
+          href={AI_FEATURES_GUIDE}
+          className="w-fit text-sm font-medium underline-offset-4 hover:underline"
+        >
+          Read the AI features guide
+        </a>
+      ) : null}
+      {state === "never" && audit.ai.model ? (
+        <p className="text-caption text-muted-foreground">
+          Sends image links to OpenAI with {audit.ai.model}.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function AiAnalysisPanel({
   appId,
   audit,
@@ -138,9 +218,7 @@ export function AiAnalysisPanel({
   const analyzeOnce = useSingleFlight(mutation);
   const state = analysisState(audit, mutation.isPending);
   const active = state === "active";
-  const elapsed = useElapsed(active, audit.ai.run?.requestedAt ?? null);
   const action = ANALYSIS_ACTION[state];
-  const analyzed = audit.creative?.screenshots.length ?? null;
   const heading = useFocusWhenQueued(mutation.isPending, active);
 
   useRunTransitions(appId, audit);
@@ -150,40 +228,7 @@ export function AiAnalysisPanel({
       <Card>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-col gap-1">
-              <h2
-                id="ai-analysis-heading"
-                ref={heading}
-                tabIndex={-1}
-                className="flex items-center gap-2 text-body font-medium"
-              >
-                AI creative analysis
-                {state === "current" ? (
-                  <Badge variant="success">Up to date</Badge>
-                ) : null}
-                {state === "stale" ? (
-                  <Badge variant="warning">Outdated</Badge>
-                ) : null}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {state === "current" && audit.creative
-                  ? `Analyzed ${formatDateTime(audit.creative.analyzedAt)} with ${audit.creative.model}`
-                  : ANALYSIS_COPY[state]}
-              </p>
-              {state === "unconfigured" ? (
-                <a
-                  href={AI_FEATURES_GUIDE}
-                  className="w-fit text-sm font-medium underline-offset-4 hover:underline"
-                >
-                  Read the AI features guide
-                </a>
-              ) : null}
-              {state === "never" && audit.ai.model ? (
-                <p className="text-caption text-muted-foreground">
-                  Sends image links to OpenAI with {audit.ai.model}.
-                </p>
-              ) : null}
-            </div>
+            <AnalysisIntro state={state} audit={audit} heading={heading} />
             {action ? (
               <Button
                 onClick={() => analyzeOnce()}
@@ -199,27 +244,11 @@ export function AiAnalysisPanel({
             ) : null}
           </div>
 
-          <div role="status" aria-live="polite" className="flex flex-col gap-2">
-            {active ? (
-              <>
-                <span
-                  aria-hidden
-                  className="block h-1 w-full overflow-hidden rounded-full bg-muted"
-                >
-                  <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {progressLine(analyzed)}
-                  {elapsed === null ? null : (
-                    <span aria-hidden> · {elapsed}s</span>
-                  )}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {ANALYSIS_COPY.active}
-                </span>
-              </>
-            ) : null}
-          </div>
+          <RunProgress
+            active={active}
+            analyzed={audit.creative?.screenshots.length ?? null}
+            requestedAt={audit.ai.run?.requestedAt ?? null}
+          />
 
           {state === "failed" ? (
             <Alert variant="destructive">

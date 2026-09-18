@@ -28,9 +28,9 @@ describe("auditMarkdown", () => {
       "**72/100 · Grade B, Good · 82% measured · Potential 86**",
     );
     expect(report).toMatch(/^\| Title \| 9\.1\/10 \| Pass \|/m);
-    expect(report).toContain("## Quick wins (today)");
-    expect(report).toContain("## High impact (this week)");
-    expect(report).toContain("## Strategic (this month)");
+    expect(report).toContain("## Quick wins · Today");
+    expect(report).toContain("## High impact · This week");
+    expect(report).toContain("## Strategic · This month");
     expect(report).toContain("## Competitor comparison");
     expect(report).toContain("## What this audit cannot see");
   });

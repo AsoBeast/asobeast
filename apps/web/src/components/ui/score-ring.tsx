@@ -1,15 +1,15 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { healthTone, type HealthTone } from "./meter";
 
-const RING_BANDS = [
-  { min: 0.7, stroke: "stroke-success" },
-  { min: 0.4, stroke: "stroke-warning" },
-] as const;
+const RING_STROKE: Record<HealthTone, string> = {
+  success: "stroke-success",
+  warning: "stroke-warning",
+  destructive: "stroke-destructive",
+};
 
 export function ringStroke(ratio: number): string {
-  return (
-    RING_BANDS.find((band) => ratio >= band.min)?.stroke ?? "stroke-destructive"
-  );
+  return RING_STROKE[healthTone(ratio)];
 }
 
 export function ringGeometry(

@@ -8,13 +8,25 @@ const TONE = {
 
 export type MeterTone = keyof typeof TONE | "health";
 
-const HEALTH = [
-  { min: 0.7, fill: "bg-success" },
-  { min: 0.4, fill: "bg-warning" },
+export type HealthTone = "success" | "warning" | "destructive";
+
+const HEALTH_BANDS = [
+  { min: 0.7, tone: "success" },
+  { min: 0.4, tone: "warning" },
 ] as const;
 
+const HEALTH_FILL: Record<HealthTone, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+};
+
+export function healthTone(ratio: number): HealthTone {
+  return HEALTH_BANDS.find((band) => ratio >= band.min)?.tone ?? "destructive";
+}
+
 export function healthFill(ratio: number): string {
-  return HEALTH.find((band) => ratio >= band.min)?.fill ?? "bg-destructive";
+  return HEALTH_FILL[healthTone(ratio)];
 }
 
 export function Meter({

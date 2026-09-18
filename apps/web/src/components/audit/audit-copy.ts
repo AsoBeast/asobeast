@@ -11,8 +11,25 @@ import type {
   AuditTarget,
   Store,
 } from "@asobeast/shared";
+import { healthTone, type HealthTone } from "@/components/ui/meter";
+import { storeLabel } from "@/lib/format";
 
 export const PROVISIONAL_CONFIDENCE = 0.6;
+
+export const BUCKETS = [
+  "quickWins",
+  "highImpact",
+  "strategic",
+] as const satisfies readonly (keyof AuditRecommendations)[];
+
+const TONE_STATUS: Record<HealthTone, AuditCheckStatus> = {
+  success: "pass",
+  warning: "warn",
+  destructive: "fail",
+};
+
+export const scoreStatus = (score: number | null): AuditCheckStatus =>
+  score === null ? "unanswered" : TONE_STATUS[healthTone(score / 10)];
 
 export function provisional(
   confidence: number | undefined,
@@ -94,11 +111,6 @@ export const MESSAGE_LABEL: Record<AuditScreenshotMessage, string> = {
   other: "Other",
 };
 
-export const STORE_LABEL: Record<Store, string> = {
-  APP_STORE: "App Store",
-  GOOGLE_PLAY: "Google Play",
-};
-
 export const percent = (share: number): number => Math.round(share * 100);
 
 export const gradeLabel = (grade: AuditGrade | null | undefined): string =>
@@ -120,7 +132,7 @@ export const availabilityLabel = (
   store: Store,
 ): string | null => {
   if (availability === "not-measurable") {
-    return `Not measured on the ${STORE_LABEL[store]}`;
+    return `Not measured on the ${storeLabel(store)}`;
   }
   return availability === "awaiting-input" ? "Waiting for input" : null;
 };

@@ -2,31 +2,18 @@
 
 import { useId, useState } from "react";
 import Link from "next/link";
-import {
-  CircleCheck,
-  CircleDashed,
-  CircleX,
-  TriangleAlert,
-} from "lucide-react";
 import type { AuditFactorResult, Store } from "@asobeast/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
-import { availabilityLabel, percent, STATUS_LABEL } from "./audit-copy";
+import {
+  availabilityLabel,
+  percent,
+  scoreStatus,
+  STATUS_LABEL,
+} from "./audit-copy";
 import { unlockHref } from "./audit-links";
 import { FactorChecks } from "./FactorChecks";
-
-const factorStatus = (factor: AuditFactorResult) => {
-  if (factor.score === null) return "unanswered" as const;
-  if (factor.score >= 7) return "pass" as const;
-  return factor.score >= 4 ? ("warn" as const) : ("fail" as const);
-};
-
-const STATUS_ICON = {
-  pass: CircleCheck,
-  warn: TriangleAlert,
-  fail: CircleX,
-  unanswered: CircleDashed,
-};
+import { STATUS_ICON } from "./status-icons";
 
 export function FactorCard({
   appId,
@@ -41,7 +28,7 @@ export function FactorCard({
 }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const status = factorStatus(factor);
+  const status = scoreStatus(factor.score);
   const Icon = STATUS_ICON[status];
   const scored = factor.checks.filter((check) => check.score !== null).length;
   const firstIssue = factor.checks.find(

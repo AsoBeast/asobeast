@@ -2,20 +2,15 @@ import type {
   AuditRecommendation,
   AuditRecommendations,
 } from "@asobeast/shared";
+import { BUCKETS } from "./audit-copy";
 
 export const TOP_FIXES_COUNT = 3;
-
-const BUCKET_ORDER = [
-  "quickWins",
-  "highImpact",
-  "strategic",
-] as const satisfies readonly (keyof AuditRecommendations)[];
 
 export function topFixes(
   recommendations: AuditRecommendations,
   count = TOP_FIXES_COUNT,
 ): AuditRecommendation[] {
-  return BUCKET_ORDER.flatMap((bucket, order) =>
+  return BUCKETS.flatMap((bucket, order) =>
     recommendations[bucket].map((item) => ({ item, order })),
   )
     .sort(

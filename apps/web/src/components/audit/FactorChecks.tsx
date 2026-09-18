@@ -1,27 +1,8 @@
 import Link from "next/link";
-import {
-  CircleCheck,
-  CircleDashed,
-  CircleX,
-  TriangleAlert,
-} from "lucide-react";
-import type { AuditCheckResult, AuditCheckStatus } from "@asobeast/shared";
+import type { AuditCheckResult } from "@asobeast/shared";
 import { SOURCE_LABEL, STATUS_LABEL } from "./audit-copy";
 import { unlockHref } from "./audit-links";
-
-const STATUS_ICON: Record<AuditCheckStatus, typeof CircleCheck> = {
-  pass: CircleCheck,
-  warn: TriangleAlert,
-  fail: CircleX,
-  unanswered: CircleDashed,
-};
-
-const STATUS_TONE: Record<AuditCheckStatus, string> = {
-  pass: "text-success",
-  warn: "text-warning",
-  fail: "text-destructive",
-  unanswered: "text-muted-foreground",
-};
+import { STATUS_ICON, STATUS_TONE } from "./status-icons";
 
 export function FactorChecks({
   appId,
