@@ -2486,6 +2486,29 @@ export const PLAY_AUDIT: AppAuditResult = {
   store: "GOOGLE_PLAY",
   totalWeight: 105,
   limitations: PLAY_LIMITATIONS,
+  recommendations: {
+    quickWins: [
+      recommendation(
+        "shortDescription",
+        "short-description-keyword",
+        "Put your priority keywords in the short description",
+        2.4,
+        "minutes",
+        "metadata",
+      ),
+    ],
+    highImpact: [],
+    strategic: [
+      recommendation(
+        "rankings",
+        "rankings-visibility",
+        "Raise your search visibility",
+        3.4,
+        "weeks",
+        "rankings",
+      ),
+    ],
+  },
   creative: null,
   ai: {
     configured: false,

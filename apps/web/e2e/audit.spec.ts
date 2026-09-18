@@ -139,7 +139,7 @@ test("shows a Google Play listing only Google Play concepts", async ({
     .first()
     .click();
   await expect(page.locator("main")).not.toContainText(
-    /Subtitle|Keyword field|Promotional text/,
+    /subtitle|keyword field|promotional text/i,
   );
   await expect(
     page.getByRole("article", { name: "Short description" }),
