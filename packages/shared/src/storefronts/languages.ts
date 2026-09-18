@@ -51,5 +51,8 @@ export const STOREFRONT_LANGUAGES: Readonly<Record<string, string>> =
   });
 
 export function storefrontLanguage(country: string): string | null {
-  return STOREFRONT_LANGUAGES[country.toLowerCase()] ?? null;
+  const key = country.toLowerCase();
+  return Object.hasOwn(STOREFRONT_LANGUAGES, key)
+    ? STOREFRONT_LANGUAGES[key]
+    : null;
 }
