@@ -35,8 +35,10 @@ function AppCrumbs({ id, segment }: { id: string; segment: string }) {
 
   return (
     <>
-      <BreadcrumbSeparator />
-      <BreadcrumbItem className="min-w-0">
+      <BreadcrumbSeparator className="hidden sm:block" />
+      <BreadcrumbItem
+        className={segment ? "hidden min-w-0 sm:inline-flex" : "min-w-0"}
+      >
         {!data ? (
           <Skeleton className="h-4 w-24" />
         ) : segment ? (
@@ -51,9 +53,11 @@ function AppCrumbs({ id, segment }: { id: string; segment: string }) {
       </BreadcrumbItem>
       {segment ? (
         <>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>{sectionLabel(segment)}</BreadcrumbPage>
+          <BreadcrumbSeparator className="hidden sm:block" />
+          <BreadcrumbItem className="min-w-0">
+            <BreadcrumbPage className="truncate">
+              {sectionLabel(segment)}
+            </BreadcrumbPage>
           </BreadcrumbItem>
         </>
       ) : null}
@@ -68,7 +72,7 @@ export function Breadcrumbs() {
   return (
     <Breadcrumb className="min-w-0 flex-1">
       <BreadcrumbList className="flex-nowrap">
-        <BreadcrumbItem>
+        <BreadcrumbItem className={app ? "hidden sm:inline-flex" : undefined}>
           {app ? (
             <BreadcrumbLink asChild>
               <Link href="/">Apps</Link>
