@@ -1025,6 +1025,10 @@ const routes: Route[] = [
         json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found"));
         return;
       }
+      if (hasCookie(req, "e2e_audit_fail", "1")) {
+        json(res, 500, errorEnvelope(500, req.url ?? "/"));
+        return;
+      }
       if (hasCookie(req, "e2e_audit_slow", "1")) {
         setTimeout(() => auditFor(id, req, res), AUDIT_SLOW_MS);
         return;

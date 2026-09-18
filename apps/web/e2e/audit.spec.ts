@@ -152,6 +152,19 @@ test("says what the audit cannot see", async ({ page }) => {
   await expect(page.getByText("App previews")).toBeVisible();
 });
 
+test("reports an audit that failed to load instead of hiding it", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_audit_fail: "1" });
+  await page.goto("/apps/app-1/audit");
+
+  await expect(page.getByText("Audit could not be loaded")).toBeVisible();
+  await expect(
+    page.getByText("Audit is not available for this app yet."),
+  ).toHaveCount(0);
+});
+
 test("explains how to enable the analysis when no key is configured", async ({
   page,
   context,

@@ -13,17 +13,10 @@ export default async function AuditPage({
 }) {
   const { id } = await params;
   const queryClient = getQueryClient();
-  const audit = await queryClient.fetchQuery(auditOptions(id)).catch((err) => {
+  await queryClient.fetchQuery(auditOptions(id)).catch((err: unknown) => {
     if (err instanceof ApiError && err.envelope.statusCode === 404) notFound();
-    return null;
+    throw err;
   });
-  if (!audit) {
-    return (
-      <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
-        Audit is not available for this app yet.
-      </div>
-    );
-  }
   void queryClient.prefetchQuery(auditHistoryOptions(id));
 
   return (
