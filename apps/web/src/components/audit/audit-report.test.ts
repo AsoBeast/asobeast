@@ -35,6 +35,17 @@ describe("auditMarkdown", () => {
     expect(report).toContain("## What this audit cannot see");
   });
 
+  it("names every column of the competitor comparison", () => {
+    const report = auditMarkdown(APP_AUDIT_EXAMPLE, {
+      name: "Where Am I?",
+      country: "us",
+    });
+
+    expect(report).toContain(
+      "| Metric | You | Competitor median | Best | Comparison |",
+    );
+  });
+
   it("escapes pipes in listing text", () => {
     const report = auditMarkdown(
       withCheckDetail(APP_AUDIT_EXAMPLE, "title-length", "A | B"),

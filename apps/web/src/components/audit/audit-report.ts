@@ -117,7 +117,7 @@ const benchmarkLines = (audit: AppAuditResult): string[] =>
         "",
         `Compared with ${audit.benchmarks.competitors} competitors.`,
         "",
-        "| Metric | You | Competitor median | Best | |",
+        "| Metric | You | Competitor median | Best | Comparison |",
         "| --- | --- | --- | --- | --- |",
         ...audit.benchmarks.rows.map(
           (row) =>
