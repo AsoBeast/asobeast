@@ -120,7 +120,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "app_audit",
     title: "ASO audit",
     description:
-      "The latest ASO audit for one app: an overall score plus per-check findings and recommendations across the rubric.",
+      "The latest ASO audit for one app: an overall score out of 100 with a letter grade and a confidence (the share of the rubric that could be measured), factor and check findings with the evidence behind each, recommendations ranked by the score points they would add and the effort they take, competitor benchmarks, and what the audit cannot see. Checks that need an OpenAI key, a saved keyword field, competitors or more history are reported as unanswered with what would answer them, never as passed.",
     inputSchema: z.object({ appId }),
     request: ({ appId }) => ({ path: `/apps/${seg(appId)}/audit` }),
   }),
