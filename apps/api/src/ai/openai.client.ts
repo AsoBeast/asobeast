@@ -56,6 +56,12 @@ export class AiRequestError extends BadGatewayException {
 
 const KEY_PATTERN = /sk-[A-Za-z0-9_-]+/g;
 const QUOTA_CODE = 'insufficient_quota';
+const RETRYABLE_STATUSES: ReadonlySet<number> = new Set([408, 409]);
+const MIN_SERVER_ERROR_STATUS = 500;
+
+const retryableStatus = (status: unknown): boolean =>
+  typeof status === 'number' &&
+  (RETRYABLE_STATUSES.has(status) || status >= MIN_SERVER_ERROR_STATUS);
 
 const redact = (text: string): string =>
   text.replace(KEY_PATTERN, '[redacted]');
@@ -65,7 +71,7 @@ const apiField = (error: APIError, field: string): string | null => {
   if (typeof body !== 'object' || body === null) {
     return null;
   }
-  const value = (body as Record<string, unknown>)[field];
+  const value: unknown = Reflect.get(body, field);
   return typeof value === 'string' ? value : null;
 };
 
@@ -113,7 +119,10 @@ export const classifyRequestError = (
   if (error instanceof APIConnectionError) {
     return new AiRequestError('Could not reach OpenAI.', true);
   }
-  return new AiRequestError('OpenAI request failed.', true);
+  return new AiRequestError(
+    'OpenAI request failed.',
+    error instanceof APIError && retryableStatus(error.status),
+  );
 };
 
 const DEFAULT_MAX_OUTPUT_TOKENS = 2048;

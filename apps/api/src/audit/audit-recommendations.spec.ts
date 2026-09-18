@@ -33,6 +33,13 @@ const bucketedItems = (
   ...recommendations.strategic,
 ];
 
+const measured = (overall: number | null): number => {
+  if (overall === null) {
+    throw new Error('Expected a measurable overall score');
+  }
+  return overall;
+};
+
 const rubricChecks = (context: AuditContext): RubricCheck[] =>
   rubricFactors(context).flatMap((factor) => factor.checks);
 
@@ -52,7 +59,7 @@ const overallWithCheckAt10 = (
       measurable: factor.checks.length > 0,
     };
   });
-  return scoreAudit(factors).overall as number;
+  return measured(scoreAudit(factors).overall);
 };
 
 describe('buildRecommendations', () => {
@@ -139,8 +146,7 @@ describe('buildRecommendations', () => {
 
     expect(first.lift).toBe(
       round1(
-        overallWithCheckAt10(context, first.checkId) -
-          (result.overall as number),
+        overallWithCheckAt10(context, first.checkId) - measured(result.overall),
       ),
     );
     expect(first.lift).toBeGreaterThan(0);
@@ -183,7 +189,7 @@ describe('buildRecommendations', () => {
     );
 
     expect(result.potential).toBeGreaterThanOrEqual(
-      (result.overall as number) + Math.max(...lifts) - ROUNDING_TOLERANCE,
+      measured(result.overall) + Math.max(...lifts) - ROUNDING_TOLERANCE,
     );
     expect(result.potential).toBeLessThanOrEqual(100);
   });

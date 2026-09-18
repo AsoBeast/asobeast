@@ -55,7 +55,7 @@ export class AuditService {
     const model = this.auditAi.model ?? 'unknown';
     const stored = {
       model,
-      observations: observations as unknown as Prisma.InputJsonValue,
+      observations,
       inputHash: creativeFingerprint(inputs, model),
       promptVersion: CREATIVE_PROMPT_VERSION,
       generatedAt: new Date(),

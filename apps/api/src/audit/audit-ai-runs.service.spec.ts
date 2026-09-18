@@ -15,7 +15,7 @@ import {
   CreativeInputs,
   creativeFingerprint,
 } from './creative/creative-observations';
-import { StoredRun } from './audit-run-state';
+import { RUN_NOT_QUEUED_MESSAGE, StoredRun } from './audit-run-state';
 
 const NOW = new Date('2026-09-17T14:00:00.000Z');
 const EARLIER = new Date('2026-09-17T13:50:00.000Z');
@@ -186,6 +186,27 @@ describe('AuditAiRunsService.request', () => {
     );
   });
 
+  it('fails the queued run and rethrows when the job cannot be queued', async () => {
+    const { service, queue, prisma } = build();
+    const outage = new Error('redis unavailable');
+    queue.add.mockRejectedValue(outage);
+
+    await expect(service.request('a')).rejects.toBe(outage);
+    expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
+      where: { appId: 'a', requestedAt: NOW, runState: 'queued' },
+      data: { runState: 'failed', runError: RUN_NOT_QUEUED_MESSAGE },
+    });
+  });
+
+  it('rethrows the queue error when the run cannot be marked failed', async () => {
+    const { service, queue, prisma } = build();
+    const outage = new Error('redis unavailable');
+    queue.add.mockRejectedValue(outage);
+    prisma.auditInsight.updateMany.mockRejectedValue(new Error('db down'));
+
+    await expect(service.request('a')).rejects.toBe(outage);
+  });
+
   it('queues again for a completed analysis of changed creative', async () => {
     const { service, queue } = build({
       insight: {
@@ -266,6 +287,19 @@ describe('AuditAiRunsService.execute', () => {
     await service.execute('a', EARLIER);
 
     expect(audit.recordToday).not.toHaveBeenCalled();
+  });
+
+  it('completes the run when recording the daily score fails', async () => {
+    const { service, prisma, auditAi, audit } = build();
+    auditAi.observe.mockResolvedValue(observations);
+    audit.recordToday.mockRejectedValue(new Error('db down'));
+
+    await expect(service.execute('a', EARLIER)).resolves.toBeUndefined();
+    const [[completion]] = prisma.auditInsight.updateMany.mock.calls as Array<
+      [{ where: unknown; data: { runState: string } }]
+    >;
+    expect(completion.where).toEqual({ appId: 'a', requestedAt: EARLIER });
+    expect(completion.data.runState).toBe('completed');
   });
 });
 

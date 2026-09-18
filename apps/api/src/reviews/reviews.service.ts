@@ -99,8 +99,8 @@ export class ReviewsService {
       });
     }
 
-    if (tracksReplies && known.size > 0) {
-      await this.recordReplies(app.id, fetched, known, checkedAt as Date);
+    if (checkedAt !== null && known.size > 0) {
+      await this.recordReplies(app.id, fetched, known, checkedAt);
     }
 
     if (!payload.backfill) {

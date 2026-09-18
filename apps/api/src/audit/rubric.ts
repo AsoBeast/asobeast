@@ -23,6 +23,7 @@ import { limitationsFor } from './audit-limitations';
 import { buildRecommendations, RubricFactor } from './audit-recommendations';
 import {
   AuditContext,
+  AuditKeyword,
   coversPhrase,
   priorityKeywords,
   RubricCheck,
@@ -230,6 +231,16 @@ const deriveUnlocks = (
     }));
 };
 
+const captionKeywordHits = (
+  caption: string | null,
+  priority: AuditKeyword[],
+): string[] =>
+  caption === null
+    ? []
+    : priority
+        .filter((keyword) => coversPhrase(caption, keyword.text))
+        .map((keyword) => keyword.text);
+
 const toCreative = (context: AuditContext): AuditCreative | null => {
   const { observations, inputs, analyzedAt, model, stale } = context.creative;
   if (observations === null || analyzedAt === null || model === null) {
@@ -245,14 +256,7 @@ const toCreative = (context: AuditContext): AuditCreative | null => {
       captionReadable: item.captionReadable,
       captionLanguage: item.captionLanguage,
       message: item.message,
-      keywordHits:
-        item.captionText === null
-          ? []
-          : priority
-              .filter((keyword) =>
-                coversPhrase(item.captionText as string, keyword.text),
-              )
-              .map((keyword) => keyword.text),
+      keywordHits: captionKeywordHits(item.captionText, priority),
     }));
   return {
     analyzedAt: analyzedAt.toISOString(),

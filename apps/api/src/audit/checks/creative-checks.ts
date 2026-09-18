@@ -48,15 +48,15 @@ const ipadScore = (count: number): number => {
   return count >= 1 ? 5 : 0;
 };
 
+const visibleCount = (store: Store, count: number): number =>
+  store === Store.GOOGLE_PLAY
+    ? Math.min(count, PLAY_SCREENSHOTS_PER_DEVICE)
+    : count;
+
 export const visibleScreenshots = (
   store: Store,
   count: number | null,
-): number | null =>
-  count === null
-    ? null
-    : store === Store.GOOGLE_PLAY
-      ? Math.min(count, PLAY_SCREENSHOTS_PER_DEVICE)
-      : count;
+): number | null => (count === null ? null : visibleCount(store, count));
 
 const countCheck = (context: AuditContext): RubricCheck | null => {
   const total = context.rawFacts.screenshotCount;
@@ -64,7 +64,7 @@ const countCheck = (context: AuditContext): RubricCheck | null => {
     return null;
   }
   const play = context.store === Store.GOOGLE_PLAY;
-  const counted = visibleScreenshots(context.store, total) as number;
+  const counted = visibleCount(context.store, total);
   return check({
     id: 'screenshots-count',
     label: 'All slots used',
@@ -159,21 +159,30 @@ export const ICON_SIMPLICITY_SCORES: Readonly<Record<string, number>> =
 export const ICON_CONTRAST_SCORES: Readonly<Record<string, number>> =
   Object.freeze({ high: 10, medium: 6, low: 2 });
 
+type CaptionedScreenshot = ScreenshotObservation & { captionText: string };
+type LanguageCaption = CaptionedScreenshot & { captionLanguage: string };
+
+const hasReadableCaption = (
+  item: ScreenshotObservation,
+): item is CaptionedScreenshot =>
+  item.captionReadable && item.captionText !== null;
+
+const hasCaptionLanguage = (
+  item: CaptionedScreenshot,
+): item is LanguageCaption => item.captionLanguage !== null;
+
 const readableCaptions = (
   observations: CreativeObservations,
-): ScreenshotObservation[] =>
-  observations.screenshots.filter(
-    (item) => item.captionReadable && item.captionText !== null,
-  );
+): CaptionedScreenshot[] => observations.screenshots.filter(hasReadableCaption);
 
 const captionChecks = (
   context: AuditContext,
   observations: CreativeObservations,
 ): RubricCheck[] => {
-  const sample = observations.screenshots.slice(0, CAPTION_SAMPLE);
-  const readable = sample.filter(
-    (item) => item.captionReadable && item.captionText !== null,
+  const sample = observations.screenshots.filter(
+    (item) => item.position <= CAPTION_SAMPLE,
   );
+  const readable = sample.filter(hasReadableCaption);
   const first = observations.screenshots.find((item) => item.position === 1);
   return [
     check({
@@ -225,9 +234,7 @@ const captionKeywordCheck = (
   const priority = priorityKeywords(context.keywords);
   const captions = readableCaptions(observations);
   const hits = priority.filter((keyword) =>
-    captions.some((caption) =>
-      coversPhrase(caption.captionText!, keyword.text),
-    ),
+    captions.some((caption) => coversPhrase(caption.captionText, keyword.text)),
   );
   return check({
     id: 'screenshots-caption-keywords',
@@ -284,16 +291,12 @@ const localizedCheck = (
     return null;
   }
   const expected = storefrontLanguage(context.country);
-  const captions = readableCaptions(observations).filter(
-    (item) => item.captionLanguage !== null,
-  );
+  const captions = readableCaptions(observations).filter(hasCaptionLanguage);
   if (expected === null || captions.length === 0) {
     return null;
   }
   const declared = context.rawFacts.languages.map((code) => code.toLowerCase());
-  const found = [
-    ...new Set(captions.map((item) => item.captionLanguage as string)),
-  ];
+  const found = [...new Set(captions.map((item) => item.captionLanguage))];
   const declaresExpected = declared.includes(expected);
   const matching = captions.filter((item) => item.captionLanguage === expected);
   const score = declaresExpected
@@ -302,9 +305,7 @@ const localizedCheck = (
       : matching.length > 0
         ? 5
         : 0
-    : captions.every((item) =>
-          declared.includes(item.captionLanguage as string),
-        )
+    : captions.every((item) => declared.includes(item.captionLanguage))
       ? 10
       : 5;
   return check({

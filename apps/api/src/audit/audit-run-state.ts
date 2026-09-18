@@ -9,6 +9,8 @@ export const COMPETITOR_RUN_MESSAGE =
 export const NOTHING_TO_ANALYZE_MESSAGE =
   'This listing has no icon or screenshots to analyze yet. Refresh the app, then try again.';
 export const RUN_UNFINISHED_MESSAGE = 'The analysis did not finish. Try again.';
+export const RUN_NOT_QUEUED_MESSAGE =
+  'The analysis could not be queued. Try again.';
 
 export const ACTIVE_STATES = ['queued', 'running'] as const;
 
@@ -26,6 +28,11 @@ export const expired = (run: StoredRun, now: Date): boolean =>
   run.requestedAt === null ||
   now.getTime() - run.requestedAt.getTime() > CREATIVE_RUN_TIMEOUT_MS;
 
+export function effectiveRun(run: StoredRun, now: Date): AuditAiRun;
+export function effectiveRun(
+  run: StoredRun | null,
+  now: Date,
+): AuditAiRun | null;
 export function effectiveRun(
   run: StoredRun | null,
   now: Date,

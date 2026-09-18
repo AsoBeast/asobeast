@@ -151,7 +151,7 @@ export class AuditContextLoader {
     } | null,
   ): AuditCreativeState {
     const observations = readStoredObservations(insight?.observations ?? null);
-    const model = this.auditAi.model;
+    const model = this.auditAi.model ?? insight?.model ?? null;
     return {
       observations,
       inputs,

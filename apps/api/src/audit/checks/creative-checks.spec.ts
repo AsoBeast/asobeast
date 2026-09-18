@@ -193,6 +193,45 @@ describe('a stale analysis', () => {
   });
 });
 
+describe('screenshots-captions', () => {
+  const withScreenshots = (
+    screenshots: ReturnType<typeof screenshotObservation>[],
+  ): AuditContext =>
+    appStoreContext({
+      facts: { screenshotCount: 6, screenshotUrls: shots(6) },
+      creative: analyzedCreative(Store.APP_STORE, {
+        observations: observations({ screenshots }),
+      }),
+    });
+
+  it('samples the first screenshot positions, not the first observations returned', () => {
+    const context = withScreenshots([
+      screenshotObservation(3, { captionReadable: false, captionText: null }),
+      screenshotObservation(4),
+      screenshotObservation(5),
+    ]);
+
+    expect(
+      checkOf(screenshotChecks(context), 'screenshots-captions'),
+    ).toMatchObject({
+      score: 0,
+      detail: '0 of the first 1 screenshots carry a readable caption.',
+    });
+  });
+
+  it('leaves the check unscored when none of the first positions was analyzed', () => {
+    const context = withScreenshots([
+      screenshotObservation(4),
+      screenshotObservation(5),
+      screenshotObservation(6),
+    ]);
+
+    expect(
+      checkOf(screenshotChecks(context), 'screenshots-captions')?.score,
+    ).toBeNull();
+  });
+});
+
 describe('screenshots-localized', () => {
   it('passes English captions in the Polish storefront when the app declares no Polish', () => {
     const context = analyzed({
