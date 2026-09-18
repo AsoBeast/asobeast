@@ -184,6 +184,31 @@ test("queues an analysis, shows progress, then the new score", async ({
   await expect(panel.getByText("Up to date")).toBeVisible();
 });
 
+test("keeps focus in place when a page opens on a running analysis", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_ai_run: "queued" });
+  await page.goto("/apps/app-1/audit");
+  await page.waitForFunction(() => {
+    const heading = document.getElementById("ai-analysis-heading");
+    return (
+      heading !== null &&
+      Object.keys(heading).some((key) => key.startsWith("__reactFiber"))
+    );
+  });
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+
+  expect(
+    await page.evaluate(() => document.activeElement?.id ?? null),
+  ).not.toBe("ai-analysis-heading");
+});
+
 test("shows a failed analysis and tries again", async ({ page, context }) => {
   await seedCookies(context, { e2e_ai_fail: "1" });
   await page.goto("/apps/app-gp/audit");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -18,31 +18,52 @@ import {
   ANALYSIS_ACTION,
   ANALYSIS_COPY,
   analysisState,
+  progressLine,
 } from "./analysis-state";
 
 const ELAPSED_TICK_MS = 1_000;
 
-const elapsedSeconds = (requestedAt: string | null): number =>
-  requestedAt === null
-    ? 0
-    : Math.max(
-        0,
-        Math.round((Date.now() - new Date(requestedAt).getTime()) / 1000),
-      );
+const subscribeClock = (tick: () => void): (() => void) => {
+  const timer = setInterval(tick, ELAPSED_TICK_MS);
+  return () => clearInterval(timer);
+};
 
-function useElapsed(active: boolean, requestedAt: string | null): number {
-  const [, setTick] = useState(0);
+const subscribeNever = (): (() => void) => () => undefined;
+
+const clockSeconds = (): number => Math.floor(Date.now() / 1000);
+
+const serverClock = (): null => null;
+
+function useElapsed(
+  active: boolean,
+  requestedAt: string | null,
+): number | null {
+  const now = useSyncExternalStore(
+    active ? subscribeClock : subscribeNever,
+    clockSeconds,
+    serverClock,
+  );
+  if (!active || requestedAt === null || now === null) return null;
+  return Math.max(0, now - Math.floor(Date.parse(requestedAt) / 1000));
+}
+
+function useFocusWhenQueued(
+  requesting: boolean,
+  active: boolean,
+): React.RefObject<HTMLHeadingElement | null> {
+  const heading = useRef<HTMLHeadingElement>(null);
+  const requested = useRef(false);
 
   useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(
-      () => setTick((value) => value + 1),
-      ELAPSED_TICK_MS,
-    );
-    return () => clearInterval(timer);
-  }, [active]);
+    if (requesting) {
+      requested.current = true;
+      return;
+    }
+    if (requested.current && active) heading.current?.focus();
+    requested.current = false;
+  }, [requesting, active]);
 
-  return active ? elapsedSeconds(requestedAt) : 0;
+  return heading;
 }
 
 function useRunTransitions(appId: string, audit: AppAuditResult): void {
@@ -88,7 +109,6 @@ export function AiAnalysisPanel({
   audit: AppAuditResult;
 }) {
   const queryClient = useQueryClient();
-  const heading = useRef<HTMLHeadingElement>(null);
   const mutation = useMutation({
     mutationKey: ["audit-ai-run", appId],
     mutationFn: () => requestAiAuditRun(appId),
@@ -120,13 +140,10 @@ export function AiAnalysisPanel({
   const active = state === "active";
   const elapsed = useElapsed(active, audit.ai.run?.requestedAt ?? null);
   const action = ANALYSIS_ACTION[state];
-  const analyzed = audit.creative?.screenshots.length ?? 0;
+  const analyzed = audit.creative?.screenshots.length ?? null;
+  const heading = useFocusWhenQueued(mutation.isPending, active);
 
   useRunTransitions(appId, audit);
-
-  useEffect(() => {
-    if (active) heading.current?.focus();
-  }, [active]);
 
   return (
     <section id="ai-analysis" aria-labelledby="ai-analysis-heading">
@@ -182,26 +199,27 @@ export function AiAnalysisPanel({
             ) : null}
           </div>
 
-          {active ? (
-            <div
-              role="status"
-              aria-live="polite"
-              className="flex flex-col gap-2"
-            >
-              <span
-                aria-hidden
-                className="block h-1 w-full overflow-hidden rounded-full bg-muted"
-              >
-                <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
-              </span>
-              <span className="text-sm text-muted-foreground">
-                Analyzing your icon and {analyzed} screenshots · {elapsed}s
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {ANALYSIS_COPY.active}
-              </span>
-            </div>
-          ) : null}
+          <div role="status" aria-live="polite" className="flex flex-col gap-2">
+            {active ? (
+              <>
+                <span
+                  aria-hidden
+                  className="block h-1 w-full overflow-hidden rounded-full bg-muted"
+                >
+                  <span className="block h-full w-1/3 animate-pulse rounded-full bg-primary" />
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {progressLine(analyzed)}
+                  {elapsed === null ? null : (
+                    <span aria-hidden> · {elapsed}s</span>
+                  )}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  {ANALYSIS_COPY.active}
+                </span>
+              </>
+            ) : null}
+          </div>
 
           {state === "failed" ? (
             <Alert variant="destructive">

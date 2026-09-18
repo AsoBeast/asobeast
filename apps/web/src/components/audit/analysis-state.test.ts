@@ -9,6 +9,7 @@ import {
   ANALYSIS_ACTION,
   ANALYSIS_COPY,
   analysisState,
+  progressLine,
   type AnalysisState,
 } from "./analysis-state";
 
@@ -82,5 +83,13 @@ describe("analysisState", () => {
 
     expect(Object.keys(ANALYSIS_COPY).sort()).toEqual([...states].sort());
     expect(Object.keys(ANALYSIS_ACTION).sort()).toEqual([...states].sort());
+  });
+});
+
+describe("progressLine", () => {
+  it("names the screenshot count only when it is known", () => {
+    expect(progressLine(4)).toBe("Analyzing your icon and 4 screenshots");
+    expect(progressLine(1)).toBe("Analyzing your icon and 1 screenshot");
+    expect(progressLine(null)).toBe("Analyzing your icon and screenshots");
   });
 });

@@ -382,7 +382,13 @@ export function invalidateAudit(
   client: QueryClient,
   appId: string,
 ): Promise<void> {
-  return client.invalidateQueries({ queryKey: appKeys.audit(appId) });
+  return Promise.all([
+    client.invalidateQueries({ queryKey: appKeys.audit(appId) }),
+    client.invalidateQueries({
+      queryKey: [...appKeys.detail(appId), "audit-history"],
+    }),
+    client.invalidateQueries({ queryKey: actionKeys.appRoot(appId) }),
+  ]).then(() => undefined);
 }
 
 export const auditHistoryOptions = (id: string, params: RangeParams = {}) =>

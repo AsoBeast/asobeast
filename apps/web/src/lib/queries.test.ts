@@ -30,6 +30,7 @@ import {
   invalidateAuth,
   invalidateCompetitorMutation,
   invalidateEmailAlertMutation,
+  invalidateAudit,
   invalidateKeywordMutation,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -240,6 +241,14 @@ describe("invalidation sets", () => {
     expect(
       invalidatedKeys((client) => invalidateKeywords(client, APP)),
     ).toEqual([appKeys.keywordsRoot(APP)]);
+  });
+
+  it("refreshes the audit, its history and the app actions after a run", () => {
+    expect(invalidatedKeys((client) => invalidateAudit(client, APP))).toEqual([
+      appKeys.audit(APP),
+      [...appKeys.detail(APP), "audit-history"],
+      actionKeys.appRoot(APP),
+    ]);
   });
 
   it("invalidates everything a keyword mutation changes", () => {

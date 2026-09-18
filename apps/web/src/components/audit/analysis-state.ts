@@ -45,4 +45,9 @@ export const ANALYSIS_ACTION: Record<AnalysisState, string | null> = {
   failed: "Try again",
 };
 
+export const progressLine = (screenshots: number | null): string =>
+  screenshots === null
+    ? "Analyzing your icon and screenshots"
+    : `Analyzing your icon and ${screenshots} screenshot${screenshots === 1 ? "" : "s"}`;
+
 export const AI_FEATURES_GUIDE = "https://docs.asobeast.com/guides/ai-features";
