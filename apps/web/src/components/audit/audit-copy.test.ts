@@ -13,6 +13,7 @@ import {
   EFFORT_LABEL,
   emptyBucketLine,
   IMPACT_LABEL,
+  liftLabel,
   MESSAGE_LABEL,
   provisional,
   measuredLine,
@@ -113,6 +114,17 @@ describe("emptyBucketLine", () => {
     expect(emptyBucketLine(0)).toBe("Nothing to change here.");
     expect(emptyBucketLine(9)).toContain("this list may grow");
     expect(emptyBucketLine(9)).not.toMatch(/great work/i);
+  });
+});
+
+describe("liftLabel", () => {
+  it("shows a measured lift in points", () => {
+    expect(liftLabel(4.5)).toBe("+4.5 points");
+    expect(liftLabel(0)).toBe("+0 points");
+  });
+
+  it("never presents a lift an older API did not send as zero", () => {
+    expect(liftLabel(undefined)).toBe("Lift not estimated");
   });
 });
 

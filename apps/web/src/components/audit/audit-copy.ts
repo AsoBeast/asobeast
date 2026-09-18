@@ -138,7 +138,7 @@ export const availabilityLabel = (
 };
 
 export const liftLabel = (lift: number | undefined): string =>
-  `+${lift ?? 0} points`;
+  lift === undefined ? "Lift not estimated" : `+${lift} points`;
 
 export const emptyBucketLine = (unanswered: number): string =>
   unanswered === 0
