@@ -131,24 +131,25 @@ const messageOf = (error: unknown): string =>
 const daysAgo = (now: Date, days: number): Date =>
   new Date(now.getTime() - days * 86_400_000);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 function isSlimFactor(value: unknown): value is SlimFactor {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
   return (
-    typeof row.id === 'string' &&
-    typeof row.weight === 'number' &&
-    (row.score === null || typeof row.score === 'number')
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.weight === 'number' &&
+    (value.score === null || typeof value.score === 'number')
   );
 }
 
 function isSlimCheck(value: unknown): value is ActionAuditCheck {
-  if (typeof value !== 'object' || value === null) return false;
-  const row = value as Record<string, unknown>;
   return (
-    typeof row.id === 'string' &&
-    typeof row.label === 'string' &&
-    AUDIT_CHECK_STATUSES.some((status) => status === row.status) &&
-    (row.score === null || typeof row.score === 'number')
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.label === 'string' &&
+    AUDIT_CHECK_STATUSES.some((status) => status === value.status) &&
+    (value.score === null || typeof value.score === 'number')
   );
 }
 
