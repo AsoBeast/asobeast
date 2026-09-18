@@ -1,9 +1,9 @@
 ---
 title: Enable the optional AI features
 sidebarTitle: AI features
-description: "Set OPENAI_API_KEY to enable AI audit evidence, metadata drafts and action explanations. Every other feature works with the key left unset."
+description: "Set OPENAI_API_KEY to enable the AI creative analysis, metadata drafts and action explanations. Every other feature works with the key left unset."
 icon: sparkles
-keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","audit evidence","optional"]
+keywords: ["OpenAI","OPENAI_API_KEY","AI_MODEL","metadata drafts","creative analysis","optional"]
 ---
 
 AI in asobeast is garnish, not foundation. Every score, rule and recommendation is deterministic and works with no key configured, which is the default.
@@ -14,11 +14,11 @@ Three features, all bring your own key.
 
 | Feature | Where | What it does |
 | --- | --- | --- |
-| AI audit evidence | Audit tab | One call reads the listing text plus the store icon and screenshots and scores the subjective factors 0 to 10 with a rationale |
+| AI creative analysis | Audit tab | Reads the icon, up to six screenshots and up to five competitor icons, and reports captions, caption language, message type, text in the icon, element count, contrast and similarity to a competitor icon. The audit rules score what it reports |
 | Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles |
 | Action explanations | Action card | Turns typed evidence into two to four plain sentences |
 
-Each feature is a single completion per run, and the audit result is cached per app so the nightly score snapshot reuses it. There are no background OpenAI calls.
+Each feature is a single completion per run. The creative analysis runs in the background after you start it, so leaving the page does not cancel it. It is reused while the icon, the screenshots, the competitor icons and `AI_MODEL` are unchanged, so analyzing an unchanged listing again costs nothing, and a finished analysis records today's audit score. The nightly score snapshot reads the stored observations and never calls OpenAI.
 
 ## What happens without a key?
 
@@ -28,16 +28,16 @@ The product is fully usable. Precisely three things differ.
 | --- | --- |
 | AI endpoints | Answer `409` |
 | Metadata drafts card | Hidden |
-| Audit tab | Shows a one line setup hint instead of the AI audit button |
+| Audit tab | Shows a one line setup hint instead of the analyze button |
 
-The deterministic audit factors still score. The AI only checks are left pending rather than guessed, and a pending check never counts against your score. See [Run an ASO audit](/guides/aso-audit).
+Every other audit check still scores. The creative checks are listed as unanswered rather than guessed, and the audit weights each factor by how much of it was measured, so they neither raise nor lower the score. See [Run an ASO audit](/guides/aso-audit).
 
 ## Configure it
 
 | Variable | Default | Notes |
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | Empty disables all three features |
-| `AI_MODEL` | `gpt-5.6-luna` | Must support vision and structured outputs, because the audit reads screenshots |
+| `AI_MODEL` | `gpt-5.6-luna` | Must accept image input and structured outputs, because the creative analysis reads images and answers in a fixed schema. `gpt-4o` also qualifies |
 
 Both live in `apps/api/.env`. Restart the API after changing them.
 
@@ -52,8 +52,19 @@ Metadata drafts are constrained the same way. Every draft is linted again on the
 ## What data leaves your deployment?
 
 <Warning>
-  Setting `OPENAI_API_KEY` sends data to OpenAI. Only the app being worked on is sent: its own metadata, its keyword statistics and its own store image URLs for the audit. Never other apps' data, never review text in the action explanation prompt, and never secrets. With the key unset, no request leaves your deployment for any AI feature.
+  Setting `OPENAI_API_KEY` sends data to OpenAI. Only the app being worked on is sent, plus the public icons of its competitors for the creative analysis. Never other workspaces' data, never review text in the action explanation prompt, and never secrets. With the key unset, no request leaves your deployment for any AI feature.
 </Warning>
+
+The creative analysis sends the least data that answers its checks.
+
+| Sent | Not sent |
+| --- | --- |
+| Store name, market code and title | Description, subtitle, short description and release notes |
+| URLs of the app icon and up to six screenshots | Ratings, reviews, keywords and rankings |
+| URLs of up to five competitor icons | Anything about other workspaces |
+|  | The OpenAI key, in any message or log |
+
+OpenAI downloads the images from the store CDNs itself; asobeast never proxies image bytes. Competitor icon URLs are public store assets.
 
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
 
@@ -61,7 +72,28 @@ The action explanation prompt receives the app's store, country and title, the r
 
 - **The AI endpoints answer 409.** No key is configured, or the API was not restarted after setting it.
 - **The audit button is missing but the key is set.** Confirm the key reached the API container. `docker compose config` shows the resolved environment.
-- **The model rejects the request.** `AI_MODEL` must support vision and structured outputs. A text only model fails on the audit while drafts still work.
+- **The model rejects the request.** `AI_MODEL` must accept images and structured outputs. A text only model fails the creative analysis while drafts still work.
+
+A failed creative analysis shows one of these messages. Only transient failures are retried, once.
+
+| Message | Fix |
+| --- | --- |
+| OpenAI rejected the API key. Check OPENAI_API_KEY. | Set a valid key and restart the API |
+| The OpenAI key cannot use the model | Give the key's project access to `AI_MODEL`, or pick another model |
+| OpenAI does not offer the model. Check AI_MODEL. | Correct the model name and restart the API |
+| OpenAI refused the request, followed by OpenAI's reason | Usually a model without image input or structured outputs; pick one that has both |
+| The OpenAI account has no remaining quota. | Add credit to the OpenAI account |
+| OpenAI is rate limiting requests. | Retried automatically; try again later if it persists |
+| OpenAI had an internal error. | Retried automatically; try again later |
+| OpenAI did not answer in time. | Retried automatically; try again |
+| Could not reach OpenAI. | Check the API container's outbound network |
+| OpenAI refused to analyze this listing. | The model declined the images; try again or another model |
+| The model ran out of output tokens. | Try again; a model with a larger output limit avoids it |
+| OpenAI filtered the response. | The images tripped OpenAI's content filter |
+| OpenAI returned an unreadable response. | Retried automatically; try again |
+| The model returned observations that do not match the schema. | Retried automatically; a model with structured outputs avoids it |
+| The analysis did not finish. Try again. | The run took more than 10 minutes, usually because the API restarted; start it again |
+| This listing has no icon or screenshots to analyze yet. Refresh the app, then try again. | Wait for the daily pipeline or refresh the app |
 
 ## Related
 
