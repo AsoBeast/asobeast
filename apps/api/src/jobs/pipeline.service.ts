@@ -25,7 +25,7 @@ import {
   scoreJobId,
   utcDateKey,
 } from './jobs.types';
-import { JOB_OPTIONS } from './job-options';
+import { JOB_OPTIONS, reviewSyncJobOptions } from './job-options';
 import { ActiveWorkspaces } from './active-workspaces';
 import { DailyCapacity } from './daily-capacity.service';
 import {
@@ -136,7 +136,10 @@ export class PipelineService {
           backfill: false,
           ...scope,
         },
-        opts: childOptions(`daily~${reviewsJobId(app.id, date)}`),
+        opts: {
+          ...childOptions(`daily~${reviewsJobId(app.id, date)}`),
+          ...reviewSyncJobOptions(app.store),
+        },
       })),
       ...buckets.map((bucket) => ({
         name: JOBS.CHECK_CATEGORY,
@@ -375,7 +378,10 @@ export class PipelineService {
           backfill: false,
           ...scope,
         },
-        { jobId: reviewsJobId(app.id, date) },
+        {
+          jobId: reviewsJobId(app.id, date),
+          ...reviewSyncJobOptions(app.store),
+        },
       );
     }
 

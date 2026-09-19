@@ -28,6 +28,7 @@ import {
   reviewsBackfillJobId,
 } from '../jobs/jobs.types';
 import { AppCaptureService } from './app-capture.service';
+import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -102,7 +103,7 @@ export class AppsService {
         workspaceId: app.workspaceId,
         correlationId: this.workspace.correlationId,
       },
-      { jobId: reviewsBackfillJobId(app.id) },
+      { jobId: reviewsBackfillJobId(app.id), ...reviewSyncJobOptions(store) },
     );
 
     await this.scheduleFirstRun(app.id);
