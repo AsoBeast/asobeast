@@ -9,7 +9,7 @@ import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import { TrackedKeywordAccess } from '../keywords/tracked-keyword.access';
 import { PrismaService } from '../prisma/prisma.service';
-import { JOB_OPTIONS } from './job-options';
+import { JOB_OPTIONS, REVIEW_SYNC_JOB_OPTIONS } from './job-options';
 import { JOBS, QUEUES } from './jobs.types';
 import { QuotaService } from '../auth/quota.service';
 import { ActiveWorkspaces } from './active-workspaces';
@@ -451,6 +451,7 @@ describe('PipelineService', () => {
     for (const child of flow.children ?? []) {
       expect(child.opts).toMatchObject({
         ...JOB_OPTIONS,
+        ...(child.name === JOBS.SYNC_REVIEWS ? REVIEW_SYNC_JOB_OPTIONS : {}),
         removeDependencyOnFailure: true,
       });
       expect(child.opts?.jobId).toMatch(/^daily~[A-Za-z0-9_~-]+~2026-07-27$/);
@@ -533,11 +534,11 @@ describe('PipelineService', () => {
       reviews: 1,
     });
     expect(flowProducer.add).not.toHaveBeenCalled();
-    expect(
-      appStoreQueue.add.mock.calls.filter(
-        ([name]) => name === JOBS.SYNC_REVIEWS,
-      ),
-    ).toHaveLength(1);
+    const reviewSyncs = appStoreQueue.add.mock.calls.filter(
+      ([name]) => name === JOBS.SYNC_REVIEWS,
+    );
+    expect(reviewSyncs).toHaveLength(1);
+    expect(reviewSyncs[0][2]).toMatchObject(REVIEW_SYNC_JOB_OPTIONS);
     expect(
       gplayQueue.add.mock.calls.filter(([name]) => name === JOBS.SYNC_REVIEWS),
     ).toHaveLength(0);

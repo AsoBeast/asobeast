@@ -17,7 +17,7 @@ import {
 } from '../store-providers/result-plausibility';
 import { ratingHistogram } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import { ReviewResult } from '../store-providers/types';
+import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 
 export interface ReviewListFilters {
@@ -27,6 +27,20 @@ export interface ReviewListFilters {
 }
 
 const REVIEW_TEXT_MAX = 500;
+
+export const EMPTY_FEED_RETRIES: Record<Store, number> = {
+  APP_STORE: 3,
+  GOOGLE_PLAY: 0,
+};
+
+const EMPTY_FEED_RETRY_DELAY_MS = 4000;
+
+interface ReviewSource {
+  id: string;
+  store: Store;
+  storeAppId: string;
+  country: string;
+}
 
 @Injectable()
 export class ReviewsService {
@@ -55,18 +69,21 @@ export class ReviewsService {
     }
 
     const provider = this.registry.get(app.store);
-    const fetched = new Map<string, ReviewResult>();
-    for (let page = 1; page <= payload.pages; page++) {
-      const results = await provider.reviews(app.storeAppId, app.country, page);
-      for (const review of results) {
-        if (!fetched.has(review.reviewId)) {
-          fetched.set(review.reviewId, review);
-        }
-      }
-    }
-
-    if (fetched.size === 0) {
-      await this.rejectSilentlyEmptyFeed(app);
+    const expected = await this.expectsReviews(app.id);
+    const retries =
+      expected || payload.backfill ? EMPTY_FEED_RETRIES[app.store] : 0;
+    const fetched = await this.fetchPages(
+      provider,
+      app,
+      payload.pages,
+      retries,
+    );
+    if (fetched.size === 0 && expected) {
+      throw new ImplausibleResultError(
+        app.store,
+        `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
+        { retryable: retries > 0 },
+      );
     }
 
     const existing = await this.prisma.review.findMany({
@@ -133,26 +150,48 @@ export class ReviewsService {
     }
   }
 
-  private async rejectSilentlyEmptyFeed(app: {
-    id: string;
-    store: Store;
-    storeAppId: string;
-  }): Promise<void> {
+  private async fetchPages(
+    provider: StoreProvider,
+    app: ReviewSource,
+    pages: number,
+    retries: number,
+  ): Promise<Map<string, ReviewResult>> {
+    const fetched = new Map<string, ReviewResult>();
+    for (let page = 1; page <= pages; page++) {
+      for (const review of await this.fetchPage(provider, app, page, retries)) {
+        if (!fetched.has(review.reviewId)) {
+          fetched.set(review.reviewId, review);
+        }
+      }
+    }
+    return fetched;
+  }
+
+  private async fetchPage(
+    provider: StoreProvider,
+    app: ReviewSource,
+    page: number,
+    retries: number,
+  ): Promise<ReviewResult[]> {
+    let results = await provider.reviews(app.storeAppId, app.country, page);
+    for (let retry = 0; results.length === 0 && retry < retries; retry++) {
+      await sleep(EMPTY_FEED_RETRY_DELAY_MS);
+      results = await provider.reviews(app.storeAppId, app.country, page);
+    }
+    return results;
+  }
+
+  private async expectsReviews(appId: string): Promise<boolean> {
     const newest = await this.prisma.review.findFirst({
-      where: { appId: app.id, reviewedAt: { not: null } },
+      where: { appId, reviewedAt: { not: null } },
       orderBy: { reviewedAt: 'desc' },
       select: { reviewedAt: true },
     });
-    const implausible = isImplausiblyEmpty({
+    return isImplausiblyEmpty({
       resultCount: 0,
       lastSeenOn: newest?.reviewedAt ?? null,
       today: new Date(),
     });
-    if (!implausible) return;
-    throw new ImplausibleResultError(
-      app.store,
-      `the review feed for ${app.storeAppId} came back empty for an app that was receiving reviews within the last ${IMPLAUSIBLE_LOOKBACK_DAYS} days`,
-    );
   }
 
   private async dispatchNegativeAlerts(
@@ -282,4 +321,8 @@ export class ReviewsService {
       throw new NotFoundException(`App ${id} not found`);
     }
   }
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

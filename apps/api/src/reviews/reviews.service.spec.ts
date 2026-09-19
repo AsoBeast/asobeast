@@ -8,7 +8,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ReviewResult } from '../store-providers/types';
-import { ReviewsService } from './reviews.service';
+import { EMPTY_FEED_RETRIES, ReviewsService } from './reviews.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
@@ -35,7 +35,7 @@ const buildDeps = (options: {
     options.storedReviewedAt === undefined
       ? daysAgo(1)
       : options.storedReviewedAt;
-  const reviews = jest.fn();
+  const reviews = jest.fn().mockResolvedValue([]);
   options.pages.forEach((page) => reviews.mockResolvedValueOnce(page));
   const createMany = jest
     .fn<Promise<{ count: number }>, [{ data: Record<string, unknown>[] }]>()
@@ -217,18 +217,99 @@ describe('ReviewsService.syncReviews', () => {
 });
 
 describe('ReviewsService silent block detection', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  async function settled<T>(promise: Promise<T>): Promise<T> {
+    const [result] = await Promise.all([promise, jest.runAllTimersAsync()]);
+    return result;
+  }
+
   it('refuses an empty feed for an app that already has stored reviews', async () => {
-    const { service, createMany } = buildDeps({
+    const { service, reviews, createMany } = buildDeps({
       pages: [[]],
       existing: [],
       storedAlready: true,
     });
 
     await expect(
-      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
-    ).rejects.toThrow(ImplausibleResultError);
+      settled(
+        service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+      ),
+    ).rejects.toMatchObject({
+      constructor: ImplausibleResultError,
+      retryable: true,
+    });
 
+    expect(reviews).toHaveBeenCalledTimes(1 + EMPTY_FEED_RETRIES.APP_STORE);
+    expect(reviews).toHaveBeenLastCalledWith('123', 'us', 1);
     expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('asks again when an expected feed comes back empty', async () => {
+    const { service, reviews } = buildDeps({
+      pages: [[], [], [makeReview('a')]],
+      existing: [],
+      storedAlready: true,
+    });
+
+    const inserted = await settled(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+    );
+
+    expect(inserted.map((review) => review.reviewId)).toEqual(['a']);
+    expect(reviews).toHaveBeenCalledTimes(3);
+  });
+
+  it('asks each empty backfill page again before accepting it', async () => {
+    const { service, reviews } = buildDeps({
+      pages: [[], [makeReview('a')], [makeReview('b')], [], [], [], []],
+      existing: [],
+      storedAlready: false,
+    });
+
+    const inserted = await settled(
+      service.syncReviews({ appId: 'app1', pages: 3, backfill: true }),
+    );
+
+    expect(inserted.map((review) => review.reviewId)).toEqual(['a', 'b']);
+    expect(reviews.mock.calls).toEqual(
+      [1, 1, 2, 3, 3, 3, 3].map((page) => ['123', 'us', page]),
+    );
+  });
+
+  it('refuses an expected empty google play feed at once, as a soft block', async () => {
+    const { service, reviews } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      store: Store.GOOGLE_PLAY,
+    });
+
+    await expect(
+      settled(
+        service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+      ),
+    ).rejects.toMatchObject({
+      constructor: ImplausibleResultError,
+      retryable: false,
+    });
+    expect(reviews).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks once when no review is expected', async () => {
+    const { service, reviews } = buildDeps({
+      pages: [[]],
+      existing: [],
+      storedAlready: true,
+      storedReviewedAt: daysAgo(365),
+    });
+
+    await settled(
+      service.syncReviews({ appId: 'app1', pages: 1, backfill: false }),
+    );
+
+    expect(reviews).toHaveBeenCalledTimes(1);
   });
 
   it('accepts an empty feed for an app that has never had a review', async () => {
