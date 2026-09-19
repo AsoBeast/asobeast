@@ -24,6 +24,25 @@ describe('normalizeText', () => {
     expect(normalizeText('Café Crème')).toBe('café crème');
   });
 
+  it('normalizes decomposed input the same as precomposed input', () => {
+    const composed = 'Zażółć Café';
+    const decomposed = composed.normalize('NFD');
+    expect(decomposed).not.toBe(composed);
+    expect(normalizeText(decomposed)).toBe('zażółć café');
+    expect(normalizeText(decomposed)).toBe(normalizeText(composed));
+  });
+
+  it('keeps combining marks that have no precomposed form inside the word', () => {
+    expect(normalizeText('हिंदी मौसम')).toBe('हिंदी मौसम');
+    expect(normalizeText('مُحَمَّد')).toBe('مُحَمَّد');
+    expect(normalizeText('\u0958a')).toBe('\u0915\u093ca');
+  });
+
+  it('drops combining marks that follow no letter or number', () => {
+    expect(normalizeText(' \u0301 ')).toBe('');
+    expect(normalizeText('\u0301habit, \u0308tracker')).toBe('habit tracker');
+  });
+
   it('keeps every letter joined to the letter after it', () => {
     const split: string[] = [];
     for (let codePoint = 0; codePoint <= 0x10ffff; codePoint += 1) {

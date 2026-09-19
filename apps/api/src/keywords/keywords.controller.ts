@@ -147,7 +147,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Set the manual iOS keyword field',
     description:
-      'Replaces the field with the normalized, deduplicated phrases of text and returns the stored field. Answers 400 when those phrases joined with commas run past 100 characters. Saves to one app are written one at a time, so the last save wins.',
+      'Replaces the field with the normalized, deduplicated phrases of text and returns the stored field. Answers 400 when those phrases joined with commas run past 100 UTF-8 bytes, the way App Store Connect counts the field. Saves to one app are written one at a time, so the last save wins.',
   })
   setKeywordField(
     @Param('id') id: string,
