@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import * as appStore from '@perttu/app-store-scraper';
+import { parseReviewsFeed, reviewsFeedUrl } from './app-store-reviews-feed';
 import { egressFetch } from './egress/egress';
 
 const MISSING_APP_PATTERN = /^app not found/i;
@@ -102,30 +104,36 @@ export const APP_STORE_LIB = Symbol('APP_STORE_LIB');
 const PAGE_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
 
+const REVIEWS_USER_AGENT = 'iTunes/12.11 (Macintosh; OS X 10.15.7)';
+
+async function fetchText(url: string, userAgent: string): Promise<string> {
+  const response = await egressFetch(url, {
+    headers: { 'User-Agent': userAgent },
+  });
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+  return response.text();
+}
+
 export const appStoreLib: AppStoreLib = {
   app: (options) => appStore.app(options),
-  page: async ({ id, country }) => {
-    const url = `https://apps.apple.com/${country}/app/id${id}`;
-    const response = await egressFetch(url, {
-      headers: { 'User-Agent': PAGE_USER_AGENT },
-    });
-    if (!response.ok) {
-      throw new Error(`Request failed with status ${response.status}`);
-    }
-    return response.text();
-  },
+  page: ({ id, country }) =>
+    fetchText(`https://apps.apple.com/${country}/app/id${id}`, PAGE_USER_AGENT),
   search: (options) =>
     appStore.search(options) as Promise<AppStoreSearchResult[]>,
   suggest: (options) => appStore.suggest(options),
   similar: (options) => appStore.similar(options),
   list: (options) =>
     appStore.list(options as Parameters<typeof appStore.list>[0]),
-  reviews: ({ id, country, page }) =>
-    appStore.reviews({
-      id,
-      country,
-      page,
-      sort: appStore.sort.RECENT,
-    }),
+  reviews: async ({ id, country, page }) =>
+    parseReviewsFeed(
+      JSON.parse(
+        await fetchText(
+          reviewsFeedUrl(id, country, page, randomUUID()),
+          REVIEWS_USER_AGENT,
+        ),
+      ),
+    ),
   developer: (options) => appStore.developer(options),
 };
