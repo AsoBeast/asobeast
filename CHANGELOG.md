@@ -3,6 +3,14 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.4.1](https://github.com/AsoBeast/asobeast/compare/v1.4.0...v1.4.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **web:** keep header actions clear of the breadcrumb on phones ([d3b86ce](https://github.com/AsoBeast/asobeast/commit/d3b86ceacd6701532c02a8ddf7fddfe03d1c61f2))
+* **web:** keep header actions clear of the breadcrumb on phones ([856a3a2](https://github.com/AsoBeast/asobeast/commit/856a3a24626ca631c63274333fbb07ce2bf8b31b))
+
 ## [1.4.0](https://github.com/AsoBeast/asobeast/compare/v1.3.0...v1.4.0) (2026-09-18)
 
 
