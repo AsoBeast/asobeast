@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import {
+  fieldLength,
   lintDescription,
   lintKeywordField,
   lintShortDescription,
@@ -10,6 +11,7 @@ import {
   MetadataAuditResult,
   MetadataDraft,
   MetadataField,
+  packKeywordField,
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
@@ -21,7 +23,7 @@ const STORE_RULES: Record<Store, string[]> = {
   APP_STORE: [
     'Title: max 30 chars, indexed, highest weight — lead with the primary keyword.',
     'Subtitle: max 30 chars, indexed — add secondary keywords, never repeat the title.',
-    'Keyword field: max 100 chars, comma-separated with NO spaces, singular forms, no words already in title or subtitle, no brand or category words.',
+    'Keyword field: max 100 bytes of UTF-8, so a letter such as ą counts twice, comma-separated with NO spaces, singular forms, no words already in title or subtitle, no brand or category words.',
     'Description: not indexed — write for conversion with a strong first line.',
   ],
   GOOGLE_PLAY: [
@@ -174,10 +176,10 @@ export const validateDrafts = (
     if (!allowed.has(field) || seen.has(field)) {
       continue;
     }
-    const limit = STORE_FIELD_LIMITS[store][field]!.limit;
-    const value = (typeof item.value === 'string' ? item.value : '').slice(
-      0,
-      limit,
+    const value = withinLimit(
+      store,
+      field,
+      typeof item.value === 'string' ? item.value : '',
     );
     seen.add(field);
     parsed.push({
@@ -203,10 +205,18 @@ export const validateDrafts = (
     return {
       field: draft.field,
       value: draft.value,
-      chars: draft.value.length,
+      chars: fieldLength(draft.field, draft.value),
       limit,
       issues: lintFor(store, draft, context, limit),
       rationale: draft.rationale,
     };
   });
 };
+
+function withinLimit(store: Store, field: MetadataField, value: string) {
+  if (field === 'keywordField') {
+    const phrases = value.split(',').map((phrase) => phrase.trim());
+    return packKeywordField(phrases.filter(Boolean)).join(',');
+  }
+  return value.slice(0, STORE_FIELD_LIMITS[store][field]!.limit);
+}
