@@ -416,6 +416,29 @@ describe('KeywordsController (e2e)', () => {
     expect(body.charactersLimit).toBe(KEYWORD_FIELD_BYTE_LIMIT);
   });
 
+  it('stores a decomposed keyword field in its precomposed form', async () => {
+    const id = await importApp();
+    const text = 'zażółć,łódź';
+    expect(text.normalize('NFD')).not.toBe(text);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: text.normalize('NFD') })
+      .expect(200);
+    const body = response.body as KeywordFieldResult;
+
+    expect(body.tracked.map((item) => item.text).sort()).toEqual([
+      'zażółć',
+      'łódź',
+    ]);
+    expect(body.charactersUsed).toBe(18);
+    expect(
+      await prisma.keyword.count({
+        where: { text: { in: ['zażółć', 'łódź'] } },
+      }),
+    ).toBe(2);
+  });
+
   it('accepts a keyword field at the limit once spacing, casing and duplicates are removed', async () => {
     const id = await importApp();
     const phrases = [

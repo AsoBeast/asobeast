@@ -60,6 +60,17 @@ describe('parseKeywordField', () => {
     });
   });
 
+  it('reads a decomposed field as the same phrases as a precomposed one', () => {
+    const composed = 'zażółć,łódź,Zażółć';
+    expect(parseKeywordField(composed.normalize('NFD'))).toEqual({
+      phrases: ['zażółć', 'łódź'],
+      duplicatesRemoved: 1,
+    });
+    expect(parseKeywordField(composed.normalize('NFD'))).toEqual(
+      parseKeywordField(composed),
+    );
+  });
+
   it('reads nothing from an empty or comma only field', () => {
     expect(parseKeywordField('')).toEqual({
       phrases: [],
