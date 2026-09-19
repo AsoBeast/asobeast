@@ -1,5 +1,6 @@
 import { KeywordSource, Store } from '@prisma/client';
 import {
+  KEYWORD_FIELD_BYTE_LIMIT,
   LintIssue,
   LintSeverity,
   tokenize,
@@ -50,8 +51,6 @@ const coverageScore = (covered: number): number => {
 
 export const TITLE_LIMIT = STORE_FIELD_LIMITS.APP_STORE.title!.limit;
 export const SUBTITLE_LIMIT = STORE_FIELD_LIMITS.APP_STORE.subtitle!.limit;
-export const KEYWORD_FIELD_BYTE_LIMIT =
-  STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;
 export const KEYWORD_FIELD_FULL_BYTES = 90;
 export const LOW_RELEVANCE = 40;
 
