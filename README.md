@@ -37,7 +37,7 @@ Every store request runs on the machine hosting asobeast. There is no ASO vendor
 | Feature                          | What it does                                                                                                                                       |
 | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                        |
-| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 character iOS keyword field by hand           |
+| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 byte iOS keyword field by hand                |
 | Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                       |
 | Transparent scoring              | Traffic and difficulty with provenance and confidence, plus per app opportunity derived on read                                                    |
 | SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and free, paid and grossing category charts                                              |
@@ -113,7 +113,7 @@ No. asobeast reads public store data, so you can track any app including your co
 
 ### Which app stores does asobeast support?
 
-Both the Apple App Store and Google Play. Apple indexes a title, a subtitle and a private 100 character keyword field. Google Play indexes a title, an 80 character short description and a long description, so subtitle and keyword field stay Apple only concepts. See [stores](https://docs.asobeast.com/concepts/stores).
+Both the Apple App Store and Google Play. Apple indexes a title, a subtitle and a private 100 byte keyword field. Google Play indexes a title, an 80 character short description and a long description, so subtitle and keyword field stay Apple only concepts. See [stores](https://docs.asobeast.com/concepts/stores).
 
 ### How often does it check rankings?
 
