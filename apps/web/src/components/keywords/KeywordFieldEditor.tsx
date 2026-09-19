@@ -9,8 +9,8 @@ import {
 import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
 import {
-  KEYWORD_FIELD_CHAR_LIMIT,
-  keywordFieldChars,
+  KEYWORD_FIELD_BYTE_LIMIT,
+  keywordFieldBytes,
   type KeywordFieldResult,
   parseKeywordField,
 } from "@asobeast/shared";
@@ -43,7 +43,7 @@ function ResultView({ result }: { result: KeywordFieldResult }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-3">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Characters used</span>
+        <span className="text-muted-foreground">Bytes used</span>
         <span
           className={cn("font-medium tabular-nums", over && "text-destructive")}
         >
@@ -95,7 +95,7 @@ function KeywordFieldUsage({
   phrases: string[];
   used: number;
 }) {
-  const over = used > KEYWORD_FIELD_CHAR_LIMIT;
+  const over = used > KEYWORD_FIELD_BYTE_LIMIT;
   const storedAs = phrases.join(",");
 
   return (
@@ -109,7 +109,7 @@ function KeywordFieldUsage({
           )}
           style={{
             inlineSize: `${Math.min(
-              (used / KEYWORD_FIELD_CHAR_LIMIT) * 100,
+              (used / KEYWORD_FIELD_BYTE_LIMIT) * 100,
               100,
             )}%`,
           }}
@@ -127,8 +127,8 @@ function KeywordFieldUsage({
             over ? "font-medium text-destructive" : "text-muted-foreground",
           )}
         >
-          {used}/{KEYWORD_FIELD_CHAR_LIMIT}
-          {over ? ` · ${used - KEYWORD_FIELD_CHAR_LIMIT} over the limit` : ""}
+          {used}/{KEYWORD_FIELD_BYTE_LIMIT}
+          {over ? ` · ${used - KEYWORD_FIELD_BYTE_LIMIT} over the limit` : ""}
         </span>
       </div>
       {storedAs !== "" && storedAs !== text ? (
@@ -150,8 +150,8 @@ function KeywordFieldForm({ id }: { id: string }) {
   const storedText = stored.tracked.map((keyword) => keyword.text).join(",");
   const text = draft ?? storedText;
   const { phrases } = parseKeywordField(text);
-  const used = keywordFieldChars(phrases);
-  const over = used > KEYWORD_FIELD_CHAR_LIMIT;
+  const used = keywordFieldBytes(phrases);
+  const over = used > KEYWORD_FIELD_BYTE_LIMIT;
   const nothingToSave = text.trim() === "" && storedText === "";
   const result = saved ?? stored;
 
@@ -229,12 +229,12 @@ export function KeywordFieldEditor({
           App Store keyword field · {formatCountry(homeCountry)}
         </CardTitle>
         <CardDescription>
-          This {KEYWORD_FIELD_CHAR_LIMIT}-character field is private — Apple
-          never shows it and it cannot be scraped. Paste exactly what you
-          submitted in App Store Connect. It applies to your home market only.
-          The field shows the phrases asobeast tracks in the order you pasted
-          them. Spacing and casing can differ, and a repeated phrase is kept
-          once, where it first appeared.
+          This {KEYWORD_FIELD_BYTE_LIMIT}-byte field is private — Apple never
+          shows it and it cannot be scraped. Letters such as ą take 2 bytes.
+          Paste exactly what you submitted in App Store Connect. It applies to
+          your home market only. The field shows the phrases asobeast tracks in
+          the order you pasted them. Spacing and casing can differ, and a
+          repeated phrase is kept once, where it first appeared.
         </CardDescription>
       </CardHeader>
       {!homeMarket ? (
