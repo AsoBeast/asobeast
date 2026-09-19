@@ -48,7 +48,9 @@ function rollWindow(current: HealthWindow | null, now: Date): HealthWindow {
 }
 
 export function outcomeOf(error: unknown): ProxyOutcome | null {
-  if (error instanceof ImplausibleResultError) return ProxyOutcome.SILENT;
+  if (error instanceof ImplausibleResultError) {
+    return error.retryable ? null : ProxyOutcome.SILENT;
+  }
   if (error instanceof ProxyPoolUnavailableError) return null;
   if (error instanceof StoreAppNotFoundError) return null;
   if (error instanceof StoreRequestError) {

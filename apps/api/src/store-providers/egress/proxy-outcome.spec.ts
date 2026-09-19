@@ -81,6 +81,16 @@ describe('outcomeOf', () => {
     ).toBe(ProxyOutcome.SILENT);
   });
 
+  it('blames no endpoint for an origin that answers empty to everyone', () => {
+    expect(
+      outcomeOf(
+        new ImplausibleResultError(Store.APP_STORE, 'empty review feed', {
+          retryable: true,
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it('blames no endpoint when the pool never handed one out', () => {
     expect(
       outcomeOf(new ProxyPoolUnavailableError(Store.APP_STORE, 1)),
