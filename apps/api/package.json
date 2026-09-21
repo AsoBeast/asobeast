@@ -38,6 +38,7 @@
     "bench:stress": "BENCH_SCALE=stress pnpm run bench"
   },
   "dependencies": {
+    "@apple/apple-ads-platform": "1.109.0",
     "@asobeast/mcp-tools": "workspace:*",
     "@asobeast/shared": "workspace:*",
     "@bull-board/api": "^9.10.0",

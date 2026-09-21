@@ -200,6 +200,19 @@ See [Enable the optional AI features](/guides/ai-features).
 | `OPENAI_API_KEY` | Empty | No | Empty disables the AI audit, metadata drafts and action explanations |
 | `AI_MODEL` | `gpt-5.6-luna` | No | Must support vision and structured outputs, because the audit reads screenshots |
 
+## Apple search popularity
+
+Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own weekly search popularity for the App Store terms it covers instead of estimating them. See [Keyword scoring](/concepts/scoring).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `APPLE_ADS_CLIENT_ID` | Empty | No | Client id from the API page of your Apple Ads account settings. The four credentials are set together or not at all, and a partial set refuses to boot |
+| `APPLE_ADS_TEAM_ID` | Empty | No | Team id from the same page |
+| `APPLE_ADS_KEY_ID` | Empty | No | Key id Apple returned when you uploaded the public key |
+| `APPLE_ADS_PRIVATE_KEY_PATH` | Empty | No | Path to the `prime256v1` private key PEM, mounted read only into the API container. Its contents are never logged |
+| `APPLE_ADS_AD_ACCOUNT_ID` | Empty | No | Ad account to read through. Empty uses the first one the credentials can read |
+| `CRON_APPLE_POPULARITY` | `0 9 * * 1` | No | When the weekly sync runs, UTC. Never scheduled while the credentials are unset |
+
 ## Admin surfaces
 
 See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).

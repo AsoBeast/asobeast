@@ -341,6 +341,12 @@ TRIAL_DAYS=7                        # trial length in days when BILLING_ENABLED=
 TRUST_PROXY=false                   # true only behind a reverse proxy that sets a trustworthy X-Forwarded-For; lets auth throttling key on the real client IP instead of the proxy's. WARNS in production when false
 ACCOUNT_DELETION_GRACE_DAYS=7       # days a scheduled workspace deletion stays reversible before the retention job erases it
 ERROR_TRACKING_DSN=                 # optional, hosted only. Sentry dsn for scrubbed error reports. Ignored unless NODE_ENV=production and BILLING_ENABLED=true, so a self hosted deployment never reports errors outside itself
+APPLE_ADS_CLIENT_ID=              # optional. SEARCHADS client id from Apple Ads account settings, API. The four credentials are all set or all unset. REFUSES TO BOOT when only some are set
+APPLE_ADS_TEAM_ID=                # SEARCHADS team id
+APPLE_ADS_KEY_ID=                 # key id Apple returned when the public key was uploaded
+APPLE_ADS_PRIVATE_KEY_PATH=       # path to the prime256v1 private key PEM, mounted read only. Never logged
+APPLE_ADS_AD_ACCOUNT_ID=          # optional; empty uses the first ad account the credentials can read
+CRON_APPLE_POPULARITY=0 9 * * 1   # weekly Apple search popularity sync, UTC. Never scheduled while the Apple Ads credentials are unset
 LOG_LEVEL=debug
 ```
 
