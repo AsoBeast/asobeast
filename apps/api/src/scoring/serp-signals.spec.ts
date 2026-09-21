@@ -23,6 +23,8 @@ describe('titleEvidence', () => {
     ['Flags of the World Quiz', 'flag quiz', 0.7],
     ['Boxes and Foxes', 'box', 1],
     ['Mapes Hotel', 'map', 0],
+    ['Trivia Quizzes', 'quiz', 1],
+    ['Countries of the World', 'country', 1],
     ['墨迹天气预报', '天气', 1],
     ['地図ゲーム 世界', '地図 ゲーム', 0.7],
   ])('%s against %s is %s', (title, keyword, expected) => {

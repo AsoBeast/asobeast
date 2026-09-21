@@ -100,6 +100,12 @@ describe('probeSuggestReach', () => {
       ga: ['games', 'gacha life'],
     };
 
+    it('counts an irregular plural as the keyword', async () => {
+      const lookup = lookupFrom({ quiz: ['quizzes for kids'], q: ['quizzes'] });
+      const { reach } = await probeSuggestReach('quiz', lookup, 'prefix');
+      expect(reach).toEqual({ status: 'hit', prefixLength: 1, position: 1 });
+    });
+
     it('counts a completion that extends the keyword', async () => {
       const lookup = lookupFrom(playLists);
       await expect(
