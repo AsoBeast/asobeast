@@ -18,7 +18,7 @@ export const DEFEND_WINDOW_DAYS = 7;
 export const DEFEND_MIN_ENTRANTS = 2;
 export const DEFEND_MIN_OBSERVED_DAYS = 4;
 export const DEFEND_YOUR_POSITION_MAX = 20;
-export const DEFEND_NEUTRAL_VOLUME = 40;
+export const DEFEND_NEUTRAL_VOLUME = 30;
 export const DEFEND_PRESSURE_WEIGHT = 0.4;
 export const DEFEND_ENTRANT_PRESSURE_CAP = 3;
 
