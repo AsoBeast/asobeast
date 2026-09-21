@@ -18,6 +18,11 @@ export const PADDED_DISCOUNT_FLOOR = 0.5;
 export const BRAND_DIFFICULTY_FLOOR = 8.5;
 export const WEAK_LEADER_DIFFICULTY_CAP = 3.5;
 export const SMALL_SERP_DIFFICULTY_CAP = 2;
+export const VELOCITY_WEIGHT = 0.1;
+export const VELOCITY_BOUNDS = [10, 50_000] as const;
+export const VELOCITY_MIN_DAYS = 14;
+export const VELOCITY_MIN_APPS = 3;
+const DAYS_PER_MONTH = 30;
 
 const average = (values: number[]): number =>
   values.length === 0
@@ -55,6 +60,27 @@ export function dominanceScore(stats: KeywordStats): number {
   return weights === 0 ? 0 : (weighted / weights) * 10;
 }
 
+export function velocityScore(stats: KeywordStats): number | null {
+  const days = stats.previousCapturedDaysAgo ?? 0;
+  if (!stats.previousTop10 || days < VELOCITY_MIN_DAYS) {
+    return null;
+  }
+  const before = new Map(
+    stats.previousTop10.map((item) => [item.storeAppId, item.ratingCount]),
+  );
+  const gains = stats.top10.flatMap((item) => {
+    const then =
+      item.storeAppId === undefined ? undefined : before.get(item.storeAppId);
+    const [now] = finiteNumbers([item.ratingCount]);
+    return then === undefined || now === undefined
+      ? []
+      : [(Math.max(0, now - then) / days) * DAYS_PER_MONTH];
+  });
+  return gains.length < VELOCITY_MIN_APPS
+    ? null
+    : logScale(median(gains), ...VELOCITY_BOUNDS);
+}
+
 export function baseDifficulty(stats: KeywordStats): number {
   return (
     DIFFICULTY_WEIGHTS.strength * strengthScore(stats) +
@@ -73,9 +99,14 @@ export function computeDifficulty(stats: KeywordStats): number {
   }
   const padding = paddingFactor(stats.top10, stats.keywordText);
   const flags = serpFlags(stats);
+  const base = baseDifficulty(stats);
+  const velocity = velocityScore(stats);
+  const blended =
+    velocity === null
+      ? base
+      : (1 - VELOCITY_WEIGHT) * base + VELOCITY_WEIGHT * velocity;
   let difficulty =
-    baseDifficulty(stats) *
-    (PADDED_DISCOUNT_FLOOR + (1 - PADDED_DISCOUNT_FLOOR) * padding);
+    blended * (PADDED_DISCOUNT_FLOOR + (1 - PADDED_DISCOUNT_FLOOR) * padding);
   if (flags.includes('brand')) {
     difficulty = Math.max(difficulty, BRAND_DIFFICULTY_FLOOR);
   }

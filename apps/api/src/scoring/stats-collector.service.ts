@@ -3,7 +3,8 @@ import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
-import { KeywordStats } from './formulas';
+import { VELOCITY_MIN_DAYS } from './difficulty';
+import { KeywordStats, PreviousSerpApp } from './formulas';
 import { ScoringEvidence } from './provenance';
 import { ProbedReach, probeSuggestReach } from './suggest-reach.probe';
 
@@ -16,6 +17,11 @@ export interface CollectedKeywordStats {
   stats: KeywordStats;
   evidence: ScoringEvidence;
 }
+
+type PreviousPage = Pick<
+  KeywordStats,
+  'previousTop10' | 'previousCapturedDaysAgo'
+>;
 
 interface DetailCollection {
   items: KeywordStats['top10'];
@@ -57,6 +63,7 @@ export class StatsCollectorService {
       keyword.country,
     );
     const suggestCompleted = reach.status !== 'unavailable';
+    const previous = await this.previousPage(keywordId);
 
     return {
       stats: {
@@ -66,6 +73,7 @@ export class StatsCollectorService {
         top10: topTen.items,
         top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
         suggest: reach,
+        ...previous,
       },
       evidence: {
         searchResultCount: results.length,
@@ -92,6 +100,23 @@ export class StatsCollectorService {
       );
     }
     return probed;
+  }
+
+  private async previousPage(keywordId: string): Promise<PreviousPage> {
+    const todayMs = Math.floor(Date.now() / DAY_MS) * DAY_MS;
+    const row = await this.prisma.keywordMetric.findFirst({
+      where: {
+        keywordId,
+        date: { lte: new Date(todayMs - VELOCITY_MIN_DAYS * DAY_MS) },
+      },
+      orderBy: { date: 'desc' },
+      select: { date: true, stats: true },
+    });
+    const previousTop10 = row ? previousApps(row.stats) : [];
+    if (!row || previousTop10.length === 0) {
+      return {};
+    }
+    return { previousTop10, previousCapturedDaysAgo: daysSince(row.date) };
   }
 
   private searchTopTen(results: SearchItem[]): DetailCollection {
@@ -163,6 +188,24 @@ export class StatsCollectorService {
       return words.every((word) => title.includes(word));
     }).length;
   }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+function previousApps(stats: unknown): PreviousSerpApp[] {
+  const top10 = isRecord(stats) ? stats.top10 : undefined;
+  if (!Array.isArray(top10)) {
+    return [];
+  }
+  return top10.flatMap((item: unknown) =>
+    isRecord(item) &&
+    typeof item.storeAppId === 'string' &&
+    typeof item.ratingCount === 'number' &&
+    Number.isFinite(item.ratingCount)
+      ? [{ storeAppId: item.storeAppId, ratingCount: item.ratingCount }]
+      : [],
+  );
 }
 
 function identityOf(

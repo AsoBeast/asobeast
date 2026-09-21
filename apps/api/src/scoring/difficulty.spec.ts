@@ -3,6 +3,7 @@ import {
   computeDifficulty,
   DIFFICULTY_WEIGHTS,
   freshnessScore,
+  velocityScore,
 } from './difficulty';
 import { KeywordStats } from './formulas';
 import * as fixtures from './scoring-fixtures';
@@ -63,5 +64,35 @@ describe('freshness and depth', () => {
   ])('%#', (stats, depth, freshness) => {
     expect(competitorsScore(stats)).toBeCloseTo(depth, 2);
     expect(freshnessScore(stats)).toBeCloseTo(freshness, 2);
+  });
+});
+
+describe('rating velocity', () => {
+  it('blends a growing page in at one tenth', () => {
+    expect(computeDifficulty(fixtures.F11_VELOCITY)).toBeCloseTo(7.4527, 3);
+  });
+
+  it.each([
+    ['a page 13 days old', { previousCapturedDaysAgo: 13 }],
+    [
+      'two matching apps',
+      { previousTop10: fixtures.F11_VELOCITY.previousTop10?.slice(0, 2) },
+    ],
+    ['no previous page', { previousTop10: undefined }],
+  ])('ignores %s', (_name, override) => {
+    expect(
+      computeDifficulty({ ...fixtures.F11_VELOCITY, ...override }),
+    ).toBeCloseTo(7.6847, 3);
+  });
+
+  it('counts a falling rating count as no growth', () => {
+    const shrinking = {
+      ...fixtures.F11_VELOCITY,
+      previousTop10: fixtures.F11_VELOCITY.previousTop10?.map((item) => ({
+        ...item,
+        ratingCount: item.ratingCount * 2,
+      })),
+    };
+    expect(velocityScore(shrinking)).toBe(0);
   });
 });

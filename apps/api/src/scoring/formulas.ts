@@ -6,6 +6,11 @@ import { SuggestReach } from './suggest-reach';
 export { toDifficulty100, toVolume } from '@asobeast/shared';
 export { clamp, linear, logScale } from './curves';
 
+export interface PreviousSerpApp {
+  storeAppId: string;
+  ratingCount: number;
+}
+
 export interface KeywordStats {
   store: Store;
   keywordText: string;
@@ -21,6 +26,8 @@ export interface KeywordStats {
   }>;
   top30TitleMatchCount: number;
   suggest: SuggestReach;
+  previousTop10?: PreviousSerpApp[];
+  previousCapturedDaysAgo?: number;
 }
 
 export const APP_STORE_FORMULA_VERSION = 'app-store-v1';

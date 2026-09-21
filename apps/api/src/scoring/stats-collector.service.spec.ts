@@ -28,7 +28,7 @@ function buildProviderWith(suggestFn: jest.Mock) {
 const buildProvider = (suggest: SuggestItem[]) =>
   buildProviderWith(jest.fn().mockResolvedValue(suggest));
 
-function buildPrisma() {
+function buildPrisma(previous: unknown = null) {
   return {
     keyword: {
       findUnique: jest.fn().mockResolvedValue({
@@ -37,6 +37,7 @@ function buildPrisma() {
         country: 'us',
       }),
     },
+    keywordMetric: { findFirst: jest.fn().mockResolvedValue(previous) },
   } as unknown as PrismaService;
 }
 
@@ -76,6 +77,7 @@ function buildGplayPrisma() {
         country: 'us',
       }),
     },
+    keywordMetric: { findFirst: jest.fn().mockResolvedValue(null) },
   } as unknown as PrismaService;
 }
 
@@ -261,6 +263,67 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence).toMatchObject({
       suggestCompleted: false,
       suggestRequests: 1,
+    });
+  });
+
+  describe('previous scored page', () => {
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const collectWith = async (previous: unknown) => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-09-21T10:00:00Z'));
+      const prisma = buildPrisma(previous);
+      const service = new StatsCollectorService(
+        prisma,
+        buildProvider([]).registry,
+      );
+      const collected = await service.collect('kw1');
+      return { prisma, collected };
+    };
+
+    it('reads the newest metric at least fourteen days old', async () => {
+      const { prisma, collected } = await collectWith({
+        date: new Date('2026-08-31T00:00:00Z'),
+        stats: {
+          top10: [
+            { storeAppId: 'app0', ratingCount: 900 },
+            { storeAppId: 'app1', ratingCount: Number.NaN },
+            { title: 'no id', ratingCount: 5 },
+            { storeAppId: 'app2', ratingCount: 950 },
+          ],
+        },
+      });
+
+      expect(prisma.keywordMetric.findFirst).toHaveBeenCalledWith({
+        where: {
+          keywordId: 'kw1',
+          date: { lte: new Date('2026-09-07T00:00:00Z') },
+        },
+        orderBy: { date: 'desc' },
+        select: { date: true, stats: true },
+      });
+      expect(collected?.stats.previousTop10).toEqual([
+        { storeAppId: 'app0', ratingCount: 900 },
+        { storeAppId: 'app2', ratingCount: 950 },
+      ]);
+      expect(collected?.stats.previousCapturedDaysAgo).toBe(21);
+    });
+
+    it.each([
+      [
+        'a v1 row',
+        {
+          date: new Date('2026-08-31T00:00:00Z'),
+          stats: { top10: [{ title: 'Puzzle', ratingCount: 900 }] },
+        },
+      ],
+      ['a row without a page', { date: new Date(), stats: null }],
+      ['no row', null],
+    ])('ignores %s', async (_name, previous) => {
+      const { collected } = await collectWith(previous);
+      expect(collected?.stats.previousTop10).toBeUndefined();
+      expect(collected?.stats.previousCapturedDaysAgo).toBeUndefined();
     });
   });
 });
