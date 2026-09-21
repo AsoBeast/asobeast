@@ -87,6 +87,33 @@ describe('probeSuggestReach', () => {
       });
     });
 
+    it.each([
+      ['cat', ['catholic bible', 'cats'], 2],
+      ['game', ['gamestop', 'games offline'], 2],
+      ['photo', ['photoshop', 'photo editor'], 2],
+      ['guess the location', ['guess the locations game'], 1],
+    ])(
+      'matches %s only on a word or plural boundary',
+      async (keyword, list, position) => {
+        const { reach } = await probeSuggestReach(
+          keyword,
+          lookupFrom({ [keyword]: list }),
+          'prefix',
+        );
+        expect(reach).toMatchObject({ position });
+      },
+    );
+
+    it('rejects a completion that only shares the first letters', async () => {
+      await expect(
+        probeSuggestReach(
+          'pho',
+          lookupFrom({ pho: ['photo editor'] }),
+          'prefix',
+        ),
+      ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+    });
+
     it('still finds nothing for a phrase no completion extends', async () => {
       const lookup = lookupFrom({ 'videos put': ['videos put together'] });
       await expect(

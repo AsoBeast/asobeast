@@ -15,8 +15,16 @@ export interface ProbedReach {
   requests: number;
 }
 
+export const PLURAL_ENDINGS = ['', 's', 'es'] as const;
+
+const extendsKeyword = (term: string, target: string): boolean =>
+  PLURAL_ENDINGS.some(
+    (ending) =>
+      term === `${target}${ending}` || term.startsWith(`${target}${ending} `),
+  );
+
 const matches = (term: string, target: string, match: SuggestMatch) =>
-  match === 'exact' ? term === target : term.startsWith(target);
+  match === 'exact' ? term === target : extendsKeyword(term, target);
 
 const positionIn = (
   list: Array<{ term: string }>,
