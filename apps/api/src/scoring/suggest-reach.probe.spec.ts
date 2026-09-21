@@ -30,12 +30,35 @@ describe('probeSuggestReach', () => {
     expect(lookup).not.toHaveBeenCalledWith('triv');
   });
 
-  it('reuses the full term list when the keyword is shorter than the cap', async () => {
+  it('reports a short keyword only offered for its full text as listed', async () => {
     const lookup = lookupFrom({ quiz: ['quizlet', 'quiz'] });
     await expect(probeSuggestReach('quiz', lookup)).resolves.toEqual({
-      reach: { status: 'hit', prefixLength: 4, position: 2 },
+      reach: { status: 'listed', position: 2 },
       requests: 4,
     });
+    expect(lookup).toHaveBeenCalledTimes(4);
+  });
+
+  it('scores an eight and a nine character keyword alike when only the full text is offered', async () => {
+    const eight = await probeSuggestReach(
+      'location',
+      lookupFrom({ location: ['location'] }),
+    );
+    const nine = await probeSuggestReach(
+      'locations',
+      lookupFrom({ locations: ['locations'] }),
+    );
+    expect(eight.reach).toEqual({ status: 'listed', position: 1 });
+    expect(nine.reach).toEqual({ status: 'listed', position: 1 });
+  });
+
+  it('never splits a character outside the basic plane', async () => {
+    const lookup = lookupFrom({ '𠮷野家': ['𠮷野家'], '𠮷': ['𠮷野家'] });
+    await expect(probeSuggestReach('𠮷野家', lookup)).resolves.toEqual({
+      reach: { status: 'hit', prefixLength: 1, position: 1 },
+      requests: 2,
+    });
+    expect(lookup).toHaveBeenCalledWith('𠮷');
   });
 
   it('reports a keyword that is only offered for its full text as listed', async () => {
@@ -65,7 +88,7 @@ describe('probeSuggestReach', () => {
   it('handles a one character keyword', async () => {
     const lookup = lookupFrom({ x: ['x'] });
     await expect(probeSuggestReach('x', lookup)).resolves.toEqual({
-      reach: { status: 'hit', prefixLength: 1, position: 1 },
+      reach: { status: 'listed', position: 1 },
       requests: 1,
     });
   });

@@ -1,4 +1,5 @@
 import { searchKey, Store } from '@asobeast/shared';
+import { pluralsOf } from './plurals';
 import { PREFIX_PROBE_CAP, SuggestReach } from './suggest-reach';
 
 export type SuggestLookup = (term: string) => Promise<Array<{ term: string }>>;
@@ -15,12 +16,9 @@ export interface ProbedReach {
   requests: number;
 }
 
-export const PLURAL_ENDINGS = ['', 's', 'es'] as const;
-
 const extendsKeyword = (term: string, target: string): boolean =>
-  PLURAL_ENDINGS.some(
-    (ending) =>
-      term === `${target}${ending}` || term.startsWith(`${target}${ending} `),
+  pluralsOf(target).some(
+    (form) => term === form || term.startsWith(`${form} `),
   );
 
 const matches = (term: string, target: string, match: SuggestMatch) =>
@@ -50,12 +48,11 @@ export async function probeSuggestReach(
     if (fullPosition === 0) {
       return { reach: { status: 'absent' }, requests };
     }
-    const lastPrefix = Math.min(keyword.length, PREFIX_PROBE_CAP);
+    const characters = Array.from(keyword);
+    const lastPrefix = Math.min(characters.length - 1, PREFIX_PROBE_CAP);
     for (let length = 1; length <= lastPrefix; length += 1) {
-      const position =
-        length === keyword.length
-          ? fullPosition
-          : positionIn(await ask(keyword.slice(0, length)), target, match);
+      const prefix = characters.slice(0, length).join('');
+      const position = positionIn(await ask(prefix), target, match);
       if (position > 0) {
         return {
           reach: { status: 'hit', prefixLength: length, position },
