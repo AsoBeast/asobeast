@@ -1,6 +1,11 @@
 import { InjectFlowProducer, InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { FanOutSummary, Store, STORES } from '@asobeast/shared';
+import {
+  CURRENT_FORMULA_VERSIONS,
+  FanOutSummary,
+  Store,
+  STORES,
+} from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -40,6 +45,11 @@ import { interleave } from './interleave';
 import { applyKeywordLimit } from './over-limit';
 import { OverLimitRegistry } from './over-limit.registry';
 import { requestsPerJob } from './request-weights';
+
+interface ScoringTarget {
+  keywordId: string;
+  keyword: { store: Store; metrics: Array<{ formulaVersion: string | null }> };
+}
 
 @Injectable()
 export class PipelineService {
@@ -306,10 +316,45 @@ export class PipelineService {
   }
 
   async fanOutScoring(): Promise<number> {
-    const { results, failures } = await this.fanOut.each(
+    return this.scoreEveryWorkspace(
       'weekly scoring visits every workspace that tracks a phrase',
-      () => this.scoreWorkspaceKeywords(),
+      async () => {
+        const week = isoWeekKey();
+        return this.enqueueScores(
+          await this.trackedForScoring(),
+          () => week,
+          'weekly scoring',
+        );
+      },
     );
+  }
+
+  async fanOutOutdatedScores(): Promise<number> {
+    return this.scoreEveryWorkspace(
+      'a formula change rescores every workspace that tracks a phrase',
+      async () => {
+        const tracked = await this.trackedForScoring();
+        const outdated = tracked.filter(({ keyword }) => {
+          const [latest] = keyword.metrics;
+          return (
+            latest !== undefined &&
+            latest.formulaVersion !== CURRENT_FORMULA_VERSIONS[keyword.store]
+          );
+        });
+        return this.enqueueScores(
+          outdated,
+          ({ keyword }) => CURRENT_FORMULA_VERSIONS[keyword.store],
+          'a formula rescore',
+        );
+      },
+    );
+  }
+
+  private async scoreEveryWorkspace(
+    justification: string,
+    work: () => Promise<number>,
+  ): Promise<number> {
+    const { results, failures } = await this.fanOut.each(justification, work);
     const total = results.reduce((sum, count) => sum + count, 0);
     this.logger.log(`fan out scoring ${total}`);
     const failure = workspaceFailure(
@@ -320,20 +365,37 @@ export class PipelineService {
     return total;
   }
 
-  private async scoreWorkspaceKeywords(): Promise<number> {
-    const scope = this.workspace.scopeFor('weekly scoring');
-    const keywords = await this.prisma.trackedKeyword.findMany({
+  private trackedForScoring(): Promise<ScoringTarget[]> {
+    return this.prisma.trackedKeyword.findMany({
       where: { active: true },
-      select: { keywordId: true, keyword: { select: { store: true } } },
       distinct: ['keywordId'],
+      select: {
+        keywordId: true,
+        keyword: {
+          select: {
+            store: true,
+            metrics: {
+              orderBy: { date: 'desc' },
+              take: 1,
+              select: { formulaVersion: true },
+            },
+          },
+        },
+      },
     });
+  }
 
-    const week = isoWeekKey();
-    for (const { keywordId, keyword } of keywords) {
-      await this.queueFor(keyword.store).add(
+  private async enqueueScores(
+    keywords: ScoringTarget[],
+    bucketFor: (target: ScoringTarget) => string,
+    reason: string,
+  ): Promise<number> {
+    const scope = this.workspace.scopeFor(reason);
+    for (const target of keywords) {
+      await this.queueFor(target.keyword.store).add(
         JOBS.SCORE_KEYWORD,
-        { keywordId, ...scope },
-        { jobId: scoreJobId(keywordId, week) },
+        { keywordId: target.keywordId, ...scope },
+        { jobId: scoreJobId(target.keywordId, bucketFor(target)) },
       );
     }
     return keywords.length;

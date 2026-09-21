@@ -102,6 +102,15 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await this.scheduleProxySync();
     await this.scheduleStoreCanary();
     await this.schedulePublishedStatus();
+    await this.rescoreOutdatedKeywords();
+  }
+
+  private async rescoreOutdatedKeywords(): Promise<void> {
+    try {
+      await this.pipeline.fanOutOutdatedScores();
+    } catch (error) {
+      this.logger.error('outdated score check failed', error);
+    }
   }
 
   private async scheduleProxySync(): Promise<void> {

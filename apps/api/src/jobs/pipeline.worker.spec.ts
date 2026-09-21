@@ -75,6 +75,7 @@ describe('PipelineWorker', () => {
     const pipeline = {
       fanOutDaily: jest.fn().mockResolvedValue(payload),
       fanOutScoring: jest.fn().mockResolvedValue(0),
+      fanOutOutdatedScores: jest.fn().mockResolvedValue(0),
       estimateDailyBudget: jest.fn().mockResolvedValue(budget),
     };
     const retention = { prune: jest.fn().mockResolvedValue(undefined) };
@@ -184,6 +185,26 @@ describe('PipelineWorker', () => {
       JOBS.AUDIT_SNAPSHOT,
       JOBS.STORE_CANARY,
     ]);
+  });
+
+  it('checks for outdated scores once, after the schedulers', async () => {
+    const { worker, pipelineQueue, pipeline } = build();
+
+    await worker.onModuleInit();
+
+    expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
+    expect(
+      pipeline.fanOutOutdatedScores.mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      Math.max(...pipelineQueue.upsertJobScheduler.mock.invocationCallOrder),
+    );
+  });
+
+  it('starts even when the outdated score check fails', async () => {
+    const { worker, pipeline } = build();
+    pipeline.fanOutOutdatedScores.mockRejectedValue(new Error('redis down'));
+
+    await expect(worker.onModuleInit()).resolves.toBeUndefined();
   });
 
   it('schedules the store canary an hour before the daily run', async () => {
