@@ -7,7 +7,7 @@ const LONGTAIL_MIN_WORDS = 3;
 export const LONGTAIL_MAX_VOLUME = 25;
 
 const isScored = (item: TrackedKeywordItem): boolean =>
-  item.opportunity !== null && item.volume !== null && !item.scoreOutdated;
+  item.opportunity !== null && item.volume !== null;
 
 const isAspirational = (item: TrackedKeywordItem): boolean =>
   (item.volume ?? 0) >= ASPIRATIONAL_VOLUME &&

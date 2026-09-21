@@ -165,7 +165,7 @@ Google Play has no equivalent, so its traffic stays an estimate. The instance co
 
 ## What happens to old scores after an upgrade?
 
-They are rescored once, automatically. When the API starts with a new formula version, every tracked keyword whose latest score used an older version is queued for one score job, through the same rate limited queues as weekly scoring. Until its job runs, the keyword keeps its old numbers and the table says "Older formula". Such a row has no bucket and never raises a keyword action or a high opportunity entry, because its numbers were not made for the current thresholds. Stored history keeps the version it was scored with.
+They are rescored once, automatically. When the API starts with a new formula version, every tracked keyword whose latest score used an older version is queued for one score job, through the same rate limited queues as weekly scoring. Until its job runs, the keyword keeps its old numbers and the table says "Older formula". Such a row keeps its bucket, so an audit still knows the app's priority keywords, but it never raises a keyword action or a high opportunity entry, because its numbers were not made for the current threshold. Stored history keeps the version it was scored with.
 
 ## Are scores comparable across stores?
 

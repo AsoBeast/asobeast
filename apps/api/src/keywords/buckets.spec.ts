@@ -91,9 +91,9 @@ describe('classifyBuckets', () => {
     expect(bucketOf(items, 'u')).toBeNull();
   });
 
-  it('returns a null bucket for a score from an older formula', () => {
+  it('keeps the bucket of a score from an older formula', () => {
     const items = [item({ keywordId: 'o', scoreOutdated: true })];
-    expect(bucketOf(items, 'o')).toBeNull();
+    expect(bucketOf(items, 'o')).toBe('primary');
   });
 
   describe('v2 thresholds', () => {
