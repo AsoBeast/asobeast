@@ -8,7 +8,11 @@ import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
 import { readPreviousTop10 } from './score-signals';
-import { ProbedReach, probeSuggestReach } from './suggest-reach.probe';
+import {
+  ProbedReach,
+  probeSuggestReach,
+  SUGGEST_MATCH,
+} from './suggest-reach.probe';
 
 const SEARCH_DEPTH = 100;
 const TOP_STRENGTH = 10;
@@ -60,11 +64,7 @@ export class StatsCollectorService {
       keyword.store === Store.GOOGLE_PLAY
         ? await this.enrichTop10(provider, results, keyword.country)
         : this.searchTopTen(results);
-    const { reach, requests } = await this.suggestReach(
-      provider,
-      keyword.text,
-      keyword.country,
-    );
+    const { reach, requests } = await this.suggestReach(provider, keyword);
     const suggestCompleted = reach.status !== 'unavailable';
     const previous = await this.previousPage(keywordId);
     const official = await this.officialPopularity.for(keyword);
@@ -93,11 +93,12 @@ export class StatsCollectorService {
 
   private async suggestReach(
     provider: StoreProvider,
-    text: string,
-    country: string,
+    { text, store, country }: { text: string; store: Store; country: string },
   ): Promise<ProbedReach> {
-    const probed = await probeSuggestReach(text, (term) =>
-      provider.suggest(term, country),
+    const probed = await probeSuggestReach(
+      text,
+      (term) => provider.suggest(term, country),
+      SUGGEST_MATCH[store],
     );
     if (probed.reach.status === 'unavailable') {
       this.logger.warn(

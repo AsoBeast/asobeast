@@ -397,4 +397,28 @@ describe('StatsCollectorService', () => {
     expect(collected?.stats.official).toEqual({ absentBelow: 41 });
     expect(collected?.evidence.officialPopularityUsed).toBe(false);
   });
+
+  it('reads google play completions of the keyword as reach', async () => {
+    const suggest = jest.fn((term: string) =>
+      Promise.resolve(
+        term === 'puzzle game' || term === 'pu'
+          ? [{ term: 'puzzle games' }, { term: 'puzzle game offline' }]
+          : [{ term: 'pinterest' }],
+      ),
+    );
+    const { registry } = buildGplayProvider({ suggest });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    const collected = await service.collect('kw1');
+
+    expect(collected?.stats.suggest).toEqual({
+      status: 'hit',
+      prefixLength: 2,
+      position: 1,
+    });
+  });
 });

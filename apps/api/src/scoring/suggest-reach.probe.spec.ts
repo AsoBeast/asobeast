@@ -69,4 +69,35 @@ describe('probeSuggestReach', () => {
       requests: 1,
     });
   });
+
+  describe('prefix matching for a store that never echoes the term', () => {
+    const playLists = {
+      game: ['games', 'gamestop', 'game changers app'],
+      g: ['grindr', 'gemini'],
+      ga: ['games', 'gacha life'],
+    };
+
+    it('counts a completion that extends the keyword', async () => {
+      const lookup = lookupFrom(playLists);
+      await expect(
+        probeSuggestReach('game', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 2, position: 1 },
+        requests: 3,
+      });
+    });
+
+    it('still finds nothing for a phrase no completion extends', async () => {
+      const lookup = lookupFrom({ 'videos put': ['videos put together'] });
+      await expect(
+        probeSuggestReach('videos puzzle', lookup, 'prefix'),
+      ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+    });
+
+    it('keeps exact matching by default', async () => {
+      await expect(
+        probeSuggestReach('game', lookupFrom(playLists)),
+      ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+    });
+  });
 });
