@@ -15,6 +15,16 @@ describe('titleEvidence', () => {
     ['Anything', '', 0],
     ['geo quiz', 'Géo  Quiz', 1],
     ['GEO QUIZ!', 'geo quiz', 1],
+    ['Product Roadmap Planner', 'map', 0],
+    ['Geography Quiz', 'geo', 0],
+    ['Carpet cleaning', 'car pet', 0],
+    ['Google Maps', 'map', 1],
+    ['Map Quiz', 'maps', 1],
+    ['Flags of the World Quiz', 'flag quiz', 0.7],
+    ['Boxes and Foxes', 'box', 1],
+    ['Mapes Hotel', 'map', 0],
+    ['墨迹天气预报', '天气', 1],
+    ['地図ゲーム 世界', '地図 ゲーム', 0.7],
   ])('%s against %s is %s', (title, keyword, expected) => {
     expect(titleEvidence(title, keyword)).toBeCloseTo(expected, 6);
   });
