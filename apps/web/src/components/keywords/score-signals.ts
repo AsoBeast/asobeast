@@ -10,6 +10,7 @@ const FLAG_LINES: Record<SerpFlag, string> = {
 };
 
 function reachLine(signals: ScoreSignals): string {
+  const capped = signals.officialPopularity === null;
   switch (signals.suggestReach) {
     case "hit": {
       const typed = signals.suggestPrefixLength;
@@ -23,7 +24,9 @@ function reachLine(signals: ScoreSignals): string {
     case "listed":
       return "The store suggests it only once the whole phrase is typed.";
     case "absent":
-      return "The store never suggests this phrase, so volume is capped.";
+      return capped
+        ? "The store never suggests this phrase, so volume is capped."
+        : "The store never suggests this phrase.";
     case "unavailable":
       return "Suggestions were unavailable, so volume comes from the ranking apps alone.";
   }
