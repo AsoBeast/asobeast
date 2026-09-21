@@ -1,6 +1,12 @@
 import { buildScoreSignals, readScoreSignals } from './score-signals';
-import { F2_BRAND, F4_EMPTY, F5_TAIL } from './scoring-fixtures';
-import { computeTraffic } from './traffic';
+import {
+  F10_ABSENT_CAP,
+  F2_BRAND,
+  F4_EMPTY,
+  F5_TAIL,
+  F9_OFFICIAL,
+} from './scoring-fixtures';
+import { computeTraffic, estimateTraffic } from './traffic';
 
 describe('buildScoreSignals', () => {
   it('describes a brand page', () => {
@@ -32,6 +38,18 @@ describe('buildScoreSignals', () => {
       suggestPosition: null,
       medianRatingCount: null,
       flags: ['small_serp', 'padded'],
+    });
+  });
+});
+
+describe('official popularity in the signals', () => {
+  it.each([
+    ['an official value', F9_OFFICIAL, 71],
+    ['an absent cap', F10_ABSENT_CAP, null],
+  ])('records %s next to the estimate', (_name, stats, official) => {
+    expect(buildScoreSignals(stats, estimateTraffic(stats))).toMatchObject({
+      officialPopularity: official,
+      estimatedTraffic: expect.closeTo(6.2315, 3) as number,
     });
   });
 });

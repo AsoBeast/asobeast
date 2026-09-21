@@ -140,6 +140,30 @@ describe('ScoringService', () => {
     expect(second).toEqual(first);
   });
 
+  it('names apple ads as the source of an official value', async () => {
+    const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
+    const collect = jest.fn<Promise<CollectedKeywordStats>, [string]>();
+    collect.mockResolvedValue({
+      stats: { ...stats, official: { value: 71 } },
+      evidence: { ...evidence, officialPopularityUsed: true },
+    });
+    const service = new ScoringService(
+      { keywordMetric: { upsert } } as unknown as PrismaService,
+      { collect } as unknown as StatsCollectorService,
+    );
+
+    await service.scoreKeyword('kw1');
+
+    const [args] = upsert.mock.calls[0];
+    expect(args.create.traffic).toBeCloseTo(7.1, 3);
+    expect(args.create.scoringSource).toBe('APPLE_ADS_POPULARITY');
+    expect(args.create.confidence).toBe('HIGH');
+    expect(args.create.stats).not.toHaveProperty('official');
+    expect(args.create.stats).toMatchObject({
+      signals: { officialPopularity: 71, estimatedTraffic: 10 },
+    });
+  });
+
   it('skips the upsert when the keyword is gone', async () => {
     const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
     const collect = jest.fn<Promise<CollectedKeywordStats | null>, [string]>();

@@ -65,6 +65,19 @@ describe('computeTraffic', () => {
     });
   });
 
+  it('prefers the official value and keeps the estimate apart', () => {
+    expect(computeTraffic(fixtures.F9_OFFICIAL)).toBeCloseTo(7.1, 3);
+    expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeCloseTo(4, 3);
+    expect(estimateTraffic(fixtures.F9_OFFICIAL)).toBeCloseTo(6.2315, 3);
+    expect(estimateTraffic(fixtures.F10_ABSENT_CAP)).toBeCloseTo(6.2315, 3);
+  });
+
+  it('leaves an estimate below the absent cap alone', () => {
+    expect(
+      computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow: 90 } }),
+    ).toBeCloseTo(6.2315, 3);
+  });
+
   it('equals the estimate when no official value exists', () => {
     expect(estimateTraffic(fixtures.F1_HEAD)).toBe(
       computeTraffic(fixtures.F1_HEAD),

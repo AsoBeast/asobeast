@@ -2,7 +2,12 @@ import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, SuggestItem } from '../store-providers/types';
+import { OfficialPopularityLookup } from './official-popularity';
 import { StatsCollectorService } from './stats-collector.service';
+
+const noOfficial = {
+  for: jest.fn().mockResolvedValue(undefined),
+} as unknown as OfficialPopularityLookup;
 
 const daysAgo = (days: number): Date =>
   new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -87,7 +92,11 @@ describe('StatsCollectorService', () => {
       { term: 'puzzle game', priority: 7000 },
       { term: 'puzzle game free', priority: 9000 },
     ]);
-    const service = new StatsCollectorService(buildPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -126,7 +135,11 @@ describe('StatsCollectorService', () => {
       ),
     );
     const { registry } = buildProviderWith(suggestFn);
-    const service = new StatsCollectorService(buildPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -148,7 +161,7 @@ describe('StatsCollectorService', () => {
     const prisma = {
       keyword: { findUnique: jest.fn().mockResolvedValue(null) },
     } as unknown as PrismaService;
-    const service = new StatsCollectorService(prisma, registry);
+    const service = new StatsCollectorService(prisma, registry, noOfficial);
 
     expect(await service.collect('gone')).toBeNull();
     expect(search).not.toHaveBeenCalled();
@@ -163,7 +176,11 @@ describe('StatsCollectorService', () => {
     const registry = {
       get: jest.fn().mockReturnValue({ search, suggest: suggestFn }),
     } as unknown as StoreProviderRegistry;
-    const service = new StatsCollectorService(buildPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -176,7 +193,11 @@ describe('StatsCollectorService', () => {
   it('enriches the google play top10 via sequential getApp', async () => {
     const suggest = jest.fn().mockResolvedValue([{ term: 'puzzle game' }]);
     const { registry, search, getApp } = buildGplayProvider({ suggest });
-    const service = new StatsCollectorService(buildGplayPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -209,7 +230,11 @@ describe('StatsCollectorService', () => {
       .mockResolvedValue(buildApp())
       .mockRejectedValueOnce(new Error('detail failed'));
     const { registry } = buildGplayProvider({ getApp });
-    const service = new StatsCollectorService(buildGplayPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -226,7 +251,11 @@ describe('StatsCollectorService', () => {
         Promise.resolve(prefix.length >= 2 ? [{ term: 'puzzle game' }] : []),
       );
     const { registry } = buildGplayProvider({ suggest });
-    const service = new StatsCollectorService(buildGplayPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -241,7 +270,11 @@ describe('StatsCollectorService', () => {
   it('stops after one request when the store never suggests the keyword', async () => {
     const suggest = jest.fn().mockResolvedValue([]);
     const { registry } = buildGplayProvider({ suggest });
-    const service = new StatsCollectorService(buildGplayPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -252,7 +285,11 @@ describe('StatsCollectorService', () => {
   it('scores on demand only when the google play suggest probe is unavailable', async () => {
     const suggest = jest.fn().mockRejectedValue(new Error('suggest failed'));
     const { registry } = buildGplayProvider({ suggest });
-    const service = new StatsCollectorService(buildGplayPrisma(), registry);
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
 
     const collected = await service.collect('kw1');
 
@@ -275,6 +312,7 @@ describe('StatsCollectorService', () => {
       const service = new StatsCollectorService(
         prisma,
         buildProvider([]).registry,
+        noOfficial,
       );
       const collected = await service.collect('kw1');
       return { prisma, collected };
@@ -323,5 +361,40 @@ describe('StatsCollectorService', () => {
       expect(collected?.stats.previousTop10).toBeUndefined();
       expect(collected?.stats.previousCapturedDaysAgo).toBeUndefined();
     });
+  });
+
+  it('carries an official popularity and says it was used', async () => {
+    const lookup = jest.fn().mockResolvedValue({ value: 71 });
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      buildProvider([]).registry,
+      { for: lookup } as unknown as OfficialPopularityLookup,
+    );
+
+    const collected = await service.collect('kw1');
+
+    expect(lookup).toHaveBeenCalledWith({
+      text: 'puzzle game',
+      store: Store.APP_STORE,
+      country: 'us',
+    });
+    expect(collected?.stats.official).toEqual({ value: 71 });
+    expect(collected?.evidence.officialPopularityUsed).toBe(true);
+  });
+
+  it('caps without claiming the official source', async () => {
+    const official = {
+      for: jest.fn().mockResolvedValue({ absentBelow: 41 }),
+    } as unknown as OfficialPopularityLookup;
+    const service = new StatsCollectorService(
+      buildPrisma(),
+      buildProvider([]).registry,
+      official,
+    );
+
+    const collected = await service.collect('kw1');
+
+    expect(collected?.stats.official).toEqual({ absentBelow: 41 });
+    expect(collected?.evidence.officialPopularityUsed).toBe(false);
   });
 });

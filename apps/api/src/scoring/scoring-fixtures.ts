@@ -110,6 +110,16 @@ export const F8_UNAVAILABLE: KeywordStats = {
   suggest: { status: 'unavailable' },
 };
 
+export const F9_OFFICIAL: KeywordStats = {
+  ...F1_HEAD,
+  official: { value: 71 },
+};
+
+export const F10_ABSENT_CAP: KeywordStats = {
+  ...F1_HEAD,
+  official: { absentBelow: 41 },
+};
+
 export const F11_VELOCITY: KeywordStats = {
   ...F1_HEAD,
   top10: headTopTen().map((item, index) => ({

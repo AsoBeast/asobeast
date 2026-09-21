@@ -17,6 +17,7 @@ function toJson(
 ): Prisma.InputJsonValue {
   const stored: Partial<KeywordStats> = { ...stats };
   delete stored.previousTop10;
+  delete stored.official;
   return {
     ...stored,
     signals: buildScoreSignals(stats, estimatedTraffic),

@@ -26,7 +26,8 @@ export function buildScoreSignals(
     serpRelevance: serpRelevance(stats.top10, stats.keywordText),
     medianRatingCount: counts.length === 0 ? null : median(counts),
     flags: serpFlags(stats),
-    officialPopularity: null,
+    officialPopularity:
+      stats.official && 'value' in stats.official ? stats.official.value : null,
     estimatedTraffic,
   };
 }

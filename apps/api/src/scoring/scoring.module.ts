@@ -9,6 +9,7 @@ import {
 } from './apple-popularity';
 import { appleAdsPopularityClient } from './apple-popularity.client';
 import { ApplePopularitySync } from './apple-popularity.sync';
+import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringService } from './scoring.service';
 import { StatsCollectorService } from './stats-collector.service';
 
@@ -37,6 +38,7 @@ function applePopularityClient(
     StatsCollectorService,
     ScoringService,
     ApplePopularitySync,
+    OfficialPopularityLookup,
     {
       provide: ApplePopularityClient,
       inject: [ConfigService],

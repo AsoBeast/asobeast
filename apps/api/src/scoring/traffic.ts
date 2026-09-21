@@ -47,5 +47,16 @@ export function estimateTraffic(stats: KeywordStats): number {
   return clamp(Math.min(blend * wordFactor(stats.keywordText), ...caps));
 }
 
-export const computeTraffic = (stats: KeywordStats): number =>
-  estimateTraffic(stats);
+export function computeTraffic(stats: KeywordStats): number {
+  if (stats.resultCount === 0) {
+    return 0;
+  }
+  const { official } = stats;
+  if (official && 'value' in official) {
+    return clamp(official.value / 10);
+  }
+  const estimate = estimateTraffic(stats);
+  return official
+    ? Math.min(estimate, (official.absentBelow - 1) / 10)
+    : estimate;
+}

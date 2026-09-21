@@ -5,6 +5,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { SearchItem, StoreProvider } from '../store-providers/types';
 import { VELOCITY_MIN_DAYS } from './difficulty';
 import { KeywordStats } from './formulas';
+import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
 import { readPreviousTop10 } from './score-signals';
 import { ProbedReach, probeSuggestReach } from './suggest-reach.probe';
@@ -37,6 +38,7 @@ export class StatsCollectorService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: StoreProviderRegistry,
+    private readonly officialPopularity: OfficialPopularityLookup,
   ) {}
 
   async collect(keywordId: string): Promise<CollectedKeywordStats | null> {
@@ -65,6 +67,7 @@ export class StatsCollectorService {
     );
     const suggestCompleted = reach.status !== 'unavailable';
     const previous = await this.previousPage(keywordId);
+    const official = await this.officialPopularity.for(keyword);
 
     return {
       stats: {
@@ -75,6 +78,7 @@ export class StatsCollectorService {
         top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
         suggest: reach,
         ...previous,
+        ...(official ? { official } : {}),
       },
       evidence: {
         searchResultCount: results.length,
@@ -82,7 +86,7 @@ export class StatsCollectorService {
         suggestRequests: requests,
         detailTargetCount: topTen.targetCount,
         detailSuccessCount: topTen.successCount,
-        officialPopularityUsed: false,
+        officialPopularityUsed: official !== undefined && 'value' in official,
       },
     };
   }
