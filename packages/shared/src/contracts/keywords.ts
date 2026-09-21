@@ -47,6 +47,8 @@ export interface TrackedKeywordItem {
   scoredAt: string | null;
   scoreProvenance: ScoreProvenance | null;
   serpVolatility7d: number | null;
+  scoreSignals?: ScoreSignals | null;
+  scoreOutdated?: boolean;
 }
 
 export interface KeywordCountrySummary {
