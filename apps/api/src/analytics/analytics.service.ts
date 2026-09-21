@@ -16,12 +16,7 @@ import {
 } from '@asobeast/shared';
 import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  computeOpportunity,
-  defaultRelevance,
-  toDifficulty100,
-  toVolume,
-} from '../scoring/formulas';
+import { appOpportunity } from '../scoring/keyword-opportunity';
 import {
   addDays,
   DAY_MS,
@@ -59,16 +54,14 @@ const rowOpportunity = (
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
     : null;
-  const traffic = metric?.traffic ?? null;
-  const difficulty = metric?.difficulty ?? null;
-  const relevance =
-    row.relevance ??
-    defaultRelevance(reportedSource(row), row.keyword.text, snapshotText);
-  return computeOpportunity(
-    traffic === null ? null : toVolume(traffic),
-    difficulty === null ? null : toDifficulty100(difficulty),
-    relevance,
-  );
+  return appOpportunity({
+    source: reportedSource(row),
+    keywordText: row.keyword.text,
+    snapshotText,
+    relevanceOverride: row.relevance,
+    traffic: metric?.traffic ?? null,
+    difficulty: metric?.difficulty ?? null,
+  }).opportunity;
 };
 
 @Injectable()

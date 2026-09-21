@@ -5,12 +5,7 @@ import {
   ScoreProvenance,
   TrackedKeywordItem,
 } from '@asobeast/shared';
-import {
-  computeOpportunity,
-  defaultRelevance,
-  toDifficulty100,
-  toVolume,
-} from '../scoring/formulas';
+import { appOpportunity } from '../scoring/keyword-opportunity';
 import { reportedSource } from './keyword-field-membership';
 
 const DELTA_WINDOW_DAYS = 7;
@@ -108,12 +103,15 @@ export function toTrackedKeywordItem(
       : null;
   const traffic = metric?.traffic ?? null;
   const difficulty = metric?.difficulty ?? null;
-  const volume = traffic === null ? null : toVolume(traffic);
-  const difficulty100 =
-    difficulty === null ? null : toDifficulty100(difficulty);
   const source = reportedSource(row);
-  const relevance =
-    row.relevance ?? defaultRelevance(source, row.keyword.text, snapshotText);
+  const { volume, relevance, opportunity } = appOpportunity({
+    source,
+    keywordText: row.keyword.text,
+    snapshotText,
+    relevanceOverride: row.relevance,
+    traffic,
+    difficulty,
+  });
   return {
     keywordId: row.keywordId,
     text: row.keyword.text,
@@ -129,7 +127,7 @@ export function toTrackedKeywordItem(
     difficulty,
     volume,
     relevance,
-    opportunity: computeOpportunity(volume, difficulty100, relevance),
+    opportunity,
     bucket: null,
     scoredAt: metric ? metric.date.toISOString().slice(0, 10) : null,
     scoreProvenance: toScoreProvenance(metric),
