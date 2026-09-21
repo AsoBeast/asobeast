@@ -93,12 +93,13 @@ describe('AppleAdsPopularityClient', () => {
     expect(second.pagination.offset).toBe(PAGE_SIZE);
   });
 
-  it('stops after ten full pages', async () => {
+  it('refuses a week that fills every page it may read', async () => {
     const full = Array.from({ length: PAGE_SIZE }, () => row());
     const api = fakeApi(Array.from({ length: 12 }, () => full));
 
-    await clientFor(api, '777').weekOf('us', '2026-09-13');
-
+    await expect(
+      clientFor(api, '777').weekOf('us', '2026-09-13'),
+    ).rejects.toBeInstanceOf(ApplePopularityError);
     expect(api.searchTermPopularityQuery).toHaveBeenCalledTimes(10);
   });
 

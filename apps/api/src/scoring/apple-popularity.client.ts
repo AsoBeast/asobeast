@@ -145,10 +145,12 @@ export class AppleAdsPopularityClient extends ApplePopularityClient {
         const found = response.data.result?.rows ?? [];
         rows.push(...found.flatMap((row) => toPopularityRow(storefront, row)));
         if (found.length < PAGE_SIZE) {
-          break;
+          return rows;
         }
       }
-      return rows;
+      throw new ApplePopularityError(
+        `Apple Ads returned more than ${MAX_PAGES} pages of search popularity`,
+      );
     } catch (error) {
       if (error instanceof ApplePopularityError) {
         throw error;
