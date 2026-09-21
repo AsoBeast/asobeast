@@ -35,6 +35,18 @@ function roundOrNull(value: number | null): number | null {
   return value === null ? null : Math.round(value);
 }
 
+function evidenceColumns(
+  keyword: TrackedKeywordItem,
+): Array<string | number | null> {
+  const signals = keyword.scoreSignals ?? null;
+  return [
+    signals?.suggestReach ?? null,
+    signals?.flags.join(" ") ?? null,
+    signals?.officialPopularity ?? null,
+    keyword.scoreOutdated === undefined ? null : String(keyword.scoreOutdated),
+  ];
+}
+
 export function keywordCsv(rows: TrackedKeywordItem[]): string {
   const csvRows = rows.map((keyword) => [
     keyword.text,
@@ -54,10 +66,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     keyword.scoreProvenance?.formulaVersion ?? null,
     keyword.scoreProvenance?.confidence ?? null,
     keyword.scoreProvenance?.capturedAt ?? null,
-    keyword.scoreSignals?.suggestReach ?? null,
-    keyword.scoreSignals?.flags.join(" ") ?? null,
-    keyword.scoreSignals?.officialPopularity ?? null,
-    keyword.scoreOutdated === undefined ? null : String(keyword.scoreOutdated),
+    ...evidenceColumns(keyword),
     SCORE_COMPARABILITY,
   ]);
   return toCsv(KEYWORD_CSV_HEADERS, csvRows);
