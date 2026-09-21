@@ -72,6 +72,14 @@ export type ScoringSource = (typeof SCORING_SOURCES)[number];
 export const SCORING_CONFIDENCES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type ScoringConfidence = (typeof SCORING_CONFIDENCES)[number];
 
+export const SERP_FLAGS = [
+  'brand',
+  'weak_leader',
+  'small_serp',
+  'padded',
+] as const;
+export type SerpFlag = (typeof SERP_FLAGS)[number];
+
 export const isScoringSource = (value: unknown): value is ScoringSource =>
   typeof value === 'string' &&
   SCORING_SOURCES.some((source) => source === value);
