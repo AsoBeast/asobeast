@@ -1,10 +1,10 @@
 import { KeywordBucket, TrackedKeywordItem } from '@asobeast/shared';
 
-const ASPIRATIONAL_VOLUME = 70;
-const ASPIRATIONAL_DIFFICULTY100 = 70;
+export const ASPIRATIONAL_VOLUME = 60;
+export const ASPIRATIONAL_DIFFICULTY100 = 65;
 const PRIMARY_TOP = 5;
 const LONGTAIL_MIN_WORDS = 3;
-const LONGTAIL_MAX_VOLUME = 30;
+export const LONGTAIL_MAX_VOLUME = 25;
 
 const isScored = (item: TrackedKeywordItem): boolean =>
   item.opportunity !== null && item.volume !== null;
