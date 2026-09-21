@@ -17,6 +17,7 @@
     "stripe:catalog": "ts-node --project tsconfig.json scripts/create-stripe-catalog.ts",
     "workspace:suspend": "ts-node --project tsconfig.json scripts/suspend-workspace.ts suspend",
     "workspace:restore": "ts-node --project tsconfig.json scripts/suspend-workspace.ts restore",
+    "scoring:calibrate": "ts-node --project tsconfig.json scripts/scoring-calibrate.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
