@@ -92,7 +92,9 @@ describe('toTrackedKeywordItem', () => {
   });
 
   describe('chance against the top ten', () => {
-    const scored = (stats: unknown) =>
+    const scored = (
+      stats: TrackedKeywordRow['keyword']['metrics'][number]['stats'],
+    ) =>
       row({
         relevance: 90,
         keyword: {
@@ -102,8 +104,7 @@ describe('toTrackedKeywordItem', () => {
               ...row().keyword.metrics[0],
               traffic: 4.77,
               difficulty: 4.37,
-              stats:
-                stats as TrackedKeywordRow['keyword']['metrics'][number]['stats'],
+              stats,
             },
           ],
         },
