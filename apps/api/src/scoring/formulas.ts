@@ -1,6 +1,7 @@
 import { KeywordSource, Store, tokenize } from '@asobeast/shared';
 
 import { clamp, finiteNumbers, logScale } from './curves';
+import { SuggestReach } from './suggest-reach';
 
 export { toDifficulty100, toVolume } from '@asobeast/shared';
 export { clamp, linear, logScale } from './curves';
@@ -8,14 +9,18 @@ export { clamp, linear, logScale } from './curves';
 export interface KeywordStats {
   store: Store;
   keywordText: string;
+  resultCount: number;
   top10: Array<{
+    storeAppId?: string;
     title: string;
+    developer?: string;
     ratingCount?: number;
     ratingAvg?: number;
     daysSinceUpdate?: number;
     installs?: number;
   }>;
   top30TitleMatchCount: number;
+  reach: SuggestReach;
   suggest: {
     priority?: number;
     partialPriority?: number;

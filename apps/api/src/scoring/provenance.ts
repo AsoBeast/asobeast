@@ -7,6 +7,7 @@ import {
 export interface ScoringEvidence {
   searchResultCount: number;
   suggestCompleted: boolean;
+  suggestRequests: number;
   prefixSweepCompleted: boolean;
   detailTargetCount: number;
   detailSuccessCount: number;

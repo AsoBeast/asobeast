@@ -19,6 +19,7 @@ import {
 const genericKeyword: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'games',
+  resultCount: 30,
   top10: Array.from({ length: 10 }, (_, index) => ({
     title: `Best Games ${index}`,
     ratingCount: 1_000_000,
@@ -27,11 +28,13 @@ const genericKeyword: KeywordStats = {
   })),
   top30TitleMatchCount: 30,
   suggest: { priority: 9000 },
+  reach: { status: 'absent' },
 };
 
 const longTailKeyword: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'offline pixel dungeon crawler',
+  resultCount: 30,
   top10: Array.from({ length: 10 }, (_, index) => ({
     title: `Random App ${index}`,
     ratingCount: 50,
@@ -39,11 +42,13 @@ const longTailKeyword: KeywordStats = {
   })),
   top30TitleMatchCount: 0,
   suggest: {},
+  reach: { status: 'absent' },
 };
 
 const midKeyword: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'puzzle game',
+  resultCount: 30,
   top10: [
     'Puzzle Game Deluxe',
     'Ultimate Puzzle Game',
@@ -63,6 +68,7 @@ const midKeyword: KeywordStats = {
   })),
   top30TitleMatchCount: 12,
   suggest: { priority: 4000 },
+  reach: { status: 'absent' },
 };
 
 describe('scoring formulas', () => {
@@ -103,6 +109,7 @@ describe('scoring formulas', () => {
     const playKeyword: KeywordStats = {
       store: 'GOOGLE_PLAY',
       keywordText: 'puzzle game',
+      resultCount: 30,
       top10: Array.from({ length: 10 }, (_, index) => ({
         title: `Puzzle Game ${index}`,
         ratingCount: 10_000,
@@ -112,6 +119,7 @@ describe('scoring formulas', () => {
       })),
       top30TitleMatchCount: 12,
       suggest: { prefixHitLength: 1 },
+      reach: { status: 'absent' },
     };
 
     const withInstalls = (
@@ -139,6 +147,7 @@ describe('scoring formulas', () => {
         gplaySuggestScore({
           ...playKeyword,
           suggest: { prefixHitLength: null },
+          reach: { status: 'absent' },
         }),
       ).toBeCloseTo(1, 2);
     });
@@ -216,9 +225,11 @@ describe('scoring formulas', () => {
     const stats: KeywordStats = {
       store: 'APP_STORE',
       keywordText: 'race',
+      resultCount: 30,
       top10: [],
       top30TitleMatchCount: 0,
       suggest: { partialPriority: 6000 },
+      reach: { status: 'absent' },
     };
     expect(suggestScore(stats)).toBeCloseTo(3, 2);
   });

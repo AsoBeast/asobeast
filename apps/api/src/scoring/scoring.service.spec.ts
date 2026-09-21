@@ -10,6 +10,7 @@ import {
 const stats: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'games',
+  resultCount: 30,
   top10: Array.from({ length: 10 }, () => ({
     title: 'Best Games',
     ratingCount: 1_000_000,
@@ -17,11 +18,13 @@ const stats: KeywordStats = {
   })),
   top30TitleMatchCount: 30,
   suggest: { priority: 9000 },
+  reach: { status: 'absent' },
 };
 
 const evidence: ScoringEvidence = {
   searchResultCount: 10,
   suggestCompleted: true,
+  suggestRequests: 2,
   prefixSweepCompleted: false,
   detailTargetCount: 0,
   detailSuccessCount: 0,

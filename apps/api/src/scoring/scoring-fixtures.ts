@@ -11,9 +11,8 @@ export interface FixtureApp {
 
 export interface ScoringFixture extends Omit<
   KeywordStats,
-  'top10' | 'suggest'
+  'top10' | 'suggest' | 'reach'
 > {
-  resultCount: number;
   top10: FixtureApp[];
   suggest: SuggestReach;
   previousTop10?: Array<{ storeAppId: string; ratingCount: number }>;

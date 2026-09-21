@@ -11,6 +11,7 @@ const evidence = (
 ): ScoringEvidence => ({
   searchResultCount: completeSearch ? 10 : 9,
   suggestCompleted: secondaryComplete,
+  suggestRequests: 2,
   prefixSweepCompleted: secondaryComplete,
   detailTargetCount: 10,
   detailSuccessCount: completeDetails ? 8 : 7,
