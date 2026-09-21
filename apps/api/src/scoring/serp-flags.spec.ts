@@ -116,6 +116,15 @@ describe('serpFlags', () => {
     ];
     expect(serpFlags(page(topTen, 'games'))).not.toContain('brand');
     expect(serpFlags(page(topTen, 'supercell'))).toContain('brand');
+    expect(serpFlags(page(topTen, 'supercell games'))).toContain('brand');
+  });
+
+  it('never reads a developer made of generic words alone as a brand', () => {
+    const topTen = [
+      { title: 'Clash', developer: 'Games Studio', ratingCount: 900_000 },
+      ...titled(unrelated(9)),
+    ];
+    expect(serpFlags(page(topTen, 'games studio'))).not.toContain('brand');
   });
 
   it('raises no brand for a leader with an unknown count', () => {

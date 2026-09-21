@@ -60,11 +60,12 @@ function namedAfter(leader: FlaggableApp, keyword: string): boolean {
   if (searchKey(segment) === phrase) {
     return true;
   }
-  const developer = searchKey(leader.developer ?? '')
-    .split(' ')
-    .filter((word) => !DEVELOPER_SUFFIXES.has(word))
-    .join(' ');
-  return developer === phrase;
+  const words = searchKey(leader.developer ?? '').split(' ');
+  const core = words.filter((word) => !DEVELOPER_SUFFIXES.has(word));
+  if (core.length === 0) {
+    return false;
+  }
+  return words.join(' ') === phrase || core.join(' ') === phrase;
 }
 
 function leaderRatings(page: FlaggablePage): number | null {
