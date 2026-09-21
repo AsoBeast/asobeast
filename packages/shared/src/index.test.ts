@@ -29,6 +29,9 @@ describe('@asobeast/shared constants', () => {
     expect(SCORING_SOURCES).toEqual([
       'APPLE_SUGGEST_SEARCH',
       'GOOGLE_PLAY_PREFIX_SEARCH',
+      'APPLE_SUGGEST_REACH',
+      'GOOGLE_PLAY_SUGGEST_REACH',
+      'APPLE_ADS_POPULARITY',
     ]);
     expect(SCORING_CONFIDENCES).toEqual(['LOW', 'MEDIUM', 'HIGH']);
     expect(isScoringSource('APPLE_SUGGEST_SEARCH')).toBe(true);

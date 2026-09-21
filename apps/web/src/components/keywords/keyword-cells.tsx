@@ -134,6 +134,9 @@ export function DerivedScoreCell({
 export const SCORING_SOURCE_LABELS: Record<ScoringSource, string> = {
   APPLE_SUGGEST_SEARCH: "Apple suggest and search",
   GOOGLE_PLAY_PREFIX_SEARCH: "Google Play prefix suggest and search",
+  APPLE_SUGGEST_REACH: "App Store suggest reach",
+  GOOGLE_PLAY_SUGGEST_REACH: "Google Play suggest reach",
+  APPLE_ADS_POPULARITY: "Apple Ads search popularity",
 };
 
 export const SCORING_CONFIDENCE_LABELS: Record<ScoringConfidence, string> = {

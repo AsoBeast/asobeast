@@ -30,10 +30,6 @@ export interface KeywordStats {
   previousCapturedDaysAgo?: number;
 }
 
-export const APP_STORE_FORMULA_VERSION = 'app-store-v1';
-
-export const GOOGLE_PLAY_FORMULA_VERSION = 'google-play-v1';
-
 const round1 = (v: number): number => Math.round(v * 10) / 10;
 
 export const OPPORTUNITY_WEIGHTS = {

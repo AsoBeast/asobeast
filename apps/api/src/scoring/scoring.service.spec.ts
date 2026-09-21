@@ -7,7 +7,7 @@ import {
   StatsCollectorService,
 } from './stats-collector.service';
 
-const stats: KeywordStats = {
+const storedStats: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'games',
   resultCount: 30,
@@ -18,15 +18,36 @@ const stats: KeywordStats = {
   })),
   top30TitleMatchCount: 30,
   suggest: { status: 'hit', prefixLength: 1, position: 1 },
+  previousCapturedDaysAgo: 3,
+};
+
+const stats: KeywordStats = {
+  ...storedStats,
+  previousTop10: [{ storeAppId: 'app0', ratingCount: 900_000 }],
 };
 
 const evidence: ScoringEvidence = {
   searchResultCount: 10,
   suggestCompleted: true,
   suggestRequests: 2,
-  prefixSweepCompleted: false,
-  detailTargetCount: 0,
-  detailSuccessCount: 0,
+  detailTargetCount: 10,
+  detailSuccessCount: 10,
+  officialPopularityUsed: false,
+};
+
+const storedJson = {
+  ...storedStats,
+  signals: {
+    suggestReach: 'hit',
+    suggestPrefixLength: 1,
+    suggestPosition: 1,
+    serpRelevance: 1,
+    medianRatingCount: 1_000_000,
+    flags: [],
+    officialPopularity: null,
+    estimatedTraffic: 10,
+  },
+  evidence,
 };
 
 const collected: CollectedKeywordStats = { stats, evidence };
@@ -77,9 +98,10 @@ describe('ScoringService', () => {
     expect(args.create.keywordId).toBe('kw1');
     expect(args.create.traffic).toBeCloseTo(10, 2);
     expect(args.create.difficulty).toBeCloseTo(9.61, 2);
-    expect(args.create.stats).toEqual({ ...stats, evidence });
-    expect(args.create.scoringSource).toBe('APPLE_SUGGEST_SEARCH');
-    expect(args.create.formulaVersion).toBe('app-store-v1');
+    expect(args.create.stats).toEqual(storedJson);
+    expect(args.create.stats).not.toHaveProperty('previousTop10');
+    expect(args.create.scoringSource).toBe('APPLE_SUGGEST_REACH');
+    expect(args.create.formulaVersion).toBe('app-store-v2');
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.capturedAt.toISOString()).toBe(
       '2026-07-28T23:59:59.500Z',
@@ -90,12 +112,32 @@ describe('ScoringService', () => {
     expect(args.update).toEqual({
       traffic: args.create.traffic,
       difficulty: args.create.difficulty,
-      stats: { ...stats, evidence },
-      scoringSource: 'APPLE_SUGGEST_SEARCH',
-      formulaVersion: 'app-store-v1',
+      stats: storedJson,
+      scoringSource: 'APPLE_SUGGEST_REACH',
+      formulaVersion: 'app-store-v2',
       confidence: 'HIGH',
       capturedAt: args.create.capturedAt,
     });
+  });
+
+  it('writes the same row on a second run the same day', async () => {
+    const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
+    const collect = jest.fn<Promise<CollectedKeywordStats>, [string]>();
+    collect.mockResolvedValue(collected);
+    const prisma = {
+      keywordMetric: { upsert },
+    } as unknown as PrismaService;
+    const service = new ScoringService(prisma, {
+      collect,
+    } as unknown as StatsCollectorService);
+
+    jest.useFakeTimers().setSystemTime(new Date('2026-07-28T01:00:00Z'));
+    await service.scoreKeyword('kw1');
+    jest.setSystemTime(new Date('2026-07-28T22:00:00Z'));
+    await service.scoreKeyword('kw1');
+
+    const [first, second] = upsert.mock.calls.map(([args]) => args.where);
+    expect(second).toEqual(first);
   });
 
   it('skips the upsert when the keyword is gone', async () => {

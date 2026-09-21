@@ -1,16 +1,17 @@
-import { ScoringConfidence, ScoringSource, Store } from '@asobeast/shared';
 import {
-  APP_STORE_FORMULA_VERSION,
-  GOOGLE_PLAY_FORMULA_VERSION,
-} from './formulas';
+  CURRENT_FORMULA_VERSIONS,
+  ScoringConfidence,
+  ScoringSource,
+  Store,
+} from '@asobeast/shared';
 
 export interface ScoringEvidence {
   searchResultCount: number;
   suggestCompleted: boolean;
   suggestRequests: number;
-  prefixSweepCompleted: boolean;
   detailTargetCount: number;
   detailSuccessCount: number;
+  officialPopularityUsed: boolean;
 }
 
 export interface ScoringProfile {
@@ -18,35 +19,35 @@ export interface ScoringProfile {
   formulaVersion: string;
 }
 
-const PROFILES: Record<Store, ScoringProfile> = {
-  APP_STORE: {
-    source: 'APPLE_SUGGEST_SEARCH',
-    formulaVersion: APP_STORE_FORMULA_VERSION,
-  },
-  GOOGLE_PLAY: {
-    source: 'GOOGLE_PLAY_PREFIX_SEARCH',
-    formulaVersion: GOOGLE_PLAY_FORMULA_VERSION,
-  },
+const MIN_COMPLETE_RESULTS = 10;
+const MIN_COMPLETE_DETAILS = 8;
+
+const REACH_SOURCES: Record<Store, ScoringSource> = {
+  APP_STORE: 'APPLE_SUGGEST_REACH',
+  GOOGLE_PLAY: 'GOOGLE_PLAY_SUGGEST_REACH',
 };
 
-export const scoringProfile = (store: Store): ScoringProfile => PROFILES[store];
+export const scoringProfile = (
+  store: Store,
+  officialUsed: boolean,
+): ScoringProfile => ({
+  source: officialUsed ? 'APPLE_ADS_POPULARITY' : REACH_SOURCES[store],
+  formulaVersion: CURRENT_FORMULA_VERSIONS[store],
+});
 
 export function scoringConfidence(
   store: Store,
   evidence: ScoringEvidence,
 ): ScoringConfidence {
-  const searchComplete = evidence.searchResultCount >= 10;
-  if (store === 'APP_STORE') {
-    const completed =
-      Number(searchComplete) + Number(evidence.suggestCompleted);
-    return completed === 2 ? 'HIGH' : completed === 1 ? 'MEDIUM' : 'LOW';
+  if (evidence.officialPopularityUsed) {
+    return 'HIGH';
   }
-
-  const detailComplete =
-    evidence.detailTargetCount >= 8 && evidence.detailSuccessCount >= 8;
-  const completed =
-    Number(searchComplete) +
-    Number(evidence.prefixSweepCompleted) +
-    Number(detailComplete);
-  return completed === 3 ? 'HIGH' : completed === 2 ? 'MEDIUM' : 'LOW';
+  if (!evidence.suggestCompleted || evidence.searchResultCount === 0) {
+    return 'LOW';
+  }
+  const serpComplete = evidence.searchResultCount >= MIN_COMPLETE_RESULTS;
+  const detailsComplete =
+    store !== 'GOOGLE_PLAY' ||
+    evidence.detailSuccessCount >= MIN_COMPLETE_DETAILS;
+  return serpComplete && detailsComplete ? 'HIGH' : 'MEDIUM';
 }

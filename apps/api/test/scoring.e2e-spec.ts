@@ -1,14 +1,20 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
+import { AppDetail, TrackedKeywordItem } from '@asobeast/shared';
+import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ownerAgent, useCookies } from './helpers/session';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { ScoringService } from '../src/scoring/scoring.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -21,6 +27,8 @@ import {
 } from '../src/store-providers/types';
 
 const KEYWORD = 'puzzle game';
+const GOOGLE_PLAY_URL =
+  'https://play.google.com/store/apps/details?id=com.example.puzzle';
 
 const searchResults: SearchItem[] = Array.from({ length: 40 }, (_, index) => ({
   storeAppId: `app${index}`,
@@ -61,6 +69,7 @@ describe('Scoring pipeline (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let scoring: ScoringService;
+  let api: Awaited<ReturnType<typeof ownerAgent>>;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -77,6 +86,7 @@ describe('Scoring pipeline (e2e)', () => {
       .compile();
 
     app = moduleFixture.createNestApplication();
+    useCookies(app);
     await app.init();
     await pauseQueues(app);
 
@@ -87,6 +97,7 @@ describe('Scoring pipeline (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
+    api = await ownerAgent(app);
   });
 
   beforeEach(async () => {
@@ -122,6 +133,53 @@ describe('Scoring pipeline (e2e)', () => {
       status: 'hit',
       prefixLength: 1,
       position: 1,
+    });
+  });
+
+  it('scores a keyword on demand and lists its v2 provenance', async () => {
+    const imported = await api
+      .post('/apps')
+      .send({ url: GOOGLE_PLAY_URL })
+      .expect(201);
+    const appId = (imported.body as AppDetail).id;
+    const added = await api
+      .post(`/apps/${appId}/keywords`)
+      .send({ keywords: [KEYWORD] })
+      .expect(201);
+    const keywordId = (added.body as TrackedKeywordItem[]).find(
+      (item) => item.text === KEYWORD,
+    )?.keywordId;
+
+    await api.post(`/keywords/${keywordId}/score`).expect(202);
+    const queue = app.get<Queue>(getQueueToken(QUEUES.GPLAY));
+    const jobs = await queue.getJobs(['waiting', 'paused', 'prioritized']);
+    const job = jobs.find(
+      (queued) =>
+        queued.name === JOBS.SCORE_KEYWORD &&
+        (queued.data as { keywordId: string }).keywordId === keywordId,
+    );
+    expect(job).toBeDefined();
+    if (job) {
+      await app.get(StoreJobsHandler).handle(job);
+    }
+
+    const listed = await api.get(`/apps/${appId}/keywords`).expect(200);
+    const scored = (listed.body as TrackedKeywordItem[]).find(
+      (item) => item.keywordId === keywordId,
+    );
+    expect(scored?.volume).toBeGreaterThan(0);
+    expect(scored?.difficulty).toBeGreaterThan(0);
+    expect(scored?.scoreProvenance).toMatchObject({
+      source: 'GOOGLE_PLAY_SUGGEST_REACH',
+      formulaVersion: 'google-play-v2',
+      confidence: 'HIGH',
+    });
+    const metric = await prisma.keywordMetric.findFirst({
+      where: { keywordId },
+    });
+    expect(metric?.stats).toMatchObject({
+      signals: { suggestReach: 'hit', flags: [] },
+      evidence: { officialPopularityUsed: false },
     });
   });
 });

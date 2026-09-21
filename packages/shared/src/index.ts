@@ -66,6 +66,9 @@ export type KeywordSource = (typeof KEYWORD_SOURCES)[number];
 export const SCORING_SOURCES = [
   'APPLE_SUGGEST_SEARCH',
   'GOOGLE_PLAY_PREFIX_SEARCH',
+  'APPLE_SUGGEST_REACH',
+  'GOOGLE_PLAY_SUGGEST_REACH',
+  'APPLE_ADS_POPULARITY',
 ] as const;
 export type ScoringSource = (typeof SCORING_SOURCES)[number];
 

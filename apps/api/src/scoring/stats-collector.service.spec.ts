@@ -111,9 +111,9 @@ describe('StatsCollectorService', () => {
       searchResultCount: 40,
       suggestCompleted: true,
       suggestRequests: 2,
-      prefixSweepCompleted: true,
       detailTargetCount: 10,
       detailSuccessCount: 10,
+      officialPopularityUsed: false,
     });
   });
 
@@ -197,9 +197,9 @@ describe('StatsCollectorService', () => {
       searchResultCount: 40,
       suggestCompleted: true,
       suggestRequests: 2,
-      prefixSweepCompleted: true,
       detailTargetCount: 10,
       detailSuccessCount: 10,
+      officialPopularityUsed: false,
     });
   });
 
@@ -236,7 +236,6 @@ describe('StatsCollectorService', () => {
       prefixLength: 2,
       position: 1,
     });
-    expect(collected?.evidence.prefixSweepCompleted).toBe(true);
   });
 
   it('stops after one request when the store never suggests the keyword', async () => {
@@ -248,7 +247,6 @@ describe('StatsCollectorService', () => {
 
     expect(suggest).toHaveBeenCalledTimes(1);
     expect(collected?.stats.suggest).toEqual({ status: 'absent' });
-    expect(collected?.evidence.prefixSweepCompleted).toBe(true);
   });
 
   it('scores on demand only when the google play suggest probe is unavailable', async () => {

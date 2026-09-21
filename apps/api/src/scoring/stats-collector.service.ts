@@ -4,8 +4,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
 import { VELOCITY_MIN_DAYS } from './difficulty';
-import { KeywordStats, PreviousSerpApp } from './formulas';
+import { KeywordStats } from './formulas';
 import { ScoringEvidence } from './provenance';
+import { readPreviousTop10 } from './score-signals';
 import { ProbedReach, probeSuggestReach } from './suggest-reach.probe';
 
 const SEARCH_DEPTH = 100;
@@ -79,9 +80,9 @@ export class StatsCollectorService {
         searchResultCount: results.length,
         suggestCompleted,
         suggestRequests: requests,
-        prefixSweepCompleted: suggestCompleted,
         detailTargetCount: topTen.targetCount,
         detailSuccessCount: topTen.successCount,
+        officialPopularityUsed: false,
       },
     };
   }
@@ -112,7 +113,7 @@ export class StatsCollectorService {
       orderBy: { date: 'desc' },
       select: { date: true, stats: true },
     });
-    const previousTop10 = row ? previousApps(row.stats) : [];
+    const previousTop10 = row ? readPreviousTop10(row.stats) : [];
     if (!row || previousTop10.length === 0) {
       return {};
     }
@@ -188,24 +189,6 @@ export class StatsCollectorService {
       return words.every((word) => title.includes(word));
     }).length;
   }
-}
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
-
-function previousApps(stats: unknown): PreviousSerpApp[] {
-  const top10 = isRecord(stats) ? stats.top10 : undefined;
-  if (!Array.isArray(top10)) {
-    return [];
-  }
-  return top10.flatMap((item: unknown) =>
-    isRecord(item) &&
-    typeof item.storeAppId === 'string' &&
-    typeof item.ratingCount === 'number' &&
-    Number.isFinite(item.ratingCount)
-      ? [{ storeAppId: item.storeAppId, ratingCount: item.ratingCount }]
-      : [],
-  );
 }
 
 function identityOf(
