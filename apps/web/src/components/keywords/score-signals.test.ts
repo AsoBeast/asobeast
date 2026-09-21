@@ -54,6 +54,14 @@ describe("trafficSignalLines", () => {
     expect(trafficSignalLines(input)).toEqual([expected]);
   });
 
+  it("never shows a missing prefix or position as zero", () => {
+    expect(
+      trafficSignalLines(
+        signals({ suggestPrefixLength: null, suggestPosition: null }),
+      ),
+    ).toEqual(["The store suggests it while it is being typed."]);
+  });
+
   it("names apple's own number first", () => {
     expect(trafficSignalLines(signals({ officialPopularity: 71 }))).toEqual([
       "Apple reports a search popularity of 71 for this term.",

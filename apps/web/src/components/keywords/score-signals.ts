@@ -12,9 +12,13 @@ const FLAG_LINES: Record<SerpFlag, string> = {
 function reachLine(signals: ScoreSignals): string {
   switch (signals.suggestReach) {
     case "hit": {
-      const typed = signals.suggestPrefixLength ?? 0;
+      const typed = signals.suggestPrefixLength;
+      const position = signals.suggestPosition;
+      if (typed === null || position === null) {
+        return "The store suggests it while it is being typed.";
+      }
       const unit = typed === 1 ? "character" : "characters";
-      return `The store suggests it after ${typed} typed ${unit}, in position ${signals.suggestPosition ?? 0}.`;
+      return `The store suggests it after ${typed} typed ${unit}, in position ${position}.`;
     }
     case "listed":
       return "The store suggests it only once the whole phrase is typed.";
