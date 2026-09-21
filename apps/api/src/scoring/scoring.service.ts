@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeDifficulty, computeTraffic } from './formulas';
+import { computeDifficulty } from './formulas';
 import { scoringConfidence, scoringProfile } from './provenance';
 import {
   CollectedKeywordStats,
   StatsCollectorService,
 } from './stats-collector.service';
+import { computeTraffic } from './traffic';
 
 const toJson = (collected: CollectedKeywordStats): Prisma.InputJsonValue =>
   ({

@@ -17,8 +17,7 @@ const stats: KeywordStats = {
     daysSinceUpdate: 9,
   })),
   top30TitleMatchCount: 30,
-  suggest: { priority: 9000 },
-  reach: { status: 'absent' },
+  suggest: { status: 'hit', prefixLength: 1, position: 1 },
 };
 
 const evidence: ScoringEvidence = {
@@ -76,7 +75,7 @@ describe('ScoringService', () => {
     expect(collect).toHaveBeenCalledWith('kw1');
     const [args] = upsert.mock.calls[0];
     expect(args.create.keywordId).toBe('kw1');
-    expect(args.create.traffic).toBeCloseTo(9.29, 2);
+    expect(args.create.traffic).toBeCloseTo(10, 2);
     expect(args.create.difficulty).toBeCloseTo(9.64, 2);
     expect(args.create.stats).toEqual({ ...stats, evidence });
     expect(args.create.scoringSource).toBe('APPLE_SUGGEST_SEARCH');

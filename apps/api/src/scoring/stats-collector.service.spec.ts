@@ -100,8 +100,7 @@ describe('StatsCollectorService', () => {
     expect(collected?.stats.top10[0].ratingCount).toBe(1000);
     expect(collected?.stats.top10[0].daysSinceUpdate).toBe(10);
     expect(collected?.stats.top30TitleMatchCount).toBe(12);
-    expect(collected?.stats.suggest).toEqual({});
-    expect(collected?.stats.reach).toEqual({
+    expect(collected?.stats.suggest).toEqual({
       status: 'hit',
       prefixLength: 1,
       position: 1,
@@ -129,7 +128,7 @@ describe('StatsCollectorService', () => {
 
     const collected = await service.collect('kw1');
 
-    expect(collected?.stats.reach).toEqual({
+    expect(collected?.stats.suggest).toEqual({
       status: 'hit',
       prefixLength: 3,
       position: 1,
@@ -167,8 +166,7 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(collected).not.toBeNull();
-    expect(collected?.stats.suggest).toEqual({});
-    expect(collected?.stats.reach).toEqual({ status: 'unavailable' });
+    expect(collected?.stats.suggest).toEqual({ status: 'unavailable' });
     expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.evidence.suggestCompleted).toBe(false);
   });
@@ -231,7 +229,11 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(suggest).toHaveBeenCalledTimes(3);
-    expect(collected?.stats.suggest).toEqual({ prefixHitLength: 2 });
+    expect(collected?.stats.suggest).toEqual({
+      status: 'hit',
+      prefixLength: 2,
+      position: 1,
+    });
     expect(collected?.evidence.prefixSweepCompleted).toBe(true);
   });
 
@@ -243,8 +245,7 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(suggest).toHaveBeenCalledTimes(1);
-    expect(collected?.stats.suggest).toEqual({ prefixHitLength: null });
-    expect(collected?.stats.reach).toEqual({ status: 'absent' });
+    expect(collected?.stats.suggest).toEqual({ status: 'absent' });
     expect(collected?.evidence.prefixSweepCompleted).toBe(true);
   });
 
@@ -256,7 +257,7 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(suggest).toHaveBeenCalledTimes(1);
-    expect(collected?.stats.reach).toEqual({ status: 'unavailable' });
+    expect(collected?.stats.suggest).toEqual({ status: 'unavailable' });
     expect(collected?.evidence).toMatchObject({
       suggestCompleted: false,
       suggestRequests: 1,

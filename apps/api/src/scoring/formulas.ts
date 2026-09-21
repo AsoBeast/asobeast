@@ -20,12 +20,7 @@ export interface KeywordStats {
     installs?: number;
   }>;
   top30TitleMatchCount: number;
-  reach: SuggestReach;
-  suggest: {
-    priority?: number;
-    partialPriority?: number;
-    prefixHitLength?: number | null;
-  };
+  suggest: SuggestReach;
 }
 
 export const WEIGHTS = {
@@ -34,11 +29,6 @@ export const WEIGHTS = {
     strength: 0.3,
     competitors: 0.2,
     freshness: 0.15,
-  },
-  traffic: {
-    suggest: 0.5,
-    strength: 0.3,
-    length: 0.2,
   },
 } as const;
 
@@ -50,12 +40,6 @@ export const GPLAY_WEIGHTS = {
     strength: 0.3,
     competitors: 0.2,
     freshness: 0.15,
-  },
-  traffic: {
-    suggest: 0.4,
-    installs: 0.3,
-    strength: 0.1,
-    length: 0.2,
   },
 } as const;
 
@@ -101,43 +85,6 @@ export const freshnessScore = (stats: KeywordStats): number => {
   return days.length === 0 ? 0 : clamp(10 - average(days) / 9);
 };
 
-export const suggestScore = (stats: KeywordStats): number => {
-  const { priority, partialPriority } = stats.suggest;
-  if (typeof priority === 'number') {
-    return clamp(priority / 1000);
-  }
-  if (typeof partialPriority === 'number') {
-    return clamp(partialPriority / 2000);
-  }
-  return 1;
-};
-
-export const installsScore = (stats: KeywordStats): number =>
-  logScale(
-    average(finiteNumbers(stats.top10.map((item) => item.installs))),
-    1_000,
-    1_000_000_000,
-  );
-
-export const gplaySuggestScore = (stats: KeywordStats): number => {
-  const hit = stats.suggest.prefixHitLength;
-  if (typeof hit === 'number') {
-    return clamp(10 * (1 - (hit - 1) / stats.keywordText.length));
-  }
-  return 1;
-};
-
-export const lengthScore = (stats: KeywordStats): number => {
-  const chars = stats.keywordText.length;
-  if (chars <= 7) {
-    return 10;
-  }
-  if (chars >= 25) {
-    return 2;
-  }
-  return 10 - ((chars - 7) / (25 - 7)) * (10 - 2);
-};
-
 export const computeDifficulty = (stats: KeywordStats): number => {
   const weights =
     stats.store === 'GOOGLE_PLAY'
@@ -148,22 +95,6 @@ export const computeDifficulty = (stats: KeywordStats): number => {
       weights.strength * strengthScore(stats) +
       weights.competitors * competitorsScore(stats) +
       weights.freshness * freshnessScore(stats),
-  );
-};
-
-export const computeTraffic = (stats: KeywordStats): number => {
-  if (stats.store === 'GOOGLE_PLAY') {
-    return clamp(
-      GPLAY_WEIGHTS.traffic.suggest * gplaySuggestScore(stats) +
-        GPLAY_WEIGHTS.traffic.installs * installsScore(stats) +
-        GPLAY_WEIGHTS.traffic.strength * strengthScore(stats) +
-        GPLAY_WEIGHTS.traffic.length * lengthScore(stats),
-    );
-  }
-  return clamp(
-    WEIGHTS.traffic.suggest * suggestScore(stats) +
-      WEIGHTS.traffic.strength * strengthScore(stats) +
-      WEIGHTS.traffic.length * lengthScore(stats),
   );
 };
 

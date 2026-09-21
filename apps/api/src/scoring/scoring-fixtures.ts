@@ -1,24 +1,6 @@
 import { KeywordStats } from './formulas';
-import { SuggestReach } from './suggest-reach';
 
-export interface FixtureApp {
-  storeAppId?: string;
-  title: string;
-  developer?: string;
-  ratingCount?: number;
-  daysSinceUpdate?: number;
-}
-
-export interface ScoringFixture extends Omit<
-  KeywordStats,
-  'top10' | 'suggest' | 'reach'
-> {
-  top10: FixtureApp[];
-  suggest: SuggestReach;
-  previousTop10?: Array<{ storeAppId: string; ratingCount: number }>;
-  previousCapturedDaysAgo?: number;
-  official?: { value: number } | { absentBelow: number };
-}
+type FixtureApp = KeywordStats['top10'][number];
 
 const app = (
   title: string,
@@ -60,106 +42,83 @@ export const outlierTopTen = (): FixtureApp[] =>
     app(`Geo Quiz ${index}`, count, 30),
   );
 
-export const headStats = (): ScoringFixture => ({
+export const F1_HEAD: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'quiz',
   resultCount: 30,
   top30TitleMatchCount: 24,
   suggest: { status: 'hit', prefixLength: 4, position: 6 },
   top10: headTopTen(),
-});
+};
 
-export const brandStats = (): ScoringFixture => ({
+export const F2_BRAND: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'geoguessr',
   resultCount: 30,
   top30TitleMatchCount: 1,
   suggest: { status: 'hit', prefixLength: 4, position: 4 },
   top10: brandTopTen(),
-});
+};
 
-export const junkStats = (): ScoringFixture => ({
+export const F3_JUNK: KeywordStats = {
   store: 'GOOGLE_PLAY',
   keywordText: 'videos put',
   resultCount: 30,
   top30TitleMatchCount: 0,
   suggest: { status: 'absent' },
   top10: junkTopTen(),
-});
+};
 
-export const emptyStats = (): ScoringFixture => ({
+export const F4_EMPTY: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'kw3006',
   resultCount: 0,
   top30TitleMatchCount: 0,
   suggest: { status: 'absent' },
   top10: [],
-});
+};
 
-export const tailStats = (): ScoringFixture => ({
+export const F5_TAIL: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'guess the location',
   resultCount: 30,
   top30TitleMatchCount: 4,
   suggest: { status: 'listed', position: 1 },
   top10: tailTopTen(),
-});
+};
 
-export const outlierStats = (): ScoringFixture => ({
+export const F6_OUTLIER: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'geo quiz',
   resultCount: 30,
   top30TitleMatchCount: 10,
   suggest: { status: 'hit', prefixLength: 3, position: 2 },
   top10: outlierTopTen(),
-});
+};
 
-export const singleStats = (): ScoringFixture => ({
+export const F7_SINGLE: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'geo quiz',
   resultCount: 1,
   top30TitleMatchCount: 1,
   suggest: { status: 'hit', prefixLength: 6, position: 1 },
   top10: [app('Geo Quiz', 1_000_000, 1)],
-});
+};
 
-export const unavailableStats = (): ScoringFixture => ({
-  ...headStats(),
+export const F8_UNAVAILABLE: KeywordStats = {
+  ...F1_HEAD,
   suggest: { status: 'unavailable' },
-});
+};
 
-export const officialStats = (): ScoringFixture => ({
-  ...headStats(),
-  official: { value: 71 },
-});
-
-export const absentCapStats = (): ScoringFixture => ({
-  ...headStats(),
-  official: { absentBelow: 41 },
-});
-
-export const velocityStats = (): ScoringFixture => ({
-  ...headStats(),
-  top10: headTopTen().map((item, index) => ({
-    ...item,
-    storeAppId: `id${index}`,
-  })),
-  previousCapturedDaysAgo: 28,
-  previousTop10: HEAD_RATING_COUNTS.map((count, index) => ({
-    storeAppId: `id${index}`,
-    ratingCount: Math.round(count * 0.98),
-  })),
-});
-
-export const notFiniteStats = (): ScoringFixture => ({
-  ...headStats(),
+export const F12_NOT_FINITE: KeywordStats = {
+  ...F1_HEAD,
   top10: headTopTen().map((item, index) =>
     index === 0 ? { ...item, ratingCount: Number.NaN } : item,
   ),
-});
+};
 
-export const diacriticsStats = (): ScoringFixture => ({
-  ...singleStats(),
+export const F13_DIACRITICS: KeywordStats = {
+  ...F7_SINGLE,
   keywordText: 'Géo  Quiz',
   resultCount: 30,
-});
+};

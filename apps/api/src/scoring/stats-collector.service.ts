@@ -65,14 +65,7 @@ export class StatsCollectorService {
         resultCount: results.length,
         top10: topTen.items,
         top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
-        reach,
-        suggest:
-          keyword.store === Store.GOOGLE_PLAY
-            ? {
-                prefixHitLength:
-                  reach.status === 'hit' ? reach.prefixLength : null,
-              }
-            : {},
+        suggest: reach,
       },
       evidence: {
         searchResultCount: results.length,

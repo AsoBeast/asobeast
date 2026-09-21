@@ -118,6 +118,10 @@ describe('Scoring pipeline (e2e)', () => {
 
     const stats = metric?.stats as { store: string; suggest: unknown };
     expect(stats.store).toBe('GOOGLE_PLAY');
-    expect(stats.suggest).toEqual({ prefixHitLength: 1 });
+    expect(stats.suggest).toEqual({
+      status: 'hit',
+      prefixLength: 1,
+      position: 1,
+    });
   });
 });
