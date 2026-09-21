@@ -1,9 +1,9 @@
 ---
 title: "Traffic, difficulty and opportunity"
 sidebarTitle: Scoring
-description: Traffic and difficulty are stored on a 0 to 10 scale with their evidence and shown on a 0 to 100 scale. Opportunity is computed per app on read and is never stored anywhere.
+description: How traffic, difficulty and opportunity are calculated, what evidence each score carries, and when Apple's own search popularity replaces the estimate.
 icon: gauge
-keywords: ["traffic score","difficulty","opportunity","keyword metric","confidence","calculation version"]
+keywords: ["traffic score","difficulty","opportunity","keyword metric","confidence","calculation version","suggest reach","score signals","Apple search popularity"]
 ---
 
 Traffic and difficulty describe a keyword and are stored. Opportunity describes the fit between a keyword and one specific app, so it is computed when you read it and never stored.
@@ -16,7 +16,48 @@ Traffic and difficulty describe a keyword and are stored. Opportunity describes 
 | Difficulty | 0 to 10 stored, 0 to 100 shown | Yes, in `KeywordMetric` | Keyword | How hard the current top results are to displace |
 | Opportunity | 0 to 100 | No | Keyword and app | Whether this keyword is worth this app's effort |
 
-Opportunity weights volume at 0.4, difficulty at 0.3 and relevance at 0.3.
+Opportunity is volume multiplied by a difficulty gate and by relevance, so any one of the three can veto a keyword.
+
+Every traffic number is an estimate built from public store signals, except where the source says Apple Ads search popularity. asobeast publishes the formula below and a calibration command, so the estimate can be checked against Apple's own number rather than taken on trust.
+
+## How is traffic estimated?
+
+Traffic starts from suggest reach: how early the store offers the exact phrase while it is being typed. A phrase the store completes after one or two typed characters is searched by many people; a phrase it only offers once the whole text is typed is searched by few.
+
+| What the store does | Reach, 0 to 10 |
+| --- | --- |
+| Suggests it after 1 typed character | 10 |
+| After 2, 3, 4, 5, 6, 7 or 8 characters | 9, 7.8, 6.6, 5.4, 4.2, 3.2 and 2.4 |
+| Suggests it only for the whole phrase | 1.5 |
+| Never suggests it | 0 |
+
+Each position below the first in the suggestion list takes 3 percent off. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length.
+
+The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched.
+
+Traffic is 65 percent reach and 35 percent demand, reduced for phrases of three words or more. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, traffic comes from demand alone at 70 percent and confidence drops to low.
+
+## How is difficulty rated?
+
+Difficulty measures how hard the current first page is to enter.
+
+| Factor | Weight | What it reads |
+| --- | --- | --- |
+| Strength | 40% | Median rating count of the top ten |
+| Dominance | 20% | How many ratings the top five hold, weighted twice as much as the rest |
+| Targeting | 20% | How many of the top ten titles contain the phrase |
+| Freshness | 10% | How recently the top ten were updated |
+| Depth | 10% | How many of the top 30 titles contain every word |
+
+Once a previous scored page at least 14 days old exists, rating velocity joins at 10 percent: the median monthly growth in ratings of the apps present on both pages. A padded page is discounted by up to half. Three flags then apply in this order:
+
+| Flag | When | Effect |
+| --- | --- | --- |
+| `brand` | The leader is named after the phrase and holds at least 10,000 ratings, ten times the rest of the page | Difficulty is at least 85 |
+| `weak_leader` | The top result has fewer than 100 ratings | Difficulty is at most 35 |
+| `small_serp` | The store returns three results or fewer | Difficulty is at most 20 |
+
+The caps run after the brand floor, so a one result page is never rated hard. A page is `padded` when at most a fifth of its titles target the phrase.
 
 ## Which scale does a response use?
 
@@ -39,12 +80,36 @@ Every persisted score is stored with the provenance needed to audit or recompute
 
 | Field | Example | Why it is stored |
 | --- | --- | --- |
-| Scoring source | `APPLE_SUGGEST_SEARCH`, `GOOGLE_PLAY_PREFIX_SEARCH` | Which public evidence produced the number |
-| Formula version | `app-store-v1`, `google-play-v1` | Which calculation produced it, so old rows stay interpretable |
+| Scoring source | `APPLE_SUGGEST_REACH`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
+| Formula version | `app-store-v2`, `google-play-v2` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 
-Confidence falls when part of the evidence was unavailable. On the App Store it reflects whether the search returned a full result set and whether the suggest lookup completed. On Google Play it additionally reflects whether the prefix sweep and the detail enrichments completed.
+Confidence says how complete the evidence was.
+
+| Evidence | Confidence |
+| --- | --- |
+| Apple's own search popularity was used | `HIGH` |
+| The suggest lookup failed, or the search returned nothing | `LOW` |
+| At least 10 results and, on Google Play, at least 8 of the top ten detail lookups | `HIGH` |
+| Anything else | `MEDIUM` |
+
+## What are score signals?
+
+`GET /apps/{id}/keywords` returns the evidence behind each stored score as `scoreSignals`, and the score details in the keyword table say the same in words.
+
+| Field | Meaning |
+| --- | --- |
+| `suggestReach` | `hit`, `listed`, `absent` or `unavailable`, as in the reach table above |
+| `suggestPrefixLength` | Typed characters before the store offered the phrase, for a `hit` |
+| `suggestPosition` | Its place in that suggestion list |
+| `serpRelevance` | Share of the top ten titles that target the phrase, 0 to 1 |
+| `medianRatingCount` | Median rating count of the top ten |
+| `flags` | `brand`, `weak_leader`, `small_serp` and `padded` |
+| `officialPopularity` | Apple's search popularity, 1 to 100, when it was used |
+| `estimatedTraffic` | The estimate on the stored 0 to 10 scale, kept even when Apple's number replaced it |
+
+`scoreSignals` is `null` for a row scored by an older formula, and `scoreOutdated` is `true` for it.
 
 A score without provenance cannot be audited, so asobeast never shows one.
 
@@ -52,7 +117,9 @@ A score without provenance cannot be audited, so asobeast never shows one.
 
 Because relevance is a property of the pairing, not of the phrase.
 
-Traffic and difficulty are the same number for every app that tracks a keyword, because they describe the search result page. Relevance is different for each app: the same phrase is core to one listing and incidental to another. asobeast derives relevance from the tracked keyword's source and from how much of the phrase appears in that app's own snapshot text, then combines it with volume and difficulty in the read layer.
+Traffic and difficulty are the same number for every app that tracks a keyword, because they describe the search result page. Relevance is different for each app: the same phrase is core to one listing and incidental to another. asobeast derives relevance from the tracked keyword's source, from how much of the phrase appears in that app's own snapshot text and from where the app already ranks, then combines it with volume and difficulty in the read layer.
+
+The app's own size matters too. Before the difficulty gate is applied, difficulty shifts by up to 15 points: an app with a hundred times fewer ratings than the median of the first page reads the keyword 15 points harder, and one with a hundred times more reads it 15 points easier.
 
 Storing opportunity would mean storing one row per app per keyword and recomputing all of them whenever a listing changed. Deriving it on read keeps one keyword row and always reflects the current metadata.
 
@@ -70,7 +137,27 @@ The tracked keyword's source sets the starting relevance, which is then adjusted
 | `SUGGESTED` | 60 |
 | `COMPETITOR` | 50 |
 
-Full overlap with the snapshot text adds 10 and no overlap subtracts 10, clamped to the range 1 to 100. You can override relevance per tracked keyword.
+Full overlap with the snapshot text adds 10 and no overlap subtracts 10. Ranking evidence follows:
+
+- An app already ranking at position 50 or better has a relevance of at least 70, because the store already treats it as relevant.
+- A `DESCRIPTION`, `SUGGESTED` or `COMPETITOR` keyword that was checked and not found loses 10.
+
+The result is clamped to the range 1 to 100. You can override relevance per tracked keyword, and an override wins over every rule.
+
+## Can asobeast use Apple's own numbers?
+
+Yes, with an Apple Ads API key. Apple publishes a weekly search popularity from 1 to 100 per storefront and genre for its most searched terms. With the key configured, asobeast syncs the newest complete week every Monday and, for App Store keywords:
+
+- uses Apple's number for a term Apple lists, with the source `APPLE_ADS_POPULARITY` and high confidence;
+- caps the estimate for a term Apple does not list below the lowest popularity Apple published that week, because the list covers the most searched terms.
+
+Google Play has no equivalent, so its traffic stays an estimate. The instance connects with its own credentials; see [Connect Apple Ads](/operations/apple-ads) and the [configuration reference](/configuration/reference#apple-search-popularity).
+
+`pnpm --filter api scoring:calibrate` compares the estimate with Apple's number for every keyword that has both, and prints the rank correlation and the typical error, so an operator can see how far the estimate is from Apple's own figure.
+
+## What happens to old scores after an upgrade?
+
+They are rescored once, automatically. When the API starts with a new formula version, every tracked keyword whose latest score used an older version is queued for one score job, through the same rate limited queues as weekly scoring. Until its job runs, the keyword keeps its old numbers and the table says "Older formula". Stored history keeps the version it was scored with.
 
 ## Are scores comparable across stores?
 

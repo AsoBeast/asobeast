@@ -1,0 +1,89 @@
+---
+title: Connect Apple Ads
+description: Give asobeast an Apple Ads API key so App Store traffic uses Apple's own weekly search popularity where Apple publishes it. Optional and off by default.
+icon: key-round
+keywords: ["Apple Ads","search popularity","API key","prime256v1","APPLE_ADS_CLIENT_ID","calibration"]
+---
+
+Without a key, App Store traffic is an estimate from public store signals. With one, asobeast reads Apple's weekly search popularity for the terms Apple publishes and uses it instead. See [Traffic, difficulty and opportunity](/concepts/scoring#can-asobeast-use-apples-own-numbers) for what changes in the scores.
+
+The key belongs to the instance, not to a workspace, and the data it reads is the same for every workspace on it.
+
+## Create the key
+
+<Steps>
+  <Step title="Generate a private key">
+    Apple Ads accepts an elliptic curve key on the `prime256v1` curve.
+
+    ```bash
+    openssl ecparam -genkey -name prime256v1 -noout -out apple-ads-private.pem
+    openssl ec -in apple-ads-private.pem -pubout -out apple-ads-public.pem
+    ```
+  </Step>
+  <Step title="Upload the public key">
+    In Apple Ads, open Account Settings, then API, and paste the contents of `apple-ads-public.pem`. Apple shows a client id, a team id and a key id. Keep all three.
+  </Step>
+  <Step title="Keep the private key out of the repository">
+    Store `apple-ads-private.pem` next to your Compose files, readable only by the account that runs Docker, and never commit it.
+  </Step>
+</Steps>
+
+## Give the API the key
+
+<Steps>
+  <Step title="Mount the key read only">
+    Add a `docker-compose.override.yml` beside `docker-compose.yml`:
+
+    ```yaml
+    services:
+      api:
+        volumes:
+          - ./apple-ads-private.pem:/run/secrets/apple-ads.pem:ro
+    ```
+  </Step>
+  <Step title="Set the four variables">
+    In `apps/api/.env`:
+
+    ```bash
+    APPLE_ADS_CLIENT_ID=SEARCHADS.your-client-id
+    APPLE_ADS_TEAM_ID=SEARCHADS.your-team-id
+    APPLE_ADS_KEY_ID=your-key-id
+    APPLE_ADS_PRIVATE_KEY_PATH=/run/secrets/apple-ads.pem
+    ```
+
+    Set all four or none. A partial set refuses to boot and names the missing ones. `APPLE_ADS_AD_ACCOUNT_ID` is optional; see the [configuration reference](/configuration/reference#apple-search-popularity).
+  </Step>
+  <Step title="Recreate the API">
+    ```bash
+    docker compose up -d --force-recreate api --wait
+    ```
+  </Step>
+</Steps>
+
+## Confirm the sync ran
+
+The sync runs every Monday at 09:00 UTC by default, after Apple posts the week that ended on Saturday. To run it now, sign in as the owner, open `/admin/queues`, select the `pipeline` queue and promote the `apple-popularity` repeatable job.
+
+Then count what was stored per market and week:
+
+```bash
+docker compose exec postgres psql -U asobeast -d asobeast -c 'select country, week, count(*) from "SearchTermPopularity" group by 1, 2 order by 2 desc'
+```
+
+A keyword Apple lists shows the source "Apple Ads search popularity" and high confidence once it is next scored. Score one from its row actions to see it at once.
+
+To see how the estimate compares with Apple's number on your own keywords, run the calibration command from a source checkout whose `apps/api/.env` points at the same database:
+
+```bash
+pnpm --filter api scoring:calibrate
+```
+
+Below ten keywords with both numbers it says there is not enough data yet.
+
+## Rotate the key
+
+Generate and upload a new key as above, replace the mounted file and `APPLE_ADS_KEY_ID`, recreate the API, then revoke the old key in Apple Ads. Stored popularity stays valid, because it is Apple's published data rather than anything tied to the key.
+
+## Disconnect
+
+Remove the four variables and recreate the API. The weekly sync is unscheduled on the next start and scoring returns to the estimate. Stored weeks stay in the table but are no longer read.

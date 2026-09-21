@@ -73,7 +73,15 @@ A persisted 0 to 10 estimate of how hard a keyword's current top results are to 
 
 ## Opportunity
 
-A 0 to 100 score describing the fit between one keyword and one app, weighting volume at 0.4, difficulty at 0.3 and relevance at 0.3. It is computed on read and never stored, because relevance is a property of the pairing.
+A 0 to 100 score describing the fit between one keyword and one app: volume multiplied by a difficulty gate and by relevance, so any one of them can veto the keyword. It is computed on read and never stored, because relevance is a property of the pairing. See [Traffic, difficulty and opportunity](/concepts/scoring).
+
+## Suggest reach
+
+How early a store offers the exact keyword while it is being typed: after how many characters and in which position, only for the whole phrase, or never. It is the main demand signal behind traffic. See [Traffic, difficulty and opportunity](/concepts/scoring#how-is-traffic-estimated).
+
+## Score signals
+
+The evidence returned with each stored score: suggest reach, how much of the first page targets the keyword, page flags such as `brand` or `padded`, and Apple's own popularity when it was used. See [Traffic, difficulty and opportunity](/concepts/scoring#what-are-score-signals).
 
 ## Visibility
 

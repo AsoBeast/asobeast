@@ -179,6 +179,7 @@
               "operations/capacity",
               "operations/billing",
               "operations/scraper-breakage",
+              "operations/apple-ads",
               "operations/troubleshooting"
             ]
           },
