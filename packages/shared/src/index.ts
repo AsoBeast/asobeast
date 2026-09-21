@@ -80,6 +80,14 @@ export const SERP_FLAGS = [
 ] as const;
 export type SerpFlag = (typeof SERP_FLAGS)[number];
 
+export const SUGGEST_REACH_STATUSES = [
+  'hit',
+  'listed',
+  'absent',
+  'unavailable',
+] as const;
+export type SuggestReachStatus = (typeof SUGGEST_REACH_STATUSES)[number];
+
 export const isScoringSource = (value: unknown): value is ScoringSource =>
   typeof value === 'string' &&
   SCORING_SOURCES.some((source) => source === value);

@@ -1,4 +1,5 @@
 import { KeywordStats } from './formulas';
+import { SuggestReach } from './suggest-reach';
 
 export interface FixtureApp {
   storeAppId?: string;
@@ -8,19 +9,13 @@ export interface FixtureApp {
   daysSinceUpdate?: number;
 }
 
-export type FixtureReach =
-  | { status: 'hit'; prefixLength: number; position: number }
-  | { status: 'listed'; position: number }
-  | { status: 'absent' }
-  | { status: 'unavailable' };
-
 export interface ScoringFixture extends Omit<
   KeywordStats,
   'top10' | 'suggest'
 > {
   resultCount: number;
   top10: FixtureApp[];
-  suggest: FixtureReach;
+  suggest: SuggestReach;
   previousTop10?: Array<{ storeAppId: string; ratingCount: number }>;
   previousCapturedDaysAgo?: number;
   official?: { value: number } | { absentBelow: number };
