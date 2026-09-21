@@ -24,6 +24,10 @@ const KEYWORD_CSV_HEADERS = [
   "formulaVersion",
   "confidence",
   "capturedAt",
+  "suggestReach",
+  "serpFlags",
+  "officialPopularity",
+  "scoreOutdated",
   "scoreComparability",
 ];
 
@@ -50,6 +54,10 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     keyword.scoreProvenance?.formulaVersion ?? null,
     keyword.scoreProvenance?.confidence ?? null,
     keyword.scoreProvenance?.capturedAt ?? null,
+    keyword.scoreSignals?.suggestReach ?? null,
+    keyword.scoreSignals?.flags.join(" ") ?? null,
+    keyword.scoreSignals?.officialPopularity ?? null,
+    keyword.scoreOutdated === undefined ? null : String(keyword.scoreOutdated),
     SCORE_COMPARABILITY,
   ]);
   return toCsv(KEYWORD_CSV_HEADERS, csvRows);

@@ -54,4 +54,38 @@ describe("keywordCsv", () => {
       .split(",");
     expect(row[8]).toBe("100");
   });
+
+  it("adds the score evidence after the capture time", () => {
+    expect(keywordCsv([keyword("focus timer")]).split("\r\n")[0]).toContain(
+      "capturedAt,suggestReach,serpFlags,officialPopularity,scoreOutdated,scoreComparability",
+    );
+  });
+
+  it("exports the signals of a scored row", () => {
+    const row = keywordCsv([
+      {
+        ...keyword("geoguessr"),
+        scoreSignals: {
+          suggestReach: "hit",
+          suggestPrefixLength: 4,
+          suggestPosition: 4,
+          serpRelevance: 0.1,
+          medianRatingCount: 800,
+          flags: ["brand", "padded"],
+          officialPopularity: 71,
+          estimatedTraffic: 4.2,
+        },
+        scoreOutdated: false,
+      },
+    ]);
+    expect(row).toContain(",hit,brand padded,71,false,");
+  });
+
+  it("leaves the evidence empty for a row without signals", () => {
+    const row = keywordCsv([
+      { ...keyword("focus timer"), scoreSignals: null, scoreOutdated: true },
+    ]);
+    expect(row).toContain(",,,,true,");
+    expect(row).not.toMatch(/null|undefined/);
+  });
 });

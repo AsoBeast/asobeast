@@ -18,3 +18,6 @@ export function scoreValue(
       return null;
   }
 }
+
+export const isScoreOutdated = (keyword: TrackedKeywordItem): boolean =>
+  keyword.scoreOutdated === true;

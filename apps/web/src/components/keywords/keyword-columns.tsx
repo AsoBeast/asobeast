@@ -21,7 +21,7 @@ import {
   SortHeader,
   VolatilityCell,
 } from "./keyword-cells";
-import { scoreValue } from "./keyword-scores";
+import { isScoreOutdated, scoreValue } from "./keyword-scores";
 import { difficultySignalLines, trafficSignalLines } from "./score-signals";
 import { SourceBadge } from "./SourceBadge";
 
@@ -143,6 +143,7 @@ function scoreColumns({ sort, onSort }: SortState) {
           tone="none"
           provenance={row.original.scoreProvenance}
           details={trafficSignalLines(row.original.scoreSignals ?? null)}
+          outdated={isScoreOutdated(row.original)}
         />
       ),
     }),
@@ -162,6 +163,7 @@ function scoreColumns({ sort, onSort }: SortState) {
           label="Difficulty"
           provenance={row.original.scoreProvenance}
           details={difficultySignalLines(row.original.scoreSignals ?? null)}
+          outdated={isScoreOutdated(row.original)}
         />
       ),
     }),

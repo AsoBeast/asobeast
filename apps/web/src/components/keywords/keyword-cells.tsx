@@ -21,6 +21,9 @@ import {
 import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
+const OUTDATED_SCORE_DETAIL =
+  "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.";
+
 const DERIVED_SCORE_DETAIL =
   "Calculated from traffic, difficulty and this app's keyword relevance when the list loaded, so it carries no stored capture time. A keyword much stronger or weaker than your app's rating count shifts the difficulty it is weighed against.";
 
@@ -79,11 +82,24 @@ function ScoreButton({
   );
 }
 
+function scoreSummary(
+  provenance: ScoreProvenance | null,
+  outdated?: boolean,
+): string {
+  if (outdated) {
+    return "Older formula";
+  }
+  return provenance
+    ? `${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`
+    : "Legacy score";
+}
+
 export function ScoreCell({
   value,
   label,
   provenance,
   details,
+  outdated,
   emphasize,
   tone,
 }: {
@@ -91,6 +107,7 @@ export function ScoreCell({
   label: string;
   provenance: ScoreProvenance | null;
   details?: string[];
+  outdated?: boolean;
   emphasize?: boolean;
   tone?: MeterTone | "none";
 }) {
@@ -100,12 +117,9 @@ export function ScoreCell({
       label={label}
       emphasize={emphasize}
       tone={tone}
-      summary={
-        provenance
-          ? `${SCORING_CONFIDENCE_LABELS[provenance.confidence]} confidence`
-          : "Legacy score"
-      }
+      summary={scoreSummary(provenance, outdated)}
     >
+      {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
       {details && details.length > 0 ? (
         <ul className="flex flex-col gap-1">
           {details.map((line) => (

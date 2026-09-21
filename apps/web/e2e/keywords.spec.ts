@@ -146,6 +146,9 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
   expect(content).toContain("APPLE_SUGGEST_REACH,app-store-v2,HIGH");
+  expect(content.split("\r\n")[0]).toContain(
+    "suggestReach,serpFlags,officialPopularity,scoreOutdated",
+  );
   expect(content).toContain(
     "Apple App Store and Google Play traffic and volume scores use different public signals and are not directly comparable",
   );
@@ -203,13 +206,16 @@ test("score details are persistent, keyboard accessible and store specific", asy
 
   const invalidTimeScore = page
     .getByRole("row", { name: /study timer/ })
-    .getByRole("button", { name: /Traffic 3000.*Low confidence/ });
+    .getByRole("button", { name: /Traffic 3000.*Older formula/ });
   await invalidTimeScore.focus();
   const invalidTimeTooltip = page
     .getByRole("tooltip")
     .filter({ hasText: "Capture time unavailable" });
   await expect(invalidTimeTooltip).toBeVisible();
   await expect(invalidTimeTooltip).not.toContainText("The store suggests");
+  await expect(invalidTimeTooltip).toContainText(
+    "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.",
+  );
   await invalidTimeScore.press("Escape");
 
   const opportunityScore = page
@@ -226,7 +232,7 @@ test("score details are persistent, keyboard accessible and store specific", asy
 
   const legacyScore = page
     .getByRole("row", { name: /productivity app/ })
-    .getByRole("button", { name: /Traffic 8000.*Legacy score/ });
+    .getByRole("button", { name: /Traffic 8000.*Older formula/ });
   await legacyScore.focus();
   await expect(
     page
