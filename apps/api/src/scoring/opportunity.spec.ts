@@ -1,4 +1,8 @@
-import { computeOpportunity, OPPORTUNITY_HIGH } from './opportunity';
+import {
+  chanceShift,
+  computeOpportunity,
+  OPPORTUNITY_HIGH,
+} from './opportunity';
 
 describe('computeOpportunity', () => {
   it.each([
@@ -39,4 +43,20 @@ describe('computeOpportunity', () => {
   it('names one threshold for a high opportunity', () => {
     expect(OPPORTUNITY_HIGH).toBe(35);
   });
+});
+
+describe('chanceShift', () => {
+  it.each([
+    [4, 21_500, 15],
+    [2_000_000, 21_500, -14.764],
+    [21_500, 21_500, 0],
+    [null, 21_500, 0],
+    [4, null, 0],
+    [0, 0, 0],
+  ])(
+    'an app with %s ratings against a median of %s shifts by %s',
+    (app, median, expected) => {
+      expect(chanceShift(app, median)).toBeCloseTo(expected, 3);
+    },
+  );
 });

@@ -6,6 +6,7 @@ import {
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
+import { readScoreSignals } from '../scoring/score-signals';
 import { reportedSource } from './keyword-field-membership';
 
 const DELTA_WINDOW_DAYS = 7;
@@ -29,6 +30,7 @@ export interface TrackedKeywordRow {
       | 'formulaVersion'
       | 'confidence'
       | 'capturedAt'
+      | 'stats'
     >[];
   };
 }
@@ -87,9 +89,16 @@ function previousDayPosition(
   return previous ? previous.position : null;
 }
 
+export interface AppFacts {
+  snapshotText: string;
+  ratingCount: number | null;
+}
+
+const NO_APP_FACTS: AppFacts = { snapshotText: '', ratingCount: null };
+
 export function toTrackedKeywordItem(
   row: TrackedKeywordRow,
-  snapshotText = '',
+  app: AppFacts = NO_APP_FACTS,
   serpVolatility7d: number | null = null,
 ): TrackedKeywordItem {
   const latest = row.keyword.rankings[0] ?? null;
@@ -107,11 +116,14 @@ export function toTrackedKeywordItem(
   const { volume, relevance, opportunity } = appOpportunity({
     source,
     keywordText: row.keyword.text,
-    snapshotText,
+    snapshotText: app.snapshotText,
     relevanceOverride: row.relevance,
     traffic,
     difficulty,
     ranking: { position: latestPosition, checked: latestDepth !== null },
+    appRatingCount: app.ratingCount,
+    medianTopTenRatings:
+      readScoreSignals(metric?.stats)?.medianRatingCount ?? null,
   });
   return {
     keywordId: row.keywordId,

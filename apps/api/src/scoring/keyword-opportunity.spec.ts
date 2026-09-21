@@ -9,6 +9,8 @@ const input = (
   relevanceOverride: null,
   traffic: 4.77,
   difficulty: 4.37,
+  appRatingCount: null,
+  medianTopTenRatings: null,
   ...overrides,
 });
 
@@ -32,6 +34,29 @@ describe('appOpportunity', () => {
       volume: null,
       difficulty100: null,
       opportunity: null,
+    });
+  });
+
+  describe('chance against the top ten', () => {
+    const row = (appRatingCount: number, median: number | null) =>
+      appOpportunity(
+        input({
+          relevanceOverride: 90,
+          appRatingCount,
+          medianTopTenRatings: median,
+        }),
+      ).opportunity;
+
+    it('reads a keyword harder for a small app', () => {
+      expect(row(4, 21_500)).toBe(28.1);
+    });
+
+    it('reads a keyword easier for a large app', () => {
+      expect(row(2_000_000, 21_500)).toBe(39.3);
+    });
+
+    it('does not shift without a median', () => {
+      expect(row(4, null)).toBe(34.7);
     });
   });
 });

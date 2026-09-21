@@ -21,15 +21,21 @@ const row = (
         formulaVersion: 'app-store-v1',
         confidence: 'HIGH',
         capturedAt: new Date('2026-07-01T09:30:00.000Z'),
+        stats: null,
       },
     ],
   },
   ...overrides,
 });
 
+const facts = (snapshotText: string, ratingCount: number | null = null) => ({
+  snapshotText,
+  ratingCount,
+});
+
 describe('toTrackedKeywordItem', () => {
   it('derives volume, difficulty and a default relevance', () => {
-    const item = toTrackedKeywordItem(row(), 'daily habit tracker');
+    const item = toTrackedKeywordItem(row(), facts('daily habit tracker'));
     expect(item.volume).toBeCloseTo(80, 2);
     expect(item.relevance).toBe(60);
     expect(item.opportunity).toBeCloseTo(80 * (1 - 0.4 ** 2) * 0.6, 1);
@@ -39,11 +45,11 @@ describe('toTrackedKeywordItem', () => {
   it('reports a keyword field member as the keyword field whatever else tracks it', () => {
     const member = toTrackedKeywordItem(
       row({ source: 'MANUAL', fieldOrder: 0 }),
-      'daily habit tracker',
+      facts('daily habit tracker'),
     );
     const field = toTrackedKeywordItem(
       row({ source: 'KEYWORD_FIELD' }),
-      'daily habit tracker',
+      facts('daily habit tracker'),
     );
 
     expect(member.source).toBe('KEYWORD_FIELD');
@@ -65,28 +71,76 @@ describe('toTrackedKeywordItem', () => {
       });
 
     it('lifts a keyword the app already ranks for in the top fifty', () => {
-      expect(toTrackedKeywordItem(ranked(3), 'weather radar').relevance).toBe(
-        70,
-      );
+      expect(
+        toTrackedKeywordItem(ranked(3), facts('weather radar')).relevance,
+      ).toBe(70);
     });
 
     it('lowers a competitor keyword checked and not found', () => {
       expect(
-        toTrackedKeywordItem(ranked(null), 'weather radar').relevance,
+        toTrackedKeywordItem(ranked(null), facts('weather radar')).relevance,
       ).toBe(30);
     });
 
     it('keeps a manual relevance over ranking evidence', () => {
       expect(
-        toTrackedKeywordItem(ranked(3, 55), 'weather radar').relevance,
+        toTrackedKeywordItem(ranked(3, 55), facts('weather radar')).relevance,
       ).toBe(55);
+    });
+  });
+
+  describe('chance against the top ten', () => {
+    const scored = (stats: unknown) =>
+      row({
+        relevance: 90,
+        keyword: {
+          ...row().keyword,
+          metrics: [
+            {
+              ...row().keyword.metrics[0],
+              traffic: 4.77,
+              difficulty: 4.37,
+              stats:
+                stats as TrackedKeywordRow['keyword']['metrics'][number]['stats'],
+            },
+          ],
+        },
+      });
+    const signals = {
+      suggestReach: 'hit',
+      suggestPrefixLength: 2,
+      suggestPosition: 1,
+      serpRelevance: 1,
+      medianRatingCount: 21_500,
+      flags: [],
+      officialPopularity: null,
+      estimatedTraffic: 4.77,
+    };
+
+    it.each([
+      [4, 28.1],
+      [2_000_000, 39.3],
+    ])('an app with %s ratings reads %s', (ratingCount, expected) => {
+      expect(
+        toTrackedKeywordItem(scored({ signals }), facts('', ratingCount))
+          .opportunity,
+      ).toBe(expected);
+    });
+
+    it('does not shift a v1 row without signals', () => {
+      expect(
+        toTrackedKeywordItem(
+          scored({ suggest: { priority: 9000 } }),
+          facts('', 4),
+        ).opportunity,
+      ).toBe(34.7);
     });
   });
 
   it('lets a manual relevance override beat the default', () => {
     const item = toTrackedKeywordItem(
       row({ relevance: 95 }),
-      'daily habit tracker',
+      facts('daily habit tracker'),
     );
     expect(item.relevance).toBe(95);
   });
@@ -101,7 +155,7 @@ describe('toTrackedKeywordItem', () => {
           metrics: [],
         },
       }),
-      '',
+      facts(''),
     );
     expect(item.volume).toBeNull();
     expect(item.opportunity).toBeNull();

@@ -108,6 +108,7 @@ export function trackedArgs(appId: string) {
               formulaVersion: true,
               confidence: true,
               capturedAt: true,
+              stats: true,
             },
           },
         },

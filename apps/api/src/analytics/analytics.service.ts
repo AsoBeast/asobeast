@@ -22,6 +22,7 @@ import {
   addDays,
   DAY_MS,
   delta,
+  medianRatingsAt,
   metricAt,
   positionAt,
   rankingAt,
@@ -47,10 +48,16 @@ const HISTORY_MAX_DAYS = 180;
 const covers = (field: string, keyword: string): boolean =>
   ` ${normalizeText(field)} `.includes(` ${keyword} `);
 
+interface CoverageApp {
+  snapshotText: string;
+  ratingCount: number | null;
+  medianRatings: Map<string, number | null>;
+}
+
 const rowOpportunity = (
   row: TrackedRow,
   referenceDate: Date | null,
-  snapshotText: string,
+  app: CoverageApp,
 ): number | null => {
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
@@ -61,13 +68,15 @@ const rowOpportunity = (
   return appOpportunity({
     source: reportedSource(row),
     keywordText: row.keyword.text,
-    snapshotText,
+    snapshotText: app.snapshotText,
     relevanceOverride: row.relevance,
     traffic: metric?.traffic ?? null,
     difficulty: metric?.difficulty ?? null,
     ...(ranking
       ? { ranking: { position: ranking.position, checked: true } }
       : {}),
+    appRatingCount: app.ratingCount,
+    medianTopTenRatings: app.medianRatings.get(row.keywordId) ?? null,
   }).opportunity;
 };
 
@@ -92,17 +101,23 @@ export class AnalyticsService {
           title: true,
           subtitle: true,
           description: true,
+          ratingCount: true,
           capturedAt: true,
         },
       }),
       this.prisma.app.count({ where: { primaryAppId: appId } }),
     ]);
+    const medianRatings = await medianRatingsAt(
+      this.prisma,
+      rows.map((row) => row.keywordId),
+      reference,
+    );
 
     return {
       visibility: this.visibilitySummary(rows, reference),
       rankDistribution: this.rankDistribution(rows, reference),
       movers: movers(rows, reference),
-      coverage: this.coverage(rows, reference, snapshot),
+      coverage: this.coverage(rows, reference, snapshot, medianRatings),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: rows.length,
       competitors,
@@ -247,18 +262,22 @@ export class AnalyticsService {
       title: string;
       subtitle: string | null;
       description: string;
+      ratingCount: number | null;
     } | null,
+    medianRatings: Map<string, number | null>,
   ): CoverageSummary {
     const fields = {
       title: snapshot?.title ?? '',
       subtitle: snapshot?.subtitle ?? '',
       description: snapshot?.description ?? '',
     };
-    const snapshotText = [
-      fields.title,
-      fields.subtitle,
-      fields.description,
-    ].join(' ');
+    const app: CoverageApp = {
+      snapshotText: [fields.title, fields.subtitle, fields.description].join(
+        ' ',
+      ),
+      ratingCount: snapshot?.ratingCount ?? null,
+      medianRatings,
+    };
 
     const hits = rows.map((row) => ({
       row,
@@ -272,7 +291,7 @@ export class AnalyticsService {
       .map((hit) => ({
         keywordId: hit.row.keywordId,
         text: hit.row.keyword.text,
-        opportunity: rowOpportunity(hit.row, referenceDate, snapshotText),
+        opportunity: rowOpportunity(hit.row, referenceDate, app),
       }))
       .filter(
         (entry): entry is UncoveredKeyword =>
