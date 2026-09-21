@@ -1,6 +1,6 @@
 import { KeywordSource, Store, tokenize } from '@asobeast/shared';
 
-import { clamp, logScale } from './curves';
+import { clamp, finiteNumbers, logScale } from './curves';
 
 export { toDifficulty100, toVolume } from '@asobeast/shared';
 export { clamp, linear, logScale } from './curves';
@@ -61,9 +61,6 @@ const average = (values: number[]): number =>
     ? 0
     : values.reduce((sum, value) => sum + value, 0) / values.length;
 
-const definedNumbers = (values: Array<number | undefined>): number[] =>
-  values.filter((value): value is number => typeof value === 'number');
-
 function titleScore(title: string, keyword: string): number {
   const haystack = title.toLowerCase();
   const phrase = keyword.toLowerCase().trim();
@@ -86,7 +83,7 @@ export const titleMatchScore = (stats: KeywordStats): number =>
 
 export const strengthScore = (stats: KeywordStats): number =>
   logScale(
-    average(definedNumbers(stats.top10.map((item) => item.ratingCount))),
+    average(finiteNumbers(stats.top10.map((item) => item.ratingCount))),
     100,
     2_000_000,
   );
@@ -95,7 +92,7 @@ export const competitorsScore = (stats: KeywordStats): number =>
   clamp(stats.top30TitleMatchCount / 3);
 
 export const freshnessScore = (stats: KeywordStats): number => {
-  const days = definedNumbers(stats.top10.map((item) => item.daysSinceUpdate));
+  const days = finiteNumbers(stats.top10.map((item) => item.daysSinceUpdate));
   return days.length === 0 ? 0 : clamp(10 - average(days) / 9);
 };
 
@@ -112,7 +109,7 @@ export const suggestScore = (stats: KeywordStats): number => {
 
 export const installsScore = (stats: KeywordStats): number =>
   logScale(
-    average(definedNumbers(stats.top10.map((item) => item.installs))),
+    average(finiteNumbers(stats.top10.map((item) => item.installs))),
     1_000,
     1_000_000_000,
   );
