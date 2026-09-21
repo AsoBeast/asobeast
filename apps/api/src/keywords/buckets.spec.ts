@@ -91,6 +91,11 @@ describe('classifyBuckets', () => {
     expect(bucketOf(items, 'u')).toBeNull();
   });
 
+  it('returns a null bucket for a score from an older formula', () => {
+    const items = [item({ keywordId: 'o', scoreOutdated: true })];
+    expect(bucketOf(items, 'o')).toBeNull();
+  });
+
   describe('v2 thresholds', () => {
     const fillers = Array.from({ length: 5 }, (_, i) =>
       item({ keywordId: `p${i}`, text: 'top word', opportunity: 95 - i }),

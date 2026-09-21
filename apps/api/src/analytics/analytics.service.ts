@@ -6,6 +6,7 @@ import {
 import {
   AppSummary,
   CoverageSummary,
+  CURRENT_FORMULA_VERSIONS,
   normalizeText,
   RankDistribution,
   RankDistributionHistory,
@@ -54,6 +55,13 @@ interface CoverageApp {
   medianRatings: Map<string, number | null>;
 }
 
+const CURRENT_VERSIONS = new Set<string>(
+  Object.values(CURRENT_FORMULA_VERSIONS),
+);
+
+const isCurrentFormula = (version?: string | null): boolean =>
+  version === undefined || (version !== null && CURRENT_VERSIONS.has(version));
+
 const rowOpportunity = (
   row: TrackedRow,
   referenceDate: Date | null,
@@ -62,6 +70,9 @@ const rowOpportunity = (
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
     : null;
+  if (metric && !isCurrentFormula(metric.formulaVersion)) {
+    return null;
+  }
   const ranking = referenceDate
     ? rankingAt(row.keyword.rankings, referenceDate)
     : null;

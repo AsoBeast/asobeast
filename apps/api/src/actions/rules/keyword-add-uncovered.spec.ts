@@ -307,6 +307,14 @@ describe('keyword.add_uncovered', () => {
     expect(detectKeywordAddUncovered(context([foreign]))).toEqual([]);
   });
 
+  it('never fires on a score from an older formula', () => {
+    const outdated = app({
+      trackedKeywords: [keyword({ scoreOutdated: true })],
+    });
+
+    expect(detectKeywordAddUncovered(context([outdated]))).toEqual([]);
+  });
+
   it('lowers confidence for weaker score provenance', () => {
     const confidenceOf = (
       confidence: 'HIGH' | 'MEDIUM' | 'LOW' | null,

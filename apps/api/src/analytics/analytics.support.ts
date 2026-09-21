@@ -11,6 +11,7 @@ export interface Metric {
   traffic: number | null;
   difficulty: number | null;
   date: Date;
+  formulaVersion?: string | null;
 }
 
 export interface Ranking {
@@ -263,7 +264,12 @@ export async function trackedRows(
           metrics: {
             where: window ? { date: { lte: window } } : undefined,
             orderBy: { date: 'desc' },
-            select: { traffic: true, difficulty: true, date: true },
+            select: {
+              traffic: true,
+              difficulty: true,
+              date: true,
+              formulaVersion: true,
+            },
           },
           rankings: {
             where: {

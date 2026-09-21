@@ -44,6 +44,7 @@ function qualifyingOpportunity(
   homeCountry: string,
 ): number | null {
   if (!keyword.active || keyword.country !== homeCountry) return null;
+  if (keyword.scoreOutdated) return null;
   if (keyword.relevance === null || keyword.relevance < UNCOVERED_MIN_RELEVANCE)
     return null;
   if ((keyword.volume ?? 0) < UNCOVERED_MIN_VOLUME) return null;

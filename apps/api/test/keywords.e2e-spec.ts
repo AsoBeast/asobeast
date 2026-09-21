@@ -1291,7 +1291,7 @@ describe('KeywordsController (e2e)', () => {
       volume: 50,
       relevance: expect.any(Number) as number,
       opportunity: expect.any(Number) as number,
-      bucket: expect.any(String) as string,
+      bucket: null,
       scoredAt: '2026-07-01',
       scoreProvenance: {
         source: 'APPLE_SUGGEST_SEARCH',

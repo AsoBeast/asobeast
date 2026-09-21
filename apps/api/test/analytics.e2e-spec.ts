@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   ApiErrorEnvelope,
   AppSummary,
+  CURRENT_FORMULA_VERSIONS,
   PortfolioSummary,
   RankDistributionHistory,
   RatingsHistory,
@@ -152,6 +153,7 @@ describe('AnalyticsController (e2e)', () => {
           date: D7,
           traffic: kw.traffic,
           difficulty: kw.difficulty,
+          formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
         },
       });
       for (const rank of kw.ranks) {
