@@ -18,7 +18,7 @@ describe('appOpportunity', () => {
       relevance: 100,
       volume: expect.closeTo(47.7, 6) as number,
       difficulty100: expect.closeTo(43.7, 6) as number,
-      opportunity: 66,
+      opportunity: 38.6,
     });
   });
 

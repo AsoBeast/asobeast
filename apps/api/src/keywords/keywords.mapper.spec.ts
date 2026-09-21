@@ -32,7 +32,7 @@ describe('toTrackedKeywordItem', () => {
     const item = toTrackedKeywordItem(row(), 'daily habit tracker');
     expect(item.volume).toBeCloseTo(80, 2);
     expect(item.relevance).toBe(60);
-    expect(item.opportunity).toBeCloseTo(80 * 0.4 + 60 * 0.3 + 60 * 0.3, 1);
+    expect(item.opportunity).toBeCloseTo(80 * (1 - 0.4 ** 2) * 0.6, 1);
     expect(item.latestDepth).toBeNull();
   });
 

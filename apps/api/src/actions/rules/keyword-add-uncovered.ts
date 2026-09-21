@@ -7,10 +7,10 @@ import {
   ScoringConfidence,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { OPPORTUNITY_HIGH } from '../../scoring/opportunity';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 
-export const UNCOVERED_MIN_OPPORTUNITY = 60;
 export const UNCOVERED_MIN_RELEVANCE = 60;
 export const UNCOVERED_MIN_VOLUME = 20;
 
@@ -47,10 +47,7 @@ function qualifyingOpportunity(
   if (keyword.relevance === null || keyword.relevance < UNCOVERED_MIN_RELEVANCE)
     return null;
   if ((keyword.volume ?? 0) < UNCOVERED_MIN_VOLUME) return null;
-  if (
-    keyword.opportunity === null ||
-    keyword.opportunity < UNCOVERED_MIN_OPPORTUNITY
-  )
+  if (keyword.opportunity === null || keyword.opportunity < OPPORTUNITY_HIGH)
     return null;
   return keyword.opportunity;
 }

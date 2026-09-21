@@ -17,6 +17,7 @@ import {
 import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
 import { appOpportunity } from '../scoring/keyword-opportunity';
+import { OPPORTUNITY_HIGH } from '../scoring/opportunity';
 import {
   addDays,
   DAY_MS,
@@ -38,7 +39,6 @@ import { bucketPositions } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 
 const SUMMARY_WINDOW_DAYS = 31;
-const HIGH_OPPORTUNITY = 60;
 const COVERAGE_LIMIT = 5;
 const HISTORY_DEFAULT_DAYS = 30;
 const HISTORY_MAX_DAYS = 180;
@@ -269,7 +269,7 @@ export class AnalyticsService {
       }))
       .filter(
         (entry): entry is UncoveredKeyword =>
-          entry.opportunity !== null && entry.opportunity >= HIGH_OPPORTUNITY,
+          entry.opportunity !== null && entry.opportunity >= OPPORTUNITY_HIGH,
       );
 
     return {

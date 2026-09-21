@@ -30,14 +30,6 @@ export interface KeywordStats {
   previousCapturedDaysAgo?: number;
 }
 
-const round1 = (v: number): number => Math.round(v * 10) / 10;
-
-export const OPPORTUNITY_WEIGHTS = {
-  volume: 0.4,
-  difficulty: 0.3,
-  relevance: 0.3,
-} as const;
-
 export const ASOBEAST_DEFAULTS = {
   relevanceBySource: {
     TITLE: 90,
@@ -69,19 +61,4 @@ export const defaultRelevance = (
     }
   }
   return clamp(relevance, 1, 100);
-};
-
-export const computeOpportunity = (
-  volume: number | null,
-  difficulty100: number | null,
-  relevance: number,
-): number | null => {
-  if (volume === null || difficulty100 === null) {
-    return null;
-  }
-  const score =
-    volume * OPPORTUNITY_WEIGHTS.volume +
-    (100 - difficulty100) * OPPORTUNITY_WEIGHTS.difficulty +
-    relevance * OPPORTUNITY_WEIGHTS.relevance;
-  return round1(clamp(score, 0, 100));
 };

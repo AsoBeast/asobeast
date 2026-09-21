@@ -1,10 +1,6 @@
 import { KeywordSource } from '@asobeast/shared';
-import {
-  computeOpportunity,
-  defaultRelevance,
-  toDifficulty100,
-  toVolume,
-} from './formulas';
+import { defaultRelevance, toDifficulty100, toVolume } from './formulas';
+import { computeOpportunity } from './opportunity';
 
 export interface OpportunityInput {
   source: KeywordSource;

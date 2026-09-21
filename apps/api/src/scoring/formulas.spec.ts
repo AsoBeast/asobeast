@@ -1,9 +1,4 @@
-import {
-  computeOpportunity,
-  defaultRelevance,
-  toDifficulty100,
-  toVolume,
-} from './formulas';
+import { defaultRelevance, toDifficulty100, toVolume } from './formulas';
 
 describe('scoring formulas', () => {
   describe('scale bridging', () => {
@@ -35,21 +30,6 @@ describe('scoring formulas', () => {
       expect(
         defaultRelevance('SUGGESTED', 'habit journal', 'habit tracker'),
       ).toBe(60);
-    });
-  });
-
-  describe('computeOpportunity', () => {
-    it('is null when volume or difficulty is missing', () => {
-      expect(computeOpportunity(null, 40, 90)).toBeNull();
-      expect(computeOpportunity(80, null, 90)).toBeNull();
-    });
-
-    it('applies the ported 0.4/0.3/0.3 weights', () => {
-      expect(computeOpportunity(80, 40, 90)).toBeCloseTo(77, 1);
-    });
-
-    it('clamps to a maximum of 100', () => {
-      expect(computeOpportunity(100, 0, 100)).toBeCloseTo(100, 1);
     });
   });
 });
