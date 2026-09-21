@@ -121,13 +121,16 @@ describe('searchKey', () => {
     expect(searchKey('  ÀÉÎÕÜ  ')).toBe('aeiou');
   });
 
-  it('keeps scripts without diacritics intact', () => {
-    expect(searchKey('地理クイズ')).toBe(
-      normalizeText('地理クイズ')
-        .normalize('NFKD')
-        .replace(/\p{M}+/gu, ''),
-    );
+  it('keeps scripts whose marks are letters intact', () => {
+    expect(searchKey('地理クイズ')).toBe('地理クイズ');
+    expect(searchKey('खेल')).toBe('खेल');
+    expect(searchKey('खेल')).not.toBe(searchKey('खल'));
+    expect(searchKey('เกม')).toBe('เกม');
     expect(searchKey('')).toBe('');
+  });
+
+  it('folds greek accents like latin ones', () => {
+    expect(searchKey('Γεωγραφία')).toBe('γεωγραφια');
   });
 
   it('leaves normalizeText unchanged', () => {
