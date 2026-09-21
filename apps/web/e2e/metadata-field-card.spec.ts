@@ -1,4 +1,5 @@
 import { expect, test } from "./session.mts";
+import { typeInto } from "./type.mts";
 
 test("the metadata workbench counts the keyword field in bytes", async ({
   page,
@@ -6,7 +7,8 @@ test("the metadata workbench counts the keyword field in bytes", async ({
   await page.goto("/apps/app-1/metadata");
 
   const field = page.getByRole("textbox", { name: "Keyword field" });
-  await field.fill(
+  await typeInto(
+    field,
     "zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć",
   );
 

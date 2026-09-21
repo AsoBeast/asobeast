@@ -1,5 +1,6 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { typeInto } from "./type.mts";
 import { KEYWORD_FIELD_BYTE_LIMIT } from "@asobeast/shared";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
@@ -9,13 +10,6 @@ function storeField(page: Page, appId: string, text: string) {
   return page.request.put(`${MOCK_API_URL}/apps/${appId}/keyword-field`, {
     data: { text },
   });
-}
-
-async function typeInto(field: Locator, value: string): Promise<void> {
-  await expect(async () => {
-    await field.fill(value);
-    await expect(field).toHaveValue(value, { timeout: 1000 });
-  }).toPass();
 }
 
 test("the keyword field refuses to save past its byte limit", async ({
