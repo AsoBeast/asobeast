@@ -1,6 +1,6 @@
 import { KeywordSource, Store, tokenize } from '@asobeast/shared';
 
-import { clamp, finiteNumbers, logScale } from './curves';
+import { clamp } from './curves';
 import { SuggestReach } from './suggest-reach';
 
 export { toDifficulty100, toVolume } from '@asobeast/shared';
@@ -23,80 +23,9 @@ export interface KeywordStats {
   suggest: SuggestReach;
 }
 
-export const WEIGHTS = {
-  difficulty: {
-    titleMatch: 0.35,
-    strength: 0.3,
-    competitors: 0.2,
-    freshness: 0.15,
-  },
-} as const;
-
 export const APP_STORE_FORMULA_VERSION = 'app-store-v1';
 
-export const GPLAY_WEIGHTS = {
-  difficulty: {
-    titleMatch: 0.35,
-    strength: 0.3,
-    competitors: 0.2,
-    freshness: 0.15,
-  },
-} as const;
-
 export const GOOGLE_PLAY_FORMULA_VERSION = 'google-play-v1';
-
-const average = (values: number[]): number =>
-  values.length === 0
-    ? 0
-    : values.reduce((sum, value) => sum + value, 0) / values.length;
-
-function titleScore(title: string, keyword: string): number {
-  const haystack = title.toLowerCase();
-  const phrase = keyword.toLowerCase().trim();
-  if (phrase.length === 0) {
-    return 0;
-  }
-  if (haystack.includes(phrase)) {
-    return 10;
-  }
-  const words = phrase.split(/\s+/);
-  const present = words.filter((word) => haystack.includes(word));
-  if (present.length === words.length) {
-    return 7;
-  }
-  return present.length > 0 ? 4 : 0;
-}
-
-export const titleMatchScore = (stats: KeywordStats): number =>
-  average(stats.top10.map((item) => titleScore(item.title, stats.keywordText)));
-
-export const strengthScore = (stats: KeywordStats): number =>
-  logScale(
-    average(finiteNumbers(stats.top10.map((item) => item.ratingCount))),
-    100,
-    2_000_000,
-  );
-
-export const competitorsScore = (stats: KeywordStats): number =>
-  clamp(stats.top30TitleMatchCount / 3);
-
-export const freshnessScore = (stats: KeywordStats): number => {
-  const days = finiteNumbers(stats.top10.map((item) => item.daysSinceUpdate));
-  return days.length === 0 ? 0 : clamp(10 - average(days) / 9);
-};
-
-export const computeDifficulty = (stats: KeywordStats): number => {
-  const weights =
-    stats.store === 'GOOGLE_PLAY'
-      ? GPLAY_WEIGHTS.difficulty
-      : WEIGHTS.difficulty;
-  return clamp(
-    weights.titleMatch * titleMatchScore(stats) +
-      weights.strength * strengthScore(stats) +
-      weights.competitors * competitorsScore(stats) +
-      weights.freshness * freshnessScore(stats),
-  );
-};
 
 const round1 = (v: number): number => Math.round(v * 10) / 10;
 

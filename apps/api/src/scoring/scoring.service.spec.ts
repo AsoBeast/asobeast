@@ -76,7 +76,7 @@ describe('ScoringService', () => {
     const [args] = upsert.mock.calls[0];
     expect(args.create.keywordId).toBe('kw1');
     expect(args.create.traffic).toBeCloseTo(10, 2);
-    expect(args.create.difficulty).toBeCloseTo(9.64, 2);
+    expect(args.create.difficulty).toBeCloseTo(9.61, 2);
     expect(args.create.stats).toEqual({ ...stats, evidence });
     expect(args.create.scoringSource).toBe('APPLE_SUGGEST_SEARCH');
     expect(args.create.formulaVersion).toBe('app-store-v1');

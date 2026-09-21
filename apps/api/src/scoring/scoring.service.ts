@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeDifficulty } from './formulas';
+import { computeDifficulty } from './difficulty';
 import { scoringConfidence, scoringProfile } from './provenance';
 import {
   CollectedKeywordStats,
