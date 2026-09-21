@@ -297,16 +297,21 @@ export async function sparklineRows(
 
 export async function medianRatingsAt(
   prisma: PrismaService,
-  keywordIds: string[],
+  rows: TrackedRow[],
   date: Date | null,
+  country: string,
 ): Promise<Map<string, number | null>> {
-  if (!date || keywordIds.length === 0) {
+  const wanted = date
+    ? rows.flatMap((row) => {
+        const metric = metricAt(row.keyword.metrics, date);
+        return metric ? [{ keywordId: row.keywordId, date: metric.date }] : [];
+      })
+    : [];
+  if (wanted.length === 0) {
     return new Map();
   }
   const metrics = await prisma.keywordMetric.findMany({
-    where: { keywordId: { in: keywordIds }, date: { lte: date } },
-    orderBy: [{ keywordId: 'asc' }, { date: 'desc' }],
-    distinct: ['keywordId'],
+    where: { OR: wanted, keyword: { country } },
     select: { keywordId: true, stats: true },
   });
   return new Map(

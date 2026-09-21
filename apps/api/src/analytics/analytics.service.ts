@@ -85,7 +85,7 @@ export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async summary(appId: string): Promise<AppSummary> {
-    await this.ensureApp(appId);
+    const { country } = await this.ensureApp(appId);
 
     const reference = await referenceDate(this.prisma, appId);
     const windowStart = reference
@@ -109,8 +109,9 @@ export class AnalyticsService {
     ]);
     const medianRatings = await medianRatingsAt(
       this.prisma,
-      rows.map((row) => row.keywordId),
+      rows,
       reference,
+      country,
     );
 
     return {
@@ -308,13 +309,14 @@ export class AnalyticsService {
     };
   }
 
-  private async ensureApp(appId: string): Promise<void> {
+  private async ensureApp(appId: string): Promise<{ country: string }> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true },
+      select: { country: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);
     }
+    return app;
   }
 }

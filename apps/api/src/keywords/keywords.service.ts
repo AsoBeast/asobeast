@@ -85,13 +85,13 @@ export class KeywordsService {
     sort?: KeywordSort,
     country?: string,
   ): Promise<TrackedKeywordItem[]> {
-    await ensureApp(this.prisma, appId);
+    const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
     const [facts, volatility] = await Promise.all([
-      this.snapshotFacts(appId),
+      this.snapshotFacts(app),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
@@ -133,20 +133,21 @@ export class KeywordsService {
       });
   }
 
-  private async snapshotFacts(appId: string): Promise<AppFacts> {
+  private async snapshotFacts(app: KeywordApp): Promise<AppFacts> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
+      where: { appId: app.id },
       orderBy: { capturedAt: 'desc' },
       select: { title: true, subtitle: true, summary: true, ratingCount: true },
     });
     if (!snapshot) {
-      return { snapshotText: '', ratingCount: null };
+      return { snapshotText: '', ratingCount: null, country: app.country };
     }
     return {
       snapshotText: [snapshot.title, snapshot.subtitle, snapshot.summary]
         .filter((part): part is string => Boolean(part))
         .join(' '),
       ratingCount: snapshot.ratingCount,
+      country: app.country,
     };
   }
 
@@ -306,7 +307,7 @@ export class KeywordsService {
       orderBy: [{ fieldOrder: 'asc' }, ...trackedOrder()],
     });
     const [facts, volatility] = await Promise.all([
-      this.snapshotFacts(app.id),
+      this.snapshotFacts(app),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),

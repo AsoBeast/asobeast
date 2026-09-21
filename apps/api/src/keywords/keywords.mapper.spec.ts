@@ -32,6 +32,7 @@ const row = (
 const facts = (snapshotText: string, ratingCount: number | null = null) => ({
   snapshotText,
   ratingCount,
+  country: 'us',
 });
 
 describe('toTrackedKeywordItem', () => {
@@ -126,6 +127,12 @@ describe('toTrackedKeywordItem', () => {
         toTrackedKeywordItem(scored({ signals }), facts('', ratingCount))
           .opportunity,
       ).toBe(expected);
+    });
+
+    it('does not weigh home market ratings against another market', () => {
+      const abroad = scored({ signals });
+      abroad.keyword.country = 'de';
+      expect(toTrackedKeywordItem(abroad, facts('', 4)).opportunity).toBe(34.7);
     });
 
     it('does not shift a v1 row without signals', () => {

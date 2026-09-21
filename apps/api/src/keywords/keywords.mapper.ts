@@ -140,9 +140,14 @@ function positionFacts(
 export interface AppFacts {
   snapshotText: string;
   ratingCount: number | null;
+  country: string;
 }
 
-const NO_APP_FACTS: AppFacts = { snapshotText: '', ratingCount: null };
+const NO_APP_FACTS: AppFacts = {
+  snapshotText: '',
+  ratingCount: null,
+  country: '',
+};
 
 export function toTrackedKeywordItem(
   row: TrackedKeywordRow,
@@ -164,7 +169,8 @@ export function toTrackedKeywordItem(
     traffic,
     difficulty,
     ranking: { position: latestPosition, checked: latestDepth !== null },
-    appRatingCount: app.ratingCount,
+    appRatingCount:
+      row.keyword.country === app.country ? app.ratingCount : null,
     medianTopTenRatings: signals?.medianRatingCount ?? null,
   });
   return {
