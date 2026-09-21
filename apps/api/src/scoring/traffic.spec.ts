@@ -78,6 +78,21 @@ describe('computeTraffic', () => {
     ).toBeCloseTo(6.2315, 3);
   });
 
+  it.each([0, 1, 5])(
+    'never caps an unlisted term below the absent cap for a floor of %s',
+    (absentBelow) => {
+      expect(
+        computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow } }),
+      ).toBeCloseTo(1.5, 6);
+    },
+  );
+
+  it('keeps the official value when the search returned nothing', () => {
+    const empty = { ...fixtures.F9_OFFICIAL, resultCount: 0, top10: [] };
+    expect(computeTraffic(empty)).toBeCloseTo(7.1, 3);
+    expect(estimateTraffic(empty)).toBe(0);
+  });
+
   it('equals the estimate when no official value exists', () => {
     expect(estimateTraffic(fixtures.F1_HEAD)).toBe(
       computeTraffic(fixtures.F1_HEAD),

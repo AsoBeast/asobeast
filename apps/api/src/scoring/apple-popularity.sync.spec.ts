@@ -115,6 +115,22 @@ describe('ApplePopularitySync', () => {
     });
   });
 
+  it('removes a week whose write failed part way', async () => {
+    const { sync, prisma } = build(['us'], (country, week) =>
+      Promise.resolve(rows(country, week, 1001)),
+    );
+    prisma.searchTermPopularity.createMany
+      .mockResolvedValueOnce({ count: 1000 })
+      .mockRejectedValueOnce(new Error('connection lost'));
+
+    await expect(sync.run(NOW)).rejects.toThrow('every market');
+
+    expect(prisma.searchTermPopularity.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prisma.searchTermPopularity.deleteMany).toHaveBeenCalledWith({
+      where: { country: 'us', week: new Date('2026-09-13T00:00:00Z') },
+    });
+  });
+
   it('stores the week it asked for whatever form apple echoes', async () => {
     const { sync, prisma } = build(['us'], (country) =>
       Promise.resolve(rows(country, 'Sep 13, 2026', 1)),

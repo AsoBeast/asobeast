@@ -76,6 +76,20 @@ describe('OfficialPopularityLookup', () => {
     });
   });
 
+  it('only reads a week from the last 28 days', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-21T00:00:00Z'));
+    const { lookup, prisma } = build();
+
+    await lookup.for(keyword('quiz'));
+
+    expect(prisma.searchTermPopularity.findFirst).toHaveBeenCalledWith({
+      where: { country: 'us', week: { gte: new Date('2026-08-24T00:00:00Z') } },
+      orderBy: { week: 'desc' },
+      select: { week: true },
+    });
+    jest.useRealTimers();
+  });
+
   it('says nothing without a dataset for the market', async () => {
     const { lookup } = build({ latestWeek: null });
 

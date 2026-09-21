@@ -4,6 +4,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ApplePopularityClient } from './apple-popularity';
 import { OfficialPopularity } from './formulas';
 
+export const POPULARITY_MAX_AGE_DAYS = 28;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export interface PopularityKeyword {
   text: string;
   store: Store;
@@ -24,7 +27,10 @@ export class OfficialPopularityLookup {
       return undefined;
     }
     const latest = await this.prisma.searchTermPopularity.findFirst({
-      where: { country: keyword.country },
+      where: {
+        country: keyword.country,
+        week: { gte: new Date(Date.now() - POPULARITY_MAX_AGE_DAYS * DAY_MS) },
+      },
       orderBy: { week: 'desc' },
       select: { week: true },
     });
