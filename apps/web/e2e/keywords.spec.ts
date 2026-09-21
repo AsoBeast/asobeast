@@ -172,6 +172,12 @@ test("score details are persistent, keyboard accessible and store specific", asy
   await expect(page.getByRole("tooltip")).toContainText(
     "input completeness, not ranking accuracy",
   );
+  await expect(page.getByRole("tooltip")).toContainText(
+    "Apple reports a search popularity of 71 for this term.",
+  );
+  await expect(page.getByRole("tooltip")).toContainText(
+    "The store suggests it after 2 typed characters, in position 8.",
+  );
   await appleScore.press("Escape");
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 
@@ -184,13 +190,26 @@ test("score details are persistent, keyboard accessible and store specific", asy
   );
   await playScore.press("Escape");
 
+  const brandDifficulty = page
+    .getByRole("row", { name: /pomodoro/ })
+    .getByRole("button", { name: /Difficulty 70.*Medium confidence/ });
+  await brandDifficulty.focus();
+  await expect(
+    page.getByRole("tooltip").filter({
+      hasText: "A brand search: one app dominates this page.",
+    }),
+  ).toBeVisible();
+  await brandDifficulty.press("Escape");
+
   const invalidTimeScore = page
     .getByRole("row", { name: /study timer/ })
     .getByRole("button", { name: /Traffic 3000.*Low confidence/ });
   await invalidTimeScore.focus();
-  await expect(
-    page.getByRole("tooltip").filter({ hasText: "Capture time unavailable" }),
-  ).toBeVisible();
+  const invalidTimeTooltip = page
+    .getByRole("tooltip")
+    .filter({ hasText: "Capture time unavailable" });
+  await expect(invalidTimeTooltip).toBeVisible();
+  await expect(invalidTimeTooltip).not.toContainText("The store suggests");
   await invalidTimeScore.press("Escape");
 
   const opportunityScore = page

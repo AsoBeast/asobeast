@@ -22,6 +22,7 @@ import {
   VolatilityCell,
 } from "./keyword-cells";
 import { scoreValue } from "./keyword-scores";
+import { difficultySignalLines, trafficSignalLines } from "./score-signals";
 import { SourceBadge } from "./SourceBadge";
 
 const columnHelper = createColumnHelper<
@@ -141,6 +142,7 @@ function scoreColumns({ sort, onSort }: SortState) {
           label="Traffic"
           tone="none"
           provenance={row.original.scoreProvenance}
+          details={trafficSignalLines(row.original.scoreSignals ?? null)}
         />
       ),
     }),
@@ -159,6 +161,7 @@ function scoreColumns({ sort, onSort }: SortState) {
           value={scoreValue(row.original, "difficulty")}
           label="Difficulty"
           provenance={row.original.scoreProvenance}
+          details={difficultySignalLines(row.original.scoreSignals ?? null)}
         />
       ),
     }),

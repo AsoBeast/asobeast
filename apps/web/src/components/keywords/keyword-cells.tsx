@@ -22,7 +22,7 @@ import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const DERIVED_SCORE_DETAIL =
-  "Calculated from traffic, difficulty and this app's keyword relevance when the list loaded, so it carries no stored capture time.";
+  "Calculated from traffic, difficulty and this app's keyword relevance when the list loaded, so it carries no stored capture time. A keyword much stronger or weaker than your app's rating count shifts the difficulty it is weighed against.";
 
 function ScoreButton({
   value,
@@ -83,12 +83,14 @@ export function ScoreCell({
   value,
   label,
   provenance,
+  details,
   emphasize,
   tone,
 }: {
   value: number | null;
   label: string;
   provenance: ScoreProvenance | null;
+  details?: string[];
   emphasize?: boolean;
   tone?: MeterTone | "none";
 }) {
@@ -104,6 +106,13 @@ export function ScoreCell({
           : "Legacy score"
       }
     >
+      {details && details.length > 0 ? (
+        <ul className="flex flex-col gap-1">
+          {details.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      ) : null}
       <ScoreProvenanceDetails provenance={provenance} />
     </ScoreButton>
   );
