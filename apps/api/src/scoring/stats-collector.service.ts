@@ -8,6 +8,7 @@ import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
 import { readPreviousTop10 } from './score-signals';
+import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
 import {
   ProbedReach,
   probeSuggestReach,
@@ -17,6 +18,7 @@ import {
 const SEARCH_DEPTH = 100;
 const TOP_STRENGTH = 10;
 const TITLE_MATCH_DEPTH = 30;
+export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export interface CollectedKeywordStats {
@@ -143,6 +145,7 @@ export class StatsCollectorService {
   ): Promise<DetailCollection> {
     const targets = results.slice(0, TOP_STRENGTH);
     const enriched: KeywordStats['top10'] = [];
+    let failed = 0;
     for (const item of targets) {
       try {
         const app = await provider.getApp(item.storeAppId, country);
@@ -162,15 +165,19 @@ export class StatsCollectorService {
         });
       } catch (error) {
         this.logger.warn(
-          `detail lookup failed for "${item.storeAppId}", dropping it: ${messageOf(error)}`,
+          `detail lookup failed for "${item.storeAppId}", keeping its search entry: ${messageOf(error)}`,
         );
+        failed += 1;
+        enriched.push(this.toStrength(item));
       }
     }
-    return {
-      items: enriched,
-      targetCount: targets.length,
-      successCount: enriched.length,
-    };
+    const successCount = targets.length - failed;
+    if (successCount < targets.length * MIN_DETAIL_SUCCESS_SHARE) {
+      throw new Error(
+        `only ${successCount} of ${targets.length} detail lookups succeeded`,
+      );
+    }
+    return { items: enriched, targetCount: targets.length, successCount };
   }
 
   private toStrength(item: SearchItem): KeywordStats['top10'][number] {
@@ -188,11 +195,10 @@ export class StatsCollectorService {
   }
 
   private countTitleMatches(results: SearchItem[], text: string): number {
-    const words = text.toLowerCase().split(/\s+/).filter(Boolean);
-    return results.slice(0, TITLE_MATCH_DEPTH).filter((item) => {
-      const title = item.title.toLowerCase();
-      return words.every((word) => title.includes(word));
-    }).length;
+    return results
+      .slice(0, TITLE_MATCH_DEPTH)
+      .filter((item) => titleEvidence(item.title, text) >= EVIDENCE_ALL_WORDS)
+      .length;
   }
 }
 

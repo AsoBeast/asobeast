@@ -224,7 +224,7 @@ describe('StatsCollectorService', () => {
     });
   });
 
-  it('drops a google play entry when its detail lookup fails', async () => {
+  it('keeps a google play entry in place when its detail lookup fails', async () => {
     const getApp = jest
       .fn()
       .mockResolvedValue(buildApp())
@@ -239,9 +239,27 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(getApp).toHaveBeenCalledTimes(10);
-    expect(collected?.stats.top10).toHaveLength(9);
+    expect(collected?.stats.top10).toHaveLength(10);
+    expect(collected?.stats.top10[0]).toMatchObject({
+      storeAppId: 'app0',
+      title: 'Puzzle Game 0',
+    });
     expect(collected?.evidence.detailTargetCount).toBe(10);
     expect(collected?.evidence.detailSuccessCount).toBe(9);
+  });
+
+  it('refuses to score when most google play detail lookups fail', async () => {
+    const getApp = jest.fn().mockRejectedValue(new Error('rate limited'));
+    const { registry } = buildGplayProvider({ getApp });
+    const service = new StatsCollectorService(
+      buildGplayPrisma(),
+      registry,
+      noOfficial,
+    );
+
+    await expect(service.collect('kw1')).rejects.toThrow(
+      'only 0 of 10 detail lookups succeeded',
+    );
   });
 
   it('stops prefix probing at the first suggest hit', async () => {
