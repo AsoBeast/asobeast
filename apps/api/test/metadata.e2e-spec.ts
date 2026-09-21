@@ -6,7 +6,9 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   MetadataAssistantResult,
   MetadataAssistantStatus,
+  KEYWORD_FIELD_BYTE_LIMIT,
   MetadataAuditResult,
+  utf8ByteLength,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -231,6 +233,72 @@ describe('MetadataController (e2e)', () => {
     expect(suggestion?.charactersUsed).toBeLessThanOrEqual(100);
     expect(suggestion?.value).not.toContain(', ');
     expect(suggestion?.addedTerms).toContain('daily goal');
+  });
+
+  it('packs the keyword field suggestion within 100 bytes', async () => {
+    const id = await seed(false);
+    const polish = [
+      'zażółć',
+      'gęślą',
+      'jaźń',
+      'łódź',
+      'źrebię',
+      'ćma',
+      'żółw',
+      'świeca',
+      'mąka',
+      'ślimak',
+      'pączek',
+      'żaba',
+      'źdźbło',
+      'ćwierć',
+    ];
+    for (const text of polish) {
+      const keyword = await prisma.keyword.create({
+        data: { text, store: Store.APP_STORE, country: 'us' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: id,
+          keywordId: keyword.id,
+          source: 'MANUAL',
+          active: true,
+        },
+      });
+    }
+
+    const response = await api.get(`/apps/${id}/metadata/audit`).expect(200);
+    const suggestion = (response.body as MetadataAuditResult)
+      .keywordFieldSuggestion;
+
+    const value = suggestion?.value ?? '';
+    expect(suggestion?.addedTerms.length).toBeGreaterThan(2);
+    expect(utf8ByteLength(value)).toBeLessThanOrEqual(KEYWORD_FIELD_BYTE_LIMIT);
+    expect(suggestion?.charactersUsed).toBe(utf8ByteLength(value));
+  });
+
+  it('counts a pasted keyword field in bytes', async () => {
+    const id = await seed(false);
+    const keyword = await prisma.keyword.create({
+      data: { text: 'zażółć', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: keyword.id,
+        source: 'KEYWORD_FIELD',
+        active: true,
+        fieldOrder: 0,
+      },
+    });
+
+    const response = await api.get(`/apps/${id}/metadata/audit`).expect(200);
+    const keywordField = (response.body as MetadataAuditResult).fields.find(
+      (field) => field.field === 'keywordField',
+    );
+
+    expect(keywordField?.value).toBe('zażółć');
+    expect(keywordField?.chars).toBe(10);
   });
 
   it('includes the keyword field when it has been pasted', async () => {

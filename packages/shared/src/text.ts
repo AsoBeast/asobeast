@@ -138,9 +138,11 @@ const DOTTED_SMALL_I = 'i\u0307';
 
 export function normalizeText(input: string): string {
   return input
+    .normalize('NFC')
     .toLowerCase()
     .replaceAll(DOTTED_SMALL_I, 'i')
-    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, ' ')
+    .replace(/(^| )\p{M}+/gu, '$1')
     .trim()
     .replace(/\s+/g, ' ');
 }

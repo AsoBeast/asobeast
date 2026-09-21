@@ -64,8 +64,8 @@ import type {
 } from "@asobeast/shared";
 import {
   DELETION_CONFIRMATION,
-  KEYWORD_FIELD_CHAR_LIMIT,
-  keywordFieldChars,
+  KEYWORD_FIELD_BYTE_LIMIT,
+  keywordFieldBytes,
   parseKeywordField,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
@@ -345,8 +345,8 @@ function keywordFieldResult(text: string, country: string): KeywordFieldResult {
 
   return {
     tracked: phrases.map((value) => trackedFromKeywordField(value, country)),
-    charactersUsed: keywordFieldChars(phrases),
-    charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+    charactersUsed: keywordFieldBytes(phrases),
+    charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
     duplicatesRemoved,
   };
 }

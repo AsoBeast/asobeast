@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  fieldLength,
+  KEYWORD_FIELD_BYTE_LIMIT,
+  packKeywordField,
   CoverageFieldStatus,
   KeywordCoverageRow,
   KeywordFieldSuggestion,
@@ -16,12 +19,11 @@ import {
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
+  utf8ByteLength,
 } from '@asobeast/shared';
 import { coversPhrase } from '../audit/audit-scoring';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-
-const KEYWORD_FIELD_LIMIT = STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -130,7 +132,11 @@ export class MetadataService {
           app.store,
           'keywordField',
           keywordFieldValue,
-          lintKeywordField(keywordFieldValue, context, KEYWORD_FIELD_LIMIT),
+          lintKeywordField(
+            keywordFieldValue,
+            context,
+            KEYWORD_FIELD_BYTE_LIMIT,
+          ),
         ),
       );
     }
@@ -173,7 +179,7 @@ export class MetadataService {
     return {
       field,
       value,
-      chars: value.length,
+      chars: fieldLength(field, value),
       limit: limit.limit,
       indexed: limit.indexed,
       issues,
@@ -212,25 +218,15 @@ export class MetadataService {
       }))
       .sort((a, b) => b.score - a.score);
 
-    const added: string[] = [];
-    let value = '';
-    for (const candidate of candidates) {
-      if (!candidate.text || added.includes(candidate.text)) {
-        continue;
-      }
-      const next =
-        value.length === 0 ? candidate.text : `${value},${candidate.text}`;
-      if (next.length > KEYWORD_FIELD_LIMIT) {
-        continue;
-      }
-      value = next;
-      added.push(candidate.text);
-    }
+    const added = packKeywordField([
+      ...new Set(candidates.map((candidate) => candidate.text).filter(Boolean)),
+    ]);
+    const value = added.join(',');
 
     return {
       value,
-      charactersUsed: value.length,
-      charactersLimit: KEYWORD_FIELD_LIMIT,
+      charactersUsed: utf8ByteLength(value),
+      charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
       addedTerms: added,
     };
   }

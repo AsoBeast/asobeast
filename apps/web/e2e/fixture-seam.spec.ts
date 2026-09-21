@@ -4,7 +4,7 @@ import type {
   KeywordFieldResult,
   WebhookItem,
 } from "@asobeast/shared";
-import { KEYWORD_FIELD_CHAR_LIMIT } from "@asobeast/shared";
+import { KEYWORD_FIELD_BYTE_LIMIT, utf8ByteLength } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { APP_1_DETAIL, APP_GP_DETAIL, APP_GP_DISCOVERY } from "./fixtures.mts";
 
@@ -73,8 +73,8 @@ test("saving the keyword field answers with the counts the product derives", asy
   expect(response.status()).toBe(200);
   const result = (await response.json()) as KeywordFieldResult;
   expect(result).toMatchObject({
-    charactersUsed: "focus timer,deep work".length,
-    charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+    charactersUsed: utf8ByteLength("focus timer,deep work"),
+    charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
     duplicatesRemoved: 1,
   });
   expect(result.tracked.map((keyword) => keyword.text)).toEqual([

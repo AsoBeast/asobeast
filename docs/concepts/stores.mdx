@@ -1,7 +1,7 @@
 ---
 title: App Store and Google Play
 sidebarTitle: Stores
-description: "Apple indexes a title, a subtitle and a private 100 character keyword field. Google Play indexes the title, short description and long description."
+description: "Apple indexes a title, a subtitle and a private 100 byte keyword field. Google Play indexes the title, short description and long description."
 icon: store
 keywords: ["App Store","Google Play","subtitle","keyword field","short description","indexed fields"]
 ---
@@ -25,7 +25,7 @@ Google Play search therefore reads three surfaces: the title, the 80 character s
 
 ## Why is the iOS keyword field private?
 
-The 100 character iOS keyword field never appears on the public store page, so no amount of collection can read it. It exists only in App Store Connect.
+The 100 byte iOS keyword field never appears on the public store page, so no amount of collection can read it. It exists only in App Store Connect.
 
 asobeast handles this by asking you for it. Paste the field in the metadata workbench and asobeast stores those keywords with the source `KEYWORD_FIELD`, which lets coverage checks, the audit rubric and the Action Center reason about a surface they cannot otherwise see.
 
@@ -42,8 +42,8 @@ The field is one endpoint pair on the app, and both answer the same `KeywordFiel
 
 Six things the schema cannot tell you.
 
-- **The value is the tracked set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing and casing can differ from what you submitted, a repeated phrase stays where it first appeared, and the character count is the count of the normalized set. The phrases keep the order of the latest submission.
-- **A save is held to the 100 character limit.** The limit is measured on the normalized set, the same count `charactersUsed` reports, so spacing and duplicates in the submitted text do not count against it. A save whose normalized set runs past 100 characters answers 400 and changes nothing.
+- **The value is the tracked set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing and casing can differ from what you submitted, a repeated phrase stays where it first appeared, and the byte count is the count of the normalized set. Accented letters are stored in their composed form, so `zażółć` pasted as decomposed text, which macOS copy and paste can produce, is tracked and counted the same as `zażółć` typed directly. The phrases keep the order of the latest submission.
+- **A save is held to the 100 byte limit.** App Store Connect counts the keyword field in UTF-8 bytes, so a letter such as ą takes 2 and a Chinese, Japanese or Korean character takes 3. The limit is measured on the normalized set, the same count `charactersUsed` reports in bytes, so spacing and duplicates in the submitted text do not count against it. A save whose normalized set runs past 100 bytes answers 400 and changes nothing.
 - **It is home market only.** The read takes no country and scopes itself to `app.country`, because the keyword field belongs to the app rather than to a storefront. See [Countries and markets](/concepts/countries).
 - **`duplicatesRemoved` is 0 on a read.** It reports what the last submission discarded, and a read submits nothing.
 - **A save never untracks a keyword something else tracks.** A phrase already tracked from the title, the subtitle, the short description or a manual add joins the field without losing that source, and the API reports it as `KEYWORD_FIELD` while it is in the field. A later save that leaves it out only takes it out of the field, so it stays tracked under its own source. A phrase that only the field tracks is deactivated when a save leaves it out. Adding such a phrase manually or reactivating it makes it a manual keyword, and a snapshot that finds it in the title, subtitle or short description gives it that source.

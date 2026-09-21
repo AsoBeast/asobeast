@@ -1,6 +1,38 @@
 import { describe, expect, it } from 'vitest';
 
-import { keywordFieldChars, parseKeywordField } from './keyword-field';
+import {
+  keywordFieldBytes,
+  keywordFieldChars,
+  packKeywordField,
+  parseKeywordField,
+} from './keyword-field';
+
+describe('keywordFieldBytes', () => {
+  it('counts the stored field in UTF-8 bytes the way App Store Connect does', () => {
+    expect(keywordFieldBytes(['habit', 'tracker'])).toBe(13);
+    expect(keywordFieldBytes(['zażółć', 'łódź'])).toBe(18);
+    expect(keywordFieldBytes([])).toBe(0);
+  });
+});
+
+describe('packKeywordField', () => {
+  it('keeps whole phrases in order while the field fits 100 bytes', () => {
+    const packed = packKeywordField([
+      'ą'.repeat(40),
+      'ę'.repeat(20),
+      'ab',
+      'c',
+    ]);
+
+    expect(packed).toEqual(['ą'.repeat(40), 'ab', 'c']);
+    expect(keywordFieldBytes(packed)).toBeLessThanOrEqual(100);
+  });
+
+  it('keeps a field that lands exactly on the limit', () => {
+    expect(packKeywordField(['ą'.repeat(50)])).toEqual(['ą'.repeat(50)]);
+    expect(packKeywordField(['a'.repeat(99) + 'ą'])).toEqual([]);
+  });
+});
 
 describe('parseKeywordField', () => {
   it('removes duplicates in first occurrence order and counts them', () => {
@@ -26,6 +58,17 @@ describe('parseKeywordField', () => {
       phrases: ['fitness', 'istanbul run', 'step counter'],
       duplicatesRemoved: 1,
     });
+  });
+
+  it('reads a decomposed field as the same phrases as a precomposed one', () => {
+    const composed = 'zażółć,łódź,Zażółć';
+    expect(parseKeywordField(composed.normalize('NFD'))).toEqual({
+      phrases: ['zażółć', 'łódź'],
+      duplicatesRemoved: 1,
+    });
+    expect(parseKeywordField(composed.normalize('NFD'))).toEqual(
+      parseKeywordField(composed),
+    );
   });
 
   it('reads nothing from an empty or comma only field', () => {

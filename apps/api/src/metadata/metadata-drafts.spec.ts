@@ -1,8 +1,10 @@
 import { Store } from '@prisma/client';
 import {
+  KEYWORD_FIELD_BYTE_LIMIT,
   LintContext,
   MetadataAuditResult,
   TrackedKeywordItem,
+  utf8ByteLength,
 } from '@asobeast/shared';
 import { buildAssistantContext, validateDrafts } from './metadata-drafts';
 
@@ -101,6 +103,50 @@ describe('validateDrafts', () => {
     expect(title?.chars).toBe(30);
     expect(title?.limit).toBe(30);
     expect(Array.isArray(title?.issues)).toBe(true);
+  });
+
+  it('trims a keyword field draft to whole phrases within 100 bytes', () => {
+    const [draft] = validateDrafts(
+      {
+        drafts: [
+          {
+            field: 'keywordField',
+            value:
+              'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć',
+            rationale: 'r',
+          },
+        ],
+      },
+      Store.APP_STORE,
+      ['keywordField'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe(
+      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba',
+    );
+    expect(draft.chars).toBe(utf8ByteLength(draft.value));
+    expect(draft.chars).toBeLessThanOrEqual(KEYWORD_FIELD_BYTE_LIMIT);
+  });
+
+  it('measures a decomposed keyword field draft once it is composed', () => {
+    const [draft] = validateDrafts(
+      {
+        drafts: [
+          {
+            field: 'keywordField',
+            value: ` ${'á'.repeat(34)} ,été`,
+            rationale: 'r',
+          },
+        ],
+      },
+      Store.APP_STORE,
+      ['keywordField'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe(`${'á'.repeat(34)},été`);
+    expect(draft.chars).toBe(utf8ByteLength(draft.value));
   });
 
   it('tolerates junk without throwing', () => {

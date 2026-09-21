@@ -1,7 +1,11 @@
 "use client";
 
 import { useId, useState } from "react";
-import { type LintIssue, type MetadataField } from "@asobeast/shared";
+import {
+  fieldLength,
+  type LintIssue,
+  type MetadataField,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Meter } from "@/components/ui/meter";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +29,8 @@ export function MetadataFieldCard({
 }) {
   const countId = useId();
   const [draft, setDraft] = useState(value);
-  const over = draft.length > limit;
+  const used = fieldLength(field, draft);
+  const over = used > limit;
   const label = METADATA_FIELD_LABELS[field];
 
   return (
@@ -40,13 +45,13 @@ export function MetadataFieldCard({
             over ? "font-semibold text-signal-down" : "text-muted-foreground",
           )}
         >
-          {draft.length}/{limit}
-          {over ? ` · ${draft.length - limit} over` : ""}
+          {used}/{limit}
+          {over ? ` · ${used - limit} over` : ""}
         </span>
       </div>
 
       <Meter
-        value={Math.min(draft.length, limit)}
+        value={Math.min(used, limit)}
         max={limit}
         tone={over ? "neutral" : "score"}
         className={over ? "bg-signal-down-subtle" : undefined}

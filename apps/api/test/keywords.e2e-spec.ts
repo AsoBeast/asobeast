@@ -8,11 +8,13 @@ import {
   ApiErrorEnvelope,
   AppDetail,
   DailyBudget,
+  KEYWORD_FIELD_BYTE_LIMIT,
   KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
   SpiderStatus,
+  utf8ByteLength,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
@@ -356,7 +358,7 @@ describe('KeywordsController (e2e)', () => {
       .expect(400);
 
     expect((response.body as ApiErrorEnvelope).message).toBe(
-      `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+      `Keyword field exceeds ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
     );
     const stored = await api.get(`/apps/${id}/keyword-field`).expect(200);
     expect(
@@ -365,6 +367,76 @@ describe('KeywordsController (e2e)', () => {
     expect(
       await prisma.keyword.count({ where: { text: { startsWith: 'kw' } } }),
     ).toBe(0);
+  });
+
+  it('refuses a keyword field that fits 100 characters but not 100 bytes', async () => {
+    const id = await importApp();
+    const text =
+      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
+    expect(text).toHaveLength(83);
+    expect(utf8ByteLength(text)).toBe(111);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      `Keyword field exceeds ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
+    );
+  });
+
+  it('holds a multibyte keyword field to exactly 100 bytes', async () => {
+    const id = await importApp();
+
+    const atLimit = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'ą'.repeat(50) })
+      .expect(200);
+    expect((atLimit.body as KeywordFieldResult).charactersUsed).toBe(
+      KEYWORD_FIELD_BYTE_LIMIT,
+    );
+
+    await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: `${'a'.repeat(99)}ą` })
+      .expect(400);
+  });
+
+  it('counts a stored multibyte keyword field in bytes', async () => {
+    const id = await importApp();
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: 'zażółć,łódź' })
+      .expect(200);
+    const body = response.body as KeywordFieldResult;
+
+    expect(body.charactersUsed).toBe(18);
+    expect(body.charactersLimit).toBe(KEYWORD_FIELD_BYTE_LIMIT);
+  });
+
+  it('stores a decomposed keyword field in its precomposed form', async () => {
+    const id = await importApp();
+    const text = 'zażółć,łódź';
+    expect(text.normalize('NFD')).not.toBe(text);
+
+    const response = await api
+      .put(`/apps/${id}/keyword-field`)
+      .send({ text: text.normalize('NFD') })
+      .expect(200);
+    const body = response.body as KeywordFieldResult;
+
+    expect(body.tracked.map((item) => item.text).sort()).toEqual([
+      'zażółć',
+      'łódź',
+    ]);
+    expect(body.charactersUsed).toBe(18);
+    expect(
+      await prisma.keyword.count({
+        where: { text: { in: ['zażółć', 'łódź'] } },
+      }),
+    ).toBe(2);
   });
 
   it('accepts a keyword field at the limit once spacing, casing and duplicates are removed', async () => {
