@@ -26,6 +26,7 @@ import { Env } from '../config/env';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
+import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
 import { DigestDispatcher } from './digest.dispatcher';
@@ -66,6 +67,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly storeCanary: StoreCanaryService,
     private readonly publishedStatus: PublishedStatusService,
     private readonly tracking: ErrorTracking,
+    private readonly popularity: ApplePopularitySync,
   ) {
     super();
   }
@@ -102,7 +104,23 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await this.scheduleProxySync();
     await this.scheduleStoreCanary();
     await this.schedulePublishedStatus();
+    await this.scheduleApplePopularity();
     await this.rescoreOutdatedKeywords();
+  }
+
+  private async scheduleApplePopularity(): Promise<void> {
+    if (!this.popularity.enabled) {
+      await this.pipelineQueue.removeJobScheduler('apple-popularity');
+      return;
+    }
+    await this.pipelineQueue.upsertJobScheduler(
+      'apple-popularity',
+      {
+        pattern: this.config.get('CRON_APPLE_POPULARITY', { infer: true }),
+        tz: 'UTC',
+      },
+      { name: JOBS.APPLE_POPULARITY },
+    );
   }
 
   private async rescoreOutdatedKeywords(): Promise<void> {
@@ -193,6 +211,11 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     }
     if (job.name === JOBS.SCORING) {
       await this.pipeline.fanOutScoring();
+      return;
+    }
+    if (job.name === JOBS.APPLE_POPULARITY) {
+      const synced = await this.popularity.run(new Date());
+      this.logger.log(`apple search popularity ${JSON.stringify(synced)}`);
       return;
     }
     if (job.name === JOBS.RETENTION) {

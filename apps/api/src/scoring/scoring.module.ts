@@ -8,6 +8,7 @@ import {
   DisabledPopularityClient,
 } from './apple-popularity';
 import { appleAdsPopularityClient } from './apple-popularity.client';
+import { ApplePopularitySync } from './apple-popularity.sync';
 import { ScoringService } from './scoring.service';
 import { StatsCollectorService } from './stats-collector.service';
 
@@ -35,12 +36,18 @@ function applePopularityClient(
   providers: [
     StatsCollectorService,
     ScoringService,
+    ApplePopularitySync,
     {
       provide: ApplePopularityClient,
       inject: [ConfigService],
       useFactory: applePopularityClient,
     },
   ],
-  exports: [StatsCollectorService, ScoringService, ApplePopularityClient],
+  exports: [
+    StatsCollectorService,
+    ScoringService,
+    ApplePopularityClient,
+    ApplePopularitySync,
+  ],
 })
 export class ScoringModule {}

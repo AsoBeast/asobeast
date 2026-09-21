@@ -46,6 +46,7 @@ export function queueNameForStore(store: Store): string {
 export const JOBS = {
   DAILY: 'daily-pipeline',
   SCORING: 'weekly-scoring',
+  APPLE_POPULARITY: 'apple-popularity-sync',
   RETENTION: 'data-retention',
   DIGEST: 'weekly-digest',
   AUDIT_SNAPSHOT: 'audit-snapshot',
