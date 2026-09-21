@@ -65,8 +65,11 @@ export const toDateKey = (date: Date): string =>
 
 const isSameDay = (a: Date, b: Date): boolean => a.getTime() === b.getTime();
 
+export const rankingAt = (rankings: Ranking[], date: Date): Ranking | null =>
+  rankings.find((ranking) => isSameDay(ranking.date, date)) ?? null;
+
 export const positionAt = (rankings: Ranking[], date: Date): number | null =>
-  rankings.find((ranking) => isSameDay(ranking.date, date))?.position ?? null;
+  rankingAt(rankings, date)?.position ?? null;
 
 export const metricAt = (metrics: Metric[], date: Date): Metric | null =>
   metrics.find((metric) => metric.date.getTime() <= date.getTime()) ?? null;

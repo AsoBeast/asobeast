@@ -1,4 +1,4 @@
-import { defaultRelevance, toDifficulty100, toVolume } from './formulas';
+import { toDifficulty100, toVolume } from './formulas';
 
 describe('scoring formulas', () => {
   describe('scale bridging', () => {
@@ -10,26 +10,6 @@ describe('scoring formulas', () => {
     it('maps difficulty to a 0-100 scale', () => {
       expect(toDifficulty100(4)).toBeCloseTo(40, 2);
       expect(toDifficulty100(11)).toBeCloseTo(100, 2);
-    });
-  });
-
-  describe('defaultRelevance', () => {
-    it('adds the overlap bonus when the keyword is fully in the snapshot', () => {
-      expect(
-        defaultRelevance('TITLE', 'habit tracker', 'daily habit tracker'),
-      ).toBe(100);
-    });
-
-    it('subtracts the bonus when there is zero overlap', () => {
-      expect(defaultRelevance('COMPETITOR', 'sudoku', 'habit tracker')).toBe(
-        40,
-      );
-    });
-
-    it('keeps the base for partial overlap', () => {
-      expect(
-        defaultRelevance('SUGGESTED', 'habit journal', 'habit tracker'),
-      ).toBe(60);
     });
   });
 });

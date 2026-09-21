@@ -1,6 +1,5 @@
-import { KeywordSource, Store, tokenize } from '@asobeast/shared';
+import { Store } from '@asobeast/shared';
 
-import { clamp } from './curves';
 import { SuggestReach } from './suggest-reach';
 
 export { toDifficulty100, toVolume } from '@asobeast/shared';
@@ -29,36 +28,3 @@ export interface KeywordStats {
   previousTop10?: PreviousSerpApp[];
   previousCapturedDaysAgo?: number;
 }
-
-export const ASOBEAST_DEFAULTS = {
-  relevanceBySource: {
-    TITLE: 90,
-    SUBTITLE: 90,
-    KEYWORD_FIELD: 90,
-    MANUAL: 80,
-    DESCRIPTION: 70,
-    SUGGESTED: 60,
-    COMPETITOR: 50,
-  } satisfies Record<KeywordSource, number>,
-  relevanceOverlapBonus: 10,
-} as const;
-
-export const defaultRelevance = (
-  source: KeywordSource,
-  keywordText: string,
-  snapshotText: string,
-): number => {
-  const base = ASOBEAST_DEFAULTS.relevanceBySource[source];
-  const tokens = tokenize(keywordText);
-  const snapshotTokens = new Set(tokenize(snapshotText));
-  let relevance = base;
-  if (tokens.length > 0) {
-    const overlap = tokens.filter((token) => snapshotTokens.has(token)).length;
-    if (overlap === tokens.length) {
-      relevance = base + ASOBEAST_DEFAULTS.relevanceOverlapBonus;
-    } else if (overlap === 0) {
-      relevance = base - ASOBEAST_DEFAULTS.relevanceOverlapBonus;
-    }
-  }
-  return clamp(relevance, 1, 100);
-};

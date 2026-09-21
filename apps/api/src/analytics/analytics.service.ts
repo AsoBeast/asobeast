@@ -24,6 +24,7 @@ import {
   delta,
   metricAt,
   positionAt,
+  rankingAt,
   referenceDate,
   startOfUtcDay,
   toDateKey,
@@ -54,6 +55,9 @@ const rowOpportunity = (
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
     : null;
+  const ranking = referenceDate
+    ? rankingAt(row.keyword.rankings, referenceDate)
+    : null;
   return appOpportunity({
     source: reportedSource(row),
     keywordText: row.keyword.text,
@@ -61,6 +65,9 @@ const rowOpportunity = (
     relevanceOverride: row.relevance,
     traffic: metric?.traffic ?? null,
     difficulty: metric?.difficulty ?? null,
+    ...(ranking
+      ? { ranking: { position: ranking.position, checked: true } }
+      : {}),
   }).opportunity;
 };
 

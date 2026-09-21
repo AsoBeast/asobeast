@@ -53,6 +53,36 @@ describe('toTrackedKeywordItem', () => {
     );
   });
 
+  describe('ranking evidence', () => {
+    const ranked = (position: number | null, relevance: number | null = null) =>
+      row({
+        relevance,
+        keyword: {
+          ...row().keyword,
+          text: 'geo quiz',
+          rankings: [{ position, date: new Date('2026-07-01'), depth: 200 }],
+        },
+      });
+
+    it('lifts a keyword the app already ranks for in the top fifty', () => {
+      expect(toTrackedKeywordItem(ranked(3), 'weather radar').relevance).toBe(
+        70,
+      );
+    });
+
+    it('lowers a competitor keyword checked and not found', () => {
+      expect(
+        toTrackedKeywordItem(ranked(null), 'weather radar').relevance,
+      ).toBe(30);
+    });
+
+    it('keeps a manual relevance over ranking evidence', () => {
+      expect(
+        toTrackedKeywordItem(ranked(3, 55), 'weather radar').relevance,
+      ).toBe(55);
+    });
+  });
+
   it('lets a manual relevance override beat the default', () => {
     const item = toTrackedKeywordItem(
       row({ relevance: 95 }),

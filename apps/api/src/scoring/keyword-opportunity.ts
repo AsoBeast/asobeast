@@ -1,6 +1,7 @@
 import { KeywordSource } from '@asobeast/shared';
-import { defaultRelevance, toDifficulty100, toVolume } from './formulas';
+import { toDifficulty100, toVolume } from './formulas';
 import { computeOpportunity } from './opportunity';
+import { defaultRelevance, RankingEvidence } from './relevance';
 
 export interface OpportunityInput {
   source: KeywordSource;
@@ -9,6 +10,7 @@ export interface OpportunityInput {
   relevanceOverride: number | null;
   traffic: number | null;
   difficulty: number | null;
+  ranking?: RankingEvidence;
 }
 
 export interface AppOpportunity {
@@ -21,7 +23,12 @@ export interface AppOpportunity {
 export function appOpportunity(input: OpportunityInput): AppOpportunity {
   const relevance =
     input.relevanceOverride ??
-    defaultRelevance(input.source, input.keywordText, input.snapshotText);
+    defaultRelevance(
+      input.source,
+      input.keywordText,
+      input.snapshotText,
+      input.ranking,
+    );
   const volume = input.traffic === null ? null : toVolume(input.traffic);
   const difficulty100 =
     input.difficulty === null ? null : toDifficulty100(input.difficulty);

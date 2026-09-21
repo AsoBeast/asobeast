@@ -111,6 +111,7 @@ export function toTrackedKeywordItem(
     relevanceOverride: row.relevance,
     traffic,
     difficulty,
+    ranking: { position: latestPosition, checked: latestDepth !== null },
   });
   return {
     keywordId: row.keywordId,
