@@ -28,14 +28,16 @@ Traffic starts from suggest reach: how early the store offers the exact phrase w
 | --- | --- |
 | Suggests it after 1 typed character | 10 |
 | After 2, 3, 4, 5, 6, 7 or 8 characters | 9, 7.8, 6.6, 5.4, 4.2, 3.2 and 2.4 |
-| Suggests it only for the whole phrase | 1.5 |
+| Suggests it only once the whole phrase is typed, however short the phrase is | 1.5 |
 | Never suggests it | 0 |
 
 Each position below the first in the suggestion list takes 3 percent off. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. Google Play never suggests the typed phrase itself, only longer searches that begin with it, so on Google Play a suggestion counts when it is the phrase in the plural or continues it with more words. A search that only shares its first letters does not count.
 
 The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched.
 
-Traffic is 65 percent reach and 35 percent demand, reduced for phrases of three words or more. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, traffic comes from demand alone at 70 percent and confidence drops to low.
+A title targets a phrase when it contains its words as whole words, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Korean and Thai are written without spaces, so there a word counts wherever it appears in the title.
+
+Traffic is 65 percent reach and 35 percent demand, reduced for longer phrases: by 8 percent for two words, 20 percent for three, 35 percent for four and half for five or more. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, traffic comes from demand alone at 70 percent and confidence drops to low.
 
 ## How is difficulty rated?
 
@@ -53,11 +55,15 @@ Once a previous scored page at least 14 days old exists, rating velocity joins a
 
 | Flag | When | Effect |
 | --- | --- | --- |
-| `brand` | The leader is named after the phrase and holds at least 10,000 ratings, ten times the rest of the page | Difficulty is at least 85 |
+| `brand` | The leader is named after the phrase and holds at least 10,000 ratings, ten times the typical rival whose title also targets the phrase | Difficulty is at least 85 |
 | `weak_leader` | The top result has fewer than 100 ratings | Difficulty is at most 35 |
 | `small_serp` | The store returns three results or fewer | Difficulty is at most 20 |
 
 The caps run after the brand floor, so a one result page is never rated hard. A page is `padded` when at most a fifth of its titles target the phrase.
+
+The leader is only measured against rivals that target the phrase, because Google Play fills a brand search with unrelated large apps. A leader counts as named after the phrase when the first part of its title, or its developer name without words such as Inc, Games or Studio, is the phrase.
+
+On Google Play the rating counts come from one detail lookup per result. A result whose lookup fails keeps its place on the page without a rating count, and when fewer than half of the lookups succeed the keyword is not scored in that run and the job retries.
 
 ## Which scale does a response use?
 
@@ -149,7 +155,9 @@ The result is clamped to the range 1 to 100. You can override relevance per trac
 Yes, with an Apple Ads API key. Apple publishes a weekly search popularity from 1 to 100 per storefront and genre for its most searched terms. With the key configured, asobeast syncs the newest complete week every Monday and, for App Store keywords:
 
 - uses Apple's number for a term Apple lists, with the source `APPLE_ADS_POPULARITY` and high confidence;
-- caps the estimate for a term Apple does not list below the lowest popularity Apple published that week, because the list covers the most searched terms.
+- caps the estimate for a term Apple does not list below the lowest popularity Apple published that week, because the list covers the most searched terms. The cap never goes under 15 on the shown scale, the same limit as a phrase the store never suggests.
+
+A week older than 28 days is ignored, so a lapsed key falls back to the estimate instead of serving old numbers. A week whose write fails part way is removed and synced again.
 
 Google Play has no equivalent, so its traffic stays an estimate. The instance connects with its own credentials; see [Connect Apple Ads](/operations/apple-ads) and the [configuration reference](/configuration/reference#apple-search-popularity).
 
@@ -157,7 +165,7 @@ Google Play has no equivalent, so its traffic stays an estimate. The instance co
 
 ## What happens to old scores after an upgrade?
 
-They are rescored once, automatically. When the API starts with a new formula version, every tracked keyword whose latest score used an older version is queued for one score job, through the same rate limited queues as weekly scoring. Until its job runs, the keyword keeps its old numbers and the table says "Older formula". Stored history keeps the version it was scored with.
+They are rescored once, automatically. When the API starts with a new formula version, every tracked keyword whose latest score used an older version is queued for one score job, through the same rate limited queues as weekly scoring. Until its job runs, the keyword keeps its old numbers and the table says "Older formula". Such a row has no bucket and never raises a keyword action or a high opportunity entry, because its numbers were not made for the current thresholds. Stored history keeps the version it was scored with.
 
 ## Are scores comparable across stores?
 
