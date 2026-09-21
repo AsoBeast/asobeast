@@ -13,6 +13,7 @@ import {
   KeywordFieldResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
+  SUGGEST_REACH_STATUSES,
   SpiderStatus,
   utf8ByteLength,
   TrackedKeywordItem,
@@ -28,6 +29,7 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { SpiderService } from '../src/keywords/spider.service';
 import { RankingsService } from '../src/rankings/rankings.service';
+import { ScoringService } from '../src/scoring/scoring.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 
@@ -1234,6 +1236,70 @@ describe('KeywordsController (e2e)', () => {
         where: { appId_keywordId: { appId: id, keywordId: keyword.id } },
       });
       expect(tracked.active).toBe(false);
+    });
+  });
+
+  it('returns score signals and the outdated flag next to every v1 field', async () => {
+    const id = await importApp();
+    const before = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const current = before.find((item) => item.text === 'habit');
+    const outdated = before.find((item) => item.text === 'tracker');
+    expect(current && outdated).toBeTruthy();
+
+    await asWorkspace(app, () =>
+      app.get(ScoringService).scoreKeyword(current?.keywordId ?? ''),
+    );
+    await prisma.keywordMetric.create({
+      data: {
+        keywordId: outdated?.keywordId ?? '',
+        date: new Date('2026-07-01'),
+        traffic: 5,
+        difficulty: 4,
+        stats: {},
+        scoringSource: 'APPLE_SUGGEST_SEARCH',
+        formulaVersion: 'app-store-v1',
+        confidence: 'HIGH',
+        capturedAt: new Date('2026-07-01T09:30:00.000Z'),
+      },
+    });
+
+    const items = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const scored = items.find((item) => item.text === 'habit');
+    const old = items.find((item) => item.text === 'tracker');
+
+    expect(SUGGEST_REACH_STATUSES).toContain(
+      scored?.scoreSignals?.suggestReach,
+    );
+    expect(scored?.scoreOutdated).toBe(false);
+    expect(old?.scoreSignals).toBeNull();
+    expect(old?.scoreOutdated).toBe(true);
+    expect(old).toMatchObject({
+      keywordId: expect.any(String) as string,
+      text: 'tracker',
+      country: 'us',
+      source: expect.any(String) as string,
+      active: true,
+      latestPosition: null,
+      latestDepth: null,
+      previousPosition: null,
+      positionDelta1d: null,
+      positionDelta7d: null,
+      traffic: 5,
+      difficulty: 4,
+      volume: 50,
+      relevance: expect.any(Number) as number,
+      opportunity: expect.any(Number) as number,
+      bucket: expect.any(String) as string,
+      scoredAt: '2026-07-01',
+      scoreProvenance: {
+        source: 'APPLE_SUGGEST_SEARCH',
+        formulaVersion: 'app-store-v1',
+        capturedAt: '2026-07-01T09:30:00.000Z',
+        confidence: 'HIGH',
+      },
+      serpVolatility7d: null,
     });
   });
 });

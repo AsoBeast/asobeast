@@ -145,7 +145,7 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   expect(content.split("\r\n")[0]).toContain(
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
-  expect(content).toContain("APPLE_SUGGEST_SEARCH,app-store-v1,HIGH");
+  expect(content).toContain("APPLE_SUGGEST_REACH,app-store-v2,HIGH");
   expect(content).toContain(
     "Apple App Store and Google Play traffic and volume scores use different public signals and are not directly comparable",
   );
@@ -165,9 +165,9 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("button", { name: /Traffic 5000.*High confidence/ });
   await appleScore.focus();
   await expect(page.getByRole("tooltip")).toContainText(
-    "Apple suggest and search",
+    "App Store suggest reach",
   );
-  await expect(page.getByRole("tooltip")).toContainText("Formula app-store-v1");
+  await expect(page.getByRole("tooltip")).toContainText("Formula app-store-v2");
   await expect(page.getByRole("tooltip")).toContainText("High confidence");
   await expect(page.getByRole("tooltip")).toContainText(
     "input completeness, not ranking accuracy",
@@ -180,7 +180,7 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("button", { name: /Traffic 9000.*Medium confidence/ });
   await playScore.focus();
   await expect(page.getByRole("tooltip")).toContainText(
-    "Google Play prefix suggest and search",
+    "Google Play suggest reach",
   );
   await playScore.press("Escape");
 
@@ -201,7 +201,7 @@ test("score details are persistent, keyboard accessible and store specific", asy
     .getByRole("tooltip")
     .filter({ hasText: "Calculated from traffic" });
   await expect(opportunityTooltip).toBeVisible();
-  await expect(opportunityTooltip).not.toContainText("Formula app-store-v1");
+  await expect(opportunityTooltip).not.toContainText("Formula app-store-v2");
   await expect(opportunityTooltip).not.toContainText("confidence");
   await opportunityScore.press("Escape");
 

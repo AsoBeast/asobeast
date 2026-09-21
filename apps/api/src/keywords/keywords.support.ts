@@ -91,6 +91,7 @@ export function trackedArgs(appId: string) {
         select: {
           text: true,
           country: true,
+          store: true,
           rankings: {
             where: { appId },
             orderBy: { date: 'desc' as const },

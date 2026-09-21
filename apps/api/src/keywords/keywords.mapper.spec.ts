@@ -11,6 +11,7 @@ const row = (
   keyword: {
     text: 'habit tracker',
     country: 'us',
+    store: 'APP_STORE',
     rankings: [],
     metrics: [
       {
@@ -137,6 +138,62 @@ describe('toTrackedKeywordItem', () => {
     });
   });
 
+  describe('score signals and the outdated flag', () => {
+    const signals = {
+      suggestReach: 'hit',
+      suggestPrefixLength: 2,
+      suggestPosition: 8,
+      serpRelevance: 0.8,
+      medianRatingCount: 45_000,
+      flags: ['padded'],
+      officialPopularity: null,
+      estimatedTraffic: 6.2,
+    };
+    const rowWith = (
+      metric: Partial<TrackedKeywordRow['keyword']['metrics'][number]>,
+      store: TrackedKeywordRow['keyword']['store'] = 'APP_STORE',
+    ) =>
+      row({
+        keyword: {
+          ...row().keyword,
+          store,
+          metrics: [{ ...row().keyword.metrics[0], ...metric }],
+        },
+      });
+
+    it('exposes the stored signals of a v2 row', () => {
+      const item = toTrackedKeywordItem(
+        rowWith({ formulaVersion: 'app-store-v2', stats: { signals } }),
+      );
+      expect(item.scoreSignals).toEqual(signals);
+      expect(item.scoreOutdated).toBe(false);
+    });
+
+    it('marks a row scored by an older formula', () => {
+      const item = toTrackedKeywordItem(
+        rowWith({ formulaVersion: 'app-store-v1', stats: {} }),
+      );
+      expect(item.scoreSignals).toBeNull();
+      expect(item.scoreOutdated).toBe(true);
+    });
+
+    it('compares against the current version of the row store', () => {
+      const item = toTrackedKeywordItem(
+        rowWith({ formulaVersion: 'app-store-v2' }, 'GOOGLE_PLAY'),
+      );
+      expect(item.scoreOutdated).toBe(true);
+    });
+
+    it('says nothing about a keyword that was never scored', () => {
+      const item = toTrackedKeywordItem(
+        row({ keyword: { ...row().keyword, metrics: [] } }),
+      );
+      expect(item.scoreSignals).toBeUndefined();
+      expect(item.scoreOutdated).toBeUndefined();
+      expect(item).not.toHaveProperty('scoreOutdated');
+    });
+  });
+
   it('lets a manual relevance override beat the default', () => {
     const item = toTrackedKeywordItem(
       row({ relevance: 95 }),
@@ -151,6 +208,7 @@ describe('toTrackedKeywordItem', () => {
         keyword: {
           text: 'habit tracker',
           country: 'us',
+          store: 'APP_STORE',
           rankings: [],
           metrics: [],
         },
@@ -202,6 +260,7 @@ describe('toTrackedKeywordItem', () => {
       keyword: {
         text: 'habit tracker',
         country: 'us',
+        store: 'APP_STORE',
         rankings: rankings.map((ranking) => ({
           position: ranking.position,
           date: new Date(ranking.date),
