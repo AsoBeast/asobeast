@@ -150,6 +150,19 @@ describe('AppleAdsPopularityClient', () => {
     await expect(failure).rejects.not.toThrow(/SEARCHADS|key-1/);
   });
 
+  it('names the kind of failure without its message', async () => {
+    const failure = new AppleAdsPopularityClient(() => {
+      const error = new Error('Failed to read private key from /secret/path');
+      error.name = 'ClientSecretError';
+      return Promise.reject(error);
+    }, '777').weekOf('us', '2026-09-13');
+
+    await expect(failure).rejects.toThrow(
+      'Apple Ads search popularity request failed: ClientSecretError',
+    );
+    await expect(failure).rejects.not.toThrow(/secret\/path/);
+  });
+
   it('fails clearly without an ad account', async () => {
     const api = fakeApi();
     api.getUserAcls.mockResolvedValue({ data: { result: { acls: [] } } });

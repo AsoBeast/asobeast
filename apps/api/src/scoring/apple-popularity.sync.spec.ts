@@ -115,6 +115,19 @@ describe('ApplePopularitySync', () => {
     });
   });
 
+  it('stores the week it asked for whatever form apple echoes', async () => {
+    const { sync, prisma } = build(['us'], (country) =>
+      Promise.resolve(rows(country, 'Sep 13, 2026', 1)),
+    );
+
+    await sync.run(NOW);
+
+    const [[args]] = prisma.searchTermPopularity.createMany.mock.calls as [
+      [{ data: Array<{ week: Date }> }],
+    ];
+    expect(args.data[0].week).toEqual(new Date('2026-09-13T00:00:00Z'));
+  });
+
   it('keeps going when one market fails', async () => {
     const { sync, prisma } = build(['gb', 'us'], (country, week) =>
       country === 'gb'

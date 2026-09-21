@@ -79,7 +79,7 @@ export class ApplePopularitySync {
     for (const week of [newest, new Date(newest.getTime() - WEEK_MS)]) {
       const rows = await this.client.weekOf(country, dateKey(week));
       if (rows.length > 0) {
-        await this.store(rows);
+        await this.store(rows, week);
         await this.prune(country, week);
         return rows.length;
       }
@@ -87,12 +87,12 @@ export class ApplePopularitySync {
     return 0;
   }
 
-  private async store(rows: PopularityRow[]): Promise<void> {
+  private async store(rows: PopularityRow[], week: Date): Promise<void> {
     for (let start = 0; start < rows.length; start += POPULARITY_WRITE_CHUNK) {
       await this.prisma.searchTermPopularity.createMany({
         data: rows
           .slice(start, start + POPULARITY_WRITE_CHUNK)
-          .map((row) => ({ ...row, week: new Date(`${row.week}T00:00:00Z`) })),
+          .map((row) => ({ ...row, week })),
         skipDuplicates: true,
       });
     }

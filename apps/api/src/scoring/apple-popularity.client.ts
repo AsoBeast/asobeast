@@ -154,8 +154,9 @@ export class AppleAdsPopularityClient extends ApplePopularityClient {
         throw error;
       }
       const status = statusOf(error);
+      const kind = error instanceof Error ? error.name : typeof error;
       throw new ApplePopularityError(
-        `Apple Ads search popularity request failed${status === undefined ? '' : ` with status ${status}`}`,
+        `Apple Ads search popularity request failed: ${kind}${status === undefined ? '' : ` with status ${status}`}`,
         status,
       );
     }
