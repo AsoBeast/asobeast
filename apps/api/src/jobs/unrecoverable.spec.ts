@@ -20,6 +20,16 @@ describe('withoutRetry', () => {
     expect((converted as Error).message).toBe(rejection.message);
   });
 
+  it('leaves a retryable plausibility rejection to the queue', () => {
+    const rejection = new ImplausibleResultError(
+      Store.APP_STORE,
+      'the review feed for 123 came back empty',
+      { retryable: true },
+    );
+
+    expect(withoutRetry(rejection)).toBe(rejection);
+  });
+
   it('leaves a missing app to the queue, which cannot tell it from a soft block', () => {
     const missing = new StoreAppNotFoundError(Store.APP_STORE, '9999999999');
 

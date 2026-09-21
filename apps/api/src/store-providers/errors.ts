@@ -31,12 +31,16 @@ export class UnsearchableAppError extends Error {
 }
 
 export class ImplausibleResultError extends Error {
+  readonly retryable: boolean;
+
   constructor(
     readonly store: Store,
     readonly detail: string,
+    options: { retryable?: boolean } = {},
   ) {
     super(`${store} returned an implausible result: ${detail}`);
     this.name = 'ImplausibleResultError';
+    this.retryable = options.retryable ?? false;
   }
 }
 
