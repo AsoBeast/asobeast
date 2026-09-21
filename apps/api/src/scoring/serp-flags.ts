@@ -1,6 +1,10 @@
 import { SERP_FLAGS, SerpFlag, searchKey } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
-import { paddingFactor } from './serp-signals';
+import {
+  EVIDENCE_ALL_WORDS,
+  paddingFactor,
+  titleEvidence,
+} from './serp-signals';
 
 export const BRAND_MIN_LEADER_RATINGS = 10_000;
 export const BRAND_LEADER_RATIO = 10;
@@ -8,7 +12,32 @@ export const WEAK_LEADER_MAX_RATINGS = 100;
 export const SMALL_SERP_MAX_RESULTS = 3;
 export const PADDED_MAX_FACTOR = 0.5;
 
-const TITLE_SEPARATOR = /\s[-–—|]\s|:/;
+const TITLE_SEPARATOR = /\s[-–—|·•]\s|[:,]/;
+const DEVELOPER_SUFFIXES = new Set([
+  'inc',
+  'llc',
+  'ltd',
+  'limited',
+  'gmbh',
+  'ab',
+  'oy',
+  'as',
+  'bv',
+  'sa',
+  'srl',
+  'co',
+  'corp',
+  'corporation',
+  'company',
+  'games',
+  'studio',
+  'studios',
+  'mobile',
+  'labs',
+  'apps',
+  'entertainment',
+  'interactive',
+]);
 
 interface FlaggableApp {
   title: string;
@@ -31,8 +60,11 @@ function namedAfter(leader: FlaggableApp, keyword: string): boolean {
   if (searchKey(segment) === phrase) {
     return true;
   }
-  const developerWords = new Set(searchKey(leader.developer ?? '').split(' '));
-  return phrase.split(' ').every((word) => developerWords.has(word));
+  const developer = searchKey(leader.developer ?? '')
+    .split(' ')
+    .filter((word) => !DEVELOPER_SUFFIXES.has(word))
+    .join(' ');
+  return developer === phrase;
 }
 
 function leaderRatings(page: FlaggablePage): number | null {
@@ -44,9 +76,13 @@ function isBrand(page: FlaggablePage, leader: number | null): boolean {
   if (leader === null || leader < BRAND_MIN_LEADER_RATINGS) {
     return false;
   }
-  const rest = median(
-    finiteNumbers(page.top10.slice(1).map((item) => item.ratingCount)),
-  );
+  const rivals = page.top10
+    .slice(1)
+    .filter(
+      (item) =>
+        titleEvidence(item.title, page.keywordText) >= EVIDENCE_ALL_WORDS,
+    );
+  const rest = median(finiteNumbers(rivals.map((item) => item.ratingCount)));
   return (
     leader >= BRAND_LEADER_RATIO * Math.max(rest, 1) &&
     namedAfter(page.top10[0], page.keywordText)

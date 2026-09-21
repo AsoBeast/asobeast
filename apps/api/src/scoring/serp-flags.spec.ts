@@ -88,6 +88,36 @@ describe('serpFlags', () => {
     );
   });
 
+  it('flags a brand on a page padded with unrelated giants', () => {
+    const topTen = [
+      { title: 'GeoGuessr', developer: 'GeoGuessr', ratingCount: 87_117 },
+      { title: 'WorldGuessr: GeoGuesser Game', ratingCount: 1_052 },
+      ...[7_859_464, 3_380_953, 3_221_374, 2_955_617, 4_174_252].map(
+        (ratingCount, index) => ({ title: `Giant ${index}`, ratingCount }),
+      ),
+    ];
+    expect(serpFlags(page(topTen, 'geoguessr'))).toContain('brand');
+  });
+
+  it('measures the leader against the rivals that target the phrase', () => {
+    const topTen = [
+      { title: 'Notes', developer: 'Apple', ratingCount: 50_000 },
+      { title: 'Notes Pro', ratingCount: 40_000 },
+      { title: 'Sticky Notes', ratingCount: 30_000 },
+      { title: 'Weather', ratingCount: 10 },
+    ];
+    expect(serpFlags(page(topTen, 'notes'))).not.toContain('brand');
+  });
+
+  it('ignores a generic word in the developer name', () => {
+    const topTen = [
+      { title: 'Clash', developer: 'Supercell Games', ratingCount: 900_000 },
+      ...titled(unrelated(9)),
+    ];
+    expect(serpFlags(page(topTen, 'games'))).not.toContain('brand');
+    expect(serpFlags(page(topTen, 'supercell'))).toContain('brand');
+  });
+
   it('raises no brand for a leader with an unknown count', () => {
     const topTen = [{ title: 'GeoGuessr' }, ...brandTopTen().slice(1)];
     expect(serpFlags(page(topTen, 'geoguessr'))).not.toContain('brand');
