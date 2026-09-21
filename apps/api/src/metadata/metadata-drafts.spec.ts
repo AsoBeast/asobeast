@@ -129,6 +129,26 @@ describe('validateDrafts', () => {
     expect(draft.chars).toBeLessThanOrEqual(KEYWORD_FIELD_BYTE_LIMIT);
   });
 
+  it('measures a decomposed keyword field draft once it is composed', () => {
+    const [draft] = validateDrafts(
+      {
+        drafts: [
+          {
+            field: 'keywordField',
+            value: ` ${'á'.repeat(34)} ,été`,
+            rationale: 'r',
+          },
+        ],
+      },
+      Store.APP_STORE,
+      ['keywordField'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe(`${'á'.repeat(34)},été`);
+    expect(draft.chars).toBe(utf8ByteLength(draft.value));
+  });
+
   it('tolerates junk without throwing', () => {
     expect(
       validateDrafts(null, Store.APP_STORE, ['title'], EMPTY_CONTEXT),

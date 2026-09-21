@@ -215,7 +215,9 @@ export const validateDrafts = (
 
 function withinLimit(store: Store, field: MetadataField, value: string) {
   if (field === 'keywordField') {
-    const phrases = value.split(',').map((phrase) => phrase.trim());
+    const phrases = value
+      .split(',')
+      .map((phrase) => phrase.trim().normalize('NFC'));
     return packKeywordField(phrases.filter(Boolean)).join(',');
   }
   return value.slice(0, STORE_FIELD_LIMITS[store][field]!.limit);
