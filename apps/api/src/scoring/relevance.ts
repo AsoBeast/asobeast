@@ -55,6 +55,7 @@ function withRankingEvidence(
   }
   if (
     ranking.position !== null &&
+    ranking.position >= 1 &&
     ranking.position <= RANKED_RELEVANCE_POSITION
   ) {
     return Math.max(relevance, RANKED_RELEVANCE_FLOOR);
