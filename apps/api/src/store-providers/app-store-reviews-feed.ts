@@ -3,7 +3,9 @@ import type { AppStoreReviewResult } from './app-store.lib';
 
 const labelled = z.object({ label: z.string() });
 
-const rating = z.object({ label: z.coerce.number().int().min(1).max(5) });
+const rating = z.object({
+  label: z.enum(['1', '2', '3', '4', '5']).transform(Number),
+});
 
 const reviewEntry = z.object({
   id: labelled,

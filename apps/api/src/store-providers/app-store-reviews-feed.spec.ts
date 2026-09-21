@@ -1,6 +1,6 @@
 import { parseReviewsFeed, reviewsFeedUrl } from './app-store-reviews-feed';
 
-function entry(id: string, rating?: string): Record<string, unknown> {
+function entry(id: string, rating?: unknown): Record<string, unknown> {
   return {
     author: {
       uri: { label: `https://itunes.apple.com/us/reviews/id${id}` },
@@ -62,16 +62,28 @@ describe('parseReviewsFeed', () => {
     ).toEqual(['2']);
   });
 
-  it.each(['x', '0', '6', '4.5', ''])(
-    'skips an entry rated %p instead of dropping the feed',
-    (rating) => {
-      expect(
-        parseReviewsFeed(feedOf([entry('3', rating), entry('4', '5')])).map(
-          (review) => review.id,
-        ),
-      ).toEqual(['4']);
-    },
-  );
+  it.each([
+    'x',
+    '0',
+    '6',
+    '4.5',
+    '',
+    ' 5',
+    '05',
+    '5.0',
+    '1e0',
+    '0x5',
+    5,
+    true,
+    [5],
+    null,
+  ])('skips an entry rated %p instead of dropping the feed', (rating) => {
+    expect(
+      parseReviewsFeed(feedOf([entry('3', rating), entry('4', '5')])).map(
+        (review) => review.id,
+      ),
+    ).toEqual(['4']);
+  });
 
   it('reads a review without a body as empty text', () => {
     const withoutBody = { ...entry('5', '2'), content: undefined };
