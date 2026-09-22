@@ -719,6 +719,20 @@ describe('BillingWebhookService', () => {
       expect(enqueue).toHaveBeenCalled();
     });
 
+    it('puts the failure back when the replay cannot be queued', async () => {
+      const { service, update, enqueue } = build({ stored: failed });
+      enqueue.mockRejectedValue(new Error('redis is gone'));
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toThrow(
+        'redis is gone',
+      );
+
+      expect(update).toHaveBeenLastCalledWith({
+        where: { id: 'evt_1' },
+        data: { processedAt: null, outcome: null, failure: 'price_mystery' },
+      });
+    });
+
     it('refuses to replay an event that names another workspace', async () => {
       const { service, update, enqueue } = build({
         stored: { ...failed, workspaceId: 'ws_other' },

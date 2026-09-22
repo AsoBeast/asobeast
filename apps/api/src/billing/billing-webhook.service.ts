@@ -134,7 +134,19 @@ export class BillingWebhookService {
           where: { id: eventId },
           data: { processedAt: null, outcome: null, failure: null },
         });
-        await this.events.enqueue(eventId, `replay-${Date.now()}`);
+        await this.events
+          .enqueue(eventId, `replay-${Date.now()}`)
+          .catch(async (error: unknown) => {
+            await this.prisma.billingEvent.update({
+              where: { id: eventId },
+              data: {
+                processedAt: row.processedAt,
+                outcome: row.outcome,
+                failure: row.failure,
+              },
+            });
+            throw error;
+          });
         this.logger.log(
           `stripe event ${eventId} replayed for workspace ${workspaceId}`,
         );
