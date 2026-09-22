@@ -83,6 +83,10 @@ Each entry below names the symptom the way you would describe it, then gives the
     Failed jobs from before the upgrade are still counted. The badge reads the failed job count of the store and alert queues, and a failed job stays in that count until it is removed, so failures from a keyword the upgrade paused keep the badge degraded. Sign in as the owner, open `/admin/queues`, select the store queue, open its failed jobs and clean them. The badge recovers on the next health check. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
 
+  <Accordion title="Scores changed after upgrading">
+    Expected after an upgrade that changes the scoring formula. Each score row records the `formulaVersion` that produced it, and the API queues one rescore for every tracked keyword whose latest score used an older version, through the same rate limited queues as weekly scoring. Until its job runs, a keyword keeps its old numbers and the table says "Older formula". A large list takes a while: about 100 minutes per 150 App Store keywords at the default rate limit. See [Popularity, difficulty and opportunity](/concepts/scoring#what-happens-to-old-scores-after-an-upgrade).
+  </Accordion>
+
   <Accordion title="A store import fails to parse">
     A store changed a response shape. The failure is contained to the provider layer, the job fails, and BullMQ retries it with backoff while request handling continues. See [Recover from a broken store parser](/operations/scraper-breakage) for triage, containment and recovery.
   </Accordion>

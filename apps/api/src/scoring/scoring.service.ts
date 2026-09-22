@@ -1,18 +1,28 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { computeDifficulty, computeTraffic } from './formulas';
+import { computeDifficulty } from './difficulty';
+import { KeywordStats } from './formulas';
 import { scoringConfidence, scoringProfile } from './provenance';
+import { buildScoreSignals } from './score-signals';
 import {
   CollectedKeywordStats,
   StatsCollectorService,
 } from './stats-collector.service';
+import { computeTraffic, estimateTraffic } from './traffic';
 
-const toJson = (collected: CollectedKeywordStats): Prisma.InputJsonValue =>
-  ({
-    ...collected.stats,
-    evidence: collected.evidence,
-  }) as unknown as Prisma.InputJsonValue;
+function toJson(
+  { stats, evidence }: CollectedKeywordStats,
+  estimatedTraffic: number,
+): Prisma.InputJsonValue {
+  const stored: Partial<KeywordStats> = { ...stats };
+  delete stored.official;
+  return {
+    ...stored,
+    signals: buildScoreSignals(stats, estimatedTraffic),
+    evidence,
+  } as unknown as Prisma.InputJsonValue;
+}
 
 function utcDay(now: Date): Date {
   return new Date(
@@ -37,9 +47,10 @@ export class ScoringService {
     const traffic = computeTraffic(stats);
     const difficulty = computeDifficulty(stats);
     const date = utcDay(capturedAt);
-    const json = toJson(collected);
+    const json = toJson(collected, estimateTraffic(stats));
     const { source: scoringSource, formulaVersion } = scoringProfile(
       stats.store,
+      evidence.officialPopularityUsed,
     );
     const confidence = scoringConfidence(stats.store, evidence);
     const provenance = {

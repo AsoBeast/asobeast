@@ -15,7 +15,7 @@ Every schedule is a cron expression evaluated in UTC. The defaults below come fr
 | Variable | Default | Meaning | What it does |
 | --- | --- | --- | --- |
 | `CRON_DAILY` | `0 3 * * *` | Daily 03:00 | Enqueues position checks, snapshots, reviews and category ranks, then generates actions and flushes batched alerts |
-| `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes traffic and difficulty for tracked keywords |
+| `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes popularity and difficulty for tracked keywords |
 | `CRON_RETENTION` | `0 5 * * *` | Daily 05:00 | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
 | `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |
@@ -45,8 +45,8 @@ Daily request volume is roughly tracked keywords multiplied by tracked markets, 
 | --- | --- |
 | Apple position check at depth 200 | 1 request |
 | Google Play position check at depth 200 | Roughly 8 requests |
-| Apple score job | Roughly 2 requests |
-| Google Play score job | Roughly 15 to 18 requests |
+| Apple score job | 2 to 10 requests |
+| Google Play score job | 12 to 20 requests |
 | Category ranks per app | Two charts, the grossing chart plus its free or paid chart |
 
 `GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity.

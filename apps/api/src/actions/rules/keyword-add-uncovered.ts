@@ -7,11 +7,14 @@ import {
   ScoringConfidence,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import {
+  OPPORTUNITY_HIGH,
+  OPPORTUNITY_MIN_RELEVANCE,
+} from '../../scoring/opportunity';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 
-export const UNCOVERED_MIN_OPPORTUNITY = 60;
-export const UNCOVERED_MIN_RELEVANCE = 60;
+export const UNCOVERED_MIN_RELEVANCE = OPPORTUNITY_MIN_RELEVANCE;
 export const UNCOVERED_MIN_VOLUME = 20;
 
 export const UNCOVERED_PROVENANCE_CONFIDENCE: Record<
@@ -44,13 +47,11 @@ function qualifyingOpportunity(
   homeCountry: string,
 ): number | null {
   if (!keyword.active || keyword.country !== homeCountry) return null;
+  if (keyword.scoreOutdated) return null;
   if (keyword.relevance === null || keyword.relevance < UNCOVERED_MIN_RELEVANCE)
     return null;
   if ((keyword.volume ?? 0) < UNCOVERED_MIN_VOLUME) return null;
-  if (
-    keyword.opportunity === null ||
-    keyword.opportunity < UNCOVERED_MIN_OPPORTUNITY
-  )
+  if (keyword.opportunity === null || keyword.opportunity < OPPORTUNITY_HIGH)
     return null;
   return keyword.opportunity;
 }

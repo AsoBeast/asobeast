@@ -24,6 +24,7 @@ export const TENANT_TABLES = [
 export const SHARED_STORE_TABLES = [
   'Keyword',
   'KeywordMetric',
+  'SearchTermPopularity',
   'SerpEntry',
 ] as const;
 

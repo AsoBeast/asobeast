@@ -67,15 +67,15 @@ The subtitle and the keyword field. On a Google Play app they carry audit weight
 
 ## Are scores comparable across stores?
 
-No. Traffic and difficulty are derived from different public evidence on each store, so an Apple difficulty of 60 and a Google Play difficulty of 60 do not mean the same thing.
+No. Popularity and difficulty are derived from different public evidence on each store, so an Apple difficulty of 60 and a Google Play difficulty of 60 do not mean the same thing.
 
-Compare a keyword against other keywords in the same store. See [Traffic, difficulty and opportunity](/concepts/scoring).
+Compare a keyword against other keywords in the same store. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Where else do the stores differ?
 
 | Difference | Effect |
 | --- | --- |
-| Google Play's suggest endpoint carries no priority signal | asobeast prefix probes it instead of reading a priority value |
+| Neither store's suggest endpoint carries a popularity value | On Google Play asobeast probes how early the store suggests the keyword; on the App Store it estimates popularity from the first 25 search results. See [Popularity, difficulty and opportunity](/concepts/scoring#how-is-popularity-estimated) |
 | Google Play search results carry no rating counts | SERP rating columns stay empty for Google Play |
 | Google Play release dates are best effort outside the `en` storefront | Treat `released` as approximate there |
 
@@ -85,6 +85,6 @@ A parser breaks, for every installation at once. Only the provider layer parses 
 
 ## Why does a Google Play job cost more?
 
-Because one logical job fans out to many requests. A Google Play score job makes roughly 15 to 18 sequential requests: one search, up to seven prefix probe suggests and ten detail enrichments. An Apple score job makes roughly two. A depth 200 Google Play position check takes roughly eight requests against one for Apple.
+Because one logical job fans out to many requests. A Google Play score job makes 12 to 20 sequential requests: one search, one to nine suggest probes and ten detail enrichments. An Apple score job makes 2 to 10: one search and one to nine suggest probes. A keyword the store never suggests costs a single probe. A depth 200 Google Play position check takes roughly eight requests against one for Apple.
 
 That is why `SCRAPE_GPLAY_RPM` spaces job starts rather than individual requests, and why its default of 10 is lower than the Apple default of 15. See [The daily pipeline and rate limits](/concepts/pipeline).

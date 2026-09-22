@@ -9,6 +9,8 @@ export const SECRET_ENV_KEYS = [
   'PROXY_API_KEY',
   'PROXY_PASSWORD',
   'PROXY_RESIDENTIAL_PASSWORD',
+  'APPLE_ADS_CLIENT_ID',
+  'APPLE_ADS_KEY_ID',
 ] as const satisfies readonly (keyof Env)[];
 
 export type SecretEnvKey = (typeof SECRET_ENV_KEYS)[number];

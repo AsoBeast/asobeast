@@ -4,7 +4,7 @@ import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { scoreValue } from "./keyword-scores";
 
 const SCORE_COMPARABILITY =
-  "Apple App Store and Google Play traffic and volume scores use different public signals and are not directly comparable";
+  "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable";
 
 const KEYWORD_CSV_HEADERS = [
   "keyword",
@@ -14,7 +14,7 @@ const KEYWORD_CSV_HEADERS = [
   "delta1d",
   "delta7d",
   "volatility",
-  "traffic",
+  "popularity",
   "difficulty",
   "opportunity",
   "bucket",
@@ -24,11 +24,27 @@ const KEYWORD_CSV_HEADERS = [
   "formulaVersion",
   "confidence",
   "capturedAt",
+  "suggestReach",
+  "serpFlags",
+  "officialPopularity",
+  "scoreOutdated",
   "scoreComparability",
 ];
 
 function roundOrNull(value: number | null): number | null {
   return value === null ? null : Math.round(value);
+}
+
+function evidenceColumns(
+  keyword: TrackedKeywordItem,
+): Array<string | number | null> {
+  const signals = keyword.scoreSignals ?? null;
+  return [
+    signals?.suggestReach ?? null,
+    signals?.flags.join(" ") ?? null,
+    signals?.officialPopularity ?? null,
+    keyword.scoreOutdated === undefined ? null : String(keyword.scoreOutdated),
+  ];
 }
 
 export function keywordCsv(rows: TrackedKeywordItem[]): string {
@@ -50,6 +66,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     keyword.scoreProvenance?.formulaVersion ?? null,
     keyword.scoreProvenance?.confidence ?? null,
     keyword.scoreProvenance?.capturedAt ?? null,
+    ...evidenceColumns(keyword),
     SCORE_COMPARABILITY,
   ]);
   return toCsv(KEYWORD_CSV_HEADERS, csvRows);

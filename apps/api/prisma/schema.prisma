@@ -273,6 +273,20 @@ model KeywordMetric {
   @@id([keywordId, date])
 }
 
+model SearchTermPopularity {
+  country           String
+  term              String
+  week              DateTime @db.Date
+  genre             String
+  rankInGenre       Int?
+  popularity        Int
+  popularityInGenre Int?
+  createdAt         DateTime @default(now())
+
+  @@id([country, term, week, genre])
+  @@index([country, week])
+}
+
 model KeywordRanking {
   appId       String
   app         App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)

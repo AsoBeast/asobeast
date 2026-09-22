@@ -5,79 +5,78 @@ import {
 } from './provenance';
 
 const evidence = (
-  completeSearch: boolean,
-  secondaryComplete: boolean,
-  completeDetails = false,
+  overrides: Partial<ScoringEvidence> = {},
 ): ScoringEvidence => ({
-  searchResultCount: completeSearch ? 10 : 9,
-  suggestCompleted: secondaryComplete,
-  prefixSweepCompleted: secondaryComplete,
-  detailTargetCount: 10,
-  detailSuccessCount: completeDetails ? 8 : 7,
+  searchResultCount: 100,
+  suggestCompleted: true,
+  suggestRequests: 4,
+  detailTargetCount: 0,
+  detailSuccessCount: 0,
+  officialPopularityUsed: false,
+  ...overrides,
 });
 
-describe('scoring provenance', () => {
+describe('scoringConfidence', () => {
   it.each([
-    [false, false, 'LOW'],
-    [true, false, 'MEDIUM'],
-    [false, true, 'MEDIUM'],
-    [true, true, 'HIGH'],
+    ['GOOGLE_PLAY', 'LOW'],
+    ['APP_STORE', 'HIGH'],
   ] as const)(
-    'maps Apple evidence %s/%s to %s confidence',
-    (search, suggest, expected) => {
-      expect(scoringConfidence('APP_STORE', evidence(search, suggest))).toBe(
-        expected,
-      );
-    },
-  );
-
-  it.each([
-    [false, false, false, 'LOW'],
-    [true, false, false, 'LOW'],
-    [false, true, false, 'LOW'],
-    [false, false, true, 'LOW'],
-    [true, true, false, 'MEDIUM'],
-    [true, false, true, 'MEDIUM'],
-    [false, true, true, 'MEDIUM'],
-    [true, true, true, 'HIGH'],
-  ] as const)(
-    'maps Play evidence %s/%s/%s to %s confidence',
-    (search, prefix, details, expected) => {
+    'without suggest evidence %s is %s, only google play traffic reads it',
+    (store, expected) => {
       expect(
-        scoringConfidence('GOOGLE_PLAY', {
-          ...evidence(search, prefix, details),
-          suggestCompleted: false,
-        }),
+        scoringConfidence(
+          store,
+          evidence({
+            suggestCompleted: false,
+            detailTargetCount: 10,
+            detailSuccessCount: 10,
+          }),
+        ),
       ).toBe(expected);
     },
   );
 
-  it('requires at least eight intended and successful detail lookups', () => {
-    const base = evidence(true, true, true);
-    expect(
-      scoringConfidence('GOOGLE_PLAY', {
-        ...base,
-        detailTargetCount: 7,
-        detailSuccessCount: 8,
-      }),
-    ).toBe('MEDIUM');
-    expect(
-      scoringConfidence('GOOGLE_PLAY', {
-        ...base,
-        detailTargetCount: 10,
-        detailSuccessCount: 7,
-      }),
-    ).toBe('MEDIUM');
+  it.each([
+    [evidence({ searchResultCount: 0 }), 'LOW'],
+    [evidence({ searchResultCount: 9 }), 'MEDIUM'],
+    [evidence({ searchResultCount: 10 }), 'HIGH'],
+    [evidence({ searchResultCount: 0, officialPopularityUsed: true }), 'HIGH'],
+  ])('%j on the app store is %s', (input, expected) => {
+    expect(scoringConfidence('APP_STORE', input)).toBe(expected);
   });
 
-  it('maps each store to its source and formula version', () => {
-    expect(scoringProfile('APP_STORE')).toEqual({
-      source: 'APPLE_SUGGEST_SEARCH',
-      formulaVersion: 'app-store-v1',
+  it('wants eight enriched details on google play', () => {
+    expect(
+      scoringConfidence(
+        'GOOGLE_PLAY',
+        evidence({ detailTargetCount: 10, detailSuccessCount: 7 }),
+      ),
+    ).toBe('MEDIUM');
+    expect(
+      scoringConfidence(
+        'GOOGLE_PLAY',
+        evidence({ detailTargetCount: 10, detailSuccessCount: 8 }),
+      ),
+    ).toBe('HIGH');
+  });
+});
+
+describe('scoringProfile', () => {
+  it('maps each store to its estimate source and v2 formula version', () => {
+    expect(scoringProfile('APP_STORE', false)).toEqual({
+      source: 'APPLE_SEARCH_SIGNALS',
+      formulaVersion: 'app-store-v2',
     });
-    expect(scoringProfile('GOOGLE_PLAY')).toEqual({
-      source: 'GOOGLE_PLAY_PREFIX_SEARCH',
-      formulaVersion: 'google-play-v1',
+    expect(scoringProfile('GOOGLE_PLAY', false)).toEqual({
+      source: 'GOOGLE_PLAY_SUGGEST_REACH',
+      formulaVersion: 'google-play-v2',
+    });
+  });
+
+  it('names apple ads when the official value was used', () => {
+    expect(scoringProfile('APP_STORE', true)).toEqual({
+      source: 'APPLE_ADS_POPULARITY',
+      formulaVersion: 'app-store-v2',
     });
   });
 });

@@ -55,7 +55,7 @@ export function KeywordsWorkspace({
       <Alert role="note">
         <Info />
         <AlertDescription>
-          Apple App Store and Google Play traffic and volume scores use
+          Apple App Store and Google Play popularity and volume scores use
           different public signals and are not directly comparable.
         </AlertDescription>
       </Alert>

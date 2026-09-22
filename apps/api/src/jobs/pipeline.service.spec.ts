@@ -548,4 +548,63 @@ describe('PipelineService', () => {
     ];
     expect(calls.every((call) => !('parent' in (call[2] ?? {})))).toBe(true);
   });
+
+  describe('a formula change rescores outdated keywords once', () => {
+    const tracked = (keywordId: string, formulaVersion: string | null) => ({
+      keywordId,
+      keyword: {
+        store: 'APP_STORE',
+        metrics: formulaVersion === null ? [] : [{ formulaVersion }],
+      },
+    });
+    const prismaWith = (rows: ReturnType<typeof tracked>[]) => ({
+      ...emptyPrisma(),
+      trackedKeyword: { findMany: jest.fn().mockResolvedValue(rows) },
+    });
+
+    it('queues one score job per outdated keyword under the formula version', async () => {
+      const { service, appStoreQueue, gplayQueue } = buildService({
+        prisma: prismaWith([
+          tracked('old', 'app-store-v1'),
+          tracked('current', 'app-store-v2'),
+          tracked('never', null),
+        ]),
+      });
+
+      await expect(service.fanOutOutdatedScores()).resolves.toBe(1);
+
+      expect(appStoreQueue.add).toHaveBeenCalledTimes(1);
+      expect(appStoreQueue.add).toHaveBeenCalledWith(
+        JOBS.SCORE_KEYWORD,
+        expect.objectContaining({
+          keywordId: 'old',
+          workspaceId: DEFAULT_WORKSPACE_ID,
+        }),
+        { jobId: 'score~old~app-store-v2' },
+      );
+      expect(gplayQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('queues nothing when every score is current', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: prismaWith([tracked('current', 'app-store-v2')]),
+      });
+
+      await expect(service.fanOutOutdatedScores()).resolves.toBe(0);
+      expect(appStoreQueue.add).not.toHaveBeenCalled();
+    });
+
+    it('keeps the weekly scoring bucket for the weekly run', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: prismaWith([tracked('old', 'app-store-v1')]),
+      });
+
+      await expect(service.fanOutScoring()).resolves.toBe(1);
+      expect(appStoreQueue.add).toHaveBeenCalledWith(
+        JOBS.SCORE_KEYWORD,
+        expect.objectContaining({ keywordId: 'old' }),
+        { jobId: 'score~old~2026-W31' },
+      );
+    });
+  });
 });

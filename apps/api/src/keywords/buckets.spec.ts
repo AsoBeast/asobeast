@@ -90,4 +90,41 @@ describe('classifyBuckets', () => {
     const items = [item({ keywordId: 'u', volume: null, opportunity: null })];
     expect(bucketOf(items, 'u')).toBeNull();
   });
+
+  it('keeps the bucket of a score from an older formula', () => {
+    const items = [item({ keywordId: 'o', scoreOutdated: true })];
+    expect(bucketOf(items, 'o')).toBe('primary');
+  });
+
+  describe('v2 thresholds', () => {
+    const fillers = Array.from({ length: 5 }, (_, i) =>
+      item({ keywordId: `p${i}`, text: 'top word', opportunity: 95 - i }),
+    );
+
+    it.each([
+      [60, 6.5, 'aspirational'],
+      [59.9, 6.5, 'secondary'],
+      [60, 6.49, 'secondary'],
+    ])(
+      'a keyword at volume %s and difficulty %s is %s',
+      (volume, difficulty, expected) => {
+        const items = [
+          ...fillers,
+          item({ keywordId: 'x', text: 'one', volume, difficulty }),
+        ];
+        expect(bucketOf(items, 'x')).toBe(expected);
+      },
+    );
+
+    it.each([
+      [24.9, 'longtail'],
+      [25, 'secondary'],
+    ])('a keyword at volume %s is %s', (volume, expected) => {
+      const items = [
+        ...fillers,
+        item({ keywordId: 'x', text: 'one', volume, difficulty: 3 }),
+      ];
+      expect(bucketOf(items, 'x')).toBe(expected);
+    });
+  });
 });

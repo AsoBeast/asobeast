@@ -6,6 +6,7 @@ import {
 import {
   AppSummary,
   CoverageSummary,
+  CURRENT_FORMULA_VERSIONS,
   normalizeText,
   RankDistribution,
   RankDistributionHistory,
@@ -16,18 +17,18 @@ import {
 } from '@asobeast/shared';
 import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
+import { AppOpportunity, appOpportunity } from '../scoring/keyword-opportunity';
 import {
-  computeOpportunity,
-  defaultRelevance,
-  toDifficulty100,
-  toVolume,
-} from '../scoring/formulas';
+  OPPORTUNITY_HIGH,
+  OPPORTUNITY_MIN_RELEVANCE,
+} from '../scoring/opportunity';
 import {
   addDays,
   DAY_MS,
   delta,
   metricAt,
   positionAt,
+  rankingAt,
   referenceDate,
   startOfUtcDay,
   toDateKey,
@@ -43,7 +44,6 @@ import { bucketPositions } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 
 const SUMMARY_WINDOW_DAYS = 31;
-const HIGH_OPPORTUNITY = 60;
 const COVERAGE_LIMIT = 5;
 const HISTORY_DEFAULT_DAYS = 30;
 const HISTORY_MAX_DAYS = 180;
@@ -51,25 +51,51 @@ const HISTORY_MAX_DAYS = 180;
 const covers = (field: string, keyword: string): boolean =>
   ` ${normalizeText(field)} `.includes(` ${keyword} `);
 
+interface CoverageApp {
+  snapshotText: string;
+}
+
+const CURRENT_VERSIONS = new Set<string>(
+  Object.values(CURRENT_FORMULA_VERSIONS),
+);
+
+const isCurrentFormula = (version?: string | null): boolean =>
+  version === undefined || (version !== null && CURRENT_VERSIONS.has(version));
+
 const rowOpportunity = (
   row: TrackedRow,
   referenceDate: Date | null,
-  snapshotText: string,
-): number | null => {
+  app: CoverageApp,
+): AppOpportunity | null => {
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
     : null;
-  const traffic = metric?.traffic ?? null;
-  const difficulty = metric?.difficulty ?? null;
-  const relevance =
-    row.relevance ??
-    defaultRelevance(reportedSource(row), row.keyword.text, snapshotText);
-  return computeOpportunity(
-    traffic === null ? null : toVolume(traffic),
-    difficulty === null ? null : toDifficulty100(difficulty),
-    relevance,
-  );
+  if (metric && !isCurrentFormula(metric.formulaVersion)) {
+    return null;
+  }
+  const ranking = referenceDate
+    ? rankingAt(row.keyword.rankings, referenceDate)
+    : null;
+  return appOpportunity({
+    source: reportedSource(row),
+    keywordText: row.keyword.text,
+    snapshotText: app.snapshotText,
+    relevanceOverride: row.relevance,
+    traffic: metric?.traffic ?? null,
+    difficulty: metric?.difficulty ?? null,
+    ...(ranking
+      ? { ranking: { position: ranking.position, checked: true } }
+      : {}),
+  });
 };
+
+const uncoveredWorthAdding = (
+  scored: AppOpportunity | null,
+): scored is AppOpportunity & { opportunity: number } =>
+  scored !== null &&
+  scored.opportunity !== null &&
+  scored.opportunity >= OPPORTUNITY_HIGH &&
+  scored.relevance >= OPPORTUNITY_MIN_RELEVANCE;
 
 @Injectable()
 export class AnalyticsService {
@@ -254,11 +280,11 @@ export class AnalyticsService {
       subtitle: snapshot?.subtitle ?? '',
       description: snapshot?.description ?? '',
     };
-    const snapshotText = [
-      fields.title,
-      fields.subtitle,
-      fields.description,
-    ].join(' ');
+    const app: CoverageApp = {
+      snapshotText: [fields.title, fields.subtitle, fields.description].join(
+        ' ',
+      ),
+    };
 
     const hits = rows.map((row) => ({
       row,
@@ -269,15 +295,18 @@ export class AnalyticsService {
 
     const uncovered = hits
       .filter((hit) => !hit.inTitle && !hit.inSubtitle && !hit.inDescription)
-      .map((hit) => ({
-        keywordId: hit.row.keywordId,
-        text: hit.row.keyword.text,
-        opportunity: rowOpportunity(hit.row, referenceDate, snapshotText),
-      }))
-      .filter(
-        (entry): entry is UncoveredKeyword =>
-          entry.opportunity !== null && entry.opportunity >= HIGH_OPPORTUNITY,
-      );
+      .flatMap((hit): UncoveredKeyword[] => {
+        const scored = rowOpportunity(hit.row, referenceDate, app);
+        return uncoveredWorthAdding(scored)
+          ? [
+              {
+                keywordId: hit.row.keywordId,
+                text: hit.row.keyword.text,
+                opportunity: scored.opportunity,
+              },
+            ]
+          : [];
+      });
 
     return {
       inTitle: hits.filter((hit) => hit.inTitle).length,

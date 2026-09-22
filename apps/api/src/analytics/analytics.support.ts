@@ -10,6 +10,7 @@ export interface Metric {
   traffic: number | null;
   difficulty: number | null;
   date: Date;
+  formulaVersion?: string | null;
 }
 
 export interface Ranking {
@@ -65,8 +66,11 @@ export const toDateKey = (date: Date): string =>
 
 const isSameDay = (a: Date, b: Date): boolean => a.getTime() === b.getTime();
 
+export const rankingAt = (rankings: Ranking[], date: Date): Ranking | null =>
+  rankings.find((ranking) => isSameDay(ranking.date, date)) ?? null;
+
 export const positionAt = (rankings: Ranking[], date: Date): number | null =>
-  rankings.find((ranking) => isSameDay(ranking.date, date))?.position ?? null;
+  rankingAt(rankings, date)?.position ?? null;
 
 export const metricAt = (metrics: Metric[], date: Date): Metric | null =>
   metrics.find((metric) => metric.date.getTime() <= date.getTime()) ?? null;
@@ -259,7 +263,12 @@ export async function trackedRows(
           metrics: {
             where: window ? { date: { lte: window } } : undefined,
             orderBy: { date: 'desc' },
-            select: { traffic: true, difficulty: true, date: true },
+            select: {
+              traffic: true,
+              difficulty: true,
+              date: true,
+              formulaVersion: true,
+            },
           },
           rankings: {
             where: {

@@ -36,6 +36,8 @@ export interface AppStoreSearchResult {
   score?: number;
   reviews?: number;
   currentVersionReviews?: number;
+  primaryGenreId?: number | string;
+  released?: string;
   updated?: string;
 }
 

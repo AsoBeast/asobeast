@@ -60,7 +60,7 @@ export function KeywordsDataTable({
       aria-rowcount={rows.length + 1}
     >
       <TableCaption className="sr-only">
-        Tracked keywords with source, position and its daily change, traffic,
+        Tracked keywords with source, position and its daily change, popularity,
         difficulty, opportunity, 7 day change and top 10 volatility.
       </TableCaption>
       <TableHeader className="sticky top-0 z-20">

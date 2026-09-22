@@ -66,11 +66,31 @@ export type KeywordSource = (typeof KEYWORD_SOURCES)[number];
 export const SCORING_SOURCES = [
   'APPLE_SUGGEST_SEARCH',
   'GOOGLE_PLAY_PREFIX_SEARCH',
+  'APPLE_SUGGEST_REACH',
+  'GOOGLE_PLAY_SUGGEST_REACH',
+  'APPLE_ADS_POPULARITY',
+  'APPLE_SEARCH_SIGNALS',
 ] as const;
 export type ScoringSource = (typeof SCORING_SOURCES)[number];
 
 export const SCORING_CONFIDENCES = ['LOW', 'MEDIUM', 'HIGH'] as const;
 export type ScoringConfidence = (typeof SCORING_CONFIDENCES)[number];
+
+export const SERP_FLAGS = [
+  'brand',
+  'weak_leader',
+  'small_serp',
+  'padded',
+] as const;
+export type SerpFlag = (typeof SERP_FLAGS)[number];
+
+export const SUGGEST_REACH_STATUSES = [
+  'hit',
+  'listed',
+  'absent',
+  'unavailable',
+] as const;
+export type SuggestReachStatus = (typeof SUGGEST_REACH_STATUSES)[number];
 
 export const isScoringSource = (value: unknown): value is ScoringSource =>
   typeof value === 'string' &&

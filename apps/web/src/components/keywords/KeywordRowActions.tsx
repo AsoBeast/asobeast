@@ -77,7 +77,7 @@ export function KeywordRowActions({
       invalidateKeywords(queryClient, appId);
       queuedToast(
         "scoring",
-        "Traffic, difficulty and opportunity land after the run.",
+        "Popularity, difficulty and opportunity land after the run.",
       );
     },
     onError: () => toast.error(`Could not queue scoring for ${keyword.text}`),

@@ -130,7 +130,7 @@ export const rankingChecks = (context: AuditContext): RubricCheck[] => {
           : 10 * (1 - Math.min(1, GAP_SHARE_FACTOR * gap.share)),
       detail:
         gap !== null
-          ? `${Math.round(gap.share * 100)}% of your tracked traffic sits on keywords a competitor owns.`
+          ? `${Math.round(gap.share * 100)}% of your tracked keyword popularity sits on keywords a competitor owns.`
           : context.competitors.length === 0
             ? 'No competitors to compare positions against.'
             : 'No home market keyword has competitor positions yet.',
@@ -139,7 +139,7 @@ export const rankingChecks = (context: AuditContext): RubricCheck[] => {
       advice: gap?.worst
         ? {
             title: `Close the gap on “${gap.worst.text}”`,
-            fix: `A competitor ranks ${gap.worst.theirs} where you rank ${gap.worst.you ?? 'outside the checked depth'}. Keywords like this carry ${Math.round(gap.share * 100)}% of your tracked traffic.`,
+            fix: `A competitor ranks ${gap.worst.theirs} where you rank ${gap.worst.you ?? 'outside the checked depth'}. Keywords like this carry ${Math.round(gap.share * 100)}% of your tracked keyword popularity.`,
           }
         : null,
     }),

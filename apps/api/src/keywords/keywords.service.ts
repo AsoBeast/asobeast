@@ -32,7 +32,7 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
-import { toTrackedKeywordItem } from './keywords.mapper';
+import { AppFacts, toTrackedKeywordItem } from './keywords.mapper';
 import {
   ensureApp,
   KeywordApp,
@@ -85,13 +85,13 @@ export class KeywordsService {
     sort?: KeywordSort,
     country?: string,
   ): Promise<TrackedKeywordItem[]> {
-    await ensureApp(this.prisma, appId);
+    const app = await ensureApp(this.prisma, appId);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: { appId, ...(country ? { keyword: { is: { country } } } : {}) },
       ...trackedArgs(appId),
     });
-    const [snapshotText, volatility] = await Promise.all([
-      this.snapshotText(appId),
+    const [facts, volatility] = await Promise.all([
+      this.snapshotFacts(app),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
@@ -102,7 +102,7 @@ export class KeywordsService {
         rows.map((row) =>
           toTrackedKeywordItem(
             row,
-            snapshotText,
+            facts,
             volatility.get(row.keywordId) ?? null,
           ),
         ),
@@ -133,18 +133,20 @@ export class KeywordsService {
       });
   }
 
-  private async snapshotText(appId: string): Promise<string> {
+  private async snapshotFacts(app: KeywordApp): Promise<AppFacts> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
+      where: { appId: app.id },
       orderBy: { capturedAt: 'desc' },
       select: { title: true, subtitle: true, summary: true },
     });
     if (!snapshot) {
-      return '';
+      return { snapshotText: '' };
     }
-    return [snapshot.title, snapshot.subtitle, snapshot.summary]
-      .filter((part): part is string => Boolean(part))
-      .join(' ');
+    return {
+      snapshotText: [snapshot.title, snapshot.subtitle, snapshot.summary]
+        .filter((part): part is string => Boolean(part))
+        .join(' '),
+    };
   }
 
   async compare(appId: string, onlyGaps: boolean): Promise<KeywordComparison> {
@@ -302,19 +304,15 @@ export class KeywordsService {
       ...trackedArgs(app.id),
       orderBy: [{ fieldOrder: 'asc' }, ...trackedOrder()],
     });
-    const [snapshotText, volatility] = await Promise.all([
-      this.snapshotText(app.id),
+    const [facts, volatility] = await Promise.all([
+      this.snapshotFacts(app),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
       ),
     ]);
     const tracked = rows.map((row) =>
-      toTrackedKeywordItem(
-        row,
-        snapshotText,
-        volatility.get(row.keywordId) ?? null,
-      ),
+      toTrackedKeywordItem(row, facts, volatility.get(row.keywordId) ?? null),
     );
 
     return {

@@ -39,7 +39,7 @@ Eight rules, with fixed constants.
 
 | Rule | Fires when | Resolves when |
 | --- | --- | --- |
-| `keyword.add_uncovered` | A tracked home market keyword scores opportunity at or above 60, relevance at or above 60 and volume at or above 20, and no indexed field contains it | Metadata covers it, it drops below threshold, or it is deactivated or untracked |
+| `keyword.add_uncovered` | A tracked home market keyword scores opportunity at or above 35, relevance at or above 60 and volume at or above 20, and no indexed field contains it | Metadata covers it, it drops below threshold, or it is deactivated or untracked |
 | `keyword.defend` | At least 2 new apps entered the top 10 over 7 days with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you |
 | `keyword.prune` | A keyword ranked on at most 5 percent of at least 30 checks, carries volume below 20 and relevance at most 50, and pruning would help | It ranks, gains volume, is deactivated, or the budget pressure disappears |
 | `rank.investigate_drop` | An indexed field changed within 14 days and visibility fell by at least 5 points, or at least 3 tracked keywords fell by the rank alert threshold | Visibility recovers to within 2 points of its pre change value |

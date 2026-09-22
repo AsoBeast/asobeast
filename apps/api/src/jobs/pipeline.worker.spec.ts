@@ -23,6 +23,7 @@ import { PublishedStatusService } from '../store-providers/canary/published-stat
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
+import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
 import { PipelineWorker } from './pipeline.worker';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
@@ -53,6 +54,7 @@ describe('PipelineWorker', () => {
     poolEnabled = false,
     canaryCron = '0 2,8,14,20 * * *',
     statusEnabled = false,
+    popularityEnabled = false,
   ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
@@ -75,6 +77,7 @@ describe('PipelineWorker', () => {
     const pipeline = {
       fanOutDaily: jest.fn().mockResolvedValue(payload),
       fanOutScoring: jest.fn().mockResolvedValue(0),
+      fanOutOutdatedScores: jest.fn().mockResolvedValue(0),
       estimateDailyBudget: jest.fn().mockResolvedValue(budget),
     };
     const retention = { prune: jest.fn().mockResolvedValue(undefined) };
@@ -108,6 +111,10 @@ describe('PipelineWorker', () => {
       cron: '17 * * * *',
       run: jest.fn().mockResolvedValue(undefined),
     };
+    const popularity = {
+      enabled: popularityEnabled,
+      run: jest.fn().mockResolvedValue({ countries: 1, rows: 2, week: 'w' }),
+    };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -129,6 +136,7 @@ describe('PipelineWorker', () => {
       storeCanary as unknown as StoreCanaryService,
       publishedStatus as unknown as PublishedStatusService,
       tracking as unknown as ErrorTracking,
+      popularity as unknown as ApplePopularitySync,
     );
     return {
       worker,
@@ -146,6 +154,7 @@ describe('PipelineWorker', () => {
       storeCanary,
       publishedStatus,
       tracking,
+      popularity,
     };
   };
 
@@ -184,6 +193,65 @@ describe('PipelineWorker', () => {
       JOBS.AUDIT_SNAPSHOT,
       JOBS.STORE_CANARY,
     ]);
+  });
+
+  describe('apple search popularity', () => {
+    it('schedules the weekly sync only when apple ads is configured', async () => {
+      const { worker, pipelineQueue } = build(false, '', false, true);
+
+      await worker.onModuleInit();
+
+      expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+        'apple-popularity',
+        { pattern: 'value:CRON_APPLE_POPULARITY', tz: 'UTC' },
+        { name: JOBS.APPLE_POPULARITY },
+      );
+      expect(pipelineQueue.removeJobScheduler).not.toHaveBeenCalledWith(
+        'apple-popularity',
+      );
+    });
+
+    it('removes a leftover scheduler when apple ads is not configured', async () => {
+      const { worker, pipelineQueue } = build();
+
+      await worker.onModuleInit();
+
+      expect(
+        pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+      ).not.toContain('apple-popularity');
+      expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+        'apple-popularity',
+      );
+    });
+
+    it('runs the sync for its job', async () => {
+      const { worker, popularity } = build(false, '', false, true);
+
+      await worker.process(job(JOBS.APPLE_POPULARITY));
+
+      expect(popularity.run).toHaveBeenCalledTimes(1);
+      expect(popularity.run).toHaveBeenCalledWith(expect.any(Date));
+    });
+  });
+
+  it('checks for outdated scores once, after the schedulers', async () => {
+    const { worker, pipelineQueue, pipeline } = build();
+
+    await worker.onModuleInit();
+
+    expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
+    expect(
+      pipeline.fanOutOutdatedScores.mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      Math.max(...pipelineQueue.upsertJobScheduler.mock.invocationCallOrder),
+    );
+  });
+
+  it('starts even when the outdated score check fails', async () => {
+    const { worker, pipeline } = build();
+    pipeline.fanOutOutdatedScores.mockRejectedValue(new Error('redis down'));
+
+    await expect(worker.onModuleInit()).resolves.toBeUndefined();
   });
 
   it('schedules the store canary an hour before the daily run', async () => {

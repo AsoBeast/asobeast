@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { assertAppleAdsConfiguration } from './apple-ads-config';
 import { assertProductionSafety } from './production-safety';
 import { TrustedProxyHops } from './trusted-proxy';
 
@@ -151,6 +152,12 @@ export const EnvSchema = z.object({
   TRUST_PROXY: TrustedProxyHops,
   ACCOUNT_DELETION_GRACE_DAYS: z.coerce.number().int().min(1).default(7),
   ERROR_TRACKING_DSN: optionalText,
+  APPLE_ADS_CLIENT_ID: optionalText,
+  APPLE_ADS_TEAM_ID: optionalText,
+  APPLE_ADS_KEY_ID: optionalText,
+  APPLE_ADS_PRIVATE_KEY_PATH: optionalText,
+  APPLE_ADS_AD_ACCOUNT_ID: optionalText,
+  CRON_APPLE_POPULARITY: z.string().min(1).default('0 9 * * 1'),
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])
     .default('debug'),
@@ -167,5 +174,6 @@ export function validateEnv(config: Record<string, unknown>): Env {
   }
   const env = EnvSchema.parse(config);
   assertProductionSafety(env);
+  assertAppleAdsConfiguration(env);
   return env;
 }

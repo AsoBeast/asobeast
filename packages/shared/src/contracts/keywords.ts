@@ -4,8 +4,22 @@ import {
   KeywordSuggestionStrategy,
   ScoringConfidence,
   ScoringSource,
+  SerpFlag,
   Store,
+  SuggestReachStatus,
 } from '../index';
+
+export interface ScoreSignals {
+  suggestReach: SuggestReachStatus;
+  suggestPrefixLength: number | null;
+  suggestPosition: number | null;
+  serpRelevance: number;
+  medianRatingCount: number | null;
+  flags: SerpFlag[];
+  officialPopularity: number | null;
+  estimatedTraffic: number | null;
+  entryDifficulty?: number | null;
+}
 
 export interface ScoreProvenance {
   source: ScoringSource;
@@ -34,6 +48,8 @@ export interface TrackedKeywordItem {
   scoredAt: string | null;
   scoreProvenance: ScoreProvenance | null;
   serpVolatility7d: number | null;
+  scoreSignals?: ScoreSignals | null;
+  scoreOutdated?: boolean;
 }
 
 export interface KeywordCountrySummary {

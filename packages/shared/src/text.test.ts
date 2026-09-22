@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { isStopword, normalizeText, STOPWORDS, tokenize } from './text';
+import {
+  isStopword,
+  normalizeText,
+  searchKey,
+  STOPWORDS,
+  tokenize,
+} from './text';
 
 describe('normalizeText', () => {
   it('lowercases input', () => {
@@ -105,5 +111,29 @@ describe('stopwords', () => {
 
   it('has a substantial list', () => {
     expect(STOPWORDS.size).toBeGreaterThanOrEqual(120);
+  });
+});
+
+describe('searchKey', () => {
+  it('folds case, punctuation, whitespace and diacritics', () => {
+    expect(searchKey('Géo  Quiz!')).toBe('geo quiz');
+    expect(searchKey('Block Blast！')).toBe('block blast');
+    expect(searchKey('  ÀÉÎÕÜ  ')).toBe('aeiou');
+  });
+
+  it('keeps scripts whose marks are letters intact', () => {
+    expect(searchKey('地理クイズ')).toBe('地理クイズ');
+    expect(searchKey('खेल')).toBe('खेल');
+    expect(searchKey('खेल')).not.toBe(searchKey('खल'));
+    expect(searchKey('เกม')).toBe('เกม');
+    expect(searchKey('')).toBe('');
+  });
+
+  it('folds greek accents like latin ones', () => {
+    expect(searchKey('Γεωγραφία')).toBe('γεωγραφια');
+  });
+
+  it('leaves normalizeText unchanged', () => {
+    expect(normalizeText('Géo  Quiz!')).toBe('géo quiz');
   });
 });

@@ -12,6 +12,7 @@ import type {
 import {
   DEFEND_MIN_ENTRANTS,
   DEFEND_MIN_OBSERVED_DAYS,
+  DEFEND_NEUTRAL_VOLUME,
   DEFEND_WINDOW_DAYS,
   DEFEND_YOUR_POSITION_MAX,
   detectKeywordDefend,
@@ -374,7 +375,8 @@ describe('keyword.defend', () => {
       NOW,
     );
 
-    expect(detections[0].terms.reach).toBe(0.4);
+    expect(DEFEND_NEUTRAL_VOLUME).toBe(30);
+    expect(detections[0].terms.reach).toBe(0.3);
   });
 
   describe('volatility damping', () => {

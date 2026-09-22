@@ -21,7 +21,8 @@ import {
   SortHeader,
   VolatilityCell,
 } from "./keyword-cells";
-import { scoreValue } from "./keyword-scores";
+import { isScoreOutdated, scoreValue } from "./keyword-scores";
+import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SourceBadge } from "./SourceBadge";
 
 const columnHelper = createColumnHelper<
@@ -130,7 +131,7 @@ function scoreColumns({ sort, onSort }: SortState) {
       header: () => (
         <SortHeader
           column="traffic"
-          label="Traffic"
+          label="Popularity"
           active={sort === "traffic"}
           onSort={onSort}
         />
@@ -138,9 +139,15 @@ function scoreColumns({ sort, onSort }: SortState) {
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "traffic")}
-          label="Traffic"
+          label="Popularity"
           tone="none"
           provenance={row.original.scoreProvenance}
+          details={popularitySignalLines(
+            row.original.scoreSignals ?? null,
+            row.original.scoreProvenance?.source,
+            scoreValue(row.original, "traffic"),
+          )}
+          outdated={isScoreOutdated(row.original)}
         />
       ),
     }),
@@ -159,6 +166,8 @@ function scoreColumns({ sort, onSort }: SortState) {
           value={scoreValue(row.original, "difficulty")}
           label="Difficulty"
           provenance={row.original.scoreProvenance}
+          details={difficultySignalLines(row.original.scoreSignals ?? null)}
+          outdated={isScoreOutdated(row.original)}
         />
       ),
     }),

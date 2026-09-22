@@ -155,3 +155,12 @@ export function tokenize(input: string): string[] {
 export function isStopword(token: string): boolean {
   return STOPWORDS.has(token);
 }
+
+const ACCENTED_LETTER = /([\p{Script=Latin}\p{Script=Greek}])\p{M}+/gu;
+
+export function searchKey(input: string): string {
+  return normalizeText(input)
+    .normalize('NFKD')
+    .replace(ACCENTED_LETTER, '$1')
+    .normalize('NFC');
+}

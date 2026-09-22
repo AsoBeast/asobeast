@@ -56,7 +56,7 @@ test("clicking a sort header updates the url and reorders rows", async ({
 
   await expect(firstKeyword).toContainText("focus timer");
 
-  await page.getByRole("button", { name: "Traffic", exact: true }).click();
+  await page.getByRole("button", { name: "Popularity", exact: true }).click();
 
   await expect(page).toHaveURL(/sort=traffic/);
   await expect(firstKeyword).toContainText("pomodoro");
@@ -143,11 +143,17 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   const content = readFileSync(await download.path(), "utf8");
   expect(content.startsWith("﻿keyword,source,active,position")).toBe(true);
   expect(content.split("\r\n")[0]).toContain(
+    "volatility,popularity,difficulty,opportunity",
+  );
+  expect(content.split("\r\n")[0]).toContain(
     "scoredAt,scoringSource,formulaVersion,confidence,capturedAt",
   );
-  expect(content).toContain("APPLE_SUGGEST_SEARCH,app-store-v1,HIGH");
+  expect(content).toContain("APPLE_SEARCH_SIGNALS,app-store-v2,HIGH");
+  expect(content.split("\r\n")[0]).toContain(
+    "suggestReach,serpFlags,officialPopularity,scoreOutdated",
+  );
   expect(content).toContain(
-    "Apple App Store and Google Play traffic and volume scores use different public signals and are not directly comparable",
+    "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable",
   );
 });
 
@@ -162,35 +168,57 @@ test("score details are persistent, keyboard accessible and store specific", asy
 
   const appleScore = page
     .getByRole("row", { name: /focus timer/ })
-    .getByRole("button", { name: /Traffic 5000.*High confidence/ });
+    .getByRole("button", { name: /Popularity 5000.*High confidence/ });
   await appleScore.focus();
   await expect(page.getByRole("tooltip")).toContainText(
-    "Apple suggest and search",
+    "App Store search signals",
   );
-  await expect(page.getByRole("tooltip")).toContainText("Formula app-store-v1");
+  await expect(page.getByRole("tooltip")).toContainText("Formula app-store-v2");
   await expect(page.getByRole("tooltip")).toContainText("High confidence");
   await expect(page.getByRole("tooltip")).toContainText(
     "input completeness, not ranking accuracy",
+  );
+  await expect(page.getByRole("tooltip")).toContainText(
+    "Estimated from the first 25 App Store results",
+  );
+  await expect(page.getByRole("tooltip")).not.toContainText(
+    "The store suggests",
   );
   await appleScore.press("Escape");
   await expect(page.getByRole("tooltip")).toHaveCount(0);
 
   const playScore = page
     .getByRole("row", { name: /pomodoro/ })
-    .getByRole("button", { name: /Traffic 9000.*Medium confidence/ });
+    .getByRole("button", { name: /Popularity 9000.*Medium confidence/ });
   await playScore.focus();
   await expect(page.getByRole("tooltip")).toContainText(
-    "Google Play prefix suggest and search",
+    "Google Play suggest reach",
   );
   await playScore.press("Escape");
 
+  const brandDifficulty = page
+    .getByRole("row", { name: /pomodoro/ })
+    .getByRole("button", { name: /Difficulty 70.*Medium confidence/ });
+  await brandDifficulty.focus();
+  await expect(
+    page.getByRole("tooltip").filter({
+      hasText: "A brand search: one app dominates this page.",
+    }),
+  ).toBeVisible();
+  await brandDifficulty.press("Escape");
+
   const invalidTimeScore = page
     .getByRole("row", { name: /study timer/ })
-    .getByRole("button", { name: /Traffic 3000.*Low confidence/ });
+    .getByRole("button", { name: /Popularity 3000.*Older formula/ });
   await invalidTimeScore.focus();
-  await expect(
-    page.getByRole("tooltip").filter({ hasText: "Capture time unavailable" }),
-  ).toBeVisible();
+  const invalidTimeTooltip = page
+    .getByRole("tooltip")
+    .filter({ hasText: "Capture time unavailable" });
+  await expect(invalidTimeTooltip).toBeVisible();
+  await expect(invalidTimeTooltip).not.toContainText("The store suggests");
+  await expect(invalidTimeTooltip).toContainText(
+    "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.",
+  );
   await invalidTimeScore.press("Escape");
 
   const opportunityScore = page
@@ -199,15 +227,15 @@ test("score details are persistent, keyboard accessible and store specific", asy
   await opportunityScore.focus();
   const opportunityTooltip = page
     .getByRole("tooltip")
-    .filter({ hasText: "Calculated from traffic" });
+    .filter({ hasText: "Calculated from popularity" });
   await expect(opportunityTooltip).toBeVisible();
-  await expect(opportunityTooltip).not.toContainText("Formula app-store-v1");
+  await expect(opportunityTooltip).not.toContainText("Formula app-store-v2");
   await expect(opportunityTooltip).not.toContainText("confidence");
   await opportunityScore.press("Escape");
 
   const legacyScore = page
     .getByRole("row", { name: /productivity app/ })
-    .getByRole("button", { name: /Traffic 8000.*Legacy score/ });
+    .getByRole("button", { name: /Popularity 8000.*Older formula/ });
   await legacyScore.focus();
   await expect(
     page
@@ -216,7 +244,9 @@ test("score details are persistent, keyboard accessible and store specific", asy
   ).toBeVisible();
 
   const unscoredRow = page.getByRole("row", { name: /time blocking/ });
-  await expect(unscoredRow.getByLabel("Traffic: not scored yet")).toBeVisible();
+  await expect(
+    unscoredRow.getByLabel("Popularity: not scored yet"),
+  ).toBeVisible();
 });
 
 test("a queued job says queued, not done", async ({ page }) => {

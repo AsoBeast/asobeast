@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { scoreValue } from "./keyword-scores";
+import { isScoreOutdated, scoreValue } from "./keyword-scores";
 
 function keyword(scores: Partial<TrackedKeywordItem>): TrackedKeywordItem {
   return {
@@ -61,4 +61,15 @@ describe("scoreValue", () => {
       );
     },
   );
+});
+
+describe("isScoreOutdated", () => {
+  it.each([
+    [{ scoreOutdated: true }, true],
+    [{ scoreOutdated: false }, false],
+    [{}, false],
+    [{ scoreOutdated: undefined, volume: null }, false],
+  ])("%j is outdated: %s", (scores, expected) => {
+    expect(isScoreOutdated(keyword(scores))).toBe(expected);
+  });
 });

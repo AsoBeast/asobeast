@@ -41,7 +41,7 @@ Every cron expression is evaluated in UTC. See [The daily pipeline and rate limi
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
 | `CRON_DAILY` | `0 3 * * *` | No | Starts the daily pipeline. Batched alerts flush after its processing completes, not on a clock |
-| `CRON_SCORING` | `0 4 * * 0` | No | Recomputes traffic and difficulty weekly on Sunday |
+| `CRON_SCORING` | `0 4 * * 0` | No | Recomputes popularity and difficulty weekly on Sunday |
 | `CRON_RETENTION` | `0 5 * * *` | No | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | No | Writes the daily audit score snapshot |
 | `CRON_DIGEST` | `0 8 * * 1` | No | Sends the weekly digest webhook on Monday |
@@ -199,6 +199,19 @@ See [Enable the optional AI features](/guides/ai-features).
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | No | Empty disables the AI audit, metadata drafts and action explanations |
 | `AI_MODEL` | `gpt-5.6-luna` | No | Must support vision and structured outputs, because the audit reads screenshots |
+
+## Apple search popularity
+
+Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own weekly search popularity for the App Store terms it covers instead of estimating them. See [Keyword scoring](/concepts/scoring).
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `APPLE_ADS_CLIENT_ID` | Empty | No | Client id from the API page of your Apple Ads account settings. The four credentials are set together or not at all, and a partial set refuses to boot |
+| `APPLE_ADS_TEAM_ID` | Empty | No | Team id from the same page |
+| `APPLE_ADS_KEY_ID` | Empty | No | Key id Apple returned when you uploaded the public key |
+| `APPLE_ADS_PRIVATE_KEY_PATH` | Empty | No | Path to the `prime256v1` private key PEM, mounted read only into the API container. Its contents are never logged |
+| `APPLE_ADS_AD_ACCOUNT_ID` | Empty | No | Ad account to read through. Empty uses the first one the credentials can read |
+| `CRON_APPLE_POPULARITY` | `0 9 * * 1` | No | When the weekly sync runs, UTC. Never scheduled while the credentials are unset |
 
 ## Admin surfaces
 

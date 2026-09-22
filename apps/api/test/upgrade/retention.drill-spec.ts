@@ -189,7 +189,10 @@ describe('Retention against an upgraded baseline database', () => {
     ).resolves.toBe(15);
     await expect(
       prisma.keywordMetric.count({
-        where: { keywordId: { startsWith: 'kw_' } },
+        where: {
+          keywordId: { startsWith: 'kw_' },
+          date: new Date('2026-07-01T00:00:00.000Z'),
+        },
       }),
     ).resolves.toBe(3);
     await expect(prisma.review.count()).resolves.toBe(3);

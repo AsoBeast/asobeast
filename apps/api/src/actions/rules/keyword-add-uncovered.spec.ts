@@ -5,11 +5,11 @@ import {
   MetadataFieldAudit,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { OPPORTUNITY_HIGH } from '../../scoring/opportunity';
 import { ActionContext, ActionContextApp } from '../action-context';
 import {
   detectKeywordAddUncovered,
   keywordAddUncoveredDetector,
-  UNCOVERED_MIN_OPPORTUNITY,
   UNCOVERED_MIN_RELEVANCE,
   UNCOVERED_MIN_VOLUME,
 } from './keyword-add-uncovered';
@@ -273,10 +273,9 @@ describe('keyword.add_uncovered', () => {
       ).length > 0;
 
     it('fires at exactly the opportunity threshold and not below', () => {
-      expect(fires({ opportunity: UNCOVERED_MIN_OPPORTUNITY })).toBe(true);
-      expect(fires({ opportunity: UNCOVERED_MIN_OPPORTUNITY - 0.1 })).toBe(
-        false,
-      );
+      expect(OPPORTUNITY_HIGH).toBe(35);
+      expect(fires({ opportunity: 35 })).toBe(true);
+      expect(fires({ opportunity: 34.9 })).toBe(false);
     });
 
     it('fires at exactly the relevance threshold and not below', () => {
@@ -306,6 +305,14 @@ describe('keyword.add_uncovered', () => {
     });
 
     expect(detectKeywordAddUncovered(context([foreign]))).toEqual([]);
+  });
+
+  it('never fires on a score from an older formula', () => {
+    const outdated = app({
+      trackedKeywords: [keyword({ scoreOutdated: true })],
+    });
+
+    expect(detectKeywordAddUncovered(context([outdated]))).toEqual([]);
   });
 
   it('lowers confidence for weaker score provenance', () => {

@@ -17,6 +17,8 @@
     "stripe:catalog": "ts-node --project tsconfig.json scripts/create-stripe-catalog.ts",
     "workspace:suspend": "ts-node --project tsconfig.json scripts/suspend-workspace.ts suspend",
     "workspace:restore": "ts-node --project tsconfig.json scripts/suspend-workspace.ts restore",
+    "scoring:calibrate": "ts-node --project tsconfig.json scripts/scoring-calibrate.ts",
+    "scoring:popularity-study": "ts-node --project tsconfig.json scripts/popularity-study.ts",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -38,6 +40,7 @@
     "bench:stress": "BENCH_SCALE=stress pnpm run bench"
   },
   "dependencies": {
+    "@apple/apple-ads-platform": "1.109.0",
     "@asobeast/mcp-tools": "workspace:*",
     "@asobeast/shared": "workspace:*",
     "@bull-board/api": "^9.10.0",

@@ -199,7 +199,7 @@ export function PrimitiveGallery() {
                 <TableRow>
                   <TableHead>Keyword</TableHead>
                   <TableHead>Position</TableHead>
-                  <TableHead>Traffic</TableHead>
+                  <TableHead>Popularity</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
