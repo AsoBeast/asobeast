@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -53,6 +54,11 @@ const eventOf = (over: Partial<Stripe.Event> = {}): Stripe.Event =>
     data: { object: subscriptionOf() },
     ...over,
   }) as Stripe.Event;
+
+const lastOutcome = (update: jest.Mock): unknown => {
+  const calls = update.mock.calls as [{ data: { outcome?: unknown } }][];
+  return calls.at(-1)?.[0].data.outcome;
+};
 
 describe('BillingWebhookService', () => {
   const build = (
@@ -195,6 +201,21 @@ describe('BillingWebhookService', () => {
       received: true,
       pending: false,
     });
+  });
+
+  it('names how a replayed delivery already settled', async () => {
+    const log = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+    const { service } = build({
+      duplicate: true,
+      stored: { id: 'evt_1', processedAt: new Date(), outcome: 'orphaned' },
+    });
+
+    await service.receive(eventOf());
+
+    expect(log).toHaveBeenCalledWith(
+      'stripe event evt_1 was already received and is already settled as orphaned',
+    );
+    log.mockRestore();
   });
 
   it('asks for processing when the stored receipt is gone', async () => {
@@ -396,20 +417,27 @@ describe('BillingWebhookService', () => {
     );
   });
 
-  it('retries rather than silently dropping a subscription it cannot place', async () => {
-    const { service, workspaceUpdate } = build({
+  it('settles a subscription it cannot place as orphaned without retrying', async () => {
+    const { service, update, workspaceUpdate } = build({
       stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
       workspace: null,
     });
 
-    await expect(service.process('evt_1')).rejects.toThrow(
-      /belongs to no known workspace/,
-    );
+    await expect(service.process('evt_1')).resolves.toBeUndefined();
+
+    expect(update).toHaveBeenCalledWith({
+      where: { id: 'evt_1' },
+      data: {
+        processedAt: expect.any(Date) as Date,
+        outcome: 'orphaned',
+        failure: null,
+      },
+    });
     expect(workspaceUpdate).not.toHaveBeenCalled();
   });
 
-  it('refuses to move a subscription onto a workspace another customer owns', async () => {
-    const { service, workspaceUpdate } = build({
+  it('settles a subscription another customer owns as orphaned', async () => {
+    const { service, update, workspaceUpdate } = build({
       stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
       workspace: {
         id: WORKSPACE,
@@ -419,10 +447,53 @@ describe('BillingWebhookService', () => {
       },
     });
 
-    await expect(service.process('evt_1')).rejects.toThrow(
-      /different customer/,
-    );
+    await expect(service.process('evt_1')).resolves.toBeUndefined();
+
+    expect(lastOutcome(update)).toBe('orphaned');
     expect(workspaceUpdate).not.toHaveBeenCalled();
+  });
+
+  it('names the orphaned settlement in its log line', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+    const { service } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: null,
+    });
+
+    await service.process('evt_1');
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/sub_1 on customer cus_1 .*orphaned/),
+    );
+    warn.mockRestore();
+  });
+
+  it('records applied, and ignored for an unhandled type or an older event', async () => {
+    const applied = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+    });
+    await applied.service.process('evt_1');
+    expect(lastOutcome(applied.update)).toBe('applied');
+
+    const unhandled = build({
+      stored: {
+        id: 'evt_1',
+        processedAt: null,
+        payload: eventOf({ type: 'customer.discount.created' }),
+      },
+    });
+    await unhandled.service.process('evt_1');
+    expect(lastOutcome(unhandled.update)).toBe('ignored');
+
+    const older = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: {
+        id: WORKSPACE,
+        subscriptionEventAt: new Date(1_900_000_000 * 1000),
+      },
+    });
+    await older.service.process('evt_1');
+    expect(lastOutcome(older.update)).toBe('ignored');
   });
 
   it('revokes the plan when the subscription is unpaid', async () => {

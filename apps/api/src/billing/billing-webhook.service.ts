@@ -13,6 +13,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
+import { type BillingEventOutcome } from './billing-event-outcome';
 import { entersDunning, leavesDunning } from './dunning';
 import { PriceCatalog } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
@@ -91,11 +92,11 @@ export class BillingWebhookService {
   private async awaitingWork(eventId: string): Promise<boolean> {
     const stored = await this.prisma.billingEvent.findUnique({
       where: { id: eventId },
-      select: { processedAt: true },
+      select: { processedAt: true, outcome: true },
     });
     const pending = !stored?.processedAt;
     this.logger.log(
-      `stripe event ${eventId} was already received and is ${pending ? 'still unprocessed' : 'already applied'}`,
+      `stripe event ${eventId} was already received and is ${pending ? 'still unprocessed' : `already settled as ${stored.outcome}`}`,
     );
     return pending;
   }
@@ -114,10 +115,12 @@ export class BillingWebhookService {
     if (!row || row.processedAt) return;
 
     try {
-      await this.dispatch(row.payload as unknown as Stripe.Event);
+      const outcome = await this.dispatch(
+        row.payload as unknown as Stripe.Event,
+      );
       await this.prisma.billingEvent.update({
         where: { id: eventId },
-        data: { processedAt: new Date(), failure: null },
+        data: { processedAt: new Date(), outcome, failure: null },
       });
     } catch (error) {
       const failure = error instanceof Error ? error.message : String(error);
@@ -130,28 +133,30 @@ export class BillingWebhookService {
     }
   }
 
-  private async dispatch(event: Stripe.Event): Promise<void> {
+  private async dispatch(event: Stripe.Event): Promise<BillingEventOutcome> {
     if (!isHandled(event.type)) {
       this.logger.debug(`ignoring unhandled stripe event ${event.type}`);
-      return;
+      return 'ignored';
     }
     const subscriptionId = subscriptionIdOf(event);
     if (!subscriptionId) {
       this.logger.warn(`stripe event ${event.id} names no subscription`);
-      return;
+      return 'ignored';
     }
     const subscription = await this.stripe.retrieveSubscription(subscriptionId);
-    await this.applySubscription(event, subscription);
+    return this.applySubscription(event, subscription);
   }
 
   private async applySubscription(
     event: Stripe.Event,
     subscription: Stripe.Subscription,
-  ): Promise<void> {
+  ): Promise<BillingEventOutcome> {
     const workspace = await this.workspaceFor(event, subscription);
     if (!workspace) {
-      throw new Error(
-        `stripe subscription ${subscription.id} belongs to no known workspace`,
+      return this.orphaned(
+        event,
+        subscription,
+        'names no workspace this instance knows',
       );
     }
 
@@ -160,8 +165,10 @@ export class BillingWebhookService {
       workspace.billingCustomerId &&
       workspace.billingCustomerId !== customerId
     ) {
-      throw new Error(
-        `stripe subscription ${subscription.id} names workspace ${workspace.id}, which belongs to a different customer`,
+      return this.orphaned(
+        event,
+        subscription,
+        `names workspace ${workspace.id}, which belongs to customer ${workspace.billingCustomerId}`,
       );
     }
 
@@ -173,7 +180,7 @@ export class BillingWebhookService {
       this.logger.log(
         `stripe event ${event.id} is older than the state workspace ${workspace.id} already holds`,
       );
-      return;
+      return 'ignored';
     }
 
     const state = stateOf(subscription, this.prices.planOf(subscription));
@@ -191,6 +198,18 @@ export class BillingWebhookService {
     this.logger.log(
       `workspace ${workspace.id} is now ${state.plan} (${state.status})`,
     );
+    return 'applied';
+  }
+
+  private orphaned(
+    event: Stripe.Event,
+    subscription: Stripe.Subscription,
+    reason: string,
+  ): BillingEventOutcome {
+    this.logger.warn(
+      `stripe event ${event.id} for subscription ${subscription.id} on customer ${customerIdOf(subscription)} ${reason}; settled as orphaned for the nightly reconciliation to report`,
+    );
+    return 'orphaned';
   }
 
   private async pending(
