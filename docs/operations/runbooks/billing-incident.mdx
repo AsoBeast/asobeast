@@ -12,8 +12,9 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 
 ## Symptoms
 
-- `billing.webhooks.failing` pages, from a stored billing event that recorded a failure.
+- `billing.webhooks.failing` pages, from a stored billing event that recorded a failure and still waits for a fix.
 - `billing.reconcile.discrepancy` arrives when events pile up unprocessed.
+- `billing.orphan.events` arrives at investigate when an event named a subscription this instance cannot place, and settled as `orphaned` without retrying. It is almost never a customer. It usually means a drill left a subscription behind, a workspace was erased while Stripe still sent its last events, or another stack shares this sandbox and its checkouts arrive here. Find the subscription named in the `settled as orphaned` log line. If it belongs to a test customer, delete that customer in its sandbox, which cancels the subscription. If another stack shares the sandbox, move that stack to a sandbox of its own, as described in [Billing](/operations/billing#one-sandbox-per-environment).
 - `asobeast_billing_events_unprocessed` climbs and does not drain.
 - A customer reports a `402` after paying, or keeps full access after cancelling.
 
@@ -57,7 +58,7 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 ## Recovery
 
 1. Confirm the daily reconciliation from `CRON_BILLING_RECONCILE` runs clean, with `asobeast_billing_events_unprocessed` back at zero.
-2. Confirm `asobeast_billing_events_failed` is zero. It pages precisely so that a single failure does not sit unnoticed.
+2. Confirm `asobeast_billing_events_failed` is zero. It counts only events still waiting for a fix, and it pages precisely so that a single failure does not sit unnoticed.
 3. Re-register the webhook endpoint with the provider if the secret changed, and verify with one test delivery.
 
 ## Who to tell
