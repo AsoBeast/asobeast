@@ -1,9 +1,11 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
 import type { ApiErrorEnvelope, BillingSession } from '@asobeast/shared';
+import type Stripe from 'stripe';
 import {
   ALREADY_SUBSCRIBED,
   CHECKOUT_IN_FLIGHT,
+  PAYMENT_PENDING,
   SUBSCRIPTION_NEEDS_ATTENTION,
 } from '../src/billing/billing.service';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
@@ -33,7 +35,7 @@ describe('Billing checkout (e2e)', () => {
   const checkout = (priceId: unknown = INDIE_MONTHLY) =>
     harness.owner.post(CHECKOUT).send({ priceId });
 
-  const storeSubscription = async (status: 'active' | 'unpaid') => {
+  const storeSubscription = async (status: Stripe.Subscription.Status) => {
     await resetBillingState(harness, {
       billingCustomerId: STORED_CUSTOMER,
       subscriptionId: 'sub_live',
@@ -150,6 +152,18 @@ describe('Billing checkout (e2e)', () => {
       message: SUBSCRIPTION_NEEDS_ATTENTION,
       billing: { reason: 'subscription_exists', recovery: 'portal' },
     });
+  });
+
+  it('holds a checkout while the first payment is still confirming', async () => {
+    await storeSubscription('incomplete');
+
+    const refused = await checkout().expect(409);
+
+    expect(refused.body as ApiErrorEnvelope).toMatchObject({
+      message: PAYMENT_PENDING,
+      billing: { reason: 'checkout_in_flight', recovery: 'retry' },
+    });
+    expect(harness.fake.checkoutSessions).toHaveLength(0);
   });
 
   it('opens one session when two checkouts race', async () => {

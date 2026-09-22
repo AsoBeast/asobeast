@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { periodEndOf, stateOf } from './subscription-state';
+import { heldSubscription, periodEndOf, stateOf } from './subscription-state';
 
 const PERIOD_END = 1_800_000_000;
 
@@ -62,5 +62,20 @@ describe('stateOf', () => {
     expect(
       stateOf(subscription({ cancel_at_period_end: true }), 'indie'),
     ).toMatchObject({ plan: 'indie', cancelAtPeriodEnd: true });
+  });
+});
+
+describe('heldSubscription', () => {
+  it('prefers an entitled subscription over one still paying', () => {
+    const pending = subscription({ id: 'sub_pending', status: 'incomplete' });
+    const active = subscription({ id: 'sub_active', status: 'active' });
+
+    expect(heldSubscription([pending, active])?.id).toBe('sub_active');
+  });
+
+  it('holds a subscription whose first payment is still confirming', () => {
+    const pending = subscription({ id: 'sub_pending', status: 'incomplete' });
+
+    expect(heldSubscription([pending])?.id).toBe('sub_pending');
   });
 });

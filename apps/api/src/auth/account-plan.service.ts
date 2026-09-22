@@ -6,7 +6,11 @@ import {
   nextPlan,
   type AccountPlan,
 } from '@asobeast/shared';
-import { holdsSubscription, stalledBy } from '../billing/subscription-status';
+import {
+  holdsSubscription,
+  pendingBy,
+  stalledBy,
+} from '../billing/subscription-status';
 import { Env } from '../config/env';
 import { QuotaService } from './quota.service';
 import { isEntitled, type WorkspaceEntitlement } from './entitlement';
@@ -41,6 +45,8 @@ export class AccountPlanService {
       subscribed: holdsSubscription(workspace),
       subscriptionStalled:
         holdsSubscription(workspace) && stalledBy(workspace.subscriptionStatus),
+      subscriptionPending:
+        holdsSubscription(workspace) && pendingBy(workspace.subscriptionStatus),
       cancelAtPeriodEnd: workspace.cancelAtPeriodEnd,
       trialEndsAt: workspace.trialEndsAt?.toISOString() ?? null,
       renewsAt: workspace.planExpiresAt?.toISOString() ?? null,

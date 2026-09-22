@@ -21,6 +21,7 @@ import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
 import {
   holdsSubscription,
+  pendingBy,
   stalledBy,
   type WorkspaceSubscription,
 } from './subscription-status';
@@ -37,6 +38,9 @@ export const ALREADY_SUBSCRIBED =
 
 export const SUBSCRIPTION_NEEDS_ATTENTION =
   'This workspace already has a subscription that is not collecting. Add a payment method in the billing portal to switch it back on rather than buying a second one.';
+
+export const PAYMENT_PENDING =
+  'Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.';
 
 @Injectable()
 export class BillingService {
@@ -331,6 +335,9 @@ function minuteBucket(): number {
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {
+  if (pendingBy(status)) {
+    return new BillingConflictError('checkout_in_flight', PAYMENT_PENDING);
+  }
   return new BillingConflictError(
     'subscription_exists',
     stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,

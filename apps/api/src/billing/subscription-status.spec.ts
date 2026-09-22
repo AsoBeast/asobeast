@@ -2,6 +2,8 @@ import {
   effectOf,
   entitledBy,
   holdsSubscription,
+  pendingBy,
+  stalledBy,
   type SubscriptionStatus,
 } from './subscription-status';
 
@@ -66,7 +68,22 @@ describe('effectOf', () => {
     },
   );
 
-  it.each(['canceled', 'incomplete', 'incomplete_expired'] as const)(
+  it('holds an incomplete subscription as pending', () => {
+    expect(effectOf('incomplete')).toBe('pending');
+    expect(
+      holdsSubscription({
+        subscriptionId: 'sub_1',
+        subscriptionStatus: 'incomplete',
+      }),
+    ).toBe(true);
+    expect(stalledBy('incomplete')).toBe(false);
+    expect(pendingBy('incomplete')).toBe(true);
+    expect(pendingBy('active')).toBe(false);
+    expect(pendingBy(null)).toBe(false);
+    expect(effectOf('incomplete_expired')).toBe('gone');
+  });
+
+  it.each(['canceled', 'incomplete_expired'] as const)(
     'lets the customer buy again after a %s subscription',
     (status) => {
       expect(effectOf(status)).toBe('gone');
@@ -105,7 +122,7 @@ describe('holdsSubscription', () => {
     },
   );
 
-  it.each(['canceled', 'incomplete', 'incomplete_expired'])(
+  it.each(['canceled', 'incomplete_expired'])(
     'lets go of a %s subscription',
     (subscriptionStatus) => {
       expect(

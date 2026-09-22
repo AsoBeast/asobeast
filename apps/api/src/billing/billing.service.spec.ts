@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
-import { BillingService } from './billing.service';
+import { BillingService, PAYMENT_PENDING } from './billing.service';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
@@ -437,7 +437,26 @@ describe('BillingService', () => {
       },
     );
 
-    it.each(['canceled', 'incomplete', 'incomplete_expired'])(
+    it('holds a checkout when stripe holds an incomplete subscription no webhook recorded', async () => {
+      const { service, listCustomerSubscriptions, createCheckoutSession } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('incomplete'),
+          metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+        },
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toMatchObject({
+        detail: { reason: 'checkout_in_flight', recovery: 'retry' },
+        message: PAYMENT_PENDING,
+      });
+      expect(createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it.each(['canceled', 'incomplete_expired'])(
       'lets the customer buy again after a %s subscription',
       async (status) => {
         const { service, listCustomerSubscriptions, createCheckoutSession } =
@@ -652,7 +671,22 @@ describe('BillingService', () => {
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it.each(['canceled', 'incomplete', 'incomplete_expired'])(
+  it('holds a checkout while the last payment is still confirming', async () => {
+    const { service, createCheckoutSession } = build('cus_existing', {
+      subscriptionId: 'sub_pending',
+      subscriptionStatus: 'incomplete',
+    });
+
+    await expect(
+      service.checkout(owner('cus_existing'), 'price_indie_month'),
+    ).rejects.toMatchObject({
+      detail: { reason: 'checkout_in_flight', recovery: 'retry' },
+      message: PAYMENT_PENDING,
+    });
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it.each(['canceled', 'incomplete_expired'])(
     'lets a workspace buy again after a %s subscription',
     async (subscriptionStatus) => {
       const { service, createCheckoutSession } = build('cus_existing', {
