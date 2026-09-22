@@ -6,7 +6,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import type {
   BillingCatalog,
@@ -20,6 +20,7 @@ import type { AccountUser } from '../auth/auth.types';
 import { BillingService } from './billing.service';
 import { BillingReconciler } from './billing-reconciler.service';
 import { CheckoutDto } from './dto/checkout.dto';
+import { ReconcileDto } from './dto/reconcile.dto';
 import { RetryAfterThrottlerGuard } from '../auth/rate-limit/retry-after-throttler.guard';
 
 @ApiTags('billing')
@@ -68,7 +69,11 @@ export class BillingController {
   @Throttle({ default: { limit: 10, ttl: 3_600_000 } })
   @HttpCode(200)
   @ApiOperation({ summary: 'Reconcile this workspace against Stripe now' })
-  reconcile(@CurrentUser() user: AccountUser): Promise<BillingReconcileReport> {
-    return this.reconciler.reconcileOne(user.workspaceId);
+  @ApiBody({ type: ReconcileDto, required: false })
+  reconcile(
+    @CurrentUser() user: AccountUser,
+    @Body() dto: ReconcileDto,
+  ): Promise<BillingReconcileReport> {
+    return this.reconciler.reconcileOne(user.workspaceId, dto.sessionId);
   }
 }

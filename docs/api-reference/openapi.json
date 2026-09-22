@@ -1279,6 +1279,16 @@
       "post": {
         "operationId": "BillingController_reconcile",
         "parameters": [],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileDto"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "",
@@ -3995,6 +4005,16 @@
         "required": [
           "priceId"
         ]
+      },
+      "ReconcileDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "maxLength": 255,
+            "pattern": "^cs_"
+          }
+        }
       },
       "ImportAppDto": {
         "type": "object",

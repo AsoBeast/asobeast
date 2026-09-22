@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import {
   CHECKOUT_RETURN_COMPLETE,
   CHECKOUT_RETURN_PARAM,
+  CHECKOUT_SESSION_PARAM,
   UPGRADE_PATH,
   type BillingCatalog,
 } from '@asobeast/shared';
@@ -29,6 +30,8 @@ import { heldForWorkspace, heldSubscription } from './subscription-state';
 import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
+
+const STRIPE_SESSION_PLACEHOLDER = '{CHECKOUT_SESSION_ID}';
 
 export const CHECKOUT_IN_FLIGHT =
   'A checkout is already being opened for this workspace. Try again in a couple of minutes.';
@@ -81,6 +84,7 @@ export class BillingService {
           client_reference_id: workspaceId,
           subscription_data: {
             metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
+            billing_mode: { type: 'flexible' },
           },
           success_url: this.checkoutReturnUrl(),
           cancel_url: this.webUrl(UPGRADE_PATH),
@@ -321,7 +325,7 @@ export class BillingService {
   private checkoutReturnUrl(): string {
     const url = new URL(this.returnUrl());
     url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
-    return url.toString();
+    return `${url.toString()}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
   }
 
   private webUrl(path: string): string {

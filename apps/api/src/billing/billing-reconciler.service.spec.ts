@@ -59,6 +59,7 @@ describe('BillingReconciler', () => {
     customerSubscriptions?: Stripe.Subscription[];
     remote?: Stripe.Subscription[];
     enabled?: boolean;
+    session?: Partial<Stripe.Checkout.Session> | Error;
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
@@ -72,6 +73,16 @@ describe('BillingReconciler', () => {
       Promise.resolve(over.customerSubscriptions ?? []),
     );
     const findMany = jest.fn(() => Promise.resolve(rows));
+    const retrieveSubscription = jest.fn(() =>
+      over.retrieveFails
+        ? Promise.reject(over.retrieveFails)
+        : Promise.resolve(over.subscription ?? subscriptionOf()),
+    );
+    const retrieveCheckoutSession = jest.fn(() =>
+      over.session instanceof Error
+        ? Promise.reject(over.session)
+        : Promise.resolve(over.session),
+    );
     const prisma = {
       workspace: {
         findMany,
@@ -83,11 +94,8 @@ describe('BillingReconciler', () => {
     const reconciler = new BillingReconciler(
       {
         enabled: over.enabled ?? true,
-        retrieveSubscription: jest.fn(() =>
-          over.retrieveFails
-            ? Promise.reject(over.retrieveFails)
-            : Promise.resolve(over.subscription ?? subscriptionOf()),
-        ),
+        retrieveSubscription,
+        retrieveCheckoutSession,
         listCustomerSubscriptions,
         listActiveSubscriptions: () => over.remote ?? [],
       } as unknown as StripeService,
@@ -101,7 +109,14 @@ describe('BillingReconciler', () => {
       } as unknown as CrossTenantAccess,
     );
 
-    return { reconciler, update, listCustomerSubscriptions, findMany, rows };
+    return {
+      reconciler,
+      update,
+      listCustomerSubscriptions,
+      retrieveSubscription,
+      findMany,
+      rows,
+    };
   };
 
   it('does nothing while Stripe is not configured', async () => {
@@ -473,6 +488,103 @@ describe('BillingReconciler', () => {
       unreconciled: [],
     });
     expect(update).toHaveBeenCalled();
+  });
+
+  describe('the checkout session the customer just completed', () => {
+    const returning = () =>
+      workspaceOf({
+        plan: 'trial',
+        planExpiresAt: null,
+        subscriptionId: null,
+        subscriptionStatus: null,
+      });
+
+    it('adopts its subscription without listing the customer', async () => {
+      const { reconciler, rows, listCustomerSubscriptions } = build({
+        workspaces: [returning()],
+        session: {
+          id: 'cs_done',
+          client_reference_id: 'ws_1',
+          subscription: 'sub_done',
+        },
+        subscription: subscriptionOf({
+          id: 'sub_done',
+          metadata: { [WORKSPACE_METADATA_KEY]: 'ws_1' },
+        }),
+      });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_done'),
+      ).resolves.toMatchObject({ corrected: 1 });
+
+      expect(listCustomerSubscriptions).not.toHaveBeenCalled();
+      expect(rows[0]).toMatchObject({
+        plan: 'indie',
+        subscriptionId: 'sub_done',
+      });
+    });
+
+    it('ignores a session that references another workspace', async () => {
+      const { reconciler, retrieveSubscription, listCustomerSubscriptions } =
+        build({
+          workspaces: [returning()],
+          session: {
+            id: 'cs_other',
+            client_reference_id: 'ws_2',
+            subscription: 'sub_other',
+          },
+        });
+
+      await reconciler.reconcileOne('ws_1', 'cs_other');
+
+      expect(retrieveSubscription).not.toHaveBeenCalledWith('sub_other');
+      expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_1');
+    });
+
+    it('falls back to the customer when the session holds no subscription yet', async () => {
+      const { reconciler, retrieveSubscription, listCustomerSubscriptions } =
+        build({
+          workspaces: [returning()],
+          session: {
+            id: 'cs_open',
+            client_reference_id: 'ws_1',
+            subscription: null,
+          },
+        });
+
+      await reconciler.reconcileOne('ws_1', 'cs_open');
+
+      expect(retrieveSubscription).not.toHaveBeenCalled();
+      expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_1');
+    });
+
+    it('falls back to the customer when stripe does not know the session', async () => {
+      const { reconciler, listCustomerSubscriptions } = build({
+        workspaces: [returning()],
+        session: stripeErrorOf({ code: 'resource_missing', statusCode: 404 }),
+      });
+
+      await expect(
+        reconciler.reconcileOne('ws_1', 'cs_unknown'),
+      ).resolves.toMatchObject({ checked: 1 });
+      expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_1');
+    });
+
+    it('reads the subscription id off an expanded session', async () => {
+      const { reconciler, rows } = build({
+        workspaces: [returning()],
+        session: {
+          id: 'cs_done',
+          client_reference_id: 'ws_1',
+          subscription: subscriptionOf({ id: 'sub_done' }),
+        },
+        subscription: subscriptionOf({ id: 'sub_done' }),
+      });
+
+      await reconciler.reconcileOne('ws_1', 'cs_done');
+
+      expect(rows[0]).toMatchObject({ subscriptionId: 'sub_done' });
+    });
   });
 
   it('carries a pending cancellation back from Stripe', async () => {

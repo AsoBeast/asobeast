@@ -10,7 +10,7 @@ import {
   WORKSPACE,
   type BillingHarness,
 } from './helpers/billing-harness';
-import { subscriptionFrom } from './helpers/fake-stripe';
+import { checkoutSession, subscriptionFrom } from './helpers/fake-stripe';
 
 const RECONCILE = '/billing/reconcile';
 const CUSTOMER = 'cus_test_stored';
@@ -79,5 +79,40 @@ describe('Billing reconcile (e2e)', () => {
       await reconcile().expect(200);
     }
     await reconcile().expect(429);
+  });
+
+  it('converges from the checkout session the customer returned with', async () => {
+    await resetBillingState(harness, { billingCustomerId: CUSTOMER });
+    harness.fake.sessions.set(
+      'cs_test_done',
+      checkoutSession({
+        id: 'cs_test_done',
+        status: 'complete',
+        client_reference_id: WORKSPACE,
+        subscription: 'sub_done',
+      }),
+    );
+    harness.fake.subscriptionStore.set(
+      'sub_done',
+      subscriptionFrom({
+        id: 'sub_done',
+        status: 'active',
+        customer: CUSTOMER,
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+    );
+
+    await reconcile().send({ sessionId: 'cs_test_done' }).expect(200);
+
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      plan: 'indie',
+      subscriptionId: 'sub_done',
+    });
+  });
+
+  it('refuses a session id that is not one', async () => {
+    await reconcile().send({ sessionId: 'nope' }).expect(400);
+    await reconcile().send({ sessionId: 42 }).expect(400);
+    await reconcile().send({}).expect(200);
   });
 });

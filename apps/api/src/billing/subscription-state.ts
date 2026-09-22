@@ -79,3 +79,11 @@ export function heldForWorkspace(
     ),
   );
 }
+
+export function subscriptionIdOfSession(
+  session: Stripe.Checkout.Session,
+): string | null {
+  const subscription = session.subscription;
+  if (typeof subscription === 'string') return subscription;
+  return subscription?.id ?? null;
+}

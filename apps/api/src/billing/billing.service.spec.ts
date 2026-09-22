@@ -178,6 +178,10 @@ describe('BillingService', () => {
         metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
       },
     });
+    expect(params.subscription_data).toEqual({
+      metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      billing_mode: { type: 'flexible' },
+    });
     expect(key).toMatch(new RegExp(`^checkout:${WORKSPACE}:[0-9a-f-]{36}$`));
   });
 
@@ -570,7 +574,7 @@ describe('BillingService', () => {
       { success_url: string },
     ];
     expect(params.success_url).toBe(
-      'https://app.example.com/settings?checkout=complete',
+      'https://app.example.com/settings?checkout=complete&session_id={CHECKOUT_SESSION_ID}',
     );
   });
 
@@ -587,7 +591,7 @@ describe('BillingService', () => {
       { success_url: string },
     ];
     expect(params.success_url).toBe(
-      'https://app.example.com/account?tab=plan&checkout=complete',
+      'https://app.example.com/account?tab=plan&checkout=complete&session_id={CHECKOUT_SESSION_ID}',
     );
   });
 
