@@ -89,6 +89,12 @@ export class BillingService {
           success_url: this.checkoutReturnUrl(),
           cancel_url: this.webUrl(UPGRADE_PATH),
           allow_promotion_codes: true,
+          billing_address_collection: 'required',
+          tax_id_collection: { enabled: true },
+          customer_update: { address: 'auto', name: 'auto' },
+          automatic_tax: {
+            enabled: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
+          },
         },
         `checkout:${workspaceId}:${attempt}`,
       );

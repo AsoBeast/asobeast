@@ -164,6 +164,7 @@ See [Authentication and accounts](/security/authentication).
 | `STRIPE_SECRET_KEY` | empty | No | Enables billing. Absent, every Stripe path is inert and the API boots normally. Never logged. Give every environment its own sandbox, because a sandbox shared with another stack posts that stack's events here. Warns in production when `BILLING_ENABLED=true` on a sandbox key (`sk_test_` or `rk_test_`) |
 | `STRIPE_WEBHOOK_SECRET` | empty | No | Verifies [the webhook endpoint](/operations/billing#the-webhook-endpoint). Absent, the endpoint refuses every delivery, because an unverified endpoint hands out subscriptions, and checkout stays closed so nobody pays for access that could never be provisioned |
 | `STRIPE_PORTAL_RETURN_URL` | empty | No | Where the customer portal returns to. Falls back to `WEB_PUBLIC_URL` plus `/settings` |
+| `STRIPE_TAX_ENABLED` | `false` | No | Adds automatic tax to every checkout session. Needs Stripe Tax active with its registrations and prices that carry a tax behaviour, or Checkout refuses to open. Address and tax id are collected either way. See [Billing](/operations/billing) |
 | `STRIPE_PRICE_INDIE_MONTHLY` | empty | No | Price id for Indie monthly. Create the catalog with `pnpm --filter api stripe:catalog` |
 | `STRIPE_PRICE_INDIE_YEARLY` | empty | No | Price id for Indie annual |
 | `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly |

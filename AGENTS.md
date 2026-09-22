@@ -331,6 +331,7 @@ AUTH_COOKIE_SECURE=false            # REFUSES TO BOOT when false and NODE_ENV=pr
 STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Never logged. One sandbox per environment; a sandbox shared with another stack posts that stack's events here. WARNS in production when BILLING_ENABLED=true on a sandbox key
 STRIPE_WEBHOOK_SECRET=              # required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
 STRIPE_PORTAL_RETURN_URL=           # where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
+STRIPE_TAX_ENABLED=false            # true adds automatic tax to every checkout. Needs Stripe Tax active with registrations and prices that carry a tax behaviour, or checkout refuses to open
 STRIPE_PRICE_INDIE_MONTHLY=         # price ids differ per environment; create them with pnpm --filter api stripe:catalog
 STRIPE_PRICE_INDIE_YEARLY=
 STRIPE_PRICE_ULTIMATE_MONTHLY=

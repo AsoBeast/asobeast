@@ -83,6 +83,12 @@ describe('Billing checkout (e2e)', () => {
     expect(customer.params.metadata).toEqual({
       [WORKSPACE_METADATA_KEY]: WORKSPACE,
     });
+    expect(recorded.params).toMatchObject({
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      automatic_tax: { enabled: false },
+    });
     expect(recorded.params.success_url?.startsWith(WEB)).toBe(true);
     expect(recorded.params.cancel_url?.startsWith(WEB)).toBe(true);
     expect(recorded.idempotencyKey).toMatch(/^checkout:[^:]+:[0-9a-f-]{36}$/);

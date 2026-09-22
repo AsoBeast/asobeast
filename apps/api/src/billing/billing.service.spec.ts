@@ -12,8 +12,9 @@ import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_billing';
 
-const CONFIG: Record<string, string | undefined> = {
+const CONFIG: Record<string, string | boolean | undefined> = {
   STRIPE_SECRET_KEY: 'sk_test',
+  STRIPE_TAX_ENABLED: false,
   STRIPE_PRICE_INDIE_MONTHLY: 'price_indie_month',
   STRIPE_WEBHOOK_SECRET: 'whsec_test',
   WEB_PUBLIC_URL: 'https://app.example.com',
@@ -48,7 +49,7 @@ describe('BillingService', () => {
       subscriptionId: string | null;
       subscriptionStatus: string | null;
     } = { subscriptionId: null, subscriptionStatus: null },
-    env: Record<string, string | undefined> = {},
+    env: Record<string, string | boolean | undefined> = {},
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
@@ -182,7 +183,28 @@ describe('BillingService', () => {
       metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
       billing_mode: { type: 'flexible' },
     });
+    expect(params).toMatchObject({
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      automatic_tax: { enabled: false },
+    });
     expect(key).toMatch(new RegExp(`^checkout:${WORKSPACE}:[0-9a-f-]{36}$`));
+  });
+
+  it('charges tax automatically once stripe tax is switched on', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_TAX_ENABLED: true },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params.automatic_tax).toEqual({ enabled: true });
   });
 
   it('reuses the stored customer rather than creating a second one', async () => {
