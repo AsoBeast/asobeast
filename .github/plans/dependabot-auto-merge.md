@@ -126,7 +126,7 @@ Both were read from the tag pages on 2026-09-22 and match the repository's rule 
 
 1. Close or leave the seven open Dependabot pull requests untouched. They cannot pass CI and will be recreated by the next run.
 2. Watch dependabot-core #15904. On the first Monday after it closes, confirm that an npm pull request again modifies `pnpm-lock.yaml` and that `checks` goes green. Until then, npm upgrades continue by hand as on 2026-09-12.
-3. Applied: `pmOnFail: ignore` in `pnpm-workspace.yaml`, which is the pnpm 12 replacement for `managePackageManagerVersions: false`, stops pnpm from recording its own version and with it the leading lockfile document. The lockfile was reduced to its dependency document, `pnpm install --frozen-lockfile` passes and leaves it unchanged, and the file parses as one YAML document. Without the setting pnpm re-adds the leading document on the next install, which was confirmed on a scratch copy.
+3. Applied: `pmOnFail: ignore` in `pnpm-workspace.yaml`, which is the pnpm 12 replacement for `managePackageManagerVersions: false`, stops pnpm from recording its own version and with it the leading lockfile document. The lockfile was reduced to its dependency document, `pnpm install --frozen-lockfile` passes and leaves it unchanged, and the file parses as one YAML document. Without the setting pnpm re-adds the leading document on the next install, and so do the `warn` and `error` values, which was confirmed on a scratch copy. The setting also turns off pnpm's check that the running version matches `packageManager`, so the pin is now enforced by corepack locally and by `pnpm/action-setup` in CI.
 
 Phases 1 and 2 can be merged before phase 0 completes. They are safe on their own, and the GitHub Actions and Docker ecosystems benefit immediately.
 
@@ -221,59 +221,13 @@ Notes:
 
 ### Phase 2: `.github/workflows/dependabot-auto-merge.yml`
 
-```yaml
-name: Dependabot auto merge
+The workflow file is the single source of truth for the rule; this section only records why it looks the way it does.
 
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-
-permissions: {}
-
-jobs:
-  auto-merge:
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Read the update metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
-
-      - name: Decide whether this update qualifies
-        id: decide
-        env:
-          UPDATE_TYPE: ${{ steps.metadata.outputs.update-type }}
-        run: |
-          case "$UPDATE_TYPE" in
-            version-update:semver-patch|version-update:semver-minor) echo "eligible=true" >>"$GITHUB_OUTPUT" ;;
-            *) echo "eligible=false" >>"$GITHUB_OUTPUT" ;;
-          esac
-          echo "update-type=$UPDATE_TYPE" >>"$GITHUB_STEP_SUMMARY"
-
-      - name: Enable auto merge
-        if: steps.decide.outputs.eligible == 'true' && github.event.pull_request.auto_merge == null
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --auto --squash "$PR_URL"
-
-      - name: Withdraw auto merge from an update that is no longer eligible
-        if: steps.decide.outputs.eligible != 'true' && github.event.pull_request.auto_merge != null
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge --disable-auto "$PR_URL"
-```
-
-Design decisions, each traceable to a finding above:
-
-- The same patch and minor rule applies to npm, GitHub Actions and Docker. The reference pull request auto merges every GitHub Actions update including majors. This plan does not, because a major bump of an action can change defaults such as `persist-credentials` or `fetch-depth` without any test noticing, and majors are rare enough that a manual look costs little. Dropping the distinction is a one line change if the maintainer prefers the reference behaviour.
+- The same patch and minor rule applies to npm, GitHub Actions and Docker, held once in the workflow level `ELIGIBLE_UPDATE_TYPES` list and read by both steps. The reference pull request auto merges every GitHub Actions update including majors. This plan does not, because a major bump of an action can change defaults such as `persist-credentials` or `fetch-depth` without any test noticing, and majors are rare enough that a manual look costs little. Dropping the distinction is a one line change if the maintainer prefers the reference behaviour.
 - `--squash` for the reasons in the Release Please section. Human pull requests keep using merge commits; the repository allows both.
 - No checkout, no interpolation of pull request text into `run:`. The only pull request derived value that reaches a shell is the pull request URL, passed through `env`.
-- Running on `synchronize` makes the workflow idempotent across Dependabot rebases, and the `auto_merge == null` guard prevents a second enable call. The withdraw step handles a group that turned major.
+- Auto merge is enabled only when a pull request is opened, reopened or marked ready, never on `synchronize`. A maintainer who presses "Disable auto merge" to look at an update first therefore keeps that decision across Dependabot's rebases.
+- The withdraw step runs on every event, including after a failed metadata read, but only touches an auto merge that `github-actions[bot]` enabled. A maintainer who reviews a major update and enables auto merge by hand is left alone. A group that turned major after a rebase, or a branch that gained a commit Dependabot did not write, loses the auto merge the workflow armed.
 - If the required checks have already passed by the time the workflow runs, `gh` merges immediately instead of enabling auto merge. The gate is the same either way.
 - The `if:` on the job means the workflow is a no op on human pull requests and costs a few seconds of runner time on those.
 
@@ -290,7 +244,7 @@ Verify, and record the answers in the pull request that adds the workflow:
 ### Phase 4: rollout and verification
 
 1. Merge phases 1 and 2 through the normal pull request flow. CI on that pull request validates the YAML.
-2. First Monday: expect one GitHub Actions pull request and up to two Docker pull requests. Confirm the workflow ran on each, that the step summary shows the `update-type`, that auto merge is shown on the pull request, and that the pull request merged on its own once the five required checks passed.
+2. First Monday: expect one GitHub Actions pull request. Both Dockerfiles use the floating `node:24-alpine` tag, so the Docker ecosystem has nothing below a major to propose and stays quiet until a tag is pinned. Confirm the workflow ran, that the metadata step's log shows the `update-type`, that auto merge is shown on the pull request, and that the pull request merged on its own once the five required checks passed.
 3. Confirm the merge commit on `main` is a single squashed commit with Dependabot's conventional subject.
 4. Confirm the next Release Please pull request lists no duplicated dependency lines.
 5. Confirm that the npm ecosystem stays parked until phase 0 completes, then repeat steps 2 to 4 for the first green npm pull request.
