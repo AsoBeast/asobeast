@@ -617,6 +617,26 @@ describe('BillingService', () => {
     );
   });
 
+  it('keeps the session placeholder in the query of a return url with a fragment', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      {
+        STRIPE_PORTAL_RETURN_URL:
+          'https://app.example.com/account?tab=plan#billing',
+      },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/account?tab=plan&checkout=complete&session_id={CHECKOUT_SESSION_ID}#billing',
+    );
+  });
+
   it('returns the customer to the portal rather than the paywall', async () => {
     const { service, createPortalSession } = build('cus_existing');
 

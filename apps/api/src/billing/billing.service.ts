@@ -333,7 +333,8 @@ export class BillingService {
   private checkoutReturnUrl(): string {
     const url = new URL(this.returnUrl());
     url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
-    return `${url.toString()}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
+    url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
+    return url.toString();
   }
 
   private webUrl(path: string): string {
