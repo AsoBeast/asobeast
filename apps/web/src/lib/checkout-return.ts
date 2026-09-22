@@ -12,7 +12,7 @@ export function checkoutReturned(search: string): boolean {
 }
 
 export function checkoutSessionId(search: string): string | undefined {
-  return new URLSearchParams(search).get(CHECKOUT_SESSION_PARAM) ?? undefined;
+  return new URLSearchParams(search).get(CHECKOUT_SESSION_PARAM) || undefined;
 }
 
 export function urlWithoutCheckout(pathname: string, search: string): string {

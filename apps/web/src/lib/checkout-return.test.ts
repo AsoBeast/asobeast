@@ -30,6 +30,10 @@ describe("checkoutSessionId", () => {
   it("answers nothing for a return that carries no session", () => {
     expect(checkoutSessionId("?checkout=complete")).toBeUndefined();
   });
+
+  it("answers nothing for an empty session, which the api would refuse", () => {
+    expect(checkoutSessionId("?checkout=complete&session_id=")).toBeUndefined();
+  });
 });
 
 describe("urlWithoutCheckout", () => {
