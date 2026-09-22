@@ -4061,7 +4061,7 @@
           "sessionId": {
             "type": "string",
             "maxLength": 255,
-            "pattern": "^cs_"
+            "pattern": "^cs_(test|live)_[A-Za-z0-9]+$"
           }
         }
       },

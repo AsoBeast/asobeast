@@ -112,6 +112,10 @@ describe('Billing reconcile (e2e)', () => {
 
   it('refuses a session id that is not one', async () => {
     await reconcile().send({ sessionId: 'nope' }).expect(400);
+    await reconcile().send({ sessionId: 'cs_forged' }).expect(400);
+    await reconcile()
+      .send({ sessionId: 'cs_test_a1\n[Nest] LOG forged line' })
+      .expect(400);
     await reconcile().send({ sessionId: 42 }).expect(400);
     await reconcile().send({}).expect(200);
   });
