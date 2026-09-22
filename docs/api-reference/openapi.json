@@ -1199,6 +1199,104 @@
         ]
       }
     },
+    "/billing/catalog": {
+      "get": {
+        "operationId": "BillingController_catalog",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Plans available to buy and their price ids",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/checkout": {
+      "post": {
+        "operationId": "BillingController_checkout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Start a Stripe Checkout session for a plan",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/portal": {
+      "post": {
+        "operationId": "BillingController_portal",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Open the Stripe customer portal for this workspace",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/billing/reconcile": {
+      "post": {
+        "operationId": "BillingController_reconcile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Reconcile this workspace against Stripe now",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
     "/apps": {
       "post": {
         "operationId": "AppsController_import",
@@ -3330,104 +3428,6 @@
         ]
       }
     },
-    "/billing/catalog": {
-      "get": {
-        "operationId": "BillingController_catalog",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Plans available to buy and their price ids",
-        "tags": [
-          "billing"
-        ]
-      }
-    },
-    "/billing/checkout": {
-      "post": {
-        "operationId": "BillingController_checkout",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CheckoutDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Start a Stripe Checkout session for a plan",
-        "tags": [
-          "billing"
-        ]
-      }
-    },
-    "/billing/portal": {
-      "post": {
-        "operationId": "BillingController_portal",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Open the Stripe customer portal for this workspace",
-        "tags": [
-          "billing"
-        ]
-      }
-    },
-    "/billing/reconcile": {
-      "post": {
-        "operationId": "BillingController_reconcile",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Reconcile this workspace against Stripe now",
-        "tags": [
-          "billing"
-        ]
-      }
-    },
     "/admin/support/workspaces": {
       "get": {
         "operationId": "SupportController_list",
@@ -3983,6 +3983,19 @@
           "confirm"
         ]
       },
+      "CheckoutDto": {
+        "type": "object",
+        "properties": {
+          "priceId": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "priceId"
+        ]
+      },
       "ImportAppDto": {
         "type": "object",
         "properties": {
@@ -4144,19 +4157,6 @@
         },
         "required": [
           "url"
-        ]
-      },
-      "CheckoutDto": {
-        "type": "object",
-        "properties": {
-          "priceId": {
-            "type": "string",
-            "minLength": 4,
-            "maxLength": 255
-          }
-        },
-        "required": [
-          "priceId"
         ]
       },
       "SupportActionDto": {
