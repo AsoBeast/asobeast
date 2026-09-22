@@ -3,7 +3,7 @@ import {
   TEST_STRIPE_WEBHOOK_SECRET,
 } from './helpers/enable-stripe';
 import { execSync } from 'child_process';
-import { readFileSync } from 'fs';
+import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -15,6 +15,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { BillingWebhookService } from '../src/billing/billing-webhook.service';
+import { HANDLED_EVENTS } from '../src/billing/webhook-events';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   STRIPE_API_VERSION,
@@ -32,6 +33,9 @@ const SUBSCRIPTION = 'sub_TestIndieMonthly';
 const PERIOD_END = new Date(1_802_678_400 * 1000);
 
 const fixtures = join(__dirname, 'fixtures', 'stripe');
+
+const UNSCRUBBED_ID =
+  /\b(?!sub_sched_Test)(cus|sub|in|price|prod|pi|ch|pm|cs|evt|si|il|bps|acct)_(?!Test)[A-Za-z0-9]+/;
 
 function fixture(name: string): Stripe.Event {
   return JSON.parse(
@@ -463,5 +467,31 @@ describe('Stripe webhooks', () => {
     expect(stored.processedAt).not.toBeNull();
     expect(stored.failure).toBeNull();
     expect((await workspaceRow()).plan).toBe('free');
+  });
+
+  it('keeps every fixture on the pinned version, in the sandbox and scrubbed', () => {
+    const files = readdirSync(fixtures).filter((file) =>
+      file.endsWith('.json'),
+    );
+    const types = new Set<string>();
+
+    for (const file of files) {
+      const text = readFileSync(join(fixtures, file), 'utf8');
+      const event = JSON.parse(text) as Stripe.Event;
+      types.add(event.type);
+      expect({ file, version: event.api_version }).toEqual({
+        file,
+        version: STRIPE_API_VERSION,
+      });
+      expect({ file, livemode: event.livemode }).toEqual({
+        file,
+        livemode: false,
+      });
+      expect({ file, unscrubbed: UNSCRUBBED_ID.exec(text)?.[0] }).toEqual({
+        file,
+        unscrubbed: undefined,
+      });
+    }
+    expect(HANDLED_EVENTS.filter((type) => !types.has(type))).toEqual([]);
   });
 });

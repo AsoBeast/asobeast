@@ -5,7 +5,7 @@
   "created": 1800000800,
   "data": {
     "object": {
-      "id": "in_2TestInvoice",
+      "id": "in_Test1",
       "object": "invoice",
       "amount_due": 1000,
       "amount_paid": 0,
@@ -19,7 +19,7 @@
       "currency": "usd",
       "customer": "cus_TestWorkspace1",
       "customer_email": "owner@example.com",
-      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_test/test",
+      "hosted_invoice_url": "https://invoice.stripe.com/i/acct_Test1/test",
       "livemode": false,
       "metadata": {},
       "parent": {
@@ -35,7 +35,6 @@
       "period_end": 1802678400,
       "period_start": 1800000000,
       "status": "open",
-      "subscription": "sub_TestIndieMonthly",
       "total": 1000
     }
   },

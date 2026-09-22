@@ -5,7 +5,7 @@
   "created": 1800000100,
   "data": {
     "object": {
-      "id": "cs_test_TestSession",
+      "id": "cs_Test1",
       "object": "checkout.session",
       "amount_total": 1000,
       "client_reference_id": "ws_stripe_fixture",

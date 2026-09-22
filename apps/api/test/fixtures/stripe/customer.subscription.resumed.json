@@ -1,8 +1,8 @@
 {
-  "id": "evt_TestSubscriptionCreated",
+  "id": "evt_TestSubscriptionResumed",
   "object": "event",
   "api_version": "2026-08-26.dahlia",
-  "created": 1800000200,
+  "created": 1800001100,
   "data": {
     "object": {
       "id": "sub_TestIndieMonthly",
@@ -81,6 +81,9 @@
       "test_clock": null,
       "trial_end": null,
       "trial_start": null
+    },
+    "previous_attributes": {
+      "status": "paused"
     }
   },
   "livemode": false,
@@ -89,5 +92,5 @@
     "id": "req_TestRequest",
     "idempotency_key": null
   },
-  "type": "customer.subscription.created"
+  "type": "customer.subscription.resumed"
 }

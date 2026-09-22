@@ -1,16 +1,16 @@
 {
-  "id": "evt_TestInvoicePaid",
+  "id": "evt_TestInvoiceActionRequired",
   "object": "event",
   "api_version": "2026-08-26.dahlia",
-  "created": 1800000700,
+  "created": 1800001200,
   "data": {
     "object": {
       "id": "in_Test1",
       "object": "invoice",
       "amount_due": 1000,
-      "amount_paid": 1000,
-      "amount_remaining": 0,
-      "attempt_count": 1,
+      "amount_paid": 0,
+      "amount_remaining": 1000,
+      "attempt_count": 2,
       "attempted": true,
       "auto_advance": false,
       "billing_reason": "subscription_cycle",
@@ -34,7 +34,7 @@
       },
       "period_end": 1802678400,
       "period_start": 1800000000,
-      "status": "paid",
+      "status": "open",
       "total": 1000
     }
   },
@@ -44,5 +44,5 @@
     "id": "req_TestRequest",
     "idempotency_key": null
   },
-  "type": "invoice.paid"
+  "type": "invoice.payment_action_required"
 }
