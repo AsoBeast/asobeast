@@ -75,6 +75,7 @@ model Workspace {
   deletionRequestedAt DateTime?
   deletionRequestedBy String?
   deletionDueAt       DateTime?
+  erasureClaimedAt    DateTime?
   createdAt   DateTime     @default(now())
 
   @@index([deletionDueAt])

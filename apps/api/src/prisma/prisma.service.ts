@@ -33,10 +33,7 @@ function createPrismaClient(
       },
       withTransaction<T>(
         run: (tx: Prisma.TransactionClient) => Promise<T>,
-        options?: {
-          isolationLevel?: Prisma.TransactionIsolationLevel;
-          timeout?: number;
-        },
+        options?: { isolationLevel?: Prisma.TransactionIsolationLevel },
       ): Promise<T> {
         return base.$transaction(async (tx) => {
           await enterScope(tx, workspace);

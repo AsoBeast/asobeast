@@ -1,5 +1,5 @@
 import './helpers/enable-stripe';
-import { INestApplication } from '@nestjs/common';
+import { ConflictException, INestApplication, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import type Stripe from 'stripe';
@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AccountDeletionService } from '../src/account/account-deletion.service';
 import { STRIPE_CLIENT } from '../src/billing/stripe.client';
+import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TENANT_TABLES } from '../src/common/tenancy/tenant-tables';
 import { restoreAuthEnv } from './helpers/auth-env';
@@ -499,29 +500,52 @@ describe('Workspace deletion (e2e)', () => {
       ).resolves.toMatchObject({ workspaceId: RACED });
     });
 
-    it('holds a cancellation until stripe has released the workspace it erases', async () => {
+    it('refuses a cancellation without waiting while stripe releases the workspace', async () => {
       await prisma.workspace.update({
         where: { id: RACED },
         data: { billingCustomerId: 'cus_deletion_raced' },
       });
-      let cancellation: Promise<{ count: number }> | undefined;
-      whileDeleting = () => {
-        cancellation = Promise.resolve(
-          prisma.workspace.updateMany({
-            where: { id: RACED },
-            data: { deletionDueAt: null },
-          }),
+      const context = app.get(WorkspaceContext);
+      let cancellation: Promise<unknown> | undefined;
+      let rowLockedDuringStripe: unknown;
+      whileDeleting = async () => {
+        rowLockedDuringStripe = await prisma.$transaction(
+          (tx) =>
+            tx.$queryRaw`SELECT "id" FROM "Workspace" WHERE "id" = ${RACED} FOR UPDATE NOWAIT`,
         );
-        return new Promise((resolve) => setTimeout(resolve, 200));
+        cancellation = context.run(RACED, () => deletion.cancel());
+        await cancellation.catch(() => undefined);
       };
 
       await expect(deletion.eraseDue()).resolves.toEqual([RACED]);
 
       expect(deletedCustomers).toContain('cus_deletion_raced');
-      await expect(cancellation).resolves.toEqual({ count: 0 });
+      expect(rowLockedDuringStripe).toEqual([{ id: RACED }]);
+      await expect(cancellation).rejects.toBeInstanceOf(ConflictException);
       await expect(
         prisma.workspace.count({ where: { id: RACED } }),
       ).resolves.toBe(0);
+    });
+
+    it('releases the claim so the owner can still cancel when stripe is unreachable', async () => {
+      await prisma.workspace.update({
+        where: { id: RACED },
+        data: { billingCustomerId: 'cus_deletion_unreachable' },
+      });
+      jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      whileDeleting = () => Promise.reject(new Error('stripe is down'));
+
+      await expect(deletion.eraseDue()).resolves.toEqual([]);
+
+      await expect(
+        prisma.workspace.findUnique({
+          where: { id: RACED },
+          select: { erasureClaimedAt: true },
+        }),
+      ).resolves.toEqual({ erasureClaimedAt: null });
+      await expect(
+        app.get(WorkspaceContext).run(RACED, () => deletion.cancel()),
+      ).resolves.toMatchObject({ scheduled: false });
     });
 
     it('leaves billing attached when the workspace delete fails', async () => {
