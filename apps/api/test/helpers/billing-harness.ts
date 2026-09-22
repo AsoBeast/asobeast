@@ -35,6 +35,7 @@ export interface BillingHarness {
 
 export async function startBillingHarness(
   configured = true,
+  prepare: (fake: FakeStripe) => void = () => undefined,
 ): Promise<BillingHarness> {
   execSync('pnpm prisma migrate deploy', {
     cwd: join(__dirname, '..', '..'),
@@ -43,6 +44,7 @@ export async function startBillingHarness(
   });
 
   const fake = fakeStripe();
+  prepare(fake);
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
   })

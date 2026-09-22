@@ -121,6 +121,23 @@ export function checkoutSession(
   } as Stripe.Checkout.Session;
 }
 
+export function catalogPrice(
+  id: string,
+  lookupKey: string,
+  unitAmount: number,
+  interval: 'month' | 'year',
+): Stripe.Price {
+  return {
+    id,
+    object: 'price',
+    active: true,
+    lookup_key: lookupKey,
+    currency: 'usd',
+    unit_amount: unitAmount,
+    recurring: { interval },
+  } as Stripe.Price;
+}
+
 export function fakeStripe(): FakeStripe {
   const signer = new Stripe(TEST_STRIPE_SECRET_KEY);
   let counter = 0;
@@ -213,7 +230,7 @@ export function fakeStripe(): FakeStripe {
         listOf(
           [...fake.priceStore.values()].filter(
             (price) =>
-              price.active &&
+              (params.active === undefined || price.active === params.active) &&
               (!params.lookup_keys ||
                 params.lookup_keys.includes(price.lookup_key ?? '')),
           ),
