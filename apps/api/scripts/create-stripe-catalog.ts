@@ -11,6 +11,7 @@ import {
   LEGAL_PRIVACY_URL,
   LEGAL_TERMS_URL,
   SAAS_TAX_CODE,
+  configurationCovers,
   portalConfiguration,
   type PortalProduct,
 } from '../src/billing/portal-configuration';
@@ -138,7 +139,7 @@ async function ensurePortal(
     limit: 1,
   });
   const current = found.data[0];
-  if (current && covers(current, desired)) return current.id;
+  if (current && configurationCovers(current, desired)) return current.id;
 
   if (current) {
     await stripe.billingPortal.configurations.update(current.id, desired);
@@ -151,24 +152,6 @@ async function ensurePortal(
     say(`mark portal configuration ${created.id} as default in the dashboard`);
   }
   return created.id;
-}
-
-function covers(actual: unknown, expected: unknown): boolean {
-  if (Array.isArray(expected)) {
-    return (
-      Array.isArray(actual) &&
-      actual.length === expected.length &&
-      expected.every((item, index) => covers(actual[index], item))
-    );
-  }
-  if (expected !== null && typeof expected === 'object') {
-    if (actual === null || typeof actual !== 'object') return false;
-    const record = actual as Record<string, unknown>;
-    return Object.entries(expected).every(([key, value]) =>
-      covers(record[key], value),
-    );
-  }
-  return actual === expected;
 }
 
 async function main(): Promise<void> {

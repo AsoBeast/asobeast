@@ -1,4 +1,5 @@
 import {
+  configurationCovers,
   LEGAL_PRIVACY_URL,
   LEGAL_TERMS_URL,
   PORTAL_CANCELLATION_REASONS,
@@ -82,5 +83,65 @@ describe('portalConfiguration', () => {
   it('points at the published legal pages', () => {
     expect(LEGAL_TERMS_URL).toBe('https://docs.asobeast.com/legal/terms');
     expect(LEGAL_PRIVACY_URL).toBe('https://docs.asobeast.com/legal/privacy');
+  });
+});
+
+describe('configurationCovers', () => {
+  const desired = portalConfiguration({
+    products: [
+      { id: 'prod_indie', prices: ['price_im', 'price_iy'] },
+      { id: 'prod_ultimate', prices: ['price_um', 'price_uy'] },
+    ],
+    termsUrl: LEGAL_TERMS_URL,
+    privacyUrl: LEGAL_PRIVACY_URL,
+  });
+
+  it('accepts a configuration that holds every desired setting and more', () => {
+    expect(
+      configurationCovers(
+        { ...desired, id: 'bpc_1', is_default: true, active: true },
+        desired,
+      ),
+    ).toBe(true);
+  });
+
+  it('accepts the same settings in whatever order stripe lists them', () => {
+    const features = desired.features;
+    const reordered = {
+      ...desired,
+      features: {
+        ...features,
+        customer_update: {
+          enabled: true,
+          allowed_updates: ['tax_id', 'address', 'phone', 'email', 'name'],
+        },
+        subscription_update: {
+          ...features.subscription_update,
+          products: [
+            { product: 'prod_ultimate', prices: ['price_uy', 'price_um'] },
+            { product: 'prod_indie', prices: ['price_iy', 'price_im'] },
+          ],
+        },
+      },
+    };
+
+    expect(configurationCovers(reordered, desired)).toBe(true);
+  });
+
+  it('refuses a configuration that differs on a setting', () => {
+    const differing = {
+      ...desired,
+      features: {
+        ...desired.features,
+        subscription_cancel: { enabled: true, mode: 'immediately' },
+      },
+    };
+
+    expect(configurationCovers(differing, desired)).toBe(false);
+  });
+
+  it('refuses a list with a setting missing or added', () => {
+    expect(configurationCovers(['a', 'b'], ['a', 'b', 'c'])).toBe(false);
+    expect(configurationCovers(['a', 'b', 'c'], ['a', 'b'])).toBe(false);
   });
 });

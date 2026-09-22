@@ -81,3 +81,26 @@ export function portalConfiguration(
     ...(input.returnUrl ? { default_return_url: input.returnUrl } : {}),
   };
 }
+
+export function configurationCovers(
+  actual: unknown,
+  expected: unknown,
+): boolean {
+  if (Array.isArray(expected)) {
+    return (
+      Array.isArray(actual) &&
+      actual.length === expected.length &&
+      expected.every((item) =>
+        actual.some((candidate) => configurationCovers(candidate, item)),
+      )
+    );
+  }
+  if (expected !== null && typeof expected === 'object') {
+    if (actual === null || typeof actual !== 'object') return false;
+    const record = actual as Record<string, unknown>;
+    return Object.entries(expected).every(([key, value]) =>
+      configurationCovers(record[key], value),
+    );
+  }
+  return actual === expected;
+}
