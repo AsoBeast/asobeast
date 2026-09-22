@@ -5,6 +5,12 @@ import {
   DELETION_CONFIRMATION,
   type WorkspaceDeletionStatus,
 } from '@asobeast/shared';
+import { reasonOf } from '../billing/stripe-errors';
+import {
+  STRIPE_MAX_NETWORK_RETRIES,
+  STRIPE_TIMEOUT_MS,
+} from '../billing/stripe.client';
+import { StripeService } from '../billing/stripe.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
@@ -15,6 +21,9 @@ const DELETION_JUSTIFICATION =
 
 const DAY_MS = 24 * 60 * 60_000;
 
+const ERASURE_TRANSACTION_TIMEOUT_MS =
+  STRIPE_TIMEOUT_MS * (STRIPE_MAX_NETWORK_RETRIES + 1) + 30_000;
+
 @Injectable()
 export class AccountDeletionService {
   private readonly logger = new Logger(AccountDeletionService.name);
@@ -23,6 +32,7 @@ export class AccountDeletionService {
     private readonly prisma: PrismaService,
     private readonly workspace: WorkspaceContext,
     private readonly crossTenant: CrossTenantAccess,
+    private readonly stripe: StripeService,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -110,26 +120,56 @@ export class AccountDeletionService {
   }
 
   private erase(workspaceId: string, now: Date): Promise<boolean> {
-    return this.prisma.withTransaction(async (tx) => {
-      const [claimed] = await tx.$queryRaw<{ id: string }[]>`
-        SELECT "id" FROM "Workspace"
-        WHERE "id" = ${workspaceId} AND "deletionDueAt" <= ${now}
-        FOR UPDATE
-      `;
-      if (!claimed) {
-        this.logger.log(
-          `workspace ${workspaceId} was no longer due for erasure`,
+    return this.prisma.withTransaction(
+      async (tx) => {
+        const [claimed] = await tx.$queryRaw<
+          { id: string; billingCustomerId: string | null }[]
+        >`
+          SELECT "id", "billingCustomerId" FROM "Workspace"
+          WHERE "id" = ${workspaceId} AND "deletionDueAt" <= ${now}
+          FOR UPDATE
+        `;
+        if (!claimed) {
+          this.logger.log(
+            `workspace ${workspaceId} was no longer due for erasure`,
+          );
+          return false;
+        }
+        const released = await this.releaseBilling(
+          workspaceId,
+          claimed.billingCustomerId,
         );
-        return false;
-      }
-      await tx.billingEvent.updateMany({
-        where: { workspaceId },
-        data: { workspaceId: null },
-      });
-      await tx.workspace.delete({ where: { id: workspaceId } });
-      this.logger.warn(`workspace ${workspaceId} erased`);
+        if (!released) return false;
+        await tx.billingEvent.updateMany({
+          where: { workspaceId },
+          data: { workspaceId: null },
+        });
+        await tx.workspace.delete({ where: { id: workspaceId } });
+        this.logger.warn(`workspace ${workspaceId} erased`);
+        return true;
+      },
+      { timeout: ERASURE_TRANSACTION_TIMEOUT_MS },
+    );
+  }
+
+  private async releaseBilling(
+    workspaceId: string,
+    customerId: string | null,
+  ): Promise<boolean> {
+    if (!customerId || !this.stripe.enabled) return true;
+
+    try {
+      await this.stripe.deleteCustomer(customerId);
+      this.logger.warn(
+        `stripe customer ${customerId} of workspace ${workspaceId} deleted, which cancels its subscriptions`,
+      );
       return true;
-    });
+    } catch (error) {
+      this.logger.error(
+        `workspace ${workspaceId} keeps its data until stripe customer ${customerId} can be deleted: ${reasonOf(error)}`,
+      );
+      return false;
+    }
   }
 
   private toStatus(workspace: {
