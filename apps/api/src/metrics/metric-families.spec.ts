@@ -78,6 +78,7 @@ const instance: InstanceMetrics = {
   suspended: 1,
   billingEventsUnprocessed: 0,
   billingEventsFailed: 1,
+  billingEventsOrphaned: 4,
 };
 
 describe('metricFamilies', () => {
@@ -141,6 +142,7 @@ describe('metricFamilies', () => {
     expect(text).toContain('asobeast_billing_workspaces{plan="indie"} 3');
     expect(text).toContain('asobeast_billing_trials_active 2');
     expect(text).toContain('asobeast_billing_events_failed 1');
+    expect(text).toContain('asobeast_billing_events_orphaned 4');
   });
 
   it('keeps one series per workspace per metric', () => {

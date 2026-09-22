@@ -83,6 +83,7 @@ export function instanceMetricsOf(
     suspended: 0,
     billingEventsUnprocessed: 0,
     billingEventsFailed: 0,
+    billingEventsOrphaned: 0,
     ...overrides,
   };
 }

@@ -9,6 +9,7 @@ import { StoreCanaryService } from '../store-providers/canary/store-canary.servi
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
 import {
   ACCOUNT_MAIL_WINDOW_HOURS,
+  BILLING_ORPHAN_WINDOW_DAYS,
   InstanceMetricsCollector,
 } from './instance-metrics.service';
 import { instanceMetricsOf } from './metrics.fixture';
@@ -93,6 +94,28 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
       },
       _count: { _all: true },
     });
+  });
+
+  it('counts failed events still awaiting a fix and orphans of the last week', async () => {
+    const orphanedSince = new Date(
+      NOW.getTime() - BILLING_ORPHAN_WINDOW_DAYS * 24 * 60 * 60 * 1000,
+    );
+    billingEventCount.mockImplementation(
+      ({ where }: { where: { outcome?: string; failure?: unknown } }) =>
+        Promise.resolve(where.outcome ? 3 : where.failure ? 2 : 5),
+    );
+
+    const metrics = await collector.collect(NOW);
+
+    expect(billingEventCount).toHaveBeenCalledWith({
+      where: { processedAt: null, failure: { not: null } },
+    });
+    expect(billingEventCount).toHaveBeenCalledWith({
+      where: { outcome: 'orphaned', receivedAt: { gte: orphanedSince } },
+    });
+    expect(metrics.billingEventsUnprocessed).toBe(5);
+    expect(metrics.billingEventsFailed).toBe(2);
+    expect(metrics.billingEventsOrphaned).toBe(3);
   });
 
   it('ignores an outcome it has no counter for', async () => {

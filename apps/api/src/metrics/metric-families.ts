@@ -274,8 +274,13 @@ function instanceFamilies(instance: InstanceMetrics): MetricFamily[] {
     ),
     single(
       'asobeast_billing_events_failed',
-      'Stored billing events that recorded a failure',
+      'Stored billing events that recorded a failure and still wait for a fix',
       instance.billingEventsFailed,
+    ),
+    single(
+      'asobeast_billing_events_orphaned',
+      'Billing events settled as orphaned in the last seven days',
+      instance.billingEventsOrphaned,
     ),
     storeCanaryFamily(instance.storeCanary),
     ...backupFamilies(instance.backup),
