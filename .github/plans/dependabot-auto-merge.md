@@ -1,6 +1,6 @@
 # Dependabot auto merge: research and implementation plan
 
-Status: proposal, 2026-09-22. Nothing in this document is applied yet.
+Status: phases 0, 1 and 2 are implemented on the `ci/dependabot-auto-merge` branch, 2026-09-22. Phase 3 is a settings checklist for the maintainer, phase 4 happens after the first Monday run, and phase 5 stays optional.
 
 ## Summary
 
@@ -126,7 +126,7 @@ Both were read from the tag pages on 2026-09-22 and match the repository's rule 
 
 1. Close or leave the seven open Dependabot pull requests untouched. They cannot pass CI and will be recreated by the next run.
 2. Watch dependabot-core #15904. On the first Monday after it closes, confirm that an npm pull request again modifies `pnpm-lock.yaml` and that `checks` goes green. Until then, npm upgrades continue by hand as on 2026-09-12.
-3. If a faster path is wanted, validate the workaround from the issue thread on a branch: apply it, run `pnpm install`, and confirm the lockfile is a single document and `pnpm install --frozen-lockfile` still passes. Only then commit it.
+3. Applied: `pmOnFail: ignore` in `pnpm-workspace.yaml`, which is the pnpm 12 replacement for `managePackageManagerVersions: false`, stops pnpm from recording its own version and with it the leading lockfile document. The lockfile was reduced to its dependency document, `pnpm install --frozen-lockfile` passes and leaves it unchanged, and the file parses as one YAML document. Without the setting pnpm re-adds the leading document on the next install, which was confirmed on a scratch copy.
 
 Phases 1 and 2 can be merged before phase 0 completes. They are safe on their own, and the GitHub Actions and Docker ecosystems benefit immediately.
 
