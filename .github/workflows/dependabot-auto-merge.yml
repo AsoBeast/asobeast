@@ -1,0 +1,36 @@
+name: Dependabot auto merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions: {}
+
+env:
+  ELIGIBLE_UPDATE_TYPES: '["version-update:semver-patch", "version-update:semver-minor"]'
+
+jobs:
+  auto-merge:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Read the update metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      - name: Enable auto merge on a new patch or minor update
+        if: github.event.action != 'synchronize' && github.event.pull_request.auto_merge == null && contains(fromJSON(env.ELIGIBLE_UPDATE_TYPES), steps.metadata.outputs.update-type)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --auto --squash "${PR_URL}"
+
+      - name: Withdraw the auto merge this workflow enabled when the update no longer qualifies
+        if: always() && github.event.pull_request.auto_merge.enabled_by.login == 'github-actions[bot]' && !contains(fromJSON(env.ELIGIBLE_UPDATE_TYPES), steps.metadata.outputs.update-type)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: gh pr merge --disable-auto "${PR_URL}"

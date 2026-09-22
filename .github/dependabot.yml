@@ -12,6 +12,8 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     commit-message:
       prefix: chore
@@ -21,19 +23,36 @@ updates:
     groups:
       production-dependencies:
         dependency-type: production
+        update-types: [minor, patch]
+      production-majors:
+        dependency-type: production
+        update-types: [major]
       development-dependencies:
         dependency-type: development
+        update-types: [minor, patch]
+      development-majors:
+        dependency-type: development
+        update-types: [major]
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: ci
       include: scope
     labels:
       - dependencies
       - github-actions
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+      github-actions-majors:
+        patterns: ["*"]
+        update-types: [major]
   - package-ecosystem: docker
     directories:
       - /apps/api
@@ -41,12 +60,17 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    cooldown:
+      default-days: 7
     commit-message:
       prefix: build
       include: scope
     labels:
       - dependencies
       - docker
+    groups:
+      docker:
+        patterns: ["*"]
     ignore:
       - dependency-name: node
         update-types: ["version-update:semver-major"]

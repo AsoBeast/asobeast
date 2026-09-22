@@ -133,6 +133,6 @@ Release Please owns package versions and `CHANGELOG.md`. Never bump a version or
 
 A release ships when the generated release pull request is merged. Mark a breaking change with `feat!` or a `BREAKING CHANGE:` commit footer so Release Please includes it in the generated changelog and computes the correct version. Only a commit subject and a breaking-change footer reach the changelog, so anything an operator must read before upgrading belongs in one of those, never in a plain commit body.
 
-Dependabot monitors the application Dockerfiles. It does not monitor the PostgreSQL and Redis base images in the Compose files, nor the `overrides` block in `pnpm-workspace.yaml`, so review those manually before each release.
+Dependabot monitors the application Dockerfiles. It does not monitor the PostgreSQL and Redis base images in the Compose files, nor the `overrides` block in `pnpm-workspace.yaml`, so review those manually before each release. Patch and minor updates from Dependabot merge on their own once the required checks pass, through `.github/workflows/dependabot-auto-merge.yml`. Major updates arrive in their own pull request and wait for a person.
 
 Container images are built only from a published release, never from `main`.
