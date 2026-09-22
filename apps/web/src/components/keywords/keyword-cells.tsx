@@ -25,7 +25,7 @@ const OUTDATED_SCORE_DETAIL =
   "Scored by an older formula. It is rescored automatically; the new number replaces this one within a day.";
 
 const DERIVED_SCORE_DETAIL =
-  "Calculated from traffic, difficulty and this app's keyword relevance when the list loaded, so it carries no stored capture time. A keyword much stronger or weaker than your app's rating count shifts the difficulty it is weighed against.";
+  "Calculated from popularity and difficulty when the list loaded, so it carries no stored capture time. It is the same for every app that tracks the keyword.";
 
 function ScoreButton({
   value,
@@ -160,6 +160,7 @@ export const SCORING_SOURCE_LABELS: Record<ScoringSource, string> = {
   APPLE_SUGGEST_REACH: "App Store suggest reach",
   GOOGLE_PLAY_SUGGEST_REACH: "Google Play suggest reach",
   APPLE_ADS_POPULARITY: "Apple Ads search popularity",
+  APPLE_SEARCH_SIGNALS: "App Store search signals",
 };
 
 export const SCORING_CONFIDENCE_LABELS: Record<ScoringConfidence, string> = {

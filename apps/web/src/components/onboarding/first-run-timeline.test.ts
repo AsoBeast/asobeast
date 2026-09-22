@@ -158,7 +158,7 @@ describe("firstRunRows", () => {
       "Listing captured",
       "Keywords tracked",
       "Positions collected",
-      "Traffic and difficulty scored",
+      "Popularity and difficulty scored",
       "Reviews backfilled",
       "Daily history",
     ]);

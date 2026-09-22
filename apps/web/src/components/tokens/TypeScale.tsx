@@ -75,7 +75,7 @@ export function TypeScale() {
                   Position
                 </th>
                 <th scope="col" className="py-1.5 text-right font-medium">
-                  Traffic
+                  Popularity
                 </th>
                 <th scope="col" className="py-1.5 text-right font-medium">
                   Score

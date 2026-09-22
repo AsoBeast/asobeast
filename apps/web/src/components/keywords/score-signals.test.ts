@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ScoreSignals } from "@asobeast/shared";
-import { difficultySignalLines, trafficSignalLines } from "./score-signals";
+import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 
 function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
   return {
@@ -16,7 +16,7 @@ function signals(overrides: Partial<ScoreSignals> = {}): ScoreSignals {
   };
 }
 
-describe("trafficSignalLines", () => {
+describe("popularitySignalLines", () => {
   it.each([
     [
       signals(),
@@ -51,26 +51,67 @@ describe("trafficSignalLines", () => {
       "Suggestions were unavailable, so volume comes from the ranking apps alone.",
     ],
   ])("describes the suggest reach %#", (input, expected) => {
-    expect(trafficSignalLines(input)).toEqual([expected]);
+    expect(popularitySignalLines(input)).toEqual([expected]);
   });
 
   it("never shows a missing prefix or position as zero", () => {
     expect(
-      trafficSignalLines(
+      popularitySignalLines(
         signals({ suggestPrefixLength: null, suggestPosition: null }),
       ),
     ).toEqual(["The store suggests it while it is being typed."]);
   });
 
-  it("names apple's own number first", () => {
-    expect(trafficSignalLines(signals({ officialPopularity: 71 }))).toEqual([
+  it("shows only apple's own number when it was used", () => {
+    expect(popularitySignalLines(signals({ officialPopularity: 71 }))).toEqual([
       "Apple reports a search popularity of 71 for this term.",
-      "The store suggests it after 2 typed characters, in position 8.",
+    ]);
+  });
+
+  it("prefers apple's number over the app store estimate", () => {
+    expect(
+      popularitySignalLines(
+        signals({ officialPopularity: 64 }),
+        "APPLE_SEARCH_SIGNALS",
+        64,
+      ),
+    ).toEqual(["Apple reports a search popularity of 64 for this term."]);
+  });
+
+  it("says when apple's list held the estimate down", () => {
+    expect(
+      popularitySignalLines(signals(), "APPLE_SEARCH_SIGNALS", 46),
+    ).toEqual([
+      "Estimated from the first 25 App Store results, on Apple's search popularity scale.",
+      "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.",
+    ]);
+    expect(
+      popularitySignalLines(signals(), "APPLE_SEARCH_SIGNALS", 54),
+    ).toHaveLength(1);
+  });
+
+  it.each(["GOOGLE_PLAY_SUGGEST_REACH", "APPLE_SUGGEST_REACH"] as const)(
+    "keeps suggest reach lines for %s",
+    (source) => {
+      expect(popularitySignalLines(signals(), source, 54)).toEqual([
+        "The store suggests it after 2 typed characters, in position 8.",
+      ]);
+    },
+  );
+
+  it("explains the app store estimate without suggest reach", () => {
+    expect(
+      popularitySignalLines(
+        signals({ suggestReach: "absent" }),
+        "APPLE_SEARCH_SIGNALS",
+      ),
+    ).toEqual([
+      "Estimated from the first 25 App Store results, on Apple's search popularity scale.",
     ]);
   });
 
   it("says nothing without signals", () => {
-    expect(trafficSignalLines(null)).toEqual([]);
+    expect(popularitySignalLines(null)).toEqual([]);
   });
 });
 

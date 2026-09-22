@@ -17,7 +17,7 @@ test("a mid run app names what is still finishing", async ({ page }) => {
   ).toBeVisible();
 
   const scores = panel.getByRole("listitem").filter({
-    hasText: "Traffic and difficulty scored",
+    hasText: "Popularity and difficulty scored",
   });
   await expect(scores).toContainText("1 of 8");
   await expect(scores).toContainText("weekly run");

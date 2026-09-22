@@ -46,7 +46,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
-  "Traffic, difficulty and opportunity scoring",
+  "Popularity, difficulty and opportunity scoring",
   "Competitor discovery and metadata audits",
   "AI audit and metadata drafts",
   "Alerts by email and webhook",

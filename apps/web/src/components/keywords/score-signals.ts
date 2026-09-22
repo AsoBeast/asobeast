@@ -1,5 +1,5 @@
 import { SERP_FLAGS } from "@asobeast/shared";
-import type { ScoreSignals, SerpFlag } from "@asobeast/shared";
+import type { ScoreSignals, ScoringSource, SerpFlag } from "@asobeast/shared";
 import { formatNumber } from "@/lib/format";
 
 const FLAG_LINES: Record<SerpFlag, string> = {
@@ -10,7 +10,6 @@ const FLAG_LINES: Record<SerpFlag, string> = {
 };
 
 function reachLine(signals: ScoreSignals): string {
-  const capped = signals.officialPopularity === null;
   switch (signals.suggestReach) {
     case "hit": {
       const typed = signals.suggestPrefixLength;
@@ -24,25 +23,43 @@ function reachLine(signals: ScoreSignals): string {
     case "listed":
       return "The store suggests it only once the whole phrase is typed.";
     case "absent":
-      return capped
-        ? "The store never suggests this phrase, so volume is capped."
-        : "The store never suggests this phrase.";
+      return "The store never suggests this phrase, so volume is capped.";
     case "unavailable":
       return "Suggestions were unavailable, so volume comes from the ranking apps alone.";
   }
 }
 
-export function trafficSignalLines(signals: ScoreSignals | null): string[] {
+const SEARCH_MODEL_LINE =
+  "Estimated from the first 25 App Store results, on Apple's search popularity scale.";
+const UNLISTED_CAP_LINE =
+  "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.";
+
+function searchModelLines(
+  signals: ScoreSignals,
+  shown: number | null,
+): string[] {
+  const estimate =
+    signals.estimatedTraffic === null ? null : signals.estimatedTraffic * 10;
+  const capped = shown !== null && estimate !== null && shown < estimate - 0.5;
+  return capped ? [SEARCH_MODEL_LINE, UNLISTED_CAP_LINE] : [SEARCH_MODEL_LINE];
+}
+
+export function popularitySignalLines(
+  signals: ScoreSignals | null,
+  source?: ScoringSource,
+  shown: number | null = null,
+): string[] {
   if (!signals) {
     return [];
   }
-  const official =
-    signals.officialPopularity === null
-      ? []
-      : [
-          `Apple reports a search popularity of ${signals.officialPopularity} for this term.`,
-        ];
-  return [...official, reachLine(signals)];
+  if (signals.officialPopularity !== null) {
+    return [
+      `Apple reports a search popularity of ${signals.officialPopularity} for this term.`,
+    ];
+  }
+  return source === "APPLE_SEARCH_SIGNALS"
+    ? searchModelLines(signals, shown)
+    : [reachLine(signals)];
 }
 
 export function difficultySignalLines(signals: ScoreSignals | null): string[] {

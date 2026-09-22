@@ -163,7 +163,9 @@ export function ComparisonMatrix({ id }: { id: string }) {
                             ) : null}
                           </span>
                           <span className="text-xs text-muted-foreground numeric font-mono">
-                            T {comparisonScoreLabel(row, "traffic")} · D{" "}
+                            <abbr title="Popularity">P</abbr>{" "}
+                            {comparisonScoreLabel(row, "traffic")} ·{" "}
+                            <abbr title="Difficulty">D</abbr>{" "}
                             {comparisonScoreLabel(row, "difficulty")}
                           </span>
                         </div>

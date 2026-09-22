@@ -19,7 +19,7 @@ const LABELS: Record<FirstRunStage, string> = {
   metadata: "Listing captured",
   keywords: "Keywords tracked",
   rankings: "Positions collected",
-  scores: "Traffic and difficulty scored",
+  scores: "Popularity and difficulty scored",
   reviews: "Reviews backfilled",
   history: "Daily history",
 };
@@ -28,7 +28,7 @@ const READY: Record<FirstRunStage, string> = {
   metadata: "The first listing snapshot is stored.",
   keywords: "Auto tracked from the indexed fields.",
   rankings: "Every tracked keyword has a position.",
-  scores: "Traffic and difficulty are in for every tracked keyword.",
+  scores: "Popularity and difficulty are in for every tracked keyword.",
   reviews: "The review backfill is stored.",
   history: "A full week of daily captures is in.",
 };
