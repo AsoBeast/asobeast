@@ -282,6 +282,11 @@ function instanceFamilies(instance: InstanceMetrics): MetricFamily[] {
       'Billing events settled as orphaned in the last seven days',
       instance.billingEventsOrphaned,
     ),
+    single(
+      'asobeast_billing_orphan_subscriptions',
+      'Stripe subscriptions the last reconciliation could not place',
+      instance.billingOrphanSubscriptions,
+    ),
     storeCanaryFamily(instance.storeCanary),
     ...backupFamilies(instance.backup),
     ...accountMailFamilies(instance.accountMail),

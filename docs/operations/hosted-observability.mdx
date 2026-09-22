@@ -49,7 +49,7 @@ Per workspace, one series per metric:
 | `asobeast_workspace_daily_run_incomplete` | Whether fewer keywords were captured than are tracked |
 | `asobeast_workspace_stored_rankings`, `asobeast_workspace_stored_reviews` | Stored rows, the storage side of cost |
 
-Instance wide, the pool and the money: `asobeast_pool_endpoints`, `asobeast_pool_endpoints_healthy`, `asobeast_pool_success_rate`, `asobeast_pool_endpoints_blocked`, `asobeast_pool_endpoints_silent`, `asobeast_proxy_requests_month`, `asobeast_residential_spend_usd`, `asobeast_residential_cap_usd`, `asobeast_billing_workspaces`, `asobeast_billing_subscriptions`, `asobeast_billing_trials_active`, `asobeast_billing_events_unprocessed`, `asobeast_billing_events_failed`, `asobeast_billing_events_orphaned`, `asobeast_backup_last_completed_seconds`, `asobeast_backup_max_age_hours`, `asobeast_database_bytes`, `asobeast_disk_budget_bytes`, `asobeast_queue_memory_bytes`, `asobeast_queue_memory_max_bytes`, `asobeast_account_mail_attempts`, `asobeast_store_canary` and `asobeast_isolation_anomalies`.
+Instance wide, the pool and the money: `asobeast_pool_endpoints`, `asobeast_pool_endpoints_healthy`, `asobeast_pool_success_rate`, `asobeast_pool_endpoints_blocked`, `asobeast_pool_endpoints_silent`, `asobeast_proxy_requests_month`, `asobeast_residential_spend_usd`, `asobeast_residential_cap_usd`, `asobeast_billing_workspaces`, `asobeast_billing_subscriptions`, `asobeast_billing_trials_active`, `asobeast_billing_events_unprocessed`, `asobeast_billing_events_failed`, `asobeast_billing_events_orphaned`, `asobeast_billing_orphan_subscriptions`, `asobeast_backup_last_completed_seconds`, `asobeast_backup_max_age_hours`, `asobeast_database_bytes`, `asobeast_disk_budget_bytes`, `asobeast_queue_memory_bytes`, `asobeast_queue_memory_max_bytes`, `asobeast_account_mail_attempts`, `asobeast_store_canary` and `asobeast_isolation_anomalies`.
 
 `asobeast_store_canary{store,outcome}` carries the parser canary verdict as a label rather than a number, so an alert expression reads `outcome="broken"` instead of decoding an enum. A store the canary has not answered for yet has no series at all, which is what a fresh instance looks like until the first scheduled run.
 
@@ -91,6 +91,7 @@ The database being unreachable does not need an alert rule. The scrape itself fa
 | `residential.spend.near-cap` | Residential fallback spend passed 80 percent of its cap |
 | `billing.reconcile.discrepancy` | Ten or more billing events are still waiting to be processed |
 | `billing.orphan.events` | A billing event in the last seven days named a subscription this instance cannot place |
+| `billing.orphan.subscriptions` | The last nightly reconciliation found Stripe subscriptions that belong to no workspace. The summary lists up to five ids |
 | `workspace.suspended` | A workspace is suspended and every write is refused |
 | `workspace.cost.unpaid` | An unpaid workspace takes a tenth or more of daily pool demand |
 | `workspace.cost.exceeds-revenue` | A paying workspace takes three times more pool demand than its share of revenue |

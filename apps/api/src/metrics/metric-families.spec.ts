@@ -79,6 +79,8 @@ const instance: InstanceMetrics = {
   billingEventsUnprocessed: 0,
   billingEventsFailed: 1,
   billingEventsOrphaned: 4,
+  billingOrphanSubscriptions: 2,
+  billingOrphanSubscriptionIds: ['sub_a', 'sub_b'],
 };
 
 describe('metricFamilies', () => {
@@ -143,6 +145,7 @@ describe('metricFamilies', () => {
     expect(text).toContain('asobeast_billing_trials_active 2');
     expect(text).toContain('asobeast_billing_events_failed 1');
     expect(text).toContain('asobeast_billing_events_orphaned 4');
+    expect(text).toContain('asobeast_billing_orphan_subscriptions 2');
   });
 
   it('keeps one series per workspace per metric', () => {

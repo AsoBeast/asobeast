@@ -1,9 +1,11 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Workspace } from '@prisma/client';
+import type { Queue } from 'bullmq';
 import type Stripe from 'stripe';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
+import { LAST_BILLING_RECONCILE_KEY } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog } from './price-catalog';
@@ -73,6 +75,7 @@ describe('BillingReconciler', () => {
       Promise.resolve(over.customerSubscriptions ?? []),
     );
     const findMany = jest.fn(() => Promise.resolve(rows));
+    const redisSet = jest.fn(() => Promise.resolve('OK'));
     const retrieveSubscription = jest.fn(() =>
       over.retrieveFails
         ? Promise.reject(over.retrieveFails)
@@ -107,10 +110,14 @@ describe('BillingReconciler', () => {
           work: () => Promise<T>,
         ) => work(),
       } as unknown as CrossTenantAccess,
+      {
+        getBackend: () => ({ client: Promise.resolve({ set: redisSet }) }),
+      } as unknown as Queue,
     );
 
     return {
       reconciler,
+      redisSet,
       update,
       listCustomerSubscriptions,
       retrieveSubscription,
@@ -584,6 +591,48 @@ describe('BillingReconciler', () => {
       await reconciler.reconcileOne('ws_1', 'cs_done');
 
       expect(rows[0]).toMatchObject({ subscriptionId: 'sub_done' });
+    });
+  });
+
+  describe('the last report', () => {
+    it('is kept after the nightly sweep with the time it finished', async () => {
+      const { reconciler, redisSet } = build({
+        workspaces: [workspaceOf()],
+        remote: [subscriptionOf({ id: 'sub_stray' })],
+      });
+
+      const report = await reconciler.reconcile();
+
+      const [key, value] = redisSet.mock.calls[0] as unknown as [
+        string,
+        string,
+      ];
+      expect(key).toBe(LAST_BILLING_RECONCILE_KEY);
+      const stored = JSON.parse(value) as Record<string, unknown>;
+      expect(stored).toMatchObject({
+        ...report,
+        orphanSubscriptions: ['sub_stray'],
+      });
+      expect(new Date(stored.finishedAt as string).toISOString()).toBe(
+        stored.finishedAt,
+      );
+    });
+
+    it('is not kept for a single workspace, which says nothing about orphans', async () => {
+      const { reconciler, redisSet } = build({ workspaces: [workspaceOf()] });
+
+      await reconciler.reconcileOne('ws_1');
+
+      expect(redisSet).not.toHaveBeenCalled();
+    });
+
+    it('does not fail the sweep when it cannot be kept', async () => {
+      const { reconciler, redisSet } = build({ workspaces: [workspaceOf()] });
+      redisSet.mockRejectedValue(new Error('redis is gone'));
+
+      await expect(reconciler.reconcile()).resolves.toMatchObject({
+        checked: 1,
+      });
     });
   });
 

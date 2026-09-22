@@ -7,6 +7,7 @@ import { ProxyLedger } from '../store-providers/egress/proxy-ledger.service';
 import { ProxyPoolHealthReport } from '../store-providers/egress/proxy-pool-health.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
+import { LAST_BILLING_RECONCILE_KEY } from '../jobs/jobs.types';
 import {
   ACCOUNT_MAIL_WINDOW_HOURS,
   BILLING_ORPHAN_WINDOW_DAYS,
@@ -26,6 +27,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
   const billingEventCount = jest.fn();
   const accountMailGroupBy = jest.fn();
   const canaryRecords = jest.fn();
+  const redisGet = jest.fn();
 
   const collector = new InstanceMetricsCollector(
     {
@@ -46,7 +48,10 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     { get: () => 0 } as unknown as ConfigService<Env, true>,
     {
       getBackend: () => ({
-        client: Promise.resolve({ ping: () => Promise.resolve('PONG') }),
+        client: Promise.resolve({
+          ping: () => Promise.resolve('PONG'),
+          get: redisGet,
+        }),
       }),
     } as unknown as Queue,
   );
@@ -59,6 +64,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     workspaceCount.mockReset().mockResolvedValue(0);
     billingEventCount.mockReset().mockResolvedValue(0);
     canaryRecords.mockReset().mockResolvedValue({});
+    redisGet.mockReset().mockResolvedValue(null);
     accountMailGroupBy.mockReset().mockResolvedValue([
       { status: 'delivered', _count: { _all: 4 } },
       { status: 'failed', _count: { _all: 2 } },
@@ -116,6 +122,56 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     expect(metrics.billingEventsUnprocessed).toBe(5);
     expect(metrics.billingEventsFailed).toBe(2);
     expect(metrics.billingEventsOrphaned).toBe(3);
+  });
+
+  it('reads the orphans the last reconciliation stored', async () => {
+    redisGet.mockImplementation((key: string) =>
+      Promise.resolve(
+        key === LAST_BILLING_RECONCILE_KEY
+          ? JSON.stringify({
+              checked: 4,
+              corrected: 0,
+              orphanSubscriptions: ['sub_a', 'sub_b'],
+              unreconciled: [],
+              finishedAt: NOW.toISOString(),
+            })
+          : null,
+      ),
+    );
+
+    const metrics = await collector.collect(NOW);
+
+    expect(metrics.billingOrphanSubscriptions).toBe(2);
+    expect(metrics.billingOrphanSubscriptionIds).toEqual(['sub_a', 'sub_b']);
+  });
+
+  it('lists at most five orphan ids while counting all of them', async () => {
+    const orphanSubscriptions = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
+    redisGet.mockResolvedValue(JSON.stringify({ orphanSubscriptions }));
+
+    const metrics = await collector.collect(NOW);
+
+    expect(metrics.billingOrphanSubscriptions).toBe(7);
+    expect(metrics.billingOrphanSubscriptionIds).toEqual([
+      'a',
+      'b',
+      'c',
+      'd',
+      'e',
+    ]);
+  });
+
+  it.each([
+    ['no reconciliation yet', null],
+    ['an unreadable report', '{not json'],
+    ['a report without orphans', JSON.stringify({ checked: 1 })],
+  ])('reports no orphans for %s', async (_, stored) => {
+    redisGet.mockResolvedValue(stored);
+
+    const metrics = await collector.collect(NOW);
+
+    expect(metrics.billingOrphanSubscriptions).toBe(0);
+    expect(metrics.billingOrphanSubscriptionIds).toEqual([]);
   });
 
   it('ignores an outcome it has no counter for', async () => {

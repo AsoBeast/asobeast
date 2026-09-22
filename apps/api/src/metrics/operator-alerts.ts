@@ -153,6 +153,14 @@ function investigateAlerts(input: OperatorAlertInput): OperatorAlert[] {
     });
   }
 
+  if (input.instance.billingOrphanSubscriptions > 0) {
+    alerts.push({
+      id: 'billing.orphan.subscriptions',
+      severity: 'investigate',
+      summary: `${input.instance.billingOrphanSubscriptions} stripe subscriptions belong to no workspace: ${input.instance.billingOrphanSubscriptionIds.join(', ')}`,
+    });
+  }
+
   for (const workspace of input.workspaces.filter(
     (candidate) => candidate.suspended,
   )) {

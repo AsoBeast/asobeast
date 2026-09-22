@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   Injectable,
   Logger,
@@ -5,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Workspace } from '@prisma/client';
+import { Queue } from 'bullmq';
 import type Stripe from 'stripe';
 import {
   FREE_PLAN,
@@ -13,6 +15,7 @@ import {
   type BillingReconcileReport,
 } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
+import { LAST_BILLING_RECONCILE_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
@@ -41,6 +44,7 @@ export class BillingReconciler {
     private readonly prices: PriceCatalog,
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
+    @InjectQueue(QUEUES.BILLING) private readonly queue: Queue,
   ) {}
 
   reconcile(): Promise<BillingReconcileReport> {
@@ -110,12 +114,30 @@ export class BillingReconciler {
     this.logger.log(
       `reconciled ${known.length} workspaces, corrected ${corrected}, left ${unreconciled.length} unreconciled, found ${orphanSubscriptions.length} orphan subscriptions`,
     );
-    return {
+    const report = {
       checked: known.length,
       corrected,
       orphanSubscriptions,
       unreconciled,
     };
+    await this.keep(report);
+    return report;
+  }
+
+  private async keep(report: BillingReconcileReport): Promise<void> {
+    try {
+      const client = (await this.queue.getBackend().client) as unknown as {
+        set(key: string, value: string): Promise<unknown>;
+      };
+      await client.set(
+        LAST_BILLING_RECONCILE_KEY,
+        JSON.stringify({ ...report, finishedAt: new Date().toISOString() }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `the billing reconciliation report could not be kept for the operator metrics: ${reasonOf(error)}`,
+      );
+    }
   }
 
   private async attempt(
