@@ -29,13 +29,13 @@ import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 
-const CHECKOUT_IN_FLIGHT =
+export const CHECKOUT_IN_FLIGHT =
   'A checkout is already being opened for this workspace. Try again in a couple of minutes.';
 
-const ALREADY_SUBSCRIBED =
+export const ALREADY_SUBSCRIBED =
   'This workspace already has a subscription. Change the plan or cancel it in the billing portal instead of buying a second one.';
 
-const SUBSCRIPTION_NEEDS_ATTENTION =
+export const SUBSCRIPTION_NEEDS_ATTENTION =
   'This workspace already has a subscription that is not collecting. Add a payment method in the billing portal to switch it back on rather than buying a second one.';
 
 @Injectable()
