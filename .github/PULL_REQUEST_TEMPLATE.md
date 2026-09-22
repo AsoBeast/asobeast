@@ -9,6 +9,7 @@ Commands run and their outcome.
 ## Checklist
 
 - [ ] Commits follow Conventional Commits (`type(scope): subject`, imperative, lowercase, max 72 characters)
+- [ ] The pull request title follows the same form; it becomes the squash commit on `main` and the changelog line
 - [ ] Branch name follows the conventional branch spec (`feat/`, `fix/`, `chore/`, ...)
 - [ ] `pnpm lint`, `pnpm test` and `pnpm build` pass locally
 - [ ] `pnpm --filter api test:e2e` and `pnpm --filter web test:e2e` pass when the change touches the API or the web app

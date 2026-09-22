@@ -62,7 +62,7 @@ Open work for a session with the **Agent task** issue template. It asks for the 
 
 ## Contribution rules
 
-- Use Conventional Commits in the form `type(scope): subject` so release automation can classify each change. The allowed types are `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `build`, `ci`, `perf`, and `revert`. The allowed scopes are `repo`, `api`, `web`, `mcp`, `shared`, `docker`, `ci`, `docs`, `deps`, `deps-dev`, `db`, `providers`, `apps`, `keywords`, `rankings`, `scoring`, `competitors`, `analytics`, `jobs`, `audit`, `metadata`, `changes`, `alerts`, `auth`, and `actions`. Use `docs` for the Mintlify documentation site in `/docs` and `repo` for repository-level documentation such as this file and the README.
+- Use Conventional Commits in the form `type(scope): subject` so release automation can classify each change. The pull request title takes the same form: pull requests are squash merged, so the title becomes the commit subject on `main` and `.github/workflows/pr-title.yml` lints it with the commitlint rules. The allowed types are `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `build`, `ci`, `perf`, and `revert`. The allowed scopes are `repo`, `api`, `web`, `mcp`, `shared`, `docker`, `ci`, `docs`, `deps`, `deps-dev`, `db`, `providers`, `apps`, `keywords`, `rankings`, `scoring`, `competitors`, `analytics`, `jobs`, `audit`, `metadata`, `changes`, `alerts`, `auth`, and `actions`. Use `docs` for the Mintlify documentation site in `/docs` and `repo` for repository-level documentation such as this file and the README.
 - Use a conventional branch prefix followed by a kebab-case slug: `feat/`, `fix/`, `refactor/`, `test/`, `docs/`, `chore/`, `ci/`, `build/`, or `perf/`. Predictable names make branch intent visible before review.
 - Do not write comments in code. Prefer clear names, small functions, and extracted abstractions that make the implementation explain itself.
 - Keep TypeScript strict and do not use `any` outside the provider boundary. Untyped scraper payloads may enter under `apps/api/src/store-providers/` only and must be mapped to typed structures immediately.
@@ -125,13 +125,13 @@ The compatibility promise for the `1.x` line is the thing to check before you st
 
 Open a feature request issue before a large `feat` so the design is agreed before you write it.
 
-Use one branch and one pull request per change, with each commit a single logical step.
+Use one branch and one pull request per change, with each commit a single logical step. Pull requests are squash merged: the title becomes the commit subject on `main` and the description becomes its body, so keep the description free of paragraphs that begin with a commit type unless they are meant as extra changelog lines.
 
 ## Versions and changelog
 
 Release Please owns package versions and `CHANGELOG.md`. Never bump a version or edit the changelog by hand. If the release pipeline ever wedges, `docs/operations/release-recovery.mdx` records how to recover it.
 
-A release ships when the generated release pull request is merged. Mark a breaking change with `feat!` or a `BREAKING CHANGE:` commit footer so Release Please includes it in the generated changelog and computes the correct version. Only a commit subject and a breaking-change footer reach the changelog, so anything an operator must read before upgrading belongs in one of those, never in a plain commit body.
+A release ships when the generated release pull request is merged. Mark a breaking change with `feat!` in the pull request title or a `BREAKING CHANGE:` footer at the end of the description so Release Please includes it in the generated changelog and computes the correct version; reserve it for the three surfaces the compatibility promise covers. Only the pull request title and that footer reach the changelog, so anything an operator must read before upgrading belongs in one of those. A pull request that ships more than one notable change lists each extra `feat:` or `fix:` line as its own paragraph at the end of the description, and Release Please records each of them. Refactors, documentation, build, test and chore changes stay out of the changelog. To correct a line after the merge, add a `BEGIN_COMMIT_OVERRIDE` block to the merged pull request description as the Release Please README describes.
 
 Dependabot monitors the application Dockerfiles. It does not monitor the PostgreSQL and Redis base images in the Compose files, nor the `overrides` block in `pnpm-workspace.yaml`, so review those manually before each release. Patch and minor updates from Dependabot merge on their own once the required checks pass, through `.github/workflows/dependabot-auto-merge.yml`. Major updates arrive in their own pull request and wait for a person.
 
