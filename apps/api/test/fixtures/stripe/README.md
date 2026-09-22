@@ -1,6 +1,6 @@
 # Stripe webhook fixtures
 
-Full event envelopes for API version `2026-07-29.dahlia`, the version
+Full event envelopes for API version `2026-08-26.dahlia`, the version
 `apps/api/src/billing/stripe.client.ts` pins. Each file is one complete
 `Stripe.Event` exactly as the endpoint receives it, so the e2e suite exercises
 the same shape the live integration does, including the `data.object` nesting
