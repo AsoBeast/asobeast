@@ -681,6 +681,7 @@ test("returning from checkout reconciles the workspace and clears the marker", a
   });
 
   let reconcileCalls = 0;
+  const reconcileBodies: unknown[] = [];
   await page.route("**/api/backend/auth/plan", async (route) => {
     await route.fulfill(
       fulfillJson(200, reconcileCalls > 0 ? INDIE_PLAN : LAPSED_PLAN),
@@ -688,6 +689,7 @@ test("returning from checkout reconciles the workspace and clears the marker", a
   });
   await page.route("**/api/backend/billing/reconcile", async (route) => {
     reconcileCalls += 1;
+    reconcileBodies.push(route.request().postDataJSON());
     await route.fulfill(
       fulfillJson(200, {
         checked: 1,
@@ -698,9 +700,10 @@ test("returning from checkout reconciles the workspace and clears the marker", a
     );
   });
 
-  await page.goto("/settings?checkout=complete");
+  await page.goto("/settings?checkout=complete&session_id=cs_test_1");
 
   await expect.poll(() => reconcileCalls).toBe(1);
+  expect(reconcileBodies).toEqual([{ sessionId: "cs_test_1" }]);
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByText("Renews on", { exact: false })).toBeVisible();
 });
@@ -728,10 +731,10 @@ test("a checkout return keeps its marker when reconciliation cannot run", async 
     ),
   );
 
-  await page.goto("/settings?checkout=complete");
+  await page.goto("/settings?checkout=complete&session_id=cs_test_1");
 
   await expect(page.getByText("Access paused")).toBeVisible();
-  await expect(page).toHaveURL(/checkout=complete/);
+  await expect(page).toHaveURL(/checkout=complete&session_id=cs_test_1/);
 });
 
 test("the upgrade page lists both paid plans with their limits", async ({
