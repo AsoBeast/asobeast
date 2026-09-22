@@ -163,7 +163,7 @@ export class BillingWebhookService {
         where: { id: eventId },
         data: { failure },
       });
-      if (this.awaitsAnOperator(error)) {
+      if (await this.awaitsAnOperator(error)) {
         this.logger.error(
           `stripe event ${eventId} failed and will not be retried until an operator replays it: ${failure}`,
         );
@@ -173,8 +173,10 @@ export class BillingWebhookService {
     }
   }
 
-  private awaitsAnOperator(error: unknown): boolean {
-    return error instanceof UnknownPriceError && this.prices.configured;
+  private async awaitsAnOperator(error: unknown): Promise<boolean> {
+    if (!(error instanceof UnknownPriceError)) return false;
+    await this.prices.refresh();
+    return this.prices.configured && !this.prices.find(error.priceId);
   }
 
   private async dispatch(event: Stripe.Event): Promise<BillingEventOutcome> {

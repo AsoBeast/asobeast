@@ -14,7 +14,7 @@ import {
   portalConfiguration,
   type PortalProduct,
 } from '../src/billing/portal-configuration';
-import { lookupKeyOf } from '../src/billing/price-catalog';
+import { PLAN_METADATA_KEY, lookupKeyOf } from '../src/billing/price-catalog';
 import { createStripeClient } from '../src/billing/stripe.client';
 
 const PRICE_TAX_BEHAVIOR = 'exclusive';
@@ -46,7 +46,7 @@ async function productFor(
 ): Promise<Stripe.Product> {
   const lookup = `asobeast_${plan}`;
   const existing = await stripe.products.search({
-    query: `metadata['asobeast_plan']:'${plan}'`,
+    query: `metadata['${PLAN_METADATA_KEY}']:'${plan}'`,
     limit: 1,
   });
   if (existing.data[0]) return existing.data[0];
@@ -55,7 +55,7 @@ async function productFor(
     {
       name: `asobeast ${PLANS[plan].displayName}`,
       tax_code: SAAS_TAX_CODE,
-      metadata: { asobeast_plan: plan },
+      metadata: { [PLAN_METADATA_KEY]: plan },
     },
     { idempotencyKey: `product_${lookup}` },
   );
@@ -82,7 +82,7 @@ async function priceFor(
       recurring: { interval },
       lookup_key: lookupKey,
       tax_behavior: PRICE_TAX_BEHAVIOR,
-      metadata: { asobeast_plan: plan },
+      metadata: { [PLAN_METADATA_KEY]: plan },
     },
     { idempotencyKey: `price_${lookupKey}` },
   );
@@ -194,7 +194,7 @@ async function main(): Promise<void> {
   say(lines.join('\n'));
   say(`portal configuration ${portal}`);
   say(
-    'the api resolves these prices by lookup key; STRIPE_PRICE_* is only needed to override one',
+    'the api resolves these prices by lookup key; setting STRIPE_PRICE_* replaces the whole catalog with the four ids it names',
   );
   say('\nset these in the dashboard, which the api cannot reach:');
   for (const item of DASHBOARD_CHECKLIST) say(`  [ ] ${item}`);

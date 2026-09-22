@@ -197,3 +197,47 @@ describe('PriceCatalog from stripe lookup keys', () => {
     expect(lookupKeyOf('indie', 'month')).toBe('asobeast_indie_month');
   });
 });
+
+describe('PriceCatalog naming the plan of a subscription', () => {
+  const subscribedTo = (price: Partial<Stripe.Price>) =>
+    ({
+      items: { data: [{ price }] },
+    }) as unknown as Stripe.Subscription;
+
+  it('names a catalogued price by its id', () => {
+    expect(
+      catalogWith(CONFIGURED).planOf(
+        subscribedTo({ id: 'price_ultimate_month' }),
+      ),
+    ).toBe('ultimate');
+  });
+
+  it('names a retired price from the plan its metadata carries', () => {
+    const catalog = catalogWith(CONFIGURED);
+
+    expect(
+      catalog.planOf(
+        subscribedTo({
+          id: 'price_old',
+          metadata: { asobeast_plan: 'ultimate' },
+        }),
+      ),
+    ).toBe('ultimate');
+  });
+
+  it('refuses a price that names no paid plan anywhere', () => {
+    const catalog = catalogWith(CONFIGURED);
+
+    expect(() =>
+      catalog.planOf(
+        subscribedTo({
+          id: 'price_stray',
+          metadata: { asobeast_plan: 'free' },
+        }),
+      ),
+    ).toThrow(UnknownPriceError);
+    expect(() => catalog.planOf(subscribedTo({ id: 'price_bare' }))).toThrow(
+      UnknownPriceError,
+    );
+  });
+});

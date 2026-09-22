@@ -65,6 +65,7 @@ export class BillingReconciler {
           where: { id: workspaceId },
         });
         if (!workspace) throw new NotFoundException('Workspace not found');
+        await this.prices.refreshIfStale();
 
         const outcome = await this.attempt(workspace, sessionId);
         if (outcome === 'unreachable') {

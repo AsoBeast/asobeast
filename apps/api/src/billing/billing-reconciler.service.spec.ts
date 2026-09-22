@@ -62,6 +62,7 @@ describe('BillingReconciler', () => {
     remote?: Stripe.Subscription[];
     enabled?: boolean;
     session?: Partial<Stripe.Checkout.Session> | Error;
+    prices?: PriceCatalog;
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
@@ -102,7 +103,8 @@ describe('BillingReconciler', () => {
         listCustomerSubscriptions,
         listActiveSubscriptions: () => over.remote ?? [],
       } as unknown as StripeService,
-      new PriceCatalog(config, { enabled: false } as StripeService),
+      over.prices ??
+        new PriceCatalog(config, { enabled: false } as StripeService),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -656,6 +658,28 @@ describe('BillingReconciler', () => {
       await expect(reconciler.reconcile()).resolves.toMatchObject({
         checked: 1,
       });
+    });
+  });
+
+  it('resolves an empty price catalog before it reconciles one workspace', async () => {
+    const prices = new PriceCatalog(
+      { get: () => undefined } as unknown as ConfigService<Env, true>,
+      {
+        enabled: true,
+        listPrices: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
+          ]),
+      } as unknown as StripeService,
+    );
+    const { reconciler } = build({
+      workspaces: [workspaceOf({ subscriptionStatus: 'past_due' })],
+      prices,
+    });
+
+    await expect(reconciler.reconcileOne('ws_1')).resolves.toMatchObject({
+      corrected: 1,
     });
   });
 

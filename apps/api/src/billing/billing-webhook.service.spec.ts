@@ -71,6 +71,7 @@ describe('BillingWebhookService', () => {
       subscription?: Stripe.Subscription;
       retrieveFails?: Error;
       emptyCatalog?: boolean;
+      catalog?: PriceCatalog;
       duplicate?: boolean;
     } = {},
   ) => {
@@ -128,12 +129,13 @@ describe('BillingWebhookService', () => {
             : Promise.resolve(over.subscription ?? subscriptionOf()),
         ),
       } as unknown as StripeService,
-      new PriceCatalog(
-        over.emptyCatalog
-          ? ({ get: () => undefined } as unknown as ConfigService<Env, true>)
-          : config,
-        { enabled: false } as StripeService,
-      ),
+      over.catalog ??
+        new PriceCatalog(
+          over.emptyCatalog
+            ? ({ get: () => undefined } as unknown as ConfigService<Env, true>)
+            : config,
+          { enabled: false } as StripeService,
+        ),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -618,6 +620,31 @@ describe('BillingWebhookService', () => {
 
       expect(failure).toBeInstanceOf(Error);
       expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
+
+    it('keeps retrying a price the catalog learns when it refreshes', async () => {
+      const listPrices = jest
+        .fn()
+        .mockResolvedValueOnce([
+          { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
+        ])
+        .mockResolvedValue([
+          { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
+          { id: 'price_mystery', lookup_key: 'asobeast_ultimate_month' },
+        ]);
+      const catalog = new PriceCatalog(
+        { get: () => undefined } as unknown as ConfigService<Env, true>,
+        { enabled: true, listPrices } as unknown as StripeService,
+      );
+      await catalog.refresh();
+      const { service } = build({ stored, subscription: mystery, catalog });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+      expect(catalog.find('price_mystery')?.plan).toBe('ultimate');
     });
 
     it('keeps retrying while the price catalog has not been resolved yet', async () => {

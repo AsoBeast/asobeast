@@ -37,7 +37,7 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
     Open the same customer in the provider dashboard. The provider is the source of truth for the subscription; the database is not.
   </Step>
   <Step title="Read why an event stopped">
-    An event that stopped retrying is counted by `asobeast_billing_events_failed` and keeps its `failure` text on the stored row. The API log names it with `will not be retried until an operator replays it`. It is almost always a subscription on a price the catalog does not know: run `pnpm --filter api stripe:catalog` so the price carries its lookup key, or set the matching `STRIPE_PRICE_*` override and redeploy.
+    An event that stopped retrying is counted by `asobeast_billing_events_failed` and keeps its `failure` text on the stored row. The API log names it with `will not be retried until an operator replays it`. It is almost always a subscription on a price that carries neither a catalog lookup key nor `asobeast_plan` metadata. Give the price that metadata in the dashboard, or run `pnpm --filter api stripe:catalog` so the current prices carry their lookup keys.
   </Step>
 </Steps>
 

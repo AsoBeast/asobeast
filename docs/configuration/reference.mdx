@@ -165,10 +165,10 @@ See [Authentication and accounts](/security/authentication).
 | `STRIPE_WEBHOOK_SECRET` | empty | No | Verifies [the webhook endpoint](/operations/billing#the-webhook-endpoint). Absent, the endpoint refuses every delivery, because an unverified endpoint hands out subscriptions, and checkout stays closed so nobody pays for access that could never be provisioned |
 | `STRIPE_PORTAL_RETURN_URL` | empty | No | Where the customer portal returns to. Falls back to `WEB_PUBLIC_URL` plus `/settings` |
 | `STRIPE_TAX_ENABLED` | `false` | No | Adds automatic tax to every checkout session. Needs Stripe Tax active with its registrations and prices that carry a tax behaviour, or Checkout refuses to open. Address and tax id are collected either way. See [Billing](/operations/billing) |
-| `STRIPE_PRICE_INDIE_MONTHLY` | empty | No | Optional override for the Indie monthly price. Empty resolves it from the lookup key `asobeast_indie_month`, which `pnpm --filter api stripe:catalog` creates, at boot and before every reconciliation |
-| `STRIPE_PRICE_INDIE_YEARLY` | empty | No | Optional override for the Indie annual price. Empty resolves it from `asobeast_indie_year` |
-| `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Optional override for the Ultimate monthly price. Empty resolves it from `asobeast_ultimate_month` |
-| `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Optional override for the Ultimate annual price. Empty resolves it from `asobeast_ultimate_year` |
+| `STRIPE_PRICE_INDIE_MONTHLY` | empty | No | Price id for Indie monthly. Empty resolves it from the lookup key `asobeast_indie_month`, which `pnpm --filter api stripe:catalog` creates, at boot and before every reconciliation. Setting any of the four `STRIPE_PRICE_*` replaces the lookup key catalog with the ids they name, so set all four or none |
+| `STRIPE_PRICE_INDIE_YEARLY` | empty | No | Price id for Indie annual. Empty resolves it from `asobeast_indie_year` |
+| `STRIPE_PRICE_ULTIMATE_MONTHLY` | empty | No | Price id for Ultimate monthly. Empty resolves it from `asobeast_ultimate_month` |
+| `STRIPE_PRICE_ULTIMATE_YEARLY` | empty | No | Price id for Ultimate annual. Empty resolves it from `asobeast_ultimate_year` |
 | `CRON_BILLING_RECONCILE` | `0 7 * * *` | No | Daily reconciliation of local subscription state against Stripe, UTC |
 | `CRON_TRIAL_NOTICES` | `0 9 * * *` | No | Daily sweep that sends the trial milestone emails, UTC |
 | `AUTH_COOKIE_SECURE` | `false` | No | Marks the session cookie `Secure`. **Refuses to boot** when `false` and `NODE_ENV` is `production`. The Docker image sets `NODE_ENV=production`, so the Compose stack defaults this to `true` |

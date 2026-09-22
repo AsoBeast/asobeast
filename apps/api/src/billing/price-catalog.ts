@@ -5,6 +5,7 @@ import {
   BILLING_INTERVALS,
   PAID_PLAN_NAMES,
   PLANS,
+  paidPlanOf,
   type BillingInterval,
   type BillingPrice,
   type PaidPlanName,
@@ -16,13 +17,15 @@ import { StripeService } from './stripe.service';
 export class UnknownPriceError extends Error {
   constructor(readonly priceId: string) {
     super(
-      `Stripe price ${priceId} is not in the price catalog. Give it a catalog lookup key or name it in STRIPE_PRICE_*, or the subscription cannot be provisioned.`,
+      `Stripe price ${priceId} is not in the price catalog and names no plan in its ${PLAN_METADATA_KEY} metadata. Run pnpm --filter api stripe:catalog, or set all four STRIPE_PRICE_* to replace the catalog, or the subscription cannot be provisioned.`,
     );
     this.name = 'UnknownPriceError';
   }
 }
 
 export const CATALOG_RETRY_MS = 60_000;
+
+export const PLAN_METADATA_KEY = 'asobeast_plan';
 
 const PRICE_KEYS = {
   indie: {
@@ -112,7 +115,13 @@ export class PriceCatalog implements OnModuleInit {
   }
 
   planOf(subscription: Stripe.Subscription): PaidPlanName {
-    return this.require(subscription.items.data[0]?.price.id ?? '').plan;
+    const price = subscription.items.data[0]?.price;
+    const priceId = price?.id ?? '';
+    const plan =
+      this.find(priceId)?.plan ??
+      paidPlanOf(price?.metadata?.[PLAN_METADATA_KEY]);
+    if (!plan) throw new UnknownPriceError(priceId);
+    return plan;
   }
 
   refresh(): Promise<void> {
