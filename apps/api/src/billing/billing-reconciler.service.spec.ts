@@ -666,11 +666,15 @@ describe('BillingReconciler', () => {
       { get: () => undefined } as unknown as ConfigService<Env, true>,
       {
         enabled: true,
-        listPrices: jest
-          .fn()
-          .mockResolvedValue([
-            { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
-          ]),
+        listPrices: jest.fn().mockResolvedValue([
+          {
+            id: 'price_indie_month',
+            lookup_key: 'asobeast_indie_month',
+            currency: 'usd',
+            unit_amount: 1_000,
+            recurring: { interval: 'month' },
+          },
+        ]),
       } as unknown as StripeService,
     );
     const { reconciler } = build({

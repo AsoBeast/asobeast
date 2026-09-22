@@ -29,8 +29,27 @@ const configOf = (values: Record<string, string | undefined>) =>
     get: (key: string) => values[key],
   }) as unknown as ConfigService<Env, true>;
 
-const price = (id: string, lookupKey: string | null): Stripe.Price =>
-  ({ id, lookup_key: lookupKey, active: true }) as Stripe.Price;
+const LIST_PRICE_CENTS: Record<string, number> = {
+  asobeast_indie_month: 1_000,
+  asobeast_indie_year: 10_000,
+  asobeast_ultimate_month: 9_900,
+  asobeast_ultimate_year: 99_000,
+};
+
+const price = (
+  id: string,
+  lookupKey: string | null,
+  over: Partial<Stripe.Price> = {},
+): Stripe.Price =>
+  ({
+    id,
+    lookup_key: lookupKey,
+    active: true,
+    currency: 'usd',
+    unit_amount: LIST_PRICE_CENTS[lookupKey ?? ''] ?? null,
+    recurring: { interval: lookupKey?.endsWith('_year') ? 'year' : 'month' },
+    ...over,
+  }) as Stripe.Price;
 
 const stripeDouble = (enabled = true) => ({
   enabled,
@@ -128,6 +147,23 @@ describe('PriceCatalog from stripe lookup keys', () => {
       price('price_im', 'asobeast_indie_month'),
       price('price_week', 'asobeast_indie_week'),
       price('price_bare', null),
+    ]);
+    const catalog = catalogWith({}, stripe);
+
+    await catalog.refresh();
+
+    expect(catalog.prices.map((known) => known.priceId)).toEqual(['price_im']);
+  });
+
+  it('ignores a lookup key on a price that disagrees with its plan', async () => {
+    const stripe = stripeDouble();
+    stripe.listPrices.mockResolvedValue([
+      price('price_im', 'asobeast_indie_month'),
+      price('price_cheap', 'asobeast_ultimate_month', { unit_amount: 100 }),
+      price('price_eur', 'asobeast_indie_year', { currency: 'eur' }),
+      price('price_weekly', 'asobeast_ultimate_year', {
+        recurring: { interval: 'week' } as Stripe.Price.Recurring,
+      }),
     ]);
     const catalog = catalogWith({}, stripe);
 

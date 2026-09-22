@@ -626,11 +626,29 @@ describe('BillingWebhookService', () => {
       const listPrices = jest
         .fn()
         .mockResolvedValueOnce([
-          { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
+          {
+            id: 'price_indie_month',
+            lookup_key: 'asobeast_indie_month',
+            currency: 'usd',
+            unit_amount: 1_000,
+            recurring: { interval: 'month' },
+          },
         ])
         .mockResolvedValue([
-          { id: 'price_indie_month', lookup_key: 'asobeast_indie_month' },
-          { id: 'price_mystery', lookup_key: 'asobeast_ultimate_month' },
+          {
+            id: 'price_indie_month',
+            lookup_key: 'asobeast_indie_month',
+            currency: 'usd',
+            unit_amount: 1_000,
+            recurring: { interval: 'month' },
+          },
+          {
+            id: 'price_mystery',
+            lookup_key: 'asobeast_ultimate_month',
+            currency: 'usd',
+            unit_amount: 9_900,
+            recurring: { interval: 'month' },
+          },
         ]);
       const catalog = new PriceCatalog(
         { get: () => undefined } as unknown as ConfigService<Env, true>,

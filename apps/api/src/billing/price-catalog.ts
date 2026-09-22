@@ -27,6 +27,8 @@ export const CATALOG_RETRY_MS = 60_000;
 
 export const PLAN_METADATA_KEY = 'asobeast_plan';
 
+export const CATALOG_CURRENCY = 'usd';
+
 const PRICE_KEYS = {
   indie: {
     month: 'STRIPE_PRICE_INDIE_MONTHLY',
@@ -38,7 +40,7 @@ const PRICE_KEYS = {
   },
 } as const satisfies Record<PaidPlanName, Record<BillingInterval, keyof Env>>;
 
-interface CatalogSlot {
+export interface CatalogSlot {
   plan: PaidPlanName;
   interval: BillingInterval;
 }
@@ -66,6 +68,17 @@ export function amountFor(
 ): number {
   const { monthlyUsd, annualUsd } = PLANS[plan].prices;
   return (interval === 'month' ? monthlyUsd : annualUsd) ?? 0;
+}
+
+export function chargesListPrice(
+  price: Stripe.Price,
+  slot: CatalogSlot,
+): boolean {
+  return (
+    price.currency === CATALOG_CURRENCY &&
+    price.unit_amount === amountFor(slot.plan, slot.interval) * 100 &&
+    price.recurring?.interval === slot.interval
+  );
 }
 
 function billingPrice(slot: CatalogSlot, priceId: string): BillingPrice {
@@ -147,7 +160,14 @@ export class PriceCatalog implements OnModuleInit {
       const resolved = new Map<string, BillingPrice>();
       for (const price of await this.stripe.listPrices(ALL_LOOKUP_KEYS)) {
         const slot = SLOT_BY_LOOKUP_KEY.get(price.lookup_key ?? '');
-        if (slot) resolved.set(price.id, billingPrice(slot, price.id));
+        if (!slot) continue;
+        if (!chargesListPrice(price, slot)) {
+          this.logger.warn(
+            `stripe price ${price.id} carries the lookup key ${price.lookup_key} but does not charge ${amountFor(slot.plan, slot.interval)} ${CATALOG_CURRENCY.toUpperCase()} per ${slot.interval}; leaving it out of the catalog`,
+          );
+          continue;
+        }
+        resolved.set(price.id, billingPrice(slot, price.id));
       }
       if (resolved.size === 0) {
         this.logger.warn(

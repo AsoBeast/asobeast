@@ -14,7 +14,13 @@ import {
   portalConfiguration,
   type PortalProduct,
 } from '../src/billing/portal-configuration';
-import { PLAN_METADATA_KEY, lookupKeyOf } from '../src/billing/price-catalog';
+import {
+  CATALOG_CURRENCY,
+  PLAN_METADATA_KEY,
+  amountFor,
+  chargesListPrice,
+  lookupKeyOf,
+} from '../src/billing/price-catalog';
 import { createStripeClient } from '../src/billing/stripe.client';
 
 const PRICE_TAX_BEHAVIOR = 'exclusive';
@@ -32,13 +38,6 @@ const DASHBOARD_CHECKLIST = [
 ];
 
 type Say = (line: string) => void;
-
-function amountCents(plan: PaidPlanName, interval: BillingInterval): number {
-  const { monthlyUsd, annualUsd } = PLANS[plan].prices;
-  const usd = interval === 'month' ? monthlyUsd : annualUsd;
-  if (usd === null) throw new Error(`${plan} has no ${interval} price`);
-  return usd * 100;
-}
 
 async function productFor(
   stripe: Stripe,
@@ -70,15 +69,22 @@ async function priceFor(
   const lookupKey = lookupKeyOf(plan, interval);
   const existing = await stripe.prices.list({
     lookup_keys: [lookupKey],
+    active: true,
     limit: 1,
   });
-  if (existing.data[0]) return existing.data[0];
+  const found = existing.data[0];
+  if (found && chargesListPrice(found, { plan, interval })) return found;
+  if (found) {
+    throw new Error(
+      `price ${found.id} carries ${lookupKey} but not its list price; archive it or move the lookup key before running this again`,
+    );
+  }
 
   return stripe.prices.create(
     {
       product: product.id,
-      currency: 'usd',
-      unit_amount: amountCents(plan, interval),
+      currency: CATALOG_CURRENCY,
+      unit_amount: amountFor(plan, interval) * 100,
       recurring: { interval },
       lookup_key: lookupKey,
       tax_behavior: PRICE_TAX_BEHAVIOR,
