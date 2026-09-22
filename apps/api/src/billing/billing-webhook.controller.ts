@@ -1,17 +1,15 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Controller, Headers, HttpCode, Post, Req } from '@nestjs/common';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
-import { Queue } from 'bullmq';
 import type { Request } from 'express';
 import { Public } from '../auth/decorators/public.decorator';
-import { JOBS, QUEUES } from '../jobs/jobs.types';
+import { BillingEventQueue } from './billing-event-queue';
 import { BillingWebhookService } from './billing-webhook.service';
 
 @Controller('billing')
 export class BillingWebhookController {
   constructor(
     private readonly webhook: BillingWebhookService,
-    @InjectQueue(QUEUES.BILLING) private readonly queue: Queue,
+    private readonly events: BillingEventQueue,
   ) {}
 
   @Post('webhook')
@@ -24,13 +22,7 @@ export class BillingWebhookController {
   ): Promise<{ received: true }> {
     const event = this.webhook.verify(rawBodyOf(request), signature);
     const { pending } = await this.webhook.receive(event);
-    if (pending) {
-      await this.queue.add(
-        JOBS.BILLING_EVENT,
-        { eventId: event.id },
-        { jobId: `billing~${event.id}` },
-      );
-    }
+    if (pending) await this.events.enqueue(event.id);
     return { received: true };
   }
 }

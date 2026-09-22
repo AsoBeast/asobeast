@@ -157,6 +157,7 @@ The same reasoning covers the two places a url reaches an event by another route
 | `GET /admin/support/workspaces` | Lists every workspace with plan, subscription state and counts |
 | `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail |
 | `POST /admin/support/workspaces/{id}/reconcile` | Reconciles one workspace against Stripe |
+| `POST /admin/support/workspaces/{id}/billing-events/{eventId}/replay` | Clears how a stored billing event settled and queues it again, once its cause is fixed. Answers 404 for an event that names neither the workspace nor its Stripe customer |
 | `POST /admin/support/workspaces/{id}/suspend` | Suspends a workspace |
 | `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
 | `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,13 +16,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
 import { type BillingEventOutcome } from './billing-event-outcome';
+import { BillingEventQueue } from './billing-event-queue';
 import { entersDunning, leavesDunning } from './dunning';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateOf } from './subscription-state';
 import { StripeService } from './stripe.service';
-import { isHandled, subscriptionIdOf, workspaceIdOf } from './webhook-events';
+import {
+  customerIdOfEvent,
+  isHandled,
+  subscriptionIdOf,
+  workspaceIdOf,
+} from './webhook-events';
 import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const SETTINGS_PATH = '/settings';
@@ -45,6 +52,7 @@ export class BillingWebhookService {
     private readonly crossTenant: CrossTenantAccess,
     private readonly notifier: AccountNotifier,
     private readonly config: ConfigService<Env, true>,
+    private readonly events: BillingEventQueue,
   ) {}
 
   verify(payload: Buffer, signature: string | undefined): Stripe.Event {
@@ -106,6 +114,31 @@ export class BillingWebhookService {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECEIPT_JUSTIFICATION,
       () => this.apply(eventId),
+    );
+  }
+
+  replay(eventId: string, workspaceId: string): Promise<void> {
+    return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+      RECEIPT_JUSTIFICATION,
+      async () => {
+        const [row, workspace] = await Promise.all([
+          this.prisma.billingEvent.findUnique({ where: { id: eventId } }),
+          this.prisma.workspace.findUnique({ where: { id: workspaceId } }),
+        ]);
+        if (!row || !workspace || !namesWorkspace(row, workspace)) {
+          throw new NotFoundException(
+            'No such billing event for this workspace',
+          );
+        }
+        await this.prisma.billingEvent.update({
+          where: { id: eventId },
+          data: { processedAt: null, outcome: null, failure: null },
+        });
+        await this.events.enqueue(eventId, `replay-${Date.now()}`);
+        this.logger.log(
+          `stripe event ${eventId} replayed for workspace ${workspaceId}`,
+        );
+      },
     );
   }
 
@@ -285,6 +318,15 @@ export class BillingWebhookService {
       where: { billingCustomerId: customerId },
     });
   }
+}
+
+function namesWorkspace(
+  row: { workspaceId: string | null; payload: Prisma.JsonValue },
+  workspace: { id: string; billingCustomerId: string | null },
+): boolean {
+  if (row.workspaceId !== null) return row.workspaceId === workspace.id;
+  const customer = customerIdOfEvent(row.payload as unknown as Stripe.Event);
+  return customer !== null && customer === workspace.billingCustomerId;
 }
 
 function reopenedCapacity(plan: PlanName) {

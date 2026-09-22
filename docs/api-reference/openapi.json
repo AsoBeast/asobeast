@@ -3535,6 +3535,55 @@
         ]
       }
     },
+    "/admin/support/workspaces/{workspaceId}/billing-events/{eventId}/replay": {
+      "post": {
+        "operationId": "SupportController_replayBillingEvent",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "eventId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupportActionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Replay a stored billing event for this workspace",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/admin/support/workspaces/{workspaceId}/suspend": {
       "post": {
         "operationId": "SupportController_suspend",

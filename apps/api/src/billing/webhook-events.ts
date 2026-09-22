@@ -53,3 +53,13 @@ export function workspaceIdOf(
   const metadata = object.metadata as Record<string, string> | undefined;
   return metadata?.[metadataKey] ?? null;
 }
+
+export function customerIdOfEvent(event: Stripe.Event): string | null {
+  const customer = objectOf(event).customer;
+  if (typeof customer === 'string') return customer;
+  if (customer && typeof customer === 'object') {
+    const id = (customer as Record<string, unknown>).id;
+    return typeof id === 'string' ? id : null;
+  }
+  return null;
+}

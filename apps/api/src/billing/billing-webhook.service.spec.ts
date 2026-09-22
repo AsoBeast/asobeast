@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -12,6 +13,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingWebhookService } from './billing-webhook.service';
 import { AccountNotifier } from './account-notifier.service';
+import { BillingEventQueue } from './billing-event-queue';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -86,6 +88,7 @@ describe('BillingWebhookService', () => {
     const workspaceUpdate = jest.fn().mockResolvedValue({});
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
+    const enqueue = jest.fn().mockResolvedValue(undefined);
     const notifier = {
       notify,
       appUrl: 'https://app.example.com',
@@ -140,9 +143,18 @@ describe('BillingWebhookService', () => {
       } as unknown as CrossTenantAccess,
       notifier,
       config,
+      { enqueue } as unknown as BillingEventQueue,
     );
 
-    return { service, create, update, workspaceUpdate, constructEvent, notify };
+    return {
+      service,
+      create,
+      update,
+      workspaceUpdate,
+      constructEvent,
+      notify,
+      enqueue,
+    };
   };
 
   it('refuses a delivery with no signature', () => {
@@ -172,6 +184,7 @@ describe('BillingWebhookService', () => {
       {} as unknown as CrossTenantAccess,
       {} as unknown as AccountNotifier,
       { get: () => undefined } as unknown as ConfigService<Env, true>,
+      {} as unknown as BillingEventQueue,
     );
 
     expect(() => service.verify(Buffer.from('{}'), 'sig')).toThrow(
@@ -589,6 +602,72 @@ describe('BillingWebhookService', () => {
         .catch((error: unknown) => error);
 
       expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
+  });
+
+  describe('a replay an operator asks for', () => {
+    const failed = {
+      id: 'evt_1',
+      workspaceId: WORKSPACE,
+      processedAt: null,
+      outcome: null,
+      failure: 'price_mystery',
+      payload: eventOf(),
+    };
+
+    it('clears the settlement and queues the event under a fresh job', async () => {
+      const { service, update, enqueue } = build({ stored: failed });
+
+      await service.replay('evt_1', WORKSPACE);
+
+      expect(update).toHaveBeenCalledWith({
+        where: { id: 'evt_1' },
+        data: { processedAt: null, outcome: null, failure: null },
+      });
+      expect(enqueue).toHaveBeenCalledWith(
+        'evt_1',
+        expect.stringMatching(/^replay-\d+$/),
+      );
+    });
+
+    it('replays an event that names the workspace only through its customer', async () => {
+      const { service, enqueue } = build({
+        stored: {
+          ...failed,
+          workspaceId: null,
+          payload: eventOf({
+            type: 'invoice.paid',
+            data: { object: { id: 'in_1', customer: 'cus_1' } },
+          } as unknown as Partial<Stripe.Event>),
+        },
+        workspace: { id: WORKSPACE, billingCustomerId: 'cus_1' },
+      });
+
+      await service.replay('evt_1', WORKSPACE);
+
+      expect(enqueue).toHaveBeenCalled();
+    });
+
+    it('refuses to replay an event that names another workspace', async () => {
+      const { service, update, enqueue } = build({
+        stored: { ...failed, workspaceId: 'ws_other' },
+        workspace: { id: WORKSPACE, billingCustomerId: 'cus_1' },
+      });
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(update).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('refuses an event nobody stored', async () => {
+      const { service, enqueue } = build({ stored: null });
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(enqueue).not.toHaveBeenCalled();
     });
   });
 });
