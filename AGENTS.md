@@ -332,10 +332,10 @@ STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Ne
 STRIPE_WEBHOOK_SECRET=              # required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
 STRIPE_PORTAL_RETURN_URL=           # where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
 STRIPE_TAX_ENABLED=false            # true adds automatic tax to every checkout. Needs Stripe Tax active with registrations and prices that carry a tax behaviour, or checkout refuses to open
-STRIPE_PRICE_INDIE_MONTHLY=         # price ids differ per environment; create them with pnpm --filter api stripe:catalog
-STRIPE_PRICE_INDIE_YEARLY=
-STRIPE_PRICE_ULTIMATE_MONTHLY=
-STRIPE_PRICE_ULTIMATE_YEARLY=
+STRIPE_PRICE_INDIE_MONTHLY=         # optional override; empty resolves the price by its lookup key, which pnpm --filter api stripe:catalog creates
+STRIPE_PRICE_INDIE_YEARLY=          # optional override; empty resolves the price by its lookup key
+STRIPE_PRICE_ULTIMATE_MONTHLY=      # optional override; empty resolves the price by its lookup key
+STRIPE_PRICE_ULTIMATE_YEARLY=       # optional override; empty resolves the price by its lookup key
 CRON_BILLING_RECONCILE=0 7 * * *    # daily reconciliation against Stripe, UTC
 CRON_TRIAL_NOTICES=0 9 * * *      # trial milestone emails, UTC
 BILLING_ENABLED=false               # entitlement seam: new accounts start a trial and lose access afterwards until plan=premium; registration stays open

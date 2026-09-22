@@ -132,7 +132,7 @@ describe('BillingService', () => {
         retrieveCheckoutSession,
         expireCheckoutSession,
       } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       { reconcileOne } as unknown as BillingReconciler,
       prisma,
       config,
@@ -755,17 +755,17 @@ describe('BillingService', () => {
       { [key]: undefined },
     );
 
-    expect(service.catalog().enabled).toBe(false);
+    expect((await service.catalog()).enabled).toBe(false);
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it('advertises only the prices it can actually sell', () => {
+  it('advertises only the prices it can actually sell', async () => {
     const { service } = build(null);
 
-    expect(service.catalog()).toEqual({
+    await expect(service.catalog()).resolves.toEqual({
       enabled: true,
       prices: [
         {

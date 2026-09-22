@@ -73,6 +73,12 @@ export class StripeService {
     return this.stripe.subscriptionSchedules.retrieve(id);
   }
 
+  listPrices(lookupKeys: string[]): Promise<Stripe.Price[]> {
+    return this.stripe.prices
+      .list({ lookup_keys: lookupKeys, active: true, limit: 100 })
+      .then((page) => page.data);
+  }
+
   retrieveSubscription(id: string): Promise<Stripe.Subscription> {
     return this.stripe.subscriptions.retrieve(id);
   }

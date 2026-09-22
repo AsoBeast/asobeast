@@ -99,7 +99,7 @@ function build(held: Stripe.Subscription[]) {
 
   const reconciler = new BillingReconciler(
     stripe,
-    new PriceCatalog(config),
+    new PriceCatalog(config, { enabled: false } as StripeService),
     prisma,
     {
       becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -111,7 +111,7 @@ function build(held: Stripe.Subscription[]) {
 
   const service = new BillingService(
     stripe,
-    new PriceCatalog(config),
+    new PriceCatalog(config, { enabled: false } as StripeService),
     reconciler,
     prisma,
     config,

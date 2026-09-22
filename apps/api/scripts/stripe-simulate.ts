@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import type Stripe from 'stripe';
 import type { PaidPlanName } from '@asobeast/shared';
+import { lookupKeyOf } from '../src/billing/price-catalog';
 import { createStripeClient } from '../src/billing/stripe.client';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 
@@ -120,7 +121,7 @@ async function monthlyPrice(
   stripe: Stripe,
   plan: PaidPlanName,
 ): Promise<string> {
-  const lookupKey = `asobeast_${plan}_month`;
+  const lookupKey = lookupKeyOf(plan, 'month');
   const found = await stripe.prices.list({
     lookup_keys: [lookupKey],
     active: true,

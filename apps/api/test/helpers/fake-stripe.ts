@@ -17,6 +17,7 @@ export interface FakeStripe extends StripeApi {
   expired: string[];
   sessions: Map<string, Stripe.Checkout.Session>;
   subscriptionStore: Map<string, Stripe.Subscription>;
+  priceStore: Map<string, Stripe.Price>;
   schedules: Map<string, Stripe.SubscriptionSchedule>;
   failNext: Error | null;
   nextSessionUrl: string | null | undefined;
@@ -133,6 +134,7 @@ export function fakeStripe(): FakeStripe {
     expired: [],
     sessions: new Map(),
     subscriptionStore: new Map(),
+    priceStore: new Map(),
     schedules: new Map(),
     failNext: null,
     nextSessionUrl: undefined,
@@ -206,6 +208,18 @@ export function fakeStripe(): FakeStripe {
       retrieve: (id) => found(fake.subscriptionStore, 'subscription', id),
     },
 
+    prices: {
+      list: (params = {}) =>
+        listOf(
+          [...fake.priceStore.values()].filter(
+            (price) =>
+              price.active &&
+              (!params.lookup_keys ||
+                params.lookup_keys.includes(price.lookup_key ?? '')),
+          ),
+        ),
+    },
+
     subscriptionSchedules: {
       retrieve: (id) => found(fake.schedules, 'subscription_schedule', id),
     },
@@ -240,6 +254,7 @@ export function fakeStripe(): FakeStripe {
       fake.expired.length = 0;
       fake.sessions.clear();
       fake.subscriptionStore.clear();
+      fake.priceStore.clear();
       fake.schedules.clear();
       fake.failNext = null;
       fake.nextSessionUrl = undefined;

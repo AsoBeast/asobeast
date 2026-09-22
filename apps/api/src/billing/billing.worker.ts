@@ -12,6 +12,7 @@ import { JOBS, QUEUES, type BillingEventPayload } from '../jobs/jobs.types';
 import { BillingReconciler } from './billing-reconciler.service';
 import { BillingWebhookService } from './billing-webhook.service';
 import { DowngradeWarner } from './downgrade-warner.service';
+import { PriceCatalog } from './price-catalog';
 import { TrialNotifier } from './trial-notifier.service';
 
 @Processor(QUEUES.BILLING, { concurrency: 1 })
@@ -24,6 +25,7 @@ export class BillingWorker extends WorkerHost implements OnModuleInit {
     private readonly reconciler: BillingReconciler,
     private readonly trials: TrialNotifier,
     private readonly downgrades: DowngradeWarner,
+    private readonly prices: PriceCatalog,
     private readonly config: ConfigService<Env, true>,
   ) {
     super();
@@ -50,9 +52,11 @@ export class BillingWorker extends WorkerHost implements OnModuleInit {
 
   async process(job: Job<BillingEventPayload>): Promise<void> {
     if (job.name === JOBS.BILLING_RECONCILE) {
+      await this.prices.refresh();
       await this.reconciler.reconcile();
       return;
     }
+    await this.prices.refreshIfStale();
     if (job.name === JOBS.TRIAL_NOTICES) {
       await this.trials.sweep();
       await this.downgrades.sweep();

@@ -99,7 +99,7 @@ describe('BillingReconciler', () => {
         listCustomerSubscriptions,
         listActiveSubscriptions: () => over.remote ?? [],
       } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(

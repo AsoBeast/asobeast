@@ -34,7 +34,7 @@ export class BillingController {
   @Get('catalog')
   @AllowUnentitled()
   @ApiOperation({ summary: 'Plans available to buy and their price ids' })
-  catalog(): BillingCatalog {
+  catalog(): Promise<BillingCatalog> {
     return this.billing.catalog();
   }
 

@@ -57,7 +57,8 @@ export class BillingService {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
-  catalog(): BillingCatalog {
+  async catalog(): Promise<BillingCatalog> {
+    await this.prices.refreshIfStale();
     return {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
@@ -65,6 +66,7 @@ export class BillingService {
   }
 
   async checkout(user: AccountUser, priceId: string): Promise<string> {
+    await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription(user.workspaceId);
@@ -250,7 +252,7 @@ export class BillingService {
   private missingConfiguration(): string[] {
     const missing: string[] = [];
     if (!this.stripe.enabled) missing.push('STRIPE_SECRET_KEY');
-    if (!this.prices.configured) missing.push('STRIPE_PRICE_*');
+    if (!this.prices.configured) missing.push('a price catalog');
     if (!this.config.get('STRIPE_WEBHOOK_SECRET', { infer: true })) {
       missing.push('STRIPE_WEBHOOK_SECRET');
     }

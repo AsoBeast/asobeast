@@ -14,18 +14,8 @@ import {
   portalConfiguration,
   type PortalProduct,
 } from '../src/billing/portal-configuration';
+import { lookupKeyOf } from '../src/billing/price-catalog';
 import { createStripeClient } from '../src/billing/stripe.client';
-
-const ENV_KEYS: Record<PaidPlanName, Record<BillingInterval, string>> = {
-  indie: {
-    month: 'STRIPE_PRICE_INDIE_MONTHLY',
-    year: 'STRIPE_PRICE_INDIE_YEARLY',
-  },
-  ultimate: {
-    month: 'STRIPE_PRICE_ULTIMATE_MONTHLY',
-    year: 'STRIPE_PRICE_ULTIMATE_YEARLY',
-  },
-};
 
 const PRICE_TAX_BEHAVIOR = 'exclusive';
 
@@ -77,7 +67,7 @@ async function priceFor(
   plan: PaidPlanName,
   interval: BillingInterval,
 ): Promise<Stripe.Price> {
-  const lookupKey = `asobeast_${plan}_${interval}`;
+  const lookupKey = lookupKeyOf(plan, interval);
   const existing = await stripe.prices.list({
     lookup_keys: [lookupKey],
     limit: 1,
@@ -190,7 +180,7 @@ async function main(): Promise<void> {
       const price = await priceFor(stripe, product, plan, interval);
       await ensureTaxBehaviour(stripe, price, say);
       prices.push(price.id);
-      lines.push(`${ENV_KEYS[plan][interval]}=${price.id}`);
+      lines.push(`${lookupKeyOf(plan, interval)} ${price.id}`);
     }
     products.push({ id: product.id, prices });
   }
@@ -203,6 +193,9 @@ async function main(): Promise<void> {
   );
   say(lines.join('\n'));
   say(`portal configuration ${portal}`);
+  say(
+    'the api resolves these prices by lookup key; STRIPE_PRICE_* is only needed to override one',
+  );
   say('\nset these in the dashboard, which the api cannot reach:');
   for (const item of DASHBOARD_CHECKLIST) say(`  [ ] ${item}`);
 }

@@ -120,7 +120,7 @@ describe('BillingWebhookService', () => {
           .fn()
           .mockResolvedValue(over.subscription ?? subscriptionOf()),
       } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -157,7 +157,7 @@ describe('BillingWebhookService', () => {
   it('refuses every delivery when billing is not configured', () => {
     const service = new BillingWebhookService(
       { enabled: false } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       {} as unknown as PrismaService,
       {} as unknown as CrossTenantAccess,
       {} as unknown as AccountNotifier,
