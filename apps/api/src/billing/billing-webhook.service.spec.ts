@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { UnrecoverableError } from 'bullmq';
 import type Stripe from 'stripe';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
@@ -66,6 +67,8 @@ describe('BillingWebhookService', () => {
       stored?: Record<string, unknown> | null;
       workspace?: Record<string, unknown> | null;
       subscription?: Stripe.Subscription;
+      retrieveFails?: Error;
+      emptyCatalog?: boolean;
       duplicate?: boolean;
     } = {},
   ) => {
@@ -116,11 +119,18 @@ describe('BillingWebhookService', () => {
       {
         enabled: true,
         constructEvent,
-        retrieveSubscription: jest
-          .fn()
-          .mockResolvedValue(over.subscription ?? subscriptionOf()),
+        retrieveSubscription: jest.fn(() =>
+          over.retrieveFails
+            ? Promise.reject(over.retrieveFails)
+            : Promise.resolve(over.subscription ?? subscriptionOf()),
+        ),
       } as unknown as StripeService,
-      new PriceCatalog(config, { enabled: false } as StripeService),
+      new PriceCatalog(
+        over.emptyCatalog
+          ? ({ get: () => undefined } as unknown as ConfigService<Env, true>)
+          : config,
+        { enabled: false } as StripeService,
+      ),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -533,5 +543,52 @@ describe('BillingWebhookService', () => {
         }) as Record<string, unknown>,
       }),
     );
+  });
+
+  describe('an event only an operator can fix', () => {
+    const mystery = subscriptionOf({
+      items: {
+        data: [
+          { current_period_end: PERIOD_END, price: { id: 'price_mystery' } },
+        ],
+      },
+    });
+    const stored = { id: 'evt_1', processedAt: null, payload: eventOf() };
+
+    it('fails without retrying when the price is unknown', async () => {
+      const { service, update } = build({ stored, subscription: mystery });
+
+      await expect(service.process('evt_1')).rejects.toBeInstanceOf(
+        UnrecoverableError,
+      );
+      expect(update).toHaveBeenCalledWith({
+        where: { id: 'evt_1' },
+        data: { failure: expect.stringContaining('price_mystery') as string },
+      });
+    });
+
+    it('keeps retrying when stripe is unreachable', async () => {
+      const { service } = build({
+        stored,
+        retrieveFails: new Error('stripe is down'),
+      });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
+
+    it('keeps retrying while the price catalog has not been resolved yet', async () => {
+      const { service } = build({ stored, emptyCatalog: true });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
   });
 });

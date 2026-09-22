@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, type Workspace } from '@prisma/client';
+import { UnrecoverableError } from 'bullmq';
 import type Stripe from 'stripe';
 import { isPaidPlan, type PlanName } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -15,7 +16,7 @@ import { AccountNotifier, noticeSettled } from './account-notifier.service';
 import { paymentFailed } from './account-mail';
 import { type BillingEventOutcome } from './billing-event-outcome';
 import { entersDunning, leavesDunning } from './dunning';
-import { PriceCatalog } from './price-catalog';
+import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
 import { projectionOf, stateOf } from './subscription-state';
@@ -129,8 +130,18 @@ export class BillingWebhookService {
         where: { id: eventId },
         data: { failure },
       });
+      if (this.awaitsAnOperator(error)) {
+        this.logger.error(
+          `stripe event ${eventId} failed and will not be retried until an operator replays it: ${failure}`,
+        );
+        throw new UnrecoverableError(failure);
+      }
       throw error;
     }
+  }
+
+  private awaitsAnOperator(error: unknown): boolean {
+    return error instanceof UnknownPriceError && this.prices.configured;
   }
 
   private async dispatch(event: Stripe.Event): Promise<BillingEventOutcome> {
