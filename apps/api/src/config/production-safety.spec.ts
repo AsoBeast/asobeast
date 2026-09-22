@@ -398,6 +398,32 @@ describe('production safety', () => {
     it('stays quiet on a self hosted instance with no billing at all', () => {
       expect(warningsFor({})).toEqual([]);
     });
+
+    const configured = {
+      STRIPE_WEBHOOK_SECRET: 'whsec_key',
+      SMTP_HOST: 'smtp.example.com',
+      SMTP_FROM: 'asobeast <alerts@example.com>',
+      WEB_PUBLIC_URL: 'https://app.example.com',
+    };
+
+    it.each(['sk_test_key', 'rk_test_key'])(
+      'warns when billing runs on the sandbox key %s',
+      (key) => {
+        expect(
+          warningsFor({
+            ...configured,
+            BILLING_ENABLED: 'true',
+            STRIPE_SECRET_KEY: key,
+          }),
+        ).toContainEqual(expect.stringContaining('sandbox'));
+      },
+    );
+
+    it('stays quiet about a sandbox key while billing is off', () => {
+      expect(
+        warningsFor({ ...configured, STRIPE_SECRET_KEY: 'sk_test_key' }),
+      ).not.toContainEqual(expect.stringContaining('sandbox'));
+    });
   });
 
   describe('the anonymous documentation surface', () => {

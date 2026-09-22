@@ -3,6 +3,8 @@ import { Env } from './env';
 
 const IMPLICIT_TLS_PORT = 465;
 
+const SANDBOX_KEY_PREFIXES = ['sk_test_', 'rk_test_'];
+
 const logger = new Logger('ProductionSafety');
 
 export function assertProductionSafety(env: Env): void {
@@ -107,6 +109,12 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  if (env.BILLING_ENABLED && isSandboxKey(env.STRIPE_SECRET_KEY)) {
+    warnings.push(
+      'BILLING_ENABLED is true in production on a sandbox STRIPE_SECRET_KEY. Every environment that shares this sandbox posts its events to this endpoint, so give each environment its own sandbox, and switch to a live key before a customer pays.',
+    );
+  }
+
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
     warnings.push(
       'STRIPE_SECRET_KEY is set in production with no STRIPE_WEBHOOK_SECRET. Every webhook delivery is refused, so a paid subscription never provisions access. Checkout stays closed until both are set.',
@@ -142,4 +150,8 @@ function missingHalf(env: Env): string {
 
 function mailConfigured(env: Env): boolean {
   return Boolean(env.SMTP_HOST && env.SMTP_FROM);
+}
+
+function isSandboxKey(key: string | undefined): boolean {
+  return SANDBOX_KEY_PREFIXES.some((prefix) => key?.startsWith(prefix));
 }
