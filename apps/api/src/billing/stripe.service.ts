@@ -5,7 +5,11 @@ import {
 } from '@nestjs/common';
 import Stripe from 'stripe';
 import { isMissingResource } from './stripe-errors';
-import { STRIPE_CLIENT, type StripeClient } from './stripe.client';
+import {
+  STRIPE_CLIENT,
+  type StripeApi,
+  type StripeClient,
+} from './stripe.client';
 
 @Injectable()
 export class StripeService {
@@ -15,7 +19,7 @@ export class StripeService {
     return this.client !== null;
   }
 
-  private get stripe(): Stripe {
+  private get stripe(): StripeApi {
     if (!this.client) {
       throw new ServiceUnavailableException('Billing is not configured');
     }
