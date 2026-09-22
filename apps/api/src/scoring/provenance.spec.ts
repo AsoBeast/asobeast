@@ -17,9 +17,12 @@ const evidence = (
 });
 
 describe('scoringConfidence', () => {
-  it.each(['APP_STORE', 'GOOGLE_PLAY'] as const)(
-    'is LOW without suggest evidence on %s',
-    (store) => {
+  it.each([
+    ['GOOGLE_PLAY', 'LOW'],
+    ['APP_STORE', 'HIGH'],
+  ] as const)(
+    'without suggest evidence %s is %s, only google play traffic reads it',
+    (store, expected) => {
       expect(
         scoringConfidence(
           store,
@@ -29,7 +32,7 @@ describe('scoringConfidence', () => {
             detailSuccessCount: 10,
           }),
         ),
-      ).toBe('LOW');
+      ).toBe(expected);
     },
   );
 
@@ -59,9 +62,9 @@ describe('scoringConfidence', () => {
 });
 
 describe('scoringProfile', () => {
-  it('maps each store to its reach source and v2 formula version', () => {
+  it('maps each store to its estimate source and v2 formula version', () => {
     expect(scoringProfile('APP_STORE', false)).toEqual({
-      source: 'APPLE_SUGGEST_REACH',
+      source: 'APPLE_SEARCH_SIGNALS',
       formulaVersion: 'app-store-v2',
     });
     expect(scoringProfile('GOOGLE_PLAY', false)).toEqual({

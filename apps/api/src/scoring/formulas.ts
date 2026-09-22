@@ -7,27 +7,24 @@ export { clamp, linear, logScale } from './curves';
 
 export type OfficialPopularity = { value: number } | { absentBelow: number };
 
-export interface PreviousSerpApp {
-  storeAppId: string;
-  ratingCount: number;
+export interface SerpApp {
+  storeAppId?: string;
+  title: string;
+  developer?: string;
+  ratingCount?: number;
+  ratingAvg?: number;
+  daysSinceUpdate?: number;
+  daysSinceRelease?: number;
+  installs?: number;
 }
 
 export interface KeywordStats {
   store: Store;
   keywordText: string;
   resultCount: number;
-  top10: Array<{
-    storeAppId?: string;
-    title: string;
-    developer?: string;
-    ratingCount?: number;
-    ratingAvg?: number;
-    daysSinceUpdate?: number;
-    installs?: number;
-  }>;
+  top10: SerpApp[];
+  competitors?: SerpApp[];
   top30TitleMatchCount: number;
   suggest: SuggestReach;
-  previousTop10?: PreviousSerpApp[];
-  previousCapturedDaysAgo?: number;
   official?: OfficialPopularity;
 }

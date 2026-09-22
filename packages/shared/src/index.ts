@@ -69,6 +69,7 @@ export const SCORING_SOURCES = [
   'APPLE_SUGGEST_REACH',
   'GOOGLE_PLAY_SUGGEST_REACH',
   'APPLE_ADS_POPULARITY',
+  'APPLE_SEARCH_SIGNALS',
 ] as const;
 export type ScoringSource = (typeof SCORING_SOURCES)[number];
 

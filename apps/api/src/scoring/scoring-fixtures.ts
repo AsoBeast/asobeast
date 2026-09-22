@@ -120,19 +120,6 @@ export const F10_ABSENT_CAP: KeywordStats = {
   official: { absentBelow: 41 },
 };
 
-export const F11_VELOCITY: KeywordStats = {
-  ...F1_HEAD,
-  top10: headTopTen().map((item, index) => ({
-    ...item,
-    storeAppId: `id${index}`,
-  })),
-  previousCapturedDaysAgo: 28,
-  previousTop10: HEAD_RATING_COUNTS.map((count, index) => ({
-    storeAppId: `id${index}`,
-    ratingCount: Math.round(count * 0.98),
-  })),
-};
-
 export const F12_NOT_FINITE: KeywordStats = {
   ...F1_HEAD,
   top10: headTopTen().map((item, index) =>

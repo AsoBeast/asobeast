@@ -6,7 +6,8 @@ import {
   SuggestReachStatus,
 } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
-import { KeywordStats, PreviousSerpApp } from './formulas';
+import { entryDifficulty } from './difficulty';
+import { KeywordStats } from './formulas';
 import { serpFlags } from './serp-flags';
 import { serpRelevance } from './serp-signals';
 
@@ -29,6 +30,7 @@ export function buildScoreSignals(
     officialPopularity:
       stats.official && 'value' in stats.official ? stats.official.value : null,
     estimatedTraffic,
+    entryDifficulty: entryDifficulty(stats),
   };
 }
 
@@ -50,6 +52,9 @@ const isFlagList = (value: unknown): value is SerpFlag[] =>
 
 export function readScoreSignals(stats: unknown): ScoreSignals | null {
   const signals = isRecord(stats) ? stats.signals : undefined;
+  const entryDifficulty = isRecord(signals)
+    ? (signals.entryDifficulty ?? null)
+    : null;
   if (
     !isRecord(signals) ||
     !isReachStatus(signals.suggestReach) ||
@@ -59,7 +64,8 @@ export function readScoreSignals(stats: unknown): ScoreSignals | null {
     !isNumberOrNull(signals.medianRatingCount) ||
     !isFlagList(signals.flags) ||
     !isNumberOrNull(signals.officialPopularity) ||
-    !isNumberOrNull(signals.estimatedTraffic)
+    !isNumberOrNull(signals.estimatedTraffic) ||
+    !isNumberOrNull(entryDifficulty)
   ) {
     return null;
   }
@@ -72,19 +78,6 @@ export function readScoreSignals(stats: unknown): ScoreSignals | null {
     flags: signals.flags,
     officialPopularity: signals.officialPopularity,
     estimatedTraffic: signals.estimatedTraffic,
+    entryDifficulty,
   };
-}
-
-export function readPreviousTop10(stats: unknown): PreviousSerpApp[] {
-  const top10 = isRecord(stats) ? stats.top10 : undefined;
-  if (!Array.isArray(top10)) {
-    return [];
-  }
-  return top10.flatMap((item: unknown) =>
-    isRecord(item) &&
-    typeof item.storeAppId === 'string' &&
-    isNumber(item.ratingCount)
-      ? [{ storeAppId: item.storeAppId, ratingCount: item.ratingCount }]
-      : [],
-  );
 }

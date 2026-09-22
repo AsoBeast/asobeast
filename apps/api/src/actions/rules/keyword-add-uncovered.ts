@@ -7,11 +7,14 @@ import {
   ScoringConfidence,
   TrackedKeywordItem,
 } from '@asobeast/shared';
-import { OPPORTUNITY_HIGH } from '../../scoring/opportunity';
+import {
+  OPPORTUNITY_HIGH,
+  OPPORTUNITY_MIN_RELEVANCE,
+} from '../../scoring/opportunity';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 
-export const UNCOVERED_MIN_RELEVANCE = 60;
+export const UNCOVERED_MIN_RELEVANCE = OPPORTUNITY_MIN_RELEVANCE;
 export const UNCOVERED_MIN_VOLUME = 20;
 
 export const UNCOVERED_PROVENANCE_CONFIDENCE: Record<

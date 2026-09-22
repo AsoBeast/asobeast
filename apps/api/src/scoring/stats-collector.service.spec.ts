@@ -18,6 +18,8 @@ function buildSearch(): SearchItem[] {
     title: index < 12 ? `Puzzle Game ${index}` : `Other App ${index}`,
     ratingCount: 1000 + index,
     ratingAvg: 4.5,
+    genreId: '6014',
+    releasedAt: daysAgo(730),
     updatedAt: daysAgo(10),
   }));
 }
@@ -33,7 +35,7 @@ function buildProviderWith(suggestFn: jest.Mock) {
 const buildProvider = (suggest: SuggestItem[]) =>
   buildProviderWith(jest.fn().mockResolvedValue(suggest));
 
-function buildPrisma(previous: unknown = null) {
+function buildPrisma() {
   return {
     keyword: {
       findUnique: jest.fn().mockResolvedValue({
@@ -42,7 +44,6 @@ function buildPrisma(previous: unknown = null) {
         country: 'us',
       }),
     },
-    keywordMetric: { findFirst: jest.fn().mockResolvedValue(previous) },
   } as unknown as PrismaService;
 }
 
@@ -82,7 +83,6 @@ function buildGplayPrisma() {
         country: 'us',
       }),
     },
-    keywordMetric: { findFirst: jest.fn().mockResolvedValue(null) },
   } as unknown as PrismaService;
 }
 
@@ -110,6 +110,8 @@ describe('StatsCollectorService', () => {
     expect(collected?.stats.top10).toHaveLength(10);
     expect(collected?.stats.top10[0].ratingCount).toBe(1000);
     expect(collected?.stats.top10[0].daysSinceUpdate).toBe(10);
+    expect(collected?.stats.competitors).toHaveLength(25);
+    expect(collected?.stats.competitors?.[0].daysSinceRelease).toBe(730);
     expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.stats.suggest).toEqual({
       status: 'hit',
@@ -319,68 +321,6 @@ describe('StatsCollectorService', () => {
     });
   });
 
-  describe('previous scored page', () => {
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    const collectWith = async (previous: unknown) => {
-      jest.useFakeTimers().setSystemTime(new Date('2026-09-21T10:00:00Z'));
-      const prisma = buildPrisma(previous);
-      const service = new StatsCollectorService(
-        prisma,
-        buildProvider([]).registry,
-        noOfficial,
-      );
-      const collected = await service.collect('kw1');
-      return { prisma, collected };
-    };
-
-    it('reads the newest metric at least fourteen days old', async () => {
-      const { prisma, collected } = await collectWith({
-        date: new Date('2026-08-31T00:00:00Z'),
-        stats: {
-          top10: [
-            { storeAppId: 'app0', ratingCount: 900 },
-            { storeAppId: 'app1', ratingCount: Number.NaN },
-            { title: 'no id', ratingCount: 5 },
-            { storeAppId: 'app2', ratingCount: 950 },
-          ],
-        },
-      });
-
-      expect(prisma.keywordMetric.findFirst).toHaveBeenCalledWith({
-        where: {
-          keywordId: 'kw1',
-          date: { lte: new Date('2026-09-07T00:00:00Z') },
-        },
-        orderBy: { date: 'desc' },
-        select: { date: true, stats: true },
-      });
-      expect(collected?.stats.previousTop10).toEqual([
-        { storeAppId: 'app0', ratingCount: 900 },
-        { storeAppId: 'app2', ratingCount: 950 },
-      ]);
-      expect(collected?.stats.previousCapturedDaysAgo).toBe(21);
-    });
-
-    it.each([
-      [
-        'a v1 row',
-        {
-          date: new Date('2026-08-31T00:00:00Z'),
-          stats: { top10: [{ title: 'Puzzle', ratingCount: 900 }] },
-        },
-      ],
-      ['a row without a page', { date: new Date(), stats: null }],
-      ['no row', null],
-    ])('ignores %s', async (_name, previous) => {
-      const { collected } = await collectWith(previous);
-      expect(collected?.stats.previousTop10).toBeUndefined();
-      expect(collected?.stats.previousCapturedDaysAgo).toBeUndefined();
-    });
-  });
-
   it('carries an official popularity and says it was used', async () => {
     const lookup = jest.fn().mockResolvedValue({ value: 71 });
     const service = new StatsCollectorService(
@@ -391,11 +331,10 @@ describe('StatsCollectorService', () => {
 
     const collected = await service.collect('kw1');
 
-    expect(lookup).toHaveBeenCalledWith({
-      text: 'puzzle game',
-      store: Store.APP_STORE,
-      country: 'us',
-    });
+    expect(lookup).toHaveBeenCalledWith(
+      { text: 'puzzle game', store: Store.APP_STORE, country: 'us' },
+      'GAMES',
+    );
     expect(collected?.stats.official).toEqual({ value: 71 });
     expect(collected?.evidence.officialPopularityUsed).toBe(true);
   });

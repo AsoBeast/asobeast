@@ -22,6 +22,7 @@ export class OfficialPopularityLookup {
 
   async for(
     keyword: PopularityKeyword,
+    genre?: string,
   ): Promise<OfficialPopularity | undefined> {
     if (!this.client.enabled || keyword.store !== Store.APP_STORE) {
       return undefined;
@@ -45,12 +46,21 @@ export class OfficialPopularityLookup {
     if (listed._max.popularity !== null) {
       return { value: listed._max.popularity };
     }
-    const floor = await this.prisma.searchTermPopularity.aggregate({
+    const floor =
+      (genre === undefined ? null : await this.floor({ ...where, genre })) ??
+      (await this.floor(where));
+    return floor === null ? undefined : { absentBelow: floor };
+  }
+
+  private async floor(where: {
+    country: string;
+    week: Date;
+    genre?: string;
+  }): Promise<number | null> {
+    const lowest = await this.prisma.searchTermPopularity.aggregate({
       where,
       _min: { popularity: true },
     });
-    return floor._min.popularity === null
-      ? undefined
-      : { absentBelow: floor._min.popularity };
+    return lowest._min.popularity;
   }
 }

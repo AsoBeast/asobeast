@@ -1,5 +1,6 @@
 import { SERP_FLAGS, SerpFlag, searchKey } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
+import { editDistance } from './edit-distance';
 import {
   EVIDENCE_ALL_WORDS,
   paddingFactor,
@@ -11,6 +12,8 @@ export const BRAND_LEADER_RATIO = 10;
 export const WEAK_LEADER_MAX_RATINGS = 100;
 export const SMALL_SERP_MAX_RESULTS = 3;
 export const PADDED_MAX_FACTOR = 0.5;
+export const BRAND_TYPO_MIN_LENGTH = 6;
+export const BRAND_DOUBLE_TYPO_MIN_LENGTH = 9;
 
 const TITLE_SEPARATOR = /\s[-–—|·•]\s|[:,]/;
 const DEVELOPER_SUFFIXES = new Set([
@@ -51,13 +54,35 @@ export interface FlaggablePage {
   top10: FlaggableApp[];
 }
 
+function typoTolerance(phrase: string): number {
+  const joined = phrase.replaceAll(' ', '');
+  if (!phrase.includes(' ') && joined.length >= BRAND_DOUBLE_TYPO_MIN_LENGTH) {
+    return 2;
+  }
+  return joined.length >= BRAND_TYPO_MIN_LENGTH ? 1 : 0;
+}
+
+function misspells(name: string, phrase: string): boolean {
+  if (name === phrase) {
+    return true;
+  }
+  const tokens = new Set(name.split(' '));
+  if (phrase.split(' ').every((word) => tokens.has(word))) {
+    return false;
+  }
+  return (
+    editDistance(name.replaceAll(' ', ''), phrase.replaceAll(' ', '')) <=
+    typoTolerance(phrase)
+  );
+}
+
 function namedAfter(leader: FlaggableApp, keyword: string): boolean {
   const phrase = searchKey(keyword);
   if (phrase.length === 0) {
     return false;
   }
   const [segment = ''] = leader.title.split(TITLE_SEPARATOR);
-  if (searchKey(segment) === phrase) {
+  if (misspells(searchKey(segment), phrase)) {
     return true;
   }
   const words = searchKey(leader.developer ?? '').split(' ');

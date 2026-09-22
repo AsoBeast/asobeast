@@ -18,6 +18,7 @@ export interface ScoreSignals {
   flags: SerpFlag[];
   officialPopularity: number | null;
   estimatedTraffic: number | null;
+  entryDifficulty?: number | null;
 }
 
 export interface ScoreProvenance {

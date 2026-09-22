@@ -20,6 +20,7 @@ import { DigestService } from '../src/analytics/digest.service';
 import { obliterateQueues } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { OPPORTUNITY_MIN_RELEVANCE } from '../src/scoring/opportunity';
 
 const D0 = new Date('2026-06-30T00:00:00.000Z');
 const D7 = new Date('2026-06-23T00:00:00.000Z');
@@ -262,6 +263,21 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.trackedKeywords).toBe(4);
     expect(summary.competitors).toBe(0);
     expect(summary.lastRefreshAt).toBe(D0.toISOString());
+  });
+
+  it('leaves an uncovered keyword below the relevance bar out', async () => {
+    const id = await seed();
+    await prisma.trackedKeyword.updateMany({
+      where: { appId: id, keyword: { text: 'daily goals' } },
+      data: { relevance: OPPORTUNITY_MIN_RELEVANCE - 1 },
+    });
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+
+    expect(
+      summary.coverage.uncoveredHighOpportunity.map((item) => item.text),
+    ).not.toContain('daily goals');
   });
 
   it('composes a portfolio whose numbers match the app summary', async () => {

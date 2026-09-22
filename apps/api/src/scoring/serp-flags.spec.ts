@@ -23,6 +23,38 @@ describe('serpFlags', () => {
     ]);
   });
 
+  it.each(['geoguesser', 'geo guesser', 'geoguess', 'geogusser'])(
+    'reads the misspelling %s as the same brand',
+    (keyword) => {
+      expect(serpFlags(page(brandTopTen(), keyword))).toContain('brand');
+    },
+  );
+
+  it('allows two typos only inside a single long word', () => {
+    const topTen = [
+      { title: 'Words Explorer - Puzzle Search', ratingCount: 10_969 },
+      ...titled(unrelated(9)),
+    ];
+    expect(serpFlags(page(topTen, 'world explorer'))).not.toContain('brand');
+  });
+
+  it('does not read a longer title that spells the phrase as a typo', () => {
+    const topTen = [
+      { title: 'Geo Quiz 2', ratingCount: 20_000_000 },
+      ...titled(unrelated(9)),
+    ];
+    expect(serpFlags(page(topTen, 'geo quiz'))).not.toContain('brand');
+  });
+
+  it('allows no typo in a short name', () => {
+    const topTen = [
+      { title: 'Waze', ratingCount: 2_000_000 },
+      ...titled(unrelated(9)),
+    ];
+    expect(serpFlags(page(topTen, 'wave'))).not.toContain('brand');
+    expect(serpFlags(page(topTen, 'waze'))).toContain('brand');
+  });
+
   it('does not call a generic head term a brand', () => {
     const topTen = [
       {

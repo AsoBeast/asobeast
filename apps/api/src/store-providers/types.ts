@@ -27,6 +27,8 @@ export interface SearchItem {
   developer?: string;
   ratingAvg?: number;
   ratingCount?: number;
+  genreId?: string;
+  releasedAt?: Date;
   updatedAt?: Date;
 }
 

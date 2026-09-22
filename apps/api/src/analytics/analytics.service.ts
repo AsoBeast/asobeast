@@ -17,13 +17,15 @@ import {
 } from '@asobeast/shared';
 import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
-import { appOpportunity } from '../scoring/keyword-opportunity';
-import { OPPORTUNITY_HIGH } from '../scoring/opportunity';
+import { AppOpportunity, appOpportunity } from '../scoring/keyword-opportunity';
+import {
+  OPPORTUNITY_HIGH,
+  OPPORTUNITY_MIN_RELEVANCE,
+} from '../scoring/opportunity';
 import {
   addDays,
   DAY_MS,
   delta,
-  medianRatingsAt,
   metricAt,
   positionAt,
   rankingAt,
@@ -51,8 +53,6 @@ const covers = (field: string, keyword: string): boolean =>
 
 interface CoverageApp {
   snapshotText: string;
-  ratingCount: number | null;
-  medianRatings: Map<string, number | null>;
 }
 
 const CURRENT_VERSIONS = new Set<string>(
@@ -66,7 +66,7 @@ const rowOpportunity = (
   row: TrackedRow,
   referenceDate: Date | null,
   app: CoverageApp,
-): number | null => {
+): AppOpportunity | null => {
   const metric = referenceDate
     ? metricAt(row.keyword.metrics, referenceDate)
     : null;
@@ -86,17 +86,23 @@ const rowOpportunity = (
     ...(ranking
       ? { ranking: { position: ranking.position, checked: true } }
       : {}),
-    appRatingCount: app.ratingCount,
-    medianTopTenRatings: app.medianRatings.get(row.keywordId) ?? null,
-  }).opportunity;
+  });
 };
+
+const uncoveredWorthAdding = (
+  scored: AppOpportunity | null,
+): scored is AppOpportunity & { opportunity: number } =>
+  scored !== null &&
+  scored.opportunity !== null &&
+  scored.opportunity >= OPPORTUNITY_HIGH &&
+  scored.relevance >= OPPORTUNITY_MIN_RELEVANCE;
 
 @Injectable()
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async summary(appId: string): Promise<AppSummary> {
-    const { country } = await this.ensureApp(appId);
+    await this.ensureApp(appId);
 
     const reference = await referenceDate(this.prisma, appId);
     const windowStart = reference
@@ -112,24 +118,17 @@ export class AnalyticsService {
           title: true,
           subtitle: true,
           description: true,
-          ratingCount: true,
           capturedAt: true,
         },
       }),
       this.prisma.app.count({ where: { primaryAppId: appId } }),
     ]);
-    const medianRatings = await medianRatingsAt(
-      this.prisma,
-      rows,
-      reference,
-      country,
-    );
 
     return {
       visibility: this.visibilitySummary(rows, reference),
       rankDistribution: this.rankDistribution(rows, reference),
       movers: movers(rows, reference),
-      coverage: this.coverage(rows, reference, snapshot, medianRatings),
+      coverage: this.coverage(rows, reference, snapshot),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: rows.length,
       competitors,
@@ -274,9 +273,7 @@ export class AnalyticsService {
       title: string;
       subtitle: string | null;
       description: string;
-      ratingCount: number | null;
     } | null,
-    medianRatings: Map<string, number | null>,
   ): CoverageSummary {
     const fields = {
       title: snapshot?.title ?? '',
@@ -287,8 +284,6 @@ export class AnalyticsService {
       snapshotText: [fields.title, fields.subtitle, fields.description].join(
         ' ',
       ),
-      ratingCount: snapshot?.ratingCount ?? null,
-      medianRatings,
     };
 
     const hits = rows.map((row) => ({
@@ -300,15 +295,18 @@ export class AnalyticsService {
 
     const uncovered = hits
       .filter((hit) => !hit.inTitle && !hit.inSubtitle && !hit.inDescription)
-      .map((hit) => ({
-        keywordId: hit.row.keywordId,
-        text: hit.row.keyword.text,
-        opportunity: rowOpportunity(hit.row, referenceDate, app),
-      }))
-      .filter(
-        (entry): entry is UncoveredKeyword =>
-          entry.opportunity !== null && entry.opportunity >= OPPORTUNITY_HIGH,
-      );
+      .flatMap((hit): UncoveredKeyword[] => {
+        const scored = rowOpportunity(hit.row, referenceDate, app);
+        return uncoveredWorthAdding(scored)
+          ? [
+              {
+                keywordId: hit.row.keywordId,
+                text: hit.row.keyword.text,
+                opportunity: scored.opportunity,
+              },
+            ]
+          : [];
+      });
 
     return {
       inTitle: hits.filter((hit) => hit.inTitle).length,
@@ -320,14 +318,13 @@ export class AnalyticsService {
     };
   }
 
-  private async ensureApp(appId: string): Promise<{ country: string }> {
+  private async ensureApp(appId: string): Promise<void> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { country: true },
+      select: { id: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);
     }
-    return app;
   }
 }

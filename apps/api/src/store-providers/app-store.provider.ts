@@ -217,6 +217,10 @@ export class AppStoreProvider implements StoreProvider {
       developer: item.developer,
       ratingAvg: item.score,
       ratingCount: item.reviews ?? item.currentVersionReviews,
+      ...(item.primaryGenreId === undefined
+        ? {}
+        : { genreId: String(item.primaryGenreId) }),
+      releasedAt: toDate(item.released),
       updatedAt: toDate(item.updated),
     };
   }

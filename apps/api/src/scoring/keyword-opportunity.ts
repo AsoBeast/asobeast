@@ -1,6 +1,6 @@
 import { KeywordSource } from '@asobeast/shared';
 import { toDifficulty100, toVolume } from './formulas';
-import { chanceShift, computeOpportunity } from './opportunity';
+import { computeOpportunity } from './opportunity';
 import { defaultRelevance, RankingEvidence } from './relevance';
 
 export interface OpportunityInput {
@@ -11,8 +11,6 @@ export interface OpportunityInput {
   traffic: number | null;
   difficulty: number | null;
   ranking?: RankingEvidence;
-  appRatingCount: number | null;
-  medianTopTenRatings: number | null;
 }
 
 export interface AppOpportunity {
@@ -38,11 +36,6 @@ export function appOpportunity(input: OpportunityInput): AppOpportunity {
     relevance,
     volume,
     difficulty100,
-    opportunity: computeOpportunity(
-      volume,
-      difficulty100,
-      relevance,
-      chanceShift(input.appRatingCount, input.medianTopTenRatings),
-    ),
+    opportunity: computeOpportunity(volume, difficulty100),
   };
 }

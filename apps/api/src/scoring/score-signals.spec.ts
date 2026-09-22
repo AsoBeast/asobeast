@@ -19,7 +19,8 @@ describe('buildScoreSignals', () => {
       medianRatingCount: 800,
       flags: ['brand', 'padded'],
       officialPopularity: null,
-      estimatedTraffic: expect.closeTo(4.1673, 3) as number,
+      estimatedTraffic: expect.closeTo(5.4, 3) as number,
+      entryDifficulty: 2.3,
     });
   });
 
@@ -49,7 +50,7 @@ describe('official popularity in the signals', () => {
   ])('records %s next to the estimate', (_name, stats, official) => {
     expect(buildScoreSignals(stats, estimateTraffic(stats))).toMatchObject({
       officialPopularity: official,
-      estimatedTraffic: expect.closeTo(6.2315, 3) as number,
+      estimatedTraffic: expect.closeTo(6.5, 3) as number,
     });
   });
 });

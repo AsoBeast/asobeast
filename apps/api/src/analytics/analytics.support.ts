@@ -1,7 +1,6 @@
 import { KeywordSource } from '@prisma/client';
 import { VisibilityPoint } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { readScoreSignals } from '../scoring/score-signals';
 import { visibility, VisibilityKeyword } from './visibility';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
@@ -299,31 +298,4 @@ export async function sparklineRows(
     rows: await trackedRows(prisma, appId, windowStart, reference),
     referenceDate: reference,
   };
-}
-
-export async function medianRatingsAt(
-  prisma: PrismaService,
-  rows: TrackedRow[],
-  date: Date | null,
-  country: string,
-): Promise<Map<string, number | null>> {
-  const wanted = date
-    ? rows.flatMap((row) => {
-        const metric = metricAt(row.keyword.metrics, date);
-        return metric ? [{ keywordId: row.keywordId, date: metric.date }] : [];
-      })
-    : [];
-  if (wanted.length === 0) {
-    return new Map();
-  }
-  const metrics = await prisma.keywordMetric.findMany({
-    where: { OR: wanted, keyword: { country } },
-    select: { keywordId: true, stats: true },
-  });
-  return new Map(
-    metrics.map((metric) => [
-      metric.keywordId,
-      readScoreSignals(metric.stats)?.medianRatingCount ?? null,
-    ]),
-  );
 }

@@ -4,7 +4,13 @@ import {
   junkTopTen,
   tailTopTen,
 } from './scoring-fixtures';
-import { paddingFactor, serpRelevance, titleEvidence } from './serp-signals';
+import {
+  MATCH_ALL_WORDS,
+  paddingFactor,
+  serpRelevance,
+  titleEvidence,
+  titleMatch,
+} from './serp-signals';
 
 describe('titleEvidence', () => {
   it.each([
@@ -72,5 +78,14 @@ describe('serpRelevance and paddingFactor', () => {
   ])('$name', ({ topTen, keyword, relevance, padding }) => {
     expect(serpRelevance(topTen, keyword)).toBeCloseTo(relevance, 6);
     expect(paddingFactor(topTen, keyword)).toBeCloseTo(padding, 6);
+  });
+});
+
+describe('titleMatch proximity', () => {
+  it('gives no proximity bonus when a word only matches inside a longer token', () => {
+    expect(titleMatch('Photo 写真編集', 'photo 編集')).toEqual({
+      strong: true,
+      evidence: MATCH_ALL_WORDS,
+    });
   });
 });

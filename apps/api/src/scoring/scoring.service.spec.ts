@@ -18,12 +18,6 @@ const storedStats: KeywordStats = {
   })),
   top30TitleMatchCount: 30,
   suggest: { status: 'hit', prefixLength: 1, position: 1 },
-  previousCapturedDaysAgo: 3,
-};
-
-const stats: KeywordStats = {
-  ...storedStats,
-  previousTop10: [{ storeAppId: 'app0', ratingCount: 900_000 }],
 };
 
 const evidence: ScoringEvidence = {
@@ -45,12 +39,13 @@ const storedJson = {
     medianRatingCount: 1_000_000,
     flags: [],
     officialPopularity: null,
-    estimatedTraffic: 10,
+    estimatedTraffic: 7,
+    entryDifficulty: null,
   },
   evidence,
 };
 
-const collected: CollectedKeywordStats = { stats, evidence };
+const collected: CollectedKeywordStats = { stats: storedStats, evidence };
 
 interface UpsertArgs {
   where: { keywordId_date: { keywordId: string; date: Date } };
@@ -96,11 +91,10 @@ describe('ScoringService', () => {
     expect(collect).toHaveBeenCalledWith('kw1');
     const [args] = upsert.mock.calls[0];
     expect(args.create.keywordId).toBe('kw1');
-    expect(args.create.traffic).toBeCloseTo(10, 2);
-    expect(args.create.difficulty).toBeCloseTo(9.61, 2);
+    expect(args.create.traffic).toBeCloseTo(7, 2);
+    expect(args.create.difficulty).toBeCloseTo(6.7, 2);
     expect(args.create.stats).toEqual(storedJson);
-    expect(args.create.stats).not.toHaveProperty('previousTop10');
-    expect(args.create.scoringSource).toBe('APPLE_SUGGEST_REACH');
+    expect(args.create.scoringSource).toBe('APPLE_SEARCH_SIGNALS');
     expect(args.create.formulaVersion).toBe('app-store-v2');
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.capturedAt.toISOString()).toBe(
@@ -113,7 +107,7 @@ describe('ScoringService', () => {
       traffic: args.create.traffic,
       difficulty: args.create.difficulty,
       stats: storedJson,
-      scoringSource: 'APPLE_SUGGEST_REACH',
+      scoringSource: 'APPLE_SEARCH_SIGNALS',
       formulaVersion: 'app-store-v2',
       confidence: 'HIGH',
       capturedAt: args.create.capturedAt,
@@ -144,7 +138,7 @@ describe('ScoringService', () => {
     const upsert = jest.fn<Promise<void>, [UpsertArgs]>();
     const collect = jest.fn<Promise<CollectedKeywordStats>, [string]>();
     collect.mockResolvedValue({
-      stats: { ...stats, official: { value: 71 } },
+      stats: { ...storedStats, official: { value: 71 } },
       evidence: { ...evidence, officialPopularityUsed: true },
     });
     const service = new ScoringService(
@@ -160,7 +154,7 @@ describe('ScoringService', () => {
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.stats).not.toHaveProperty('official');
     expect(args.create.stats).toMatchObject({
-      signals: { officialPopularity: 71, estimatedTraffic: 10 },
+      signals: { officialPopularity: 71, estimatedTraffic: 7 },
     });
   });
 

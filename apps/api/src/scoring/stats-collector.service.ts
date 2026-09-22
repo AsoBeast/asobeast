@@ -3,11 +3,10 @@ import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
-import { VELOCITY_MIN_DAYS } from './difficulty';
+import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
-import { readPreviousTop10 } from './score-signals';
 import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
 import {
   ProbedReach,
@@ -17,6 +16,7 @@ import {
 
 const SEARCH_DEPTH = 100;
 const TOP_STRENGTH = 10;
+const COMPETITOR_DEPTH = 25;
 const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -25,11 +25,6 @@ export interface CollectedKeywordStats {
   stats: KeywordStats;
   evidence: ScoringEvidence;
 }
-
-type PreviousPage = Pick<
-  KeywordStats,
-  'previousTop10' | 'previousCapturedDaysAgo'
->;
 
 interface DetailCollection {
   items: KeywordStats['top10'];
@@ -68,8 +63,10 @@ export class StatsCollectorService {
         : this.searchTopTen(results);
     const { reach, requests } = await this.suggestReach(provider, keyword);
     const suggestCompleted = reach.status !== 'unavailable';
-    const previous = await this.previousPage(keywordId);
-    const official = await this.officialPopularity.for(keyword);
+    const official = await this.officialPopularity.for(
+      keyword,
+      inferPopularityGenre(results),
+    );
 
     return {
       stats: {
@@ -77,9 +74,15 @@ export class StatsCollectorService {
         keywordText: keyword.text,
         resultCount: results.length,
         top10: topTen.items,
+        ...(keyword.store === Store.APP_STORE
+          ? {
+              competitors: results
+                .slice(0, COMPETITOR_DEPTH)
+                .map((item) => this.toStrength(item)),
+            }
+          : {}),
         top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
         suggest: reach,
-        ...previous,
         ...(official ? { official } : {}),
       },
       evidence: {
@@ -102,29 +105,12 @@ export class StatsCollectorService {
       (term) => provider.suggest(term, country),
       SUGGEST_MATCH[store],
     );
-    if (probed.reach.status === 'unavailable') {
+    if (probed.reach.status === 'unavailable' && store === Store.GOOGLE_PLAY) {
       this.logger.warn(
         `suggest unavailable for "${text}", scoring on demand only`,
       );
     }
     return probed;
-  }
-
-  private async previousPage(keywordId: string): Promise<PreviousPage> {
-    const todayMs = Math.floor(Date.now() / DAY_MS) * DAY_MS;
-    const row = await this.prisma.keywordMetric.findFirst({
-      where: {
-        keywordId,
-        date: { lte: new Date(todayMs - VELOCITY_MIN_DAYS * DAY_MS) },
-      },
-      orderBy: { date: 'desc' },
-      select: { date: true, stats: true },
-    });
-    const previousTop10 = row ? readPreviousTop10(row.stats) : [];
-    if (!row || previousTop10.length === 0) {
-      return {};
-    }
-    return { previousTop10, previousCapturedDaysAgo: daysSince(row.date) };
   }
 
   private searchTopTen(results: SearchItem[]): DetailCollection {
@@ -159,6 +145,9 @@ export class StatsCollectorService {
           ...(app.storeUpdatedAt === undefined
             ? {}
             : { daysSinceUpdate: daysSince(app.storeUpdatedAt) }),
+          ...(app.releasedAt === undefined
+            ? {}
+            : { daysSinceRelease: daysSince(app.releasedAt) }),
           ...(app.installs === undefined
             ? {}
             : { installs: Number(app.installs) }),
@@ -191,6 +180,9 @@ export class StatsCollectorService {
       ...(item.updatedAt === undefined
         ? {}
         : { daysSinceUpdate: daysSince(item.updatedAt) }),
+      ...(item.releasedAt === undefined
+        ? {}
+        : { daysSinceRelease: daysSince(item.releasedAt) }),
     };
   }
 

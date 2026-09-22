@@ -1,6 +1,7 @@
 import { searchKey, Store } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
 import { KeywordStats } from './formulas';
+import { estimatePopularity } from './popularity-model';
 import { paddingFactor } from './serp-signals';
 import { reachScore } from './suggest-reach';
 
@@ -14,6 +15,7 @@ export const WORD_FACTORS = [1, 1, 0.92, 0.8, 0.65, 0.5] as const;
 export const ABSENT_TRAFFIC_CAP = 1.5;
 export const THIN_SERP_RESULTS = 5;
 export const THIN_SERP_TRAFFIC_CAP = 1;
+const POPULARITY_SCALE = 10;
 
 export function demandScore(stats: KeywordStats): number {
   const [min, max] = DEMAND_BOUNDS[stats.store];
@@ -30,33 +32,49 @@ function wordFactor(keywordText: string): number {
   return WORD_FACTORS[Math.min(words, WORD_FACTORS.length - 1)];
 }
 
-export function estimateTraffic(stats: KeywordStats): number {
-  if (stats.resultCount === 0) {
-    return 0;
-  }
+function suggestEstimate(stats: KeywordStats): number {
   const reach = reachScore(stats.suggest);
   const demand = demandScore(stats);
   const blend =
     reach === null
       ? DEMAND_ONLY_FACTOR * demand
       : TRAFFIC_WEIGHTS.reach * reach + TRAFFIC_WEIGHTS.demand * demand;
-  const caps = [
-    stats.suggest.status === 'absent' ? ABSENT_TRAFFIC_CAP : 10,
-    stats.resultCount < THIN_SERP_RESULTS ? THIN_SERP_TRAFFIC_CAP : 10,
-  ];
-  return clamp(Math.min(blend * wordFactor(stats.keywordText), ...caps));
+  const cap = stats.suggest.status === 'absent' ? ABSENT_TRAFFIC_CAP : 10;
+  return clamp(Math.min(blend * wordFactor(stats.keywordText), cap));
+}
+
+function modelEstimate(stats: KeywordStats): number {
+  const popularity = estimatePopularity(
+    stats.competitors ?? stats.top10,
+    stats.keywordText,
+  );
+  return popularity === null ? 0 : popularity / POPULARITY_SCALE;
+}
+
+export function estimateTraffic(stats: KeywordStats): number {
+  if (stats.resultCount === 0) {
+    return 0;
+  }
+  const estimate =
+    stats.store === 'APP_STORE' ? modelEstimate(stats) : suggestEstimate(stats);
+  return stats.resultCount < THIN_SERP_RESULTS
+    ? Math.min(estimate, THIN_SERP_TRAFFIC_CAP)
+    : estimate;
 }
 
 export function computeTraffic(stats: KeywordStats): number {
   const { official } = stats;
   if (official && 'value' in official) {
-    return clamp(official.value / 10);
+    return clamp(official.value / POPULARITY_SCALE);
   }
   const estimate = estimateTraffic(stats);
   return official
     ? Math.min(
         estimate,
-        Math.max((official.absentBelow - 1) / 10, ABSENT_TRAFFIC_CAP),
+        Math.max(
+          (official.absentBelow - 1) / POPULARITY_SCALE,
+          ABSENT_TRAFFIC_CAP,
+        ),
       )
     : estimate;
 }

@@ -137,17 +137,15 @@ export class KeywordsService {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { appId: app.id },
       orderBy: { capturedAt: 'desc' },
-      select: { title: true, subtitle: true, summary: true, ratingCount: true },
+      select: { title: true, subtitle: true, summary: true },
     });
     if (!snapshot) {
-      return { snapshotText: '', ratingCount: null, country: app.country };
+      return { snapshotText: '' };
     }
     return {
       snapshotText: [snapshot.title, snapshot.subtitle, snapshot.summary]
         .filter((part): part is string => Boolean(part))
         .join(' '),
-      ratingCount: snapshot.ratingCount,
-      country: app.country,
     };
   }
 

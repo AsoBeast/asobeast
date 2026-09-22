@@ -29,18 +29,14 @@ const row = (
   ...overrides,
 });
 
-const facts = (snapshotText: string, ratingCount: number | null = null) => ({
-  snapshotText,
-  ratingCount,
-  country: 'us',
-});
+const facts = (snapshotText: string) => ({ snapshotText });
 
 describe('toTrackedKeywordItem', () => {
   it('derives volume, difficulty and a default relevance', () => {
     const item = toTrackedKeywordItem(row(), facts('daily habit tracker'));
     expect(item.volume).toBeCloseTo(80, 2);
     expect(item.relevance).toBe(60);
-    expect(item.opportunity).toBeCloseTo(80 * (1 - 0.4 ** 2) * 0.6, 1);
+    expect(item.opportunity).toBe(65);
     expect(item.latestDepth).toBeNull();
   });
 
@@ -91,61 +87,6 @@ describe('toTrackedKeywordItem', () => {
     });
   });
 
-  describe('chance against the top ten', () => {
-    const scored = (
-      stats: TrackedKeywordRow['keyword']['metrics'][number]['stats'],
-    ) =>
-      row({
-        relevance: 90,
-        keyword: {
-          ...row().keyword,
-          metrics: [
-            {
-              ...row().keyword.metrics[0],
-              traffic: 4.77,
-              difficulty: 4.37,
-              stats,
-            },
-          ],
-        },
-      });
-    const signals = {
-      suggestReach: 'hit',
-      suggestPrefixLength: 2,
-      suggestPosition: 1,
-      serpRelevance: 1,
-      medianRatingCount: 21_500,
-      flags: [],
-      officialPopularity: null,
-      estimatedTraffic: 4.77,
-    };
-
-    it.each([
-      [4, 28.1],
-      [2_000_000, 39.3],
-    ])('an app with %s ratings reads %s', (ratingCount, expected) => {
-      expect(
-        toTrackedKeywordItem(scored({ signals }), facts('', ratingCount))
-          .opportunity,
-      ).toBe(expected);
-    });
-
-    it('does not weigh home market ratings against another market', () => {
-      const abroad = scored({ signals });
-      abroad.keyword.country = 'de';
-      expect(toTrackedKeywordItem(abroad, facts('', 4)).opportunity).toBe(34.7);
-    });
-
-    it('does not shift a v1 row without signals', () => {
-      expect(
-        toTrackedKeywordItem(
-          scored({ suggest: { priority: 9000 } }),
-          facts('', 4),
-        ).opportunity,
-      ).toBe(34.7);
-    });
-  });
-
   describe('score signals and the outdated flag', () => {
     const signals = {
       suggestReach: 'hit',
@@ -156,6 +97,7 @@ describe('toTrackedKeywordItem', () => {
       flags: ['padded'],
       officialPopularity: null,
       estimatedTraffic: 6.2,
+      entryDifficulty: null,
     };
     const rowWith = (
       metric: Partial<TrackedKeywordRow['keyword']['metrics'][number]>,
