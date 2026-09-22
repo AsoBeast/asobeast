@@ -430,6 +430,29 @@ describe('BillingReconciler', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('revokes a plan whose subscription ended on a price the catalog no longer holds', async () => {
+    const { reconciler, rows } = build({
+      workspaces: [workspaceOf()],
+      subscription: subscriptionOf({
+        status: 'canceled',
+        items: {
+          data: [
+            { current_period_end: PERIOD_END, price: { id: 'price_retired' } },
+          ],
+        },
+      }),
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 1,
+      unreconciled: [],
+    });
+    expect(rows[0]).toMatchObject({
+      plan: 'free',
+      subscriptionStatus: 'canceled',
+    });
+  });
+
   it('keeps the paid plan when the local price catalog cannot name the plan', async () => {
     const { reconciler, update } = build({
       workspaces: [workspaceOf()],

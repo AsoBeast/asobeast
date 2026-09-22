@@ -21,7 +21,7 @@ import { entersDunning, leavesDunning } from './dunning';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
 import { nextPhasePlan, scheduleIdOf } from './scheduled-plan';
 import type { SubscriptionStatus } from './subscription-status';
-import { projectionOf, stateOf } from './subscription-state';
+import { projectionOf, stateFrom } from './subscription-state';
 import { StripeService } from './stripe.service';
 import {
   customerIdOfEvent,
@@ -227,7 +227,7 @@ export class BillingWebhookService {
       return 'ignored';
     }
 
-    const state = stateOf(subscription, this.prices.planOf(subscription));
+    const state = stateFrom(subscription, this.prices);
     await this.prisma.workspace.update({
       where: { id: workspace.id },
       data: {

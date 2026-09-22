@@ -22,7 +22,7 @@ import { isMissingResource, reasonOf } from './stripe-errors';
 import {
   heldForWorkspace,
   projectionOf,
-  stateOf,
+  stateFrom,
   subscriptionIdOfSession,
   type SubscriptionState,
 } from './subscription-state';
@@ -188,7 +188,7 @@ export class BillingReconciler {
       : ((await this.adoptableSubscription(workspace)) ?? stored);
     if (!subscription) return null;
 
-    return stateOf(subscription, this.prices.planOf(subscription));
+    return stateFrom(subscription, this.prices);
   }
 
   private async completedSubscription(

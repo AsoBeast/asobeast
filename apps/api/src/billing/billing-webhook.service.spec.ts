@@ -558,6 +558,32 @@ describe('BillingWebhookService', () => {
     );
   });
 
+  it('revokes a cancelled subscription whose price has left the catalog', async () => {
+    const { service, update, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      subscription: subscriptionOf({
+        status: 'canceled',
+        items: {
+          data: [
+            { current_period_end: PERIOD_END, price: { id: 'price_retired' } },
+          ],
+        },
+      }),
+    });
+
+    await expect(service.process('evt_1')).resolves.toBeUndefined();
+
+    expect(lastOutcome(update)).toBe('applied');
+    expect(workspaceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          plan: 'free',
+          subscriptionStatus: 'canceled',
+        }) as Record<string, unknown>,
+      }),
+    );
+  });
+
   describe('an event only an operator can fix', () => {
     const mystery = subscriptionOf({
       items: {
