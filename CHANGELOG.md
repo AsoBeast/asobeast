@@ -3,6 +3,85 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.5.0](https://github.com/AsoBeast/asobeast/compare/v1.4.0...v1.5.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **web:** the keywords CSV export names the score column popularity instead of traffic.
+
+### Features
+
+* **actions:** retune the defend rule for the v2 volume scale ([b2e15cf](https://github.com/AsoBeast/asobeast/commit/b2e15cff30ebaa2dc83a3650135dee81e3d511df))
+* **db:** add the search term popularity table ([637fd2f](https://github.com/AsoBeast/asobeast/commit/637fd2f16624a5e2b83afcb93cbd8b4d906388dc))
+* **jobs:** rescore keywords once when the formula version changes ([dcd5011](https://github.com/AsoBeast/asobeast/commit/dcd501145618bb8728a10412ee72aeab8ed6dc8b))
+* **jobs:** sync apple search term popularity weekly ([5c2c27d](https://github.com/AsoBeast/asobeast/commit/5c2c27daace8f436c9c3c8ead328aeaaa7957ea4))
+* **keywords:** rebucket keywords on the v2 score scale ([95d0d93](https://github.com/AsoBeast/asobeast/commit/95d0d932c22e3d61b930a49fb930f9fc7fc77eae))
+* **keywords:** return score signals and the outdated formula flag ([1468f87](https://github.com/AsoBeast/asobeast/commit/1468f8700297514b9d17a435b59f33558194d1c6))
+* **keywords:** shift opportunity by the app's chance in the top ten ([35ef1c5](https://github.com/AsoBeast/asobeast/commit/35ef1c5b410574c2e098e822f92efb3cb4447b17))
+* **mcp:** describe v2 score signals in the keyword tools ([ec39fee](https://github.com/AsoBeast/asobeast/commit/ec39fee13fdebf064defe209633acc200d27e6f5))
+* **scoring:** add rating velocity from the previous scored page ([6284611](https://github.com/AsoBeast/asobeast/commit/628461189827914c23e65b5f9771124fa76db0ab))
+* **scoring:** add the apple ads popularity client ([7ca5e7f](https://github.com/AsoBeast/asobeast/commit/7ca5e7fae0894eee607f99882fb59acffc043d2b))
+* **scoring:** adjust default relevance with ranking evidence ([262fa90](https://github.com/AsoBeast/asobeast/commit/262fa9057b646952f1b02627fd3d9b5ce5cb7747))
+* **scoring:** estimate app store popularity from the search results ([01e6002](https://github.com/AsoBeast/asobeast/commit/01e60022732384ad358117d30015390ab213ee69))
+* **scoring:** estimate traffic from suggest reach and real demand ([52ad418](https://github.com/AsoBeast/asobeast/commit/52ad418c4bedb25ee80e513cea7bead5076e1794))
+* **scoring:** flag brand, weak leader and small result pages ([b4c86bd](https://github.com/AsoBeast/asobeast/commit/b4c86bd92037e9f25524aa977cafe739290d85f9))
+* **scoring:** make opportunity multiplicative with a difficulty gate ([53e6cf6](https://github.com/AsoBeast/asobeast/commit/53e6cf69d0a27e5bcf23912ab7561b5cae428e9d))
+* **scoring:** measure serp relevance, padding and medians ([99e5482](https://github.com/AsoBeast/asobeast/commit/99e5482904da92c6d18a9be2932e49b660727602))
+* **scoring:** prefer official apple popularity and cap absent terms ([2d07211](https://github.com/AsoBeast/asobeast/commit/2d07211d4488e2d71c0d0a8bbfe2925875bedae5))
+* **scoring:** probe suggest reach on both stores ([8a6b70b](https://github.com/AsoBeast/asobeast/commit/8a6b70b17f8fc203ac5ab07027ad9bfa249b4b38))
+* **scoring:** rate difficulty on medians, dominance and serp flags ([3d9a655](https://github.com/AsoBeast/asobeast/commit/3d9a65572fb9632a13b3c78914672eb7e04f95cf))
+* **scoring:** rebuild keyword scores on suggest reach and honest difficulty ([193f45c](https://github.com/AsoBeast/asobeast/commit/193f45c525a5b89a845fbe6cbb689458a279e5c3))
+* **scoring:** report estimator agreement with apple popularity ([23294f0](https://github.com/AsoBeast/asobeast/commit/23294f0cadb75e68deb2c4465d14c82ba7df0d9d))
+* **scoring:** score suggest reach by prefix length and position ([378ac6e](https://github.com/AsoBeast/asobeast/commit/378ac6eb89fbbaf4c87e53515add7aec6d11f98b))
+* **scoring:** stamp v2 provenance and honest confidence ([b3d0851](https://github.com/AsoBeast/asobeast/commit/b3d0851be068340e21b1220191e9a6913b8ea525))
+* **shared:** add a diacritic free search key ([9fd9706](https://github.com/AsoBeast/asobeast/commit/9fd97069b14f14d4185e3489ded52c6d64df2fc4))
+* **shared:** add score signals and the outdated flag to the contract ([cdb9816](https://github.com/AsoBeast/asobeast/commit/cdb9816d95a3bb513fd7ce5f4a540e7d0b969fbf))
+* **web:** call the traffic score popularity ([adb44d4](https://github.com/AsoBeast/asobeast/commit/adb44d4740bb6c579b4aeb62e9caab0b60acddf8))
+* **web:** explain score signals in the score details ([1f8afd4](https://github.com/AsoBeast/asobeast/commit/1f8afd4b4941656dba450a03d03b07543e09f1fe))
+* **web:** flag scores from an outdated formula ([ae6ccb7](https://github.com/AsoBeast/asobeast/commit/ae6ccb79cf648cf1b1c689a6df347cb3987b47e2))
+
+
+### Bug Fixes
+
+* **jobs:** retry an app store review feed that comes back empty ([3e4c4a0](https://github.com/AsoBeast/asobeast/commit/3e4c4a02f3f864170b415b2a89642832384b8a7d))
+* **jobs:** retry an app store review feed that comes back empty ([497e25d](https://github.com/AsoBeast/asobeast/commit/497e25de76e1d6cc9ddeaa719248a187d40bc9a7))
+* **keywords:** keep scores from an older formula out of buckets and actions ([15be537](https://github.com/AsoBeast/asobeast/commit/15be5370bcdec985cd19669cea1a0f537b545f03))
+* **keywords:** keep the bucket of a score from an older formula ([56f12a9](https://github.com/AsoBeast/asobeast/commit/56f12a9895bdb7ea49ec39ec4288c7a3c96520e3))
+* **keywords:** refuse a keyword field over 100 bytes ([edc57f6](https://github.com/AsoBeast/asobeast/commit/edc57f677e183f9e290d3d4d40b970508ee73d30))
+* **keywords:** refuse a keyword field over 100 bytes ([b0dac6f](https://github.com/AsoBeast/asobeast/commit/b0dac6f796710b5e124f80d11cd27963d363f62b))
+* **keywords:** weigh an app's chance only within its home market ([2c6dae9](https://github.com/AsoBeast/asobeast/commit/2c6dae94535fdbe67e9348cccde86c36ef75db57))
+* **metadata:** compose keyword field draft phrases before packing ([5aab774](https://github.com/AsoBeast/asobeast/commit/5aab774129ea29a8c71a5b06cbf1a428c1f8fcf4))
+* **metadata:** count the keyword field in bytes in audits and drafts ([e8a7248](https://github.com/AsoBeast/asobeast/commit/e8a72481d2b55b3e3c0908dc0e35fcd0e9203d46))
+* **providers:** accept only a rating of 1 to 5 written as a string ([6ae208c](https://github.com/AsoBeast/asobeast/commit/6ae208caad6a00b53cb39776d9c8985fcfb658c5))
+* **providers:** blame no proxy endpoint for an empty app store review feed ([d66e449](https://github.com/AsoBeast/asobeast/commit/d66e449a836f5753671648f1b24e4863f11325d8))
+* **providers:** read app store reviews from the origin past the edge cache ([3a13012](https://github.com/AsoBeast/asobeast/commit/3a130126685dc1e41e465ac28f458cbca21545a5))
+* **scoring:** accept the full developer name as the brand ([5807824](https://github.com/AsoBeast/asobeast/commit/58078242f8b37b607d8f909c93cb64476f7b2570))
+* **scoring:** bound the apple popularity cap and ignore stale weeks ([0a7e55c](https://github.com/AsoBeast/asobeast/commit/0a7e55cb8d1a00beb0397b9f494fd14e1b6a32b8))
+* **scoring:** fail an apple popularity week past the page limit ([4021995](https://github.com/AsoBeast/asobeast/commit/4021995b9256c12c3cb92313c60d366aa43eb64d))
+* **scoring:** ignore a position below one as ranking evidence ([41a559c](https://github.com/AsoBeast/asobeast/commit/41a559c175e077566cc129419cd8b0e1ace160f3))
+* **scoring:** keep a failed play detail lookup in its place ([fdaf52a](https://github.com/AsoBeast/asobeast/commit/fdaf52a0e0bfbc410343cbda1da16e5cb34bbe64))
+* **scoring:** match google play completions on word boundaries ([8b6c399](https://github.com/AsoBeast/asobeast/commit/8b6c39934dc78eb6fcbdfb50ea56d1bfceb6d420))
+* **scoring:** match google play suggestions by prefix ([c581c6c](https://github.com/AsoBeast/asobeast/commit/c581c6cba478fa5853a1580e789f0dcba7ea8f11))
+* **scoring:** match plurals that double a z or turn y into ies ([2057b92](https://github.com/AsoBeast/asobeast/commit/2057b923280852d45e440629875ebf800120226d))
+* **scoring:** match serp titles on whole words ([4af1fd4](https://github.com/AsoBeast/asobeast/commit/4af1fd434c3db8c72fa82dce52cee95c53686740))
+* **scoring:** measure a brand leader against rivals that target the phrase ([e8c5fbd](https://github.com/AsoBeast/asobeast/commit/e8c5fbd1ac50462457ed24dc57befd1cd40688aa))
+* **scoring:** score a phrase offered only when fully typed as listed ([502c7e0](https://github.com/AsoBeast/asobeast/commit/502c7e0b4b2fabe5716dca650c5505ce8e1eff5e))
+* **scoring:** store the requested popularity week and name failures ([663f5f5](https://github.com/AsoBeast/asobeast/commit/663f5f535020bceb83103c0797c9ce7f681b9065))
+* **shared:** count the keyword field in utf-8 bytes ([4240b5a](https://github.com/AsoBeast/asobeast/commit/4240b5ae1a0584626d631f37e9a61a96ffed9bb3))
+* **shared:** fold diacritics only on latin and greek letters ([be73557](https://github.com/AsoBeast/asobeast/commit/be73557153a48c08c646d45fe658b677e2bb0041))
+* **shared:** normalize keywords to nfc before tokenizing ([e98f947](https://github.com/AsoBeast/asobeast/commit/e98f947ec019ba8e22ce3c99fcd2d6ae48cec33b))
+* **web:** count the keyword field in bytes ([2dd5e97](https://github.com/AsoBeast/asobeast/commit/2dd5e974e8cee970ff4ced7d5f52fae9c6589a91))
+* **web:** describe a suggest hit without inventing its position ([35694a1](https://github.com/AsoBeast/asobeast/commit/35694a11ec889bc310c13058ccf7c274f80a2a9b))
+* **web:** drop the cap wording when the apple popularity is shown ([7355bd7](https://github.com/AsoBeast/asobeast/commit/7355bd7ff7d3054ca33227acb27b6d4ac37c9f32))
+* **web:** keep header actions clear of the breadcrumb on phones ([d3b86ce](https://github.com/AsoBeast/asobeast/commit/d3b86ceacd6701532c02a8ddf7fddfe03d1c61f2))
+* **web:** keep header actions clear of the breadcrumb on phones ([856a3a2](https://github.com/AsoBeast/asobeast/commit/856a3a24626ca631c63274333fbb07ce2bf8b31b))
+
+
+### Continuous Integration
+
+* **repo:** squash merge pull requests and lint their titles ([#123](https://github.com/AsoBeast/asobeast/issues/123)) ([3cd1e27](https://github.com/AsoBeast/asobeast/commit/3cd1e27628583554687a33e89c87506806c3f6e1))
+
 ## [1.4.0](https://github.com/AsoBeast/asobeast/compare/v1.3.0...v1.4.0) (2026-09-18)
 
 
