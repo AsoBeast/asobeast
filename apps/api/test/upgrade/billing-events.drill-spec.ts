@@ -26,12 +26,16 @@ describe('Billing events against an upgraded baseline database', () => {
   });
 
   it.each(['evt_drill_orphan', 'evt_drill_foreign'])(
-    'settles %s, which failed only because no workspace could take it, as orphaned',
+    'settles %s, which failed only because no workspace could take it, as orphaned when it arrived',
     async (id) => {
       const row = await settlement(id);
+      const { receivedAt } = await prisma.billingEvent.findUniqueOrThrow({
+        where: { id },
+        select: { receivedAt: true },
+      });
 
       expect(row.outcome).toBe('orphaned');
-      expect(row.processedAt).not.toBeNull();
+      expect(row.processedAt).toEqual(receivedAt);
       expect(row.failure).toBeNull();
     },
   );
