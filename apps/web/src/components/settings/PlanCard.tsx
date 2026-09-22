@@ -19,7 +19,11 @@ import { Meter } from "@/components/ui/meter";
 import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, openBillingPortal } from "@/lib/api";
 import { formatNumber, formatPlanLimit } from "@/lib/format";
-import { planCallToAction, planStatusLine } from "@/lib/plan-choice";
+import {
+  planAction,
+  planCallToAction,
+  planStatusLine,
+} from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
@@ -101,7 +105,7 @@ export function PlanCard() {
         </dl>
       </CardContent>
       <CardFooter className="gap-2">
-        {plan.upgradeTo ? (
+        {plan.upgradeTo && planAction(plan, plan.upgradeTo) !== "pending" ? (
           <Button asChild>
             <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
           </Button>

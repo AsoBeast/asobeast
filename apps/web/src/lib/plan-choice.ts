@@ -1,7 +1,11 @@
 import { PLANS, type AccountPlan, type PaidPlanName } from "@asobeast/shared";
 import { formatDate } from "@/lib/format";
 
-export type PlanAction = "current" | "checkout" | "change" | "resume";
+export type PlanAction =
+  "current" | "checkout" | "change" | "resume" | "pending";
+
+export const PAYMENT_CONFIRMING =
+  "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
 
 const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
 
@@ -15,10 +19,15 @@ const ACTION_LABEL: Record<Exclude<PlanAction, "checkout">, string> = {
   current: "Current plan",
   change: "Change in the billing portal",
   resume: "Resume in the billing portal",
+  pending: "Confirming your payment",
 };
 
 function stalled(plan: AccountPlan): boolean {
   return plan.subscriptionStalled === true;
+}
+
+function pending(plan: AccountPlan): boolean {
+  return plan.subscriptionPending === true;
 }
 
 export function planAction(
@@ -26,6 +35,7 @@ export function planAction(
   name: PaidPlanName,
 ): PlanAction {
   if (plan?.plan === name) return "current";
+  if (plan && pending(plan)) return "pending";
   if (!plan?.subscribed) return "checkout";
   return stalled(plan) ? "resume" : "change";
 }
@@ -39,6 +49,7 @@ export function planActionLabel(
 
 export function paywallStatusLine(plan: AccountPlan | undefined): string {
   if (!plan) return CHOOSE_A_PLAN;
+  if (pending(plan)) return PAYMENT_CONFIRMING;
   if (plan.plan === "trial" && plan.trialEndsAt) {
     return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
   }
@@ -53,6 +64,7 @@ export function paywallStatusLine(plan: AccountPlan | undefined): string {
 }
 
 export function planStatusLine(plan: AccountPlan): string {
+  if (pending(plan)) return PAYMENT_CONFIRMING;
   if (stalled(plan)) return STALLED_IN_SETTINGS;
   if (!plan.entitled) {
     return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
