@@ -48,8 +48,11 @@ node apps/api/test/fixtures/stripe/scrub.mjs < raw/invoice.paid.json > apps/api/
 `scrub.mjs` refuses a live event, maps the first customer to
 `cus_TestWorkspace1`, the first subscription to `sub_TestIndieMonthly` and each
 catalog price to the id its lookup key names in the suite, renames every other
-identifier to `<prefix>_Test<n>` consistently within the file, and replaces every
-email with `owner@example.com`. Delete `raw/` afterwards, delete the triggered
+identifier to `<prefix>_Test<n>` consistently within the file, replaces every
+email with `owner@example.com`, blanks every address but its country, the phone
+numbers, client secrets and idempotency keys, names the customer `Test Owner`,
+replaces tax id values and hosted invoice links, and leaves the rest alone.
+`raw/` is ignored by git. Delete it afterwards, delete the triggered
 customers in the sandbox, and record the capture date and the scenario each file
 came from here.
 

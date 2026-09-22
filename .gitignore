@@ -18,3 +18,6 @@ apps/web/e2e/__baseline__/
 proxy
 qa
 keys
+
+/raw/
+apps/api/test/fixtures/stripe/raw/

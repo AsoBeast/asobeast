@@ -34,6 +34,9 @@ const PERIOD_END = new Date(1_802_678_400 * 1000);
 
 const fixtures = join(__dirname, 'fixtures', 'stripe');
 
+const PERSONAL_DATA =
+  /"line1":\s*"|"client_secret":\s*"|_secret_[A-Za-z0-9]|invoice\.stripe\.com/;
+
 const UNSCRUBBED_ID =
   /\b(?!sub_sched_Test)(cus|sub|in|price|prod|pi|ch|pm|cs|evt|si|il|bps|acct)_(?!Test)[A-Za-z0-9]+/;
 
@@ -490,6 +493,10 @@ describe('Stripe webhooks', () => {
       expect({ file, unscrubbed: UNSCRUBBED_ID.exec(text)?.[0] }).toEqual({
         file,
         unscrubbed: undefined,
+      });
+      expect({ file, personal: PERSONAL_DATA.exec(text)?.[0] }).toEqual({
+        file,
+        personal: undefined,
       });
     }
     expect(HANDLED_EVENTS.filter((type) => !types.has(type))).toEqual([]);

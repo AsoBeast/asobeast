@@ -37,6 +37,57 @@ const FIRST_OF = {
 
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
 
+const OWNER_NAME = 'Test Owner';
+
+const INVOICE_URL = 'https://invoice.stripe.test/Test';
+
+const TAX_ID = 'TEST0000';
+
+function blankAddress(address) {
+  if (!address || typeof address !== 'object') return address;
+  return Object.fromEntries(
+    Object.keys(address).map((key) => [
+      key,
+      key === 'country' ? address[key] : null,
+    ]),
+  );
+}
+
+const PERSONAL = {
+  address: blankAddress,
+  customer_address: blankAddress,
+  customer_shipping: () => null,
+  shipping_details: () => null,
+  customer_name: (value) => (value === null ? null : OWNER_NAME),
+  customer_phone: () => null,
+  phone: () => null,
+  client_secret: () => null,
+  idempotency_key: () => null,
+  hosted_invoice_url: (value) => (value === null ? null : INVOICE_URL),
+  invoice_pdf: (value) => (value === null ? null : INVOICE_URL),
+  receipt_url: (value) => (value === null ? null : INVOICE_URL),
+  tax_ids: (ids) =>
+    Array.isArray(ids) ? ids.map((id) => ({ ...id, value: TAX_ID })) : ids,
+  customer_tax_ids: (ids) =>
+    Array.isArray(ids) ? ids.map((id) => ({ ...id, value: TAX_ID })) : ids,
+};
+
+function withoutPersonalData(node, parentKey = '') {
+  if (Array.isArray(node)) {
+    return node.map((item) => withoutPersonalData(item, parentKey));
+  }
+  if (!node || typeof node !== 'object') return node;
+  return Object.fromEntries(
+    Object.entries(node).map(([key, value]) => {
+      if (parentKey === 'customer_details' && key === 'name') {
+        return [key, value === null ? null : OWNER_NAME];
+      }
+      const blank = PERSONAL[key];
+      return [key, blank ? blank(value) : withoutPersonalData(value, key)];
+    }),
+  );
+}
+
 function pricesByLookupKey(node, found = new Map()) {
   if (Array.isArray(node)) {
     for (const item of node) pricesByLookupKey(item, found);
@@ -74,7 +125,9 @@ function scrub(text) {
     return renamed.get(id);
   });
 
-  const scrubbed = JSON.parse(replaced.replace(EMAIL, 'owner@example.com'));
+  const scrubbed = withoutPersonalData(
+    JSON.parse(replaced.replace(EMAIL, 'owner@example.com')),
+  );
   return `${JSON.stringify(scrubbed, null, 2)}\n`;
 }
 
