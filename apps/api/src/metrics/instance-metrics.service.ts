@@ -7,6 +7,7 @@ import type { ProxyPoolHealth } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
+import type { BillingEventOutcome } from '../billing/billing-event-outcome';
 import { LAST_BACKUP_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { StoreCanaryRecord } from '../store-providers/canary/store-canary.service';
@@ -51,6 +52,7 @@ const NO_BILLING = {
   suspended: 0,
   billingEventsUnprocessed: 0,
   billingEventsFailed: 0,
+  billingEventsOrphaned: 0,
 };
 
 const NO_RESOURCES: ResourceUsage = {
@@ -66,6 +68,8 @@ export interface TrialFunnel {
 }
 
 export const ACCOUNT_MAIL_WINDOW_HOURS = 24;
+
+export const BILLING_ORPHAN_WINDOW_DAYS = 7;
 
 export interface AccountMailOutcomes {
   delivered: number;
@@ -103,6 +107,7 @@ export interface InstanceMetrics {
   suspended: number;
   billingEventsUnprocessed: number;
   billingEventsFailed: number;
+  billingEventsOrphaned: number;
 }
 
 @Injectable()
@@ -196,6 +201,7 @@ export class InstanceMetricsCollector {
       suspended,
       unprocessed,
       failed,
+      orphaned,
     ] = await Promise.all([
       this.prisma.workspace.groupBy({
         by: ['plan'],
@@ -214,7 +220,15 @@ export class InstanceMetricsCollector {
       }),
       this.prisma.workspace.count({ where: { suspendedAt: { not: null } } }),
       this.prisma.billingEvent.count({ where: { processedAt: null } }),
-      this.prisma.billingEvent.count({ where: { failure: { not: null } } }),
+      this.prisma.billingEvent.count({
+        where: { processedAt: null, failure: { not: null } },
+      }),
+      this.prisma.billingEvent.count({
+        where: {
+          outcome: 'orphaned' satisfies BillingEventOutcome,
+          receivedAt: { gte: daysBefore(now, BILLING_ORPHAN_WINDOW_DAYS) },
+        },
+      }),
     ]);
 
     return {
@@ -229,6 +243,7 @@ export class InstanceMetricsCollector {
       suspended,
       billingEventsUnprocessed: unprocessed,
       billingEventsFailed: failed,
+      billingEventsOrphaned: orphaned,
     };
   }
 
@@ -313,4 +328,8 @@ export class InstanceMetricsCollector {
 
 function tally(entries: [string, number][]): Record<string, number> {
   return Object.fromEntries(entries);
+}
+
+function daysBefore(now: Date, days: number): Date {
+  return new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
 }

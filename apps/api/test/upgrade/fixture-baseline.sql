@@ -142,4 +142,11 @@ VALUES
   ('evt_pending_two', 'ws_default', 'review.negative', 'app_play', NULL, '{"score":1}', '2026-07-15 03:30:00', NULL, NULL, NULL),
   ('evt_unclaimed', 'ws_default', 'metadata.change', 'app_rival', 'metadata.change:app_rival:2026-07-15', '{"field":"title"}', '2026-07-15 03:30:00', NULL, 'flush_2', '2026-07-15 03:59:00');
 
+INSERT INTO "BillingEvent" ("id", "type", "workspaceId", "createdAt", "payload", "receivedAt", "processedAt", "failure")
+VALUES
+  ('evt_drill_applied', 'customer.subscription.updated', 'ws_paid', '2026-07-14 11:00:00', '{}', '2026-07-14 11:00:01', '2026-07-14 11:00:02', NULL),
+  ('evt_drill_orphan', 'invoice.paid', NULL, '2026-07-14 12:00:00', '{}', '2026-07-14 12:00:01', NULL, 'stripe subscription sub_drill belongs to no known workspace'),
+  ('evt_drill_foreign', 'customer.subscription.updated', 'ws_paid', '2026-07-14 12:30:00', '{}', '2026-07-14 12:30:01', NULL, 'stripe subscription sub_foreign names workspace ws_paid, which belongs to a different customer'),
+  ('evt_drill_retrying', 'invoice.paid', 'ws_paid', '2026-07-14 13:00:00', '{}', '2026-07-14 13:00:01', NULL, 'connect ECONNREFUSED');
+
 COMMIT;

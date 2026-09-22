@@ -15,6 +15,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { BillingWebhookService } from '../src/billing/billing-webhook.service';
+import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   STRIPE_API_VERSION,
   STRIPE_CLIENT,
@@ -444,5 +445,23 @@ describe('Stripe webhooks', () => {
       plan: 'indie',
       subscriptionId: SUBSCRIPTION,
     });
+  });
+
+  it('settles a delivery for a workspace this instance never had', async () => {
+    const event = fixture('customer.subscription.created');
+    const subscription = event.data.object as Stripe.Subscription;
+    subscription.metadata = { [WORKSPACE_METADATA_KEY]: 'ws_nobody' };
+    subscriptions.set(SUBSCRIPTION, subscription);
+
+    await send(event).expect(200);
+    await expect(webhook.process(event.id)).resolves.toBeUndefined();
+
+    const stored = await prisma.billingEvent.findUniqueOrThrow({
+      where: { id: event.id },
+    });
+    expect(stored.outcome).toBe('orphaned');
+    expect(stored.processedAt).not.toBeNull();
+    expect(stored.failure).toBeNull();
+    expect((await workspaceRow()).plan).toBe('free');
   });
 });

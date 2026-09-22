@@ -69,6 +69,7 @@ UNION ALL SELECT 'Webhook', count(*) FROM "Webhook"
 UNION ALL SELECT 'EmailAlert', count(*) FROM "EmailAlert"
 UNION ALL SELECT 'AlertDelivery', count(*) FROM "AlertDelivery"
 UNION ALL SELECT 'AlertEvent', count(*) FROM "AlertEvent"
+UNION ALL SELECT 'BillingEvent', count(*) FROM "BillingEvent"
 ORDER BY 1;
 SQL
 }

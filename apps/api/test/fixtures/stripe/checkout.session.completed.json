@@ -1,7 +1,7 @@
 {
   "id": "evt_TestCheckoutCompleted",
   "object": "event",
-  "api_version": "2026-07-29.dahlia",
+  "api_version": "2026-08-26.dahlia",
   "created": 1800000100,
   "data": {
     "object": {

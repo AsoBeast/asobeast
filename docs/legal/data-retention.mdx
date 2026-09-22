@@ -56,10 +56,10 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
     The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.
   </Step>
   <Step title="Change your mind">
-    The owner presses **Cancel deletion** in **Settings**, or sends `DELETE /account/deletion`. Nothing was removed, so nothing needs restoring. A member sees the status but cannot cancel it.
+    The owner presses **Cancel deletion** in **Settings**, or sends `DELETE /account/deletion`. Nothing was removed, so nothing needs restoring. A member sees the status but cannot cancel it. Once the retention run has started releasing the workspace at Stripe, cancelling answers `409 Conflict`: the subscription may already be gone, so erasure finishes. If Stripe could not be reached, the run lets go and cancelling works again.
   </Step>
   <Step title="Erasure">
-    On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it. The due date is therefore the earliest erasure, not an exact time.
+    On the first retention run after the grace period ends, the workspace row is deleted and every tenant owned table cascades with it. The due date is therefore the earliest erasure, not an exact time. A workspace that pays is released at Stripe first: its Stripe customer is deleted, which cancels every subscription so nothing is charged again. If Stripe cannot be reached, the workspace waits for the next run rather than being erased while its subscription still bills.
   </Step>
 </Steps>
 

@@ -28,4 +28,12 @@ UPDATE "TrackedKeyword"
 SET "active" = false
 WHERE ("appId", "keywordId") IN (('app_play', 'kw_play_amp_meals'), ('app_play', 'kw_play_39_daily'), ('app_play', 'kw_play_amp_stretch'));
 
+UPDATE "BillingEvent"
+SET "outcome" = 'applied'
+WHERE "id" = 'evt_drill_applied';
+
+UPDATE "BillingEvent"
+SET "outcome" = 'orphaned', "processedAt" = "receivedAt", "failure" = NULL
+WHERE "id" IN ('evt_drill_orphan', 'evt_drill_foreign');
+
 COMMIT;

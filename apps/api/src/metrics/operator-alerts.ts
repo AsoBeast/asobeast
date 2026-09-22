@@ -112,7 +112,7 @@ function pageAlerts(input: OperatorAlertInput): OperatorAlert[] {
     alerts.push({
       id: 'billing.webhooks.failing',
       severity: 'page',
-      summary: `${input.instance.billingEventsFailed} stored billing events recorded a failure`,
+      summary: `${input.instance.billingEventsFailed} stored billing events recorded a failure and still wait for a fix`,
     });
   }
 
@@ -142,6 +142,14 @@ function investigateAlerts(input: OperatorAlertInput): OperatorAlert[] {
       id: 'billing.reconcile.discrepancy',
       severity: 'investigate',
       summary: `${input.instance.billingEventsUnprocessed} billing events are still waiting to be processed`,
+    });
+  }
+
+  if (input.instance.billingEventsOrphaned > 0) {
+    alerts.push({
+      id: 'billing.orphan.events',
+      severity: 'investigate',
+      summary: `${input.instance.billingEventsOrphaned} billing events named a subscription this instance cannot place; the nightly reconciliation lists them`,
     });
   }
 

@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import Stripe from 'stripe';
+import type Stripe from 'stripe';
 import {
   BILLING_INTERVALS,
   PAID_PLAN_NAMES,
@@ -7,7 +7,7 @@ import {
   type BillingInterval,
   type PaidPlanName,
 } from '@asobeast/shared';
-import { STRIPE_API_VERSION } from '../src/billing/stripe.client';
+import { createStripeClient } from '../src/billing/stripe.client';
 
 const ENV_KEYS: Record<PaidPlanName, Record<BillingInterval, string>> = {
   indie: {
@@ -74,10 +74,8 @@ async function priceFor(
 }
 
 async function main(): Promise<void> {
-  const secret = process.env.STRIPE_SECRET_KEY;
-  if (!secret) throw new Error('STRIPE_SECRET_KEY is not set');
-
-  const stripe = new Stripe(secret, { apiVersion: STRIPE_API_VERSION });
+  const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY);
+  if (!stripe) throw new Error('STRIPE_SECRET_KEY is not set');
   const lines: string[] = [];
 
   for (const plan of PAID_PLAN_NAMES) {

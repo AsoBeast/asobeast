@@ -49,4 +49,29 @@ describe('StripeService', () => {
       idempotencyKey: 'portal-key',
     });
   });
+
+  it('treats a customer stripe no longer has as already deleted', async () => {
+    const del = jest.fn().mockRejectedValue(
+      Object.assign(new Error('No such customer'), {
+        code: 'resource_missing',
+      }),
+    );
+    const service = new StripeService({
+      customers: { del },
+    } as unknown as Stripe);
+
+    await expect(service.deleteCustomer('cus_gone')).resolves.toBeUndefined();
+    expect(del).toHaveBeenCalledWith('cus_gone');
+  });
+
+  it('surfaces any other failure to delete a customer', async () => {
+    const del = jest.fn().mockRejectedValue(new Error('stripe is down'));
+    const service = new StripeService({
+      customers: { del },
+    } as unknown as Stripe);
+
+    await expect(service.deleteCustomer('cus_1')).rejects.toThrow(
+      'stripe is down',
+    );
+  });
 });

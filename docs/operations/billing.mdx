@@ -32,6 +32,43 @@ The endpoint is the one billing route that is public, because Stripe has no sess
 
 A refused delivery is logged. Look for `rejected a webhook delivery` in the API log, which names the reason, and check the endpoint's own delivery history in the Stripe dashboard. Stripe retries a failed delivery, so a secret you fix within the retry window costs nothing.
 
+### What happens to an event this instance cannot place
+
+Every verified delivery is stored once and processed from a queue, and each stored event records how it settled:
+
+| Outcome | Meaning |
+| --- | --- |
+| `applied` | The subscription was written onto the workspace it belongs to |
+| `ignored` | Nothing to do: an event type asobeast does not act on, an event that names no subscription, or one older than the state the workspace already holds |
+| `orphaned` | The subscription names a workspace this instance does not have, or a workspace that belongs to a different Stripe customer |
+
+An orphaned event settles on its first attempt. Waiting cannot make it placeable, so it is never retried and never pages. It keeps its payload for `RETENTION_BILLING_EVENTS_DAYS`, the API logs a warning naming the event, the subscription and the customer, and the nightly reconciliation reports the subscription. The count of events settled as orphaned in the last seven days is `asobeast_billing_events_orphaned`, and while it is above zero the `billing.orphan.events` alert fires at investigate. See [Billing incident](/operations/runbooks/billing-incident) for what usually causes one.
+
+An event that fails for a reason that can pass, such as Stripe or the database being unreachable, still retries, and while it waits for a fix it is counted by `asobeast_billing_events_failed`, which pages. Upgrading to the release that introduced these outcomes settles, as orphaned, every stored event that had failed for one of the two orphan reasons, so those rows stop counting as failed.
+
+## One sandbox per environment
+
+Stripe posts every event of a sandbox to every endpoint registered in that sandbox. A laptop and production that share one sandbox therefore share their events: a checkout on the laptop arrives at production as a subscription for a workspace production has never seen. Give every environment its own sandbox.
+
+| Environment | Stripe account | Webhook |
+| --- | --- | --- |
+| Development on a laptop | A sandbox of its own, for example `asobeast-local` | Forwarded by the Stripe CLI, see below |
+| A disposable QA stack | The development sandbox, while no laptop uses it at the same time | Forwarded by the Stripe CLI to the stack's web origin |
+| CI | None. No automated test reaches Stripe | None |
+| Production before launch | A sandbox no other stack uses | An endpoint registered in the dashboard |
+| Production at launch | Live mode | A new live endpoint, with rotated keys |
+
+A stack that does not bill leaves `BILLING_ENABLED` false and holds no Stripe keys at all. Production warns at boot while billing runs on a sandbox key, as a reminder to switch to live keys before a customer pays.
+
+Create a sandbox in the dashboard from the account menu, then log the Stripe CLI in to it and forward its events to the local API:
+
+```bash
+stripe login --project-name asobeast-local
+stripe listen --project-name asobeast-local --forward-to localhost:4000/billing/webhook
+```
+
+`stripe listen` prints a signing secret of its own. That is the `STRIPE_WEBHOOK_SECRET` of the stack it forwards to, not the secret of any registered endpoint. Run `pnpm --filter api stripe:catalog` once against each new sandbox.
+
 ## States a workspace moves through
 
 | State | Entitled | Buying again | What runs |

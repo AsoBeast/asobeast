@@ -328,7 +328,7 @@ AUTH_SESSION_DAYS=7                 # session cookie lifetime in days
 AUTH_ALLOW_REGISTRATION=false       # true keeps signups open; false closes registration once the first (owner) account exists (self-hosted). The first account always bootstraps as owner regardless
 AUTH_REGISTRATION_WORKSPACE=own     # where a self registration lands. own gives every sign up its own workspace, so a stranger never sees the data already tracked here; shared puts them all in ws_default as members, an explicit opt-in for an instance whose sign ups are already trusted. REFUSES TO BOOT when shared and BILLING_ENABLED=true. WARNS in production when shared and AUTH_ALLOW_REGISTRATION=true
 AUTH_COOKIE_SECURE=false            # REFUSES TO BOOT when false and NODE_ENV=production. The Docker image sets NODE_ENV=production, so the Compose stack defaults this to true
-STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Never logged
+STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Never logged. One sandbox per environment; a sandbox shared with another stack posts that stack's events here. WARNS in production when BILLING_ENABLED=true on a sandbox key
 STRIPE_WEBHOOK_SECRET=              # required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
 STRIPE_PORTAL_RETURN_URL=           # where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
 STRIPE_PRICE_INDIE_MONTHLY=         # price ids differ per environment; create them with pnpm --filter api stripe:catalog

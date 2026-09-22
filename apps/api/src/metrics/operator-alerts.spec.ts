@@ -94,6 +94,27 @@ describe('operatorAlerts', () => {
     );
   });
 
+  it('asks for a look at orphaned billing events rather than paging', () => {
+    const alerts = operatorAlerts(
+      inputOf({
+        instance: instanceMetricsOf({
+          billingEventsOrphaned: 1,
+          billingEventsFailed: 0,
+        }),
+      }),
+    );
+
+    expect(alerts).toContainEqual(
+      expect.objectContaining({
+        id: 'billing.orphan.events',
+        severity: 'investigate',
+      }),
+    );
+    expect(alerts.map((alert) => alert.id)).not.toContain(
+      'billing.webhooks.failing',
+    );
+  });
+
   it('sorts a silent-failure pool alert into the same day tier', () => {
     const [alert] = operatorAlerts(
       inputOf({

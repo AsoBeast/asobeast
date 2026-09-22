@@ -75,6 +75,7 @@ model Workspace {
   deletionRequestedAt DateTime?
   deletionRequestedBy String?
   deletionDueAt       DateTime?
+  erasureClaimedAt    DateTime?
   createdAt   DateTime     @default(now())
 
   @@index([deletionDueAt])
@@ -109,9 +110,11 @@ model BillingEvent {
   payload     Json
   receivedAt  DateTime  @default(now())
   processedAt DateTime?
+  outcome     String?
   failure     String?
 
   @@index([processedAt])
+  @@index([outcome, receivedAt])
 }
 
 model WorkspaceInvite {

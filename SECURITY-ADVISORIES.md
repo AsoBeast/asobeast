@@ -93,19 +93,18 @@ comes back empty.
 
 ## Held back on purpose
 
-Six updates are not applied, because each needs a migration rather than a
+Five updates are not applied, because each needs a migration rather than a
 version number, or has no released version that fits.
 
 | Package                   | Held at   | Why                                                                                                                                                                                                                                                                            |
 | ------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `typescript`              | `^5.9.3`  | Version 7 is the native compiler port. `tsup` cannot generate declarations against it: `packages/shared` fails its build with `Cannot read properties of undefined (reading 'useCaseSensitiveFileNames')`. Moving needs a declaration build that supports the new compiler API |
 | `eslint` and `@eslint/js` | `^9.39.5` | Version 10 removed `context.getFilename`, which `eslint-plugin-react` 7.37.5 still calls. `eslint-config-next` pulls that plugin in, so linting the web app crashes. Moving needs an `eslint-plugin-react` release that supports ESLint 10                                     |
-| `stripe`                  | `22.5.0`  | 22.6.0 moves the pinned API version to `2026-08-26.dahlia`, which the SDK types enforce. The recorded webhook envelopes under `test/fixtures/stripe` are captured at `2026-07-29.dahlia`, so the version cannot move until they are recaptured against the newer one           |
 | `@nestjs/*`               | `^11.2.1` | Nest 12 publishes as pure ESM: `@nestjs/common` declares `"type": "module"` and its `exports` carry no `require` condition, so the commonjs api cannot load it and every jest suite fails to parse it. `@nestjs/throttler` has no release that accepts nest 12 at all          |
 | `@nestjs/config`          | `^4.0.4`  | Version 12 accepts nest 11 in its peer range but is itself pure ESM, so it cannot be loaded either. It also moves validation to Standard Schema and reorders how internal config, validated env and `process.env` take precedence                                              |
 | `prisma`                  | `^7.10.0` | The `latest` dist-tag is `8.0.0-rc.13`, a release candidate. `prev` is `7.10.0`                                                                                                                                                                                                |
 
-None of the six carries an advisory. Track them and take them when the
+None of the five carries an advisory. Track them and take them when the
 toolchain catches up.
 
 `typescript` is held for a second reason now: `ts-jest` 29 declares

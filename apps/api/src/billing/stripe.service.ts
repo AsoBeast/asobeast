@@ -4,6 +4,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import Stripe from 'stripe';
+import { isMissingResource } from './stripe-errors';
 import { STRIPE_CLIENT, type StripeClient } from './stripe.client';
 
 @Injectable()
@@ -41,6 +42,12 @@ export class StripeService {
 
   expireCheckoutSession(id: string): Promise<Stripe.Checkout.Session> {
     return this.stripe.checkout.sessions.expire(id);
+  }
+
+  async deleteCustomer(id: string): Promise<void> {
+    await this.stripe.customers.del(id).catch((error: unknown) => {
+      if (!isMissingResource(error)) throw error;
+    });
   }
 
   listCustomerSubscriptions(customer: string): Promise<Stripe.Subscription[]> {
