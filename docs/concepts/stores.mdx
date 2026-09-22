@@ -67,15 +67,15 @@ The subtitle and the keyword field. On a Google Play app they carry audit weight
 
 ## Are scores comparable across stores?
 
-No. Traffic and difficulty are derived from different public evidence on each store, so an Apple difficulty of 60 and a Google Play difficulty of 60 do not mean the same thing.
+No. Popularity and difficulty are derived from different public evidence on each store, so an Apple difficulty of 60 and a Google Play difficulty of 60 do not mean the same thing.
 
-Compare a keyword against other keywords in the same store. See [Traffic, difficulty and opportunity](/concepts/scoring).
+Compare a keyword against other keywords in the same store. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Where else do the stores differ?
 
 | Difference | Effect |
 | --- | --- |
-| Neither store's suggest endpoint carries a popularity value | asobeast probes how early each store suggests the keyword instead. See [Traffic, difficulty and opportunity](/concepts/scoring#how-is-traffic-estimated) |
+| Neither store's suggest endpoint carries a popularity value | On Google Play asobeast probes how early the store suggests the keyword; on the App Store it estimates popularity from the first 25 search results. See [Popularity, difficulty and opportunity](/concepts/scoring#how-is-popularity-estimated) |
 | Google Play search results carry no rating counts | SERP rating columns stay empty for Google Play |
 | Google Play release dates are best effort outside the `en` storefront | Treat `released` as approximate there |
 

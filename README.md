@@ -28,7 +28,7 @@ Every store request runs on the machine hosting asobeast. There is no ASO vendor
 - **No accounts, no vendor API keys.** asobeast collects from the public store endpoints at a deliberately modest rate. You need Docker and nothing else.
 - **Your keyword list is your strategy.** It never leaves your database, so no competitor intelligence product is quietly assembling it.
 - **Both stores as one tracking entity.** One app row tracks keywords across many storefronts, so `us` and `de` are markets on the same listing rather than two subscriptions.
-- **Every score shows its evidence.** Traffic and difficulty carry their source, calculation version, capture date and confidence, so you can argue with a number instead of trusting it.
+- **Every score shows its evidence.** Popularity and difficulty carry their source, calculation version, capture date and confidence, so you can argue with a number instead of trusting it.
 - **Deterministic recommendations.** Eight rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
 - **AGPL-3.0, no open core.** Every feature the hosted service runs is in this repository.
 
@@ -39,7 +39,7 @@ Every store request runs on the machine hosting asobeast. There is no ASO vendor
 | Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                        |
 | Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 byte iOS keyword field by hand                |
 | Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                       |
-| Transparent scoring              | Traffic and difficulty with provenance and confidence, plus per app opportunity derived on read                                                    |
+| Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                         |
 | SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and free, paid and grossing category charts                                              |
 | Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                  |
 | Reviews and change detection     | Sync reviews and rating history, mine review language for keyword ideas, and detect owned and competitor metadata changes                          |
@@ -152,7 +152,7 @@ The software is, entirely. It is AGPL-3.0 with no open core and no feature held 
 
 Worth knowing before you rely on it:
 
-- **Scores are store-specific estimates.** Traffic and difficulty come from different public evidence on each store, so the numbers are not comparable across stores and are not a substitute for first-party acquisition data.
+- **Scores are store-specific estimates.** Popularity and difficulty come from different public evidence on each store, so the numbers are not comparable across stores and are not a substitute for first-party acquisition data.
 - **Scrapers can break.** asobeast reads public endpoints. When a store changes one, a parser can fail. Failures fail the job, which BullMQ retries with backoff, and never take down request handling.
 - **Store rate limits bind first, not hardware.** The public endpoints tolerate only modest request rates per address, which is what caps how many keyword markets one instance can track. See [capacity and limits](https://docs.asobeast.com/operations/capacity).
 - **Operations are yours.** Backups, TLS, secret rotation, monitoring and upgrades are the operator's responsibility. Verify a restore before you rely on a backup.
@@ -162,7 +162,7 @@ Worth knowing before you rely on it:
 `1.0.0` is the current release. What remains open:
 
 - A per-user permission model finer than owner and member, and one account in several workspaces.
-- Better traffic calibration using licensed or first-party acquisition data.
+- Better popularity calibration using licensed or first-party acquisition data.
 - A per-market app detail switcher, so snapshots, reviews and category ranks are not limited to the home storefront.
 - Write capable MCP tools, behind an explicit opt-in. Every tool is read-only today on purpose.
 

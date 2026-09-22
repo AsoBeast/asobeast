@@ -41,7 +41,7 @@ Every cron expression is evaluated in UTC. See [The daily pipeline and rate limi
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
 | `CRON_DAILY` | `0 3 * * *` | No | Starts the daily pipeline. Batched alerts flush after its processing completes, not on a clock |
-| `CRON_SCORING` | `0 4 * * 0` | No | Recomputes traffic and difficulty weekly on Sunday |
+| `CRON_SCORING` | `0 4 * * 0` | No | Recomputes popularity and difficulty weekly on Sunday |
 | `CRON_RETENTION` | `0 5 * * *` | No | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | No | Writes the daily audit score snapshot |
 | `CRON_DIGEST` | `0 8 * * 1` | No | Sends the weekly digest webhook on Monday |

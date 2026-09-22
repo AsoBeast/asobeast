@@ -44,7 +44,7 @@ The home storefront is not just a label. It decides where snapshots, category ra
 Four things, in order.
 
 1. **The listing is fetched and snapshotted.** asobeast stores the parsed fields and the raw payload, so a later parser fix can reprocess history rather than recollect it. The App Store subtitle is read from the public product page, and when Apple does not answer that page in time, the snapshot is stored without it and a backfill fills it in within a few minutes.
-2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first traffic and difficulty score.
+2. **Keywords are extracted from the indexed fields and auto tracked.** Each one carries the source it came from, and each one is queued for its first popularity and difficulty score.
 3. **A review backfill is queued.** The first three pages of reviews are collected so ratings history starts with something in it.
 4. **The first pass is scheduled.** Every auto tracked keyword is queued for a rank check. The action queue for your workspace is generated when those first rank checks finish, so the first recommendations read real positions instead of an empty database.
 

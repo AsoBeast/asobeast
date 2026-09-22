@@ -63,25 +63,25 @@ An app whose position on a tracked keyword changed materially between SERP snaps
 
 An app that appeared in a keyword's top 10 without having been there before. Entrants fire the `serp.entrant` alert.
 
-## Traffic score
+## Popularity score
 
-A persisted 0 to 10 estimate of a keyword's search demand, shown on a 0 to 100 scale as volume, stored with its evidence source, formula version, capture date and confidence. See [Traffic, difficulty and opportunity](/concepts/scoring).
+A persisted 0 to 10 estimate of a keyword's search demand, shown on a 0 to 100 scale as volume, stored with its evidence source, formula version, capture date and confidence. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Difficulty
 
-A persisted 0 to 10 estimate of how hard a keyword's current top results are to displace, shown on a 0 to 100 scale. See [Traffic, difficulty and opportunity](/concepts/scoring).
+A persisted 0 to 10 estimate of how hard a keyword's current top results are to displace, shown on a 0 to 100 scale. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Opportunity
 
-A 0 to 100 score describing the fit between one keyword and one app: volume multiplied by a difficulty gate and by relevance, so any one of them can veto the keyword. It is computed on read and never stored, because relevance is a property of the pairing. See [Traffic, difficulty and opportunity](/concepts/scoring).
+A 0 to 100 score for one keyword: search volume on a log scale multiplied by a difficulty gate, so either one can veto the keyword. It is computed on read and never stored. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Suggest reach
 
-How early a store offers the exact keyword while it is being typed: after how many characters and in which position, only for the whole phrase, or never. It is the main demand signal behind traffic. See [Traffic, difficulty and opportunity](/concepts/scoring#how-is-traffic-estimated).
+How early a store offers the exact keyword while it is being typed: after how many characters and in which position, only for the whole phrase, or never. It is the main demand signal behind Google Play popularity; App Store popularity reads the search results instead. See [Popularity, difficulty and opportunity](/concepts/scoring#how-is-popularity-estimated).
 
 ## Score signals
 
-The evidence returned with each stored score: suggest reach, how much of the first page targets the keyword, page flags such as `brand` or `padded`, and Apple's own popularity when it was used. See [Traffic, difficulty and opportunity](/concepts/scoring#what-are-score-signals).
+The evidence returned with each stored score: suggest reach, how much of the first page targets the keyword, page flags such as `brand` or `padded`, and Apple's own popularity when it was used. See [Popularity, difficulty and opportunity](/concepts/scoring#what-are-score-signals).
 
 ## Visibility
 

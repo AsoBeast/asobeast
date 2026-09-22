@@ -15,7 +15,7 @@ Every schedule is a cron expression evaluated in UTC. The defaults below come fr
 | Variable | Default | Meaning | What it does |
 | --- | --- | --- | --- |
 | `CRON_DAILY` | `0 3 * * *` | Daily 03:00 | Enqueues position checks, snapshots, reviews and category ranks, then generates actions and flushes batched alerts |
-| `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes traffic and difficulty for tracked keywords |
+| `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes popularity and difficulty for tracked keywords |
 | `CRON_RETENTION` | `0 5 * * *` | Daily 05:00 | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
 | `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |

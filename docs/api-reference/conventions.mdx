@@ -43,9 +43,9 @@ Poll the resource afterwards rather than expecting the response to carry the res
 
 ## Scores are shown on a 0 to 100 scale
 
-Traffic and difficulty are stored on a 0 to 10 scale with their provenance, and some responses return them on that stored scale. Volume and opportunity are always 0 to 100, and opportunity is computed per app on read and never persisted. See [Which scale does a response use?](/concepts/scoring#which-scale-does-a-response-use) before comparing numbers across endpoints.
+Popularity and difficulty are stored on a 0 to 10 scale with their provenance, and some responses return them on that stored scale. Volume and opportunity are always 0 to 100, and opportunity is computed on read and never persisted. See [Which scale does a response use?](/concepts/scoring#which-scale-does-a-response-use) before comparing numbers across endpoints.
 
-Apple and Google Play scores come from different public evidence and are not directly comparable. See [Traffic, difficulty and opportunity](/concepts/scoring).
+Apple and Google Play scores come from different public evidence and are not directly comparable. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## installs is a BigInt
 
