@@ -68,6 +68,9 @@ updates:
     labels:
       - dependencies
       - docker
+    groups:
+      docker:
+        patterns: ["*"]
     ignore:
       - dependency-name: node
         update-types: ["version-update:semver-major"]
