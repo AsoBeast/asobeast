@@ -13,13 +13,18 @@ import {
 import { useQueryState, useQueryStates } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
 import {
-  keywordSearchParser,
+  keywordFilterParsers,
   keywordSortParser,
   serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
 import { sortingFromUrl, urlFromSorting } from "@/lib/table/sorting";
-import { KEYWORD_SORT_DEFAULTS, keywordColumns } from "./keyword-columns";
+import {
+  HIDDEN_KEYWORD_COLUMNS,
+  KEYWORD_SORT_DEFAULTS,
+  keywordColumns,
+} from "./keyword-columns";
+import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
@@ -42,7 +47,7 @@ export function KeywordsTable({
     dir: sortDirectionParser,
   });
   const [, setSerp] = useQueryState("serp", serpParser);
-  const [search, setSearch] = useQueryState("q", keywordSearchParser);
+  const [filters, setFilters] = useQueryStates(keywordFilterParsers);
   const { data: keywords } = useSuspenseQuery(
     keywordsOptions(id, undefined, country),
   );
@@ -72,6 +77,8 @@ export function KeywordsTable({
     [setSortParams, sorting],
   );
 
+  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
+
   const columns = useMemo(
     () =>
       keywordColumns({
@@ -85,7 +92,13 @@ export function KeywordsTable({
     features: keywordTableFeatures,
     data: keywords,
     columns,
-    state: { rowSelection, sorting, globalFilter: search },
+    state: {
+      rowSelection,
+      sorting,
+      columnFilters,
+      globalFilter: filters.q,
+      columnVisibility: HIDDEN_KEYWORD_COLUMNS,
+    },
     onRowSelectionChange: setSelection,
     onSortingChange,
     getRowId: (row) => row.keywordId,
@@ -111,12 +124,12 @@ export function KeywordsTable({
         <KeywordsFilterBar
           appId={id}
           table={table}
-          search={search}
-          onSearch={(value, options) => void setSearch(value, options)}
+          filters={filters}
+          setFilters={setFilters}
         />
         <KeywordsDataTable
           table={table}
-          onClearFilters={() => void setSearch(null)}
+          onClearFilters={() => void setFilters(null)}
         />
 
         {selectedIds.length > 0 ? (

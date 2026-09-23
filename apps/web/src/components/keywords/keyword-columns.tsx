@@ -2,7 +2,11 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
-import type { TrackedKeywordItem } from "@asobeast/shared";
+import type {
+  KeywordBucket,
+  KeywordSource,
+  TrackedKeywordItem,
+} from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,6 +28,7 @@ import {
 import { isScoreOutdated, scoreValue } from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
+import { oneOf, statusFilter, type ActivityStatus } from "@/lib/table/facets";
 import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 
 const columnHelper = createColumnHelper<
@@ -43,6 +48,8 @@ export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
 
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
+export const HIDDEN_KEYWORD_COLUMNS = { bucket: false, status: false };
+
 export function keywordColumns({
   appId,
   onOpenSerp,
@@ -57,6 +64,7 @@ export function keywordColumns({
     deltaColumn(),
     volatilityColumn(),
     actionsColumn({ appId, onOpenSerp }),
+    ...filterColumns(),
   ]);
 }
 
@@ -105,12 +113,35 @@ function identityColumns() {
         </span>
       ),
     }),
-    columnHelper.accessor((row) => SOURCE_LABELS[row.source], {
-      id: "source",
-      sortFn: "text",
+    columnHelper.accessor("source", {
+      sortFn: (a, b, id) =>
+        SOURCE_LABELS[a.getValue<KeywordSource>(id)].localeCompare(
+          SOURCE_LABELS[b.getValue<KeywordSource>(id)],
+        ),
       sortDescFirst: false,
+      filterFn: (row, id, selected: KeywordSource[]) =>
+        oneOf(row.getValue<KeywordSource>(id), selected),
       header: ({ column }) => <SortableHeader column={column} label="Source" />,
       cell: ({ row }) => <SourceBadge source={row.original.source} />,
+    }),
+  ];
+}
+
+function filterColumns() {
+  return [
+    columnHelper.accessor((row) => row.bucket ?? undefined, {
+      id: "bucket",
+      enableHiding: false,
+      enableSorting: false,
+      filterFn: (row, id, selected: KeywordBucket[]) =>
+        oneOf(row.getValue<KeywordBucket | undefined>(id), selected),
+    }),
+    columnHelper.accessor("active", {
+      id: "status",
+      enableHiding: false,
+      enableSorting: false,
+      filterFn: (row, _id, status: ActivityStatus) =>
+        statusFilter(row.original, status),
     }),
   ];
 }

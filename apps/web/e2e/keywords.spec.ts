@@ -427,6 +427,51 @@ test("the export follows the search", async ({ page }) => {
   expect(lines[1].startsWith("pomodoro,")).toBe(true);
 });
 
+test("a source facet narrows the rows and shows a removable chip", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const rows = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row");
+
+  await page.getByRole("button", { name: "Filter by source" }).click();
+  await page.getByRole("option", { name: /Manual/ }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(page).toHaveURL(/source=MANUAL/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("productivity app");
+  await expect(page.getByText("Source: Manual")).toBeVisible();
+
+  await page.getByRole("button", { name: "Remove Source: Manual" }).click();
+
+  await expect(page).not.toHaveURL(/source=/);
+  await expect(rows).toHaveCount(6);
+});
+
+test("the status filter keeps paused rows and clear all empties the url", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?q=tim");
+  const rows = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row");
+
+  await page.getByRole("combobox", { name: "Filter by status" }).click();
+  await page.getByRole("option", { name: "Paused" }).click();
+
+  await expect(page).toHaveURL(/status=paused/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("time blocking");
+  await expect(page.getByText("Status: Paused")).toBeVisible();
+
+  await page.getByRole("button", { name: "Clear all" }).click();
+
+  await expect(page).not.toHaveURL(/status=|q=/);
+  await expect(rows).toHaveCount(6);
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 

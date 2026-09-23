@@ -3,7 +3,9 @@ import {
   ACTION_PRIORITIES,
   ACTION_RULES,
   ACTION_STATUSES,
+  KEYWORD_BUCKETS,
   KEYWORD_SORTS,
+  KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
@@ -24,8 +26,12 @@ import {
   changeDaysParser,
   countryParser,
   discoveryDaysParser,
+  KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
+  keywordBucketParser,
   keywordIdsParser,
+  keywordSourceParser,
+  keywordStatusParser,
   keywordSearchParser,
   keywordSortParser,
   mcpClientParser,
@@ -68,6 +74,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
     "metadata",
   ],
   ["mcpClient", mcpClientParser, MCP_CLIENTS, DEFAULT_MCP_CLIENT],
+  ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -80,6 +87,8 @@ const LIST_PARSERS = [
   ["actionStatus", actionStatusParser, ACTION_STATUSES, ["OPEN", "SNOOZED"]],
   ["actionPriority", actionPriorityParser, ACTION_PRIORITIES, []],
   ["actionRule", actionRuleParser, ACTION_RULES, []],
+  ["keywordSource", keywordSourceParser, KEYWORD_SOURCES, []],
+  ["keywordBucket", keywordBucketParser, KEYWORD_BUCKETS, []],
 ] as const;
 
 const STRING_PARSERS = [

@@ -3,7 +3,9 @@ import {
   ACTION_PRIORITIES,
   ACTION_RULES,
   ACTION_STATUSES,
+  KEYWORD_BUCKETS,
   KEYWORD_SORTS,
+  KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
 } from "@asobeast/shared";
 import {
@@ -25,6 +27,7 @@ import {
   type MoverWindow,
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
+import type { ActivityStatus } from "./table/facets";
 
 export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,
@@ -39,6 +42,30 @@ export const keywordSortParser =
   parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
 
 export const keywordSearchParser = parseAsString.withDefault("");
+
+export const keywordSourceParser = parseAsArrayOf(
+  parseAsStringLiteral(KEYWORD_SOURCES),
+).withDefault([]);
+
+export const keywordBucketParser = parseAsArrayOf(
+  parseAsStringLiteral(KEYWORD_BUCKETS),
+).withDefault([]);
+
+export const KEYWORD_STATUSES = [
+  "all",
+  "active",
+  "paused",
+] as const satisfies readonly ActivityStatus[];
+
+export const keywordStatusParser =
+  parseAsStringLiteral(KEYWORD_STATUSES).withDefault("all");
+
+export const keywordFilterParsers = {
+  q: keywordSearchParser,
+  source: keywordSourceParser,
+  bucket: keywordBucketParser,
+  status: keywordStatusParser,
+};
 
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
