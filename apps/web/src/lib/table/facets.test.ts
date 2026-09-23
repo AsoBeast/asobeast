@@ -7,6 +7,7 @@ import {
   positionBandIn,
   positionBandOf,
   statusFilter,
+  versusOf,
 } from "./facets";
 
 describe("oneOf", () => {
@@ -107,5 +108,23 @@ describe("countBy", () => {
         ["even", 2],
       ]),
     );
+  });
+});
+
+describe("versusOf", () => {
+  it.each([
+    [1, [4, 9], "winning"],
+    [3, [null], "winning"],
+    [3, [], "winning"],
+    [5, [5, 8], "tied"],
+    [12, [4], "losing"],
+    [12, [null, 11], "losing"],
+    [null, [8], "losing"],
+  ] as const)("calls you at %s against %j %s", (you, competitors, expected) => {
+    expect(versusOf(you, competitors)).toBe(expected);
+  });
+
+  it("has no verdict when nobody ranks", () => {
+    expect(versusOf(null, [null, null])).toBeNull();
   });
 });

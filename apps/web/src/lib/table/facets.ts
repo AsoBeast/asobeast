@@ -74,3 +74,19 @@ export function countBy<T, K>(
   }
   return counts;
 }
+
+export const VERSUS = ["winning", "losing", "tied"] as const;
+
+export type Versus = (typeof VERSUS)[number];
+
+export function versusOf(
+  you: number | null,
+  competitors: ReadonlyArray<number | null>,
+): Versus | null {
+  const ranked = competitors.filter((value): value is number => value !== null);
+  const best = ranked.length > 0 ? Math.min(...ranked) : null;
+  if (you === null && best === null) return null;
+  if (you === null) return "losing";
+  if (best === null || you < best) return "winning";
+  return you === best ? "tied" : "losing";
+}

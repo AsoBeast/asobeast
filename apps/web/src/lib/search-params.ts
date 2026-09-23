@@ -28,7 +28,7 @@ import {
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
-import { POSITION_BANDS, type ActivityStatus } from "./table/facets";
+import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
 
 export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,
@@ -78,6 +78,18 @@ export const keywordFilterParsers = {
   diff: gradeFacetParser,
   opp: gradeFacetParser,
   pos: positionBandParser,
+};
+
+export const matrixSortParser = parseAsString;
+
+export const VERSUS_FILTERS = ["all", ...VERSUS] as const;
+
+export const versusParser =
+  parseAsStringLiteral(VERSUS_FILTERS).withDefault("all");
+
+export const matrixFilterParsers = {
+  q: keywordSearchParser,
+  vs: versusParser,
 };
 
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;

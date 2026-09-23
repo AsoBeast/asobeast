@@ -1,17 +1,12 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
-import {
-  functionalUpdate,
-  useTable,
-  type RowSelectionState,
-  type SortingState,
-  type Updater,
-} from "@tanstack/react-table";
+import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
+import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordsOptions } from "@/lib/queries";
 import {
   keywordFilterParsers,
@@ -19,7 +14,6 @@ import {
   serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import { sortingFromUrl, urlFromSorting } from "@/lib/table/sorting";
 import {
   HIDDEN_KEYWORD_COLUMNS,
   KEYWORD_SORT_DEFAULTS,
@@ -65,23 +59,14 @@ export function KeywordsTable({
     [keywords, selection],
   );
 
-  const sorting = useMemo(
-    () => sortingFromUrl(sort, dir, KEYWORD_SORT_DEFAULTS),
-    [sort, dir],
-  );
-
-  const onSortingChange = useCallback(
-    (updater: Updater<SortingState>) => {
-      const next = urlFromSorting(
-        functionalUpdate(updater, sorting),
-        KEYWORD_SORT_DEFAULTS,
-      );
+  const { sorting, onSortingChange } = useUrlSorting(
+    { sort, dir },
+    KEYWORD_SORT_DEFAULTS,
+    (next) =>
       void setSortParams({
         sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
         dir: next.dir,
-      });
-    },
-    [setSortParams, sorting],
+      }),
   );
 
   const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);

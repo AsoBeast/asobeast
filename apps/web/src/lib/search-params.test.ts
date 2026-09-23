@@ -31,7 +31,10 @@ import {
   KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
   gradeFacetParser,
+  matrixSortParser,
   positionBandParser,
+  VERSUS_FILTERS,
+  versusParser,
   keywordBucketParser,
   keywordIdsParser,
   keywordSourceParser,
@@ -79,6 +82,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ],
   ["mcpClient", mcpClientParser, MCP_CLIENTS, DEFAULT_MCP_CLIENT],
   ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
+  ["versus", versusParser, VERSUS_FILTERS, "all"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -267,5 +271,15 @@ describe("keywordSort parser", () => {
 describe("keywordSearch parser", () => {
   it("keeps surrounding spaces rather than trimming the search", () => {
     expect(keywordSearchParser.parseServerSide(" pomo ")).toBe(" pomo ");
+  });
+});
+
+describe("matrixSort parser", () => {
+  it("keeps a competitor column id", () => {
+    expect(matrixSortParser.parseServerSide("c:comp-1")).toBe("c:comp-1");
+  });
+
+  it("keeps the api order when nothing is named", () => {
+    expect(matrixSortParser.parseServerSide(undefined)).toBeNull();
   });
 });

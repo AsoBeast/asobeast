@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import type { SortDirection } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export function SortableHeader({
   ...props
 }: ComponentProps<"button"> & {
   column: SortableColumn;
-  label: string;
+  label: ReactNode;
 }) {
   const sorted = column.getIsSorted();
   const Icon =

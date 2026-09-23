@@ -5,7 +5,9 @@ import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordComparisonRow } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
-import { nullsLast } from "@/lib/table/sorting";
+import { SortableHeader } from "@/components/data-table/SortableHeader";
+import { versusOf, type Versus } from "@/lib/table/facets";
+import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import type { ComparisonTableFeatures } from "./comparison-table-features";
 import { comparisonScoreLabel } from "./comparison-scores";
@@ -16,6 +18,24 @@ export interface MatrixCompetitor {
   name: string | null;
   iconUrl: string | null;
 }
+
+export const COMPARISON_SORT_DEFAULTS: SortDefaults = {
+  descFirst: new Set(["traffic", "difficulty"]),
+};
+
+export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
+
+const POSITION_SORT = {
+  sortFn: "basic",
+  sortUndefined: "last",
+  sortDescFirst: false,
+} as const;
+
+const SCORE_SORT = {
+  sortFn: "basic",
+  sortUndefined: "last",
+  sortDescFirst: true,
+} as const;
 
 const columnHelper = createColumnHelper<
   ComparisonTableFeatures,
@@ -83,6 +103,20 @@ function KeywordCell({ row }: { row: KeywordComparisonRow }) {
   );
 }
 
+function ScoreCell({
+  row,
+  score,
+}: {
+  row: KeywordComparisonRow;
+  score: "traffic" | "difficulty";
+}) {
+  return (
+    <span className="numeric font-mono">
+      {comparisonScoreLabel(row, score)}
+    </span>
+  );
+}
+
 export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
@@ -91,12 +125,37 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
   return columnHelper.columns([
     columnHelper.accessor("text", {
       id: "keyword",
-      header: "Keyword",
+      sortFn: "text",
+      sortDescFirst: false,
+      enableHiding: false,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Keyword" />
+      ),
       cell: ({ row }) => <KeywordCell row={row.original} />,
+    }),
+    columnHelper.accessor((row) => nullsLast(row.traffic), {
+      id: "traffic",
+      ...SCORE_SORT,
+      meta: { label: "Popularity" },
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Popularity" />
+      ),
+      cell: ({ row }) => <ScoreCell row={row.original} score="traffic" />,
+    }),
+    columnHelper.accessor((row) => nullsLast(row.difficulty), {
+      id: "difficulty",
+      ...SCORE_SORT,
+      meta: { label: "Difficulty" },
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Difficulty" />
+      ),
+      cell: ({ row }) => <ScoreCell row={row.original} score="difficulty" />,
     }),
     columnHelper.accessor((row) => nullsLast(row.you), {
       id: "you",
-      header: "You",
+      ...POSITION_SORT,
+      enableHiding: false,
+      header: ({ column }) => <SortableHeader column={column} label="You" />,
       cell: ({ row }) => (
         <PositionCell
           value={row.original.you}
@@ -109,17 +168,24 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
         (row) => nullsLast(row.positions[competitor.id] ?? null),
         {
           id: `c:${competitor.id}`,
-          header: () => (
-            <span className="inline-flex items-center gap-1.5">
-              <AppIcon
-                src={competitor.iconUrl}
-                name={competitor.name}
-                size={20}
-              />
-              <span className="max-w-32 truncate">
-                {competitor.name ?? "Competitor"}
-              </span>
-            </span>
+          ...POSITION_SORT,
+          enableHiding: false,
+          header: ({ column }) => (
+            <SortableHeader
+              column={column}
+              label={
+                <span className="inline-flex items-center gap-1.5">
+                  <AppIcon
+                    src={competitor.iconUrl}
+                    name={competitor.name}
+                    size={20}
+                  />
+                  <span className="max-w-32 truncate">
+                    {competitor.name ?? "Competitor"}
+                  </span>
+                </span>
+              }
+            />
           ),
           cell: ({ row }) => {
             const value = row.original.positions[competitor.id] ?? null;
@@ -129,6 +195,20 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
           },
         },
       ),
+    ),
+    columnHelper.accessor(
+      (row) =>
+        versusOf(
+          row.you,
+          competitorIds.map((cid) => row.positions[cid] ?? null),
+        ) ?? undefined,
+      {
+        id: "versus",
+        enableHiding: false,
+        enableSorting: false,
+        filterFn: (row, id, versus: Versus) =>
+          row.getValue<Versus | undefined>(id) === versus,
+      },
     ),
   ]);
 }
