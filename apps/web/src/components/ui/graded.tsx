@@ -22,10 +22,6 @@ const GRADE_WASH: Record<Grade, string> = {
   poor: "bg-grade-poor-subtle",
 };
 
-export function gradeText(value: Grade): string {
-  return GRADE_TEXT[value];
-}
-
 export function gradeFill(value: Grade): string {
   return GRADE_FILL[value];
 }
@@ -45,15 +41,17 @@ export function GradedNumber({
   label: string;
   className?: string;
 }) {
+  const spoken = grade
+    ? `${label} ${value}, ${gradeLabel(grade)}`
+    : `${label} ${value}`;
   return (
     <span
       data-grade={grade ?? undefined}
-      aria-label={
-        grade ? `${label} ${value}, ${gradeLabel(grade)}` : `${label} ${value}`
-      }
-      className={cn("numeric font-mono", grade && gradeText(grade), className)}
+      title={spoken}
+      className={cn("numeric font-mono", grade && GRADE_TEXT[grade], className)}
     >
-      {value}
+      <span aria-hidden>{value}</span>
+      <span className="sr-only">{spoken}</span>
     </span>
   );
 }

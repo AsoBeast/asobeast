@@ -350,10 +350,9 @@ test("scores and positions carry their grade in colour and in words", async ({
   await expect(
     row.getByRole("button", { name: /^Opportunity/ }),
   ).toHaveAttribute("data-grade", "strong");
-  await expect(row.getByLabel("Position 12, weak")).toHaveAttribute(
-    "data-grade",
-    "weak",
-  );
+  await expect(
+    row.locator("[data-grade]", { hasText: "Position 12, weak" }),
+  ).toHaveAttribute("data-grade", "weak");
 });
 
 test("an unscored keyword grades nothing but its position", async ({
@@ -367,10 +366,9 @@ test("an unscored keyword grades nothing but its position", async ({
     row.getByLabel("Popularity: not scored yet"),
   ).not.toHaveAttribute("data-grade", /.+/);
   await expect(row.locator("[data-grade]")).toHaveCount(1);
-  await expect(row.getByLabel("Position 45, poor")).toHaveAttribute(
-    "data-grade",
-    "poor",
-  );
+  await expect(
+    row.locator("[data-grade]", { hasText: "Position 45, poor" }),
+  ).toHaveAttribute("data-grade", "poor");
 });
 
 test("searching narrows the rows, counts them and lives in the url", async ({

@@ -105,18 +105,15 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
     name: /productivity app/,
   });
 
-  await expect(focus.getByTitle("Position 3, strong")).toHaveAttribute(
-    "data-grade",
-    "strong",
-  );
-  await expect(focus.getByTitle("Position 9, fair")).toHaveAttribute(
-    "data-grade",
-    "fair",
-  );
-  await expect(pomodoro.getByTitle("Position 12, weak")).toHaveAttribute(
-    "data-grade",
-    "weak",
-  );
+  await expect(
+    focus.locator("[data-grade]", { hasText: "Position 3, strong" }),
+  ).toHaveAttribute("data-grade", "strong");
+  await expect(
+    focus.locator("[data-grade]", { hasText: "Position 9, fair" }),
+  ).toHaveAttribute("data-grade", "fair");
+  await expect(
+    pomodoro.locator("[data-grade]", { hasText: "Position 12, weak" }),
+  ).toHaveAttribute("data-grade", "weak");
 
   const unranked = productivity.getByTitle("Not ranking");
   await expect(unranked).toHaveCount(1);
@@ -124,12 +121,11 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
 
   const keywordCell = focus.getByRole("cell").first();
   await expect(
-    keywordCell.getByLabel("Popularity 100, strong"),
+    keywordCell.locator("[data-grade]", { hasText: "Popularity 100, strong" }),
   ).toHaveAttribute("data-grade", "strong");
-  await expect(keywordCell.getByLabel("Difficulty 40, fair")).toHaveAttribute(
-    "data-grade",
-    "fair",
-  );
+  await expect(
+    keywordCell.locator("[data-grade]", { hasText: "Difficulty 40, fair" }),
+  ).toHaveAttribute("data-grade", "fair");
 });
 
 test("on a phone the matrix names competitors by icon and hides the scores", async ({

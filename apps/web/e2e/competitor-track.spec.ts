@@ -155,10 +155,9 @@ test("the discovery table sorts by rating both ways and searches by name", async
   await rating.click();
   await expect(page).toHaveURL(/appSort=rating/);
   await expect(rows.nth(1)).toContainText("Deep Work Sessions");
-  await expect(rows.nth(1).getByLabel("Rating 4.7, strong")).toHaveAttribute(
-    "data-grade",
-    "strong",
-  );
+  await expect(
+    rows.nth(1).locator("[data-grade]", { hasText: "Rating 4.7, strong" }),
+  ).toHaveAttribute("data-grade", "strong");
 
   await rating.click();
   await expect(page).toHaveURL(/appDir=asc/);

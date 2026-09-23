@@ -6,7 +6,7 @@ import type { KeywordComparisonRow } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { GradedNumber, gradeWash } from "@/components/ui/graded";
-import { grade, gradeLabel } from "@/lib/grade";
+import { grade } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
@@ -63,20 +63,28 @@ function PositionCell({
   best: boolean;
 }) {
   const graded = grade("position", value);
+  const pill = cn(
+    "inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5",
+    best && "font-semibold underline decoration-2 underline-offset-4",
+  );
+  if (graded === null) {
+    return (
+      <span
+        title="Not ranking"
+        className={cn(pill, "numeric font-mono text-muted-foreground")}
+      >
+        <span aria-hidden>{formatRankPosition(value)}</span>
+        <span className="sr-only">Not ranking</span>
+      </span>
+    );
+  }
   return (
-    <span
-      data-grade={graded ?? undefined}
-      title={
-        graded ? `Position ${value}, ${gradeLabel(graded)}` : "Not ranking"
-      }
-      className={cn(
-        "numeric font-mono inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5",
-        graded ? gradeWash(graded) : "text-muted-foreground",
-        best && "font-semibold underline decoration-2 underline-offset-4",
-      )}
-    >
-      {formatRankPosition(value)}
-    </span>
+    <GradedNumber
+      value={formatRankPosition(value)}
+      grade={graded}
+      label="Position"
+      className={cn(pill, "text-foreground", gradeWash(graded))}
+    />
   );
 }
 
