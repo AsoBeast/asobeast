@@ -79,6 +79,25 @@ Buckets classify scored keywords automatically so a large list stays readable.
 
 An unscored keyword has no bucket until the weekly scoring run reaches it.
 
+## Read the table
+
+Click a column header to sort by it, and click it again to reverse the order. The arrow in the header shows the direction, and the page address carries both as `sort` and `dir`, so a copied link opens the same view. Scores and weekly change sort best first, position and names sort from the top, and a keyword with no value sorts last either way.
+
+The controls above the table narrow the rows without reloading them.
+
+| Control | What it keeps | Address key |
+| --- | --- | --- |
+| Search keywords | Phrases that contain the text you type | `q` |
+| Source | Keywords added from the chosen sources | `source` |
+| Bucket | Keywords in the chosen buckets | `bucket` |
+| Status | Active or paused keywords | `status` |
+| Popularity, Difficulty, Opportunity | Keywords whose score has the chosen grade | `pop`, `diff`, `opp` |
+| Position | Top 3, 4 to 10, 11 to 30, beyond 30, or not ranking | `pos` |
+
+Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
+
+**Columns** hides and shows columns. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
+
 ## Watch your request budget
 
 Every keyword and every market adds daily requests against a fixed capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`.
