@@ -50,7 +50,7 @@ reviews:
         The MCP server is a consumer like the web app: HTTP only, typed by @asobeast/shared. No Prisma, Nest or scraper imports.
         Every tool is a GET annotated readOnlyHint: true. Flag any mutation tool.
         stdout belongs to the JSON-RPC stream. All diagnostics go to stderr and the API token is never logged.
-    - path: "{apps/api/test,apps/web/e2e}/**"
+    - path: "{apps/api/test/**,apps/web/e2e/**,**/*.spec.ts,**/*.test.ts,**/*.test.tsx}"
       instructions: |
         No test may make a real store network call. Providers are mocked; the browser suite runs against the typed mock API.
         Flag weakened assertions, removed cases, skipped tests or loosened types introduced to make a suite pass.
