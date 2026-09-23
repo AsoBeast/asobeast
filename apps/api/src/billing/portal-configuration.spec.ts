@@ -1,9 +1,12 @@
+import type Stripe from 'stripe';
 import {
   configurationCovers,
   LEGAL_PRIVACY_URL,
   LEGAL_TERMS_URL,
   PORTAL_CANCELLATION_REASONS,
   portalConfiguration,
+  syncPortal,
+  type PortalConfigurations,
 } from './portal-configuration';
 
 describe('portalConfiguration', () => {
@@ -143,5 +146,62 @@ describe('configurationCovers', () => {
   it('refuses a list with a setting missing or added', () => {
     expect(configurationCovers(['a', 'b'], ['a', 'b', 'c'])).toBe(false);
     expect(configurationCovers(['a', 'b', 'c'], ['a', 'b'])).toBe(false);
+  });
+});
+
+describe('syncPortal', () => {
+  const desired = portalConfiguration({
+    products: [
+      { id: 'prod_indie', prices: ['price_im', 'price_iy'] },
+      { id: 'prod_ultimate', prices: ['price_um', 'price_uy'] },
+    ],
+    termsUrl: LEGAL_TERMS_URL,
+    privacyUrl: LEGAL_PRIVACY_URL,
+  });
+
+  function stripeHolding(held: Stripe.BillingPortal.ConfigurationCreateParams) {
+    const update = jest.fn();
+    const list = jest.fn(({ expand = [] }: { expand?: string[] } = {}) => {
+      const listed = structuredClone({
+        ...held,
+        id: 'bpc_1',
+        is_default: true,
+      });
+      if (!expand.includes('data.features.subscription_update.products')) {
+        delete listed.features.subscription_update?.products;
+      }
+      return Promise.resolve({ data: [listed] });
+    });
+    const configurations = {
+      list,
+      update,
+      create: jest.fn(),
+    } as unknown as PortalConfigurations;
+    return { configurations, update };
+  }
+
+  it('leaves a portal that already holds every setting alone', async () => {
+    const { configurations, update } = stripeHolding(desired);
+    const say = jest.fn();
+
+    await expect(syncPortal(configurations, desired, say)).resolves.toBe(
+      'bpc_1',
+    );
+    expect(update).not.toHaveBeenCalled();
+    expect(say).not.toHaveBeenCalled();
+  });
+
+  it('updates a portal that differs on a setting', async () => {
+    const { configurations, update } = stripeHolding({
+      ...desired,
+      features: {
+        ...desired.features,
+        subscription_cancel: { enabled: true, mode: 'immediately' },
+      },
+    });
+
+    await syncPortal(configurations, desired, jest.fn());
+
+    expect(update).toHaveBeenCalledWith('bpc_1', desired);
   });
 });

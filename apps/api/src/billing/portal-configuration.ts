@@ -119,7 +119,11 @@ export async function syncPortal(
   desired: Stripe.BillingPortal.ConfigurationCreateParams,
   say: (line: string) => void,
 ): Promise<string> {
-  const found = await configurations.list({ is_default: true, limit: 1 });
+  const found = await configurations.list({
+    is_default: true,
+    limit: 1,
+    expand: ['data.features.subscription_update.products'],
+  });
   const current = found.data[0];
   if (current && configurationCovers(current, desired)) return current.id;
 
