@@ -13,12 +13,12 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { DeltaChip } from "@/components/ui/delta-chip";
+import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
   PositionCell,
   ScoreCell,
-  SortHeader,
   VolatilityCell,
 } from "./keyword-cells";
 import { isScoreOutdated, scoreValue } from "./keyword-scores";
@@ -89,7 +89,9 @@ function identityColumns() {
       id: "keyword",
       sortFn: "text",
       sortDescFirst: false,
-      header: ({ column }) => <SortHeader column={column} label="Keyword" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Keyword" />
+      ),
       cell: ({ row }) => (
         <span className="flex max-w-64 items-center gap-2 font-medium">
           <span title={row.original.text} className="truncate">
@@ -107,7 +109,7 @@ function identityColumns() {
       id: "source",
       sortFn: "text",
       sortDescFirst: false,
-      header: ({ column }) => <SortHeader column={column} label="Source" />,
+      header: ({ column }) => <SortableHeader column={column} label="Source" />,
       cell: ({ row }) => <SourceBadge source={row.original.source} />,
     }),
   ];
@@ -118,7 +120,7 @@ function positionColumn() {
     id: "position",
     ...SORTABLE,
     sortDescFirst: false,
-    header: ({ column }) => <SortHeader column={column} label="Position" />,
+    header: ({ column }) => <SortableHeader column={column} label="Position" />,
     cell: ({ row }) => <PositionCell keyword={row.original} />,
   });
 }
@@ -130,7 +132,7 @@ function deltaColumn() {
       id: "delta7d",
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortHeader column={column} label="Δ7d" />,
+      header: ({ column }) => <SortableHeader column={column} label="Δ7d" />,
       cell: ({ row }) => (
         <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
       ),
@@ -144,7 +146,9 @@ function scoreColumns() {
       id: "traffic",
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortHeader column={column} label="Popularity" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Popularity" />
+      ),
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "traffic")}
@@ -164,7 +168,9 @@ function scoreColumns() {
       id: "difficulty",
       ...SORTABLE,
       sortDescFirst: true,
-      header: ({ column }) => <SortHeader column={column} label="Difficulty" />,
+      header: ({ column }) => (
+        <SortableHeader column={column} label="Difficulty" />
+      ),
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "difficulty")}
@@ -181,7 +187,7 @@ function scoreColumns() {
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => (
-        <SortHeader column={column} label="Opportunity" />
+        <SortableHeader column={column} label="Opportunity" />
       ),
       cell: ({ row }) => (
         <DerivedScoreCell
@@ -203,7 +209,7 @@ function volatilityColumn() {
     header: ({ column }) => (
       <Tooltip>
         <TooltipTrigger asChild>
-          <SortHeader column={column} label="Volatility" />
+          <SortableHeader column={column} label="Volatility" />
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
           How much the top 10 changed day to day over the last week. High churn
