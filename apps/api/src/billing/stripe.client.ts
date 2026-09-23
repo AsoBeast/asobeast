@@ -13,11 +13,28 @@ export const STRIPE_APP_INFO = {
 
 export const STRIPE_CLIENT = 'STRIPE_CLIENT';
 
-export type StripeClient = Stripe | null;
+export interface StripeApi {
+  customers: Pick<Stripe['customers'], 'create' | 'del'>;
+  checkout: {
+    sessions: Pick<
+      Stripe['checkout']['sessions'],
+      'create' | 'retrieve' | 'expire'
+    >;
+  };
+  subscriptions: Pick<Stripe['subscriptions'], 'list' | 'retrieve'>;
+  prices: Pick<Stripe['prices'], 'list'>;
+  subscriptionSchedules: Pick<Stripe['subscriptionSchedules'], 'retrieve'>;
+  billingPortal: {
+    sessions: Pick<Stripe['billingPortal']['sessions'], 'create'>;
+  };
+  webhooks: Pick<Stripe['webhooks'], 'constructEvent'>;
+}
+
+export type StripeClient = StripeApi | null;
 
 export function createStripeClient(
   secretKey: string | undefined,
-): StripeClient {
+): Stripe | null {
   if (!secretKey) return null;
   return new Stripe(secretKey, {
     apiVersion: STRIPE_API_VERSION,

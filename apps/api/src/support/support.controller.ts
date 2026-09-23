@@ -19,6 +19,7 @@ import { WorkspaceSuspension } from '../auth/abuse/workspace-suspension.service'
 import { SUPPORT_ROUTE } from '../auth/admin-access';
 import { isPlatformOperator } from '../auth/platform-operator';
 import { BillingReconciler } from '../billing/billing-reconciler.service';
+import { BillingWebhookService } from '../billing/billing-webhook.service';
 import { PipelineService } from '../jobs/pipeline.service';
 import { SupportAudit } from './support-audit.service';
 import { SupportActionDto } from './dto/support-action.dto';
@@ -34,6 +35,7 @@ export class SupportController {
     private readonly audit: SupportAudit,
     private readonly suspension: WorkspaceSuspension,
     private readonly reconciler: BillingReconciler,
+    private readonly webhook: BillingWebhookService,
     private readonly pipeline: PipelineService,
   ) {}
 
@@ -79,6 +81,22 @@ export class SupportController {
     return this.apply(user, workspaceId, 'reconcile', dto, async () => {
       const report = await this.reconciler.reconcileOne(workspaceId);
       return `checked ${report.checked}, corrected ${report.corrected}`;
+    });
+  }
+
+  @Post('workspaces/:workspaceId/billing-events/:eventId/replay')
+  @ApiOperation({
+    summary: 'Replay a stored billing event for this workspace',
+  })
+  replayBillingEvent(
+    @CurrentUser() user: User,
+    @Param('workspaceId') workspaceId: string,
+    @Param('eventId') eventId: string,
+    @Body() dto: SupportActionDto,
+  ): Promise<SupportActionResult> {
+    return this.apply(user, workspaceId, 'replay', dto, async () => {
+      await this.webhook.replay(eventId, workspaceId);
+      return `event ${eventId} queued again`;
     });
   }
 

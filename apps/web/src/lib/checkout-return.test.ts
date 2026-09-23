@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { checkoutReturned, urlWithoutCheckout } from "./checkout-return";
+import {
+  checkoutReturned,
+  checkoutSessionId,
+  urlWithoutCheckout,
+} from "./checkout-return";
 
 describe("checkoutReturned", () => {
   it("recognises the return Stripe sends the customer back with", () => {
@@ -16,7 +20,32 @@ describe("checkoutReturned", () => {
   });
 });
 
+describe("checkoutSessionId", () => {
+  it("reads the session stripe substituted into the return", () => {
+    expect(checkoutSessionId("?checkout=complete&session_id=cs_test_1")).toBe(
+      "cs_test_1",
+    );
+  });
+
+  it("answers nothing for a return that carries no session", () => {
+    expect(checkoutSessionId("?checkout=complete")).toBeUndefined();
+  });
+
+  it("answers nothing for an empty session, which the api would refuse", () => {
+    expect(checkoutSessionId("?checkout=complete&session_id=")).toBeUndefined();
+  });
+});
+
 describe("urlWithoutCheckout", () => {
+  it("strips both checkout parameters and keeps the rest", () => {
+    expect(
+      urlWithoutCheckout(
+        "/settings",
+        "?tab=plan&checkout=complete&session_id=cs_test_1",
+      ),
+    ).toBe("/settings?tab=plan");
+  });
+
   it("drops the marker so a reload does not reconcile again", () => {
     expect(urlWithoutCheckout("/settings", "?checkout=complete")).toBe(
       "/settings",

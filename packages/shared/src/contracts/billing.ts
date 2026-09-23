@@ -4,6 +4,8 @@ export const CHECKOUT_RETURN_PARAM = 'checkout';
 
 export const CHECKOUT_RETURN_COMPLETE = 'complete';
 
+export const CHECKOUT_SESSION_PARAM = 'session_id';
+
 export const BILLING_INTERVALS = ['month', 'year'] as const;
 
 export type BillingInterval = (typeof BILLING_INTERVALS)[number];
@@ -22,6 +24,10 @@ export interface BillingCatalog {
 
 export interface CheckoutRequest {
   priceId: string;
+}
+
+export interface ReconcileRequest {
+  sessionId?: string;
 }
 
 export interface BillingSession {

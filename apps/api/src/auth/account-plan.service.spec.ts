@@ -116,8 +116,13 @@ describe('AccountPlanService', () => {
       false,
     ],
     [
-      'a checkout that never completed',
+      'a first payment still being confirmed',
       { subscriptionId: 'sub_1', subscriptionStatus: 'incomplete' },
+      true,
+    ],
+    [
+      'a checkout whose payment window expired',
+      { subscriptionId: 'sub_1', subscriptionStatus: 'incomplete_expired' },
       false,
     ],
     [
@@ -201,6 +206,33 @@ describe('AccountPlanService', () => {
         entitled: false,
         subscriptionStalled: false,
       });
+    });
+
+    it('reports a first payment still being confirmed as pending, not stalled', async () => {
+      await expect(describeWith('incomplete')).resolves.toMatchObject({
+        subscribed: true,
+        entitled: false,
+        subscriptionStalled: false,
+        subscriptionPending: true,
+      });
+    });
+
+    it.each(['active', 'past_due', 'unpaid', null])(
+      'does not report a %s subscription as pending',
+      async (subscriptionStatus) => {
+        await expect(describeWith(subscriptionStatus)).resolves.toMatchObject({
+          subscriptionPending: false,
+        });
+      },
+    );
+
+    it('holds nothing pending without a subscription', async () => {
+      await expect(
+        build(true, { plan: 'free', apps: 0, keywordMarkets: 0 }).describe(
+          workspace(),
+          NOW,
+        ),
+      ).resolves.toMatchObject({ subscriptionPending: false });
     });
 
     it('holds nothing to stall without a subscription', async () => {

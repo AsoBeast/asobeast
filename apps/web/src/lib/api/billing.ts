@@ -3,6 +3,7 @@ import type {
   BillingReconcileReport,
   BillingSession,
   CheckoutRequest,
+  ReconcileRequest,
 } from "@asobeast/shared";
 import { ApiError, apiFetch } from "./client";
 
@@ -21,9 +22,12 @@ export function openBillingPortal(): Promise<BillingSession> {
   return apiFetch<BillingSession>("/billing/portal", { method: "POST" });
 }
 
-export function reconcileBilling(): Promise<BillingReconcileReport> {
+export function reconcileBilling(
+  sessionId?: string,
+): Promise<BillingReconcileReport> {
   return apiFetch<BillingReconcileReport>("/billing/reconcile", {
     method: "POST",
+    body: JSON.stringify({ sessionId } satisfies ReconcileRequest),
   });
 }
 

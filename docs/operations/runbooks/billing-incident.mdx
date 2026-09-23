@@ -15,6 +15,7 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 - `billing.webhooks.failing` pages, from a stored billing event that recorded a failure and still waits for a fix.
 - `billing.reconcile.discrepancy` arrives when events pile up unprocessed.
 - `billing.orphan.events` arrives at investigate when an event named a subscription this instance cannot place, and settled as `orphaned` without retrying. It is almost never a customer. It usually means a drill left a subscription behind, a workspace was erased while Stripe still sent its last events, or another stack shares this sandbox and its checkouts arrive here. Find the subscription named in the `settled as orphaned` log line. If it belongs to a test customer, delete that customer in its sandbox, which cancels the subscription. If another stack shares the sandbox, move that stack to a sandbox of its own, as described in [Billing](/operations/billing#one-sandbox-per-environment).
+- `billing.orphan.subscriptions` arrives at investigate when the last nightly reconciliation found Stripe subscriptions that belong to no workspace. The summary lists up to five ids. Treat each like an orphaned event: a leftover test customer is deleted in its sandbox, and a real customer with no workspace is almost always one whose workspace was erased before erasure cancelled billing, so cancel the subscription in the dashboard and refund.
 - `asobeast_billing_events_unprocessed` climbs and does not drain.
 - A customer reports a `402` after paying, or keeps full access after cancelling.
 
@@ -35,6 +36,9 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
   <Step title="Compare with the provider">
     Open the same customer in the provider dashboard. The provider is the source of truth for the subscription; the database is not.
   </Step>
+  <Step title="Read why an event stopped">
+    An event that stopped retrying is counted by `asobeast_billing_events_failed` and keeps its `failure` text on the stored row. The API log names it with `will not be retried until an operator replays it`. It is almost always a subscription on a price that carries neither a catalog lookup key nor `asobeast_plan` metadata. Give the price that metadata in the dashboard, or run `pnpm --filter api stripe:catalog` so the current prices carry their lookup keys.
+  </Step>
 </Steps>
 
 ## Containment
@@ -44,7 +48,6 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 </Warning>
 
 1. Reconcile the one workspace, which corrects local state from the provider and records who did it and why:
-
    ```bash
    curl --silent --request POST \
      --header 'Content-Type: application/json' \
@@ -53,7 +56,15 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
    ```
 2. Reconciliation looks for a subscription on the workspace customer as well as by the stored id, so a customer who paid and whose webhook never landed is repaired by this step rather than needing the id pasted in by hand.
 3. If many workspaces are wrong, fix the webhook path first. Reconciling everyone against a broken cause just delays the same incident.
-4. Replayed events are safe. Webhook handling is idempotent and a stored event is processed once.
+4. Once the cause of a stopped event is fixed, replay it. The replay clears how the event settled, queues it again and records who asked and why:
+   ```bash
+   curl --silent --request POST \
+     --header 'Content-Type: application/json' \
+     --data '{"confirm":true,"reason":"price added to the catalog"}' \
+     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/billing-events/<eventId>/replay
+   ```
+   Replayed events are safe. Webhook handling is idempotent, and an event older than the state the workspace already holds is ignored. An event that names neither the workspace nor its Stripe customer answers 404.
+5. A customer who deleted their account and is still charged had their workspace erased before erasure cancelled billing. Cancel the subscription in the dashboard and refund the charges since the deletion.
 
 ## Recovery
 

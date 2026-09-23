@@ -1,6 +1,8 @@
 import { INestApplication } from '@nestjs/common';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
+import { Queue } from 'bullmq';
 import {
   SupportActionResult,
   SupportWorkspaceDetail,
@@ -12,13 +14,15 @@ import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { AppModule } from '../src/app.module';
 import { sha256 } from '../src/auth/password-hash';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { ownerAgent, useCookies } from './helpers/session';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { testDb } from './helpers/test-db';
 
 const SUPPORT = '/admin/support/workspaces';
 const OTHER_WORKSPACE = 'ws_support_target';
 const TENANT_WORKSPACE = 'ws_support_tenant';
+const FAILED_EVENT = 'evt_support_replay';
 
 describe('Support tooling (e2e)', () => {
   let app: INestApplication<App>;
@@ -95,6 +99,7 @@ describe('Support tooling (e2e)', () => {
     useCookies(app);
     configureAdminSurfaces(app);
     await app.init();
+    await pauseQueues(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -113,6 +118,7 @@ describe('Support tooling (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.billingEvent.deleteMany({ where: { id: FAILED_EVENT } });
     await prisma.supportAccess.deleteMany({});
     await prisma.workspace.deleteMany({
       where: { id: { in: [OTHER_WORKSPACE, TENANT_WORKSPACE] } },
@@ -260,5 +266,74 @@ describe('Support tooling (e2e)', () => {
     });
     expect(entry).toMatchObject({ outcome: 'failed' });
     expect(entry.detail).toBeTruthy();
+  });
+
+  describe('replaying a stored billing event', () => {
+    const replay = (eventId = FAILED_EVENT) =>
+      `${SUPPORT}/${OTHER_WORKSPACE}/billing-events/${eventId}/replay`;
+
+    beforeEach(async () => {
+      await prisma.billingEvent.deleteMany({ where: { id: FAILED_EVENT } });
+      await prisma.billingEvent.create({
+        data: {
+          id: FAILED_EVENT,
+          type: 'customer.subscription.updated',
+          workspaceId: OTHER_WORKSPACE,
+          createdAt: new Date(),
+          payload: { id: FAILED_EVENT, data: { object: {} } },
+          failure: 'Stripe price price_mystery is not in the price catalog',
+        },
+      });
+    });
+
+    it('clears the failure, queues the event again and records who asked', async () => {
+      const queue = app.get<Queue>(getQueueToken(QUEUES.BILLING), {
+        strict: false,
+      });
+      await queue.drain(true);
+
+      const response = await owner
+        .post(replay())
+        .send({ confirm: true, reason: 'price added to the catalog' })
+        .expect(201);
+
+      expect((response.body as SupportActionResult).action).toBe('replay');
+      await expect(
+        prisma.billingEvent.findUniqueOrThrow({ where: { id: FAILED_EVENT } }),
+      ).resolves.toMatchObject({ failure: null, processedAt: null });
+      const queued = await queue.getJobs(['waiting', 'paused']);
+      expect(
+        queued
+          .filter((job) => job.name === JOBS.BILLING_EVENT)
+          .map((job) => job.data as unknown),
+      ).toContainEqual({ eventId: FAILED_EVENT });
+      await expect(
+        prisma.supportAccess.findFirst({
+          where: { workspaceId: OTHER_WORKSPACE, action: 'replay' },
+        }),
+      ).resolves.toMatchObject({ outcome: 'succeeded' });
+    });
+
+    it('is not found for the owner of another workspace', async () => {
+      await request(app.getHttpServer())
+        .post(replay())
+        .set('Authorization', `Bearer ${await tenantOwnerToken()}`)
+        .send({ confirm: true, reason: 'not mine to replay' })
+        .expect(404);
+    });
+
+    it('answers 404 for an event nobody stored', async () => {
+      await owner
+        .post(replay('evt_nobody_stored'))
+        .send({ confirm: true, reason: 'looking for a ghost' })
+        .expect(404);
+    });
+
+    it('refuses a replay with no confirmation', async () => {
+      await owner
+        .post(replay())
+        .send({ reason: 'price added to the catalog' })
+        .expect(400);
+    });
   });
 });

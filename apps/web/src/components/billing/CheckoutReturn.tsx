@@ -3,7 +3,11 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { reconcileBilling } from "@/lib/api";
-import { checkoutReturned, urlWithoutCheckout } from "@/lib/checkout-return";
+import {
+  checkoutReturned,
+  checkoutSessionId,
+  urlWithoutCheckout,
+} from "@/lib/checkout-return";
 import { invalidateAuth } from "@/lib/queries";
 
 export function CheckoutReturn() {
@@ -14,7 +18,7 @@ export function CheckoutReturn() {
     if (settled.current || !checkoutReturned(window.location.search)) return;
     settled.current = true;
 
-    void reconcileBilling()
+    void reconcileBilling(checkoutSessionId(window.location.search))
       .then(() => {
         const { pathname, search } = window.location;
         window.history.replaceState(

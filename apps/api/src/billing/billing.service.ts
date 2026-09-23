@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import {
   CHECKOUT_RETURN_COMPLETE,
   CHECKOUT_RETURN_PARAM,
+  CHECKOUT_SESSION_PARAM,
   UPGRADE_PATH,
   type BillingCatalog,
 } from '@asobeast/shared';
@@ -21,6 +22,7 @@ import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
 import {
   holdsSubscription,
+  pendingBy,
   stalledBy,
   type WorkspaceSubscription,
 } from './subscription-status';
@@ -29,14 +31,19 @@ import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
 const CHECKOUT_CLAIM_MS = 120_000;
 
-const CHECKOUT_IN_FLIGHT =
+const STRIPE_SESSION_PLACEHOLDER = '{CHECKOUT_SESSION_ID}';
+
+export const CHECKOUT_IN_FLIGHT =
   'A checkout is already being opened for this workspace. Try again in a couple of minutes.';
 
-const ALREADY_SUBSCRIBED =
+export const ALREADY_SUBSCRIBED =
   'This workspace already has a subscription. Change the plan or cancel it in the billing portal instead of buying a second one.';
 
-const SUBSCRIPTION_NEEDS_ATTENTION =
+export const SUBSCRIPTION_NEEDS_ATTENTION =
   'This workspace already has a subscription that is not collecting. Add a payment method in the billing portal to switch it back on rather than buying a second one.';
+
+export const PAYMENT_PENDING =
+  'Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.';
 
 @Injectable()
 export class BillingService {
@@ -50,7 +57,8 @@ export class BillingService {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
-  catalog(): BillingCatalog {
+  async catalog(): Promise<BillingCatalog> {
+    await this.prices.refreshIfStale();
     return {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
@@ -58,6 +66,7 @@ export class BillingService {
   }
 
   async checkout(user: AccountUser, priceId: string): Promise<string> {
+    await this.prices.refreshIfStale();
     this.refuseUnprovisionableCheckout();
     const price = this.prices.require(priceId);
     await this.refuseSecondSubscription(user.workspaceId);
@@ -77,10 +86,17 @@ export class BillingService {
           client_reference_id: workspaceId,
           subscription_data: {
             metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
+            billing_mode: { type: 'flexible' },
           },
           success_url: this.checkoutReturnUrl(),
           cancel_url: this.webUrl(UPGRADE_PATH),
           allow_promotion_codes: true,
+          billing_address_collection: 'required',
+          tax_id_collection: { enabled: true },
+          customer_update: { address: 'auto', name: 'auto' },
+          automatic_tax: {
+            enabled: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
+          },
         },
         `checkout:${workspaceId}:${attempt}`,
       );
@@ -236,7 +252,7 @@ export class BillingService {
   private missingConfiguration(): string[] {
     const missing: string[] = [];
     if (!this.stripe.enabled) missing.push('STRIPE_SECRET_KEY');
-    if (!this.prices.configured) missing.push('STRIPE_PRICE_*');
+    if (!this.prices.configured) missing.push('a price catalog');
     if (!this.config.get('STRIPE_WEBHOOK_SECRET', { infer: true })) {
       missing.push('STRIPE_WEBHOOK_SECRET');
     }
@@ -317,6 +333,7 @@ export class BillingService {
   private checkoutReturnUrl(): string {
     const url = new URL(this.returnUrl());
     url.searchParams.set(CHECKOUT_RETURN_PARAM, CHECKOUT_RETURN_COMPLETE);
+    url.search = `${url.search}&${CHECKOUT_SESSION_PARAM}=${STRIPE_SESSION_PLACEHOLDER}`;
     return url.toString();
   }
 
@@ -331,6 +348,9 @@ function minuteBucket(): number {
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {
+  if (pendingBy(status)) {
+    return new BillingConflictError('checkout_in_flight', PAYMENT_PENDING);
+  }
   return new BillingConflictError(
     'subscription_exists',
     stalledBy(status) ? SUBSCRIPTION_NEEDS_ATTENTION : ALREADY_SUBSCRIBED,

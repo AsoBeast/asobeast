@@ -2,7 +2,8 @@ import type Stripe from 'stripe';
 
 export type SubscriptionStatus = Stripe.Subscription.Status;
 
-export type SubscriptionEffect = 'entitles' | 'recoverable' | 'gone';
+export type SubscriptionEffect =
+  'entitles' | 'recoverable' | 'pending' | 'gone';
 
 const STATUS_EFFECT: Record<SubscriptionStatus, SubscriptionEffect> = {
   trialing: 'entitles',
@@ -10,7 +11,7 @@ const STATUS_EFFECT: Record<SubscriptionStatus, SubscriptionEffect> = {
   past_due: 'entitles',
   unpaid: 'recoverable',
   paused: 'recoverable',
-  incomplete: 'gone',
+  incomplete: 'pending',
   incomplete_expired: 'gone',
   canceled: 'gone',
 };
@@ -44,4 +45,8 @@ export function holdsSubscription(workspace: WorkspaceSubscription): boolean {
 
 export function stalledBy(status: string | null): boolean {
   return status !== null && effectOf(status) === 'recoverable';
+}
+
+export function pendingBy(status: string | null): boolean {
+  return status !== null && effectOf(status) === 'pending';
 }

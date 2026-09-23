@@ -7,6 +7,7 @@ export const SUPPORT_ACTIONS = [
   'suspend',
   'restore',
   'run-daily',
+  'replay',
 ] as const;
 
 export type SupportAction = (typeof SUPPORT_ACTIONS)[number];
@@ -20,6 +21,7 @@ export const SUPPORT_MUTATIONS: SupportAction[] = [
   'suspend',
   'restore',
   'run-daily',
+  'replay',
 ];
 
 export interface SupportWorkspaceSummary {

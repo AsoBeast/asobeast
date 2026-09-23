@@ -8,6 +8,7 @@ import { BillingController } from './billing.controller';
 import { BillingService } from './billing.service';
 import { BillingWebhookController } from './billing-webhook.controller';
 import { BillingWebhookService } from './billing-webhook.service';
+import { BillingEventQueue } from './billing-event-queue';
 import { BillingReconciler } from './billing-reconciler.service';
 import { AccountNotifier } from './account-notifier.service';
 import { DowngradeWarner } from './downgrade-warner.service';
@@ -30,6 +31,7 @@ import { StripeService } from './stripe.service';
     StripeService,
     PriceCatalog,
     BillingService,
+    BillingEventQueue,
     BillingWebhookService,
     BillingReconciler,
     AccountNotifier,
@@ -41,6 +43,7 @@ import { StripeService } from './stripe.service';
     StripeService,
     PriceCatalog,
     BillingService,
+    BillingEventQueue,
     BillingWebhookService,
     BillingReconciler,
     AccountNotifier,

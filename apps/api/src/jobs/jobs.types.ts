@@ -25,6 +25,8 @@ export const LAST_DAILY_RUN_KEY = 'asobeast:last-daily-run';
 
 export const LAST_BACKUP_KEY = 'asobeast:last-backup';
 
+export const LAST_BILLING_RECONCILE_KEY = 'asobeast:last-billing-reconcile';
+
 export const PUBLISHED_STATUS_KEY = 'asobeast:store-status:published';
 
 export function storeCanaryKey(store: Store): string {

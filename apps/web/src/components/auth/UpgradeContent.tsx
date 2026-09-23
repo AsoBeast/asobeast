@@ -150,6 +150,7 @@ function PlanOption({
           className="w-full"
           disabled={
             action === "current" ||
+            action === "pending" ||
             (action === "checkout" && !price) ||
             change.isPending
           }
