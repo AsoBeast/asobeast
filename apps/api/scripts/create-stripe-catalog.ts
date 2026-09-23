@@ -19,6 +19,7 @@ import {
   CATALOG_CURRENCY,
   PLAN_METADATA_KEY,
   amountFor,
+  belongsToProduct,
   chargesListPrice,
   lookupKeyOf,
 } from '../src/billing/price-catalog';
@@ -74,10 +75,16 @@ async function priceFor(
     limit: 1,
   });
   const found = existing.data[0];
-  if (found && chargesListPrice(found, { plan, interval })) return found;
+  if (
+    found &&
+    belongsToProduct(found, product.id) &&
+    chargesListPrice(found, { plan, interval })
+  ) {
+    return found;
+  }
   if (found) {
     throw new Error(
-      `price ${found.id} carries ${lookupKey} but not its list price; archive it or move the lookup key before running this again`,
+      `price ${found.id} carries ${lookupKey} but is not the list price of ${product.id}; archive it or move the lookup key before running this again`,
     );
   }
 

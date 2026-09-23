@@ -81,6 +81,15 @@ export function chargesListPrice(
   );
 }
 
+export function belongsToProduct(
+  price: Stripe.Price,
+  productId: string,
+): boolean {
+  const owner =
+    typeof price.product === 'string' ? price.product : price.product.id;
+  return owner === productId;
+}
+
 function billingPrice(slot: CatalogSlot, priceId: string): BillingPrice {
   return {
     plan: slot.plan,

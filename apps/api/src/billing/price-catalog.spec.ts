@@ -6,6 +6,7 @@ import {
   PriceCatalog,
   UnknownPriceError,
   amountFor,
+  belongsToProduct,
   lookupKeyOf,
 } from './price-catalog';
 import { StripeService } from './stripe.service';
@@ -231,6 +232,22 @@ describe('PriceCatalog from stripe lookup keys', () => {
 
   it('shares its lookup key format with the catalog script', () => {
     expect(lookupKeyOf('indie', 'month')).toBe('asobeast_indie_month');
+  });
+
+  it('tells the catalog script a price of another product from its own', () => {
+    const own = price('price_im', 'asobeast_indie_month', {
+      product: 'prod_indie',
+    });
+    const expanded = price('price_im', 'asobeast_indie_month', {
+      product: { id: 'prod_indie' } as Stripe.Product,
+    });
+    const foreign = price('price_im', 'asobeast_indie_month', {
+      product: 'prod_other',
+    });
+
+    expect(belongsToProduct(own, 'prod_indie')).toBe(true);
+    expect(belongsToProduct(expanded, 'prod_indie')).toBe(true);
+    expect(belongsToProduct(foreign, 'prod_indie')).toBe(false);
   });
 });
 
