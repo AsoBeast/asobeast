@@ -102,7 +102,9 @@ function KeywordCell({ row }: { row: KeywordComparisonRow }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="inline-flex items-center gap-2 font-medium">
-        {row.text}
+        <span title={row.text} className="max-w-32 truncate md:max-w-64">
+          {row.text}
+        </span>
         {row.gap ? (
           <Badge variant="outline" className="border-warning/40 text-warning">
             Gap
@@ -179,14 +181,17 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
           header: ({ column }) => (
             <SortableHeader
               column={column}
+              title={competitor.name ?? "Competitor"}
               label={
                 <span className="inline-flex items-center gap-1.5">
-                  <AppIcon
-                    src={competitor.iconUrl}
-                    name={competitor.name}
-                    size={20}
-                  />
-                  <span className="max-w-32 truncate">
+                  <span aria-hidden>
+                    <AppIcon
+                      src={competitor.iconUrl}
+                      name={competitor.name}
+                      size={20}
+                    />
+                  </span>
+                  <span className="sr-only max-w-32 truncate md:not-sr-only">
                     {competitor.name ?? "Competitor"}
                   </span>
                 </span>

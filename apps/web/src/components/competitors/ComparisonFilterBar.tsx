@@ -1,6 +1,8 @@
 "use client";
 
+import type { ComponentProps } from "react";
 import type { inferParserType, SetValues } from "nuqs";
+import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
@@ -26,11 +28,13 @@ export function ComparisonFilterBar({
   setFilters,
   shown,
   total,
+  columns,
 }: {
   filters: MatrixFilters;
   setFilters: SetValues<typeof matrixFilterParsers>;
   shown: number;
   total: number;
+  columns: ComponentProps<typeof ColumnMenu>["columns"];
 }) {
   const chips = [
     filters.q
@@ -64,6 +68,9 @@ export function ComparisonFilterBar({
           onChange={(vs) => void setFilters({ vs })}
         />
         <RowCount shown={shown} total={total} noun="keyword" />
+        <div className="ml-auto">
+          <ColumnMenu columns={columns} />
+        </div>
       </div>
       <FilterChips chips={chips} onClearAll={() => void setFilters(null)} />
     </div>

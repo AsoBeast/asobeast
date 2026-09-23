@@ -4,9 +4,11 @@ import { Suspense, useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
+import { ColumnMenu } from "@/components/data-table/ColumnMenu";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
+import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,7 +38,9 @@ import {
   discoverySortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
+import { phoneColumnVisibility } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
 import {
   DISCOVERY_SORT_DEFAULTS,
@@ -53,6 +57,8 @@ const DISCOVERY_PARAMS = {
 
 const DISCOVERY_URL_KEYS = { sort: "appSort", dir: "appDir", q: "appQ" };
 
+const NO_HIDDEN_COLUMNS = {};
+
 function DiscoveryTable({
   id,
   days,
@@ -67,6 +73,15 @@ function DiscoveryTable({
     urlKeys: DISCOVERY_URL_KEYS,
   });
   const columns = useMemo(() => discoveryColumns(id), [id]);
+  const isMobile = useIsMobile();
+  const defaultVisibility = useMemo(
+    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
+    [isMobile, columns],
+  );
+  const [visibility, setVisibility] = useStoredColumnVisibility(
+    "discovery",
+    defaultVisibility,
+  );
   const { sorting, onSortingChange } = useUrlSorting(
     params,
     DISCOVERY_SORT_DEFAULTS,
@@ -82,8 +97,13 @@ function DiscoveryTable({
     data: data.items,
     columns,
     getRowId: (row) => row.storeAppId,
-    state: { sorting, globalFilter: params.q },
+    state: {
+      sorting,
+      globalFilter: params.q,
+      columnVisibility: visibility,
+    },
     onSortingChange,
+    onColumnVisibilityChange: setVisibility,
     enableSortingRemoval: false,
     enableMultiSort: false,
     globalFilterFn: "includesString",
@@ -109,6 +129,9 @@ function DiscoveryTable({
           onSearch={(q, options) => void setParams({ q }, options)}
         />
         <RowCount shown={rows.length} total={data.items.length} noun="app" />
+        <div className="ml-auto">
+          <ColumnMenu columns={table.getAllLeafColumns()} />
+        </div>
       </div>
       <Table containerClassName="rounded-xl border">
         <TableCaption className="sr-only">

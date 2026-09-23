@@ -73,7 +73,7 @@ export function discoveryColumns(appId: string) {
     columnHelper.accessor("appearances", {
       ...NUMBER_SORT,
       sortDescFirst: true,
-      meta: { label: "Appearances" },
+      meta: { label: "Appearances", phone: true },
       header: ({ column }) => (
         <SortableHeader column={column} label="Appearances" />
       ),
@@ -104,7 +104,7 @@ export function discoveryColumns(appId: string) {
       id: "best",
       ...NUMBER_SORT,
       sortDescFirst: false,
-      meta: { label: "Best" },
+      meta: { label: "Best", phone: true },
       header: ({ column }) => <SortableHeader column={column} label="Best" />,
       cell: ({ row }) => (
         <GradedNumber
@@ -132,7 +132,7 @@ export function discoveryColumns(appId: string) {
       id: "rating",
       ...NUMBER_SORT,
       sortDescFirst: true,
-      meta: { label: "Rating" },
+      meta: { label: "Rating", phone: true },
       header: ({ column }) => <SortableHeader column={column} label="Rating" />,
       cell: ({ row }) => <RatingCell item={row.original} />,
     }),

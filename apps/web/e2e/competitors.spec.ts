@@ -131,3 +131,45 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
     "fair",
   );
 });
+
+test("on a phone the matrix names competitors by icon and hides the scores", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const header = matrix(page).getByRole("columnheader", {
+    name: "Rival Focus",
+    exact: true,
+  });
+  await expect(header).toBeVisible();
+  const box = await header.getByRole("button").boundingBox();
+  expect(box?.width ?? 0).toBeLessThan(64);
+  for (const name of ["Popularity", "Difficulty"]) {
+    await expect(
+      matrix(page).getByRole("columnheader", { name, exact: true }),
+    ).toHaveCount(0);
+  }
+
+  await page.getByRole("button", { name: "Columns" }).last().click();
+  await page.getByRole("menuitemcheckbox", { name: "Difficulty" }).click();
+  await page.keyboard.press("Escape");
+  await expect(
+    matrix(page).getByRole("columnheader", { name: "Difficulty", exact: true }),
+  ).toBeVisible();
+
+  const discovery = page.getByRole("table", {
+    name: /appearing in your keyword search results/,
+  });
+  for (const name of ["App", "Appearances", "Best", "Rating"]) {
+    await expect(
+      discovery.getByRole("columnheader", { name, exact: true }),
+    ).toBeVisible();
+  }
+  for (const name of ["Keywords", "Avg"]) {
+    await expect(
+      discovery.getByRole("columnheader", { name, exact: true }),
+    ).toHaveCount(0);
+  }
+});
