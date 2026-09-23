@@ -26,19 +26,30 @@ handler reads it there. The retained events are on `2026-07-29.dahlia` and
 Stripe renders an event in the version it was created with, so they cannot
 replace these files.
 
+On 2026-09-23 the manual pass forwarded real `2026-08-26.dahlia` events from
+checkouts, test clock renewals, a scheduled downgrade, a cancellation and CLI
+triggers, and every field path each envelope here carries was checked against
+them. None was missing from the real events, and the subscription invoices again
+named their subscription only through `parent.subscription_details`. The files
+stay assembled, because the e2e suite addresses them by their identifiers.
+
 ## Capturing
 
 Recapture on the pinned version from the `asobeast-local` sandbox, never from a
 sandbox another stack uses. With the stack running and the catalog provisioned:
 
 ```bash
-stripe listen --project-name asobeast-local --forward-to localhost:4000/billing/webhook --print-json > raw/events.jsonl
+stripe listen --project-name asobeast-local --latest --all-snapshot --forward-to localhost:4000/billing/webhook --format json > raw/events.jsonl
 ```
 
-Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and M-QA-07 from the manual pass, then
-`stripe trigger` `customer.subscription.trial_will_end`,
-`customer.subscription.paused` and `customer.subscription.resumed` for the three
-events no asobeast flow produces. Pick one envelope per file name above, save
+`--latest` renders the events on the newest API version instead of the
+account's default, so check that the line `stripe listen` prints when it is
+ready names the pinned version. Run M-QA-01, M-QA-03, M-QA-04, M-QA-06 and
+M-QA-07 from the manual pass, then `stripe trigger`
+`customer.subscription.trial_will_end` and `customer.subscription.paused` for
+two events no asobeast flow produces. The CLI cannot trigger
+`customer.subscription.resumed`, so resume the paused subscription with
+`stripe post /v1/subscriptions/<id>/resume`. Pick one envelope per file name above, save
 each as `raw/<name>.json`, and scrub it:
 
 ```bash
