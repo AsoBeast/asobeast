@@ -89,8 +89,8 @@ describe('Billing checkout (e2e)', () => {
       customer_update: { address: 'auto', name: 'auto' },
       automatic_tax: { enabled: false },
     });
-    expect(recorded.params.success_url?.startsWith(WEB)).toBe(true);
-    expect(recorded.params.cancel_url?.startsWith(WEB)).toBe(true);
+    expect(new URL(recorded.params.success_url ?? '').origin).toBe(WEB);
+    expect(new URL(recorded.params.cancel_url ?? '').origin).toBe(WEB);
     expect(recorded.idempotencyKey).toMatch(/^checkout:[^:]+:[0-9a-f-]{36}$/);
     await expect(workspaceRow(harness)).resolves.toMatchObject({
       billingCustomerId: 'cus_test_1',
