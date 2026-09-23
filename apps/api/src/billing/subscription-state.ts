@@ -36,7 +36,8 @@ export function stateOf(
     status,
     plan: entitledBy(status) ? plan : FREE_PLAN,
     planExpiresAt: periodEndOf(subscription),
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    cancelAtPeriodEnd:
+      subscription.cancel_at_period_end || Boolean(subscription.cancel_at),
   };
 }
 

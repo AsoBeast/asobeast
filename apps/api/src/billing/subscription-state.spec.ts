@@ -63,6 +63,15 @@ describe('stateOf', () => {
       stateOf(subscription({ cancel_at_period_end: true }), 'indie'),
     ).toMatchObject({ plan: 'indie', cancelAtPeriodEnd: true });
   });
+
+  it('records a cancellation the portal schedules through cancel_at', () => {
+    expect(
+      stateOf(
+        subscription({ cancel_at_period_end: false, cancel_at: PERIOD_END }),
+        'indie',
+      ),
+    ).toMatchObject({ plan: 'indie', cancelAtPeriodEnd: true });
+  });
 });
 
 describe('heldSubscription', () => {
