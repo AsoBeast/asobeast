@@ -108,3 +108,30 @@ export function configurationCovers(
   }
   return actual === expected;
 }
+
+export type PortalConfigurations = Pick<
+  Stripe['billingPortal']['configurations'],
+  'list' | 'update' | 'create'
+>;
+
+export async function syncPortal(
+  configurations: PortalConfigurations,
+  desired: Stripe.BillingPortal.ConfigurationCreateParams,
+  say: (line: string) => void,
+): Promise<string> {
+  const found = await configurations.list({ is_default: true, limit: 1 });
+  const current = found.data[0];
+  if (current && configurationCovers(current, desired)) return current.id;
+
+  if (current) {
+    await configurations.update(current.id, desired);
+    say(`updated portal configuration ${current.id}`);
+    return current.id;
+  }
+  const created = await configurations.create(desired);
+  say(`created portal configuration ${created.id}`);
+  if (!created.is_default) {
+    say(`mark portal configuration ${created.id} as default in the dashboard`);
+  }
+  return created.id;
+}

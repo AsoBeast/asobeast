@@ -11,8 +11,8 @@ import {
   LEGAL_PRIVACY_URL,
   LEGAL_TERMS_URL,
   SAAS_TAX_CODE,
-  configurationCovers,
   portalConfiguration,
+  syncPortal,
   type PortalProduct,
 } from '../src/billing/portal-configuration';
 import {
@@ -141,24 +141,7 @@ async function ensurePortal(
     privacyUrl: LEGAL_PRIVACY_URL,
     returnUrl: webUrl ? `${webUrl}/settings` : undefined,
   });
-  const found = await stripe.billingPortal.configurations.list({
-    is_default: true,
-    limit: 1,
-  });
-  const current = found.data[0];
-  if (current && configurationCovers(current, desired)) return current.id;
-
-  if (current) {
-    await stripe.billingPortal.configurations.update(current.id, desired);
-    say(`updated portal configuration ${current.id}`);
-    return current.id;
-  }
-  const created = await stripe.billingPortal.configurations.create(desired);
-  say(`created portal configuration ${created.id}`);
-  if (!created.is_default) {
-    say(`mark portal configuration ${created.id} as default in the dashboard`);
-  }
-  return created.id;
+  return syncPortal(stripe.billingPortal.configurations, desired, say);
 }
 
 async function main(): Promise<void> {
