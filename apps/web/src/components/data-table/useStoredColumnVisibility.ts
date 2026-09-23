@@ -7,6 +7,7 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import {
+  columnChoices,
   parseColumnVisibility,
   readStoredColumns,
   writeColumnVisibility,
@@ -31,21 +32,29 @@ export function useStoredColumnVisibility(
 ) {
   const raw = useSyncExternalStore(
     subscribe,
-    () => readStoredColumns(localStorage, table) ?? unsaved.get(table) ?? null,
+    () => unsaved.get(table) ?? readStoredColumns(localStorage, table),
     () => null,
   );
   const stored = useMemo(() => parseColumnVisibility(raw), [raw]);
-  const visibility = stored ?? fallback;
+  const visibility = useMemo(
+    () => ({ ...fallback, ...stored }),
+    [fallback, stored],
+  );
 
   const setVisibility = useCallback(
     (updater: Updater<ColumnVisibilityState>) => {
-      const next = functionalUpdate(updater, visibility);
-      if (!writeColumnVisibility(localStorage, table, next)) {
-        unsaved.set(table, JSON.stringify(next));
+      const choices = columnChoices(
+        functionalUpdate(updater, visibility),
+        fallback,
+      );
+      if (writeColumnVisibility(localStorage, table, choices)) {
+        unsaved.delete(table);
+      } else {
+        unsaved.set(table, JSON.stringify(choices));
       }
       listeners.forEach((listener) => listener());
     },
-    [table, visibility],
+    [table, visibility, fallback],
   );
 
   return [visibility, setVisibility] as const;

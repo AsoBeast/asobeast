@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  columnChoices,
   parseColumnVisibility,
   phoneColumnVisibility,
   readStoredColumns,
@@ -73,5 +74,22 @@ describe("phoneColumnVisibility", () => {
         { id: "traffic", meta: { label: "Popularity" } },
       ]),
     ).toEqual({ source: false, traffic: false });
+  });
+});
+
+describe("columnChoices", () => {
+  it("keeps only what differs from the screen default", () => {
+    expect(
+      columnChoices(
+        { source: true, traffic: false, difficulty: false },
+        { source: false, traffic: false, difficulty: false },
+      ),
+    ).toEqual({ source: true });
+  });
+
+  it("counts a column the default shows as visible", () => {
+    expect(columnChoices({ source: false, traffic: true }, {})).toEqual({
+      source: false,
+    });
   });
 });

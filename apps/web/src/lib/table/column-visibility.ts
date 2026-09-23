@@ -61,3 +61,14 @@ export function phoneColumnVisibility(
       .map((column) => [column.id, false]),
   );
 }
+
+export function columnChoices(
+  visibility: ColumnVisibilityState,
+  fallback: ColumnVisibilityState,
+): ColumnVisibilityState {
+  return Object.fromEntries(
+    Object.entries(visibility).filter(
+      ([id, visible]) => visible !== (fallback[id] ?? true),
+    ),
+  );
+}

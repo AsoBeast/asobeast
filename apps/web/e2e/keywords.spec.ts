@@ -604,6 +604,26 @@ test("bulk actions only reach selected keywords the filters still show", async (
   expect(updates[0]).toContain("kw-2");
 });
 
+test("a column shown on a phone does not hide the rest on a wider screen", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
+  await page.keyboard.press("Escape");
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+
+  for (const name of ["Source", "Popularity", "Difficulty", "Volatility"]) {
+    await expect(
+      page.getByRole("columnheader", { name, exact: true }),
+    ).toBeVisible();
+  }
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
