@@ -119,13 +119,17 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
   await expect(unranked).toHaveCount(1);
   await expect(unranked).not.toHaveAttribute("data-grade", /.+/);
 
-  const keywordCell = focus.getByRole("cell").first();
-  await expect(
-    keywordCell.locator("[data-grade]", { hasText: "Popularity 100, strong" }),
-  ).toHaveAttribute("data-grade", "strong");
-  await expect(
-    keywordCell.locator("[data-grade]", { hasText: "Difficulty 40, fair" }),
-  ).toHaveAttribute("data-grade", "fair");
+  const popularity = focus.locator("[data-grade]", {
+    hasText: "Popularity 100, strong",
+  });
+  await expect(popularity).toHaveCount(1);
+  await expect(popularity).toHaveAttribute("data-grade", "strong");
+  const difficulty = focus.locator("[data-grade]", {
+    hasText: "Difficulty 40, fair",
+  });
+  await expect(difficulty).toHaveCount(1);
+  await expect(difficulty).toHaveAttribute("data-grade", "fair");
+  await expect(focus.getByRole("cell").first()).not.toContainText("Popularity");
 });
 
 test("on a phone the matrix names competitors by icon and hides the scores", async ({
@@ -147,6 +151,13 @@ test("on a phone the matrix names competitors by icon and hides the scores", asy
       matrix(page).getByRole("columnheader", { name, exact: true }),
     ).toHaveCount(0);
   }
+  await expect(
+    matrix(page)
+      .getByRole("row", { name: /focus timer/ })
+      .getByRole("cell")
+      .first()
+      .locator("[data-grade]", { hasText: "Popularity 100, strong" }),
+  ).toHaveCount(1);
 
   await page.getByRole("button", { name: "Columns" }).last().click();
   await page.getByRole("menuitemcheckbox", { name: "Difficulty" }).click();

@@ -106,7 +106,20 @@ function ScoreCell({
   );
 }
 
-function KeywordCell({ row }: { row: KeywordComparisonRow }) {
+const SCORES: readonly ComparisonScore[] = ["traffic", "difficulty"];
+
+const SCORE_ABBR: Record<ComparisonScore, string> = {
+  traffic: "P",
+  difficulty: "D",
+};
+
+function KeywordCell({
+  row,
+  scores,
+}: {
+  row: KeywordComparisonRow;
+  scores: readonly ComparisonScore[];
+}) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="inline-flex items-center gap-2 font-medium">
@@ -119,16 +132,18 @@ function KeywordCell({ row }: { row: KeywordComparisonRow }) {
           </Badge>
         ) : null}
       </span>
-      <span className="text-xs text-muted-foreground">
-        <abbr aria-hidden title={SCORE_LABEL.traffic}>
-          P
-        </abbr>{" "}
-        <ScoreCell row={row} score="traffic" /> ·{" "}
-        <abbr aria-hidden title={SCORE_LABEL.difficulty}>
-          D
-        </abbr>{" "}
-        <ScoreCell row={row} score="difficulty" />
-      </span>
+      {scores.length > 0 ? (
+        <span className="flex gap-2 text-xs text-muted-foreground">
+          {scores.map((score) => (
+            <span key={score}>
+              <abbr aria-hidden title={SCORE_LABEL[score]}>
+                {SCORE_ABBR[score]}
+              </abbr>{" "}
+              <ScoreCell row={row} score={score} />
+            </span>
+          ))}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -147,7 +162,14 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
       header: ({ column }) => (
         <SortableHeader column={column} label="Keyword" />
       ),
-      cell: ({ row }) => <KeywordCell row={row.original} />,
+      cell: ({ row, table }) => (
+        <KeywordCell
+          row={row.original}
+          scores={SCORES.filter(
+            (score) => !table.getColumn(score)?.getIsVisible(),
+          )}
+        />
+      ),
     }),
     columnHelper.accessor((row) => nullsLast(row.traffic), {
       id: "traffic",
