@@ -59,6 +59,14 @@ export const RESERVED_SIGNALS = [
   "--score-low",
   "--score-mid",
   "--score-high",
+  "--grade-strong",
+  "--grade-strong-subtle",
+  "--grade-fair",
+  "--grade-fair-subtle",
+  "--grade-weak",
+  "--grade-weak-subtle",
+  "--grade-poor",
+  "--grade-poor-subtle",
 ];
 
 export const RANK_BANDS = [
@@ -202,6 +210,30 @@ export const TEXT_PAIRS: Array<{
   {
     label: "score-high on card",
     foreground: "--score-high",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "grade-strong on card",
+    foreground: "--grade-strong",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "grade-fair on card",
+    foreground: "--grade-fair",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "grade-weak on card",
+    foreground: "--grade-weak",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "grade-poor on card",
+    foreground: "--grade-poor",
     background: "--card",
     floor: 4.5,
   },
