@@ -11,6 +11,7 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import { useQueryState, useQueryStates } from "nuqs";
+import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { keywordsOptions } from "@/lib/queries";
 import {
   keywordFilterParsers,
@@ -33,6 +34,8 @@ import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./SerpSheet";
 
+const NO_HIDDEN_COLUMNS = {};
+
 export function KeywordsTable({
   id,
   store,
@@ -52,6 +55,10 @@ export function KeywordsTable({
     keywordsOptions(id, undefined, country),
   );
   const [selection, setSelection] = useState<RowSelectionState>({});
+  const [visibility, setVisibility] = useStoredColumnVisibility(
+    "keywords",
+    NO_HIDDEN_COLUMNS,
+  );
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -97,8 +104,9 @@ export function KeywordsTable({
       sorting,
       columnFilters,
       globalFilter: filters.q,
-      columnVisibility: HIDDEN_KEYWORD_COLUMNS,
+      columnVisibility: { ...visibility, ...HIDDEN_KEYWORD_COLUMNS },
     },
+    onColumnVisibilityChange: setVisibility,
     onRowSelectionChange: setSelection,
     onSortingChange,
     getRowId: (row) => row.keywordId,

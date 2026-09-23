@@ -8,12 +8,14 @@ import {
   createSortedRowModel,
   filterFn_includesString,
   globalFilteringFeature,
+  metaHelper,
   rowSelectionFeature,
   rowSortingFeature,
   sortFn_basic,
   sortFn_text,
   tableFeatures,
 } from "@tanstack/react-table";
+import type { TableColumnMeta } from "@/lib/table/column-visibility";
 
 export const keywordTableFeatures = tableFeatures({
   columnVisibilityFeature,
@@ -28,6 +30,7 @@ export const keywordTableFeatures = tableFeatures({
   facetedUniqueValues: createFacetedUniqueValues(),
   sortFns: { basic: sortFn_basic, text: sortFn_text },
   filterFns: { includesString: filterFn_includesString },
+  columnMeta: metaHelper<TableColumnMeta>(),
 });
 
 export type KeywordTableFeatures = typeof keywordTableFeatures;

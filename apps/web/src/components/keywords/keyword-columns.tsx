@@ -91,6 +91,7 @@ function identityColumns() {
   return [
     columnHelper.display({
       id: "select",
+      enableHiding: false,
       header: ({ table }) => (
         <Checkbox
           checked={
@@ -114,6 +115,7 @@ function identityColumns() {
     }),
     columnHelper.accessor("text", {
       id: "keyword",
+      enableHiding: false,
       sortFn: "text",
       sortDescFirst: false,
       header: ({ column }) => (
@@ -133,6 +135,7 @@ function identityColumns() {
       ),
     }),
     columnHelper.accessor("source", {
+      meta: { label: "Source" },
       sortFn: (a, b, id) =>
         SOURCE_LABELS[a.getValue<KeywordSource>(id)].localeCompare(
           SOURCE_LABELS[b.getValue<KeywordSource>(id)],
@@ -168,6 +171,7 @@ function filterColumns() {
 function positionColumn() {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
+    meta: { label: "Position" },
     ...SORTABLE,
     sortDescFirst: false,
     filterFn: (row, _id, selected: PositionBand[]) =>
@@ -186,6 +190,7 @@ function deltaColumn() {
     (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
     {
       id: "delta7d",
+      meta: { label: "Δ7d" },
       ...SORTABLE,
       sortDescFirst: true,
       header: ({ column }) => <SortableHeader column={column} label="Δ7d" />,
@@ -200,6 +205,7 @@ function scoreColumns() {
   return [
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
       id: "traffic",
+      meta: { label: "Popularity" },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("popularity"),
@@ -223,6 +229,7 @@ function scoreColumns() {
     }),
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
       id: "difficulty",
+      meta: { label: "Difficulty" },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("difficulty"),
@@ -242,6 +249,7 @@ function scoreColumns() {
     }),
     columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
+      meta: { label: "Opportunity" },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("opportunity"),
@@ -263,6 +271,7 @@ function scoreColumns() {
 function volatilityColumn() {
   return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
     id: "volatility",
+    meta: { label: "Volatility" },
     ...SORTABLE,
     sortDescFirst: true,
     header: ({ column }) => (
@@ -289,6 +298,7 @@ function actionsColumn({
 }) {
   return columnHelper.display({
     id: "actions",
+    enableHiding: false,
     header: () => null,
     cell: ({ row }) => (
       <div className="flex items-center justify-end gap-1 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-data-[state=open]:opacity-100 pointer-fine:opacity-0">

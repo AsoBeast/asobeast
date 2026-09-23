@@ -507,6 +507,28 @@ test("the position facet finds keywords that do not rank", async ({ page }) => {
   await expect(rows.nth(1)).toContainText(">200");
 });
 
+test("the columns menu hides a column and remembers it", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  const sourceHeader = page.getByRole("columnheader", { name: "Source" });
+  await expect(sourceHeader).toBeVisible();
+
+  await page.getByRole("button", { name: "Columns" }).click();
+  const menu = page.getByRole("menu");
+  await expect(
+    menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
+  ).toHaveCount(0);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(7);
+  await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(sourceHeader).toHaveCount(0);
+  await page.reload();
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).toBeVisible();
+  await expect(sourceHeader).toHaveCount(0);
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
