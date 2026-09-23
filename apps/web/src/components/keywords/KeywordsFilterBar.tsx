@@ -3,45 +3,16 @@
 import { Download } from "lucide-react";
 import type { SetValues } from "nuqs";
 import type { Table } from "@tanstack/react-table";
-import {
-  KEYWORD_BUCKETS,
-  KEYWORD_SOURCES,
-  type TrackedKeywordItem,
-} from "@asobeast/shared";
-import { BUCKET_LABELS } from "@/components/BucketBadge";
-import { FacetFilter } from "@/components/data-table/FacetFilter";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
-import { SelectFilter } from "@/components/data-table/SelectFilter";
 import { Button } from "@/components/ui/button";
-import {
-  KEYWORD_STATUSES,
-  type keywordFilterParsers,
-} from "@/lib/search-params";
+import type { keywordFilterParsers } from "@/lib/search-params";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
-import {
-  keywordFilterChips,
-  STATUS_LABELS,
-  type KeywordFilters,
-} from "./keyword-filters";
-import { SOURCE_LABELS } from "./SourceBadge";
-
-const SOURCE_OPTIONS = KEYWORD_SOURCES.map((value) => ({
-  value,
-  label: SOURCE_LABELS[value],
-}));
-
-const BUCKET_OPTIONS = KEYWORD_BUCKETS.map((value) => ({
-  value,
-  label: BUCKET_LABELS[value],
-}));
-
-const STATUS_OPTIONS = KEYWORD_STATUSES.map((value) => ({
-  value,
-  label: STATUS_LABELS[value],
-}));
+import { keywordFilterChips, type KeywordFilters } from "./keyword-filters";
+import { KeywordFacets } from "./KeywordFacets";
 
 export function KeywordsFilterBar({
   appId,
@@ -55,8 +26,6 @@ export function KeywordsFilterBar({
   setFilters: SetValues<typeof keywordFilterParsers>;
 }) {
   const shown = table.getRowModel().rows;
-  const counts = (id: string) =>
-    table.getColumn(id)?.getFacetedUniqueValues() ?? new Map<unknown, number>();
 
   return (
     <div className="flex flex-col gap-2">
@@ -66,25 +35,10 @@ export function KeywordsFilterBar({
           value={filters.q}
           onSearch={(q, options) => void setFilters({ q }, options)}
         />
-        <FacetFilter
-          title="Source"
-          options={SOURCE_OPTIONS}
-          selected={filters.source}
-          counts={counts("source")}
-          onChange={(source) => void setFilters({ source })}
-        />
-        <FacetFilter
-          title="Bucket"
-          options={BUCKET_OPTIONS}
-          selected={filters.bucket}
-          counts={counts("bucket")}
-          onChange={(bucket) => void setFilters({ bucket })}
-        />
-        <SelectFilter
-          title="Status"
-          value={filters.status}
-          options={STATUS_OPTIONS}
-          onChange={(status) => void setFilters({ status })}
+        <KeywordFacets
+          table={table}
+          filters={filters}
+          setFilters={setFilters}
         />
         <RowCount
           shown={shown.length}

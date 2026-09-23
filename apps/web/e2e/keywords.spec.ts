@@ -472,6 +472,41 @@ test("the status filter keeps paused rows and clear all empties the url", async 
   await expect(rows).toHaveCount(6);
 });
 
+test("a grade facet keeps only rows of that grade", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  const table = page.getByRole("table", { name: /Tracked keywords/ });
+
+  await page.getByRole("button", { name: "Filter by popularity" }).click();
+  await page.getByRole("option", { name: /strong/ }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(page).toHaveURL(/pop=strong/);
+  await expect(table.getByRole("row")).toHaveCount(5);
+  await expect(table.getByText("time blocking")).toHaveCount(0);
+  const popularity = table.getByRole("button", { name: /^Popularity \d+/ });
+  await expect(popularity).toHaveCount(4);
+  for (const cell of await popularity.all()) {
+    await expect(cell).toHaveAttribute("data-grade", "strong");
+  }
+  await expect(page.getByText("Popularity: strong")).toBeVisible();
+});
+
+test("the position facet finds keywords that do not rank", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+  const rows = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row");
+
+  await page.getByRole("button", { name: "Filter by position" }).click();
+  await page.getByRole("option", { name: /Not ranking/ }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(page).toHaveURL(/pos=unranked/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("productivity app");
+  await expect(rows.nth(1)).toContainText(">200");
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 

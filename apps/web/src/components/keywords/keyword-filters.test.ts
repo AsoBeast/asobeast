@@ -5,7 +5,16 @@ import {
   type KeywordFilters,
 } from "./keyword-filters";
 
-const NONE: KeywordFilters = { q: "", source: [], bucket: [], status: "all" };
+const NONE: KeywordFilters = {
+  q: "",
+  source: [],
+  bucket: [],
+  status: "all",
+  pop: [],
+  diff: [],
+  opp: [],
+  pos: [],
+};
 
 describe("keywordColumnFilters", () => {
   it("applies nothing when every filter is at its default", () => {
@@ -19,11 +28,19 @@ describe("keywordColumnFilters", () => {
         source: ["MANUAL"],
         bucket: ["primary"],
         status: "paused",
+        pop: ["strong"],
+        diff: ["fair"],
+        opp: ["weak"],
+        pos: ["unranked"],
       }),
     ).toEqual([
       { id: "source", value: ["MANUAL"] },
       { id: "bucket", value: ["primary"] },
       { id: "status", value: "paused" },
+      { id: "traffic", value: ["strong"] },
+      { id: "difficulty", value: ["fair"] },
+      { id: "opportunity", value: ["weak"] },
+      { id: "position", value: ["unranked"] },
     ]);
   });
 });
@@ -40,12 +57,20 @@ describe("keywordFilterChips", () => {
         source: ["MANUAL", "TITLE"],
         bucket: ["longtail"],
         status: "active",
+        pop: ["strong", "fair"],
+        diff: ["poor"],
+        opp: ["weak"],
+        pos: ["top3", "unranked"],
       }),
     ).toEqual([
       { key: "q", label: "Search: pomo" },
       { key: "source", label: "Source: Manual, Title" },
       { key: "bucket", label: "Bucket: Long tail" },
       { key: "status", label: "Status: Active" },
+      { key: "pop", label: "Popularity: strong, fair" },
+      { key: "diff", label: "Difficulty: poor" },
+      { key: "opp", label: "Opportunity: weak" },
+      { key: "pos", label: "Position: Top 3, Not ranking" },
     ]);
   });
 });

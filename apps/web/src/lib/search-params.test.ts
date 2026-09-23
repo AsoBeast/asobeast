@@ -18,6 +18,8 @@ import {
   VISIBILITY_RANGES,
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
+import { GRADES } from "./grade";
+import { POSITION_BANDS } from "./table/facets";
 import {
   actionCategoryParser,
   actionPriorityParser,
@@ -28,6 +30,8 @@ import {
   discoveryDaysParser,
   KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
+  gradeFacetParser,
+  positionBandParser,
   keywordBucketParser,
   keywordIdsParser,
   keywordSourceParser,
@@ -89,6 +93,8 @@ const LIST_PARSERS = [
   ["actionRule", actionRuleParser, ACTION_RULES, []],
   ["keywordSource", keywordSourceParser, KEYWORD_SOURCES, []],
   ["keywordBucket", keywordBucketParser, KEYWORD_BUCKETS, []],
+  ["gradeFacet", gradeFacetParser, GRADES, []],
+  ["positionBand", positionBandParser, POSITION_BANDS, []],
 ] as const;
 
 const STRING_PARSERS = [

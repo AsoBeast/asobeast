@@ -1,6 +1,6 @@
 "use client";
 
-import { createColumnHelper } from "@tanstack/react-table";
+import { createColumnHelper, type FilterFn } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
 import type {
   KeywordBucket,
@@ -25,10 +25,18 @@ import {
   ScoreCell,
   VolatilityCell,
 } from "./keyword-cells";
-import { isScoreOutdated, scoreValue } from "./keyword-scores";
+import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
-import { oneOf, statusFilter, type ActivityStatus } from "@/lib/table/facets";
+import type { Grade, GradeMetric } from "@/lib/grade";
+import {
+  gradeIn,
+  oneOf,
+  positionBandIn,
+  statusFilter,
+  type ActivityStatus,
+  type PositionBand,
+} from "@/lib/table/facets";
 import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 
 const columnHelper = createColumnHelper<
@@ -49,6 +57,17 @@ export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
 export const HIDDEN_KEYWORD_COLUMNS = { bucket: false, status: false };
+
+function gradeFilter(
+  metric: GradeMetric,
+): FilterFn<KeywordTableFeatures, TrackedKeywordItem> {
+  return (row, id, selected: Grade[]) =>
+    gradeIn(
+      metric,
+      shownScore(row.getValue<number | undefined>(id) ?? null),
+      selected,
+    );
+}
 
 export function keywordColumns({
   appId,
@@ -151,6 +170,12 @@ function positionColumn() {
     id: "position",
     ...SORTABLE,
     sortDescFirst: false,
+    filterFn: (row, _id, selected: PositionBand[]) =>
+      positionBandIn(
+        row.original.latestPosition,
+        row.original.latestDepth,
+        selected,
+      ),
     header: ({ column }) => <SortableHeader column={column} label="Position" />,
     cell: ({ row }) => <PositionCell keyword={row.original} />,
   });
@@ -177,6 +202,7 @@ function scoreColumns() {
       id: "traffic",
       ...SORTABLE,
       sortDescFirst: true,
+      filterFn: gradeFilter("popularity"),
       header: ({ column }) => (
         <SortableHeader column={column} label="Popularity" />
       ),
@@ -199,6 +225,7 @@ function scoreColumns() {
       id: "difficulty",
       ...SORTABLE,
       sortDescFirst: true,
+      filterFn: gradeFilter("difficulty"),
       header: ({ column }) => (
         <SortableHeader column={column} label="Difficulty" />
       ),
@@ -217,6 +244,7 @@ function scoreColumns() {
       id: "opportunity",
       ...SORTABLE,
       sortDescFirst: true,
+      filterFn: gradeFilter("opportunity"),
       header: ({ column }) => (
         <SortableHeader column={column} label="Opportunity" />
       ),

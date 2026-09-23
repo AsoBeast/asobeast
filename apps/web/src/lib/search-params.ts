@@ -27,7 +27,8 @@ import {
   type MoverWindow,
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
-import type { ActivityStatus } from "./table/facets";
+import { GRADES } from "./grade";
+import { POSITION_BANDS, type ActivityStatus } from "./table/facets";
 
 export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,
@@ -60,11 +61,23 @@ export const KEYWORD_STATUSES = [
 export const keywordStatusParser =
   parseAsStringLiteral(KEYWORD_STATUSES).withDefault("all");
 
+export const gradeFacetParser = parseAsArrayOf(
+  parseAsStringLiteral(GRADES),
+).withDefault([]);
+
+export const positionBandParser = parseAsArrayOf(
+  parseAsStringLiteral(POSITION_BANDS),
+).withDefault([]);
+
 export const keywordFilterParsers = {
   q: keywordSearchParser,
   source: keywordSourceParser,
   bucket: keywordBucketParser,
   status: keywordStatusParser,
+  pop: gradeFacetParser,
+  diff: gradeFacetParser,
+  opp: gradeFacetParser,
+  pos: positionBandParser,
 };
 
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;

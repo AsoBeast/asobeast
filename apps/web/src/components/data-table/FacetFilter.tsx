@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 export interface FacetOption<T extends string> {
   value: T;
   label: string;
+  swatch?: string;
 }
 
 export function FacetFilter<T extends string>({
@@ -90,6 +91,12 @@ export function FacetFilter<T extends string>({
                     >
                       {checked ? <Check className="size-3" /> : null}
                     </span>
+                    {option.swatch ? (
+                      <span
+                        aria-hidden
+                        className={cn("size-2 rounded-full", option.swatch)}
+                      />
+                    ) : null}
                     {option.label}
                     <span className="ml-auto numeric font-mono text-xs text-muted-foreground">
                       {counts.get(option.value) ?? 0}
