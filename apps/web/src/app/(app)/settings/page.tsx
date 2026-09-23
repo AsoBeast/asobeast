@@ -18,6 +18,7 @@ import {
 } from "@/components/settings/skeletons";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
+  accountPlanOptions,
   alertDeliveryOptions,
   alertsConfigOptions,
   budgetOptions,
@@ -28,6 +29,7 @@ import {
 export default async function SettingsPage() {
   const queryClient = getQueryClient();
   await Promise.all([
+    queryClient.prefetchQuery(accountPlanOptions),
     queryClient.prefetchQuery(webhooksOptions),
     queryClient.prefetchQuery(emailAlertsOptions),
     queryClient.prefetchQuery(alertsConfigOptions),

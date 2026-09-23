@@ -118,6 +118,21 @@ const ACCOUNT_PLAN: AccountPlan = {
     keywordMarkets: { used: 12, limit: null },
   },
 };
+const BILLING_COOKIE = "e2e_billing";
+const BILLING_ACCOUNT_PLAN: AccountPlan = { ...ACCOUNT_PLAN, billing: true };
+const PLAN_COOKIE = "e2e_plan";
+
+function accountPlanFor(req: IncomingMessage): AccountPlan {
+  const seeded = cookieValue(req, PLAN_COOKIE);
+  if (seeded) {
+    return JSON.parse(
+      Buffer.from(seeded, "base64url").toString("utf8"),
+    ) as AccountPlan;
+  }
+  return hasCookie(req, BILLING_COOKIE, "1")
+    ? BILLING_ACCOUNT_PLAN
+    : ACCOUNT_PLAN;
+}
 
 const TEAM: WorkspaceTeam = {
   members: [
@@ -747,7 +762,7 @@ const routes: Route[] = [
       const setupRequired = hasCookie(req, "e2e_setup_required", "1");
       const authenticated = hasCookie(req, SESSION_COOKIE);
       json(res, 200, {
-        billing: false,
+        billing: hasCookie(req, BILLING_COOKIE, "1"),
         registrationOpen: setupRequired,
         setupRequired,
         authenticated,
@@ -836,7 +851,7 @@ const routes: Route[] = [
       if (!hasCookie(req, SESSION_COOKIE)) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/plan"));
       }
-      json(res, 200, ACCOUNT_PLAN);
+      json(res, 200, accountPlanFor(req));
     },
   },
   {

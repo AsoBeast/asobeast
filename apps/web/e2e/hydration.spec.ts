@@ -124,6 +124,25 @@ test("the dashboard open action count is in the html the server sent", async ({
   ).toHaveText(String(ACTION_SUMMARY.open));
 });
 
+test("the settings plan section is in the html the server sent while billing is on", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_billing: "1" });
+  const errors = collectPageErrors(page);
+
+  const html = await page.request
+    .get("/settings")
+    .then((response) => response.text());
+  expect(html).toContain('id="plan"');
+
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Plan" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
+});
+
 test("a stored onboarding checklist hydrates without an uncaught error", async ({
   page,
   context,
