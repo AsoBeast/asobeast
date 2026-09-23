@@ -81,7 +81,7 @@ Create a sandbox in the dashboard from the account menu, then log the Stripe CLI
 
 ```bash
 stripe login --project-name asobeast-local
-stripe listen --project-name asobeast-local --forward-to localhost:4000/billing/webhook
+stripe listen --project-name asobeast-local --all-snapshot --forward-to localhost:4000/billing/webhook
 ```
 
 `stripe listen` prints a signing secret of its own. That is the `STRIPE_WEBHOOK_SECRET` of the stack it forwards to, not the secret of any registered endpoint. Run `pnpm --filter api stripe:catalog` once against each new sandbox.
