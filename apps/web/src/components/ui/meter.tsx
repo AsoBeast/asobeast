@@ -33,11 +33,13 @@ export function Meter({
   value,
   max = 100,
   tone = "neutral",
+  fill,
   className,
 }: {
   value: number;
   max?: number;
   tone?: MeterTone;
+  fill?: string;
   className?: string;
 }) {
   const ratio = Math.max(0, Math.min(1, value / max));
@@ -54,7 +56,7 @@ export function Meter({
       <span
         className={cn(
           "block h-full rounded-full",
-          tone === "health" ? healthFill(ratio) : TONE[tone],
+          fill ?? (tone === "health" ? healthFill(ratio) : TONE[tone]),
         )}
         style={{ inlineSize: `${ratio * 100}%` }}
       />
