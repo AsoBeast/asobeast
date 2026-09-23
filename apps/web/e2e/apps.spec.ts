@@ -273,6 +273,16 @@ test("app overview renders summary numbers and a utc refresh date", async ({
 
   await expect(page.getByText("Keyword movers")).toBeVisible();
   await expect(page.getByRole("link", { name: /focus timer/ })).toBeVisible();
+  await expect(
+    page
+      .getByRole("link", { name: /focus timer/ })
+      .getByLabel("Position 3, strong"),
+  ).toHaveAttribute("data-grade", "strong");
+  await expect(
+    page
+      .getByRole("link", { name: /pomodoro/ })
+      .getByLabel("Position 12, weak"),
+  ).toHaveAttribute("data-grade", "weak");
 
   await expect(page.getByText("Metadata coverage")).toBeVisible();
   await expect(page.getByText("productivity app")).toBeVisible();

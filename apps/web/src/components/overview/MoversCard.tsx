@@ -6,6 +6,8 @@ import { ArrowRight } from "lucide-react";
 import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordMover } from "@asobeast/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { GradedNumber } from "@/components/ui/graded";
+import { grade } from "@/lib/grade";
 import { appSummaryOptions } from "@/lib/queries";
 
 function MoverList({
@@ -34,7 +36,15 @@ function MoverList({
                 <span className="flex shrink-0 items-center gap-1 numeric font-mono text-muted-foreground">
                   {formatRankPosition(mover.from, mover.fromDepth)}
                   <ArrowRight className="size-3" />
-                  {formatRankPosition(mover.to, mover.toDepth)}
+                  {mover.to === null ? (
+                    formatRankPosition(mover.to, mover.toDepth)
+                  ) : (
+                    <GradedNumber
+                      value={formatRankPosition(mover.to, mover.toDepth)}
+                      grade={grade("position", mover.to)}
+                      label="Position"
+                    />
+                  )}
                 </span>
               </Link>
             </li>

@@ -5,13 +5,14 @@ import { formatRankPosition } from "@asobeast/shared";
 import type { KeywordComparisonRow } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
+import { GradedNumber, gradeWash } from "@/components/ui/graded";
+import { grade, gradeLabel } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import type { ComparisonTableFeatures } from "./comparison-table-features";
-import { comparisonScoreLabel } from "./comparison-scores";
-import { positionBand } from "./position-band";
+import { comparisonScore, type ComparisonScore } from "./comparison-scores";
 
 export interface MatrixCompetitor {
   id: string;
@@ -61,25 +62,39 @@ function PositionCell({
   value: number | null;
   best: boolean;
 }) {
-  const band = positionBand(value);
+  const graded = grade("position", value);
   return (
     <span
-      title={band ? `Position ${value} — ${band.label}` : "Not ranking"}
-      style={
-        band
-          ? {
-              backgroundColor: `color-mix(in oklch, ${band.token} 22%, transparent)`,
-            }
-          : undefined
+      data-grade={graded ?? undefined}
+      title={
+        graded ? `Position ${value}, ${gradeLabel(graded)}` : "Not ranking"
       }
       className={cn(
         "numeric font-mono inline-flex min-w-10 justify-center rounded-md px-1.5 py-0.5",
-        value === null && "text-muted-foreground",
+        graded ? gradeWash(graded) : "text-muted-foreground",
         best && "font-semibold underline decoration-2 underline-offset-4",
       )}
     >
       {formatRankPosition(value)}
     </span>
+  );
+}
+
+const SCORE_LABEL: Record<ComparisonScore, string> = {
+  traffic: "Popularity",
+  difficulty: "Difficulty",
+};
+
+function ScoreCell({
+  row,
+  score,
+}: {
+  row: KeywordComparisonRow;
+  score: ComparisonScore;
+}) {
+  const { label, grade: graded } = comparisonScore(row, score);
+  return (
+    <GradedNumber value={label} grade={graded} label={SCORE_LABEL[score]} />
   );
 }
 
@@ -94,26 +109,17 @@ function KeywordCell({ row }: { row: KeywordComparisonRow }) {
           </Badge>
         ) : null}
       </span>
-      <span className="text-xs text-muted-foreground numeric font-mono">
-        <abbr title="Popularity">P</abbr> {comparisonScoreLabel(row, "traffic")}{" "}
-        · <abbr title="Difficulty">D</abbr>{" "}
-        {comparisonScoreLabel(row, "difficulty")}
+      <span className="text-xs text-muted-foreground">
+        <abbr aria-hidden title={SCORE_LABEL.traffic}>
+          P
+        </abbr>{" "}
+        <ScoreCell row={row} score="traffic" /> ·{" "}
+        <abbr aria-hidden title={SCORE_LABEL.difficulty}>
+          D
+        </abbr>{" "}
+        <ScoreCell row={row} score="difficulty" />
       </span>
     </div>
-  );
-}
-
-function ScoreCell({
-  row,
-  score,
-}: {
-  row: KeywordComparisonRow;
-  score: "traffic" | "difficulty";
-}) {
-  return (
-    <span className="numeric font-mono">
-      {comparisonScoreLabel(row, score)}
-    </span>
   );
 }
 

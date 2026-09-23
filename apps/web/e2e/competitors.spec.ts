@@ -91,3 +91,38 @@ test("a matrix filter that matches nothing offers to clear it", async ({
   await expect(page).not.toHaveURL(/vs=/);
   await expect(matrixRows(page)).toHaveCount(5);
 });
+
+test("matrix positions and scores carry their grade", async ({ page }) => {
+  await page.goto("/apps/app-1/competitors");
+  const focus = matrix(page).getByRole("row", { name: /focus timer/ });
+  const pomodoro = matrix(page).getByRole("row", { name: /pomodoro/ });
+  const productivity = matrix(page).getByRole("row", {
+    name: /productivity app/,
+  });
+
+  await expect(focus.getByTitle("Position 3, strong")).toHaveAttribute(
+    "data-grade",
+    "strong",
+  );
+  await expect(focus.getByTitle("Position 9, fair")).toHaveAttribute(
+    "data-grade",
+    "fair",
+  );
+  await expect(pomodoro.getByTitle("Position 12, weak")).toHaveAttribute(
+    "data-grade",
+    "weak",
+  );
+
+  const unranked = productivity.getByTitle("Not ranking");
+  await expect(unranked).toHaveCount(1);
+  await expect(unranked).not.toHaveAttribute("data-grade", /.+/);
+
+  const keywordCell = focus.getByRole("cell").first();
+  await expect(
+    keywordCell.getByLabel("Popularity 100, strong"),
+  ).toHaveAttribute("data-grade", "strong");
+  await expect(keywordCell.getByLabel("Difficulty 40, fair")).toHaveAttribute(
+    "data-grade",
+    "fair",
+  );
+});

@@ -1,19 +1,28 @@
 import { toDifficulty100, toVolume } from "@asobeast/shared";
 import type { KeywordComparisonRow } from "@asobeast/shared";
+import { grade, type Grade, type GradeMetric } from "@/lib/grade";
 
-type ComparisonScore = "traffic" | "difficulty";
+export type ComparisonScore = "traffic" | "difficulty";
 
 const TO_DISPLAY_SCALE: Record<ComparisonScore, (score: number) => number> = {
   traffic: toVolume,
   difficulty: toDifficulty100,
 };
 
-export function comparisonScoreLabel(
+const COMPARISON_SCORE_METRIC: Record<ComparisonScore, GradeMetric> = {
+  traffic: "popularity",
+  difficulty: "difficulty",
+};
+
+export function comparisonScore(
   row: KeywordComparisonRow,
   score: ComparisonScore,
-): string {
+): { label: string; grade: Grade | null } {
   const value = row[score];
-  return value === null
-    ? "—"
-    : String(Math.round(TO_DISPLAY_SCALE[score](value)));
+  if (value === null) return { label: "—", grade: null };
+  const shown = Math.round(TO_DISPLAY_SCALE[score](value));
+  return {
+    label: String(shown),
+    grade: grade(COMPARISON_SCORE_METRIC[score], shown),
+  };
 }
