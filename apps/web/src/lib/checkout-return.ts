@@ -10,6 +10,13 @@ export function checkoutReturned(search: string): boolean {
   );
 }
 
+export function pageReturnedFromCheckout(
+  searchParams: Record<string, string | string[] | undefined>,
+): boolean {
+  const value = searchParams[CHECKOUT_RETURN_PARAM];
+  return (Array.isArray(value) ? value[0] : value) === CHECKOUT_RETURN_COMPLETE;
+}
+
 export function urlWithoutCheckout(pathname: string, search: string): string {
   const params = new URLSearchParams(search);
   params.delete(CHECKOUT_RETURN_PARAM);

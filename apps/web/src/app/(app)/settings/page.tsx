@@ -16,6 +16,7 @@ import {
   EmailAlertsCardSkeleton,
   WebhooksCardSkeleton,
 } from "@/components/settings/skeletons";
+import { pageReturnedFromCheckout } from "@/lib/checkout-return";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   accountPlanOptions,
@@ -26,10 +27,17 @@ import {
   webhooksOptions,
 } from "@/lib/queries";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const returnedFromCheckout = pageReturnedFromCheckout(await searchParams);
   const queryClient = getQueryClient();
   await Promise.all([
-    queryClient.prefetchQuery(accountPlanOptions),
+    returnedFromCheckout
+      ? undefined
+      : queryClient.prefetchQuery(accountPlanOptions),
     queryClient.prefetchQuery(webhooksOptions),
     queryClient.prefetchQuery(emailAlertsOptions),
     queryClient.prefetchQuery(alertsConfigOptions),
