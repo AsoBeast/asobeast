@@ -20,7 +20,7 @@ export default async function SetupPage({
   const app = await queryClient.fetchQuery(appDetailOptions(id));
   await Promise.all([
     queryClient.prefetchQuery(competitorsOptions(id)),
-    queryClient.prefetchQuery(keywordsOptions(id, undefined, app.country)),
+    queryClient.prefetchQuery(keywordsOptions(id, app.country)),
     queryClient.prefetchQuery(budgetOptions),
     queryClient.prefetchQuery(webhooksOptions),
     queryClient.prefetchQuery(emailAlertsOptions),

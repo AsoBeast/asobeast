@@ -44,7 +44,7 @@ export function SuggestionsPanel({
     suggestionStrategyParser,
   );
 
-  const tracked = useQuery(keywordsOptions(id, undefined, country));
+  const tracked = useQuery(keywordsOptions(id, country));
   const trackedTexts = new Set(
     (tracked.data ?? []).map((keyword) => keyword.text),
   );

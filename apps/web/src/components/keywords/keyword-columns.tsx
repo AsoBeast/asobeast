@@ -37,22 +37,12 @@ import {
   type ActivityStatus,
   type PositionBand,
 } from "@/lib/table/facets";
-import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
+import { nullsLast } from "@/lib/table/sorting";
 
 const columnHelper = createColumnHelper<
   KeywordTableFeatures,
   TrackedKeywordItem
 >();
-
-export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
-  descFirst: new Set([
-    "traffic",
-    "difficulty",
-    "opportunity",
-    "volatility",
-    "delta7d",
-  ]),
-};
 
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 

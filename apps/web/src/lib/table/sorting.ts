@@ -37,3 +37,15 @@ export function ariaSort(
   if (sorted === "desc") return "descending";
   return undefined;
 }
+
+export function sortDefaultsOf(
+  columns: ReadonlyArray<{ id?: string; sortDescFirst?: boolean }>,
+): SortDefaults {
+  return {
+    descFirst: new Set(
+      columns.flatMap((column) =>
+        column.id && column.sortDescFirst ? [column.id] : [],
+      ),
+    ),
+  };
+}

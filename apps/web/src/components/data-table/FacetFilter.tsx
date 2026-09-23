@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
-export interface FacetOption<T extends string> {
+interface FacetOption<T extends string> {
   value: T;
   label: string;
   swatch?: string;

@@ -9,6 +9,7 @@ import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
+import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,30 +35,22 @@ import { storeLabel } from "@/lib/format";
 import { DISCOVERY_WINDOWS } from "@/lib/ranges";
 import {
   discoveryDaysParser,
-  discoverySearchParser,
+  searchParser,
   discoverySortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import { phoneColumnVisibility } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
-import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
-import {
-  DISCOVERY_SORT_DEFAULTS,
-  discoveryColumns,
-  discoveryTableFeatures,
-} from "./discovery-columns";
+import { discoveryColumns } from "./discovery-columns";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 
 const DISCOVERY_PARAMS = {
   sort: discoverySortParser,
   dir: sortDirectionParser,
-  q: discoverySearchParser,
+  q: searchParser,
 };
 
 const DISCOVERY_URL_KEYS = { sort: "appSort", dir: "appDir", q: "appQ" };
-
-const NO_HIDDEN_COLUMNS = {};
 
 function DiscoveryTable({
   id,
@@ -73,18 +66,13 @@ function DiscoveryTable({
     urlKeys: DISCOVERY_URL_KEYS,
   });
   const columns = useMemo(() => discoveryColumns(id), [id]);
-  const isMobile = useIsMobile();
-  const defaultVisibility = useMemo(
-    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
-    [isMobile, columns],
-  );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "discovery",
-    defaultVisibility,
+    columns,
   );
   const { sorting, onSortingChange } = useUrlSorting(
     params,
-    DISCOVERY_SORT_DEFAULTS,
+    columns,
     (next) =>
       void setParams({
         sort: next.sort === null ? null : discoverySortParser.parse(next.sort),
@@ -93,7 +81,7 @@ function DiscoveryTable({
   );
 
   const table = useTable({
-    features: discoveryTableFeatures,
+    features: dataTableFeatures,
     data: data.items,
     columns,
     getRowId: (row) => row.storeAppId,

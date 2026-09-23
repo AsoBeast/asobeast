@@ -9,20 +9,16 @@ import { GradedNumber, gradeWash } from "@/components/ui/graded";
 import { grade } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { versusOf, type Versus } from "@/lib/table/facets";
-import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
+import { nullsLast } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
-import type { ComparisonTableFeatures } from "./comparison-table-features";
+import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { comparisonScore, type ComparisonScore } from "./comparison-scores";
 
-export interface MatrixCompetitor {
+interface MatrixCompetitor {
   id: string;
   name: string | null;
   iconUrl: string | null;
 }
-
-export const COMPARISON_SORT_DEFAULTS: SortDefaults = {
-  descFirst: new Set(["traffic", "difficulty"]),
-};
 
 export const HIDDEN_COMPARISON_COLUMNS = { versus: false };
 
@@ -39,7 +35,7 @@ const SCORE_SORT = {
 } as const;
 
 const columnHelper = createColumnHelper<
-  ComparisonTableFeatures,
+  DataTableFeatures,
   KeywordComparisonRow
 >();
 

@@ -27,7 +27,7 @@ export default async function KeywordsPage({
 
   await Promise.all([
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
-    queryClient.prefetchQuery(keywordsOptions(id, undefined, market)),
+    queryClient.prefetchQuery(keywordsOptions(id, market)),
     ...(app.store === "APP_STORE"
       ? [queryClient.prefetchQuery(keywordFieldOptions(id))]
       : []),

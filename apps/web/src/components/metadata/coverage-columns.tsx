@@ -1,18 +1,6 @@
 "use client";
 
-import {
-  columnFilteringFeature,
-  columnVisibilityFeature,
-  createColumnHelper,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFn_includesString,
-  globalFilteringFeature,
-  rowSortingFeature,
-  sortFn_basic,
-  sortFn_text,
-  tableFeatures,
-} from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import { Check, Minus } from "lucide-react";
 import {
   KEYWORD_BUCKETS,
@@ -21,23 +9,10 @@ import {
 } from "@asobeast/shared";
 import { BucketBadge } from "@/components/BucketBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
-import type { SortDefaults } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
-
-export const coverageTableFeatures = tableFeatures({
-  columnVisibilityFeature,
-  rowSortingFeature,
-  columnFilteringFeature,
-  globalFilteringFeature,
-  sortedRowModel: createSortedRowModel(),
-  filteredRowModel: createFilteredRowModel(),
-  sortFns: { basic: sortFn_basic, text: sortFn_text },
-  filterFns: { includesString: filterFn_includesString },
-});
-
-export const COVERAGE_SORT_DEFAULTS: SortDefaults = { descFirst: new Set() };
 
 export const HIDDEN_COVERAGE_COLUMNS = { uncovered: false };
 
@@ -50,7 +25,7 @@ export const FIELD_ORDER: MetadataField[] = [
 ];
 
 const columnHelper = createColumnHelper<
-  typeof coverageTableFeatures,
+  DataTableFeatures,
   KeywordCoverageRow
 >();
 

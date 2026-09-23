@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ariaSort,
   nullsLast,
+  sortDefaultsOf,
   sortingFromUrl,
   urlFromSorting,
   type SortDefaults,
@@ -93,5 +94,18 @@ describe("nullsLast", () => {
 
   it("keeps a zero", () => {
     expect(nullsLast(0)).toBe(0);
+  });
+});
+
+describe("sortDefaultsOf", () => {
+  it("reads the natural direction from the column definitions", () => {
+    expect(
+      sortDefaultsOf([
+        { id: "keyword", sortDescFirst: false },
+        { id: "traffic", sortDescFirst: true },
+        { id: "select" },
+        { sortDescFirst: true },
+      ]),
+    ).toEqual({ descFirst: new Set(["traffic"]) });
   });
 });

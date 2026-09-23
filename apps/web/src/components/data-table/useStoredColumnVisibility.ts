@@ -9,9 +9,11 @@ import {
 import {
   columnChoices,
   parseColumnVisibility,
+  phoneColumnVisibility,
   readStoredColumns,
   writeColumnVisibility,
 } from "@/lib/table/column-visibility";
+import { useIsMobile } from "@/lib/use-is-mobile";
 
 const listeners = new Set<() => void>();
 const unsaved = new Map<string, string>();
@@ -26,10 +28,17 @@ function subscribe(listener: () => void) {
   };
 }
 
+const NO_HIDDEN_COLUMNS: ColumnVisibilityState = {};
+
 export function useStoredColumnVisibility(
   table: string,
-  fallback: ColumnVisibilityState,
+  columns: Parameters<typeof phoneColumnVisibility>[0],
 ) {
+  const isMobile = useIsMobile();
+  const fallback = useMemo(
+    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
+    [isMobile, columns],
+  );
   const raw = useSyncExternalStore(
     subscribe,
     () => unsaved.get(table) ?? readStoredColumns(localStorage, table),

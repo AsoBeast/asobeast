@@ -43,7 +43,7 @@ export function SpiderDialog({
   const [term, setTerm] = useQueryState("spider", spiderTermParser);
   const [draft, setDraft] = useState(term);
 
-  const tracked = useQuery(keywordsOptions(appId, undefined, country));
+  const tracked = useQuery(keywordsOptions(appId, country));
   const trackedTexts = new Set(
     (tracked.data ?? []).map((keyword) => keyword.text),
   );

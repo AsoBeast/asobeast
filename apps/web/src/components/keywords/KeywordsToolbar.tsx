@@ -24,9 +24,7 @@ export function KeywordsToolbar({
 }) {
   const [, setCountry] = useQueryState("country", countryParser);
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
-  const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, undefined, market),
-  );
+  const { data: keywords } = useSuspenseQuery(keywordsOptions(id, market));
 
   const total = markets.reduce((sum, entry) => sum + entry.keywordCount, 0);
   const active = keywords.filter((keyword) => keyword.active).length;

@@ -8,19 +8,13 @@ import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordsOptions } from "@/lib/queries";
-import { phoneColumnVisibility } from "@/lib/table/column-visibility";
-import { useIsMobile } from "@/lib/use-is-mobile";
 import {
   keywordFilterParsers,
   keywordSortParser,
   serpParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import {
-  HIDDEN_KEYWORD_COLUMNS,
-  KEYWORD_SORT_DEFAULTS,
-  keywordColumns,
-} from "./keyword-columns";
+import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -29,8 +23,6 @@ import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
 import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./SerpSheet";
-
-const NO_HIDDEN_COLUMNS = {};
 
 export function KeywordsTable({
   id,
@@ -47,24 +39,12 @@ export function KeywordsTable({
   });
   const [, setSerp] = useQueryState("serp", serpParser);
   const [filters, setFilters] = useQueryStates(keywordFilterParsers);
-  const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, undefined, country),
-  );
+  const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
   const [selection, setSelection] = useState<RowSelectionState>({});
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
     [keywords, selection],
-  );
-
-  const { sorting, onSortingChange } = useUrlSorting(
-    { sort, dir },
-    KEYWORD_SORT_DEFAULTS,
-    (next) =>
-      void setSortParams({
-        sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
-        dir: next.dir,
-      }),
   );
 
   const columns = useMemo(
@@ -76,14 +56,19 @@ export function KeywordsTable({
     [id, setSerp],
   );
 
-  const isMobile = useIsMobile();
-  const defaultVisibility = useMemo(
-    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
-    [isMobile, columns],
+  const { sorting, onSortingChange } = useUrlSorting(
+    { sort, dir },
+    columns,
+    (next) =>
+      void setSortParams({
+        sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
+        dir: next.dir,
+      }),
   );
+
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "keywords",
-    defaultVisibility,
+    columns,
   );
 
   const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);

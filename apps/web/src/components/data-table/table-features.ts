@@ -13,7 +13,7 @@ import {
 } from "@tanstack/react-table";
 import type { TableColumnMeta } from "@/lib/table/column-visibility";
 
-export const comparisonTableFeatures = tableFeatures({
+export const dataTableFeatures = tableFeatures({
   columnVisibilityFeature,
   rowSortingFeature,
   columnFilteringFeature,
@@ -25,4 +25,4 @@ export const comparisonTableFeatures = tableFeatures({
   columnMeta: metaHelper<TableColumnMeta>(),
 });
 
-export type ComparisonTableFeatures = typeof comparisonTableFeatures;
+export type DataTableFeatures = typeof dataTableFeatures;

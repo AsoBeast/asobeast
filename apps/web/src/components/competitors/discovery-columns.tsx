@@ -1,21 +1,9 @@
 "use client";
 
-import {
-  columnFilteringFeature,
-  columnVisibilityFeature,
-  createColumnHelper,
-  createFilteredRowModel,
-  createSortedRowModel,
-  filterFn_includesString,
-  globalFilteringFeature,
-  metaHelper,
-  rowSortingFeature,
-  sortFn_basic,
-  sortFn_text,
-  tableFeatures,
-} from "@tanstack/react-table";
+import { createColumnHelper } from "@tanstack/react-table";
 import type { CompetitorDiscoveryItem } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { GradedNumber } from "@/components/ui/graded";
 import {
   Tooltip,
@@ -24,28 +12,11 @@ import {
 } from "@/components/ui/tooltip";
 import { formatNumber, formatRating } from "@/lib/format";
 import { grade } from "@/lib/grade";
-import type { TableColumnMeta } from "@/lib/table/column-visibility";
-import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
+import { nullsLast } from "@/lib/table/sorting";
 import { TrackButton } from "./TrackButton";
 
-export const discoveryTableFeatures = tableFeatures({
-  columnVisibilityFeature,
-  rowSortingFeature,
-  columnFilteringFeature,
-  globalFilteringFeature,
-  sortedRowModel: createSortedRowModel(),
-  filteredRowModel: createFilteredRowModel(),
-  sortFns: { basic: sortFn_basic, text: sortFn_text },
-  filterFns: { includesString: filterFn_includesString },
-  columnMeta: metaHelper<TableColumnMeta>(),
-});
-
-export const DISCOVERY_SORT_DEFAULTS: SortDefaults = {
-  descFirst: new Set(["appearances", "keywords", "rating"]),
-};
-
 const columnHelper = createColumnHelper<
-  typeof discoveryTableFeatures,
+  DataTableFeatures,
   CompetitorDiscoveryItem
 >();
 
@@ -71,6 +42,7 @@ export function discoveryColumns(appId: string) {
       ),
     }),
     columnHelper.accessor("appearances", {
+      id: "appearances",
       ...NUMBER_SORT,
       sortDescFirst: true,
       meta: { label: "Appearances", phone: true },

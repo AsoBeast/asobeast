@@ -8,6 +8,7 @@ import { FilterChips } from "@/components/data-table/FilterChips";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
+import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -28,9 +29,7 @@ import {
 } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
 import {
-  COVERAGE_SORT_DEFAULTS,
   coverageColumns,
-  coverageTableFeatures,
   FIELD_ORDER,
   HIDDEN_COVERAGE_COLUMNS,
 } from "./coverage-columns";
@@ -52,7 +51,7 @@ export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
   const columns = useMemo(() => coverageColumns(fields), [fields]);
   const { sorting, onSortingChange } = useUrlSorting(
     params,
-    COVERAGE_SORT_DEFAULTS,
+    columns,
     (next) =>
       void setParams({
         sort: next.sort === null ? null : coverageSortParser.parse(next.sort),
@@ -61,7 +60,7 @@ export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
   );
 
   const table = useTable({
-    features: coverageTableFeatures,
+    features: dataTableFeatures,
     data: rows,
     columns,
     getRowId: (row) => row.keywordId,

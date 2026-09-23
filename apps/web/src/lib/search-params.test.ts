@@ -33,7 +33,6 @@ import {
   COVERAGE_SORTS,
   coverageSortParser,
   DISCOVERY_SORTS,
-  discoverySearchParser,
   discoverySortParser,
   gradeFacetParser,
   matrixSortParser,
@@ -44,7 +43,6 @@ import {
   keywordIdsParser,
   keywordSourceParser,
   keywordStatusParser,
-  keywordSearchParser,
   keywordSortParser,
   mcpClientParser,
   moverDaysParser,
@@ -52,6 +50,7 @@ import {
   rangeParser,
   ratingsRangeParser,
   reviewScoreParser,
+  searchParser,
   serpParser,
   SORT_DIRECTIONS,
   sortDirectionParser,
@@ -111,8 +110,7 @@ const STRING_PARSERS = [
   ["country", countryParser],
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
-  ["keywordSearch", keywordSearchParser],
-  ["discoverySearch", discoverySearchParser],
+  ["search", searchParser],
 ] as const;
 
 describe.each(LITERAL_PARSERS)(
@@ -275,9 +273,9 @@ describe("keywordSort parser", () => {
   );
 });
 
-describe("keywordSearch parser", () => {
+describe("search parser", () => {
   it("keeps surrounding spaces rather than trimming the search", () => {
-    expect(keywordSearchParser.parseServerSide(" pomo ")).toBe(" pomo ");
+    expect(searchParser.parseServerSide(" pomo ")).toBe(" pomo ");
   });
 });
 

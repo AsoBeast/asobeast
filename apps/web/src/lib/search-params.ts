@@ -37,12 +37,10 @@ export const KEYWORD_TABLE_SORTS = [
   "delta7d",
 ] as const;
 
-export type KeywordTableSort = (typeof KEYWORD_TABLE_SORTS)[number];
-
 export const keywordSortParser =
   parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
 
-export const keywordSearchParser = parseAsString.withDefault("");
+export const searchParser = parseAsString.withDefault("");
 
 export const keywordSourceParser = parseAsArrayOf(
   parseAsStringLiteral(KEYWORD_SOURCES),
@@ -70,7 +68,7 @@ export const positionBandParser = parseAsArrayOf(
 ).withDefault([]);
 
 export const keywordFilterParsers = {
-  q: keywordSearchParser,
+  q: searchParser,
   source: keywordSourceParser,
   bucket: keywordBucketParser,
   status: keywordStatusParser,
@@ -88,7 +86,7 @@ export const versusParser =
   parseAsStringLiteral(VERSUS_FILTERS).withDefault("all");
 
 export const matrixFilterParsers = {
-  q: keywordSearchParser,
+  q: searchParser,
   vs: versusParser,
 };
 
@@ -104,14 +102,12 @@ export const DISCOVERY_SORTS = [
 export const discoverySortParser =
   parseAsStringLiteral(DISCOVERY_SORTS).withDefault("appearances");
 
-export const discoverySearchParser = parseAsString.withDefault("");
-
 export const COVERAGE_SORTS = ["keyword", "bucket"] as const;
 
 export const coverageSortParser = parseAsStringLiteral(COVERAGE_SORTS);
 
 export const coverageFilterParsers = {
-  q: keywordSearchParser,
+  q: searchParser,
   uncovered: parseAsBoolean.withDefault(false),
 };
 

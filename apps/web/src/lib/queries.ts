@@ -2,7 +2,6 @@ import type {
   AlertChannel,
   AppAuditResult,
   FirstRunStatus,
-  KeywordSort,
   KeywordSuggestionStrategy,
 } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
@@ -68,8 +67,8 @@ export const appKeys = {
   summary: (id: string) => [...appKeys.detail(id), "summary"] as const,
   keywordsRoot: (id: string) => [...appKeys.detail(id), "keywords"] as const,
   compareRoot: (id: string) => [...appKeys.detail(id), "compare"] as const,
-  keywords: (id: string, sort?: KeywordSort, country?: string) =>
-    [...appKeys.detail(id), "keywords", { sort, country }] as const,
+  keywords: (id: string, country?: string) =>
+    [...appKeys.detail(id), "keywords", { country }] as const,
   keywordCountries: (id: string) =>
     [...appKeys.detail(id), "keyword-countries"] as const,
   keywordField: (id: string) =>
@@ -294,14 +293,10 @@ export const appSummaryOptions = (id: string) =>
     queryFn: () => getSummary(id),
   });
 
-export const keywordsOptions = (
-  id: string,
-  sort?: KeywordSort,
-  country?: string,
-) =>
+export const keywordsOptions = (id: string, country?: string) =>
   queryOptions({
-    queryKey: appKeys.keywords(id, sort, country),
-    queryFn: () => getKeywords(id, sort, country),
+    queryKey: appKeys.keywords(id, country),
+    queryFn: () => getKeywords(id, undefined, country),
   });
 
 export const keywordCountriesOptions = (id: string) =>

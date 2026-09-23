@@ -7,9 +7,9 @@ import {
   type Updater,
 } from "@tanstack/react-table";
 import {
+  sortDefaultsOf,
   sortingFromUrl,
   urlFromSorting,
-  type SortDefaults,
   type SortDirection,
 } from "@/lib/table/sorting";
 
@@ -20,9 +20,10 @@ export interface UrlSort {
 
 export function useUrlSorting(
   { sort, dir }: UrlSort,
-  defaults: SortDefaults,
+  columns: Parameters<typeof sortDefaultsOf>[0],
   onChange: (next: UrlSort) => void,
 ) {
+  const defaults = useMemo(() => sortDefaultsOf(columns), [columns]);
   const sorting = useMemo(
     () => (sort === null ? [] : sortingFromUrl(sort, dir, defaults)),
     [sort, dir, defaults],

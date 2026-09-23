@@ -5,6 +5,7 @@ import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
 import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import {
@@ -21,19 +22,13 @@ import {
   matrixSortParser,
   sortDirectionParser,
 } from "@/lib/search-params";
-import { phoneColumnVisibility } from "@/lib/table/column-visibility";
 import { ariaSort } from "@/lib/table/sorting";
-import { useIsMobile } from "@/lib/use-is-mobile";
 import { cn } from "@/lib/utils";
 import {
-  COMPARISON_SORT_DEFAULTS,
   comparisonColumns,
   HIDDEN_COMPARISON_COLUMNS,
 } from "./comparison-columns";
-import { comparisonTableFeatures } from "./comparison-table-features";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
-
-const NO_HIDDEN_COLUMNS = {};
 
 const HEAD_CLASS: Record<string, string> = {
   keyword: "sticky left-0 z-20 bg-inherit",
@@ -68,25 +63,20 @@ export function ComparisonTable({
     );
   }, [competitors, data.competitors]);
 
-  const isMobile = useIsMobile();
-  const defaultVisibility = useMemo(
-    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
-    [isMobile, columns],
-  );
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",
-    defaultVisibility,
+    columns,
   );
 
   const knownSort = columns.some((column) => column.id === sortParams.sort);
   const { sorting, onSortingChange } = useUrlSorting(
     { sort: knownSort ? sortParams.sort : null, dir: sortParams.dir },
-    COMPARISON_SORT_DEFAULTS,
+    columns,
     (next) => void setSortParams(next),
   );
 
   const table = useTable({
-    features: comparisonTableFeatures,
+    features: dataTableFeatures,
     data: data.rows,
     columns,
     getRowId: (row) => row.keywordId,
