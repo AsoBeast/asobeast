@@ -58,6 +58,7 @@ apps/
                           /admin/queues and /docs* (same-path proxies to the API surfaces)
       components/
         ui/               shadcn generated primitives (owned, editable)
+        data-table/       table kit: sortable header, search, facet, chips, column menu, filtered empty state
         layout/           SiteHeader, ThemeToggle, HealthBadge, ErrorState, command palette
         actions/ apps/ app-detail/ overview/ keywords/ rankings/ competitors/ audit/
         metadata/ changes/ reviews/ settings/ onboarding/ auth/   feature + skeleton components
@@ -233,6 +234,7 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 6. **Theming & a11y.** shadcn primitives live in `components/ui` (owned, editable); dark mode via `next-themes` class strategy. Icon-only buttons carry `aria-label`, dialogs carry a description, tables carry a caption, charts keep `accessibilityLayer`, and colour is never the only signal.
 7. **The shell is a sidebar, and page width is a per-page decision.** `(app)` routes render inside `SidebarProvider` + `SidebarInset`; `(auth)` routes (`/login`, `/register`, `/upgrade`) render a centered card with no sidebar. Route groups keep every URL unchanged. Each page picks one of three width utilities from `src/styles/layout.css`: `page-full` for tables and charts that want every pixel (keywords, rankings, competitors), `page-wide` for dashboards and grids at a 1600 px ceiling (portfolio, overview, actions, changes, reviews, metadata), and `page-reading` at 720 px for prose and forms (settings, audit, setup). Gutters come from `page-gutter`, which folds `env(safe-area-inset-*)` into the density scale — never per-page padding.
 8. **Charts go through the chart system.** `src/components/charts/theme.ts` owns axes, grid, margins, heights, the series palette and the stroke-pattern order; no chart configures those inline and no chart references `--chart-N` directly. Multi-series charts distinguish series by stroke pattern as well as colour, and every chart has loading, empty and insufficient (fewer than four points) states at its real height.
+9. **Tables go through the table kit, and judged numbers go through the grade scale.** A data table is a `@tanstack/react-table` v9 instance assembled from `components/data-table/` (sortable header, search, facet, chips, column menu, filtered empty state) with its pure logic in `lib/table/`; sorting and filtering happen in the browser and live in the URL through `search-params.ts`, and column visibility is the one per viewer preference, kept in local storage. A score, a position, a rating or a coverage share is graded by `lib/grade.ts` into strong, fair, weak or poor, rendered by `components/ui/graded.tsx`, and always carries the word as well as the colour. `--rank-band-*` and `--score-*` stay for charts that show a distribution.
 
 ## Domain rules that are easy to get wrong
 
