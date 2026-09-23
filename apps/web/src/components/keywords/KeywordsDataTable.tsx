@@ -75,6 +75,7 @@ export function KeywordsDataTable({
                 key={header.id}
                 aria-sort={ariaSort(header.column.getIsSorted())}
                 className={cn(
+                  "max-md:whitespace-normal",
                   header.column.id === "actions" && "w-0",
                   STICKY_COLUMNS[header.column.id],
                 )}

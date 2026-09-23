@@ -529,6 +529,56 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(sourceHeader).toHaveCount(0);
 });
 
+test("a phone starts with the columns that fit and offers the rest", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+
+  for (const name of ["Keyword", "Position", "Opportunity"]) {
+    await expect(
+      page.getByRole("columnheader", { name, exact: true }),
+    ).toBeVisible();
+  }
+  for (const name of [
+    "Source",
+    "Popularity",
+    "Difficulty",
+    "Δ7d",
+    "Volatility",
+  ]) {
+    await expect(
+      page.getByRole("columnheader", { name, exact: true }),
+    ).toHaveCount(0);
+  }
+
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("columnheader", { name: "Source" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Filter by source" })
+    .click();
+  await page.getByRole("option", { name: /Manual/ }).click();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await expect(page.getByText("Source: Manual")).toBeVisible();
+
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 

@@ -8,6 +8,8 @@ import { useQueryState, useQueryStates } from "nuqs";
 import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordsOptions } from "@/lib/queries";
+import { phoneColumnVisibility } from "@/lib/table/column-visibility";
+import { useIsMobile } from "@/lib/use-is-mobile";
 import {
   keywordFilterParsers,
   keywordSortParser,
@@ -49,10 +51,6 @@ export function KeywordsTable({
     keywordsOptions(id, undefined, country),
   );
   const [selection, setSelection] = useState<RowSelectionState>({});
-  const [visibility, setVisibility] = useStoredColumnVisibility(
-    "keywords",
-    NO_HIDDEN_COLUMNS,
-  );
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
@@ -69,8 +67,6 @@ export function KeywordsTable({
       }),
   );
 
-  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
-
   const columns = useMemo(
     () =>
       keywordColumns({
@@ -79,6 +75,18 @@ export function KeywordsTable({
       }),
     [id, setSerp],
   );
+
+  const isMobile = useIsMobile();
+  const defaultVisibility = useMemo(
+    () => (isMobile ? phoneColumnVisibility(columns) : NO_HIDDEN_COLUMNS),
+    [isMobile, columns],
+  );
+  const [visibility, setVisibility] = useStoredColumnVisibility(
+    "keywords",
+    defaultVisibility,
+  );
+
+  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
 
   const table = useTable({
     features: keywordTableFeatures,

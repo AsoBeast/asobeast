@@ -51,3 +51,13 @@ export function writeColumnVisibility(
     return false;
   }
 }
+
+export function phoneColumnVisibility(
+  columns: ReadonlyArray<{ id?: string; meta?: TableColumnMeta }>,
+): ColumnVisibilityState {
+  return Object.fromEntries(
+    columns
+      .filter((column) => column.id && column.meta?.label && !column.meta.phone)
+      .map((column) => [column.id, false]),
+  );
+}

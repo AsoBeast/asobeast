@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseColumnVisibility,
+  phoneColumnVisibility,
   readStoredColumns,
   writeColumnVisibility,
 } from "./column-visibility";
@@ -58,5 +59,19 @@ describe("stored column visibility", () => {
 
   it("reports a write to a storage that throws as not saved", () => {
     expect(writeColumnVisibility(throwing, "keywords", {})).toBe(false);
+  });
+});
+
+describe("phoneColumnVisibility", () => {
+  it("hides every labelled column not marked for the phone", () => {
+    expect(
+      phoneColumnVisibility([
+        { id: "select" },
+        { id: "keyword" },
+        { id: "source", meta: { label: "Source" } },
+        { id: "position", meta: { label: "Position", phone: true } },
+        { id: "traffic", meta: { label: "Popularity" } },
+      ]),
+    ).toEqual({ source: false, traffic: false });
   });
 });

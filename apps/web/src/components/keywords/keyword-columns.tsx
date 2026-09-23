@@ -122,7 +122,7 @@ function identityColumns() {
         <SortableHeader column={column} label="Keyword" />
       ),
       cell: ({ row }) => (
-        <span className="flex max-w-64 items-center gap-2 font-medium">
+        <span className="flex max-w-40 items-center gap-2 font-medium md:max-w-64">
           <span title={row.original.text} className="truncate">
             {row.original.text}
           </span>
@@ -135,6 +135,7 @@ function identityColumns() {
       ),
     }),
     columnHelper.accessor("source", {
+      id: "source",
       meta: { label: "Source" },
       sortFn: (a, b, id) =>
         SOURCE_LABELS[a.getValue<KeywordSource>(id)].localeCompare(
@@ -171,7 +172,7 @@ function filterColumns() {
 function positionColumn() {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
-    meta: { label: "Position" },
+    meta: { label: "Position", phone: true },
     ...SORTABLE,
     sortDescFirst: false,
     filterFn: (row, _id, selected: PositionBand[]) =>
@@ -249,7 +250,7 @@ function scoreColumns() {
     }),
     columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
-      meta: { label: "Opportunity" },
+      meta: { label: "Opportunity", phone: true },
       ...SORTABLE,
       sortDescFirst: true,
       filterFn: gradeFilter("opportunity"),
@@ -305,6 +306,7 @@ function actionsColumn({
         <Button
           variant="ghost"
           size="icon-sm"
+          className="pointer-coarse:size-11"
           aria-label={`View top 10 for ${row.original.text}`}
           onClick={() => onOpenSerp(row.original.keywordId)}
         >
