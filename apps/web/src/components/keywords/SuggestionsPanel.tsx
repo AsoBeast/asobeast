@@ -22,7 +22,7 @@ import {
   keywordsOptions,
   suggestionsOptions,
 } from "@/lib/queries";
-import { sortParser, suggestionStrategyParser } from "@/lib/search-params";
+import { suggestionStrategyParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { SpiderDialog } from "./SpiderDialog";
 import { SuggestionList } from "./SuggestionList";
@@ -43,9 +43,8 @@ export function SuggestionsPanel({
     "strategy",
     suggestionStrategyParser,
   );
-  const [sort] = useQueryState("sort", sortParser);
 
-  const tracked = useQuery(keywordsOptions(id, sort, country));
+  const tracked = useQuery(keywordsOptions(id, undefined, country));
   const trackedTexts = new Set(
     (tracked.data ?? []).map((keyword) => keyword.text),
   );

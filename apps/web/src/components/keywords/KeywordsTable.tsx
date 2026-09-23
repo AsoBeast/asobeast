@@ -7,7 +7,8 @@ import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import { useQueryState } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
 import { serpParser, sortParser } from "@/lib/search-params";
-import { keywordColumns } from "./keyword-columns";
+import { sortingFromUrl } from "@/lib/table/sorting";
+import { KEYWORD_SORT_DEFAULTS, keywordColumns } from "./keyword-columns";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
@@ -27,13 +28,18 @@ export function KeywordsTable({
   const [sort, setSort] = useQueryState("sort", sortParser);
   const [, setSerp] = useQueryState("serp", serpParser);
   const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, sort, country),
+    keywordsOptions(id, undefined, country),
   );
   const [selection, setSelection] = useState<RowSelectionState>({});
 
   const rowSelection = useMemo(
     () => selectedKeywordsStillOnScreen(selection, keywords),
     [keywords, selection],
+  );
+
+  const sorting = useMemo(
+    () => sortingFromUrl(sort, null, KEYWORD_SORT_DEFAULTS),
+    [sort],
   );
 
   const columns = useMemo(
@@ -51,10 +57,12 @@ export function KeywordsTable({
     features: keywordTableFeatures,
     data: keywords,
     columns,
-    state: { rowSelection },
+    state: { rowSelection, sorting },
     onRowSelectionChange: setSelection,
     getRowId: (row) => row.keywordId,
     enableRowSelection: true,
+    enableSortingRemoval: false,
+    enableMultiSort: false,
   });
 
   const selectedIds = Object.keys(rowSelection);

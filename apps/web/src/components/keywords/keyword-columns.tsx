@@ -24,11 +24,18 @@ import {
 import { isScoreOutdated, scoreValue } from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
 import { SourceBadge } from "./SourceBadge";
+import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 
 const columnHelper = createColumnHelper<
   KeywordTableFeatures,
   TrackedKeywordItem
 >();
+
+export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
+  descFirst: new Set(["traffic", "difficulty", "opportunity", "volatility"]),
+};
+
+const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
 interface SortState {
   sort: KeywordSort | null;
@@ -80,6 +87,7 @@ function identityColumns() {
       ),
     }),
     columnHelper.accessor("text", {
+      enableSorting: false,
       header: "Keyword",
       cell: ({ row }) => (
         <span className="flex max-w-64 items-center gap-2 font-medium">
@@ -95,6 +103,7 @@ function identityColumns() {
       ),
     }),
     columnHelper.accessor("source", {
+      enableSorting: false,
       header: "Source",
       cell: ({ row }) => <SourceBadge source={row.original.source} />,
     }),
@@ -102,7 +111,10 @@ function identityColumns() {
 }
 
 function positionColumn({ sort, onSort }: SortState) {
-  return columnHelper.accessor("latestPosition", {
+  return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
+    id: "position",
+    ...SORTABLE,
+    sortDescFirst: false,
     header: () => (
       <SortHeader
         column="position"
@@ -117,6 +129,7 @@ function positionColumn({ sort, onSort }: SortState) {
 
 function deltaColumn() {
   return columnHelper.accessor("positionDelta7d", {
+    enableSorting: false,
     header: "Δ7d",
     cell: ({ row }) => (
       <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
@@ -126,8 +139,10 @@ function deltaColumn() {
 
 function scoreColumns({ sort, onSort }: SortState) {
   return [
-    columnHelper.display({
+    columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
       id: "traffic",
+      ...SORTABLE,
+      sortDescFirst: true,
       header: () => (
         <SortHeader
           column="traffic"
@@ -151,8 +166,10 @@ function scoreColumns({ sort, onSort }: SortState) {
         />
       ),
     }),
-    columnHelper.display({
+    columnHelper.accessor((row) => nullsLast(scoreValue(row, "difficulty")), {
       id: "difficulty",
+      ...SORTABLE,
+      sortDescFirst: true,
       header: () => (
         <SortHeader
           column="difficulty"
@@ -171,8 +188,10 @@ function scoreColumns({ sort, onSort }: SortState) {
         />
       ),
     }),
-    columnHelper.display({
+    columnHelper.accessor((row) => nullsLast(row.opportunity), {
       id: "opportunity",
+      ...SORTABLE,
+      sortDescFirst: true,
       header: () => (
         <SortHeader
           column="opportunity"
@@ -193,7 +212,10 @@ function scoreColumns({ sort, onSort }: SortState) {
 }
 
 function volatilityColumn({ sort, onSort }: SortState) {
-  return columnHelper.accessor("serpVolatility7d", {
+  return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
+    id: "volatility",
+    ...SORTABLE,
+    sortDescFirst: true,
     header: () => (
       <Tooltip>
         <TooltipTrigger asChild>

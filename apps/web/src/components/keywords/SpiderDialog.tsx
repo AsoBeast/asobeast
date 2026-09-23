@@ -25,7 +25,7 @@ import {
   keywordsOptions,
   spiderOptions,
 } from "@/lib/queries";
-import { sortParser, spiderTermParser } from "@/lib/search-params";
+import { spiderTermParser } from "@/lib/search-params";
 
 const PROBES_TOTAL = 27;
 
@@ -42,9 +42,8 @@ export function SpiderDialog({
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useQueryState("spider", spiderTermParser);
   const [draft, setDraft] = useState(term);
-  const [sort] = useQueryState("sort", sortParser);
 
-  const tracked = useQuery(keywordsOptions(appId, sort, country));
+  const tracked = useQuery(keywordsOptions(appId, undefined, country));
   const trackedTexts = new Set(
     (tracked.data ?? []).map((keyword) => keyword.text),
   );

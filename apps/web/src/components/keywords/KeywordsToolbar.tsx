@@ -7,7 +7,7 @@ import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { formatCountry } from "@/lib/format";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import { countryParser, sortParser } from "@/lib/search-params";
+import { countryParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { exportKeywords } from "./keyword-csv";
@@ -24,10 +24,9 @@ export function KeywordsToolbar({
   homeCountry: string;
 }) {
   const [, setCountry] = useQueryState("country", countryParser);
-  const [sort] = useQueryState("sort", sortParser);
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
   const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, sort, market),
+    keywordsOptions(id, undefined, market),
   );
 
   const total = markets.reduce((sum, entry) => sum + entry.keywordCount, 0);
