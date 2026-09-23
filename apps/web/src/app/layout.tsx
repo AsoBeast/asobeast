@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { Providers } from "./providers";
 import "./globals.css";
 import { CheckoutReturn } from "@/components/billing/CheckoutReturn";
+import { STREAMING_SEGMENT_GUARD } from "@/lib/streaming-segment-guard";
 
 const sans = IBM_Plex_Sans({
   variable: "--font-plex-sans",
@@ -55,6 +56,9 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: STREAMING_SEGMENT_GUARD }} />
+      </head>
       <body className="min-h-full font-sans">
         <a
           href="#main-content"
