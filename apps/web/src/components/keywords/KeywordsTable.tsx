@@ -1,13 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
-import { useTable, type RowSelectionState } from "@tanstack/react-table";
-import { useQueryState } from "nuqs";
+import {
+  functionalUpdate,
+  useTable,
+  type RowSelectionState,
+  type SortingState,
+  type Updater,
+} from "@tanstack/react-table";
+import { useQueryState, useQueryStates } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
-import { serpParser, sortParser } from "@/lib/search-params";
-import { sortingFromUrl } from "@/lib/table/sorting";
+import {
+  serpParser,
+  sortDirectionParser,
+  sortParser,
+} from "@/lib/search-params";
+import { sortingFromUrl, urlFromSorting } from "@/lib/table/sorting";
 import { KEYWORD_SORT_DEFAULTS, keywordColumns } from "./keyword-columns";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
@@ -25,7 +35,10 @@ export function KeywordsTable({
   store: Store;
   country: string;
 }) {
-  const [sort, setSort] = useQueryState("sort", sortParser);
+  const [{ sort, dir }, setSortParams] = useQueryStates({
+    sort: sortParser,
+    dir: sortDirectionParser,
+  });
   const [, setSerp] = useQueryState("serp", serpParser);
   const { data: keywords } = useSuspenseQuery(
     keywordsOptions(id, undefined, country),
@@ -38,19 +51,31 @@ export function KeywordsTable({
   );
 
   const sorting = useMemo(
-    () => sortingFromUrl(sort, null, KEYWORD_SORT_DEFAULTS),
-    [sort],
+    () => sortingFromUrl(sort, dir, KEYWORD_SORT_DEFAULTS),
+    [sort, dir],
+  );
+
+  const onSortingChange = useCallback(
+    (updater: Updater<SortingState>) => {
+      const next = urlFromSorting(
+        functionalUpdate(updater, sorting),
+        KEYWORD_SORT_DEFAULTS,
+      );
+      void setSortParams({
+        sort: next.sort === null ? null : sortParser.parse(next.sort),
+        dir: next.dir,
+      });
+    },
+    [setSortParams, sorting],
   );
 
   const columns = useMemo(
     () =>
       keywordColumns({
         appId: id,
-        sort,
-        onSort: setSort,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, sort, setSort, setSerp],
+    [id, setSerp],
   );
 
   const table = useTable({
@@ -59,6 +84,7 @@ export function KeywordsTable({
     columns,
     state: { rowSelection, sorting },
     onRowSelectionChange: setSelection,
+    onSortingChange,
     getRowId: (row) => row.keywordId,
     enableRowSelection: true,
     enableSortingRemoval: false,

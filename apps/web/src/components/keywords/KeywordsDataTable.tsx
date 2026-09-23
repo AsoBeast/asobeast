@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 
 const STICKY_COLUMNS: Record<string, string | undefined> = {
@@ -69,6 +70,7 @@ export function KeywordsDataTable({
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
+                aria-sort={ariaSort(header.column.getIsSorted())}
                 className={cn(
                   header.column.id === "actions" && "w-0",
                   STICKY_COLUMNS[header.column.id],

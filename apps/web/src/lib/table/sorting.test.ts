@@ -1,6 +1,12 @@
 import { KEYWORD_SORTS } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
-import { nullsLast, sortingFromUrl, type SortDefaults } from "./sorting";
+import {
+  ariaSort,
+  nullsLast,
+  sortingFromUrl,
+  urlFromSorting,
+  type SortDefaults,
+} from "./sorting";
 
 const DEFAULTS: SortDefaults = {
   descFirst: new Set(["traffic", "difficulty", "opportunity", "volatility"]),
@@ -21,6 +27,63 @@ describe("sortingFromUrl", () => {
       ]);
     },
   );
+});
+
+describe("sortingFromUrl with a direction", () => {
+  it("lets the url reverse the natural direction", () => {
+    expect(sortingFromUrl("traffic", "asc", DEFAULTS)).toEqual([
+      { id: "traffic", desc: false },
+    ]);
+  });
+
+  it("keeps an explicit descending direction", () => {
+    expect(sortingFromUrl("position", "desc", DEFAULTS)).toEqual([
+      { id: "position", desc: true },
+    ]);
+  });
+});
+
+describe("urlFromSorting", () => {
+  it("drops the direction when it is the column's natural one", () => {
+    expect(urlFromSorting([{ id: "traffic", desc: true }], DEFAULTS)).toEqual({
+      sort: "traffic",
+      dir: null,
+    });
+  });
+
+  it("writes ascending when a descending column is reversed", () => {
+    expect(urlFromSorting([{ id: "traffic", desc: false }], DEFAULTS)).toEqual({
+      sort: "traffic",
+      dir: "asc",
+    });
+  });
+
+  it("drops the direction for position ascending", () => {
+    expect(urlFromSorting([{ id: "position", desc: false }], DEFAULTS)).toEqual(
+      { sort: "position", dir: null },
+    );
+  });
+
+  it("writes descending when position is reversed", () => {
+    expect(urlFromSorting([{ id: "position", desc: true }], DEFAULTS)).toEqual({
+      sort: "position",
+      dir: "desc",
+    });
+  });
+
+  it("clears both keys for an empty state", () => {
+    expect(urlFromSorting([], DEFAULTS)).toEqual({ sort: null, dir: null });
+  });
+});
+
+describe("ariaSort", () => {
+  it.each([
+    ["asc", "ascending"],
+    ["desc", "descending"],
+    [false, undefined],
+  ] as const)("maps %s to %s", (sorted, expected) => {
+    expect(ariaSort(sorted)).toBe(expected);
+  });
 });
 
 describe("nullsLast", () => {

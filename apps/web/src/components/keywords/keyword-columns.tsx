@@ -2,7 +2,7 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import { ListOrdered } from "lucide-react";
-import type { KeywordSort, TrackedKeywordItem } from "@asobeast/shared";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,26 +37,19 @@ export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
 
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
 
-interface SortState {
-  sort: KeywordSort | null;
-  onSort: (column: KeywordSort) => void;
-}
-
 export function keywordColumns({
   appId,
-  sort,
-  onSort,
   onOpenSerp,
-}: SortState & {
+}: {
   appId: string;
   onOpenSerp: (keywordId: string) => void;
 }) {
   return columnHelper.columns([
     ...identityColumns(),
-    positionColumn({ sort, onSort }),
-    ...scoreColumns({ sort, onSort }),
+    positionColumn(),
+    ...scoreColumns(),
     deltaColumn(),
-    volatilityColumn({ sort, onSort }),
+    volatilityColumn(),
     actionsColumn({ appId, onOpenSerp }),
   ]);
 }
@@ -110,19 +103,12 @@ function identityColumns() {
   ];
 }
 
-function positionColumn({ sort, onSort }: SortState) {
+function positionColumn() {
   return columnHelper.accessor((row) => nullsLast(row.latestPosition), {
     id: "position",
     ...SORTABLE,
     sortDescFirst: false,
-    header: () => (
-      <SortHeader
-        column="position"
-        label="Position"
-        active={sort === "position"}
-        onSort={onSort}
-      />
-    ),
+    header: ({ column }) => <SortHeader column={column} label="Position" />,
     cell: ({ row }) => <PositionCell keyword={row.original} />,
   });
 }
@@ -137,20 +123,13 @@ function deltaColumn() {
   });
 }
 
-function scoreColumns({ sort, onSort }: SortState) {
+function scoreColumns() {
   return [
     columnHelper.accessor((row) => nullsLast(scoreValue(row, "traffic")), {
       id: "traffic",
       ...SORTABLE,
       sortDescFirst: true,
-      header: () => (
-        <SortHeader
-          column="traffic"
-          label="Popularity"
-          active={sort === "traffic"}
-          onSort={onSort}
-        />
-      ),
+      header: ({ column }) => <SortHeader column={column} label="Popularity" />,
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "traffic")}
@@ -170,14 +149,7 @@ function scoreColumns({ sort, onSort }: SortState) {
       id: "difficulty",
       ...SORTABLE,
       sortDescFirst: true,
-      header: () => (
-        <SortHeader
-          column="difficulty"
-          label="Difficulty"
-          active={sort === "difficulty"}
-          onSort={onSort}
-        />
-      ),
+      header: ({ column }) => <SortHeader column={column} label="Difficulty" />,
       cell: ({ row }) => (
         <ScoreCell
           value={scoreValue(row.original, "difficulty")}
@@ -192,13 +164,8 @@ function scoreColumns({ sort, onSort }: SortState) {
       id: "opportunity",
       ...SORTABLE,
       sortDescFirst: true,
-      header: () => (
-        <SortHeader
-          column="opportunity"
-          label="Opportunity"
-          active={sort === "opportunity"}
-          onSort={onSort}
-        />
+      header: ({ column }) => (
+        <SortHeader column={column} label="Opportunity" />
       ),
       cell: ({ row }) => (
         <DerivedScoreCell
@@ -211,20 +178,15 @@ function scoreColumns({ sort, onSort }: SortState) {
   ];
 }
 
-function volatilityColumn({ sort, onSort }: SortState) {
+function volatilityColumn() {
   return columnHelper.accessor((row) => nullsLast(row.serpVolatility7d), {
     id: "volatility",
     ...SORTABLE,
     sortDescFirst: true,
-    header: () => (
+    header: ({ column }) => (
       <Tooltip>
         <TooltipTrigger asChild>
-          <SortHeader
-            column="volatility"
-            label="Volatility"
-            active={sort === "volatility"}
-            onSort={onSort}
-          />
+          <SortHeader column={column} label="Volatility" />
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
           How much the top 10 changed day to day over the last week. High churn

@@ -62,6 +62,57 @@ test("clicking a sort header updates the url and reorders rows", async ({
   await expect(firstKeyword).toContainText("pomodoro");
 });
 
+const firstDataRow = (page: Page) =>
+  page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row")
+    .nth(1);
+
+test("a second click on a sort header flips the direction", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const popularity = page.getByRole("button", {
+    name: "Popularity",
+    exact: true,
+  });
+  await popularity.click();
+  await expect(page).toHaveURL(/sort=traffic/);
+  await expect(firstDataRow(page)).toContainText("pomodoro");
+
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/keywords")) requests.push(request.url());
+  });
+
+  await popularity.click();
+
+  await expect(page).toHaveURL(/dir=asc/);
+  await expect(firstDataRow(page)).toContainText("study timer");
+  await expect(
+    page
+      .getByRole("table", { name: /Tracked keywords/ })
+      .getByRole("row")
+      .last(),
+  ).toContainText("time blocking");
+  expect(requests).toEqual([]);
+});
+
+test("a pasted link with a direction loads in that order and announces it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?sort=difficulty&dir=asc");
+
+  await expect(firstDataRow(page)).toContainText("focus timer");
+  await expect(
+    page.getByRole("columnheader", { name: "Difficulty" }),
+  ).toHaveAttribute("aria-sort", "ascending");
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).not.toHaveAttribute("aria-sort", /.+/);
+});
+
 test("position deltas render arrows, a bare position and the captured-depth marker", async ({
   page,
 }) => {

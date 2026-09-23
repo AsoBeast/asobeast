@@ -1,9 +1,9 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import type { SortDirection } from "@tanstack/react-table";
 import type {
-  KeywordSort,
   ScoreProvenance,
   ScoringConfidence,
   ScoringSource,
@@ -288,33 +288,36 @@ export function VolatilityCell({ value }: { value: number | null }) {
   );
 }
 
+interface SortableColumn {
+  getIsSorted: () => SortDirection | false;
+  getToggleSortingHandler: () => ((event: unknown) => void) | undefined;
+}
+
 export function SortHeader({
   column,
   label,
-  active,
-  onSort,
   className,
   ...props
 }: ComponentProps<"button"> & {
-  column: KeywordSort;
+  column: SortableColumn;
   label: string;
-  active: boolean;
-  onSort: (column: KeywordSort) => void;
 }) {
+  const sorted = column.getIsSorted();
+  const Icon =
+    sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown;
   return (
     <button
       {...props}
       type="button"
-      onClick={() => onSort(column)}
-      aria-pressed={active}
+      onClick={column.getToggleSortingHandler()}
       className={cn(
         "inline-flex items-center gap-1 transition-colors",
-        active ? "text-foreground" : "hover:text-foreground",
+        sorted ? "text-foreground" : "hover:text-foreground",
         className,
       )}
     >
       {label}
-      {active ? <ChevronDown className="size-3.5" /> : null}
+      <Icon className={cn("size-3.5", !sorted && "opacity-40")} aria-hidden />
     </button>
   );
 }

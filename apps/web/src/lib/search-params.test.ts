@@ -32,6 +32,8 @@ import {
   ratingsRangeParser,
   reviewScoreParser,
   serpParser,
+  SORT_DIRECTIONS,
+  sortDirectionParser,
   sortParser,
   spiderTermParser,
   suggestionStrategyParser,
@@ -220,5 +222,17 @@ describe("actionCategory parser", () => {
 
   it("rejects an unknown category rather than defaulting to one", () => {
     expect(actionCategoryParser.parseServerSide("not-a-category")).toBeNull();
+  });
+});
+
+describe("sortDirection parser", () => {
+  it.each(SORT_DIRECTIONS)("round-trips %s", (direction) => {
+    expect(
+      sortDirectionParser.parse(sortDirectionParser.serialize(direction)),
+    ).toBe(direction);
+  });
+
+  it("rejects an unknown direction rather than defaulting to one", () => {
+    expect(sortDirectionParser.parseServerSide("up")).toBeNull();
   });
 });

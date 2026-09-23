@@ -29,6 +29,10 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 export const sortParser =
   parseAsStringLiteral(KEYWORD_SORTS).withDefault("opportunity");
 
+export const SORT_DIRECTIONS = ["asc", "desc"] as const;
+
+export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 
