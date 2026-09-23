@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkoutReturned,
+  pageReturnedFromCheckout,
   checkoutSessionId,
   urlWithoutCheckout,
 } from "./checkout-return";
@@ -17,6 +18,26 @@ describe("checkoutReturned", () => {
 
   it("ignores a checkout the customer abandoned", () => {
     expect(checkoutReturned("?checkout=cancelled")).toBe(false);
+  });
+});
+
+describe("pageReturnedFromCheckout", () => {
+  it("recognises the return in the search params a page receives", () => {
+    expect(pageReturnedFromCheckout({ checkout: "complete" })).toBe(true);
+  });
+
+  it("reads a repeated marker the way the browser does, by its first value", () => {
+    expect(
+      pageReturnedFromCheckout({ checkout: ["complete", "cancelled"] }),
+    ).toBe(true);
+    expect(
+      pageReturnedFromCheckout({ checkout: ["cancelled", "complete"] }),
+    ).toBe(false);
+  });
+
+  it("ignores a page opened without the marker or with another value", () => {
+    expect(pageReturnedFromCheckout({})).toBe(false);
+    expect(pageReturnedFromCheckout({ checkout: "cancelled" })).toBe(false);
   });
 });
 

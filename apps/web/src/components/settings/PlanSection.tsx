@@ -5,12 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { PlanCard } from "@/components/settings/PlanCard";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { PlanCardSkeleton } from "@/components/settings/skeletons";
-import { authStatusOptions } from "@/lib/queries";
+import { accountPlanOptions } from "@/lib/queries";
 
 export function PlanSection() {
-  const { data: status } = useQuery(authStatusOptions);
+  const { data: plan } = useQuery(accountPlanOptions);
 
-  if (!status?.billing) return null;
+  if (!plan?.billing) return null;
 
   return (
     <SettingsSection

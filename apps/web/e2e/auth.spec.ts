@@ -539,6 +539,17 @@ const LAPSED_PLAN: AccountPlan = {
   },
 };
 
+async function seedPlan(page: Page, plan: AccountPlan) {
+  await page.context().addCookies([
+    {
+      name: "e2e_plan",
+      value: Buffer.from(JSON.stringify(plan)).toString("base64url"),
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+}
+
 const PENDING_PLAN: AccountPlan = {
   ...LAPSED_PLAN,
   subscribed: true,
@@ -548,6 +559,7 @@ const PENDING_PLAN: AccountPlan = {
 const PAYMENT_CONFIRMING = "Your payment is being confirmed.";
 
 async function routePlan(page: Page, plan: AccountPlan) {
+  await seedPlan(page, plan);
   await page.route("**/api/backend/auth/plan", (route) =>
     route.fulfill(fulfillJson(200, plan)),
   );
@@ -769,6 +781,7 @@ test("returning from checkout reconciles the workspace and clears the marker", a
   });
 
   let reconcileCalls = 0;
+  await seedPlan(page, LAPSED_PLAN);
   const reconcileBodies: unknown[] = [];
   await page.route("**/api/backend/auth/plan", async (route) => {
     await route.fulfill(

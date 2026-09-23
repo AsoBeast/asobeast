@@ -11,6 +11,13 @@ export function checkoutReturned(search: string): boolean {
   );
 }
 
+export function pageReturnedFromCheckout(
+  searchParams: Record<string, string | string[] | undefined>,
+): boolean {
+  const value = searchParams[CHECKOUT_RETURN_PARAM];
+  return (Array.isArray(value) ? value[0] : value) === CHECKOUT_RETURN_COMPLETE;
+}
+
 export function checkoutSessionId(search: string): string | undefined {
   return new URLSearchParams(search).get(CHECKOUT_SESSION_PARAM) || undefined;
 }
