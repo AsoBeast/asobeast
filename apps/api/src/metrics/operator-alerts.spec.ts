@@ -115,6 +115,31 @@ describe('operatorAlerts', () => {
     );
   });
 
+  it('asks for a look at subscriptions the last reconciliation could not place', () => {
+    const alerts = operatorAlerts(
+      inputOf({
+        instance: instanceMetricsOf({
+          billingOrphanSubscriptions: 2,
+          billingOrphanSubscriptionIds: ['sub_a', 'sub_b'],
+        }),
+      }),
+    );
+
+    const orphans = alerts.find(
+      (alert) => alert.id === 'billing.orphan.subscriptions',
+    );
+    expect(orphans?.severity).toBe('investigate');
+    expect(orphans?.summary).toContain('sub_a, sub_b');
+  });
+
+  it('raises nothing when the last reconciliation placed every subscription', () => {
+    const alerts = operatorAlerts(inputOf({ instance: instanceMetricsOf() }));
+
+    expect(alerts.map((alert) => alert.id)).not.toContain(
+      'billing.orphan.subscriptions',
+    );
+  });
+
   it('sorts a silent-failure pool alert into the same day tier', () => {
     const [alert] = operatorAlerts(
       inputOf({

@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import type { Workspace } from '@prisma/client';
+import type { Queue } from 'bullmq';
 import type Stripe from 'stripe';
 import { effectivePlan } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -99,7 +100,7 @@ function build(held: Stripe.Subscription[]) {
 
   const reconciler = new BillingReconciler(
     stripe,
-    new PriceCatalog(config),
+    new PriceCatalog(config, { enabled: false } as StripeService),
     prisma,
     {
       becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -107,11 +108,14 @@ function build(held: Stripe.Subscription[]) {
         work: () => Promise<T>,
       ) => work(),
     } as unknown as CrossTenantAccess,
+    {
+      getBackend: () => ({ client: Promise.resolve({ set: jest.fn() }) }),
+    } as unknown as Queue,
   );
 
   const service = new BillingService(
     stripe,
-    new PriceCatalog(config),
+    new PriceCatalog(config, { enabled: false } as StripeService),
     reconciler,
     prisma,
     config,

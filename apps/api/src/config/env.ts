@@ -138,6 +138,10 @@ export const EnvSchema = z.object({
   STRIPE_SECRET_KEY: optionalText,
   STRIPE_WEBHOOK_SECRET: optionalText,
   STRIPE_PORTAL_RETURN_URL: optionalText,
+  STRIPE_TAX_ENABLED: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   STRIPE_PRICE_INDIE_MONTHLY: optionalText,
   STRIPE_PRICE_INDIE_YEARLY: optionalText,
   STRIPE_PRICE_ULTIMATE_MONTHLY: optionalText,

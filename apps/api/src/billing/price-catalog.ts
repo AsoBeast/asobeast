@@ -1,23 +1,33 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type Stripe from 'stripe';
 import {
+  BILLING_INTERVALS,
   PAID_PLAN_NAMES,
   PLANS,
+  paidPlanOf,
   type BillingInterval,
   type BillingPrice,
   type PaidPlanName,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
+import { reasonOf } from './stripe-errors';
+import { StripeService } from './stripe.service';
 
 export class UnknownPriceError extends Error {
   constructor(readonly priceId: string) {
     super(
-      `Stripe price ${priceId} is not in the configured catalog. Add it to STRIPE_PRICE_* or the subscription cannot be provisioned.`,
+      `Stripe price ${priceId} is not in the price catalog and names no plan in its ${PLAN_METADATA_KEY} metadata. Run pnpm --filter api stripe:catalog, or set all four STRIPE_PRICE_* to replace the catalog, or the subscription cannot be provisioned.`,
     );
     this.name = 'UnknownPriceError';
   }
 }
+
+export const CATALOG_RETRY_MS = 60_000;
+
+export const PLAN_METADATA_KEY = 'asobeast_plan';
+
+export const CATALOG_CURRENCY = 'usd';
 
 const PRICE_KEYS = {
   indie: {
@@ -30,6 +40,28 @@ const PRICE_KEYS = {
   },
 } as const satisfies Record<PaidPlanName, Record<BillingInterval, keyof Env>>;
 
+export interface CatalogSlot {
+  plan: PaidPlanName;
+  interval: BillingInterval;
+}
+
+const SLOTS: CatalogSlot[] = PAID_PLAN_NAMES.flatMap((plan) =>
+  BILLING_INTERVALS.map((interval) => ({ plan, interval })),
+);
+
+export function lookupKeyOf(
+  plan: PaidPlanName,
+  interval: BillingInterval,
+): string {
+  return `asobeast_${plan}_${interval}`;
+}
+
+const SLOT_BY_LOOKUP_KEY = new Map(
+  SLOTS.map((slot) => [lookupKeyOf(slot.plan, slot.interval), slot]),
+);
+
+export const ALL_LOOKUP_KEYS = [...SLOT_BY_LOOKUP_KEY.keys()];
+
 export function amountFor(
   plan: PaidPlanName,
   interval: BillingInterval,
@@ -38,25 +70,52 @@ export function amountFor(
   return (interval === 'month' ? monthlyUsd : annualUsd) ?? 0;
 }
 
-@Injectable()
-export class PriceCatalog {
-  private readonly byPriceId = new Map<string, BillingPrice>();
+export function chargesListPrice(
+  price: Stripe.Price,
+  slot: CatalogSlot,
+): boolean {
+  return (
+    price.currency === CATALOG_CURRENCY &&
+    price.unit_amount === amountFor(slot.plan, slot.interval) * 100 &&
+    price.recurring?.interval === slot.interval
+  );
+}
 
-  constructor(private readonly config: ConfigService<Env, true>) {
-    for (const plan of PAID_PLAN_NAMES) {
-      for (const interval of ['month', 'year'] as const) {
-        const priceId = this.config.get(PRICE_KEYS[plan][interval], {
-          infer: true,
-        });
-        if (!priceId) continue;
-        this.byPriceId.set(priceId, {
-          plan,
-          interval,
-          priceId,
-          amountUsd: amountFor(plan, interval),
-        });
-      }
-    }
+export function belongsToProduct(
+  price: Stripe.Price,
+  productId: string,
+): boolean {
+  const owner =
+    typeof price.product === 'string' ? price.product : price.product.id;
+  return owner === productId;
+}
+
+function billingPrice(slot: CatalogSlot, priceId: string): BillingPrice {
+  return {
+    plan: slot.plan,
+    interval: slot.interval,
+    priceId,
+    amountUsd: amountFor(slot.plan, slot.interval),
+  };
+}
+
+@Injectable()
+export class PriceCatalog implements OnModuleInit {
+  private readonly logger = new Logger(PriceCatalog.name);
+  private byPriceId = new Map<string, BillingPrice>();
+  private readonly fromEnvironment: boolean;
+  private attemptedAt: number | null = null;
+  private inFlight: Promise<void> | null = null;
+
+  constructor(
+    private readonly config: ConfigService<Env, true>,
+    private readonly stripe: StripeService,
+  ) {
+    this.fromEnvironment = this.readEnvironment();
+  }
+
+  onModuleInit(): void {
+    void this.refresh();
   }
 
   get prices(): BillingPrice[] {
@@ -78,6 +137,71 @@ export class PriceCatalog {
   }
 
   planOf(subscription: Stripe.Subscription): PaidPlanName {
-    return this.require(subscription.items.data[0]?.price.id ?? '').plan;
+    const price = subscription.items.data[0]?.price;
+    const priceId = price?.id ?? '';
+    const plan =
+      this.find(priceId)?.plan ??
+      paidPlanOf(price?.metadata?.[PLAN_METADATA_KEY]);
+    if (!plan) throw new UnknownPriceError(priceId);
+    return plan;
+  }
+
+  refresh(): Promise<void> {
+    if (this.fromEnvironment || !this.stripe.enabled) return Promise.resolve();
+    this.inFlight ??= this.resolve().finally(() => {
+      this.inFlight = null;
+    });
+    return this.inFlight;
+  }
+
+  async refreshIfStale(): Promise<void> {
+    if (this.inFlight) return this.inFlight;
+    if (this.configured) return;
+    const since =
+      this.attemptedAt === null ? null : Date.now() - this.attemptedAt;
+    if (since !== null && since < CATALOG_RETRY_MS) return;
+    await this.refresh();
+  }
+
+  private async resolve(): Promise<void> {
+    this.attemptedAt = Date.now();
+    try {
+      const resolved = new Map<string, BillingPrice>();
+      for (const price of await this.stripe.listPrices(ALL_LOOKUP_KEYS)) {
+        const slot = SLOT_BY_LOOKUP_KEY.get(price.lookup_key ?? '');
+        if (!slot) continue;
+        if (!chargesListPrice(price, slot)) {
+          this.logger.warn(
+            `stripe price ${price.id} carries the lookup key ${price.lookup_key} but does not charge ${amountFor(slot.plan, slot.interval)} ${CATALOG_CURRENCY.toUpperCase()} per ${slot.interval}; leaving it out of the catalog`,
+          );
+          continue;
+        }
+        resolved.set(price.id, billingPrice(slot, price.id));
+      }
+      if (resolved.size === 0) {
+        this.logger.warn(
+          `price catalog found no stripe price with the lookup keys ${ALL_LOOKUP_KEYS.join(', ')}; run pnpm --filter api stripe:catalog`,
+        );
+        return;
+      }
+      this.byPriceId = resolved;
+      this.logger.log(
+        `price catalog resolved ${resolved.size} prices from stripe lookup keys`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `price catalog could not be resolved from stripe: ${reasonOf(error)}`,
+      );
+    }
+  }
+
+  private readEnvironment(): boolean {
+    for (const slot of SLOTS) {
+      const priceId = this.config.get(PRICE_KEYS[slot.plan][slot.interval], {
+        infer: true,
+      });
+      if (priceId) this.byPriceId.set(priceId, billingPrice(slot, priceId));
+    }
+    return this.byPriceId.size > 0;
   }
 }

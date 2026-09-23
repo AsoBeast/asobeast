@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bullmq';
 import {
   Injectable,
   Logger,
@@ -5,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Workspace } from '@prisma/client';
+import { Queue } from 'bullmq';
 import type Stripe from 'stripe';
 import {
   FREE_PLAN,
@@ -13,17 +15,20 @@ import {
   type BillingReconcileReport,
 } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
+import { LAST_BILLING_RECONCILE_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import {
   heldForWorkspace,
   projectionOf,
-  stateOf,
+  stateFrom,
+  subscriptionIdOfSession,
   type SubscriptionState,
 } from './subscription-state';
 import { StripeService } from './stripe.service';
 import { effectOf } from './subscription-status';
+import { belongsToWorkspace } from './workspace-link';
 
 const RECONCILE_JUSTIFICATION =
   'reconciliation compares every workspace against the billing provider';
@@ -39,6 +44,7 @@ export class BillingReconciler {
     private readonly prices: PriceCatalog,
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
+    @InjectQueue(QUEUES.BILLING) private readonly queue: Queue,
   ) {}
 
   reconcile(): Promise<BillingReconcileReport> {
@@ -48,7 +54,10 @@ export class BillingReconciler {
     );
   }
 
-  reconcileOne(workspaceId: string): Promise<BillingReconcileReport> {
+  reconcileOne(
+    workspaceId: string,
+    sessionId?: string,
+  ): Promise<BillingReconcileReport> {
     return this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
       RECONCILE_JUSTIFICATION,
       async () => {
@@ -56,8 +65,9 @@ export class BillingReconciler {
           where: { id: workspaceId },
         });
         if (!workspace) throw new NotFoundException('Workspace not found');
+        await this.prices.refreshIfStale();
 
-        const outcome = await this.attempt(workspace);
+        const outcome = await this.attempt(workspace, sessionId);
         if (outcome === 'unreachable') {
           throw new ServiceUnavailableException(
             'Stripe could not be reached, so this workspace keeps the plan it already has. Try again shortly.',
@@ -105,17 +115,38 @@ export class BillingReconciler {
     this.logger.log(
       `reconciled ${known.length} workspaces, corrected ${corrected}, left ${unreconciled.length} unreconciled, found ${orphanSubscriptions.length} orphan subscriptions`,
     );
-    return {
+    const report = {
       checked: known.length,
       corrected,
       orphanSubscriptions,
       unreconciled,
     };
+    await this.keep(report);
+    return report;
   }
 
-  private async attempt(workspace: Workspace): Promise<Outcome> {
+  private async keep(report: BillingReconcileReport): Promise<void> {
     try {
-      return (await this.correct(workspace)) ? 'corrected' : 'agreed';
+      const client = await this.queue.getBackend().client;
+      await client.set(
+        LAST_BILLING_RECONCILE_KEY,
+        JSON.stringify({ ...report, finishedAt: new Date().toISOString() }),
+      );
+    } catch (error) {
+      this.logger.warn(
+        `the billing reconciliation report could not be kept for the operator metrics: ${reasonOf(error)}`,
+      );
+    }
+  }
+
+  private async attempt(
+    workspace: Workspace,
+    sessionId?: string,
+  ): Promise<Outcome> {
+    try {
+      return (await this.correct(workspace, sessionId))
+        ? 'corrected'
+        : 'agreed';
     } catch (error) {
       this.logger.error(
         `workspace ${workspace.id} could not be reconciled against Stripe, so it keeps ${workspace.plan}: ${reasonOf(error)}`,
@@ -124,8 +155,11 @@ export class BillingReconciler {
     }
   }
 
-  private async correct(workspace: Workspace): Promise<boolean> {
-    const desired = await this.desiredState(workspace);
+  private async correct(
+    workspace: Workspace,
+    sessionId?: string,
+  ): Promise<boolean> {
+    const desired = await this.desiredState(workspace, sessionId);
     if (!desired) return this.revokeUnknownSubscription(workspace);
 
     if (matches(workspace, desired)) return false;
@@ -142,14 +176,45 @@ export class BillingReconciler {
 
   private async desiredState(
     workspace: Workspace,
+    sessionId?: string,
   ): Promise<SubscriptionState | null> {
-    const stored = await this.storedSubscription(workspace);
+    const completed = sessionId
+      ? await this.completedSubscription(workspace, sessionId)
+      : null;
+    const stored = completed ?? (await this.storedSubscription(workspace));
     const subscription = stillHeld(stored)
       ? stored
       : ((await this.adoptableSubscription(workspace)) ?? stored);
     if (!subscription) return null;
 
-    return stateOf(subscription, this.prices.planOf(subscription));
+    return stateFrom(subscription, this.prices);
+  }
+
+  private async completedSubscription(
+    workspace: Workspace,
+    sessionId: string,
+  ): Promise<Stripe.Subscription | null> {
+    const session = await this.stripe
+      .retrieveCheckoutSession(sessionId)
+      .catch((error: unknown) => {
+        if (!isMissingResource(error)) throw error;
+        this.logger.warn(
+          `stripe does not know checkout session ${sessionId}; reconciling workspace ${workspace.id} from its customer instead`,
+        );
+        return null;
+      });
+    if (!session) return null;
+    if (session.client_reference_id !== workspace.id) {
+      this.logger.warn(
+        `checkout session ${sessionId} references ${session.client_reference_id ?? 'nobody'}, not workspace ${workspace.id}; ignoring it`,
+      );
+      return null;
+    }
+    const subscriptionId = subscriptionIdOfSession(session);
+    if (!subscriptionId) return null;
+
+    const subscription = await this.stripe.retrieveSubscription(subscriptionId);
+    return belongsToWorkspace(subscription, workspace.id) ? subscription : null;
   }
 
   private async storedSubscription(

@@ -84,6 +84,8 @@ export function instanceMetricsOf(
     billingEventsUnprocessed: 0,
     billingEventsFailed: 0,
     billingEventsOrphaned: 0,
+    billingOrphanSubscriptions: 0,
+    billingOrphanSubscriptionIds: [],
     ...overrides,
   };
 }

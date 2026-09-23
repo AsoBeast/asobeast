@@ -1,16 +1,19 @@
 import {
   BadRequestException,
   Logger,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
+import { UnrecoverableError } from 'bullmq';
 import type Stripe from 'stripe';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { BillingWebhookService } from './billing-webhook.service';
 import { AccountNotifier } from './account-notifier.service';
+import { BillingEventQueue } from './billing-event-queue';
 import { PriceCatalog } from './price-catalog';
 import { StripeService } from './stripe.service';
 import { WORKSPACE_METADATA_KEY } from './workspace-link';
@@ -66,6 +69,9 @@ describe('BillingWebhookService', () => {
       stored?: Record<string, unknown> | null;
       workspace?: Record<string, unknown> | null;
       subscription?: Stripe.Subscription;
+      retrieveFails?: Error;
+      emptyCatalog?: boolean;
+      catalog?: PriceCatalog;
       duplicate?: boolean;
     } = {},
   ) => {
@@ -83,6 +89,7 @@ describe('BillingWebhookService', () => {
     const workspaceUpdate = jest.fn().mockResolvedValue({});
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
+    const enqueue = jest.fn().mockResolvedValue(undefined);
     const notifier = {
       notify,
       appUrl: 'https://app.example.com',
@@ -116,11 +123,19 @@ describe('BillingWebhookService', () => {
       {
         enabled: true,
         constructEvent,
-        retrieveSubscription: jest
-          .fn()
-          .mockResolvedValue(over.subscription ?? subscriptionOf()),
+        retrieveSubscription: jest.fn(() =>
+          over.retrieveFails
+            ? Promise.reject(over.retrieveFails)
+            : Promise.resolve(over.subscription ?? subscriptionOf()),
+        ),
       } as unknown as StripeService,
-      new PriceCatalog(config),
+      over.catalog ??
+        new PriceCatalog(
+          over.emptyCatalog
+            ? ({ get: () => undefined } as unknown as ConfigService<Env, true>)
+            : config,
+          { enabled: false } as StripeService,
+        ),
       prisma,
       {
         becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
@@ -130,9 +145,18 @@ describe('BillingWebhookService', () => {
       } as unknown as CrossTenantAccess,
       notifier,
       config,
+      { enqueue } as unknown as BillingEventQueue,
     );
 
-    return { service, create, update, workspaceUpdate, constructEvent, notify };
+    return {
+      service,
+      create,
+      update,
+      workspaceUpdate,
+      constructEvent,
+      notify,
+      enqueue,
+    };
   };
 
   it('refuses a delivery with no signature', () => {
@@ -157,11 +181,12 @@ describe('BillingWebhookService', () => {
   it('refuses every delivery when billing is not configured', () => {
     const service = new BillingWebhookService(
       { enabled: false } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       {} as unknown as PrismaService,
       {} as unknown as CrossTenantAccess,
       {} as unknown as AccountNotifier,
       { get: () => undefined } as unknown as ConfigService<Env, true>,
+      {} as unknown as BillingEventQueue,
     );
 
     expect(() => service.verify(Buffer.from('{}'), 'sig')).toThrow(
@@ -533,5 +558,201 @@ describe('BillingWebhookService', () => {
         }) as Record<string, unknown>,
       }),
     );
+  });
+
+  it('revokes a cancelled subscription whose price has left the catalog', async () => {
+    const { service, update, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      subscription: subscriptionOf({
+        status: 'canceled',
+        items: {
+          data: [
+            { current_period_end: PERIOD_END, price: { id: 'price_retired' } },
+          ],
+        },
+      }),
+    });
+
+    await expect(service.process('evt_1')).resolves.toBeUndefined();
+
+    expect(lastOutcome(update)).toBe('applied');
+    expect(workspaceUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          plan: 'free',
+          subscriptionStatus: 'canceled',
+        }) as Record<string, unknown>,
+      }),
+    );
+  });
+
+  describe('an event only an operator can fix', () => {
+    const mystery = subscriptionOf({
+      items: {
+        data: [
+          { current_period_end: PERIOD_END, price: { id: 'price_mystery' } },
+        ],
+      },
+    });
+    const stored = { id: 'evt_1', processedAt: null, payload: eventOf() };
+
+    it('fails without retrying when the price is unknown', async () => {
+      const { service, update } = build({ stored, subscription: mystery });
+
+      await expect(service.process('evt_1')).rejects.toBeInstanceOf(
+        UnrecoverableError,
+      );
+      expect(update).toHaveBeenCalledWith({
+        where: { id: 'evt_1' },
+        data: { failure: expect.stringContaining('price_mystery') as string },
+      });
+    });
+
+    it('keeps retrying when stripe is unreachable', async () => {
+      const { service } = build({
+        stored,
+        retrieveFails: new Error('stripe is down'),
+      });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(Error);
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
+
+    it('keeps retrying a price the catalog learns when it refreshes', async () => {
+      const listPrices = jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'price_indie_month',
+            lookup_key: 'asobeast_indie_month',
+            currency: 'usd',
+            unit_amount: 1_000,
+            recurring: { interval: 'month' },
+          },
+        ])
+        .mockResolvedValue([
+          {
+            id: 'price_indie_month',
+            lookup_key: 'asobeast_indie_month',
+            currency: 'usd',
+            unit_amount: 1_000,
+            recurring: { interval: 'month' },
+          },
+          {
+            id: 'price_mystery',
+            lookup_key: 'asobeast_ultimate_month',
+            currency: 'usd',
+            unit_amount: 9_900,
+            recurring: { interval: 'month' },
+          },
+        ]);
+      const catalog = new PriceCatalog(
+        { get: () => undefined } as unknown as ConfigService<Env, true>,
+        { enabled: true, listPrices } as unknown as StripeService,
+      );
+      await catalog.refresh();
+      const { service } = build({ stored, subscription: mystery, catalog });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+      expect(catalog.find('price_mystery')?.plan).toBe('ultimate');
+    });
+
+    it('keeps retrying while the price catalog has not been resolved yet', async () => {
+      const { service } = build({ stored, emptyCatalog: true });
+
+      const failure = await service
+        .process('evt_1')
+        .catch((error: unknown) => error);
+
+      expect(failure).not.toBeInstanceOf(UnrecoverableError);
+    });
+  });
+
+  describe('a replay an operator asks for', () => {
+    const failed = {
+      id: 'evt_1',
+      workspaceId: WORKSPACE,
+      processedAt: null,
+      outcome: null,
+      failure: 'price_mystery',
+      payload: eventOf(),
+    };
+
+    it('clears the settlement and queues the event under a fresh job', async () => {
+      const { service, update, enqueue } = build({ stored: failed });
+
+      await service.replay('evt_1', WORKSPACE);
+
+      expect(update).toHaveBeenCalledWith({
+        where: { id: 'evt_1' },
+        data: { processedAt: null, outcome: null, failure: null },
+      });
+      expect(enqueue).toHaveBeenCalledWith(
+        'evt_1',
+        expect.stringMatching(/^replay-\d+$/),
+      );
+    });
+
+    it('replays an event that names the workspace only through its customer', async () => {
+      const { service, enqueue } = build({
+        stored: {
+          ...failed,
+          workspaceId: null,
+          payload: eventOf({
+            type: 'invoice.paid',
+            data: { object: { id: 'in_1', customer: 'cus_1' } },
+          } as unknown as Partial<Stripe.Event>),
+        },
+        workspace: { id: WORKSPACE, billingCustomerId: 'cus_1' },
+      });
+
+      await service.replay('evt_1', WORKSPACE);
+
+      expect(enqueue).toHaveBeenCalled();
+    });
+
+    it('puts the failure back when the replay cannot be queued', async () => {
+      const { service, update, enqueue } = build({ stored: failed });
+      enqueue.mockRejectedValue(new Error('redis is gone'));
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toThrow(
+        'redis is gone',
+      );
+
+      expect(update).toHaveBeenLastCalledWith({
+        where: { id: 'evt_1' },
+        data: { processedAt: null, outcome: null, failure: 'price_mystery' },
+      });
+    });
+
+    it('refuses to replay an event that names another workspace', async () => {
+      const { service, update, enqueue } = build({
+        stored: { ...failed, workspaceId: 'ws_other' },
+        workspace: { id: WORKSPACE, billingCustomerId: 'cus_1' },
+      });
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(update).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it('refuses an event nobody stored', async () => {
+      const { service, enqueue } = build({ stored: null });
+
+      await expect(service.replay('evt_1', WORKSPACE)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
+      expect(enqueue).not.toHaveBeenCalled();
+    });
   });
 });

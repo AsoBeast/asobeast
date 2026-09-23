@@ -3,12 +3,17 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ProxyTier, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
+import { z } from 'zod';
 import type { ProxyPoolHealth } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
 import { ACCOUNT_MAIL_CHANNEL } from '../alerts/mailer.service';
 import type { BillingEventOutcome } from '../billing/billing-event-outcome';
-import { LAST_BACKUP_KEY, QUEUES } from '../jobs/jobs.types';
+import {
+  LAST_BACKUP_KEY,
+  LAST_BILLING_RECONCILE_KEY,
+  QUEUES,
+} from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import type { StoreCanaryRecord } from '../store-providers/canary/store-canary.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
@@ -71,6 +76,22 @@ export const ACCOUNT_MAIL_WINDOW_HOURS = 24;
 
 export const BILLING_ORPHAN_WINDOW_DAYS = 7;
 
+export const BILLING_ORPHAN_IDS_LISTED = 5;
+
+export interface BillingOrphans {
+  billingOrphanSubscriptions: number;
+  billingOrphanSubscriptionIds: string[];
+}
+
+const ORPHAN_REPORT = z.object({
+  orphanSubscriptions: z.array(z.unknown()).catch([]),
+});
+
+const NO_ORPHANS: BillingOrphans = {
+  billingOrphanSubscriptions: 0,
+  billingOrphanSubscriptionIds: [],
+};
+
 export interface AccountMailOutcomes {
   delivered: number;
   failed: number;
@@ -92,7 +113,7 @@ export type StoreCanaryVerdicts = Partial<Record<Store, StoreCanaryRecord>>;
 
 const NO_CANARY: StoreCanaryVerdicts = {};
 
-export interface InstanceMetrics {
+export interface InstanceMetrics extends BillingOrphans {
   pool: ProxyPoolHealth;
   backup: BackupFreshness;
   resources: ResourceUsage;
@@ -113,6 +134,7 @@ export interface InstanceMetrics {
 @Injectable()
 export class InstanceMetricsCollector {
   private readonly logger = new Logger(InstanceMetricsCollector.name);
+  private unreadableReportLogged = false;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -136,6 +158,7 @@ export class InstanceMetricsCollector {
       resources,
       accountMail,
       storeCanary,
+      orphans,
     ] = await Promise.all([
       this.degradable('the proxy pool', () => this.pool.build(now), NO_POOL),
       this.degradable(
@@ -174,6 +197,7 @@ export class InstanceMetricsCollector {
         () => this.canary.records(),
         NO_CANARY,
       ),
+      this.billingOrphans(),
     ]);
 
     return {
@@ -188,7 +212,31 @@ export class InstanceMetricsCollector {
         [ProxyTier.RESIDENTIAL]: residential,
       },
       ...billing,
+      ...orphans,
     };
+  }
+
+  private async billingOrphans(): Promise<BillingOrphans> {
+    const recorded = await this.redisValue(LAST_BILLING_RECONCILE_KEY);
+    if (!recorded) return NO_ORPHANS;
+    try {
+      const report = ORPHAN_REPORT.parse(JSON.parse(recorded));
+      const ids = report.orphanSubscriptions.filter(
+        (id): id is string => typeof id === 'string',
+      );
+      return {
+        billingOrphanSubscriptions: ids.length,
+        billingOrphanSubscriptionIds: ids.slice(0, BILLING_ORPHAN_IDS_LISTED),
+      };
+    } catch (error) {
+      if (!this.unreadableReportLogged) {
+        this.unreadableReportLogged = true;
+        this.logger.warn(
+          `the last billing reconciliation report is unreadable, so no orphan subscriptions are reported: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      return NO_ORPHANS;
+    }
   }
 
   private async billing(now: Date) {
@@ -300,14 +348,16 @@ export class InstanceMetricsCollector {
   }
 
   private async lastBackupAt(): Promise<Date | null> {
+    const recorded = await this.redisValue(LAST_BACKUP_KEY);
+    if (!recorded) return null;
+    const at = new Date(recorded);
+    return Number.isNaN(at.getTime()) ? null : at;
+  }
+
+  private async redisValue(key: string): Promise<string | null> {
     try {
-      const client = (await this.queue.getBackend().client) as unknown as {
-        get(key: string): Promise<string | null>;
-      };
-      const recorded = await client.get(LAST_BACKUP_KEY);
-      if (!recorded) return null;
-      const at = new Date(recorded);
-      return Number.isNaN(at.getTime()) ? null : at;
+      const client = await this.queue.getBackend().client;
+      return await client.get(key);
     } catch {
       return null;
     }

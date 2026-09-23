@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
-import { BillingService } from './billing.service';
+import { BillingService, PAYMENT_PENDING } from './billing.service';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
 import { PriceCatalog, UnknownPriceError } from './price-catalog';
@@ -12,8 +12,9 @@ import { WORKSPACE_METADATA_KEY } from './workspace-link';
 
 const WORKSPACE = 'ws_billing';
 
-const CONFIG: Record<string, string | undefined> = {
+const CONFIG: Record<string, string | boolean | undefined> = {
   STRIPE_SECRET_KEY: 'sk_test',
+  STRIPE_TAX_ENABLED: false,
   STRIPE_PRICE_INDIE_MONTHLY: 'price_indie_month',
   STRIPE_WEBHOOK_SECRET: 'whsec_test',
   WEB_PUBLIC_URL: 'https://app.example.com',
@@ -48,7 +49,7 @@ describe('BillingService', () => {
       subscriptionId: string | null;
       subscriptionStatus: string | null;
     } = { subscriptionId: null, subscriptionStatus: null },
-    env: Record<string, string | undefined> = {},
+    env: Record<string, string | boolean | undefined> = {},
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
@@ -131,7 +132,7 @@ describe('BillingService', () => {
         retrieveCheckoutSession,
         expireCheckoutSession,
       } as unknown as StripeService,
-      new PriceCatalog(config),
+      new PriceCatalog(config, { enabled: false } as StripeService),
       { reconcileOne } as unknown as BillingReconciler,
       prisma,
       config,
@@ -178,7 +179,32 @@ describe('BillingService', () => {
         metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
       },
     });
+    expect(params.subscription_data).toEqual({
+      metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      billing_mode: { type: 'flexible' },
+    });
+    expect(params).toMatchObject({
+      billing_address_collection: 'required',
+      tax_id_collection: { enabled: true },
+      customer_update: { address: 'auto', name: 'auto' },
+      automatic_tax: { enabled: false },
+    });
     expect(key).toMatch(new RegExp(`^checkout:${WORKSPACE}:[0-9a-f-]{36}$`));
+  });
+
+  it('charges tax automatically once stripe tax is switched on', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_TAX_ENABLED: true },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params.automatic_tax).toEqual({ enabled: true });
   });
 
   it('reuses the stored customer rather than creating a second one', async () => {
@@ -437,7 +463,26 @@ describe('BillingService', () => {
       },
     );
 
-    it.each(['canceled', 'incomplete', 'incomplete_expired'])(
+    it('holds a checkout when stripe holds an incomplete subscription no webhook recorded', async () => {
+      const { service, listCustomerSubscriptions, createCheckoutSession } =
+        build('cus_existing');
+      listCustomerSubscriptions.mockResolvedValue([
+        {
+          ...liveSubscription('incomplete'),
+          metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+        },
+      ]);
+
+      await expect(
+        service.checkout(owner('cus_existing'), 'price_indie_month'),
+      ).rejects.toMatchObject({
+        detail: { reason: 'checkout_in_flight', recovery: 'retry' },
+        message: PAYMENT_PENDING,
+      });
+      expect(createCheckoutSession).not.toHaveBeenCalled();
+    });
+
+    it.each(['canceled', 'incomplete_expired'])(
       'lets the customer buy again after a %s subscription',
       async (status) => {
         const { service, listCustomerSubscriptions, createCheckoutSession } =
@@ -551,7 +596,7 @@ describe('BillingService', () => {
       { success_url: string },
     ];
     expect(params.success_url).toBe(
-      'https://app.example.com/settings?checkout=complete',
+      'https://app.example.com/settings?checkout=complete&session_id={CHECKOUT_SESSION_ID}',
     );
   });
 
@@ -568,7 +613,27 @@ describe('BillingService', () => {
       { success_url: string },
     ];
     expect(params.success_url).toBe(
-      'https://app.example.com/account?tab=plan&checkout=complete',
+      'https://app.example.com/account?tab=plan&checkout=complete&session_id={CHECKOUT_SESSION_ID}',
+    );
+  });
+
+  it('keeps the session placeholder in the query of a return url with a fragment', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      {
+        STRIPE_PORTAL_RETURN_URL:
+          'https://app.example.com/account?tab=plan#billing',
+      },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      { success_url: string },
+    ];
+    expect(params.success_url).toBe(
+      'https://app.example.com/account?tab=plan&checkout=complete&session_id={CHECKOUT_SESSION_ID}#billing',
     );
   });
 
@@ -652,7 +717,22 @@ describe('BillingService', () => {
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it.each(['canceled', 'incomplete', 'incomplete_expired'])(
+  it('holds a checkout while the last payment is still confirming', async () => {
+    const { service, createCheckoutSession } = build('cus_existing', {
+      subscriptionId: 'sub_pending',
+      subscriptionStatus: 'incomplete',
+    });
+
+    await expect(
+      service.checkout(owner('cus_existing'), 'price_indie_month'),
+    ).rejects.toMatchObject({
+      detail: { reason: 'checkout_in_flight', recovery: 'retry' },
+      message: PAYMENT_PENDING,
+    });
+    expect(createCheckoutSession).not.toHaveBeenCalled();
+  });
+
+  it.each(['canceled', 'incomplete_expired'])(
     'lets a workspace buy again after a %s subscription',
     async (subscriptionStatus) => {
       const { service, createCheckoutSession } = build('cus_existing', {
@@ -695,17 +775,17 @@ describe('BillingService', () => {
       { [key]: undefined },
     );
 
-    expect(service.catalog().enabled).toBe(false);
+    expect((await service.catalog()).enabled).toBe(false);
     await expect(
       service.checkout(owner('cus_existing'), 'price_indie_month'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(createCheckoutSession).not.toHaveBeenCalled();
   });
 
-  it('advertises only the prices it can actually sell', () => {
+  it('advertises only the prices it can actually sell', async () => {
     const { service } = build(null);
 
-    expect(service.catalog()).toEqual({
+    await expect(service.catalog()).resolves.toEqual({
       enabled: true,
       prices: [
         {

@@ -1,0 +1,73 @@
+---
+title: Take billing live
+sidebarTitle: Billing go live
+description: "The dashboard settings the API cannot reach, the ordered steps from a sandbox to live mode, and how to roll back if the first live payment goes wrong."
+icon: rocket
+keywords: ["billing","stripe","go live","live mode","checklist","stripe tax","webhook"]
+---
+
+Everything the API can set about Stripe is set by `pnpm --filter api stripe:catalog`: the products, the prices, their tax behaviour, the product tax code and the customer portal. What is left lives only in the Stripe dashboard. This page is the checklist for it and the order to switch from a sandbox to live mode. How billing behaves once it runs is on [Billing](/operations/billing).
+
+## Dashboard settings
+
+Set every row in every sandbox and again in live mode. The catalog script prints the same list when it finishes.
+
+| Setting | Where | Value | Why |
+| --- | --- | --- | --- |
+| Limit customers to one subscription | Settings, Checkout and Payment Links, Subscriptions | On | The only thing that stops two checkout tabs both completing |
+| Manage failed payments | Settings, Billing, Subscriptions and emails | Smart Retries on, then mark the subscription unpaid | `past_due` stays entitled while Stripe retries; `unpaid` stops collection without losing the subscription, and the customer resumes it from the portal |
+| Customer emails | Settings, Billing, Subscriptions and emails | Failed payments, expiring cards and payments requiring authentication on, with the hosted invoice link | asobeast sends one dunning email and nothing when a renewal needs authentication; Stripe's emails carry the link |
+| Trial end behaviour | Settings, Billing, Subscriptions and emails | Leave as it is | asobeast trials run in the app and Checkout never starts a Stripe trial, so the setting never applies |
+| Payment methods | Settings, Payment methods | Card, Link, Apple Pay and Google Pay on; SEPA Direct Debit and Cash App Pay off | A delayed method leaves a subscription pending for days |
+| Adaptive pricing | Settings, Checkout | Off | The catalog and the web app are in USD |
+| Public business details | Settings, Public details | Legal name, support email `hello@asobeast.dev`, terms and privacy URLs | Checkout and the portal print them |
+| Radar | Radar, Rules | The default rules |  |
+| Webhook endpoint | Developers, Webhooks | One endpoint per environment with the ten handled events on the pinned API version | See [Billing](/operations/billing#the-webhook-endpoint) |
+
+## Going live
+
+<Steps>
+  <Step title="Register for Stripe Tax">
+    Add the registrations in the dashboard: Poland, OSS for the EU, and any US state past its nexus threshold. Until they exist `STRIPE_TAX_ENABLED` stays `false`, and Checkout collects the address and tax id without charging tax.
+  </Step>
+  <Step title="Provision live mode">
+    Run `pnpm --filter api stripe:catalog` with the live secret key in `STRIPE_SECRET_KEY` and the production `WEB_PUBLIC_URL`. Read its output: the four lookup keys with their price ids, the portal configuration id and the dashboard checklist.
+  </Step>
+  <Step title="Set the dashboard">
+    Set every row of the table above in live mode.
+  </Step>
+  <Step title="Create the live endpoint">
+    Register `https://app.asobeast.com/api/backend/billing/webhook` with the ten handled events on the pinned API version, and copy its signing secret.
+  </Step>
+  <Step title="Switch the keys">
+    Replace `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` on the host, remove the four `STRIPE_PRICE_*` variables, set `STRIPE_TAX_ENABLED` to what the first step allows, and redeploy. The boot log reports four prices resolved from lookup keys and no longer warns about a sandbox key.
+  </Step>
+  <Step title="Send a test event">
+    Send one test event from the endpoint's page. It names no subscription, so the stored event settles as `ignored`.
+  </Step>
+  <Step title="Buy once with a real card">
+    Buy Indie monthly on a throwaway workspace, confirm the plan card shows Indie, then cancel in the portal and refund the charge from the dashboard.
+  </Step>
+  <Step title="Rotate the sandbox keys">
+    Rotate every sandbox key that was ever pasted anywhere outside the host.
+  </Step>
+  <Step title="Retire the old sandbox endpoint">
+    Delete the sandbox endpoint that pointed at production, so the old sandbox can serve a staging stack or be deleted.
+  </Step>
+</Steps>
+
+## Rolling back
+
+Put the sandbox keys and the sandbox webhook secret back on the host and redeploy, then delete the live endpoint so Stripe stops posting live events to an instance that cannot verify them. A workspace that paid in live mode in the meantime keeps its subscription at Stripe; refund it from the dashboard and reconcile the workspace from support once live mode returns.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Billing" icon="credit-card" href="/operations/billing">
+    The catalog, checkout, the webhook endpoint and reconciliation.
+  </Card>
+
+  <Card title="Billing incident" icon="triangle-exclamation" href="/operations/runbooks/billing-incident">
+    What to do when an event fails or a customer lands on the wrong side.
+  </Card>
+</CardGroup>

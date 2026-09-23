@@ -15,6 +15,7 @@
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
     "stripe:catalog": "ts-node --project tsconfig.json scripts/create-stripe-catalog.ts",
+    "stripe:simulate": "ts-node --project tsconfig.json scripts/stripe-simulate.ts",
     "workspace:suspend": "ts-node --project tsconfig.json scripts/suspend-workspace.ts suspend",
     "workspace:restore": "ts-node --project tsconfig.json scripts/suspend-workspace.ts restore",
     "scoring:calibrate": "ts-node --project tsconfig.json scripts/scoring-calibrate.ts",

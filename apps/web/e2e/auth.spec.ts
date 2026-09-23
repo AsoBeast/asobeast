@@ -550,6 +550,14 @@ async function seedPlan(page: Page, plan: AccountPlan) {
   ]);
 }
 
+const PENDING_PLAN: AccountPlan = {
+  ...LAPSED_PLAN,
+  subscribed: true,
+  subscriptionPending: true,
+};
+
+const PAYMENT_CONFIRMING = "Your payment is being confirmed.";
+
 async function routePlan(page: Page, plan: AccountPlan) {
   await seedPlan(page, plan);
   await page.route("**/api/backend/auth/plan", (route) =>
@@ -681,6 +689,86 @@ test("a workspace whose subscription stalled is sent to the portal, not the payw
   expect(checkoutCalls).toBe(0);
 });
 
+test("a workspace whose first payment is confirming is asked to wait, not to pay again", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, PENDING_PLAN);
+
+  await page.goto("/upgrade");
+  await expect(
+    page.getByText(PAYMENT_CONFIRMING, { exact: false }),
+  ).toBeVisible();
+  const waiting = page.getByRole("button", {
+    name: "Confirming your payment",
+  });
+  await expect(waiting).toHaveCount(2);
+  for (const button of await waiting.all()) await expect(button).toBeDisabled();
+
+  await page.goto("/settings");
+  await expect(
+    page.getByText(PAYMENT_CONFIRMING, { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Choose a plan" })).toHaveCount(
+    0,
+  );
+});
+
+test("a checkout refused while a payment confirms shows why and can be tried again", async ({
+  page,
+}) => {
+  const message =
+    "Your last payment is still being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can try again.";
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, LAPSED_PLAN);
+  await page.route("**/api/backend/billing/catalog", (route) =>
+    route.fulfill(
+      fulfillJson(200, {
+        enabled: true,
+        prices: [
+          {
+            plan: "indie",
+            interval: "month",
+            priceId: "price_indie_month",
+            amountUsd: 10,
+          },
+        ],
+      }),
+    ),
+  );
+  await page.route("**/api/backend/billing/checkout", (route) =>
+    route.fulfill(
+      fulfillJson(409, {
+        statusCode: 409,
+        error: "Conflict",
+        message,
+        path: "/billing/checkout",
+        timestamp: new Date().toISOString(),
+        billing: { reason: "checkout_in_flight", recovery: "retry" },
+      }),
+    ),
+  );
+
+  await page.goto("/upgrade");
+  const choose = page.getByRole("button", { name: "Choose Indie" });
+  await choose.click();
+
+  await expect(page.getByText(message)).toBeVisible();
+  await expect(choose).toBeEnabled();
+});
+
 test("returning from checkout reconciles the workspace and clears the marker", async ({
   page,
 }) => {
@@ -694,6 +782,7 @@ test("returning from checkout reconciles the workspace and clears the marker", a
 
   let reconcileCalls = 0;
   await seedPlan(page, LAPSED_PLAN);
+  const reconcileBodies: unknown[] = [];
   await page.route("**/api/backend/auth/plan", async (route) => {
     await route.fulfill(
       fulfillJson(200, reconcileCalls > 0 ? INDIE_PLAN : LAPSED_PLAN),
@@ -701,6 +790,7 @@ test("returning from checkout reconciles the workspace and clears the marker", a
   });
   await page.route("**/api/backend/billing/reconcile", async (route) => {
     reconcileCalls += 1;
+    reconcileBodies.push(route.request().postDataJSON());
     await route.fulfill(
       fulfillJson(200, {
         checked: 1,
@@ -711,9 +801,10 @@ test("returning from checkout reconciles the workspace and clears the marker", a
     );
   });
 
-  await page.goto("/settings?checkout=complete");
+  await page.goto("/settings?checkout=complete&session_id=cs_test_1");
 
   await expect.poll(() => reconcileCalls).toBe(1);
+  expect(reconcileBodies).toEqual([{ sessionId: "cs_test_1" }]);
   await expect(page).toHaveURL(/\/settings$/);
   await expect(page.getByText("Renews on", { exact: false })).toBeVisible();
 });
@@ -741,10 +832,10 @@ test("a checkout return keeps its marker when reconciliation cannot run", async 
     ),
   );
 
-  await page.goto("/settings?checkout=complete");
+  await page.goto("/settings?checkout=complete&session_id=cs_test_1");
 
   await expect(page.getByText("Access paused")).toBeVisible();
-  await expect(page).toHaveURL(/checkout=complete/);
+  await expect(page).toHaveURL(/checkout=complete&session_id=cs_test_1/);
 });
 
 test("the upgrade page lists both paid plans with their limits", async ({

@@ -1,5 +1,5 @@
 import type Stripe from 'stripe';
-import { FREE_PLAN, type PlanName } from '@asobeast/shared';
+import { FREE_PLAN, type PaidPlanName, type PlanName } from '@asobeast/shared';
 import {
   effectOf,
   entitledBy,
@@ -36,8 +36,23 @@ export function stateOf(
     status,
     plan: entitledBy(status) ? plan : FREE_PLAN,
     planExpiresAt: periodEndOf(subscription),
-    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    cancelAtPeriodEnd:
+      subscription.cancel_at_period_end || Boolean(subscription.cancel_at),
   };
+}
+
+export interface PlanResolver {
+  planOf(subscription: Stripe.Subscription): PaidPlanName;
+}
+
+export function stateFrom(
+  subscription: Stripe.Subscription,
+  prices: PlanResolver,
+): SubscriptionState {
+  const plan = entitledBy(subscription.status)
+    ? prices.planOf(subscription)
+    : FREE_PLAN;
+  return stateOf(subscription, plan);
 }
 
 export interface SubscriptionProjection {
@@ -78,4 +93,12 @@ export function heldForWorkspace(
       belongsToWorkspace(subscription, workspaceId),
     ),
   );
+}
+
+export function subscriptionIdOfSession(
+  session: Stripe.Checkout.Session,
+): string | null {
+  const subscription = session.subscription;
+  if (typeof subscription === 'string') return subscription;
+  return subscription?.id ?? null;
 }

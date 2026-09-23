@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AccountPlan } from "@asobeast/shared";
 import {
+  PAYMENT_CONFIRMING,
   planAction,
   planActionLabel,
   planCallToAction,
@@ -37,6 +38,14 @@ const drifted = planOf({
   subscribed: true,
   subscriptionStalled: false,
   trialEndsAt: null,
+});
+
+const pending = planOf({
+  plan: "free",
+  entitled: false,
+  subscribed: true,
+  subscriptionPending: true,
+  trialEndsAt: "2026-09-01T00:00:00.000Z",
 });
 
 const lapsedTrial = planOf({
@@ -162,5 +171,29 @@ describe("planCallToAction", () => {
 
   it("does not offer a resume for a subscription that never stalled", () => {
     expect(planCallToAction(drifted)).toBe("Choose a plan");
+  });
+});
+
+describe("a first payment still being confirmed", () => {
+  it("waits on every paid plan instead of selling or sending to the portal", () => {
+    expect(planAction(pending, "indie")).toBe("pending");
+    expect(planAction(pending, "ultimate")).toBe("pending");
+    expect(planActionLabel("pending", "Indie")).toBe("Confirming your payment");
+  });
+
+  it("says the payment is confirming on the paywall and in settings", () => {
+    expect(paywallStatusLine(pending)).toBe(PAYMENT_CONFIRMING);
+    expect(planStatusLine(pending)).toBe(PAYMENT_CONFIRMING);
+  });
+
+  it("says the payment is confirming ahead of a trial that is still running", () => {
+    const trialing = { ...pending, plan: "trial" as const };
+
+    expect(paywallStatusLine(trialing)).toBe(PAYMENT_CONFIRMING);
+    expect(planAction(trialing, "indie")).toBe("pending");
+  });
+
+  it("still marks the plan a pending workspace is already on", () => {
+    expect(planAction({ ...pending, plan: "indie" }, "indie")).toBe("current");
   });
 });

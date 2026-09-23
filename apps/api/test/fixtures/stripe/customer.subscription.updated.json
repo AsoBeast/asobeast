@@ -16,7 +16,7 @@
       "created": 1800000000,
       "currency": "usd",
       "customer": "cus_TestWorkspace1",
-      "default_payment_method": "pm_1TestCard",
+      "default_payment_method": "pm_Test1",
       "description": null,
       "discounts": [],
       "ended_at": null,
@@ -43,7 +43,7 @@
                 "asobeast_plan": "ultimate"
               },
               "nickname": null,
-              "product": "prod_AsobeastUltimate",
+              "product": "prod_Test1",
               "recurring": {
                 "interval": "month",
                 "interval_count": 1,
@@ -64,7 +64,7 @@
         "total_count": 1,
         "url": "/v1/subscription_items?subscription=sub_TestIndieMonthly"
       },
-      "latest_invoice": "in_1TestInvoice",
+      "latest_invoice": "in_Test1",
       "livemode": false,
       "metadata": {
         "asobeast_workspace_id": "ws_stripe_fixture"
