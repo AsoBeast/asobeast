@@ -10,6 +10,7 @@ test("the comparison matrix sorts by your position both ways", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
   const rows = matrixRows(page);
   await expect(rows.nth(1)).toContainText("focus timer");
 
@@ -38,6 +39,7 @@ test("the comparison matrix sorts by a competitor and by popularity", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
   const rows = matrixRows(page);
 
   await matrix(page)
@@ -57,6 +59,7 @@ test("the comparison matrix filters to losing rows and searches", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
   const rows = matrixRows(page);
 
   await page.getByRole("combobox", { name: "Filter by result" }).click();
@@ -85,6 +88,7 @@ test("a matrix filter that matches nothing offers to clear it", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/competitors?vs=tied");
+  await page.waitForLoadState("networkidle");
 
   await expect(page.getByText("No keywords match these filters")).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
@@ -94,6 +98,7 @@ test("a matrix filter that matches nothing offers to clear it", async ({
 
 test("matrix positions and scores carry their grade", async ({ page }) => {
   await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
   const focus = matrix(page).getByRole("row", { name: /focus timer/ });
   const pomodoro = matrix(page).getByRole("row", { name: /pomodoro/ });
   const productivity = matrix(page).getByRole("row", {

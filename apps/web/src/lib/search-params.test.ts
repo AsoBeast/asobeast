@@ -30,6 +30,9 @@ import {
   discoveryDaysParser,
   KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
+  DISCOVERY_SORTS,
+  discoverySearchParser,
+  discoverySortParser,
   gradeFacetParser,
   matrixSortParser,
   positionBandParser,
@@ -83,6 +86,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["mcpClient", mcpClientParser, MCP_CLIENTS, DEFAULT_MCP_CLIENT],
   ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
   ["versus", versusParser, VERSUS_FILTERS, "all"],
+  ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -106,6 +110,7 @@ const STRING_PARSERS = [
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
   ["keywordSearch", keywordSearchParser],
+  ["discoverySearch", discoverySearchParser],
 ] as const;
 
 describe.each(LITERAL_PARSERS)(

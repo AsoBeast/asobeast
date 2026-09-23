@@ -92,6 +92,20 @@ export const matrixFilterParsers = {
   vs: versusParser,
 };
 
+export const DISCOVERY_SORTS = [
+  "app",
+  "appearances",
+  "keywords",
+  "best",
+  "avg",
+  "rating",
+] as const;
+
+export const discoverySortParser =
+  parseAsStringLiteral(DISCOVERY_SORTS).withDefault("appearances");
+
+export const discoverySearchParser = parseAsString.withDefault("");
+
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
 export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);

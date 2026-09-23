@@ -139,3 +139,37 @@ test("the discovery panel names the store its rows come from", async ({
       .getByText("App Store"),
   ).toBeVisible();
 });
+
+test("the discovery table sorts by rating both ways and searches by name", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+  const table = page.getByRole("table", {
+    name: /appearing in your keyword search results/,
+  });
+  const rows = table.getByRole("row");
+  await expect(rows.nth(1)).toContainText("Deep Work Sessions");
+
+  const rating = table.getByRole("button", { name: "Rating", exact: true });
+  await rating.click();
+  await expect(page).toHaveURL(/appSort=rating/);
+  await expect(rows.nth(1)).toContainText("Deep Work Sessions");
+  await expect(rows.nth(1).getByLabel("Rating 4.7, strong")).toHaveAttribute(
+    "data-grade",
+    "strong",
+  );
+
+  await rating.click();
+  await expect(page).toHaveURL(/appDir=asc/);
+  await expect(rows.nth(1)).toContainText("Tomato Clock");
+  await expect(page).not.toHaveURL(/[?&]sort=/);
+
+  await page.getByRole("textbox", { name: "Search apps" }).fill("deep");
+  await expect(page).toHaveURL(/appQ=deep/);
+  await expect(rows).toHaveCount(2);
+  await expect(
+    rows.nth(1).getByRole("button", { name: "Track" }),
+  ).toBeVisible();
+  await expect(page.getByText("1 of 2 apps")).toBeVisible();
+});
