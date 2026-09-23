@@ -97,7 +97,7 @@ function identityColumns() {
           checked={
             table.getIsAllRowsSelected()
               ? true
-              : table.getIsSomeRowsSelected()
+              : table.getFilteredSelectedRowModel().rows.length > 0
                 ? "indeterminate"
                 : false
           }

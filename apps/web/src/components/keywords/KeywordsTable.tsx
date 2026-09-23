@@ -110,10 +110,10 @@ export function KeywordsTable({
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
 
-  const selectedIds = Object.keys(rowSelection);
-  const selectedKeywords = keywords.filter(
-    (keyword) => rowSelection[keyword.keywordId],
-  );
+  const selectedKeywords = table
+    .getFilteredSelectedRowModel()
+    .rows.map((row) => row.original);
+  const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
 
   if (keywords.length === 0) {
     return <KeywordsEmptyState appId={id} store={store} country={country} />;

@@ -579,6 +579,33 @@ test("a phone starts with the columns that fit and offers the rest", async ({
   ).toBe(true);
 });
 
+test("bulk actions only reach selected keywords the filters still show", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  await page.getByRole("checkbox", { name: "Select focus timer" }).click();
+  await page.getByRole("checkbox", { name: "Select pomodoro" }).click();
+  const bulk = page.getByRole("group", { name: "Bulk keyword actions" });
+  await expect(bulk).toContainText("2 selected");
+
+  await page.getByRole("textbox", { name: "Search keywords" }).fill("pomo");
+  await expect(page).toHaveURL(/q=pomo/);
+
+  await expect(bulk).toContainText("1 selected");
+  await expect(
+    page.getByRole("checkbox", { name: "Select all keywords" }),
+  ).toBeChecked();
+
+  const updates: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "PATCH" && request.url().includes("/keywords/"))
+      updates.push(new URL(request.url()).pathname);
+  });
+  await bulk.getByRole("button", { name: "Pause" }).click();
+  await expect.poll(() => updates.length).toBe(1);
+  expect(updates[0]).toContain("kw-2");
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
