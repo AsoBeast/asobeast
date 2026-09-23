@@ -19,7 +19,7 @@ const PREFIXES = [
 ];
 
 const ID = new RegExp(
-  `\\b(${PREFIXES.join('|')})_((?:test|live)_)?([A-Za-z0-9]+)`,
+  `\\b(${PREFIXES.join('|')})_((?:test|live)_)?([A-Za-z0-9]{14,})\\b`,
   'g',
 );
 

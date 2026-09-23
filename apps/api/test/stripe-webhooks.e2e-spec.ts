@@ -38,7 +38,7 @@ const PERSONAL_DATA =
   /"line1":\s*"|"client_secret":\s*"|_secret_[A-Za-z0-9]|invoice\.stripe\.com/;
 
 const UNSCRUBBED_ID =
-  /\b(?!sub_sched_Test)(cus|sub|in|price|prod|pi|ch|pm|cs|evt|si|il|bps|acct)_(?!Test)[A-Za-z0-9]+/;
+  /\b(?!sub_sched_Test)(cus|sub|in|price|prod|pi|ch|pm|cs|evt|si|il|bps|acct)_(?:(?:test|live)_)?(?!Test)[A-Za-z0-9]{14,}\b/;
 
 function fixture(name: string): Stripe.Event {
   return JSON.parse(
@@ -500,5 +500,43 @@ describe('Stripe webhooks', () => {
       });
     }
     expect(HANDLED_EVENTS.filter((type) => !types.has(type))).toEqual([]);
+  });
+
+  it('renames sandbox ids and keeps field names that share their prefix', () => {
+    const captured = {
+      id: 'evt_1QaBcDeFgHiJkLmNoPqRsTu',
+      livemode: false,
+      data: {
+        object: {
+          id: 'in_1QaBcDeFgHiJkLmNoPqRsTu',
+          pricing: {
+            type: 'price_details',
+            price_details: {
+              price: 'price_1QaBcDeFgHiJkLmNoPqRsTu',
+              product: 'prod_QaBcDeFgHiJkLm',
+            },
+          },
+        },
+      },
+    };
+
+    const scrubbed = execSync(`node ${join(fixtures, 'scrub.mjs')}`, {
+      input: JSON.stringify(captured),
+    }).toString();
+
+    expect(JSON.parse(scrubbed)).toEqual({
+      id: 'evt_Test1',
+      livemode: false,
+      data: {
+        object: {
+          id: 'in_Test1',
+          pricing: {
+            type: 'price_details',
+            price_details: { price: 'price_Test1', product: 'prod_Test1' },
+          },
+        },
+      },
+    });
+    expect(UNSCRUBBED_ID.exec(scrubbed)?.[0]).toBeUndefined();
   });
 });
