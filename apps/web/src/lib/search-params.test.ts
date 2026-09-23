@@ -30,6 +30,8 @@ import {
   discoveryDaysParser,
   KEYWORD_STATUSES,
   KEYWORD_TABLE_SORTS,
+  COVERAGE_SORTS,
+  coverageSortParser,
   DISCOVERY_SORTS,
   discoverySearchParser,
   discoverySortParser,
@@ -286,5 +288,16 @@ describe("matrixSort parser", () => {
 
   it("keeps the api order when nothing is named", () => {
     expect(matrixSortParser.parseServerSide(undefined)).toBeNull();
+  });
+});
+
+describe("coverageSort parser", () => {
+  it.each(COVERAGE_SORTS)("accepts the column %s", (sort) => {
+    expect(coverageSortParser.parseServerSide(sort)).toBe(sort);
+  });
+
+  it("keeps the api order when nothing or something unknown is named", () => {
+    expect(coverageSortParser.parseServerSide(undefined)).toBeNull();
+    expect(coverageSortParser.parseServerSide("title")).toBeNull();
   });
 });

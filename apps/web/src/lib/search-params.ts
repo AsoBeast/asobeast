@@ -106,6 +106,15 @@ export const discoverySortParser =
 
 export const discoverySearchParser = parseAsString.withDefault("");
 
+export const COVERAGE_SORTS = ["keyword", "bucket"] as const;
+
+export const coverageSortParser = parseAsStringLiteral(COVERAGE_SORTS);
+
+export const coverageFilterParsers = {
+  q: keywordSearchParser,
+  uncovered: parseAsBoolean.withDefault(false),
+};
+
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
 export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
