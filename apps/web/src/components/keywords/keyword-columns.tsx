@@ -23,7 +23,7 @@ import {
 } from "./keyword-cells";
 import { isScoreOutdated, scoreValue } from "./keyword-scores";
 import { difficultySignalLines, popularitySignalLines } from "./score-signals";
-import { SourceBadge } from "./SourceBadge";
+import { SOURCE_LABELS, SourceBadge } from "./SourceBadge";
 import { nullsLast, type SortDefaults } from "@/lib/table/sorting";
 
 const columnHelper = createColumnHelper<
@@ -32,7 +32,13 @@ const columnHelper = createColumnHelper<
 >();
 
 export const KEYWORD_SORT_DEFAULTS: SortDefaults = {
-  descFirst: new Set(["traffic", "difficulty", "opportunity", "volatility"]),
+  descFirst: new Set([
+    "traffic",
+    "difficulty",
+    "opportunity",
+    "volatility",
+    "delta7d",
+  ]),
 };
 
 const SORTABLE = { sortUndefined: "last", sortFn: "basic" } as const;
@@ -80,8 +86,10 @@ function identityColumns() {
       ),
     }),
     columnHelper.accessor("text", {
-      enableSorting: false,
-      header: "Keyword",
+      id: "keyword",
+      sortFn: "text",
+      sortDescFirst: false,
+      header: ({ column }) => <SortHeader column={column} label="Keyword" />,
       cell: ({ row }) => (
         <span className="flex max-w-64 items-center gap-2 font-medium">
           <span title={row.original.text} className="truncate">
@@ -95,9 +103,11 @@ function identityColumns() {
         </span>
       ),
     }),
-    columnHelper.accessor("source", {
-      enableSorting: false,
-      header: "Source",
+    columnHelper.accessor((row) => SOURCE_LABELS[row.source], {
+      id: "source",
+      sortFn: "text",
+      sortDescFirst: false,
+      header: ({ column }) => <SortHeader column={column} label="Source" />,
       cell: ({ row }) => <SourceBadge source={row.original.source} />,
     }),
   ];
@@ -114,13 +124,18 @@ function positionColumn() {
 }
 
 function deltaColumn() {
-  return columnHelper.accessor("positionDelta7d", {
-    enableSorting: false,
-    header: "Δ7d",
-    cell: ({ row }) => (
-      <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
-    ),
-  });
+  return columnHelper.accessor(
+    (row) => (row.positionDelta7d === null ? undefined : -row.positionDelta7d),
+    {
+      id: "delta7d",
+      ...SORTABLE,
+      sortDescFirst: true,
+      header: ({ column }) => <SortHeader column={column} label="Δ7d" />,
+      cell: ({ row }) => (
+        <DeltaChip value={row.original.positionDelta7d} period="over 7 days" />
+      ),
+    },
+  );
 }
 
 function scoreColumns() {

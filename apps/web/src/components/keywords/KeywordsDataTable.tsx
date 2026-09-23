@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 
 const STICKY_COLUMNS: Record<string, string | undefined> = {
   select: "sticky left-0 z-10 w-10 min-w-10 bg-inherit",
-  text: "sticky left-10 z-10 bg-inherit",
+  keyword: "sticky left-10 z-10 bg-inherit",
 };
 
 const ROW_HEIGHT = 41;

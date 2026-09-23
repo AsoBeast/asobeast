@@ -24,7 +24,9 @@ import {
   changeDaysParser,
   countryParser,
   discoveryDaysParser,
+  KEYWORD_TABLE_SORTS,
   keywordIdsParser,
+  keywordSortParser,
   mcpClientParser,
   moverDaysParser,
   onlyGapsParser,
@@ -56,6 +58,7 @@ type LiteralParserCase = readonly [
 
 const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["sort", sortParser, KEYWORD_SORTS, "opportunity"],
+  ["keywordSort", keywordSortParser, KEYWORD_TABLE_SORTS, "opportunity"],
   ["range", rangeParser, RANGE_PRESETS, "30d"],
   ["visibilityRange", visibilityRangeParser, VISIBILITY_RANGES, "30d"],
   ["ratingsRange", ratingsRangeParser, RATINGS_RANGES, "30d"],
@@ -235,4 +238,13 @@ describe("sortDirection parser", () => {
   it("rejects an unknown direction rather than defaulting to one", () => {
     expect(sortDirectionParser.parseServerSide("up")).toBeNull();
   });
+});
+
+describe("keywordSort parser", () => {
+  it.each(["keyword", "source", "delta7d", ...KEYWORD_SORTS])(
+    "accepts the table sort %s",
+    (sort) => {
+      expect(keywordSortParser.parseServerSide(sort)).toBe(sort);
+    },
+  );
 });

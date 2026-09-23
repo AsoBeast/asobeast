@@ -83,7 +83,8 @@ test("a second click on a sort header flips the direction", async ({
 
   const requests: string[] = [];
   page.on("request", (request) => {
-    if (request.url().includes("/keywords")) requests.push(request.url());
+    if (new URL(request.url()).pathname === "/api/backend/apps/app-1/keywords")
+      requests.push(request.url());
   });
 
   await popularity.click();
@@ -111,6 +112,32 @@ test("a pasted link with a direction loads in that order and announces it", asyn
   await expect(
     page.getByRole("columnheader", { name: "Popularity" }),
   ).not.toHaveAttribute("aria-sort", /.+/);
+});
+
+test("the keyword, source and weekly change headers sort too", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const rows = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row");
+
+  await page.getByRole("button", { name: "Keyword", exact: true }).click();
+  await expect(page).toHaveURL(/sort=keyword/);
+  await expect(rows.nth(1)).toContainText("focus timer");
+  await expect(rows.nth(2)).toContainText("pomodoro");
+  await expect(rows.last()).toContainText("time blocking");
+
+  await page.getByRole("button", { name: "Source", exact: true }).click();
+  await expect(page).toHaveURL(/sort=source/);
+  await expect(rows.nth(1)).toContainText("time blocking");
+  await expect(rows.last()).toContainText("focus timer");
+
+  await page.getByRole("button", { name: "Δ7d", exact: true }).click();
+  await expect(page).toHaveURL(/sort=delta7d/);
+  await expect(rows.nth(1)).toContainText("focus timer");
+  await expect(rows.nth(2)).toContainText("study timer");
+  await expect(rows.last()).toContainText("productivity app");
 });
 
 test("position deltas render arrows, a bare position and the captured-depth marker", async ({

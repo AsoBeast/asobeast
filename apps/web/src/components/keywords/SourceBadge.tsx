@@ -14,7 +14,7 @@ const VARIANT: Record<
   COMPETITOR: "secondary",
 };
 
-const LABEL: Record<KeywordSource, string> = {
+export const SOURCE_LABELS: Record<KeywordSource, string> = {
   TITLE: "Title",
   SUBTITLE: "Subtitle",
   DESCRIPTION: "Description",
@@ -25,5 +25,5 @@ const LABEL: Record<KeywordSource, string> = {
 };
 
 export function SourceBadge({ source }: { source: KeywordSource }) {
-  return <Badge variant={VARIANT[source]}>{LABEL[source]}</Badge>;
+  return <Badge variant={VARIANT[source]}>{SOURCE_LABELS[source]}</Badge>;
 }

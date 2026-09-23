@@ -13,9 +13,9 @@ import {
 import { useQueryState, useQueryStates } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
 import {
+  keywordSortParser,
   serpParser,
   sortDirectionParser,
-  sortParser,
 } from "@/lib/search-params";
 import { sortingFromUrl, urlFromSorting } from "@/lib/table/sorting";
 import { KEYWORD_SORT_DEFAULTS, keywordColumns } from "./keyword-columns";
@@ -36,7 +36,7 @@ export function KeywordsTable({
   country: string;
 }) {
   const [{ sort, dir }, setSortParams] = useQueryStates({
-    sort: sortParser,
+    sort: keywordSortParser,
     dir: sortDirectionParser,
   });
   const [, setSerp] = useQueryState("serp", serpParser);
@@ -62,7 +62,7 @@ export function KeywordsTable({
         KEYWORD_SORT_DEFAULTS,
       );
       void setSortParams({
-        sort: next.sort === null ? null : sortParser.parse(next.sort),
+        sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
         dir: next.dir,
       });
     },
