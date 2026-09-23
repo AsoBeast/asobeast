@@ -373,6 +373,60 @@ test("an unscored keyword grades nothing but its position", async ({
   );
 });
 
+test("searching narrows the rows, counts them and lives in the url", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const rows = page
+    .getByRole("table", { name: /Tracked keywords/ })
+    .getByRole("row");
+  const search = page.getByRole("textbox", { name: "Search keywords" });
+
+  await expect(page.getByText("5 of 5 keywords")).toBeVisible();
+  await search.fill("pomo");
+
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("pomodoro");
+  await expect(page.getByText("1 of 5 keywords")).toBeVisible();
+  await expect(page).toHaveURL(/q=pomo/);
+
+  await search.fill("");
+
+  await expect(rows).toHaveCount(6);
+  await expect(page).not.toHaveURL(/q=/);
+});
+
+test("a search that matches nothing offers to clear the filters", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?q=zzzz");
+
+  await expect(page.getByText("No keywords match these filters")).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Popularity" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Clear filters" }).click();
+
+  await expect(page).not.toHaveURL(/q=/);
+  await expect(page.getByText("5 of 5 keywords")).toBeVisible();
+});
+
+test("the export follows the search", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords?q=pomo");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export keywords to CSV" }).click(),
+  ]);
+
+  const lines = readFileSync(await download.path(), "utf8")
+    .split("\r\n")
+    .filter((line) => line.length > 0);
+  expect(lines).toHaveLength(2);
+  expect(lines[1].startsWith("pomodoro,")).toBe(true);
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 

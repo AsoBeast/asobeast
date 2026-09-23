@@ -26,6 +26,7 @@ import {
   discoveryDaysParser,
   KEYWORD_TABLE_SORTS,
   keywordIdsParser,
+  keywordSearchParser,
   keywordSortParser,
   mcpClientParser,
   moverDaysParser,
@@ -36,7 +37,6 @@ import {
   serpParser,
   SORT_DIRECTIONS,
   sortDirectionParser,
-  sortParser,
   spiderTermParser,
   suggestionStrategyParser,
   visibilityRangeParser,
@@ -57,7 +57,6 @@ type LiteralParserCase = readonly [
 ];
 
 const LITERAL_PARSERS: readonly LiteralParserCase[] = [
-  ["sort", sortParser, KEYWORD_SORTS, "opportunity"],
   ["keywordSort", keywordSortParser, KEYWORD_TABLE_SORTS, "opportunity"],
   ["range", rangeParser, RANGE_PRESETS, "30d"],
   ["visibilityRange", visibilityRangeParser, VISIBILITY_RANGES, "30d"],
@@ -87,6 +86,7 @@ const STRING_PARSERS = [
   ["country", countryParser],
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
+  ["keywordSearch", keywordSearchParser],
 ] as const;
 
 describe.each(LITERAL_PARSERS)(
@@ -247,4 +247,10 @@ describe("keywordSort parser", () => {
       expect(keywordSortParser.parseServerSide(sort)).toBe(sort);
     },
   );
+});
+
+describe("keywordSearch parser", () => {
+  it("keeps surrounding spaces rather than trimming the search", () => {
+    expect(keywordSearchParser.parseServerSide(" pomo ")).toBe(" pomo ");
+  });
 });

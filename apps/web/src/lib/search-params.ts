@@ -26,9 +26,6 @@ import {
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 
-export const sortParser =
-  parseAsStringLiteral(KEYWORD_SORTS).withDefault("opportunity");
-
 export const KEYWORD_TABLE_SORTS = [
   ...KEYWORD_SORTS,
   "keyword",
@@ -40,6 +37,8 @@ export type KeywordTableSort = (typeof KEYWORD_TABLE_SORTS)[number];
 
 export const keywordSortParser =
   parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
+
+export const keywordSearchParser = parseAsString.withDefault("");
 
 export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 

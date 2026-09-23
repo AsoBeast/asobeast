@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   Table,
@@ -28,8 +29,10 @@ const VIRTUALIZE_ABOVE = 50;
 
 export function KeywordsDataTable({
   table,
+  onClearFilters,
 }: {
   table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
+  onClearFilters: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = table.getRowModel().rows;
@@ -88,6 +91,16 @@ export function KeywordsDataTable({
         ))}
       </TableHeader>
       <TableBody>
+        {rows.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={columnCount}>
+              <FilteredEmpty
+                title="No keywords match these filters"
+                onClear={onClearFilters}
+              />
+            </TableCell>
+          </TableRow>
+        ) : null}
         {before > 0 ? (
           <tr aria-hidden>
             <td colSpan={columnCount} style={{ height: before }} />

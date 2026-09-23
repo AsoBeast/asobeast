@@ -13,6 +13,7 @@ import {
 import { useQueryState, useQueryStates } from "nuqs";
 import { keywordsOptions } from "@/lib/queries";
 import {
+  keywordSearchParser,
   keywordSortParser,
   serpParser,
   sortDirectionParser,
@@ -24,6 +25,7 @@ import { exportKeywords } from "./keyword-csv";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
+import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./SerpSheet";
 
 export function KeywordsTable({
@@ -40,6 +42,7 @@ export function KeywordsTable({
     dir: sortDirectionParser,
   });
   const [, setSerp] = useQueryState("serp", serpParser);
+  const [search, setSearch] = useQueryState("q", keywordSearchParser);
   const { data: keywords } = useSuspenseQuery(
     keywordsOptions(id, undefined, country),
   );
@@ -82,13 +85,15 @@ export function KeywordsTable({
     features: keywordTableFeatures,
     data: keywords,
     columns,
-    state: { rowSelection, sorting },
+    state: { rowSelection, sorting, globalFilter: search },
     onRowSelectionChange: setSelection,
     onSortingChange,
     getRowId: (row) => row.keywordId,
     enableRowSelection: true,
     enableSortingRemoval: false,
     enableMultiSort: false,
+    globalFilterFn: "includesString",
+    getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
 
   const selectedIds = Object.keys(rowSelection);
@@ -103,7 +108,16 @@ export function KeywordsTable({
   return (
     <>
       <div className="flex flex-col gap-3">
-        <KeywordsDataTable table={table} />
+        <KeywordsFilterBar
+          appId={id}
+          table={table}
+          search={search}
+          onSearch={(value, options) => void setSearch(value, options)}
+        />
+        <KeywordsDataTable
+          table={table}
+          onClearFilters={() => void setSearch(null)}
+        />
 
         {selectedIds.length > 0 ? (
           <div className="sticky bottom-4 z-30 flex justify-center">

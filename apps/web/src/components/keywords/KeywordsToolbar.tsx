@@ -1,7 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Download, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
 import { countryParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
-import { exportKeywords } from "./keyword-csv";
 
 export function KeywordsToolbar({
   id,
@@ -101,18 +100,6 @@ export function KeywordsToolbar({
         </span>{" "}
         active
       </p>
-
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-auto"
-        disabled={keywords.length === 0}
-        onClick={() => exportKeywords(id, keywords)}
-        aria-label="Export keywords to CSV"
-      >
-        <Download />
-        Export CSV
-      </Button>
     </div>
   );
 }
