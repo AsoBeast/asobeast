@@ -3,6 +3,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ProxyTier, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
+import { z } from 'zod';
 import type { ProxyPoolHealth } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
@@ -81,6 +82,10 @@ export interface BillingOrphans {
   billingOrphanSubscriptions: number;
   billingOrphanSubscriptionIds: string[];
 }
+
+const ORPHAN_REPORT = z.object({
+  orphanSubscriptions: z.array(z.unknown()).catch([]),
+});
 
 const NO_ORPHANS: BillingOrphans = {
   billingOrphanSubscriptions: 0,
@@ -215,14 +220,10 @@ export class InstanceMetricsCollector {
     const recorded = await this.redisValue(LAST_BILLING_RECONCILE_KEY);
     if (!recorded) return NO_ORPHANS;
     try {
-      const report = JSON.parse(recorded) as {
-        orphanSubscriptions?: unknown;
-      };
-      const ids = Array.isArray(report.orphanSubscriptions)
-        ? report.orphanSubscriptions.filter(
-            (id): id is string => typeof id === 'string',
-          )
-        : [];
+      const report = ORPHAN_REPORT.parse(JSON.parse(recorded));
+      const ids = report.orphanSubscriptions.filter(
+        (id): id is string => typeof id === 'string',
+      );
       return {
         billingOrphanSubscriptions: ids.length,
         billingOrphanSubscriptionIds: ids.slice(0, BILLING_ORPHAN_IDS_LISTED),
@@ -355,9 +356,7 @@ export class InstanceMetricsCollector {
 
   private async redisValue(key: string): Promise<string | null> {
     try {
-      const client = (await this.queue.getBackend().client) as unknown as {
-        get(key: string): Promise<string | null>;
-      };
+      const client = await this.queue.getBackend().client;
       return await client.get(key);
     } catch {
       return null;

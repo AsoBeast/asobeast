@@ -164,6 +164,11 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
   it.each([
     ['no reconciliation yet', null],
     ['an unreadable report', '{not json'],
+    ['a null report', 'null'],
+    [
+      'a report whose orphans are not a list',
+      '{"orphanSubscriptions":"sub_a"}',
+    ],
     ['a report without orphans', JSON.stringify({ checked: 1 })],
   ])('reports no orphans for %s', async (_, stored) => {
     redisGet.mockResolvedValue(stored);

@@ -82,6 +82,9 @@ export function portalConfiguration(
   };
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
 export function configurationCovers(
   actual: unknown,
   expected: unknown,
@@ -95,11 +98,12 @@ export function configurationCovers(
       )
     );
   }
-  if (expected !== null && typeof expected === 'object') {
-    if (actual === null || typeof actual !== 'object') return false;
-    const record = actual as Record<string, unknown>;
-    return Object.entries(expected).every(([key, value]) =>
-      configurationCovers(record[key], value),
+  if (isRecord(expected)) {
+    return (
+      isRecord(actual) &&
+      Object.entries(expected).every(([key, value]) =>
+        configurationCovers(actual[key], value),
+      )
     );
   }
   return actual === expected;

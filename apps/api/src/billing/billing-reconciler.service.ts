@@ -127,9 +127,7 @@ export class BillingReconciler {
 
   private async keep(report: BillingReconcileReport): Promise<void> {
     try {
-      const client = (await this.queue.getBackend().client) as unknown as {
-        set(key: string, value: string): Promise<unknown>;
-      };
+      const client = await this.queue.getBackend().client;
       await client.set(
         LAST_BILLING_RECONCILE_KEY,
         JSON.stringify({ ...report, finishedAt: new Date().toISOString() }),
