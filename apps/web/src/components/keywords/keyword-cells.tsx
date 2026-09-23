@@ -12,13 +12,15 @@ import type {
 import { formatCheckedPosition } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { PositionDeltaChip } from "@/components/ui/delta-chip";
-import { Meter, type MeterTone } from "@/components/ui/meter";
+import { Meter } from "@/components/ui/meter";
+import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
+import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
 import { cn } from "@/lib/utils";
 
 const OUTDATED_SCORE_DETAIL =
@@ -27,19 +29,24 @@ const OUTDATED_SCORE_DETAIL =
 const DERIVED_SCORE_DETAIL =
   "Calculated from popularity and difficulty when the list loaded, so it carries no stored capture time. It is the same for every app that tracks the keyword.";
 
+type ScoreMetric = Extract<
+  GradeMetric,
+  "popularity" | "difficulty" | "opportunity"
+>;
+
 function ScoreButton({
   value,
   label,
+  metric,
   summary,
   emphasize,
-  tone = "score",
   children,
 }: {
   value: number | null;
   label: string;
+  metric: ScoreMetric;
   summary: string;
   emphasize?: boolean;
-  tone?: MeterTone | "none";
   children: ReactNode;
 }) {
   if (value === null) {
@@ -58,12 +65,15 @@ function ScoreButton({
     );
   }
   const valueLabel = Math.round(value);
+  const graded = grade(metric, valueLabel);
+  const gradeWords = graded ? `, ${gradeLabel(graded)}` : "";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <button
           type="button"
-          aria-label={`${label} ${valueLabel}. ${summary}. Show scoring details`}
+          data-grade={graded ?? undefined}
+          aria-label={`${label} ${valueLabel}${gradeWords}. ${summary}. Show scoring details`}
           className={cn(
             "flex w-14 flex-col items-end gap-1 rounded-sm numeric font-mono outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             emphasize
@@ -72,7 +82,7 @@ function ScoreButton({
           )}
         >
           {valueLabel}
-          {tone === "none" ? null : <Meter value={value} tone={tone} />}
+          {graded ? <Meter value={value} fill={gradeFill(graded)} /> : null}
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm flex-col items-start gap-1.5">
@@ -97,26 +107,26 @@ function scoreSummary(
 export function ScoreCell({
   value,
   label,
+  metric,
   provenance,
   details,
   outdated,
   emphasize,
-  tone,
 }: {
   value: number | null;
   label: string;
+  metric: ScoreMetric;
   provenance: ScoreProvenance | null;
   details?: string[];
   outdated?: boolean;
   emphasize?: boolean;
-  tone?: MeterTone | "none";
 }) {
   return (
     <ScoreButton
       value={value}
       label={label}
+      metric={metric}
       emphasize={emphasize}
-      tone={tone}
       summary={scoreSummary(provenance, outdated)}
     >
       {outdated ? <span>{OUTDATED_SCORE_DETAIL}</span> : null}
@@ -135,18 +145,20 @@ export function ScoreCell({
 export function DerivedScoreCell({
   value,
   label,
+  metric,
   emphasize,
 }: {
   value: number | null;
   label: string;
+  metric: ScoreMetric;
   emphasize?: boolean;
 }) {
   return (
     <ScoreButton
       value={value}
       label={label}
+      metric={metric}
       emphasize={emphasize}
-      tone="opportunity"
       summary="Derived score"
     >
       <span>{DERIVED_SCORE_DETAIL}</span>
@@ -247,13 +259,15 @@ export function PositionCell({ keyword }: { keyword: TrackedKeywordItem }) {
   }
   return (
     <span className="numeric font-mono inline-flex items-center gap-1.5">
-      <span
-        className={cn(
-          keyword.latestPosition === null && "text-muted-foreground",
-        )}
-      >
-        {label}
-      </span>
+      {keyword.latestPosition === null ? (
+        <span className="text-muted-foreground">{label}</span>
+      ) : (
+        <GradedNumber
+          value={label}
+          grade={grade("position", keyword.latestPosition)}
+          label="Position"
+        />
+      )}
       <PositionDeltaChip value={keyword.positionDelta1d} />
     </span>
   );

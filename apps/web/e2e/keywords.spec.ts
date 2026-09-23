@@ -301,7 +301,7 @@ test("score details are persistent, keyboard accessible and store specific", asy
 
   const opportunityScore = page
     .getByRole("row", { name: /focus timer/ })
-    .getByRole("button", { name: /Opportunity \d+\. Derived score/ });
+    .getByRole("button", { name: /Opportunity \d+, strong\. Derived score/ });
   await opportunityScore.focus();
   const opportunityTooltip = page
     .getByRole("tooltip")
@@ -325,6 +325,52 @@ test("score details are persistent, keyboard accessible and store specific", asy
   await expect(
     unscoredRow.getByLabel("Popularity: not scored yet"),
   ).toBeVisible();
+});
+
+test("scores and positions carry their grade in colour and in words", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /pomodoro/ });
+
+  const popularity = row.getByRole("button", { name: /^Popularity/ });
+  await expect(popularity).toHaveAttribute("data-grade", "strong");
+  await expect(popularity).toHaveAccessibleName(
+    /Popularity \d+, (strong|fair|weak|poor)\./,
+  );
+  await expect(popularity).toHaveAccessibleName(
+    /Popularity 9000.*Medium confidence/,
+  );
+  await expect(
+    row.getByRole("button", { name: /^Difficulty/ }),
+  ).toHaveAttribute("data-grade", "weak");
+  await expect(
+    row.getByRole("button", { name: /^Difficulty/ }),
+  ).toHaveAccessibleName(/Difficulty 70, weak\..*Medium confidence/);
+  await expect(
+    row.getByRole("button", { name: /^Opportunity/ }),
+  ).toHaveAttribute("data-grade", "strong");
+  await expect(row.getByLabel("Position 12, weak")).toHaveAttribute(
+    "data-grade",
+    "weak",
+  );
+});
+
+test("an unscored keyword grades nothing but its position", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const row = page.getByRole("row", { name: /time blocking/ });
+
+  await expect(row.getByLabel("Popularity: not scored yet")).toBeVisible();
+  await expect(
+    row.getByLabel("Popularity: not scored yet"),
+  ).not.toHaveAttribute("data-grade", /.+/);
+  await expect(row.locator("[data-grade]")).toHaveCount(1);
+  await expect(row.getByLabel("Position 45, poor")).toHaveAttribute(
+    "data-grade",
+    "poor",
+  );
 });
 
 test("a queued job says queued, not done", async ({ page }) => {

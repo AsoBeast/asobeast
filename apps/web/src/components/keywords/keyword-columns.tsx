@@ -149,7 +149,7 @@ function scoreColumns() {
         <ScoreCell
           value={scoreValue(row.original, "traffic")}
           label="Popularity"
-          tone="none"
+          metric="popularity"
           provenance={row.original.scoreProvenance}
           details={popularitySignalLines(
             row.original.scoreSignals ?? null,
@@ -169,6 +169,7 @@ function scoreColumns() {
         <ScoreCell
           value={scoreValue(row.original, "difficulty")}
           label="Difficulty"
+          metric="difficulty"
           provenance={row.original.scoreProvenance}
           details={difficultySignalLines(row.original.scoreSignals ?? null)}
           outdated={isScoreOutdated(row.original)}
@@ -186,6 +187,7 @@ function scoreColumns() {
         <DerivedScoreCell
           value={scoreValue(row.original, "opportunity")}
           label="Opportunity"
+          metric="opportunity"
           emphasize
         />
       ),
