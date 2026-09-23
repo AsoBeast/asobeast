@@ -438,6 +438,9 @@ test("a source facet narrows the rows and shows a removable chip", async ({
   await page.keyboard.press("Escape");
 
   await expect(page).toHaveURL(/source=MANUAL/);
+  await expect(
+    page.getByRole("button", { name: "Filter by source, 1 selected" }),
+  ).toBeVisible();
   await expect(rows).toHaveCount(2);
   await expect(rows.nth(1)).toContainText("productivity app");
   await expect(page.getByText("Source: Manual")).toBeVisible();

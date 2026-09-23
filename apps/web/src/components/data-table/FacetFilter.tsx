@@ -52,7 +52,11 @@ export function FacetFilter<T extends string>({
           variant="outline"
           size="sm"
           className="border-dashed"
-          aria-label={`Filter by ${title.toLowerCase()}`}
+          aria-label={
+            selected.length > 0
+              ? `Filter by ${title.toLowerCase()}, ${selected.length} selected`
+              : `Filter by ${title.toLowerCase()}`
+          }
         >
           <ListFilter aria-hidden />
           {title}
