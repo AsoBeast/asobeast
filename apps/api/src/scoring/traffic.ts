@@ -14,7 +14,7 @@ export const THIN_SERP_RESULTS = 5;
 export const THIN_SERP_TRAFFIC_CAP = 1;
 const POPULARITY_SCALE = 10;
 
-export function demandScore(stats: KeywordStats): number {
+function demandScore(stats: KeywordStats): number {
   const [min, max] = DEMAND_BOUNDS;
   const top = topTen(stats);
   const typical = median(finiteNumbers(top.map((item) => item.ratingCount)));
