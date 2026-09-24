@@ -638,6 +638,40 @@ test("a column shown on a phone does not hide the rest on a wider screen", async
   }
 });
 
+test("a column hidden on a wide screen stays hidden after a phone change", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Popularity" }).click();
+  await page.keyboard.press("Escape");
+  const popularity = page.getByRole("columnheader", {
+    name: "Popularity",
+    exact: true,
+  });
+  await expect(popularity).toHaveCount(0);
+
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Source" }).click();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("columnheader", { name: "Source", exact: true }),
+  ).toBeVisible();
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.reload();
+
+  await expect(
+    page.getByRole("columnheader", { name: "Difficulty", exact: true }),
+  ).toBeVisible();
+  await expect(popularity).toHaveCount(0);
+});
+
 test("a queued job says queued, not done", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 

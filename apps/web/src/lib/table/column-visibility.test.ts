@@ -78,18 +78,46 @@ describe("phoneColumnVisibility", () => {
 });
 
 describe("columnChoices", () => {
+  const phone = { source: false, traffic: false, difficulty: false };
+
   it("keeps only what differs from the screen default", () => {
     expect(
       columnChoices(
+        {},
+        phone,
         { source: true, traffic: false, difficulty: false },
-        { source: false, traffic: false, difficulty: false },
+        phone,
       ),
     ).toEqual({ source: true });
   });
 
   it("counts a column the default shows as visible", () => {
-    expect(columnChoices({ source: false, traffic: true }, {})).toEqual({
-      source: false,
-    });
+    expect(columnChoices({}, {}, { source: false, traffic: true }, {})).toEqual(
+      { source: false },
+    );
+  });
+
+  it("keeps a choice made on another screen that the user did not touch", () => {
+    const stored = { traffic: false };
+    expect(
+      columnChoices(
+        stored,
+        { ...phone, ...stored },
+        { ...phone, ...stored, source: true },
+        phone,
+      ),
+    ).toEqual({ traffic: false, source: true });
+  });
+
+  it("drops a choice the user sets back to the screen default", () => {
+    expect(
+      columnChoices({ source: false }, { source: false }, { source: true }, {}),
+    ).toEqual({});
+  });
+
+  it("treats a column missing from the update as visible", () => {
+    expect(columnChoices({ source: false }, { source: false }, {}, {})).toEqual(
+      {},
+    );
   });
 });

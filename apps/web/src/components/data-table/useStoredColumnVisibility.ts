@@ -53,6 +53,8 @@ export function useStoredColumnVisibility(
   const setVisibility = useCallback(
     (updater: Updater<ColumnVisibilityState>) => {
       const choices = columnChoices(
+        stored ?? NO_HIDDEN_COLUMNS,
+        visibility,
         functionalUpdate(updater, visibility),
         fallback,
       );
@@ -63,7 +65,7 @@ export function useStoredColumnVisibility(
       }
       listeners.forEach((listener) => listener());
     },
-    [table, visibility, fallback],
+    [table, stored, visibility, fallback],
   );
 
   return [visibility, setVisibility] as const;

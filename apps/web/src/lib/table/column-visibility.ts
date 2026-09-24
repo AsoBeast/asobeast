@@ -63,12 +63,17 @@ export function phoneColumnVisibility(
 }
 
 export function columnChoices(
-  visibility: ColumnVisibilityState,
+  stored: ColumnVisibilityState,
+  current: ColumnVisibilityState,
+  next: ColumnVisibilityState,
   fallback: ColumnVisibilityState,
 ): ColumnVisibilityState {
-  return Object.fromEntries(
-    Object.entries(visibility).filter(
-      ([id, visible]) => visible !== (fallback[id] ?? true),
-    ),
-  );
+  const choices = { ...stored };
+  for (const id of new Set([...Object.keys(current), ...Object.keys(next)])) {
+    const visible = next[id] ?? true;
+    if (visible === (current[id] ?? true)) continue;
+    if (visible === (fallback[id] ?? true)) delete choices[id];
+    else choices[id] = visible;
+  }
+  return choices;
 }
