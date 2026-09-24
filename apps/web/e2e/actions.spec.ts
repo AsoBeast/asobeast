@@ -8,7 +8,9 @@ const ACT_UNCOVERED_TITLE = "Add a high-opportunity keyword to your metadata";
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 test.beforeEach(async ({ request }) => {
-  await request.post(`${MOCK_API_URL}/__reset`);
+  await request.post(`${MOCK_API_URL}/__reset/actions`, {
+    failOnStatusCode: true,
+  });
 });
 
 test("lists actions sorted by estimated impact", async ({ page }) => {
