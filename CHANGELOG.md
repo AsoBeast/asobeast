@@ -3,6 +3,21 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.6.0](https://github.com/AsoBeast/asobeast/compare/v1.5.0...v1.6.0) (2026-09-24)
+
+
+### Features
+
+* **api:** harden stripe checkout, catalog and operations for launch ([#126](https://github.com/AsoBeast/asobeast/issues/126)) ([6c1fd42](https://github.com/AsoBeast/asobeast/commit/6c1fd4253d5116082945e80a5b292a84fbd5ec8d))
+* **web:** sort, filter and colour grade every table ([#130](https://github.com/AsoBeast/asobeast/issues/130)) ([ba85a19](https://github.com/AsoBeast/asobeast/commit/ba85a19111d53a3c3f351262f3407fdbaea0957e))
+
+
+### Bug Fixes
+
+* **web:** drop a streamed segment whose fallback was already revealed ([#129](https://github.com/AsoBeast/asobeast/issues/129)) ([6b52efd](https://github.com/AsoBeast/asobeast/commit/6b52efd8a1b6be8369d811a39f915e08934ab5c3))
+* **web:** render the settings plan section on the server ([#127](https://github.com/AsoBeast/asobeast/issues/127)) ([6c2fb48](https://github.com/AsoBeast/asobeast/commit/6c2fb48439bbe226b548ebf5f521b18600a4d07a))
+* **web:** report the server auth state until a consumer has hydrated ([#131](https://github.com/AsoBeast/asobeast/issues/131)) ([2d01333](https://github.com/AsoBeast/asobeast/commit/2d01333d1dbe6bba4ce4d080602c55ac9e200014))
+
 ## [1.5.0](https://github.com/AsoBeast/asobeast/compare/v1.4.0...v1.5.0) (2026-09-22)
 
 
