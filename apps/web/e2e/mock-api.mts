@@ -82,12 +82,6 @@ const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
 const keywordFields = new Map<string, string>();
-const INITIAL_COMPETITORS = new Map(
-  Object.entries(DATASETS).map(([id, dataset]) => [
-    id,
-    [...dataset.competitors],
-  ]),
-);
 const AUTH_USER: AuthUser = {
   id: "u1",
   email: "owner@example.com",
@@ -174,18 +168,12 @@ interface Route {
   handler: Handler;
 }
 
-function resetState(): void {
+function resetActions(): void {
   actions.splice(
     0,
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
   );
-  webhooks.splice(0, webhooks.length, ...WEBHOOKS);
-  emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
-  for (const [id, initial] of INITIAL_COMPETITORS) {
-    const list = DATASETS[id].competitors;
-    list.splice(0, list.length, ...initial);
-  }
 }
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
@@ -695,9 +683,9 @@ function firstRunFor(appId: string): FirstRunStatus {
 const routes: Route[] = [
   {
     method: "POST",
-    pattern: /^\/__reset$/,
+    pattern: /^\/__reset\/actions$/,
     handler: (_p, _req, res) => {
-      resetState();
+      resetActions();
       json(res, 200, { reset: true });
     },
   },
