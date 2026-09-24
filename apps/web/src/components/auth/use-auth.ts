@@ -29,7 +29,7 @@ const SERVER_AUTH_STATE: AuthState = {
   status: undefined,
   user: undefined,
   isLoading: true,
-  isFetching: false,
+  isFetching: true,
   trialOnly: false,
 };
 
@@ -46,13 +46,13 @@ export function useAuth(): AuthState {
     enabled: authenticated,
   });
 
+  if (!hydrated) return SERVER_AUTH_STATE;
+
   const trialOnly = Boolean(
     user?.entitled &&
     paidPlanOf(user.plan) === null &&
     user.trialEndsAt !== null,
   );
-
-  if (!hydrated) return SERVER_AUTH_STATE;
 
   return {
     status,
