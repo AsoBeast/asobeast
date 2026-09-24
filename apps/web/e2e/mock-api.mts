@@ -692,6 +692,18 @@ function firstRunFor(appId: string): FirstRunStatus {
   return { ...FIRST_RUN_COMPLETE, appId };
 }
 
+const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+
+const budgetHolds = new Map<string, PromiseWithResolvers<void>>();
+
+function budgetHold(token: string): PromiseWithResolvers<void> {
+  const existing = budgetHolds.get(token);
+  if (existing) return existing;
+  const hold = Promise.withResolvers<void>();
+  budgetHolds.set(token, hold);
+  return hold;
+}
+
 const routes: Route[] = [
   {
     method: "POST",
@@ -699,6 +711,14 @@ const routes: Route[] = [
     handler: (_p, _req, res) => {
       resetState();
       json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__budget-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      budgetHold(token).resolve();
+      json(res, 200, { released: true });
     },
   },
   {
@@ -992,7 +1012,14 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/jobs\/budget$/,
-    handler: (_p, _q, res) => json(res, 200, BUDGET),
+    handler: (_p, req, res) => {
+      const token = cookieValue(req, BUDGET_HOLD_COOKIE);
+      if (!token) {
+        json(res, 200, BUDGET);
+        return;
+      }
+      void budgetHold(token).promise.then(() => json(res, 200, BUDGET));
+    },
   },
   {
     method: "POST",

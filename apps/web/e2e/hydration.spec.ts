@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
@@ -9,6 +10,8 @@ import {
   ONBOARDING_STORAGE_KEY,
   type OnboardingState,
 } from "../src/lib/onboarding";
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 const IN_PROGRESS_ONBOARDING: OnboardingState = {
   ...NOT_STARTED_ONBOARDING,
@@ -138,6 +141,26 @@ test("the settings plan section is in the html the server sent while billing is 
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Plan" })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
+});
+
+test("settings hydrates after the shell has already loaded the session", async ({
+  page,
+  context,
+  request,
+}) => {
+  const hold = randomUUID();
+  await seedCookies(context, { e2e_budget_hold: hold });
+  const errors = collectPageErrors(page);
+
+  await page.goto("/settings", { waitUntil: "commit" });
+  await expect(
+    page.getByRole("button", { name: "Account menu" }),
+  ).toBeVisible();
+  await request.post(`${MOCK_API_URL}/__budget-holds/${hold}/release`);
+  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
