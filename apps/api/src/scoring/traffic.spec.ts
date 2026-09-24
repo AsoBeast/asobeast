@@ -86,18 +86,18 @@ describe('computeTraffic on the app store', () => {
   });
 
   it('reads the results past the top ten', () => {
-    const stats = {
-      ...fixtures.F5_TAIL,
-      serp: [
-        ...fixtures.F5_TAIL.serp,
-        ...Array.from({ length: 15 }, () => ({
-          title: 'Guess the Location',
-          ratingCount: 500_000,
-        })),
-      ],
-    };
-    expect(estimateTraffic(stats)).toBe(modelTraffic(stats));
-    expect(estimateTraffic(stats)).not.toBe(modelTraffic(fixtures.F5_TAIL));
+    const page = [
+      ...fixtures.tailTopTen(),
+      ...Array.from({ length: 15 }, () => ({
+        title: 'Guess the Location',
+        ratingCount: 500_000,
+      })),
+    ];
+    const popularity = (apps: typeof page) =>
+      (estimatePopularity(apps, fixtures.F5_TAIL.keywordText) ?? 0) / 10;
+    const estimate = estimateTraffic({ ...fixtures.F5_TAIL, serp: page });
+    expect(estimate).toBe(popularity(page));
+    expect(estimate).not.toBe(popularity(page.slice(0, 10)));
   });
 
   it('caps a thin page and releases the cap at five results', () => {

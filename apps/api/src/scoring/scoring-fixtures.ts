@@ -1,8 +1,6 @@
 import { KeywordStats, SerpApp } from './formulas';
 
-type FixtureApp = SerpApp;
-
-const app = (title: string, ratingCount: number): FixtureApp => ({
+const app = (title: string, ratingCount: number): SerpApp => ({
   title,
   ratingCount,
 });
@@ -12,23 +10,23 @@ export const HEAD_RATING_COUNTS = [
   60_000,
 ];
 
-export const headTopTen = (): FixtureApp[] =>
+export const headTopTen = (): SerpApp[] =>
   HEAD_RATING_COUNTS.map((count, index) => app(`Quiz ${index}`, count));
 
-export const brandTopTen = (): FixtureApp[] => [
+export const brandTopTen = (): SerpApp[] => [
   app('GeoGuessr', 31_751),
   ...Array.from({ length: 9 }, (_, index) => app(`Map game ${index}`, 800)),
 ];
 
-export const junkTopTen = (): FixtureApp[] =>
+export const junkTopTen = (): SerpApp[] =>
   Array.from({ length: 10 }, () => app('YouTube', 30_000_000));
 
-export const tailTopTen = (): FixtureApp[] =>
+export const tailTopTen = (): SerpApp[] =>
   [1_200, 300, 50, 20, 900, 10, 5, 0, 40, 700].map((count, index) =>
     app(index < 4 ? `Guess the Location ${index}` : `Map game ${index}`, count),
   );
 
-export const outlierTopTen = (): FixtureApp[] =>
+export const outlierTopTen = (): SerpApp[] =>
   [20_000_000, 5, 5, 5, 5, 5, 5, 5, 5, 5].map((count, index) =>
     app(`Geo Quiz ${index}`, count),
   );

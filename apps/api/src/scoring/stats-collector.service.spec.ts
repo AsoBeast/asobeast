@@ -201,7 +201,7 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence.suggestCompleted).toBe(false);
   });
 
-  it('enriches the google play top10 via sequential getApp', async () => {
+  it('enriches the google play top ten via sequential getApp', async () => {
     const suggest = jest.fn().mockResolvedValue([{ term: 'puzzle game' }]);
     const { registry, search, getApp } = buildGplayProvider({ suggest });
     const service = new StatsCollectorService(
