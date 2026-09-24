@@ -464,6 +464,8 @@ function auditBase(id: string, req: IncomingMessage): AppAuditResult {
 
 const AUDIT_SLOW_MS = 1_500;
 
+const BUDGET_SLOW_MS = 1_500;
+
 function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
   const base = auditBase(id, req);
   if (hasCookie(req, "e2e_ai_unconfigured", "1")) {
@@ -992,7 +994,13 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/jobs\/budget$/,
-    handler: (_p, _q, res) => json(res, 200, BUDGET),
+    handler: (_p, req, res) => {
+      if (hasCookie(req, "e2e_budget_slow", "1")) {
+        setTimeout(() => json(res, 200, BUDGET), BUDGET_SLOW_MS);
+        return;
+      }
+      json(res, 200, BUDGET);
+    },
   },
   {
     method: "POST",
