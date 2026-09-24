@@ -143,6 +143,25 @@ test("the settings plan section is in the html the server sent while billing is 
   expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
 });
 
+test("settings hydrates after the shell has already loaded the session", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { e2e_budget_slow: "1" });
+  const errors = collectPageErrors(page);
+  const shellLoaded = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/api/backend/account/deletion",
+  );
+
+  await page.goto("/settings");
+  await shellLoaded;
+  await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
+  await page.waitForLoadState("networkidle");
+
+  expect(errors, `the settings page threw: ${errors.join(", ")}`).toEqual([]);
+});
+
 test("a stored onboarding checklist hydrates without an uncaught error", async ({
   page,
   context,
