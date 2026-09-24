@@ -174,19 +174,34 @@ interface Route {
   handler: Handler;
 }
 
-function resetState(): void {
-  actions.splice(
-    0,
-    actions.length,
-    ...ACTIONS.map((action) => structuredClone(action)),
-  );
-  webhooks.splice(0, webhooks.length, ...WEBHOOKS);
-  emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
-  for (const [id, initial] of INITIAL_COMPETITORS) {
-    const list = DATASETS[id].competitors;
-    list.splice(0, list.length, ...initial);
-  }
-}
+const RESETS = new Map<string, () => void>([
+  [
+    "actions",
+    () => {
+      actions.splice(
+        0,
+        actions.length,
+        ...ACTIONS.map((action) => structuredClone(action)),
+      );
+    },
+  ],
+  [
+    "alerts",
+    () => {
+      webhooks.splice(0, webhooks.length, ...WEBHOOKS);
+      emailAlerts.splice(0, emailAlerts.length, ...EMAIL_ALERTS);
+    },
+  ],
+  [
+    "competitors",
+    () => {
+      for (const [id, initial] of INITIAL_COMPETITORS) {
+        const list = DATASETS[id].competitors;
+        list.splice(0, list.length, ...initial);
+      }
+    },
+  ],
+]);
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
   for (const pair of (req.headers.cookie ?? "").split(";")) {
@@ -696,9 +711,24 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/__reset$/,
-    handler: (_p, _req, res) => {
-      resetState();
-      json(res, 200, { reset: true });
+    handler: (_p, req, res) => {
+      const path = req.url ?? "/__reset";
+      const scope = new URL(path, "http://localhost").searchParams.get("scope");
+      const reset = scope === null ? undefined : RESETS.get(scope);
+      if (!reset) {
+        json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            `scope must be one of ${[...RESETS.keys()].join(", ")}`,
+          ),
+        );
+        return;
+      }
+      reset();
+      json(res, 200, { reset: scope });
     },
   },
   {
