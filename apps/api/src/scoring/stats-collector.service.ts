@@ -6,6 +6,7 @@ import { SearchItem, StoreProvider } from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats, SerpApp, TOP_TEN } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
+import { MODEL_DEPTH } from './popularity-model';
 import { ScoringEvidence } from './provenance';
 import {
   ProbedReach,
@@ -14,7 +15,6 @@ import {
 } from './suggest-reach.probe';
 
 const SEARCH_DEPTH = 100;
-const COMPETITOR_DEPTH = 25;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -105,9 +105,7 @@ export class StatsCollectorService {
   private searchPage(results: SearchItem[]): DetailCollection {
     const topCount = Math.min(results.length, TOP_TEN);
     return {
-      items: results
-        .slice(0, COMPETITOR_DEPTH)
-        .map((item) => this.toStrength(item)),
+      items: results.slice(0, MODEL_DEPTH).map((item) => this.toStrength(item)),
       targetCount: topCount,
       successCount: topCount,
     };

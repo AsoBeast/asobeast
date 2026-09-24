@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, SuggestItem } from '../store-providers/types';
 import { OfficialPopularityLookup } from './official-popularity';
+import { MODEL_DEPTH } from './popularity-model';
 import { StatsCollectorService } from './stats-collector.service';
 
 const noOfficial = {
@@ -114,7 +115,7 @@ describe('StatsCollectorService', () => {
       'store',
       'suggest',
     ]);
-    expect(collected?.stats.serp).toHaveLength(25);
+    expect(collected?.stats.serp).toHaveLength(MODEL_DEPTH);
     expect(collected?.stats.serp[0]).toEqual({
       storeAppId: 'app0',
       title: 'Puzzle Game 0',
