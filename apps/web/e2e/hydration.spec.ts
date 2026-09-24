@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
@@ -9,6 +10,8 @@ import {
   ONBOARDING_STORAGE_KEY,
   type OnboardingState,
 } from "../src/lib/onboarding";
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 const IN_PROGRESS_ONBOARDING: OnboardingState = {
   ...NOT_STARTED_ONBOARDING,
@@ -146,16 +149,18 @@ test("the settings plan section is in the html the server sent while billing is 
 test("settings hydrates after the shell has already loaded the session", async ({
   page,
   context,
+  request,
 }) => {
-  await seedCookies(context, { e2e_budget_slow: "1" });
+  const hold = randomUUID();
+  await seedCookies(context, { e2e_budget_hold: hold });
   const errors = collectPageErrors(page);
-  const shellLoaded = page.waitForResponse(
-    (response) =>
-      new URL(response.url()).pathname === "/api/backend/account/deletion",
+  const sessionLoaded = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/backend/auth/me",
   );
 
-  await page.goto("/settings");
-  await shellLoaded;
+  await page.goto("/settings", { waitUntil: "commit" });
+  await sessionLoaded;
+  await request.post(`${MOCK_API_URL}/__budget-holds/${hold}/release`);
   await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
   await page.waitForLoadState("networkidle");
 

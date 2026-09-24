@@ -464,8 +464,6 @@ function auditBase(id: string, req: IncomingMessage): AppAuditResult {
 
 const AUDIT_SLOW_MS = 1_500;
 
-const BUDGET_SLOW_MS = 1_500;
-
 function auditFor(id: string, req: IncomingMessage, res: ServerResponse): void {
   const base = auditBase(id, req);
   if (hasCookie(req, "e2e_ai_unconfigured", "1")) {
@@ -694,6 +692,18 @@ function firstRunFor(appId: string): FirstRunStatus {
   return { ...FIRST_RUN_COMPLETE, appId };
 }
 
+const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+
+const budgetHolds = new Map<string, PromiseWithResolvers<void>>();
+
+function budgetHold(token: string): PromiseWithResolvers<void> {
+  const existing = budgetHolds.get(token);
+  if (existing) return existing;
+  const hold = Promise.withResolvers<void>();
+  budgetHolds.set(token, hold);
+  return hold;
+}
+
 const routes: Route[] = [
   {
     method: "POST",
@@ -701,6 +711,14 @@ const routes: Route[] = [
     handler: (_p, _req, res) => {
       resetState();
       json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__budget-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      budgetHold(token).resolve();
+      json(res, 200, { released: true });
     },
   },
   {
@@ -995,11 +1013,12 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/budget$/,
     handler: (_p, req, res) => {
-      if (hasCookie(req, "e2e_budget_slow", "1")) {
-        setTimeout(() => json(res, 200, BUDGET), BUDGET_SLOW_MS);
+      const token = cookieValue(req, BUDGET_HOLD_COOKIE);
+      if (!token) {
+        json(res, 200, BUDGET);
         return;
       }
-      json(res, 200, BUDGET);
+      void budgetHold(token).promise.then(() => json(res, 200, BUDGET));
     },
   },
   {
