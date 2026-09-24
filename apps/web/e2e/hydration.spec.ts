@@ -154,12 +154,11 @@ test("settings hydrates after the shell has already loaded the session", async (
   const hold = randomUUID();
   await seedCookies(context, { e2e_budget_hold: hold });
   const errors = collectPageErrors(page);
-  const sessionLoaded = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/backend/auth/me",
-  );
 
   await page.goto("/settings", { waitUntil: "commit" });
-  await sessionLoaded;
+  await expect(
+    page.getByRole("button", { name: "Account menu" }),
+  ).toBeVisible();
   await request.post(`${MOCK_API_URL}/__budget-holds/${hold}/release`);
   await expect(page.getByText("API tokens", { exact: true })).toBeVisible();
   await page.waitForLoadState("networkidle");
