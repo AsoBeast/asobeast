@@ -107,7 +107,7 @@ function ActiveSetup({
   const emailAlerts = useQuery(emailAlertsOptions);
   const keywordQueries = useQueries({
     queries: state.selectedMarkets.map((market) =>
-      keywordsOptions(app.id, undefined, market),
+      keywordsOptions(app.id, market),
     ),
   });
   const channelQueries: LiveQuery[] = [

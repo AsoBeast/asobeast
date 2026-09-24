@@ -21,3 +21,6 @@ export function scoreValue(
 
 export const isScoreOutdated = (keyword: TrackedKeywordItem): boolean =>
   keyword.scoreOutdated === true;
+
+export const shownScore = (value: number | null): number | null =>
+  value === null ? null : Math.round(value);

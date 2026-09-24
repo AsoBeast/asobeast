@@ -1,7 +1,17 @@
-import { Check, Minus } from "lucide-react";
-import type { KeywordCoverageRow, MetadataField } from "@asobeast/shared";
-import { BucketBadge } from "@/components/BucketBadge";
-import { Badge } from "@/components/ui/badge";
+"use client";
+
+import { useMemo } from "react";
+import { flexRender, useTable } from "@tanstack/react-table";
+import { useQueryStates } from "nuqs";
+import type { KeywordCoverageRow } from "@asobeast/shared";
+import { FilterChips } from "@/components/data-table/FilterChips";
+import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { RowCount } from "@/components/data-table/RowCount";
+import { SearchInput } from "@/components/data-table/SearchInput";
+import { dataTableFeatures } from "@/components/data-table/table-features";
+import { useUrlSorting } from "@/components/data-table/useUrlSorting";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -12,101 +22,160 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
-import { cn } from "@/lib/utils";
+import {
+  coverageFilterParsers,
+  coverageSortParser,
+  sortDirectionParser,
+} from "@/lib/search-params";
+import { ariaSort } from "@/lib/table/sorting";
+import {
+  coverageColumns,
+  FIELD_ORDER,
+  HIDDEN_COVERAGE_COLUMNS,
+} from "./coverage-columns";
 
-const FIELD_ORDER: MetadataField[] = [
-  "title",
-  "subtitle",
-  "shortDescription",
-  "keywordField",
-  "description",
-];
-
-function CoverageMark({
-  covered,
-  field,
-}: {
-  covered: boolean;
-  field: MetadataField;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex size-6 items-center justify-center rounded-full",
-        covered
-          ? "bg-success-subtle text-success"
-          : "bg-muted text-muted-foreground",
-      )}
-    >
-      {covered ? (
-        <Check className="size-3.5" />
-      ) : (
-        <Minus className="size-3.5" />
-      )}
-      <span className="sr-only">
-        {covered ? "in" : "missing from"} {METADATA_FIELD_LABELS[field]}
-      </span>
-    </span>
-  );
-}
+const COVERAGE_PARAMS = {
+  ...coverageFilterParsers,
+  sort: coverageSortParser,
+  dir: sortDirectionParser,
+};
 
 export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
-  const present = new Set(
-    rows.flatMap((row) => row.fields.map((field) => field.field)),
+  const [params, setParams] = useQueryStates(COVERAGE_PARAMS);
+  const fields = useMemo(() => {
+    const present = new Set(
+      rows.flatMap((row) => row.fields.map((field) => field.field)),
+    );
+    return FIELD_ORDER.filter((field) => present.has(field));
+  }, [rows]);
+  const columns = useMemo(() => coverageColumns(fields), [fields]);
+  const { sorting, onSortingChange } = useUrlSorting(
+    params,
+    columns,
+    (next) =>
+      void setParams({
+        sort: next.sort === null ? null : coverageSortParser.parse(next.sort),
+        dir: next.dir,
+      }),
   );
-  const columns = FIELD_ORDER.filter((field) => present.has(field));
+
+  const table = useTable({
+    features: dataTableFeatures,
+    data: rows,
+    columns,
+    getRowId: (row) => row.keywordId,
+    state: {
+      sorting,
+      globalFilter: params.q,
+      columnFilters: params.uncovered ? [{ id: "uncovered", value: true }] : [],
+      columnVisibility: HIDDEN_COVERAGE_COLUMNS,
+    },
+    onSortingChange,
+    enableSortingRemoval: false,
+    enableMultiSort: false,
+    globalFilterFn: "includesString",
+    getColumnCanGlobalFilter: (column) => column.id === "keyword",
+  });
+  const shown = table.getRowModel().rows;
+  const clearFilters = () => void setParams({ q: null, uncovered: null });
+  const chips = [
+    params.q
+      ? {
+          key: "q",
+          label: `Search: ${params.q}`,
+          onRemove: () => void setParams({ q: null }),
+        }
+      : null,
+    params.uncovered
+      ? {
+          key: "uncovered",
+          label: "Uncovered only",
+          onRemove: () => void setParams({ uncovered: null }),
+        }
+      : null,
+  ].filter((chip) => chip !== null);
 
   return (
-    <Table containerClassName="rounded-xl border bg-card">
-      <TableCaption className="sr-only">
-        Keyword coverage across{" "}
-        {columns.map((column) => METADATA_FIELD_LABELS[column]).join(", ")},
-        with uncovered keywords highlighted.
-      </TableCaption>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Keyword</TableHead>
-          <TableHead>Bucket</TableHead>
-          {columns.map((column) => (
-            <TableHead key={column} className="text-center">
-              {METADATA_FIELD_LABELS[column]}
-            </TableHead>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <SearchInput
+          label="Search keywords"
+          value={params.q}
+          onSearch={(q, options) => void setParams({ q }, options)}
+        />
+        <div className="flex items-center gap-2">
+          <Switch
+            id="uncovered-only"
+            checked={params.uncovered}
+            onCheckedChange={(next) =>
+              void setParams({ uncovered: next ? true : null })
+            }
+          />
+          <Label htmlFor="uncovered-only" className="text-sm">
+            Uncovered only
+          </Label>
+        </div>
+        <RowCount shown={shown.length} total={rows.length} noun="keyword" />
+      </div>
+      <FilterChips chips={chips} onClearAll={clearFilters} />
+      <Table containerClassName="rounded-xl border bg-card">
+        <TableCaption className="sr-only">
+          Keyword coverage across{" "}
+          {fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}, with
+          uncovered keywords highlighted.
+        </TableCaption>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  aria-sort={ariaSort(header.column.getIsSorted())}
+                  className={
+                    header.column.getCanSort() ? undefined : "text-center"
+                  }
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
           ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => {
-          const covered = new Map(
-            row.fields.map((field) => [field.field, field.covered]),
-          );
-          return (
+        </TableHeader>
+        <TableBody>
+          {shown.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                <FilteredEmpty
+                  title="No keywords match these filters"
+                  onClear={clearFilters}
+                />
+              </TableCell>
+            </TableRow>
+          ) : null}
+          {shown.map((row) => (
             <TableRow
-              key={row.keywordId}
-              className={row.uncovered ? "bg-warning-subtle" : undefined}
+              key={row.id}
+              className={
+                row.original.uncovered ? "bg-warning-subtle" : undefined
+              }
             >
-              <TableCell className="font-medium text-foreground">
-                <span className="flex items-center gap-2">
-                  {row.text}
-                  {row.uncovered ? (
-                    <Badge variant="warning">Uncovered</Badge>
-                  ) : null}
-                </span>
-              </TableCell>
-              <TableCell>
-                <BucketBadge bucket={row.bucket} />
-              </TableCell>
-              {columns.map((column) => (
-                <TableCell key={column} className="text-center">
-                  <CoverageMark
-                    covered={covered.get(column) ?? false}
-                    field={column}
-                  />
+              {row.getVisibleCells().map((cell) => (
+                <TableCell
+                  key={cell.id}
+                  className={
+                    cell.column.getCanSort() ? undefined : "text-center"
+                  }
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
               ))}
             </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

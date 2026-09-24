@@ -4,15 +4,24 @@ import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { Store, TrackedKeywordItem } from "@asobeast/shared";
 import { useTable, type RowSelectionState } from "@tanstack/react-table";
-import { useQueryState } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
+import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
+import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { keywordsOptions } from "@/lib/queries";
-import { serpParser, sortParser } from "@/lib/search-params";
-import { keywordColumns } from "./keyword-columns";
+import {
+  keywordFilterParsers,
+  keywordSortParser,
+  serpParser,
+  sortDirectionParser,
+} from "@/lib/search-params";
+import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
+import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
+import { KeywordsFilterBar } from "./KeywordsFilterBar";
 import { SerpSheet } from "./SerpSheet";
 
 export function KeywordsTable({
@@ -24,11 +33,13 @@ export function KeywordsTable({
   store: Store;
   country: string;
 }) {
-  const [sort, setSort] = useQueryState("sort", sortParser);
+  const [{ sort, dir }, setSortParams] = useQueryStates({
+    sort: keywordSortParser,
+    dir: sortDirectionParser,
+  });
   const [, setSerp] = useQueryState("serp", serpParser);
-  const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, sort, country),
-  );
+  const [filters, setFilters] = useQueryStates(keywordFilterParsers);
+  const { data: keywords } = useSuspenseQuery(keywordsOptions(id, country));
   const [selection, setSelection] = useState<RowSelectionState>({});
 
   const rowSelection = useMemo(
@@ -40,27 +51,54 @@ export function KeywordsTable({
     () =>
       keywordColumns({
         appId: id,
-        sort,
-        onSort: setSort,
         onOpenSerp: (keywordId) => void setSerp(keywordId),
       }),
-    [id, sort, setSort, setSerp],
+    [id, setSerp],
   );
+
+  const { sorting, onSortingChange } = useUrlSorting(
+    { sort, dir },
+    columns,
+    (next) =>
+      void setSortParams({
+        sort: next.sort === null ? null : keywordSortParser.parse(next.sort),
+        dir: next.dir,
+      }),
+  );
+
+  const [visibility, setVisibility] = useStoredColumnVisibility(
+    "keywords",
+    columns,
+  );
+
+  const columnFilters = useMemo(() => keywordColumnFilters(filters), [filters]);
 
   const table = useTable({
     features: keywordTableFeatures,
     data: keywords,
     columns,
-    state: { rowSelection },
+    state: {
+      rowSelection,
+      sorting,
+      columnFilters,
+      globalFilter: filters.q,
+      columnVisibility: { ...visibility, ...HIDDEN_KEYWORD_COLUMNS },
+    },
+    onColumnVisibilityChange: setVisibility,
     onRowSelectionChange: setSelection,
+    onSortingChange,
     getRowId: (row) => row.keywordId,
     enableRowSelection: true,
+    enableSortingRemoval: false,
+    enableMultiSort: false,
+    globalFilterFn: "includesString",
+    getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
 
-  const selectedIds = Object.keys(rowSelection);
-  const selectedKeywords = keywords.filter(
-    (keyword) => rowSelection[keyword.keywordId],
-  );
+  const selectedKeywords = table
+    .getFilteredSelectedRowModel()
+    .rows.map((row) => row.original);
+  const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
 
   if (keywords.length === 0) {
     return <KeywordsEmptyState appId={id} store={store} country={country} />;
@@ -69,7 +107,16 @@ export function KeywordsTable({
   return (
     <>
       <div className="flex flex-col gap-3">
-        <KeywordsDataTable table={table} />
+        <KeywordsFilterBar
+          appId={id}
+          table={table}
+          filters={filters}
+          setFilters={setFilters}
+        />
+        <KeywordsDataTable
+          table={table}
+          onClearFilters={() => void setFilters(null)}
+        />
 
         {selectedIds.length > 0 ? (
           <div className="sticky bottom-4 z-30 flex justify-center">

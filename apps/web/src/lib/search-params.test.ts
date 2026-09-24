@@ -3,7 +3,9 @@ import {
   ACTION_PRIORITIES,
   ACTION_RULES,
   ACTION_STATUSES,
+  KEYWORD_BUCKETS,
   KEYWORD_SORTS,
+  KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
@@ -16,6 +18,8 @@ import {
   VISIBILITY_RANGES,
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
+import { GRADES } from "./grade";
+import { POSITION_BANDS } from "./table/facets";
 import {
   actionCategoryParser,
   actionPriorityParser,
@@ -24,15 +28,32 @@ import {
   changeDaysParser,
   countryParser,
   discoveryDaysParser,
+  KEYWORD_STATUSES,
+  KEYWORD_TABLE_SORTS,
+  COVERAGE_SORTS,
+  coverageSortParser,
+  DISCOVERY_SORTS,
+  discoverySortParser,
+  gradeFacetParser,
+  matrixSortParser,
+  positionBandParser,
+  VERSUS_FILTERS,
+  versusParser,
+  keywordBucketParser,
   keywordIdsParser,
+  keywordSourceParser,
+  keywordStatusParser,
+  keywordSortParser,
   mcpClientParser,
   moverDaysParser,
   onlyGapsParser,
   rangeParser,
   ratingsRangeParser,
   reviewScoreParser,
+  searchParser,
   serpParser,
-  sortParser,
+  SORT_DIRECTIONS,
+  sortDirectionParser,
   spiderTermParser,
   suggestionStrategyParser,
   visibilityRangeParser,
@@ -53,7 +74,7 @@ type LiteralParserCase = readonly [
 ];
 
 const LITERAL_PARSERS: readonly LiteralParserCase[] = [
-  ["sort", sortParser, KEYWORD_SORTS, "opportunity"],
+  ["keywordSort", keywordSortParser, KEYWORD_TABLE_SORTS, "opportunity"],
   ["range", rangeParser, RANGE_PRESETS, "30d"],
   ["visibilityRange", visibilityRangeParser, VISIBILITY_RANGES, "30d"],
   ["ratingsRange", ratingsRangeParser, RATINGS_RANGES, "30d"],
@@ -64,6 +85,9 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
     "metadata",
   ],
   ["mcpClient", mcpClientParser, MCP_CLIENTS, DEFAULT_MCP_CLIENT],
+  ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
+  ["versus", versusParser, VERSUS_FILTERS, "all"],
+  ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -76,12 +100,17 @@ const LIST_PARSERS = [
   ["actionStatus", actionStatusParser, ACTION_STATUSES, ["OPEN", "SNOOZED"]],
   ["actionPriority", actionPriorityParser, ACTION_PRIORITIES, []],
   ["actionRule", actionRuleParser, ACTION_RULES, []],
+  ["keywordSource", keywordSourceParser, KEYWORD_SOURCES, []],
+  ["keywordBucket", keywordBucketParser, KEYWORD_BUCKETS, []],
+  ["gradeFacet", gradeFacetParser, GRADES, []],
+  ["positionBand", positionBandParser, POSITION_BANDS, []],
 ] as const;
 
 const STRING_PARSERS = [
   ["country", countryParser],
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
+  ["search", searchParser],
 ] as const;
 
 describe.each(LITERAL_PARSERS)(
@@ -220,5 +249,53 @@ describe("actionCategory parser", () => {
 
   it("rejects an unknown category rather than defaulting to one", () => {
     expect(actionCategoryParser.parseServerSide("not-a-category")).toBeNull();
+  });
+});
+
+describe("sortDirection parser", () => {
+  it.each(SORT_DIRECTIONS)("round-trips %s", (direction) => {
+    expect(
+      sortDirectionParser.parse(sortDirectionParser.serialize(direction)),
+    ).toBe(direction);
+  });
+
+  it("rejects an unknown direction rather than defaulting to one", () => {
+    expect(sortDirectionParser.parseServerSide("up")).toBeNull();
+  });
+});
+
+describe("keywordSort parser", () => {
+  it.each(["keyword", "source", "delta7d", ...KEYWORD_SORTS])(
+    "accepts the table sort %s",
+    (sort) => {
+      expect(keywordSortParser.parseServerSide(sort)).toBe(sort);
+    },
+  );
+});
+
+describe("search parser", () => {
+  it("keeps surrounding spaces rather than trimming the search", () => {
+    expect(searchParser.parseServerSide(" pomo ")).toBe(" pomo ");
+  });
+});
+
+describe("matrixSort parser", () => {
+  it("keeps a competitor column id", () => {
+    expect(matrixSortParser.parseServerSide("c:comp-1")).toBe("c:comp-1");
+  });
+
+  it("keeps the api order when nothing is named", () => {
+    expect(matrixSortParser.parseServerSide(undefined)).toBeNull();
+  });
+});
+
+describe("coverageSort parser", () => {
+  it.each(COVERAGE_SORTS)("accepts the column %s", (sort) => {
+    expect(coverageSortParser.parseServerSide(sort)).toBe(sort);
+  });
+
+  it("keeps the api order when nothing or something unknown is named", () => {
+    expect(coverageSortParser.parseServerSide(undefined)).toBeNull();
+    expect(coverageSortParser.parseServerSide("title")).toBeNull();
   });
 });

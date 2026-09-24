@@ -77,11 +77,7 @@ function isPrefixOf(prefix: QueryKey, key: QueryKey): boolean {
 const APP_SCOPED_OPTIONS = [
   ["detail", appDetailOptions(APP), appKeys.detail(APP)],
   ["summary", appSummaryOptions(APP), appKeys.summary(APP)],
-  [
-    "keywords",
-    keywordsOptions(APP, "traffic", "us"),
-    appKeys.keywords(APP, "traffic", "us"),
-  ],
+  ["keywords", keywordsOptions(APP, "us"), appKeys.keywords(APP, "us")],
   [
     "keywordCountries",
     keywordCountriesOptions(APP),
@@ -145,11 +141,7 @@ const APP_SCOPED_OPTIONS = [
 const ROOT_TO_LEAF = [
   ["all", appKeys.all, appKeys.detail(APP)],
   ["detail", appKeys.detail(APP), appKeys.summary(APP)],
-  [
-    "keywordsRoot",
-    appKeys.keywordsRoot(APP),
-    appKeys.keywords(APP, "traffic", "us"),
-  ],
+  ["keywordsRoot", appKeys.keywordsRoot(APP), appKeys.keywords(APP, "us")],
   ["compareRoot", appKeys.compareRoot(APP), appKeys.compare(APP, true)],
   ["serpMoversRoot", appKeys.serpMoversRoot(APP), appKeys.serpMovers(APP, 7)],
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],

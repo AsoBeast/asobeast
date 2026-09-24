@@ -105,7 +105,12 @@ export function KeywordRowActions({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon-sm" aria-label="Keyword actions">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="pointer-coarse:size-11"
+            aria-label="Keyword actions"
+          >
             <MoreHorizontal />
           </Button>
         </DropdownMenuTrigger>

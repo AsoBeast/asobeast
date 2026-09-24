@@ -51,6 +51,14 @@
   --color-score-low: var(--score-low);
   --color-score-mid: var(--score-mid);
   --color-score-high: var(--score-high);
+  --color-grade-strong: var(--grade-strong);
+  --color-grade-strong-subtle: var(--grade-strong-subtle);
+  --color-grade-fair: var(--grade-fair);
+  --color-grade-fair-subtle: var(--grade-fair-subtle);
+  --color-grade-weak: var(--grade-weak);
+  --color-grade-weak-subtle: var(--grade-weak-subtle);
+  --color-grade-poor: var(--grade-poor);
+  --color-grade-poor-subtle: var(--grade-poor-subtle);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);

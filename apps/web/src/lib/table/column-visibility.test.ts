@@ -1,0 +1,123 @@
+import { describe, expect, it } from "vitest";
+import {
+  columnChoices,
+  parseColumnVisibility,
+  phoneColumnVisibility,
+  readStoredColumns,
+  writeColumnVisibility,
+} from "./column-visibility";
+
+function memoryStorage(): Pick<Storage, "getItem" | "setItem"> {
+  const items = new Map<string, string>();
+  return {
+    getItem: (key) => items.get(key) ?? null,
+    setItem: (key, value) => void items.set(key, value),
+  };
+}
+
+const throwing = (): Storage => {
+  throw new Error("storage is blocked");
+};
+
+describe("parseColumnVisibility", () => {
+  it("reads nothing stored as no preference", () => {
+    expect(parseColumnVisibility(null)).toBeNull();
+  });
+
+  it.each(["not json", "[]", "null", '"source"', '{"source":"no"}'])(
+    "ignores the invalid value %s",
+    (raw) => {
+      expect(parseColumnVisibility(raw)).toBeNull();
+    },
+  );
+
+  it("reads a map of column ids to booleans", () => {
+    expect(parseColumnVisibility('{"source":false,"traffic":true}')).toEqual({
+      source: false,
+      traffic: true,
+    });
+  });
+});
+
+describe("stored column visibility", () => {
+  it("round trips through storage under one key per table", () => {
+    const storage = memoryStorage();
+    expect(
+      writeColumnVisibility(() => storage, "keywords", { source: false }),
+    ).toBe(true);
+    expect(storage.getItem("asobeast.columns.keywords")).toBe(
+      '{"source":false}',
+    );
+    expect(
+      parseColumnVisibility(readStoredColumns(() => storage, "keywords")),
+    ).toEqual({ source: false });
+    expect(readStoredColumns(() => storage, "comparison")).toBeNull();
+  });
+
+  it("reads nothing from a storage that throws", () => {
+    expect(readStoredColumns(throwing, "keywords")).toBeNull();
+  });
+
+  it("reports a write to a storage that throws as not saved", () => {
+    expect(writeColumnVisibility(throwing, "keywords", {})).toBe(false);
+  });
+});
+
+describe("phoneColumnVisibility", () => {
+  it("hides every labelled column not marked for the phone", () => {
+    expect(
+      phoneColumnVisibility([
+        { id: "select" },
+        { id: "keyword" },
+        { id: "source", meta: { label: "Source" } },
+        { id: "position", meta: { label: "Position", phone: true } },
+        { id: "traffic", meta: { label: "Popularity" } },
+      ]),
+    ).toEqual({ source: false, traffic: false });
+  });
+});
+
+describe("columnChoices", () => {
+  const phone = { source: false, traffic: false, difficulty: false };
+
+  it("keeps only what differs from the screen default", () => {
+    expect(
+      columnChoices(
+        {},
+        phone,
+        { source: true, traffic: false, difficulty: false },
+        phone,
+      ),
+    ).toEqual({ source: true });
+  });
+
+  it("counts a column the default shows as visible", () => {
+    expect(columnChoices({}, {}, { source: false, traffic: true }, {})).toEqual(
+      { source: false },
+    );
+  });
+
+  it("keeps a choice made on another screen that the user did not touch", () => {
+    const stored = { traffic: false };
+    expect(
+      columnChoices(
+        stored,
+        { ...phone, ...stored },
+        { ...phone, ...stored, source: true },
+        phone,
+      ),
+    ).toEqual({ traffic: false, source: true });
+  });
+
+  it("drops a choice the user sets back to the screen default", () => {
+    expect(
+      columnChoices({ source: false }, { source: false }, { source: true }, {}),
+    ).toEqual({});
+  });
+
+  it("treats a column missing from the update as visible", () => {
+    expect(columnChoices({ source: false }, { source: false }, {}, {})).toEqual(
+      {},
+    );
+  });
+});

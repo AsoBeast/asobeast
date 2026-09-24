@@ -1,8 +1,16 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useMemo } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
+import { flexRender, useTable } from "@tanstack/react-table";
+import { useQueryState, useQueryStates } from "nuqs";
+import { ColumnMenu } from "@/components/data-table/ColumnMenu";
+import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
+import { RowCount } from "@/components/data-table/RowCount";
+import { SearchInput } from "@/components/data-table/SearchInput";
+import { useStoredColumnVisibility } from "@/components/data-table/useStoredColumnVisibility";
+import { dataTableFeatures } from "@/components/data-table/table-features";
+import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -21,18 +29,28 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { appDetailOptions, discoveryOptions } from "@/lib/queries";
-import { formatNumber, formatRating, storeLabel } from "@/lib/format";
+import { storeLabel } from "@/lib/format";
 import { DISCOVERY_WINDOWS } from "@/lib/ranges";
-import { discoveryDaysParser } from "@/lib/search-params";
+import {
+  discoveryDaysParser,
+  searchParser,
+  discoverySortParser,
+  sortDirectionParser,
+} from "@/lib/search-params";
+import { ariaSort } from "@/lib/table/sorting";
+import { cn } from "@/lib/utils";
+import { discoveryColumns } from "./discovery-columns";
 import { DiscoveryPanelSkeleton } from "./skeletons";
-import { TrackButton } from "./TrackButton";
+
+const DISCOVERY_PARAMS = {
+  sort: discoverySortParser,
+  dir: sortDirectionParser,
+  q: searchParser,
+};
+
+const DISCOVERY_URL_KEYS = { sort: "appSort", dir: "appDir", q: "appQ" };
 
 function DiscoveryTable({
   id,
@@ -44,6 +62,42 @@ function DiscoveryTable({
   storeName: string;
 }) {
   const { data } = useSuspenseQuery(discoveryOptions(id, days));
+  const [params, setParams] = useQueryStates(DISCOVERY_PARAMS, {
+    urlKeys: DISCOVERY_URL_KEYS,
+  });
+  const columns = useMemo(() => discoveryColumns(id), [id]);
+  const [visibility, setVisibility] = useStoredColumnVisibility(
+    "discovery",
+    columns,
+  );
+  const { sorting, onSortingChange } = useUrlSorting(
+    params,
+    columns,
+    (next) =>
+      void setParams({
+        sort: next.sort === null ? null : discoverySortParser.parse(next.sort),
+        dir: next.dir,
+      }),
+  );
+
+  const table = useTable({
+    features: dataTableFeatures,
+    data: data.items,
+    columns,
+    getRowId: (row) => row.storeAppId,
+    state: {
+      sorting,
+      globalFilter: params.q,
+      columnVisibility: visibility,
+    },
+    onSortingChange,
+    onColumnVisibilityChange: setVisibility,
+    enableSortingRemoval: false,
+    enableMultiSort: false,
+    globalFilterFn: "includesString",
+    getColumnCanGlobalFilter: (column) => column.id === "app",
+  });
+  const rows = table.getRowModel().rows;
 
   if (data.items.length === 0) {
     return (
@@ -55,73 +109,59 @@ function DiscoveryTable({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border">
-      <Table>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <SearchInput
+          label="Search apps"
+          value={params.q}
+          onSearch={(q, options) => void setParams({ q }, options)}
+        />
+        <RowCount shown={rows.length} total={data.items.length} noun="app" />
+        <div className="ml-auto">
+          <ColumnMenu columns={table.getAllLeafColumns()} />
+        </div>
+      </div>
+      <Table containerClassName="rounded-xl border">
         <TableCaption className="sr-only">
           Untracked {storeName} apps appearing in your keyword search results
           over the last {days} days.
         </TableCaption>
         <TableHeader>
-          <TableRow>
-            <TableHead>App</TableHead>
-            <TableHead>Appearances</TableHead>
-            <TableHead>Keywords</TableHead>
-            <TableHead>Best</TableHead>
-            <TableHead>Avg</TableHead>
-            <TableHead>Rating</TableHead>
-            <TableHead className="w-0" />
-          </TableRow>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead
+                  key={header.id}
+                  aria-sort={ariaSort(header.column.getIsSorted())}
+                  className={cn(header.column.id === "track" && "w-0")}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
         </TableHeader>
         <TableBody>
-          {data.items.map((item) => (
-            <TableRow key={item.storeAppId}>
-              <TableCell>
-                <div className="flex flex-col">
-                  <span className="font-medium">{item.title}</span>
-                  {item.developer ? (
-                    <span className="text-xs text-muted-foreground">
-                      {item.developer}
-                    </span>
-                  ) : null}
-                </div>
+          {rows.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={table.getVisibleLeafColumns().length}>
+                <FilteredEmpty
+                  title="No apps match this search"
+                  onClear={() => void setParams({ q: null })}
+                />
               </TableCell>
-              <TableCell className="numeric font-mono">
-                {item.appearances}
-              </TableCell>
-              <TableCell>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="numeric font-mono underline decoration-dotted underline-offset-4">
-                      {item.keywordCount}
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent>{item.keywords.join(", ")}</TooltipContent>
-                </Tooltip>
-              </TableCell>
-              <TableCell className="numeric font-mono">
-                {item.bestPosition}
-              </TableCell>
-              <TableCell className="numeric font-mono">
-                {item.avgPosition}
-              </TableCell>
-              <TableCell className="numeric font-mono text-muted-foreground">
-                {item.ratingAvg !== null
-                  ? `${formatRating(item.ratingAvg)}${
-                      item.ratingCount !== null
-                        ? ` · ${formatNumber(item.ratingCount)}`
-                        : ""
-                    }`
-                  : "—"}
-              </TableCell>
-              <TableCell>
-                <div className="flex justify-end">
-                  <TrackButton
-                    id={id}
-                    storeAppId={item.storeAppId}
-                    title={item.title}
-                  />
-                </div>
-              </TableCell>
+            </TableRow>
+          ) : null}
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
             </TableRow>
           ))}
         </TableBody>

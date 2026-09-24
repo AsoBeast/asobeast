@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { flexRender, type Table as TableInstance } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TrackedKeywordItem } from "@asobeast/shared";
+import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import type { KeywordTableFeatures } from "./keyword-table-features";
 import {
   Table,
@@ -14,11 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 
 const STICKY_COLUMNS: Record<string, string | undefined> = {
   select: "sticky left-0 z-10 w-10 min-w-10 bg-inherit",
-  text: "sticky left-10 z-10 bg-inherit",
+  keyword: "sticky left-10 z-10 bg-inherit",
 };
 
 const ROW_HEIGHT = 41;
@@ -27,8 +29,10 @@ const VIRTUALIZE_ABOVE = 50;
 
 export function KeywordsDataTable({
   table,
+  onClearFilters,
 }: {
   table: TableInstance<KeywordTableFeatures, TrackedKeywordItem>;
+  onClearFilters: () => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = table.getRowModel().rows;
@@ -69,7 +73,9 @@ export function KeywordsDataTable({
             {headerGroup.headers.map((header) => (
               <TableHead
                 key={header.id}
+                aria-sort={ariaSort(header.column.getIsSorted())}
                 className={cn(
+                  "max-md:whitespace-normal",
                   header.column.id === "actions" && "w-0",
                   STICKY_COLUMNS[header.column.id],
                 )}
@@ -86,6 +92,16 @@ export function KeywordsDataTable({
         ))}
       </TableHeader>
       <TableBody>
+        {rows.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={columnCount}>
+              <FilteredEmpty
+                title="No keywords match these filters"
+                onClear={onClearFilters}
+              />
+            </TableCell>
+          </TableRow>
+        ) : null}
         {before > 0 ? (
           <tr aria-hidden>
             <td colSpan={columnCount} style={{ height: before }} />

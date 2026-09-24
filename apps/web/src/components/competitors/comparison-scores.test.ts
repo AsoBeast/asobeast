@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { KeywordComparisonRow } from "@asobeast/shared";
-import { comparisonScoreLabel } from "./comparison-scores";
+import { comparisonScore } from "./comparison-scores";
 
 function row(
   traffic: number | null,
@@ -17,7 +17,7 @@ function row(
   };
 }
 
-describe("comparisonScoreLabel", () => {
+describe("comparisonScore", () => {
   it.each([
     [0, "0"],
     [4.1, "41"],
@@ -26,12 +26,36 @@ describe("comparisonScoreLabel", () => {
     [48.2, "100"],
     [-1, "0"],
   ])("labels a stored score of %s as %s", (score, expected) => {
-    expect(comparisonScoreLabel(row(score, null), "traffic")).toBe(expected);
-    expect(comparisonScoreLabel(row(null, score), "difficulty")).toBe(expected);
+    expect(comparisonScore(row(score, null), "traffic").label).toBe(expected);
+    expect(comparisonScore(row(null, score), "difficulty").label).toBe(
+      expected,
+    );
   });
 
-  it("labels an unscored keyword with an em dash", () => {
-    expect(comparisonScoreLabel(row(null, null), "traffic")).toBe("—");
-    expect(comparisonScoreLabel(row(null, null), "difficulty")).toBe("—");
+  it.each([
+    [6.2, "strong", "weak"],
+    [4.5, "fair", "fair"],
+    [1.5, "poor", "strong"],
+  ] as const)(
+    "grades a stored score of %s as %s popularity and %s difficulty",
+    (score, popularity, difficulty) => {
+      expect(comparisonScore(row(score, null), "traffic").grade).toBe(
+        popularity,
+      );
+      expect(comparisonScore(row(null, score), "difficulty").grade).toBe(
+        difficulty,
+      );
+    },
+  );
+
+  it("labels an unscored keyword with an em dash and no grade", () => {
+    expect(comparisonScore(row(null, null), "traffic")).toEqual({
+      label: "—",
+      grade: null,
+    });
+    expect(comparisonScore(row(null, null), "difficulty")).toEqual({
+      label: "—",
+      grade: null,
+    });
   });
 });

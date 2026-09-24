@@ -11,9 +11,16 @@ const VARIANT: Record<
   aspirational: "warning",
 };
 
+export const BUCKET_LABELS: Record<KeywordBucket, string> = {
+  primary: "Primary",
+  secondary: "Secondary",
+  longtail: "Long tail",
+  aspirational: "Aspirational",
+};
+
 export function BucketBadge({ bucket }: { bucket: KeywordBucket | null }) {
   if (!bucket) {
     return <span className="text-muted-foreground">—</span>;
   }
-  return <Badge variant={VARIANT[bucket]}>{bucket}</Badge>;
+  return <Badge variant={VARIANT[bucket]}>{BUCKET_LABELS[bucket]}</Badge>;
 }

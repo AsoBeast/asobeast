@@ -1,16 +1,15 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { Download, Plus, X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { formatCountry } from "@/lib/format";
 import { keywordCountriesOptions, keywordsOptions } from "@/lib/queries";
-import { countryParser, sortParser } from "@/lib/search-params";
+import { countryParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
-import { exportKeywords } from "./keyword-csv";
 
 export function KeywordsToolbar({
   id,
@@ -24,11 +23,8 @@ export function KeywordsToolbar({
   homeCountry: string;
 }) {
   const [, setCountry] = useQueryState("country", countryParser);
-  const [sort] = useQueryState("sort", sortParser);
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
-  const { data: keywords } = useSuspenseQuery(
-    keywordsOptions(id, sort, market),
-  );
+  const { data: keywords } = useSuspenseQuery(keywordsOptions(id, market));
 
   const total = markets.reduce((sum, entry) => sum + entry.keywordCount, 0);
   const active = keywords.filter((keyword) => keyword.active).length;
@@ -102,18 +98,6 @@ export function KeywordsToolbar({
         </span>{" "}
         active
       </p>
-
-      <Button
-        variant="outline"
-        size="sm"
-        className="ml-auto"
-        disabled={keywords.length === 0}
-        onClick={() => exportKeywords(id, keywords)}
-        aria-label="Export keywords to CSV"
-      >
-        <Download />
-        Export CSV
-      </Button>
     </div>
   );
 }

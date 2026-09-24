@@ -3,7 +3,9 @@ import {
   ACTION_PRIORITIES,
   ACTION_RULES,
   ACTION_STATUSES,
+  KEYWORD_BUCKETS,
   KEYWORD_SORTS,
+  KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
 } from "@asobeast/shared";
 import {
@@ -25,9 +27,93 @@ import {
   type MoverWindow,
 } from "./ranges";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
+import { GRADES } from "./grade";
+import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
 
-export const sortParser =
-  parseAsStringLiteral(KEYWORD_SORTS).withDefault("opportunity");
+export const KEYWORD_TABLE_SORTS = [
+  ...KEYWORD_SORTS,
+  "keyword",
+  "source",
+  "delta7d",
+] as const;
+
+export const keywordSortParser =
+  parseAsStringLiteral(KEYWORD_TABLE_SORTS).withDefault("opportunity");
+
+export const searchParser = parseAsString.withDefault("");
+
+export const keywordSourceParser = parseAsArrayOf(
+  parseAsStringLiteral(KEYWORD_SOURCES),
+).withDefault([]);
+
+export const keywordBucketParser = parseAsArrayOf(
+  parseAsStringLiteral(KEYWORD_BUCKETS),
+).withDefault([]);
+
+export const KEYWORD_STATUSES = [
+  "all",
+  "active",
+  "paused",
+] as const satisfies readonly ActivityStatus[];
+
+export const keywordStatusParser =
+  parseAsStringLiteral(KEYWORD_STATUSES).withDefault("all");
+
+export const gradeFacetParser = parseAsArrayOf(
+  parseAsStringLiteral(GRADES),
+).withDefault([]);
+
+export const positionBandParser = parseAsArrayOf(
+  parseAsStringLiteral(POSITION_BANDS),
+).withDefault([]);
+
+export const keywordFilterParsers = {
+  q: searchParser,
+  source: keywordSourceParser,
+  bucket: keywordBucketParser,
+  status: keywordStatusParser,
+  pop: gradeFacetParser,
+  diff: gradeFacetParser,
+  opp: gradeFacetParser,
+  pos: positionBandParser,
+};
+
+export const matrixSortParser = parseAsString;
+
+export const VERSUS_FILTERS = ["all", ...VERSUS] as const;
+
+export const versusParser =
+  parseAsStringLiteral(VERSUS_FILTERS).withDefault("all");
+
+export const matrixFilterParsers = {
+  q: searchParser,
+  vs: versusParser,
+};
+
+export const DISCOVERY_SORTS = [
+  "app",
+  "appearances",
+  "keywords",
+  "best",
+  "avg",
+  "rating",
+] as const;
+
+export const discoverySortParser =
+  parseAsStringLiteral(DISCOVERY_SORTS).withDefault("appearances");
+
+export const COVERAGE_SORTS = ["keyword", "bucket"] as const;
+
+export const coverageSortParser = parseAsStringLiteral(COVERAGE_SORTS);
+
+export const coverageFilterParsers = {
+  q: searchParser,
+  uncovered: parseAsBoolean.withDefault(false),
+};
+
+export const SORT_DIRECTIONS = ["asc", "desc"] as const;
+
+export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
 
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");

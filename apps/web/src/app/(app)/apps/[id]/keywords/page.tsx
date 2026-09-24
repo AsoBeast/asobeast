@@ -7,7 +7,7 @@ import {
   keywordFieldOptions,
   keywordsOptions,
 } from "@/lib/queries";
-import { countryParser, sortParser } from "@/lib/search-params";
+import { countryParser } from "@/lib/search-params";
 
 export default async function KeywordsPage({
   params,
@@ -15,13 +15,11 @@ export default async function KeywordsPage({
 }: {
   params: Promise<{ id: string }>;
   searchParams: Promise<{
-    sort?: string | string[];
     country?: string | string[];
   }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const sort = sortParser.parseServerSide(sp.sort);
 
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
@@ -29,7 +27,7 @@ export default async function KeywordsPage({
 
   await Promise.all([
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
-    queryClient.prefetchQuery(keywordsOptions(id, sort, market)),
+    queryClient.prefetchQuery(keywordsOptions(id, market)),
     ...(app.store === "APP_STORE"
       ? [queryClient.prefetchQuery(keywordFieldOptions(id))]
       : []),

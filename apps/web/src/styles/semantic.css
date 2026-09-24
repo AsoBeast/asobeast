@@ -38,6 +38,14 @@
   --score-low: var(--score-low-600);
   --score-mid: var(--score-mid-600);
   --score-high: var(--score-high-600);
+  --grade-strong: var(--green-600);
+  --grade-strong-subtle: color-mix(in oklch, var(--green-600) 14%, transparent);
+  --grade-fair: var(--yellow-600);
+  --grade-fair-subtle: color-mix(in oklch, var(--yellow-600) 14%, transparent);
+  --grade-weak: var(--amber-600);
+  --grade-weak-subtle: color-mix(in oklch, var(--amber-600) 14%, transparent);
+  --grade-poor: var(--red-600);
+  --grade-poor-subtle: color-mix(in oklch, var(--red-600) 14%, transparent);
 
   --chart-1: var(--series-1-600);
   --chart-2: var(--series-2-600);
@@ -104,6 +112,14 @@
   --score-low: var(--score-low-400);
   --score-mid: var(--score-mid-400);
   --score-high: var(--score-high-400);
+  --grade-strong: var(--green-400);
+  --grade-strong-subtle: color-mix(in oklch, var(--green-400) 18%, transparent);
+  --grade-fair: var(--yellow-400);
+  --grade-fair-subtle: color-mix(in oklch, var(--yellow-400) 18%, transparent);
+  --grade-weak: var(--amber-400);
+  --grade-weak-subtle: color-mix(in oklch, var(--amber-400) 18%, transparent);
+  --grade-poor: var(--red-400);
+  --grade-poor-subtle: color-mix(in oklch, var(--red-400) 18%, transparent);
 
   --chart-1: var(--series-1-400);
   --chart-2: var(--series-2-400);
