@@ -1,10 +1,10 @@
 import { brandTopTen, headTopTen, junkTopTen } from './scoring-fixtures';
 import { serpFlags } from './serp-flags';
 
-type TopTen = Parameters<typeof serpFlags>[0]['top10'];
+type TopTen = Parameters<typeof serpFlags>[0]['serp'];
 
 const page = (topTen: TopTen, keywordText: string, resultCount = 30) => ({
-  top10: topTen,
+  serp: topTen,
   keywordText,
   resultCount,
 });

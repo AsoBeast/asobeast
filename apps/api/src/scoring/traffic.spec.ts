@@ -9,8 +9,7 @@ const play = (stats: KeywordStats): KeywordStats => ({
 });
 
 const modelTraffic = (stats: KeywordStats): number =>
-  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText) ??
-    0) / 10;
+  (estimatePopularity(stats.serp, stats.keywordText) ?? 0) / 10;
 
 describe('computeTraffic on google play', () => {
   it.each([
@@ -54,7 +53,7 @@ describe('computeTraffic on google play', () => {
   it('reads no demand from a page without a single finite rating count', () => {
     const blind = {
       ...play(fixtures.F1_HEAD),
-      top10: fixtures.F1_HEAD.top10.map((item) => ({
+      serp: fixtures.F1_HEAD.serp.map((item) => ({
         ...item,
         ratingCount: undefined,
       })),
@@ -86,14 +85,19 @@ describe('computeTraffic on the app store', () => {
     );
   });
 
-  it('prefers the first 25 results over the top ten', () => {
+  it('reads the results past the top ten', () => {
     const stats = {
       ...fixtures.F5_TAIL,
-      competitors: fixtures.headTopTen(),
+      serp: [
+        ...fixtures.F5_TAIL.serp,
+        ...Array.from({ length: 15 }, () => ({
+          title: 'Guess the Location',
+          ratingCount: 500_000,
+        })),
+      ],
     };
-    expect(estimateTraffic(stats)).toBe(
-      (estimatePopularity(fixtures.headTopTen(), stats.keywordText) ?? 0) / 10,
-    );
+    expect(estimateTraffic(stats)).toBe(modelTraffic(stats));
+    expect(estimateTraffic(stats)).not.toBe(modelTraffic(fixtures.F5_TAIL));
   });
 
   it('caps a thin page and releases the cap at five results', () => {
@@ -109,7 +113,7 @@ describe('computeTraffic on the app store', () => {
       ...fixtures.F4_EMPTY,
       keywordText: 'xqzvw',
       resultCount: 1,
-      top10: [{ title: 'Calculator' }],
+      serp: [{ title: 'Calculator' }],
     };
     expect(computeTraffic(nonsense)).toBeLessThanOrEqual(1);
   });
@@ -150,7 +154,7 @@ describe('computeTraffic on the app store', () => {
   );
 
   it('keeps the official value when the search returned nothing', () => {
-    const empty = { ...fixtures.F9_OFFICIAL, resultCount: 0, top10: [] };
+    const empty = { ...fixtures.F9_OFFICIAL, resultCount: 0, serp: [] };
     expect(computeTraffic(empty)).toBeCloseTo(7.1, 3);
     expect(estimateTraffic(empty)).toBe(0);
   });

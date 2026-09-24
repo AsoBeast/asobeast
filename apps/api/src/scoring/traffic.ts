@@ -1,6 +1,6 @@
 import { searchKey } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
-import { KeywordStats } from './formulas';
+import { KeywordStats, topTen } from './formulas';
 import { estimatePopularity } from './popularity-model';
 import { paddingFactor } from './serp-signals';
 import { reachScore } from './suggest-reach';
@@ -16,12 +16,9 @@ const POPULARITY_SCALE = 10;
 
 export function demandScore(stats: KeywordStats): number {
   const [min, max] = DEMAND_BOUNDS;
-  const typical = median(
-    finiteNumbers(stats.top10.map((item) => item.ratingCount)),
-  );
-  return (
-    logScale(typical, min, max) * paddingFactor(stats.top10, stats.keywordText)
-  );
+  const top = topTen(stats);
+  const typical = median(finiteNumbers(top.map((item) => item.ratingCount)));
+  return logScale(typical, min, max) * paddingFactor(top, stats.keywordText);
 }
 
 function wordFactor(keywordText: string): number {
@@ -41,10 +38,7 @@ function suggestEstimate(stats: KeywordStats): number {
 }
 
 function modelEstimate(stats: KeywordStats): number {
-  const popularity = estimatePopularity(
-    stats.competitors ?? stats.top10,
-    stats.keywordText,
-  );
+  const popularity = estimatePopularity(stats.serp, stats.keywordText);
   return popularity === null ? 0 : popularity / POPULARITY_SCALE;
 }
 

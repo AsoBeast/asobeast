@@ -7,7 +7,7 @@ import {
 } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
 import { entryDifficulty } from './difficulty';
-import { KeywordStats } from './formulas';
+import { KeywordStats, topTen } from './formulas';
 import { serpFlags } from './serp-flags';
 import { serpRelevance } from './serp-signals';
 
@@ -16,7 +16,8 @@ export function buildScoreSignals(
   estimatedTraffic: number,
 ): ScoreSignals {
   const { suggest } = stats;
-  const counts = finiteNumbers(stats.top10.map((item) => item.ratingCount));
+  const top = topTen(stats);
+  const counts = finiteNumbers(top.map((item) => item.ratingCount));
   return {
     suggestReach: suggest.status,
     suggestPrefixLength: suggest.status === 'hit' ? suggest.prefixLength : null,
@@ -24,7 +25,7 @@ export function buildScoreSignals(
       suggest.status === 'hit' || suggest.status === 'listed'
         ? suggest.position
         : null,
-    serpRelevance: serpRelevance(stats.top10, stats.keywordText),
+    serpRelevance: serpRelevance(top, stats.keywordText),
     medianRatingCount: counts.length === 0 ? null : median(counts),
     flags: serpFlags(stats),
     officialPopularity:

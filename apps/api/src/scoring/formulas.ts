@@ -20,8 +20,12 @@ export interface KeywordStats {
   store: Store;
   keywordText: string;
   resultCount: number;
-  top10: SerpApp[];
-  competitors?: SerpApp[];
+  serp: SerpApp[];
   suggest: SuggestReach;
   official?: OfficialPopularity;
 }
+
+export const TOP_TEN = 10;
+
+export const topTen = <T>(page: { serp: T[] }): T[] =>
+  page.serp.slice(0, TOP_TEN);
