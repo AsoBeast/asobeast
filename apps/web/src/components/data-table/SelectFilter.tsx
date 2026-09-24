@@ -28,7 +28,9 @@ export function SelectFilter<T extends string>({
       }}
     >
       <SelectTrigger size="sm" aria-label={`Filter by ${title.toLowerCase()}`}>
-        <SelectValue />
+        <SelectValue>
+          {options.find((option) => option.value === value)?.label}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((option) => (

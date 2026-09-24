@@ -473,6 +473,17 @@ test("the status filter keeps paused rows and clear all empties the url", async 
   await expect(rows).toHaveCount(6);
 });
 
+test("the status filter names its value before the page hydrates", async ({
+  page,
+}) => {
+  await page.route("**/_next/static/chunks/**", (route) => route.abort());
+  await page.goto("/apps/app-1/keywords");
+
+  await expect(
+    page.getByRole("combobox", { name: "Filter by status" }),
+  ).toHaveText("All statuses");
+});
+
 test("a grade facet keeps only rows of that grade", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
   const table = page.getByRole("table", { name: /Tracked keywords/ });
