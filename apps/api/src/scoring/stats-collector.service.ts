@@ -7,7 +7,6 @@ import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
-import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
 import {
   ProbedReach,
   probeSuggestReach,
@@ -17,7 +16,6 @@ import {
 const SEARCH_DEPTH = 100;
 const TOP_STRENGTH = 10;
 const COMPETITOR_DEPTH = 25;
-const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -81,7 +79,6 @@ export class StatsCollectorService {
                 .map((item) => this.toStrength(item)),
             }
           : {}),
-        top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
         suggest: reach,
         ...(official ? { official } : {}),
       },
@@ -142,15 +139,9 @@ export class StatsCollectorService {
             ? {}
             : { ratingCount: app.ratingCount }),
           ...(app.ratingAvg === undefined ? {} : { ratingAvg: app.ratingAvg }),
-          ...(app.storeUpdatedAt === undefined
-            ? {}
-            : { daysSinceUpdate: daysSince(app.storeUpdatedAt) }),
           ...(app.releasedAt === undefined
             ? {}
             : { daysSinceRelease: daysSince(app.releasedAt) }),
-          ...(app.installs === undefined
-            ? {}
-            : { installs: Number(app.installs) }),
         });
       } catch (error) {
         this.logger.warn(
@@ -177,20 +168,10 @@ export class StatsCollectorService {
         ? {}
         : { ratingCount: item.ratingCount }),
       ...(item.ratingAvg === undefined ? {} : { ratingAvg: item.ratingAvg }),
-      ...(item.updatedAt === undefined
-        ? {}
-        : { daysSinceUpdate: daysSince(item.updatedAt) }),
       ...(item.releasedAt === undefined
         ? {}
         : { daysSinceRelease: daysSince(item.releasedAt) }),
     };
-  }
-
-  private countTitleMatches(results: SearchItem[], text: string): number {
-    return results
-      .slice(0, TITLE_MATCH_DEPTH)
-      .filter((item) => titleEvidence(item.title, text) >= EVIDENCE_ALL_WORDS)
-      .length;
   }
 }
 

@@ -1,4 +1,4 @@
-import { searchKey, Store } from '@asobeast/shared';
+import { searchKey } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
 import { KeywordStats } from './formulas';
 import { estimatePopularity } from './popularity-model';
@@ -7,10 +7,7 @@ import { reachScore } from './suggest-reach';
 
 export const TRAFFIC_WEIGHTS = { reach: 0.65, demand: 0.35 } as const;
 export const DEMAND_ONLY_FACTOR = 0.7;
-export const DEMAND_BOUNDS: Record<Store, readonly [number, number]> = {
-  APP_STORE: [50, 500_000],
-  GOOGLE_PLAY: [100, 2_000_000],
-};
+export const DEMAND_BOUNDS = [100, 2_000_000] as const;
 export const WORD_FACTORS = [1, 1, 0.92, 0.8, 0.65, 0.5] as const;
 export const ABSENT_TRAFFIC_CAP = 1.5;
 export const THIN_SERP_RESULTS = 5;
@@ -18,7 +15,7 @@ export const THIN_SERP_TRAFFIC_CAP = 1;
 const POPULARITY_SCALE = 10;
 
 export function demandScore(stats: KeywordStats): number {
-  const [min, max] = DEMAND_BOUNDS[stats.store];
+  const [min, max] = DEMAND_BOUNDS;
   const typical = median(
     finiteNumbers(stats.top10.map((item) => item.ratingCount)),
   );

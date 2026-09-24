@@ -13,9 +13,7 @@ export interface SerpApp {
   developer?: string;
   ratingCount?: number;
   ratingAvg?: number;
-  daysSinceUpdate?: number;
   daysSinceRelease?: number;
-  installs?: number;
 }
 
 export interface KeywordStats {
@@ -24,7 +22,6 @@ export interface KeywordStats {
   resultCount: number;
   top10: SerpApp[];
   competitors?: SerpApp[];
-  top30TitleMatchCount: number;
   suggest: SuggestReach;
   official?: OfficialPopularity;
 }

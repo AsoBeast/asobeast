@@ -109,10 +109,10 @@ describe('StatsCollectorService', () => {
     expect(collected?.stats.keywordText).toBe('puzzle game');
     expect(collected?.stats.top10).toHaveLength(10);
     expect(collected?.stats.top10[0].ratingCount).toBe(1000);
-    expect(collected?.stats.top10[0].daysSinceUpdate).toBe(10);
+    expect(collected?.stats.top10[0]).not.toHaveProperty('daysSinceUpdate');
     expect(collected?.stats.competitors).toHaveLength(25);
     expect(collected?.stats.competitors?.[0].daysSinceRelease).toBe(730);
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
+    expect(collected?.stats).not.toHaveProperty('top30TitleMatchCount');
     expect(collected?.stats.suggest).toEqual({
       status: 'hit',
       prefixLength: 1,
@@ -188,7 +188,6 @@ describe('StatsCollectorService', () => {
 
     expect(collected).not.toBeNull();
     expect(collected?.stats.suggest).toEqual({ status: 'unavailable' });
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.evidence.suggestCompleted).toBe(false);
   });
 
@@ -212,10 +211,7 @@ describe('StatsCollectorService', () => {
       title: 'Puzzle Game',
       ratingCount: 5000,
       ratingAvg: 4.3,
-      daysSinceUpdate: 20,
-      installs: 1_000_000,
     });
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.evidence).toEqual({
       searchResultCount: 40,
       suggestCompleted: true,
