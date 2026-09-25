@@ -356,3 +356,32 @@ test("prints the rankings in one column with the chart inside its card", async (
   expect(charts.length).toBeGreaterThanOrEqual(1);
   expect(charts.filter((chart) => !chart.fits)).toEqual([]);
 });
+
+async function countPrints(page: Page) {
+  await page.addInitScript(() => {
+    window.print = () => {
+      const root = document.documentElement;
+      root.dataset.printCalls = String(
+        Number(root.dataset.printCalls ?? 0) + 1,
+      );
+    };
+  });
+}
+
+test("offers print report on the two report pages only", async ({ page }) => {
+  await countPrints(page);
+  const action = page.getByRole("button", { name: "Print report" });
+
+  await open(page, `${OVERVIEW}/keywords`);
+  await expect(action).toHaveCount(0);
+
+  await open(page, RANKINGS);
+  await expect(action).toBeVisible();
+
+  await open(page, OVERVIEW);
+  await action.click();
+  await expect(page.locator("html")).toHaveAttribute("data-print-calls", "1");
+
+  await printed(page);
+  await expect(action).toHaveCount(0);
+});

@@ -4,6 +4,7 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { keywordLabel } from "@asobeast/shared";
 import { Download, X } from "lucide-react";
+import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -111,6 +112,7 @@ export function RankingsView({ id }: { id: string }) {
             <Download />
             Export CSV
           </Button>
+          <PrintReportButton />
         </div>
 
         {tracked.length === 0 ? (

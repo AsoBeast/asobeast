@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
+import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
@@ -68,9 +69,12 @@ export default async function AppOverviewPage({
 
         <FirstRunTimeline id={id} />
 
-        <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>
-          <SnapshotFacts id={id} />
-        </Suspense>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>
+            <SnapshotFacts id={id} />
+          </Suspense>
+          <PrintReportButton />
+        </div>
 
         <Suspense fallback={<StatCardsSkeleton />}>
           <StatCards id={id} />
