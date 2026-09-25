@@ -8,7 +8,9 @@ import {
   RankDroppedPayload,
   RankFirstPayload,
   RankImprovedPayload,
+  RankMilestoneDirection,
   RankMilestonePayload,
+  RankMilestoneTier,
   RankOvertakenPayload,
   ReviewNegativePayload,
   SERP_DEPTH,
@@ -60,8 +62,41 @@ export function isRankEvent(
   );
 }
 
+export function milestonePhrase(
+  tier: RankMilestoneTier,
+  direction: RankMilestoneDirection,
+): string {
+  if (tier === 1) {
+    return direction === 'entered' ? 'reached first place' : 'lost first place';
+  }
+  return direction === 'entered'
+    ? `entered the top ${tier}`
+    : `left the top ${tier}`;
+}
+
 export function rankEventSentence(payload: RankEventPayload): string {
-  return `${appLabel(payload.app.name)}: ${payload.event} for "${keywordLabel(payload.keyword)}"`;
+  const app = appLabel(payload.app.name);
+  const keyword = `"${keywordLabel(payload.keyword)}"`;
+  if (payload.event === 'rank.first') {
+    return `${app} ranks for ${keyword} for the first time: ${position(payload.position, payload.depth)}`;
+  }
+  if (payload.event === 'rank.milestone') {
+    return `${app} ${milestonePhrase(payload.tier, payload.direction)} for ${keyword}: ${position(payload.from, payload.fromDepth)} → ${position(payload.to, payload.toDepth)}`;
+  }
+  const rival = appLabel(payload.competitor.name);
+  return `${rival} overtook ${app} for ${keyword}: ${rival} ${position(payload.competitor.from, payload.fromDepth)} → ${position(payload.competitor.to, payload.toDepth)}, ${app} ${position(payload.from, payload.fromDepth)} → ${position(payload.to, payload.toDepth)}`;
+}
+
+function milestoneLine(alert: RankMilestonePayload): string {
+  return `${keywordLabel(alert.keyword)}  ${rank(alert.from, alert.fromDepth)} → ${rank(alert.to, alert.toDepth)}  ${milestonePhrase(alert.tier, alert.direction)}`;
+}
+
+function firstRankingLine(alert: RankFirstPayload): string {
+  return `${keywordLabel(alert.keyword)}  ${rank(alert.position, alert.depth)}`;
+}
+
+function overtakeLine(alert: RankOvertakenPayload): string {
+  return `${keywordLabel(alert.keyword)}  ${appLabel(alert.competitor.name)} ${rank(alert.competitor.from, alert.fromDepth)} → ${rank(alert.competitor.to, alert.toDepth)}, ${appLabel(alert.app.name)} ${rank(alert.from, alert.fromDepth)} → ${rank(alert.to, alert.toDepth)}`;
 }
 
 function plural(count: number, singular: string): string {
@@ -174,6 +209,24 @@ export function sectionBlocks(
     blocks.push({
       title: 'Rank improvements',
       lines: section.rankImprovements.map(rankLine),
+    });
+  }
+  const milestones = section.rankMilestones ?? [];
+  if (milestones.length > 0) {
+    blocks.push({ title: 'Milestones', lines: milestones.map(milestoneLine) });
+  }
+  const firstRankings = section.firstRankings ?? [];
+  if (firstRankings.length > 0) {
+    blocks.push({
+      title: 'First rankings',
+      lines: firstRankings.map(firstRankingLine),
+    });
+  }
+  const overtakes = section.overtakes ?? [];
+  if (overtakes.length > 0) {
+    blocks.push({
+      title: 'Overtaken by competitors',
+      lines: overtakes.map(overtakeLine),
     });
   }
   if (section.serpEntrants.length > 0) {

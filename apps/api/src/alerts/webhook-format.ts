@@ -15,6 +15,7 @@ import {
   changeLines,
   isRankEvent,
   position,
+  RankEventPayload,
   rankEventSentence,
   sectionBlocks,
   stars,
@@ -44,6 +45,13 @@ function isDiscord(url: string): boolean {
 
 function isSlack(url: string): boolean {
   return host(url) === 'hooks.slack.com';
+}
+
+function rankEventIcon(payload: RankEventPayload): string {
+  if (payload.event === 'rank.first') return '✨';
+  if (payload.event === 'rank.overtaken') return '⚔️';
+  if (payload.direction === 'left') return '🔻';
+  return payload.tier === 1 ? '🏆' : '🏅';
 }
 
 export function renderMessage(payload: AlertPayload): string {
@@ -82,7 +90,7 @@ export function renderMessage(payload: AlertPayload): string {
   }
 
   if (isRankEvent(payload)) {
-    return rankEventSentence(payload);
+    return `${rankEventIcon(payload)} ${rankEventSentence(payload)}`;
   }
 
   const who = appLabel(payload.app.name);

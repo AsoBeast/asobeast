@@ -12,7 +12,9 @@ import {
   batchHeadline,
   changeLines,
   isRankEvent,
+  milestonePhrase,
   rank,
+  RankEventPayload,
   sectionBlocks,
   stars,
   storeLabel,
@@ -42,6 +44,36 @@ function signedDelta(delta: number | null): string {
   }
   const rounded = Math.round(delta * 10) / 10;
   return rounded >= 0 ? `+${rounded}` : `${rounded}`;
+}
+
+function rankEventRows(payload: RankEventPayload): Row[] {
+  const rows: Row[] = [
+    ['App', appLabel(payload.app.name)],
+    ['Keyword', keywordLabel(payload.keyword)],
+  ];
+  if (payload.event === 'rank.first') {
+    return [...rows, ['Position', rank(payload.position, payload.depth)]];
+  }
+  if (payload.event === 'rank.milestone') {
+    return [
+      ...rows,
+      ['Milestone', milestonePhrase(payload.tier, payload.direction)],
+      ['From', rank(payload.from, payload.fromDepth)],
+      ['To', rank(payload.to, payload.toDepth)],
+    ];
+  }
+  return [
+    ...rows,
+    ['Competitor', appLabel(payload.competitor.name)],
+    [
+      'Competitor position',
+      `${rank(payload.competitor.from, payload.fromDepth)} → ${rank(payload.competitor.to, payload.toDepth)}`,
+    ],
+    [
+      'App position',
+      `${rank(payload.from, payload.fromDepth)} → ${rank(payload.to, payload.toDepth)}`,
+    ],
+  ];
 }
 
 function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
@@ -114,10 +146,7 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
   }
 
   if (isRankEvent(payload)) {
-    return [
-      ['App', appLabel(payload.app.name)],
-      ['Keyword', keywordLabel(payload.keyword)],
-    ];
+    return rankEventRows(payload);
   }
 
   const rows: Row[] = [
@@ -207,6 +236,9 @@ interface OwnedCounts {
   changes: number;
   negativeReviews: number;
   actions: number;
+  rankMilestones: number;
+  firstRankings: number;
+  overtakes: number;
 }
 
 function countOwned(payload: AlertBatchPayload): OwnedCounts {
@@ -217,6 +249,9 @@ function countOwned(payload: AlertBatchPayload): OwnedCounts {
     changes: 0,
     negativeReviews: 0,
     actions: 0,
+    rankMilestones: 0,
+    firstRankings: 0,
+    overtakes: 0,
   };
   for (const section of payload.apps) {
     counts.rankDrops += section.rankDrops.length;
@@ -225,6 +260,9 @@ function countOwned(payload: AlertBatchPayload): OwnedCounts {
     counts.changes += section.changes.length;
     counts.negativeReviews += section.negativeReviews.length;
     counts.actions += section.actions.length;
+    counts.rankMilestones += (section.rankMilestones ?? []).length;
+    counts.firstRankings += (section.firstRankings ?? []).length;
+    counts.overtakes += (section.overtakes ?? []).length;
   }
   return counts;
 }
@@ -238,6 +276,9 @@ function ownedSummary(payload: AlertBatchPayload): string {
     plural(counts.changes, 'metadata change'),
     plural(counts.negativeReviews, 'negative review'),
     plural(counts.actions, 'new action'),
+    plural(counts.rankMilestones, 'milestone'),
+    plural(counts.firstRankings, 'first ranking'),
+    plural(counts.overtakes, 'overtake'),
   ].join(' · ');
 }
 
