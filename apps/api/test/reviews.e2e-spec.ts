@@ -173,6 +173,32 @@ describe('ReviewsController (e2e)', () => {
     expect(body.versions).toEqual(['2.0.0', '1.0.0']);
   });
 
+  it('lists undated reviews after the dated ones and outside the limit', async () => {
+    const seeded = await seedApp();
+    await prisma.review.create({
+      data: {
+        appId: seeded.id,
+        reviewId: 'r0',
+        score: 3,
+        text: 'Undated',
+        reviewedAt: null,
+      },
+    });
+
+    const all = await api.get(`/apps/${seeded.id}/reviews`).expect(200);
+    expect(
+      (all.body as ReviewList).reviews.map((review) => review.reviewId),
+    ).toEqual(['r3', 'r2', 'r1', 'r0']);
+
+    const limited = await api
+      .get(`/apps/${seeded.id}/reviews`)
+      .query({ limit: 3 })
+      .expect(200);
+    expect(
+      (limited.body as ReviewList).reviews.map((review) => review.reviewId),
+    ).toEqual(['r3', 'r2', 'r1']);
+  });
+
   it('filters by star and version', async () => {
     const seeded = await seedApp();
 
