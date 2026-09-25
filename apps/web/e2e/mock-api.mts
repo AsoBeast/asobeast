@@ -12,6 +12,7 @@ import {
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
+  METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
   BUDGET,
   DATASETS,
@@ -52,6 +53,8 @@ import type {
   FirstRunStatus,
   KeywordFieldRequest,
   KeywordFieldResult,
+  MetadataAssistantRequest,
+  MetadataAssistantResult,
   KeywordSort,
   ParsedStoreUrl,
   StoreHealthReport,
@@ -113,6 +116,8 @@ const ACCOUNT_PLAN: AccountPlan = {
   },
 };
 const BILLING_COOKIE = "e2e_billing";
+const METADATA_AI_COOKIE = "e2e_metadata_ai";
+const METADATA_AI_MODEL = "gpt-test";
 const BILLING_ACCOUNT_PLAN: AccountPlan = { ...ACCOUNT_PLAN, billing: true };
 const PLAN_COOKIE = "e2e_plan";
 
@@ -1064,8 +1069,39 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/metadata\/assistant$/,
-    handler: (_p, _q, res) =>
-      json(res, 200, { configured: false, model: null }),
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        hasCookie(req, METADATA_AI_COOKIE, "1")
+          ? { configured: true, model: METADATA_AI_MODEL }
+          : { configured: false, model: null },
+      ),
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/metadata\/assistant$/,
+    handler: ([id], req, res) => {
+      withBody<MetadataAssistantRequest>(req, res, (body) => {
+        if (!apps.some((app) => app.id === id)) {
+          return json(
+            res,
+            404,
+            errorEnvelope(404, req.url ?? "/", "App not found"),
+          );
+        }
+        const fields =
+          body.fields ?? METADATA_DRAFTS.map((draft) => draft.field);
+        const result: MetadataAssistantResult = {
+          model: METADATA_AI_MODEL,
+          localization: body.localization ?? null,
+          drafts: METADATA_DRAFTS.filter((draft) =>
+            fields.includes(draft.field),
+          ),
+        };
+        json(res, 201, result);
+      });
+    },
   },
   {
     method: "GET",

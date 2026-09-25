@@ -7,6 +7,7 @@ import {
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
+  APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
@@ -21,6 +22,7 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  draftLocaleParser,
   actionCategoryParser,
   actionPriorityParser,
   actionRuleParser,
@@ -297,5 +299,17 @@ describe("coverageSort parser", () => {
   it("keeps the api order when nothing or something unknown is named", () => {
     expect(coverageSortParser.parseServerSide(undefined)).toBeNull();
     expect(coverageSortParser.parseServerSide("title")).toBeNull();
+  });
+});
+
+describe("draftLocale parser", () => {
+  it.each(APP_STORE_LOCALIZATION_IDS)("accepts the localization %s", (id) => {
+    expect(draftLocaleParser.parseServerSide(id)).toBe(id);
+  });
+
+  it("drafts the primary listing for a missing, miscased or unknown value", () => {
+    expect(draftLocaleParser.parseServerSide(undefined)).toBeNull();
+    expect(draftLocaleParser.parseServerSide("es-mx")).toBeNull();
+    expect(draftLocaleParser.parseServerSide("xx")).toBeNull();
   });
 });

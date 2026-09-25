@@ -144,3 +144,17 @@ test("the metadata page stays up when the markets cannot be read", async ({
     page.getByRole("region", { name: "Storefront localizations" }),
   ).toHaveCount(0);
 });
+
+test("without ai drafts the storefront languages are plain labels", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata");
+
+  await expect(
+    page.getByRole("region", { name: "Storefront localizations" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /^Draft with AI/ }),
+  ).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "AI drafts" })).toHaveCount(0);
+});

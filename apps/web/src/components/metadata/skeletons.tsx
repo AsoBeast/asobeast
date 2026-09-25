@@ -8,3 +8,7 @@ export function StorefrontLocalizationsSkeleton() {
     </div>
   );
 }
+
+export function DraftLocalizationSkeleton() {
+  return <Skeleton className="h-14 w-72 max-w-full" />;
+}
