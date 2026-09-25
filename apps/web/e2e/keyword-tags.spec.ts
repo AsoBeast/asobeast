@@ -140,3 +140,87 @@ test("saved tags and a note survive a reload", async ({ page }) => {
     page.getByRole("button", { name: "Note: Keep it" }),
   ).toBeVisible();
 });
+
+test.describe("bulk tagging", () => {
+  const seedTags = (
+    request: import("@playwright/test").APIRequestContext,
+    keywordId: string,
+    tags: string[],
+  ) =>
+    request.patch(`${MOCK_API_URL}/apps/app-tags/keywords/${keywordId}`, {
+      data: { tags },
+      failOnStatusCode: true,
+    });
+
+  async function tagSelection(page: Page, texts: string[], tag: string) {
+    await page.goto(KEYWORDS);
+    for (const text of texts) {
+      await page.getByRole("checkbox", { name: `Select ${text}` }).check();
+    }
+    await page
+      .getByRole("group", { name: "Bulk keyword actions" })
+      .getByRole("button", { name: "Tag", exact: true })
+      .click();
+    await page.getByRole("textbox", { name: "Tag to add or remove" }).fill(tag);
+  }
+
+  const patches = (page: Page) => {
+    const sent: unknown[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PATCH") sent.push(request.postDataJSON());
+    });
+    return sent;
+  };
+
+  test("adds a tag only to the keywords without it", async ({
+    page,
+    request,
+  }) => {
+    await seedTags(request, "kw-2", ["core"]);
+    const sent = patches(page);
+    await tagSelection(
+      page,
+      ["focus timer", "pomodoro", "study timer"],
+      "core",
+    );
+
+    await page.getByRole("button", { name: "Add to 2 keywords" }).click();
+
+    await expect(page.getByText("Tagged 2 keywords")).toBeVisible();
+    expect(sent).toEqual([{ tags: ["core"] }, { tags: ["core"] }]);
+  });
+
+  test("removes a tag only from the keywords carrying it", async ({
+    page,
+    request,
+  }) => {
+    await seedTags(request, "kw-1", ["core"]);
+    await seedTags(request, "kw-2", ["core", "brand"]);
+    const sent = patches(page);
+    await tagSelection(
+      page,
+      ["focus timer", "pomodoro", "study timer"],
+      "core",
+    );
+
+    await page.getByRole("button", { name: "Remove from 2 keywords" }).click();
+
+    await expect(page.getByText("Untagged 2 keywords")).toBeVisible();
+    expect(sent).toEqual([{ tags: [] }, { tags: ["brand"] }]);
+  });
+
+  test("names a keyword skipped at the tag limit", async ({
+    page,
+    request,
+  }) => {
+    await seedTags(request, "kw-1", ["a", "b", "c", "d", "e", "f", "g", "h"]);
+    await tagSelection(page, ["focus timer", "pomodoro"], "core");
+
+    await expect(
+      page.getByText("Skips 1 keyword at the 8 tag limit: focus timer"),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Add to 1 keyword" }),
+    ).toBeVisible();
+  });
+});

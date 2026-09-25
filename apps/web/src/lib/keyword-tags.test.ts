@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addTag,
+  bulkTagChanges,
   splitTagInput,
   tagsIn,
   tagSuggestions,
@@ -78,5 +79,32 @@ describe("tagsIn", () => {
     expect(
       tagsIn([{ tags: ["core", "brand"] }, { tags: ["core"] }, {}]),
     ).toEqual(["brand", "core"]);
+  });
+});
+
+describe("bulkTagChanges", () => {
+  const eight = ["a", "b", "c", "d", "e", "f", "g", "h"];
+  const rows = [
+    { keywordId: "k1", text: "focus timer", tags: ["core"] },
+    { keywordId: "k2", text: "pomodoro", tags: [] },
+    { keywordId: "k3", text: "study timer", tags: eight },
+    { keywordId: "k4", text: "time blocking" },
+  ];
+
+  it("adds the tag only where it is missing and names keywords at the limit", () => {
+    expect(bulkTagChanges(rows, "core", "add")).toEqual({
+      changes: [
+        { keywordId: "k2", tags: ["core"] },
+        { keywordId: "k4", tags: ["core"] },
+      ],
+      atLimit: ["study timer"],
+    });
+  });
+
+  it("removes the tag only where it is present", () => {
+    expect(bulkTagChanges(rows, "core", "remove")).toEqual({
+      changes: [{ keywordId: "k1", tags: [] }],
+      atLimit: [],
+    });
   });
 });

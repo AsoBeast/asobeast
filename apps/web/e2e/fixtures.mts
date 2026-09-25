@@ -1504,7 +1504,7 @@ export const APP_TAGS_ID = "app-tags";
 DATASETS[APP_TAGS_ID] = {
   ...DATASETS["app-1"],
   detail: { ...APP_1_DETAIL, id: APP_TAGS_ID, name: "Tag Lab" },
-  keywords: APP_1_KEYWORDS.slice(0, 2).map((keyword) => ({
+  keywords: APP_1_KEYWORDS.slice(0, 3).map((keyword) => ({
     ...keyword,
     tags: [],
     note: null,

@@ -62,3 +62,36 @@ export function tagsIn(
     a.localeCompare(b),
   );
 }
+
+export interface BulkTagChange {
+  keywordId: string;
+  tags: string[];
+}
+
+export type BulkTagMode = "add" | "remove";
+
+export function bulkTagChanges(
+  rows: readonly { keywordId: string; text: string; tags?: string[] }[],
+  tag: string,
+  mode: BulkTagMode,
+): { changes: BulkTagChange[]; atLimit: string[] } {
+  const changes: BulkTagChange[] = [];
+  const atLimit: string[] = [];
+  for (const row of rows) {
+    const tags = row.tags ?? [];
+    const has = tags.includes(tag);
+    if (mode === "remove") {
+      if (has) {
+        changes.push({
+          keywordId: row.keywordId,
+          tags: tags.filter((entry) => entry !== tag),
+        });
+      }
+    } else if (!has && tags.length >= KEYWORD_TAGS_MAX) {
+      atLimit.push(row.text);
+    } else if (!has) {
+      changes.push({ keywordId: row.keywordId, tags: [...tags, tag] });
+    }
+  }
+  return { changes, atLimit };
+}
