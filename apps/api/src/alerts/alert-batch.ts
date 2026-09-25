@@ -297,6 +297,12 @@ function addOwnedSignal(
     if (payload.event === 'rank.dropped') section.rankDrops.push(payload);
     else if (payload.event === 'rank.improved') {
       section.rankImprovements.push(payload);
+    } else if (payload.event === 'rank.milestone') {
+      section.rankMilestones.push(payload);
+    } else if (payload.event === 'rank.first') {
+      section.firstRankings.push(payload);
+    } else if (payload.event === 'rank.overtaken') {
+      section.overtakes.push(payload);
     } else if (payload.event === 'serp.entrant') {
       section.serpEntrants.push(payload);
     } else if (payload.event === 'metadata.changed') {

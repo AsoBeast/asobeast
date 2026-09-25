@@ -1,4 +1,9 @@
-import { AlertPayload } from '@asobeast/shared';
+import {
+  AlertPayload,
+  RankFirstPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
+} from '@asobeast/shared';
 
 export interface OutboxRow {
   event: string;
@@ -17,6 +22,13 @@ function hash(input: string): string {
     value = (value * 33) ^ input.charCodeAt(i);
   }
   return (value >>> 0).toString(36);
+}
+
+function appRow(
+  payload: RankMilestonePayload | RankFirstPayload | RankOvertakenPayload,
+  dedupeKey: string,
+): OutboxRow {
+  return { event: payload.event, appId: payload.app.id, dedupeKey, payload };
 }
 
 export function outboxRows(payload: AlertPayload): OutboxRow[] {
@@ -75,6 +87,33 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
         dedupeKey: `action.opened~${payload.action.id}`,
         payload,
       },
+    ];
+  }
+
+  if (payload.event === 'rank.milestone') {
+    const day = dayOf(payload.occurredAt);
+    return [
+      appRow(
+        payload,
+        `milestone:${payload.app.id}:${payload.keyword.id}:${day}`,
+      ),
+    ];
+  }
+
+  if (payload.event === 'rank.first') {
+    const day = dayOf(payload.occurredAt);
+    return [
+      appRow(payload, `first:${payload.app.id}:${payload.keyword.id}:${day}`),
+    ];
+  }
+
+  if (payload.event === 'rank.overtaken') {
+    const day = dayOf(payload.occurredAt);
+    return [
+      appRow(
+        payload,
+        `overtaken:${payload.app.id}:${payload.keyword.id}:${payload.competitor.id}:${day}`,
+      ),
     ];
   }
 
