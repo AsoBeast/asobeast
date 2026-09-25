@@ -27,7 +27,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { ChangeTimelineSkeleton } from "./skeletons";
 
-const FIELD_LABELS: Record<ChangeField, string> = {
+export const FIELD_LABELS: Record<ChangeField, string> = {
   title: "Title",
   subtitle: "Subtitle",
   summary: "Summary",

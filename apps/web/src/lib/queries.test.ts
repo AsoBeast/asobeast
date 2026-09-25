@@ -18,6 +18,7 @@ import {
   authStatusKey,
   budgetKey,
   categoryRanksOptions,
+  changeImpactOptions,
   changesOptions,
   competitorsOptions,
   comparisonOptions,
@@ -117,6 +118,11 @@ const APP_SCOPED_OPTIONS = [
   ["discovery", discoveryOptions(APP, 30), appKeys.discovery(APP, 30)],
   ["changes", changesOptions(APP, 90), appKeys.changes(APP, 90)],
   [
+    "changeImpact",
+    changeImpactOptions(APP, 90, "us"),
+    appKeys.changeImpact(APP, 90, "us"),
+  ],
+  [
     "reviews",
     reviewsOptions(APP, { score: 1 }),
     appKeys.reviews(APP, { score: 1 }),
@@ -146,6 +152,11 @@ const ROOT_TO_LEAF = [
   ["serpMoversRoot", appKeys.serpMoversRoot(APP), appKeys.serpMovers(APP, 7)],
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],
   ["changesRoot", appKeys.changesRoot(APP), appKeys.changes(APP, 90)],
+  [
+    "changesRoot impact",
+    appKeys.changesRoot(APP),
+    appKeys.changeImpact(APP, 90, "us"),
+  ],
   ["reviewsRoot", appKeys.reviewsRoot(APP), appKeys.reviews(APP, { score: 1 })],
   ["actions all", actionKeys.all, actionKeys.list({}, undefined)],
   ["actions appRoot", appKeys.detail(APP), actionKeys.appRoot(APP)],
@@ -194,6 +205,15 @@ describe("appKeys", () => {
       JSON.stringify(options.queryKey),
     );
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("keys a change impact report by its window and its market", () => {
+    expect(appKeys.changeImpact(APP, 90, "us")).not.toEqual(
+      appKeys.changeImpact(APP, 90, "gb"),
+    );
+    expect(appKeys.changeImpact(APP, 90, "us")).not.toEqual(
+      appKeys.changeImpact(APP, 30, "us"),
+    );
   });
 
   it("keys a deep search by its storefront", () => {
