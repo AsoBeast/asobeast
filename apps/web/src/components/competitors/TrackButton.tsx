@@ -12,10 +12,12 @@ export function TrackButton({
   id,
   storeAppId,
   title,
+  className,
 }: {
   id: string;
   storeAppId: string;
   title: string;
+  className?: string;
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -38,6 +40,7 @@ export function TrackButton({
     <Button
       variant="outline"
       size="sm"
+      className={className}
       disabled={mutation.isPending}
       onClick={() => trackOnce()}
     >

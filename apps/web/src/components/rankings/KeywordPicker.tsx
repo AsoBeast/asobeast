@@ -45,7 +45,10 @@ export function KeywordPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="justify-between gap-2">
+        <Button
+          variant="outline"
+          className="justify-between gap-2 print:hidden"
+        >
           {value.length} selected
           <ChevronsUpDown className="size-4 opacity-50" />
         </Button>

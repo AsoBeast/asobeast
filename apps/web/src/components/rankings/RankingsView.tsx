@@ -87,22 +87,23 @@ export function RankingsView({ id }: { id: string }) {
               onClick={() =>
                 setSelected(effective.filter((item) => item !== keywordId))
               }
-              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs hover:bg-muted"
+              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs hover:bg-muted print:border-0 print:px-0 print:py-0"
             >
               <span
+                data-swatch
                 className="size-2 shrink-0 rounded-full"
                 style={{ backgroundColor: chart.config[keywordId]?.color }}
               />
-              <span className="max-w-40 truncate">
+              <span className="max-w-40 truncate print:max-w-none print:whitespace-normal">
                 {labels.get(keywordId) ?? keywordId}
               </span>
-              <X className="size-3 opacity-60" aria-hidden />
+              <X className="size-3 opacity-60 print:hidden" aria-hidden />
             </button>
           ))}
           <Button
             variant="outline"
             size="sm"
-            className="ml-auto"
+            className="ml-auto print:hidden"
             disabled={chart.rows.length === 0}
             onClick={() => exportRankings(id, bounds, chart)}
             aria-label="Export rankings to CSV"

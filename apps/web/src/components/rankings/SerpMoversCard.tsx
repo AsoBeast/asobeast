@@ -20,6 +20,7 @@ import { formatDate } from "@/lib/format";
 import { serpMoversOptions } from "@/lib/queries";
 import { MOVER_WINDOWS } from "@/lib/ranges";
 import { moverDaysParser } from "@/lib/search-params";
+import { PrintRangeLabel } from "./RangePicker";
 
 function groupByDay(items: SerpMoverItem[]): [string, SerpMoverItem[]][] {
   const groups = new Map<string, SerpMoverItem[]>();
@@ -78,6 +79,7 @@ function SerpMoversList({ id, days }: { id: string; days: number }) {
                     id={id}
                     storeAppId={item.storeAppId}
                     title={item.title}
+                    className="print:hidden"
                   />
                 ) : null}
               </li>
@@ -117,13 +119,14 @@ export function SerpMoversCard({ id }: { id: string }) {
           value={String(days)}
           onValueChange={(next) => void setDays(Number(next) as typeof days)}
         >
-          <TabsList aria-label="SERP movers window">
+          <TabsList aria-label="SERP movers window" className="print:hidden">
             {MOVER_WINDOWS.map((window) => (
               <TabsTrigger key={window} value={String(window)}>
                 {window}d
               </TabsTrigger>
             ))}
           </TabsList>
+          <PrintRangeLabel preset={`${days}d`} />
         </Tabs>
       </CardHeader>
       <CardContent>

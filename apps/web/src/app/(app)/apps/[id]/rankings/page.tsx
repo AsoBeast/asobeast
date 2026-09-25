@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import { RankingsReportHeader } from "@/components/rankings/RankingsReportHeader";
 import { RankingsView } from "@/components/rankings/RankingsView";
 import { SerpMoversCard } from "@/components/rankings/SerpMoversCard";
 import { RankingChartSkeleton } from "@/components/rankings/skeletons";
@@ -51,8 +52,11 @@ export default async function RankingsPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-full grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
-        <div className="lg:col-span-2">
+      <div className="page-full grid gap-6 lg:grid-cols-3 print:grid-cols-1 [&>*]:min-w-0">
+        <Suspense fallback={null}>
+          <RankingsReportHeader id={id} />
+        </Suspense>
+        <div className="lg:col-span-2 print:col-span-1">
           <Suspense fallback={<RankingChartSkeleton />}>
             <RankingsView id={id} />
           </Suspense>

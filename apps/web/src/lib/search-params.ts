@@ -192,6 +192,11 @@ export const moverDaysParser = createParser({
   },
 }).withDefault(7);
 
+export const rankingsRangeParsers = {
+  range: rangeParser,
+  movers: moverDaysParser,
+};
+
 export const actionStatusParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),
 ).withDefault(["OPEN", "SNOOZED"]);

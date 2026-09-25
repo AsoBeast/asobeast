@@ -281,3 +281,78 @@ test("prints grades, badges and legends in colour with the grade word", async ({
     ).toBe("exact");
   }
 });
+
+const RANKINGS = `/apps/${APP_1_DETAIL.id}/rankings`;
+
+test("prints a rankings report header and the windows as words", async ({
+  page,
+}) => {
+  await open(page, `${RANKINGS}?range=7d&movers=14`);
+
+  await printed(page);
+
+  await expect(page.getByText("Rankings report")).toBeVisible();
+  await expect(
+    page.getByText("Ranking history: Last 7 days", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("SERP movers: Last 14 days", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Last 14 days", { exact: true })).toBeVisible();
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+});
+
+test("prints the rankings controls as plain labels or not at all", async ({
+  page,
+}) => {
+  await open(page, RANKINGS);
+  const chip = page.getByRole("button", {
+    name: "Remove focus timer (US) from the chart",
+  });
+  await expect(chip.locator("svg")).toBeVisible();
+
+  await printed(page);
+
+  for (const name of ["5 selected", "Export rankings to CSV", "Track"]) {
+    await expect(page.getByRole("button", { name })).toHaveCount(0);
+  }
+  await expect(chip).toBeVisible();
+  await expect(chip).toHaveText("focus timer (US)");
+  await expect(chip).toHaveCSS("border-top-width", "0px");
+  await expect(chip.locator("svg")).toBeHidden();
+  expect(
+    await chip
+      .locator("[data-swatch]")
+      .evaluate((node) =>
+        getComputedStyle(node).getPropertyValue("print-color-adjust"),
+      ),
+  ).toBe("exact");
+});
+
+test("prints the rankings in one column with the chart inside its card", async ({
+  page,
+}) => {
+  await open(page, RANKINGS);
+  await expect(
+    page.getByRole("region", { name: "Keyword rank positions" }),
+  ).toBeVisible();
+
+  await printed(page);
+
+  const main = await page
+    .locator("main")
+    .evaluate((node) => Math.round(node.getBoundingClientRect().width));
+  expect(await cardWidth(page, "Keyword rank positions")).toBe(main);
+  const movers = await page
+    .getByText("SERP movers", { exact: true })
+    .evaluate((node) => {
+      const card = node.closest("[data-slot='card']");
+      if (!card) throw new Error("movers outside a card");
+      return Math.round(card.getBoundingClientRect().width);
+    });
+  expect(movers).toBe(main);
+
+  const charts = await fitsInCards(page);
+  expect(charts.length).toBeGreaterThanOrEqual(1);
+  expect(charts.filter((chart) => !chart.fits)).toEqual([]);
+});

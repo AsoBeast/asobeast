@@ -74,7 +74,8 @@
 
   [data-slot="badge"],
   [data-slot="chart"],
-  [data-grade] {
+  [data-grade],
+  [data-swatch] {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
