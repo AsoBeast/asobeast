@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
@@ -179,4 +180,31 @@ test("on a phone the matrix names competitors by icon and hides the scores", asy
       discovery.getByRole("columnheader", { name, exact: true }),
     ).toHaveCount(0);
   }
+});
+
+test("exporting competitors downloads one row per tracked competitor", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+  await expect(
+    page.getByText("1 tracked competitor", { exact: true }),
+  ).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export competitors to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^competitors-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  const lines = readFileSync(await download.path(), "utf8").split("\r\n");
+  expect(lines[0]).toBe(
+    "\uFEFFcompetitor,store,title,subtitle,summary,rating,ratings,installs,price,version,capturedAt",
+  );
+  expect(lines).toHaveLength(2);
+  expect(lines[1]).toMatch(
+    /^Rival Focus,APP_STORE,Rival Focus,Deep work timer,,4\.5,12000,,0,2\.1\.0,\d{4}-\d{2}-\d{2}T[\d:.]+Z$/,
+  );
 });
