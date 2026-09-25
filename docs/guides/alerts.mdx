@@ -53,7 +53,7 @@ A new event never joins an existing subscription. To opt in, open **Edit events*
 
 "Never ranked" looks back as far as position history is kept, `RETENTION_RANKINGS_DAYS`, 365 days by default. See [what is retained](/concepts/pipeline#what-is-retained).
 
-A keyword that moves between 10 and 11 fires each time it crosses. Every fact is deduplicated per keyword and day and folded into the batched report, so a noisy boundary costs a line in the daily report rather than a message per check.
+A keyword that moves between 10 and 11 fires each time it crosses. In batched delivery, the default, every fact is deduplicated per keyword and day and folded into the daily report, so a noisy boundary costs a line in that report rather than a message per check. Instant delivery sends each check that crosses a boundary as it happens.
 
 ## Webhook delivery
 
