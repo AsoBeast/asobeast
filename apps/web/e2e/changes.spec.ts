@@ -137,3 +137,57 @@ test("an app without changes says so for the window", async ({ page }) => {
     "No changes to your listing in the last 90 days",
   );
 });
+
+test("a second market can be picked and is kept in the url", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+
+  const market = page.getByRole("combobox", { name: "Market" });
+  await expect(market).toHaveText("US · United States");
+  await market.click();
+  await page.getByRole("option", { name: "PL · Poland" }).click();
+
+  await expect(page).toHaveURL(/country=pl/);
+  await expect(impactCard(page)).toContainText(
+    "No keywords tracked in Poland yet",
+  );
+});
+
+test("a market deep link opens on it and the home market clears the key", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes?country=pl");
+
+  const market = page.getByRole("combobox", { name: "Market" });
+  await expect(market).toHaveText("PL · Poland");
+  await expect(impactCard(page)).toContainText(
+    "No keywords tracked in Poland yet",
+  );
+
+  await market.click();
+  await page.getByRole("option", { name: "US · United States" }).click();
+
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(
+    impactCard(page).getByRole("heading", { level: 3 }).first(),
+  ).toBeVisible();
+});
+
+test("a single market app has no picker and measures its home market", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-gp/changes");
+  await expect(impactCard(page)).toContainText("No changes to your listing");
+  await expect(page.getByRole("combobox", { name: "Market" })).toHaveCount(0);
+
+  const request = page.waitForRequest((sent) => {
+    const url = new URL(sent.url());
+    return (
+      url.pathname === "/api/backend/apps/app-gp/changes/impact" &&
+      url.searchParams.get("country") === "de"
+    );
+  });
+  await page.getByRole("tab", { name: "30d" }).click();
+  await request;
+});

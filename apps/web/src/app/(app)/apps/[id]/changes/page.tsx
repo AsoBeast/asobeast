@@ -8,14 +8,17 @@ import {
   changesOptions,
   keywordCountriesOptions,
 } from "@/lib/queries";
-import { changeDaysParser } from "@/lib/search-params";
+import { changeDaysParser, countryParser } from "@/lib/search-params";
 
 export default async function ChangesPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ days?: string | string[] }>;
+  searchParams: Promise<{
+    days?: string | string[];
+    country?: string | string[];
+  }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
@@ -23,10 +26,11 @@ export default async function ChangesPage({
 
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
+  const market = countryParser.parseServerSide(sp.country) || app.country;
   await Promise.all([
     queryClient.prefetchQuery(changesOptions(id, days)),
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
-    queryClient.prefetchQuery(changeImpactOptions(id, days, app.country)),
+    queryClient.prefetchQuery(changeImpactOptions(id, days, market)),
   ]);
 
   return (

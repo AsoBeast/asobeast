@@ -3,7 +3,7 @@
 import { Suspense, useId } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ChangeImpactItem } from "@asobeast/shared";
+import type { ChangeImpactItem, KeywordCountrySummary } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -13,9 +13,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
-import { changeDaysParser } from "@/lib/search-params";
+import { changeDaysParser, countryParser } from "@/lib/search-params";
 import { ChangeImpactWindowTile } from "./ChangeImpactWindowTile";
 import { FIELD_LABELS } from "./ChangeTimeline";
 import { impactScopeLine } from "./change-impact-copy";
@@ -89,24 +97,66 @@ function ChangeImpactList({ id, days, market }: ImpactScope) {
   );
 }
 
-function ChangeImpactBody({ id, days, market }: ImpactScope) {
+function ImpactMarketSelect({
+  markets,
+  market,
+  onChange,
+}: {
+  markets: KeywordCountrySummary[];
+  market: string;
+  onChange: (country: string) => void;
+}) {
+  const selectId = useId();
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Label htmlFor={selectId}>Market</Label>
+      <Select value={market} onValueChange={onChange}>
+        <SelectTrigger id={selectId} className="w-[220px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {markets.map((entry) => (
+            <SelectItem key={entry.country} value={entry.country}>
+              {entry.country.toUpperCase()} · {formatCountry(entry.country)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function ChangeImpactBody({
+  id,
+  days,
+  market,
+  onMarketChange,
+}: ImpactScope & { onMarketChange: (country: string) => void }) {
   const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
   const tracked =
     markets.find((entry) => entry.country === market)?.keywordCount ?? 0;
 
-  if (tracked === 0) {
-    return (
-      <EmptyState
-        title={`No keywords tracked in ${formatCountry(market)} yet`}
-        body="Track keywords in this market to see how changes to your listing move them."
-      />
-    );
-  }
-
   return (
-    <Suspense fallback={<ChangeImpactSkeleton />}>
-      <ChangeImpactList id={id} days={days} market={market} />
-    </Suspense>
+    <div className="flex flex-col gap-4">
+      {markets.length > 1 ? (
+        <ImpactMarketSelect
+          markets={markets}
+          market={market}
+          onChange={onMarketChange}
+        />
+      ) : null}
+      {tracked === 0 ? (
+        <EmptyState
+          title={`No keywords tracked in ${formatCountry(market)} yet`}
+          body="Track keywords in this market to see how changes to your listing move them."
+        />
+      ) : (
+        <Suspense fallback={<ChangeImpactSkeleton />}>
+          <ChangeImpactList id={id} days={days} market={market} />
+        </Suspense>
+      )}
+    </div>
   );
 }
 
@@ -119,6 +169,8 @@ export function ChangeImpactCard({
 }) {
   const titleId = useId();
   const [days] = useQueryState("days", changeDaysParser);
+  const [country, setCountry] = useQueryState("country", countryParser);
+  const market = country || homeCountry;
 
   return (
     <Card role="region" aria-labelledby={titleId}>
@@ -130,7 +182,14 @@ export function ChangeImpactCard({
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChangeImpactSkeleton />}>
-          <ChangeImpactBody id={id} days={days} market={homeCountry} />
+          <ChangeImpactBody
+            id={id}
+            days={days}
+            market={market}
+            onMarketChange={(next) =>
+              void setCountry(next === homeCountry ? null : next)
+            }
+          />
         </Suspense>
       </CardContent>
     </Card>
