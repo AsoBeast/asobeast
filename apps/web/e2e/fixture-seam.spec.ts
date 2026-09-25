@@ -96,6 +96,71 @@ test("creating an email alert answers with the item", async ({ page }) => {
   } satisfies Partial<EmailAlertItem>);
 });
 
+test("patching a webhook's events answers with the item", async ({ page }) => {
+  const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/patch-seam",
+      events: ["serp.entrant"],
+      secret: "seam-secret",
+    },
+  });
+  const { id } = (await created.json()) as WebhookItem;
+
+  const patched = await page.request.patch(`${MOCK_API_URL}/webhooks/${id}`, {
+    data: { events: ["rank.milestone"] },
+  });
+
+  expect(patched.status()).toBe(200);
+  await expect(patched.json()).resolves.toMatchObject({
+    id,
+    events: ["rank.milestone"],
+    hasSecret: true,
+  } satisfies Partial<WebhookItem>);
+});
+
+test("patching an email alert's events answers with the item", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
+    data: { email: "patch-seam@example.com", events: ["serp.entrant"] },
+  });
+  const { id } = (await created.json()) as EmailAlertItem;
+
+  const patched = await page.request.patch(
+    `${MOCK_API_URL}/email-alerts/${id}`,
+    { data: { events: ["rank.first"] } },
+  );
+
+  expect(patched.status()).toBe(200);
+  await expect(patched.json()).resolves.toMatchObject({
+    id,
+    email: "patch-seam@example.com",
+    events: ["rank.first"],
+  } satisfies Partial<EmailAlertItem>);
+});
+
+test("patching a channel refuses no events and an unknown id", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/empty-seam",
+      events: ["serp.entrant"],
+    },
+  });
+  const { id } = (await created.json()) as WebhookItem;
+
+  const empty = await page.request.patch(`${MOCK_API_URL}/webhooks/${id}`, {
+    data: { events: [] },
+  });
+  const missing = await page.request.patch(`${MOCK_API_URL}/webhooks/missing`, {
+    data: { events: ["rank.first"] },
+  });
+
+  expect(empty.status()).toBe(400);
+  expect(missing.status()).toBe(404);
+});
+
 test("creating a webhook answers with the item", async ({ page }) => {
   const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
     data: {

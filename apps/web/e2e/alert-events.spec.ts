@@ -6,6 +6,8 @@ import { openSettledDialog } from "./dialog.mts";
 
 const SELECTED_ATTRIBUTE = "aria-checked";
 const SERP_ENTRANT = "SERP entrant";
+const EDIT_EVENTS = "Edit events";
+const RANK_MILESTONE = "Rank milestone";
 
 const VIEWPORTS = [
   { width: 1280, height: 720 },
@@ -38,6 +40,26 @@ async function setSelected(option: Locator, selected: boolean): Promise<void> {
     await option.click();
   }
   await expect(option).toHaveAttribute(SELECTED_ATTRIBUTE, String(selected));
+}
+
+async function createChannel(
+  page: Page,
+  channel: (typeof CHANNELS)[number],
+): Promise<Locator> {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, channel.trigger);
+  for (const option of await eventOptions(dialog).all()) {
+    await setSelected(option, false);
+  }
+  await setSelected(eventOption(dialog, SERP_ENTRANT), true);
+  const target = channel.target();
+  await page.getByLabel(channel.field).fill(target);
+  await dialog
+    .getByRole("button", { name: channel.trigger, exact: true })
+    .click();
+  const row = page.getByRole("listitem").filter({ hasText: target });
+  await expect(row.locator('[data-slot="badge"]')).toHaveText([SERP_ENTRANT]);
+  return row;
 }
 
 interface Box {
@@ -83,6 +105,66 @@ test("the rank events sit together among the event chips", async ({ page }) => {
 });
 
 for (const channel of CHANNELS) {
+  test(`${channel.trigger} edits the events of an existing channel`, async ({
+    page,
+  }) => {
+    const row = await createChannel(page, channel);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(eventOption(dialog, SERP_ENTRANT)).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "true",
+    );
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+
+    const patch = page.waitForRequest(
+      (request) => request.method() === "PATCH",
+    );
+    await dialog.getByRole("button", { name: "Save events" }).click();
+
+    expect((await patch).postDataJSON()).toEqual({
+      events: ["serp.entrant", "rank.milestone"],
+    });
+    await expect(dialog).toBeHidden();
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([
+      SERP_ENTRANT,
+      RANK_MILESTONE,
+    ]);
+  });
+
+  test(`${channel.trigger} cannot save a channel without events`, async ({
+    page,
+  }) => {
+    const row = await createChannel(page, channel);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+
+    await setSelected(eventOption(dialog, SERP_ENTRANT), false);
+
+    await expect(
+      dialog.getByRole("button", { name: "Save events" }),
+    ).toBeDisabled();
+    await expect(
+      dialog.getByText("Select at least one event to save."),
+    ).toBeVisible();
+  });
+
+  test(`${channel.trigger} discards an edit closed with Escape`, async ({
+    page,
+  }) => {
+    const row = await createChannel(page, channel);
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(row.locator('[data-slot="badge"]')).toHaveText([SERP_ENTRANT]);
+
+    const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(eventOption(reopened, RANK_MILESTONE)).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "false",
+    );
+  });
+
   test(`${channel.trigger} selects and deselects every event`, async ({
     page,
   }) => {

@@ -48,6 +48,7 @@ import type {
   CompetitorAddRequest,
   CompetitorItem,
   EmailAlertCreateRequest,
+  EmailAlertUpdateRequest,
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldRequest,
@@ -60,6 +61,7 @@ import type {
   TrackedKeywordItem,
   WebhookCreateRequest,
   WebhookItem,
+  WebhookUpdateRequest,
   WorkspaceDeletionStatus,
 } from "@asobeast/shared";
 import {
@@ -919,6 +921,29 @@ const routes: Route[] = [
     },
   },
   {
+    method: "PATCH",
+    pattern: /^\/webhooks\/([^/]+)$/,
+    handler: (params, req, res) => {
+      withBody<WebhookUpdateRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const webhook = webhooks.find((row) => row.id === params[0]);
+        if (!webhook) return json(res, 404, errorEnvelope(404, path));
+        if (body.events?.length === 0) {
+          return json(
+            res,
+            400,
+            errorEnvelope(400, path, "events should not be empty"),
+          );
+        }
+        if (body.url !== undefined) webhook.url = body.url;
+        if (body.events !== undefined) webhook.events = body.events;
+        if (body.active !== undefined) webhook.active = body.active;
+        if (body.secret !== undefined) webhook.hasSecret = body.secret !== "";
+        json(res, 200, webhook);
+      });
+    },
+  },
+  {
     method: "GET",
     pattern: /^\/alerts\/config$/,
     handler: (_p, _q, res) => json(res, 200, { emailEnabled: true }),
@@ -981,6 +1006,28 @@ const routes: Route[] = [
         };
         emailAlerts.unshift(alert);
         json(res, 201, alert);
+      });
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/email-alerts\/([^/]+)$/,
+    handler: (params, req, res) => {
+      withBody<EmailAlertUpdateRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const alert = emailAlerts.find((row) => row.id === params[0]);
+        if (!alert) return json(res, 404, errorEnvelope(404, path));
+        if (body.events?.length === 0) {
+          return json(
+            res,
+            400,
+            errorEnvelope(400, path, "events should not be empty"),
+          );
+        }
+        if (body.email !== undefined) alert.email = body.email;
+        if (body.events !== undefined) alert.events = body.events;
+        if (body.active !== undefined) alert.active = body.active;
+        json(res, 200, alert);
       });
     },
   },

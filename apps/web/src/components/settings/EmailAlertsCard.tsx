@@ -120,6 +120,17 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onError: () => toast.error("Could not update email alert"),
   });
 
+  const editEvents = useMutation({
+    mutationFn: (events: WebhookEvent[]) =>
+      updateEmailAlert(alert.id, { events }),
+    onSuccess: () => {
+      invalidateEmailAlertMutation(queryClient);
+      toast.success("Email alert events saved");
+    },
+    onError: () => toast.error("Could not save the email alert events"),
+  });
+  const saveEvents = useSharedFlight(editEvents.mutateAsync);
+
   const test = useMutation({
     mutationFn: () => testEmailAlert(alert.id),
     onSuccess: (result) => {
@@ -157,6 +168,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       onTest={() => test.mutate()}
       deletePending={remove.isPending}
       onDelete={removeOnce}
+      eventsPending={editEvents.isPending}
+      onEventsSave={saveEvents}
     />
   );
 }

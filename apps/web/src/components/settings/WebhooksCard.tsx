@@ -135,6 +135,17 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onError: () => toast.error("Could not update webhook"),
   });
 
+  const editEvents = useMutation({
+    mutationFn: (events: WebhookEvent[]) =>
+      updateWebhook(webhook.id, { events }),
+    onSuccess: () => {
+      invalidateWebhookMutation(queryClient);
+      toast.success("Webhook events saved");
+    },
+    onError: () => toast.error("Could not save the webhook events"),
+  });
+  const saveEvents = useSharedFlight(editEvents.mutateAsync);
+
   const test = useMutation({
     mutationFn: () => testWebhook(webhook.id),
     onSuccess: (result) => {
@@ -182,6 +193,8 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       onTest={() => test.mutate()}
       deletePending={remove.isPending}
       onDelete={removeOnce}
+      eventsPending={editEvents.isPending}
+      onEventsSave={saveEvents}
     />
   );
 }
