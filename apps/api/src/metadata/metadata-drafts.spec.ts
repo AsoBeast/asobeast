@@ -6,7 +6,11 @@ import {
   TrackedKeywordItem,
   utf8ByteLength,
 } from '@asobeast/shared';
-import { buildAssistantContext, validateDrafts } from './metadata-drafts';
+import {
+  buildAssistantContext,
+  storefrontsReading,
+  validateDrafts,
+} from './metadata-drafts';
 
 const EMPTY_CONTEXT: LintContext = {
   titleWords: [],
@@ -170,6 +174,29 @@ describe('validateDrafts', () => {
       ),
     ).toEqual([]);
   });
+
+  it('packs a chinese keyword field draft into whole phrases within 100 bytes', () => {
+    const [draft] = validateDrafts(
+      {
+        drafts: [
+          {
+            field: 'keywordField',
+            value:
+              '番茄钟,专注计时,学习计时器,工作效率,待办清单,习惯养成,冥想,睡眠,阅读,运动记录,番茄工作法',
+            rationale: 'r',
+          },
+        ],
+      },
+      Store.APP_STORE,
+      ['keywordField'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe(
+      '番茄钟,专注计时,学习计时器,工作效率,待办清单,习惯养成,冥想,睡眠,阅读',
+    );
+    expect(draft.chars).toBe(98);
+  });
 });
 
 describe('buildAssistantContext', () => {
@@ -190,4 +217,72 @@ describe('buildAssistantContext', () => {
     expect(text).toContain('Owner instructions: be playful');
     expect(text).toContain('Draft these fields only: title, subtitle');
   });
+
+  it('leads with the target localization, before the untrusted reference data', () => {
+    const text = buildAssistantContext(
+      Store.APP_STORE,
+      ['title', 'subtitle', 'keywordField'],
+      audit,
+      [makeKw('daily goals', 10, 5)],
+      [],
+      undefined,
+      { localization: 'es-MX', storefronts: ['us', 'mx'] },
+    );
+
+    expect(text.split('\n').slice(0, 5)).toEqual([
+      'Target localization: Spanish (Mexico) (es-MX).',
+      "Storefronts among this app's markets that read it: US, MX.",
+      'Write every drafted field in Spanish (Mexico) for people in US, MX whose device language matches, unless the owner instructions ask for another language.',
+      'Prefer words the current title, subtitle and keyword field do not already use: in a storefront that reads both listings, a repeated word adds no reach.',
+      '',
+    ]);
+    expect(text.split('\n')[5]).toMatch(/^REFERENCE DATA/);
+  });
+
+  it('says so when none of the markets reads the localization', () => {
+    const text = buildAssistantContext(
+      Store.APP_STORE,
+      ['keywordField'],
+      audit,
+      [],
+      [],
+      undefined,
+      { localization: 'ja', storefronts: [] },
+    );
+
+    expect(text).toContain(
+      "Storefronts among this app's markets that read it: none.",
+    );
+    expect(text).toContain(
+      'Write every drafted field in Japanese for people whose device language matches, unless the owner instructions ask for another language.',
+    );
+  });
+
+  it('leaves the primary listing prompt as it was', () => {
+    const text = buildAssistantContext(
+      Store.APP_STORE,
+      ['title'],
+      audit,
+      [],
+      [],
+      'be playful',
+    );
+
+    expect(text.startsWith('REFERENCE DATA')).toBe(true);
+    expect(text).not.toContain('Target localization');
+  });
+});
+
+describe('storefrontsReading', () => {
+  it.each([
+    ['es-MX', ['us', 'gb', 'mx'], ['us', 'mx']],
+    ['en-US', ['jp', 'us', 'gb'], ['jp', 'us']],
+    ['ja', ['us', 'pl'], []],
+    ['pl', ['zz', 'pl'], ['pl']],
+  ] as const)(
+    'finds where %s is read among %j',
+    (localization, countries, expected) => {
+      expect(storefrontsReading(localization, countries)).toEqual(expected);
+    },
+  );
 });
