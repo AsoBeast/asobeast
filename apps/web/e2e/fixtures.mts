@@ -1567,6 +1567,7 @@ export const PORTFOLIO: PortfolioSummary = {
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "us", keywordCount: APP_1_KEYWORDS.length },
   { country: "pl", keywordCount: 0 },
+  { country: "gb", keywordCount: 0 },
 ];
 
 export const BUDGET: DailyBudget = {

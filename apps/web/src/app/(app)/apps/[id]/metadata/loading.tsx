@@ -1,3 +1,4 @@
+import { StorefrontLocalizationsSkeleton } from "@/components/metadata/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
@@ -8,6 +9,7 @@ export default function Loading() {
           <Skeleton key={index} className="h-32 rounded-xl" />
         ))}
       </div>
+      <StorefrontLocalizationsSkeleton />
       <Skeleton className="h-64 w-full rounded-xl" />
     </div>
   );

@@ -1054,7 +1054,11 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
-        ? json(res, 200, { ...METADATA_AUDIT, appId: id })
+        ? json(res, 200, {
+            ...METADATA_AUDIT,
+            appId: id,
+            store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
+          })
         : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
