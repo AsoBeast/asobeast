@@ -2097,6 +2097,58 @@
         ]
       }
     },
+    "/apps/{id}/changes/impact": {
+      "get": {
+        "operationId": "ChangesController_impact",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 365,
+              "default": 90,
+              "type": "integer"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Keyword position and visibility movement after each change to an app listing",
+        "tags": [
+          "changes"
+        ]
+      }
+    },
     "/changes/recent": {
       "get": {
         "operationId": "RecentChangesController_recent",
