@@ -2,7 +2,7 @@
 title: Optimize listing metadata
 description: "The workbench lints each indexed field against its store limit, reports keyword coverage, and holds the pasted private iOS keyword field."
 icon: pencil-ruler
-keywords: ["metadata","lint","coverage","character limit","keyword field","drafts"]
+keywords: ["metadata","lint","coverage","character limit","keyword field","drafts","localization"]
 ---
 
 The workbench is where you see your listing the way search sees it: field by field, against the limits, and against the keywords you claim to be targeting.
@@ -21,6 +21,12 @@ Each field is checked against the limit for its store, and the lint reports char
 | Promotional text | 170, not indexed | Not present |
 
 Fields a store does not have are hidden rather than shown empty. See [App Store and Google Play](/concepts/stores).
+
+## See which localizations each storefront reads
+
+On an App Store app, the card under the fields lists your home storefront first and then every storefront where you track keywords, each with Apple's default language and additional languages. A storefront with no additional language says so.
+
+The fields above exist once per localization, so each additional language is another title, subtitle and keyword field for search in that storefront, and the card counts that room for you. The rule, its source and its limits are in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
 
 ## Check keyword coverage
 
