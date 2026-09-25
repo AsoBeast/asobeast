@@ -364,14 +364,13 @@ jobs:
       - name: Start object storage off the host
         run: |
           docker run -d --name offsite -p 9000:9000 \
-            -e MINIO_ROOT_USER=asobeast \
-            -e MINIO_ROOT_PASSWORD=asobeast-offsite-secret \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z server /data
+            rclone/rclone:1.75.1 serve s3 /data --addr :9000 \
+            --auth-key asobeast,asobeast-offsite-secret
           for _ in $(seq 1 60); do
-            curl --silent --fail http://127.0.0.1:9000/minio/health/live && exit 0
+            curl --silent --output /dev/null http://127.0.0.1:9000/ && exit 0
             sleep 1
           done
-          echo "MinIO did not report live within 60 seconds." >&2
+          echo "The object storage did not answer within 60 seconds." >&2
           docker logs offsite
           exit 1
       - run: apps/api/test/backup/run-drill.sh
@@ -379,7 +378,7 @@ jobs:
           UPGRADE_FROM_TAG: v1.0.0
           BACKUP_DRILL_REMOTE: offsite:asobeast-backups
           RCLONE_CONFIG_OFFSITE_TYPE: s3
-          RCLONE_CONFIG_OFFSITE_PROVIDER: Minio
+          RCLONE_CONFIG_OFFSITE_PROVIDER: Other
           RCLONE_CONFIG_OFFSITE_ENDPOINT: http://127.0.0.1:9000
           RCLONE_CONFIG_OFFSITE_REGION: us-east-1
           RCLONE_CONFIG_OFFSITE_FORCE_PATH_STYLE: "true"

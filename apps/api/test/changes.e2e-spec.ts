@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import { ApiErrorEnvelope, ChangeTimeline } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues } from './obliterate-queues';
@@ -89,14 +90,14 @@ describe('ChangesController (e2e)', () => {
           field: 'title',
           before: 'A',
           after: 'B',
-          capturedAt: new Date('2026-07-09T00:00:00Z'),
+          capturedAt: addDays(utcToday(), -3),
         },
         {
           appId: competitor.id,
           field: 'subtitle',
           before: 'Old',
           after: 'New',
-          capturedAt: new Date('2026-07-10T00:00:00Z'),
+          capturedAt: addDays(utcToday(), -2),
         },
       ],
     });
@@ -134,14 +135,14 @@ describe('ChangesController (e2e)', () => {
           field: 'title',
           before: 'A',
           after: 'B',
-          capturedAt: new Date('2026-07-09T00:00:00Z'),
+          capturedAt: addDays(utcToday(), -3),
         },
         {
           appId: primary.id,
           field: 'subtitle',
           before: 'Old',
           after: 'New',
-          capturedAt: new Date('2026-07-10T00:00:00Z'),
+          capturedAt: addDays(utcToday(), -2),
         },
       ],
     });
