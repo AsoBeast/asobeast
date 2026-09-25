@@ -331,6 +331,28 @@ describe('measureChangeImpact', () => {
         visibilityChange: 6.5,
       });
     });
+
+    it('weights a keyword without popularity like the overview does', () => {
+      const keywords = [
+        ranked([
+          [-1, 10],
+          [7, 4],
+        ]),
+        ranked(
+          [
+            [-1, 5],
+            [7, 9],
+          ],
+          [metric(4, on(-10))],
+        ),
+      ];
+
+      expect(windowOf(keywords, 7)).toMatchObject({
+        visibilityBefore: 36.7,
+        visibilityAfter: 32.7,
+        visibilityChange: -4,
+      });
+    });
   });
 
   describe('overlap', () => {
@@ -453,5 +475,63 @@ describe('measureChangeImpact', () => {
       expect(times).toContain(addDays(TODAY, -121).getTime());
       expect(times).not.toContain(addDays(TODAY, -131).getTime());
     });
+
+    it.each(Array.from({ length: 50 }, (_, seed) => seed + 1))(
+      'measures the planned rows exactly as every row, seed %i',
+      (seed) => {
+        const random = seededRandom(seed);
+        const changes = changeDays(
+          Array.from({ length: 1 + Math.floor(random() * 16) }, () => ({
+            field: 'title' as const,
+            capturedAt: addDays(TODAY, -Math.floor(random() * 90)),
+          })),
+        );
+        const keywords = Array.from({ length: 6 }, () => randomKeyword(random));
+        const plan = impactReadPlan(changes, TODAY);
+        const planned = new Set(
+          plan.rankingDates.map((date) => date.getTime()),
+        );
+        const readOnly = keywords.map((keyword) => ({
+          metrics: keyword.metrics.filter(
+            (entry) =>
+              plan.metricsUntil !== null &&
+              entry.date.getTime() <= plan.metricsUntil.getTime(),
+          ),
+          rankings: keyword.rankings.filter((ranking) =>
+            planned.has(ranking.date.getTime()),
+          ),
+        }));
+
+        expect(
+          measureChangeImpact({ changes, keywords: readOnly, today: TODAY }),
+        ).toEqual(measureChangeImpact({ changes, keywords, today: TODAY }));
+      },
+    );
   });
 });
+
+function seededRandom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 1664525 + 1013904223) % 4294967296;
+    return state / 4294967296;
+  };
+}
+
+function randomKeyword(random: () => number): ImpactKeyword {
+  const days = Array.from({ length: 130 }, (_, index) => -index);
+  return {
+    metrics: days
+      .filter((offset) => offset % 7 === 0)
+      .map((offset) =>
+        metric(1 + Math.floor(random() * 10), addDays(TODAY, offset)),
+      ),
+    rankings: days
+      .filter(() => random() < 0.25)
+      .map((offset) => ({
+        date: addDays(TODAY, offset),
+        position: random() < 0.2 ? null : 1 + Math.floor(random() * 200),
+        depth: 200,
+      })),
+  };
+}
