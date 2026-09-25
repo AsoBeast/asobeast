@@ -10,6 +10,10 @@ import {
 } from "@asobeast/shared";
 import { describe, expect, it } from "vitest";
 import {
+  COMBINATION_STATUSES,
+  COMBINATION_WORD_COUNTS,
+} from "./keyword-combinations";
+import {
   CHANGE_WINDOWS,
   DISCOVERY_WINDOWS,
   MOVER_WINDOWS,
@@ -21,6 +25,12 @@ import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS } from "./table/facets";
 import {
+  COMBINATION_URL_KEYS,
+  COMBINATION_WORD_FILTERS,
+  combinationParsers,
+  combinationStatusParser,
+  combinationWordsParser,
+  keywordFilterParsers,
   actionCategoryParser,
   actionPriorityParser,
   actionRuleParser,
@@ -104,6 +114,8 @@ const LIST_PARSERS = [
   ["keywordBucket", keywordBucketParser, KEYWORD_BUCKETS, []],
   ["gradeFacet", gradeFacetParser, GRADES, []],
   ["positionBand", positionBandParser, POSITION_BANDS, []],
+  ["combinationWords", combinationWordsParser, COMBINATION_WORD_FILTERS, []],
+  ["combinationStatus", combinationStatusParser, COMBINATION_STATUSES, []],
 ] as const;
 
 const STRING_PARSERS = [
@@ -297,5 +309,28 @@ describe("coverageSort parser", () => {
   it("keeps the api order when nothing or something unknown is named", () => {
     expect(coverageSortParser.parseServerSide(undefined)).toBeNull();
     expect(coverageSortParser.parseServerSide("title")).toBeNull();
+  });
+});
+
+describe("combination parsers", () => {
+  it("offer one word count filter per combination size", () => {
+    expect([...COMBINATION_WORD_FILTERS]).toEqual(
+      COMBINATION_WORD_COUNTS.map(String),
+    );
+  });
+
+  it("use address keys no other keyword monitor control uses", () => {
+    const taken = new Set([
+      ...Object.keys(keywordFilterParsers),
+      "country",
+      "sort",
+      "dir",
+      "serp",
+      "strategy",
+      "spider",
+    ]);
+    const keys = Object.values(COMBINATION_URL_KEYS);
+    expect(new Set(keys).size).toBe(Object.keys(combinationParsers).length);
+    expect(keys.filter((key) => taken.has(key))).toEqual([]);
   });
 });
