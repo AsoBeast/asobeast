@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewItem } from "@asobeast/shared";
-import { reviewCsv } from "./review-csv";
+import { reviewCsv, truncatedExportNotice } from "./review-csv";
 
 const reviewedAt = new Date().toISOString();
 
@@ -55,5 +55,19 @@ describe("reviewCsv", () => {
         }),
       ])[1],
     ).toBe(",5,,Best pomodoro app I have used.,,,store-rev-1");
+  });
+});
+
+describe("truncatedExportNotice", () => {
+  it("says how many of the matching reviews the file holds when it stops short", () => {
+    expect(
+      truncatedExportNotice({ reviews: [review(), review()], total: 1800 }),
+    ).toBe(
+      "Exported the newest 2 of 1,800 reviews. Narrow the filters to reach the others.",
+    );
+  });
+
+  it("stays quiet when every matching review is in the file", () => {
+    expect(truncatedExportNotice({ reviews: [review()], total: 1 })).toBeNull();
   });
 });

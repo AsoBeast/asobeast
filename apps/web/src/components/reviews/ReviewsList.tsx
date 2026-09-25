@@ -38,7 +38,7 @@ import {
 } from "@/lib/queries";
 import { reviewScoreParser, reviewVersionParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
-import { exportReviews } from "./review-csv";
+import { exportReviews, truncatedExportNotice } from "./review-csv";
 import { ReviewsListSkeleton } from "./skeletons";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
@@ -209,7 +209,11 @@ function ExportReviewsButton({
   const { data } = useQuery(reviewsOptions(id, filters));
   const exporting = useMutation({
     mutationFn: () => queryClient.fetchQuery(reviewsExportOptions(id, filters)),
-    onSuccess: (list) => exportReviews(id, list.reviews),
+    onSuccess: (list) => {
+      exportReviews(id, list.reviews);
+      const notice = truncatedExportNotice(list);
+      if (notice) toast.info(notice);
+    },
     onError: () => {
       toast.error("Could not export reviews");
     },
