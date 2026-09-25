@@ -29,6 +29,8 @@ const KEYWORD_CSV_HEADERS = [
   "officialPopularity",
   "scoreOutdated",
   "scoreComparability",
+  "tags",
+  "note",
 ];
 
 function roundOrNull(value: number | null): number | null {
@@ -68,6 +70,8 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     keyword.scoreProvenance?.capturedAt ?? null,
     ...evidenceColumns(keyword),
     SCORE_COMPARABILITY,
+    (keyword.tags ?? []).join("; "),
+    keyword.note ?? null,
   ]);
   return toCsv(KEYWORD_CSV_HEADERS, csvRows);
 }

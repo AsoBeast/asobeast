@@ -233,6 +233,10 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   expect(content).toContain(
     "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable",
   );
+  expect(content.split("\r\n")[0].endsWith(",tags,note")).toBe(true);
+  expect(
+    content.split("\r\n").find((line) => line.startsWith("time blocking,")),
+  ).toContain(',testing,"Seasonal <push> in May\nKeep for exam season"');
 });
 
 test("score details are persistent, keyboard accessible and store specific", async ({
