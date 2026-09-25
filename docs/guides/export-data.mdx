@@ -19,10 +19,11 @@ The export writes one row per tracked keyword, named `keywords-<appId>-<date>.cs
 | Provenance | `scoredAt`, `scoringSource`, `formulaVersion`, `confidence`, `capturedAt` |
 | Evidence | `suggestReach`, `serpFlags` separated by spaces, `officialPopularity`, `scoreOutdated` |
 | Caveat | `scoreComparability` |
+| Owner notes | `tags` separated by semicolons, `note` |
 
 The provenance columns travel with the scores on purpose. A spreadsheet that carries `formulaVersion` and `confidence` can still be audited months later, while one that carries only a number cannot.
 
-The last column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
+The `scoreComparability` column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
 
 `position` is formatted the same way the table shows it, so an unranked keyword exports as `>200` rather than as an empty cell or a zero. See [Positions and rank depth](/concepts/positions).
 
