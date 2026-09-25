@@ -32,12 +32,13 @@ export default async function MetadataPage({
       </div>
     );
   }
-  const appStore = result.store === "APP_STORE";
   const queryClient = getQueryClient();
-  if (appStore) {
-    void queryClient.prefetchQuery(keywordCountriesOptions(id));
-  }
-  const assistant = await getMetadataAssistantStatus().catch(() => null);
+  const [markets, assistant] = await Promise.all([
+    result.store === "APP_STORE"
+      ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
+      : null,
+    getMetadataAssistantStatus().catch(() => null),
+  ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -54,7 +55,7 @@ export default async function MetadataPage({
           ))}
         </section>
 
-        {appStore ? (
+        {markets ? (
           <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
             <StorefrontLocalizationsCard id={id} />
           </Suspense>

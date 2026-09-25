@@ -1115,6 +1115,9 @@ const routes: Route[] = [
       const path = req.url ?? "/";
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      if (hasCookie(req, "e2e-keyword-countries-error", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
+      }
       if (id === "app-1") return json(res, 200, APP_1_KEYWORD_COUNTRIES);
       json(res, 200, [
         {

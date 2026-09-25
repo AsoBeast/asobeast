@@ -113,3 +113,34 @@ test("the card arrives with the page and the browser never asks for it", async (
 
   expect(requested).toEqual([]);
 });
+
+test("the metadata page stays up when the markets cannot be read", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-keyword-countries-error",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  const requested: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname.endsWith("/keyword-countries")) {
+      requested.push(request.url());
+    }
+  });
+
+  await page.goto("/apps/app-1/metadata");
+  await expect(
+    page.getByRole("heading", { name: "Keyword coverage" }),
+  ).toBeVisible();
+  await page.waitForTimeout(3000);
+
+  expect(requested).toEqual([]);
+  await expect(page.getByText("Metadata could not be loaded")).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Storefront localizations" }),
+  ).toHaveCount(0);
+});
