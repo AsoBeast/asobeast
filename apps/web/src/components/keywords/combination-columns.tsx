@@ -2,6 +2,7 @@
 
 import { createColumnHelper } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type {
   CombinationField,
   CombinationStatus,
@@ -58,6 +59,23 @@ const columnHelper = createColumnHelper<
 >();
 
 export const COMBINATION_COLUMNS = columnHelper.columns([
+  columnHelper.display({
+    id: "select",
+    enableHiding: false,
+    header: () => <span className="sr-only">Select</span>,
+    cell: ({ row }) => (
+      <Checkbox
+        checked={row.getIsSelected()}
+        disabled={!row.getCanSelect()}
+        onCheckedChange={(value) => row.toggleSelected(!!value)}
+        aria-label={
+          row.getCanSelect()
+            ? `Select ${row.original.phrase}`
+            : `${row.original.phrase}: already tracked`
+        }
+      />
+    ),
+  }),
   columnHelper.accessor("phrase", {
     id: "phrase",
     header: "Phrase",

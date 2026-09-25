@@ -12,6 +12,9 @@ const COMBOS_PAGE = `/apps/${APP_COMBOS_DETAIL.id}/keywords`;
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ request }) => {
+  await request.post(`${MOCK_API_URL}/__reset/keywords`, {
+    failOnStatusCode: true,
+  });
   await request.put(
     `${MOCK_API_URL}/apps/${APP_COMBOS_DETAIL.id}/keyword-field`,
     { data: { text: APP_COMBOS_KEYWORD_FIELD }, failOnStatusCode: true },
@@ -174,4 +177,144 @@ test("a google play listing combines its title and short description", async ({
   await expect(rowOf(card, "fokus")).toContainText("Short description");
   await expect(page.getByText(/title and short description/)).toBeVisible();
   expect(fieldRequests).toEqual([]);
+});
+
+const trackRequest = (page: Page) =>
+  page.waitForRequest(
+    (request) =>
+      request.method() === "POST" &&
+      request.url().endsWith(`/apps/${APP_COMBOS_DETAIL.id}/keywords`),
+  );
+
+test("selected combinations are tracked after one confirmation", async ({
+  page,
+}) => {
+  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  const card = combinations(page);
+
+  await expect(
+    card.getByRole("checkbox", { name: "water: already tracked" }),
+  ).toBeDisabled();
+  for (const phrase of ["journal", "diary", "gratitude"]) {
+    await card
+      .getByRole("checkbox", { name: `Select ${phrase}`, exact: true })
+      .check();
+  }
+  await card.getByRole("button", { name: "Track selected (3)" }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "Track 3 keywords in United States?",
+  });
+  await expect(dialog).toContainText("one store search a day");
+  await expect(
+    dialog.getByRole("link", { name: "Review the daily request budget" }),
+  ).toHaveAttribute("href", "/settings#daily-capacity");
+  let sent = 0;
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().includes("/keywords")) {
+      sent += 1;
+    }
+  });
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(sent).toBe(0);
+
+  await card.getByRole("button", { name: "Track selected (3)" }).click();
+  const request = trackRequest(page);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Track", exact: true })
+    .click();
+
+  expect((await request).postDataJSON()).toEqual({
+    keywords: ["journal", "diary", "gratitude"],
+    country: "us",
+  });
+  await expect(page.getByText("Tracking 3 keywords")).toBeVisible();
+  await expect(rowOf(card, "journal")).toContainText("Tracked");
+  await expect(
+    card.getByRole("button", { name: "Track selected (0)" }),
+  ).toBeDisabled();
+});
+
+test("every combination the filters show is tracked at once", async ({
+  page,
+}) => {
+  await page.goto(`${COMBOS_PAGE}?combos=true&comboWords=1`);
+  const card = combinations(page);
+  await expect(page.getByText("Tracking 7 keywords · 6 active")).toBeVisible();
+
+  await card.getByRole("button", { name: "Track all shown (10)" }).click();
+  const request = trackRequest(page);
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Track", exact: true })
+    .click();
+
+  expect((await request).postDataJSON()).toEqual({
+    keywords: [
+      "mood",
+      "journal",
+      "daily",
+      "diary",
+      "gratitude",
+      "log",
+      "sleep",
+      "notes",
+      "tracker",
+      "planner",
+    ],
+    country: "us",
+  });
+  await expect(page.getByText("Tracking 10 keywords")).toBeVisible();
+  await expect(rowOf(card, "gratitude")).toContainText("Tracked");
+  await expect(
+    card.getByRole("button", { name: "Track all shown (0)" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Tracking 16 keywords · 16 active"),
+  ).toBeVisible();
+});
+
+test("a quota error stops the run and names what was tracked", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    {
+      name: "e2e_keyword_quota",
+      value: "210",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  const sizes: number[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "POST" &&
+      request.url().endsWith(`/apps/${APP_COMBOS_DETAIL.id}/keywords`)
+    ) {
+      sizes.push(
+        (request.postDataJSON() as { keywords: string[] }).keywords.length,
+      );
+    }
+  });
+  await page.goto(`${COMBOS_PAGE}?combos=true&comboStatus=untracked`);
+  const card = combinations(page);
+
+  await card.getByRole("button", { name: "Track all shown (224)" }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Track", exact: true })
+    .click();
+
+  await expect(
+    page.getByText(
+      "keywordMarkets limit reached: 206 of 210 used on the indie plan, 24 more requested",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("200 of 224 tracked before this error"),
+  ).toBeVisible();
+  await expect(card.getByText("24 of 231 combinations")).toBeVisible();
+  expect(sizes).toEqual([200, 24]);
 });

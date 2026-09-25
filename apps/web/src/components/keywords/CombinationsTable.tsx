@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useTable } from "@tanstack/react-table";
+import { useTable, type RowSelectionState } from "@tanstack/react-table";
 import type { Store } from "@asobeast/shared";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatNumber } from "@/lib/format";
@@ -26,6 +26,7 @@ import {
 } from "./CombinationFilters";
 import { CombinationRows } from "./CombinationRows";
 import { keywordTableFeatures } from "./keyword-table-features";
+import { TrackCombinations } from "./TrackCombinations";
 
 interface CombinationsProps {
   id: string;
@@ -64,6 +65,7 @@ function ListingCombinations({
 }: CombinationsProps & { keywordField: readonly string[] }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { data: tracked } = useSuspenseQuery(keywordsOptions(id, homeCountry));
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const snapshot = app.latestSnapshot;
   const result = useMemo(
     () =>
@@ -91,7 +93,10 @@ function ListingCombinations({
       globalFilter: params.q,
       columnFilters,
       columnVisibility: HIDDEN_COMBINATION_COLUMNS,
+      rowSelection,
     },
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: (row) => row.original.status !== "tracked",
     globalFilterFn: "includesString",
     getColumnCanGlobalFilter: (column) => column.id === "phrase",
   });
@@ -115,7 +120,14 @@ function ListingCombinations({
           first {formatNumber(COMBINATION_LIMIT)}, shortest first, are listed.
         </p>
       ) : null}
-      <CombinationFilters table={table} params={params} setParams={setParams} />
+      <CombinationFilters
+        table={table}
+        params={params}
+        setParams={setParams}
+        actions={
+          <TrackCombinations table={table} id={id} homeCountry={homeCountry} />
+        }
+      />
       <CombinationRows
         key={JSON.stringify([params.q, params.words, params.status])}
         table={table}

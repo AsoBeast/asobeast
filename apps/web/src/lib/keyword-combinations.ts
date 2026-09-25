@@ -1,5 +1,6 @@
 import {
   isStopword,
+  KEYWORD_BULK_ADD_LIMIT,
   tokenize,
   TRACKED_KEYWORD_CHAR_LIMIT,
   type AppSnapshotSummary,
@@ -189,4 +190,34 @@ export function buildCombinations({
     }
   }
   return { words, combinations, total, truncated: total > combinations.length };
+}
+
+export interface TrackOutcome {
+  ok: boolean;
+  tracked: number;
+  error?: unknown;
+}
+
+export function phrasesToTrack(rows: readonly KeywordCombination[]): string[] {
+  return rows
+    .filter((row) => row.status !== "tracked")
+    .map((row) => row.trackedAs ?? row.phrase);
+}
+
+export async function trackInChunks(
+  phrases: readonly string[],
+  add: (chunk: string[]) => Promise<unknown>,
+  size: number = KEYWORD_BULK_ADD_LIMIT,
+): Promise<TrackOutcome> {
+  let tracked = 0;
+  for (let start = 0; start < phrases.length; start += size) {
+    const chunk = phrases.slice(start, start + size);
+    try {
+      await add(chunk);
+    } catch (error) {
+      return { ok: false, tracked, error };
+    }
+    tracked += chunk.length;
+  }
+  return { ok: true, tracked };
 }

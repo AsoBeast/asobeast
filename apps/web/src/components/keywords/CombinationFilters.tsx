@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { Row, Table } from "@tanstack/react-table";
 import type { inferParserType, SetValues } from "nuqs";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
@@ -47,10 +48,12 @@ export function CombinationFilters({
   table,
   params,
   setParams,
+  actions,
 }: {
   table: CombinationTable;
   params: CombinationParams;
   setParams: SetCombinationParams;
+  actions: ReactNode;
 }) {
   const statuses = params.status.map(
     (value) => COMBINATION_STATUS_LABELS[value],
@@ -108,6 +111,7 @@ export function CombinationFilters({
           total={table.getPreFilteredRowModel().rows.length}
           noun="combination"
         />
+        {actions}
       </div>
       <FilterChips
         chips={chips}

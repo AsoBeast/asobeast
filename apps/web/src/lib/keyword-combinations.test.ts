@@ -1,11 +1,14 @@
 import { TRACKED_KEYWORD_CHAR_LIMIT } from "@asobeast/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildCombinations,
   combinationKey,
   COMBINATION_LIMIT,
   COMBINATION_MIN_WORD_LENGTH,
   listingWords,
+  phrasesToTrack,
+  trackInChunks,
+  type KeywordCombination,
   type CombinationListing,
   type TrackedPhrase,
 } from "./keyword-combinations";
@@ -274,5 +277,77 @@ describe("tracking status", () => {
       (combination) => combination.phrase === phrase,
     );
     expect([row?.status, row?.trackedAs]).toEqual([status, trackedAs]);
+  });
+});
+
+describe("phrasesToTrack", () => {
+  const row = (
+    phrase: string,
+    status: KeywordCombination["status"],
+    trackedAs: string | null,
+  ): KeywordCombination => ({
+    key: phrase,
+    phrase,
+    wordCount: 1,
+    fields: ["title"],
+    status,
+    trackedAs,
+  });
+
+  it("sends untracked phrases and the paused keyword's own text", () => {
+    expect(
+      phrasesToTrack([
+        row("mood", "untracked", null),
+        row("mood journal", "tracked", "mood journal"),
+        row("gratitude log", "paused", "gratitude log app"),
+      ]),
+    ).toEqual(["mood", "gratitude log app"]);
+  });
+});
+
+describe("trackInChunks", () => {
+  const phrases = Array.from({ length: 450 }, (_, index) => `p${index}`);
+
+  it("sends chunks one after another and counts what was tracked", async () => {
+    let inFlight = 0;
+    const sizes: number[] = [];
+    const add = vi.fn(async (chunk: string[]) => {
+      inFlight += 1;
+      expect(inFlight).toBe(1);
+      sizes.push(chunk.length);
+      await Promise.resolve();
+      inFlight -= 1;
+    });
+
+    await expect(trackInChunks(phrases, add)).resolves.toEqual({
+      ok: true,
+      tracked: 450,
+    });
+    expect(sizes).toEqual([200, 200, 50]);
+    expect(add.mock.calls[1][0][0]).toBe("p200");
+  });
+
+  it("stops at the first failing chunk", async () => {
+    const error = new Error("quota");
+    const add = vi
+      .fn<(chunk: string[]) => Promise<unknown>>()
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(error);
+
+    await expect(trackInChunks(phrases, add)).resolves.toEqual({
+      ok: false,
+      tracked: 200,
+      error,
+    });
+    expect(add).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends nothing without phrases", async () => {
+    const add = vi.fn();
+    await expect(trackInChunks([], add)).resolves.toEqual({
+      ok: true,
+      tracked: 0,
+    });
+    expect(add).not.toHaveBeenCalled();
   });
 });
