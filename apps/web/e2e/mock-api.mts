@@ -33,6 +33,7 @@ import {
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
+  SERP_SNAPSHOTS,
   WEBHOOKS,
   errorEnvelope,
   rateLimitedEnvelope,
@@ -1000,6 +1001,17 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/keywords\/([^/]+)\/score$/,
     handler: (_p, _q, res) => json(res, 202, { enqueued: 1 }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/keywords\/([^/]+)\/serp$/,
+    handler: ([keywordId], req, res) => {
+      const snapshot = SERP_SNAPSHOTS[keywordId];
+      if (!snapshot) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, snapshot);
+    },
   },
   {
     method: "GET",
