@@ -176,6 +176,10 @@ describe('KeywordsController (e2e)', () => {
     );
     expect(manual).toBeDefined();
     expect(manual?.source).toBe('MANUAL');
+    for (const item of added.body as TrackedKeywordItem[]) {
+      expect(item.tags).toEqual([]);
+      expect(item.note).toBeNull();
+    }
 
     await api
       .patch(`/apps/${id}/keywords/${manual?.keywordId}`)
