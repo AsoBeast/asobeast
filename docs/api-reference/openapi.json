@@ -4151,6 +4151,23 @@
             "minimum": 1,
             "maximum": 100,
             "example": 80
+          },
+          "tags": {
+            "example": [
+              "core",
+              "brand"
+            ],
+            "maxItems": 8,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "example": "Seasonal, push in May"
           }
         }
       },
