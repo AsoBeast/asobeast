@@ -68,12 +68,12 @@ Deep search runs the store suggestion endpoint against a seed phrase and every o
 
 The **Keyword combinations** card, below the suggestions, lists every phrase of one to three words that the words of your listing can form: the title, subtitle and keyword field on the App Store, and the title and short description on Google Play. Open it to see the list; the card stays closed until you do, and the address remembers that it is open.
 
-Words are lowercased, stopwords such as app, free and best are left out, and so are words of one letter. A phrase is a set of words, shown in the order its words first appear in the listing, because word order does not change what the App Store matches. See [What does each store index?](/concepts/stores#what-does-each-store-index)
+Words are lowercased, stopwords such as app, free and best are left out, and so are words of one character. A phrase is a set of words, shown in the order its words first appear in the listing, because word order does not change what the App Store matches. See [What does each store index?](/concepts/stores#what-does-each-store-index)
 
 | Status | Meaning |
 | --- | --- |
-| Tracked | An active tracked keyword in your home storefront has the same words, in any order |
-| Paused | Only a paused keyword has those words; tracking it again resumes that keyword |
+| Tracked | An active tracked keyword in your home storefront has the same words, in any order and ignoring stopwords, so `sleep notes app` counts for `sleep notes`; the card names that keyword |
+| Paused | Only a paused keyword has those words, matched the same way; tracking it again resumes that keyword |
 | Not tracked | No tracked keyword has those words |
 
 Combinations and coverage answer different questions. Coverage on the metadata workbench asks whether a tracked keyword appears word for word inside one field. Combinations ask which phrases your listing's words can form across fields, so a phrase can be a combination without being covered.
