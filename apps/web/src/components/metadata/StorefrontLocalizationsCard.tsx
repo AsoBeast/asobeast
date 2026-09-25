@@ -108,8 +108,7 @@ export function StorefrontLocalizationsCard({
   const draftable = new Set(draftableLocalizations(rows));
   const onDraft = canDraft
     ? (localization: AppStoreLocalization) => {
-        void setDraftLocale(localization);
-        focusDraftLocalization();
+        void setDraftLocale(localization).then(focusDraftLocalization);
       }
     : null;
 

@@ -53,6 +53,12 @@ test("a storefront language opens the drafts card on that language", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/metadata");
+  await page.evaluate(() => {
+    document.addEventListener("focusin", (event) => {
+      document.body.dataset.focusedText =
+        (event.target as HTMLElement).textContent ?? "";
+    });
+  });
 
   await page
     .getByRole("button", { name: "Draft with AI: Spanish (Mexico)" })
@@ -62,6 +68,10 @@ test("a storefront language opens the drafts card on that language", async ({
   const localization = page.getByRole("combobox", { name: "Localization" });
   await expect(localization).toBeFocused();
   await expect(localization).toHaveText("Spanish (Mexico)");
+  await expect(page.locator("body")).toHaveAttribute(
+    "data-focused-text",
+    "Spanish (Mexico)",
+  );
 });
 
 test("a google play app never sends a localization", async ({ page }) => {
