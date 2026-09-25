@@ -418,3 +418,20 @@ test("prints both reports to pdf in the light theme", async ({
     });
   }
 });
+
+test("leaves the rankings empty state actions out of the printout", async ({
+  page,
+}) => {
+  for (const [path, name] of [
+    ["/apps/app-2/rankings", "Go to keywords"],
+    ["/apps/app-long/rankings?range=7d", "Widen to 90 days"],
+  ] as const) {
+    await open(page, path);
+    const action = page.getByRole("main").getByText(name, { exact: true });
+    await expect(action).toBeVisible();
+
+    await printed(page);
+    await expect(action).toBeHidden();
+    await page.emulateMedia({ media: "screen" });
+  }
+});
