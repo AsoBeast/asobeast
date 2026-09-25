@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -28,13 +28,32 @@ There is no separate alert schedule. `CRON_DAILY` controls when processing start
 | --- | --- | --- |
 | `rank.dropped` | An owned app position falls | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
 | `rank.improved` | An owned app position rises | `ALERT_RANK_DROP_THRESHOLD`, default 5 |
+| `rank.milestone` | An owned app enters or leaves the top 10, the top 3 or first place | None |
+| `rank.first` | An owned app ranks for a keyword it has never ranked for | None |
+| `rank.overtaken` | A tracked competitor moves above an owned app | None |
 | `review.negative` | A review lands at or below the rating cutoff | `ALERT_REVIEW_SCORE_MAX`, default 2, range 1 to 4 |
 | `action.opened` | An action opens or reopens at or above the priority floor | `ALERT_ACTIONS_MIN_PRIORITY`, default `high` |
 | `metadata.changed` | A snapshot differs from the previous one | None |
 | `serp.entrant` | A new app enters a tracked keyword's top 10 | None |
 | `digest.weekly` | The weekly portfolio digest | `CRON_DIGEST`, webhook only |
 
-Existing subscribers are unaffected by `action.opened` until they opt into it on the settings page.
+A new event never joins an existing subscription. To opt in, open **Edit events** on the channel in Settings, tick the events and save. A webhook keeps its url and its secret.
+
+## Milestones, first rankings and overtakes
+
+`rank.dropped` and `rank.improved` report moves of at least `ALERT_RANK_DROP_THRESHOLD` places. These three events report what a move means, whatever its size. Each compares today's check with the previous check of the same app and keyword, so a keyword checked for the first time fires none of them, and adding keywords never floods a channel.
+
+| Event | Rule |
+| --- | --- |
+| `rank.milestone` | The app entered or left the top 10, the top 3 or first place. One move reports one milestone: rising from 15 to 2 enters the top 3 rather than also the top 10, and falling from 2 to 15 leaves the top 10. |
+| `rank.first` | The app ranks today, did not rank in the previous check and has no earlier ranked check. It replaces `rank.milestone` for that keyword and check. |
+| `rank.overtaken` | A tracked competitor that was behind the app, or not ranked, in the previous check is ahead of it now, also when the app no longer ranks. One event per competitor. |
+
+`rank.dropped` and `rank.improved` still fire alongside, so a move from 14 to 8 brings both `rank.improved` and `rank.milestone`. All three belong to your own app and arrive in the owned app report; `rank.overtaken` names the competitor inside it.
+
+"Never ranked" looks back as far as position history is kept, `RETENTION_RANKINGS_DAYS`, 365 days by default. See [what is retained](/concepts/pipeline#what-is-retained).
+
+A keyword that moves between 10 and 11 fires each time it crosses. Every fact is deduplicated per keyword and day and folded into the batched report, so a noisy boundary costs a line in the daily report rather than a message per check.
 
 ## Webhook delivery
 
@@ -88,6 +107,37 @@ A granular event looks like this.
 }
 ```
 
+A milestone and an overtake look like this. `rank.first` carries `position` and `depth` instead of the move.
+
+```json
+{
+  "event": "rank.milestone",
+  "occurredAt": "2026-09-26T03:14:07.000Z",
+  "app": { "id": "cm1a", "name": "My App" },
+  "keyword": { "id": "cm1k", "text": "habit tracker", "store": "APP_STORE", "country": "us" },
+  "tier": 10,
+  "direction": "entered",
+  "from": 14,
+  "to": 8,
+  "fromDepth": 200,
+  "toDepth": 200
+}
+```
+
+```json
+{
+  "event": "rank.overtaken",
+  "occurredAt": "2026-09-26T03:14:07.000Z",
+  "app": { "id": "cm1a", "name": "My App" },
+  "keyword": { "id": "cm1k", "text": "habit tracker", "store": "APP_STORE", "country": "us" },
+  "competitor": { "id": "cm1r", "name": "Rival Focus", "from": 9, "to": 4 },
+  "from": 5,
+  "to": 6,
+  "fromDepth": 200,
+  "toDepth": 200
+}
+```
+
 A batched report wraps events in a scoped envelope. Branch on the top level `scope`, which is `owned_apps` or `competitors`. The flat `events` array stays granular and contains only events for that scope, so a consumer that already handles granular events needs one extra branch rather than a rewrite.
 
 ```json
@@ -101,6 +151,10 @@ A batched report wraps events in a scoped envelope. Branch on the top level `sco
   "events": []
 }
 ```
+
+Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankImprovements`, `rankMilestones`, `firstRankings`, `overtakes`, `serpEntrants`, `changes`, `negativeReviews`, `actions` and `competitors`. An array is empty when nothing happened or when the channel does not list its event.
+
+Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
 `link` is present only when `WEB_PUBLIC_URL` is set. That variable is used for nothing else. When it is unset the link is `null` rather than a broken `localhost` guess.
 

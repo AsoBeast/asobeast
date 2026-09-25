@@ -97,7 +97,7 @@ See [Send alerts](/guides/alerts).
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |
 | `ALERT_DELIVERY` | `batched` | No | `batched` sends up to two scoped reports per channel after daily processing completes. `instant` sends one notification per event. Warns in production when `instant` has no SMTP configured. Webhook subscriptions live in the database, so configuration validation cannot see them |
-| `ALERT_RANK_DROP_THRESHOLD` | `5` | No | Positions a primary app must move before a rank alert fires |
+| `ALERT_RANK_DROP_THRESHOLD` | `5` | No | Positions a primary app must move before `rank.dropped` or `rank.improved` fires |
 | `ALERT_REVIEW_SCORE_MAX` | `2` | No | Highest star rating treated as a negative review. Accepts 1 to 4 |
 | `ALERT_ACTIONS_MIN_PRIORITY` | `high` | No | Lowest priority that fires `action.opened`. One of `critical`, `high`, `medium`, `low` |
 | `WEBHOOK_ALLOW_PRIVATE_TARGETS` | `false` | No | `false` keeps alert webhooks on public addresses. Loopback, private, carrier grade NAT, link local and cloud metadata targets are refused when the webhook is registered and again when the connection is made, so a hostname that resolves to an internal address cannot reach it either. `true` opts a self hosted instance in to delivery on its own network. Refuses to boot when `true` with `BILLING_ENABLED` set to `true`, because the url belongs to the customer, and warns in production otherwise |
