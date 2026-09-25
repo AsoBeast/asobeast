@@ -385,3 +385,36 @@ test("offers print report on the two report pages only", async ({ page }) => {
   await printed(page);
   await expect(action).toHaveCount(0);
 });
+
+const REPORTS = [
+  ["overview", OVERVIEW],
+  ["rankings", RANKINGS],
+] as const;
+
+const MIN_REPORT_BYTES = 10_000;
+
+test("prints both reports to pdf in the light theme", async ({
+  page,
+}, testInfo) => {
+  await page.addInitScript(() => window.localStorage.setItem("theme", "dark"));
+
+  for (const [name, path] of REPORTS) {
+    await open(page, path);
+    await expect(page.locator("html")).toHaveClass(/dark/);
+
+    const file = testInfo.outputPath(`${name}.pdf`);
+    const pdf = await page.pdf({
+      path: file,
+      format: "A4",
+      printBackground: false,
+      preferCSSPageSize: true,
+    });
+
+    expect(pdf.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(pdf.byteLength).toBeGreaterThan(MIN_REPORT_BYTES);
+    await testInfo.attach(`${name}.pdf`, {
+      path: file,
+      contentType: "application/pdf",
+    });
+  }
+});
