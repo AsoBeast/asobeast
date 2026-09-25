@@ -11,6 +11,7 @@ import {
   appLabel,
   batchHeadline,
   changeLines,
+  isRankEvent,
   rank,
   sectionBlocks,
   stars,
@@ -110,6 +111,13 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
       rows.push(['Open', payload.link]);
     }
     return rows;
+  }
+
+  if (isRankEvent(payload)) {
+    return [
+      ['App', appLabel(payload.app.name)],
+      ['Keyword', keywordLabel(payload.keyword)],
+    ];
   }
 
   const rows: Row[] = [

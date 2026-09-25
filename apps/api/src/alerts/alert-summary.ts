@@ -6,7 +6,10 @@ import {
   MetadataChangedPayload,
   RANK_DEPTH,
   RankDroppedPayload,
+  RankFirstPayload,
   RankImprovedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
   ReviewNegativePayload,
   SERP_DEPTH,
   SerpEntrantPayload,
@@ -42,6 +45,23 @@ export function stars(score: number): string {
 
 export function appLabel(name: string | null): string {
   return name ?? 'An app';
+}
+
+export type RankEventPayload =
+  RankMilestonePayload | RankFirstPayload | RankOvertakenPayload;
+
+export function isRankEvent(
+  payload: AlertPayload,
+): payload is RankEventPayload {
+  return (
+    payload.event === 'rank.milestone' ||
+    payload.event === 'rank.first' ||
+    payload.event === 'rank.overtaken'
+  );
+}
+
+export function rankEventSentence(payload: RankEventPayload): string {
+  return `${appLabel(payload.app.name)}: ${payload.event} for "${keywordLabel(payload.keyword)}"`;
 }
 
 function plural(count: number, singular: string): string {
@@ -88,6 +108,10 @@ export function summarize(payload: AlertPayload): string {
 
   if (payload.event === 'action.opened') {
     return actionLine(payload);
+  }
+
+  if (isRankEvent(payload)) {
+    return rankEventSentence(payload);
   }
 
   return `Weekly digest: ${payload.apps.length} app${payload.apps.length === 1 ? '' : 's'}`;

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCheckedPosition, formatRankPosition, isRanked } from './rank';
+import {
+  formatCheckedPosition,
+  formatRankPosition,
+  isRanked,
+  RANK_DEPTH,
+  RANK_MILESTONE_DIRECTIONS,
+  RANK_MILESTONE_TIERS,
+} from './rank';
 
 describe('isRanked', () => {
   it.each([
@@ -43,5 +50,20 @@ describe('formatCheckedPosition', () => {
 
   it('reports a keyword that was never checked as unformattable', () => {
     expect(formatCheckedPosition(null, null)).toBeNull();
+  });
+});
+
+describe('rank milestones', () => {
+  it('names the first result, the first screen and the first page', () => {
+    expect(RANK_MILESTONE_TIERS).toEqual([1, 3, 10]);
+    expect(RANK_MILESTONE_DIRECTIONS).toEqual(['entered', 'left']);
+  });
+
+  it('keeps the tiers distinct, ascending and inside the captured depth', () => {
+    const tiers = [...RANK_MILESTONE_TIERS];
+    expect([...tiers].sort((left, right) => left - right)).toEqual(tiers);
+    expect(new Set(tiers).size).toBe(tiers.length);
+    expect(Math.min(...tiers)).toBeGreaterThanOrEqual(1);
+    expect(Math.max(...tiers)).toBeLessThanOrEqual(RANK_DEPTH);
   });
 });

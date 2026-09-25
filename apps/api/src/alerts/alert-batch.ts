@@ -9,7 +9,10 @@ import {
   GranularAlertPayload,
   MetadataChangedPayload,
   RankDroppedPayload,
+  RankFirstPayload,
   RankImprovedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
   ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
@@ -85,6 +88,9 @@ interface MutableSection {
   app: AlertBatchApp;
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
+  rankMilestones: RankMilestonePayload[];
+  firstRankings: RankFirstPayload[];
+  overtakes: RankOvertakenPayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
@@ -259,6 +265,9 @@ function createSection(app: ResolvedApp): MutableSection {
     app: toBatchApp(app),
     rankDrops: [],
     rankImprovements: [],
+    rankMilestones: [],
+    firstRankings: [],
+    overtakes: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
@@ -341,6 +350,9 @@ function finalizeSections(
       app: section.app,
       rankDrops: section.rankDrops,
       rankImprovements: section.rankImprovements,
+      rankMilestones: section.rankMilestones,
+      firstRankings: section.firstRankings,
+      overtakes: section.overtakes,
       serpEntrants: section.serpEntrants,
       changes: section.changes,
       negativeReviews: section.negativeReviews,

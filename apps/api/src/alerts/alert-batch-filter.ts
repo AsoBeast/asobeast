@@ -28,6 +28,9 @@ export function filterBatch(
         allowed.has('rank.improved') && batch.scope === 'owned_apps'
           ? section.rankImprovements
           : [],
+      rankMilestones: [],
+      firstRankings: [],
+      overtakes: [],
       serpEntrants:
         batch.scope === 'owned_apps' && allowed.has('serp.entrant')
           ? section.serpEntrants

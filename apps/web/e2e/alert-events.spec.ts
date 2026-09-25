@@ -64,6 +64,24 @@ function expectSameBox(actual: Box, expected: Box, message: string): void {
   expect(actual.height, message).toBeCloseTo(expected.height, 1);
 }
 
+test("the rank events sit together among the event chips", async ({ page }) => {
+  await page.goto("/settings");
+  const dialog = await openSettledDialog(page, "Add webhook");
+
+  await expect(eventOptions(dialog)).toHaveText([
+    "Metadata changed",
+    "Rank dropped",
+    "Rank improved",
+    "Rank milestone",
+    "First ranking",
+    "Overtaken by competitor",
+    "Negative review",
+    "Weekly digest",
+    "SERP entrant",
+    "New action",
+  ]);
+});
+
 for (const channel of CHANNELS) {
   test(`${channel.trigger} selects and deselects every event`, async ({
     page,

@@ -13,7 +13,9 @@ import {
   appHeader,
   appLabel,
   changeLines,
+  isRankEvent,
   position,
+  rankEventSentence,
   sectionBlocks,
   stars,
   storeLabel,
@@ -79,7 +81,11 @@ export function renderMessage(payload: AlertPayload): string {
     return `🎯 ${actionLine(payload)}`;
   }
 
-  const who = payload.app.name ?? 'An app';
+  if (isRankEvent(payload)) {
+    return rankEventSentence(payload);
+  }
+
+  const who = appLabel(payload.app.name);
   const icon = payload.event === 'rank.dropped' ? '📉' : '📈';
   const verb = payload.event === 'rank.dropped' ? 'dropped' : 'improved';
   return `${icon} ${who} ${verb} for "${keywordLabel(payload.keyword)}": ${position(payload.from, payload.fromDepth)} → ${position(payload.to, payload.toDepth)}`;
