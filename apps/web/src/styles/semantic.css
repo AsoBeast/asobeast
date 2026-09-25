@@ -72,76 +72,86 @@
   --elevation-highlight: none;
 }
 
-.dark {
-  --background: var(--neutral-950);
-  --foreground: var(--neutral-50);
-  --card: var(--neutral-900);
-  --card-foreground: var(--neutral-50);
-  --popover: var(--neutral-850);
-  --popover-foreground: var(--neutral-50);
-  --primary: var(--accent-400);
-  --primary-foreground: var(--neutral-950);
-  --secondary: var(--neutral-850);
-  --secondary-foreground: var(--neutral-50);
-  --muted: var(--neutral-850);
-  --muted-foreground: var(--neutral-400);
-  --accent: var(--neutral-850);
-  --accent-foreground: var(--neutral-50);
-  --destructive: var(--red-400);
-  --border: var(--hairline-10);
-  --input: var(--hairline-15);
-  --ring: var(--accent-500);
+@media screen {
+  .dark {
+    --background: var(--neutral-950);
+    --foreground: var(--neutral-50);
+    --card: var(--neutral-900);
+    --card-foreground: var(--neutral-50);
+    --popover: var(--neutral-850);
+    --popover-foreground: var(--neutral-50);
+    --primary: var(--accent-400);
+    --primary-foreground: var(--neutral-950);
+    --secondary: var(--neutral-850);
+    --secondary-foreground: var(--neutral-50);
+    --muted: var(--neutral-850);
+    --muted-foreground: var(--neutral-400);
+    --accent: var(--neutral-850);
+    --accent-foreground: var(--neutral-50);
+    --destructive: var(--red-400);
+    --border: var(--hairline-10);
+    --input: var(--hairline-15);
+    --ring: var(--accent-500);
 
-  --signal-up: var(--green-400);
-  --signal-up-subtle: color-mix(in oklch, var(--green-400) 16%, transparent);
-  --signal-down: var(--red-400);
-  --signal-down-subtle: color-mix(in oklch, var(--red-400) 16%, transparent);
-  --success: var(--green-400);
-  --success-subtle: color-mix(in oklch, var(--green-400) 16%, transparent);
-  --warning: var(--amber-400);
-  --warning-subtle: color-mix(in oklch, var(--amber-400) 16%, transparent);
-  --priority-critical: var(--crimson-400);
-  --priority-high: var(--amber-400);
-  --priority-medium: var(--yellow-400);
-  --priority-low: var(--neutral-400);
-  --rank-band-1: var(--band-1-400);
-  --rank-band-2: var(--band-2-400);
-  --rank-band-3: var(--band-3-400);
-  --rank-band-4: var(--band-4-400);
-  --rank-band-5: var(--band-5-400);
-  --score-low: var(--score-low-400);
-  --score-mid: var(--score-mid-400);
-  --score-high: var(--score-high-400);
-  --grade-strong: var(--green-400);
-  --grade-strong-subtle: color-mix(in oklch, var(--green-400) 18%, transparent);
-  --grade-fair: var(--yellow-400);
-  --grade-fair-subtle: color-mix(in oklch, var(--yellow-400) 18%, transparent);
-  --grade-weak: var(--amber-400);
-  --grade-weak-subtle: color-mix(in oklch, var(--amber-400) 18%, transparent);
-  --grade-poor: var(--red-400);
-  --grade-poor-subtle: color-mix(in oklch, var(--red-400) 18%, transparent);
+    --signal-up: var(--green-400);
+    --signal-up-subtle: color-mix(in oklch, var(--green-400) 16%, transparent);
+    --signal-down: var(--red-400);
+    --signal-down-subtle: color-mix(in oklch, var(--red-400) 16%, transparent);
+    --success: var(--green-400);
+    --success-subtle: color-mix(in oklch, var(--green-400) 16%, transparent);
+    --warning: var(--amber-400);
+    --warning-subtle: color-mix(in oklch, var(--amber-400) 16%, transparent);
+    --priority-critical: var(--crimson-400);
+    --priority-high: var(--amber-400);
+    --priority-medium: var(--yellow-400);
+    --priority-low: var(--neutral-400);
+    --rank-band-1: var(--band-1-400);
+    --rank-band-2: var(--band-2-400);
+    --rank-band-3: var(--band-3-400);
+    --rank-band-4: var(--band-4-400);
+    --rank-band-5: var(--band-5-400);
+    --score-low: var(--score-low-400);
+    --score-mid: var(--score-mid-400);
+    --score-high: var(--score-high-400);
+    --grade-strong: var(--green-400);
+    --grade-strong-subtle: color-mix(
+      in oklch,
+      var(--green-400) 18%,
+      transparent
+    );
+    --grade-fair: var(--yellow-400);
+    --grade-fair-subtle: color-mix(
+      in oklch,
+      var(--yellow-400) 18%,
+      transparent
+    );
+    --grade-weak: var(--amber-400);
+    --grade-weak-subtle: color-mix(in oklch, var(--amber-400) 18%, transparent);
+    --grade-poor: var(--red-400);
+    --grade-poor-subtle: color-mix(in oklch, var(--red-400) 18%, transparent);
 
-  --chart-1: var(--series-1-400);
-  --chart-2: var(--series-2-400);
-  --chart-3: var(--series-3-400);
-  --chart-4: var(--series-4-400);
-  --chart-5: var(--series-5-400);
-  --chart-6: var(--series-6-400);
-  --chart-7: var(--series-7-400);
-  --chart-8: var(--series-8-400);
-  --sidebar: var(--neutral-900);
-  --sidebar-foreground: var(--neutral-50);
-  --sidebar-primary: var(--accent-400);
-  --sidebar-primary-foreground: var(--neutral-950);
-  --sidebar-accent: var(--neutral-800);
-  --sidebar-accent-foreground: var(--neutral-50);
-  --sidebar-border: var(--hairline-8);
-  --sidebar-ring: var(--accent-500);
+    --chart-1: var(--series-1-400);
+    --chart-2: var(--series-2-400);
+    --chart-3: var(--series-3-400);
+    --chart-4: var(--series-4-400);
+    --chart-5: var(--series-5-400);
+    --chart-6: var(--series-6-400);
+    --chart-7: var(--series-7-400);
+    --chart-8: var(--series-8-400);
+    --sidebar: var(--neutral-900);
+    --sidebar-foreground: var(--neutral-50);
+    --sidebar-primary: var(--accent-400);
+    --sidebar-primary-foreground: var(--neutral-950);
+    --sidebar-accent: var(--neutral-800);
+    --sidebar-accent-foreground: var(--neutral-50);
+    --sidebar-border: var(--hairline-8);
+    --sidebar-ring: var(--accent-500);
 
-  --elevation-flat: none;
-  --elevation-raised:
-    0 1px 0 oklch(1 0 0 / 4%) inset, 0 1px 2px oklch(0 0 0 / 40%);
-  --elevation-overlay:
-    0 1px 0 oklch(1 0 0 / 6%) inset, 0 12px 32px oklch(0 0 0 / 60%);
-  --elevation-highlight: 0 1px 0 oklch(1 0 0 / 6%) inset;
+    --elevation-flat: none;
+    --elevation-raised:
+      0 1px 0 oklch(1 0 0 / 4%) inset, 0 1px 2px oklch(0 0 0 / 40%);
+    --elevation-overlay:
+      0 1px 0 oklch(1 0 0 / 6%) inset, 0 12px 32px oklch(0 0 0 / 60%);
+    --elevation-highlight: 0 1px 0 oklch(1 0 0 / 6%) inset;
+  }
 }
