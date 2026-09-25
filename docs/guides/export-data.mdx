@@ -1,11 +1,11 @@
 ---
 title: Export data
-description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV. Each file holds the rows you are looking at, with the filters you applied.
+description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV. Each file follows the filters you applied.
 icon: file-down
 keywords: ["export","CSV","keywords","rankings","competitors","keyword gaps","reviews","SERP","spreadsheet","provenance"]
 ---
 
-The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export what you are looking at, with the filters you have applied, as a CSV file. `<date>` in a file name is the UTC day of the export.
+The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export.
 
 ## Export keywords to CSV
 
@@ -64,7 +64,7 @@ Positions are written the way the matrix shows them, so an app that does not ran
 
 ## Export reviews to CSV
 
-The reviews list exports the newest 200 reviews that match the star and version filters, newest first, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. Narrow the filters to reach a different set, for example one version at a time.
+The reviews list exports the newest 200 reviews that match the star and version filters, newest first, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. When more reviews match, a notice after the download says how many the file holds. Narrow the filters to reach a different set, for example one version at a time.
 
 | Column | What it holds |
 | --- | --- |
@@ -85,7 +85,7 @@ The top 10 sheet on the keyword monitor exports the snapshot it shows, one row p
 | `position` | 1 to 10 |
 | `app`, `developer` | The result's title and developer |
 | `rating`, `ratings` | Its average rating and rating count |
-| `role` | `you`, `competitor` or `other` |
+| `role` | `you`, `competitor` for an app tracked as a competitor in the workspace, as the sheet's badge shows, or `other` |
 | `storeAppId` | The store's id for the app |
 
 `ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [App Store and Google Play](/concepts/stores).
