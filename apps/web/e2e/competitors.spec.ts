@@ -208,3 +208,44 @@ test("exporting competitors downloads one row per tracked competitor", async ({
     /^Rival Focus,APP_STORE,Rival Focus,Deep work timer,,4\.5,12000,,0,2\.1\.0,\d{4}-\d{2}-\d{2}T[\d:.]+Z$/,
   );
 });
+
+test("the comparison export writes the rows the matrix shows, in its order", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors?vs=winning&sort=you&dir=desc");
+  await page.waitForLoadState("networkidle");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^keyword-comparison-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
+    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
+    "time blocking,,,45,>200,winning,false",
+    "focus timer,100,40,3,9,winning,false",
+  ]);
+});
+
+test("with only gaps on, the export is named for the gaps and holds them alone", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors?onlyGaps=true");
+  await page.waitForLoadState("networkidle");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^keyword-gaps-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
+    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
+    "productivity app,100,60,>200,8,losing,true",
+  ]);
+});

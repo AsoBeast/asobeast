@@ -236,7 +236,7 @@ function sortKeywords(
 
 function appRoute(
   pattern: RegExp,
-  pick: (dataset: (typeof DATASETS)[string]) => unknown,
+  pick: (dataset: (typeof DATASETS)[string], query: URLSearchParams) => unknown,
 ): Route {
   return {
     method: "GET",
@@ -249,7 +249,11 @@ function appRoute(
       }
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, pick(dataset));
+      json(
+        res,
+        200,
+        pick(dataset, new URL(path, "http://localhost").searchParams),
+      );
     },
   };
 }
@@ -1125,9 +1129,13 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
     (dataset) => dataset.discovery,
   ),
-  appRoute(
-    /^\/apps\/([^/]+)\/keywords\/compare$/,
-    (dataset) => dataset.comparison,
+  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query) =>
+    query.get("onlyGaps") === "true"
+      ? {
+          ...dataset.comparison,
+          rows: dataset.comparison.rows.filter((row) => row.gap),
+        }
+      : dataset.comparison,
   ),
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),

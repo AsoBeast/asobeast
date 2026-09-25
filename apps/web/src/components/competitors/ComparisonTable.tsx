@@ -28,6 +28,7 @@ import {
   comparisonColumns,
   HIDDEN_COMPARISON_COLUMNS,
 } from "./comparison-columns";
+import { exportComparison } from "./comparison-csv";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 
 const HEAD_CLASS: Record<string, string> = {
@@ -43,9 +44,13 @@ const CELL_CLASS: Record<string, string> = {
 export function ComparisonTable({
   data,
   competitors,
+  appId,
+  onlyGaps,
 }: {
   data: KeywordComparison;
   competitors: readonly CompetitorItem[];
+  appId: string;
+  onlyGaps: boolean;
 }) {
   const [sortParams, setSortParams] = useQueryStates({
     sort: matrixSortParser,
@@ -104,6 +109,14 @@ export function ComparisonTable({
         shown={rows.length}
         total={data.rows.length}
         columns={table.getAllLeafColumns()}
+        onExport={() =>
+          exportComparison(
+            appId,
+            onlyGaps,
+            data.competitors,
+            rows.map((row) => row.original),
+          )
+        }
       />
       <Table containerClassName="rounded-xl border">
         <TableCaption className="sr-only">
