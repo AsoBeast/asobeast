@@ -1,5 +1,6 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
+import { QUERY_BOUNDS } from "@asobeast/shared";
 import type { AppAuditResult, AuditAiRunState } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
@@ -43,6 +44,8 @@ import {
   rankingsOptions,
   ratingsHistogramOptions,
   ratingsHistoryOptions,
+  REVIEWS_EXPORT_LIMIT,
+  reviewsExportOptions,
   reviewsOptions,
   serpMoversOptions,
   serpOptions,
@@ -122,6 +125,11 @@ const APP_SCOPED_OPTIONS = [
     appKeys.reviews(APP, { score: 1 }),
   ],
   [
+    "reviewsExport",
+    reviewsExportOptions(APP, { score: 1 }),
+    appKeys.reviews(APP, { score: 1, limit: QUERY_BOUNDS.reviewsLimit.max }),
+  ],
+  [
     "ratingsHistory",
     ratingsHistoryOptions(APP, RANGE),
     appKeys.ratingsHistory(APP, RANGE),
@@ -147,6 +155,11 @@ const ROOT_TO_LEAF = [
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],
   ["changesRoot", appKeys.changesRoot(APP), appKeys.changes(APP, 90)],
   ["reviewsRoot", appKeys.reviewsRoot(APP), appKeys.reviews(APP, { score: 1 })],
+  [
+    "reviewsRoot to an export",
+    appKeys.reviewsRoot(APP),
+    reviewsExportOptions(APP, { score: 1 }).queryKey,
+  ],
   ["actions all", actionKeys.all, actionKeys.list({}, undefined)],
   ["actions appRoot", appKeys.detail(APP), actionKeys.appRoot(APP)],
 ] as const;
@@ -188,6 +201,13 @@ describe("appKeys", () => {
       expect(isPrefixOf(root, leaf)).toBe(true);
     },
   );
+
+  it("keys a reviews export apart from the list it was filtered from", () => {
+    expect(reviewsExportOptions(APP, { score: 1 }).queryKey).not.toEqual(
+      reviewsOptions(APP, { score: 1 }).queryKey,
+    );
+    expect(REVIEWS_EXPORT_LIMIT).toBe(QUERY_BOUNDS.reviewsLimit.max);
+  });
 
   it("keeps every app scoped key distinct", () => {
     const keys = APP_SCOPED_OPTIONS.map(([, options]) =>
