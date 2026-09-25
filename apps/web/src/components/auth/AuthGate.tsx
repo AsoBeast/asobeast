@@ -50,7 +50,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   return (
     <>
       {lapsed ? (
-        <div className="flex items-center justify-between gap-4 border-b bg-muted px-4 py-2 text-body sm:px-6">
+        <div className="flex items-center justify-between gap-4 border-b bg-muted px-4 py-2 text-body sm:px-6 print:hidden">
           <span>
             Collection is paused. Everything asobeast has already gathered stays
             readable and exportable.
@@ -61,7 +61,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
         </div>
       ) : null}
       {remaining !== null ? (
-        <div className="flex items-center justify-between gap-4 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body text-warning sm:px-6">
+        <div className="flex items-center justify-between gap-4 border-b border-warning/30 bg-warning-subtle px-4 py-2 text-body text-warning sm:px-6 print:hidden">
           <span>
             Trial ends in {remaining} day{remaining === 1 ? "" : "s"}.
           </span>

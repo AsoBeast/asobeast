@@ -1,5 +1,39 @@
+@page {
+  margin: 12mm;
+}
+
 @media print {
   :root {
     color-scheme: light !important;
+  }
+
+  [data-slot="sidebar"],
+  [data-slot="sheet-overlay"]:has(+ [data-slot="sidebar"]),
+  [data-sonner-toaster] {
+    display: none;
+  }
+
+  [data-slot="sidebar-wrapper"] {
+    display: block;
+    min-height: 0;
+    background: none;
+  }
+
+  [data-slot="sidebar-inset"] {
+    display: block;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    background: none;
+  }
+
+  #main-content {
+    padding: 0;
+  }
+
+  [data-slot="card"] {
+    break-inside: avoid;
+    overflow: visible;
+    box-shadow: none;
   }
 }

@@ -42,3 +42,10 @@ describe("print theme", () => {
     expect(imports.at(-1)).toBe("../styles/print.css");
   });
 });
+
+describe("print page box", () => {
+  it("sets a 12 mm margin and leaves the size to the dialog", () => {
+    expect(print).toMatch(/@page\s*\{\s*margin: 12mm;\s*\}/);
+    expect(print).not.toMatch(/\bsize:/);
+  });
+});

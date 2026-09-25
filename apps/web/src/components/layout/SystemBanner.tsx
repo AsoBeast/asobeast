@@ -27,7 +27,7 @@ export function SystemBanner() {
     <Alert
       variant={notice.variant}
       role={breakage ? "alert" : "status"}
-      className="mb-4"
+      className="mb-4 print:hidden"
     >
       {breakage ? (
         <TriangleAlert aria-hidden="true" />
