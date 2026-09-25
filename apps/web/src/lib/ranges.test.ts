@@ -1,9 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  MOVER_WINDOWS,
   RANGE_PRESETS,
   RATINGS_RANGES,
   VISIBILITY_RANGES,
   presetToRange,
+  rangeLabel,
 } from "./ranges";
 
 const ALL_PRESETS = [
@@ -78,5 +80,15 @@ describe("range presets", () => {
   it("offers visibility and ratings ranges that the chart presets also cover", () => {
     expect(RANGE_PRESETS).toContain(VISIBILITY_RANGES[0]);
     expect(RATINGS_RANGES.slice(0, 2)).toEqual([...VISIBILITY_RANGES]);
+  });
+});
+
+describe("rangeLabel", () => {
+  it.each(ALL_PRESETS)("labels %s as the last whole days", (preset) => {
+    expect(rangeLabel(preset)).toBe(`Last ${preset.replace("d", "")} days`);
+  });
+
+  it("labels a mover window the same way", () => {
+    expect(rangeLabel(`${MOVER_WINDOWS[0]}d`)).toBe("Last 7 days");
   });
 });

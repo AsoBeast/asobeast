@@ -121,6 +121,12 @@ export const rangeParser =
 export const visibilityRangeParser =
   parseAsStringLiteral(VISIBILITY_RANGES).withDefault("30d");
 
+export const overviewRangeParsers = {
+  range: visibilityRangeParser,
+  distRange: visibilityRangeParser,
+  categoryRange: rangeParser,
+};
+
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
 export const countryParser = parseAsString.withDefault("");

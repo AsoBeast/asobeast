@@ -58,7 +58,7 @@ export function FirstRunTimeline({ id }: { id: string }) {
   }
 
   return (
-    <Card aria-live="polite">
+    <Card aria-live="polite" className="print:hidden">
       <CardHeader>
         <CardTitle asChild>
           <h2 id={headingId}>{firstRunHeadline(data)}</h2>

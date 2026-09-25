@@ -36,4 +36,51 @@
     overflow: visible;
     box-shadow: none;
   }
+
+  [data-slot="chart"] {
+    height: auto;
+    aspect-ratio: auto;
+  }
+
+  [data-slot="chart"] .recharts-responsive-container {
+    height: auto !important;
+  }
+
+  [data-slot="chart"] .recharts-responsive-container > div {
+    width: auto !important;
+    height: auto !important;
+  }
+
+  [data-slot="chart"] .recharts-wrapper {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  [data-slot="chart"] svg.recharts-surface {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  [data-slot="chart"] .recharts-legend-wrapper {
+    position: static !important;
+    width: auto !important;
+  }
+
+  .recharts-tooltip-wrapper,
+  .recharts-tooltip-cursor,
+  .recharts-active-dot {
+    display: none;
+  }
+
+  [data-slot="badge"],
+  [data-slot="chart"],
+  [data-grade] {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-grade]::after {
+    content: attr(data-grade);
+    margin-inline-start: 0.25em;
+  }
 }

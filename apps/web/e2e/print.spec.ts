@@ -119,3 +119,165 @@ test("leaves toasts out of the printout", async ({ page }) => {
 
   await expect(toast).toBeHidden({ timeout: 1000 });
 });
+
+const OVERVIEW_WITH_RANGES = `${OVERVIEW}?range=90d&categoryRange=7d`;
+const PAPER_STAND_IN = "#main-content { width: 600px; }";
+
+function fitsInCards(page: Page) {
+  return page.evaluate((rule) => {
+    const style = document.createElement("style");
+    style.textContent = rule;
+    document.head.append(style);
+    const charts = Array.from(
+      document.querySelectorAll<SVGSVGElement>("svg.recharts-surface"),
+    ).map((svg) => {
+      const content = svg.closest<HTMLElement>("[data-slot='card-content']");
+      if (!content) throw new Error("chart outside a card");
+      const padding = getComputedStyle(content);
+      const room =
+        content.clientWidth -
+        Number.parseFloat(padding.paddingLeft) -
+        Number.parseFloat(padding.paddingRight);
+      const width = svg.getBoundingClientRect().width;
+      return {
+        fits: width <= room + 1,
+        grew: width > Number(svg.getAttribute("width")) + 1,
+      };
+    });
+    style.remove();
+    return charts;
+  }, PAPER_STAND_IN);
+}
+
+function cardWidth(page: Page, region: string) {
+  return page.getByRole("region", { name: region }).evaluate((node) => {
+    const card = node.closest("[data-slot='card']");
+    if (!card) throw new Error("chart outside a card");
+    return Math.round(card.getBoundingClientRect().width);
+  });
+}
+
+test("prints an overview report header with the ranges shown", async ({
+  page,
+}) => {
+  await open(page, OVERVIEW_WITH_RANGES);
+  await expect(page.getByText("Overview report")).toBeHidden();
+
+  await printed(page);
+
+  await expect(
+    page.getByRole("heading", { level: 1, name: APP_NAME }),
+  ).toBeVisible();
+  await expect(page.getByText("Overview report")).toBeVisible();
+  for (const fact of [
+    "Home storefront: United States",
+    "Visibility: Last 90 days",
+    "Rank bands: Last 30 days",
+    "Category ranks: Last 7 days",
+  ]) {
+    await expect(page.getByText(fact, { exact: true })).toBeVisible();
+  }
+  await expect(
+    page.getByText(/^Printed .+ \(UTC\) from asobeast$/),
+  ).toBeVisible();
+});
+
+test("prints the overview ranges as words and leaves its links out", async ({
+  page,
+}) => {
+  await open(page, OVERVIEW_WITH_RANGES);
+  await expect(page.getByRole("tablist")).toHaveCount(3);
+
+  await printed(page);
+
+  await expect(page.getByRole("tablist")).toHaveCount(0);
+  const visibility = page
+    .getByRole("region", { name: "Search visibility over time" })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(visibility.getByText("Last 90 days")).toBeVisible();
+  const category = page
+    .getByRole("region", { name: "Category chart position over time" })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(category.getByText("Last 7 days")).toBeVisible();
+  await expect(page.getByRole("link", { name: "View comparison" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("link", { name: "Open the Action Center" }),
+  ).toHaveCount(0);
+});
+
+test("prints the overview in one column with every chart inside its card", async ({
+  page,
+}) => {
+  await open(page, OVERVIEW);
+  await expect(
+    page.getByRole("region", { name: "Category chart position over time" }),
+  ).toBeVisible();
+
+  await printed(page);
+
+  const main = await page
+    .locator("main")
+    .evaluate((node) => Math.round(node.getBoundingClientRect().width));
+  for (const region of [
+    "Search visibility over time",
+    "Keyword rank distribution",
+    "Category chart position over time",
+  ]) {
+    expect(await cardWidth(page, region)).toBe(main);
+  }
+
+  const charts = await fitsInCards(page);
+  expect(charts.length).toBeGreaterThanOrEqual(3);
+  expect(charts.filter((chart) => !chart.fits)).toEqual([]);
+  expect(charts.filter((chart) => chart.grew)).toEqual([]);
+  expect(
+    await page.evaluate(() =>
+      Array.from(
+        document.querySelectorAll(".recharts-tooltip-wrapper"),
+        (node) => getComputedStyle(node).display,
+      ),
+    ),
+  ).not.toContain("block");
+});
+
+test("leaves the first run timeline out of the printout", async ({ page }) => {
+  await open(page, "/apps/app-2");
+  const timeline = page.getByRole("heading", {
+    name: "One step is still finishing.",
+  });
+  await expect(timeline).toBeVisible();
+
+  await printed(page);
+
+  await expect(timeline).toBeHidden();
+});
+
+test("prints grades, badges and legends in colour with the grade word", async ({
+  page,
+}) => {
+  await open(page, OVERVIEW);
+  const graded = page.locator("[data-grade='strong']").first();
+  const after = () =>
+    graded.evaluate((node) => getComputedStyle(node, "::after").content);
+  expect(await after()).toBe("none");
+
+  await printed(page);
+
+  expect(await after()).not.toBe("none");
+  for (const selector of [
+    "[data-grade='strong']",
+    "[data-slot='badge']",
+    "[data-slot='chart']",
+  ]) {
+    expect(
+      await page
+        .locator(selector)
+        .first()
+        .evaluate((node) =>
+          getComputedStyle(node).getPropertyValue("print-color-adjust"),
+        ),
+    ).toBe("exact");
+  }
+});
