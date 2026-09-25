@@ -57,6 +57,7 @@ import type {
   StoreHealthReport,
   WorkspaceRunStatus,
   PortfolioSummary,
+  KeywordUpdateRequest,
   TrackedKeywordItem,
   WebhookCreateRequest,
   WebhookItem,
@@ -64,7 +65,11 @@ import type {
 } from "@asobeast/shared";
 import {
   DELETION_CONFIRMATION,
+  isKeywordTag,
   KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_TAGS_MAX,
+  normalizeKeywordNote,
+  normalizeKeywordTags,
   keywordFieldBytes,
   parseKeywordField,
   SESSION_COOKIE,
@@ -77,6 +82,17 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
+const annotations = new Map<
+  string,
+  Map<string, Pick<TrackedKeywordItem, "tags" | "note">>
+>();
+
+function annotated(
+  appId: string,
+  keyword: TrackedKeywordItem,
+): TrackedKeywordItem {
+  return { ...keyword, ...annotations.get(appId)?.get(keyword.keywordId) };
+}
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
@@ -695,6 +711,14 @@ function budgetHold(token: string): PromiseWithResolvers<void> {
 const routes: Route[] = [
   {
     method: "POST",
+    pattern: /^\/__reset\/keyword-annotations\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      annotations.delete(id);
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/__reset\/actions$/,
     handler: (_p, _req, res) => {
       resetActions();
@@ -1046,7 +1070,54 @@ const routes: Route[] = [
       const scoped = country
         ? dataset.keywords.filter((keyword) => keyword.country === country)
         : dataset.keywords;
-      json(res, 200, sortKeywords(scoped, query.get("sort")));
+      json(
+        res,
+        200,
+        sortKeywords(
+          scoped.map((keyword) => annotated(id, keyword)),
+          query.get("sort"),
+        ),
+      );
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/apps\/([^/]+)\/keywords\/([^/]+)$/,
+    handler: ([id, keywordId], req, res) => {
+      withBody<KeywordUpdateRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        if (hasCookie(req, "e2e-fail-keyword-patch", "1")) {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const keyword = DATASETS[id]?.keywords.find(
+          (row) => row.keywordId === keywordId,
+        );
+        if (!keyword) return json(res, 404, errorEnvelope(404, path));
+        const tags =
+          body.tags === undefined ? undefined : normalizeKeywordTags(body.tags);
+        if (
+          tags !== undefined &&
+          (tags.length > KEYWORD_TAGS_MAX || !tags.every(isKeywordTag))
+        ) {
+          return json(res, 400, errorEnvelope(400, path, "invalid tags"));
+        }
+        const current = annotated(id, keyword);
+        const stored = {
+          tags: tags ?? current.tags ?? [],
+          note:
+            body.note === undefined
+              ? (current.note ?? null)
+              : normalizeKeywordNote(body.note),
+        };
+        const appAnnotations = annotations.get(id) ?? new Map();
+        appAnnotations.set(keywordId, stored);
+        annotations.set(id, appAnnotations);
+        json(res, 200, {
+          ...current,
+          ...stored,
+          active: body.active ?? current.active,
+        });
+      });
     },
   },
   {

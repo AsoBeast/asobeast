@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/tooltip";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
@@ -305,7 +306,7 @@ function actionsColumn({
     id: "actions",
     enableHiding: false,
     header: () => null,
-    cell: ({ row }) => (
+    cell: ({ row, table }) => (
       <div className="flex items-center justify-end gap-1 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-data-[state=open]:opacity-100 pointer-fine:opacity-0">
         <Button
           variant="ghost"
@@ -316,7 +317,13 @@ function actionsColumn({
         >
           <ListOrdered />
         </Button>
-        <KeywordRowActions appId={appId} keyword={row.original} />
+        <KeywordRowActions
+          appId={appId}
+          keyword={row.original}
+          marketTags={() =>
+            tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
+          }
+        />
       </div>
     ),
   });

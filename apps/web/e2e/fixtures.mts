@@ -1499,6 +1499,18 @@ export const DATASETS: Record<string, AppDataset> = {
   },
 };
 
+export const APP_TAGS_ID = "app-tags";
+
+DATASETS[APP_TAGS_ID] = {
+  ...DATASETS["app-1"],
+  detail: { ...APP_1_DETAIL, id: APP_TAGS_ID, name: "Tag Lab" },
+  keywords: APP_1_KEYWORDS.slice(0, 2).map((keyword) => ({
+    ...keyword,
+    tags: [],
+    note: null,
+  })),
+};
+
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];
 
 export const PORTFOLIO: PortfolioSummary = {
