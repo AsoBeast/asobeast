@@ -220,6 +220,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
     text: "focus timer",
+    tags: ["core", "testing", "students", "exam season", "brand"],
     country: "us",
     serpVolatility7d: 8,
     source: "TITLE",
@@ -257,6 +258,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-2",
     text: "pomodoro",
+    tags: ["core", "brand"],
     country: "us",
     serpVolatility7d: 72,
     source: "SUBTITLE",
@@ -345,6 +347,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-5",
     text: "time blocking",
+    tags: ["testing"],
+    note: "Seasonal <push> in May\nKeep for exam season",
     country: "us",
     serpVolatility7d: 50,
     source: "COMPETITOR",

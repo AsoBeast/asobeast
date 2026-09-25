@@ -21,8 +21,10 @@ import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
+  NoteButton,
   PositionCell,
   ScoreCell,
+  TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
 import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
@@ -116,6 +118,7 @@ function identityColumns() {
           <span title={row.original.text} className="truncate">
             {row.original.text}
           </span>
+          {row.original.note ? <NoteButton note={row.original.note} /> : null}
           {!row.original.active ? (
             <Badge variant="secondary" className="shrink-0">
               Paused
@@ -123,6 +126,14 @@ function identityColumns() {
           ) : null}
         </span>
       ),
+    }),
+    columnHelper.accessor((row) => row.tags ?? [], {
+      id: "tags",
+      header: "Tags",
+      enableSorting: false,
+      getUniqueValues: (row) => row.tags ?? [],
+      meta: { label: "Tags" },
+      cell: ({ row }) => <TagBadges tags={row.original.tags ?? []} />,
     }),
     columnHelper.accessor("source", {
       id: "source",

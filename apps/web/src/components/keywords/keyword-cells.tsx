@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { StickyNote } from "lucide-react";
 import type {
   ScoreProvenance,
   ScoringConfidence,
@@ -18,6 +19,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { formatDateTime } from "@/lib/format";
+import { tagsLabel, visibleTags } from "@/lib/keyword-tags";
 import { grade, gradeLabel, type GradeMetric } from "@/lib/grade";
 import { cn } from "@/lib/utils";
 
@@ -297,5 +299,49 @@ export function VolatilityCell({ value }: { value: number | null }) {
         {value}
       </span>
     </span>
+  );
+}
+
+export function TagBadges({ tags }: { tags: readonly string[] }) {
+  if (tags.length === 0) return null;
+  const { shown, hidden } = visibleTags(tags);
+  const label = tagsLabel(tags);
+  return (
+    <span
+      role="group"
+      aria-label={label}
+      title={label}
+      className="flex items-center gap-1 whitespace-nowrap"
+    >
+      {shown.map((tag) => (
+        <Badge key={tag} variant="outline" aria-hidden>
+          {tag}
+        </Badge>
+      ))}
+      {hidden > 0 ? (
+        <span aria-hidden className="text-caption text-muted-foreground">
+          +{hidden}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+export function NoteButton({ note }: { note: string }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Note: ${note}`}
+          className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+        >
+          <StickyNote className="size-3.5" aria-hidden />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-sm whitespace-pre-line">
+        {note}
+      </TooltipContent>
+    </Tooltip>
   );
 }

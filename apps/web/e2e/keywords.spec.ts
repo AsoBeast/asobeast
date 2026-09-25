@@ -529,7 +529,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(
     menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
   ).toHaveCount(0);
-  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(7);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(8);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
@@ -783,4 +783,44 @@ test.describe("a market typed into the add keywords dialog", () => {
       page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
     ).toBeEnabled();
   });
+});
+
+test("a row shows three of its tags and names them all", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const tags = page
+    .getByRole("row", { name: /focus timer/ })
+    .getByRole("group", {
+      name: "Tags: core, testing, students, exam season, brand",
+    });
+  await expect(tags).toBeVisible();
+  await expect(tags).toHaveText("coretestingstudents+2");
+});
+
+test("a note reads as plain text on focus", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const note = page.getByRole("button", {
+    name: "Note: Seasonal <push> in May Keep for exam season",
+  });
+  await note.focus();
+
+  const tooltip = page.getByRole("tooltip");
+  await expect(tooltip).toContainText("Seasonal <push> in May");
+  await expect(tooltip.locator("push")).toHaveCount(0);
+});
+
+test("a phone hides the tags column and the column menu offers it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+
+  const header = page.getByRole("columnheader", { name: "Tags", exact: true });
+  await expect(header).toHaveCount(0);
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Tags" }).click();
+  await page.keyboard.press("Escape");
+  await expect(header).toBeVisible();
 });
