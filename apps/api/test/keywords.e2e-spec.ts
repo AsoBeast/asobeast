@@ -1386,6 +1386,20 @@ describe('KeywordsController (e2e)', () => {
       });
     });
 
+    it('keeps the note when a later update leaves it out', async () => {
+      const { id, keywordId } = await tracked();
+      const path = `/apps/${id}/keywords/${keywordId}`;
+      await api.patch(path).send({ note: 'push in may' }).expect(200);
+
+      await api.patch(path).send({ active: false }).expect(200);
+      await api
+        .patch(path)
+        .send({ tags: ['core'] })
+        .expect(200);
+
+      expect((await listed(id, keywordId))?.note).toBe('push in may');
+    });
+
     it('refuses nine tags and keeps the stored list', async () => {
       const { id, keywordId } = await tracked();
       const path = `/apps/${id}/keywords/${keywordId}`;

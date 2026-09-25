@@ -249,9 +249,9 @@ export class KeywordsService {
     }
     const update = {
       ...(data.active === undefined ? {} : { active: data.active }),
-      ...('relevance' in data ? { relevance: data.relevance } : {}),
+      ...(data.relevance === undefined ? {} : { relevance: data.relevance }),
       ...(data.tags === undefined ? {} : { tags: data.tags }),
-      ...('note' in data ? { note: data.note ?? null } : {}),
+      ...(data.note === undefined ? {} : { note: data.note }),
     };
     if (data.active === true) {
       await this.quota.admitKeywordMarkets(async (tx) => {
