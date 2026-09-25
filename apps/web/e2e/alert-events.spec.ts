@@ -158,6 +158,34 @@ for (const channel of CHANNELS) {
     );
   });
 
+  test(`${channel.trigger} keeps the edit open when saving fails`, async ({
+    page,
+  }) => {
+    const row = await createChannel(page, channel);
+    await page.route(
+      (url) => url.pathname.startsWith(`${channel.list}/`),
+      (route) =>
+        route.request().method() === "PATCH"
+          ? route.fulfill({
+              status: 500,
+              contentType: "application/json",
+              body: JSON.stringify({ statusCode: 500, message: "boom" }),
+            })
+          : route.continue(),
+    );
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+
+    await dialog.getByRole("button", { name: "Save events" }).click();
+
+    await expect(page.getByText(/Could not save the .* events/)).toBeVisible();
+    await expect(dialog).toBeVisible();
+    await expect(eventOption(dialog, RANK_MILESTONE)).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "true",
+    );
+  });
+
   test(`${channel.trigger} cannot save a channel without events`, async ({
     page,
   }) => {
