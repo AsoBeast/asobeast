@@ -19,11 +19,13 @@ const CHANNELS = [
     trigger: "Add email alert",
     field: "Recipient email",
     target: () => `alerts-${randomUUID()}@example.com`,
+    list: "/api/backend/email-alerts",
   },
   {
     trigger: "Add webhook",
     field: "Endpoint URL",
     target: () => `https://hooks.example.com/${randomUUID()}`,
+    list: "/api/backend/webhooks",
   },
 ] as const;
 
@@ -129,6 +131,31 @@ for (const channel of CHANNELS) {
       SERP_ENTRANT,
       RANK_MILESTONE,
     ]);
+  });
+
+  test(`${channel.trigger} reopens a saved edit before the list refetches`, async ({
+    page,
+  }) => {
+    const row = await createChannel(page, channel);
+    await page.route(
+      (url) => url.pathname === channel.list,
+      async (route) => {
+        if (route.request().method() === "GET") {
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+        await route.continue();
+      },
+    );
+    const dialog = await openSettledDialog(page, EDIT_EVENTS, row);
+    await setSelected(eventOption(dialog, RANK_MILESTONE), true);
+    await dialog.getByRole("button", { name: "Save events" }).click();
+    await expect(dialog).toBeHidden();
+
+    const reopened = await openSettledDialog(page, EDIT_EVENTS, row);
+    await expect(eventOption(reopened, RANK_MILESTONE)).toHaveAttribute(
+      SELECTED_ATTRIBUTE,
+      "true",
+    );
   });
 
   test(`${channel.trigger} cannot save a channel without events`, async ({

@@ -20,7 +20,11 @@ import {
   testWebhook,
   updateWebhook,
 } from "@/lib/api";
-import { invalidateWebhookMutation, webhooksOptions } from "@/lib/queries";
+import {
+  invalidateWebhookMutation,
+  seedWebhook,
+  webhooksOptions,
+} from "@/lib/queries";
 import { EventSelection } from "./alert-events";
 import {
   AlertChannelCard,
@@ -138,7 +142,8 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
   const editEvents = useMutation({
     mutationFn: (events: WebhookEvent[]) =>
       updateWebhook(webhook.id, { events }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      seedWebhook(queryClient, saved);
       invalidateWebhookMutation(queryClient);
       toast.success("Webhook events saved");
     },

@@ -22,6 +22,7 @@ import {
   alertsConfigOptions,
   emailAlertsOptions,
   invalidateEmailAlertMutation,
+  seedEmailAlert,
 } from "@/lib/queries";
 import { EventSelection } from "./alert-events";
 import {
@@ -123,7 +124,8 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
   const editEvents = useMutation({
     mutationFn: (events: WebhookEvent[]) =>
       updateEmailAlert(alert.id, { events }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
+      seedEmailAlert(queryClient, saved);
       invalidateEmailAlertMutation(queryClient);
       toast.success("Email alert events saved");
     },

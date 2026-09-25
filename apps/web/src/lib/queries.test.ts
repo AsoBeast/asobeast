@@ -1,6 +1,11 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { AppAuditResult, AuditAiRunState } from "@asobeast/shared";
+import type {
+  AppAuditResult,
+  AuditAiRunState,
+  EmailAlertItem,
+  WebhookItem,
+} from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
   actionKeys,
@@ -36,6 +41,8 @@ import {
   invalidateKeywords,
   invalidateLinkMutation,
   invalidateWebhookMutation,
+  seedEmailAlert,
+  seedWebhook,
   keywordCountriesOptions,
   keywordsOptions,
   marketAvailabilityOptions,
@@ -325,6 +332,54 @@ describe("invalidation sets", () => {
     ["email alert", invalidateEmailAlertMutation, emailAlertKeys.all],
   ] as const)("invalidates only the %s list", (_name, invalidate, key) => {
     expect(invalidatedKeys(invalidate)).toEqual([key]);
+  });
+});
+
+describe("seeding a saved alert channel", () => {
+  const webhook = (id: string, url: string): WebhookItem => ({
+    id,
+    url,
+    events: ["metadata.changed"],
+    active: true,
+    hasSecret: false,
+    createdAt: "2026-09-25T00:00:00.000Z",
+  });
+
+  it("replaces only the saved webhook in the cached list", () => {
+    const client = new QueryClient();
+    const other = webhook("hook-2", "https://hooks.example.com/b");
+    client.setQueryData(webhookKeys.all, [
+      webhook("hook-1", "https://hooks.example.com/a"),
+      other,
+    ]);
+    const saved: WebhookItem = {
+      ...webhook("hook-1", "https://hooks.example.com/a"),
+      events: ["rank.milestone"],
+    };
+
+    seedWebhook(client, saved);
+
+    expect(client.getQueryData(webhookKeys.all)).toEqual([saved, other]);
+  });
+
+  it("replaces the saved email alert and leaves an empty cache empty", () => {
+    const client = new QueryClient();
+    const saved: EmailAlertItem = {
+      id: "email-1",
+      email: "ops@example.com",
+      events: ["rank.first"],
+      active: true,
+      createdAt: "2026-09-25T00:00:00.000Z",
+    };
+
+    seedEmailAlert(client, saved);
+    expect(client.getQueryData(emailAlertKeys.all)).toBeUndefined();
+
+    client.setQueryData(emailAlertKeys.all, [
+      { ...saved, events: ["metadata.changed"] },
+    ]);
+    seedEmailAlert(client, saved);
+    expect(client.getQueryData(emailAlertKeys.all)).toEqual([saved]);
   });
 });
 
