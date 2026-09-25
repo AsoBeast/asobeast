@@ -99,6 +99,9 @@ describe('RankingsService.checkKeyword', () => {
     knownApps?: { id: string; storeAppId: string; isCompetitor: boolean }[];
     searchResults?: SearchItem[];
     collectableWorkspaces?: string[] | null;
+    rankedEarlier?: { date: Date } | null;
+    competitorsPrevious?: { appId: string; position: number | null }[];
+    existingByApp?: Record<string, { position: number | null }>;
   }) => {
     const search = jest
       .fn()
@@ -118,11 +121,32 @@ describe('RankingsService.checkKeyword', () => {
       >()
       .mockResolvedValue(undefined);
     const rankingFindUnique = jest
-      .fn()
-      .mockResolvedValue(options?.existingToday ?? null);
+      .fn<
+        Promise<{ position: number | null } | null>,
+        [{ where: { appId_keywordId_date: { appId: string } } }]
+      >()
+      .mockImplementation(({ where }) =>
+        Promise.resolve(
+          options?.existingByApp?.[where.appId_keywordId_date.appId] ??
+            options?.existingToday ??
+            null,
+        ),
+      );
+    const previousRow = options?.previous
+      ? { date: PREVIOUS_DAY, depth: RANK_DEPTH, ...options.previous }
+      : null;
     const rankingFindFirst = jest
-      .fn()
-      .mockResolvedValue(options?.previous ?? null);
+      .fn<Promise<unknown>, [{ where: { position?: unknown } }]>()
+      .mockImplementation(({ where }) =>
+        Promise.resolve(
+          where.position === undefined
+            ? previousRow
+            : (options?.rankedEarlier ?? null),
+        ),
+      );
+    const rankingFindMany = jest
+      .fn<Promise<{ appId: string; position: number | null }[]>, [unknown]>()
+      .mockResolvedValue(options?.competitorsPrevious ?? []);
     const dispatch = jest.fn<Promise<void>, [AlertPayload]>();
     const deleteMany = jest
       .fn<{ op: string }, [{ where: { keywordId: string; date: Date } }]>()
@@ -183,6 +207,7 @@ describe('RankingsService.checkKeyword', () => {
         upsert,
         findUnique: rankingFindUnique,
         findFirst: rankingFindFirst,
+        findMany: rankingFindMany,
       },
       serpEntry: {
         deleteMany,
@@ -250,7 +275,47 @@ describe('RankingsService.checkKeyword', () => {
       withTransaction,
       dispatch,
       trackedFindMany,
+      rankingFindFirst,
+      rankingFindMany,
     };
+  };
+
+  const dispatched = (dispatch: jest.Mock<Promise<void>, [AlertPayload]>) =>
+    dispatch.mock.calls.map(([payload]) => payload);
+
+  const placed = (placements: Record<string, number>): SearchItem[] =>
+    Array.from({ length: 40 }, (_, index) => {
+      const hit = Object.keys(placements).find(
+        (storeAppId) => placements[storeAppId] === index + 1,
+      );
+      const storeAppId = hit ?? `other-${index + 1}`;
+      return { storeAppId, title: storeAppId };
+    });
+
+  const withRival = [
+    {
+      app: {
+        id: 'primary',
+        name: 'Mine',
+        workspaceId: 'ws_default',
+        storeAppId: 'primary-store',
+        competitors: [
+          {
+            id: 'competitorA',
+            name: 'Rival A',
+            workspaceId: 'ws_default',
+            storeAppId: 'competitor-store',
+          },
+        ],
+      },
+    },
+  ];
+
+  const rivalAhead = {
+    tracked: withRival,
+    searchResults: placed({ 'primary-store': 6, 'competitor-store': 4 }),
+    previous: { position: 5 },
+    competitorsPrevious: [{ appId: 'competitorA', position: 9 }],
   };
 
   it('records positions for the primary and its competitors from one search', async () => {
@@ -285,7 +350,16 @@ describe('RankingsService.checkKeyword', () => {
     expect(search).toHaveBeenCalledTimes(1);
     const written = upsert.mock.calls.map(([args]) => args.create.appId);
     expect(written).toEqual(['primary']);
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatched(dispatch)).toEqual([
+      expect.objectContaining({
+        event: 'rank.improved',
+        app: { id: 'primary', name: 'Mine' },
+      }),
+      expect.objectContaining({
+        event: 'rank.milestone',
+        app: { id: 'primary', name: 'Mine' },
+      }),
+    ]);
   });
 
   it('asks about every workspace the phrase is tracked by', async () => {
@@ -395,7 +469,10 @@ describe('RankingsService.checkKeyword', () => {
 
     await service.checkKeyword('kw1');
 
-    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatched(dispatch).map((payload) => payload.event)).toEqual([
+      'rank.dropped',
+      'rank.milestone',
+    ]);
     expect(dispatch.mock.calls[0][0]).toMatchObject({
       event: 'rank.dropped',
       app: { id: 'primary' },
@@ -667,5 +744,219 @@ describe('RankingsService.checkKeyword', () => {
     await service.checkKeyword('kw1');
 
     expect(upsert).toHaveBeenCalled();
+  });
+
+  describe('milestone, first rank and overtake alerts', () => {
+    const events = (dispatch: jest.Mock<Promise<void>, [AlertPayload]>) =>
+      dispatched(dispatch).map((payload) => payload.event);
+
+    it('reports entering the top 10 beside the rank improvement', async () => {
+      const { service, dispatch } = setup({
+        tracked: primaryOnly,
+        previous: { position: 14 },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual(['rank.improved', 'rank.milestone']);
+      expect(dispatched(dispatch)[1]).toMatchObject({
+        tier: 10,
+        direction: 'entered',
+        from: 14,
+        to: 7,
+        fromDepth: 200,
+        toDepth: 200,
+      });
+    });
+
+    it('reports reaching first place from a move of one place', async () => {
+      const { service, dispatch } = setup({
+        tracked: primaryOnly,
+        searchResults: placed({ 'primary-store': 1 }),
+        previous: { position: 2 },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 1,
+          direction: 'entered',
+        }),
+      ]);
+    });
+
+    it('reports losing first place', async () => {
+      const { service, dispatch } = setup({
+        tracked: primaryOnly,
+        searchResults: placed({ 'primary-store': 2 }),
+        previous: { position: 1 },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.milestone',
+          tier: 1,
+          direction: 'left',
+          from: 1,
+          to: 2,
+        }),
+      ]);
+    });
+
+    it('reports a first ranking instead of a milestone', async () => {
+      const { service, dispatch, rankingFindFirst } = setup({
+        tracked: primaryOnly,
+        previous: { position: null },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual(['rank.improved', 'rank.first']);
+      expect(dispatched(dispatch)[1]).toMatchObject({
+        position: 7,
+        depth: 200,
+      });
+      expect(rankingFindFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            appId: 'primary',
+            keywordId: 'kw1',
+            date: { lt: utcDayStart(FROZEN_NOW) },
+            position: { not: null },
+          },
+        }),
+      );
+    });
+
+    it('reports a milestone when the app ranked before the previous check', async () => {
+      const { service, dispatch } = setup({
+        tracked: primaryOnly,
+        previous: { position: null },
+        rankedEarlier: { date: PREVIOUS_DAY },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual(['rank.improved', 'rank.milestone']);
+      expect(dispatched(dispatch)[1]).toMatchObject({
+        tier: 10,
+        direction: 'entered',
+      });
+    });
+
+    it('reports a competitor that moved ahead of the app', async () => {
+      const { service, dispatch, rankingFindMany } = setup(rivalAhead);
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatched(dispatch)).toEqual([
+        expect.objectContaining({
+          event: 'rank.overtaken',
+          app: { id: 'primary', name: 'Mine' },
+          competitor: { id: 'competitorA', name: 'Rival A', from: 9, to: 4 },
+          from: 5,
+          to: 6,
+        }),
+      ]);
+      expect(rankingFindMany).toHaveBeenCalledTimes(1);
+      expect(rankingFindMany).toHaveBeenCalledWith({
+        where: {
+          keywordId: 'kw1',
+          date: PREVIOUS_DAY,
+          appId: { in: ['competitorA'] },
+        },
+        select: { appId: true, position: true },
+      });
+    });
+
+    it('skips a competitor with no row at the previous check', async () => {
+      const { service, dispatch } = setup({
+        ...rivalAhead,
+        competitorsPrevious: [],
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('reports an overtake when the app falls out of view', async () => {
+      const { service, dispatch } = setup({
+        ...rivalAhead,
+        searchResults: placed({ 'competitor-store': 4 }),
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual([
+        'rank.dropped',
+        'rank.milestone',
+        'rank.overtaken',
+      ]);
+      expect(dispatched(dispatch)[1]).toMatchObject({
+        tier: 10,
+        direction: 'left',
+      });
+      expect(dispatched(dispatch)[2]).toMatchObject({ to: null });
+    });
+
+    it('never reads competitors when the app was unranked before', async () => {
+      const { service, dispatch, rankingFindMany } = setup({
+        ...rivalAhead,
+        previous: { position: null },
+        rankedEarlier: { date: PREVIOUS_DAY },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual(['rank.improved', 'rank.milestone']);
+      expect(rankingFindMany).not.toHaveBeenCalled();
+    });
+
+    it('reports an overtake from a re-run where only the competitor moved', async () => {
+      const { service, dispatch } = setup({
+        ...rivalAhead,
+        existingByApp: {
+          primary: { position: 6 },
+          competitorA: { position: 9 },
+        },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(events(dispatch)).toEqual(['rank.overtaken']);
+    });
+
+    it('dispatches nothing from a re-run where nothing moved', async () => {
+      const { service, dispatch, rankingFindFirst, rankingFindMany } = setup({
+        ...rivalAhead,
+        existingByApp: {
+          primary: { position: 6 },
+          competitorA: { position: 4 },
+        },
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(rankingFindFirst).not.toHaveBeenCalled();
+      expect(rankingFindMany).not.toHaveBeenCalled();
+    });
+
+    it('dispatches nothing on the first ever capture', async () => {
+      const { service, dispatch, rankingFindMany } = setup({
+        tracked: withRival,
+        searchResults: placed({ 'primary-store': 6, 'competitor-store': 4 }),
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(dispatch).not.toHaveBeenCalled();
+      expect(rankingFindMany).not.toHaveBeenCalled();
+    });
   });
 });
