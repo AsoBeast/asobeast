@@ -824,3 +824,73 @@ test("a phone hides the tags column and the column menu offers it", async ({
   await page.keyboard.press("Escape");
   await expect(header).toBeVisible();
 });
+
+test.describe("the tags facet", () => {
+  const rowsOf = (page: import("@playwright/test").Page) =>
+    page.getByRole("table", { name: /Tracked keywords/ }).getByRole("row");
+
+  test("keeps only rows carrying the tag and writes it to the url", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    await page.getByRole("button", { name: "Filter by tags" }).click();
+    await page.getByRole("option", { name: /^core/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/tag=core/);
+    await expect(rowsOf(page)).toHaveCount(3);
+    await expect(rowsOf(page).nth(1)).toContainText("focus timer");
+    await expect(rowsOf(page).nth(2)).toContainText("pomodoro");
+  });
+
+  test("keeps rows carrying either of two tags", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?tag=core,testing");
+
+    await expect(rowsOf(page)).toHaveCount(4);
+    await expect(rowsOf(page).filter({ hasText: "time blocking" })).toHaveCount(
+      1,
+    );
+  });
+
+  test("counts tags within the other filters", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?status=paused");
+
+    await page.getByRole("button", { name: "Filter by tags" }).click();
+    const options = page.getByRole("option");
+    await expect(options).toHaveCount(1);
+    await expect(options.first()).toContainText("testing");
+    await expect(options.first()).toContainText("1");
+  });
+
+  test("the chip and clear all remove the tag filter", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?tag=core");
+
+    await page.getByRole("button", { name: "Remove Tag: core" }).click();
+    await expect(page).not.toHaveURL(/tag=/);
+    await expect(rowsOf(page)).toHaveCount(6);
+
+    await page.goto("/apps/app-1/keywords?tag=core&status=active");
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(page).not.toHaveURL(/tag=|status=/);
+  });
+
+  test("the phone sheet offers the tags facet", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/apps/app-1/keywords");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: "Filter by tags" }),
+    ).toBeVisible();
+  });
+
+  test("the search box does not match a tag", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?q=brand");
+
+    await expect(
+      page.getByText("No keywords match these filters"),
+    ).toBeVisible();
+  });
+});

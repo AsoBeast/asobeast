@@ -34,6 +34,7 @@ import type { Grade, GradeMetric } from "@/lib/grade";
 import {
   gradeIn,
   oneOf,
+  someOf,
   positionBandIn,
   statusFilter,
   type ActivityStatus,
@@ -132,6 +133,8 @@ function identityColumns() {
       header: "Tags",
       enableSorting: false,
       getUniqueValues: (row) => row.tags ?? [],
+      filterFn: (row, _id, selected: readonly string[]) =>
+        someOf(row.original.tags, selected),
       meta: { label: "Tags" },
       cell: ({ row }) => <TagBadges tags={row.original.tags ?? []} />,
     }),

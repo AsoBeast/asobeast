@@ -67,6 +67,8 @@ export const positionBandParser = parseAsArrayOf(
   parseAsStringLiteral(POSITION_BANDS),
 ).withDefault([]);
 
+export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
+
 export const keywordFilterParsers = {
   q: searchParser,
   source: keywordSourceParser,
@@ -76,6 +78,7 @@ export const keywordFilterParsers = {
   diff: gradeFacetParser,
   opp: gradeFacetParser,
   pos: positionBandParser,
+  tag: keywordTagsParser,
 };
 
 export const matrixSortParser = parseAsString;
