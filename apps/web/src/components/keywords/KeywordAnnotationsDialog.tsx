@@ -80,6 +80,7 @@ function AnnotationsForm({
   }
 
   function keyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.nativeEvent.isComposing) return;
     if (event.key === "Enter") {
       event.preventDefault();
       if (input.trim() !== "" && commit([input]) === null) setInput("");
@@ -93,7 +94,7 @@ function AnnotationsForm({
     event.preventDefault();
     const pending = input.trim();
     const result = pending === "" ? null : addTag(tags, pending);
-    if (result?.refused) {
+    if (result?.refused && result.refused !== "duplicate") {
       setRefused(result.refused);
       return;
     }

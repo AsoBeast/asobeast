@@ -71,6 +71,45 @@ test("tags are added with enter, a comma and a suggestion, and saved", async ({
   ).toBeVisible();
 });
 
+test("enter while composing text does not add a tag", async ({ page }) => {
+  await page.goto(KEYWORDS);
+  const dialog = await openEditor(page, "focus timer");
+  const input = dialog.getByRole("textbox", { name: "Tags" });
+
+  await input.fill("专注");
+  await input.evaluate((element) =>
+    element.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        isComposing: true,
+        bubbles: true,
+      }),
+    ),
+  );
+
+  await expect(
+    dialog.getByRole("button", { name: /^Remove tag / }),
+  ).toHaveCount(0);
+  await expect(input).toHaveValue("专注");
+});
+
+test("a duplicate left in the field does not block saving", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const dialog = await openEditor(page, "focus timer");
+  const input = dialog.getByRole("textbox", { name: "Tags" });
+  await input.fill("core");
+  await input.press("Enter");
+  await input.fill("Core");
+
+  const patch = page.waitForRequest((request) => request.method() === "PATCH");
+  await dialog.getByRole("button", { name: "Save" }).click();
+
+  expect((await patch).postDataJSON()).toEqual({ tags: ["core"], note: null });
+  await expect(dialog).toBeHidden();
+});
+
 test("an invalid or a ninth tag is refused and the note counts", async ({
   page,
 }) => {
