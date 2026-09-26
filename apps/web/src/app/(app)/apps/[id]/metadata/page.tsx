@@ -57,12 +57,19 @@ export default async function MetadataPage({
 
         {markets ? (
           <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
-            <StorefrontLocalizationsCard id={id} />
+            <StorefrontLocalizationsCard
+              id={id}
+              canDraft={assistant?.configured === true}
+            />
           </Suspense>
         ) : null}
 
         {assistant?.configured ? (
-          <MetadataAssistantPanel appId={id} store={result.store} />
+          <MetadataAssistantPanel
+            appId={id}
+            store={result.store}
+            canLocalize={markets !== null}
+          />
         ) : null}
 
         <section className="flex flex-col gap-3">

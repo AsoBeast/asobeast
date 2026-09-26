@@ -41,3 +41,12 @@ export function extraRoom(count: number, country: string): string {
     : "titles, subtitles and keyword fields";
   return `${count} more ${localizations}: ${count} more ${fields} that ${country.toUpperCase()} search reads`;
 }
+
+export function draftableLocalizations(
+  rows: readonly StorefrontRow[],
+): AppStoreLocalization[] {
+  const primary = rows.find((row) => row.home)?.primary;
+  return [...new Set(rows.flatMap((row) => row.additional))].filter(
+    (localization) => localization !== primary,
+  );
+}

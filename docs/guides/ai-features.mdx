@@ -15,7 +15,7 @@ Three features, all bring your own key.
 | Feature | Where | What it does |
 | --- | --- | --- |
 | AI creative analysis | Audit tab | Reads the icon, up to six screenshots and up to five competitor icons, and reports captions, caption language, message type, text in the icon, element count, contrast and similarity to a competitor icon. The audit rules score what it reports |
-| Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles |
+| Metadata drafts | Metadata workbench | Proposes field values grounded in your tracked keywords, coverage gaps and competitor titles, for the primary listing or for an additional language one of your storefronts reads |
 | Action explanations | Action card | Turns typed evidence into two to four plain sentences |
 
 Each feature is a single completion per run. The creative analysis runs in the background after you start it, so leaving the page does not cancel it. It is reused while the icon, the screenshots, the competitor icons and `AI_MODEL` are unchanged, so analyzing an unchanged listing again costs nothing, and a finished analysis records today's audit score. The nightly score snapshot reads the stored observations and never calls OpenAI.
@@ -67,6 +67,8 @@ The creative analysis sends the least data that answers its checks.
 OpenAI downloads the images from the store CDNs itself; asobeast never proxies image bytes. Competitor icon URLs are public store assets.
 
 The action explanation prompt receives the app's store, country and title, the rule, the priority, the impact and the evidence object, and nothing else.
+
+The metadata draft prompt receives the store, the listing's current metadata, up to 25 tracked keywords of the home market with their scores and coverage, competitor titles and your instructions. A draft for an additional language also sends the language and the codes of your markets that read it.
 
 ## Troubleshooting
 

@@ -1,32 +1,61 @@
 "use client";
 
-import { useSuspenseQuery } from "@tanstack/react-query";
-import { ExternalLink } from "lucide-react";
-import { APP_STORE_LOCALIZATIONS } from "@asobeast/shared";
+import { ExternalLink, Sparkles } from "lucide-react";
+import { useQueryState } from "nuqs";
+import {
+  APP_STORE_LOCALIZATIONS,
+  type AppStoreLocalization,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatCountry } from "@/lib/format";
 import {
   APPLE_LOCALIZATIONS_URL,
+  draftableLocalizations,
   extraRoom,
   LOCALIZED_FIELDS_NOTE,
-  storefrontRows,
   type StorefrontRow,
 } from "@/lib/localizations";
-import { appDetailOptions, keywordCountriesOptions } from "@/lib/queries";
+import { draftLocaleParser } from "@/lib/search-params";
+import { focusDraftLocalization } from "./DraftLocalizationSelect";
+import { useStorefrontRows } from "./use-storefront-rows";
 
 const HEADING_ID = "storefront-localizations-heading";
 
-function useStorefrontRows(id: string): StorefrontRow[] {
-  const { data: app } = useSuspenseQuery(appDetailOptions(id));
-  const { data: markets } = useSuspenseQuery(keywordCountriesOptions(id));
-  return storefrontRows(
-    app.country,
-    markets.map((market) => market.country),
+type DraftHandler = (localization: AppStoreLocalization) => void;
+
+function LanguageChip({
+  localization,
+  onDraft,
+}: {
+  localization: AppStoreLocalization;
+  onDraft: DraftHandler | null;
+}) {
+  const label = APP_STORE_LOCALIZATIONS[localization];
+  if (!onDraft) return <Badge variant="secondary">{label}</Badge>;
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      aria-label={`Draft with AI: ${label}`}
+      onClick={() => onDraft(localization)}
+    >
+      <Sparkles aria-hidden />
+      {label}
+    </Button>
   );
 }
 
-function StorefrontItem({ row }: { row: StorefrontRow }) {
+function StorefrontItem({
+  row,
+  draftable,
+  onDraft,
+}: {
+  row: StorefrontRow;
+  draftable: ReadonlySet<AppStoreLocalization>;
+  onDraft: DraftHandler | null;
+}) {
   const name = formatCountry(row.country);
 
   return (
@@ -53,9 +82,10 @@ function StorefrontItem({ row }: { row: StorefrontRow }) {
           >
             {row.additional.map((localization) => (
               <li key={localization}>
-                <Badge variant="secondary">
-                  {APP_STORE_LOCALIZATIONS[localization]}
-                </Badge>
+                <LanguageChip
+                  localization={localization}
+                  onDraft={draftable.has(localization) ? onDraft : null}
+                />
               </li>
             ))}
           </ul>
@@ -65,9 +95,22 @@ function StorefrontItem({ row }: { row: StorefrontRow }) {
   );
 }
 
-export function StorefrontLocalizationsCard({ id }: { id: string }) {
+export function StorefrontLocalizationsCard({
+  id,
+  canDraft,
+}: {
+  id: string;
+  canDraft: boolean;
+}) {
   const rows = useStorefrontRows(id);
+  const [, setDraftLocale] = useQueryState("draftLocale", draftLocaleParser);
   if (rows.length === 0) return null;
+  const draftable = new Set(draftableLocalizations(rows));
+  const onDraft = canDraft
+    ? (localization: AppStoreLocalization) => {
+        void setDraftLocale(localization).then(focusDraftLocalization);
+      }
+    : null;
 
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">
@@ -92,9 +135,20 @@ export function StorefrontLocalizationsCard({ id }: { id: string }) {
             </a>
           </p>
           <p className="text-body text-foreground">{LOCALIZED_FIELDS_NOTE}</p>
+          {canDraft ? (
+            <p className="text-body text-foreground">
+              Choose a language to draft its title, subtitle and keyword field
+              in the AI drafts below.
+            </p>
+          ) : null}
           <ul className="flex flex-col gap-3">
             {rows.map((row) => (
-              <StorefrontItem key={row.country} row={row} />
+              <StorefrontItem
+                key={row.country}
+                row={row}
+                draftable={draftable}
+                onDraft={onDraft}
+              />
             ))}
           </ul>
           <p className="text-caption text-muted-foreground">

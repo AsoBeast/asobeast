@@ -30,6 +30,7 @@ import type {
   AuditRecommendation,
   AuditTarget,
   MetadataAuditResult,
+  MetadataDraft,
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
@@ -2152,6 +2153,33 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   ],
   keywordFieldSuggestion: null,
 };
+
+export const METADATA_DRAFTS: MetadataDraft[] = [
+  {
+    field: "title",
+    value: "Focus Timer: Pomodoro",
+    chars: 21,
+    limit: 30,
+    issues: [],
+    rationale: "Leads with the primary keyword.",
+  },
+  {
+    field: "subtitle",
+    value: "Deep work sessions",
+    chars: 18,
+    limit: 30,
+    issues: [],
+    rationale: "Adds a secondary keyword without a title word.",
+  },
+  {
+    field: "keywordField",
+    value: "study,habit,productivity",
+    chars: 24,
+    limit: 100,
+    issues: [],
+    rationale: "Covers uncovered terms.",
+  },
+];
 
 const auditCheck = (
   id: string,

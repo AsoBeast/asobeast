@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  draftableLocalizations,
   extraRoom,
   LOCALIZED_FIELDS_NOTE,
   storefrontRows,
@@ -47,4 +48,33 @@ describe("LOCALIZED_FIELDS_NOTE", () => {
       "Each localization has its own 30 character title, 30 character subtitle and 100 byte keyword field.",
     );
   });
+});
+
+const US_IDS = [
+  "ar",
+  "zh-Hans",
+  "zh-Hant",
+  "fr",
+  "ko",
+  "pt-BR",
+  "ru",
+  "es-MX",
+  "vi",
+];
+
+describe("draftableLocalizations", () => {
+  it.each([
+    ["us", ["us", "pl", "gb"], [...US_IDS, "pl"]],
+    ["us", ["us", "jp"], US_IDS],
+    ["us", ["us", "mx", "ca"], [...US_IDS, "en-GB", "fr-CA"]],
+    ["gb", ["gb"], []],
+    ["jp", ["jp"], ["en-US"]],
+  ])(
+    "offers what %s with %j reads beyond the primary listing",
+    (home, markets, expected) => {
+      expect(draftableLocalizations(storefrontRows(home, markets))).toEqual(
+        expected,
+      );
+    },
+  );
 });

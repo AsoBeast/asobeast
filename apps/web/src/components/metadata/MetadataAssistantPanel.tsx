@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Copy, Loader2, Sparkles } from "lucide-react";
+import { useQueryState } from "nuqs";
 import { toast } from "sonner";
-import type { MetadataDraft, MetadataField, Store } from "@asobeast/shared";
+import {
+  APP_STORE_LOCALIZATIONS,
+  type MetadataDraft,
+  type MetadataField,
+  type Store,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,7 +20,10 @@ import {
   LINT_SEVERITY_VARIANT,
   METADATA_FIELD_LABELS,
 } from "@/lib/metadata-display";
+import { draftLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
+import { DraftLocalizationSelect } from "./DraftLocalizationSelect";
+import { DraftLocalizationSkeleton } from "./skeletons";
 
 const STORE_FIELDS: Record<Store, MetadataField[]> = {
   APP_STORE: ["title", "subtitle", "keywordField"],
@@ -81,13 +90,16 @@ function DraftCard({ draft }: { draft: MetadataDraft }) {
 export function MetadataAssistantPanel({
   appId,
   store,
+  canLocalize,
 }: {
   appId: string;
   store: Store;
+  canLocalize: boolean;
 }) {
   const available = STORE_FIELDS[store];
   const [selected, setSelected] = useState<MetadataField[]>(available);
   const [instructions, setInstructions] = useState("");
+  const [draftLocale] = useQueryState("draftLocale", draftLocaleParser);
 
   const mutation = useMutation({
     mutationKey: ["metadata-assistant", appId],
@@ -95,6 +107,7 @@ export function MetadataAssistantPanel({
       generateMetadataDrafts(appId, {
         fields: selected,
         instructions: instructions.trim() || undefined,
+        localization: canLocalize ? (draftLocale ?? undefined) : undefined,
       }),
     onError: (error) => {
       toast.error(
@@ -107,6 +120,7 @@ export function MetadataAssistantPanel({
   const draftOnce = useSingleFlight(mutation);
 
   const drafts = mutation.data?.drafts ?? [];
+  const drafted = mutation.data?.localization ?? null;
 
   function toggle(field: MetadataField, checked: boolean) {
     setSelected((current) =>
@@ -119,6 +133,11 @@ export function MetadataAssistantPanel({
       <h2 className="text-lg font-medium">AI drafts</h2>
       <Card>
         <CardContent className="flex flex-col gap-4">
+          {canLocalize ? (
+            <Suspense fallback={<DraftLocalizationSkeleton />}>
+              <DraftLocalizationSelect appId={appId} />
+            </Suspense>
+          ) : null}
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="assistant-instructions"
@@ -167,6 +186,11 @@ export function MetadataAssistantPanel({
           </div>
         </CardContent>
       </Card>
+      {drafted ? (
+        <p className="text-sm text-muted-foreground">
+          Drafted in {APP_STORE_LOCALIZATIONS[drafted]}
+        </p>
+      ) : null}
       {drafts.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2">
           {drafts.map((draft) => (
