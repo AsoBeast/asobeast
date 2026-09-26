@@ -3,6 +3,7 @@ import { AiClient } from '../ai/openai.client';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantService } from './metadata-assistant.service';
+import { DRAFT_MAX_OUTPUT_TOKENS } from './metadata-drafts';
 import { MetadataService } from './metadata.service';
 
 describe('MetadataAssistantService', () => {
@@ -49,5 +50,40 @@ describe('MetadataAssistantService', () => {
     expect(keywordCountries).not.toHaveBeenCalled();
     expect(audit).not.toHaveBeenCalled();
     expect(structured).not.toHaveBeenCalled();
+  });
+
+  it('gives a localized draft room to reason before it answers', async () => {
+    const structured = jest.fn().mockRejectedValue(new Error('stop'));
+    const service = new MetadataAssistantService(
+      { model: 'gpt-4o', structured },
+      {
+        app: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'app-1',
+            store: 'APP_STORE',
+            country: 'us',
+            name: 'Where Am I',
+          }),
+          findMany: jest.fn().mockResolvedValue([]),
+        },
+      } as unknown as PrismaService,
+      {
+        keywordCountries: jest
+          .fn()
+          .mockResolvedValue([{ country: 'us', keywordCount: 1 }]),
+        listTracked: jest.fn().mockResolvedValue([]),
+      } as unknown as KeywordsService,
+      {
+        audit: jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
+      } as unknown as MetadataService,
+    );
+
+    await expect(
+      service.generate('app-1', { localization: 'es-MX' }),
+    ).rejects.toThrow('stop');
+    expect(structured).toHaveBeenCalledWith(
+      expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
+    );
+    expect(DRAFT_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(4096);
   });
 });

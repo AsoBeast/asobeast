@@ -22,6 +22,7 @@ import { MetadataAssistantDto } from './dto/metadata-assistant.dto';
 import {
   buildAssistantContext,
   currentValue,
+  DRAFT_MAX_OUTPUT_TOKENS,
   draftSchema,
   LocalizationTarget,
   storefrontsReading,
@@ -102,6 +103,7 @@ export class MetadataAssistantService {
         },
       ],
       schema: draftSchema(fields),
+      maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
     });
 
     const base: LintContext = {
