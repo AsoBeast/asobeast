@@ -32,7 +32,9 @@ function MoverList({
                 href={`/apps/${id}/rankings?keywords=${mover.keywordId}`}
                 className="flex items-center justify-between gap-2 rounded-md px-2 py-1 text-sm hover:bg-muted"
               >
-                <span className="truncate">{mover.text}</span>
+                <span className="truncate print:whitespace-normal">
+                  {mover.text}
+                </span>
                 <span className="flex shrink-0 items-center gap-1 numeric font-mono text-muted-foreground">
                   {formatRankPosition(mover.from, mover.fromDepth)}
                   <ArrowRight className="size-3" />

@@ -157,6 +157,12 @@ export const rangeParser =
 export const visibilityRangeParser =
   parseAsStringLiteral(VISIBILITY_RANGES).withDefault("30d");
 
+export const overviewRangeParsers = {
+  range: visibilityRangeParser,
+  distRange: visibilityRangeParser,
+  categoryRange: rangeParser,
+};
+
 export const keywordIdsParser = parseAsArrayOf(parseAsString).withDefault([]);
 
 export const countryParser = parseAsString.withDefault("");
@@ -221,6 +227,11 @@ export const moverDaysParser = createParser({
     return String(value);
   },
 }).withDefault(7);
+
+export const rankingsRangeParsers = {
+  range: rangeParser,
+  movers: moverDaysParser,
+};
 
 export const actionStatusParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),

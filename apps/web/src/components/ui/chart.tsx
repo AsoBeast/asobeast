@@ -14,6 +14,17 @@ const THEMES: Array<{ name: ChartTheme; selector: string }> = [
 ];
 
 const INITIAL_DIMENSION = { width: 320, height: 200 };
+
+function useScreenChartHeight() {
+  const [height, setHeight] = React.useState<number>();
+
+  const onResize = React.useCallback((_width: number, measured: number) => {
+    if (!window.matchMedia("print").matches) setHeight(Math.round(measured));
+  }, []);
+
+  return { height, onResize };
+}
+
 type TooltipNameType = number | string;
 
 export type ChartConfig = Record<
@@ -62,6 +73,7 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId();
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
+  const { height, onResize } = useScreenChartHeight();
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -76,7 +88,10 @@ function ChartContainer({
       >
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer
+          className="h-full!"
           initialDimension={initialDimension}
+          height={height}
+          onResize={onResize}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>

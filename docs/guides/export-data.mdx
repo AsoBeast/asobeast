@@ -1,11 +1,11 @@
 ---
 title: Export data
-description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV. Each file follows the filters you applied.
+description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV, and the overview and the rankings view print as a report you can save as PDF. Each file follows the filters you applied.
 icon: file-down
-keywords: ["export","CSV","keywords","rankings","competitors","keyword gaps","reviews","SERP","spreadsheet","provenance"]
+keywords: ["export","CSV","keywords","rankings","competitors","keyword gaps","reviews","SERP","spreadsheet","provenance","print","PDF"]
 ---
 
-The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export.
+The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export. The app overview and the rankings view also print as a report, which is the quickest way to share a view with someone who has no account.
 
 ## Export keywords to CSV
 
@@ -90,6 +90,23 @@ The top 10 sheet on the keyword monitor exports the snapshot it shows, one row p
 | `storeAppId` | The store's id for the app |
 
 `ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [App Store and Google Play](/concepts/stores).
+
+## Print a report or save it as PDF
+
+The app overview and the rankings view print as a report. Select **Print report**, on the overview next to the snapshot facts and on the rankings view next to **Export CSV**, or use the browser's print command. To get a file, choose **Save as PDF** as the destination.
+
+The printout leaves out the navigation, the header controls, banners and notifications, and every button. The keywords charted on the rankings view print as a row of labels with their colours. It opens with the app name, its store and home storefront, the page, each range the charts show, and the UTC date it was printed. Range pickers print as the range they are set to, so set them before you print.
+
+| On screen | On paper |
+| --- | --- |
+| Dark theme | Always the light theme |
+| Range tabs | The selected range, such as `Last 30 days` |
+| Charts side by side | One chart per row, scaled to the page width |
+| Grade colours | The colour and the grade word, such as `3 strong` |
+
+Charts keep the shape they had on screen and shrink to fit the paper, so a chart drawn across a wide window prints with smaller text. For larger chart text, print the overview in landscape or from a narrower window. Grade colours, badges and chart legends print even with background graphics turned off.
+
+Other pages print without the navigation and in the light theme, but without a report layout.
 
 ## Are the files safe to open?
 

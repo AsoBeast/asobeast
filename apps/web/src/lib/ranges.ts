@@ -18,7 +18,13 @@ export type MoverWindow = (typeof MOVER_WINDOWS)[number];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export function presetToRange(preset: `${number}d`): {
+export type DayPreset = `${number}d`;
+
+export function rangeLabel(preset: DayPreset): string {
+  return `Last ${preset.replace("d", "")} days`;
+}
+
+export function presetToRange(preset: DayPreset): {
   from: string;
   to: string;
 } {

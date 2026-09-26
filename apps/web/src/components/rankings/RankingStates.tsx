@@ -39,7 +39,7 @@ export function NoKeywordsTracked({ id }: { id: string }) {
       title="No keywords tracked yet"
       body="Ranking history is drawn from the keywords you track for this app."
       action={
-        <Button asChild size="sm">
+        <Button asChild size="sm" className="print:hidden">
           <Link href={`/apps/${id}/keywords`}>Go to keywords</Link>
         </Button>
       }
@@ -63,7 +63,12 @@ export function NoDataInRange({ onWiden }: { onWiden?: () => void }) {
       body="These keywords have history outside the selected window."
       action={
         onWiden ? (
-          <Button size="sm" variant="outline" onClick={onWiden}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="print:hidden"
+            onClick={onWiden}
+          >
             Widen to 90 days
           </Button>
         ) : null

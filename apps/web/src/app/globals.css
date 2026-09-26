@@ -5,8 +5,15 @@
 @import "../styles/semantic.css";
 @import "../styles/typography.css";
 @import "../styles/layout.css";
+@import "../styles/print.css";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark {
+  @media screen {
+    &:is(.dark *) {
+      @slot;
+    }
+  }
+}
 
 @theme inline {
   --color-background: var(--background);
@@ -96,8 +103,10 @@
     color-scheme: light;
   }
 
-  .dark {
-    color-scheme: dark;
+  @media screen {
+    .dark {
+      color-scheme: dark;
+    }
   }
 
   a,

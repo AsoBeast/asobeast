@@ -58,7 +58,7 @@ export function ActionsSummaryCard({ appId }: { appId?: string }) {
 
         <Link
           href={href}
-          className="text-sm font-medium underline-offset-4 hover:underline"
+          className="text-sm font-medium underline-offset-4 hover:underline print:hidden"
         >
           Open the Action Center
         </Link>

@@ -53,7 +53,7 @@ export function StatCards({ id }: { id: string }) {
         <CardContent>
           <Link
             href={`/apps/${id}/competitors`}
-            className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            className="text-xs font-medium text-muted-foreground hover:text-foreground print:hidden"
           >
             View comparison
           </Link>

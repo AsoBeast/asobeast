@@ -24,7 +24,7 @@ export function AppHeader({ id }: { id: string }) {
       <div className="flex min-w-0 flex-col gap-1.5">
         <h1
           title={name}
-          className="line-clamp-2 text-display tracking-tight text-balance"
+          className="line-clamp-2 text-display tracking-tight text-balance print:line-clamp-none"
         >
           {name}
         </h1>
@@ -40,7 +40,7 @@ export function AppHeader({ id }: { id: string }) {
             href={storeUrl(detail)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-sm hover:text-foreground"
+            className="inline-flex items-center gap-1 rounded-sm hover:text-foreground print:hidden"
           >
             Store page
             <ExternalLink className="size-3.5" />
@@ -48,7 +48,9 @@ export function AppHeader({ id }: { id: string }) {
         </div>
       </div>
 
-      <AppLink detail={detail} />
+      <div className="flex print:hidden">
+        <AppLink detail={detail} />
+      </div>
     </header>
   );
 }
