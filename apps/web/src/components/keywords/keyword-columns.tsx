@@ -18,11 +18,14 @@ import {
 } from "@/components/ui/tooltip";
 import { DeltaChip } from "@/components/ui/delta-chip";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
+import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordRowActions } from "./KeywordRowActions";
 import {
   DerivedScoreCell,
+  NoteButton,
   PositionCell,
   ScoreCell,
+  TagBadges,
   VolatilityCell,
 } from "./keyword-cells";
 import { isScoreOutdated, scoreValue, shownScore } from "./keyword-scores";
@@ -32,6 +35,7 @@ import type { Grade, GradeMetric } from "@/lib/grade";
 import {
   gradeIn,
   oneOf,
+  someOf,
   positionBandIn,
   statusFilter,
   type ActivityStatus,
@@ -116,6 +120,7 @@ function identityColumns() {
           <span title={row.original.text} className="truncate">
             {row.original.text}
           </span>
+          {row.original.note ? <NoteButton note={row.original.note} /> : null}
           {!row.original.active ? (
             <Badge variant="secondary" className="shrink-0">
               Paused
@@ -123,6 +128,16 @@ function identityColumns() {
           ) : null}
         </span>
       ),
+    }),
+    columnHelper.accessor((row) => row.tags ?? [], {
+      id: "tags",
+      header: "Tags",
+      enableSorting: false,
+      getUniqueValues: (row) => row.tags ?? [],
+      filterFn: (row, _id, selected: readonly string[]) =>
+        someOf(row.original.tags, selected),
+      meta: { label: "Tags" },
+      cell: ({ row }) => <TagBadges tags={row.original.tags ?? []} />,
     }),
     columnHelper.accessor("source", {
       id: "source",
@@ -291,7 +306,7 @@ function actionsColumn({
     id: "actions",
     enableHiding: false,
     header: () => null,
-    cell: ({ row }) => (
+    cell: ({ row, table }) => (
       <div className="flex items-center justify-end gap-1 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 has-data-[state=open]:opacity-100 pointer-fine:opacity-0">
         <Button
           variant="ghost"
@@ -302,7 +317,13 @@ function actionsColumn({
         >
           <ListOrdered />
         </Button>
-        <KeywordRowActions appId={appId} keyword={row.original} />
+        <KeywordRowActions
+          appId={appId}
+          keyword={row.original}
+          marketTags={() =>
+            tagsIn(table.getCoreRowModel().rows.map((entry) => entry.original))
+          }
+        />
       </div>
     ),
   });

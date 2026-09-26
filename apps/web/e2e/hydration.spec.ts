@@ -40,6 +40,19 @@ const DEEP_LINKS = [
     endpoint: "/api/backend/apps/app-1/keywords/compare",
     ready: (page: Page) => page.getByRole("table"),
   },
+  {
+    name: "a change impact window",
+    url: "/apps/app-1/changes?days=30",
+    endpoint: "/api/backend/apps/app-1/changes/impact",
+    ready: (page: Page) =>
+      page.getByRole("heading", { level: 4, name: "After 7 days" }),
+  },
+  {
+    name: "a change timeline window",
+    url: "/apps/app-1/changes?days=30",
+    endpoint: "/api/backend/apps/app-1/changes",
+    ready: (page: Page) => page.getByText("Focus Timer Pro"),
+  },
 ] as const;
 
 for (const { name, url, endpoint, ready } of DEEP_LINKS) {

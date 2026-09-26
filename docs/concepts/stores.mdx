@@ -23,6 +23,8 @@ On the App Store, asobeast tracks listings available on iPhone or iPad, because 
 
 Google Play search therefore reads three surfaces: the title, the 80 character short description and the 4000 character long description. There is no subtitle and no keyword field on Google Play, so those two stay Apple only concepts everywhere in asobeast, including the types, the metadata lints and the audit rubric.
 
+In practice, App Store search combines the words of the title, subtitle and keyword field into phrases within one localization, never across two, and the order of the words does not matter. Apple does not document either behaviour; both are the consistent observation of ASO practitioners.
+
 ## Why is the iOS keyword field private?
 
 The 100 byte iOS keyword field never appears on the public store page, so no amount of collection can read it. It exists only in App Store Connect.
@@ -77,6 +79,7 @@ Compare a keyword against other keywords in the same store. See [Popularity, dif
 | --- | --- |
 | Neither store's suggest endpoint carries a popularity value | On Google Play asobeast probes how early the store suggests the keyword; on the App Store it estimates popularity from the first 25 search results. See [Popularity, difficulty and opportunity](/concepts/scoring#how-is-popularity-estimated) |
 | Google Play search results carry no rating counts | SERP rating columns stay empty for Google Play |
+| The App Store publishes no install count | `installs` stays empty for App Store apps and their competitors |
 | Google Play release dates are best effort outside the `en` storefront | Treat `released` as approximate there |
 
 ## What happens when a store changes its response?

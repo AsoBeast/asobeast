@@ -63,6 +63,18 @@ An app whose position on a tracked keyword changed materially between SERP snaps
 
 An app that appeared in a keyword's top 10 without having been there before. Entrants fire the `serp.entrant` alert.
 
+## Rank milestone
+
+An owned app entering or leaving the top 10, the top 3 or first place for a keyword between two consecutive checks. Fires the `rank.milestone` alert. See [Send alerts](/guides/alerts#milestones-first-rankings-and-overtakes).
+
+## First ranking
+
+The first check in which an owned app ranks for a keyword it had no ranked check for. Fires the `rank.first` alert.
+
+## Overtake
+
+A tracked competitor moving from behind an owned app, or from not ranked, to ahead of it on a keyword between two consecutive checks. Fires the `rank.overtaken` alert.
+
 ## Popularity score
 
 A persisted 0 to 10 estimate of a keyword's search demand, shown on a 0 to 100 scale as volume, stored with its evidence source, formula version, capture date and confidence. See [Popularity, difficulty and opportunity](/concepts/scoring).
@@ -98,6 +110,10 @@ A captured copy of a listing's metadata at one moment, stored with the raw store
 ## Change event
 
 A field level difference between two consecutive snapshots, recorded for your own apps and for competitors. See [Watch listing changes](/guides/listing-changes).
+
+## Change impact
+
+How the positions of your tracked keywords and your visibility moved 7, 14 and 28 days after a change to your own listing, compared with the last rank check before it. See [Watch listing changes](/guides/listing-changes#measure-the-impact-of-a-change).
 
 ## Audit score
 

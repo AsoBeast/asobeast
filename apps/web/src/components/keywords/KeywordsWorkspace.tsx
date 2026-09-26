@@ -12,6 +12,7 @@ import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { KeywordsToolbar } from "./KeywordsToolbar";
 import { KeywordsTable } from "./KeywordsTable";
 import { KeywordsTableSkeleton } from "./skeletons";
+import { KeywordCombinations } from "./KeywordCombinations";
 import { SuggestionsPanel } from "./SuggestionsPanel";
 
 export function KeywordsWorkspace({
@@ -63,6 +64,12 @@ export function KeywordsWorkspace({
         <KeywordsTable id={id} store={store} country={market} />
       </Suspense>
       <SuggestionsPanel id={id} country={market} store={store} />
+      <KeywordCombinations
+        id={id}
+        store={store}
+        homeCountry={homeCountry}
+        market={market}
+      />
       {store === "APP_STORE" ? (
         <KeywordFieldEditor
           id={id}

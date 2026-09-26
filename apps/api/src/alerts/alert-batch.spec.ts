@@ -4,7 +4,10 @@ import {
   MetadataChangedPayload,
   RANK_DEPTH,
   RankDroppedPayload,
+  RankFirstPayload,
   RankImprovedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
   ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
@@ -570,5 +573,130 @@ describe('action.opened batching', () => {
     });
 
     expect(filterBatch(owned, new Set(['rank.dropped']))).toBeNull();
+  });
+});
+
+describe('rank milestone batching', () => {
+  const milestone: RankMilestonePayload = {
+    event: 'rank.milestone',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'a', name: 'Alpha' },
+    keyword: { id: 'kw1', text: 'game', store: 'APP_STORE', country: 'us' },
+    tier: 10,
+    direction: 'entered',
+    from: 14,
+    to: 8,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+  };
+
+  const firstRanking: RankFirstPayload = {
+    event: 'rank.first',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    position: 37,
+    depth: RANK_DEPTH,
+  };
+
+  const overtake: RankOvertakenPayload = {
+    event: 'rank.overtaken',
+    occurredAt: milestone.occurredAt,
+    app: milestone.app,
+    keyword: milestone.keyword,
+    competitor: { id: 'c1', name: 'Rival', from: 9, to: 4 },
+    from: 5,
+    to: 6,
+    fromDepth: RANK_DEPTH,
+    toDepth: RANK_DEPTH,
+  };
+
+  const now = new Date('2026-07-22T11:00:00.000Z');
+  const ownedBatch = () =>
+    assembleBatches({
+      events: [
+        event(milestone, 'a', 'e1'),
+        event(firstRanking, 'a', 'e2'),
+        event(overtake, 'a', 'e3'),
+      ],
+      appById,
+      serpPrimariesByKeyword: new Map(),
+      now,
+    }).owned;
+
+  it('routes each new rank event into its owned app section', () => {
+    const owned = ownedBatch();
+
+    expect(owned.totals).toEqual({ events: 3, apps: 1 });
+    expect(owned.events.map((payload) => payload.event)).toEqual([
+      'rank.milestone',
+      'rank.first',
+      'rank.overtaken',
+    ]);
+    expect(owned.apps[0]).toMatchObject({
+      rankMilestones: [milestone],
+      firstRankings: [firstRanking],
+      overtakes: [overtake],
+    });
+  });
+
+  it('skips the new rank events keyed on a competitor', () => {
+    const onCompetitor = [milestone, firstRanking, overtake].map((payload) =>
+      event({ ...payload, app: { id: 'c', name: 'Charlie' } }, 'c'),
+    );
+
+    const result = classifyBatch({
+      events: onCompetitor,
+      appById,
+      serpPrimariesByKeyword: new Map(),
+    });
+
+    expect(result.skipped.competitor_owned_signal).toBe(3);
+    expect(result.owned).toHaveLength(0);
+  });
+
+  it('keeps each new array only for a channel that lists its event', () => {
+    const owned = ownedBatch();
+
+    expect(
+      filterBatch(owned, new Set(['rank.milestone']))?.apps[0],
+    ).toMatchObject({
+      rankMilestones: [milestone],
+      firstRankings: [],
+      overtakes: [],
+    });
+    expect(filterBatch(owned, new Set(['rank.first']))?.apps[0]).toMatchObject({
+      rankMilestones: [],
+      firstRankings: [firstRanking],
+      overtakes: [],
+    });
+    expect(
+      filterBatch(owned, new Set(['rank.overtaken']))?.apps[0],
+    ).toMatchObject({
+      rankMilestones: [],
+      firstRankings: [],
+      overtakes: [overtake],
+    });
+  });
+
+  it('sends nothing to a channel that lists none of the new events', () => {
+    const owned = ownedBatch();
+
+    expect(filterBatch(owned, new Set(['rank.dropped']))).toBeNull();
+    const overtakesOnly = filterBatch(owned, new Set(['rank.overtaken']));
+    expect(overtakesOnly?.apps).toHaveLength(1);
+    expect(overtakesOnly?.events).toEqual([overtake]);
+    expect(overtakesOnly?.apps[0]).toMatchObject({
+      rankDrops: [],
+      rankImprovements: [],
+      rankMilestones: [],
+      firstRankings: [],
+      overtakes: [overtake],
+      serpEntrants: [],
+      changes: [],
+      negativeReviews: [],
+      actions: [],
+      competitors: [],
+    });
   });
 });

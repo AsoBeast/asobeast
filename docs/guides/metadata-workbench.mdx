@@ -2,7 +2,7 @@
 title: Optimize listing metadata
 description: "The workbench lints each indexed field against its store limit, reports keyword coverage, and holds the pasted private iOS keyword field."
 icon: pencil-ruler
-keywords: ["metadata","lint","coverage","character limit","keyword field","drafts"]
+keywords: ["metadata","lint","coverage","character limit","keyword field","drafts","localization"]
 ---
 
 The workbench is where you see your listing the way search sees it: field by field, against the limits, and against the keywords you claim to be targeting.
@@ -21,6 +21,12 @@ Each field is checked against the limit for its store, and the lint reports char
 | Promotional text | 170, not indexed | Not present |
 
 Fields a store does not have are hidden rather than shown empty. See [App Store and Google Play](/concepts/stores).
+
+## See which localizations each storefront reads
+
+On an App Store app, the card under the fields lists your home storefront first and then every storefront where you track keywords, each with Apple's default language and additional languages. A storefront with no additional language says so.
+
+The fields above exist once per localization, so each additional language is another title, subtitle and keyword field for search in that storefront, and the card counts that room for you. The rule, its source and its limits are in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
 
 ## Check keyword coverage
 
@@ -68,11 +74,16 @@ Every draft is linted again on the server and clamped to the field limit, so a d
 
 With no key the card is hidden entirely. See [Enable the optional AI features](/guides/ai-features).
 
+On an App Store app the drafts card has a **Localization** menu. **Primary listing** drafts the listing asobeast reads, as before. An additional language of one of your storefronts drafts that localization instead: its title, subtitle and keyword field, written in that language from the meaning of your tracked keywords rather than copied from them, preferring words your current listing does not use. The keyword field is held to its 100 byte limit, which a Chinese, Japanese or Korean draft reaches in about 33 characters. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field)
+
+Each additional language on the storefront card has a button that picks it in the menu and moves the focus there. To fill a localization's keyword field with keywords in another language, a common tactic for Spanish (Mexico) in the United States, say so in the instructions. Which storefronts read which localization is explained in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
+
 ## Troubleshooting
 
 - **A keyword you added to the title still shows as uncovered.** Coverage reads the latest snapshot. Refresh the listing after the store publishes the change.
 - **The subtitle card is missing.** You are looking at a Google Play app. It has no subtitle.
 - **Character counts differ from App Store Connect.** asobeast counts characters, so an emoji or an accented character counts as the store counts it in the stored value.
+- **The Localization menu is missing.** The app is on Google Play, none of your storefronts lists an additional language (the United Kingdom lists none), or asobeast could not read your keyword markets when the page loaded.
 
 ## Related
 

@@ -10,6 +10,7 @@ export * from './metadata';
 export * from './competitors';
 export * from './serp';
 export * from './changes';
+export * from './change-impact';
 export * from './spider';
 export * from './reviews';
 export * from './portfolio';

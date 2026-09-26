@@ -1,9 +1,11 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -15,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDate, formatNumber, formatRating } from "@/lib/format";
 import { serpOptions } from "@/lib/queries";
 import { serpParser } from "@/lib/search-params";
+import { exportSerp } from "./serp-csv";
 
 function SerpRows({ appId, keywordId }: { appId: string; keywordId: string }) {
   const { data } = useSuspenseQuery(serpOptions(keywordId));
@@ -85,6 +88,31 @@ function SerpSkeleton() {
   );
 }
 
+function SerpExportButton({
+  appId,
+  keywordId,
+}: {
+  appId: string;
+  keywordId: string;
+}) {
+  const { data } = useQuery(serpOptions(keywordId));
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="self-start"
+      disabled={data === undefined || data.entries.length === 0}
+      onClick={() => {
+        if (data) exportSerp(appId, data);
+      }}
+      aria-label="Export top 10 to CSV"
+    >
+      <Download />
+      Export CSV
+    </Button>
+  );
+}
+
 export function SerpSheet({ appId }: { appId: string }) {
   const [keywordId, setKeywordId] = useQueryState("serp", serpParser);
   const open = keywordId.length > 0;
@@ -102,6 +130,9 @@ export function SerpSheet({ appId }: { appId: string }) {
           <SheetDescription id="serp-description">
             The apps ranking for this keyword on the latest daily check.
           </SheetDescription>
+          {open ? (
+            <SerpExportButton appId={appId} keywordId={keywordId} />
+          ) : null}
         </SheetHeader>
         {open ? (
           <div className="overflow-y-auto">

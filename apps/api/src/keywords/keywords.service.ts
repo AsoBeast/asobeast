@@ -13,6 +13,7 @@ import {
   keywordFieldBytes,
   KeywordFieldResult,
   KeywordSort,
+  KeywordUpdateRequest,
   KEYWORD_FIELD_BYTE_LIMIT,
   parseKeywordField,
   TrackedKeywordItem,
@@ -239,7 +240,7 @@ export class KeywordsService {
   async updateKeyword(
     appId: string,
     keywordId: string,
-    data: { active?: boolean; relevance?: number | null },
+    data: KeywordUpdateRequest,
   ): Promise<TrackedKeywordItem> {
     await ensureApp(this.prisma, appId);
     const keyword = await this.ensureTracked(appId, keywordId);
@@ -248,7 +249,9 @@ export class KeywordsService {
     }
     const update = {
       ...(data.active === undefined ? {} : { active: data.active }),
-      ...('relevance' in data ? { relevance: data.relevance } : {}),
+      ...(data.relevance === undefined ? {} : { relevance: data.relevance }),
+      ...(data.tags === undefined ? {} : { tags: data.tags }),
+      ...(data.note === undefined ? {} : { note: data.note }),
     };
     if (data.active === true) {
       await this.quota.admitKeywordMarkets(async (tx) => {

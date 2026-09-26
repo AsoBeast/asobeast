@@ -50,6 +50,8 @@ export interface TrackedKeywordItem {
   serpVolatility7d: number | null;
   scoreSignals?: ScoreSignals | null;
   scoreOutdated?: boolean;
+  tags?: string[];
+  note?: string | null;
 }
 
 export interface KeywordCountrySummary {
@@ -95,6 +97,8 @@ export interface KeywordComparison {
 export interface KeywordUpdateRequest {
   active?: boolean;
   relevance?: number | null;
+  tags?: string[];
+  note?: string | null;
 }
 
 export interface KeywordAddRequest {

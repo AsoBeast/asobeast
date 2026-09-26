@@ -92,27 +92,44 @@ describe('Rate limits (billing mode)', () => {
   const read = (cookie: string) =>
     request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
 
+  interface Burst {
+    send: (cookie: string) => request.Test;
+    limit: number;
+    admitted: number;
+  }
+
+  const writes: Burst = {
+    send: write,
+    limit: WRITES_PER_MINUTE,
+    admitted: 404,
+  };
+  const reads: Burst = { send: read, limit: READS_PER_MINUTE, admitted: 200 };
+
   const burn = async (
-    send: (cookie: string) => request.Test,
+    { send, limit, admitted }: Burst,
     cookie: string,
     times: number,
-    limit: number,
   ): Promise<void> => {
     await awaitBurnHeadroom();
     for (let spent = 1; spent <= times; spent += 1) {
       const response = await send(cookie);
       expect({
         spent,
+        status: response.status,
         remaining: response.headers['ratelimit-remaining'],
-      }).toEqual({ spent, remaining: String(Math.max(limit - spent, 0)) });
+      }).toEqual({
+        spent,
+        status: spent > limit ? 429 : admitted,
+        remaining: String(Math.max(limit - spent, 0)),
+      });
     }
   };
 
   const burnWrites = (cookie: string, times: number): Promise<void> =>
-    burn(write, cookie, times, WRITES_PER_MINUTE);
+    burn(writes, cookie, times);
 
   const burnReads = (cookie: string, times: number): Promise<void> =>
-    burn(read, cookie, times, READS_PER_MINUTE);
+    burn(reads, cookie, times);
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {

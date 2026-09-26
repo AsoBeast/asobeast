@@ -5,6 +5,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
+  AlertBatchPayload,
   ApiErrorEnvelope,
   SerpEntrantPayload,
   SerpMovers,
@@ -12,12 +13,13 @@ import {
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { AlertFlushService } from '../src/alerts/alert-flush.service';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { QUEUES } from '../src/jobs/jobs.types';
+import { DeliverAlertPayload, QUEUES } from '../src/jobs/jobs.types';
 import { RankingsService } from '../src/rankings/rankings.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../src/store-providers/types';
@@ -318,6 +320,263 @@ describe('RankingsService serp entrant alerts (e2e)', () => {
         appId: null,
         isCompetitor: false,
       },
+    ]);
+  });
+});
+
+describe('RankingsService milestone alerts (e2e)', () => {
+  let app: INestApplication<App>;
+  let prisma: PrismaClient;
+  let rankings: RankingsService;
+  let flush: AlertFlushService;
+  let results: SearchItem[] = [];
+
+  const registry = {
+    get: (): StoreProvider =>
+      ({
+        search: () => Promise.resolve(results),
+      }) as unknown as StoreProvider,
+  };
+
+  const seed = async (): Promise<{
+    you: string;
+    rival: string;
+    keywordId: string;
+  }> => {
+    const you = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'self-store',
+        country: 'us',
+        name: 'You',
+      },
+    });
+    const rival = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: 'rival-store',
+        country: 'us',
+        name: 'Rival',
+        isCompetitor: true,
+        primaryAppId: you.id,
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: you.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    return { you: you.id, rival: rival.id, keywordId: keyword.id };
+  };
+
+  const serpAt = (placements: Record<string, number>): SearchItem[] =>
+    Array.from({ length: 40 }, (_, index) => {
+      const hit = Object.keys(placements).find(
+        (storeAppId) => placements[storeAppId] === index + 1,
+      );
+      const storeAppId = hit ?? `filler-${index + 1}`;
+      return { storeAppId, title: storeAppId };
+    });
+
+  const rankedOn = (
+    appId: string,
+    keywordId: string,
+    daysAgo: number,
+    position: number | null,
+  ) =>
+    prisma.keywordRanking.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date: utcMidnight(daysAgo),
+        position,
+      },
+    });
+
+  const outbox = async () =>
+    new Map(
+      (
+        await prisma.alertEvent.findMany({
+          select: { event: true, appId: true, dedupeKey: true, payload: true },
+        })
+      ).map((row) => [row.event, row]),
+    );
+
+  const today = (): string => utcMidnight(0).toISOString().slice(0, 10);
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(registry)
+      .compile();
+
+    app = moduleFixture.createNestApplication();
+    await app.init();
+
+    prisma = testDb();
+    rankings = app.get(RankingsService);
+    flush = app.get(AlertFlushService);
+    await prisma.workspace.upsert({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      update: {},
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
+    });
+  });
+
+  beforeEach(async () => {
+    await obliterateQueues(app);
+    await pauseQueues(app);
+    results = [];
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "Keyword", "Webhook", "AlertEvent" RESTART IDENTITY CASCADE',
+    );
+  });
+
+  afterAll(async () => {
+    await obliterateQueues(app);
+    await app.close();
+  });
+
+  it('collects a milestone beside the rank improvement', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, keywordId, 1, 14);
+    results = serpAt({ 'self-store': 8 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const rows = await outbox();
+    expect([...rows.keys()].sort()).toEqual([
+      'rank.improved',
+      'rank.milestone',
+    ]);
+    expect(rows.get('rank.improved')?.dedupeKey).toBe(
+      `rank:${you}:${keywordId}:${today()}`,
+    );
+    expect(rows.get('rank.milestone')).toMatchObject({
+      appId: you,
+      dedupeKey: `milestone:${you}:${keywordId}:${today()}`,
+      payload: {
+        app: { id: you, name: 'You' },
+        tier: 10,
+        direction: 'entered',
+        from: 14,
+        to: 8,
+      },
+    });
+  });
+
+  it('collects a first ranking instead of a milestone', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, keywordId, 1, null);
+    results = serpAt({ 'self-store': 8 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const rows = await outbox();
+    expect([...rows.keys()].sort()).toEqual(['rank.first', 'rank.improved']);
+    expect(rows.get('rank.first')).toMatchObject({
+      dedupeKey: `first:${you}:${keywordId}:${today()}`,
+      payload: { position: 8 },
+    });
+  });
+
+  it('collects a milestone when the app ranked before the previous check', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, keywordId, 3, 50);
+    await rankedOn(you, keywordId, 1, null);
+    results = serpAt({ 'self-store': 8 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    expect([...(await outbox()).keys()].sort()).toEqual([
+      'rank.improved',
+      'rank.milestone',
+    ]);
+  });
+
+  it('collects an overtake keyed on the owned app', async () => {
+    const { you, rival, keywordId } = await seed();
+    await rankedOn(you, keywordId, 1, 5);
+    await rankedOn(rival, keywordId, 1, 9);
+    results = serpAt({ 'self-store': 6, 'rival-store': 4 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    const rows = await outbox();
+    expect([...rows.keys()]).toEqual(['rank.overtaken']);
+    expect(rows.get('rank.overtaken')).toMatchObject({
+      appId: you,
+      dedupeKey: `overtaken:${you}:${keywordId}:${rival}:${today()}`,
+      payload: {
+        competitor: { id: rival, name: 'Rival', from: 9, to: 4 },
+        from: 5,
+        to: 6,
+      },
+    });
+    expect(await prisma.alertEvent.count({ where: { appId: rival } })).toBe(0);
+  });
+
+  it('collects nothing on the first ever capture', async () => {
+    const { keywordId } = await seed();
+    results = serpAt({ 'self-store': 2, 'rival-store': 1 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+
+    expect((await outbox()).size).toBe(0);
+  });
+
+  it('delivers a milestone only to the channel that lists it', async () => {
+    const { you, keywordId } = await seed();
+    await rankedOn(you, keywordId, 1, 14);
+    const milestones = await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/milestones',
+        events: ['rank.milestone'],
+      },
+    });
+    await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/reviews',
+        events: ['review.negative'],
+      },
+    });
+    results = serpAt({ 'self-store': 8 });
+
+    await asWorkspace(app, () => rankings.checkKeyword(keywordId));
+    await asWorkspace(app, () => flush.flush());
+
+    const queue = app.get<Queue<DeliverAlertPayload>>(
+      getQueueToken(QUEUES.ALERTS),
+      { strict: false },
+    );
+    const jobs = await queue.getJobs([
+      'wait',
+      'paused',
+      'delayed',
+      'waiting-children',
+    ]);
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0].data.webhookId).toBe(milestones.id);
+    const batch = jobs[0].data.payload as AlertBatchPayload;
+    expect(batch.scope).toBe('owned_apps');
+    expect(batch.events.map((payload) => payload.event)).toEqual([
+      'rank.milestone',
+    ]);
+    expect(batch.apps[0].rankMilestones).toEqual([
+      expect.objectContaining({ tier: 10, direction: 'entered' }),
     ]);
   });
 });

@@ -12,7 +12,11 @@ import { versusOf, type Versus } from "@/lib/table/facets";
 import { nullsLast } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
-import { comparisonScore, type ComparisonScore } from "./comparison-scores";
+import {
+  comparisonScore,
+  UNNAMED_COMPETITOR,
+  type ComparisonScore,
+} from "./comparison-scores";
 
 interface MatrixCompetitor {
   id: string;
@@ -207,7 +211,7 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
           header: ({ column }) => (
             <SortableHeader
               column={column}
-              title={competitor.name ?? "Competitor"}
+              title={competitor.name ?? UNNAMED_COMPETITOR}
               label={
                 <span className="inline-flex items-center gap-1.5">
                   <span aria-hidden>
@@ -218,7 +222,7 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
                     />
                   </span>
                   <span className="sr-only max-w-32 truncate md:not-sr-only">
-                    {competitor.name ?? "Competitor"}
+                    {competitor.name ?? UNNAMED_COMPETITOR}
                   </span>
                 </span>
               }

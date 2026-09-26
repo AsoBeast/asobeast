@@ -13,6 +13,10 @@ import type {
   FirstRunStatus,
   KeywordComparison,
   KeywordCountrySummary,
+  KeywordSource,
+  ChangeImpactReport,
+  ChangeImpactWindow,
+  ChangeImpactWindowDays,
   ChangeTimeline,
   CompetitorItem,
   HealthStatus,
@@ -26,10 +30,12 @@ import type {
   RatingsHistory,
   ReviewList,
   SerpMovers,
+  SerpSnapshot,
   AppAuditResult,
   AuditRecommendation,
   AuditTarget,
   MetadataAuditResult,
+  MetadataDraft,
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
@@ -220,6 +226,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
     text: "focus timer",
+    tags: ["core", "testing", "students", "exam season", "brand"],
     country: "us",
     serpVolatility7d: 8,
     source: "TITLE",
@@ -257,6 +264,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-2",
     text: "pomodoro",
+    tags: ["core", "brand"],
     country: "us",
     serpVolatility7d: 72,
     source: "SUBTITLE",
@@ -345,6 +353,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-5",
     text: "time blocking",
+    tags: ["testing"],
+    note: "Seasonal <push> in May\nKeep for exam season",
     country: "us",
     serpVolatility7d: 50,
     source: "COMPETITOR",
@@ -442,6 +452,66 @@ export const APP_1_SERP_MOVERS: SerpMovers = {
       isCompetitor: false,
     },
   ],
+};
+
+export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
+  "kw-1": {
+    keywordId: "kw-1",
+    text: "focus timer",
+    date: utcDaysAgo(0),
+    entries: [
+      {
+        position: 1,
+        storeAppId: "555000111",
+        title: "Deep Work Sessions",
+        developer: "Nordlys Labs",
+        ratingAvg: 4.7,
+        ratingCount: 8400,
+        appId: null,
+        isCompetitor: false,
+      },
+      {
+        position: 2,
+        storeAppId: "555000222",
+        title: "Tomato Clock",
+        developer: "Bitwise Studio",
+        ratingAvg: 4.1,
+        ratingCount: 1900,
+        appId: null,
+        isCompetitor: false,
+      },
+      {
+        position: 3,
+        storeAppId: "123456789",
+        title: "Focus Timer",
+        developer: "Focus Labs",
+        ratingAvg: 4.8,
+        ratingCount: 24000,
+        appId: "app-1",
+        isCompetitor: false,
+      },
+      {
+        position: 4,
+        storeAppId: "comp-store",
+        title: "Rival Focus",
+        developer: "Rival Labs",
+        ratingAvg: 4.5,
+        ratingCount: 12000,
+        appId: "comp-1",
+        isCompetitor: true,
+      },
+      {
+        position: 5,
+        storeAppId: "stranger-store",
+        title: "Newcomer Timer",
+        developer: null,
+        ratingAvg: null,
+        ratingCount: null,
+        appId: null,
+        isCompetitor: false,
+      },
+    ],
+  },
 };
 
 export const APP_1_SUMMARY: AppSummary = {
@@ -914,6 +984,159 @@ const APP_1_CHANGES: ChangeTimeline = {
       after: null,
       capturedAt: utcTimestampDaysAgo(12),
     },
+    {
+      id: "app-chg-6",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.3.0",
+      after: "2.4.0",
+      capturedAt: utcTimestampDaysAgo(40),
+    },
+    {
+      id: "app-chg-7",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshots",
+      before: "6",
+      after: "8",
+      capturedAt: utcTimestampDaysAgo(70),
+    },
+  ],
+};
+
+function openWindow(
+  status: "pending" | "unmeasured",
+  changedDaysAgo: number,
+  days: ChangeImpactWindowDays,
+  overlappingChanges: string[] = [],
+): ChangeImpactWindow {
+  return {
+    days,
+    status,
+    targetDate: utcDaysAgo(changedDaysAgo - days),
+    measuredOn: null,
+    movement: null,
+    medianPositionChange: null,
+    visibilityBefore: null,
+    visibilityAfter: null,
+    visibilityChange: null,
+    overlappingChanges,
+  };
+}
+
+function emptyChangeImpact(detail: AppDetail): ChangeImpactReport {
+  return {
+    appId: detail.id,
+    country: detail.country,
+    days: 90,
+    totalChanges: 0,
+    items: [],
+  };
+}
+
+export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
+  appId: "app-1",
+  country: "us",
+  days: 90,
+  totalChanges: 4,
+  items: [
+    {
+      changedOn: utcDaysAgo(1),
+      fields: ["title", "description"],
+      baselineDate: utcDaysAgo(2),
+      windows: [
+        openWindow("pending", 1, 7),
+        openWindow("pending", 1, 14),
+        openWindow("pending", 1, 28),
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(12),
+      fields: ["icon"],
+      baselineDate: utcDaysAgo(13),
+      windows: [
+        {
+          days: 7,
+          status: "measured",
+          targetDate: utcDaysAgo(5),
+          measuredOn: utcDaysAgo(5),
+          movement: {
+            improved: 2,
+            declined: 1,
+            unchanged: 1,
+            entered: 1,
+            exited: 0,
+            measured: 5,
+          },
+          medianPositionChange: -3,
+          visibilityBefore: 38.4,
+          visibilityAfter: 42.1,
+          visibilityChange: 3.7,
+          overlappingChanges: [],
+        },
+        openWindow("pending", 12, 14, [utcDaysAgo(1)]),
+        openWindow("pending", 12, 28, [utcDaysAgo(1)]),
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(40),
+      fields: ["version"],
+      baselineDate: utcDaysAgo(41),
+      windows: [
+        {
+          days: 7,
+          status: "measured",
+          targetDate: utcDaysAgo(33),
+          measuredOn: utcDaysAgo(34),
+          movement: {
+            improved: 1,
+            declined: 2,
+            unchanged: 1,
+            entered: 0,
+            exited: 1,
+            measured: 5,
+          },
+          medianPositionChange: 2,
+          visibilityBefore: 40.2,
+          visibilityAfter: 37.9,
+          visibilityChange: -2.3,
+          overlappingChanges: [],
+        },
+        openWindow("unmeasured", 40, 14),
+        {
+          days: 28,
+          status: "measured",
+          targetDate: utcDaysAgo(12),
+          measuredOn: utcDaysAgo(12),
+          movement: {
+            improved: 3,
+            declined: 1,
+            unchanged: 1,
+            entered: 0,
+            exited: 0,
+            measured: 5,
+          },
+          medianPositionChange: -1,
+          visibilityBefore: 40.2,
+          visibilityAfter: 41.5,
+          visibilityChange: 1.3,
+          overlappingChanges: [utcDaysAgo(12)],
+        },
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(70),
+      fields: ["screenshots"],
+      baselineDate: null,
+      windows: [
+        openWindow("unmeasured", 70, 7),
+        openWindow("unmeasured", 70, 14),
+        openWindow("unmeasured", 70, 28),
+      ],
+    },
   ],
 };
 
@@ -1047,6 +1270,68 @@ export const APP_BULK_DETAIL: AppDetail = {
   ...APP_LONG_DETAIL,
   id: "app-bulk",
   name: "Bulk Keywords App",
+};
+
+export const APP_COMBOS_KEYWORD_FIELD = "mood tracker,daily planner,water";
+
+const APP_COMBOS_TRACKED: ReadonlyArray<
+  readonly [string, KeywordSource, boolean]
+> = [
+  ["mood journal", "TITLE", true],
+  ["mood tracker", "KEYWORD_FIELD", true],
+  ["daily planner", "KEYWORD_FIELD", true],
+  ["water", "KEYWORD_FIELD", true],
+  ["sleep notes app", "MANUAL", true],
+  ["diary daily", "MANUAL", true],
+  ["gratitude", "MANUAL", false],
+];
+
+export const APP_COMBOS_KEYWORDS: TrackedKeywordItem[] = APP_COMBOS_TRACKED.map(
+  ([text, source, active], index) => ({
+    keywordId: `kw-combos-${index + 1}`,
+    text,
+    country: "us",
+    serpVolatility7d: null,
+    source,
+    active,
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+  }),
+);
+
+export const APP_COMBOS_DETAIL: AppDetail = {
+  id: "app-combos",
+  store: "APP_STORE",
+  storeAppId: "555987654",
+  country: "us",
+  name: "Mood Journal",
+  iconUrl: null,
+  createdAt: utcTimestampDaysAgo(12),
+  latestSnapshot: {
+    id: "snap-combos",
+    title: "Mood Journal: Daily Diary",
+    subtitle: "Gratitude log & sleep notes",
+    summary: "Write a short entry every evening.",
+    ratingAvg: 4.6,
+    ratingCount: 2100,
+    installs: null,
+    price: 0,
+    version: "2.3.0",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  competitors: [],
+  group: null,
 };
 
 export const APP_LONG_ICON_URL =
@@ -1352,6 +1637,7 @@ export interface AppDataset {
   ratingsHistory: RatingsHistory;
   ratingsHistogram: RatingsHistogram;
   changes: ChangeTimeline;
+  changeImpact: ChangeImpactReport;
   discovery: CompetitorDiscovery;
   comparison: KeywordComparison;
 }
@@ -1371,6 +1657,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: APP_1_RATINGS_HISTORY,
     ratingsHistogram: APP_1_RATINGS_HISTOGRAM,
     changes: APP_1_CHANGES,
+    changeImpact: APP_1_CHANGE_IMPACT,
     discovery: APP_1_DISCOVERY,
     comparison: APP_1_COMPARISON,
   },
@@ -1388,6 +1675,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_2_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1405,6 +1693,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_LONG_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1422,6 +1711,25 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_BULK_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  "app-combos": {
+    detail: APP_COMBOS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_COMBOS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1439,6 +1747,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_UNCHECKED_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1456,6 +1765,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_1_DE_DETAIL),
     discovery: APP_1_DE_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1473,6 +1783,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_GP_DETAIL),
     discovery: APP_GP_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1490,9 +1801,22 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(IMPORTED_APP_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
+};
+
+export const APP_TAGS_ID = "app-tags";
+
+DATASETS[APP_TAGS_ID] = {
+  ...DATASETS["app-1"],
+  detail: { ...APP_1_DETAIL, id: APP_TAGS_ID, name: "Tag Lab" },
+  keywords: APP_1_KEYWORDS.slice(0, 3).map((keyword) => ({
+    ...keyword,
+    tags: [],
+    note: null,
+  })),
 };
 
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];
@@ -1567,6 +1891,7 @@ export const PORTFOLIO: PortfolioSummary = {
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "us", keywordCount: APP_1_KEYWORDS.length },
   { country: "pl", keywordCount: 0 },
+  { country: "gb", keywordCount: 0 },
 ];
 
 export const BUDGET: DailyBudget = {
@@ -2151,6 +2476,83 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   ],
   keywordFieldSuggestion: null,
 };
+
+export const METADATA_DRAFTS: MetadataDraft[] = [
+  {
+    field: "title",
+    value: "Focus Timer: Pomodoro",
+    chars: 21,
+    limit: 30,
+    issues: [],
+    rationale: "Leads with the primary keyword.",
+  },
+  {
+    field: "subtitle",
+    value: "Deep work sessions",
+    chars: 18,
+    limit: 30,
+    issues: [],
+    rationale: "Adds a secondary keyword without a title word.",
+  },
+  {
+    field: "keywordField",
+    value: "study,habit,productivity",
+    chars: 24,
+    limit: 100,
+    issues: [],
+    rationale: "Covers uncovered terms.",
+  },
+];
+
+const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+
+const LONG_KEYWORD_FIELD =
+  "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
+
+const withLongKeywordField = <
+  T extends { field: string; value: string | null; chars: number },
+>(
+  row: T,
+): T =>
+  row.field === "keywordField"
+    ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
+    : row;
+
+export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
+  ...METADATA_AUDIT,
+  appId: "app-long",
+  fields: [
+    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    {
+      field: "description",
+      value: LONG_DESCRIPTION,
+      chars: LONG_DESCRIPTION.length,
+      limit: 4000,
+      indexed: false,
+      issues: [
+        {
+          rule: "no-social-proof",
+          severity: "info",
+          message: "No social proof (awards, press, user counts) detected.",
+        },
+      ],
+    },
+  ],
+};
+
+export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
+  (draft) => ({
+    ...withLongKeywordField(draft),
+    issues: [
+      {
+        rule: "under-utilized",
+        severity: "warn",
+        message: `Only ${draft.chars} of ${draft.limit} characters used.`,
+      },
+    ],
+  }),
+);
 
 const auditCheck = (
   id: string,

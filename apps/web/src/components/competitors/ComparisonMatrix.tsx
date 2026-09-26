@@ -49,7 +49,12 @@ export function ComparisonMatrix({ id }: { id: string }) {
               : "No comparison data yet. Track keywords and run a daily check to populate positions."}
           </div>
         ) : (
-          <ComparisonTable data={data} competitors={competitors} />
+          <ComparisonTable
+            data={data}
+            competitors={competitors}
+            appId={id}
+            onlyGaps={onlyGaps}
+          />
         )}
       </CardContent>
     </Card>

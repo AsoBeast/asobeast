@@ -1,6 +1,12 @@
 import { QueryClient, type QueryKey } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { AppAuditResult, AuditAiRunState } from "@asobeast/shared";
+import { QUERY_BOUNDS } from "@asobeast/shared";
+import type {
+  AppAuditResult,
+  AuditAiRunState,
+  EmailAlertItem,
+  WebhookItem,
+} from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
   actionKeys,
@@ -18,6 +24,7 @@ import {
   authStatusKey,
   budgetKey,
   categoryRanksOptions,
+  changeImpactOptions,
   changesOptions,
   competitorsOptions,
   comparisonOptions,
@@ -35,6 +42,8 @@ import {
   invalidateKeywords,
   invalidateLinkMutation,
   invalidateWebhookMutation,
+  seedEmailAlert,
+  seedWebhook,
   keywordCountriesOptions,
   keywordsOptions,
   marketAvailabilityOptions,
@@ -43,6 +52,8 @@ import {
   rankingsOptions,
   ratingsHistogramOptions,
   ratingsHistoryOptions,
+  REVIEWS_EXPORT_LIMIT,
+  reviewsExportOptions,
   reviewsOptions,
   serpMoversOptions,
   serpOptions,
@@ -117,9 +128,19 @@ const APP_SCOPED_OPTIONS = [
   ["discovery", discoveryOptions(APP, 30), appKeys.discovery(APP, 30)],
   ["changes", changesOptions(APP, 90), appKeys.changes(APP, 90)],
   [
+    "changeImpact",
+    changeImpactOptions(APP, 90, "us"),
+    appKeys.changeImpact(APP, 90, "us"),
+  ],
+  [
     "reviews",
     reviewsOptions(APP, { score: 1 }),
     appKeys.reviews(APP, { score: 1 }),
+  ],
+  [
+    "reviewsExport",
+    reviewsExportOptions(APP, { score: 1 }),
+    appKeys.reviews(APP, { score: 1, limit: QUERY_BOUNDS.reviewsLimit.max }),
   ],
   [
     "ratingsHistory",
@@ -146,7 +167,17 @@ const ROOT_TO_LEAF = [
   ["serpMoversRoot", appKeys.serpMoversRoot(APP), appKeys.serpMovers(APP, 7)],
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],
   ["changesRoot", appKeys.changesRoot(APP), appKeys.changes(APP, 90)],
+  [
+    "changesRoot impact",
+    appKeys.changesRoot(APP),
+    appKeys.changeImpact(APP, 90, "us"),
+  ],
   ["reviewsRoot", appKeys.reviewsRoot(APP), appKeys.reviews(APP, { score: 1 })],
+  [
+    "reviewsRoot to an export",
+    appKeys.reviewsRoot(APP),
+    reviewsExportOptions(APP, { score: 1 }).queryKey,
+  ],
   ["actions all", actionKeys.all, actionKeys.list({}, undefined)],
   ["actions appRoot", appKeys.detail(APP), actionKeys.appRoot(APP)],
 ] as const;
@@ -189,11 +220,27 @@ describe("appKeys", () => {
     },
   );
 
+  it("keys a reviews export apart from the list it was filtered from", () => {
+    expect(reviewsExportOptions(APP, { score: 1 }).queryKey).not.toEqual(
+      reviewsOptions(APP, { score: 1 }).queryKey,
+    );
+    expect(REVIEWS_EXPORT_LIMIT).toBe(QUERY_BOUNDS.reviewsLimit.max);
+  });
+
   it("keeps every app scoped key distinct", () => {
     const keys = APP_SCOPED_OPTIONS.map(([, options]) =>
       JSON.stringify(options.queryKey),
     );
     expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("keys a change impact report by its window and its market", () => {
+    expect(appKeys.changeImpact(APP, 90, "us")).not.toEqual(
+      appKeys.changeImpact(APP, 90, "gb"),
+    );
+    expect(appKeys.changeImpact(APP, 90, "us")).not.toEqual(
+      appKeys.changeImpact(APP, 30, "us"),
+    );
   });
 
   it("keys a deep search by its storefront", () => {
@@ -305,6 +352,54 @@ describe("invalidation sets", () => {
     ["email alert", invalidateEmailAlertMutation, emailAlertKeys.all],
   ] as const)("invalidates only the %s list", (_name, invalidate, key) => {
     expect(invalidatedKeys(invalidate)).toEqual([key]);
+  });
+});
+
+describe("seeding a saved alert channel", () => {
+  const webhook = (id: string, url: string): WebhookItem => ({
+    id,
+    url,
+    events: ["metadata.changed"],
+    active: true,
+    hasSecret: false,
+    createdAt: "2026-09-25T00:00:00.000Z",
+  });
+
+  it("replaces only the saved webhook in the cached list", () => {
+    const client = new QueryClient();
+    const other = webhook("hook-2", "https://hooks.example.com/b");
+    client.setQueryData(webhookKeys.all, [
+      webhook("hook-1", "https://hooks.example.com/a"),
+      other,
+    ]);
+    const saved: WebhookItem = {
+      ...webhook("hook-1", "https://hooks.example.com/a"),
+      events: ["rank.milestone"],
+    };
+
+    seedWebhook(client, saved);
+
+    expect(client.getQueryData(webhookKeys.all)).toEqual([saved, other]);
+  });
+
+  it("replaces the saved email alert and leaves an empty cache empty", () => {
+    const client = new QueryClient();
+    const saved: EmailAlertItem = {
+      id: "email-1",
+      email: "ops@example.com",
+      events: ["rank.first"],
+      active: true,
+      createdAt: "2026-09-25T00:00:00.000Z",
+    };
+
+    seedEmailAlert(client, saved);
+    expect(client.getQueryData(emailAlertKeys.all)).toBeUndefined();
+
+    client.setQueryData(emailAlertKeys.all, [
+      { ...saved, events: ["metadata.changed"] },
+    ]);
+    seedEmailAlert(client, saved);
+    expect(client.getQueryData(emailAlertKeys.all)).toEqual([saved]);
   });
 });
 

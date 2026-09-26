@@ -1,8 +1,15 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useQueryState } from "nuqs";
+import { toast } from "sonner";
 import type { ReviewItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,15 +28,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { ReviewFilters } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { formatDate } from "@/lib/format";
-import { reviewsOptions } from "@/lib/queries";
+import {
+  REVIEWS_EXPORT_LIMIT,
+  reviewsExportOptions,
+  reviewsOptions,
+} from "@/lib/queries";
 import { reviewScoreParser, reviewVersionParser } from "@/lib/search-params";
+import { useSingleFlight } from "@/lib/single-flight";
+import { exportReviews, truncatedExportNotice } from "./review-csv";
 import { ReviewsListSkeleton } from "./skeletons";
 
 const STAR_FILTERS = [5, 4, 3, 2, 1] as const;
 const LOW_SCORE = 2;
 const CLAMP_ABOVE = 240;
+const EXPORT_SCOPE = `Exports the newest ${REVIEWS_EXPORT_LIMIT} reviews that match the filters`;
+
+function reviewFilters(score: number | null, version: string): ReviewFilters {
+  return { score: score ?? undefined, version: version || undefined };
+}
 
 function Stars({ score }: { score: number }) {
   const low = score <= LOW_SCORE;
@@ -115,10 +134,7 @@ function ReviewCards({
   onClearFilters: () => void;
 }) {
   const { data } = useSuspenseQuery(
-    reviewsOptions(id, {
-      score: score ?? undefined,
-      version: version || undefined,
-    }),
+    reviewsOptions(id, reviewFilters(score, version)),
   );
 
   const filtered = score !== null || version !== "";
@@ -182,6 +198,44 @@ function VersionSelect({
   );
 }
 
+function ExportReviewsButton({
+  id,
+  filters,
+}: {
+  id: string;
+  filters: ReviewFilters;
+}) {
+  const queryClient = useQueryClient();
+  const { data } = useQuery(reviewsOptions(id, filters));
+  const exporting = useMutation({
+    mutationFn: () => queryClient.fetchQuery(reviewsExportOptions(id, filters)),
+    onSuccess: (list) => {
+      exportReviews(id, list.reviews);
+      const notice = truncatedExportNotice(list);
+      if (notice) toast.info(notice);
+    },
+    onError: () => {
+      toast.error("Could not export reviews");
+    },
+  });
+  const exportOnce = useSingleFlight(exporting);
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="ml-auto"
+      disabled={(data?.total ?? 0) === 0 || exporting.isPending}
+      onClick={() => exportOnce()}
+      aria-label="Export reviews to CSV"
+      title={EXPORT_SCOPE}
+    >
+      <Download />
+      Export CSV
+    </Button>
+  );
+}
+
 export function ReviewsList({ id }: { id: string }) {
   const [score, setScore] = useQueryState("score", reviewScoreParser);
   const [version, setVersion] = useQueryState("version", reviewVersionParser);
@@ -198,23 +252,29 @@ export function ReviewsList({ id }: { id: string }) {
         </Suspense>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div
-          className="flex flex-wrap gap-1.5"
-          role="group"
-          aria-label="Filter by star rating"
-        >
-          {STAR_FILTERS.map((star) => (
-            <Button
-              key={star}
-              size="sm"
-              variant={score === star ? "default" : "outline"}
-              aria-pressed={score === star}
-              onClick={() => void setScore(score === star ? null : star)}
-            >
-              {star}
-              <span aria-hidden>{"★"}</span>
-            </Button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex flex-wrap gap-1.5"
+            role="group"
+            aria-label="Filter by star rating"
+          >
+            {STAR_FILTERS.map((star) => (
+              <Button
+                key={star}
+                size="sm"
+                variant={score === star ? "default" : "outline"}
+                aria-pressed={score === star}
+                onClick={() => void setScore(score === star ? null : star)}
+              >
+                {star}
+                <span aria-hidden>{"★"}</span>
+              </Button>
+            ))}
+          </div>
+          <ExportReviewsButton
+            id={id}
+            filters={reviewFilters(score, version)}
+          />
         </div>
         <Suspense fallback={<ReviewsListSkeleton />}>
           <ReviewCards

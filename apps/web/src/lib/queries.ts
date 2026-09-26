@@ -1,9 +1,12 @@
 import type {
   AlertChannel,
   AppAuditResult,
+  EmailAlertItem,
   FirstRunStatus,
   KeywordSuggestionStrategy,
+  WebhookItem,
 } from "@asobeast/shared";
+import { QUERY_BOUNDS } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
   getActionAiStatus,
@@ -25,6 +28,7 @@ import {
   getBillingCatalog,
   getBudget,
   getCategoryRanks,
+  getChangeImpact,
   getChanges,
   getEmailAlerts,
   getComparison,
@@ -104,6 +108,8 @@ export const appKeys = {
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
   changes: (id: string, days: number) =>
     [...appKeys.detail(id), "changes", { days }] as const,
+  changeImpact: (id: string, days: number, country: string) =>
+    [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
     [...appKeys.detail(id), "reviews", filters] as const,
@@ -419,11 +425,28 @@ export const changesOptions = (id: string, days: number) =>
     queryFn: () => getChanges(id, days),
   });
 
+export const changeImpactOptions = (
+  id: string,
+  days: number,
+  country: string,
+) =>
+  queryOptions({
+    queryKey: appKeys.changeImpact(id, days, country),
+    queryFn: () => getChangeImpact(id, days, country),
+  });
+
 export const reviewsOptions = (id: string, filters: ReviewFilters) =>
   queryOptions({
     queryKey: appKeys.reviews(id, filters),
     queryFn: () => getReviews(id, filters),
   });
+
+export const REVIEWS_EXPORT_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
+
+export const reviewsExportOptions = (
+  id: string,
+  filters: Omit<ReviewFilters, "limit">,
+) => reviewsOptions(id, { ...filters, limit: REVIEWS_EXPORT_LIMIT });
 
 export const ratingsHistoryOptions = (id: string, params: RangeParams) =>
   queryOptions({
@@ -564,4 +587,26 @@ export function invalidateWebhookMutation(client: QueryClient): void {
 
 export function invalidateEmailAlertMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: emailAlertKeys.all });
+}
+
+function replaceRow<T extends { id: string }>(
+  rows: T[] | undefined,
+  item: T,
+): T[] | undefined {
+  return rows?.map((row) => (row.id === item.id ? item : row));
+}
+
+export function seedWebhook(client: QueryClient, webhook: WebhookItem): void {
+  client.setQueryData<WebhookItem[]>(webhookKeys.all, (rows) =>
+    replaceRow(rows, webhook),
+  );
+}
+
+export function seedEmailAlert(
+  client: QueryClient,
+  alert: EmailAlertItem,
+): void {
+  client.setQueryData<EmailAlertItem[]>(emailAlertKeys.all, (rows) =>
+    replaceRow(rows, alert),
+  );
 }
