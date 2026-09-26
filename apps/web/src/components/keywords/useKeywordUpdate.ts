@@ -6,6 +6,7 @@ import type {
 } from "@asobeast/shared";
 import { updateKeyword } from "@/lib/api";
 import { appKeys, invalidateKeywordMutation } from "@/lib/queries";
+import { rollbackKeywordUpdate } from "./keyword-rollback";
 
 export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
   const queryClient = useQueryClient();
@@ -29,9 +30,11 @@ export function useKeywordUpdate(appId: string, keyword: TrackedKeywordItem) {
       );
       return { previous };
     },
-    onError: (_error, _update, context) => {
+    onError: (_error, update, context) => {
       context?.previous.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
+        queryClient.setQueryData<TrackedKeywordItem[]>(key, (current) =>
+          rollbackKeywordUpdate(current, data, keyword.keywordId, update),
+        );
       });
       toast.error(`Could not update ${keyword.text}`);
     },
