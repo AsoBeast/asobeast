@@ -318,6 +318,20 @@ describe('ActionsController (e2e)', () => {
     expect(stored.note).toBeNull();
   });
 
+  it('keeps the stored note when the update omits it', async () => {
+    const id = await seedAction({ note: 'waiting on design' });
+
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE' })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'DONE',
+      note: 'waiting on design',
+    });
+  });
+
   it('refuses to close a resolved action', async () => {
     const id = await seedAction({ status: 'RESOLVED', resolvedAt: new Date() });
 
