@@ -4,6 +4,7 @@ import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 import type { TooltipValueType } from "recharts";
 
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 type ChartTheme = "light" | "dark";
@@ -14,6 +15,24 @@ const THEMES: Array<{ name: ChartTheme; selector: string }> = [
 ];
 
 const INITIAL_DIMENSION = { width: 320, height: 200 };
+
+type ChartSize = { width: number; height: number };
+
+const PRINT_QUERY = "print";
+
+function useScreenChartSize() {
+  const printing = useMediaQuery(PRINT_QUERY);
+  const [screenSize, setScreenSize] = React.useState<ChartSize>();
+
+  const onResize = (width: number, height: number) => {
+    if (!window.matchMedia(PRINT_QUERY).matches) {
+      setScreenSize({ width, height });
+    }
+  };
+
+  return { printSize: printing ? screenSize : undefined, onResize };
+}
+
 type TooltipNameType = number | string;
 
 export type ChartConfig = Record<
@@ -62,6 +81,7 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId();
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, "")}`;
+  const { printSize, onResize } = useScreenChartSize();
 
   return (
     <ChartContext.Provider value={{ config }}>
@@ -77,6 +97,8 @@ function ChartContainer({
         <ChartStyle id={chartId} config={config} />
         <RechartsPrimitive.ResponsiveContainer
           initialDimension={initialDimension}
+          onResize={onResize}
+          {...printSize}
         >
           {children}
         </RechartsPrimitive.ResponsiveContainer>

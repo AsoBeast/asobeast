@@ -43,6 +43,7 @@
   }
 
   [data-slot="chart"] .recharts-responsive-container {
+    width: auto !important;
     height: auto !important;
   }
 
