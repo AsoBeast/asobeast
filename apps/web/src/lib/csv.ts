@@ -4,7 +4,9 @@ function escapeField(value: string | number | null): string {
   }
   const raw = String(value);
   const text =
-    typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : raw;
+    typeof value === "string" && /^[=+\-@\t\r\n]/.test(value)
+      ? `'${value}`
+      : raw;
   if (/[",\r\n]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
   }

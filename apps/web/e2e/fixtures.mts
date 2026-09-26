@@ -30,6 +30,7 @@ import type {
   RatingsHistory,
   ReviewList,
   SerpMovers,
+  SerpSnapshot,
   AppAuditResult,
   AuditRecommendation,
   AuditTarget,
@@ -451,6 +452,66 @@ export const APP_1_SERP_MOVERS: SerpMovers = {
       isCompetitor: false,
     },
   ],
+};
+
+export const SERP_SNAPSHOTS: Record<string, SerpSnapshot> = {
+  "kw-1": {
+    keywordId: "kw-1",
+    text: "focus timer",
+    date: utcDaysAgo(0),
+    entries: [
+      {
+        position: 1,
+        storeAppId: "555000111",
+        title: "Deep Work Sessions",
+        developer: "Nordlys Labs",
+        ratingAvg: 4.7,
+        ratingCount: 8400,
+        appId: null,
+        isCompetitor: false,
+      },
+      {
+        position: 2,
+        storeAppId: "555000222",
+        title: "Tomato Clock",
+        developer: "Bitwise Studio",
+        ratingAvg: 4.1,
+        ratingCount: 1900,
+        appId: null,
+        isCompetitor: false,
+      },
+      {
+        position: 3,
+        storeAppId: "123456789",
+        title: "Focus Timer",
+        developer: "Focus Labs",
+        ratingAvg: 4.8,
+        ratingCount: 24000,
+        appId: "app-1",
+        isCompetitor: false,
+      },
+      {
+        position: 4,
+        storeAppId: "comp-store",
+        title: "Rival Focus",
+        developer: "Rival Labs",
+        ratingAvg: 4.5,
+        ratingCount: 12000,
+        appId: "comp-1",
+        isCompetitor: true,
+      },
+      {
+        position: 5,
+        storeAppId: "stranger-store",
+        title: "Newcomer Timer",
+        developer: null,
+        ratingAvg: null,
+        ratingCount: null,
+        appId: null,
+        isCompetitor: false,
+      },
+    ],
+  },
 };
 
 export const APP_1_SUMMARY: AppSummary = {

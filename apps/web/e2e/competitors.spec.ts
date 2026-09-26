@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
@@ -179,4 +180,72 @@ test("on a phone the matrix names competitors by icon and hides the scores", asy
       discovery.getByRole("columnheader", { name, exact: true }),
     ).toHaveCount(0);
   }
+});
+
+test("exporting competitors downloads one row per tracked competitor", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+  await expect(
+    page.getByText("1 tracked competitor", { exact: true }),
+  ).toBeVisible();
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export competitors to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^competitors-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  const lines = readFileSync(await download.path(), "utf8").split("\r\n");
+  expect(lines[0]).toBe(
+    "\uFEFFcompetitor,store,title,subtitle,summary,rating,ratings,installs,price,version,capturedAt",
+  );
+  expect(lines).toHaveLength(2);
+  expect(lines[1]).toMatch(
+    /^Rival Focus,APP_STORE,Rival Focus,Deep work timer,,4\.5,12000,,0,2\.1\.0,\d{4}-\d{2}-\d{2}T[\d:.]+Z$/,
+  );
+});
+
+test("the comparison export writes the rows the matrix shows, in its order", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors?vs=winning&sort=you&dir=desc");
+  await page.waitForLoadState("networkidle");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^keyword-comparison-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
+    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
+    "time blocking,,,45,>200,winning,false",
+    "focus timer,100,40,3,9,winning,false",
+  ]);
+});
+
+test("with only gaps on, the export is named for the gaps and holds them alone", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors?onlyGaps=true");
+  await page.waitForLoadState("networkidle");
+
+  const [download] = await Promise.all([
+    page.waitForEvent("download"),
+    page.getByRole("button", { name: "Export comparison to CSV" }).click(),
+  ]);
+
+  expect(download.suggestedFilename()).toMatch(
+    /^keyword-gaps-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
+  );
+  expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
+    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
+    "productivity app,100,60,>200,8,losing,true",
+  ]);
 });

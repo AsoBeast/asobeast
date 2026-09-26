@@ -1,11 +1,11 @@
 ---
 title: Export data
-description: The keyword monitor and the rankings view both export CSV. Keyword exports carry the score provenance columns alongside every number.
+description: The keyword monitor, rankings view, competitors page, reviews list and top 10 sheet export CSV. Each file follows the filters you applied.
 icon: file-down
-keywords: ["export","CSV","keywords","rankings","spreadsheet","provenance"]
+keywords: ["export","CSV","keywords","rankings","competitors","keyword gaps","reviews","SERP","spreadsheet","provenance"]
 ---
 
-Both the keyword monitor and the rankings view export the table you are looking at, with the filters you have applied, as a CSV file.
+The keyword monitor, the rankings view, the competitor list and the comparison matrix on the competitors page, the reviews list and the top 10 sheet each export a CSV file that follows the filters you have applied. `<date>` in a file name is the UTC day of the export.
 
 ## Export keywords to CSV
 
@@ -29,7 +29,67 @@ The `scoreComparability` column repeats, on every row, that App Store and Google
 
 ## Export rankings to CSV
 
-The rankings view exports the charted window as one row per date and one column per keyword, named `rankings-<appId>-<from>-<to>.csv`.
+The rankings view exports the charted window as one row per date and one column per keyword, named `rankings-<appId>-<from>-<to>-<date>.csv`, where `<from>` and `<to>` are the first and last day of the window.
+
+## Export competitors to CSV
+
+The competitors page exports one row per tracked competitor from its latest snapshot, named `competitors-<appId>-<date>.csv`. Your own app is not in the file.
+
+| Column | What it holds |
+| --- | --- |
+| `competitor` | The competitor's name |
+| `store` | `APP_STORE` or `GOOGLE_PLAY` |
+| `title`, `subtitle`, `summary` | The listing text of the latest snapshot, where `summary` is the Google Play short description |
+| `rating`, `ratings` | The average rating, unrounded, and the number of ratings |
+| `installs` | The install count |
+| `price` | The price, `0` for a free app |
+| `version` | The latest version |
+| `capturedAt` | When the snapshot was taken, in UTC |
+
+A column the store does not publish stays empty: `subtitle` on Google Play, `summary` and `installs` on the App Store. See [App Store and Google Play](/concepts/stores).
+
+## Export the keyword comparison to CSV
+
+The comparison matrix exports the rows it shows, in the order shown, after the search and the result filter. The file is named `keyword-comparison-<appId>-<date>.csv`, or `keyword-gaps-<appId>-<date>.csv` when **only gaps** is on, and then it holds the gap rows alone.
+
+| Column | What it holds |
+| --- | --- |
+| `keyword` | The tracked phrase |
+| `popularity`, `difficulty` | The scores on the 0 to 100 scale the matrix shows, empty when unscored |
+| `you` | Your position |
+| One column per competitor | That competitor's position, headed by its name |
+| `result` | `winning`, `losing` or `tied`, empty when nobody ranks |
+| `gap` | `true` on the rows the matrix marks as a gap, otherwise `false` |
+
+Positions are written the way the matrix shows them, so an app that does not rank exports as `>200`. Two competitors with the same name get `(2)`, `(3)` after the name so every column header stays unique, and a competitor without a name is headed `Competitor`. What winning, losing, tied and a gap mean is explained in [Read the comparison matrix](/guides/competitors#read-the-comparison-matrix).
+
+## Export reviews to CSV
+
+The reviews list exports the newest 200 reviews that match the star and version filters, newest first, named `reviews-<appId>-<date>.csv`. The reviews endpoint returns at most 200 reviews in one request and does not page, so older reviews are not in the file. When more reviews match, a notice after the download says how many the file holds. Narrow the filters to reach a different set, for example one version at a time.
+
+| Column | What it holds |
+| --- | --- |
+| `reviewedAt` | The review's date in UTC, empty when the store sent none |
+| `score` | 1 to 5 stars |
+| `title`, `text` | The review, with `title` empty when it has none |
+| `version` | The app version the store attached to the review, when it sent one |
+| `author` | The reviewer's display name |
+| `reviewId` | The store's own id for the review |
+
+## Export a SERP snapshot to CSV
+
+The top 10 sheet on the keyword monitor exports the snapshot it shows, one row per result, named `serp-<appId>-<keywordId>-<captured>-<date>.csv`, where `<captured>` is the day the snapshot was taken.
+
+| Column | What it holds |
+| --- | --- |
+| `keyword`, `capturedOn` | The phrase and the snapshot's day, repeated on every row |
+| `position` | 1 to 10 |
+| `app`, `developer` | The result's title and developer |
+| `rating`, `ratings` | Its average rating and rating count |
+| `role` | `you`, `competitor` for an app tracked as a competitor in the workspace, as the sheet's badge shows, or `other` |
+| `storeAppId` | The store's id for the app |
+
+`ratings` stays empty for Google Play keywords, whose search results carry no rating counts. See [App Store and Google Play](/concepts/stores).
 
 ## Are the files safe to open?
 
@@ -47,6 +107,14 @@ For anything scripted, read the API rather than parsing an export. It returns ty
   </Card>
 
   <Card title="Read rankings and SERPs" icon="chart-line" href="/guides/read-rankings">
-    The chart the rankings export is taken from.
+    The chart and the snapshots the rankings and SERP exports are taken from.
+  </Card>
+
+  <Card title="Track competitors" icon="users" href="/guides/competitors">
+    The list and the matrix the competitor exports are taken from.
+  </Card>
+
+  <Card title="Sync reviews and mine keyword ideas" icon="message-square" href="/guides/reviews">
+    Where the exported reviews come from.
   </Card>
 </CardGroup>

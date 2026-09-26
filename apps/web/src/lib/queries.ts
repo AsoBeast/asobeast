@@ -6,6 +6,7 @@ import type {
   KeywordSuggestionStrategy,
   WebhookItem,
 } from "@asobeast/shared";
+import { QUERY_BOUNDS } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
   getActionAiStatus,
@@ -439,6 +440,13 @@ export const reviewsOptions = (id: string, filters: ReviewFilters) =>
     queryKey: appKeys.reviews(id, filters),
     queryFn: () => getReviews(id, filters),
   });
+
+export const REVIEWS_EXPORT_LIMIT = QUERY_BOUNDS.reviewsLimit.max;
+
+export const reviewsExportOptions = (
+  id: string,
+  filters: Omit<ReviewFilters, "limit">,
+) => reviewsOptions(id, { ...filters, limit: REVIEWS_EXPORT_LIMIT });
 
 export const ratingsHistoryOptions = (id: string, params: RangeParams) =>
   queryOptions({

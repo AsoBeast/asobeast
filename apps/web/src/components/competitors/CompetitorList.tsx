@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Trash2 } from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { CompetitorItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -28,6 +28,7 @@ import {
   storeLabel,
 } from "@/lib/format";
 import { useSingleFlight } from "@/lib/single-flight";
+import { exportCompetitors } from "./competitor-csv";
 
 function CompetitorCard({
   id,
@@ -127,11 +128,28 @@ export function CompetitorList({
   id: string;
   competitors: CompetitorItem[];
 }) {
+  const count = competitors.length;
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      {competitors.map((competitor) => (
-        <CompetitorCard key={competitor.id} id={id} competitor={competitor} />
-      ))}
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-body text-muted-foreground">
+          {`${count} tracked ${count === 1 ? "competitor" : "competitors"}`}
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportCompetitors(id, competitors)}
+          aria-label="Export competitors to CSV"
+        >
+          <Download />
+          Export CSV
+        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {competitors.map((competitor) => (
+          <CompetitorCard key={competitor.id} id={id} competitor={competitor} />
+        ))}
+      </div>
     </div>
   );
 }

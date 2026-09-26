@@ -36,6 +36,7 @@ import {
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
+  SERP_SNAPSHOTS,
   WEBHOOKS,
   errorEnvelope,
   rateLimitedEnvelope,
@@ -306,7 +307,7 @@ function sortKeywords(
 
 function appRoute(
   pattern: RegExp,
-  pick: (dataset: (typeof DATASETS)[string]) => unknown,
+  pick: (dataset: (typeof DATASETS)[string], query: URLSearchParams) => unknown,
 ): Route {
   return {
     method: "GET",
@@ -319,7 +320,11 @@ function appRoute(
       }
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
-      json(res, 200, pick(dataset));
+      json(
+        res,
+        200,
+        pick(dataset, new URL(path, "http://localhost").searchParams),
+      );
     },
   };
 }
@@ -1134,6 +1139,17 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/keywords\/([^/]+)\/serp$/,
+    handler: ([keywordId], req, res) => {
+      const snapshot = SERP_SNAPSHOTS[keywordId];
+      if (!snapshot) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, snapshot);
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/jobs\/budget$/,
     handler: (_p, req, res) => {
       const token = cookieValue(req, BUDGET_HOLD_COOKIE);
@@ -1414,9 +1430,13 @@ const routes: Route[] = [
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
     (dataset) => dataset.discovery,
   ),
-  appRoute(
-    /^\/apps\/([^/]+)\/keywords\/compare$/,
-    (dataset) => dataset.comparison,
+  appRoute(/^\/apps\/([^/]+)\/keywords\/compare$/, (dataset, query) =>
+    query.get("onlyGaps") === "true"
+      ? {
+          ...dataset.comparison,
+          rows: dataset.comparison.rows.filter((row) => row.gap),
+        }
+      : dataset.comparison,
   ),
   appRoute(/^\/apps\/([^/]+)\/rankings$/, (dataset) => dataset.rankings),
   appRoute(/^\/apps\/([^/]+)\/serp-movers$/, (dataset) => dataset.serpMovers),
