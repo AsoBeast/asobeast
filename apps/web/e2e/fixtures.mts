@@ -13,6 +13,9 @@ import type {
   FirstRunStatus,
   KeywordComparison,
   KeywordCountrySummary,
+  ChangeImpactReport,
+  ChangeImpactWindow,
+  ChangeImpactWindowDays,
   ChangeTimeline,
   CompetitorItem,
   HealthStatus,
@@ -30,6 +33,7 @@ import type {
   AuditRecommendation,
   AuditTarget,
   MetadataAuditResult,
+  MetadataDraft,
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
@@ -918,6 +922,159 @@ const APP_1_CHANGES: ChangeTimeline = {
       after: null,
       capturedAt: utcTimestampDaysAgo(12),
     },
+    {
+      id: "app-chg-6",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.3.0",
+      after: "2.4.0",
+      capturedAt: utcTimestampDaysAgo(40),
+    },
+    {
+      id: "app-chg-7",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshots",
+      before: "6",
+      after: "8",
+      capturedAt: utcTimestampDaysAgo(70),
+    },
+  ],
+};
+
+function openWindow(
+  status: "pending" | "unmeasured",
+  changedDaysAgo: number,
+  days: ChangeImpactWindowDays,
+  overlappingChanges: string[] = [],
+): ChangeImpactWindow {
+  return {
+    days,
+    status,
+    targetDate: utcDaysAgo(changedDaysAgo - days),
+    measuredOn: null,
+    movement: null,
+    medianPositionChange: null,
+    visibilityBefore: null,
+    visibilityAfter: null,
+    visibilityChange: null,
+    overlappingChanges,
+  };
+}
+
+function emptyChangeImpact(detail: AppDetail): ChangeImpactReport {
+  return {
+    appId: detail.id,
+    country: detail.country,
+    days: 90,
+    totalChanges: 0,
+    items: [],
+  };
+}
+
+export const APP_1_CHANGE_IMPACT: ChangeImpactReport = {
+  appId: "app-1",
+  country: "us",
+  days: 90,
+  totalChanges: 4,
+  items: [
+    {
+      changedOn: utcDaysAgo(1),
+      fields: ["title", "description"],
+      baselineDate: utcDaysAgo(2),
+      windows: [
+        openWindow("pending", 1, 7),
+        openWindow("pending", 1, 14),
+        openWindow("pending", 1, 28),
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(12),
+      fields: ["icon"],
+      baselineDate: utcDaysAgo(13),
+      windows: [
+        {
+          days: 7,
+          status: "measured",
+          targetDate: utcDaysAgo(5),
+          measuredOn: utcDaysAgo(5),
+          movement: {
+            improved: 2,
+            declined: 1,
+            unchanged: 1,
+            entered: 1,
+            exited: 0,
+            measured: 5,
+          },
+          medianPositionChange: -3,
+          visibilityBefore: 38.4,
+          visibilityAfter: 42.1,
+          visibilityChange: 3.7,
+          overlappingChanges: [],
+        },
+        openWindow("pending", 12, 14, [utcDaysAgo(1)]),
+        openWindow("pending", 12, 28, [utcDaysAgo(1)]),
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(40),
+      fields: ["version"],
+      baselineDate: utcDaysAgo(41),
+      windows: [
+        {
+          days: 7,
+          status: "measured",
+          targetDate: utcDaysAgo(33),
+          measuredOn: utcDaysAgo(34),
+          movement: {
+            improved: 1,
+            declined: 2,
+            unchanged: 1,
+            entered: 0,
+            exited: 1,
+            measured: 5,
+          },
+          medianPositionChange: 2,
+          visibilityBefore: 40.2,
+          visibilityAfter: 37.9,
+          visibilityChange: -2.3,
+          overlappingChanges: [],
+        },
+        openWindow("unmeasured", 40, 14),
+        {
+          days: 28,
+          status: "measured",
+          targetDate: utcDaysAgo(12),
+          measuredOn: utcDaysAgo(12),
+          movement: {
+            improved: 3,
+            declined: 1,
+            unchanged: 1,
+            entered: 0,
+            exited: 0,
+            measured: 5,
+          },
+          medianPositionChange: -1,
+          visibilityBefore: 40.2,
+          visibilityAfter: 41.5,
+          visibilityChange: 1.3,
+          overlappingChanges: [utcDaysAgo(12)],
+        },
+      ],
+    },
+    {
+      changedOn: utcDaysAgo(70),
+      fields: ["screenshots"],
+      baselineDate: null,
+      windows: [
+        openWindow("unmeasured", 70, 7),
+        openWindow("unmeasured", 70, 14),
+        openWindow("unmeasured", 70, 28),
+      ],
+    },
   ],
 };
 
@@ -1356,6 +1513,7 @@ export interface AppDataset {
   ratingsHistory: RatingsHistory;
   ratingsHistogram: RatingsHistogram;
   changes: ChangeTimeline;
+  changeImpact: ChangeImpactReport;
   discovery: CompetitorDiscovery;
   comparison: KeywordComparison;
 }
@@ -1375,6 +1533,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: APP_1_RATINGS_HISTORY,
     ratingsHistogram: APP_1_RATINGS_HISTOGRAM,
     changes: APP_1_CHANGES,
+    changeImpact: APP_1_CHANGE_IMPACT,
     discovery: APP_1_DISCOVERY,
     comparison: APP_1_COMPARISON,
   },
@@ -1392,6 +1551,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_2_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1409,6 +1569,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_LONG_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1426,6 +1587,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_BULK_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1443,6 +1605,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_UNCHECKED_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1460,6 +1623,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_1_DE_DETAIL),
     discovery: APP_1_DE_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1477,6 +1641,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_GP_DETAIL),
     discovery: APP_GP_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1494,6 +1659,7 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistory: EMPTY_RATINGS_HISTORY,
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(IMPORTED_APP_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
@@ -1583,6 +1749,7 @@ export const PORTFOLIO: PortfolioSummary = {
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "us", keywordCount: APP_1_KEYWORDS.length },
   { country: "pl", keywordCount: 0 },
+  { country: "gb", keywordCount: 0 },
 ];
 
 export const BUDGET: DailyBudget = {
@@ -2167,6 +2334,83 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   ],
   keywordFieldSuggestion: null,
 };
+
+export const METADATA_DRAFTS: MetadataDraft[] = [
+  {
+    field: "title",
+    value: "Focus Timer: Pomodoro",
+    chars: 21,
+    limit: 30,
+    issues: [],
+    rationale: "Leads with the primary keyword.",
+  },
+  {
+    field: "subtitle",
+    value: "Deep work sessions",
+    chars: 18,
+    limit: 30,
+    issues: [],
+    rationale: "Adds a secondary keyword without a title word.",
+  },
+  {
+    field: "keywordField",
+    value: "study,habit,productivity",
+    chars: 24,
+    limit: 100,
+    issues: [],
+    rationale: "Covers uncovered terms.",
+  },
+];
+
+const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+
+const LONG_KEYWORD_FIELD =
+  "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
+
+const withLongKeywordField = <
+  T extends { field: string; value: string | null; chars: number },
+>(
+  row: T,
+): T =>
+  row.field === "keywordField"
+    ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
+    : row;
+
+export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
+  ...METADATA_AUDIT,
+  appId: "app-long",
+  fields: [
+    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    {
+      field: "description",
+      value: LONG_DESCRIPTION,
+      chars: LONG_DESCRIPTION.length,
+      limit: 4000,
+      indexed: false,
+      issues: [
+        {
+          rule: "no-social-proof",
+          severity: "info",
+          message: "No social proof (awards, press, user counts) detected.",
+        },
+      ],
+    },
+  ],
+};
+
+export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
+  (draft) => ({
+    ...withLongKeywordField(draft),
+    issues: [
+      {
+        rule: "under-utilized",
+        severity: "warn",
+        message: `Only ${draft.chars} of ${draft.limit} characters used.`,
+      },
+    ],
+  }),
+);
 
 const auditCheck = (
   id: string,

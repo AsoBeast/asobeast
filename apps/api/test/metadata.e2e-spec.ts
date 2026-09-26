@@ -4,6 +4,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
+  ApiErrorEnvelope,
   MetadataAssistantResult,
   MetadataAssistantStatus,
   KEYWORD_FIELD_BYTE_LIMIT,
@@ -14,15 +15,19 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
-import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
+import {
+  AiClient,
+  AiStructuredRequest,
+  OPENAI_CLIENT,
+} from '../src/ai/openai.client';
 import { obliterateQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
 const D0 = new Date('2026-07-01T00:00:00.000Z');
 
-const fakeAiClient: AiClient = {
-  model: 'gpt-4o',
-  structured: jest.fn().mockResolvedValue({
+const structured = jest
+  .fn<Promise<unknown>, [AiStructuredRequest]>()
+  .mockResolvedValue({
     drafts: [
       {
         field: 'title',
@@ -40,7 +45,13 @@ const fakeAiClient: AiClient = {
         rationale: 'Covers uncovered terms in singular form.',
       },
     ],
-  }),
+  });
+
+const fakeAiClient: AiClient = { model: 'gpt-4o', structured };
+
+const lastPrompt = (): string => {
+  const part = structured.mock.lastCall?.[0].content[0];
+  return part?.type === 'text' ? part.text : '';
 };
 
 describe('MetadataController (e2e)', () => {
@@ -400,5 +411,107 @@ describe('MetadataController (e2e)', () => {
       .post(`/apps/${id}/metadata/assistant`)
       .send({ fields: ['promotionalText'] })
       .expect(400);
+  });
+
+  it('drafts a chosen localization and names the storefronts that read it', async () => {
+    const id = await seed(false);
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({ localization: 'es-MX' })
+      .expect(201);
+    const result = response.body as MetadataAssistantResult;
+
+    expect(result.localization).toBe('es-MX');
+    expect(result.drafts.map((draft) => draft.field)).toEqual([
+      'title',
+      'subtitle',
+      'keywordField',
+    ]);
+    expect(lastPrompt()).toContain(
+      'Target localization: Spanish (Mexico) (es-MX).',
+    );
+    expect(lastPrompt()).toContain(
+      "Storefronts among this app's markets that read it: US.",
+    );
+  });
+
+  it('echoes no localization for the primary listing', async () => {
+    const id = await seed(false);
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({})
+      .expect(201);
+
+    expect((response.body as MetadataAssistantResult).localization).toBeNull();
+    expect(lastPrompt()).not.toContain('Target localization');
+  });
+
+  it('treats a null localization as the primary listing', async () => {
+    const id = await seed(false);
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({ localization: null })
+      .expect(201);
+
+    expect((response.body as MetadataAssistantResult).localization).toBeNull();
+  });
+
+  it('refuses a localization that is not an app store id', async () => {
+    const id = await seed(false);
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({ localization: 'es-mx' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toContain(
+      'localization must be one of the following values',
+    );
+  });
+
+  it('refuses a localization for a google play app', async () => {
+    const id = await seedPlay();
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({ localization: 'es-MX' })
+      .expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toContain(
+      'GOOGLE_PLAY does not support drafting a localization',
+    );
+  });
+
+  it('names every tracked market that reads the localization and honours the fields', async () => {
+    const id = await seed(false);
+    const keyword = await prisma.keyword.create({
+      data: { text: 'temporizador', store: Store.APP_STORE, country: 'mx' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+
+    const response = await api
+      .post(`/apps/${id}/metadata/assistant`)
+      .send({ localization: 'es-MX', fields: ['keywordField'] })
+      .expect(201);
+
+    expect(
+      (response.body as MetadataAssistantResult).drafts.map(
+        (draft) => draft.field,
+      ),
+    ).toEqual(['keywordField']);
+    expect(lastPrompt()).toContain(
+      "Storefronts among this app's markets that read it: US, MX.",
+    );
+    expect(lastPrompt()).toContain('Draft these fields only: keywordField.');
   });
 });

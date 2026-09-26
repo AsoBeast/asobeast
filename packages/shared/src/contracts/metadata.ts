@@ -1,6 +1,7 @@
 import { KeywordBucket, Store } from '../index';
 import { LintIssue } from '../aso/lint';
 import { MetadataField } from '../aso/limits';
+import { AppStoreLocalization } from '../storefronts/app-store-localizations';
 
 export interface MetadataFieldAudit {
   field: MetadataField;
@@ -51,6 +52,7 @@ export interface MetadataDraft {
 export interface MetadataAssistantResult {
   model: string;
   drafts: MetadataDraft[];
+  localization?: AppStoreLocalization | null;
 }
 
 export interface MetadataAssistantStatus {
@@ -61,4 +63,5 @@ export interface MetadataAssistantStatus {
 export interface MetadataAssistantRequest {
   fields?: MetadataField[];
   instructions?: string;
+  localization?: AppStoreLocalization;
 }

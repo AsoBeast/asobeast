@@ -96,6 +96,111 @@ test("creating an email alert answers with the item", async ({ page }) => {
   } satisfies Partial<EmailAlertItem>);
 });
 
+test("patching a webhook's events answers with the item", async ({ page }) => {
+  const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/patch-seam",
+      events: ["serp.entrant"],
+      secret: "seam-secret",
+    },
+  });
+  const { id } = (await created.json()) as WebhookItem;
+
+  const patched = await page.request.patch(`${MOCK_API_URL}/webhooks/${id}`, {
+    data: { events: ["rank.milestone"] },
+  });
+
+  expect(patched.status()).toBe(200);
+  await expect(patched.json()).resolves.toMatchObject({
+    id,
+    events: ["rank.milestone"],
+    hasSecret: true,
+  } satisfies Partial<WebhookItem>);
+});
+
+test("patching an email alert's events answers with the item", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
+    data: { email: "patch-seam@example.com", events: ["serp.entrant"] },
+  });
+  const { id } = (await created.json()) as EmailAlertItem;
+
+  const patched = await page.request.patch(
+    `${MOCK_API_URL}/email-alerts/${id}`,
+    { data: { events: ["rank.first"] } },
+  );
+
+  expect(patched.status()).toBe(200);
+  await expect(patched.json()).resolves.toMatchObject({
+    id,
+    email: "patch-seam@example.com",
+    events: ["rank.first"],
+  } satisfies Partial<EmailAlertItem>);
+});
+
+test("patching a channel refuses no events and an unknown id", async ({
+  page,
+}) => {
+  const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/empty-seam",
+      events: ["serp.entrant"],
+    },
+  });
+  const { id } = (await created.json()) as WebhookItem;
+
+  const empty = await page.request.patch(`${MOCK_API_URL}/webhooks/${id}`, {
+    data: { events: [] },
+  });
+  const missing = await page.request.patch(`${MOCK_API_URL}/webhooks/missing`, {
+    data: { events: ["rank.first"] },
+  });
+
+  expect(empty.status()).toBe(400);
+  expect(missing.status()).toBe(404);
+});
+
+test("patching a channel refuses a null event list and keeps its events", async ({
+  page,
+}) => {
+  const hook = await page.request.post(`${MOCK_API_URL}/webhooks`, {
+    data: {
+      url: "https://hooks.example.com/null-seam",
+      events: ["serp.entrant"],
+    },
+  });
+  const email = await page.request.post(`${MOCK_API_URL}/email-alerts`, {
+    data: { email: "null-seam@example.com", events: ["serp.entrant"] },
+  });
+  const { id: hookId } = (await hook.json()) as WebhookItem;
+  const { id: emailId } = (await email.json()) as EmailAlertItem;
+
+  const hookPatch = await page.request.patch(
+    `${MOCK_API_URL}/webhooks/${hookId}`,
+    { data: { events: null } },
+  );
+  const emailPatch = await page.request.patch(
+    `${MOCK_API_URL}/email-alerts/${emailId}`,
+    { data: { events: null } },
+  );
+
+  expect(hookPatch.status()).toBe(400);
+  expect(emailPatch.status()).toBe(400);
+  const hooks = (await (
+    await page.request.get(`${MOCK_API_URL}/webhooks`)
+  ).json()) as WebhookItem[];
+  const alerts = (await (
+    await page.request.get(`${MOCK_API_URL}/email-alerts`)
+  ).json()) as EmailAlertItem[];
+  expect(hooks.find((row) => row.id === hookId)?.events).toEqual([
+    "serp.entrant",
+  ]);
+  expect(alerts.find((row) => row.id === emailId)?.events).toEqual([
+    "serp.entrant",
+  ]);
+});
+
 test("creating a webhook answers with the item", async ({ page }) => {
   const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
     data: {

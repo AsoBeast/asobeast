@@ -7,6 +7,7 @@ import {
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
+  APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -209,3 +210,7 @@ export const actionFocusParser = parseAsString.withDefault("");
 
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
+
+export const draftLocaleParser = parseAsStringLiteral(
+  APP_STORE_LOCALIZATION_IDS,
+);

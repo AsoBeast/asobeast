@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import {
   AuditCheckStatus,
   ChangeField,
-  CHANGE_FIELDS,
   DailyBudget,
+  isChangeField,
   KeywordCoverageRow,
   MetadataFieldAudit,
   Store,
@@ -184,10 +184,6 @@ function toAuditSnapshot(
       checks: slimChecks(factor.checks),
     })),
   };
-}
-
-function isChangeField(value: string): value is ChangeField {
-  return CHANGE_FIELDS.some((field) => field === value);
 }
 
 function groupBy<T, K>(rows: T[], key: (row: T) => K): Map<K, T[]> {

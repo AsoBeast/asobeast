@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { EVENT_LABELS } from "../alert-events";
 import { DeliveriesSection } from "../DeliveriesSection";
+import { EditEventsDialog } from "./EditEventsDialog";
 
 export function AlertChannelRow({
   label,
@@ -35,6 +36,8 @@ export function AlertChannelRow({
   onTest,
   deletePending,
   onDelete,
+  eventsPending,
+  onEventsSave,
 }: {
   label: string;
   channel: "webhook" | "email";
@@ -50,6 +53,8 @@ export function AlertChannelRow({
   onTest: () => void;
   deletePending: boolean;
   onDelete: () => Promise<unknown>;
+  eventsPending: boolean;
+  onEventsSave: (events: WebhookEvent[]) => Promise<unknown>;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -93,6 +98,12 @@ export function AlertChannelRow({
             {EVENT_LABELS[event]}
           </Badge>
         ))}
+        <EditEventsDialog
+          label={label}
+          events={events}
+          pending={eventsPending}
+          onSave={onEventsSave}
+        />
       </div>
 
       <DeliveriesSection channel={channel} id={id} />
