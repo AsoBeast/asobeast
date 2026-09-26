@@ -3,7 +3,7 @@ title: Countries and markets
 sidebarTitle: Countries
 description: "An app is one row with a home storefront. Each tracked keyword carries its own country, and one search serves the app and every competitor at once."
 icon: globe
-keywords: ["country","storefront","market","multi country","keyword tracking","DEFAULT_COUNTRY"]
+keywords: ["country","storefront","market","multi country","keyword tracking","DEFAULT_COUNTRY","localization"]
 ---
 
 You import an app once. The app row carries one home storefront, and every tracked keyword carries its own country, so a single app tracks keywords across as many markets as you want.
@@ -63,3 +63,22 @@ The two lists differ, so the check is made per store. `pw` is an App Store store
 The refusal names the store, for example `zz is not an App Store storefront` or `pw is not a Google Play location`. It applies to importing an app, adding keywords, reactivating a paused keyword, deep search, keyword suggestions and the market availability check. A store URL whose country segment or `gl` parameter names no storefront is refused the same way.
 
 An upgrade pauses any keyword that was already tracked in a code that is not a storefront. Its history stays, and it stops producing failed jobs.
+
+## Which localizations does a storefront read?
+
+Apple publishes, for every App Store storefront, a default language and the additional languages it supports, in [App Store localizations](https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/). asobeast carries that table unchanged, for the same 175 storefronts it accepts.
+
+| From Apple's table | Value |
+| --- | --- |
+| Localizations a listing can have | 50 |
+| Storefronts with at least one additional language | 104 |
+| Storefronts with English (U.K.) and nothing else | 71 |
+| Additional languages of the United States | 9: Arabic, Chinese (Simplified), Chinese (Traditional), French, Korean, Portuguese (Brazil), Russian, Spanish (Mexico) and Vietnamese |
+
+Many ASO guides still name only Spanish (Mexico) for the United States. asobeast follows Apple's table.
+
+Apple's page lists languages; it does not describe search. In practice, App Store search in a storefront reads the title, subtitle and keyword field of every localization on that storefront's list, and the words of one localization combine into phrases only with each other. Each additional language is therefore extra room: its own 30 character title, 30 character subtitle and 100 byte keyword field.
+
+asobeast cannot see which of those localizations your listing fills. App Store Connect is private and a store page shows one localization per request, so the metadata workbench lists what each storefront reads without guessing what you have. See [Optimize listing metadata](/guides/metadata-workbench#see-which-localizations-each-storefront-reads).
+
+Google Play has no such list. It shows the listing that matches the device language, so storefront localizations are App Store only.

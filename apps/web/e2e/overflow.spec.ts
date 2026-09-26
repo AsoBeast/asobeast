@@ -10,6 +10,7 @@ const ROUTES = [
   ["play audit", "/apps/app-gp/audit"],
   ["competitors", "/apps/app-1/competitors"],
   ["metadata", "/apps/app-1/metadata"],
+  ["metadata with a long listing", "/apps/app-long/metadata"],
   ["changes", "/apps/app-1/changes"],
 ] as const;
 

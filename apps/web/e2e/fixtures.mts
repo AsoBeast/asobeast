@@ -33,6 +33,7 @@ import type {
   AuditRecommendation,
   AuditTarget,
   MetadataAuditResult,
+  MetadataDraft,
   TrackedKeywordItem,
   VisibilityHistory,
   WebhookItem,
@@ -1732,6 +1733,7 @@ export const PORTFOLIO: PortfolioSummary = {
 export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "us", keywordCount: APP_1_KEYWORDS.length },
   { country: "pl", keywordCount: 0 },
+  { country: "gb", keywordCount: 0 },
 ];
 
 export const BUDGET: DailyBudget = {
@@ -2316,6 +2318,83 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   ],
   keywordFieldSuggestion: null,
 };
+
+export const METADATA_DRAFTS: MetadataDraft[] = [
+  {
+    field: "title",
+    value: "Focus Timer: Pomodoro",
+    chars: 21,
+    limit: 30,
+    issues: [],
+    rationale: "Leads with the primary keyword.",
+  },
+  {
+    field: "subtitle",
+    value: "Deep work sessions",
+    chars: 18,
+    limit: 30,
+    issues: [],
+    rationale: "Adds a secondary keyword without a title word.",
+  },
+  {
+    field: "keywordField",
+    value: "study,habit,productivity",
+    chars: 24,
+    limit: 100,
+    issues: [],
+    rationale: "Covers uncovered terms.",
+  },
+];
+
+const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+
+const LONG_KEYWORD_FIELD =
+  "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
+
+const withLongKeywordField = <
+  T extends { field: string; value: string | null; chars: number },
+>(
+  row: T,
+): T =>
+  row.field === "keywordField"
+    ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
+    : row;
+
+export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
+  ...METADATA_AUDIT,
+  appId: "app-long",
+  fields: [
+    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    {
+      field: "description",
+      value: LONG_DESCRIPTION,
+      chars: LONG_DESCRIPTION.length,
+      limit: 4000,
+      indexed: false,
+      issues: [
+        {
+          rule: "no-social-proof",
+          severity: "info",
+          message: "No social proof (awards, press, user counts) detected.",
+        },
+      ],
+    },
+  ],
+};
+
+export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
+  (draft) => ({
+    ...withLongKeywordField(draft),
+    issues: [
+      {
+        rule: "under-utilized",
+        severity: "warn",
+        message: `Only ${draft.chars} of ${draft.limit} characters used.`,
+      },
+    ],
+  }),
+);
 
 const auditCheck = (
   id: string,

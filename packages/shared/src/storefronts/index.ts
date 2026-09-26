@@ -3,6 +3,8 @@ import { APP_STORE_STOREFRONTS } from './app-store';
 import { GOOGLE_PLAY_STOREFRONTS } from './google-play';
 import { STOREFRONT_LANGUAGES, storefrontLanguage } from './languages';
 
+export * from './app-store-localizations';
+
 export {
   APP_STORE_STOREFRONTS,
   GOOGLE_PLAY_STOREFRONTS,
