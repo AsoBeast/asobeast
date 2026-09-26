@@ -15,6 +15,7 @@ describe("toCsv", () => {
     ["@command", "'@command"],
     ["\tlead", "'\tlead"],
     ["\rlead", `"'\rlead"`],
+    ["\nlead", `"'\nlead"`],
   ])("neutralizes the formula-like value %s", (value, expected) => {
     expect(toCsv(["keyword"], [[value]])).toBe(rows(expected));
   });
