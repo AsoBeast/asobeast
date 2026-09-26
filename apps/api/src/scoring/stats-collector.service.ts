@@ -3,7 +3,6 @@ import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
-import { inferPopularityGenre } from './apple-genres';
 import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
@@ -74,10 +73,7 @@ export class StatsCollectorService {
       keyword,
     );
     const suggestCompleted = reach.status !== 'unavailable';
-    const official = await this.officialPopularity.for(
-      keyword,
-      inferPopularityGenre(results),
-    );
+    const official = await this.officialPopularity.for(keyword);
 
     return {
       stats: {

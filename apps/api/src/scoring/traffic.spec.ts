@@ -136,23 +136,36 @@ describe('computeTraffic on the app store', () => {
     );
   });
 
-  it('caps an unlisted term just below its genre floor', () => {
+  it('scales an unlisted term into the range below the lowest listed value', () => {
     const estimate = modelTraffic(fixtures.F1_HEAD);
     expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeCloseTo(
-      Math.min(estimate, 4),
+      (estimate * 4) / 10,
       6,
     );
     expect(
       computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow: 101 } }),
-    ).toBe(estimate);
+    ).toBeCloseTo(estimate, 6);
+  });
+
+  it('keeps unlisted terms in estimate order instead of tying them at the floor', () => {
+    const head = computeTraffic(fixtures.F10_ABSENT_CAP);
+    const tail = computeTraffic({
+      ...fixtures.F5_TAIL,
+      official: { absentBelow: 41 },
+    });
+    expect(estimateTraffic(fixtures.F1_HEAD)).toBeGreaterThan(
+      estimateTraffic(fixtures.F5_TAIL),
+    );
+    expect(head).toBeGreaterThan(tail);
+    expect(head).toBeLessThanOrEqual(4);
   });
 
   it.each([0, 1, 5])(
-    'never caps an unlisted term below 1.5 for a floor of %s',
+    'never scales an unlisted term under a ceiling of 1.5 for a floor of %s',
     (absentBelow) => {
       expect(
         computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow } }),
-      ).toBeCloseTo(Math.min(modelTraffic(fixtures.F1_HEAD), 1.5), 6);
+      ).toBeCloseTo((modelTraffic(fixtures.F1_HEAD) * 1.5) / 10, 6);
     },
   );
 

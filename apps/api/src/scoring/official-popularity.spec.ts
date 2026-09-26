@@ -7,7 +7,6 @@ interface Dataset {
   latestWeek?: Date | null;
   highest?: number | null;
   floor?: number | null;
-  genreFloors?: Record<string, number>;
 }
 
 const build = ({
@@ -15,7 +14,6 @@ const build = ({
   latestWeek = new Date('2026-09-13T00:00:00Z'),
   highest = 71,
   floor = 41,
-  genreFloors = { GAMES: 56 },
 }: Dataset = {}) => {
   const prisma = {
     searchTermPopularity: {
@@ -24,24 +22,16 @@ const build = ({
         .mockResolvedValue(latestWeek ? { week: latestWeek } : null),
       aggregate: jest
         .fn()
-        .mockImplementation(
-          ({ where }: { where: { term?: string; genre?: string } }) =>
-            Promise.resolve(
-              where.term === undefined
-                ? {
-                    _min: {
-                      popularity:
-                        where.genre === undefined
-                          ? floor
-                          : (genreFloors[where.genre] ?? null),
-                    },
-                  }
-                : {
-                    _max: {
-                      popularity: where.term === 'quiz' ? highest : null,
-                    },
+        .mockImplementation(({ where }: { where: { term?: string } }) =>
+          Promise.resolve(
+            where.term === undefined
+              ? { _min: { popularity: floor } }
+              : {
+                  _max: {
+                    popularity: where.term === 'quiz' ? highest : null,
                   },
-            ),
+                },
+          ),
         ),
     },
   };
@@ -76,7 +66,7 @@ describe('OfficialPopularityLookup', () => {
     });
   });
 
-  it('caps a term missing from a loaded week below its floor', async () => {
+  it('places a term missing from a loaded week below its lowest value', async () => {
     const { lookup, prisma } = build();
 
     await expect(lookup.for(keyword('geo quiz world'))).resolves.toEqual({
@@ -87,19 +77,6 @@ describe('OfficialPopularityLookup', () => {
       _min: { popularity: true },
     });
   });
-
-  it.each([
-    ['its own category', 'GAMES', 56],
-    ['the whole week when its category has no terms', 'SPORTS', 41],
-  ])(
-    'caps a missing term below the floor of %s',
-    async (_name, genre, floor) => {
-      const { lookup } = build();
-      await expect(
-        lookup.for(keyword('geo quiz world'), genre),
-      ).resolves.toEqual({ absentBelow: floor });
-    },
-  );
 
   it('only reads a week from the last 28 days', async () => {
     jest.useFakeTimers().setSystemTime(new Date('2026-09-21T00:00:00Z'));

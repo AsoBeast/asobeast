@@ -211,7 +211,7 @@ The result is clamped to the range 1 to 100. You can override relevance per trac
 Yes, with an Apple Ads API key. Apple publishes a weekly search popularity from 1 to 100 per storefront and genre for its most searched terms. With the key configured, asobeast syncs the newest complete week every Monday and, for App Store keywords:
 
 - uses Apple's number for a term Apple lists, with the source `APPLE_ADS_POPULARITY` and high confidence;
-- caps the estimate for a term Apple does not list below the lowest popularity Apple published that week in the term's own genre, because the list covers the 500 most searched terms of each genre and the bars differ: in one US week the lowest listed term read 41 in Sports and 56 in Games. The genre is the one most of the first ten results belong to, and when none of them maps to a genre Apple reports, the lowest value of the whole week applies. The cap never goes under 15 on the shown scale.
+- places a term Apple does not list below the lowest popularity Apple published that week, because Apple lists every term searched at least 500 times that week, up to the 500 most searched of each genre. The estimate is scaled into the range under that value rather than cut off at it, so unlisted terms keep the order the estimate gives them instead of tying at one number: with a lowest listed value of 41, an estimate of 60 shows as 24 and an estimate of 30 as 12. The whole week's lowest value applies to every term, because the genre a search belongs to cannot be read reliably from its results. The range never ends under 15 on the shown scale.
 
 A week older than 28 days is ignored, so a lapsed key falls back to the estimate instead of serving old numbers. A week whose write fails part way is removed and synced again.
 
