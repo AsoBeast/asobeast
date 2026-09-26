@@ -16,11 +16,11 @@ import {
 } from '@asobeast/shared';
 
 export class UpdateWebhookDto implements WebhookUpdateRequest {
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   url?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @ArrayNotEmpty()
   @IsIn(WEBHOOK_EVENTS, { each: true })
@@ -32,7 +32,7 @@ export class UpdateWebhookDto implements WebhookUpdateRequest {
   @MinLength(8)
   secret?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
 }

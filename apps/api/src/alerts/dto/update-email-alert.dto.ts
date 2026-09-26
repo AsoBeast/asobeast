@@ -4,7 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
-  IsOptional,
+  ValidateIf,
 } from 'class-validator';
 import {
   EmailAlertUpdateRequest,
@@ -13,17 +13,17 @@ import {
 } from '@asobeast/shared';
 
 export class UpdateEmailAlertDto implements EmailAlertUpdateRequest {
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsEmail()
   email?: string;
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsArray()
   @ArrayNotEmpty()
   @IsIn(WEBHOOK_EVENTS, { each: true })
   events?: WebhookEvent[];
 
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
 }
