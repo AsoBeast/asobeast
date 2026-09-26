@@ -355,12 +355,14 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence.officialPopularityUsed).toBe(false);
   });
 
-  it('reads google play completions of the keyword as reach', async () => {
+  it('reads only the exact google play phrase as reach', async () => {
     const suggest = jest.fn((term: string) =>
       Promise.resolve(
-        term === 'puzzle game' || term === 'pu'
+        term === 'pu'
           ? [{ term: 'puzzle games' }, { term: 'puzzle game offline' }]
-          : [{ term: 'pinterest' }],
+          : term === 'puzzle game' || term === 'puz'
+            ? [{ term: 'puzzle game' }]
+            : [{ term: 'pinterest' }],
       ),
     );
     const { registry } = buildGplayProvider({ suggest });
@@ -374,7 +376,7 @@ describe('StatsCollectorService', () => {
 
     expect(collected?.stats.suggest).toEqual({
       status: 'hit',
-      prefixLength: 2,
+      prefixLength: 3,
       position: 1,
     });
   });

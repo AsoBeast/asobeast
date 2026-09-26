@@ -22,7 +22,9 @@ const extendsKeyword = (term: string, target: string): boolean =>
   );
 
 const matches = (term: string, target: string, match: SuggestMatch) =>
-  match === 'exact' ? term === target : extendsKeyword(term, target);
+  match === 'exact' || target.includes(' ')
+    ? term === target
+    : extendsKeyword(term, target);
 
 const positionIn = (
   list: Array<{ term: string }>,

@@ -57,7 +57,7 @@ Google Play popularity starts from suggest reach: how early the store offers the
 | Suggests it only once the whole phrase is typed, however short the phrase is | 1.5 |
 | Never suggests it | 0 |
 
-Each position below the first in the suggestion list takes 3 percent off. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. Google Play never suggests the typed phrase itself, only longer searches that begin with it, so a suggestion counts when it is the phrase in the plural or continues it with more words. A search that only shares its first letters does not count.
+Each position below the first in the suggestion list takes 3 percent off. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
 
 The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched. Titles are matched as on the App Store.
 
@@ -117,7 +117,7 @@ Every persisted score is stored with the provenance needed to audit or recompute
 | Field | Example | Why it is stored |
 | --- | --- | --- |
 | Scoring source | `APPLE_SEARCH_SIGNALS`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH`, `APPLE_SUGGEST_REACH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
-| Formula version | `app-store-v2`, `google-play-v2` | Which calculation produced it, so old rows stay interpretable |
+| Formula version | `app-store-v2`, `google-play-v3` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 

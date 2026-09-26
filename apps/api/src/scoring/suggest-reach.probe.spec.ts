@@ -93,7 +93,7 @@ describe('probeSuggestReach', () => {
     });
   });
 
-  describe('prefix matching for a store that never echoes the term', () => {
+  describe('prefix matching for a store that never echoes a single word', () => {
     const playLists = {
       game: ['games', 'gamestop', 'game changers app'],
       g: ['grindr', 'gemini'],
@@ -120,7 +120,6 @@ describe('probeSuggestReach', () => {
       ['cat', ['catholic bible', 'cats'], 2],
       ['game', ['gamestop', 'games offline'], 2],
       ['photo', ['photoshop', 'photo editor'], 2],
-      ['guess the location', ['guess the locations game'], 1],
     ])(
       'matches %s only on a word or plural boundary',
       async (keyword, list, position) => {
@@ -148,6 +147,33 @@ describe('probeSuggestReach', () => {
       await expect(
         probeSuggestReach('videos puzzle', lookup, 'prefix'),
       ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+    });
+
+    it.each([
+      ['geography game', ['geography games', 'geography games offline']],
+      ['travel game', ['travel games', 'road trip travel game']],
+      ['guess the location', ['guess the locations game']],
+    ])(
+      'needs the exact phrase %s, not its plural or a longer search',
+      async (keyword, list) => {
+        await expect(
+          probeSuggestReach(keyword, lookupFrom({ [keyword]: list }), 'prefix'),
+        ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+      },
+    );
+
+    it('finds a phrase the store offers exactly', async () => {
+      const lookup = lookupFrom({
+        'map quiz': ['map quiz', 'map quiz game'],
+        m: ['maps'],
+        ma: ['map quiz game', 'map quiz'],
+      });
+      await expect(
+        probeSuggestReach('map quiz', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 2, position: 2 },
+        requests: 3,
+      });
     });
 
     it('keeps exact matching by default', async () => {

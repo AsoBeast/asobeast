@@ -69,7 +69,7 @@ describe('scoringProfile', () => {
     });
     expect(scoringProfile('GOOGLE_PLAY', false)).toEqual({
       source: 'GOOGLE_PLAY_SUGGEST_REACH',
-      formulaVersion: 'google-play-v2',
+      formulaVersion: 'google-play-v3',
     });
   });
 
