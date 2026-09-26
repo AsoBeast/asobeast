@@ -97,6 +97,23 @@ Buckets classify scored keywords automatically so a large list stays readable.
 
 An unscored keyword has no bucket until the weekly scoring run reaches it.
 
+## Tag keywords and keep notes
+
+Tags and notes record what asobeast cannot work out for itself: which keywords are your brand, which carry the business, which are an experiment, and why each one is tracked.
+
+Open the row menu of a keyword and choose **Edit tags and note**. Type a tag and press Enter or a comma, or pick one of the suggestions: `brand`, `core`, `testing`, then the tags already used in this market. Backspace in the empty field removes the last tag. Save writes both at once.
+
+| Rule | Limit |
+| --- | --- |
+| Tags per keyword | 8 |
+| Tag length | 24 characters, starting with a letter or number; letters, numbers, spaces, hyphens and underscores |
+| Tag case | stored in lowercase, with extra spaces removed, so `Core` and `core ` are the same tag |
+| Note | 500 characters of plain text; an empty note is removed |
+
+To tag many keywords at once, select them and choose **Tag** in the bar that appears. Type or pick one tag, then add it to the keywords that do not have it yet or remove it from the keywords that do. A keyword already at 8 tags is skipped and named.
+
+The **Tags** filter keeps the keywords that carry any of the tags you tick. Tags and notes belong to the keyword in its storefront, so the same phrase tracked in two markets has its own tags and note in each.
+
 ## Read the table
 
 Click a column header to sort by it, and click it again to reverse the order. The arrow in the header shows the direction, and the page address carries both as `sort` and `dir`, so a copied link opens the same view. Scores and weekly change sort best first, position and names sort from the top, and a keyword with no value sorts last either way.
@@ -111,8 +128,11 @@ The controls above the table narrow the rows without reloading them.
 | Status | Active or paused keywords | `status` |
 | Popularity, Difficulty, Opportunity | Keywords whose score has the chosen grade | `pop`, `diff`, `opp` |
 | Position | Top 3, 4 to 10, 11 to 30, beyond 30, or not ranking | `pos` |
+| Tags | Keywords carrying any of the chosen tags | `tag` |
 
 Every active filter shows as a chip under the controls. Remove one chip to drop that filter, or use **Clear all**. The count next to the controls reads how many keywords are shown out of how many are tracked in the market, and **Export CSV** exports exactly the rows shown, in the order shown. The grade words are defined in [How are scores graded?](/concepts/scoring#how-are-scores-graded).
+
+The **Tags** column shows up to three tags and how many more a keyword carries. A note icon next to the keyword shows its note when you point at it or focus it.
 
 **Columns** hides and shows columns. The choice is remembered in this browser and is not part of the link. On a phone the table starts with the keyword, position and opportunity columns, and the filters move into a **Filters** panel.
 

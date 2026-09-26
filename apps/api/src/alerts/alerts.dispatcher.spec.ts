@@ -1,7 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { RANK_DEPTH, RankDroppedPayload } from '@asobeast/shared';
+import {
+  RANK_DEPTH,
+  RankDroppedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
+} from '@asobeast/shared';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import { Env } from '../config/env';
 import { DeliverAlertPayload, DeliverEmailPayload } from '../jobs/jobs.types';
@@ -20,6 +25,31 @@ const rankPayload: RankDroppedPayload = {
   fromDepth: RANK_DEPTH,
   toDepth: RANK_DEPTH,
   threshold: 5,
+};
+
+const milestone: RankMilestonePayload = {
+  event: 'rank.milestone',
+  occurredAt: '2026-07-22T10:00:00.000Z',
+  app: { id: 'app1', name: 'App One' },
+  keyword: { id: 'kw1', text: 'game', store: 'APP_STORE', country: 'us' },
+  tier: 10,
+  direction: 'entered',
+  from: 14,
+  to: 8,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
+};
+
+const overtake: RankOvertakenPayload = {
+  event: 'rank.overtaken',
+  occurredAt: milestone.occurredAt,
+  app: milestone.app,
+  keyword: milestone.keyword,
+  competitor: { id: 'c1', name: 'Rival', from: 9, to: 4 },
+  from: 5,
+  to: 6,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
 };
 
 const buildConfig = (delivery: 'batched' | 'instant') =>
@@ -215,5 +245,47 @@ describe('AlertsDispatcher', () => {
 
     expect(prisma.alertEvent.create).not.toHaveBeenCalled();
     expect(prisma.webhook.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('collects a milestone into the outbox under its own key', async () => {
+    const prisma = buildPrisma();
+    const { queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: true } as MailerService,
+      buildConfig('batched'),
+      queue,
+      workspace,
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(milestone));
+
+    expect(prisma.updates[0].where.dedupeKey).toBe(
+      'milestone:app1:kw1:2026-07-22',
+    );
+    expect(prisma.updates[0].data).toEqual({
+      event: 'rank.milestone',
+      appId: 'app1',
+      payload: milestone,
+    });
+  });
+
+  it('looks up the subscribers of an overtake in instant mode', async () => {
+    const prisma = buildPrisma();
+    const { queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: false } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(overtake));
+
+    expect(prisma.webhook.findMany).toHaveBeenCalledWith({
+      where: { active: true, events: { has: 'rank.overtaken' } },
+      select: { id: true },
+    });
   });
 });

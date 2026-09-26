@@ -6,6 +6,7 @@ import {
   MetadataChangedPayload,
   RANK_DEPTH,
   RankDroppedPayload,
+  RankMilestonePayload,
 } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
@@ -34,6 +35,19 @@ const competitorPayload: MetadataChangedPayload = {
   occurredAt: '2026-07-22T10:30:00.000Z',
   app: { id: 'competitor1', name: 'Rival', isCompetitor: true },
   changes: [{ field: 'title', before: 'Old', after: 'New' }],
+};
+
+const milestone: RankMilestonePayload = {
+  event: 'rank.milestone',
+  occurredAt: '2026-07-22T10:00:00.000Z',
+  app: { id: 'app1', name: 'App One' },
+  keyword: { id: 'kw1', text: 'game', store: 'APP_STORE', country: 'us' },
+  tier: 10,
+  direction: 'entered',
+  from: 14,
+  to: 8,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
 };
 
 const claimRow = (
@@ -355,6 +369,30 @@ describe('AlertFlushService', () => {
     expect(delivery.opts?.jobId).toBe(
       'flush~claim-1~webhook~webhook-1~owned_apps',
     );
+  });
+
+  it('delivers a claimed milestone only to channels that list it', async () => {
+    const harness = buildHarness();
+    harness.setClaimLoader(() =>
+      Promise.resolve([
+        { ...claimRow('row-1'), event: milestone.event, payload: milestone },
+      ]),
+    );
+    harness.setWebhooks([
+      { id: 'milestones', events: ['rank.milestone'] },
+      { id: 'drops', events: ['rank.dropped'] },
+    ]);
+
+    await expect(harness.service.flushEveryWorkspace()).resolves.toEqual({
+      flushed: 1,
+      channels: 1,
+      notifications: 1,
+    });
+    const [delivery] = harness.bulkCalls[0];
+    expect(delivery.opts?.jobId).toBe(
+      'flush~claim-1~webhook~milestones~owned_apps',
+    );
+    expect(batchPayload(delivery).apps[0].rankMilestones).toEqual([milestone]);
   });
 
   it('creates deterministic IDs for email and webhook channels', async () => {

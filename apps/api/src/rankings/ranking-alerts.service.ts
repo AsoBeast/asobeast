@@ -4,8 +4,29 @@ import { KeywordScope } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  CompetitorCapture,
+  overtaken,
+  positionAlert,
+  RankCapture,
+} from './rank-milestones';
 import { appsByStoreAppId, toDateKey } from './rankings.support';
 import { detectEntrants, SerpSnapshotDay } from './serp-movers';
+
+interface PreviousRanking {
+  date: Date;
+  position: number | null;
+  depth: number;
+}
+
+export interface MilestoneCheck {
+  app: { id: string; name: string | null };
+  keyword: KeywordScope;
+  date: Date;
+  depth: number;
+  capture: RankCapture;
+  competitors: CompetitorCapture[];
+}
 
 @Injectable()
 export class RankingAlertsService {
@@ -72,11 +93,7 @@ export class RankingAlertsService {
     capture: { position: number | null; depth: number },
   ): Promise<void> {
     const { position, depth } = capture;
-    const previous = await this.prisma.keywordRanking.findFirst({
-      where: { appId: app.id, keywordId: keyword.id, date: { lt: date } },
-      orderBy: { date: 'desc' },
-      select: { position: true, depth: true },
-    });
+    const previous = await this.previousRanking(app.id, keyword.id, date);
     if (!previous) {
       return;
     }
@@ -115,6 +132,140 @@ export class RankingAlertsService {
         threshold,
       });
     }
+  }
+
+  async dispatchMilestoneAlerts(check: MilestoneCheck): Promise<void> {
+    const competitors = check.competitors.filter(
+      (competitor) => check.capture.changed || competitor.changed,
+    );
+    if (!check.capture.changed && competitors.length === 0) {
+      return;
+    }
+    const previous = await this.previousRanking(
+      check.app.id,
+      check.keyword.id,
+      check.date,
+    );
+    if (!previous) {
+      return;
+    }
+    const occurredAt = new Date().toISOString();
+    if (check.capture.changed) {
+      await this.dispatchPositionAlert(check, previous, occurredAt);
+    }
+    await this.dispatchOvertakes(check, previous, competitors, occurredAt);
+  }
+
+  private async dispatchPositionAlert(
+    check: MilestoneCheck,
+    previous: PreviousRanking,
+    occurredAt: string,
+  ): Promise<void> {
+    const { app, keyword, date, depth } = check;
+    const to = check.capture.position;
+    const rankedEarlier =
+      previous.position === null &&
+      to !== null &&
+      (await this.rankedEarlier(app.id, keyword.id, date));
+    const alert = positionAlert(previous.position, to, rankedEarlier);
+    if (alert?.event === 'rank.first') {
+      await this.alerts.dispatch({
+        event: 'rank.first',
+        occurredAt,
+        app,
+        keyword,
+        position: alert.position,
+        depth,
+      });
+    } else if (alert?.event === 'rank.milestone') {
+      await this.alerts.dispatch({
+        event: 'rank.milestone',
+        occurredAt,
+        app,
+        keyword,
+        tier: alert.milestone.tier,
+        direction: alert.milestone.direction,
+        from: previous.position,
+        to,
+        fromDepth: previous.depth,
+        toDepth: depth,
+      });
+    }
+  }
+
+  private async dispatchOvertakes(
+    check: MilestoneCheck,
+    previous: PreviousRanking,
+    competitors: CompetitorCapture[],
+    occurredAt: string,
+  ): Promise<void> {
+    const from = previous.position;
+    const ranked = competitors.flatMap((competitor) =>
+      competitor.position === null
+        ? []
+        : [{ ...competitor, position: competitor.position }],
+    );
+    if (from === null || ranked.length === 0) {
+      return;
+    }
+    const rows = await this.prisma.keywordRanking.findMany({
+      where: {
+        keywordId: check.keyword.id,
+        date: previous.date,
+        appId: { in: ranked.map((competitor) => competitor.id) },
+      },
+      select: { appId: true, position: true },
+    });
+    const before = new Map(rows.map((row) => [row.appId, row.position]));
+    for (const competitor of ranked) {
+      const competitorFrom = before.get(competitor.id);
+      if (competitorFrom === undefined) continue;
+      const passed = overtaken(
+        { app: from, competitor: competitorFrom },
+        { app: check.capture.position, competitor: competitor.position },
+      );
+      if (!passed) continue;
+      await this.alerts.dispatch({
+        event: 'rank.overtaken',
+        occurredAt,
+        app: check.app,
+        keyword: check.keyword,
+        competitor: {
+          id: competitor.id,
+          name: competitor.name,
+          from: competitorFrom,
+          to: competitor.position,
+        },
+        from,
+        to: check.capture.position,
+        fromDepth: previous.depth,
+        toDepth: check.depth,
+      });
+    }
+  }
+
+  private previousRanking(
+    appId: string,
+    keywordId: string,
+    date: Date,
+  ): Promise<PreviousRanking | null> {
+    return this.prisma.keywordRanking.findFirst({
+      where: { appId, keywordId, date: { lt: date } },
+      orderBy: { date: 'desc' },
+      select: { date: true, position: true, depth: true },
+    });
+  }
+
+  private async rankedEarlier(
+    appId: string,
+    keywordId: string,
+    date: Date,
+  ): Promise<boolean> {
+    const earlier = await this.prisma.keywordRanking.findFirst({
+      where: { appId, keywordId, date: { lt: date }, position: { not: null } },
+      select: { date: true },
+    });
+    return earlier !== null;
   }
 
   private async serpDay(

@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  AppStoreLocalization,
   LintContext,
   MetadataAssistantResult,
   MetadataAssistantStatus,
@@ -21,7 +22,10 @@ import { MetadataAssistantDto } from './dto/metadata-assistant.dto';
 import {
   buildAssistantContext,
   currentValue,
+  DRAFT_MAX_OUTPUT_TOKENS,
   draftSchema,
+  LocalizationTarget,
+  storefrontsReading,
   SYSTEM_PROMPT,
   validateDrafts,
 } from './metadata-drafts';
@@ -56,6 +60,7 @@ export class MetadataAssistantService {
       throw new ConflictException('AI features require OPENAI_API_KEY');
     }
     const app = await this.ensureApp(appId);
+    const target = await this.localizationTarget(app, dto.localization);
     const fields = this.resolveFields(app.store, dto.fields);
     const [audit, tracked, competitors] = await Promise.all([
       this.metadata.audit(appId),
@@ -93,10 +98,12 @@ export class MetadataAssistantService {
             active,
             competitorTitles,
             dto.instructions,
+            target,
           ),
         },
       ],
       schema: draftSchema(fields),
+      maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
     });
 
     const base: LintContext = {
@@ -117,7 +124,11 @@ export class MetadataAssistantService {
       );
     }
 
-    return { model: this.client.model, drafts };
+    return {
+      model: this.client.model,
+      localization: target?.localization ?? null,
+      drafts,
+    };
   }
 
   private resolveFields(
@@ -135,6 +146,28 @@ export class MetadataAssistantService {
       );
     }
     return [...new Set(requested)];
+  }
+
+  private async localizationTarget(
+    app: { id: string; store: Store },
+    localization?: AppStoreLocalization,
+  ): Promise<LocalizationTarget | undefined> {
+    if (!localization) {
+      return undefined;
+    }
+    if (app.store !== Store.APP_STORE) {
+      throw new BadRequestException(
+        `${app.store} does not support drafting a localization. Send the request without localization.`,
+      );
+    }
+    const markets = await this.keywords.keywordCountries(app.id);
+    return {
+      localization,
+      storefronts: storefrontsReading(
+        localization,
+        markets.map((market) => market.country),
+      ),
+    };
   }
 
   private async ensureApp(appId: string): Promise<{

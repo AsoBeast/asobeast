@@ -127,6 +127,9 @@ function samplePayload(): AlertBatchPayload {
           },
         ],
         rankImprovements: [],
+        rankMilestones: [],
+        firstRankings: [],
+        overtakes: [],
         serpEntrants: [
           {
             event: 'serp.entrant',
@@ -202,6 +205,9 @@ function samplePayload(): AlertBatchPayload {
             threshold: 5,
           },
         ],
+        rankMilestones: [],
+        firstRankings: [],
+        overtakes: [],
         serpEntrants: [],
         changes: [],
         negativeReviews: [],

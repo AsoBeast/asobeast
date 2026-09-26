@@ -13,7 +13,7 @@ export default function ChangesError({
     <ErrorState
       error={error}
       retry={retry}
-      title="Change timeline could not be loaded"
+      title="Changes could not be loaded"
     />
   );
 }

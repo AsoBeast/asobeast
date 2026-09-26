@@ -7,6 +7,7 @@ import {
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
+  APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -71,6 +72,8 @@ export const positionBandParser = parseAsArrayOf(
   parseAsStringLiteral(POSITION_BANDS),
 ).withDefault([]);
 
+export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
+
 export const keywordFilterParsers = {
   q: searchParser,
   source: keywordSourceParser,
@@ -80,6 +83,7 @@ export const keywordFilterParsers = {
   diff: gradeFacetParser,
   opp: gradeFacetParser,
   pos: positionBandParser,
+  tag: keywordTagsParser,
 };
 
 export const COMBINATION_WORD_FILTERS = [
@@ -238,3 +242,7 @@ export const actionFocusParser = parseAsString.withDefault("");
 
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
+
+export const draftLocaleParser = parseAsStringLiteral(
+  APP_STORE_LOCALIZATION_IDS,
+);

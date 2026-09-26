@@ -1,9 +1,16 @@
-import { AlertBatchAppSection, AlertBatchPayload } from '@asobeast/shared';
+import {
+  AlertBatchAppSection,
+  AlertBatchPayload,
+  WebhookEvent,
+} from '@asobeast/shared';
 
 function sectionHasContent(section: AlertBatchAppSection): boolean {
   return (
     section.rankDrops.length > 0 ||
     section.rankImprovements.length > 0 ||
+    section.rankMilestones.length > 0 ||
+    section.firstRankings.length > 0 ||
+    section.overtakes.length > 0 ||
     section.serpEntrants.length > 0 ||
     section.changes.length > 0 ||
     section.negativeReviews.length > 0 ||
@@ -17,6 +24,8 @@ export function filterBatch(
   allowed: Set<string>,
 ): AlertBatchPayload | null {
   const events = batch.events.filter((event) => allowed.has(event.event));
+  const ownedOnly = <T>(event: WebhookEvent, list: T[]): T[] =>
+    batch.scope === 'owned_apps' && allowed.has(event) ? list : [];
   const apps = batch.apps
     .map((section): AlertBatchAppSection => ({
       app: section.app,
@@ -28,6 +37,9 @@ export function filterBatch(
         allowed.has('rank.improved') && batch.scope === 'owned_apps'
           ? section.rankImprovements
           : [],
+      rankMilestones: ownedOnly('rank.milestone', section.rankMilestones),
+      firstRankings: ownedOnly('rank.first', section.firstRankings),
+      overtakes: ownedOnly('rank.overtaken', section.overtakes),
       serpEntrants:
         batch.scope === 'owned_apps' && allowed.has('serp.entrant')
           ? section.serpEntrants

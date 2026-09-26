@@ -7,6 +7,8 @@ import {
   MaxLength,
 } from 'class-validator';
 import {
+  APP_STORE_LOCALIZATION_IDS,
+  AppStoreLocalization,
   MetadataAssistantRequest,
   METADATA_FIELDS,
   MetadataField,
@@ -24,4 +26,13 @@ export class MetadataAssistantDto implements MetadataAssistantRequest {
   @IsString()
   @MaxLength(500)
   instructions?: string;
+
+  @ApiPropertyOptional({
+    enum: APP_STORE_LOCALIZATION_IDS,
+    description:
+      'An App Store localization to draft instead of the primary listing. Refused for a Google Play app',
+  })
+  @IsOptional()
+  @IsIn([...APP_STORE_LOCALIZATION_IDS])
+  localization?: AppStoreLocalization;
 }

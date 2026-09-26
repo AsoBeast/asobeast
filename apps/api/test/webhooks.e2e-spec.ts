@@ -97,6 +97,49 @@ describe('WebhooksController (e2e)', () => {
     expect(empty.body as WebhookItem[]).toHaveLength(0);
   });
 
+  it('accepts the milestone, first rank and overtake events', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['rank.milestone', 'rank.first', 'rank.overtaken'],
+      })
+      .expect(201);
+
+    expect((created.body as WebhookItem).events).toEqual([
+      'rank.milestone',
+      'rank.first',
+      'rank.overtaken',
+    ]);
+  });
+
+  it('replaces only the events of a signed webhook', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['metadata.changed'],
+        secret: 'supersecret',
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const patched = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ events: ['rank.milestone'] })
+      .expect(200);
+
+    expect(patched.body as WebhookItem).toMatchObject({
+      events: ['rank.milestone'],
+      hasSecret: true,
+    });
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.secret).toBe('supersecret');
+    expect(stored.url).toBe('https://hooks.example.com/asobeast');
+  });
+
   it('rejects an invalid url', async () => {
     await api
       .post('/webhooks')

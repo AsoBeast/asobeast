@@ -6,9 +6,21 @@ import {
   oneOf,
   positionBandIn,
   positionBandOf,
+  someOf,
   statusFilter,
   versusOf,
 } from "./facets";
+
+describe("someOf", () => {
+  it("keeps a row carrying any selected value", () => {
+    expect(someOf(["core"], ["brand", "core"])).toBe(true);
+  });
+
+  it("drops a row without values or without the field", () => {
+    expect(someOf([], ["core"])).toBe(false);
+    expect(someOf(undefined, ["core"])).toBe(false);
+  });
+});
 
 describe("oneOf", () => {
   it("keeps a value that is selected", () => {

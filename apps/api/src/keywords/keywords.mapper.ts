@@ -19,6 +19,8 @@ export interface TrackedKeywordRow {
   fieldOrder: number | null;
   active: boolean;
   relevance: number | null;
+  tags: string[];
+  note: string | null;
   keyword: {
     text: string;
     country: string;
@@ -181,5 +183,7 @@ export function toTrackedKeywordItem(
     scoreProvenance: toScoreProvenance(metric),
     serpVolatility7d,
     ...scoreEvidence(metric, row.keyword.store, signals),
+    tags: row.tags,
+    note: row.note,
   };
 }
