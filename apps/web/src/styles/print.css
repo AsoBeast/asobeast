@@ -52,6 +52,8 @@
   }
 
   [data-slot="chart"] .recharts-wrapper {
+    display: flex;
+    flex-direction: column;
     max-width: 100%;
     height: auto !important;
   }
@@ -63,6 +65,7 @@
 
   [data-slot="chart"] .recharts-legend-wrapper {
     position: static !important;
+    order: 1;
     width: auto !important;
   }
 

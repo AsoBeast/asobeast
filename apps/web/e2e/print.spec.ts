@@ -411,6 +411,35 @@ const REPORTS = [
 
 const MIN_REPORT_BYTES = 10_000;
 
+test("prints every chart legend under its chart", async ({ page }) => {
+  for (const [, path] of REPORTS) {
+    await open(page, path);
+    await expect(
+      page.locator(".recharts-legend-wrapper").first(),
+    ).toBeVisible();
+
+    await printed(page);
+
+    const underChart = await page
+      .locator(".recharts-legend-wrapper")
+      .evaluateAll((legends) =>
+        legends.map((legend) => {
+          const chart = legend.parentElement?.querySelector(
+            "svg.recharts-surface",
+          );
+          if (!chart) throw new Error("legend outside a chart");
+          return (
+            legend.getBoundingClientRect().top >=
+            chart.getBoundingClientRect().bottom - 1
+          );
+        }),
+      );
+    expect(underChart.length).toBeGreaterThan(0);
+    expect(underChart).not.toContain(false);
+    await page.emulateMedia({ media: "screen" });
+  }
+});
+
 test("prints both reports to pdf in the light theme", async ({
   page,
 }, testInfo) => {
