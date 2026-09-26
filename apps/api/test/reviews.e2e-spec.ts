@@ -199,6 +199,39 @@ describe('ReviewsController (e2e)', () => {
     ).toEqual(['r3', 'r2', 'r1']);
   });
 
+  it('breaks a reviewedAt tie by descending id at the limit', async () => {
+    const seeded = await seedApp();
+    const reviewedAt = new Date('2026-07-13T00:00:00Z');
+    await prisma.review.createMany({
+      data: [
+        {
+          id: 'review-tie-b',
+          appId: seeded.id,
+          reviewId: 'tie-b',
+          score: 3,
+          text: 'Tie B',
+          reviewedAt,
+        },
+        {
+          id: 'review-tie-a',
+          appId: seeded.id,
+          reviewId: 'tie-a',
+          score: 3,
+          text: 'Tie A',
+          reviewedAt,
+        },
+      ],
+    });
+
+    const limited = await api
+      .get(`/apps/${seeded.id}/reviews`)
+      .query({ limit: 1 })
+      .expect(200);
+    expect(
+      (limited.body as ReviewList).reviews.map((review) => review.reviewId),
+    ).toEqual(['tie-b']);
+  });
+
   it('filters by star and version', async () => {
     const seeded = await seedApp();
 
