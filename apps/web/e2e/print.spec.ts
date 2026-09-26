@@ -444,6 +444,7 @@ test("prints both reports to pdf in the light theme", async ({
   page,
 }, testInfo) => {
   await page.addInitScript(() => window.localStorage.setItem("theme", "dark"));
+  await page.emulateMedia({ reducedMotion: "reduce" });
 
   for (const [name, path] of REPORTS) {
     await open(page, path);
