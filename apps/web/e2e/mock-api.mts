@@ -318,6 +318,10 @@ function withBody<T>(
     });
 }
 
+function refusesEvents(events: unknown): boolean {
+  return events !== undefined && !(Array.isArray(events) && events.length > 0);
+}
+
 function trackedFromKeywordField(
   text: string,
   country: string,
@@ -928,7 +932,7 @@ const routes: Route[] = [
         const path = req.url ?? "/";
         const webhook = webhooks.find((row) => row.id === params[0]);
         if (!webhook) return json(res, 404, errorEnvelope(404, path));
-        if (body.events?.length === 0) {
+        if (refusesEvents(body.events)) {
           return json(
             res,
             400,
@@ -1017,7 +1021,7 @@ const routes: Route[] = [
         const path = req.url ?? "/";
         const alert = emailAlerts.find((row) => row.id === params[0]);
         if (!alert) return json(res, 404, errorEnvelope(404, path));
-        if (body.events?.length === 0) {
+        if (refusesEvents(body.events)) {
           return json(
             res,
             400,
