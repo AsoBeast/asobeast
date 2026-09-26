@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ChangeField, ChangeImpactReport } from '@asobeast/shared';
+import { ChangeImpactReport, isChangeField } from '@asobeast/shared';
 import { addDays, utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -34,10 +34,9 @@ export class ChangeImpactService {
       select: { field: true, capturedAt: true },
     });
     const changes = changeDays(
-      events.map((event) => ({
-        field: event.field as ChangeField,
-        capturedAt: event.capturedAt,
-      })),
+      events.flatMap(({ field, capturedAt }) =>
+        isChangeField(field) ? [{ field, capturedAt }] : [],
+      ),
     );
     const keywords = await this.keywords(
       app.id,

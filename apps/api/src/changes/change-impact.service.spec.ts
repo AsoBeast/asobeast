@@ -111,4 +111,16 @@ describe('ChangeImpactService', () => {
       movement: { improved: 1, measured: 1 },
     });
   });
+
+  it('leaves a stored field the contract does not name out of the report', async () => {
+    eventFindMany.mockResolvedValue([
+      titleEvent,
+      { field: 'legacyField', capturedAt: addDays(today, -20) },
+    ]);
+
+    const report = await service.report('app_1', 90);
+
+    expect(report.totalChanges).toBe(1);
+    expect(report.items.map((item) => item.fields)).toEqual([['title']]);
+  });
 });
