@@ -53,7 +53,7 @@ function DraftCard({ draft }: { draft: MetadataDraft }) {
       <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded-lg border border-border bg-muted p-2 font-mono text-sm text-foreground">
         {draft.value}
       </pre>
-      <div className="mt-3 flex items-start justify-between gap-3">
+      <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1.5">
           {draft.issues.length === 0 ? (
             <Badge variant="success">no issues</Badge>

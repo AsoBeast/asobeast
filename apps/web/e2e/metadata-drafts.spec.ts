@@ -105,3 +105,36 @@ test("a deep link to another app store language keeps it and hydrates cleanly", 
   await page.waitForLoadState("networkidle");
   expect(errors).toEqual([]);
 });
+
+for (const width of [375, 820, 1440]) {
+  test(`a draft with an issue keeps its copy button inside the card at ${width}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/apps/app-long/metadata");
+    await page.getByRole("button", { name: "Generate drafts" }).click();
+
+    const copies = page.getByRole("button", { name: /^Copy .+ draft$/ });
+    await expect(copies).toHaveCount(3);
+
+    const escapes = await copies.evaluateAll((buttons) =>
+      buttons.flatMap((button) => {
+        const card = button.closest(".rounded-xl");
+        if (!card) return ["no card"];
+        const inner = button.getBoundingClientRect();
+        const outer = card.getBoundingClientRect();
+        return inner.left >= outer.left && inner.right <= outer.right
+          ? []
+          : [button.getAttribute("aria-label")];
+      }),
+    );
+    expect(escapes).toEqual([]);
+    expect(
+      await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ),
+    ).toBe(true);
+  });
+}
