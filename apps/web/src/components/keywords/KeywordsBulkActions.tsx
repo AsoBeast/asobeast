@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Download, Pause, Play, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +17,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { removeKeyword, updateKeyword } from "@/lib/api";
+import type { BulkTagChange, BulkTagMode } from "@/lib/keyword-tags";
 import { invalidateKeywordMutation } from "@/lib/queries";
+import { BulkTagPopover } from "./BulkTagPopover";
 
 function summarize(results: PromiseSettledResult<unknown>[]): {
   ok: number;
@@ -37,18 +40,65 @@ function report(verb: string, results: PromiseSettledResult<unknown>[]): void {
   toast.warning(`${verb} ${ok}, ${failed} failed`);
 }
 
+function ConfirmRemove({
+  open,
+  onOpenChange,
+  count,
+  pending,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  count: number;
+  pending: boolean;
+  onConfirm: () => void;
+}) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            Stop tracking {count} keyword
+            {count === 1 ? "" : "s"}?
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            Ranking history for the selected keywords stops accruing. You can
+            add them again later, but the gap in history will remain.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={pending}
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+          >
+            {pending ? "Removing…" : "Stop tracking"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function KeywordsBulkActions({
   appId,
-  selectedIds,
+  selectedKeywords,
+  marketTags,
   onClear,
   onExport,
 }: {
   appId: string;
-  selectedIds: string[];
+  selectedKeywords: readonly TrackedKeywordItem[];
+  marketTags: readonly string[];
   onClear: () => void;
   onExport: () => void;
 }) {
   const queryClient = useQueryClient();
+  const selectedIds = selectedKeywords.map((keyword) => keyword.keywordId);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const setActive = useMutation({
@@ -74,7 +124,26 @@ export function KeywordsBulkActions({
     },
   });
 
-  const busy = setActive.isPending || remove.isPending;
+  const tagSelected = useMutation({
+    mutationFn: ({
+      changes,
+    }: {
+      changes: BulkTagChange[];
+      mode: BulkTagMode;
+    }) =>
+      Promise.allSettled(
+        changes.map((change) =>
+          updateKeyword(appId, change.keywordId, { tags: change.tags }),
+        ),
+      ),
+    onSuccess: (results, { mode }) => {
+      report(mode === "add" ? "Tagged" : "Untagged", results);
+      invalidateKeywordMutation(queryClient, appId);
+      onClear();
+    },
+  });
+
+  const busy = setActive.isPending || remove.isPending || tagSelected.isPending;
 
   return (
     <div
@@ -104,6 +173,12 @@ export function KeywordsBulkActions({
           <Play />
           Activate
         </Button>
+        <BulkTagPopover
+          keywords={selectedKeywords}
+          marketTags={marketTags}
+          disabled={busy}
+          onApply={(changes, mode) => tagSelected.mutate({ changes, mode })}
+        />
         <Button
           variant="outline"
           size="sm"
@@ -134,35 +209,13 @@ export function KeywordsBulkActions({
         </Button>
       </div>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              Stop tracking {selectedIds.length} keyword
-              {selectedIds.length === 1 ? "" : "s"}?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Ranking history for the selected keywords stops accruing. You can
-              add them again later, but the gap in history will remain.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={remove.isPending}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={remove.isPending}
-              onClick={(event) => {
-                event.preventDefault();
-                remove.mutate();
-              }}
-            >
-              {remove.isPending ? "Removing…" : "Stop tracking"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmRemove
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        count={selectedIds.length}
+        pending={remove.isPending}
+        onConfirm={() => remove.mutate()}
+      />
     </div>
   );
 }

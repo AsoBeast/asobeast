@@ -3,6 +3,9 @@ import {
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  CHANGE_FIELDS,
+  isChangeField,
+  WEBHOOK_EVENTS,
 } from './changes';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
@@ -19,6 +22,21 @@ const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
 });
 
 describe('alert contracts', () => {
+  it('groups the rank events right after rank.improved', () => {
+    expect(WEBHOOK_EVENTS).toEqual([
+      'metadata.changed',
+      'rank.dropped',
+      'rank.improved',
+      'rank.milestone',
+      'rank.first',
+      'rank.overtaken',
+      'review.negative',
+      'digest.weekly',
+      'serp.entrant',
+      'action.opened',
+    ]);
+  });
+
   it('requires one of the two delivery scopes', () => {
     expect([batch('owned_apps').scope, batch('competitors').scope]).toEqual([
       'owned_apps',
@@ -51,5 +69,15 @@ describe('alert contracts', () => {
       pending: 4,
       claimed: 2,
     });
+  });
+});
+
+describe('isChangeField', () => {
+  it('accepts every known change field', () => {
+    expect(CHANGE_FIELDS.every((field) => isChangeField(field))).toBe(true);
+  });
+
+  it('rejects a field the contract does not name', () => {
+    expect(isChangeField('legacyField')).toBe(false);
   });
 });

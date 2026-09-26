@@ -7,6 +7,7 @@ import {
   KEYWORD_SORTS,
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
+  APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -26,6 +27,10 @@ import {
   type DiscoveryWindow,
   type MoverWindow,
 } from "./ranges";
+import {
+  COMBINATION_STATUSES,
+  type CombinationWordCount,
+} from "./keyword-combinations";
 import { DEFAULT_MCP_CLIENT, MCP_CLIENTS } from "./mcp-snippets";
 import { GRADES } from "./grade";
 import { POSITION_BANDS, VERSUS, type ActivityStatus } from "./table/facets";
@@ -67,6 +72,8 @@ export const positionBandParser = parseAsArrayOf(
   parseAsStringLiteral(POSITION_BANDS),
 ).withDefault([]);
 
+export const keywordTagsParser = parseAsArrayOf(parseAsString).withDefault([]);
+
 export const keywordFilterParsers = {
   q: searchParser,
   source: keywordSourceParser,
@@ -76,7 +83,36 @@ export const keywordFilterParsers = {
   diff: gradeFacetParser,
   opp: gradeFacetParser,
   pos: positionBandParser,
+  tag: keywordTagsParser,
 };
+
+export const COMBINATION_WORD_FILTERS = [
+  "1",
+  "2",
+  "3",
+] as const satisfies readonly `${CombinationWordCount}`[];
+
+export const combinationWordsParser = parseAsArrayOf(
+  parseAsStringLiteral(COMBINATION_WORD_FILTERS),
+).withDefault([]);
+
+export const combinationStatusParser = parseAsArrayOf(
+  parseAsStringLiteral(COMBINATION_STATUSES),
+).withDefault([]);
+
+export const combinationParsers = {
+  open: parseAsBoolean.withDefault(false),
+  q: searchParser,
+  words: combinationWordsParser,
+  status: combinationStatusParser,
+};
+
+export const COMBINATION_URL_KEYS = {
+  open: "combos",
+  q: "comboQ",
+  words: "comboWords",
+  status: "comboStatus",
+} as const satisfies Record<keyof typeof combinationParsers, string>;
 
 export const matrixSortParser = parseAsString;
 
@@ -206,3 +242,7 @@ export const actionFocusParser = parseAsString.withDefault("");
 
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
+
+export const draftLocaleParser = parseAsStringLiteral(
+  APP_STORE_LOCALIZATION_IDS,
+);

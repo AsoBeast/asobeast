@@ -4,6 +4,7 @@ import type { DigestWeeklyPayload } from './portfolio';
 import type { KeywordScope } from './keywords';
 import type { SerpEntrantPayload } from './serp';
 import type { ActionOpenedPayload } from './actions';
+import type { RankMilestoneDirection, RankMilestoneTier } from '../rank';
 
 export const CHANGE_FIELDS = [
   'title',
@@ -17,6 +18,10 @@ export const CHANGE_FIELDS = [
   'whatsNew',
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
+
+export function isChangeField(value: string): value is ChangeField {
+  return CHANGE_FIELDS.some((field) => field === value);
+}
 
 export interface ChangeEventItem {
   id: string;
@@ -37,6 +42,9 @@ export const WEBHOOK_EVENTS = [
   'metadata.changed',
   'rank.dropped',
   'rank.improved',
+  'rank.milestone',
+  'rank.first',
+  'rank.overtaken',
   'review.negative',
   'digest.weekly',
   'serp.entrant',
@@ -159,6 +167,45 @@ export interface RankImprovedPayload {
   threshold: number;
 }
 
+export interface RankMilestonePayload {
+  event: 'rank.milestone';
+  occurredAt: string;
+  app: { id: string; name: string | null };
+  keyword: KeywordScope;
+  tier: RankMilestoneTier;
+  direction: RankMilestoneDirection;
+  from: number | null;
+  to: number | null;
+  fromDepth: number;
+  toDepth: number;
+}
+
+export interface RankFirstPayload {
+  event: 'rank.first';
+  occurredAt: string;
+  app: { id: string; name: string | null };
+  keyword: KeywordScope;
+  position: number;
+  depth: number;
+}
+
+export interface RankOvertakenPayload {
+  event: 'rank.overtaken';
+  occurredAt: string;
+  app: { id: string; name: string | null };
+  keyword: KeywordScope;
+  competitor: {
+    id: string;
+    name: string | null;
+    from: number | null;
+    to: number;
+  };
+  from: number;
+  to: number | null;
+  fromDepth: number;
+  toDepth: number;
+}
+
 export interface AlertBatchApp {
   id: string;
   name: string | null;
@@ -175,6 +222,9 @@ export interface AlertBatchAppSection {
   app: AlertBatchApp;
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
+  rankMilestones: RankMilestonePayload[];
+  firstRankings: RankFirstPayload[];
+  overtakes: RankOvertakenPayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
@@ -186,6 +236,9 @@ export type GranularAlertPayload =
   | MetadataChangedPayload
   | RankDroppedPayload
   | RankImprovedPayload
+  | RankMilestonePayload
+  | RankFirstPayload
+  | RankOvertakenPayload
   | ReviewNegativePayload
   | DigestWeeklyPayload
   | SerpEntrantPayload

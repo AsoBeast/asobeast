@@ -3,8 +3,9 @@ import { expect, type Locator, type Page } from "@playwright/test";
 export async function openSettledDialog(
   page: Page,
   trigger: string,
+  scope: Page | Locator = page,
 ): Promise<Locator> {
-  await page
+  await scope
     .getByRole("button", { name: trigger, exact: true })
     .first()
     .click();

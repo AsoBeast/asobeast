@@ -20,7 +20,11 @@ import {
   testWebhook,
   updateWebhook,
 } from "@/lib/api";
-import { invalidateWebhookMutation, webhooksOptions } from "@/lib/queries";
+import {
+  invalidateWebhookMutation,
+  seedWebhook,
+  webhooksOptions,
+} from "@/lib/queries";
 import { EventSelection } from "./alert-events";
 import {
   AlertChannelCard,
@@ -135,6 +139,18 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
     onError: () => toast.error("Could not update webhook"),
   });
 
+  const editEvents = useMutation({
+    mutationFn: (events: WebhookEvent[]) =>
+      updateWebhook(webhook.id, { events }),
+    onSuccess: (saved) => {
+      seedWebhook(queryClient, saved);
+      invalidateWebhookMutation(queryClient);
+      toast.success("Webhook events saved");
+    },
+    onError: () => toast.error("Could not save the webhook events"),
+  });
+  const saveEvents = useSharedFlight(editEvents.mutateAsync);
+
   const test = useMutation({
     mutationFn: () => testWebhook(webhook.id),
     onSuccess: (result) => {
@@ -182,6 +198,8 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       onTest={() => test.mutate()}
       deletePending={remove.isPending}
       onDelete={removeOnce}
+      eventsPending={editEvents.isPending}
+      onEventsSave={saveEvents}
     />
   );
 }

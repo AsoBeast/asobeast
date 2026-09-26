@@ -3,6 +3,7 @@ import {
   keywordColumnFilters,
   keywordFilterChips,
   type KeywordFilters,
+  tagOptions,
 } from "./keyword-filters";
 
 const NONE: KeywordFilters = {
@@ -14,6 +15,7 @@ const NONE: KeywordFilters = {
   diff: [],
   opp: [],
   pos: [],
+  tag: [],
 };
 
 describe("keywordColumnFilters", () => {
@@ -61,6 +63,7 @@ describe("keywordFilterChips", () => {
         diff: ["poor"],
         opp: ["weak"],
         pos: ["top3", "unranked"],
+        tag: [],
       }),
     ).toEqual([
       { key: "q", label: "Search: pomo" },
@@ -72,5 +75,27 @@ describe("keywordFilterChips", () => {
       { key: "opp", label: "Opportunity: weak" },
       { key: "pos", label: "Position: Top 3, Not ranking" },
     ]);
+  });
+});
+
+describe("tag filters", () => {
+  it("filters the tags column and names the tags in a chip", () => {
+    const filters = { ...NONE, tag: ["brand", "core"] };
+
+    expect(keywordColumnFilters(filters)).toEqual([
+      { id: "tags", value: ["brand", "core"] },
+    ]);
+    expect(keywordFilterChips(filters)).toEqual([
+      { key: "tag", label: "Tag: brand, core" },
+    ]);
+  });
+
+  it("offers the tags present and any selected tag no row carries, sorted", () => {
+    expect(tagOptions(["testing", "core"], ["archived"])).toEqual([
+      { value: "archived", label: "archived" },
+      { value: "core", label: "core" },
+      { value: "testing", label: "testing" },
+    ]);
+    expect(tagOptions([], [])).toEqual([]);
   });
 });

@@ -176,6 +176,10 @@ describe('KeywordsController (e2e)', () => {
     );
     expect(manual).toBeDefined();
     expect(manual?.source).toBe('MANUAL');
+    for (const item of added.body as TrackedKeywordItem[]) {
+      expect(item.tags).toEqual([]);
+      expect(item.note).toBeNull();
+    }
 
     await api
       .patch(`/apps/${id}/keywords/${manual?.keywordId}`)
@@ -1300,6 +1304,148 @@ describe('KeywordsController (e2e)', () => {
         confidence: 'HIGH',
       },
       serpVolatility7d: null,
+    });
+  });
+  describe('tags and notes', () => {
+    const tracked = async (): Promise<{ id: string; keywordId: string }> => {
+      const id = await importApp();
+      const added = await api
+        .post(`/apps/${id}/keywords`)
+        .send({ keywords: ['streak counter'] })
+        .expect(201);
+      const [item] = added.body as TrackedKeywordItem[];
+      return { id, keywordId: item.keywordId };
+    };
+
+    const listed = async (id: string, keywordId: string) =>
+      (
+        (await api.get(`/apps/${id}/keywords`).expect(200))
+          .body as TrackedKeywordItem[]
+      ).find((item) => item.keywordId === keywordId);
+
+    it('stores normalized tags and lists them', async () => {
+      const { id, keywordId } = await tracked();
+
+      const patched = await api
+        .patch(`/apps/${id}/keywords/${keywordId}`)
+        .send({ tags: ['Core', ' brand '] })
+        .expect(200);
+
+      expect((patched.body as TrackedKeywordItem).tags).toEqual([
+        'core',
+        'brand',
+      ]);
+      expect((await listed(id, keywordId))?.tags).toEqual(['core', 'brand']);
+    });
+
+    it('clears tags and repeats a list idempotently', async () => {
+      const { id, keywordId } = await tracked();
+      const path = `/apps/${id}/keywords/${keywordId}`;
+
+      await api
+        .patch(path)
+        .send({ tags: ['core'] })
+        .expect(200);
+      const again = await api
+        .patch(path)
+        .send({ tags: ['core'] })
+        .expect(200);
+      expect((again.body as TrackedKeywordItem).tags).toEqual(['core']);
+
+      const cleared = await api.patch(path).send({ tags: [] }).expect(200);
+      expect((cleared.body as TrackedKeywordItem).tags).toEqual([]);
+    });
+
+    it('trims a note and stores a blank or null note as none', async () => {
+      const { id, keywordId } = await tracked();
+      const path = `/apps/${id}/keywords/${keywordId}`;
+
+      const noted = await api
+        .patch(path)
+        .send({ note: '  seasonal  ' })
+        .expect(200);
+      expect((noted.body as TrackedKeywordItem).note).toBe('seasonal');
+
+      for (const note of ['', null]) {
+        const cleared = await api.patch(path).send({ note }).expect(200);
+        expect((cleared.body as TrackedKeywordItem).note).toBeNull();
+      }
+    });
+
+    it('applies active and tags from one request', async () => {
+      const { id, keywordId } = await tracked();
+
+      const patched = await api
+        .patch(`/apps/${id}/keywords/${keywordId}`)
+        .send({ active: false, tags: ['core'] })
+        .expect(200);
+
+      expect(patched.body as TrackedKeywordItem).toMatchObject({
+        active: false,
+        tags: ['core'],
+      });
+    });
+
+    it('keeps the note when a later update leaves it out', async () => {
+      const { id, keywordId } = await tracked();
+      const path = `/apps/${id}/keywords/${keywordId}`;
+      await api.patch(path).send({ note: 'push in may' }).expect(200);
+
+      await api.patch(path).send({ active: false }).expect(200);
+      await api
+        .patch(path)
+        .send({ tags: ['core'] })
+        .expect(200);
+
+      expect((await listed(id, keywordId))?.note).toBe('push in may');
+    });
+
+    it('refuses nine tags and keeps the stored list', async () => {
+      const { id, keywordId } = await tracked();
+      const path = `/apps/${id}/keywords/${keywordId}`;
+      await api
+        .patch(path)
+        .send({ tags: ['core'] })
+        .expect(200);
+
+      await api
+        .patch(path)
+        .send({ tags: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'] })
+        .expect(400);
+
+      expect((await listed(id, keywordId))?.tags).toEqual(['core']);
+    });
+
+    it.each([{ tags: null }, { tags: ['ok', 7] }, { tags: ['#hash'] }])(
+      'refuses %j with the standard envelope',
+      async (body) => {
+        const { id, keywordId } = await tracked();
+
+        const response = await api
+          .patch(`/apps/${id}/keywords/${keywordId}`)
+          .send(body)
+          .expect(400);
+
+        expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
+      },
+    );
+
+    it('refuses a note over the limit', async () => {
+      const { id, keywordId } = await tracked();
+
+      await api
+        .patch(`/apps/${id}/keywords/${keywordId}`)
+        .send({ note: 'x'.repeat(501) })
+        .expect(400);
+    });
+
+    it('answers 404 for a keyword the app does not track', async () => {
+      const id = await importApp();
+
+      await api
+        .patch(`/apps/${id}/keywords/missing`)
+        .send({ tags: ['core'] })
+        .expect(404);
     });
   });
 });

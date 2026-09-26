@@ -36,6 +36,15 @@ export function statusFilter(
   return status === "all" || row.active === (status === "active");
 }
 
+export function someOf<T>(
+  values: readonly T[] | undefined,
+  selected: readonly T[],
+): boolean {
+  return (
+    values !== undefined && values.some((value) => selected.includes(value))
+  );
+}
+
 export function gradeIn(
   metric: GradeMetric,
   value: number | null,

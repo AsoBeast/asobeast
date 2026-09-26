@@ -83,6 +83,22 @@ const LISTS: ScopedRead[] = [
         .sort(),
   },
   {
+    name: 'GET /apps/:id/changes/impact',
+    path: (workspace) => `/apps/${workspace.appleAppId}/changes/impact`,
+    identity: (body) => {
+      const report = body as {
+        appId: string;
+        items: { changedOn: string; fields: string[] }[];
+      };
+      return [
+        report.appId,
+        ...report.items.map(
+          (item) => `${item.changedOn}:${item.fields.join(',')}`,
+        ),
+      ];
+    },
+  },
+  {
     name: 'GET /apps/:id/audit/history',
     path: (workspace) => `/apps/${workspace.appleAppId}/audit/history`,
     identity: (body) =>
@@ -138,6 +154,10 @@ const BY_ID = [
     name: 'GET /apps/:id/competitors/analysis',
     path: (w: IsolationWorkspace) =>
       `/apps/${w.appleAppId}/competitors/analysis`,
+  },
+  {
+    name: 'GET /apps/:id/changes/impact',
+    path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/changes/impact`,
   },
   {
     name: 'GET /apps/:id/visibility-history',

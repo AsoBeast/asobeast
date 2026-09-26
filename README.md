@@ -47,7 +47,7 @@ Every store request runs on the machine hosting asobeast. There is no ASO vendor
 | ASO Action Center                | Eight deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link and a full lifecycle |
 | Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                            |
 | Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                              |
-| MCP server                       | 21 read-only tools over stdio or a remote endpoint, so Claude Code and Claude Desktop can query your instance directly                             |
+| MCP server                       | 22 read-only tools over stdio or a remote endpoint, so Claude Code and Claude Desktop can query your instance directly                             |
 
 A guide for each of these lives in the [documentation](https://docs.asobeast.com).
 
@@ -129,7 +129,7 @@ No, unless you turn it on. Webhook alerts, SMTP email and OpenAI assistance are 
 
 ### Can I connect asobeast to Claude or another AI agent?
 
-Yes. asobeast ships a Model Context Protocol server with 21 read-only tools, available as a local stdio process or as a remote endpoint on your instance. Every tool is a `GET` and requires a personal API token. See [MCP](https://docs.asobeast.com/mcp/introduction).
+Yes. asobeast ships a Model Context Protocol server with 22 read-only tools, available as a local stdio process or as a remote endpoint on your instance. Every tool is a `GET` and requires a personal API token. See [MCP](https://docs.asobeast.com/mcp/introduction).
 
 ### Is asobeast really free?
 

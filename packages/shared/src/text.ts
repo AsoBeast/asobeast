@@ -136,11 +136,12 @@ export const STOPWORDS: ReadonlySet<string> = new Set([
 
 const DOTTED_SMALL_I = 'i\u0307';
 
+export function lowerCase(input: string): string {
+  return input.toLowerCase().replaceAll(DOTTED_SMALL_I, 'i');
+}
+
 export function normalizeText(input: string): string {
-  return input
-    .normalize('NFC')
-    .toLowerCase()
-    .replaceAll(DOTTED_SMALL_I, 'i')
+  return lowerCase(input.normalize('NFC'))
     .replace(/[^\p{L}\p{M}\p{N}]+/gu, ' ')
     .replace(/(^| )\p{M}+/gu, '$1')
     .trim()
