@@ -303,6 +303,35 @@ describe('ActionsController (e2e)', () => {
       .expect(400);
   });
 
+  it('rejects a null note and leaves the action open', async () => {
+    const id = await seedAction();
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE', note: null })
+      .expect(400);
+
+    const stored = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+    });
+    expect(stored.status).toBe('OPEN');
+    expect(stored.note).toBeNull();
+  });
+
+  it('keeps the stored note when the update omits it', async () => {
+    const id = await seedAction({ note: 'waiting on design' });
+
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE' })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'DONE',
+      note: 'waiting on design',
+    });
+  });
+
   it('refuses to close a resolved action', async () => {
     const id = await seedAction({ status: 'RESOLVED', resolvedAt: new Date() });
 
