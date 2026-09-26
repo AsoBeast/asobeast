@@ -6,12 +6,13 @@ import { PrismaClient, Store } from '@prisma/client';
 import { CompetitorAnalysis, CompetitorDiscovery } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
-const D0 = new Date('2026-07-01T00:00:00.000Z');
+const D0 = addDays(utcToday(), -1);
 
 describe('CompetitorsController (e2e)', () => {
   let app: INestApplication<App>;

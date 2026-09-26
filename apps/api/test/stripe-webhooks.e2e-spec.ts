@@ -31,6 +31,7 @@ const WORKSPACE = 'ws_stripe_fixture';
 const CUSTOMER = 'cus_TestWorkspace1';
 const SUBSCRIPTION = 'sub_TestIndieMonthly';
 const PERIOD_END = new Date(1_802_678_400 * 1000);
+const BEFORE_PERIOD_END = new Date(PERIOD_END.getTime() - 60_000);
 
 const fixtures = join(__dirname, 'fixtures', 'stripe');
 
@@ -409,7 +410,7 @@ describe('Stripe webhooks', () => {
     await deliver('customer.subscription.cancel_pending');
 
     const pending = await workspaceRow();
-    expect(isEntitled(pending, new Date())).toBe(true);
+    expect(isEntitled(pending, BEFORE_PERIOD_END)).toBe(true);
     expect(pending.cancelAtPeriodEnd).toBe(true);
 
     subscriptions.set(
@@ -420,7 +421,7 @@ describe('Stripe webhooks', () => {
     await deliver('customer.subscription.deleted');
 
     const ended = await workspaceRow();
-    expect(isEntitled(ended, new Date())).toBe(false);
+    expect(isEntitled(ended, BEFORE_PERIOD_END)).toBe(false);
     expect(ended.trialStartedAt).toBeNull();
   });
 

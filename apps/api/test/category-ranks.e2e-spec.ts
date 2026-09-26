@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import { ApiErrorEnvelope, CategoryRankSeries } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues } from './obliterate-queues';
@@ -86,21 +87,21 @@ describe('CategoryRanksController (e2e)', () => {
       data: [
         {
           appId: you.id,
-          date: new Date('2026-07-09T00:00:00.000Z'),
+          date: addDays(utcToday(), -2),
           collection: 'free',
           genre: '6007',
           position: 12,
         },
         {
           appId: you.id,
-          date: new Date('2026-07-10T00:00:00.000Z'),
+          date: addDays(utcToday(), -1),
           collection: 'free',
           genre: '6007',
           position: 8,
         },
         {
           appId: you.id,
-          date: new Date('2026-07-10T00:00:00.000Z'),
+          date: addDays(utcToday(), -1),
           collection: 'free',
           genre: 'overall',
           position: null,
