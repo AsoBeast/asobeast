@@ -440,6 +440,42 @@ test("prints every chart legend under its chart", async ({ page }) => {
   }
 });
 
+function chartHeights(page: Page) {
+  return page
+    .locator("svg.recharts-surface")
+    .evaluateAll((charts) =>
+      charts.map((chart) => chart.getAttribute("height")),
+    );
+}
+
+function nextFrames(page: Page, count: number) {
+  return page.evaluate(
+    (frames) =>
+      new Promise<void>((resolve) => {
+        const step = (left: number) =>
+          left === 0 ? resolve() : requestAnimationFrame(() => step(left - 1));
+        step(frames);
+      }),
+    count,
+  );
+}
+
+test("keeps every chart at its screen height while printed", async ({
+  page,
+}) => {
+  for (const [, path] of REPORTS) {
+    await open(page, path);
+    await expect(page.locator("svg.recharts-surface").first()).toBeVisible();
+    const screen = await chartHeights(page);
+
+    await printed(page);
+    await nextFrames(page, 30);
+
+    expect(await chartHeights(page)).toEqual(screen);
+    await page.emulateMedia({ media: "screen" });
+  }
+});
+
 test("prints both reports to pdf in the light theme", async ({
   page,
 }, testInfo) => {
