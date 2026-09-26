@@ -88,6 +88,6 @@ A parser breaks, for every installation at once. Only the provider layer parses 
 
 ## Why does a Google Play job cost more?
 
-Because one logical job fans out to many requests. A Google Play score job makes 12 to 20 sequential requests: one search, one to nine suggest probes and ten detail enrichments. An Apple score job makes 2 to 10: one search and one to nine suggest probes. A keyword the store never suggests costs a single probe. A depth 200 Google Play position check takes roughly eight requests against one for Apple.
+Because one logical job fans out to many requests. A Google Play score job makes 12 to 20 sequential requests: one search, one to nine suggest probes and ten detail enrichments. An Apple score job makes 3 to 11: one search, one to nine suggest probes and one lookup of the phrase followed by a space, which counts the searches that continue it. A keyword the store never suggests costs a single probe, plus that lookup on the App Store. A depth 200 Google Play position check takes roughly eight requests against one for Apple.
 
 That is why `SCRAPE_GPLAY_RPM` spaces job starts rather than individual requests, and why its default of 10 is lower than the Apple default of 15. See [The daily pipeline and rate limits](/concepts/pipeline).

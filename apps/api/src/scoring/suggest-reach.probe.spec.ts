@@ -1,4 +1,8 @@
-import { probeSuggestReach } from './suggest-reach.probe';
+import {
+  countContinuations,
+  countingLookup,
+  probeSuggestReach,
+} from './suggest-reach.probe';
 
 const lookupFrom = (lists: Record<string, string[]>) =>
   jest.fn((term: string) =>
@@ -181,5 +185,46 @@ describe('probeSuggestReach', () => {
         probeSuggestReach('game', lookupFrom(playLists)),
       ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
     });
+  });
+});
+
+describe('countContinuations', () => {
+  it('counts distinct searches that are the phrase or continue it', async () => {
+    const lookup = lookupFrom({
+      map: ['maps', 'mapquest', 'map my run'],
+      'map ': ['map my run', 'map my walk', 'map tap'],
+    });
+    await expect(countContinuations('map', lookup)).resolves.toBe(3);
+    expect(lookup).toHaveBeenCalledWith('map ');
+  });
+
+  it('counts nothing for a misspelling the store corrects', async () => {
+    const lookup = lookupFrom({
+      geogusser: ['geoguessr', 'geoguessr free'],
+      'geogusser ': ['geoguessr'],
+    });
+    await expect(countContinuations('geogusser', lookup)).resolves.toBe(0);
+  });
+
+  it('compares on the search key', async () => {
+    const lookup = lookupFrom({ 'Géo Quiz': ['geo quiz', 'GEO QUIZ Maps'] });
+    await expect(countContinuations('Géo Quiz', lookup)).resolves.toBe(2);
+  });
+
+  it('returns null when a lookup throws', async () => {
+    const lookup = jest.fn().mockRejectedValue(new Error('hints down'));
+    await expect(countContinuations('map', lookup)).resolves.toBeNull();
+  });
+});
+
+describe('countingLookup', () => {
+  it('asks the store once per distinct term', async () => {
+    const lookup = lookupFrom({ map: ['maps'] });
+    const counting = countingLookup(lookup);
+    await counting.ask('map');
+    await counting.ask('map');
+    await counting.ask('map ');
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(counting.requests()).toBe(2);
   });
 });

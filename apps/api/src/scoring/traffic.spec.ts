@@ -1,6 +1,6 @@
 import * as fixtures from './scoring-fixtures';
 import { KeywordStats } from './formulas';
-import { estimatePopularity } from './popularity-model';
+import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
 import { computeTraffic, estimateTraffic, WORD_FACTORS } from './traffic';
 
 const play = (stats: KeywordStats): KeywordStats => ({
@@ -9,8 +9,11 @@ const play = (stats: KeywordStats): KeywordStats => ({
 });
 
 const modelTraffic = (stats: KeywordStats): number =>
-  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText) ??
-    0) / 10;
+  (estimatePopularity(
+    stats.competitors ?? stats.top10,
+    stats.keywordText,
+    stats.continuations ?? NEUTRAL_CONTINUATIONS,
+  ) ?? 0) / 10;
 
 describe('computeTraffic on google play', () => {
   it.each([
@@ -92,7 +95,11 @@ describe('computeTraffic on the app store', () => {
       competitors: fixtures.headTopTen(),
     };
     expect(estimateTraffic(stats)).toBe(
-      (estimatePopularity(fixtures.headTopTen(), stats.keywordText) ?? 0) / 10,
+      (estimatePopularity(
+        fixtures.headTopTen(),
+        stats.keywordText,
+        NEUTRAL_CONTINUATIONS,
+      ) ?? 0) / 10,
     );
   });
 

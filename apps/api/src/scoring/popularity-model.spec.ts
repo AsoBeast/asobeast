@@ -1,5 +1,6 @@
 import {
   estimatePopularity,
+  NEUTRAL_CONTINUATIONS,
   POPULARITY_FEATURES,
   PopularityWeights,
   popularityFeatures,
@@ -13,7 +14,7 @@ const zero = Object.fromEntries(
 
 describe('popularityFeatures', () => {
   it('returns null for an empty page', () => {
-    expect(popularityFeatures([], 'quiz')).toBeNull();
+    expect(popularityFeatures([], 'quiz', 0)).toBeNull();
   });
 
   it('reads leader, depth and title shares from the page', () => {
@@ -23,7 +24,7 @@ describe('popularityFeatures', () => {
       app('Maps', 999),
       app('Geo Quiz Pro'),
     ];
-    const features = popularityFeatures(page, 'geo quiz');
+    const features = popularityFeatures(page, 'geo quiz', 9);
     const expected = {
       leader: 5,
       depth: 3,
@@ -32,6 +33,7 @@ describe('popularityFeatures', () => {
       exactLeader: 5,
       words: 1,
       results: 4 / 25,
+      continuations: 1,
     };
     Object.entries(expected).forEach(([name, value]) => {
       expect(features?.[name as keyof typeof expected]).toBeCloseTo(value, 9);
@@ -48,13 +50,14 @@ describe('popularityFeatures', () => {
       ...Array.from({ length: 5 }, (_, index) => app(`Other ${index}`, 10)),
       app('Trivia', 1_000_000),
     ];
-    expect(popularityFeatures(page, 'trivia')?.exactLeader).toBe(0);
+    expect(popularityFeatures(page, 'trivia', 0)?.exactLeader).toBe(0);
   });
 
   it('stays finite when a rating count is negative or missing', () => {
     const features = popularityFeatures(
       [app('Quiz', -5), app('Quiz'), app('Quiz', Number.NaN)],
       'quiz',
+      -3,
     );
     Object.values(features ?? {}).forEach((value) => {
       expect(Number.isFinite(value)).toBe(true);
@@ -63,12 +66,12 @@ describe('popularityFeatures', () => {
   });
 
   it('counts a keyword without words as one word', () => {
-    expect(popularityFeatures([app('Quiz', 10)], ' !? ')?.words).toBe(0);
+    expect(popularityFeatures([app('Quiz', 10)], ' !? ', 0)?.words).toBe(0);
   });
 
   it('reads at most 25 results and caps the word count', () => {
     const page = Array.from({ length: 40 }, () => app('Word', 1));
-    const features = popularityFeatures(page, 'a b c d e f g h');
+    const features = popularityFeatures(page, 'a b c d e f g h', 0);
     expect(features?.results).toBe(1);
     expect(features?.words).toBe(5);
   });
@@ -76,19 +79,23 @@ describe('popularityFeatures', () => {
 
 describe('estimatePopularity', () => {
   it('returns null without results', () => {
-    expect(estimatePopularity([], 'quiz')).toBeNull();
+    expect(estimatePopularity([], 'quiz', 0)).toBeNull();
   });
 
   it('keeps the estimate on the 1 to 100 scale', () => {
     const page = [app('Quiz', 1_000)];
-    expect(estimatePopularity(page, 'quiz', { ...zero, intercept: -20 })).toBe(
-      1,
-    );
-    expect(estimatePopularity(page, 'quiz', { ...zero, intercept: 250 })).toBe(
-      100,
-    );
     expect(
-      estimatePopularity(page, 'quiz', { ...zero, intercept: 10, leader: 2 }),
+      estimatePopularity(page, 'quiz', 0, { ...zero, intercept: -20 }),
+    ).toBe(1);
+    expect(
+      estimatePopularity(page, 'quiz', 0, { ...zero, intercept: 250 }),
+    ).toBe(100);
+    expect(
+      estimatePopularity(page, 'quiz', 0, {
+        ...zero,
+        intercept: 10,
+        leader: 2,
+      }),
     ).toBe(Math.round(10 + 2 * Math.log10(1_001)));
   });
 
@@ -99,8 +106,23 @@ describe('estimatePopularity', () => {
     const tail = Array.from({ length: 25 }, (_, index) =>
       app(index < 2 ? 'Guess The Old Town Map' : `Puzzle ${index}`, 40),
     );
-    expect(estimatePopularity(head, 'quiz')).toBeGreaterThan(
-      estimatePopularity(tail, 'guess the old town map') ?? 100,
+    expect(
+      estimatePopularity(head, 'quiz', NEUTRAL_CONTINUATIONS),
+    ).toBeGreaterThan(
+      estimatePopularity(
+        tail,
+        'guess the old town map',
+        NEUTRAL_CONTINUATIONS,
+      ) ?? 100,
+    );
+  });
+
+  it('ranks a phrase the store continues often above one it never continues', () => {
+    const page = Array.from({ length: 25 }, (_, index) =>
+      app(`Map Quiz ${index}`, 5_000),
+    );
+    expect(estimatePopularity(page, 'map quiz', 9)).toBeGreaterThan(
+      estimatePopularity(page, 'map quiz', 0) ?? 100,
     );
   });
 });

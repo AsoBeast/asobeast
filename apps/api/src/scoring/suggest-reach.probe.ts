@@ -33,6 +33,42 @@ const positionIn = (
 ): number =>
   list.findIndex((item) => matches(searchKey(item.term), target, match)) + 1;
 
+export interface CountingLookup {
+  ask: SuggestLookup;
+  requests: () => number;
+}
+
+export function countingLookup(lookup: SuggestLookup): CountingLookup {
+  const asked = new Map<string, ReturnType<SuggestLookup>>();
+  const ask: SuggestLookup = (term) => {
+    const pending = asked.get(term) ?? lookup(term);
+    asked.set(term, pending);
+    return pending;
+  };
+  return { ask, requests: () => asked.size };
+}
+
+const continues = (term: string, target: string): boolean =>
+  term === target || term.startsWith(`${target} `);
+
+export async function countContinuations(
+  keyword: string,
+  lookup: SuggestLookup,
+): Promise<number | null> {
+  const target = searchKey(keyword);
+  const offered = new Set<string>();
+  try {
+    for (const typed of [keyword, `${keyword} `]) {
+      for (const item of await lookup(typed)) {
+        offered.add(searchKey(item.term));
+      }
+    }
+  } catch {
+    return null;
+  }
+  return [...offered].filter((term) => continues(term, target)).length;
+}
+
 export async function probeSuggestReach(
   keyword: string,
   lookup: SuggestLookup,

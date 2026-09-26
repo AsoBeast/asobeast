@@ -105,7 +105,7 @@ describe('action generation (e2e)', () => {
         date: D(1),
         traffic: 8,
         difficulty: 3,
-        formulaVersion: 'app-store-v2',
+        formulaVersion: 'app-store-v3',
       },
     });
 

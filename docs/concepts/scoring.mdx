@@ -26,7 +26,7 @@ Each store leaves different evidence, so each store has its own estimate.
 
 ### App Store
 
-App Store popularity is estimated from the first 25 search results by a model fitted against Apple's own search popularity, so the estimate is on Apple's 1 to 100 scale. It reads:
+App Store popularity is estimated from the first 25 search results and the search suggestions by a model fitted against Apple's own search popularity, so the estimate is on Apple's 1 to 100 scale. It reads:
 
 | Signal | What it reads |
 | --- | --- |
@@ -39,10 +39,11 @@ App Store popularity is estimated from the first 25 search results by a model fi
 | Words | Number of words in the phrase, up to six |
 | Relevance | Average title match strength, alone and multiplied by the leader, so the leader's weight can depend on how well the page targets the phrase |
 | Results | How many of the 25 places the search filled |
+| Continuations | How many searches Apple suggests that are the phrase or continue it with more words, when the phrase and the phrase followed by a space are typed, on a log scale |
 
 The estimate is a weighted sum of these signals, rounded and held between 1 and 100. The weights come from `pnpm --filter api scoring:popularity-study`, which searches a sample of the terms Apple lists for one week and fits the weights by least squares. The fit for the US week of 13 September 2026 used 450 listed terms, 30 per genre, and 400 unlisted ones: 200 search suggestions for listed terms and 200 suggestions for those suggestions. An unlisted term has no known value, so the fit places a suggestion 10 below the lowest listed value of its genre and a suggestion of a suggestion 20 below it. On the 30 percent of terms held out of the fit, the estimate is off by about 7 points on Apple's scale, and it places a listed term above an unlisted one 9 times out of 10. Terms are held out one by one, so a suggestion and the term it came from can fall on different sides, which flatters both figures a little. Among listed terms alone it ranks weakly, because most of them sit between 50 and 60.
 
-Suggest reach is still recorded in the score signals, but App Store popularity ignores it. Apple does not suggest many short, common searches at all, so a phrase it never suggests can still be searched often.
+Suggest reach is still recorded in the score signals, but App Store popularity ignores it. Apple does not suggest many short, common searches at all, so a phrase it never suggests can still be searched often. Continuations read the suggestions differently: Apple still offers popular searches that begin with such a word, like "map my run" for "map", while a phrase few people search is continued by few, and a misspelling by none, because Apple offers the corrected spelling instead. When the suggestion lookup fails, the model reads 5 continuations, a typical count, so a failed lookup neither raises nor sinks a phrase.
 
 A title contains a word when it has it as a whole word, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Korean and Thai are written without spaces, so there a word counts wherever it appears in the title. A search with fewer than five results stays at or below 10 on the shown scale, and a search with no results scores 0.
 
@@ -117,7 +118,7 @@ Every persisted score is stored with the provenance needed to audit or recompute
 | Field | Example | Why it is stored |
 | --- | --- | --- |
 | Scoring source | `APPLE_SEARCH_SIGNALS`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH`, `APPLE_SUGGEST_REACH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
-| Formula version | `app-store-v2`, `google-play-v3` | Which calculation produced it, so old rows stay interpretable |
+| Formula version | `app-store-v3`, `google-play-v3` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 
