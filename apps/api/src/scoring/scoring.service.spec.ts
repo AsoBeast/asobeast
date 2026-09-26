@@ -39,7 +39,7 @@ const storedJson = {
     medianRatingCount: 1_000_000,
     flags: [],
     officialPopularity: null,
-    estimatedTraffic: 6.2,
+    estimatedTraffic: 6.6,
     entryDifficulty: null,
   },
   evidence,
@@ -91,7 +91,7 @@ describe('ScoringService', () => {
     expect(collect).toHaveBeenCalledWith('kw1');
     const [args] = upsert.mock.calls[0];
     expect(args.create.keywordId).toBe('kw1');
-    expect(args.create.traffic).toBeCloseTo(6.2, 2);
+    expect(args.create.traffic).toBeCloseTo(6.6, 2);
     expect(args.create.difficulty).toBeCloseTo(6.7, 2);
     expect(args.create.stats).toEqual(storedJson);
     expect(args.create.scoringSource).toBe('APPLE_SEARCH_SIGNALS');
@@ -154,7 +154,7 @@ describe('ScoringService', () => {
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.stats).not.toHaveProperty('official');
     expect(args.create.stats).toMatchObject({
-      signals: { officialPopularity: 71, estimatedTraffic: 6.2 },
+      signals: { officialPopularity: 71, estimatedTraffic: 6.6 },
     });
   });
 

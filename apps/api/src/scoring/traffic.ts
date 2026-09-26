@@ -48,7 +48,10 @@ function modelEstimate(stats: KeywordStats): number {
   const popularity = estimatePopularity(
     stats.competitors ?? stats.top10,
     stats.keywordText,
-    stats.continuations ?? NEUTRAL_CONTINUATIONS,
+    {
+      continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
+      reach: stats.suggest,
+    },
   );
   return popularity === null ? 0 : popularity / POPULARITY_SCALE;
 }

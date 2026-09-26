@@ -30,7 +30,7 @@ function reachLine(signals: ScoreSignals): string {
 }
 
 const SEARCH_MODEL_LINE =
-  "Estimated from the first 25 App Store results, on Apple's search popularity scale.";
+  "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.";
 const UNLISTED_CAP_LINE =
   "Apple does not list this term among its most searched, so it is placed below the lowest popularity Apple published this week, in the order its estimate gives it.";
 
