@@ -111,6 +111,30 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(400);
   });
 
+  it.each([{ email: null }, { events: null }, { active: null }])(
+    'rejects a null field when updating an alert: %o',
+    async (patch) => {
+      const created = await api
+        .post('/email-alerts')
+        .send({ email: 'ops@example.com', events: ['metadata.changed'] })
+        .expect(201);
+      const alert = created.body as EmailAlertItem;
+
+      const response = await api
+        .patch(`/email-alerts/${alert.id}`)
+        .send(patch)
+        .expect(400);
+      expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
+
+      const stored = await prisma.emailAlert.findUniqueOrThrow({
+        where: { id: alert.id },
+      });
+      expect(stored.email).toBe('ops@example.com');
+      expect(stored.events).toEqual(['metadata.changed']);
+      expect(stored.active).toBe(true);
+    },
+  );
+
   it('sends a sample through the test endpoint', async () => {
     const created = await api
       .post('/email-alerts')

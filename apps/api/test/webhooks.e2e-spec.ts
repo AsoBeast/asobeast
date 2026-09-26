@@ -153,6 +153,33 @@ describe('WebhooksController (e2e)', () => {
     expect(stored.url).toBe('https://hooks.example.com/asobeast');
   });
 
+  it.each([{ url: null }, { events: null }, { active: null }])(
+    'rejects a null field when updating a webhook: %o',
+    async (patch) => {
+      const created = await api
+        .post('/webhooks')
+        .send({
+          url: 'https://hooks.example.com/asobeast',
+          events: ['metadata.changed'],
+        })
+        .expect(201);
+      const webhook = created.body as WebhookItem;
+
+      const response = await api
+        .patch(`/webhooks/${webhook.id}`)
+        .send(patch)
+        .expect(400);
+      expect((response.body as ApiErrorEnvelope).statusCode).toBe(400);
+
+      const stored = await prisma.webhook.findUniqueOrThrow({
+        where: { id: webhook.id },
+      });
+      expect(stored.url).toBe('https://hooks.example.com/asobeast');
+      expect(stored.events).toEqual(['metadata.changed']);
+      expect(stored.active).toBe(true);
+    },
+  );
+
   it('rejects an unknown event name', async () => {
     await api
       .post('/webhooks')
