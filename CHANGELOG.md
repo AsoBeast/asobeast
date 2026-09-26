@@ -3,6 +3,26 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.7.0](https://github.com/AsoBeast/asobeast/compare/v1.6.0...v1.7.0) (2026-09-26)
+
+
+### Features
+
+* **alerts:** alert on rank milestones, first rankings and overtakes ([#139](https://github.com/AsoBeast/asobeast/issues/139)) ([da5e16a](https://github.com/AsoBeast/asobeast/commit/da5e16ada729ceae8f2fb434aa05fcbb0e1f53dd))
+* **changes:** report how rankings and visibility moved after each change ([#138](https://github.com/AsoBeast/asobeast/issues/138)) ([3afeab3](https://github.com/AsoBeast/asobeast/commit/3afeab3741a075e8bfbea3efa52f772b5e60bfee))
+* **keywords:** tag tracked keywords and keep a note on each ([#144](https://github.com/AsoBeast/asobeast/issues/144)) ([c8ec7f8](https://github.com/AsoBeast/asobeast/commit/c8ec7f8d9c119cde45298da22b53307f586bf1b7))
+* **web:** export competitors, gaps, reviews and serps to csv ([#146](https://github.com/AsoBeast/asobeast/issues/146)) ([86259e5](https://github.com/AsoBeast/asobeast/commit/86259e54f638e36808b17b95560cea75329ba31d))
+* **web:** list keyword combinations from the listing and track them ([#145](https://github.com/AsoBeast/asobeast/issues/145)) ([3ee53c1](https://github.com/AsoBeast/asobeast/commit/3ee53c1f39364c2c2ec25a83567599c50062c917))
+* **web:** print the overview and rankings pages as reports ([#148](https://github.com/AsoBeast/asobeast/issues/148)) ([a2e37bf](https://github.com/AsoBeast/asobeast/commit/a2e37bfd7eddd8610d871c8fbcb3eebd7b6999eb))
+* **web:** show the extra localizations each storefront indexes ([#140](https://github.com/AsoBeast/asobeast/issues/140)) ([223bcda](https://github.com/AsoBeast/asobeast/commit/223bcda67c3362f49aebafc0dfa2d2120bedefbf))
+
+
+### Bug Fixes
+
+* **alerts:** reject null fields when updating an alert channel ([#149](https://github.com/AsoBeast/asobeast/issues/149)) ([4eb9e22](https://github.com/AsoBeast/asobeast/commit/4eb9e224d703b65016d1b1bba0ea14d9f32e1e18))
+* **api:** list undated reviews after the dated ones ([#147](https://github.com/AsoBeast/asobeast/issues/147)) ([88b3df6](https://github.com/AsoBeast/asobeast/commit/88b3df66bc475451ce0d622cc58aaa213d3a60b6))
+* **api:** reject null fields when updating keywords and actions ([#151](https://github.com/AsoBeast/asobeast/issues/151)) ([560a2e4](https://github.com/AsoBeast/asobeast/commit/560a2e4b37775155fe1c6ab0c88429f2c86f24af))
+
 ## [1.6.0](https://github.com/AsoBeast/asobeast/compare/v1.5.0...v1.6.0) (2026-09-24)
 
 
