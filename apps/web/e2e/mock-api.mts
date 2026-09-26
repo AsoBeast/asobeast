@@ -1122,6 +1122,10 @@ const routes: Route[] = [
   },
   appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset) => dataset.changes),
   appRoute(
+    /^\/apps\/([^/]+)\/changes\/impact$/,
+    (dataset) => dataset.changeImpact,
+  ),
+  appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,
     (dataset) => dataset.discovery,
   ),

@@ -25,6 +25,7 @@ import {
   getBillingCatalog,
   getBudget,
   getCategoryRanks,
+  getChangeImpact,
   getChanges,
   getEmailAlerts,
   getComparison,
@@ -104,6 +105,8 @@ export const appKeys = {
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
   changes: (id: string, days: number) =>
     [...appKeys.detail(id), "changes", { days }] as const,
+  changeImpact: (id: string, days: number, country: string) =>
+    [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
   reviews: (id: string, filters: ReviewFilters) =>
     [...appKeys.detail(id), "reviews", filters] as const,
@@ -417,6 +420,16 @@ export const changesOptions = (id: string, days: number) =>
   queryOptions({
     queryKey: appKeys.changes(id, days),
     queryFn: () => getChanges(id, days),
+  });
+
+export const changeImpactOptions = (
+  id: string,
+  days: number,
+  country: string,
+) =>
+  queryOptions({
+    queryKey: appKeys.changeImpact(id, days, country),
+    queryFn: () => getChangeImpact(id, days, country),
   });
 
 export const reviewsOptions = (id: string, filters: ReviewFilters) =>

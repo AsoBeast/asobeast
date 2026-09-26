@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "21 read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics, the request budget and the Action Center queue."
+description: "22 read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics, the request budget and the Action Center queue."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","daily_budget","read only"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 21 tools, every one of them a `GET` annotated `readOnlyHint: true`. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 22 tools, every one of them a `GET` annotated `readOnlyHint: true`. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -46,6 +46,7 @@ Every parameter is validated by the tool before a request leaves, against the sa
 | `metadata_audit` | Metadata audit | Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings | `appId` (required) |
 | `list_reviews` | List reviews | Recent store reviews for one app, optionally filtered by star score or app version | `appId` (required), `score`, `version`, `limit` |
 | `changes_timeline` | Changes timeline | Detected change events for one app over the last N days | `appId` (required), `days` |
+| `change_impact` | Change impact | Keyword position and visibility movement 7, 14, 28 days after each change to one app's own listing, newest change first | `appId` (required), `days`, `country` |
 | `daily_budget` | Daily request budget | The estimated daily store-request fan-out for the whole instance against the configured rate limits | None |
 
 `from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.

@@ -3,6 +3,8 @@ import {
   AlertBatchPayload,
   AlertDeliveryStatus,
   AlertFlushResult,
+  CHANGE_FIELDS,
+  isChangeField,
 } from './changes';
 
 const batch = (scope: AlertBatchPayload['scope']): AlertBatchPayload => ({
@@ -51,5 +53,15 @@ describe('alert contracts', () => {
       pending: 4,
       claimed: 2,
     });
+  });
+});
+
+describe('isChangeField', () => {
+  it('accepts every known change field', () => {
+    expect(CHANGE_FIELDS.every((field) => isChangeField(field))).toBe(true);
+  });
+
+  it('rejects a field the contract does not name', () => {
+    expect(isChangeField('legacyField')).toBe(false);
   });
 });

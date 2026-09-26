@@ -58,6 +58,47 @@ describe("insight tools", () => {
     expect(new URL(calls[1]!.url).searchParams.get("date")).toBe("2026-07-20");
   });
 
+  it("routes change_impact with its window and market", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerInsightTools(server, client);
+
+    await tools.get("change_impact")!.handler({
+      appId: "app-1",
+      days: 30,
+      country: "gb",
+    });
+
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/apps/app-1/changes/impact");
+    expect(url.searchParams.get("days")).toBe("30");
+    expect(url.searchParams.get("country")).toBe("gb");
+  });
+
+  it("returns a version note when change_impact 404s", async () => {
+    const { server, tools } = createHarness();
+    const { client } = stubFetch(() => ({
+      status: 404,
+      body: {
+        statusCode: 404,
+        error: "Not Found",
+        message: "Cannot GET /apps/app-1/changes/impact",
+        path: "/apps/app-1/changes/impact",
+        timestamp: "2026-07-24T00:00:00.000Z",
+      },
+    }));
+    registerInsightTools(server, client);
+
+    const result = await tools
+      .get("change_impact")!
+      .handler({ appId: "app-1" });
+
+    expect(result.isError).toBe(true);
+    expect((result.content[0] as { text: string }).text).toContain(
+      "not available on this instance",
+    );
+  });
+
   it("returns a version note when audit_history 404s", async () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({

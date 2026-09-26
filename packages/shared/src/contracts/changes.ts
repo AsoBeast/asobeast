@@ -18,6 +18,10 @@ export const CHANGE_FIELDS = [
 ] as const;
 export type ChangeField = (typeof CHANGE_FIELDS)[number];
 
+export function isChangeField(value: string): value is ChangeField {
+  return CHANGE_FIELDS.some((field) => field === value);
+}
+
 export interface ChangeEventItem {
   id: string;
   appId: string;

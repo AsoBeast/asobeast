@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { QUERY_BOUNDS, UTC_DATE_PATTERN } from "@asobeast/shared";
+import {
+  CHANGE_IMPACT_WINDOWS,
+  COUNTRY_PATTERN,
+  QUERY_BOUNDS,
+  UTC_DATE_PATTERN,
+} from "@asobeast/shared";
 import { isUtcCalendarDate } from "./calendar-date";
 import { defineReadTool, seg, type ReadTool } from "./define";
 
@@ -203,6 +208,46 @@ export const INSIGHT_TOOLS: ReadTool[] = [
       path: `/apps/${seg(appId)}/changes`,
       params: { days },
     }),
+  }),
+
+  defineReadTool({
+    name: "change_impact",
+    title: "Change impact",
+    description: [
+      `Keyword position and visibility movement ${CHANGE_IMPACT_WINDOWS.join(", ")} days after each change to one app's own listing, newest change first.`,
+      "A change is one UTC day of the app's own metadata edits, listed with the fields that changed; competitor changes are never included.",
+      "Each window compares the last rank check shortly before the change with the latest rank check on or shortly before its targetDate, over the active tracked keywords of one market (country, defaulting to the app's home storefront) that were checked on both days.",
+      "status is measured, pending (targetDate is still ahead) or unmeasured (no usable rank check).",
+      "movement counts keywords that improved, declined, stayed unchanged, entered (not found before, ranked after) or exited, out of measured; medianPositionChange is negative when the typical keyword moved up; visibilityBefore and visibilityAfter share the baseline popularity weights, so only positions move them.",
+      "overlappingChanges lists later changes inside a window, whose effect is mixed in.",
+      "totalChanges counts every change in the window; only the newest are measured.",
+      "This describes what moved after a change, not proof that the change caused it: store algorithm updates, seasonality and competitors move rankings too.",
+    ].join(" "),
+    inputSchema: z.object({
+      appId,
+      days: z
+        .number()
+        .int()
+        .min(QUERY_BOUNDS.changeTimelineDays.min)
+        .max(QUERY_BOUNDS.changeTimelineDays.max)
+        .optional()
+        .describe(
+          `Look-back window in days for the changes to measure (${QUERY_BOUNDS.changeTimelineDays.min}-${QUERY_BOUNDS.changeTimelineDays.max}). Defaults to ${QUERY_BOUNDS.changeTimelineDays.default}.`,
+        ),
+      country: z
+        .string()
+        .regex(COUNTRY_PATTERN)
+        .optional()
+        .describe(
+          "Two-letter storefront code of the keyword market to measure. Defaults to the app's home storefront.",
+        ),
+    }),
+    request: ({ appId, days, country }) => ({
+      path: `/apps/${seg(appId)}/changes/impact`,
+      params: { days, country },
+    }),
+    unavailableOn404:
+      "Change impact is not available on this instance. It needs a newer asobeast API.",
   }),
 
   defineReadTool({
