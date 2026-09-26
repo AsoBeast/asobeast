@@ -34,3 +34,27 @@ export function KeywordFieldSkeleton() {
     </div>
   );
 }
+
+export function KeywordCombinationsSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Skeleton className="h-8 w-full sm:w-64" />
+        <Skeleton className="h-8 w-24" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+      <div className="overflow-hidden rounded-xl border">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-4 border-b px-4 py-3 last:border-b-0"
+          >
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

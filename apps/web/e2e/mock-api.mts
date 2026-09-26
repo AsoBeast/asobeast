@@ -55,6 +55,7 @@ import type {
   EmailAlertItem,
   FirstRunStatus,
   KeywordFieldRequest,
+  KeywordAddRequest,
   KeywordFieldResult,
   MetadataAssistantRequest,
   MetadataAssistantResult,
@@ -72,6 +73,7 @@ import type {
 } from "@asobeast/shared";
 import {
   DELETION_CONFIRMATION,
+  KEYWORD_BULK_ADD_LIMIT,
   isKeywordTag,
   KEYWORD_FIELD_BYTE_LIMIT,
   KEYWORD_TAGS_MAX,
@@ -89,6 +91,49 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
+const KEYWORD_QUOTA_COOKIE = "e2e_keyword_quota";
+const initialKeywords = new Map(
+  Object.entries(DATASETS).map(([id, dataset]) => [
+    id,
+    structuredClone(dataset.keywords),
+  ]),
+);
+
+function resetKeywords(): void {
+  for (const [id, keywords] of initialKeywords) {
+    DATASETS[id].keywords = structuredClone(keywords);
+  }
+}
+
+function manualKeyword(
+  appId: string,
+  text: string,
+  country: string,
+  index: number,
+): TrackedKeywordItem {
+  return {
+    keywordId: `kw-${appId}-added-${index}`,
+    text,
+    country,
+    serpVolatility7d: null,
+    source: "MANUAL",
+    active: true,
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+  };
+}
+
 const annotations = new Map<
   string,
   Map<string, Pick<TrackedKeywordItem, "tags" | "note">>
@@ -724,6 +769,14 @@ function budgetHold(token: string): PromiseWithResolvers<void> {
 const routes: Route[] = [
   {
     method: "POST",
+    pattern: /^\/__reset\/keywords$/,
+    handler: (_p, _req, res) => {
+      resetKeywords();
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/__reset\/keyword-annotations\/([^/]+)$/,
     handler: ([id], _req, res) => {
       annotations.delete(id);
@@ -1114,6 +1167,70 @@ const routes: Route[] = [
     },
   },
   appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset) => dataset.summary),
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keywords$/,
+    handler: ([id], req, res) => {
+      withBody<KeywordAddRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (body.keywords.length > KEYWORD_BULK_ADD_LIMIT) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              `keywords must contain no more than ${KEYWORD_BULK_ADD_LIMIT} elements`,
+            ),
+          );
+        }
+        const country = body.country ?? dataset.detail.country;
+        const inMarket = (text: string) =>
+          dataset.keywords.find(
+            (row) => row.text === text && row.country === country,
+          );
+        const activating = body.keywords.filter(
+          (text) => !inMarket(text)?.active,
+        );
+        const used = dataset.keywords.filter((row) => row.active).length;
+        const limit = Number(cookieValue(req, KEYWORD_QUOTA_COOKIE));
+        if (limit > 0 && used + activating.length > limit) {
+          return json(res, 403, {
+            ...errorEnvelope(
+              403,
+              path,
+              `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${activating.length} more requested`,
+            ),
+            quota: {
+              resource: "keywordMarkets",
+              plan: "indie",
+              limit,
+              used,
+              requested: activating.length,
+              upgradeTo: "ultimate",
+            },
+          });
+        }
+        for (const text of activating) {
+          const existing = inMarket(text);
+          if (existing) {
+            existing.active = true;
+          } else {
+            dataset.keywords.push(
+              manualKeyword(id, text, country, dataset.keywords.length + 1),
+            );
+          }
+        }
+        json(
+          res,
+          201,
+          dataset.keywords.filter((row) => row.country === country),
+        );
+      });
+    },
+  },
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keywords$/,

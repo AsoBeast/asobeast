@@ -96,6 +96,22 @@ test("creating an email alert answers with the item", async ({ page }) => {
   } satisfies Partial<EmailAlertItem>);
 });
 
+test("adding more than 200 keywords at once is refused like the api", async ({
+  page,
+}) => {
+  const keywords = Array.from({ length: 201 }, (_, index) => `phrase ${index}`);
+
+  const response = await page.request.post(
+    `${MOCK_API_URL}/apps/app-combos/keywords`,
+    { data: { keywords, country: "us" } },
+  );
+
+  expect(response.status()).toBe(400);
+  await expect(response.json()).resolves.toMatchObject({
+    message: "keywords must contain no more than 200 elements",
+  });
+});
+
 test("patching a webhook's events answers with the item", async ({ page }) => {
   const created = await page.request.post(`${MOCK_API_URL}/webhooks`, {
     data: {

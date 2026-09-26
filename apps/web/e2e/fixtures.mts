@@ -13,6 +13,7 @@ import type {
   FirstRunStatus,
   KeywordComparison,
   KeywordCountrySummary,
+  KeywordSource,
   ChangeImpactReport,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
@@ -1210,6 +1211,68 @@ export const APP_BULK_DETAIL: AppDetail = {
   name: "Bulk Keywords App",
 };
 
+export const APP_COMBOS_KEYWORD_FIELD = "mood tracker,daily planner,water";
+
+const APP_COMBOS_TRACKED: ReadonlyArray<
+  readonly [string, KeywordSource, boolean]
+> = [
+  ["mood journal", "TITLE", true],
+  ["mood tracker", "KEYWORD_FIELD", true],
+  ["daily planner", "KEYWORD_FIELD", true],
+  ["water", "KEYWORD_FIELD", true],
+  ["sleep notes app", "MANUAL", true],
+  ["diary daily", "MANUAL", true],
+  ["gratitude", "MANUAL", false],
+];
+
+export const APP_COMBOS_KEYWORDS: TrackedKeywordItem[] = APP_COMBOS_TRACKED.map(
+  ([text, source, active], index) => ({
+    keywordId: `kw-combos-${index + 1}`,
+    text,
+    country: "us",
+    serpVolatility7d: null,
+    source,
+    active,
+    latestPosition: null,
+    latestDepth: null,
+    previousPosition: null,
+    positionDelta1d: null,
+    positionDelta7d: null,
+    traffic: null,
+    difficulty: null,
+    volume: null,
+    relevance: null,
+    opportunity: null,
+    bucket: null,
+    scoredAt: null,
+    scoreProvenance: null,
+  }),
+);
+
+export const APP_COMBOS_DETAIL: AppDetail = {
+  id: "app-combos",
+  store: "APP_STORE",
+  storeAppId: "555987654",
+  country: "us",
+  name: "Mood Journal",
+  iconUrl: null,
+  createdAt: utcTimestampDaysAgo(12),
+  latestSnapshot: {
+    id: "snap-combos",
+    title: "Mood Journal: Daily Diary",
+    subtitle: "Gratitude log & sleep notes",
+    summary: "Write a short entry every evening.",
+    ratingAvg: 4.6,
+    ratingCount: 2100,
+    installs: null,
+    price: 0,
+    version: "2.3.0",
+    capturedAt: utcTimestampDaysAgo(0),
+  },
+  competitors: [],
+  group: null,
+};
+
 export const APP_LONG_ICON_URL =
   "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus/512x512bb.png";
 
@@ -1588,6 +1651,24 @@ export const DATASETS: Record<string, AppDataset> = {
     ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
     changes: EMPTY_CHANGES,
     changeImpact: emptyChangeImpact(APP_BULK_DETAIL),
+    discovery: EMPTY_DISCOVERY,
+    comparison: EMPTY_COMPARISON,
+  },
+  "app-combos": {
+    detail: APP_COMBOS_DETAIL,
+    summary: APP_2_SUMMARY,
+    keywords: APP_COMBOS_KEYWORDS,
+    rankings: EMPTY_RANKINGS,
+    serpMovers: EMPTY_SERP_MOVERS,
+    visibility: EMPTY_VISIBILITY,
+    rankDistributionHistory: EMPTY_RANK_DISTRIBUTION_HISTORY,
+    categoryRanks: EMPTY_CATEGORY_RANKS,
+    competitors: [],
+    reviews: EMPTY_REVIEWS,
+    ratingsHistory: EMPTY_RATINGS_HISTORY,
+    ratingsHistogram: EMPTY_RATINGS_HISTOGRAM,
+    changes: EMPTY_CHANGES,
+    changeImpact: emptyChangeImpact(APP_COMBOS_DETAIL),
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
