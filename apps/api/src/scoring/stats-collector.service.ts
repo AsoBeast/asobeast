@@ -4,10 +4,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, StoreProvider } from '../store-providers/types';
 import { inferPopularityGenre } from './apple-genres';
-import { KeywordStats } from './formulas';
+import { KeywordStats, SerpApp, TOP_TEN } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
+import { MODEL_DEPTH } from './popularity-model';
 import { ScoringEvidence } from './provenance';
-import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
 import {
   ProbedReach,
   probeSuggestReach,
@@ -15,9 +15,6 @@ import {
 } from './suggest-reach.probe';
 
 const SEARCH_DEPTH = 100;
-const TOP_STRENGTH = 10;
-const COMPETITOR_DEPTH = 25;
-const TITLE_MATCH_DEPTH = 30;
 export const MIN_DETAIL_SUCCESS_SHARE = 0.5;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -27,7 +24,7 @@ export interface CollectedKeywordStats {
 }
 
 interface DetailCollection {
-  items: KeywordStats['top10'];
+  items: SerpApp[];
   targetCount: number;
   successCount: number;
 }
@@ -57,10 +54,10 @@ export class StatsCollectorService {
       keyword.country,
       SEARCH_DEPTH,
     );
-    const topTen =
+    const serp =
       keyword.store === Store.GOOGLE_PLAY
         ? await this.enrichTop10(provider, results, keyword.country)
-        : this.searchTopTen(results);
+        : this.searchPage(results);
     const { reach, requests } = await this.suggestReach(provider, keyword);
     const suggestCompleted = reach.status !== 'unavailable';
     const official = await this.officialPopularity.for(
@@ -73,15 +70,7 @@ export class StatsCollectorService {
         store: keyword.store,
         keywordText: keyword.text,
         resultCount: results.length,
-        top10: topTen.items,
-        ...(keyword.store === Store.APP_STORE
-          ? {
-              competitors: results
-                .slice(0, COMPETITOR_DEPTH)
-                .map((item) => this.toStrength(item)),
-            }
-          : {}),
-        top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
+        serp: serp.items,
         suggest: reach,
         ...(official ? { official } : {}),
       },
@@ -89,8 +78,8 @@ export class StatsCollectorService {
         searchResultCount: results.length,
         suggestCompleted,
         suggestRequests: requests,
-        detailTargetCount: topTen.targetCount,
-        detailSuccessCount: topTen.successCount,
+        detailTargetCount: serp.targetCount,
+        detailSuccessCount: serp.successCount,
         officialPopularityUsed: official !== undefined && 'value' in official,
       },
     };
@@ -113,14 +102,12 @@ export class StatsCollectorService {
     return probed;
   }
 
-  private searchTopTen(results: SearchItem[]): DetailCollection {
-    const items = results
-      .slice(0, TOP_STRENGTH)
-      .map((item) => this.toStrength(item));
+  private searchPage(results: SearchItem[]): DetailCollection {
+    const topCount = Math.min(results.length, TOP_TEN);
     return {
-      items,
-      targetCount: items.length,
-      successCount: items.length,
+      items: results.slice(0, MODEL_DEPTH).map((item) => this.toStrength(item)),
+      targetCount: topCount,
+      successCount: topCount,
     };
   }
 
@@ -129,8 +116,8 @@ export class StatsCollectorService {
     results: SearchItem[],
     country: string,
   ): Promise<DetailCollection> {
-    const targets = results.slice(0, TOP_STRENGTH);
-    const enriched: KeywordStats['top10'] = [];
+    const targets = results.slice(0, TOP_TEN);
+    const enriched: SerpApp[] = [];
     let failed = 0;
     for (const item of targets) {
       try {
@@ -142,15 +129,9 @@ export class StatsCollectorService {
             ? {}
             : { ratingCount: app.ratingCount }),
           ...(app.ratingAvg === undefined ? {} : { ratingAvg: app.ratingAvg }),
-          ...(app.storeUpdatedAt === undefined
-            ? {}
-            : { daysSinceUpdate: daysSince(app.storeUpdatedAt) }),
           ...(app.releasedAt === undefined
             ? {}
             : { daysSinceRelease: daysSince(app.releasedAt) }),
-          ...(app.installs === undefined
-            ? {}
-            : { installs: Number(app.installs) }),
         });
       } catch (error) {
         this.logger.warn(
@@ -169,7 +150,7 @@ export class StatsCollectorService {
     return { items: enriched, targetCount: targets.length, successCount };
   }
 
-  private toStrength(item: SearchItem): KeywordStats['top10'][number] {
+  private toStrength(item: SearchItem): SerpApp {
     return {
       ...identityOf(item),
       title: item.title,
@@ -177,26 +158,16 @@ export class StatsCollectorService {
         ? {}
         : { ratingCount: item.ratingCount }),
       ...(item.ratingAvg === undefined ? {} : { ratingAvg: item.ratingAvg }),
-      ...(item.updatedAt === undefined
-        ? {}
-        : { daysSinceUpdate: daysSince(item.updatedAt) }),
       ...(item.releasedAt === undefined
         ? {}
         : { daysSinceRelease: daysSince(item.releasedAt) }),
     };
   }
-
-  private countTitleMatches(results: SearchItem[], text: string): number {
-    return results
-      .slice(0, TITLE_MATCH_DEPTH)
-      .filter((item) => titleEvidence(item.title, text) >= EVIDENCE_ALL_WORDS)
-      .length;
-  }
 }
 
 function identityOf(
   item: SearchItem,
-): Pick<KeywordStats['top10'][number], 'storeAppId' | 'developer'> {
+): Pick<SerpApp, 'storeAppId' | 'developer'> {
   return {
     storeAppId: item.storeAppId,
     ...(item.developer === undefined ? {} : { developer: item.developer }),

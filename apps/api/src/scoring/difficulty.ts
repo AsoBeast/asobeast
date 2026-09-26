@@ -276,15 +276,12 @@ function difficulty100(apps: SerpApp[], keyword: string): number {
   return clamp(total, 1, 100);
 }
 
-const competitorsOf = (stats: KeywordStats): SerpApp[] =>
-  stats.competitors ?? stats.top10;
-
 export const computeDifficulty = (stats: KeywordStats): number =>
-  difficulty100(competitorsOf(stats), stats.keywordText) / 10;
+  difficulty100(stats.serp, stats.keywordText) / 10;
 
 export function entryDifficulty(stats: KeywordStats): number | null {
   if (!serpFlags(stats).includes('brand')) {
     return null;
   }
-  return difficulty100(competitorsOf(stats).slice(1), stats.keywordText) / 10;
+  return difficulty100(stats.serp.slice(1), stats.keywordText) / 10;
 }

@@ -20,10 +20,10 @@ const rated = (ratingCount: number, extra: Partial<SerpApp> = {}): SerpApp => ({
   ...extra,
 });
 
-const page = (keywordText: string, top10: SerpApp[]): KeywordStats => ({
+const page = (keywordText: string, serp: SerpApp[]): KeywordStats => ({
   ...fixtures.F1_HEAD,
   keywordText,
-  top10,
+  serp,
 });
 
 const backfilled = (leader: SerpApp, targeting: number): SerpApp[] => [
@@ -101,12 +101,13 @@ describe('computeDifficulty', () => {
     expect(computeDifficulty(fixtures.F1_HEAD)).toBe(6);
   });
 
-  it('prefers the wider competitor window over the top ten', () => {
+  it('reads the results past the top ten', () => {
     const wide = {
       ...fixtures.F1_HEAD,
-      competitors: Array.from({ length: 25 }, () =>
-        rated(100, { title: 'Quiz' }),
-      ),
+      serp: [
+        ...fixtures.F1_HEAD.serp,
+        ...Array.from({ length: 15 }, () => rated(100, { title: 'Quiz' })),
+      ],
     };
     expect(computeDifficulty(wide)).toBeLessThan(
       computeDifficulty(fixtures.F1_HEAD),

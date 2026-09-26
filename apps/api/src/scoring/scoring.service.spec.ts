@@ -11,12 +11,10 @@ const storedStats: KeywordStats = {
   store: 'APP_STORE',
   keywordText: 'games',
   resultCount: 30,
-  top10: Array.from({ length: 10 }, () => ({
+  serp: Array.from({ length: 10 }, () => ({
     title: 'Best Games',
     ratingCount: 1_000_000,
-    daysSinceUpdate: 9,
   })),
-  top30TitleMatchCount: 30,
   suggest: { status: 'hit', prefixLength: 1, position: 1 },
 };
 

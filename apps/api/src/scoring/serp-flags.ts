@@ -1,6 +1,7 @@
 import { SERP_FLAGS, SerpFlag, searchKey } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
 import { editDistance } from './edit-distance';
+import { topTen } from './formulas';
 import {
   EVIDENCE_ALL_WORDS,
   paddingFactor,
@@ -51,7 +52,7 @@ interface FlaggableApp {
 export interface FlaggablePage {
   keywordText: string;
   resultCount: number;
-  top10: FlaggableApp[];
+  serp: FlaggableApp[];
 }
 
 function typoTolerance(phrase: string): number {
@@ -93,35 +94,39 @@ function namedAfter(leader: FlaggableApp, keyword: string): boolean {
   return words.join(' ') === phrase || core.join(' ') === phrase;
 }
 
-function leaderRatings(page: FlaggablePage): number | null {
-  const [count] = finiteNumbers([page.top10[0]?.ratingCount]);
+function leaderRatings(top: FlaggableApp[]): number | null {
+  const [count] = finiteNumbers([top[0]?.ratingCount]);
   return count ?? null;
 }
 
-function isBrand(page: FlaggablePage, leader: number | null): boolean {
+function isBrand(
+  top: FlaggableApp[],
+  keywordText: string,
+  leader: number | null,
+): boolean {
   if (leader === null || leader < BRAND_MIN_LEADER_RATINGS) {
     return false;
   }
-  const rivals = page.top10
+  const rivals = top
     .slice(1)
     .filter(
-      (item) =>
-        titleEvidence(item.title, page.keywordText) >= EVIDENCE_ALL_WORDS,
+      (item) => titleEvidence(item.title, keywordText) >= EVIDENCE_ALL_WORDS,
     );
   const rest = median(finiteNumbers(rivals.map((item) => item.ratingCount)));
   return (
     leader >= BRAND_LEADER_RATIO * Math.max(rest, 1) &&
-    namedAfter(page.top10[0], page.keywordText)
+    namedAfter(top[0], keywordText)
   );
 }
 
 export function serpFlags(page: FlaggablePage): SerpFlag[] {
-  const leader = leaderRatings(page);
+  const top = topTen(page);
+  const leader = leaderRatings(top);
   const raised: Record<SerpFlag, boolean> = {
-    brand: isBrand(page, leader),
+    brand: isBrand(top, page.keywordText, leader),
     weak_leader: leader !== null && leader < WEAK_LEADER_MAX_RATINGS,
     small_serp: page.resultCount <= SMALL_SERP_MAX_RESULTS,
-    padded: paddingFactor(page.top10, page.keywordText) <= PADDED_MAX_FACTOR,
+    padded: paddingFactor(top, page.keywordText) <= PADDED_MAX_FACTOR,
   };
   return SERP_FLAGS.filter((flag) => raised[flag]);
 }

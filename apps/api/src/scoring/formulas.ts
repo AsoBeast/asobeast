@@ -13,18 +13,19 @@ export interface SerpApp {
   developer?: string;
   ratingCount?: number;
   ratingAvg?: number;
-  daysSinceUpdate?: number;
   daysSinceRelease?: number;
-  installs?: number;
 }
 
 export interface KeywordStats {
   store: Store;
   keywordText: string;
   resultCount: number;
-  top10: SerpApp[];
-  competitors?: SerpApp[];
-  top30TitleMatchCount: number;
+  serp: SerpApp[];
   suggest: SuggestReach;
   official?: OfficialPopularity;
 }
+
+export const TOP_TEN = 10;
+
+export const topTen = <T>(page: { serp: T[] }): T[] =>
+  page.serp.slice(0, TOP_TEN);

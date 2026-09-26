@@ -32,6 +32,28 @@ describe('buildScoreSignals', () => {
     });
   });
 
+  it('reads only the top ten of a wider page', () => {
+    const wider = {
+      ...F2_BRAND,
+      serp: [
+        ...F2_BRAND.serp,
+        ...Array.from({ length: 15 }, () => ({
+          title: 'GeoGuessr',
+          ratingCount: 1,
+        })),
+      ],
+    };
+    const { entryDifficulty, ...topTenSignals } = buildScoreSignals(wider, 5);
+    expect(topTenSignals).toMatchObject({
+      serpRelevance: expect.closeTo(0.1, 6) as number,
+      medianRatingCount: 800,
+      flags: ['brand', 'padded'],
+    });
+    expect(entryDifficulty).not.toBe(
+      buildScoreSignals(F2_BRAND, 5).entryDifficulty,
+    );
+  });
+
   it('has no median without a single rating count', () => {
     expect(buildScoreSignals(F4_EMPTY, 0)).toMatchObject({
       suggestReach: 'absent',
@@ -60,6 +82,18 @@ describe('readScoreSignals', () => {
 
   it('reads the stored signals back', () => {
     expect(readScoreSignals({ ...F2_BRAND, signals })).toEqual(signals);
+  });
+
+  it('reads a row stored with the retired stats fields', () => {
+    const { serp, ...rest } = F2_BRAND;
+    const legacy = {
+      ...rest,
+      top10: serp,
+      competitors: serp,
+      top30TitleMatchCount: 1,
+      signals,
+    };
+    expect(readScoreSignals(legacy)).toEqual(signals);
   });
 
   it.each([

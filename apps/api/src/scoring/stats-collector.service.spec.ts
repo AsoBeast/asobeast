@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem, SuggestItem } from '../store-providers/types';
 import { OfficialPopularityLookup } from './official-popularity';
+import { MODEL_DEPTH } from './popularity-model';
 import { StatsCollectorService } from './stats-collector.service';
 
 const noOfficial = {
@@ -107,12 +108,21 @@ describe('StatsCollectorService', () => {
     expect(suggestFn).toHaveBeenCalledTimes(2);
 
     expect(collected?.stats.keywordText).toBe('puzzle game');
-    expect(collected?.stats.top10).toHaveLength(10);
-    expect(collected?.stats.top10[0].ratingCount).toBe(1000);
-    expect(collected?.stats.top10[0].daysSinceUpdate).toBe(10);
-    expect(collected?.stats.competitors).toHaveLength(25);
-    expect(collected?.stats.competitors?.[0].daysSinceRelease).toBe(730);
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
+    expect(Object.keys(collected?.stats ?? {}).sort()).toEqual([
+      'keywordText',
+      'resultCount',
+      'serp',
+      'store',
+      'suggest',
+    ]);
+    expect(collected?.stats.serp).toHaveLength(MODEL_DEPTH);
+    expect(collected?.stats.serp[0]).toEqual({
+      storeAppId: 'app0',
+      title: 'Puzzle Game 0',
+      ratingCount: 1000,
+      ratingAvg: 4.5,
+      daysSinceRelease: 730,
+    });
     expect(collected?.stats.suggest).toEqual({
       status: 'hit',
       prefixLength: 1,
@@ -151,7 +161,7 @@ describe('StatsCollectorService', () => {
       position: 1,
     });
     expect(collected?.stats.resultCount).toBe(40);
-    expect(collected?.stats.top10[0]).toMatchObject({ storeAppId: 'app0' });
+    expect(collected?.stats.serp[0]).toMatchObject({ storeAppId: 'app0' });
     expect(collected?.evidence).toMatchObject({
       suggestCompleted: true,
       suggestRequests: 4,
@@ -188,11 +198,10 @@ describe('StatsCollectorService', () => {
 
     expect(collected).not.toBeNull();
     expect(collected?.stats.suggest).toEqual({ status: 'unavailable' });
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.evidence.suggestCompleted).toBe(false);
   });
 
-  it('enriches the google play top10 via sequential getApp', async () => {
+  it('enriches the google play top ten via sequential getApp', async () => {
     const suggest = jest.fn().mockResolvedValue([{ term: 'puzzle game' }]);
     const { registry, search, getApp } = buildGplayProvider({ suggest });
     const service = new StatsCollectorService(
@@ -206,16 +215,13 @@ describe('StatsCollectorService', () => {
     expect(search).toHaveBeenCalledWith('puzzle game', 'us', 100);
     expect(getApp).toHaveBeenCalledTimes(10);
     expect(collected?.stats.store).toBe('GOOGLE_PLAY');
-    expect(collected?.stats.top10).toHaveLength(10);
-    expect(collected?.stats.top10[0]).toEqual({
+    expect(collected?.stats.serp).toHaveLength(10);
+    expect(collected?.stats.serp[0]).toEqual({
       storeAppId: 'app0',
       title: 'Puzzle Game',
       ratingCount: 5000,
       ratingAvg: 4.3,
-      daysSinceUpdate: 20,
-      installs: 1_000_000,
     });
-    expect(collected?.stats.top30TitleMatchCount).toBe(12);
     expect(collected?.evidence).toEqual({
       searchResultCount: 40,
       suggestCompleted: true,
@@ -241,8 +247,8 @@ describe('StatsCollectorService', () => {
     const collected = await service.collect('kw1');
 
     expect(getApp).toHaveBeenCalledTimes(10);
-    expect(collected?.stats.top10).toHaveLength(10);
-    expect(collected?.stats.top10[0]).toMatchObject({
+    expect(collected?.stats.serp).toHaveLength(10);
+    expect(collected?.stats.serp[0]).toMatchObject({
       storeAppId: 'app0',
       title: 'Puzzle Game 0',
     });
