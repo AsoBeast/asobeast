@@ -3,10 +3,48 @@ import {
   MetadataChangedPayload,
   RANK_DEPTH,
   RankDroppedPayload,
+  RankFirstPayload,
+  RankImprovedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
   ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
 import { outboxRows } from './outbox-rows';
+
+const milestone: RankMilestonePayload = {
+  event: 'rank.milestone',
+  occurredAt: '2026-07-22T10:00:00.000Z',
+  app: { id: 'app1', name: 'App One' },
+  keyword: { id: 'kw1', text: 'game', store: 'APP_STORE', country: 'us' },
+  tier: 10,
+  direction: 'entered',
+  from: 14,
+  to: 8,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
+};
+
+const firstRanking: RankFirstPayload = {
+  event: 'rank.first',
+  occurredAt: milestone.occurredAt,
+  app: milestone.app,
+  keyword: milestone.keyword,
+  position: 37,
+  depth: RANK_DEPTH,
+};
+
+const overtake: RankOvertakenPayload = {
+  event: 'rank.overtaken',
+  occurredAt: milestone.occurredAt,
+  app: milestone.app,
+  keyword: milestone.keyword,
+  competitor: { id: 'c1', name: 'Rival', from: 9, to: 4 },
+  from: 5,
+  to: 6,
+  fromDepth: RANK_DEPTH,
+  toDepth: RANK_DEPTH,
+};
 
 const actionOpened: ActionOpenedPayload = {
   event: 'action.opened',
@@ -139,5 +177,62 @@ describe('outboxRows for action.opened', () => {
     expect(outboxRows(reopened)[0].dedupeKey).toBe(
       outboxRows(actionOpened)[0].dedupeKey,
     );
+  });
+});
+
+describe('outboxRows for the rank milestone events', () => {
+  it('keys a milestone on the owned app, keyword and day', () => {
+    expect(outboxRows(milestone)).toEqual([
+      {
+        event: 'rank.milestone',
+        appId: 'app1',
+        dedupeKey: 'milestone:app1:kw1:2026-07-22',
+        payload: milestone,
+      },
+    ]);
+  });
+
+  it('keys a first ranking on the owned app, keyword and day', () => {
+    expect(outboxRows(firstRanking)).toEqual([
+      {
+        event: 'rank.first',
+        appId: 'app1',
+        dedupeKey: 'first:app1:kw1:2026-07-22',
+        payload: firstRanking,
+      },
+    ]);
+  });
+
+  it('keys an overtake on each competitor', () => {
+    const second: RankOvertakenPayload = {
+      ...overtake,
+      competitor: { ...overtake.competitor, id: 'c2' },
+    };
+
+    expect(
+      [overtake, second].flatMap(outboxRows).map((row) => row.dedupeKey),
+    ).toEqual([
+      'overtaken:app1:kw1:c1:2026-07-22',
+      'overtaken:app1:kw1:c2:2026-07-22',
+    ]);
+  });
+
+  it('never shares a key with the rank alert of the same move', () => {
+    const improved: RankImprovedPayload = {
+      event: 'rank.improved',
+      occurredAt: milestone.occurredAt,
+      app: milestone.app,
+      keyword: milestone.keyword,
+      from: 14,
+      to: 8,
+      fromDepth: RANK_DEPTH,
+      toDepth: RANK_DEPTH,
+      threshold: 5,
+    };
+
+    const [milestoneRow] = outboxRows(milestone);
+    const [improvedRow] = outboxRows(improved);
+
+    expect(milestoneRow.dedupeKey).not.toBe(improvedRow.dedupeKey);
   });
 });

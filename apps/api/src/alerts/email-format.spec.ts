@@ -10,6 +10,13 @@ import {
   ReviewNegativePayload,
 } from '@asobeast/shared';
 import { formatBatchEmail, formatEmail } from './email-format';
+import {
+  firstRanking,
+  milestone,
+  overtake,
+  rankEventSection,
+  withoutRankEvents,
+} from './rank-events.fixture';
 
 const metadata: MetadataChangedPayload = {
   event: 'metadata.changed',
@@ -229,6 +236,9 @@ const emptySection = (
   app,
   rankDrops: [],
   rankImprovements: [],
+  rankMilestones: [],
+  firstRankings: [],
+  overtakes: [],
   serpEntrants: [],
   changes: [],
   negativeReviews: [],
@@ -630,5 +640,72 @@ describe('formatEmail for action.opened', () => {
     expect(email.text).toContain('1 new action');
     expect(email.text).toContain('Actions');
     expect(email.text).toContain('estimated impact 71');
+  });
+});
+
+describe('formatEmail for the new rank events', () => {
+  it('subjects a milestone and lists its move', () => {
+    const email = formatEmail(milestone());
+
+    expect(email.subject).toBe(
+      '[asobeast] My App entered the top 10 for "habit tracker (US)": #14 → #8',
+    );
+    expect(email.text).toContain('Milestone: entered the top 10');
+    expect(email.text).toContain('From: 14');
+    expect(email.text).toContain('To: 8');
+  });
+
+  it('lists the position of a first ranking and both moves of an overtake', () => {
+    expect(formatEmail(firstRanking()).text).toContain('Position: 37');
+    const email = formatEmail(overtake());
+    expect(email.text).toContain('Competitor: Rival Focus');
+    expect(email.text).toContain('Competitor position: 9 → 4');
+    expect(email.text).toContain('App position: 5 → 6');
+  });
+});
+
+describe('formatBatchEmail for the new rank events', () => {
+  const rankBatch = (section: AlertBatchAppSection): AlertBatchPayload => ({
+    ...batch,
+    totals: { events: 3, apps: 1 },
+    apps: [section],
+  });
+
+  it('counts and lists the new blocks and escapes a competitor name', () => {
+    const section = rankEventSection();
+    const email = formatBatchEmail(
+      rankBatch({
+        ...section,
+        overtakes: [
+          overtake({
+            competitor: { id: 'r', name: '<Rival & Co>', from: 9, to: 4 },
+          }),
+        ],
+      }),
+    );
+
+    expect(email.text).toContain(
+      '· 0 new actions · 1 milestone · 1 first ranking · 1 overtake',
+    );
+    for (const title of [
+      'Milestones',
+      'First rankings',
+      'Overtaken by competitors',
+    ]) {
+      expect(email.text).toContain(title);
+      expect(email.html).toContain(title);
+    }
+    expect(email.html).toContain('&lt;Rival &amp; Co&gt;');
+    expect(email.html).not.toContain('<Rival & Co>');
+  });
+
+  it('counts zero for a section queued before the new arrays existed', () => {
+    const email = formatBatchEmail(
+      rankBatch(withoutRankEvents(rankEventSection())),
+    );
+
+    expect(email.text).toContain(
+      '0 milestones · 0 first rankings · 0 overtakes',
+    );
   });
 });

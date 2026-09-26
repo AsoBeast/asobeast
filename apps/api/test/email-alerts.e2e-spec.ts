@@ -104,6 +104,40 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     expect(empty.body as EmailAlertItem[]).toHaveLength(0);
   });
 
+  it('accepts the milestone, first rank and overtake events', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({
+        email: 'ops@example.com',
+        events: ['rank.milestone', 'rank.first', 'rank.overtaken'],
+      })
+      .expect(201);
+
+    expect((created.body as EmailAlertItem).events).toEqual([
+      'rank.milestone',
+      'rank.first',
+      'rank.overtaken',
+    ]);
+  });
+
+  it('replaces only the events of an email alert', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({ email: 'ops@example.com', events: ['metadata.changed'] })
+      .expect(201);
+    const alert = created.body as EmailAlertItem;
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ events: ['rank.first'] })
+      .expect(200);
+
+    expect(patched.body as EmailAlertItem).toMatchObject({
+      events: ['rank.first'],
+      email: 'ops@example.com',
+    });
+  });
+
   it('rejects an invalid email', async () => {
     await api
       .post('/email-alerts')

@@ -1,8 +1,10 @@
 import type {
   AlertChannel,
   AppAuditResult,
+  EmailAlertItem,
   FirstRunStatus,
   KeywordSuggestionStrategy,
+  WebhookItem,
 } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
@@ -577,4 +579,26 @@ export function invalidateWebhookMutation(client: QueryClient): void {
 
 export function invalidateEmailAlertMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: emailAlertKeys.all });
+}
+
+function replaceRow<T extends { id: string }>(
+  rows: T[] | undefined,
+  item: T,
+): T[] | undefined {
+  return rows?.map((row) => (row.id === item.id ? item : row));
+}
+
+export function seedWebhook(client: QueryClient, webhook: WebhookItem): void {
+  client.setQueryData<WebhookItem[]>(webhookKeys.all, (rows) =>
+    replaceRow(rows, webhook),
+  );
+}
+
+export function seedEmailAlert(
+  client: QueryClient,
+  alert: EmailAlertItem,
+): void {
+  client.setQueryData<EmailAlertItem[]>(emailAlertKeys.all, (rows) =>
+    replaceRow(rows, alert),
+  );
 }
