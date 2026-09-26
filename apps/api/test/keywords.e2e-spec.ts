@@ -1239,6 +1239,23 @@ describe('KeywordsController (e2e)', () => {
     });
   });
 
+  it('rejects a null active flag and leaves the keyword tracked', async () => {
+    const id = await importApp();
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+
+    await api
+      .patch(`/apps/${id}/keywords/${keywordId}`)
+      .send({ active: null })
+      .expect(400);
+
+    const tracked = await prisma.trackedKeyword.findUniqueOrThrow({
+      where: { appId_keywordId: { appId: id, keywordId } },
+    });
+    expect(tracked.active).toBe(true);
+  });
+
   it('returns score signals and the outdated flag next to every v1 field', async () => {
     const id = await importApp();
     const before = (await api.get(`/apps/${id}/keywords`).expect(200))

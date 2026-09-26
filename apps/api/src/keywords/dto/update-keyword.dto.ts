@@ -11,7 +11,7 @@ import { KeywordUpdateRequest } from '@asobeast/shared';
 
 export class UpdateKeywordDto implements KeywordUpdateRequest {
   @ApiPropertyOptional({ example: false })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsBoolean()
   active?: boolean;
 
