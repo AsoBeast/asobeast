@@ -241,7 +241,10 @@ export class ReviewsService {
       Promise.all([
         tx.review.findMany({
           where,
-          orderBy: { reviewedAt: 'desc' },
+          orderBy: [
+            { reviewedAt: { sort: 'desc', nulls: 'last' } },
+            { id: 'desc' },
+          ],
           take: filters.limit,
         }),
         tx.review.count({ where }),
