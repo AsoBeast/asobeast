@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import {
   ACTION_UPDATE_STATUSES,
@@ -25,7 +26,7 @@ export class UpdateActionDto implements ActionUpdateRequest {
   snoozedUntil?: string;
 
   @ApiPropertyOptional({ maxLength: ACTION_NOTE_MAX_LENGTH })
-  @IsOptional()
+  @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @MaxLength(ACTION_NOTE_MAX_LENGTH)
   note?: string;
