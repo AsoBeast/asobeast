@@ -19,6 +19,7 @@ const NUMERIC: Array<[string, string, keyof typeof QUERY_BOUNDS]> = [
   ["keyword_suggestions", "limit", "suggestionsLimit"],
   ["serp_movers", "days", "serpMoverDays"],
   ["changes_timeline", "days", "changeTimelineDays"],
+  ["change_impact", "days", "changeTimelineDays"],
 ];
 
 describe("mcp input bounds match the api", () => {
@@ -50,6 +51,7 @@ describe("mcp input bounds match the api", () => {
     ["app_actions", "country"],
     ["list_keywords", "country"],
     ["keyword_suggestions", "country"],
+    ["change_impact", "country"],
   ];
 
   it.each(COUNTRY_FIELDS)(

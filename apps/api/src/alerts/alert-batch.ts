@@ -9,7 +9,10 @@ import {
   GranularAlertPayload,
   MetadataChangedPayload,
   RankDroppedPayload,
+  RankFirstPayload,
   RankImprovedPayload,
+  RankMilestonePayload,
+  RankOvertakenPayload,
   ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
@@ -85,6 +88,9 @@ interface MutableSection {
   app: AlertBatchApp;
   rankDrops: RankDroppedPayload[];
   rankImprovements: RankImprovedPayload[];
+  rankMilestones: RankMilestonePayload[];
+  firstRankings: RankFirstPayload[];
+  overtakes: RankOvertakenPayload[];
   serpEntrants: SerpEntrantPayload[];
   changes: MetadataChangedPayload[];
   negativeReviews: ReviewNegativePayload[];
@@ -259,6 +265,9 @@ function createSection(app: ResolvedApp): MutableSection {
     app: toBatchApp(app),
     rankDrops: [],
     rankImprovements: [],
+    rankMilestones: [],
+    firstRankings: [],
+    overtakes: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
@@ -288,6 +297,12 @@ function addOwnedSignal(
     if (payload.event === 'rank.dropped') section.rankDrops.push(payload);
     else if (payload.event === 'rank.improved') {
       section.rankImprovements.push(payload);
+    } else if (payload.event === 'rank.milestone') {
+      section.rankMilestones.push(payload);
+    } else if (payload.event === 'rank.first') {
+      section.firstRankings.push(payload);
+    } else if (payload.event === 'rank.overtaken') {
+      section.overtakes.push(payload);
     } else if (payload.event === 'serp.entrant') {
       section.serpEntrants.push(payload);
     } else if (payload.event === 'metadata.changed') {
@@ -341,6 +356,9 @@ function finalizeSections(
       app: section.app,
       rankDrops: section.rankDrops,
       rankImprovements: section.rankImprovements,
+      rankMilestones: section.rankMilestones,
+      firstRankings: section.firstRankings,
+      overtakes: section.overtakes,
       serpEntrants: section.serpEntrants,
       changes: section.changes,
       negativeReviews: section.negativeReviews,

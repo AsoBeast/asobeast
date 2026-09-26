@@ -9,6 +9,12 @@ import {
   RankImprovedPayload,
   ReviewNegativePayload,
 } from '@asobeast/shared';
+import {
+  firstRanking,
+  milestone,
+  overtake,
+  rankEventSection,
+} from './rank-events.fixture';
 import { formatWebhookBody, renderMessage } from './webhook-format';
 
 function discordEmbedSize(body: string): number {
@@ -269,6 +275,9 @@ describe('formatWebhookBody', () => {
       },
     ],
     rankImprovements: [],
+    rankMilestones: [],
+    firstRankings: [],
+    overtakes: [],
     serpEntrants: [],
     changes: [
       {
@@ -287,6 +296,9 @@ describe('formatWebhookBody', () => {
     app: alphaSection.app,
     rankDrops: [],
     rankImprovements: [],
+    rankMilestones: [],
+    firstRankings: [],
+    overtakes: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
@@ -322,6 +334,9 @@ describe('formatWebhookBody', () => {
         threshold: 5,
       },
     ],
+    rankMilestones: [],
+    firstRankings: [],
+    overtakes: [],
     serpEntrants: [],
     changes: [],
     negativeReviews: [],
@@ -682,5 +697,88 @@ describe('formatWebhookBody for action.opened', () => {
     expect(discord.content).toContain('keyword.add_uncovered');
     expect(discord.content).toContain('estimated impact 71');
     expect(slack.text).toContain('[high]');
+  });
+});
+
+describe('the new rank events on webhooks', () => {
+  it.each([
+    [
+      milestone(),
+      '🏅 My App entered the top 10 for "habit tracker (US)": #14 → #8',
+    ],
+    [
+      milestone({ tier: 1, from: 3, to: 1 }),
+      '🏆 My App reached first place for "habit tracker (US)": #3 → #1',
+    ],
+    [
+      milestone({ tier: 3, direction: 'left', from: 2, to: 5 }),
+      '🔻 My App left the top 3 for "habit tracker (US)": #2 → #5',
+    ],
+    [
+      milestone({ tier: 1, direction: 'left', from: 1, to: 2 }),
+      '🔻 My App lost first place for "habit tracker (US)": #1 → #2',
+    ],
+    [
+      firstRanking(),
+      '✨ My App ranks for "habit tracker (US)" for the first time: #37',
+    ],
+    [
+      overtake(),
+      '⚔️ Rival Focus overtook My App for "habit tracker (US)": Rival Focus #9 → #4, My App #5 → #6',
+    ],
+  ])('renders %p', (payload, expected) => {
+    expect(renderMessage(payload)).toBe(expected);
+  });
+
+  it.each([milestone(), firstRanking(), overtake()])(
+    'sends %p raw to generic receivers and as a line to chat',
+    (payload) => {
+      expect(
+        JSON.parse(formatWebhookBody('https://hooks.example.com/x', payload)),
+      ).toEqual(payload);
+      expect(
+        JSON.parse(
+          formatWebhookBody(
+            'https://discord.com/api/webhooks/123/abc',
+            payload,
+          ),
+        ),
+      ).toEqual({ content: renderMessage(payload) });
+      expect(
+        JSON.parse(
+          formatWebhookBody('https://hooks.slack.com/services/T/B/x', payload),
+        ),
+      ).toEqual({ text: renderMessage(payload) });
+    },
+  );
+
+  it('renders the new blocks in discord and slack batches', () => {
+    const rankBatch: AlertBatchPayload = {
+      event: 'alerts.batch',
+      scope: 'owned_apps',
+      occurredAt: '2026-07-22T11:00:00.000Z',
+      window: {
+        from: '2026-07-22T09:00:00.000Z',
+        to: '2026-07-22T11:00:00.000Z',
+      },
+      totals: { events: 3, apps: 1 },
+      apps: [rankEventSection()],
+      events: [milestone(), firstRanking(), overtake()],
+    };
+
+    const discord = JSON.parse(
+      formatWebhookBody('https://discord.com/api/webhooks/123/abc', rankBatch),
+    ) as { embeds: { fields: { value: string }[] }[] };
+    const value = discord.embeds[0].fields[0].value;
+    expect(value).toContain('**Milestones**');
+    expect(value).toContain(
+      'habit tracker \\(US\\)  14 → 8  entered the top 10',
+    );
+
+    const slack = JSON.parse(
+      formatWebhookBody('https://hooks.slack.com/services/T/B/x', rankBatch),
+    ) as { blocks: Array<{ type: string; text?: { text: string } }> };
+    const section = slack.blocks.find((block) => block.type === 'section');
+    expect(section?.text?.text).toContain('*Milestones*');
   });
 });

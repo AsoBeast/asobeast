@@ -14,3 +14,9 @@ export const formatCheckedPosition = (
   depth: number | null,
 ): string | null =>
   depth === null ? null : formatRankPosition(position, depth);
+
+export const RANK_MILESTONE_TIERS = [1, 3, 10] as const;
+export type RankMilestoneTier = (typeof RANK_MILESTONE_TIERS)[number];
+
+export const RANK_MILESTONE_DIRECTIONS = ['entered', 'left'] as const;
+export type RankMilestoneDirection = (typeof RANK_MILESTONE_DIRECTIONS)[number];

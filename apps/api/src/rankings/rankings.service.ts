@@ -14,6 +14,7 @@ import { ImplausibleResultError } from '../store-providers/errors';
 import { isImplausiblyEmpty } from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { RankingHistoryQueryDto } from './dto/ranking-history-query.dto';
+import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
 import { DAY_MS, toDateKey, utcToday } from './rankings.support';
 import { SerpSnapshotDay } from './serp-movers';
@@ -23,6 +24,26 @@ const HISTORY_DAYS = 30;
 interface RankedApp {
   storeAppId: string;
   workspaceId: string;
+}
+
+interface CompetitorRef {
+  id: string;
+  name: string | null;
+}
+
+interface TrackedApps {
+  apps: Map<string, RankedApp>;
+  primaryNames: Map<string, string | null>;
+  competitorsOf: Map<string, CompetitorRef[]>;
+}
+
+interface RecordInput {
+  owned: Map<string, RankedApp>;
+  keyword: KeywordScope;
+  date: Date;
+  positionByStoreAppId: Map<string, number>;
+  primaryNames: Map<string, string | null>;
+  competitorsOf: Map<string, CompetitorRef[]>;
 }
 
 @Injectable()
@@ -50,7 +71,7 @@ export class RankingsService {
         'one search serves every workspace tracking the phrase in that market',
         () => this.trackedApps(keywordId, keyword.store),
       );
-    const { apps, primaryNames } = await this.collectableFor(
+    const { apps, primaryNames, competitorsOf } = await this.collectableFor(
       tracked,
       keywordId,
     );
@@ -105,6 +126,7 @@ export class RankingsService {
           date,
           positionByStoreAppId,
           primaryNames,
+          competitorsOf,
         });
         if (baseline) {
           await this.rankingAlerts.dispatchEntrantAlert(keyword, [
@@ -140,15 +162,9 @@ export class RankingsService {
   }
 
   private async collectableFor(
-    tracked: {
-      apps: Map<string, RankedApp>;
-      primaryNames: Map<string, string | null>;
-    },
+    tracked: TrackedApps,
     keywordId: string,
-  ): Promise<{
-    apps: Map<string, RankedApp>;
-    primaryNames: Map<string, string | null>;
-  }> {
+  ): Promise<TrackedApps> {
     if (tracked.apps.size === 0) return tracked;
 
     const eligible = await this.eligibility.forKeyword(
@@ -161,17 +177,15 @@ export class RankingsService {
     const primaryNames = new Map(
       [...tracked.primaryNames].filter(([appId]) => apps.has(appId)),
     );
-    return { apps, primaryNames };
+    const competitorsOf = new Map(
+      [...tracked.competitorsOf].filter(([appId]) => apps.has(appId)),
+    );
+    return { apps, primaryNames, competitorsOf };
   }
 
-  private async recordPositions(input: {
-    owned: Map<string, RankedApp>;
-    keyword: KeywordScope;
-    date: Date;
-    positionByStoreAppId: Map<string, number>;
-    primaryNames: Map<string, string | null>;
-  }): Promise<void> {
+  private async recordPositions(input: RecordInput): Promise<void> {
     const { owned, keyword, date, positionByStoreAppId, primaryNames } = input;
+    const captures = new Map<string, RankCapture>();
     for (const [appId, { storeAppId, workspaceId }] of owned) {
       const position = positionByStoreAppId.get(storeAppId) ?? null;
       const existing = await this.prisma.keywordRanking.findUnique({
@@ -192,6 +206,7 @@ export class RankingsService {
       });
 
       const changed = existing === null || existing.position !== position;
+      captures.set(appId, { position, changed });
       if (primaryNames.has(appId) && changed) {
         await this.rankingAlerts.dispatchRankAlert(
           { id: appId, name: primaryNames.get(appId) ?? null },
@@ -201,15 +216,36 @@ export class RankingsService {
         );
       }
     }
+    await this.dispatchMilestones(input, captures);
+  }
+
+  private async dispatchMilestones(
+    input: RecordInput,
+    captures: Map<string, RankCapture>,
+  ): Promise<void> {
+    for (const [appId, capture] of captures) {
+      if (!input.primaryNames.has(appId)) continue;
+      const competitors = (input.competitorsOf.get(appId) ?? []).flatMap(
+        (competitor): CompetitorCapture[] => {
+          const current = captures.get(competitor.id);
+          return current ? [{ ...competitor, ...current }] : [];
+        },
+      );
+      await this.rankingAlerts.dispatchMilestoneAlerts({
+        app: { id: appId, name: input.primaryNames.get(appId) ?? null },
+        keyword: input.keyword,
+        date: input.date,
+        depth: RANK_DEPTH,
+        capture,
+        competitors,
+      });
+    }
   }
 
   private async trackedApps(
     keywordId: string,
     store: Store,
-  ): Promise<{
-    apps: Map<string, RankedApp>;
-    primaryNames: Map<string, string | null>;
-  }> {
+  ): Promise<TrackedApps> {
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: { keywordId, active: true, app: { store } },
       select: {
@@ -220,7 +256,12 @@ export class RankingsService {
             storeAppId: true,
             workspaceId: true,
             competitors: {
-              select: { id: true, storeAppId: true, workspaceId: true },
+              select: {
+                id: true,
+                name: true,
+                storeAppId: true,
+                workspaceId: true,
+              },
             },
           },
         },
@@ -229,12 +270,17 @@ export class RankingsService {
 
     const apps = new Map<string, RankedApp>();
     const primaryNames = new Map<string, string | null>();
+    const competitorsOf = new Map<string, CompetitorRef[]>();
     for (const { app } of tracked) {
       apps.set(app.id, {
         storeAppId: app.storeAppId,
         workspaceId: app.workspaceId,
       });
       primaryNames.set(app.id, app.name);
+      competitorsOf.set(
+        app.id,
+        app.competitors.map(({ id, name }) => ({ id, name })),
+      );
       for (const competitor of app.competitors) {
         apps.set(competitor.id, {
           storeAppId: competitor.storeAppId,
@@ -242,7 +288,7 @@ export class RankingsService {
         });
       }
     }
-    return { apps, primaryNames };
+    return { apps, primaryNames, competitorsOf };
   }
 
   async history(
