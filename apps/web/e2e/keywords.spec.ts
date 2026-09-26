@@ -801,17 +801,51 @@ test("a row shows three of its tags and names them all", async ({ page }) => {
   await expect(tags).toHaveText("coretestingstudents+2");
 });
 
-test("a note reads as plain text on focus", async ({ page }) => {
+const NOTE_NAME = "Note: Seasonal <push> in May Keep for exam season";
+
+test("a note reads as plain text from the keyboard", async ({ page }) => {
   await page.goto("/apps/app-1/keywords");
 
-  const note = page.getByRole("button", {
-    name: "Note: Seasonal <push> in May Keep for exam season",
-  });
+  const note = page.getByRole("button", { name: NOTE_NAME });
   await note.focus();
+  await page.keyboard.press("Enter");
 
-  const tooltip = page.getByRole("tooltip");
-  await expect(tooltip).toContainText("Seasonal <push> in May");
-  await expect(tooltip.locator("push")).toHaveCount(0);
+  const popover = page.getByRole("dialog", { name: "Keyword note" });
+  await expect(popover).toContainText("Seasonal <push> in May");
+  await expect(popover.locator("push")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(note).toBeFocused();
+});
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true });
+
+  test("a tap opens the note and a second tap closes it", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const note = page.getByRole("button", { name: NOTE_NAME });
+    await note.tap();
+
+    const popover = page.getByRole("dialog", { name: "Keyword note" });
+    await expect(popover).toBeVisible();
+    await expect(popover).toContainText("Keep for exam season");
+    await expect(note).toHaveAttribute("aria-expanded", "true");
+
+    await note.tap();
+    await expect(popover).toBeHidden();
+  });
+});
+
+test("clicking the note button shows the note", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: NOTE_NAME }).click();
+
+  await expect(
+    page.getByRole("dialog", { name: "Keyword note" }),
+  ).toContainText("Seasonal <push> in May");
 });
 
 test("a phone hides the tags column and the column menu offers it", async ({

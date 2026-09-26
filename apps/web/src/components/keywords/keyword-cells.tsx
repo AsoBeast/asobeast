@@ -14,6 +14,11 @@ import { PositionDeltaChip } from "@/components/ui/delta-chip";
 import { Meter } from "@/components/ui/meter";
 import { GradedNumber, gradeFill } from "@/components/ui/graded";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
@@ -329,19 +334,23 @@ export function TagBadges({ tags }: { tags: readonly string[] }) {
 
 export function NoteButton({ note }: { note: string }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <button
           type="button"
           aria-label={`Note: ${note}`}
-          className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background data-[state=open]:text-foreground"
         >
           <StickyNote className="size-3.5" aria-hidden />
         </button>
-      </TooltipTrigger>
-      <TooltipContent className="max-w-sm whitespace-pre-line">
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        aria-label="Keyword note"
+        className="w-auto max-w-[min(24rem,calc(100vw-2rem))] font-normal break-words whitespace-pre-line"
+      >
         {note}
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }
