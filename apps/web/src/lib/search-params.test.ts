@@ -46,6 +46,7 @@ import {
   keywordSourceParser,
   keywordStatusParser,
   keywordSortParser,
+  keywordTagsParser,
   mcpClientParser,
   moverDaysParser,
   onlyGapsParser,
@@ -299,6 +300,16 @@ describe("coverageSort parser", () => {
   it("keeps the api order when nothing or something unknown is named", () => {
     expect(coverageSortParser.parseServerSide(undefined)).toBeNull();
     expect(coverageSortParser.parseServerSide("title")).toBeNull();
+  });
+});
+
+describe("keyword tags parser", () => {
+  it("reads a comma list of tags and defaults to none", () => {
+    expect(keywordTagsParser.parseServerSide("core,brand")).toEqual([
+      "core",
+      "brand",
+    ]);
+    expect(keywordTagsParser.parseServerSide(undefined)).toEqual([]);
   });
 });
 

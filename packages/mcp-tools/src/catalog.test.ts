@@ -38,4 +38,13 @@ describe("the tool catalog", () => {
   it("returns nothing for a tool it does not define", () => {
     expect(toolByName("delete_everything")).toBeUndefined();
   });
+
+  it("names the owner tags and note in the keyword tool summary", () => {
+    const [summary] = (toolByName("list_keywords")?.description ?? "").split(
+      /\.\s|\s[—–]\s/,
+    );
+
+    expect(summary).toContain("tags");
+    expect(summary).toContain("note");
+  });
 });

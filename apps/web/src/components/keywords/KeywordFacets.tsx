@@ -23,7 +23,11 @@ import {
   positionBandOf,
 } from "@/lib/table/facets";
 import type { KeywordTableFeatures } from "./keyword-table-features";
-import { STATUS_LABELS, type KeywordFilters } from "./keyword-filters";
+import {
+  STATUS_LABELS,
+  tagOptions,
+  type KeywordFilters,
+} from "./keyword-filters";
 import { shownScore } from "./keyword-scores";
 import { SOURCE_LABELS } from "./SourceBadge";
 
@@ -70,6 +74,32 @@ function gradeCounts(table: KeywordTable, id: string, metric: GradeMetric) {
   );
 }
 
+function TagFacet({
+  table,
+  selected,
+  setFilters,
+}: {
+  table: KeywordTable;
+  selected: readonly string[];
+  setFilters: SetValues<typeof keywordFilterParsers>;
+}) {
+  const counts = table.getColumn("tags")?.getFacetedUniqueValues() ?? new Map();
+  const options = tagOptions(
+    [...counts.keys()].filter((tag): tag is string => typeof tag === "string"),
+    selected,
+  );
+  if (options.length === 0) return null;
+  return (
+    <FacetFilter
+      title="Tags"
+      options={options}
+      selected={selected}
+      counts={counts}
+      onChange={(tag) => void setFilters({ tag })}
+    />
+  );
+}
+
 export function KeywordFacets({
   table,
   filters,
@@ -101,6 +131,7 @@ export function KeywordFacets({
         options={STATUS_OPTIONS}
         onChange={(status) => void setFilters({ status })}
       />
+      <TagFacet table={table} selected={filters.tag} setFilters={setFilters} />
       <FacetFilter
         title="Popularity"
         options={GRADE_OPTIONS}

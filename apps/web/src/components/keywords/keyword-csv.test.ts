@@ -88,4 +88,29 @@ describe("keywordCsv", () => {
     expect(row).toContain(",,,,true,");
     expect(row).not.toMatch(/null|undefined/);
   });
+
+  it("appends the tags and the note after the existing columns", () => {
+    const header = keywordCsv([keyword("focus timer")]).split("\r\n")[0];
+
+    expect(header.endsWith(",scoreComparability,tags,note")).toBe(true);
+    expect(header.split(",")).toHaveLength(24);
+  });
+
+  it("joins the tags and leaves a missing tag list and note empty", () => {
+    const [, tagged, bare] = keywordCsv([
+      { ...keyword("focus timer"), tags: ["core", "exam season"], note: "May" },
+      keyword("pomodoro"),
+    ]).split("\r\n");
+
+    expect(tagged.endsWith(",core; exam season,May")).toBe(true);
+    expect(bare.endsWith(",,")).toBe(true);
+  });
+
+  it("neutralizes a formula-like note", () => {
+    const [, row] = keywordCsv([
+      { ...keyword("focus timer"), note: "=HYPERLINK(1)" },
+    ]).split("\r\n");
+
+    expect(row.endsWith(",'=HYPERLINK(1)")).toBe(true);
+  });
 });

@@ -224,6 +224,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-1",
     text: "focus timer",
+    tags: ["core", "testing", "students", "exam season", "brand"],
     country: "us",
     serpVolatility7d: 8,
     source: "TITLE",
@@ -261,6 +262,7 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-2",
     text: "pomodoro",
+    tags: ["core", "brand"],
     country: "us",
     serpVolatility7d: 72,
     source: "SUBTITLE",
@@ -349,6 +351,8 @@ export const APP_1_KEYWORDS: TrackedKeywordItem[] = [
   {
     keywordId: "kw-5",
     text: "time blocking",
+    tags: ["testing"],
+    note: "Seasonal <push> in May\nKeep for exam season",
     country: "us",
     serpVolatility7d: 50,
     source: "COMPETITOR",
@@ -1659,6 +1663,18 @@ export const DATASETS: Record<string, AppDataset> = {
     discovery: EMPTY_DISCOVERY,
     comparison: EMPTY_COMPARISON,
   },
+};
+
+export const APP_TAGS_ID = "app-tags";
+
+DATASETS[APP_TAGS_ID] = {
+  ...DATASETS["app-1"],
+  detail: { ...APP_1_DETAIL, id: APP_TAGS_ID, name: "Tag Lab" },
+  keywords: APP_1_KEYWORDS.slice(0, 3).map((keyword) => ({
+    ...keyword,
+    tags: [],
+    note: null,
+  })),
 };
 
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];

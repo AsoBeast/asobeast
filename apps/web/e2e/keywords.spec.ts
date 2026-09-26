@@ -233,6 +233,10 @@ test("exporting keywords downloads a bom-prefixed csv", async ({ page }) => {
   expect(content).toContain(
     "Apple App Store and Google Play popularity and volume scores use different public signals and are not directly comparable",
   );
+  expect(content.split("\r\n")[0].endsWith(",tags,note")).toBe(true);
+  expect(
+    content.split("\r\n").find((line) => line.startsWith("time blocking,")),
+  ).toContain(',testing,"Seasonal <push> in May\nKeep for exam season"');
 });
 
 test("score details are persistent, keyboard accessible and store specific", async ({
@@ -529,7 +533,7 @@ test("the columns menu hides a column and remembers it", async ({ page }) => {
   await expect(
     menu.getByRole("menuitemcheckbox", { name: "Keyword" }),
   ).toHaveCount(0);
-  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(7);
+  await expect(menu.getByRole("menuitemcheckbox")).toHaveCount(8);
   await menu.getByRole("menuitemcheckbox", { name: "Source" }).click();
   await page.keyboard.press("Escape");
 
@@ -782,5 +786,149 @@ test.describe("a market typed into the add keywords dialog", () => {
     await expect(
       page.getByRole("dialog").getByRole("button", { name: "Add keywords" }),
     ).toBeEnabled();
+  });
+});
+
+test("a row shows three of its tags and names them all", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const tags = page
+    .getByRole("row", { name: /focus timer/ })
+    .getByRole("group", {
+      name: "Tags: core, testing, students, exam season, brand",
+    });
+  await expect(tags).toBeVisible();
+  await expect(tags).toHaveText("coretestingstudents+2");
+});
+
+const NOTE_NAME = "Note: Seasonal <push> in May Keep for exam season";
+
+test("a note reads as plain text from the keyboard", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const note = page.getByRole("button", { name: NOTE_NAME });
+  await note.focus();
+  await page.keyboard.press("Enter");
+
+  const popover = page.getByRole("dialog", { name: "Keyword note" });
+  await expect(popover).toContainText("Seasonal <push> in May");
+  await expect(popover.locator("push")).toHaveCount(0);
+
+  await page.keyboard.press("Escape");
+  await expect(popover).toBeHidden();
+  await expect(note).toBeFocused();
+});
+
+test.describe("on a touch screen", () => {
+  test.use({ hasTouch: true });
+
+  test("a tap opens the note and a second tap closes it", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const note = page.getByRole("button", { name: NOTE_NAME });
+    await note.tap();
+
+    const popover = page.getByRole("dialog", { name: "Keyword note" });
+    await expect(popover).toBeVisible();
+    await expect(popover).toContainText("Keep for exam season");
+    await expect(note).toHaveAttribute("aria-expanded", "true");
+
+    await note.tap();
+    await expect(popover).toBeHidden();
+  });
+});
+
+test("clicking the note button shows the note", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  await page.getByRole("button", { name: NOTE_NAME }).click();
+
+  await expect(
+    page.getByRole("dialog", { name: "Keyword note" }),
+  ).toContainText("Seasonal <push> in May");
+});
+
+test("a phone hides the tags column and the column menu offers it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await page.goto("/apps/app-1/keywords");
+  await page.waitForLoadState("networkidle");
+
+  const header = page.getByRole("columnheader", { name: "Tags", exact: true });
+  await expect(header).toHaveCount(0);
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Tags" }).click();
+  await page.keyboard.press("Escape");
+  await expect(header).toBeVisible();
+});
+
+test.describe("the tags facet", () => {
+  const rowsOf = (page: import("@playwright/test").Page) =>
+    page.getByRole("table", { name: /Tracked keywords/ }).getByRole("row");
+
+  test("keeps only rows carrying the tag and writes it to the url", async ({
+    page,
+  }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    await page.getByRole("button", { name: "Filter by tags" }).click();
+    await page.getByRole("option", { name: /^core/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/tag=core/);
+    await expect(rowsOf(page)).toHaveCount(3);
+    await expect(rowsOf(page).nth(1)).toContainText("focus timer");
+    await expect(rowsOf(page).nth(2)).toContainText("pomodoro");
+  });
+
+  test("keeps rows carrying either of two tags", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?tag=core,testing");
+
+    await expect(rowsOf(page)).toHaveCount(4);
+    await expect(rowsOf(page).filter({ hasText: "time blocking" })).toHaveCount(
+      1,
+    );
+  });
+
+  test("counts tags within the other filters", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?status=paused");
+
+    await page.getByRole("button", { name: "Filter by tags" }).click();
+    const options = page.getByRole("option");
+    await expect(options).toHaveCount(1);
+    await expect(options.first()).toContainText("testing");
+    await expect(options.first()).toContainText("1");
+  });
+
+  test("the chip and clear all remove the tag filter", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?tag=core");
+
+    await page.getByRole("button", { name: "Remove Tag: core" }).click();
+    await expect(page).not.toHaveURL(/tag=/);
+    await expect(rowsOf(page)).toHaveCount(6);
+
+    await page.goto("/apps/app-1/keywords?tag=core&status=active");
+    await page.getByRole("button", { name: "Clear all" }).click();
+    await expect(page).not.toHaveURL(/tag=|status=/);
+  });
+
+  test("the phone sheet offers the tags facet", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto("/apps/app-1/keywords");
+    await page.waitForLoadState("networkidle");
+
+    await page.getByRole("button", { name: /^Filters/ }).click();
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: "Filter by tags" }),
+    ).toBeVisible();
+  });
+
+  test("the search box does not match a tag", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?q=brand");
+
+    await expect(
+      page.getByText("No keywords match these filters"),
+    ).toBeVisible();
   });
 });

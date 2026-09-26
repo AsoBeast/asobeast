@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MoreHorizontal, Sparkles, Trash2 } from "lucide-react";
+import { MoreHorizontal, Sparkles, Tag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
@@ -24,52 +24,27 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
-import { removeKeyword, scoreKeyword, updateKeyword } from "@/lib/api";
+import { removeKeyword, scoreKeyword } from "@/lib/api";
 import { queuedToast } from "@/lib/queued-toast";
-import {
-  appKeys,
-  invalidateKeywordMutation,
-  invalidateKeywords,
-} from "@/lib/queries";
+import { invalidateKeywordMutation, invalidateKeywords } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { KeywordAnnotationsDialog } from "./KeywordAnnotationsDialog";
+import { useKeywordUpdate } from "./useKeywordUpdate";
 
 export function KeywordRowActions({
   appId,
   keyword,
+  marketTags,
 }: {
   appId: string;
   keyword: TrackedKeywordItem;
+  marketTags: () => string[];
 }) {
   const queryClient = useQueryClient();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
-  const toggle = useMutation({
-    mutationFn: (active: boolean) =>
-      updateKeyword(appId, keyword.keywordId, { active }),
-    onMutate: async (active) => {
-      await queryClient.cancelQueries({
-        queryKey: appKeys.keywordsRoot(appId),
-      });
-      const previous = queryClient.getQueriesData<TrackedKeywordItem[]>({
-        queryKey: appKeys.keywordsRoot(appId),
-      });
-      queryClient.setQueriesData<TrackedKeywordItem[]>(
-        { queryKey: appKeys.keywordsRoot(appId) },
-        (rows) =>
-          rows?.map((row) =>
-            row.keywordId === keyword.keywordId ? { ...row, active } : row,
-          ),
-      );
-      return { previous };
-    },
-    onError: (_error, _active, context) => {
-      context?.previous.forEach(([key, data]) => {
-        queryClient.setQueryData(key, data);
-      });
-      toast.error(`Could not update ${keyword.text}`);
-    },
-    onSettled: () => invalidateKeywordMutation(queryClient, appId),
-  });
+  const toggle = useKeywordUpdate(appId, keyword);
 
   const score = useMutation({
     mutationFn: () => scoreKeyword(keyword.keywordId),
@@ -99,7 +74,7 @@ export function KeywordRowActions({
       <Switch
         checked={keyword.active}
         disabled={toggle.isPending}
-        onCheckedChange={(next) => toggle.mutate(next)}
+        onCheckedChange={(next) => toggle.mutate({ active: next })}
         aria-label={keyword.active ? "Pause keyword" : "Resume keyword"}
       />
 
@@ -115,6 +90,10 @@ export function KeywordRowActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+            <Tag />
+            Edit tags and note
+          </DropdownMenuItem>
           <DropdownMenuItem
             disabled={score.isPending}
             onSelect={() => score.mutate()}
@@ -132,6 +111,14 @@ export function KeywordRowActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <KeywordAnnotationsDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        appId={appId}
+        keyword={keyword}
+        marketTags={marketTags}
+      />
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>

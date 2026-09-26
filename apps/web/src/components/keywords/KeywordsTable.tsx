@@ -18,6 +18,7 @@ import { HIDDEN_KEYWORD_COLUMNS, keywordColumns } from "./keyword-columns";
 import { keywordColumnFilters } from "./keyword-filters";
 import { keywordTableFeatures } from "./keyword-table-features";
 import { exportKeywords } from "./keyword-csv";
+import { tagsIn } from "@/lib/keyword-tags";
 import { KeywordsBulkActions } from "./KeywordsBulkActions";
 import { KeywordsEmptyState } from "./KeywordsEmptyState";
 import { KeywordsDataTable } from "./KeywordsDataTable";
@@ -122,7 +123,8 @@ export function KeywordsTable({
           <div className="sticky bottom-4 z-30 flex justify-center">
             <KeywordsBulkActions
               appId={id}
-              selectedIds={selectedIds}
+              selectedKeywords={selectedKeywords}
+              marketTags={tagsIn(keywords)}
               onClear={() => setSelection({})}
               onExport={() => exportKeywords(id, selectedKeywords)}
             />

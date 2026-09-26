@@ -72,6 +72,21 @@ describe('Adversarial isolation attempts', () => {
     expect(untouched.active).toBe(true);
   });
 
+  it('refuses to tag a keyword tracked by the other workspace', async () => {
+    await fixture.a.agent
+      .patch(
+        `/apps/${fixture.a.appleAppId}/keywords/${fixture.b.privateKeywordId}`,
+      )
+      .send({ tags: ['core'] })
+      .expect(404);
+
+    const untouched = await fixture.db.trackedKeyword.findFirstOrThrow({
+      where: { keywordId: fixture.b.privateKeywordId },
+      select: { tags: true },
+    });
+    expect(untouched.tags).toEqual([]);
+  });
+
   it('refuses to remove a keyword tracked by the other workspace', async () => {
     await fixture.a.agent
       .delete(`/apps/${fixture.b.appleAppId}/keywords/${fixture.b.keywordId}`)

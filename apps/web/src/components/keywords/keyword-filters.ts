@@ -32,6 +32,7 @@ export function keywordColumnFilters(
     { id: "difficulty", value: filters.diff },
     { id: "opportunity", value: filters.opp },
     { id: "position", value: filters.pos },
+    { id: "tags", value: filters.tag },
   ].filter((filter) => filter.value.length > 0 && filter.value !== "all");
 }
 
@@ -78,6 +79,16 @@ export function keywordFilterChips(
       filters.pos,
       (value) => POSITION_BAND_LABELS[value],
     ),
+    listChip("tag", "Tag", filters.tag, (value) => value),
   ];
   return chips.filter((chip) => chip !== null);
+}
+
+export function tagOptions(
+  present: Iterable<string>,
+  selected: readonly string[],
+): { value: string; label: string }[] {
+  return [...new Set([...present, ...selected])]
+    .sort((left, right) => left.localeCompare(right))
+    .map((value) => ({ value, label: value }));
 }

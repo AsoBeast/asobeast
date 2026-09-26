@@ -8,6 +8,8 @@ const row = (
   fieldOrder: null,
   active: true,
   relevance: null,
+  tags: [],
+  note: null,
   keyword: {
     text: 'habit tracker',
     country: 'us',
@@ -32,6 +34,14 @@ const row = (
 const facts = (snapshotText: string) => ({ snapshotText });
 
 describe('toTrackedKeywordItem', () => {
+  it('carries the owner tags and note', () => {
+    const item = toTrackedKeywordItem(
+      row({ tags: ['core', 'brand'], note: 'Push in May' }),
+    );
+    expect(item.tags).toEqual(['core', 'brand']);
+    expect(item.note).toBe('Push in May');
+  });
+
   it('derives volume, difficulty and a default relevance', () => {
     const item = toTrackedKeywordItem(row(), facts('daily habit tracker'));
     expect(item.volume).toBeCloseTo(80, 2);
