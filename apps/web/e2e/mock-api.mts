@@ -13,6 +13,8 @@ import {
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   METADATA_DRAFTS,
+  APP_LONG_METADATA_AUDIT,
+  APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
   BUDGET,
   DATASETS,
@@ -1060,7 +1062,7 @@ const routes: Route[] = [
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id)
         ? json(res, 200, {
-            ...METADATA_AUDIT,
+            ...(id === "app-long" ? APP_LONG_METADATA_AUDIT : METADATA_AUDIT),
             appId: id,
             store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
           })
@@ -1095,9 +1097,10 @@ const routes: Route[] = [
         const result: MetadataAssistantResult = {
           model: METADATA_AI_MODEL,
           localization: body.localization ?? null,
-          drafts: METADATA_DRAFTS.filter((draft) =>
-            fields.includes(draft.field),
-          ),
+          drafts: (id === "app-long"
+            ? APP_LONG_METADATA_DRAFTS
+            : METADATA_DRAFTS
+          ).filter((draft) => fields.includes(draft.field)),
         };
         json(res, 201, result);
       });

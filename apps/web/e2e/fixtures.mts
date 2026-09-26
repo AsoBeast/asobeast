@@ -2181,6 +2181,56 @@ export const METADATA_DRAFTS: MetadataDraft[] = [
   },
 ];
 
+const LONG_DESCRIPTION =
+  "Deep Focus Timer turns every study session, deep work block and quiet reading hour into a calm, measurable routine that keeps you away from notifications, tabs and the endless scroll while the timer runs.";
+
+const LONG_KEYWORD_FIELD =
+  "focus,pomodoro,study,deepwork,productivity,concentration,habit,routine,planner,tracker,quiet,calm";
+
+const withLongKeywordField = <
+  T extends { field: string; value: string | null; chars: number },
+>(
+  row: T,
+): T =>
+  row.field === "keywordField"
+    ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
+    : row;
+
+export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
+  ...METADATA_AUDIT,
+  appId: "app-long",
+  fields: [
+    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    {
+      field: "description",
+      value: LONG_DESCRIPTION,
+      chars: LONG_DESCRIPTION.length,
+      limit: 4000,
+      indexed: false,
+      issues: [
+        {
+          rule: "no-social-proof",
+          severity: "info",
+          message: "No social proof (awards, press, user counts) detected.",
+        },
+      ],
+    },
+  ],
+};
+
+export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
+  (draft) => ({
+    ...withLongKeywordField(draft),
+    issues: [
+      {
+        rule: "under-utilized",
+        severity: "warn",
+        message: `Only ${draft.chars} of ${draft.limit} characters used.`,
+      },
+    ],
+  }),
+);
+
 const auditCheck = (
   id: string,
   label: string,
