@@ -1256,6 +1256,27 @@ describe('KeywordsController (e2e)', () => {
     expect(tracked.active).toBe(true);
   });
 
+  it('keeps the stored active flag when the update omits it', async () => {
+    const id = await importApp();
+    const { keywordId } = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, active: true },
+    });
+    await api
+      .patch(`/apps/${id}/keywords/${keywordId}`)
+      .send({ active: false })
+      .expect(200);
+
+    const res = await api
+      .patch(`/apps/${id}/keywords/${keywordId}`)
+      .send({ relevance: 80 })
+      .expect(200);
+
+    expect(res.body as TrackedKeywordItem).toMatchObject({
+      active: false,
+      relevance: 80,
+    });
+  });
+
   it('returns score signals and the outdated flag next to every v1 field', async () => {
     const id = await importApp();
     const before = (await api.get(`/apps/${id}/keywords`).expect(200))
