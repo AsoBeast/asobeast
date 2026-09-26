@@ -182,6 +182,24 @@ test("prints an overview report header with the ranges shown", async ({
   ).toBeVisible();
 });
 
+test("stamps the date printing starts on after a utc midnight", async ({
+  page,
+}) => {
+  await page.clock.install({ time: new Date("2026-03-14T23:59:00Z") });
+  await open(page, OVERVIEW);
+  await expect(page.getByText("Overview report")).toBeHidden();
+
+  await page.clock.setSystemTime(new Date("2026-03-15T00:01:00Z"));
+  await page.evaluate(() => window.dispatchEvent(new Event("beforeprint")));
+  await printed(page);
+
+  await expect(
+    page.getByText("Printed Mar 15, 2026 (UTC) from asobeast", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
 test("prints the overview ranges as words and leaves its links out", async ({
   page,
 }) => {

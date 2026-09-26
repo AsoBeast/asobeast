@@ -1,9 +1,10 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { formatCountry, formatDate } from "@/lib/format";
+import { formatCountry } from "@/lib/format";
 import { appDetailOptions } from "@/lib/queries";
 import { rangeLabel, type DayPreset } from "@/lib/ranges";
+import { usePrintedDate } from "./use-printed-date";
 
 export interface ReportRange {
   label: string;
@@ -20,6 +21,7 @@ export function ReportHeader({
   ranges: readonly ReportRange[];
 }) {
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const printedDate = usePrintedDate();
   const facts = [
     `Home storefront: ${formatCountry(detail.country)}`,
     ...ranges.map((range) => `${range.label}: ${rangeLabel(range.preset)}`),
@@ -37,7 +39,7 @@ export function ReportHeader({
         className="text-caption text-muted-foreground"
         suppressHydrationWarning
       >
-        {`Printed ${formatDate(new Date().toISOString())} (UTC) from asobeast`}
+        {`Printed ${printedDate} (UTC) from asobeast`}
       </p>
     </div>
   );
