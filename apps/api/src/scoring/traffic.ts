@@ -1,7 +1,7 @@
 import { searchKey, Store } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
 import { KeywordStats } from './formulas';
-import { estimatePopularity } from './popularity-model';
+import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
 import { paddingFactor } from './serp-signals';
 import { reachScore } from './suggest-reach';
 
@@ -47,6 +47,7 @@ function modelEstimate(stats: KeywordStats): number {
   const popularity = estimatePopularity(
     stats.competitors ?? stats.top10,
     stats.keywordText,
+    stats.continuations ?? NEUTRAL_CONTINUATIONS,
   );
   return popularity === null ? 0 : popularity / POPULARITY_SCALE;
 }

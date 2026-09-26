@@ -8,8 +8,10 @@ import { KeywordStats } from './formulas';
 import { OfficialPopularityLookup } from './official-popularity';
 import { ScoringEvidence } from './provenance';
 import { EVIDENCE_ALL_WORDS, titleEvidence } from './serp-signals';
+import { SuggestReach } from './suggest-reach';
 import {
-  ProbedReach,
+  countContinuations,
+  countingLookup,
   probeSuggestReach,
   SUGGEST_MATCH,
 } from './suggest-reach.probe';
@@ -24,6 +26,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export interface CollectedKeywordStats {
   stats: KeywordStats;
   evidence: ScoringEvidence;
+}
+
+interface SuggestSignals {
+  reach: SuggestReach;
+  continuations: number | null;
+  requests: number;
 }
 
 interface DetailCollection {
@@ -61,7 +69,10 @@ export class StatsCollectorService {
       keyword.store === Store.GOOGLE_PLAY
         ? await this.enrichTop10(provider, results, keyword.country)
         : this.searchTopTen(results);
-    const { reach, requests } = await this.suggestReach(provider, keyword);
+    const { reach, continuations, requests } = await this.suggestSignals(
+      provider,
+      keyword,
+    );
     const suggestCompleted = reach.status !== 'unavailable';
     const official = await this.officialPopularity.for(
       keyword,
@@ -83,6 +94,7 @@ export class StatsCollectorService {
           : {}),
         top30TitleMatchCount: this.countTitleMatches(results, keyword.text),
         suggest: reach,
+        ...(continuations === null ? {} : { continuations }),
         ...(official ? { official } : {}),
       },
       evidence: {
@@ -96,21 +108,26 @@ export class StatsCollectorService {
     };
   }
 
-  private async suggestReach(
+  private async suggestSignals(
     provider: StoreProvider,
     { text, store, country }: { text: string; store: Store; country: string },
-  ): Promise<ProbedReach> {
-    const probed = await probeSuggestReach(
+  ): Promise<SuggestSignals> {
+    const lookup = countingLookup((term) => provider.suggest(term, country));
+    const { reach } = await probeSuggestReach(
       text,
-      (term) => provider.suggest(term, country),
+      lookup.ask,
       SUGGEST_MATCH[store],
     );
-    if (probed.reach.status === 'unavailable' && store === Store.GOOGLE_PLAY) {
+    if (reach.status === 'unavailable' && store === Store.GOOGLE_PLAY) {
       this.logger.warn(
         `suggest unavailable for "${text}", scoring on demand only`,
       );
     }
-    return probed;
+    const continuations =
+      store === Store.APP_STORE
+        ? await countContinuations(text, lookup.ask)
+        : null;
+    return { reach, continuations, requests: lookup.requests() };
   }
 
   private searchTopTen(results: SearchItem[]): DetailCollection {

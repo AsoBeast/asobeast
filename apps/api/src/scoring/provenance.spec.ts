@@ -62,21 +62,21 @@ describe('scoringConfidence', () => {
 });
 
 describe('scoringProfile', () => {
-  it('maps each store to its estimate source and v2 formula version', () => {
+  it('maps each store to its estimate source and v3 formula version', () => {
     expect(scoringProfile('APP_STORE', false)).toEqual({
       source: 'APPLE_SEARCH_SIGNALS',
-      formulaVersion: 'app-store-v2',
+      formulaVersion: 'app-store-v3',
     });
     expect(scoringProfile('GOOGLE_PLAY', false)).toEqual({
       source: 'GOOGLE_PLAY_SUGGEST_REACH',
-      formulaVersion: 'google-play-v2',
+      formulaVersion: 'google-play-v3',
     });
   });
 
   it('names apple ads when the official value was used', () => {
     expect(scoringProfile('APP_STORE', true)).toEqual({
       source: 'APPLE_ADS_POPULARITY',
-      formulaVersion: 'app-store-v2',
+      formulaVersion: 'app-store-v3',
     });
   });
 });

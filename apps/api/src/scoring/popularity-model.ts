@@ -10,6 +10,7 @@ export const MAX_WORDS = 6;
 export const EXACT_HEAD_MAGNITUDE = 5;
 export const POPULARITY_MIN = 1;
 export const POPULARITY_MAX = 100;
+export const NEUTRAL_CONTINUATIONS = 5;
 
 export interface PopularityFeatures {
   leader: number;
@@ -22,6 +23,7 @@ export interface PopularityFeatures {
   weightedLeader: number;
   results: number;
   exactHead: number;
+  continuations: number;
 }
 
 export type PopularityFeature = keyof PopularityFeatures;
@@ -37,6 +39,7 @@ export const POPULARITY_FEATURES: readonly PopularityFeature[] = [
   'weightedLeader',
   'results',
   'exactHead',
+  'continuations',
 ];
 
 export type PopularityWeights = Record<PopularityFeature | 'intercept', number>;
@@ -45,17 +48,18 @@ export type PopularityWeights = Record<PopularityFeature | 'intercept', number>;
 // Apple Ads top search terms (US, week of 2026-09-13). Refit with the study,
 // never by hand.
 export const POPULARITY_WEIGHTS: PopularityWeights = {
-  intercept: 39.8362,
-  leader: 1.296,
-  depth: 2.2581,
-  titled: 17.4107,
-  exact: -10.1152,
-  exactLeader: 0.8944,
-  words: -3.2445,
-  relevance: 2.3251,
-  weightedLeader: -1.2453,
-  results: -7.875,
-  exactHead: 4.0032,
+  intercept: 36.5756,
+  leader: 0.902,
+  depth: 1.9378,
+  titled: 10.3165,
+  exact: -8.6671,
+  exactLeader: 0.561,
+  words: -1.732,
+  relevance: 0.192,
+  weightedLeader: -1.2402,
+  results: -8.8726,
+  exactHead: 3.8553,
+  continuations: 13.4935,
 };
 
 const magnitude = (count: number): number => Math.log10(1 + Math.max(0, count));
@@ -68,6 +72,7 @@ const strongest = (apps: SerpApp[]): number => Math.max(0, ...ratingsOf(apps));
 export function popularityFeatures(
   results: SerpApp[],
   keyword: string,
+  continuations: number,
 ): PopularityFeatures | null {
   const page = results.slice(0, MODEL_DEPTH);
   if (page.length === 0) {
@@ -101,6 +106,7 @@ export function popularityFeatures(
     weightedLeader: leader * relevance,
     results: page.length / MODEL_DEPTH,
     exactHead: Math.max(0, exactLeader - EXACT_HEAD_MAGNITUDE) ** 2,
+    continuations: magnitude(continuations),
   };
 }
 
@@ -117,9 +123,10 @@ export function predictPopularity(
 export function estimatePopularity(
   results: SerpApp[],
   keyword: string,
+  continuations: number,
   weights: PopularityWeights = POPULARITY_WEIGHTS,
 ): number | null {
-  const features = popularityFeatures(results, keyword);
+  const features = popularityFeatures(results, keyword, continuations);
   if (features === null) {
     return null;
   }

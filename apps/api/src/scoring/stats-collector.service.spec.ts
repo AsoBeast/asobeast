@@ -103,8 +103,9 @@ describe('StatsCollectorService', () => {
     expect(search).toHaveBeenCalledWith('puzzle game', 'us', 100);
     expect(suggestFn).toHaveBeenNthCalledWith(1, 'puzzle game', 'us');
     expect(suggestFn).toHaveBeenNthCalledWith(2, 'p', 'us');
+    expect(suggestFn).toHaveBeenNthCalledWith(3, 'puzzle game ', 'us');
     expect(search).toHaveBeenCalledTimes(1);
-    expect(suggestFn).toHaveBeenCalledTimes(2);
+    expect(suggestFn).toHaveBeenCalledTimes(3);
 
     expect(collected?.stats.keywordText).toBe('puzzle game');
     expect(collected?.stats.top10).toHaveLength(10);
@@ -118,10 +119,11 @@ describe('StatsCollectorService', () => {
       prefixLength: 1,
       position: 1,
     });
+    expect(collected?.stats.continuations).toBe(2);
     expect(collected?.evidence).toEqual({
       searchResultCount: 40,
       suggestCompleted: true,
-      suggestRequests: 2,
+      suggestRequests: 3,
       detailTargetCount: 10,
       detailSuccessCount: 10,
       officialPopularityUsed: false,
@@ -152,9 +154,10 @@ describe('StatsCollectorService', () => {
     });
     expect(collected?.stats.resultCount).toBe(40);
     expect(collected?.stats.top10[0]).toMatchObject({ storeAppId: 'app0' });
+    expect(collected?.stats.continuations).toBe(1);
     expect(collected?.evidence).toMatchObject({
       suggestCompleted: true,
-      suggestRequests: 4,
+      suggestRequests: 5,
     });
   });
 
@@ -188,8 +191,12 @@ describe('StatsCollectorService', () => {
 
     expect(collected).not.toBeNull();
     expect(collected?.stats.suggest).toEqual({ status: 'unavailable' });
+    expect(collected?.stats).not.toHaveProperty('continuations');
     expect(collected?.stats.top30TitleMatchCount).toBe(12);
-    expect(collected?.evidence.suggestCompleted).toBe(false);
+    expect(collected?.evidence).toMatchObject({
+      suggestCompleted: false,
+      suggestRequests: 1,
+    });
   });
 
   it('enriches the google play top10 via sequential getApp', async () => {
@@ -355,12 +362,14 @@ describe('StatsCollectorService', () => {
     expect(collected?.evidence.officialPopularityUsed).toBe(false);
   });
 
-  it('reads google play completions of the keyword as reach', async () => {
+  it('reads only the exact google play phrase as reach', async () => {
     const suggest = jest.fn((term: string) =>
       Promise.resolve(
-        term === 'puzzle game' || term === 'pu'
+        term === 'pu'
           ? [{ term: 'puzzle games' }, { term: 'puzzle game offline' }]
-          : [{ term: 'pinterest' }],
+          : term === 'puzzle game' || term === 'puz'
+            ? [{ term: 'puzzle game' }]
+            : [{ term: 'pinterest' }],
       ),
     );
     const { registry } = buildGplayProvider({ suggest });
@@ -374,8 +383,9 @@ describe('StatsCollectorService', () => {
 
     expect(collected?.stats.suggest).toEqual({
       status: 'hit',
-      prefixLength: 2,
+      prefixLength: 3,
       position: 1,
     });
+    expect(collected?.stats).not.toHaveProperty('continuations');
   });
 });

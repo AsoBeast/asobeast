@@ -121,9 +121,9 @@ describe('toTrackedKeywordItem', () => {
         },
       });
 
-    it('exposes the stored signals of a v2 row', () => {
+    it('exposes the stored signals of a v3 row', () => {
       const item = toTrackedKeywordItem(
-        rowWith({ formulaVersion: 'app-store-v2', stats: { signals } }),
+        rowWith({ formulaVersion: 'app-store-v3', stats: { signals } }),
       );
       expect(item.scoreSignals).toEqual(signals);
       expect(item.scoreOutdated).toBe(false);
@@ -139,7 +139,7 @@ describe('toTrackedKeywordItem', () => {
 
     it('compares against the current version of the row store', () => {
       const item = toTrackedKeywordItem(
-        rowWith({ formulaVersion: 'app-store-v2' }, 'GOOGLE_PLAY'),
+        rowWith({ formulaVersion: 'app-store-v3' }, 'GOOGLE_PLAY'),
       );
       expect(item.scoreOutdated).toBe(true);
     });

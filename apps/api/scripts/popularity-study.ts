@@ -30,6 +30,7 @@ import {
   popularityFeatures,
   predictPopularity,
 } from '../src/scoring/popularity-model';
+import { countContinuations } from '../src/scoring/suggest-reach.probe';
 import { appStoreLib } from '../src/store-providers/app-store.lib';
 import { AppStoreProvider } from '../src/store-providers/app-store.provider';
 
@@ -76,6 +77,7 @@ interface Sample {
   floor: number;
   depth?: number;
   results: SerpApp[];
+  continuations: number;
 }
 
 const sleep = (ms: number): Promise<void> =>
@@ -143,13 +145,14 @@ class SampleCollector {
     for (const [index, term] of terms.entries()) {
       if (this.done.has(term.term)) continue;
       try {
-        const { apps } = await this.search(term.term);
+        const { apps, continuations } = await this.search(term.term);
         this.add({
           term: term.term,
           popularity: term.popularity,
           genre: term.genre,
           floor: this.file.floors[term.genre] ?? this.globalFloor,
           results: apps,
+          continuations,
         });
         console.log(`listed ${index + 1}/${terms.length} ${term.term}`);
       } catch (error) {
@@ -176,7 +179,7 @@ class SampleCollector {
         if (found >= limit) break;
         if (this.listed.has(term) || this.done.has(term)) continue;
         try {
-          const { apps, genre } = await this.search(term);
+          const { apps, genre, continuations } = await this.search(term);
           this.add({
             term,
             popularity: null,
@@ -184,6 +187,7 @@ class SampleCollector {
             floor: (genre && this.file.floors[genre]) || this.globalFloor,
             depth,
             results: apps,
+            continuations,
           });
           found += 1;
           console.log(`unlisted depth ${depth} ${found}/${limit} ${term}`);
@@ -215,7 +219,15 @@ class SampleCollector {
   private async search(term: string): Promise<SearchResults> {
     await sleep(DELAY_MS);
     const results = await this.provider.search(term, COUNTRY, MODEL_DEPTH);
+    const continuations = await countContinuations(term, async (typed) => {
+      await sleep(DELAY_MS);
+      return this.provider.suggest(typed, COUNTRY);
+    });
+    if (continuations === null) {
+      throw new Error('search suggestions failed');
+    }
     return {
+      continuations,
       apps: results.map((item) => ({
         title: item.title,
         ...(item.developer === undefined ? {} : { developer: item.developer }),
@@ -245,6 +257,7 @@ async function collect(termsPath: string, outPath: string): Promise<void> {
 interface SearchResults {
   apps: SerpApp[];
   genre: string | undefined;
+  continuations: number;
 }
 
 interface Row {
@@ -359,7 +372,11 @@ const median = (values: number[]): number => {
 function fit(samplesPath: string): void {
   const samples = JSON.parse(readFileSync(samplesPath, 'utf8')) as Sample[];
   const rows: Row[] = samples.flatMap((sample) => {
-    const features = popularityFeatures(sample.results, sample.term);
+    const features = popularityFeatures(
+      sample.results,
+      sample.term,
+      sample.continuations,
+    );
     if (features === null) return [];
     const listed = sample.popularity !== null;
     return [

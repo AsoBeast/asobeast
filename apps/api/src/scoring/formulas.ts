@@ -26,5 +26,6 @@ export interface KeywordStats {
   competitors?: SerpApp[];
   top30TitleMatchCount: number;
   suggest: SuggestReach;
+  continuations?: number;
   official?: OfficialPopularity;
 }
