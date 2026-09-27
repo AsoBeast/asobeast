@@ -25,7 +25,7 @@ function reachLine(signals: ScoreSignals): string {
     case "absent":
       return "The store never suggests this phrase, so volume is capped.";
     case "unavailable":
-      return "Suggestions were unavailable, so volume comes from the ranking apps alone.";
+      return "Suggestions were unavailable, so volume assumes a typical reach.";
   }
 }
 

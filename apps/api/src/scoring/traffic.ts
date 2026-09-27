@@ -1,17 +1,16 @@
-import { searchKey, Store } from '@asobeast/shared';
+import { Store } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
 import { KeywordStats } from './formulas';
 import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
 import { paddingFactor } from './serp-signals';
 import { reachScore } from './suggest-reach';
 
-export const TRAFFIC_WEIGHTS = { reach: 0.65, demand: 0.35 } as const;
-export const DEMAND_ONLY_FACTOR = 0.7;
+export const DEMAND_WEIGHT = 0.12;
+export const TYPICAL_REACH = 2.5;
 export const DEMAND_BOUNDS: Record<Store, readonly [number, number]> = {
   APP_STORE: [50, 500_000],
   GOOGLE_PLAY: [100, 2_000_000],
 };
-export const WORD_FACTORS = [1, 1, 0.92, 0.8, 0.65, 0.5] as const;
 export const ABSENT_TRAFFIC_CAP = 1.5;
 export const THIN_SERP_RESULTS = 5;
 export const THIN_SERP_TRAFFIC_CAP = 1;
@@ -28,20 +27,11 @@ export function demandScore(stats: KeywordStats): number {
   );
 }
 
-function wordFactor(keywordText: string): number {
-  const words = searchKey(keywordText).split(' ').filter(Boolean).length;
-  return WORD_FACTORS[Math.min(words, WORD_FACTORS.length - 1)];
-}
-
 function suggestEstimate(stats: KeywordStats): number {
-  const reach = reachScore(stats.suggest);
-  const demand = demandScore(stats);
-  const blend =
-    reach === null
-      ? DEMAND_ONLY_FACTOR * demand
-      : TRAFFIC_WEIGHTS.reach * reach + TRAFFIC_WEIGHTS.demand * demand;
+  const reach = reachScore(stats.suggest) ?? TYPICAL_REACH;
+  const blend = reach + DEMAND_WEIGHT * demandScore(stats);
   const cap = stats.suggest.status === 'absent' ? ABSENT_TRAFFIC_CAP : 10;
-  return clamp(Math.min(blend * wordFactor(stats.keywordText), cap));
+  return clamp(Math.min(blend, cap));
 }
 
 function modelEstimate(stats: KeywordStats): number {

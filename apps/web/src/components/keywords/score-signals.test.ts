@@ -48,7 +48,7 @@ describe("popularitySignalLines", () => {
         suggestPrefixLength: null,
         suggestPosition: null,
       }),
-      "Suggestions were unavailable, so volume comes from the ranking apps alone.",
+      "Suggestions were unavailable, so volume assumes a typical reach.",
     ],
   ])("describes the suggest reach %#", (input, expected) => {
     expect(popularitySignalLines(input)).toEqual([expected]);

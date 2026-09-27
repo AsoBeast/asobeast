@@ -55,16 +55,16 @@ Google Play popularity starts from suggest reach: how early the store offers the
 
 | What the store does | Reach, 0 to 10 |
 | --- | --- |
-| Suggests it after 1 typed character | 10 |
-| After 2, 3, 4, 5, 6, 7 or 8 characters | 9, 7.8, 6.6, 5.4, 4.2, 3.2 and 2.4 |
-| Suggests it only once the whole phrase is typed, however short the phrase is | 1.5 |
-| Never suggests it | 0 |
+| Suggests it after 1 typed character | 6.8 |
+| After 2, 3, 4, 5, 6, 7 or 8 characters | 4.8, 4.4, 4, 3.2, 2.5, 2 and 1.6 |
+| Suggests it only once the whole phrase is typed, however short the phrase is | 1 |
+| Never suggests it | 0.9 |
 
-Each position below the first in the suggestion list takes 3 percent off. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
+The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
 
 The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched. Titles are matched as on the App Store.
 
-Google Play popularity is 65 percent reach and 35 percent demand, reduced for longer phrases: by 8 percent for two words, 20 percent for three, 35 percent for four and half for five or more. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, popularity comes from demand alone at 70 percent and confidence drops to low.
+Google Play popularity is the reach plus 12 percent of the demand. A longer phrase is not discounted, because one the store offers after a few typed characters is searched as often as a short one it offers as early. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, the reach is taken as 2.5, the typical reach of that sample, instead of reading demand alone, and confidence drops to low.
 
 ## How is difficulty rated?
 
