@@ -15,7 +15,6 @@ export const ABSENT_TRAFFIC_CAP = 1.5;
 export const THIN_SERP_RESULTS = 5;
 export const THIN_SERP_TRAFFIC_CAP = 1;
 const POPULARITY_SCALE = 10;
-const TRAFFIC_MAX = 10;
 
 export function demandScore(stats: KeywordStats): number {
   const [min, max] = DEMAND_BOUNDS[stats.store];
@@ -63,13 +62,13 @@ export function computeTraffic(stats: KeywordStats): number {
     return clamp(official.value / POPULARITY_SCALE);
   }
   const estimate = estimateTraffic(stats);
-  return official ? belowListed(estimate, official.absentBelow) : estimate;
-}
-
-function belowListed(estimate: number, absentBelow: number): number {
-  const ceiling = Math.max(
-    (absentBelow - 1) / POPULARITY_SCALE,
-    ABSENT_TRAFFIC_CAP,
-  );
-  return (clamp(estimate) * ceiling) / TRAFFIC_MAX;
+  return official
+    ? Math.min(
+        estimate,
+        Math.max(
+          (official.absentBelow - 1) / POPULARITY_SCALE,
+          ABSENT_TRAFFIC_CAP,
+        ),
+      )
+    : estimate;
 }

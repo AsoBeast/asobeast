@@ -338,11 +338,10 @@ describe('StatsCollectorService', () => {
 
     const collected = await service.collect('kw1');
 
-    expect(lookup).toHaveBeenCalledWith({
-      text: 'puzzle game',
-      store: Store.APP_STORE,
-      country: 'us',
-    });
+    expect(lookup).toHaveBeenCalledWith(
+      { text: 'puzzle game', store: Store.APP_STORE, country: 'us' },
+      'GAMES',
+    );
     expect(collected?.stats.official).toEqual({ value: 71 });
     expect(collected?.evidence.officialPopularityUsed).toBe(true);
   });

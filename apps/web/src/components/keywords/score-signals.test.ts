@@ -83,7 +83,7 @@ describe("popularitySignalLines", () => {
       popularitySignalLines(signals(), "APPLE_SEARCH_SIGNALS", 46),
     ).toEqual([
       "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.",
-      "Apple does not list this term among its most searched, so it is placed below the lowest popularity Apple published this week, in the order its estimate gives it.",
+      "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.",
     ]);
     expect(
       popularitySignalLines(signals(), "APPLE_SEARCH_SIGNALS", 54),
