@@ -55,23 +55,23 @@ export const POPULARITY_FEATURES: readonly PopularityFeature[] = [
 export type PopularityWeights = Record<PopularityFeature | 'intercept', number>;
 
 // Fitted by `pnpm --filter api scoring:popularity-study fit` against the
-// Apple Ads top search terms (US, week of 2026-09-13). Refit with the study,
-// never by hand.
+// Apple Ads top search terms and a reference of published popularity (US,
+// week of 2026-09-13). Refit with the study, never by hand.
 export const POPULARITY_WEIGHTS: PopularityWeights = {
-  intercept: 29.2396,
-  leader: 1.8321,
-  depth: 1.6489,
-  titled: 5.163,
-  exact: -6.918,
-  exactLeader: 0.2888,
-  words: -1.4132,
-  relevance: 3.7039,
-  weightedLeader: -0.62,
-  results: -5.123,
-  exactHead: 3.1445,
-  continuations: 11.7102,
-  suggested: -9.7432,
-  early: 15.6661,
+  intercept: 2.4357,
+  leader: 0.1811,
+  depth: 0.0856,
+  titled: 0.5979,
+  exact: 0.4935,
+  exactLeader: 0.0321,
+  words: 0.0613,
+  relevance: -0.4549,
+  weightedLeader: -0.0672,
+  results: -1.3057,
+  exactHead: -0.0417,
+  continuations: 0.5293,
+  suggested: -0.0646,
+  early: 0.8583,
 };
 
 const magnitude = (count: number): number => Math.log10(1 + Math.max(0, count));
@@ -137,9 +137,11 @@ export function predictPopularity(
   features: PopularityFeatures,
   weights: PopularityWeights = POPULARITY_WEIGHTS,
 ): number {
-  return POPULARITY_FEATURES.reduce(
-    (sum, name) => sum + weights[name] * features[name],
-    weights.intercept,
+  return Math.expm1(
+    POPULARITY_FEATURES.reduce(
+      (sum, name) => sum + weights[name] * features[name],
+      weights.intercept,
+    ),
   );
 }
 

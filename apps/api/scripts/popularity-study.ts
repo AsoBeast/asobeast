@@ -12,7 +12,12 @@
  *    two depths: search suggestions for listed terms (depth 1) and
  *    suggestions for those (depth 2). Apple publishes no value for them, so
  *    the fit places them 10 and 20 below their genre's lowest listed value.
- * 3. pnpm --filter api scoring:popularity-study fit samples.json
+ * 3. Optionally, pnpm --filter api scoring:popularity-study reference
+ *    terms.json reference.json samples.json adds terms whose popularity is
+ *    known from another source, as [{"term", "popularity"}] on Apple's
+ *    scale, so the long tail is fitted on real values. With enough of them,
+ *    STUDY_ABSENT_WEIGHT=0 drops the placed unlisted terms from the fit.
+ * 4. pnpm --filter api scoring:popularity-study fit samples.json
  *    Prints holdout metrics and the weights to paste into POPULARITY_WEIGHTS.
  */
 import { createHash } from 'node:crypto';
@@ -69,6 +74,8 @@ interface ListedTerm {
   genre: string;
   popularity: number;
 }
+
+type KnownTerm = Pick<ListedTerm, 'term' | 'popularity'> & { genre?: string };
 
 interface TermsFile {
   floors: Record<string, number>;
@@ -147,21 +154,24 @@ class SampleCollector {
     this.done = new Set(this.samples.map((sample) => sample.term));
   }
 
-  async collectListed(terms: ListedTerm[]): Promise<void> {
+  async collectKnown(terms: KnownTerm[], label: string): Promise<void> {
     for (const [index, term] of terms.entries()) {
       if (this.done.has(term.term)) continue;
       try {
-        const { apps, continuations, reach } = await this.search(term.term);
+        const { apps, genre, continuations, reach } = await this.search(
+          term.term,
+        );
+        const known = term.genre ?? genre;
         this.add({
           term: term.term,
           popularity: term.popularity,
-          genre: term.genre,
-          floor: this.file.floors[term.genre] ?? this.globalFloor,
+          genre: known ?? null,
+          floor: (known && this.file.floors[known]) || this.globalFloor,
           results: apps,
           continuations,
           reach,
         });
-        console.log(`listed ${index + 1}/${terms.length} ${term.term}`);
+        console.log(`${label} ${index + 1}/${terms.length} ${term.term}`);
       } catch (error) {
         console.warn(`skip "${term.term}": ${messageOf(error)}`);
       }
@@ -255,13 +265,27 @@ async function collect(termsPath: string, outPath: string): Promise<void> {
   const file = readTerms(termsPath);
   const collector = new SampleCollector(file, outPath);
   const positives = sampleListed(file);
-  await collector.collectListed(positives);
+  await collector.collectKnown(positives, 'listed');
   await collector.collectUnlisted(
     spread(positives, SEEDS).map((term) => term.term),
     1,
     ABSENT,
   );
   await collector.collectUnlisted(collector.unlistedAt(1), 2, DEEP);
+  console.log(`saved ${collector.samples.length} samples to ${outPath}`);
+}
+
+async function reference(
+  termsPath: string,
+  referencePath: string,
+  outPath: string,
+): Promise<void> {
+  const known = JSON.parse(readFileSync(referencePath, 'utf8')) as KnownTerm[];
+  const collector = new SampleCollector(readTerms(termsPath), outPath);
+  await collector.collectKnown(
+    known.filter((term) => Number.isFinite(term.popularity)),
+    'reference',
+  );
   console.log(`saved ${collector.samples.length} samples to ${outPath}`);
 }
 
@@ -319,7 +343,7 @@ function fitWeights(rows: Row[]): PopularityWeights {
   for (const row of rows) {
     const x = design(row.features);
     for (let i = 0; i < size; i++) {
-      xty[i] += row.weight * x[i] * row.target;
+      xty[i] += row.weight * x[i] * Math.log1p(row.target);
       for (let j = 0; j < size; j++) xtx[i][j] += row.weight * x[i] * x[j];
     }
   }
@@ -425,14 +449,16 @@ function messageOf(error: unknown): string {
 }
 
 async function main(): Promise<void> {
-  const [command, first, second] = process.argv.slice(2);
+  const [command, first, second, third] = process.argv.slice(2);
   if (command === 'collect' && first && second) {
     await collect(userPath(first), userPath(second));
+  } else if (command === 'reference' && first && second && third) {
+    await reference(userPath(first), userPath(second), userPath(third));
   } else if (command === 'fit' && first) {
     fit(userPath(first));
   } else {
     console.log(
-      'usage: popularity-study collect <terms.json> <samples.json> | fit <samples.json>',
+      'usage: popularity-study collect <terms.json> <samples.json> | reference <terms.json> <reference.json> <samples.json> | fit <samples.json>',
     );
     process.exitCode = 1;
   }

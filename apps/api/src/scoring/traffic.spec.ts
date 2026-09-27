@@ -131,12 +131,14 @@ describe('computeTraffic on the app store', () => {
     expect(computeTraffic(nonsense)).toBeLessThanOrEqual(1);
   });
 
-  it('ignores suggest reach', () => {
+  it('reads suggest reach', () => {
     const absent = {
       ...fixtures.F1_HEAD,
       suggest: { status: 'absent' } as const,
     };
-    expect(computeTraffic(absent)).toBe(computeTraffic(fixtures.F1_HEAD));
+    expect(computeTraffic(absent)).toBeLessThan(
+      computeTraffic(fixtures.F1_HEAD),
+    );
   });
 
   it('prefers the official value and keeps the estimate apart', () => {

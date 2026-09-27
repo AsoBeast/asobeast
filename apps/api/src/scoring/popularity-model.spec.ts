@@ -113,7 +113,7 @@ describe('estimatePopularity', () => {
     expect(estimatePopularity([], 'quiz', suggest(0))).toBeNull();
   });
 
-  it('keeps the estimate on the 1 to 100 scale', () => {
+  it('predicts on a log scale and keeps the estimate between 1 and 100', () => {
     const page = [app('Quiz', 1_000)];
     expect(
       estimatePopularity(page, 'quiz', suggest(0), { ...zero, intercept: -20 }),
@@ -124,10 +124,10 @@ describe('estimatePopularity', () => {
     expect(
       estimatePopularity(page, 'quiz', suggest(0), {
         ...zero,
-        intercept: 10,
-        leader: 2,
+        intercept: 1,
+        leader: 0.5,
       }),
-    ).toBe(Math.round(10 + 2 * Math.log10(1_001)));
+    ).toBe(Math.round(Math.expm1(1 + 0.5 * Math.log10(1_001))));
   });
 
   it('ranks a crowded head term above a long tail phrase', () => {
