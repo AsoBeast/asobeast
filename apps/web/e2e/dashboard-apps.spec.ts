@@ -246,3 +246,19 @@ test("hovering the rank bands of a card shows the breakdown", async ({
     page.getByRole("tooltip").getByText("#11–50"),
   );
 });
+
+test("a search from the address stays visible on a short app list", async ({
+  page,
+}) => {
+  await page.goto("/?q=tomato");
+
+  const search = appsRegion(page).getByRole("textbox", { name: "Search apps" });
+  await expect(search).toHaveValue("tomato");
+  await expect.poll(() => cardNames(page)).toEqual(["Tomato Clock"]);
+
+  await search.fill("");
+
+  await expect
+    .poll(async () => (await cardNames(page)).length)
+    .toBeGreaterThan(1);
+});

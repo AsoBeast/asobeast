@@ -38,7 +38,7 @@ export function AppsToolbar() {
 
   return (
     <>
-      {data.apps.length > SEARCH_MIN_APPS ? (
+      {data.apps.length > SEARCH_MIN_APPS || q !== "" ? (
         <SearchInput
           label="Search apps"
           value={q}
