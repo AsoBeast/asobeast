@@ -367,6 +367,18 @@ async function seedWorkspace(
       lastSeenAt: new Date(),
     },
   });
+  await db.actionEvent.create({
+    data: {
+      workspaceId: id,
+      actionId: action.id,
+      appId: apple.id,
+      type: 'opened',
+      actor: 'system',
+      status: 'OPEN',
+      priority: 'high',
+      impact: 60,
+    },
+  });
 
   return {
     id,

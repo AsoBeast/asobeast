@@ -198,6 +198,18 @@ describe('Workspace deletion (e2e)', () => {
         lastSeenAt: new Date(),
       },
     });
+    await prisma.actionEvent.create({
+      data: {
+        workspaceId,
+        actionId: action.id,
+        appId: owned.id,
+        type: 'opened',
+        actor: 'system',
+        status: 'OPEN',
+        priority: 'high',
+        impact: 50,
+      },
+    });
     const webhook = await prisma.webhook.create({
       data: {
         workspaceId,
@@ -285,6 +297,7 @@ describe('Workspace deletion (e2e)', () => {
       auditScore,
       suggestProbe,
       actionItem,
+      actionEvent,
       webhook,
       emailAlert,
       alertDelivery,
@@ -308,6 +321,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.auditScore.count({ where: { appId: target.appId } }),
       prisma.suggestProbe.count({ where: { appId: target.appId } }),
       prisma.actionItem.count({ where: { id: target.actionId } }),
+      prisma.actionEvent.count({ where: { actionId: target.actionId } }),
       prisma.webhook.count({ where: { id: target.webhookId } }),
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
@@ -331,6 +345,7 @@ describe('Workspace deletion (e2e)', () => {
       AuditScore: auditScore,
       SuggestProbe: suggestProbe,
       ActionItem: actionItem,
+      ActionEvent: actionEvent,
       Webhook: webhook,
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,
