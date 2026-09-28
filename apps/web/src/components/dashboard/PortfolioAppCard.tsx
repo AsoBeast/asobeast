@@ -1,4 +1,5 @@
-import type { PortfolioApp } from "@asobeast/shared";
+import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
+import { RankBandBar } from "@/components/charts/RankBandBar";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -9,8 +10,9 @@ import {
   formatNumber,
   storeLabel,
 } from "@/lib/format";
-import { AppCardLink } from "./AppCardLink";
-import { DeleteAppMenu } from "./DeleteAppMenu";
+import { AppCardLink } from "@/components/apps/AppCardLink";
+import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
+import { AppFacts } from "./AppFacts";
 import { Sparkline } from "./Sparkline";
 
 export function AppStats({ app }: { app: PortfolioApp }) {
@@ -40,11 +42,32 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
   );
 }
 
-export function PortfolioAppCard({ app }: { app: PortfolioApp }) {
+function Top10Line({ insight }: { insight: PortfolioAppInsight }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <RankBandBar distribution={insight.rankDistribution} />
+      <div className="flex flex-wrap items-center gap-2 text-caption text-muted-foreground">
+        <span>{formatNumber(insight.rankDistribution.top10)} in top 10</span>
+        <TrendChip label="7d" value={insight.top10Delta7d} />
+      </div>
+    </div>
+  );
+}
+
+const hasTrackedKeywords = (insight: PortfolioAppInsight): boolean =>
+  Object.values(insight.rankDistribution).some((count) => count > 0);
+
+export function PortfolioAppCard({
+  app,
+  insight,
+}: {
+  app: PortfolioApp;
+  insight: PortfolioAppInsight | undefined;
+}) {
   const name = app.name ?? "Untitled app";
 
   return (
-    <Card className="relative gap-0 p-4 transition-colors hover:bg-muted/40">
+    <Card className="@container/app-card relative h-full gap-0 p-4 transition-colors hover:bg-muted/40">
       <AppCardLink
         id={app.id}
         name={name}
@@ -55,7 +78,7 @@ export function PortfolioAppCard({ app }: { app: PortfolioApp }) {
         <DeleteAppMenu id={app.id} name={name} />
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-1 flex-col gap-3">
         <div className="flex items-start gap-4">
           <AppIcon src={app.iconUrl} name={app.name} />
           <div className="flex min-w-0 flex-1 flex-col gap-1 pr-6">
@@ -73,23 +96,41 @@ export function PortfolioAppCard({ app }: { app: PortfolioApp }) {
         ) : (
           <>
             <div className="flex flex-col gap-1">
-              <span className="numeric font-mono text-3xl font-semibold">
-                {Math.round(app.visibility.current)}
+              <div className="flex items-baseline gap-2">
+                <span className="numeric font-mono text-3xl font-semibold">
+                  {Math.round(app.visibility.current)}
+                </span>
+                <TrendChip label="7d" value={app.visibility.delta7d} />
+              </div>
+              <span className="text-caption text-muted-foreground">
+                visibility
               </span>
-              <TrendChip label="7d" value={app.visibility.delta7d} />
             </div>
 
             <Sparkline points={app.sparkline} />
+
+            {insight && hasTrackedKeywords(insight) ? (
+              <Top10Line insight={insight} />
+            ) : null}
+            {insight ? <AppFacts app={app} insight={insight} /> : null}
           </>
         )}
 
-        <AppStats app={app} />
+        <div data-slot="app-card-footer" className="mt-auto">
+          <AppStats app={app} />
+        </div>
       </div>
     </Card>
   );
 }
 
-export function PortfolioGroupMember({ app }: { app: PortfolioApp }) {
+export function PortfolioGroupMember({
+  app,
+  insight,
+}: {
+  app: PortfolioApp;
+  insight: PortfolioAppInsight | undefined;
+}) {
   const name = app.name ?? "Untitled app";
 
   return (
@@ -127,7 +168,10 @@ export function PortfolioGroupMember({ app }: { app: PortfolioApp }) {
           Awaiting the first daily run.
         </p>
       ) : (
-        <Sparkline points={app.sparkline} />
+        <>
+          <Sparkline points={app.sparkline} />
+          {insight ? <AppFacts app={app} insight={insight} compact /> : null}
+        </>
       )}
 
       <AppStats app={app} />

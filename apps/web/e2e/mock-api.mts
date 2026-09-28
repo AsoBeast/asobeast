@@ -31,6 +31,7 @@ import {
   IMPORTED_APP,
   IMPORTED_APP_DETAIL,
   IMPORTED_PORTFOLIO_APP,
+  MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
   PORTFOLIO,
@@ -41,6 +42,14 @@ import {
   errorEnvelope,
   rateLimitedEnvelope,
 } from "./fixtures.mts";
+import {
+  EMPTY_PORTFOLIO_INSIGHTS,
+  FRESH_PORTFOLIO_INSIGHTS,
+  MANY_PORTFOLIO_INSIGHTS,
+  PORTFOLIO_INSIGHTS,
+  QUIET_PORTFOLIO_INSIGHTS,
+  UNRANKED_PORTFOLIO_INSIGHTS,
+} from "./portfolio-insights.mts";
 import type {
   AccountPlan,
   ActionItem,
@@ -760,16 +769,23 @@ function firstRunFor(appId: string): FirstRunStatus {
 }
 
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
-const budgetHolds = new Map<string, PromiseWithResolvers<void>>();
+type Holds = Map<string, PromiseWithResolvers<void>>;
 
-function budgetHold(token: string): PromiseWithResolvers<void> {
-  const existing = budgetHolds.get(token);
+const budgetHolds: Holds = new Map();
+const insightsHolds: Holds = new Map();
+
+function holdFor(holds: Holds, token: string): PromiseWithResolvers<void> {
+  const existing = holds.get(token);
   if (existing) return existing;
   const hold = Promise.withResolvers<void>();
-  budgetHolds.set(token, hold);
+  holds.set(token, hold);
   return hold;
 }
+
+const budgetHold = (token: string) => holdFor(budgetHolds, token);
+const insightsHold = (token: string) => holdFor(insightsHolds, token);
 
 const routes: Route[] = [
   {
@@ -801,6 +817,14 @@ const routes: Route[] = [
     pattern: /^\/__budget-holds\/([^/]+)\/release$/,
     handler: ([token], _req, res) => {
       budgetHold(token).resolve();
+      json(res, 200, { released: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__insights-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      insightsHold(token).resolve();
       json(res, 200, { released: true });
     },
   },
@@ -973,15 +997,40 @@ const routes: Route[] = [
         });
       }
       const empty = hasCookie(req, "portfolio_empty", "1");
+      const listed = hasCookie(req, "portfolio_many", "1")
+        ? [...portfolioApps, ...MANY_PORTFOLIO_APPS]
+        : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : portfolioApps,
+        apps: empty ? [] : listed,
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
-          apps: empty ? 0 : portfolioApps.length,
+          apps: empty ? 0 : listed.length,
         },
       } satisfies PortfolioSummary);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/portfolio\/insights$/,
+    handler: (_p, req, res) => {
+      if (hasCookie(req, "portfolio_empty", "1")) {
+        return json(res, 200, EMPTY_PORTFOLIO_INSIGHTS);
+      }
+      if (hasCookie(req, "portfolio_many", "1")) {
+        return json(res, 200, MANY_PORTFOLIO_INSIGHTS);
+      }
+      const insights = hasCookie(req, "portfolio_insights_quiet", "1")
+        ? QUIET_PORTFOLIO_INSIGHTS
+        : hasCookie(req, "portfolio_insights_unranked", "1")
+          ? UNRANKED_PORTFOLIO_INSIGHTS
+          : hasCookie(req, "portfolio_insights_fresh", "1")
+            ? FRESH_PORTFOLIO_INSIGHTS
+            : PORTFOLIO_INSIGHTS;
+      const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
+      if (!token) return json(res, 200, insights);
+      void insightsHold(token).promise.then(() => json(res, 200, insights));
     },
   },
   {

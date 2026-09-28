@@ -11,6 +11,7 @@ import {
   formatPrice,
   formatRating,
   formatRelativeTime,
+  pluralize,
   storeLabel,
 } from "./format";
 
@@ -159,5 +160,20 @@ describe("formatCountry", () => {
 
   it("falls back to the uppercased code when the region lookup throws", () => {
     expect(formatCountry("u")).toBe("U");
+  });
+});
+
+describe("pluralize", () => {
+  it("uses the singular for exactly one", () => {
+    expect(pluralize(1, "app")).toBe("1 app");
+  });
+
+  it("uses the plural for zero and many", () => {
+    expect(pluralize(0, "keyword")).toBe("0 keywords");
+    expect(pluralize(1200, "competitor")).toBe("1,200 competitors");
+  });
+
+  it("accepts an irregular plural", () => {
+    expect(pluralize(2, "category", "categories")).toBe("2 categories");
   });
 });

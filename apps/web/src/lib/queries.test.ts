@@ -47,6 +47,8 @@ import {
   keywordCountriesOptions,
   keywordsOptions,
   marketAvailabilityOptions,
+  portfolioInsightsKey,
+  portfolioInsightsOptions,
   portfolioKey,
   rankDistributionHistoryOptions,
   rankingsOptions,
@@ -273,7 +275,7 @@ describe("invalidation sets", () => {
   it("invalidates every query of the app once its listing settles", () => {
     expect(
       invalidatedKeys((client) => invalidateAppListing(client, APP)),
-    ).toEqual([appKeys.detail(APP)]);
+    ).toEqual([appKeys.detail(APP), portfolioKey]);
   });
 
   it("invalidates only the keyword list when keywords are refetched", () => {
@@ -300,6 +302,7 @@ describe("invalidation sets", () => {
       appKeys.keywordField(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
+      portfolioInsightsKey,
     ]);
   });
 
@@ -310,6 +313,7 @@ describe("invalidation sets", () => {
       appKeys.detail(APP),
       appKeys.discoveryRoot(APP),
       appKeys.serpMoversRoot(APP),
+      portfolioKey,
     ]);
   });
 
@@ -329,13 +333,13 @@ describe("invalidation sets", () => {
   it("invalidates the whole action surface for a global action mutation", () => {
     expect(
       invalidatedKeys((client) => invalidateActionMutation(client)),
-    ).toEqual([actionKeys.all]);
+    ).toEqual([actionKeys.all, portfolioInsightsKey]);
   });
 
   it("also invalidates the app action list for an app scoped action mutation", () => {
     expect(
       invalidatedKeys((client) => invalidateActionMutation(client, APP)),
-    ).toEqual([actionKeys.all, actionKeys.appRoot(APP)]);
+    ).toEqual([actionKeys.all, portfolioInsightsKey, actionKeys.appRoot(APP)]);
   });
 
   it("invalidates every account query when the session changes", () => {
@@ -400,6 +404,13 @@ describe("seeding a saved alert channel", () => {
     ]);
     seedEmailAlert(client, saved);
     expect(client.getQueryData(emailAlertKeys.all)).toEqual([saved]);
+  });
+});
+
+describe("portfolio insights key", () => {
+  it("sits under the portfolio key so a portfolio invalidation reaches it", () => {
+    expect(isPrefixOf(portfolioKey, portfolioInsightsKey)).toBe(true);
+    expect(portfolioInsightsOptions.queryKey).toEqual(portfolioInsightsKey);
   });
 });
 

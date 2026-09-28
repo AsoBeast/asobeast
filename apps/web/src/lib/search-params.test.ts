@@ -9,6 +9,7 @@ import {
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
+import { createSerializer } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 import {
   COMBINATION_STATUSES,
@@ -37,7 +38,13 @@ import {
   actionPriorityParser,
   actionRuleParser,
   actionStatusParser,
+  APP_SORTS,
+  APP_VIEWS,
+  appSortParser,
+  appViewParser,
+  CHANGE_OWNERS,
   changeDaysParser,
+  changeOwnerParser,
   countryParser,
   discoveryDaysParser,
   KEYWORD_STATUSES,
@@ -101,6 +108,9 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
   ["versus", versusParser, VERSUS_FILTERS, "all"],
   ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
+  ["changeOwner", changeOwnerParser, CHANGE_OWNERS, "all"],
+  ["appSort", appSortParser, APP_SORTS, "visibility"],
+  ["appView", appViewParser, APP_VIEWS, "cards"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -357,5 +367,17 @@ describe("draftLocale parser", () => {
     expect(draftLocaleParser.parseServerSide(undefined)).toBeNull();
     expect(draftLocaleParser.parseServerSide("es-mx")).toBeNull();
     expect(draftLocaleParser.parseServerSide("xx")).toBeNull();
+  });
+});
+
+describe("changeOwner parser", () => {
+  const serialize = createSerializer({ changes: changeOwnerParser });
+
+  it("keeps the default out of the url", () => {
+    expect(serialize({ changes: "all" })).toBe("");
+  });
+
+  it("writes a narrowed owner into the url", () => {
+    expect(serialize({ changes: "competitors" })).toBe("?changes=competitors");
   });
 });

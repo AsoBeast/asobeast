@@ -2570,6 +2570,28 @@
         ]
       }
     },
+    "/portfolio/insights": {
+      "get": {
+        "operationId": "PortfolioController_getInsights",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Per app signals and cross-app movers for the portfolio dashboard",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
     "/apps/{id}/reviews": {
       "get": {
         "operationId": "ReviewsController_list",

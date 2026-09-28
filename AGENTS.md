@@ -38,7 +38,7 @@ apps/
       reviews/            review sync, ratings history, review-mined keyword ideas
       changes/            metadata change events (owned + competitor)
       scoring/            pure formulas + stats collection
-      analytics/          visibility, summary, portfolio, weekly digest
+      analytics/          visibility, summary, portfolio, portfolio insights, weekly digest
       audit/              aso audit rubric engine, history + endpoints
       metadata/           metadata audit + keyword coverage
       actions/            aso action center: rules/, engine, lifecycle, endpoints
@@ -60,7 +60,7 @@ apps/
         ui/               shadcn generated primitives (owned, editable)
         data-table/       table kit: sortable header, search, facet, chips, column menu, filtered empty state
         layout/           SiteHeader, ThemeToggle, HealthBadge, ErrorState, command palette
-        actions/ apps/ app-detail/ overview/ keywords/ rankings/ competitors/ audit/
+        actions/ apps/ app-detail/ dashboard/ overview/ keywords/ rankings/ competitors/ audit/
         metadata/ changes/ reviews/ settings/ onboarding/ auth/   feature + skeleton components
       lib/                api/ (typed transport: client.ts + one module per domain behind a barrel),
                           queries.ts (query keys + options + invalidation),
@@ -232,7 +232,7 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 4. **Boundaries per section.** Every route segment has `loading.tsx` (geometry-matched skeleton) and `error.tsx` (shared `ErrorState`, recovers via `unstable_retry`); every `useSuspenseQuery` consumer sits under a local `Suspense` boundary, not the whole page.
 5. **Domain rendering.** Position is 1-based; `null` means "checked, not found within the captured depth" → render `>100` or `>200` from the row's depth, never `0`. Ranking charts use a reversed Y axis (1 on top). Dates are UTC `date` strings formatted with `Intl.DateTimeFormat` pinned to UTC. Traffic/difficulty/opportunity are 0–100 scores. `refresh` returns a snapshot diff to show; `run-daily` and `score` return 202 queued — toast "queued" and let the cache refetch.
 6. **Theming & a11y.** shadcn primitives live in `components/ui` (owned, editable); dark mode via `next-themes` class strategy. Icon-only buttons carry `aria-label`, dialogs carry a description, tables carry a caption, charts keep `accessibilityLayer`, and colour is never the only signal.
-7. **The shell is a sidebar, and page width is a per-page decision.** `(app)` routes render inside `SidebarProvider` + `SidebarInset`; `(auth)` routes (`/login`, `/register`, `/upgrade`) render a centered card with no sidebar. Route groups keep every URL unchanged. Each page picks one of three width utilities from `src/styles/layout.css`: `page-full` for tables and charts that want every pixel (keywords, rankings, competitors), `page-wide` for dashboards and grids at a 1600 px ceiling (portfolio, overview, actions, changes, reviews, metadata), and `page-reading` at 720 px for prose and forms (settings, audit, setup). Gutters come from `page-gutter`, which folds `env(safe-area-inset-*)` into the density scale — never per-page padding.
+7. **The shell is a sidebar, and page width is a per-page decision.** `(app)` routes render inside `SidebarProvider` + `SidebarInset`; `(auth)` routes (`/login`, `/register`, `/upgrade`) render a centered card with no sidebar. Route groups keep every URL unchanged. Each page picks one of three width utilities from `src/styles/layout.css`: `page-full` for tables and charts that want every pixel (keywords, rankings, competitors), `page-wide` for dashboards and grids at a 1600 px ceiling (portfolio, overview, actions, changes, reviews, metadata), and `page-reading` at 720 px for prose and forms (settings, audit, setup). Gutters come from `page-gutter`, which folds `env(safe-area-inset-*)` into the density scale — never per-page padding. The dashboard lays out by its own width through `@container/dashboard`, because the collapsible sidebar makes the viewport a poor proxy for the content box.
 8. **Charts go through the chart system.** `src/components/charts/theme.ts` owns axes, grid, margins, heights, the series palette and the stroke-pattern order; no chart configures those inline and no chart references `--chart-N` directly. Multi-series charts distinguish series by stroke pattern as well as colour, and every chart has loading, empty and insufficient (fewer than four points) states at its real height.
 9. **Tables go through the table kit, and judged numbers go through the grade scale.** A data table is a `@tanstack/react-table` v9 instance assembled from `components/data-table/` (sortable header, search, facet, chips, column menu, filtered empty state) with its pure logic in `lib/table/`; sorting and filtering happen in the browser and live in the URL through `search-params.ts`, and column visibility is the one per viewer preference, kept in local storage. A score, a position, a rating or a coverage share is graded by `lib/grade.ts` into strong, fair, weak or poor, rendered by `components/ui/graded.tsx`, and always carries the word as well as the colour. `--rank-band-*` and `--score-*` stay for charts that show a distribution.
 

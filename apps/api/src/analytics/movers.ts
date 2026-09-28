@@ -4,18 +4,28 @@ import { addDays, DAY_MS, Ranking, TrackedRow } from './analytics.support';
 const MOVER_WINDOW_DAYS = 7;
 const MOVER_TOLERANCE_MS = DAY_MS;
 const MOVER_LIMIT = 5;
-const UNRANKED_RANK = Number.MAX_SAFE_INTEGER;
+export const UNRANKED_RANK = Number.MAX_SAFE_INTEGER;
 
-export function movers(
+export interface RankedMover extends KeywordMover {
+  country: string;
+  change: number;
+}
+
+export interface RankedMovers {
+  up: RankedMover[];
+  down: RankedMover[];
+}
+
+export function rankedMovers(
   rows: TrackedRow[],
   referenceDate: Date | null,
-): KeywordMovers {
+): RankedMovers {
   if (!referenceDate) {
     return { up: [], down: [] };
   }
   const target = addDays(referenceDate, -MOVER_WINDOW_DAYS);
-  const up: Array<KeywordMover & { change: number }> = [];
-  const down: Array<KeywordMover & { change: number }> = [];
+  const up: RankedMover[] = [];
+  const down: RankedMover[] = [];
 
   for (const row of rows) {
     const toCapture = captureAt(row.keyword.rankings, referenceDate);
@@ -28,9 +38,10 @@ export function movers(
     const { depth: toDepth } = toCapture;
     const { depth: fromDepth } = fromCapture;
     const change = (from ?? UNRANKED_RANK) - (to ?? UNRANKED_RANK);
-    const mover: KeywordMover & { change: number } = {
+    const mover: RankedMover = {
       keywordId: row.keywordId,
       text: row.keyword.text,
+      country: row.keyword.country,
       from,
       fromDepth,
       to,
@@ -45,14 +56,19 @@ export function movers(
   }
 
   return {
-    up: up
-      .sort((a, b) => b.change - a.change)
-      .slice(0, MOVER_LIMIT)
-      .map(strip),
-    down: down
-      .sort((a, b) => a.change - b.change)
-      .slice(0, MOVER_LIMIT)
-      .map(strip),
+    up: up.sort((a, b) => b.change - a.change),
+    down: down.sort((a, b) => a.change - b.change),
+  };
+}
+
+export function movers(
+  rows: TrackedRow[],
+  referenceDate: Date | null,
+): KeywordMovers {
+  const ranked = rankedMovers(rows, referenceDate);
+  return {
+    up: ranked.up.slice(0, MOVER_LIMIT).map(strip),
+    down: ranked.down.slice(0, MOVER_LIMIT).map(strip),
   };
 }
 
@@ -79,7 +95,7 @@ const nearestCapture = (rankings: Ranking[], target: Date): Ranking | null => {
   return closest;
 };
 
-const strip = (mover: KeywordMover & { change: number }): KeywordMover => ({
+const strip = (mover: RankedMover): KeywordMover => ({
   keywordId: mover.keywordId,
   text: mover.text,
   from: mover.from,

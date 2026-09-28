@@ -1,4 +1,4 @@
-import { movers } from './movers';
+import { movers, rankedMovers, UNRANKED_RANK } from './movers';
 import type { Ranking, TrackedRow } from './analytics.support';
 
 const REFERENCE = new Date('2026-07-13T00:00:00.000Z');
@@ -8,7 +8,7 @@ const row = (rankings: Ranking[]): TrackedRow => ({
   keywordId: 'kw_1',
   source: 'TITLE',
   relevance: null,
-  keyword: { text: 'focus timer', metrics: [], rankings },
+  keyword: { text: 'focus timer', country: 'us', metrics: [], rankings },
 });
 
 describe('movers', () => {
@@ -111,6 +111,46 @@ describe('movers', () => {
         to: null,
         toDepth: 200,
       },
+    ]);
+  });
+});
+
+describe('rankedMovers', () => {
+  const climber = (index: number, from: number | null, to: number) => ({
+    ...row([
+      { position: from, depth: 200, date: BASELINE },
+      { position: to, depth: 200, date: REFERENCE },
+    ]),
+    keywordId: `kw_${index}`,
+  });
+
+  it('keeps every climber beyond the top five cut', () => {
+    const rows = [20, 19, 18, 17, 16, 15, 14].map((from, index) =>
+      climber(index, from, 3),
+    );
+
+    expect(rankedMovers(rows, REFERENCE).up).toHaveLength(7);
+    expect(movers(rows, REFERENCE).up).toHaveLength(5);
+  });
+
+  it('carries the keyword country and the change of each mover', () => {
+    const german = climber(1, 12, 4);
+    const rows = [
+      { ...german, keyword: { ...german.keyword, country: 'de' } },
+      climber(2, null, 9),
+    ];
+
+    const result = rankedMovers(rows, REFERENCE);
+
+    expect(
+      result.up.map(({ keywordId, country, change }) => ({
+        keywordId,
+        country,
+        change,
+      })),
+    ).toEqual([
+      { keywordId: 'kw_2', country: 'us', change: UNRANKED_RANK - 9 },
+      { keywordId: 'kw_1', country: 'de', change: 12 - 4 },
     ]);
   });
 });

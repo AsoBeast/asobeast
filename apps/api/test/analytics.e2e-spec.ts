@@ -1,12 +1,14 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
   ApiErrorEnvelope,
   AppSummary,
   CURRENT_FORMULA_VERSIONS,
+  PortfolioInsights,
   PortfolioSummary,
   RankDistributionHistory,
   RatingsHistory,
@@ -310,6 +312,136 @@ describe('AnalyticsController (e2e)', () => {
       competitors: 0,
       trackedKeywords: summary.trackedKeywords,
       changes7d: 0,
+    });
+  });
+
+  it('reports portfolio insight bands that match the app summary', async () => {
+    const id = await seed();
+
+    const summary = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps).toHaveLength(1);
+    const [entry] = insights.apps;
+    expect(entry.appId).toBe(id);
+    expect(entry.rankDistribution).toEqual(summary.rankDistribution);
+    expect(entry.movement.up + entry.movement.down).toBeGreaterThanOrEqual(
+      summary.movers.up.length + summary.movers.down.length,
+    );
+    expect(insights.totals.top10).toBe(summary.rankDistribution.top10);
+    expect(insights.movers.up[0]).toMatchObject({
+      appId: id,
+      country: 'us',
+      text: 'habit tracker',
+      from: 24,
+      to: 11,
+    });
+  });
+
+  it('counts a competitor change under its primary app', async () => {
+    const id = await seed();
+    const rival = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '999000111',
+        country: 'us',
+        name: 'Rival',
+        isCompetitor: true,
+        primaryAppId: id,
+      },
+    });
+    await prisma.changeEvent.createMany({
+      data: [
+        { appId: id, field: 'title', before: 'a', after: 'b' },
+        { appId: rival.id, field: 'title', before: 'c', after: 'd' },
+        { appId: rival.id, field: 'subtitle', before: 'e', after: 'f' },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps.map((entry) => entry.appId)).toEqual([id]);
+    expect(insights.apps[0].changes7d).toEqual({ own: 1, competitors: 2 });
+    expect(insights.totals.changes7d).toEqual({ own: 1, competitors: 2 });
+  });
+
+  it('counts reviews at the negative score threshold and none above it', async () => {
+    const id = await seed();
+    const threshold = app
+      .get(ConfigService)
+      .get<number>('ALERT_REVIEW_SCORE_MAX');
+    await prisma.review.createMany({
+      data: [
+        { appId: id, reviewId: 'r1', score: threshold, text: 'meh' },
+        { appId: id, reviewId: 'r2', score: threshold + 1, text: 'fine' },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].negativeReviews7d).toBe(1);
+    expect(insights.totals.negativeReviews7d).toBe(1);
+  });
+
+  it('compares the latest rating with the one a week before it', async () => {
+    const id = await seed();
+    const now = Date.now();
+    await prisma.appSnapshot.createMany({
+      data: [
+        {
+          appId: id,
+          title: 'Habit Tracker',
+          description: 'Build habits every day',
+          raw: {},
+          ratingAvg: 4.5,
+          ratingCount: 900,
+          capturedAt: new Date(now - 8 * 24 * 60 * 60 * 1000),
+        },
+        {
+          appId: id,
+          title: 'Habit Tracker',
+          description: 'Build habits every day',
+          raw: {},
+          ratingAvg: 4.6,
+          ratingCount: 1000,
+          capturedAt: new Date(now - 60 * 1000),
+        },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].rating).toEqual({
+      average: 4.6,
+      count: 1000,
+      averageDelta7d: 0.1,
+    });
+  });
+
+  it('reports no rating trend when collection stopped over a week ago', async () => {
+    const id = await seed();
+    await prisma.appSnapshot.updateMany({
+      where: { appId: id },
+      data: {
+        ratingAvg: 4.2,
+        ratingCount: 30,
+        capturedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].rating).toEqual({
+      average: 4.2,
+      count: 30,
+      averageDelta7d: null,
     });
   });
 

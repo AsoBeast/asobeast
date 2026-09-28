@@ -1947,7 +1947,7 @@ export const RECENT_CHANGES: ChangeTimeline = {
       field: "title",
       before: "Focus Timer",
       after: "Focus Timer Pro",
-      capturedAt: utcTimestampDaysAgo(1),
+      capturedAt: utcTimestampDaysAgo(0),
     },
     {
       id: "chg-2",
@@ -1958,6 +1958,86 @@ export const RECENT_CHANGES: ChangeTimeline = {
       before: "Deep work timer",
       after: "Deep focus timer",
       capturedAt: utcTimestampDaysAgo(2),
+    },
+    {
+      id: "chg-3",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.0.0",
+      after: "2.1.0",
+      capturedAt: utcTimestampDaysAgo(3),
+    },
+    {
+      id: "chg-4",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "version",
+      before: "2.1.0",
+      after: "2.2.0",
+      capturedAt: utcTimestampDaysAgo(4),
+    },
+    {
+      id: "chg-5",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.2.0",
+      after: "2.3.0",
+      capturedAt: utcTimestampDaysAgo(5),
+    },
+    {
+      id: "chg-6",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "version",
+      before: "2.3.0",
+      after: "2.4.0",
+      capturedAt: utcTimestampDaysAgo(6),
+    },
+    {
+      id: "chg-7",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.4.0",
+      after: "2.5.0",
+      capturedAt: utcTimestampDaysAgo(7),
+    },
+    {
+      id: "chg-8",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "version",
+      before: "2.5.0",
+      after: "2.6.0",
+      capturedAt: utcTimestampDaysAgo(8),
+    },
+    {
+      id: "chg-9",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "version",
+      before: "2.6.0",
+      after: "2.7.0",
+      capturedAt: utcTimestampDaysAgo(9),
+    },
+    {
+      id: "chg-10",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "version",
+      before: "2.7.0",
+      after: "2.8.0",
+      capturedAt: utcTimestampDaysAgo(10),
     },
   ],
 };
@@ -2019,6 +2099,37 @@ export const PENDING_PORTFOLIO_APP: PortfolioSummary["apps"][number] = {
   competitors: 0,
   lastCapturedAt: null,
 };
+
+const MANY_APP_NAMES = [
+  ["Sleep Sounds", "APP_STORE", "gb"],
+  ["Water Reminder", "GOOGLE_PLAY", "fr"],
+  ["Budget Planner", "APP_STORE", "jp"],
+  ["Step Counter", "GOOGLE_PLAY", "br"],
+  ["Recipe Keeper", "APP_STORE", "in"],
+  [
+    "Language Cards: Learn Vocabulary With Spaced Repetition",
+    "GOOGLE_PLAY",
+    "mx",
+  ],
+] as const;
+
+export const MANY_PORTFOLIO_APPS: PortfolioSummary["apps"] = MANY_APP_NAMES.map(
+  ([name, store, country], index) => ({
+    id: `app-many-${index + 1}`,
+    store,
+    storeAppId: `many.${index + 1}`,
+    country,
+    name,
+    iconUrl: null,
+    groupId: null,
+    groupName: null,
+    visibility: { current: 8 - index, delta7d: null },
+    sparkline: [],
+    trackedKeywords: 2,
+    competitors: 0,
+    lastCapturedAt: utcTimestampDaysAgo(0),
+  }),
+);
 
 export const IMPORTED_PORTFOLIO_APP: PortfolioSummary["apps"][number] = {
   id: "app-new",
@@ -2105,7 +2216,7 @@ const ACTION_BASE = {
 
 const APP_SCOPE = {
   appId: "app-1",
-  appName: "Habit Tracker",
+  appName: "Focus Timer",
   store: "APP_STORE",
   country: "us",
 } as const;

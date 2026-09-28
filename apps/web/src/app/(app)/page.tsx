@@ -5,44 +5,59 @@ import {
   actionsOptions,
   actionSummaryOptions,
   budgetOptions,
+  portfolioInsightsOptions,
   portfolioOptions,
   recentChangesOptions,
+  runStatusOptions,
 } from "@/lib/queries";
-import { AppsDashboard } from "@/components/apps/AppsDashboard";
+import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
-import { PortfolioSummary } from "@/components/apps/PortfolioSummary";
-import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
+import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
+import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
+import { PortfolioStatusLine } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
-  PortfolioTotalsSkeleton,
-} from "@/components/apps/skeletons";
-import { Button } from "@/components/ui/button";
+  PortfolioMoversCardSkeleton,
+  PortfolioStatusLineSkeleton,
+  PortfolioPulseSkeleton,
+} from "@/components/dashboard/skeletons";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
-import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
+import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
+import { appViewParser } from "@/lib/search-params";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string | string[] }>;
+}) {
   const queryClient = getQueryClient();
-  const [portfolio] = await Promise.all([
-    queryClient.fetchQuery(portfolioOptions),
-    queryClient.prefetchQuery(recentChangesOptions()),
-    queryClient.prefetchQuery(budgetOptions),
-    queryClient.prefetchQuery(actionSummaryOptions),
-    queryClient.prefetchQuery(
-      actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }),
-    ),
-  ]);
+  void queryClient.prefetchQuery(recentChangesOptions());
+  void queryClient.prefetchQuery(budgetOptions);
+  void queryClient.prefetchQuery(runStatusOptions);
+  void queryClient.prefetchQuery(actionSummaryOptions);
+  void queryClient.prefetchQuery(
+    actionsOptions({ status: ["OPEN"], limit: DASHBOARD_ACTION_LIMIT }),
+  );
+  void queryClient.prefetchQuery(portfolioInsightsOptions);
+  const portfolio = await queryClient.fetchQuery(portfolioOptions);
 
   if (portfolio.apps.length === 0) {
     return <FirstRun />;
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+  const view = appViewParser.parseServerSide((await searchParams).view);
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
+      <div className="page-wide @container/dashboard flex flex-col gap-6">
         <Suspense fallback={null}>
           <OnboardingBanner />
         </Suspense>
@@ -50,28 +65,47 @@ export default async function Page() {
           <BudgetBanner />
         </Suspense>
 
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-display tracking-tight text-balance">Apps</h1>
-          <ImportAppDialog>
-            <Button>Import app</Button>
-          </ImportAppDialog>
-        </div>
+        <DashboardHeader>
+          <Suspense fallback={<PortfolioStatusLineSkeleton />}>
+            <PortfolioStatusLine />
+          </Suspense>
+        </DashboardHeader>
 
-        <Suspense fallback={<PortfolioTotalsSkeleton />}>
-          <PortfolioSummary />
+        <Suspense fallback={<PortfolioPulseSkeleton />}>
+          <PortfolioPulse />
         </Suspense>
 
-        <Suspense fallback={<ActionsSummaryCardSkeleton />}>
-          <ActionsSummaryCard />
-        </Suspense>
-
-        <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
-          <div className="lg:col-span-2">
-            <Suspense fallback={<AppsDashboardSkeleton />}>
-              <AppsDashboard />
+        <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
+          <div className="@5xl/dashboard:col-span-7">
+            <Suspense fallback={<ActionsSummaryCardSkeleton />}>
+              <ActionsSummaryCard />
             </Suspense>
           </div>
-          <RecentChangesCard />
+          <div className="@5xl/dashboard:col-span-5">
+            <Suspense fallback={<PortfolioMoversCardSkeleton />}>
+              <PortfolioMoversCard />
+            </Suspense>
+          </div>
+        </div>
+
+        <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">
+          <DashboardSection
+            id="apps"
+            title="Apps"
+            className="@6xl/dashboard:col-span-8"
+            toolbar={
+              <Suspense fallback={null}>
+                <AppsToolbar />
+              </Suspense>
+            }
+          >
+            <Suspense fallback={<AppsDashboardSkeleton view={view} />}>
+              <AppsDashboard />
+            </Suspense>
+          </DashboardSection>
+          <div className="@6xl/dashboard:col-span-4">
+            <RecentChangesCard today={today} />
+          </div>
         </div>
       </div>
     </HydrationBoundary>

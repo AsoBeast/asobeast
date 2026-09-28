@@ -151,6 +151,35 @@ export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
 export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
 
+export const APP_SORTS = [
+  "visibility",
+  "change",
+  "top10",
+  "rating",
+  "actions",
+  "name",
+  "updated",
+] as const;
+
+export type AppSort = (typeof APP_SORTS)[number];
+
+export const appSortParser =
+  parseAsStringLiteral(APP_SORTS).withDefault("visibility");
+
+export const APP_VIEWS = ["cards", "table"] as const;
+
+export type AppView = (typeof APP_VIEWS)[number];
+
+export const appViewParser =
+  parseAsStringLiteral(APP_VIEWS).withDefault("cards");
+
+export const appListParsers = {
+  q: searchParser,
+  sort: appSortParser,
+  dir: sortDirectionParser,
+  view: appViewParser,
+};
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 
@@ -250,6 +279,13 @@ export const actionCategoryParser = parseAsStringLiteral(ACTION_CATEGORIES);
 export const actionAppParser = parseAsString.withDefault("");
 
 export const actionFocusParser = parseAsString.withDefault("");
+
+export const CHANGE_OWNERS = ["all", "yours", "competitors"] as const;
+
+export type ChangeOwner = (typeof CHANGE_OWNERS)[number];
+
+export const changeOwnerParser =
+  parseAsStringLiteral(CHANGE_OWNERS).withDefault("all");
 
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);

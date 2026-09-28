@@ -1,4 +1,5 @@
 export const TOP_ACTION_LIMIT = 3;
+export const DASHBOARD_ACTION_LIMIT = 5;
 
 import type { ActionFilters } from "@/lib/api";
 import {

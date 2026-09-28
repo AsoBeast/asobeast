@@ -54,6 +54,14 @@ export function formatNumber(value: number): string {
   return numberFormatter.format(value);
 }
 
+export function pluralize(
+  count: number,
+  singular: string,
+  plural = `${singular}s`,
+): string {
+  return `${numberFormatter.format(count)} ${count === 1 ? singular : plural}`;
+}
+
 export function formatPlanLimit(value: PlanLimit): string {
   return value === null ? "Unlimited" : numberFormatter.format(value);
 }

@@ -52,6 +52,13 @@ const CUTS: ReadonlyArray<readonly [GradeMetric, number, Grade]> = [
   ["rating", 3.9, "weak"],
   ["rating", 3.5, "weak"],
   ["rating", 3.4, "poor"],
+  ["audit", 100, "strong"],
+  ["audit", 70, "strong"],
+  ["audit", 69, "fair"],
+  ["audit", 55, "fair"],
+  ["audit", 54, "weak"],
+  ["audit", 40, "weak"],
+  ["audit", 39, "poor"],
 ];
 
 const METRICS = Object.keys(GRADE_SCALES) as GradeMetric[];
