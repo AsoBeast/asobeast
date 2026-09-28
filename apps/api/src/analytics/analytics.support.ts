@@ -26,6 +26,7 @@ export interface TrackedRow {
   relevance: number | null;
   keyword: {
     text: string;
+    country: string;
     metrics: Metric[];
     rankings: Ranking[];
   };
@@ -260,6 +261,7 @@ export async function trackedRows(
       keyword: {
         select: {
           text: true,
+          country: true,
           metrics: {
             where: window ? { date: { lte: window } } : undefined,
             orderBy: { date: 'desc' },

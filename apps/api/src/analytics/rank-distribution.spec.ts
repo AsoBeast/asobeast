@@ -9,7 +9,7 @@ const row = (rankings: Ranking[]): TrackedRow => ({
   source: 'TITLE',
   fieldOrder: null,
   relevance: null,
-  keyword: { text: 'focus timer', metrics: [], rankings },
+  keyword: { text: 'focus timer', country: 'us', metrics: [], rankings },
 });
 
 const rankedAt = (position: number | null, date = REFERENCE): TrackedRow =>
