@@ -3139,6 +3139,68 @@
         ]
       }
     },
+    "/actions/activity": {
+      "get": {
+        "operationId": "ActionsController_activity",
+        "parameters": [
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "description": "Restrict to one app",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 7,
+              "maximum": 90,
+              "default": 30,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actions opened and closed per UTC day"
+          }
+        },
+        "summary": "Report daily action activity",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
     "/actions/{id}": {
       "get": {
         "operationId": "ActionsController_detail",

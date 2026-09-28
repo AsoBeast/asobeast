@@ -16,6 +16,7 @@ import {
   ACTION_UPDATE_STATUSES,
   isActionCategory,
   isActionDismissReason,
+  isActionEventType,
   isActionPriority,
   isActionRule,
   isActionStatus,
@@ -308,6 +309,8 @@ describe('action events', () => {
   it('lists each event type and actor once', () => {
     expect(new Set(ACTION_EVENT_TYPES).size).toBe(ACTION_EVENT_TYPES.length);
     expect(new Set(ACTION_EVENT_ACTORS).size).toBe(ACTION_EVENT_ACTORS.length);
+    expect(ACTION_EVENT_TYPES.every(isActionEventType)).toBe(true);
+    expect(REJECTED.some(isActionEventType)).toBe(false);
   });
 });
 

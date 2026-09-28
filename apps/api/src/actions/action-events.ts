@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
   ACTION_EVENT_ACTORS,
-  ACTION_EVENT_TYPES,
   ActionDismissReason,
   ActionEventActor,
   ActionEventItem,
@@ -10,6 +9,7 @@ import {
   ActionPriority,
   ActionStatus,
   isActionDismissReason,
+  isActionEventType,
   isActionStatus,
 } from '@asobeast/shared';
 import { priorityOf } from './actions.mapper';
@@ -57,14 +57,11 @@ export type ActionEventRow = Prisma.ActionEventGetPayload<{
   select: typeof EVENT_SELECT;
 }>;
 
-const isEventType = (value: string): value is ActionEventType =>
-  ACTION_EVENT_TYPES.some((type) => type === value);
-
 const isEventActor = (value: string): value is ActionEventActor =>
   ACTION_EVENT_ACTORS.some((actor) => actor === value);
 
 export function toActionEventItem(row: ActionEventRow): ActionEventItem | null {
-  if (!isEventType(row.type) || !isEventActor(row.actor)) return null;
+  if (!isActionEventType(row.type) || !isEventActor(row.actor)) return null;
   return {
     id: row.id,
     type: row.type,

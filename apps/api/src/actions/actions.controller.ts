@@ -17,6 +17,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  ActionActivity,
   ActionAiStatus,
   ActionDetail,
   ActionExplanation,
@@ -29,11 +30,13 @@ import {
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { ActionActivityService } from './action-activity.service';
 import { ActionDetailService } from './action-detail.service';
 import { ActionRunQueue } from './action-run.queue';
 import { parseSummaryScope } from './action-summary-scope';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionsService } from './actions.service';
+import { ActionActivityQueryDto } from './dto/action-activity-query.dto';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
@@ -43,6 +46,7 @@ export class ActionsController {
   constructor(
     private readonly actions: ActionsService,
     private readonly details: ActionDetailService,
+    private readonly activityReader: ActionActivityService,
     private readonly ai: ActionsAiService,
     private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
@@ -70,6 +74,13 @@ export class ActionsController {
   @ApiOperation({ summary: 'Report AI explanation availability' })
   aiStatus(): ActionAiStatus {
     return this.ai.status();
+  }
+
+  @Get('activity')
+  @ApiOkResponse({ description: 'Actions opened and closed per UTC day' })
+  @ApiOperation({ summary: 'Report daily action activity' })
+  activity(@Query() query: ActionActivityQueryDto): Promise<ActionActivity> {
+    return this.activityReader.read(query);
   }
 
   @Get(':id')

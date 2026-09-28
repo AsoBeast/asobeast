@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
   ACTION_FORMULA_VERSION,
+  ActionActivity,
   ActionItem,
   ApiErrorEnvelope,
   ActionListResult,
@@ -309,6 +310,51 @@ describe('ActionsController (e2e)', () => {
 
     expect(summary.body).toHaveProperty('byStatus');
     expect(aiStatus.body).toHaveProperty('configured');
+  });
+
+  it('reports today in the daily activity and scopes it to one app', async () => {
+    const opened = await seedAction();
+    const done = await seedAction();
+    const dismissed = await seedAction();
+    await prisma.actionEvent.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        actionId: opened,
+        appId,
+        type: 'opened',
+        actor: 'system',
+        status: 'OPEN',
+        priority: 'high',
+        impact: 71,
+      },
+    });
+    await api.patch(`/actions/${done}`).send({ status: 'DONE' }).expect(200);
+    await api
+      .patch(`/actions/${dismissed}`)
+      .send({ status: 'DISMISSED' })
+      .expect(200);
+
+    const activity = (await api.get('/actions/activity?days=7').expect(200))
+      .body as ActionActivity;
+    const other = (
+      await api
+        .get('/actions/activity')
+        .query({ appId: 'app_elsewhere' })
+        .expect(200)
+    ).body as ActionActivity;
+
+    expect(activity.days).toHaveLength(7);
+    expect(activity.days.at(-1)).toMatchObject({
+      opened: 1,
+      done: 1,
+      dismissed: 1,
+    });
+    expect(other.days).toHaveLength(30);
+    expect(Object.values(other.totals).every((count) => count === 0)).toBe(
+      true,
+    );
+    await api.get('/actions/activity?days=6').expect(400);
+    await api.get('/actions/activity?days=91').expect(400);
   });
 
   it('marks an action done and clears its snooze', async () => {

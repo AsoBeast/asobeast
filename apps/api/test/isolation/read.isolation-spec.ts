@@ -264,6 +264,19 @@ describe('Read isolation', () => {
     );
   });
 
+  it('never counts another workspace action events in the activity', async () => {
+    const response = await fixture.b.agent
+      .get('/actions/activity')
+      .query({ appId: fixture.a.appleAppId })
+      .expect(200);
+    const own = await fixture.b.agent.get('/actions/activity').expect(200);
+    const opened = (body: unknown) =>
+      (body as { totals: { opened: number } }).totals.opened;
+
+    expect(opened(response.body)).toBe(0);
+    expect(opened(own.body)).toBe(1);
+  });
+
   it('refuses another workspace app id as a filter value', async () => {
     const response = await fixture.a.agent.get(
       `/apps/${fixture.b.appleAppId}/keywords`,

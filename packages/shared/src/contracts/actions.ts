@@ -264,6 +264,10 @@ export const ACTION_EVENT_TYPES = [
 ] as const;
 export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];
 
+export const isActionEventType = (value: unknown): value is ActionEventType =>
+  typeof value === 'string' &&
+  ACTION_EVENT_TYPES.some((type) => type === value);
+
 export const ACTION_EVENT_ACTORS = ['system', 'user'] as const;
 export type ActionEventActor = (typeof ACTION_EVENT_ACTORS)[number];
 
@@ -340,6 +344,26 @@ export interface ActionDetail extends ActionItem {
   events: ActionEventItem[];
   trend: ActionTrend | null;
   outcome: ActionOutcome | null;
+}
+
+export interface ActionActivityCounts {
+  opened: number;
+  reopened: number;
+  done: number;
+  dismissed: number;
+  resolved: number;
+  verified: number;
+}
+
+export interface ActionActivityDay extends ActionActivityCounts {
+  date: string;
+}
+
+export interface ActionActivity {
+  from: string;
+  to: string;
+  days: ActionActivityDay[];
+  totals: ActionActivityCounts;
 }
 
 export interface ActionListResult {
