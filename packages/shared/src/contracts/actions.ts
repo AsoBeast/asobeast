@@ -13,6 +13,7 @@ export const ACTION_RULES = [
   'audit.fix_factor',
   'reviews.investigate_theme',
   'market.improve_country',
+  'keyword.push_to_top10',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -48,6 +49,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'audit.fix_factor': 'conversion',
   'reviews.investigate_theme': 'reputation',
   'market.improve_country': 'markets',
+  'keyword.push_to_top10': 'metadata',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -214,6 +216,19 @@ export interface MarketImproveCountryEvidence {
   windowDays: number;
 }
 
+export interface KeywordPushToTop10Evidence {
+  rule: 'keyword.push_to_top10';
+  latestPosition: number;
+  bestPosition: number;
+  daysInBand: number;
+  windowDays: number;
+  volume: number | null;
+  relevance: number | null;
+  opportunity: number | null;
+  coveredFields: MetadataField[];
+  strongFields: MetadataField[];
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -222,7 +237,8 @@ export type ActionEvidence =
   | SerpHoldVolatileEvidence
   | AuditFixFactorEvidence
   | ReviewsInvestigateThemeEvidence
-  | MarketImproveCountryEvidence;
+  | MarketImproveCountryEvidence
+  | KeywordPushToTop10Evidence;
 
 export interface ActionAi {
   explanation: string | null;

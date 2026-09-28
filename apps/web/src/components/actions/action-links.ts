@@ -4,6 +4,7 @@ export function actionHref(item: ActionItem): string {
   const { appId, keywordId, country } = item.scope;
   switch (item.rule) {
     case "keyword.add_uncovered":
+    case "keyword.push_to_top10":
       return `/apps/${appId}/metadata${keywordId ? `?keyword=${keywordId}` : ""}`;
     case "keyword.defend":
       return `/apps/${appId}/keywords?country=${country}${keywordId ? `&serp=${keywordId}` : ""}`;

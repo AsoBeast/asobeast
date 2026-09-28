@@ -183,6 +183,23 @@ describe("actionHeadline", () => {
     ).toBe("Close the 26.5 point visibility gap in Germany");
   });
 
+  it("names the position a keyword near the top 10 starts from", () => {
+    expect(
+      headline({
+        rule: "keyword.push_to_top10",
+        latestPosition: 12,
+        bestPosition: 11,
+        daysInBand: 6,
+        windowDays: 7,
+        volume: 54,
+        relevance: 80,
+        opportunity: 41.5,
+        coveredFields: ["keywordField"],
+        strongFields: ["title", "subtitle"],
+      }),
+    ).toBe('Push "habit tracker" from #12 into the top 10');
+  });
+
   it("falls back to the rule title for degraded evidence", () => {
     expect(actionHeadline(actionItem({ scope: { keywordText: null } }))).toBe(
       "Add a high-opportunity keyword to your metadata",

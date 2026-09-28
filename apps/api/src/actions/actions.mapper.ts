@@ -75,6 +75,7 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'audit.fix_factor': ['factorId', 'score', 'weight', 'auditDate'],
   'reviews.investigate_theme': ['theme', 'mentions', 'sampleReviewIds'],
   'market.improve_country': ['country', 'homeCountry', 'gap'],
+  'keyword.push_to_top10': ['latestPosition', 'daysInBand', 'coveredFields'],
 };
 
 export function parseActionEvidence(

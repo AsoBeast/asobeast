@@ -71,6 +71,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `theme ${evidence.theme}`;
     case 'market.improve_country':
       return `gap ${evidence.gap}`;
+    case 'keyword.push_to_top10':
+      return `position ${evidence.latestPosition}`;
     default: {
       const never: never = evidence;
       return never;
@@ -250,6 +252,18 @@ describe('action evidence', () => {
         observedDays: 12,
         windowDays: 14,
       },
+      {
+        rule: 'keyword.push_to_top10',
+        latestPosition: 12,
+        bestPosition: 11,
+        daysInBand: 6,
+        windowDays: 7,
+        volume: 60,
+        relevance: 80,
+        opportunity: 44,
+        coveredFields: ['keywordField'],
+        strongFields: ['title', 'subtitle'],
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -264,6 +278,7 @@ describe('action evidence', () => {
       'factor screenshots',
       'theme crashes on launch',
       'gap 26.5',
+      'position 12',
     ]);
   });
 

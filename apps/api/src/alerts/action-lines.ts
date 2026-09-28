@@ -18,6 +18,8 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return `"${evidence.theme}" in ${evidence.mentions} of ${evidence.negativeReviews} negative reviews for ${evidence.version ?? 'the latest version'} (was ${evidence.previousMentions})`;
     case 'market.improve_country':
       return `visibility ${evidence.marketVisibility} against ${evidence.homeVisibility} at home, a ${evidence.gap} point gap`;
+    case 'keyword.push_to_top10':
+      return `position ${evidence.latestPosition}, ${evidence.daysInBand}/${evidence.windowDays} days in 11 to 20, covered only in ${evidence.coveredFields.join(', ')}`;
     default: {
       const never: never = evidence;
       return never;

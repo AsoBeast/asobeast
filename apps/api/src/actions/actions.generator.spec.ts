@@ -4,7 +4,11 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
-import { actionContext, dailyBudget } from './rules/rule-context.fixture';
+import {
+  actionContext,
+  dailyBudget,
+  ruleSampleContext,
+} from './rules/rule-context.fixture';
 import { ACTION_REOPEN_AFTER_DAYS } from './action-lifecycle';
 import { ActionDetector, DetectedAction } from './action-rule';
 import { ActionsGenerator } from './actions.generator';
@@ -787,6 +791,75 @@ describe('ActionsGenerator', () => {
 
       expect(result).toMatchObject({ opened: 0, suppressedByCap: 0 });
       expect(prisma.created).toEqual([]);
+    });
+  });
+
+  describe('new rules leave the existing rules alone', () => {
+    const realDetectors =
+      jest.requireActual<typeof import('./action-rule')>(
+        './action-rule',
+      ).ACTION_DETECTORS;
+    const NEW_RULES: ActionRule[] = ['keyword.push_to_top10'];
+
+    const createdRules = async (detectors: readonly ActionDetector[]) => {
+      mockDetectors.splice(0, mockDetectors.length, ...detectors);
+      const prisma = buildPrisma();
+      await generatorFor(ruleSampleContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      return (
+        prisma.created as unknown as Array<{
+          fingerprint: string;
+          rule: string;
+        }>
+      )
+        .filter((row) => !NEW_RULES.includes(row.rule as ActionRule))
+        .map((row) => row.fingerprint)
+        .sort();
+    };
+
+    it('detects the same existing actions with the new detectors registered', async () => {
+      const withNew = await createdRules(realDetectors);
+      const withoutNew = await createdRules(
+        realDetectors.filter((detector) => !NEW_RULES.includes(detector.rule)),
+      );
+
+      expect(withNew).toEqual(withoutNew);
+      expect(withNew.length).toBeGreaterThan(0);
+    });
+
+    it('keeps an open push action open once its results turn volatile', async () => {
+      const push = realDetectors.filter(
+        (detector) => detector.rule === 'keyword.push_to_top10',
+      );
+      useDetectors(push);
+      const first = buildPrisma();
+      await generatorFor(ruleSampleContext(), first).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      const sample = ruleSampleContext();
+      const volatile: ActionContext = {
+        ...sample,
+        apps: sample.apps.map((app) => ({
+          ...app,
+          volatilityByKeyword: new Map([['kw_push', 60]]),
+        })),
+      };
+      const prisma = buildPrisma(
+        storedRow(first.created[0].fingerprint, {
+          rule: 'keyword.push_to_top10',
+        }),
+      );
+
+      const result = await generatorFor(volatile, prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(result).toMatchObject({ opened: 0, resolved: 0, refreshed: 0 });
+      expect(prisma.updated).toEqual([]);
     });
   });
 

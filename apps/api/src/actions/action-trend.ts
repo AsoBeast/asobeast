@@ -25,6 +25,7 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'audit.fix_factor': 'audit',
   'reviews.investigate_theme': 'rating',
   'market.improve_country': 'visibility',
+  'keyword.push_to_top10': 'position',
 };
 
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =

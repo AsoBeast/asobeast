@@ -18,7 +18,7 @@ test("the queue groups by priority from critical to low", async ({ page }) => {
   await expect(page.locator("#queue h3")).toHaveText([
     "Critical · 1",
     "High · 5",
-    "Medium · 4",
+    "Medium · 5",
     "Low · 2",
   ]);
   const high = page.locator('[data-slot="action-group"]').nth(1);
@@ -31,7 +31,7 @@ test("the queue groups by priority from critical to low", async ({ page }) => {
 test("the queue groups by app on the workspace page only", async ({ page }) => {
   await page.goto("/actions?group=app");
   await expect(page.locator("#queue h3")).toHaveText([
-    "Focus Timer · US · 11",
+    "Focus Timer · US · 12",
     "Tomato Clock · DE · 1",
   ]);
 
@@ -120,7 +120,7 @@ test.describe("closing several actions at once", () => {
 
   test("marks the selected rows done in one go", async ({ page }) => {
     await page.goto("/actions");
-    await expect(openTile(page)).toContainText("11");
+    await expect(openTile(page)).toContainText("12");
     await select(page, "act-prune");
     await select(page, "act-volatile");
 
@@ -131,7 +131,7 @@ test.describe("closing several actions at once", () => {
     await expect(page.locator(card("act-prune"))).toHaveCount(0);
     await expect(page.locator(card("act-volatile"))).toHaveCount(0);
     await expect(page.getByText("Marked 2 done")).toBeVisible();
-    await expect(openTile(page)).toContainText("9");
+    await expect(openTile(page)).toContainText("10");
   });
 
   test("Undo brings the closed rows back", async ({ page }) => {

@@ -52,6 +52,26 @@ describe("actionSteps", () => {
     ).toBe('Put "habit tracker" in the subtitle, or in the keyword field');
   });
 
+  it("moves a keyword near the top 10 into a strong field on each store", () => {
+    const push = ACTIONS.find((item) => item.id === "act-push")!;
+    const confirmation =
+      "asobeast confirms the fix when the keyword reaches the top 10 or stops qualifying";
+
+    expect(actionSteps(push)).toEqual([
+      'Move "pomodoro timer" into the subtitle or the title',
+      "Keep the words together and in this order",
+      "Ship it with your next release",
+      confirmation,
+    ]);
+    expect(actionSteps(onStore(push, "GOOGLE_PLAY"))).toEqual([
+      'Add "pomodoro timer" to the title or the short description',
+      "Keep the words together and in this order",
+      "Publish the listing change in Play Console",
+      confirmation,
+    ]);
+    expect(actionSteps(push)).not.toContain(CONFIRMATION_STEP);
+  });
+
   it("turns each failing audit check into a step, in order", () => {
     const audit = ACTIONS.find((item) => item.id === "act-audit")!;
     const evidence = audit.evidence!;

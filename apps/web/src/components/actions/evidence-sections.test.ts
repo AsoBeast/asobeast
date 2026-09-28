@@ -117,6 +117,27 @@ describe("evidenceSections", () => {
     });
   });
 
+  it("grades the position of a keyword near the top 10 and names its fields", () => {
+    const evidence = evidenceOf("act-push");
+    const { facts } = evidenceSections(evidence);
+
+    expect(factValues(evidence)).toMatchObject({
+      "Latest position": "12",
+      "Best position": "11",
+      "Days in band": "6 of 7",
+      Volume: "54",
+      Relevance: "80",
+      Opportunity: "41.5",
+    });
+    expect(
+      facts.find((fact) => fact.label === "Latest position")?.grade,
+    ).toEqual({ metric: "position", value: 12 });
+    expect(lists(evidence)).toEqual({
+      "Covered only by": ["Keyword field"],
+      "Strong fields": ["Title", "Subtitle"],
+    });
+  });
+
   it("omits an empty list and keeps the summary sentence", () => {
     const evidence = evidenceOf("act-snoozed");
     const sections = evidenceSections(evidence);

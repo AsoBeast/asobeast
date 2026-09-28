@@ -4,6 +4,7 @@ import type { ImpactTerms } from './action-impact';
 import { auditFixFactorDetector } from './rules/audit-fix-factor';
 import { keywordAddUncoveredDetector } from './rules/keyword-add-uncovered';
 import { keywordDefendDetector } from './rules/keyword-defend';
+import { keywordPushToTop10Detector } from './rules/keyword-push-to-top10';
 import { keywordPruneDetector } from './rules/keyword-prune';
 import { marketImproveCountryDetector } from './rules/market-improve-country';
 import { rankInvestigateDropDetector } from './rules/rank-investigate-drop';
@@ -37,4 +38,5 @@ export const ACTION_DETECTORS: readonly ActionDetector[] = Object.freeze([
   auditFixFactorDetector,
   reviewsInvestigateThemeDetector,
   marketImproveCountryDetector,
+  keywordPushToTop10Detector,
 ]);

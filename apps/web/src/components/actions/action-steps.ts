@@ -1,9 +1,22 @@
-import type { ActionEvidence, ActionItem, Store } from "@asobeast/shared";
+import type {
+  ActionEvidence,
+  ActionItem,
+  ActionRule,
+  Store,
+} from "@asobeast/shared";
 import { formatCountry, formatDate } from "@/lib/format";
 import { ACTION_RULE_TITLE } from "./action-copy";
 
 export const CONFIRMATION_STEP =
   "asobeast confirms the fix when this recommendation stops firing";
+
+const RULE_CONFIRMATION: Partial<Record<ActionRule, string>> = {
+  "keyword.push_to_top10":
+    "asobeast confirms the fix when the keyword reaches the top 10 or stops qualifying",
+};
+
+const confirmationStep = (rule: ActionRule): string =>
+  RULE_CONFIRMATION[rule] ?? CONFIRMATION_STEP;
 
 const STORE_CONSOLE: Record<Store, string> = {
   APP_STORE: "App Store Connect",
@@ -37,6 +50,20 @@ function addKeywordSteps(
     `Put ${keyword} in the subtitle, or in the keyword field${room}`,
     "Ship the change with your next release",
   ];
+}
+
+function pushSteps(keyword: string, store: Store): string[] {
+  return store === "GOOGLE_PLAY"
+    ? [
+        `Add ${keyword} to the title or the short description`,
+        "Keep the words together and in this order",
+        "Publish the listing change in Play Console",
+      ]
+    : [
+        `Move ${keyword} into the subtitle or the title`,
+        "Keep the words together and in this order",
+        "Ship it with your next release",
+      ];
 }
 
 function ruleSteps(
@@ -89,6 +116,8 @@ function ruleSteps(
         "Find keywords that rank at home but not here",
         "Consider localizing the listing for this storefront",
       ];
+    case "keyword.push_to_top10":
+      return pushSteps(keyword, store);
     default: {
       const never: never = evidence;
       return never;
@@ -98,10 +127,13 @@ function ruleSteps(
 
 export function actionSteps(item: ActionItem): string[] {
   if (item.evidence === null) {
-    return [ACTION_RULE_TITLE[item.rule], CONFIRMATION_STEP];
+    return [ACTION_RULE_TITLE[item.rule], confirmationStep(item.rule)];
   }
   const keyword = item.scope.keywordText
     ? `"${item.scope.keywordText}"`
     : "the keyword";
-  return [...ruleSteps(item.evidence, item, keyword), CONFIRMATION_STEP];
+  return [
+    ...ruleSteps(item.evidence, item, keyword),
+    confirmationStep(item.rule),
+  ];
 }

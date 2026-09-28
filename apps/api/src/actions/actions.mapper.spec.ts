@@ -172,6 +172,23 @@ describe('parseActionEvidence', () => {
     ).not.toBeNull();
   });
 
+  it('accepts a push evidence and degrades one missing its position', () => {
+    const push = {
+      rule: 'keyword.push_to_top10',
+      latestPosition: 12,
+      daysInBand: 6,
+      coveredFields: ['keywordField'],
+    };
+
+    expect(parseActionEvidence('keyword.push_to_top10', push)).not.toBeNull();
+    expect(
+      parseActionEvidence('keyword.push_to_top10', {
+        ...push,
+        latestPosition: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

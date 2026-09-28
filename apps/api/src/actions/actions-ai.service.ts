@@ -42,6 +42,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'A complaint theme appears in negative reviews of the latest version materially more than in the previous version.',
   'market.improve_country':
     'A non-home market is visibly behind the home market on stored visibility. This is a signal to investigate, not a localization verdict.',
+  'keyword.push_to_top10':
+    'A relevant, valuable keyword has sat just outside the top 10 for most of the last week and appears only in a weak metadata field.',
 };
 
 const SCHEMA = {

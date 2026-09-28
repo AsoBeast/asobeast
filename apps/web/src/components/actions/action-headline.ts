@@ -51,6 +51,7 @@ const KEYWORD_RULES: readonly ActionRule[] = [
   "keyword.defend",
   "keyword.prune",
   "serp.hold_volatile",
+  "keyword.push_to_top10",
 ];
 
 export function actionHeadline(item: ActionItem): string {
@@ -81,6 +82,8 @@ export function actionHeadline(item: ActionItem): string {
       return `Look into ${quoted(evidence.theme)} in reviews of ${evidence.version ?? "the latest version"}`;
     case "market.improve_country":
       return `Close the ${measure(evidence.gap)} point visibility gap in ${formatCountry(evidence.country)}`;
+    case "keyword.push_to_top10":
+      return `Push ${subject} from #${evidence.latestPosition} into the top 10`;
     default: {
       const never: never = evidence;
       return never;

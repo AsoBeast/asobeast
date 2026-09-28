@@ -19,6 +19,7 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "audit.fix_factor": "Fix a weak audit factor",
   "reviews.investigate_theme": "Investigate a new negative review theme",
   "market.improve_country": "Investigate an underperforming market",
+  "keyword.push_to_top10": "Push a keyword that sits just outside the top 10",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -30,6 +31,7 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "audit.fix_factor": "Weak audit factors",
   "reviews.investigate_theme": "Review themes",
   "market.improve_country": "Underperforming markets",
+  "keyword.push_to_top10": "Near the top 10",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -75,6 +77,8 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `"${evidence.theme}" appears in ${measure(evidence.mentions)} negative reviews of ${evidence.version ?? "the latest version"}, up from ${measure(evidence.previousMentions)}.`;
     case "market.improve_country":
       return `${evidence.country.toUpperCase()} sits ${measure(evidence.gap)} visibility points behind ${evidence.homeCountry.toUpperCase()}. Investigate this market.`;
+    case "keyword.push_to_top10":
+      return `Ranks #${evidence.latestPosition} with volume ${measure(evidence.volume)} and sat between 11 and 20 on ${measure(evidence.daysInBand)} of ${measure(evidence.windowDays)} days, but only a weaker field contains it.`;
     default: {
       const never: never = evidence;
       return never;

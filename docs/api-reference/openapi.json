@@ -3000,7 +3000,8 @@
                   "serp.hold_volatile",
                   "audit.fix_factor",
                   "reviews.investigate_theme",
-                  "market.improve_country"
+                  "market.improve_country",
+                  "keyword.push_to_top10"
                 ]
               }
             }
@@ -3385,7 +3386,8 @@
                   "serp.hold_volatile",
                   "audit.fix_factor",
                   "reviews.investigate_theme",
-                  "market.improve_country"
+                  "market.improve_country",
+                  "keyword.push_to_top10"
                 ]
               }
             }

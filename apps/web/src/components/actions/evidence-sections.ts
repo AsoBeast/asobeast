@@ -6,6 +6,7 @@ import type {
   KeywordAddUncoveredEvidence,
   KeywordDefendEvidence,
   KeywordPruneEvidence,
+  KeywordPushToTop10Evidence,
   MarketImproveCountryEvidence,
   RankInvestigateDropEvidence,
   ReviewsInvestigateThemeEvidence,
@@ -267,6 +268,38 @@ function marketSections(evidence: MarketImproveCountryEvidence): Sections {
   };
 }
 
+function pushSections(evidence: KeywordPushToTop10Evidence): Sections {
+  return {
+    facts: [
+      graded(
+        "Latest position",
+        evidence.latestPosition,
+        "position",
+        formatRankPosition,
+      ),
+      fact("Best position", formatRankPosition(evidence.bestPosition)),
+      fact("Days in band", days(evidence.daysInBand, evidence.windowDays)),
+      graded("Volume", evidence.volume, "popularity"),
+      fact("Relevance", optional(evidence.relevance)),
+      graded("Opportunity", evidence.opportunity, "opportunity"),
+    ],
+    lists: [
+      {
+        label: "Covered only by",
+        items: evidence.coveredFields.map((field) => ({
+          text: METADATA_FIELD_LABELS[field],
+        })),
+      },
+      {
+        label: "Strong fields",
+        items: evidence.strongFields.map((field) => ({
+          text: METADATA_FIELD_LABELS[field],
+        })),
+      },
+    ],
+  };
+}
+
 function sections(evidence: ActionEvidence): Sections {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
@@ -285,6 +318,8 @@ function sections(evidence: ActionEvidence): Sections {
       return themeSections(evidence);
     case "market.improve_country":
       return marketSections(evidence);
+    case "keyword.push_to_top10":
+      return pushSections(evidence);
     default: {
       const never: never = evidence;
       return never;

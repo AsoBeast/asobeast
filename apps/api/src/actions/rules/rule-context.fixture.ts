@@ -78,3 +78,69 @@ export const actionContext = (
   rankDropThreshold: 5,
   ...overrides,
 });
+
+const SAMPLE_NOW = Date.UTC(2026, 6, 30);
+
+const sampleDay = (offset: number): string =>
+  new Date(SAMPLE_NOW - offset * 86_400_000).toISOString().slice(0, 10);
+
+export const ruleSampleContext = (): ActionContext =>
+  actionContext([
+    contextApp({
+      trackedKeywords: [
+        trackedKeyword({
+          keywordId: 'kw_push',
+          text: 'habit tracker',
+          latestPosition: 12,
+          volume: 60,
+          relevance: 80,
+          opportunity: 44,
+        }),
+        trackedKeyword({
+          keywordId: 'kw_new',
+          text: 'focus timer',
+          volume: 70,
+          relevance: 90,
+          opportunity: 72,
+          scoreProvenance: {
+            source: 'APPLE_SUGGEST_SEARCH',
+            formulaVersion: 'app-store-v1',
+            capturedAt: sampleDay(1),
+            confidence: 'HIGH',
+          },
+        }),
+      ],
+      coverage: [
+        {
+          keywordId: 'kw_push',
+          text: 'habit tracker',
+          bucket: null,
+          uncovered: false,
+          fields: [
+            { field: 'title', covered: false },
+            { field: 'subtitle', covered: false },
+            { field: 'keywordField', covered: true },
+          ],
+        },
+        {
+          keywordId: 'kw_new',
+          text: 'focus timer',
+          bucket: null,
+          uncovered: true,
+          fields: [
+            { field: 'title', covered: false },
+            { field: 'subtitle', covered: false },
+          ],
+        },
+      ],
+      rankingDaysByKeyword: new Map([
+        [
+          'kw_push',
+          [22, 14, 13, 12, 12, 12, 12].map((position, index) => ({
+            date: sampleDay(6 - index),
+            position,
+          })),
+        ],
+      ]),
+    }),
+  ]);
