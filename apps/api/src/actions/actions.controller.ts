@@ -18,6 +18,7 @@ import {
 } from '@nestjs/swagger';
 import {
   ActionAiStatus,
+  ActionDetail,
   ActionExplanation,
   ActionItem,
   ActionListResult,
@@ -28,6 +29,7 @@ import {
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { ActionDetailService } from './action-detail.service';
 import { ActionRunQueue } from './action-run.queue';
 import { parseSummaryScope } from './action-summary-scope';
 import { ActionsAiService } from './actions-ai.service';
@@ -40,6 +42,7 @@ import { UpdateActionDto } from './dto/update-action.dto';
 export class ActionsController {
   constructor(
     private readonly actions: ActionsService,
+    private readonly details: ActionDetailService,
     private readonly ai: ActionsAiService,
     private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
@@ -67,6 +70,16 @@ export class ActionsController {
   @ApiOperation({ summary: 'Report AI explanation availability' })
   aiStatus(): ActionAiStatus {
     return this.ai.status();
+  }
+
+  @Get(':id')
+  @ApiOkResponse({
+    description: 'One action with its history, trend and measured outcome',
+  })
+  @ApiNotFoundResponse({ description: 'No such action in this workspace' })
+  @ApiOperation({ summary: 'Read one action' })
+  detail(@Param('id') id: string): Promise<ActionDetail> {
+    return this.details.get(id);
   }
 
   @Patch(':id')

@@ -293,6 +293,55 @@ export interface ActionEventItem {
   reason: ActionDismissReason | null;
 }
 
+export const ACTION_TREND_METRICS = [
+  'position',
+  'visibility',
+  'audit',
+  'rating',
+  'updateAge',
+] as const;
+export type ActionTrendMetric = (typeof ACTION_TREND_METRICS)[number];
+
+export type ActionTrendDirection = 'lower_is_better' | 'higher_is_better';
+
+export interface ActionTrendPoint {
+  date: string;
+  checked: boolean;
+  value: number | null;
+}
+
+export interface ActionTrend {
+  metric: ActionTrendMetric;
+  direction: ActionTrendDirection;
+  depth: number | null;
+  points: ActionTrendPoint[];
+}
+
+export const ACTION_OUTCOME_VERDICTS = [
+  'improved',
+  'worsened',
+  'unchanged',
+  'pending',
+] as const;
+export type ActionOutcomeVerdict = (typeof ACTION_OUTCOME_VERDICTS)[number];
+
+export interface ActionOutcome {
+  metric: ActionTrendMetric;
+  direction: ActionTrendDirection;
+  before: number | null;
+  beforeDate: string | null;
+  after: number | null;
+  afterDate: string | null;
+  change: number | null;
+  verdict: ActionOutcomeVerdict;
+}
+
+export interface ActionDetail extends ActionItem {
+  events: ActionEventItem[];
+  trend: ActionTrend | null;
+  outcome: ActionOutcome | null;
+}
+
 export interface ActionListResult {
   items: ActionItem[];
   total: number;

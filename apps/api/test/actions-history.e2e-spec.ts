@@ -3,15 +3,17 @@ import { readdirSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
-import { ActionsGenerator } from '../src/actions/actions.generator';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
-import { asWorkspace } from './helpers/tenancy';
+import {
+  ACTION_DAY,
+  generateActionsAt,
+  seedUncoveredKeyword,
+} from './helpers/action-seed';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
 
@@ -93,60 +95,8 @@ describe('action history (e2e)', () => {
     });
 
     const generateOne = async (): Promise<string> => {
-      await prisma.$executeRawUnsafe(
-        'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
-      );
-      const created = await prisma.app.create({
-        data: {
-          workspaceId: DEFAULT_WORKSPACE_ID,
-          store: Store.APP_STORE,
-          storeAppId: '111',
-          country: 'us',
-          name: 'Budget Planner',
-        },
-      });
-      await prisma.appSnapshot.create({
-        data: {
-          appId: created.id,
-          title: 'Budget Planner',
-          subtitle: 'Money',
-          description: 'Track spending.',
-          raw: {},
-        },
-      });
-      const keyword = await prisma.keyword.create({
-        data: {
-          text: 'expense tracker',
-          store: Store.APP_STORE,
-          country: 'us',
-        },
-      });
-      await prisma.trackedKeyword.create({
-        data: {
-          appId: created.id,
-          keywordId: keyword.id,
-          source: 'MANUAL',
-          active: true,
-          relevance: 90,
-        },
-      });
-      await prisma.keywordMetric.create({
-        data: {
-          keywordId: keyword.id,
-          date: new Date(Date.UTC(2026, 6, 29)),
-          traffic: 8,
-          difficulty: 3,
-          formulaVersion: 'app-store-v2',
-        },
-      });
-      const budget = await asWorkspace(app, () =>
-        app.get(DailyBudgetService).estimate(),
-      );
-      await asWorkspace(app, () =>
-        app
-          .get(ActionsGenerator)
-          .generateForWorkspace(budget, new Date(Date.UTC(2026, 6, 30))),
-      );
+      await seedUncoveredKeyword(prisma);
+      await generateActionsAt(app, ACTION_DAY(0));
       const [action] = await prisma.actionItem.findMany({
         where: { workspaceId: DEFAULT_WORKSPACE_ID },
         select: { id: true },

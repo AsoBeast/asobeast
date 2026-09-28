@@ -1,5 +1,10 @@
 import { Prisma } from '@prisma/client';
-import { ActionEventInput, ActionEventRecorder } from './action-events';
+import {
+  ActionEventInput,
+  ActionEventRecorder,
+  ActionEventRow,
+  toActionEventItem,
+} from './action-events';
 
 const event: ActionEventInput = {
   workspaceId: 'ws_1',
@@ -41,5 +46,49 @@ describe('ActionEventRecorder', () => {
 
     expect(createMany).toHaveBeenCalledTimes(1);
     expect(createMany).toHaveBeenCalledWith({ data: [event, done] });
+  });
+});
+
+describe('toActionEventItem', () => {
+  const row = (overrides: Partial<ActionEventRow> = {}): ActionEventRow => ({
+    id: 'ev_1',
+    type: 'dismissed',
+    actor: 'user',
+    status: 'DISMISSED',
+    priority: 'high',
+    impact: 71,
+    snoozedUntil: null,
+    reason: 'not_relevant',
+    occurredAt: new Date('2026-07-30T03:00:00.000Z'),
+    user: { name: 'Anna' },
+    ...overrides,
+  });
+
+  it('maps a user event with the name of the person who made it', () => {
+    expect(toActionEventItem(row())).toEqual({
+      id: 'ev_1',
+      type: 'dismissed',
+      actor: 'user',
+      actorName: 'Anna',
+      occurredAt: '2026-07-30T03:00:00.000Z',
+      status: 'DISMISSED',
+      priority: 'high',
+      impact: 71,
+      snoozedUntil: null,
+      reason: 'not_relevant',
+    });
+  });
+
+  it('names nobody for a system event and drops an unknown reason', () => {
+    expect(
+      toActionEventItem(
+        row({ actor: 'system', user: null, type: 'opened', reason: 'bored' }),
+      ),
+    ).toMatchObject({ actor: 'system', actorName: null, reason: null });
+  });
+
+  it('skips a row whose type or actor it does not know', () => {
+    expect(toActionEventItem(row({ type: 'teleported' }))).toBeNull();
+    expect(toActionEventItem(row({ actor: 'robot' }))).toBeNull();
   });
 });

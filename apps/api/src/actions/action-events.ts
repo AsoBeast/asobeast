@@ -1,12 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
+  ACTION_EVENT_ACTORS,
+  ACTION_EVENT_TYPES,
   ActionDismissReason,
   ActionEventActor,
+  ActionEventItem,
   ActionEventType,
   ActionPriority,
   ActionStatus,
+  isActionDismissReason,
+  isActionStatus,
 } from '@asobeast/shared';
+import { priorityOf } from './actions.mapper';
 
 export interface ActionEventInput {
   workspaceId: string;
@@ -32,4 +38,43 @@ export class ActionEventRecorder {
     if (events.length === 0) return;
     await tx.actionEvent.createMany({ data: [...events] });
   }
+}
+
+export const EVENT_SELECT = {
+  id: true,
+  type: true,
+  actor: true,
+  status: true,
+  priority: true,
+  impact: true,
+  snoozedUntil: true,
+  reason: true,
+  occurredAt: true,
+  user: { select: { name: true } },
+} satisfies Prisma.ActionEventSelect;
+
+export type ActionEventRow = Prisma.ActionEventGetPayload<{
+  select: typeof EVENT_SELECT;
+}>;
+
+const isEventType = (value: string): value is ActionEventType =>
+  ACTION_EVENT_TYPES.some((type) => type === value);
+
+const isEventActor = (value: string): value is ActionEventActor =>
+  ACTION_EVENT_ACTORS.some((actor) => actor === value);
+
+export function toActionEventItem(row: ActionEventRow): ActionEventItem | null {
+  if (!isEventType(row.type) || !isEventActor(row.actor)) return null;
+  return {
+    id: row.id,
+    type: row.type,
+    actor: row.actor,
+    actorName: row.user?.name ?? null,
+    occurredAt: row.occurredAt.toISOString(),
+    status: isActionStatus(row.status) ? row.status : 'OPEN',
+    priority: priorityOf(row.priority),
+    impact: row.impact,
+    snoozedUntil: row.snoozedUntil?.toISOString() ?? null,
+    reason: isActionDismissReason(row.reason) ? row.reason : null,
+  };
 }

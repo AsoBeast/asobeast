@@ -6,6 +6,8 @@ import {
   ACTION_EVENT_ACTORS,
   ACTION_EVENT_TYPES,
   ACTION_IMPACT_WEIGHTS,
+  ACTION_OUTCOME_VERDICTS,
+  ACTION_TREND_METRICS,
   ACTION_PRIORITIES,
   ACTION_PRIORITY_BANDS,
   ACTION_RULES,
@@ -334,5 +336,16 @@ describe('ActionSummary.byStatus', () => {
     expect(
       ACTION_STATUSES.every((status: ActionStatus) => status in byStatus),
     ).toBe(true);
+  });
+});
+
+describe('action detail vocabularies', () => {
+  it('lists each trend metric and outcome verdict once', () => {
+    expect(new Set(ACTION_TREND_METRICS).size).toBe(
+      ACTION_TREND_METRICS.length,
+    );
+    expect(new Set(ACTION_OUTCOME_VERDICTS).size).toBe(
+      ACTION_OUTCOME_VERDICTS.length,
+    );
   });
 });

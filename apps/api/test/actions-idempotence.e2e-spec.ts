@@ -2,26 +2,25 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
-import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ACTION_REOPEN_AFTER_DAYS } from '../src/actions/action-lifecycle';
-import { ActionsGenerator } from '../src/actions/actions.generator';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { obliterateQueues } from './obliterate-queues';
-import { asWorkspace } from './helpers/tenancy';
+import {
+  ACTION_DAY,
+  generateActionsAt,
+  seedUncoveredKeyword,
+} from './helpers/action-seed';
 
-const D = (offset: number): Date =>
-  new Date(Date.UTC(2026, 6, 30) - offset * 86_400_000);
+const D = ACTION_DAY;
 
 describe('action generation (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
-  let generator: ActionsGenerator;
-  let budget: DailyBudgetService;
   let providerCalls = 0;
 
   beforeAll(async () => {
@@ -46,8 +45,6 @@ describe('action generation (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
     prisma = testDb();
-    generator = app.get(ActionsGenerator);
-    budget = app.get(DailyBudgetService);
 
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },
@@ -62,64 +59,10 @@ describe('action generation (e2e)', () => {
     await app.close();
   });
 
-  const seedUncoveredKeyword = async (): Promise<void> => {
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
-    );
-
-    const created = await prisma.app.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        store: Store.APP_STORE,
-        storeAppId: '111',
-        country: 'us',
-        name: 'Budget Planner',
-      },
-    });
-    await prisma.appSnapshot.create({
-      data: {
-        appId: created.id,
-        title: 'Budget Planner',
-        subtitle: 'Money',
-        description: 'Track spending.',
-        version: '4.2.0',
-        raw: {},
-        capturedAt: D(1),
-      },
-    });
-
-    const keyword = await prisma.keyword.create({
-      data: { text: 'expense tracker', store: Store.APP_STORE, country: 'us' },
-    });
-    await prisma.trackedKeyword.create({
-      data: {
-        appId: created.id,
-        keywordId: keyword.id,
-        source: 'MANUAL',
-        active: true,
-        relevance: 90,
-      },
-    });
-    await prisma.keywordMetric.create({
-      data: {
-        keywordId: keyword.id,
-        date: D(1),
-        traffic: 8,
-        difficulty: 3,
-        formulaVersion: 'app-store-v2',
-      },
-    });
-  };
-
-  const runAt = async (now: Date) => {
-    const estimated = await asWorkspace(app, () => budget.estimate());
-    return asWorkspace(app, () =>
-      generator.generateForWorkspace(estimated, now),
-    );
-  };
+  const runAt = (now: Date) => generateActionsAt(app, now);
 
   it('opens nothing new on a second run over unchanged data', async () => {
-    await seedUncoveredKeyword();
+    await seedUncoveredKeyword(prisma);
 
     const first = await runAt(D(0));
     const second = await runAt(D(0));
@@ -140,7 +83,7 @@ describe('action generation (e2e)', () => {
   });
 
   it('reopens a done action whose rule keeps firing for fourteen days', async () => {
-    await seedUncoveredKeyword();
+    await seedUncoveredKeyword(prisma);
     const first = await runAt(D(0));
     expect(first.opened).toBeGreaterThan(0);
 
@@ -165,7 +108,7 @@ describe('action generation (e2e)', () => {
   });
 
   it('confirms a done action once its rule stops firing and reopens it when it returns', async () => {
-    await seedUncoveredKeyword();
+    await seedUncoveredKeyword(prisma);
     const first = await runAt(D(0));
     expect(first.opened).toBeGreaterThan(0);
     await prisma.actionItem.updateMany({

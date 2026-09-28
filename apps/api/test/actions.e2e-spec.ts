@@ -303,6 +303,14 @@ describe('ActionsController (e2e)', () => {
     await api.get('/actions/summary?store=NOPE').expect(400);
   });
 
+  it('keeps the literal routes ahead of the action id route', async () => {
+    const summary = await api.get('/actions/summary').expect(200);
+    const aiStatus = await api.get('/actions/ai-status').expect(200);
+
+    expect(summary.body).toHaveProperty('byStatus');
+    expect(aiStatus.body).toHaveProperty('configured');
+  });
+
   it('marks an action done and clears its snooze', async () => {
     const id = await seedAction();
 

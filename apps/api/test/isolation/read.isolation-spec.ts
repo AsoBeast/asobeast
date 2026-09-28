@@ -190,6 +190,10 @@ const BY_ID = [
     name: 'GET /apps/:id/first-run',
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/first-run`,
   },
+  {
+    name: 'GET /actions/:id',
+    path: (w: IsolationWorkspace) => `/actions/${w.actionId}`,
+  },
 ];
 
 describe('Read isolation', () => {
