@@ -39,7 +39,7 @@ export function ActionPriorityBadge({
       className={cn("shrink-0", PRIORITY_CLASS[priority])}
     >
       <Icon aria-hidden className="size-3.5" />
-      <span className={cn(compact && "sr-only @md/queue:not-sr-only")}>
+      <span className={cn(compact && "sr-only @2xl/queue:not-sr-only")}>
         {ACTION_PRIORITY_LABEL[priority]}
       </span>
     </Badge>

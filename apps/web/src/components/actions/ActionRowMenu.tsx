@@ -41,7 +41,7 @@ export function ActionRowMenu({
           disabled={disabled}
           aria-label={`More actions for ${headline}`}
           data-command="more"
-          className="size-11 @md/queue:size-7"
+          className="size-11 @2xl/queue:size-7"
         >
           <MoreHorizontal aria-hidden />
         </Button>

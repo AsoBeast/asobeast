@@ -64,7 +64,7 @@ export function ActionListSkeleton({ rows = 5 }: { rows?: number }) {
       {Array.from({ length: rows }, (_, index) => (
         <Skeleton
           key={index}
-          className="h-[143px] w-full rounded-lg @md/queue:h-[72px]"
+          className="h-[143px] w-full rounded-lg @2xl/queue:h-[72px]"
         />
       ))}
     </div>

@@ -90,7 +90,7 @@ function RowControls({
         variant="outline"
         size="sm"
         disabled={busy}
-        className="h-11 @md/queue:h-7"
+        className="h-11 @2xl/queue:h-7"
         onClick={() => mutation.mutate({ status: "OPEN" })}
       >
         <RotateCcw aria-hidden />
@@ -106,13 +106,13 @@ function RowControls({
         disabled={busy}
         aria-label="Done"
         data-command="done"
-        className="size-11 @md/queue:h-7 @md/queue:w-auto"
+        className="size-11 @2xl/queue:h-7 @2xl/queue:w-auto"
         onClick={() => mutation.mutate({ status: "DONE" })}
       >
         <Check aria-hidden />
-        <span className="hidden @md/queue:inline">Done</span>
+        <span className="hidden @2xl/queue:inline">Done</span>
       </Button>
-      <div className="hidden items-center gap-2 @md/queue:flex">
+      <div className="hidden items-center gap-2 @2xl/queue:flex">
         <ActionSnoozeMenu
           status={item.status}
           snoozedUntil={item.snoozedUntil}
@@ -150,7 +150,7 @@ function RowSelect({
   onToggle: () => void;
 }) {
   return (
-    <label className="relative z-20 flex size-11 items-center justify-center @md/queue:size-5">
+    <label className="relative z-20 flex size-11 items-center justify-center @2xl/queue:size-6">
       <Checkbox
         checked={checked}
         onCheckedChange={onToggle}
@@ -190,7 +190,7 @@ export function ActionRow({
         if (event.target === event.currentTarget) onFocus();
       }}
       data-focused={focused ? "true" : undefined}
-      className="relative grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 @md/queue:grid-cols-[auto_1fr_auto] rounded-lg border bg-card px-3 py-3 outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring data-[focused=true]:ring-2 data-[focused=true]:ring-ring"
+      className="relative grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 @2xl/queue:grid-cols-[auto_1fr_auto] rounded-lg border bg-card px-3 py-3 outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring data-[focused=true]:ring-2 data-[focused=true]:ring-ring"
     >
       {selectable ? (
         <RowSelect
@@ -199,7 +199,7 @@ export function ActionRow({
           onToggle={() => selection.toggle(item.id)}
         />
       ) : (
-        <span aria-hidden className="w-11 @md/queue:w-5" />
+        <span aria-hidden className="w-11 @2xl/queue:w-5" />
       )}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-start gap-2">
@@ -218,7 +218,7 @@ export function ActionRow({
         </div>
         <RowMeta item={item} appScoped={appScoped} />
       </div>
-      <div className="relative z-20 col-start-2 flex items-center justify-end gap-2 @md/queue:col-start-3 @md/queue:row-start-1">
+      <div className="relative z-20 col-start-2 flex items-center justify-end gap-2 @2xl/queue:col-start-3 @2xl/queue:row-start-1">
         <ActionImpactMeter
           impact={item.impact}
           compact

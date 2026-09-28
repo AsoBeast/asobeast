@@ -134,3 +134,194 @@ for (const [width, rows] of [
     expect(new Set(tops).size).toBe(rows);
   });
 }
+
+const LAYOUT_WIDTHS = [375, 768, 1024, 1440] as const;
+const THEMES = ["light", "dark"] as const;
+const LAYOUT_PAGES = [
+  {
+    name: "workspace",
+    path: "/actions",
+    sections: ["Queue", "Progress", "Where the work is"],
+  },
+  {
+    name: "app",
+    path: "/apps/app-1/actions",
+    sections: ["Actions", "Queue", "Progress", "Where the work is"],
+  },
+] as const;
+
+const headingOutline = (page: Page) =>
+  page.evaluate(() =>
+    Array.from(
+      document.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6"),
+    ).map((heading) => ({
+      level: Number(heading.tagName.slice(1)),
+      text: heading.textContent?.trim() ?? "",
+    })),
+  );
+
+const undersizedTargets = (page: Page, minHeight: number, selector: string) =>
+  page.locator(selector).evaluateAll(
+    (nodes, min) =>
+      nodes
+        .filter((node) => {
+          const box = node.getBoundingClientRect();
+          return box.width > 0 && box.height > 0;
+        })
+        .filter((node) => {
+          const stretched =
+            getComputedStyle(node, "::after").position === "absolute";
+          const target = stretched
+            ? ((node as HTMLElement).offsetParent ?? node)
+            : (node.closest("label") ?? node);
+          const box = target.getBoundingClientRect();
+          return box.width < 24 || box.height < min;
+        })
+        .map(
+          (node) =>
+            `${node.tagName} "${(node.getAttribute("aria-label") ?? node.textContent ?? "").trim().slice(0, 40)}"`,
+        ),
+    minHeight,
+  );
+
+const rowTops = (page: Page) =>
+  page
+    .locator("#queue [id^='action-act-']")
+    .evaluateAll((nodes) =>
+      nodes.slice(0, 2).map((node) => node.getBoundingClientRect().top),
+    );
+
+const tileRows = async (page: Page): Promise<number> => {
+  const tiles = page.locator('[data-slot="stat-tile"]');
+  await expect(tiles).toHaveCount(4);
+  const tops = await tiles.evaluateAll((nodes) =>
+    nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+  );
+  return new Set(tops).size;
+};
+
+for (const theme of THEMES) {
+  for (const width of LAYOUT_WIDTHS) {
+    for (const layout of LAYOUT_PAGES) {
+      test(`the ${layout.name} action center holds its layout at ${width} px in ${theme}`, async ({
+        page,
+      }) => {
+        await page.addInitScript(
+          (value) => window.localStorage.setItem("theme", value),
+          theme,
+        );
+        await page.emulateMedia({ colorScheme: theme });
+        await page.setViewportSize({ width, height: 812 });
+        await page.goto(layout.path);
+        await expect(
+          page.locator('[data-slot="stat-tile"]').first(),
+        ).toBeVisible();
+        await expect(page.locator("html")).toHaveClass(new RegExp(theme));
+        await expect(
+          page.getByRole("heading", { level: 1 }).first(),
+        ).toBeVisible();
+
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+          ),
+        ).toBe(true);
+
+        const outline = await headingOutline(page);
+        expect(outline.filter((heading) => heading.level === 1)).toHaveLength(
+          1,
+        );
+        expect(
+          outline
+            .filter((heading) => heading.level === 2)
+            .map((heading) => heading.text),
+        ).toEqual(layout.sections);
+        outline.reduce((previous, heading) => {
+          expect(heading.level).toBeLessThanOrEqual(previous + 1);
+          return heading.level;
+        }, 0);
+
+        expect(
+          await undersizedTargets(
+            page,
+            24,
+            "main button:visible, main a:visible",
+          ),
+        ).toEqual([]);
+
+        const narrowest = await page
+          .locator("#queue [id^='action-act-'] a")
+          .evaluateAll((nodes) =>
+            Math.min(
+              ...nodes.map((node) => node.getBoundingClientRect().width),
+            ),
+          );
+        expect(narrowest).toBeGreaterThanOrEqual(160);
+
+        if (width === 375) {
+          expect(
+            await undersizedTargets(
+              page,
+              44,
+              "#queue [id^='action-act-'] button:visible",
+            ),
+          ).toEqual([]);
+          expect(await tileRows(page)).toBe(2);
+          await page
+            .locator("#queue")
+            .evaluate((node) => node.scrollIntoView({ block: "start" }));
+          const tops = await rowTops(page);
+          expect(tops).toHaveLength(2);
+          for (const top of tops) expect(top).toBeLessThan(812);
+        }
+
+        if (width === 1440) {
+          expect(await tileRows(page)).toBe(1);
+          expect(await railBeside(page)).toBe(true);
+        }
+      });
+    }
+
+    if (width === 375 || width === 1440) {
+      test(`the action sheet fits a ${width} px viewport in ${theme}`, async ({
+        page,
+      }) => {
+        await page.addInitScript(
+          (value) => window.localStorage.setItem("theme", value),
+          theme,
+        );
+        await page.emulateMedia({ colorScheme: theme });
+        await page.setViewportSize({ width, height: 812 });
+        await page.goto("/actions?action=act-uncovered");
+
+        const dialog = page.getByRole("dialog");
+        await expect(
+          dialog.getByRole("heading", { name: "Trend" }),
+        ).toBeVisible();
+        const box = async () => (await dialog.boundingBox())!;
+        await expect
+          .poll(async () => {
+            const { x, width: dialogWidth } = await box();
+            return x + dialogWidth;
+          })
+          .toBeLessThanOrEqual(width + 1);
+        expect((await box()).x).toBeGreaterThanOrEqual(0);
+        expect((await box()).height).toBeLessThanOrEqual(812 + 1);
+
+        const scrolls = await dialog.evaluate((node) =>
+          [node, ...Array.from(node.querySelectorAll<HTMLElement>("*"))].some(
+            (child) =>
+              ["auto", "scroll"].includes(getComputedStyle(child).overflowY) &&
+              child.scrollHeight > child.clientHeight,
+          ),
+        );
+        expect(scrolls).toBe(true);
+        expect(
+          await page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth + 1,
+          ),
+        ).toBe(true);
+      });
+    }
+  }
+}

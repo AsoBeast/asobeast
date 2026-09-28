@@ -13,7 +13,7 @@ import { formatNumber } from "@/lib/format";
 import { ActionDismissMenu } from "./ActionDismissMenu";
 import { SNOOZE_PRESET_DAYS, snoozeUntil } from "./ActionSnoozeMenu";
 
-const BAR_BUTTON = "h-11 @md/queue:h-7";
+const BAR_BUTTON = "h-11 @2xl/queue:h-7";
 
 export function ActionBulkBar({
   count,

@@ -2428,7 +2428,12 @@ export const ACTIONS: ActionItem[] = [
     status: "OPEN",
     priority: "medium",
     impact: 48,
-    scope: { ...APP_SCOPE, keywordId: "kw-10", keywordText: "pomodoro timer" },
+    scope: {
+      ...APP_SCOPE,
+      keywordId: "kw-10",
+      keywordText:
+        "pomodoro timer for deep focus sessions and study breaks with ambient sounds",
+    },
     evidence: {
       rule: "keyword.push_to_top10",
       latestPosition: 12,

@@ -19,13 +19,15 @@ function GroupSelect({
   const chosen = ids.filter((id) => selection.isSelected(id)).length;
 
   return (
-    <Checkbox
-      aria-label={`Select all in ${group.label}`}
-      checked={
-        chosen === ids.length ? true : chosen > 0 ? "indeterminate" : false
-      }
-      onCheckedChange={() => selection.setMany(ids, chosen < ids.length)}
-    />
+    <label className="flex size-6 items-center justify-center">
+      <Checkbox
+        aria-label={`Select all in ${group.label}`}
+        checked={
+          chosen === ids.length ? true : chosen > 0 ? "indeterminate" : false
+        }
+        onCheckedChange={() => selection.setMany(ids, chosen < ids.length)}
+      />
+    </label>
   );
 }
 

@@ -4,6 +4,9 @@ import { ACTIONS } from "../../../e2e/fixtures.mts";
 import { actionSteps, CONFIRMATION_STEP } from "./action-steps";
 import { actionItem } from "./action-test-item";
 
+const LONG_KEYWORD =
+  "pomodoro timer for deep focus sessions and study breaks with ambient sounds";
+
 const WITH_EVIDENCE = ACTIONS.filter((item) => item.evidence !== null);
 
 const onStore = (item: ActionItem, store: ActionItem["scope"]["store"]) => ({
@@ -58,13 +61,13 @@ describe("actionSteps", () => {
       "asobeast confirms the fix when the keyword reaches the top 10 or stops qualifying";
 
     expect(actionSteps(push)).toEqual([
-      'Move "pomodoro timer" into the subtitle or the title',
+      `Move "${LONG_KEYWORD}" into the subtitle or the title`,
       "Keep the words together and in this order",
       "Ship it with your next release",
       confirmation,
     ]);
     expect(actionSteps(onStore(push, "GOOGLE_PLAY"))).toEqual([
-      'Add "pomodoro timer" to the title or the short description',
+      `Add "${LONG_KEYWORD}" to the title or the short description`,
       "Keep the words together and in this order",
       "Publish the listing change in Play Console",
       confirmation,
