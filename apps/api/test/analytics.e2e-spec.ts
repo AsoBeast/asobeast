@@ -388,6 +388,63 @@ describe('AnalyticsController (e2e)', () => {
     expect(insights.totals.negativeReviews7d).toBe(1);
   });
 
+  it('compares the latest rating with the one a week before it', async () => {
+    const id = await seed();
+    const now = Date.now();
+    await prisma.appSnapshot.createMany({
+      data: [
+        {
+          appId: id,
+          title: 'Habit Tracker',
+          description: 'Build habits every day',
+          raw: {},
+          ratingAvg: 4.5,
+          ratingCount: 900,
+          capturedAt: new Date(now - 8 * 24 * 60 * 60 * 1000),
+        },
+        {
+          appId: id,
+          title: 'Habit Tracker',
+          description: 'Build habits every day',
+          raw: {},
+          ratingAvg: 4.6,
+          ratingCount: 1000,
+          capturedAt: new Date(now - 60 * 1000),
+        },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].rating).toEqual({
+      average: 4.6,
+      count: 1000,
+      averageDelta7d: 0.1,
+    });
+  });
+
+  it('reports no rating trend when collection stopped over a week ago', async () => {
+    const id = await seed();
+    await prisma.appSnapshot.updateMany({
+      where: { appId: id },
+      data: {
+        ratingAvg: 4.2,
+        ratingCount: 30,
+        capturedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].rating).toEqual({
+      average: 4.2,
+      count: 30,
+      averageDelta7d: null,
+    });
+  });
+
   it('blends visibility across a linked pair', async () => {
     const { id, group, play } = await seedLinkedPair();
 

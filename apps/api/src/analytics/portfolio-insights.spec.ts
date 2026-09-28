@@ -228,22 +228,37 @@ describe('ratingTrend', () => {
   it('rounds the average delta to two decimals', () => {
     expect(
       ratingTrend(
-        { ratingAvg: 4.6, ratingCount: 1840 },
-        { ratingAvg: 4.5, ratingCount: 1700 },
+        { ratingAvg: 4.6, ratingCount: 1840, capturedAt: REFERENCE },
+        { ratingAvg: 4.5, ratingCount: 1700, capturedAt: WEEK_AGO },
       ),
     ).toEqual({ average: 4.6, count: 1840, averageDelta7d: 0.1 });
   });
 
+  it('reports no delta when the latest snapshot is the baseline itself', () => {
+    const stale = { ratingAvg: 4.2, ratingCount: 30, capturedAt: WEEK_AGO };
+
+    expect(ratingTrend(stale, stale)).toEqual({
+      average: 4.2,
+      count: 30,
+      averageDelta7d: null,
+    });
+  });
+
   it('reports no delta when either side is missing', () => {
-    expect(ratingTrend({ ratingAvg: 4.6, ratingCount: 10 }, null)).toEqual({
+    expect(
+      ratingTrend(
+        { ratingAvg: 4.6, ratingCount: 10, capturedAt: REFERENCE },
+        null,
+      ),
+    ).toEqual({
       average: 4.6,
       count: 10,
       averageDelta7d: null,
     });
     expect(
       ratingTrend(
-        { ratingAvg: null, ratingCount: null },
-        { ratingAvg: 4.1, ratingCount: 3 },
+        { ratingAvg: null, ratingCount: null, capturedAt: REFERENCE },
+        { ratingAvg: 4.1, ratingCount: 3, capturedAt: WEEK_AGO },
       ),
     ).toEqual({ average: null, count: null, averageDelta7d: null });
     expect(ratingTrend(null, null)).toEqual({

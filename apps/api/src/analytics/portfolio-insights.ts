@@ -24,6 +24,7 @@ export interface RankInsight {
 export interface RatingSample {
   ratingAvg: number | null;
   ratingCount: number | null;
+  capturedAt: Date;
 }
 
 type TaggedMover = RankedMover & { appId: string };
@@ -102,7 +103,10 @@ export function ratingTrend(
   baseline: RatingSample | null,
 ): AppRatingTrend {
   const average = latest?.ratingAvg ?? null;
-  const past = baseline?.ratingAvg ?? null;
+  const past =
+    latest && baseline && baseline.capturedAt < latest.capturedAt
+      ? baseline.ratingAvg
+      : null;
   return {
     average,
     count: latest?.ratingCount ?? null,

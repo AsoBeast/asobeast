@@ -59,7 +59,7 @@ export class PortfolioInsightsService {
         snapshots: {
           orderBy: { capturedAt: 'desc' },
           take: 1,
-          select: { ratingAvg: true, ratingCount: true },
+          select: { ratingAvg: true, ratingCount: true, capturedAt: true },
         },
       },
     });
@@ -187,7 +187,12 @@ export class PortfolioInsightsService {
       },
       distinct: ['appId'],
       orderBy: [{ appId: 'asc' }, { capturedAt: 'desc' }],
-      select: { appId: true, ratingAvg: true, ratingCount: true },
+      select: {
+        appId: true,
+        ratingAvg: true,
+        ratingCount: true,
+        capturedAt: true,
+      },
     });
     return new Map(rows.map(({ appId, ...sample }) => [appId, sample]));
   }
