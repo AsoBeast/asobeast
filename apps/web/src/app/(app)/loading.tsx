@@ -1,7 +1,7 @@
 import {
   AppsDashboardSkeleton,
   PortfolioTotalsSkeleton,
-} from "@/components/apps/skeletons";
+} from "@/components/dashboard/skeletons";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";

@@ -10,14 +10,14 @@ import {
   recentChangesOptions,
   runStatusOptions,
 } from "@/lib/queries";
-import { AppsDashboard } from "@/components/apps/AppsDashboard";
+import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
-import { PortfolioSummary } from "@/components/apps/PortfolioSummary";
+import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
 import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
 import {
   AppsDashboardSkeleton,
   PortfolioTotalsSkeleton,
-} from "@/components/apps/skeletons";
+} from "@/components/dashboard/skeletons";
 import { Button } from "@/components/ui/button";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";

@@ -3,7 +3,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { portfolioOptions } from "@/lib/queries";
-import { ImportAppDialog } from "./ImportAppDialog";
+import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
 import { PortfolioGrid } from "./PortfolioGrid";
 
 export function AppsDashboard() {

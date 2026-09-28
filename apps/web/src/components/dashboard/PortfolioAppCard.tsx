@@ -9,8 +9,8 @@ import {
   formatNumber,
   storeLabel,
 } from "@/lib/format";
-import { AppCardLink } from "./AppCardLink";
-import { DeleteAppMenu } from "./DeleteAppMenu";
+import { AppCardLink } from "@/components/apps/AppCardLink";
+import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { Sparkline } from "./Sparkline";
 
 export function AppStats({ app }: { app: PortfolioApp }) {
