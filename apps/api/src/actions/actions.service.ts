@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 import {
   ACTION_CATEGORIES,
   ActionCategory,
+  ActionEventType,
   ActionItem,
   ActionListResult,
   ActionPriorityCounts,
@@ -31,7 +32,8 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { toActionItem } from './actions.mapper';
+import { ActionEventRecorder } from './action-events';
+import { ActionRow, priorityOf, toActionItem } from './actions.mapper';
 import {
   ACTIONS_DEFAULT_STATUSES,
   ListActionsQueryDto,
@@ -63,6 +65,21 @@ const ROW_SELECT = {
   keyword: { select: { id: true, text: true } },
 } satisfies Prisma.ActionItemSelect;
 
+const CURRENT_SELECT = {
+  id: true,
+  appId: true,
+  status: true,
+  priority: true,
+  impact: true,
+  reopenCount: true,
+  snoozedUntil: true,
+  closedAt: true,
+} satisfies Prisma.ActionItemSelect;
+
+type CurrentAction = Prisma.ActionItemGetPayload<{
+  select: typeof CURRENT_SELECT;
+}>;
+
 const TOP_RULES_LIMIT = 5;
 const DAY_MS = 86_400_000;
 
@@ -75,6 +92,7 @@ export class ActionsService {
     private readonly config: ConfigService<Env, true>,
     @InjectQueue(QUEUES.PIPELINE) private readonly pipeline: Queue,
     private readonly workspace: WorkspaceContext,
+    private readonly recorder: ActionEventRecorder,
   ) {}
 
   async list(
@@ -188,13 +206,38 @@ export class ActionsService {
     }
   }
 
-  async update(id: string, body: UpdateActionDto): Promise<ActionItem> {
-    const current = await this.prisma.actionItem.findFirst({
-      where: { id },
-      select: { id: true, status: true, reopenCount: true },
+  async update(
+    id: string,
+    body: UpdateActionDto,
+    userId: string,
+  ): Promise<ActionItem> {
+    const row = await this.prisma.withTransaction(async (tx) => {
+      const current = await tx.actionItem.findFirst({
+        where: { id },
+        select: CURRENT_SELECT,
+      });
+      if (!current) {
+        throw new NotFoundException('Action not found');
+      }
+      return this.applyUpdate(tx, current, body, userId, new Date());
     });
-    if (!current) {
-      throw new NotFoundException('Action not found');
+    return this.map(row);
+  }
+
+  private async applyUpdate(
+    tx: Prisma.TransactionClient,
+    current: CurrentAction,
+    body: UpdateActionDto,
+    userId: string,
+    now: Date,
+  ): Promise<ActionRow> {
+    const note = body.note === undefined ? {} : { note: body.note.trim() };
+    if (isNoteOnly(current, body)) {
+      return tx.actionItem.update({
+        where: { id: current.id },
+        data: note,
+        select: ROW_SELECT,
+      });
     }
 
     const snoozedUntil = this.validateSnooze(body);
@@ -204,16 +247,35 @@ export class ActionsService {
       );
     }
 
-    const row = await this.prisma.actionItem.update({
-      where: { id },
+    const row = await tx.actionItem.update({
+      where: { id: current.id },
       data: {
         status: body.status,
-        ...(body.note === undefined ? {} : { note: body.note.trim() }),
-        ...this.sideEffects(body.status, current.status, snoozedUntil),
+        ...note,
+        ...this.sideEffects(body.status, current.status, snoozedUntil, now),
       },
       select: ROW_SELECT,
     });
-    return this.map(row);
+    const type = transitionEvent(current.status, body.status);
+    if (type) {
+      await this.recorder.record(tx, [
+        {
+          workspaceId: this.workspace.require('an action update'),
+          actionId: current.id,
+          appId: current.appId,
+          type,
+          actor: 'user',
+          userId,
+          status: body.status,
+          priority: priorityOf(current.priority),
+          impact: current.impact,
+          snoozedUntil,
+          reason: null,
+          occurredAt: now,
+        },
+      ]);
+    }
+    return row;
   }
 
   private validateSnooze(body: UpdateActionDto): Date | null {
@@ -249,8 +311,8 @@ export class ActionsService {
     target: ActionUpdateStatus,
     previous: string,
     snoozedUntil: Date | null,
+    now: Date,
   ): Prisma.ActionItemUpdateInput {
-    const now = new Date();
     switch (target) {
       case 'DONE':
         return { closedAt: now, resolvedAt: null, snoozedUntil: null };
@@ -299,11 +361,42 @@ export class ActionsService {
     return latest._max.lastSeenAt?.toISOString() ?? null;
   }
 
-  private map(row: Prisma.ActionItemGetPayload<{ select: typeof ROW_SELECT }>) {
+  private map(row: ActionRow) {
     const item = toActionItem(row);
     if (item.degraded) {
       this.logger.warn(`action ${item.id} has unreadable ${row.rule} evidence`);
     }
     return item;
+  }
+}
+
+function isNoteOnly(current: CurrentAction, body: UpdateActionDto): boolean {
+  if (body.status !== current.status) return false;
+  if (body.status === 'SNOOZED') {
+    return (
+      body.snoozedUntil !== undefined &&
+      current.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
+    );
+  }
+  return (
+    (body.status === 'DONE' || body.status === 'DISMISSED') &&
+    body.snoozedUntil === undefined
+  );
+}
+
+function transitionEvent(
+  previous: string,
+  target: ActionUpdateStatus,
+): ActionEventType | null {
+  switch (target) {
+    case 'DONE':
+      return 'done';
+    case 'DISMISSED':
+      return 'dismissed';
+    case 'SNOOZED':
+      return 'snoozed';
+    case 'OPEN':
+      if (previous === 'OPEN') return null;
+      return previous === 'SNOOZED' ? 'woke' : 'reopened';
   }
 }

@@ -79,6 +79,7 @@ describe('Write isolation', () => {
   });
 
   it('answers 404 when updating another workspace action', async () => {
+    const eventsBefore = await fixture.db.actionEvent.count();
     await fixture.a.agent
       .patch(`/actions/${fixture.b.actionId}`)
       .send({ status: 'DISMISSED' })
@@ -89,6 +90,7 @@ describe('Write isolation', () => {
       select: { status: true },
     });
     expect(after.status).toBe('OPEN');
+    await expect(fixture.db.actionEvent.count()).resolves.toBe(eventsBefore);
   });
 
   it('refuses to attach a competitor to another workspace app', async () => {

@@ -1,9 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma } from '@prisma/client';
 import {
-  ACTION_FORMULA_VERSION,
-  ACTION_RULE_CATEGORY,
   ActionPriority,
   ActionRule,
   DailyBudget,
@@ -12,10 +9,19 @@ import {
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
+import { ActionEventInput, ActionEventRecorder } from './action-events';
 import { actionFingerprint } from './action-fingerprint';
 import { scoreImpact } from './action-impact';
 import { ExistingAction, nextLifecycle } from './action-lifecycle';
 import { ACTION_DETECTORS, DetectedAction } from './action-rule';
+import {
+  ActionWrite,
+  ExistingRow,
+  lifecycleWrite,
+  resolveWrite,
+  ScoredDetection,
+} from './action-writes';
+import { priorityOf } from './actions.mapper';
 
 export interface OpenedAction {
   id: string;
@@ -41,20 +47,6 @@ export interface ActionGenerationResult {
   openedActions: OpenedAction[];
 }
 
-interface ScoredDetection extends DetectedAction {
-  fingerprint: string;
-  impact: number;
-  priority: ActionPriority;
-}
-
-type ExistingRow = ExistingAction & {
-  id: string;
-  fingerprint: string;
-  rule: string;
-};
-
-type ActionWrite = (tx: Prisma.TransactionClient) => Promise<unknown>;
-
 const EMPTY_RESULT = (durationMs: number): ActionGenerationResult => ({
   opened: 0,
   refreshed: 0,
@@ -76,6 +68,7 @@ export class ActionsGenerator {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService<Env, true>,
     private readonly loader: ActionContextLoader,
+    private readonly recorder: ActionEventRecorder,
   ) {}
 
   async generateForWorkspace(
@@ -156,7 +149,10 @@ export class ActionsGenerator {
         id: true,
         fingerprint: true,
         rule: true,
+        appId: true,
         status: true,
+        priority: true,
+        impact: true,
         lastSeenAt: true,
         closedAt: true,
         snoozedUntil: true,
@@ -170,6 +166,9 @@ export class ActionsGenerator {
           id: row.id,
           fingerprint: row.fingerprint,
           rule: row.rule,
+          appId: row.appId,
+          priority: priorityOf(row.priority),
+          impact: row.impact,
           status: row.status as ExistingAction['status'],
           lastSeenAt: row.lastSeenAt,
           closedAt: row.closedAt,
@@ -232,54 +231,12 @@ export class ActionsGenerator {
 
     for (const detection of kept) {
       const row = existing.get(detection.fingerprint) ?? null;
-      const outcome = nextLifecycle(row, true, now);
-
-      if (outcome.kind === 'create') {
-        writes.push((tx) =>
-          this.createWrite(tx, context.workspaceId, detection, now),
-        );
-        result.opened += 1;
-        opened.push({ detection, reopened: false });
-        continue;
-      }
-      if (!row) continue;
-
-      if (outcome.kind === 'reopen') {
-        writes.push((tx) =>
-          this.updateWrite(tx, row.id, detection, now, {
-            status: 'OPEN',
-            reopenCount: outcome.reopenCount,
-            closedAt: null,
-            resolvedAt: null,
-            snoozedUntil: null,
-            aiExplanation: null,
-            aiModel: null,
-            aiGeneratedAt: null,
-          }),
-        );
-        result.reopened += 1;
-        opened.push({ detection, reopened: true });
-        continue;
-      }
-      if (outcome.kind === 'refresh') {
-        writes.push((tx) =>
-          this.updateWrite(tx, row.id, detection, now, {
-            status: outcome.status,
-            resolvedAt: null,
-            ...(outcome.status === 'OPEN' ? { snoozedUntil: null } : {}),
-          }),
-        );
-        result.refreshed += 1;
-        continue;
-      }
-      if (outcome.kind === 'touch') {
-        writes.push((tx) =>
-          tx.actionItem.update({
-            where: { id: row.id },
-            data: { lastSeenAt: now },
-          }),
-        );
-        result.touched += 1;
+      const planned = lifecycleWrite(context.workspaceId, row, detection, now);
+      if (!planned) continue;
+      writes.push(planned.write);
+      result[planned.counter] += 1;
+      if (planned.counter === 'opened' || planned.counter === 'reopened') {
+        opened.push({ detection, reopened: planned.counter === 'reopened' });
       }
     }
 
@@ -289,20 +246,17 @@ export class ActionsGenerator {
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
       const outcome = nextLifecycle(row, false, now);
       if (outcome.kind !== 'resolve') continue;
-      writes.push((tx) =>
-        tx.actionItem.update({
-          where: { id: row.id },
-          data: { status: 'RESOLVED', resolvedAt: now, snoozedUntil: null },
-        }),
-      );
+      writes.push(resolveWrite(context.workspaceId, row, now));
       result.resolved += 1;
     }
 
     if (writes.length > 0) {
       await this.prisma.withTransaction(async (tx) => {
+        const events: ActionEventInput[] = [];
         for (const write of writes) {
-          await write(tx);
+          await write(tx, events);
         }
+        await this.recorder.record(tx, events);
       });
     }
     result.openedActions = await this.resolveOpened(
@@ -310,53 +264,6 @@ export class ActionsGenerator {
       opened,
     );
     return result;
-  }
-
-  private createWrite(
-    tx: Prisma.TransactionClient,
-    workspaceId: string,
-    detection: ScoredDetection,
-    now: Date,
-  ): Promise<unknown> {
-    return tx.actionItem.create({
-      data: {
-        workspaceId,
-        appId: detection.appId,
-        keywordId: detection.keywordId,
-        rule: detection.rule,
-        category: ACTION_RULE_CATEGORY[detection.rule],
-        store: detection.store,
-        country: detection.country,
-        fingerprint: detection.fingerprint,
-        status: 'OPEN',
-        priority: detection.priority,
-        impact: detection.impact,
-        formulaVersion: ACTION_FORMULA_VERSION,
-        evidence: detection.evidence as unknown as Prisma.InputJsonValue,
-        firstSeenAt: now,
-        lastSeenAt: now,
-      },
-    });
-  }
-
-  private updateWrite(
-    tx: Prisma.TransactionClient,
-    id: string,
-    detection: ScoredDetection,
-    now: Date,
-    extra: Prisma.ActionItemUpdateInput,
-  ): Promise<unknown> {
-    return tx.actionItem.update({
-      where: { id },
-      data: {
-        priority: detection.priority,
-        impact: detection.impact,
-        formulaVersion: ACTION_FORMULA_VERSION,
-        evidence: detection.evidence as unknown as Prisma.InputJsonValue,
-        lastSeenAt: now,
-        ...extra,
-      },
-    });
   }
 
   private async resolveOpened(

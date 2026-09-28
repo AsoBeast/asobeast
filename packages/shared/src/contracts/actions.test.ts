@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_ADVISORY_RULES,
   ACTION_CATEGORIES,
+  ACTION_EVENT_ACTORS,
+  ACTION_EVENT_TYPES,
   ACTION_IMPACT_WEIGHTS,
   ACTION_PRIORITIES,
   ACTION_PRIORITY_BANDS,
@@ -293,5 +295,12 @@ describe('action evidence', () => {
     expect(ACTION_RULE_CATEGORY[payload.action.rule]).toBe(
       payload.action.category,
     );
+  });
+});
+
+describe('action events', () => {
+  it('lists each event type and actor once', () => {
+    expect(new Set(ACTION_EVENT_TYPES).size).toBe(ACTION_EVENT_TYPES.length);
+    expect(new Set(ACTION_EVENT_ACTORS).size).toBe(ACTION_EVENT_ACTORS.length);
   });
 });

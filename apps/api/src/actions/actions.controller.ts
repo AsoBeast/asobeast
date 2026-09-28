@@ -23,6 +23,8 @@ import {
   ActionRunResult,
   ActionSummary,
 } from '@asobeast/shared';
+import type { User } from '@prisma/client';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { ActionRunQueue } from './action-run.queue';
 import { ActionsAiService } from './actions-ai.service';
@@ -67,8 +69,9 @@ export class ActionsController {
   update(
     @Param('id') id: string,
     @Body() body: UpdateActionDto,
+    @CurrentUser() user: User,
   ): Promise<ActionItem> {
-    return this.actions.update(id, body);
+    return this.actions.update(id, body, user.id);
   }
 
   @Post(':id/explain')

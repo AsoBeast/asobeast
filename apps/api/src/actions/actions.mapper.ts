@@ -67,6 +67,9 @@ export function parseActionEvidence(
 const iso = (value: Date | null): string | null =>
   value === null ? null : value.toISOString();
 
+export const priorityOf = (stored: string): ActionPriority =>
+  isActionPriority(stored) ? stored : 'low';
+
 function categoryOf(rule: string, stored: string): ActionCategory {
   if (isActionRule(rule)) return ACTION_RULE_CATEGORY[rule];
   return isActionCategory(stored) ? stored : 'hygiene';
@@ -78,16 +81,12 @@ export function toActionItem(row: ActionRow): ActionItem {
     ? row.rule
     : 'keyword.add_uncovered';
   const status: ActionStatus = isActionStatus(row.status) ? row.status : 'OPEN';
-  const priority: ActionPriority = isActionPriority(row.priority)
-    ? row.priority
-    : 'low';
-
   return {
     id: row.id,
     rule,
     category: categoryOf(row.rule, row.category),
     status,
-    priority,
+    priority: priorityOf(row.priority),
     impact: row.impact,
     formulaVersion: row.formulaVersion,
     scope: {

@@ -251,6 +251,41 @@ export interface ActionItem {
   ai: ActionAi;
 }
 
+export const ACTION_EVENT_TYPES = [
+  'opened',
+  'reopened',
+  'snoozed',
+  'woke',
+  'done',
+  'dismissed',
+  'resolved',
+  'verified',
+] as const;
+export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];
+
+export const ACTION_EVENT_ACTORS = ['system', 'user'] as const;
+export type ActionEventActor = (typeof ACTION_EVENT_ACTORS)[number];
+
+export const ACTION_DISMISS_REASONS = [
+  'not_relevant',
+  'handled_elsewhere',
+  'disagree_with_data',
+] as const;
+export type ActionDismissReason = (typeof ACTION_DISMISS_REASONS)[number];
+
+export interface ActionEventItem {
+  id: string;
+  type: ActionEventType;
+  actor: ActionEventActor;
+  actorName: string | null;
+  occurredAt: string;
+  status: ActionStatus;
+  priority: ActionPriority;
+  impact: number;
+  snoozedUntil: string | null;
+  reason: ActionDismissReason | null;
+}
+
 export interface ActionListResult {
   items: ActionItem[];
   total: number;
