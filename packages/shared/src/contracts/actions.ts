@@ -333,6 +333,7 @@ export interface ActionUpdateRequest {
   snoozedUntil?: string;
   note?: string;
   reason?: ActionDismissReason;
+  revert?: boolean;
 }
 
 export interface ActionRunResult {

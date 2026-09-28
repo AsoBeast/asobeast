@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsISO8601, IsOptional } from 'class-validator';
+import { IsBoolean, IsIn, IsISO8601, IsOptional } from 'class-validator';
 import {
   ACTION_DISMISS_REASONS,
   ACTION_UPDATE_STATUSES,
@@ -21,4 +21,11 @@ export class ActionTransitionDto {
   @IsOptional()
   @IsIn(ACTION_DISMISS_REASONS)
   reason?: ActionDismissReason;
+
+  @ApiPropertyOptional({
+    description: 'Undo the latest change instead of making a new one',
+  })
+  @IsOptional()
+  @IsBoolean()
+  revert?: boolean;
 }

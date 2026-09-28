@@ -388,6 +388,39 @@ describe('ActionsController (e2e)', () => {
       .expect(400);
   });
 
+  it('undoes a done without counting a reopen or keeping its event', async () => {
+    const id = await seedAction();
+    await prisma.actionEvent.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        actionId: id,
+        appId,
+        type: 'opened',
+        actor: 'system',
+        status: 'OPEN',
+        priority: 'high',
+        impact: 71,
+      },
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'OPEN', revert: true })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'OPEN',
+      reopenCount: 0,
+      closedAt: null,
+    });
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      select: { type: true },
+    });
+    expect(events).toEqual([{ type: 'opened' }]);
+  });
+
   it('rejects an unknown id and an invalid status', async () => {
     await api.patch('/actions/missing').send({ status: 'DONE' }).expect(404);
     const id = await seedAction();

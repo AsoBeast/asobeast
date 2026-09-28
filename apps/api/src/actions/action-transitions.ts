@@ -30,7 +30,10 @@ export type CurrentAction = Prisma.ActionItemGetPayload<{
   select: typeof CURRENT_SELECT;
 }>;
 
+export const ACTION_REVERT_WINDOW_MINUTES = 10;
+
 const DAY_MS = 86_400_000;
+const MINUTE_MS = 60_000;
 
 @Injectable()
 export class ActionTransitions {
@@ -47,6 +50,7 @@ export class ActionTransitions {
     userId: string,
   ): Promise<ActionRow> {
     validateShape(body);
+    if (body.revert) return this.revert(tx, current, body);
     const note = body.note === undefined ? {} : { note: body.note.trim() };
     if (isNoteOnly(current, body)) {
       return tx.actionItem.update({
@@ -69,7 +73,10 @@ export class ActionTransitions {
       data: {
         status: body.status,
         ...note,
-        ...sideEffects(body.status, current.status, snoozedUntil, now),
+        ...sideEffects(body.status, snoozedUntil, now),
+        ...(countsAsReopen(current.status, body.status)
+          ? { reopenCount: { increment: 1 } }
+          : {}),
       },
       select: ROW_SELECT,
     });
@@ -92,6 +99,48 @@ export class ActionTransitions {
         },
       ]);
     }
+    return row;
+  }
+
+  private async revert(
+    tx: Prisma.TransactionClient,
+    current: CurrentAction,
+    body: ActionUpdateRequest,
+  ): Promise<ActionRow> {
+    const now = new Date();
+    const [latest, before] = await tx.actionEvent.findMany({
+      where: { actionId: current.id },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      take: 2,
+      select: {
+        id: true,
+        type: true,
+        actor: true,
+        status: true,
+        occurredAt: true,
+      },
+    });
+    const windowStart =
+      now.getTime() - ACTION_REVERT_WINDOW_MINUTES * MINUTE_MS;
+    if (latest?.actor !== 'user' || latest.occurredAt.getTime() < windowStart) {
+      throw new ConflictException('Nothing recent to undo on this action');
+    }
+    if (body.status !== (before?.status ?? 'OPEN')) {
+      throw new ConflictException('Undo must restore the previous status');
+    }
+
+    const row = await tx.actionItem.update({
+      where: { id: current.id },
+      data: {
+        status: body.status,
+        ...sideEffects(body.status, this.snoozeDate(body, now), now),
+        ...(latest.type === 'reopened'
+          ? { reopenCount: { decrement: 1 } }
+          : {}),
+      },
+      select: ROW_SELECT,
+    });
+    await tx.actionEvent.delete({ where: { id: latest.id } });
     return row;
   }
 
@@ -145,9 +194,12 @@ function isNoteOnly(
   return body.status === 'DONE' || body.status === 'DISMISSED';
 }
 
+function countsAsReopen(previous: string, target: ActionUpdateStatus): boolean {
+  return target === 'OPEN' && previous !== 'OPEN' && previous !== 'SNOOZED';
+}
+
 function sideEffects(
   target: ActionUpdateStatus,
-  previous: string,
   snoozedUntil: Date | null,
   now: Date,
 ): Prisma.ActionItemUpdateInput {
@@ -174,9 +226,6 @@ function sideEffects(
         verifiedAt: null,
         resolvedAt: null,
         snoozedUntil: null,
-        ...(previous === 'OPEN' || previous === 'SNOOZED'
-          ? {}
-          : { reopenCount: { increment: 1 } }),
       };
   }
 }

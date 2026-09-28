@@ -11,7 +11,10 @@ import { Env } from '../config/env';
 import { actionsGeneratedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
-import { ActionTransitions } from './action-transitions';
+import {
+  ACTION_REVERT_WINDOW_MINUTES,
+  ActionTransitions,
+} from './action-transitions';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
@@ -76,7 +79,18 @@ const currentRow = (overrides: Partial<CurrentRow> = {}): CurrentRow => ({
   ...overrides,
 });
 
-const buildPrisma = (overrides: Partial<CurrentRow> | null = {}) => {
+interface StoredEvent {
+  id: string;
+  type: string;
+  actor: string;
+  status: string;
+  occurredAt: Date;
+}
+
+const buildPrisma = (
+  overrides: Partial<CurrentRow> | null = {},
+  history: StoredEvent[] = [],
+) => {
   const current = overrides === null ? null : currentRow(overrides);
   const events: ActionEventInput[] = [];
   const prisma = {
@@ -104,6 +118,8 @@ const buildPrisma = (overrides: Partial<CurrentRow> | null = {}) => {
         events.push(...args.data);
         return Promise.resolve({ count: args.data.length });
       }),
+      findMany: jest.fn(() => Promise.resolve([...history].reverse())),
+      delete: jest.fn(() => Promise.resolve({})),
     },
     events,
   };
@@ -728,4 +744,155 @@ describe('ActionsService dismiss reasons', () => {
       );
     },
   );
+});
+
+describe('ActionsService undo', () => {
+  const minutesAgo = (minutes: number): Date =>
+    new Date(Date.now() - minutes * 60_000);
+  const opened: StoredEvent = {
+    id: 'ev_opened',
+    type: 'opened',
+    actor: 'system',
+    status: 'OPEN',
+    occurredAt: minutesAgo(60 * 24),
+  };
+  const done = (minutes = 1): StoredEvent => ({
+    id: 'ev_done',
+    type: 'done',
+    actor: 'user',
+    status: 'DONE',
+    occurredAt: minutesAgo(minutes),
+  });
+
+  it('restores open without counting a reopen and forgets the done event', async () => {
+    const prisma = buildPrisma({ status: 'DONE', reopenCount: 2 }, [
+      opened,
+      done(),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'OPEN', revert: true }),
+      USER,
+    );
+
+    const data = prisma.actionItem.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ status: 'OPEN', closedAt: null });
+    expect(data).not.toHaveProperty('reopenCount');
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_done' },
+    });
+    expect(prisma.events).toEqual([]);
+  });
+
+  it('restores a snooze with its wake date when a dismiss is undone', async () => {
+    const until = new Date(Date.now() + 5 * DAY_MS);
+    const prisma = buildPrisma({ status: 'DISMISSED' }, [
+      opened,
+      {
+        id: 'ev_snoozed',
+        type: 'snoozed',
+        actor: 'user',
+        status: 'SNOOZED',
+        occurredAt: minutesAgo(30),
+      },
+      {
+        id: 'ev_dismissed',
+        type: 'dismissed',
+        actor: 'user',
+        status: 'DISMISSED',
+        occurredAt: minutesAgo(1),
+      },
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({
+        status: 'SNOOZED',
+        snoozedUntil: until.toISOString(),
+        revert: true,
+      }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: until,
+      closedAt: null,
+    });
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_dismissed' },
+    });
+  });
+
+  it('takes back the reopen count when a reopen is undone', async () => {
+    const prisma = buildPrisma({ status: 'OPEN', reopenCount: 1 }, [
+      opened,
+      done(20),
+      {
+        id: 'ev_reopened',
+        type: 'reopened',
+        actor: 'user',
+        status: 'OPEN',
+        occurredAt: minutesAgo(1),
+      },
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DONE', revert: true }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'DONE',
+      reopenCount: { decrement: 1 },
+    });
+  });
+
+  it('refuses an undo after the window has passed', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      done(ACTION_REVERT_WINDOW_MINUTES + 1),
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses an undo to a status the action did not have', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [opened, done()]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'DISMISSED', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Undo must restore the previous status'),
+    );
+  });
+
+  it('refuses an undo when the latest change was not a person', async () => {
+    const prisma = buildPrisma({ status: 'OPEN' }, [opened]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+  });
 });

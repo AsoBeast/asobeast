@@ -4374,6 +4374,10 @@
             ],
             "type": "string"
           },
+          "revert": {
+            "type": "boolean",
+            "description": "Undo the latest change instead of making a new one"
+          },
           "note": {
             "type": "string",
             "maxLength": 500
