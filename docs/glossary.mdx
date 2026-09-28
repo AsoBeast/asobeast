@@ -85,7 +85,7 @@ A persisted 0 to 10 estimate of how hard a keyword's current top results are to 
 
 ## Opportunity
 
-A 0 to 100 score for one keyword: search volume on a log scale multiplied by a difficulty gate, so either one can veto the keyword. It is computed on read and never stored. See [Popularity, difficulty and opportunity](/concepts/scoring).
+A 0 to 100 score for one keyword: the share of the page left open by difficulty, scaled down when the volume is under 30, so either one can veto the keyword. It is computed on read and never stored. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
 ## Suggest reach
 

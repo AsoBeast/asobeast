@@ -46,7 +46,7 @@ describe('toTrackedKeywordItem', () => {
     const item = toTrackedKeywordItem(row(), facts('daily habit tracker'));
     expect(item.volume).toBeCloseTo(80, 2);
     expect(item.relevance).toBe(60);
-    expect(item.opportunity).toBe(65);
+    expect(item.opportunity).toBe(60);
     expect(item.latestDepth).toBeNull();
   });
 

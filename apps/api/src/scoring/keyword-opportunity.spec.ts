@@ -18,14 +18,14 @@ describe('appOpportunity', () => {
       relevance: 100,
       volume: expect.closeTo(47.7, 6) as number,
       difficulty100: expect.closeTo(43.7, 6) as number,
-      opportunity: 34,
+      opportunity: 56,
     });
   });
 
   it('prefers a manual relevance and keeps it out of the opportunity', () => {
     expect(appOpportunity(input({ relevanceOverride: 55 }))).toMatchObject({
       relevance: 55,
-      opportunity: 34,
+      opportunity: 56,
     });
   });
 

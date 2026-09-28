@@ -16,7 +16,7 @@ Popularity and difficulty describe a keyword and are stored. Opportunity is deri
 | Difficulty | 0 to 10 stored, 0 to 100 shown | Yes, in `KeywordMetric` | Keyword | How hard the current top results are to displace |
 | Opportunity | 0 to 100 | No | Keyword | Whether the searches a keyword brings are within reach |
 
-Opportunity is search volume on a log scale multiplied by a difficulty gate, so either one can veto a keyword.
+Opportunity is the share of the page left open by difficulty, scaled down for a keyword searched too rarely to matter, so either one can veto a keyword.
 
 Every popularity number is an estimate built from public store signals, except where the source says Apple Ads search popularity. asobeast publishes the formula below and a calibration command, so the estimate can be checked against Apple's own number rather than taken on trust.
 
@@ -150,17 +150,19 @@ A score without provenance cannot be audited, so asobeast never shows one.
 
 ## How is opportunity calculated?
 
-Opportunity asks how likely the keyword is to bring installs: how many people search it, and whether the page can be entered at all.
-
-Volume is first read as estimated searches a day, because search demand grows exponentially along the 0 to 100 scale. A volume of 40 reads as about 70 searches a day, 50 as 280, 60 as 1,150, 70 as 4,600, 80 as 19,000 and 100 as 300,000, with straight lines between the published points. The anchor is Apple's reporting bar: a phrase enters its search popularity data at about 500 searches a week, which is where the scale reads 40.
+Opportunity asks how likely the keyword is to bring installs: whether enough people search it, and how much of the page is still open.
 
 | Step | Formula |
 | --- | --- |
-| Reach | `log10(1 + searches a day) / log10(1 + 300,000)` |
-| Gate | `1 - (difficulty / 100)²` |
-| Opportunity | Reach multiplied by the gate and by 100, cut to a whole number |
+| Reach | Volume divided by 30, at most 1 |
+| Openness | 100 minus difficulty |
+| Opportunity | Reach multiplied by openness, cut to a whole number |
 
-The gate is quadratic, so competition barely counts on an easy page and closes fast on a hard one: a difficulty of 20 keeps 96 percent of the reach, 50 keeps 75 percent, 80 keeps 36 percent and 100 keeps nothing. A popular phrase held by the largest apps therefore scores low, and a moderately searched phrase on an open page can score well.
+Volume counts only up to 30. Past that point a keyword brings enough searches that the competition decides whether the installs can be won, so a keyword with a volume of 30 and one with 70 score the same on the same page. Below it, opportunity falls in proportion: a volume of 15 halves the score. Difficulty counts across the whole range: a difficulty of 20 keeps 80 percent of the reach, 50 keeps half and 80 keeps a fifth.
+
+A popular phrase held by the largest apps therefore scores low, and a moderately searched phrase on an open page scores high. `game` at a volume of 68 and a difficulty of 71 scores 29, while `geography map game` at 33 and 23 scores 77.
+
+The shape was chosen against published keyword effectiveness. On the reference's own popularity and difficulty it orders 794 App Store and 2,101 Google Play keywords at a rank agreement of 0.93 and 0.96, against 0.90 for the previous formula. A two-dimensional table of popularity and difficulty bands fits the reference more closely on its own inputs, but orders the keywords worse from estimated popularity and difficulty, because a band edge turns a small estimation error into a jump.
 
 Opportunity is the same for every app that tracks the keyword. Relevance is reported next to it and not multiplied in, so the number says what the keyword is worth and relevance says whether it belongs in this listing. The action rules read both.
 
