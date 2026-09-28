@@ -373,6 +373,30 @@ describe('ActionContextLoader', () => {
     expect(context.apps[0].competitorUpdatedAt).toEqual([rival]);
   });
 
+  it('keeps the last known store update when the newest snapshot has none', async () => {
+    const known = new Date('2026-03-01T00:00:00.000Z');
+    const prisma = buildPrisma({
+      snapshots: [
+        {
+          appId: 'app_1',
+          version: '2.0',
+          capturedAt: new Date('2026-07-29T03:00:00.000Z'),
+          storeUpdatedAt: null,
+        },
+        {
+          appId: 'app_1',
+          version: '2.0',
+          capturedAt: new Date('2026-07-28T03:00:00.000Z'),
+          storeUpdatedAt: known,
+        },
+      ],
+    });
+
+    const context = await loaderFor(prisma).load(budget, NOW);
+
+    expect(context.apps[0].latestStoreUpdatedAt).toEqual(known);
+  });
+
   it('bounds the ranking window and the shorter SERP window', async () => {
     const prisma = buildPrisma();
     await loaderFor(prisma, [keyword('kw_1', 'us')]).load(budget, NOW);

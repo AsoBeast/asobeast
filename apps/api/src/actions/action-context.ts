@@ -550,7 +550,9 @@ export class ActionContextLoader {
       reviews: rows.reviews,
       latestVersion: distinctVersions[0] ?? null,
       previousVersion: distinctVersions[1] ?? null,
-      latestStoreUpdatedAt: rows.versions[0]?.storeUpdatedAt ?? null,
+      latestStoreUpdatedAt:
+        rows.versions.find((row) => row.storeUpdatedAt !== null)
+          ?.storeUpdatedAt ?? null,
     };
   }
 }
