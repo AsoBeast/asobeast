@@ -12,14 +12,14 @@ import {
 } from "@/lib/queries";
 import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
-import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
+import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { PortfolioStatusLine } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
   PortfolioStatusLineSkeleton,
-  PortfolioTotalsSkeleton,
+  PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
@@ -60,8 +60,8 @@ export default async function Page() {
           </Suspense>
         </DashboardHeader>
 
-        <Suspense fallback={<PortfolioTotalsSkeleton />}>
-          <PortfolioSummary />
+        <Suspense fallback={<PortfolioPulseSkeleton />}>
+          <PortfolioPulse />
         </Suspense>
 
         <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">

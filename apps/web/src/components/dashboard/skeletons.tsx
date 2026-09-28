@@ -2,10 +2,12 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup } from "@/components/ui/stat-tile";
 
-export function PortfolioTotalsSkeleton() {
+export const PULSE_GRID = "grid-cols-2 @3xl/dashboard:grid-cols-4";
+
+export function PortfolioPulseSkeleton() {
   return (
-    <StatTileGroup>
-      {Array.from({ length: 5 }).map((_, index) => (
+    <StatTileGroup className={PULSE_GRID}>
+      {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
           className="flex flex-col gap-1 rounded-xl border bg-card px-4 py-3"

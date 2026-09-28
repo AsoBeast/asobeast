@@ -1,7 +1,7 @@
 import {
   AppsDashboardSkeleton,
   PortfolioStatusLineSkeleton,
-  PortfolioTotalsSkeleton,
+  PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 import { Card, CardHeader } from "@/components/ui/card";
@@ -17,7 +17,7 @@ export default function Loading() {
         </div>
         <PortfolioStatusLineSkeleton />
       </div>
-      <PortfolioTotalsSkeleton />
+      <PortfolioPulseSkeleton />
       <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
         <div className="@5xl/dashboard:col-span-7">
           <ActionsSummaryCardSkeleton />
