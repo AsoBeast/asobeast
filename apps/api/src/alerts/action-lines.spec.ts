@@ -95,7 +95,20 @@ describe('summarizeActionEvidence', () => {
         competitorMedianDays: null,
         competitorsCompared: 0,
       }),
-    ).toBe('last store update 142 days ago, competitor median — days');
+    ).toBe('last store update 142 days ago');
+  });
+
+  it('adds the competitor median when rivals were compared', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'listing.ship_update',
+        storeUpdatedAt: '2026-03-10T00:00:00.000Z',
+        daysSinceUpdate: 142,
+        version: '3.1.0',
+        competitorMedianDays: 25,
+        competitorsCompared: 3,
+      }),
+    ).toBe('last store update 142 days ago, competitor median 25 days');
   });
 
   it('counts the store rule problems in a listing field', () => {
