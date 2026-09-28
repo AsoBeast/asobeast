@@ -2500,6 +2500,49 @@ export const ACTIONS: ActionItem[] = [
       budgetUtilization: 0.7,
     },
   },
+  {
+    ...ACTION_BASE,
+    id: "act-gp-defend",
+    rule: "keyword.defend",
+    category: "competition",
+    status: "OPEN",
+    priority: "high",
+    impact: 62,
+    scope: {
+      appId: "app-gp",
+      appName: "Tomato Clock",
+      store: "GOOGLE_PLAY",
+      country: "de",
+      keywordId: "kw-gp-1",
+      keywordText: "tomato timer",
+    },
+    evidence: {
+      rule: "keyword.defend",
+      yourPosition: 5,
+      previousPosition: 3,
+      windowDays: 7,
+      observedDays: 7,
+      volatility: 9,
+      entrants: [
+        {
+          storeAppId: "com.rival.focus",
+          title: "Focus Rival",
+          position: 2,
+          appId: null,
+          isCompetitor: false,
+        },
+        {
+          storeAppId: "com.pomo.pro",
+          title: "Pomo Pro",
+          position: 4,
+          appId: null,
+          isCompetitor: false,
+        },
+      ],
+      entrantsAtOrAbove: 2,
+      volume: 48,
+    },
+  },
 ];
 
 export const ACTION_SUMMARY: ActionSummary = summarizeActions(ACTIONS, {

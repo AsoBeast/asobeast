@@ -19,6 +19,7 @@ import { storeLabel } from "@/lib/format";
 import {
   actionsOptions,
   actionSummaryOptions,
+  appActionSummaryOptions,
   portfolioOptions,
 } from "@/lib/queries";
 import { ACTION_PRIORITY_LABEL, ACTION_RULE_TITLE } from "./action-copy";
@@ -136,7 +137,8 @@ function AllClear() {
   );
 }
 
-function PortfolioActions({ summary }: { summary: ActionSummary }) {
+function PortfolioActions() {
+  const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   if (summary.generatedAt !== null && summary.open === 0) return <AllClear />;
 
   return (
@@ -148,8 +150,18 @@ function PortfolioActions({ summary }: { summary: ActionSummary }) {
   );
 }
 
+function AppActions({ appId }: { appId: string }) {
+  const { data: summary } = useSuspenseQuery(appActionSummaryOptions(appId));
+
+  return (
+    <>
+      <PriorityCounts summary={summary} />
+      <AppActionList appId={appId} summary={summary} />
+    </>
+  );
+}
+
 export function ActionsSummaryCard({ appId }: { appId?: string }) {
-  const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   const href = appId ? `/apps/${appId}/actions` : "/actions";
   const Title = appId ? "div" : "h2";
 
@@ -164,14 +176,7 @@ export function ActionsSummaryCard({ appId }: { appId?: string }) {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {appId ? (
-          <>
-            <PriorityCounts summary={summary} />
-            <AppActionList appId={appId} summary={summary} />
-          </>
-        ) : (
-          <PortfolioActions summary={summary} />
-        )}
+        {appId ? <AppActions appId={appId} /> : <PortfolioActions />}
 
         <Link
           href={href}

@@ -59,6 +59,7 @@ import {
   getVisibilityHistory,
   getWebhooks,
   type ActionFilters,
+  type ActionSummaryScope,
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
@@ -252,6 +253,8 @@ export const actionKeys = {
   list: (filters: ActionFilters, appId?: string) =>
     ["actions", "list", appId ?? null, filters] as const,
   summary: ["actions", "summary"] as const,
+  scopedSummary: (scope: ActionSummaryScope) =>
+    ["actions", "summary", scope] as const,
   aiStatus: ["actions", "ai-status"] as const,
   appRoot: (id: string) => [...appKeys.detail(id), "actions"] as const,
 };
@@ -265,8 +268,14 @@ export const actionsOptions = (filters: ActionFilters, appId?: string) =>
 
 export const actionSummaryOptions = queryOptions({
   queryKey: actionKeys.summary,
-  queryFn: getActionSummary,
+  queryFn: () => getActionSummary(),
 });
+
+export const appActionSummaryOptions = (appId: string) =>
+  queryOptions({
+    queryKey: actionKeys.scopedSummary({ appId }),
+    queryFn: () => getActionSummary({ appId }),
+  });
 
 export const actionAiStatusOptions = queryOptions({
   queryKey: actionKeys.aiStatus,

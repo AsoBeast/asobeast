@@ -11,6 +11,8 @@ import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
   actionKeys,
   actionsOptions,
+  actionSummaryOptions,
+  appActionSummaryOptions,
   alertsConfigKey,
   apiTokenKeys,
   appKeys,
@@ -262,6 +264,13 @@ describe("actionKeys", () => {
     expect(actionsOptions({}, APP).queryKey).not.toEqual(
       actionsOptions({}, undefined).queryKey,
     );
+  });
+
+  it("keeps the app scoped summary under the action root", () => {
+    const scoped = appActionSummaryOptions(APP).queryKey;
+
+    expect(isPrefixOf(actionKeys.all, scoped)).toBe(true);
+    expect(scoped).not.toEqual(actionSummaryOptions.queryKey);
   });
 
   it("separates action lists by their filters", () => {

@@ -46,8 +46,22 @@ export function getActions(filters: ActionFilters): Promise<ActionListResult> {
   );
 }
 
-export function getActionSummary(): Promise<ActionSummary> {
-  return apiFetch<ActionSummary>("/actions/summary");
+export interface ActionSummaryScope {
+  appId?: string;
+  store?: Store;
+  country?: string;
+}
+
+export function getActionSummary({
+  appId,
+  store,
+  country,
+}: ActionSummaryScope = {}): Promise<ActionSummary> {
+  const params = new URLSearchParams();
+  if (appId) params.set("appId", appId);
+  if (store) params.set("store", store);
+  if (country) params.set("country", country);
+  return apiFetch<ActionSummary>(withQuery("/actions/summary", params));
 }
 
 export function getAppActions(
