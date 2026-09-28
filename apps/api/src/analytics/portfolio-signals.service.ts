@@ -1,13 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { DigestAppSummary } from '@asobeast/shared';
+import { AppActionCounts, AppAuditTrend } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { addDays } from './analytics.support';
 
 const AUDIT_TREND_DAYS = 7;
 
-type ActionCounts = NonNullable<DigestAppSummary['actions']>;
-
-export const EMPTY_ACTION_COUNTS: ActionCounts = {
+export const EMPTY_ACTION_COUNTS: AppActionCounts = {
   open: 0,
   critical: 0,
   high: 0,
@@ -21,7 +19,7 @@ export class PortfolioSignals {
 
   async actionCounts(
     appIds: string[],
-  ): Promise<Map<string, ActionCounts> | null> {
+  ): Promise<Map<string, AppActionCounts> | null> {
     if (appIds.length === 0) return new Map();
     try {
       const rows = await this.prisma.actionItem.groupBy({
@@ -33,7 +31,7 @@ export class PortfolioSignals {
         _count: { _all: true },
       });
 
-      const counts = new Map<string, ActionCounts>();
+      const counts = new Map<string, AppActionCounts>();
       for (const row of rows) {
         const current = counts.get(row.appId) ?? { ...EMPTY_ACTION_COUNTS };
         current.open += row._count._all;
@@ -48,10 +46,7 @@ export class PortfolioSignals {
     }
   }
 
-  async auditTrend(
-    appId: string,
-    to: Date,
-  ): Promise<DigestAppSummary['audit']> {
+  async auditTrend(appId: string, to: Date): Promise<AppAuditTrend | null> {
     const [current, baseline] = await Promise.all([
       this.prisma.auditScore.findFirst({
         where: { appId, date: { lte: to } },
