@@ -1,12 +1,18 @@
-export const TOP_ACTION_LIMIT = 3;
-export const DASHBOARD_ACTION_LIMIT = 5;
-
-import type { ActionFilters } from "@/lib/api";
+import { QUERY_BOUNDS } from "@asobeast/shared";
+import type { ActionActivityScope, ActionFilters } from "@/lib/api";
 import {
   actionPriorityParser,
   actionRuleParser,
   actionStatusParser,
 } from "@/lib/search-params";
+
+export const TOP_ACTION_LIMIT = 3;
+export const DASHBOARD_ACTION_LIMIT = 5;
+
+export function actionActivityScope(appId?: string): ActionActivityScope {
+  const days = QUERY_BOUNDS.actionActivityDays.default;
+  return appId ? { appId, days } : { days };
+}
 
 export interface ActionSearchParams {
   status?: string | string[];

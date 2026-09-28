@@ -136,6 +136,42 @@ test("the app actions page heads its section under the app name", async ({
   ).toBeVisible();
 });
 
+test("four tiles summarize the queue, two by two on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/actions");
+
+  const tiles = page.locator('[data-slot="stat-tile"]');
+  await expect(tiles).toHaveCount(4);
+  const tops = await Promise.all(
+    [0, 1, 2, 3].map(
+      async (index) => (await tiles.nth(index).boundingBox())?.y,
+    ),
+  );
+  expect(tops[0]).toBe(tops[1]);
+  expect(tops[2]).toBe(tops[3]);
+  expect(tops[2]).toBeGreaterThan(tops[0] ?? 0);
+});
+
+test("the tiles wait for the first generation", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "e2e_actions_ungenerated",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/actions");
+
+  const tiles = page.locator('[data-slot="stat-tile"]');
+  await expect(tiles).toHaveCount(4);
+  for (const index of [0, 1, 2, 3]) {
+    await expect(tiles.nth(index)).toContainText("—");
+    await expect(tiles.nth(index)).toContainText("not generated yet");
+  }
+});
+
 test.describe("generating the queue on demand", () => {
   const cookie = (name: string, value: string) => ({
     name,

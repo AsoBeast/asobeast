@@ -3,8 +3,13 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionCenter } from "@/components/actions/ActionCenter";
 import { ActionCenterSkeleton } from "@/components/actions/skeletons";
 import { getQueryClient } from "@/lib/get-query-client";
-import { actionsOptions, actionSummaryOptions } from "@/lib/queries";
 import {
+  actionActivityOptions,
+  actionsOptions,
+  actionSummaryOptions,
+} from "@/lib/queries";
+import {
+  actionActivityScope,
   actionFiltersFrom,
   type ActionSearchParams,
 } from "@/lib/action-filters";
@@ -18,6 +23,7 @@ export default async function ActionsPage({
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(actionSummaryOptions);
+  void queryClient.prefetchQuery(actionActivityOptions(actionActivityScope()));
   await queryClient.prefetchQuery(actionsOptions(filters));
 
   return (

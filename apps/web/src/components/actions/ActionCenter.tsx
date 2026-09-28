@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ActionFilters as Filters } from "@/lib/api";
@@ -13,6 +13,8 @@ import {
 } from "@/lib/search-params";
 import { ActionCard } from "./ActionCard";
 import { ActionCenterHeader } from "./ActionCenterHeader";
+import { ActionOverview } from "./ActionOverview";
+import { ActionOverviewSkeleton } from "./skeletons";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionFilters } from "./ActionFilters";
 import { isFilteredView } from "./queue-filters";
@@ -70,6 +72,9 @@ export function ActionCenter({ appId }: { appId?: string }) {
         generatedAt={data.generatedAt}
         showGenerate={!emptyStateGenerates}
       />
+      <Suspense fallback={<ActionOverviewSkeleton />}>
+        <ActionOverview appId={appId} />
+      </Suspense>
       <ActionFilters
         status={status}
         priority={priority}

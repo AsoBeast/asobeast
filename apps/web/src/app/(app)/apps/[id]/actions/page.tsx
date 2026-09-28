@@ -3,11 +3,13 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionCenter } from "@/components/actions/ActionCenter";
 import { ActionCenterSkeleton } from "@/components/actions/skeletons";
 import {
+  actionActivityScope,
   actionFiltersFrom,
   type ActionSearchParams,
 } from "@/lib/action-filters";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
+  actionActivityOptions,
   actionsOptions,
   actionSummaryFor,
   appDetailOptions,
@@ -25,6 +27,9 @@ export default async function AppActionsPage({
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(actionSummaryFor(id));
+  void queryClient.prefetchQuery(
+    actionActivityOptions(actionActivityScope(id)),
+  );
   await Promise.all([
     queryClient.prefetchQuery(appDetailOptions(id)),
     queryClient.prefetchQuery(actionsOptions(filters, id)),
