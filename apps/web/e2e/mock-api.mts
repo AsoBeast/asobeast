@@ -31,6 +31,7 @@ import {
   IMPORTED_APP,
   IMPORTED_APP_DETAIL,
   IMPORTED_PORTFOLIO_APP,
+  MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
   PORTFOLIO,
@@ -43,6 +44,7 @@ import {
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
+  MANY_PORTFOLIO_INSIGHTS,
   PORTFOLIO_INSIGHTS,
   QUIET_PORTFOLIO_INSIGHTS,
 } from "./portfolio-insights.mts";
@@ -978,13 +980,16 @@ const routes: Route[] = [
         });
       }
       const empty = hasCookie(req, "portfolio_empty", "1");
+      const listed = hasCookie(req, "portfolio_many", "1")
+        ? [...portfolioApps, ...MANY_PORTFOLIO_APPS]
+        : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : portfolioApps,
+        apps: empty ? [] : listed,
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
-          apps: empty ? 0 : portfolioApps.length,
+          apps: empty ? 0 : listed.length,
         },
       } satisfies PortfolioSummary);
     },
@@ -995,6 +1000,9 @@ const routes: Route[] = [
     handler: (_p, req, res) => {
       if (hasCookie(req, "portfolio_empty", "1")) {
         return json(res, 200, EMPTY_PORTFOLIO_INSIGHTS);
+      }
+      if (hasCookie(req, "portfolio_many", "1")) {
+        return json(res, 200, MANY_PORTFOLIO_INSIGHTS);
       }
       json(
         res,

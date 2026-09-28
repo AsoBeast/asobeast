@@ -3,6 +3,22 @@ import { expect, test } from "./session.mts";
 
 const appsRegion = (page: Page) => page.getByRole("region", { name: "Apps" });
 
+const cardNames = (page: Page) =>
+  appsRegion(page)
+    .locator('[data-slot="app-grid"] > li')
+    .evaluateAll((items) =>
+      items.map(
+        (item) => item.querySelector("span[title]")?.textContent?.trim() ?? "",
+      ),
+    );
+
+const withManyApps = (page: Page) =>
+  page
+    .context()
+    .addCookies([
+      { name: "portfolio_many", value: "1", url: "http://localhost:3000" },
+    ]);
+
 const card = (page: Page, name: string) =>
   appsRegion(page)
     .locator('[data-slot="card"]')
@@ -83,4 +99,76 @@ test("app card footers line up along a grid row", async ({ page }) => {
   for (const box of firstRow) {
     expect(Math.abs(box.bottom - firstRow[0].bottom)).toBeLessThanOrEqual(1);
   }
+});
+
+test("sorting the app list by name writes the url", async ({ page }) => {
+  await page.goto("/");
+
+  await appsRegion(page).getByRole("combobox", { name: "Sort by" }).click();
+  await page.getByRole("option", { name: "Name" }).click();
+
+  await expect(page).toHaveURL(/[?&]sort=name/);
+  await expect.poll(async () => (await cardNames(page))[0]).toBe("Focus Timer");
+  const names = await cardNames(page);
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+});
+
+test("the app list restores its sort from the url", async ({ page }) => {
+  await page.goto("/?sort=rating");
+
+  await expect(
+    appsRegion(page).getByRole("combobox", { name: "Sort by" }),
+  ).toHaveText("Rating");
+  await expect.poll(async () => (await cardNames(page))[0]).toBe("Focus Timer");
+  const names = await cardNames(page);
+  expect(names.indexOf("Habit Tracker")).toBeLessThan(
+    names.indexOf("Tomato Clock"),
+  );
+});
+
+test("searching the app list filters cards and writes the url", async ({
+  page,
+}) => {
+  await withManyApps(page);
+  await page.goto("/");
+
+  const search = appsRegion(page).getByRole("textbox", { name: "Search apps" });
+  await expect(search).toBeVisible();
+  const everything = (await cardNames(page)).length;
+  await search.fill("tomato");
+
+  await expect(page).toHaveURL(/[?&]q=tomato/);
+  await expect.poll(() => cardNames(page)).toEqual(["Tomato Clock"]);
+
+  await search.fill("");
+
+  await expect
+    .poll(async () => (await cardNames(page)).length)
+    .toBe(everything);
+});
+
+test("a short app list offers no search", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(
+    appsRegion(page).getByRole("combobox", { name: "Sort by" }),
+  ).toBeVisible();
+  await expect(
+    appsRegion(page).getByRole("textbox", { name: "Search apps" }),
+  ).toHaveCount(0);
+});
+
+test("a search without matches offers to clear it", async ({ page }) => {
+  await withManyApps(page);
+  await page.goto("/?q=zzz");
+
+  const region = appsRegion(page);
+  await expect(region.getByText('No apps match "zzz"')).toBeVisible();
+
+  await region.getByRole("button", { name: "Clear filters" }).click();
+
+  await expect
+    .poll(async () => (await cardNames(page)).length)
+    .toBeGreaterThan(6);
+  await expect(page).not.toHaveURL(/[?&]q=/);
 });

@@ -2100,6 +2100,33 @@ export const PENDING_PORTFOLIO_APP: PortfolioSummary["apps"][number] = {
   lastCapturedAt: null,
 };
 
+const MANY_APP_NAMES = [
+  ["Sleep Sounds", "APP_STORE", "gb"],
+  ["Water Reminder", "GOOGLE_PLAY", "fr"],
+  ["Budget Planner", "APP_STORE", "jp"],
+  ["Step Counter", "GOOGLE_PLAY", "br"],
+  ["Recipe Keeper", "APP_STORE", "in"],
+  ["Language Cards", "GOOGLE_PLAY", "mx"],
+] as const;
+
+export const MANY_PORTFOLIO_APPS: PortfolioSummary["apps"] = MANY_APP_NAMES.map(
+  ([name, store, country], index) => ({
+    id: `app-many-${index + 1}`,
+    store,
+    storeAppId: `many.${index + 1}`,
+    country,
+    name,
+    iconUrl: null,
+    groupId: null,
+    groupName: null,
+    visibility: { current: 8 - index, delta7d: null },
+    sparkline: [],
+    trackedKeywords: 2,
+    competitors: 0,
+    lastCapturedAt: utcTimestampDaysAgo(0),
+  }),
+);
+
 export const IMPORTED_PORTFOLIO_APP: PortfolioSummary["apps"][number] = {
   id: "app-new",
   store: "APP_STORE",

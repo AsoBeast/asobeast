@@ -1,4 +1,12 @@
-import type { PortfolioApp, Store } from "@asobeast/shared";
+import { normalizeText } from "@asobeast/shared";
+import type {
+  PortfolioApp,
+  PortfolioAppInsight,
+  Store,
+} from "@asobeast/shared";
+import { storeLabel } from "@/lib/format";
+import type { AppSort } from "@/lib/search-params";
+import type { SortDirection } from "@/lib/table/sorting";
 
 const STORE_ORDER: Record<Store, number> = {
   APP_STORE: 0,
@@ -89,4 +97,96 @@ export function toRows(apps: PortfolioApp[]): PortfolioRow[] {
   }
 
   return rows;
+}
+
+type SortValue = number | string | null;
+
+export const APP_SORT_VALUES: Record<
+  AppSort,
+  {
+    descFirst: boolean;
+    value: (app: PortfolioApp, insight?: PortfolioAppInsight) => SortValue;
+  }
+> = {
+  visibility: { descFirst: true, value: (app) => app.visibility.current },
+  change: { descFirst: true, value: (app) => app.visibility.delta7d },
+  top10: {
+    descFirst: true,
+    value: (_app, insight) => insight?.rankDistribution.top10 ?? null,
+  },
+  rating: {
+    descFirst: true,
+    value: (_app, insight) => insight?.rating.average ?? null,
+  },
+  actions: {
+    descFirst: true,
+    value: (_app, insight) => insight?.actions?.open ?? null,
+  },
+  name: { descFirst: false, value: (app) => app.name ?? "" },
+  updated: { descFirst: true, value: (app) => app.lastCapturedAt },
+};
+
+export interface AppSorting {
+  sort: AppSort;
+  dir: SortDirection | null;
+}
+
+function compareValues(a: SortValue, b: SortValue, desc: boolean): number {
+  if (a === null || b === null) return a === b ? 0 : a === null ? 1 : -1;
+  const order =
+    typeof a === "number" && typeof b === "number"
+      ? a - b
+      : String(a).localeCompare(String(b));
+  return desc ? -order : order;
+}
+
+export function sortRows(
+  rows: PortfolioRow[],
+  { sort, dir }: AppSorting,
+  insights: ReadonlyMap<string, PortfolioAppInsight>,
+): PortfolioRow[] {
+  const { descFirst, value } = APP_SORT_VALUES[sort];
+  const desc = dir === null ? descFirst : dir === "desc";
+  const appValue = (app: PortfolioApp) => value(app, insights.get(app.id));
+  const rowValue = (row: PortfolioRow): SortValue => {
+    if (row.kind === "app") return appValue(row.app);
+    if (sort === "name") return row.name;
+    return (
+      row.members
+        .map(appValue)
+        .sort((a, b) => compareValues(a, b, descFirst))[0] ?? null
+    );
+  };
+  return rows
+    .map((row) => ({ row, value: rowValue(row) }))
+    .sort((a, b) => compareValues(a.value, b.value, desc))
+    .map(({ row }) => row);
+}
+
+const searchable = (text: string): string =>
+  normalizeText(text).normalize("NFD").replace(/\p{M}/gu, "");
+
+export function matchesQuery(app: PortfolioApp, query: string): boolean {
+  const needle = searchable(query);
+  if (needle === "") return true;
+  const haystack = searchable(
+    [
+      app.name ?? "",
+      storeLabel(app.store),
+      app.country,
+      app.groupName ?? "",
+    ].join(" "),
+  );
+  return haystack.includes(needle);
+}
+
+export function filterRows(
+  rows: PortfolioRow[],
+  query: string,
+): PortfolioRow[] {
+  return rows.filter((row) =>
+    row.kind === "app"
+      ? matchesQuery(row.app, query)
+      : row.members.some((member) => matchesQuery(member, query)),
+  );
 }

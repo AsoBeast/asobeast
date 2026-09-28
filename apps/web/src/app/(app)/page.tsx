@@ -14,6 +14,7 @@ import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
 import { PanelCardSkeleton } from "@/components/overview/skeletons";
@@ -86,6 +87,11 @@ export default async function Page() {
             id="apps"
             title="Apps"
             className="@6xl/dashboard:col-span-8"
+            toolbar={
+              <Suspense fallback={null}>
+                <AppsToolbar />
+              </Suspense>
+            }
           >
             <Suspense fallback={<AppsDashboardSkeleton />}>
               <AppsDashboard />

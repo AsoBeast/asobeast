@@ -5,6 +5,7 @@ import type {
   PortfolioMovement,
   RankDistribution,
 } from "@asobeast/shared";
+import { MANY_PORTFOLIO_APPS } from "./fixtures.mts";
 
 const NO_BANDS: RankDistribution = {
   top1: 0,
@@ -187,4 +188,15 @@ export const EMPTY_PORTFOLIO_INSIGHTS: PortfolioInsights = {
   apps: [],
   movers: { up: [], down: [] },
   totals: totalsOf([]),
+};
+
+export const MANY_PORTFOLIO_INSIGHTS: PortfolioInsights = {
+  ...PORTFOLIO_INSIGHTS,
+  apps: [
+    ...APPS,
+    ...MANY_PORTFOLIO_APPS.map((app, index) => ({
+      ...quiet(app.id),
+      rating: { average: 3.5 + index / 10, count: 40, averageDelta7d: null },
+    })),
+  ],
 };

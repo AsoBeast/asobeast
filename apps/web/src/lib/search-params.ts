@@ -151,6 +151,27 @@ export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
 export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
 
+export const APP_SORTS = [
+  "visibility",
+  "change",
+  "top10",
+  "rating",
+  "actions",
+  "name",
+  "updated",
+] as const;
+
+export type AppSort = (typeof APP_SORTS)[number];
+
+export const appSortParser =
+  parseAsStringLiteral(APP_SORTS).withDefault("visibility");
+
+export const appListParsers = {
+  q: searchParser,
+  sort: appSortParser,
+  dir: sortDirectionParser,
+};
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 
