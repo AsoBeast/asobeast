@@ -36,7 +36,7 @@ export function ActionStatusLine({ appId }: { appId?: string }) {
   return (
     <p data-slot="action-status" className="text-body text-muted-foreground">
       <Separated parts={statusParts(summary)} />
-      {summary.suppressedByCap > 0 ? (
+      {appId === undefined && summary.suppressedByCap > 0 ? (
         <span className="hidden @md/actions:inline">
           <span aria-hidden> · </span>
           {formatNumber(summary.suppressedByCap)} withheld by the per app cap

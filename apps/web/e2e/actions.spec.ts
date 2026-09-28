@@ -101,6 +101,16 @@ test("the header states how fresh the queue is", async ({ page }) => {
   await expect(status).toContainText("withheld by the per app cap");
 });
 
+test("an app's header leaves out the workspace wide cap count", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/actions");
+
+  const status = page.locator('[data-slot="action-status"]');
+  await expect(status).toContainText("generated");
+  await expect(status).not.toContainText("withheld");
+});
+
 test("offers Generate now exactly once, with a queue and without one", async ({
   page,
 }) => {
