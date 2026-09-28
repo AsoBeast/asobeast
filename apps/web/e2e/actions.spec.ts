@@ -39,7 +39,7 @@ test("filtering by priority updates the url and survives a reload", async ({
   page,
 }) => {
   await page.goto("/actions");
-  await page.getByRole("button", { name: "Critical", exact: true }).click();
+  await page.getByRole("button", { name: /^Critical/ }).click();
 
   await expect(page).toHaveURL(/priority=critical/);
   await expect(page.getByRole("heading", { level: 2 })).toHaveCount(1);
@@ -170,6 +170,79 @@ test("the tiles wait for the first generation", async ({ page }) => {
     await expect(tiles.nth(index)).toContainText("—");
     await expect(tiles.nth(index)).toContainText("not generated yet");
   }
+});
+
+test.describe("the queue toolbar", () => {
+  test("a rule facet narrows the queue and recounts the priorities", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await page.getByRole("button", { name: /^Filter by rule/ }).click();
+    await page.getByRole("option", { name: /Keywords to defend/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/rule=keyword\.defend/);
+    await expect(page.locator(card("act-uncovered"))).toHaveCount(0);
+    await expect(page.locator(card("act-defend"))).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^High/ }),
+    ).toHaveAccessibleName("High, 3 actions");
+  });
+
+  test("a search narrows the queue and survives a reload", async ({ page }) => {
+    await page.goto("/actions");
+    await page.getByRole("textbox", { name: "Search actions" }).fill("habit");
+
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+    await expect(page.locator(card("act-defend"))).toHaveCount(0);
+    await expect(page).toHaveURL(/q=habit/);
+
+    await page.reload();
+    await expect(
+      page.getByRole("textbox", { name: "Search actions" }),
+    ).toHaveValue("habit");
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+  });
+
+  test("the status tabs switch between the to do and closed lists", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await page.getByRole("tab", { name: "Dismissed" }).click();
+
+    await expect(page).toHaveURL(/status=DISMISSED/);
+    await expect(page.locator(card("act-dismissed"))).toBeVisible();
+
+    await page.getByRole("tab", { name: "To do" }).click();
+    await expect(page).not.toHaveURL(/status=/);
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+  });
+
+  test("a status set without a tab shows as a removable chip", async ({
+    page,
+  }) => {
+    await page.goto("/actions?status=DONE,DISMISSED");
+
+    await expect(page.getByText("Status: Done, Dismissed")).toBeVisible();
+    await expect(page.getByRole("tab", { selected: true })).toHaveCount(0);
+  });
+
+  test("the header and toolbar stay compact on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/actions");
+
+    const header = await page.locator("main header").first().boundingBox();
+    const toolbar = await page
+      .locator('[data-slot="action-toolbar"]')
+      .boundingBox();
+    expect(header?.height ?? 0).toBeLessThanOrEqual(140);
+    expect(toolbar?.height ?? 0).toBeLessThanOrEqual(200);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
 });
 
 test.describe("generating the queue on demand", () => {

@@ -1,43 +1,41 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useDeferredValue, useEffect, useRef } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ActionFilters as Filters } from "@/lib/api";
+import { queueFilters } from "@/lib/action-filters";
 import { actionsOptions } from "@/lib/queries";
-import {
-  actionFocusParser,
-  actionPriorityParser,
-  actionRuleParser,
-  actionStatusParser,
-} from "@/lib/search-params";
+import { actionFocusParser } from "@/lib/search-params";
 import { ActionCard } from "./ActionCard";
 import { ActionCenterHeader } from "./ActionCenterHeader";
-import { ActionOverview } from "./ActionOverview";
-import { ActionOverviewSkeleton } from "./skeletons";
 import { ActionEmptyState } from "./ActionEmptyState";
-import { ActionFilters } from "./ActionFilters";
-import { isFilteredView } from "./queue-filters";
+import { ActionOverview } from "./ActionOverview";
+import { ActionToolbar } from "./ActionToolbar";
+import { filterQueue, isFilteredView } from "./queue-filters";
+import { sortQueue } from "./queue-groups";
+import { ActionOverviewSkeleton } from "./skeletons";
+import { useQueueView } from "./use-queue-view";
+
+const CLEARED_VIEW = {
+  status: null,
+  priority: null,
+  rule: null,
+  category: null,
+  app: null,
+  market: null,
+  store: null,
+  q: null,
+};
 
 export function ActionCenter({ appId }: { appId?: string }) {
-  const [status, setStatus] = useQueryState("status", actionStatusParser);
-  const [priority, setPriority] = useQueryState(
-    "priority",
-    actionPriorityParser,
-  );
-  const [rule, setRule] = useQueryState("rule", actionRuleParser);
+  const [view, setView] = useQueueView();
   const [focus] = useQueryState("action", actionFocusParser);
+  const q = useDeferredValue(view.q);
 
-  const filters = useMemo<Filters>(
-    () => ({
-      status,
-      ...(priority.length > 0 ? { priority } : {}),
-      ...(rule.length > 0 ? { rule } : {}),
-    }),
-    [status, priority, rule],
+  const { data } = useSuspenseQuery(
+    actionsOptions(queueFilters(view.status), appId),
   );
-
-  const { data } = useSuspenseQuery(actionsOptions(filters, appId));
+  const visible = sortQueue(filterQueue(data.items, { ...view, q }), view.sort);
 
   const focusRef = useRef<string | null>(null);
   useEffect(() => {
@@ -51,19 +49,9 @@ export function ActionCenter({ appId }: { appId?: string }) {
     card.focus({ preventScroll: true });
   }, [focus, data]);
 
-  const filtered = isFilteredView({
-    status,
-    priority,
-    rule,
-    category: [],
-    app: [],
-    market: [],
-    store: null,
-    q: "",
-  });
-
+  const filtered = isFilteredView(view);
   const emptyStateGenerates =
-    data.items.length === 0 && (data.generatedAt === null || !filtered);
+    visible.length === 0 && (data.generatedAt === null || !filtered);
 
   return (
     <>
@@ -75,28 +63,24 @@ export function ActionCenter({ appId }: { appId?: string }) {
       <Suspense fallback={<ActionOverviewSkeleton />}>
         <ActionOverview appId={appId} />
       </Suspense>
-      <ActionFilters
-        status={status}
-        priority={priority}
-        rule={rule}
-        onStatusChange={(next) => void setStatus(next)}
-        onPriorityChange={(next) => void setPriority(next)}
-        onRuleChange={(next) => void setRule(next)}
+      <ActionToolbar
+        appId={appId}
+        items={data.items}
+        view={view}
+        setView={setView}
+        shown={visible.length}
+        loadedTotal={data.total}
       />
 
-      {data.items.length === 0 ? (
+      {visible.length === 0 ? (
         <ActionEmptyState
           generatedAt={data.generatedAt}
           filtered={filtered}
-          onClearFilters={() => {
-            void setStatus(null);
-            void setPriority(null);
-            void setRule(null);
-          }}
+          onClearFilters={() => void setView(CLEARED_VIEW)}
         />
       ) : (
         <ul className="flex list-none flex-col gap-4 p-0">
-          {data.items.map((item) => (
+          {visible.map((item) => (
             <li key={item.id}>
               <ActionCard item={item} focused={focus === item.id} />
             </li>

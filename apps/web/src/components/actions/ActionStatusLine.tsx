@@ -28,11 +28,6 @@ function statusParts(summary: ActionSummary): ReactNode[] {
     ) : (
       "not generated yet"
     ),
-    summary.suppressedByCap > 0 ? (
-      <span className="hidden @md/actions:inline">
-        {formatNumber(summary.suppressedByCap)} withheld by the per app cap
-      </span>
-    ) : null,
   ].filter((part) => part !== null);
 }
 
@@ -42,6 +37,12 @@ export function ActionStatusLine({ appId }: { appId?: string }) {
   return (
     <p data-slot="action-status" className="text-body text-muted-foreground">
       <Separated parts={statusParts(summary)} />
+      {summary.suppressedByCap > 0 ? (
+        <span className="hidden @md/actions:inline">
+          <span aria-hidden> · </span>
+          {formatNumber(summary.suppressedByCap)} withheld by the per app cap
+        </span>
+      ) : null}
     </p>
   );
 }

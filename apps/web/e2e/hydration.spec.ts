@@ -48,6 +48,18 @@ const DEEP_LINKS = [
       page.getByRole("heading", { level: 4, name: "After 7 days" }),
   },
   {
+    name: "the action queue",
+    url: "/actions",
+    endpoint: "/api/backend/actions",
+    ready: (page: Page) => page.locator("[id='action-act-uncovered']"),
+  },
+  {
+    name: "an app action queue",
+    url: "/apps/app-1/actions",
+    endpoint: "/api/backend/apps/app-1/actions",
+    ready: (page: Page) => page.locator("[id='action-act-uncovered']"),
+  },
+  {
     name: "a change timeline window",
     url: "/apps/app-1/changes?days=30",
     endpoint: "/api/backend/apps/app-1/changes",
