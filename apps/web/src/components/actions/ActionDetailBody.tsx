@@ -9,6 +9,8 @@ import { formatDate } from "@/lib/format";
 import { ActionEvidencePanel } from "./ActionEvidencePanel";
 import { ActionExplain } from "./ActionExplain";
 import { ActionImpactMeter } from "./ActionImpactMeter";
+import { ActionHistory } from "./ActionHistory";
+import { ActionOutcome } from "./ActionOutcome";
 import { ActionSteps } from "./ActionSteps";
 import { ActionTrendChart } from "./ActionTrendChart";
 
@@ -98,6 +100,19 @@ export function ActionDetailBody({
       {detail.data?.trend ? (
         <Section title="Trend">
           <ActionTrendChart trend={detail.data.trend} item={shown} />
+        </Section>
+      ) : null}
+      {detail.data?.outcome ? (
+        <Section title="Outcome">
+          <ActionOutcome
+            outcome={detail.data.outcome}
+            depth={detail.data.trend?.depth ?? null}
+          />
+        </Section>
+      ) : null}
+      {detail.data ? (
+        <Section title="History">
+          <ActionHistory events={detail.data.events} />
         </Section>
       ) : null}
       <ActionExplain item={shown} />

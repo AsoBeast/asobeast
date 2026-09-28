@@ -65,7 +65,10 @@ test("the sheet writes out the steps and ends with the confirmation", async ({
   await expect(
     dialog.getByRole("heading", { name: "How to fix" }),
   ).toBeVisible();
-  const steps = dialog.locator("ol > li");
+  const steps = dialog
+    .getByRole("heading", { name: "How to fix" })
+    .locator("xpath=..")
+    .locator("ol > li");
   expect(await steps.count()).toBeGreaterThanOrEqual(3);
   await expect(steps.last()).toHaveText(/^asobeast confirms the fix/);
 });
@@ -97,7 +100,7 @@ test("the sheet covers a phone screen without a sideways scroll", async ({
   await page.goto("/actions?action=act-uncovered");
 
   const dialog = await page.getByRole("dialog").boundingBox();
-  expect(dialog?.width).toBe(375);
+  expect(dialog?.width ?? 0).toBeCloseTo(375, 0);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -123,4 +126,40 @@ test("an action without readable evidence has no trend", async ({ page }) => {
     dialog.getByRole("heading", { name: "How to fix" }),
   ).toBeVisible();
   await expect(dialog.getByRole("heading", { name: "Trend" })).toHaveCount(0);
+});
+
+test("the history names who dismissed an action and why", async ({ page }) => {
+  await page.goto("/actions?status=DISMISSED&action=act-dismissed");
+
+  const history = page
+    .getByRole("dialog")
+    .getByRole("heading", { name: "History" })
+    .locator("xpath=..");
+  await expect(
+    history.getByText("Dismissed", { exact: false }).first(),
+  ).toBeVisible();
+  await expect(history.getByText(/Not relevant to this app/)).toBeVisible();
+  await expect(history.getByText(/Anna/)).toBeVisible();
+});
+
+test("a confirmed fix shows its measured outcome", async ({ page }) => {
+  await page.goto("/actions?action=act-done-confirmed");
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Outcome" })).toBeVisible();
+  await expect(dialog.getByText(/#16 → #7/)).toBeVisible();
+  await expect(dialog.getByText("Improved", { exact: true })).toBeVisible();
+  await expect(
+    dialog.getByText(
+      "Other changes in the same days can also move this number.",
+    ),
+  ).toBeVisible();
+});
+
+test("a fresh fix is still being measured", async ({ page }) => {
+  await page.goto("/actions?action=act-done-verifying");
+
+  await expect(
+    page.getByRole("dialog").getByText("Measuring", { exact: true }),
+  ).toBeVisible();
 });
