@@ -15,6 +15,8 @@ import { FirstRun } from "@/components/apps/FirstRun";
 import { PortfolioPulse } from "@/components/dashboard/PortfolioPulse";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
+import { PanelCardSkeleton } from "@/components/overview/skeletons";
 import { PortfolioStatusLine } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
@@ -68,6 +70,11 @@ export default async function Page() {
           <div className="@5xl/dashboard:col-span-7">
             <Suspense fallback={<ActionsSummaryCardSkeleton />}>
               <ActionsSummaryCard />
+            </Suspense>
+          </div>
+          <div className="@5xl/dashboard:col-span-5">
+            <Suspense fallback={<PanelCardSkeleton />}>
+              <PortfolioMoversCard />
             </Suspense>
           </div>
         </div>

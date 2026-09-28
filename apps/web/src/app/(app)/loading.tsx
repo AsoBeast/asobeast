@@ -4,6 +4,7 @@ import {
   PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
+import { PanelCardSkeleton } from "@/components/overview/skeletons";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -21,6 +22,9 @@ export default function Loading() {
       <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
         <div className="@5xl/dashboard:col-span-7">
           <ActionsSummaryCardSkeleton />
+        </div>
+        <div className="@5xl/dashboard:col-span-5">
+          <PanelCardSkeleton />
         </div>
       </div>
       <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">

@@ -1,7 +1,17 @@
 import { expect, test } from "./session.mts";
-import { ACTIONS } from "./fixtures.mts";
+import type { Page } from "@playwright/test";
+import { ACTIONS, PORTFOLIO } from "./fixtures.mts";
+import { PORTFOLIO_INSIGHTS } from "./portfolio-insights.mts";
 
 const DASHBOARD_ACTION_LIMIT = 5;
+
+const moversCard = (page: Page) =>
+  page
+    .getByRole("heading", { name: "Keyword movers", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+
+const appName = (appId: string) =>
+  PORTFOLIO.apps.find((app) => app.id === appId)?.name ?? "";
 
 test("top actions name their app and open the exact action", async ({
   page,
@@ -27,4 +37,82 @@ test("top actions name their app and open the exact action", async ({
     "data-focused",
     "true",
   );
+});
+
+test("keyword movers list climbers and fallers side by side on a desktop", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+
+  const card = moversCard(page);
+  await expect(card.getByRole("tab")).toHaveCount(0);
+  const lists = card.getByRole("list");
+  await expect(lists).toHaveCount(2);
+
+  const climbers = lists.first().getByRole("listitem");
+  await expect(climbers).toHaveCount(PORTFOLIO_INSIGHTS.movers.up.length);
+  for (const [index, mover] of PORTFOLIO_INSIGHTS.movers.up.entries()) {
+    const row = climbers.nth(index);
+    await expect(row).toContainText(mover.text);
+    await expect(row).toContainText(appName(mover.appId));
+    await expect(row).toContainText(mover.country.toUpperCase());
+  }
+  await expect(lists.last().getByRole("listitem")).toHaveCount(
+    PORTFOLIO_INSIGHTS.movers.down.length,
+  );
+
+  const [first, second] = await lists.evaluateAll((nodes) =>
+    nodes.map((node) => node.getBoundingClientRect().x),
+  );
+  expect(second).toBeGreaterThan(first);
+});
+
+test("keyword movers switch lists with tabs on a phone", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+
+  const card = moversCard(page);
+  const [faller] = PORTFOLIO_INSIGHTS.movers.down;
+  await expect(card.getByRole("tab", { name: "Climbers" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  const fallerRow = card.getByText(faller.text).filter({ visible: true });
+  await expect(fallerRow).toHaveCount(0);
+
+  await card.getByRole("tab", { name: "Fallers" }).click();
+
+  await expect(fallerRow).toHaveCount(1);
+});
+
+test("a keyword mover opens that keyword on its app's rankings", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+
+  const [climber] = PORTFOLIO_INSIGHTS.movers.up;
+  await expect(
+    moversCard(page).getByRole("list").first().getByRole("link").first(),
+  ).toHaveAttribute(
+    "href",
+    `/apps/${climber.appId}/rankings?keywords=${climber.keywordId}`,
+  );
+});
+
+test("keyword movers say so in a quiet week", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "portfolio_insights_quiet",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/");
+
+  const card = moversCard(page);
+  await expect(card).toContainText("No keyword moved this week.");
+  await expect(card.getByRole("list")).toHaveCount(0);
 });

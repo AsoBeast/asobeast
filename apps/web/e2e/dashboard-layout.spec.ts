@@ -29,6 +29,7 @@ test("the dashboard outline reads in visual order on a phone", async ({
   await expect(mainHeadings(page)).toHaveText([
     "Dashboard",
     "Top actions",
+    "Keyword movers",
     "Apps",
     "Recent changes",
   ]);
