@@ -46,8 +46,10 @@ export function RecentChangesCard() {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>Recent changes</CardDescription>
-        <CardTitle>Across your portfolio</CardTitle>
+        <CardTitle asChild>
+          <h2>Recent changes</h2>
+        </CardTitle>
+        <CardDescription>Across your portfolio</CardDescription>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChangeTimelineSkeleton />}>

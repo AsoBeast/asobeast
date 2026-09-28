@@ -13,12 +13,12 @@ import {
 import { AppsDashboard } from "@/components/dashboard/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
 import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
-import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import {
   AppsDashboardSkeleton,
   PortfolioTotalsSkeleton,
 } from "@/components/dashboard/skeletons";
-import { Button } from "@/components/ui/button";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
@@ -44,7 +44,7 @@ export default async function Page() {
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
+      <div className="page-wide @container/dashboard flex flex-col gap-6">
         <Suspense fallback={null}>
           <OnboardingBanner />
         </Suspense>
@@ -52,28 +52,33 @@ export default async function Page() {
           <BudgetBanner />
         </Suspense>
 
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="text-display tracking-tight text-balance">Apps</h1>
-          <ImportAppDialog>
-            <Button>Import app</Button>
-          </ImportAppDialog>
-        </div>
+        <DashboardHeader />
 
         <Suspense fallback={<PortfolioTotalsSkeleton />}>
           <PortfolioSummary />
         </Suspense>
 
-        <Suspense fallback={<ActionsSummaryCardSkeleton />}>
-          <ActionsSummaryCard />
-        </Suspense>
+        <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">
+          <div className="@5xl/dashboard:col-span-7">
+            <Suspense fallback={<ActionsSummaryCardSkeleton />}>
+              <ActionsSummaryCard />
+            </Suspense>
+          </div>
+        </div>
 
-        <div className="grid gap-6 lg:grid-cols-3 [&>*]:min-w-0">
-          <div className="lg:col-span-2">
+        <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">
+          <DashboardSection
+            id="apps"
+            title="Apps"
+            className="@6xl/dashboard:col-span-8"
+          >
             <Suspense fallback={<AppsDashboardSkeleton />}>
               <AppsDashboard />
             </Suspense>
+          </DashboardSection>
+          <div className="@6xl/dashboard:col-span-4">
+            <RecentChangesCard />
           </div>
-          <RecentChangesCard />
         </div>
       </div>
     </HydrationBoundary>

@@ -21,11 +21,14 @@ export function ActionsSummaryCard({ appId }: { appId?: string }) {
   const { data: list } = useSuspenseQuery(actionsOptions(filters, appId));
   const { data: summary } = useSuspenseQuery(actionSummaryOptions);
   const href = appId ? `/apps/${appId}/actions` : "/actions";
+  const Title = appId ? "div" : "h2";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top actions</CardTitle>
+        <CardTitle asChild>
+          <Title>Top actions</Title>
+        </CardTitle>
         <CardDescription>
           The highest-impact open work, computed from your stored data.
         </CardDescription>
