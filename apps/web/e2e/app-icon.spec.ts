@@ -14,7 +14,9 @@ test("a portfolio icon that fails before hydration falls back to the letter tile
 
   await page.goto("/");
 
-  const card = page.locator("[data-slot=card]").filter({ hasText: NAME });
+  const card = page
+    .locator("[data-slot=card]")
+    .filter({ hasText: new RegExp(NAME) });
   const placeholder = card.locator(PLACEHOLDER);
 
   await expect(placeholder).toHaveText(INITIAL);

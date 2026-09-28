@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { CircleCheck } from "lucide-react";
@@ -22,7 +23,8 @@ import {
   actionSummaryFor,
   portfolioOptions,
 } from "@/lib/queries";
-import { ACTION_PRIORITY_LABEL, ACTION_RULE_TITLE } from "./action-copy";
+import { ACTION_PRIORITY_LABEL } from "./action-copy";
+import { actionHeadline } from "./action-headline";
 import { ActionPriorityBadge } from "./ActionPriorityBadge";
 import { PriorityBar } from "./PriorityBar";
 
@@ -66,14 +68,42 @@ function AppActionList({
   if (list.items.length === 0) return <EmptyActions summary={summary} />;
 
   return (
-    <ul className="flex list-none flex-col gap-2 p-0">
+    <ul className="flex list-none flex-col gap-1 p-0">
       {list.items.slice(0, TOP_ACTION_LIMIT).map((item) => (
-        <li key={item.id} className="flex items-start gap-2 text-sm">
-          <ActionPriorityBadge priority={item.priority} />
-          <span>{ACTION_RULE_TITLE[item.rule]}</span>
+        <li key={item.id}>
+          <TopActionLink
+            item={item}
+            href={`/apps/${appId}/actions?action=${item.id}`}
+          />
         </li>
       ))}
     </ul>
+  );
+}
+
+function TopActionLink({
+  item,
+  href,
+  children,
+}: {
+  item: ActionItem;
+  href: string;
+  children?: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex min-h-10 flex-col gap-1 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
+    >
+      <span className="flex items-start gap-2">
+        <ActionPriorityBadge priority={item.priority} />
+        <span>{actionHeadline(item)}</span>
+        {item.reopenCount > 0 ? (
+          <Badge variant="outline">Reopened {item.reopenCount}×</Badge>
+        ) : null}
+      </span>
+      {children}
+    </Link>
   );
 }
 
@@ -109,19 +139,12 @@ function PortfolioActionList({ summary }: { summary: ActionSummary }) {
     <ul className="flex list-none flex-col gap-1 p-0">
       {list.items.slice(0, DASHBOARD_ACTION_LIMIT).map((item) => (
         <li key={item.id}>
-          <Link
-            href={`/actions?action=${item.id}`}
-            className="flex min-h-10 flex-col gap-1 rounded-md px-2 py-2 text-sm outline-none transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
-          >
-            <span className="flex items-start gap-2">
-              <ActionPriorityBadge priority={item.priority} />
-              <span>{ACTION_RULE_TITLE[item.rule]}</span>
-            </span>
+          <TopActionLink item={item} href={`/actions?action=${item.id}`}>
             <ActionScopeLine
               item={item}
               iconUrl={icons.get(item.scope.appId) ?? null}
             />
-          </Link>
+          </TopActionLink>
         </li>
       ))}
     </ul>

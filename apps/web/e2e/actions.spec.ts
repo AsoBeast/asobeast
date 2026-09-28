@@ -444,6 +444,23 @@ test("the command palette reaches the action center", async ({ page }) => {
   await expect(page).toHaveURL(/\/actions$/);
 });
 
+test("the app overview opens a top action in its sheet", async ({ page }) => {
+  await page.goto("/apps/app-1");
+  const card = page
+    .getByText("Top actions", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  const first = card.getByRole("link").first();
+
+  await expect(first).toHaveAttribute(
+    "href",
+    "/apps/app-1/actions?action=act-uncovered",
+  );
+  await first.click();
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { level: 2 }),
+  ).toHaveText(ACT_UNCOVERED_TITLE);
+});
+
 test("the app detail nav exposes an actions section", async ({ page }) => {
   await page.goto("/apps/app-1");
 

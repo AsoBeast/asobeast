@@ -34,6 +34,7 @@ test("top actions name their app and open the exact action", async ({
 
   const [first] = ACTIONS;
   const link = rows.first().getByRole("link");
+  await expect(link).toContainText('Add "habit tracker" to your metadata');
   await expect(link).toContainText(first.scope.appName ?? "");
   await expect(link).toContainText(first.scope.country.toUpperCase());
   await expect(link).toHaveAttribute("href", `/actions?action=${first.id}`);
