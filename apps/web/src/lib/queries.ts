@@ -9,6 +9,8 @@ import type {
 import { QUERY_BOUNDS } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
+  getAction,
+  getActionActivity,
   getActionAiStatus,
   getActions,
   getActionSummary,
@@ -58,6 +60,7 @@ import {
   getSummary,
   getVisibilityHistory,
   getWebhooks,
+  type ActionActivityScope,
   type ActionFilters,
   type ActionSummaryScope,
   type RangeParams,
@@ -250,11 +253,15 @@ export const portfolioInsightsOptions = queryOptions({
 
 export const actionKeys = {
   all: ["actions"] as const,
+  lists: ["actions", "list"] as const,
   list: (filters: ActionFilters, appId?: string) =>
     ["actions", "list", appId ?? null, filters] as const,
   summary: ["actions", "summary"] as const,
   scopedSummary: (scope: ActionSummaryScope) =>
     ["actions", "summary", scope] as const,
+  detail: (id: string) => ["actions", "detail", id] as const,
+  activity: (scope: ActionActivityScope) =>
+    ["actions", "activity", scope] as const,
   aiStatus: ["actions", "ai-status"] as const,
   appRoot: (id: string) => [...appKeys.detail(id), "actions"] as const,
 };
@@ -275,6 +282,20 @@ export const appActionSummaryOptions = (appId: string) =>
   queryOptions({
     queryKey: actionKeys.scopedSummary({ appId }),
     queryFn: () => getActionSummary({ appId }),
+  });
+
+export const actionDetailOptions = (id: string) =>
+  queryOptions({
+    queryKey: actionKeys.detail(id),
+    queryFn: () => getAction(id),
+    staleTime: 30_000,
+  });
+
+export const actionActivityOptions = (scope: ActionActivityScope = {}) =>
+  queryOptions({
+    queryKey: actionKeys.activity(scope),
+    queryFn: () => getActionActivity(scope),
+    staleTime: 60_000,
   });
 
 export const actionAiStatusOptions = queryOptions({

@@ -1,6 +1,10 @@
 import type {
+  ActionActivity,
   ActionAiStatus,
+  ActionBulkUpdateRequest,
+  ActionBulkUpdateResult,
   ActionCategory,
+  ActionDetail,
   ActionExplanation,
   ActionItem,
   ActionListResult,
@@ -78,6 +82,37 @@ export function updateAction(
   body: ActionUpdateRequest,
 ): Promise<ActionItem> {
   return apiFetch<ActionItem>(`/actions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export function getAction(id: string): Promise<ActionDetail> {
+  return apiFetch<ActionDetail>(`/actions/${encodeURIComponent(id)}`);
+}
+
+export interface ActionActivityScope extends ActionSummaryScope {
+  days?: number;
+}
+
+export function getActionActivity({
+  appId,
+  store,
+  country,
+  days,
+}: ActionActivityScope = {}): Promise<ActionActivity> {
+  const params = new URLSearchParams();
+  if (appId) params.set("appId", appId);
+  if (store) params.set("store", store);
+  if (country) params.set("country", country);
+  if (days !== undefined) params.set("days", String(days));
+  return apiFetch<ActionActivity>(withQuery("/actions/activity", params));
+}
+
+export function bulkUpdateActions(
+  body: ActionBulkUpdateRequest,
+): Promise<ActionBulkUpdateResult> {
+  return apiFetch<ActionBulkUpdateResult>("/actions", {
     method: "PATCH",
     body: JSON.stringify(body),
   });

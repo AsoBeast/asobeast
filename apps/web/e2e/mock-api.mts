@@ -5,6 +5,13 @@ import {
 } from "node:http";
 import { summarizeActions } from "./actions-summary.mts";
 import {
+  ACTION_ACTIVITY,
+  EMPTY_ACTION_ACTIVITY,
+  initialActionEvents,
+  outcomeFor,
+  trendFor,
+} from "./action-details.mts";
+import {
   ACTIONS,
   ACTION_SUMMARY,
   APP_AUDIT,
@@ -53,8 +60,14 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  ActionBulkUpdateResult,
+  ActionDetail,
+  ActionDismissReason,
+  ActionEventItem,
+  ActionEventType,
   ActionItem,
   ActionSummary,
+  ActionUpdateStatus,
   AppAuditResult,
   WorkspaceTeam,
   ActionStatus,
@@ -157,6 +170,8 @@ function annotated(
   return { ...keyword, ...annotations.get(appId)?.get(keyword.keywordId) };
 }
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
+const actionEvents: Record<string, ActionEventItem[]> =
+  initialActionEvents(ACTIONS);
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
@@ -255,6 +270,80 @@ function resetActions(): void {
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
   );
+  for (const id of Object.keys(actionEvents)) delete actionEvents[id];
+  Object.assign(actionEvents, initialActionEvents(ACTIONS));
+}
+
+interface ActionTransitionBody {
+  status: ActionUpdateStatus;
+  snoozedUntil?: string;
+  note?: string;
+  reason?: ActionDismissReason;
+  revert?: boolean;
+}
+
+function transitionEvent(
+  previous: ActionStatus,
+  target: ActionUpdateStatus,
+): ActionEventType | null {
+  if (target === "DONE") return "done";
+  if (target === "DISMISSED") return "dismissed";
+  if (target === "SNOOZED") return "snoozed";
+  if (previous === "OPEN") return null;
+  return previous === "SNOOZED" ? "woke" : "reopened";
+}
+
+function noteOnly(action: ActionItem, body: ActionTransitionBody): boolean {
+  if (body.revert || body.status !== action.status) return false;
+  if (body.status === "SNOOZED") {
+    return body.snoozedUntil === action.snoozedUntil;
+  }
+  return body.status === "DONE" || body.status === "DISMISSED";
+}
+
+function transition(action: ActionItem, body: ActionTransitionBody): void {
+  if (body.note !== undefined) action.note = body.note.trim();
+  if (noteOnly(action, body)) return;
+  const previous = action.status;
+  const events = (actionEvents[action.id] ??= []);
+  action.status = body.status;
+  action.snoozedUntil =
+    body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
+  action.closedAt =
+    body.status === "DONE" || body.status === "DISMISSED"
+      ? new Date().toISOString()
+      : null;
+  action.verifiedAt = null;
+  if (body.revert) {
+    const undone = events.findLastIndex((entry) => entry.actor === "user");
+    if (undone >= 0) events.splice(undone, 1);
+    return;
+  }
+  const type = transitionEvent(previous, body.status);
+  if (type === "reopened") action.reopenCount += 1;
+  if (!type) return;
+  events.push({
+    id: `${action.id}-${events.length}`,
+    type,
+    actor: "user",
+    actorName: "You",
+    occurredAt: new Date().toISOString(),
+    status: body.status,
+    priority: action.priority,
+    impact: action.impact,
+    snoozedUntil: action.snoozedUntil,
+    reason: body.reason ?? null,
+  });
+}
+
+function actionDetail(action: ActionItem): ActionDetail {
+  const trend = trendFor(action);
+  return {
+    ...action,
+    events: actionEvents[action.id] ?? [],
+    trend,
+    outcome: outcomeFor(action, trend),
+  };
 }
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
@@ -1648,6 +1737,16 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/actions\/activity$/,
+    handler: (_p, req, res) =>
+      json(
+        res,
+        200,
+        actionsUngenerated(req) ? EMPTY_ACTION_ACTIVITY : ACTION_ACTIVITY,
+      ),
+  },
+  {
+    method: "GET",
     pattern: /^\/actions\/summary$/,
     handler: (_p, req, res) => followActionRun(req, res),
   },
@@ -1677,34 +1776,54 @@ const routes: Route[] = [
       ),
   },
   {
+    method: "GET",
+    pattern: /^\/actions\/([^/]+)$/,
+    handler: (params, req, res) => {
+      const action = actions.find((row) => row.id === params[0]);
+      if (!action) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      json(res, 200, actionDetail(action));
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/actions$/,
+    handler: (_params, req, res) => {
+      withBody<ActionTransitionBody & { ids: string[] }>(req, res, (body) => {
+        if (body.ids.includes("act-degraded")) {
+          return json(res, 500, errorEnvelope(500, req.url ?? "/"));
+        }
+        const result: ActionBulkUpdateResult = {
+          items: [],
+          missing: [],
+          conflicts: [],
+        };
+        for (const id of body.ids) {
+          const action = actions.find((row) => row.id === id);
+          if (!action) {
+            result.missing.push(id);
+          } else if (action.status === "RESOLVED" && body.status !== "OPEN") {
+            result.conflicts.push(id);
+          } else {
+            transition(action, body);
+            result.items.push(action);
+          }
+        }
+        json(res, 200, result);
+      });
+    },
+  },
+  {
     method: "PATCH",
     pattern: /^\/actions\/([^/]+)$/,
     handler: (params, req, res) => {
-      withBody<{
-        status: ActionStatus;
-        snoozedUntil?: string;
-        note?: string;
-        revert?: boolean;
-      }>(req, res, (body) => {
+      withBody<ActionTransitionBody>(req, res, (body) => {
         const path = req.url ?? "/";
         const action = actions.find((row) => row.id === params[0]);
         if (!action) return json(res, 404, errorEnvelope(404, path));
         if (action.id === "act-degraded") {
           return json(res, 500, errorEnvelope(500, path));
         }
-        const reopening =
-          !body.revert &&
-          body.status === "OPEN" &&
-          action.status !== "OPEN" &&
-          action.status !== "SNOOZED";
-        action.status = body.status;
-        action.snoozedUntil =
-          body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
-        action.closedAt =
-          body.status === "DONE" || body.status === "DISMISSED"
-            ? new Date().toISOString()
-            : null;
-        if (reopening) action.reopenCount += 1;
+        transition(action, body);
         json(res, 200, action);
       });
     },
