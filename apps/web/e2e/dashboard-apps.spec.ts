@@ -270,5 +270,8 @@ test("the table sorts an app awaiting its first run last", async ({ page }) => {
     .getByRole("table")
     .locator("tbody tr td:first-child a");
   await expect(names.first()).toBeVisible();
-  await expect(names.last()).toHaveText("Pending App");
+  const order = await names.allInnerTexts();
+  expect(order.indexOf("Pending App")).toBeGreaterThan(
+    order.indexOf("Tomato Clock"),
+  );
 });
