@@ -119,6 +119,19 @@ describe('keyword.push_to_top10', () => {
     ).toEqual([]);
   });
 
+  it('counts no more days in the band than the window holds', () => {
+    const [detection] = detect([
+      app({
+        rankingDaysByKeyword: new Map([
+          ['kw_1', lastWeek([12, 12, 12, 12, 12, 12, 12, 12])],
+        ]),
+      }),
+    ]);
+
+    expect(detection.evidence).toMatchObject({ daysInBand: 7, windowDays: 7 });
+    expect(detection.terms.confidence).toBe(1);
+  });
+
   it('stays silent with only four days in the band', () => {
     expect(
       detect([

@@ -43,7 +43,7 @@ interface BandHistory {
 function bandHistory(days: ActionRankingDay[], now: Date): BandHistory {
   const cutoff = windowCutoff(now, PUSH_WINDOW_DAYS);
   const window = days
-    .filter((day) => day.date >= cutoff)
+    .filter((day) => day.date > cutoff)
     .sort((left, right) => left.date.localeCompare(right.date));
   const ranked = window
     .map((day) => day.position)
