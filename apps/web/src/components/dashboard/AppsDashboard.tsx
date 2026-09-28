@@ -2,12 +2,13 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { portfolioOptions } from "@/lib/queries";
+import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
 import { PortfolioGrid } from "./PortfolioGrid";
 
 export function AppsDashboard() {
   const { data } = useSuspenseQuery(portfolioOptions);
+  const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
 
   if (data.apps.length === 0) {
     return (
@@ -26,5 +27,11 @@ export function AppsDashboard() {
     );
   }
 
-  return <PortfolioGrid apps={data.apps} groups={data.groups} />;
+  return (
+    <PortfolioGrid
+      apps={data.apps}
+      groups={data.groups}
+      insights={insights.apps}
+    />
+  );
 }

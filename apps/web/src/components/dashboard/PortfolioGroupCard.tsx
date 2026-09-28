@@ -1,5 +1,9 @@
 import { Globe, Link2 } from "lucide-react";
-import type { PortfolioApp, PortfolioGroup } from "@asobeast/shared";
+import type {
+  PortfolioApp,
+  PortfolioAppInsight,
+  PortfolioGroup,
+} from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { TrendChip } from "@/components/ui/delta-chip";
@@ -40,17 +44,19 @@ export function PortfolioGroupCard({
   members,
   variant,
   group,
+  insightFor,
 }: {
   name: string;
   members: PortfolioApp[];
   variant: GroupVariant;
   group: PortfolioGroup | undefined;
+  insightFor: (appId: string) => PortfolioAppInsight | undefined;
 }) {
   const storefront = variant === "storefront";
   const Icon = storefront ? Globe : Link2;
 
   return (
-    <Card className="gap-0 p-4">
+    <Card className="h-full gap-0 p-4">
       <div className="mb-3 flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -73,7 +79,10 @@ export function PortfolioGroupCard({
       <ul className="flex flex-col divide-y">
         {orderMembers(members).map((member) => (
           <li key={member.id}>
-            <PortfolioGroupMember app={member} />
+            <PortfolioGroupMember
+              app={member}
+              insight={insightFor(member.id)}
+            />
           </li>
         ))}
       </ul>
