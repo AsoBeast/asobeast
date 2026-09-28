@@ -41,6 +41,11 @@ import {
   errorEnvelope,
   rateLimitedEnvelope,
 } from "./fixtures.mts";
+import {
+  EMPTY_PORTFOLIO_INSIGHTS,
+  PORTFOLIO_INSIGHTS,
+  QUIET_PORTFOLIO_INSIGHTS,
+} from "./portfolio-insights.mts";
 import type {
   AccountPlan,
   ActionItem,
@@ -982,6 +987,22 @@ const routes: Route[] = [
           apps: empty ? 0 : portfolioApps.length,
         },
       } satisfies PortfolioSummary);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/portfolio\/insights$/,
+    handler: (_p, req, res) => {
+      if (hasCookie(req, "portfolio_empty", "1")) {
+        return json(res, 200, EMPTY_PORTFOLIO_INSIGHTS);
+      }
+      json(
+        res,
+        200,
+        hasCookie(req, "portfolio_insights_quiet", "1")
+          ? QUIET_PORTFOLIO_INSIGHTS
+          : PORTFOLIO_INSIGHTS,
+      );
     },
   },
   {

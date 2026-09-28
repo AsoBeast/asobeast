@@ -5,8 +5,10 @@ import {
   actionsOptions,
   actionSummaryOptions,
   budgetOptions,
+  portfolioInsightsOptions,
   portfolioOptions,
   recentChangesOptions,
+  runStatusOptions,
 } from "@/lib/queries";
 import { AppsDashboard } from "@/components/apps/AppsDashboard";
 import { FirstRun } from "@/components/apps/FirstRun";
@@ -26,15 +28,15 @@ import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
 export default async function Page() {
   const queryClient = getQueryClient();
-  const [portfolio] = await Promise.all([
-    queryClient.fetchQuery(portfolioOptions),
-    queryClient.prefetchQuery(recentChangesOptions()),
-    queryClient.prefetchQuery(budgetOptions),
-    queryClient.prefetchQuery(actionSummaryOptions),
-    queryClient.prefetchQuery(
-      actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }),
-    ),
-  ]);
+  void queryClient.prefetchQuery(recentChangesOptions());
+  void queryClient.prefetchQuery(budgetOptions);
+  void queryClient.prefetchQuery(runStatusOptions);
+  void queryClient.prefetchQuery(actionSummaryOptions);
+  void queryClient.prefetchQuery(
+    actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }),
+  );
+  void queryClient.prefetchQuery(portfolioInsightsOptions);
+  const portfolio = await queryClient.fetchQuery(portfolioOptions);
 
   if (portfolio.apps.length === 0) {
     return <FirstRun />;

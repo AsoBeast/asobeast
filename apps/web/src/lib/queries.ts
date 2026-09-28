@@ -41,6 +41,7 @@ import {
   getKeywords,
   getMarketAvailability,
   getPortfolio,
+  getPortfolioInsights,
   getRankDistributionHistory,
   getRankings,
   getRatingsHistogram,
@@ -124,6 +125,7 @@ export const appKeys = {
 };
 
 export const portfolioKey = ["portfolio"] as const;
+export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
 export const recentChangesKey = (limit?: number) =>
   ["changes", "recent", { limit }] as const;
@@ -239,6 +241,12 @@ export const portfolioOptions = queryOptions({
   queryFn: getPortfolio,
 });
 
+export const portfolioInsightsOptions = queryOptions({
+  queryKey: portfolioInsightsKey,
+  queryFn: getPortfolioInsights,
+  staleTime: 60_000,
+});
+
 export const actionKeys = {
   all: ["actions"] as const,
   list: (filters: ActionFilters, appId?: string) =>
@@ -271,6 +279,7 @@ export function invalidateActionMutation(
   appId?: string,
 ): void {
   void client.invalidateQueries({ queryKey: actionKeys.all });
+  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
   if (appId) {
     void client.invalidateQueries({ queryKey: actionKeys.appRoot(appId) });
   }
@@ -555,6 +564,7 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
+  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
