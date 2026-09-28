@@ -25,7 +25,7 @@ import { BudgetBanner } from "@/components/settings/BudgetBanner";
 import { RecentChangesCard } from "@/components/changes/RecentChangesCard";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
-import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
+import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
 export default async function Page() {
@@ -35,7 +35,7 @@ export default async function Page() {
   void queryClient.prefetchQuery(runStatusOptions);
   void queryClient.prefetchQuery(actionSummaryOptions);
   void queryClient.prefetchQuery(
-    actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }),
+    actionsOptions({ status: ["OPEN"], limit: DASHBOARD_ACTION_LIMIT }),
   );
   void queryClient.prefetchQuery(portfolioInsightsOptions);
   const portfolio = await queryClient.fetchQuery(portfolioOptions);

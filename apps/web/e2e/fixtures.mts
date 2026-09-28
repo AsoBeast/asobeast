@@ -2105,7 +2105,7 @@ const ACTION_BASE = {
 
 const APP_SCOPE = {
   appId: "app-1",
-  appName: "Habit Tracker",
+  appName: "Focus Timer",
   store: "APP_STORE",
   country: "us",
 } as const;
