@@ -17,6 +17,7 @@ const HREF: Record<ActionRule, string> = {
   "metadata.fix_lint": "/apps/app-1/metadata",
   "rank.investigate_unexplained_drop": "/apps/app-1/keywords?country=us",
   "competitor.investigate_overtake": "/apps/app-1/competitors",
+  "reviews.investigate_rating_decline": "/apps/app-1/reviews",
 };
 
 describe("actionHref", () => {

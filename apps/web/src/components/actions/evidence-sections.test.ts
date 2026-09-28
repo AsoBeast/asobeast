@@ -156,6 +156,23 @@ describe("evidenceSections", () => {
     });
   });
 
+  it("grades the recent review average against the earlier one", () => {
+    const evidence = evidenceOf("act-decline");
+    const { facts } = evidenceSections(evidence);
+
+    expect(factValues(evidence)).toMatchObject({
+      "Recent average": "3.5",
+      "Earlier average": "4.5",
+      Drop: "1",
+      "Recent reviews": "8 in 14 days",
+      "Negative share": "25%",
+      "Latest version": "4.2.0",
+    });
+    expect(
+      facts.find((fact) => fact.label === "Recent average")?.grade,
+    ).toEqual({ metric: "rating", value: 3.5 });
+  });
+
   it("lists the keywords that fell with no change of yours", () => {
     const evidence = evidenceOf("act-slide");
 

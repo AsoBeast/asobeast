@@ -257,6 +257,27 @@ describe("actionHeadline", () => {
     );
   });
 
+  it("names the fall in review scores and its window", () => {
+    expect(
+      headline(
+        {
+          rule: "reviews.investigate_rating_decline",
+          recentAverage: 3.5,
+          baselineAverage: 4.5,
+          drop: 1,
+          recentReviews: 8,
+          baselineReviews: 6,
+          recentDays: 14,
+          baselineDays: 21,
+          latestVersion: "4.2.0",
+          negativeShare: 0.25,
+          sampleReviewIds: [],
+        },
+        null,
+      ),
+    ).toBe("Review scores fell from 4.5 to 3.5 in the last 14 days");
+  });
+
   it("counts the store rule problems in a listing field", () => {
     const issue = {
       rule: "over-limit",

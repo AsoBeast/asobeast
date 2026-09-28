@@ -88,6 +88,12 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
     'fields',
     'keywords',
   ],
+  'reviews.investigate_rating_decline': [
+    'recentAverage',
+    'baselineAverage',
+    'drop',
+    'sampleReviewIds',
+  ],
 };
 
 export function parseActionEvidence(

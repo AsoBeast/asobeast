@@ -24,6 +24,8 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return `visibility ${evidence.visibilityBefore} → ${evidence.visibilityAfter} with no change of yours, ${evidence.droppedKeywords.length} keywords fell`;
     case 'competitor.investigate_overtake':
       return `${evidence.competitorName ?? 'a competitor'} changed ${evidence.fields.join(', ')} on ${evidence.changedAt} and passed you on ${evidence.keywords.length} keywords`;
+    case 'reviews.investigate_rating_decline':
+      return `review scores ${evidence.baselineAverage} → ${evidence.recentAverage} over ${evidence.recentReviews} recent reviews`;
     case 'metadata.fix_lint':
       return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {

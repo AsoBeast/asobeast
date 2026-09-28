@@ -131,6 +131,12 @@ function ruleSteps(
         "Decide whether the keywords they now target matter to you",
         "Strengthen your coverage of the keywords you want to keep",
       ];
+    case "reviews.investigate_rating_decline":
+      return [
+        "Read the recent low reviews",
+        `Check what changed in version ${evidence.latestVersion ?? "the latest version"}`,
+        "Reply where a fix is on its way",
+      ];
     case "metadata.fix_lint":
       return [
         ...evidence.issues.map((issue) => issue.message),

@@ -17,6 +17,7 @@ export const ACTION_RULES = [
   'metadata.fix_lint',
   'rank.investigate_unexplained_drop',
   'competitor.investigate_overtake',
+  'reviews.investigate_rating_decline',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -56,6 +57,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'metadata.fix_lint': 'metadata',
   'rank.investigate_unexplained_drop': 'regression',
   'competitor.investigate_overtake': 'competition',
+  'reviews.investigate_rating_decline': 'reputation',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -284,6 +286,20 @@ export interface CompetitorInvestigateOvertakeEvidence {
   keywords: ActionOvertakenKeyword[];
 }
 
+export interface ReviewsInvestigateRatingDeclineEvidence {
+  rule: 'reviews.investigate_rating_decline';
+  recentAverage: number;
+  baselineAverage: number;
+  drop: number;
+  recentReviews: number;
+  baselineReviews: number;
+  recentDays: number;
+  baselineDays: number;
+  latestVersion: string | null;
+  negativeShare: number;
+  sampleReviewIds: string[];
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -296,7 +312,8 @@ export type ActionEvidence =
   | KeywordPushToTop10Evidence
   | MetadataFixLintEvidence
   | RankInvestigateUnexplainedDropEvidence
-  | CompetitorInvestigateOvertakeEvidence;
+  | CompetitorInvestigateOvertakeEvidence
+  | ReviewsInvestigateRatingDeclineEvidence;
 
 export interface ActionAi {
   explanation: string | null;

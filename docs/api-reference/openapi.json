@@ -3004,7 +3004,8 @@
                   "keyword.push_to_top10",
                   "metadata.fix_lint",
                   "rank.investigate_unexplained_drop",
-                  "competitor.investigate_overtake"
+                  "competitor.investigate_overtake",
+                  "reviews.investigate_rating_decline"
                 ]
               }
             }
@@ -3393,7 +3394,8 @@
                   "keyword.push_to_top10",
                   "metadata.fix_lint",
                   "rank.investigate_unexplained_drop",
-                  "competitor.investigate_overtake"
+                  "competitor.investigate_overtake",
+                  "reviews.investigate_rating_decline"
                 ]
               }
             }

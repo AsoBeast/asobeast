@@ -50,6 +50,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'Visibility or several tracked ranks fell in a market over the last two weeks without an indexed metadata change of this app to explain it.',
   'competitor.investigate_overtake':
     'A tracked competitor changed indexed metadata and has stayed ahead of this app on relevant, valuable keywords since the change.',
+  'reviews.investigate_rating_decline':
+    'The average score of reviews from the last two weeks fell clearly below the three weeks before, without a single repeated complaint theme to explain it.',
 };
 
 const SCHEMA = {

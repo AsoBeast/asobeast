@@ -29,6 +29,7 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'metadata.fix_lint': 'audit',
   'rank.investigate_unexplained_drop': 'visibility',
   'competitor.investigate_overtake': 'position',
+  'reviews.investigate_rating_decline': 'rating',
 };
 
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =

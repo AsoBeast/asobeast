@@ -99,6 +99,8 @@ export function actionHeadline(item: ActionItem): string {
       return unexplainedHeadline(evidence);
     case "competitor.investigate_overtake":
       return `${evidence.competitorName ?? "A competitor"} changed its ${changedFields(evidence.fields)} and passed you on ${pluralize(evidence.keywords.length, "keyword")}`;
+    case "reviews.investigate_rating_decline":
+      return `Review scores fell from ${measure(evidence.baselineAverage)} to ${measure(evidence.recentAverage)} in the last ${evidence.recentDays} days`;
     case "metadata.fix_lint":
       return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
     default: {

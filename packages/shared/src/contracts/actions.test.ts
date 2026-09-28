@@ -79,6 +79,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `delta ${evidence.visibilityDelta}`;
     case 'competitor.investigate_overtake':
       return `${evidence.competitorName} ${evidence.keywords.length}`;
+    case 'reviews.investigate_rating_decline':
+      return `drop ${evidence.drop}`;
     default: {
       const never: never = evidence;
       return never;
@@ -316,6 +318,19 @@ describe('action evidence', () => {
           },
         ],
       },
+      {
+        rule: 'reviews.investigate_rating_decline',
+        recentAverage: 3.6,
+        baselineAverage: 4.4,
+        drop: 0.8,
+        recentReviews: 8,
+        baselineReviews: 6,
+        recentDays: 14,
+        baselineDays: 21,
+        latestVersion: '4.2.0',
+        negativeShare: 0.25,
+        sampleReviewIds: ['rev_1'],
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -334,6 +349,7 @@ describe('action evidence', () => {
       'title 1',
       'delta 7.5',
       'Tomato Focus 1',
+      'drop 0.8',
     ]);
   });
 

@@ -25,6 +25,7 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "rank.investigate_unexplained_drop":
     "Investigate a drop that followed no change of yours",
   "competitor.investigate_overtake": "Respond to a competitor that moved ahead",
+  "reviews.investigate_rating_decline": "Investigate falling review scores",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -40,6 +41,7 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "metadata.fix_lint": "Store rule problems",
   "rank.investigate_unexplained_drop": "Unexplained drops",
   "competitor.investigate_overtake": "Competitor overtakes",
+  "reviews.investigate_rating_decline": "Rating declines",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -91,6 +93,8 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `${evidence.country.toUpperCase()} visibility fell from ${measure(evidence.visibilityBefore)} to ${measure(evidence.visibilityAfter)} and ${pluralize(evidence.droppedKeywords.length, "keyword")} fell, with no change of yours to explain it.`;
     case "competitor.investigate_overtake":
       return `${evidence.competitorName ?? "A competitor"} changed its listing on ${evidence.changedAt} and has stayed ahead of you on ${pluralize(evidence.keywords.length, "keyword")} since.`;
+    case "reviews.investigate_rating_decline":
+      return `Reviews from the last ${evidence.recentDays} days average ${measure(evidence.recentAverage)} against ${measure(evidence.baselineAverage)} before, with no single complaint theme behind it.`;
     case "metadata.fix_lint":
       return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {

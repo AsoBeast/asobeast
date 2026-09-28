@@ -13,6 +13,7 @@ import type {
   MetadataFixLintEvidence,
   RankInvestigateDropEvidence,
   RankInvestigateUnexplainedDropEvidence,
+  ReviewsInvestigateRatingDeclineEvidence,
   ReviewsInvestigateThemeEvidence,
   SerpHoldVolatileEvidence,
 } from "@asobeast/shared";
@@ -313,6 +314,30 @@ function themeSections(evidence: ReviewsInvestigateThemeEvidence): Sections {
   };
 }
 
+function declineSections(
+  evidence: ReviewsInvestigateRatingDeclineEvidence,
+): Sections {
+  return {
+    facts: [
+      graded("Recent average", evidence.recentAverage, "rating"),
+      fact("Earlier average", formatMeasure(evidence.baselineAverage)),
+      fact("Drop", formatMeasure(evidence.drop)),
+      fact(
+        "Recent reviews",
+        `${formatNumber(evidence.recentReviews)} in ${evidence.recentDays} days`,
+      ),
+      fact(
+        "Earlier reviews",
+        `${formatNumber(evidence.baselineReviews)} in ${evidence.baselineDays} days`,
+      ),
+      fact("Negative share", `${Math.round(evidence.negativeShare * 100)}%`),
+      fact("Latest version", evidence.latestVersion ?? "—"),
+      fact("Sample reviews", formatNumber(evidence.sampleReviewIds.length)),
+    ],
+    lists: [],
+  };
+}
+
 function marketSections(evidence: MarketImproveCountryEvidence): Sections {
   return {
     facts: [
@@ -408,6 +433,8 @@ function sections(evidence: ActionEvidence): Sections {
       return unexplainedSections(evidence);
     case "competitor.investigate_overtake":
       return overtakeSections(evidence);
+    case "reviews.investigate_rating_decline":
+      return declineSections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

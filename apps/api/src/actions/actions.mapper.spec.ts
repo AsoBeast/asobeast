@@ -243,6 +243,26 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts a rating decline evidence and degrades one missing its drop', () => {
+    const decline = {
+      rule: 'reviews.investigate_rating_decline',
+      recentAverage: 3.5,
+      baselineAverage: 4.5,
+      drop: 1,
+      sampleReviewIds: [],
+    };
+
+    expect(
+      parseActionEvidence('reviews.investigate_rating_decline', decline),
+    ).not.toBeNull();
+    expect(
+      parseActionEvidence('reviews.investigate_rating_decline', {
+        ...decline,
+        drop: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

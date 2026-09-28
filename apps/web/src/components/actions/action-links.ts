@@ -18,6 +18,8 @@ export function actionHref(item: ActionItem): string {
       return `/apps/${appId}/metadata`;
     case "competitor.investigate_overtake":
       return `/apps/${appId}/competitors`;
+    case "reviews.investigate_rating_decline":
+      return `/apps/${appId}/reviews`;
     case "audit.fix_factor":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":

@@ -52,6 +52,24 @@ describe('summarizeActionEvidence', () => {
     );
   });
 
+  it('compares recent review scores with the baseline', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'reviews.investigate_rating_decline',
+        recentAverage: 3.5,
+        baselineAverage: 4.5,
+        drop: 1,
+        recentReviews: 8,
+        baselineReviews: 6,
+        recentDays: 14,
+        baselineDays: 21,
+        latestVersion: '4.2.0',
+        negativeShare: 0.25,
+        sampleReviewIds: [],
+      }),
+    ).toBe('review scores 4.5 → 3.5 over 8 recent reviews');
+  });
+
   it('counts the store rule problems in a listing field', () => {
     const lint = {
       rule: 'metadata.fix_lint' as const,

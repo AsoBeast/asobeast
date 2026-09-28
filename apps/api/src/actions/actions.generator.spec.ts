@@ -7,6 +7,7 @@ import { ActionEventInput, ActionEventRecorder } from './action-events';
 import {
   actionContext,
   dailyBudget,
+  contextApp,
   ruleSampleContext,
 } from './rules/rule-context.fixture';
 import { ACTION_REOPEN_AFTER_DAYS } from './action-lifecycle';
@@ -804,6 +805,7 @@ describe('ActionsGenerator', () => {
       'metadata.fix_lint',
       'rank.investigate_unexplained_drop',
       'competitor.investigate_overtake',
+      'reviews.investigate_rating_decline',
     ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {
@@ -832,6 +834,64 @@ describe('ActionsGenerator', () => {
 
       expect(withNew).toEqual(withoutNew);
       expect(withNew.length).toBeGreaterThan(0);
+    });
+
+    it('leaves a decline row alone once a review theme explains it', async () => {
+      const decline = realDetectors.filter(
+        (detector) => detector.rule === 'reviews.investigate_rating_decline',
+      );
+      mockDetectors.splice(0, mockDetectors.length, ...decline);
+      const reviewAt = (daysAgo: number, index: number) =>
+        new Date(NOW.getTime() - (daysAgo + index / 10) * 86_400_000);
+      const scored = (
+        scores: number[],
+        daysAgo: number,
+        version: string,
+        text = 'fine',
+      ) =>
+        scores.map((score, index) => ({
+          id: `rev_${daysAgo}_${version}_${text}_${index}`,
+          score,
+          title: null,
+          text,
+          version,
+          reviewedAt: reviewAt(daysAgo, index),
+        }));
+      const declining = (themed: boolean): ActionContext =>
+        actionContext([
+          contextApp({
+            latestVersion: '4.2.0',
+            previousVersion: themed ? '4.1.0' : null,
+            reviews: [
+              ...scored([1, 1, 2], 1, '4.2.0', 'crashes on launch every time'),
+              ...scored([5, 4, 4, 4, 4], 2, '4.2.0'),
+              ...scored([1], 20, '4.1.0', 'too many adverts'),
+              ...scored([5, 5, 5, 5, 5], 21, '4.1.0'),
+            ],
+          }),
+        ]);
+      const first = buildPrisma();
+      await generatorFor(declining(false), first).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      const fingerprint = first.created[0].fingerprint;
+
+      for (const status of ['OPEN', 'DONE'] as const) {
+        const prisma = buildPrisma(
+          storedRow(fingerprint, {
+            rule: 'reviews.investigate_rating_decline',
+            status,
+          }),
+        );
+        const result = await generatorFor(
+          declining(true),
+          prisma,
+        ).generateForWorkspace(budget, NOW);
+
+        expect(result).toMatchObject({ resolved: 0, verified: 0, opened: 0 });
+        expect(prisma.updated).toEqual([]);
+      }
     });
 
     it('keeps an open push action open once its results turn volatile', async () => {
