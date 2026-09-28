@@ -1,4 +1,9 @@
-import type { ActionItem, ChangeField } from "@asobeast/shared";
+import type {
+  ActionItem,
+  ActionRule,
+  ChangeField,
+  RankInvestigateDropEvidence,
+} from "@asobeast/shared";
 import {
   formatCountry,
   formatList,
@@ -7,7 +12,7 @@ import {
 } from "@/lib/format";
 import { ACTION_RULE_TITLE } from "./action-copy";
 
-const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
+export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   title: "title",
   subtitle: "subtitle",
   summary: "short description",
@@ -34,36 +39,42 @@ function degradedHeadline(item: ActionItem): string {
   return keyword ? `${title}: ${quoted(keyword)}` : title;
 }
 
+function dropHeadline(evidence: RankInvestigateDropEvidence): string {
+  const fields = changedFields(evidence.fields);
+  return evidence.visibilityDelta
+    ? `Investigate the ${measure(Math.abs(evidence.visibilityDelta))} point drop after your ${fields} change`
+    : `Investigate ${pluralize(evidence.droppedKeywords.length, "keyword drop")} after your ${fields} change`;
+}
+
+const KEYWORD_RULES: readonly ActionRule[] = [
+  "keyword.add_uncovered",
+  "keyword.defend",
+  "keyword.prune",
+  "serp.hold_volatile",
+];
+
 export function actionHeadline(item: ActionItem): string {
   const { evidence } = item;
   if (evidence === null) return degradedHeadline(item);
   const keyword = item.scope.keywordText;
-  const subject = keyword ? quoted(keyword) : null;
+  if (keyword === null && KEYWORD_RULES.includes(evidence.rule)) {
+    return ACTION_RULE_TITLE[evidence.rule];
+  }
+  const subject = quoted(keyword ?? "");
 
   switch (evidence.rule) {
     case "keyword.add_uncovered":
-      return subject
-        ? `Add ${subject} to your metadata`
-        : ACTION_RULE_TITLE[evidence.rule];
+      return `Add ${subject} to your metadata`;
     case "keyword.defend":
-      if (!subject) return ACTION_RULE_TITLE[evidence.rule];
       return evidence.entrants.length > 0
         ? `Defend ${subject}: ${pluralize(evidence.entrants.length, "new app")} in the top 10`
         : `Defend ${subject} in the top 10`;
     case "keyword.prune":
-      return subject
-        ? `Retire ${subject}: ranked on ${evidence.rankedDays} of ${evidence.checkedDays} days`
-        : ACTION_RULE_TITLE[evidence.rule];
-    case "rank.investigate_drop": {
-      const fields = changedFields(evidence.fields);
-      return evidence.visibilityDelta
-        ? `Investigate the ${measure(Math.abs(evidence.visibilityDelta))} point drop after your ${fields} change`
-        : `Investigate ${pluralize(evidence.droppedKeywords.length, "keyword drop")} after your ${fields} change`;
-    }
+      return `Retire ${subject}: ranked on ${evidence.rankedDays} of ${evidence.checkedDays} days`;
+    case "rank.investigate_drop":
+      return dropHeadline(evidence);
     case "serp.hold_volatile":
-      return subject
-        ? `Hold changes on ${subject} while its results are volatile`
-        : ACTION_RULE_TITLE[evidence.rule];
+      return `Hold changes on ${subject} while its results are volatile`;
     case "audit.fix_factor":
       return `Raise ${evidence.factorLabel} from ${measure(evidence.score)} of 10`;
     case "reviews.investigate_theme":

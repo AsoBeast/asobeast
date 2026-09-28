@@ -1,133 +1,45 @@
 import type { ActionEvidence } from "@asobeast/shared";
-import { formatRankPosition } from "@asobeast/shared";
-import { formatDate, formatMeasure, formatNumber } from "@/lib/format";
+import { GradedNumber } from "@/components/ui/graded";
+import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/format";
+import { grade } from "@/lib/grade";
+import {
+  evidenceSections,
+  type EvidenceFact,
+  type EvidenceList,
+} from "./evidence-sections";
 
-type Fact = [string, string];
+function FactValue({ fact }: { fact: EvidenceFact }) {
+  if (!fact.grade) return <>{fact.value}</>;
+  return (
+    <GradedNumber
+      value={fact.value}
+      grade={grade(fact.grade.metric, fact.grade.value)}
+      label={fact.label}
+    />
+  );
+}
 
-const optional = (value: number | null): string =>
-  value === null ? "—" : formatMeasure(value);
-
-function factsFor(evidence: ActionEvidence): Fact[] {
-  switch (evidence.rule) {
-    case "keyword.add_uncovered":
-      return [
-        ["Opportunity", formatMeasure(evidence.opportunity)],
-        ["Volume", optional(evidence.volume)],
-        ["Difficulty", optional(evidence.difficulty)],
-        ["Relevance", optional(evidence.relevance)],
-        ["Latest position", formatRankPosition(evidence.latestPosition)],
-        ["Indexed fields", evidence.indexedFields.join(", ") || "—"],
-        ["Uncovered in", evidence.uncoveredFields.join(", ") || "—"],
-        ["Keyword field free", optional(evidence.keywordFieldCharsFree)],
-        [
-          "Score confidence",
-          evidence.scoreProvenance?.confidence ?? "unscored",
-        ],
-      ];
-    case "keyword.defend":
-      return [
-        ["Your position", formatRankPosition(evidence.yourPosition)],
-        ["Earlier position", formatRankPosition(evidence.previousPosition)],
-        ["New entrants", formatNumber(evidence.entrants.length)],
-        ["At or above you", formatNumber(evidence.entrantsAtOrAbove)],
-        ["Observed days", `${evidence.observedDays} of ${evidence.windowDays}`],
-        ["SERP volatility", optional(evidence.volatility)],
-        ["Volume", optional(evidence.volume)],
-        [
-          "Entrants",
-          evidence.entrants
-            .map(
-              (entrant) =>
-                `#${entrant.position} ${entrant.title}${entrant.isCompetitor ? " (tracked competitor)" : ""}`,
-            )
-            .join(", ") || "—",
-        ],
-      ];
-    case "keyword.prune":
-      return [
-        ["Checked days", formatNumber(evidence.checkedDays)],
-        ["Ranked days", formatNumber(evidence.rankedDays)],
-        ["Best position", formatRankPosition(evidence.bestPosition)],
-        ["Volume", optional(evidence.volume)],
-        ["Relevance", optional(evidence.relevance)],
-        ["Requests saved per day", formatNumber(evidence.dailyRequestsSaved)],
-        [
-          "Budget utilization",
-          `${Math.round(evidence.budgetUtilization * 100)}%`,
-        ],
-      ];
-    case "rank.investigate_drop":
-      return [
-        ["Changed on", formatDate(evidence.changedAt)],
-        ["Fields", evidence.fields.join(", ")],
-        ["Visibility before", optional(evidence.visibilityBefore)],
-        ["Visibility after", optional(evidence.visibilityAfter)],
-        ["Visibility delta", optional(evidence.visibilityDelta)],
-        ["Tracked keywords", formatNumber(evidence.trackedKeywords)],
-        [
-          "Dropped keywords",
-          evidence.droppedKeywords
-            .map(
-              (keyword) =>
-                `${keyword.text} ${formatRankPosition(keyword.from)} → ${formatRankPosition(keyword.to)}`,
-            )
-            .join(", ") || "—",
-        ],
-        ["Mean volatility", optional(evidence.meanVolatility)],
-      ];
-    case "serp.hold_volatile":
-      return [
-        ["Volatility", formatMeasure(evidence.volatility)],
-        ["Observed days", `${evidence.observedDays} of ${evidence.windowDays}`],
-        ["Your position", formatRankPosition(evidence.yourPosition)],
-        ["Damped rules", evidence.dampenedRules.join(", ")],
-      ];
-    case "audit.fix_factor":
-      return [
-        ["Factor", evidence.factorLabel],
-        ["Score", `${formatMeasure(evidence.score)} of 10`],
-        ["Weight", formatMeasure(evidence.weight)],
-        ["Overall audit", optional(evidence.overall)],
-        [
-          "Rubric covered",
-          `${evidence.coveredWeight} of ${evidence.totalWeight}`,
-        ],
-        ["Audit date", formatDate(evidence.auditDate)],
-        [
-          "Failing checks",
-          evidence.failingChecks
-            .map((check) => `${check.label} (${check.status})`)
-            .join(", ") || "—",
-        ],
-      ];
-    case "reviews.investigate_theme":
-      return [
-        ["Theme", evidence.theme],
-        ["Version", evidence.version ?? "—"],
-        ["Previous version", evidence.previousVersion ?? "—"],
-        ["Mentions", formatNumber(evidence.mentions)],
-        ["Previously", formatNumber(evidence.previousMentions)],
-        ["Negative reviews", formatNumber(evidence.negativeReviews)],
-        ["Reviews for this version", formatNumber(evidence.totalReviews)],
-        ["Rating change", optional(evidence.ratingAvgDelta)],
-        ["Sample reviews", formatNumber(evidence.sampleReviewIds.length)],
-      ];
-    case "market.improve_country":
-      return [
-        ["Market", evidence.country.toUpperCase()],
-        ["Home market", evidence.homeCountry.toUpperCase()],
-        ["Market visibility", formatMeasure(evidence.marketVisibility)],
-        ["Home visibility", formatMeasure(evidence.homeVisibility)],
-        ["Gap", formatMeasure(evidence.gap)],
-        ["Tracked keywords", formatNumber(evidence.trackedKeywords)],
-        ["Ranked keywords", formatNumber(evidence.rankedKeywords)],
-        ["Observed days", `${evidence.observedDays} of ${evidence.windowDays}`],
-      ];
-    default: {
-      const never: never = evidence;
-      return never;
-    }
-  }
+function EvidenceLists({ lists }: { lists: EvidenceList[] }) {
+  return lists.map((list) => (
+    <div key={list.label} className="mt-3 flex flex-col gap-1.5">
+      <p className="text-label text-muted-foreground">{list.label}</p>
+      <ul className="flex list-none flex-wrap gap-1.5 p-0">
+        {list.items.map((entry) => (
+          <li key={`${entry.text}~${entry.detail ?? ""}`}>
+            <Badge variant="outline" className="h-auto whitespace-normal">
+              {entry.text}
+              {entry.detail ? (
+                <span className="numeric font-mono text-muted-foreground">
+                  {entry.detail}
+                </span>
+              ) : null}
+            </Badge>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ));
 }
 
 export function ActionEvidencePanel({
@@ -148,24 +60,27 @@ export function ActionEvidencePanel({
     );
   }
 
+  const { facts, lists } = evidenceSections(evidence);
+
   return (
     <details className="group">
       <summary className="cursor-pointer text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
         Why this
       </summary>
       <dl className="mt-3 grid gap-x-6 gap-y-1.5 text-body sm:grid-cols-2">
-        {factsFor(evidence).map(([label, value]) => (
+        {facts.map((fact) => (
           <div
-            key={label}
+            key={fact.label}
             className="flex items-baseline justify-between gap-4 border-b border-dashed border-border/60 pb-1"
           >
-            <dt className="text-muted-foreground">{label}</dt>
+            <dt className="text-muted-foreground">{fact.label}</dt>
             <dd className="numeric font-mono text-right font-medium">
-              {value}
+              <FactValue fact={fact} />
             </dd>
           </div>
         ))}
       </dl>
+      <EvidenceLists lists={lists} />
       <p className="mt-3 text-caption text-muted-foreground">
         Last confirmed {formatDate(lastSeenAt)}
       </p>
