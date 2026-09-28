@@ -39,6 +39,7 @@ export function ActionRowMenu({
           size="icon-sm"
           disabled={disabled}
           aria-label={`More actions for ${headline}`}
+          data-command="more"
           className="size-11 @md/queue:size-7"
         >
           <MoreHorizontal aria-hidden />

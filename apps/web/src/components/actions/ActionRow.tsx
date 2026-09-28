@@ -98,6 +98,7 @@ function RowControls({
         size="sm"
         disabled={busy}
         aria-label="Done"
+        data-command="done"
         className="size-11 @md/queue:h-7 @md/queue:w-auto"
         onClick={() => mutation.mutate({ status: "DONE" })}
       >
@@ -118,6 +119,7 @@ function RowControls({
           variant="ghost"
           size="sm"
           disabled={busy}
+          data-command="dismiss"
           onClick={() => mutation.mutate({ status: "DISMISSED" })}
         >
           <X aria-hidden />
@@ -162,6 +164,8 @@ export function ActionRow({
   href,
   onOpen,
   selection,
+  tabbable,
+  onFocus,
 }: {
   item: ActionItem;
   focused: boolean;
@@ -169,6 +173,8 @@ export function ActionRow({
   href: string;
   onOpen: () => void;
   selection: QueueSelection;
+  tabbable: boolean;
+  onFocus: () => void;
 }) {
   const headline = actionHeadline(item);
   const selectable = selection.selectable.includes(item.id);
@@ -176,7 +182,10 @@ export function ActionRow({
   return (
     <li
       id={`action-${item.id}`}
-      tabIndex={-1}
+      tabIndex={tabbable ? 0 : -1}
+      onFocus={(event) => {
+        if (event.target === event.currentTarget) onFocus();
+      }}
       data-focused={focused ? "true" : undefined}
       className="relative grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 @md/queue:grid-cols-[auto_1fr_auto] rounded-lg border bg-card px-3 py-3 outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring data-[focused=true]:ring-2 data-[focused=true]:ring-ring"
     >

@@ -7,10 +7,12 @@ import {
   STORES,
   type ActionItem,
 } from "@asobeast/shared";
+import { Keyboard } from "lucide-react";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { RowCount } from "@/components/data-table/RowCount";
 import { SearchInput } from "@/components/data-table/SearchInput";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -198,6 +200,7 @@ export function ActionToolbar({
   setView,
   shown,
   loadedTotal,
+  onShowShortcuts,
 }: {
   appId?: string;
   items: readonly ActionItem[];
@@ -205,6 +208,7 @@ export function ActionToolbar({
   setView: SetQueueView;
   shown: number;
   loadedTotal: number;
+  onShowShortcuts: () => void;
 }) {
   const counts = facetCounts(items, view);
   const options = useFacetOptions(items, view);
@@ -266,7 +270,13 @@ export function ActionToolbar({
           onClearAll={() => void setView(CLEARED_FACETS)}
         />
       </div>
-      <RowCount shown={shown} total={items.length} noun="action" />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <RowCount shown={shown} total={items.length} noun="action" />
+        <Button variant="link" size="sm" onClick={onShowShortcuts}>
+          <Keyboard aria-hidden />
+          Shortcuts
+        </Button>
+      </div>
       {loadedTotal > items.length ? (
         <p className="text-caption text-muted-foreground">
           Only the {items.length} highest-impact actions are loaded; narrow the

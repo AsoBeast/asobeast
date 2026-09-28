@@ -10,6 +10,7 @@ import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionOverview } from "./ActionOverview";
 import { ActionQueue } from "./ActionQueue";
+import { ActionShortcutsDialog } from "./ActionShortcutsDialog";
 import { ActionToolbar } from "./ActionToolbar";
 import {
   filterQueue,
@@ -20,6 +21,7 @@ import { groupQueue, sortQueue } from "./queue-groups";
 import { ActionOverviewSkeleton } from "./skeletons";
 import { useActionSheet } from "./use-action-sheet";
 import { useBulkUpdate } from "./use-bulk-update";
+import { useQueueKeys } from "./use-queue-keys";
 import { useQueueSelection } from "./use-queue-selection";
 import { useQueueView } from "./use-queue-view";
 
@@ -46,6 +48,18 @@ export function ActionCenter({ appId }: { appId?: string }) {
   const sheet = useActionSheet(view);
   const selection = useQueueSelection(visible, isDefaultStatusSet(view.status));
   const bulk = useBulkUpdate(appId);
+  const groups = groupQueue(
+    visible,
+    appId && view.group === "app" ? "priority" : view.group,
+  );
+  const keys = useQueueKeys({
+    ids: groups.flatMap((group) => group.items.map((item) => item.id)),
+    onOpen: sheet.open,
+    onSelect: (id) => {
+      if (selection.selectable.includes(id)) selection.toggle(id);
+    },
+    onClear: selection.clear,
+  });
 
   const filtered = isFilteredView(view);
   const emptyStateGenerates =
@@ -65,6 +79,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
         id="queue"
         aria-labelledby="queue-heading"
         className="@container/queue flex flex-col gap-4"
+        onKeyDown={keys.onKeyDown}
       >
         <h2 id="queue-heading" className="sr-only">
           Queue
@@ -76,6 +91,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
           setView={setView}
           shown={visible.length}
           loadedTotal={data.total}
+          onShowShortcuts={() => keys.setHelpOpen(true)}
         />
         {visible.length === 0 ? (
           <ActionEmptyState
@@ -85,15 +101,14 @@ export function ActionCenter({ appId }: { appId?: string }) {
           />
         ) : (
           <ActionQueue
-            groups={groupQueue(
-              visible,
-              appId && view.group === "app" ? "priority" : view.group,
-            )}
+            groups={groups}
             focusedId={sheet.id}
             appScoped={appId !== undefined}
             hrefFor={sheet.hrefFor}
             onOpen={(item) => sheet.open(item.id)}
             selection={selection}
+            keyboardId={keys.focusedId}
+            onRowFocus={keys.setFocusedId}
           />
         )}
         <ActionBulkBar
@@ -109,6 +124,10 @@ export function ActionCenter({ appId }: { appId?: string }) {
         />
       </section>
       <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
+      <ActionShortcutsDialog
+        open={keys.helpOpen}
+        onOpenChange={keys.setHelpOpen}
+      />
     </>
   );
 }

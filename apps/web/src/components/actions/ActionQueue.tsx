@@ -36,6 +36,8 @@ export function ActionQueue({
   hrefFor,
   onOpen,
   selection,
+  keyboardId,
+  onRowFocus,
 }: {
   groups: QueueGroup[];
   focusedId: string;
@@ -43,7 +45,13 @@ export function ActionQueue({
   hrefFor: (id: string) => string;
   onOpen: (item: ActionItem) => void;
   selection: QueueSelection;
+  keyboardId: string | null;
+  onRowFocus: (id: string) => void;
 }) {
+  const ids = groups.flatMap((group) => group.items.map((item) => item.id));
+  const tabbableId =
+    keyboardId && ids.includes(keyboardId) ? keyboardId : ids[0];
+
   return (
     <div className="flex flex-col gap-6">
       {groups.map((group) => (
@@ -68,6 +76,8 @@ export function ActionQueue({
                 href={hrefFor(item.id)}
                 onOpen={() => onOpen(item)}
                 selection={selection}
+                tabbable={tabbableId === item.id}
+                onFocus={() => onRowFocus(item.id)}
               />
             ))}
           </ul>

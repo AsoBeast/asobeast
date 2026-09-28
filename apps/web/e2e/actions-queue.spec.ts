@@ -197,3 +197,67 @@ test.describe("closing several actions at once", () => {
     }
   });
 });
+
+test.describe("working the queue from the keyboard", () => {
+  test("j moves focus down the rows", async ({ page }) => {
+    await page.goto("/actions");
+    const rows = page.locator(ROWS);
+    await rows.first().focus();
+
+    await page.keyboard.press("j");
+    await page.keyboard.press("j");
+
+    await expect(rows.nth(2)).toBeFocused();
+  });
+
+  test("Enter opens the focused row and Escape returns to it", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const first = page.locator(ROWS).first();
+    await first.focus();
+
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(first).toBeFocused();
+  });
+
+  test("d marks the focused row done and focuses the next one", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const rows = page.locator(ROWS);
+    await rows.nth(1).focus();
+    const secondId = await rows.nth(1).getAttribute("id");
+    const thirdId = await rows.nth(2).getAttribute("id");
+
+    await page.keyboard.press("d");
+
+    await expect(page.locator(`[id='${secondId}']`)).toHaveCount(0);
+    await expect(page.locator(`[id='${thirdId}']`)).toBeFocused();
+  });
+
+  test("typing in the search box never moves the focus", async ({ page }) => {
+    await page.goto("/actions");
+    const search = page.getByRole("textbox", { name: "Search actions" });
+    await search.fill("");
+    await search.press("j");
+
+    await expect(search).toHaveValue("j");
+    await expect(search).toBeFocused();
+  });
+
+  test("? shows the keyboard shortcuts", async ({ page }) => {
+    await page.goto("/actions");
+    await page.locator(ROWS).first().focus();
+
+    await page.keyboard.press("Shift+?");
+
+    await expect(
+      page.getByRole("dialog", { name: "Keyboard shortcuts" }),
+    ).toBeVisible();
+  });
+});
