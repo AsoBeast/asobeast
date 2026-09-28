@@ -62,6 +62,17 @@ export function titleEvidence(title: string, keyword: string): number {
     : (present / words.length) * EVIDENCE_PARTIAL;
 }
 
+export function titleTargets(title: string, keyword: string): boolean {
+  const phrase = searchKey(keyword);
+  if (phrase.length === 0) {
+    return false;
+  }
+  const haystack = searchKey(title);
+  return UNSEGMENTED.test(phrase)
+    ? haystack.includes(phrase)
+    : ` ${haystack}`.includes(` ${phrase}`);
+}
+
 export interface TitleMatch {
   strong: boolean;
   evidence: number;

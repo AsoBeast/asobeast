@@ -20,7 +20,7 @@ describe('buildScoreSignals', () => {
       flags: ['brand', 'padded'],
       officialPopularity: null,
       estimatedTraffic: expect.closeTo(5.6, 3) as number,
-      entryDifficulty: 2.3,
+      entryDifficulty: 1.3,
     });
   });
 

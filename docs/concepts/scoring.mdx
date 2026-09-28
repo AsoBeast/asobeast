@@ -68,31 +68,26 @@ Google Play popularity is the reach plus 12 percent of the demand. A longer phra
 
 ## How is difficulty rated?
 
-Difficulty measures how strong the apps that currently rank for the phrase are.
+Difficulty measures how hard it is to reach the first ten results for the phrase. It reads the first ten results on both stores, the search results on the App Store and the ten detail lookups on Google Play, and combines three inputs:
 
-It reads the first 25 results on the App Store and the ten results with a detail lookup on Google Play. Every factor is scored from 0 to 100 on a smooth curve, and the weighted sum is cut to a whole number from 1 to 100.
+| Input | What it reads |
+| --- | --- |
+| Strength | Each app's rating count on a log scale: 1,000 ratings or fewer rate 0, about 31,600 rate 0.5 and a million or more rate 1. The page's strength is the mean over the apps whose rating count is known |
+| Targeting | The share of the ten titles that carry the phrase as written, starting at the beginning of a word. "Geometry Dash" targets `geo`, while "BADLAND" does not target `bad land` and "Quiz Geo" does not target `geo quiz`. A Chinese, Japanese, Korean or Thai phrase matches anywhere in the title |
+| Phrase length | The number of characters in the phrase |
 
-| Factor | Weight | What it reads |
-| --- | --- | --- |
-| Rating volume | 30% | Median rating count: 500 rates 30, 2,000 rates 50, 10,000 rates 78 and 100,000 or more rates 100 |
-| Dominant players | 20% | Each app's rating count on a log scale up to ten million, with the top half of the page counted twice |
-| Rating velocity | 10% | Median ratings gained per year since release: 1,000 rates 50 and 50,000 or more rates 100 |
-| Star ratings | 10% | Average stars weighted by the log of each rating count: 4.0 rates 50 and 4.5 rates 85 |
-| Market maturity | 10% | Mean age of the apps: three years rates 50 and ten or more rates 100 |
-| Publisher diversity | 10% | Share of distinct publishers on the page |
-| Keyword in titles | 10% | Share of titles that contain the phrase or all of its words |
+Each store weighs them differently:
 
-Velocity and maturity rate a neutral 50 when no result carries a release date. Two dampeners run before the sum. A page of fewer than ten apps scales dominance, stars, diversity and titles by its size over ten, because a ratio over three apps says little. A page whose titles barely target the phrase is mostly filler from broader searches, so stars, maturity and diversity are scaled by 2.6 times the mean title match, never below 0.3 or above 1. A title that runs the words together also counts, so "ScrollLess" targets `scroll less`, and words that sit close together count for more than words spread across the title.
+| Store | Base | Strength | Targeting | Per character |
+| --- | --- | --- | --- | --- |
+| App Store | 13 | 40 | 26 | 0 |
+| Google Play | 15 | 78 | 21 | 0.7 |
 
-Three corrections follow, in this order:
+Difficulty is the base, plus strength and targeting times their weights, minus the phrase length times its weight, cut to a whole number from 1 to 100. A search with no results scores 0.
 
-| Correction | When | Effect |
-| --- | --- | --- |
-| Small page | The store returns one, two, three or four results | Difficulty is at most 10, 20, 31 or 40 |
-| Weak leader | The top result has fewer than 1,000 ratings and the phrase is not a brand | Difficulty is capped between 15, for a leader without ratings, and 50. When more than a fifth of the titles target the phrase the cap is softened by that share, because the field is contested even without a dominant app |
-| Filler page | The same weak leader, and fewer than a fifth of the titles target the phrase | Difficulty is discounted by up to 40 percent, less as the leader gets stronger |
+The weights were fitted against published difficulty for 794 App Store and 444 Google Play keywords in the US store. On the App Store the titles count almost as much as the apps: a page of strong apps whose titles do not carry the phrase is easier to break into than one where every title does. On Google Play the strength of the page decides, and a longer phrase is easier. Star ratings, installs, days since release or update, publisher diversity, chart positions and titles past the tenth result were tested as well and are left out, because none of them changed the order by more than 0.01 of rank agreement.
 
-A phrase is a brand when all of its words appear in the publisher name of the top result, and that app either has 1,000 ratings or is followed by four apps of other publishers with a median of at least 10,000. Such a leader is ranked first for its name, not its strength, so the weak leader cap and the filler discount are skipped. A brand never raises difficulty: the score always describes the apps on the page.
+A brand page is scored like any other page, so difficulty always describes the apps a newcomer has to pass.
 
 The `flags` in the score signals describe the page and do not change difficulty. `brand` means the leader is named after the phrase, a misspelling included, and holds at least 10,000 ratings, ten times the typical rival whose title also targets the phrase. `weak_leader` means the top result has fewer than 100 ratings, `small_serp` three results or fewer, and `padded` that at most a fifth of the top ten titles target the phrase.
 
