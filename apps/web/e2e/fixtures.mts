@@ -40,6 +40,7 @@ import type {
   VisibilityHistory,
   WebhookItem,
 } from "@asobeast/shared";
+import { summarizeActions } from "./actions-summary.mts";
 import {
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
@@ -2501,28 +2502,10 @@ export const ACTIONS: ActionItem[] = [
   },
 ];
 
-export const ACTION_SUMMARY: ActionSummary = {
-  open: 9,
-  snoozed: 1,
-  byPriority: { critical: 1, high: 4, medium: 4, low: 2 },
-  byCategory: {
-    metadata: 2,
-    competition: 2,
-    regression: 1,
-    conversion: 2,
-    reputation: 1,
-    markets: 1,
-    hygiene: 2,
-  },
-  topRules: [
-    { rule: "keyword.add_uncovered", count: 2 },
-    { rule: "keyword.defend", count: 2 },
-  ],
+export const ACTION_SUMMARY: ActionSummary = summarizeActions(ACTIONS, {
   generatedAt: "2026-07-30T03:00:00.000Z",
   suppressedByCap: 3,
-  openByPriority: { critical: 1, high: 3, medium: 4, low: 2 },
-  byStatus: { OPEN: 10, SNOOZED: 1, DONE: 0, DISMISSED: 1, RESOLVED: 0 },
-};
+});
 
 export const METADATA_AUDIT: MetadataAuditResult = {
   appId: "app-1",

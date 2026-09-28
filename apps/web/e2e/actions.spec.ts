@@ -22,6 +22,19 @@ test("lists actions sorted by estimated impact", async ({ page }) => {
   await expect(page.getByText("88", { exact: false }).first()).toBeVisible();
 });
 
+test("the summary counts agree with the listed actions", async ({
+  request,
+}) => {
+  const summary = await request.get(`${MOCK_API_URL}/actions/summary`);
+  const list = await request.get(
+    `${MOCK_API_URL}/actions?status=OPEN&limit=200`,
+  );
+
+  expect(((await summary.json()) as { open: number }).open).toBe(
+    ((await list.json()) as { total: number }).total,
+  );
+});
+
 test("filtering by priority updates the url and survives a reload", async ({
   page,
 }) => {

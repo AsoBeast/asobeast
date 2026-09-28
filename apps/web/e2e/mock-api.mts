@@ -3,6 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { summarizeActions } from "./actions-summary.mts";
 import {
   ACTIONS,
   ACTION_SUMMARY,
@@ -688,9 +689,22 @@ function actionsGeneratedAt(req: IncomingMessage): string | null {
 }
 
 function actionSummaryFor(req: IncomingMessage): ActionSummary {
-  const generatedAt = actionsGeneratedAt(req);
-  if (!actionsUngenerated(req)) return { ...ACTION_SUMMARY, generatedAt };
-  return { ...ACTION_SUMMARY, open: 0, generatedAt };
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const appId = url.searchParams.get("appId");
+  const store = url.searchParams.get("store");
+  const country = url.searchParams.get("country");
+  const scoped = actionsUngenerated(req)
+    ? []
+    : actions.filter(
+        (action) =>
+          (!appId || action.scope.appId === appId) &&
+          (!store || action.scope.store === store) &&
+          (!country || action.scope.country === country),
+      );
+  return summarizeActions(scoped, {
+    generatedAt: actionsGeneratedAt(req),
+    suppressedByCap: ACTION_SUMMARY.suppressedByCap,
+  });
 }
 
 function followActionRun(req: IncomingMessage, res: ServerResponse): void {
