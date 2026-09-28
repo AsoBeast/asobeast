@@ -1,6 +1,6 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
-import { ACTIONS, PORTFOLIO } from "./fixtures.mts";
+import { ACTIONS, PORTFOLIO, RECENT_CHANGES } from "./fixtures.mts";
 import { PORTFOLIO_INSIGHTS } from "./portfolio-insights.mts";
 
 const DASHBOARD_ACTION_LIMIT = 5;
@@ -8,6 +8,13 @@ const DASHBOARD_ACTION_LIMIT = 5;
 const moversCard = (page: Page) =>
   page
     .getByRole("heading", { name: "Keyword movers", level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+
+const VISIBLE_CHANGES = 8;
+
+const changesCard = (page: Page) =>
+  page
+    .getByRole("heading", { name: "Recent changes", level: 2 })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
 
 const appName = (appId: string) =>
@@ -115,4 +122,57 @@ test("keyword movers say so in a quiet week", async ({ page }) => {
   const card = moversCard(page);
   await expect(card).toContainText("No keyword moved this week.");
   await expect(card.getByRole("list")).toHaveCount(0);
+});
+
+test("recent changes filter by owner and write the url", async ({ page }) => {
+  await page.goto("/");
+
+  const card = changesCard(page);
+  for (const name of ["All", "Yours", "Competitors"]) {
+    await expect(card.getByRole("tab", { name })).toBeVisible();
+  }
+  await expect(card.getByText("Focus Timer Pro")).toBeVisible();
+
+  await card.getByRole("tab", { name: "Competitors" }).click();
+
+  await expect(page).toHaveURL(/[?&]changes=competitors/);
+  await expect(card.getByText("Focus Timer Pro")).toHaveCount(0);
+  await expect(card.getByText("Deep focus timer")).toBeVisible();
+});
+
+test("the recent changes filter survives a reload", async ({ page }) => {
+  await page.goto("/?changes=competitors");
+
+  const card = changesCard(page);
+  await expect(card.getByRole("tab", { name: "Competitors" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await expect(card.getByText("Deep focus timer")).toBeVisible();
+  await expect(card.getByText("Focus Timer Pro")).toHaveCount(0);
+});
+
+test("recent changes show eight events and reveal the rest", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const card = changesCard(page);
+  const rows = card.getByRole("link", { name: /Focus Timer|Rival Focus/ });
+  await expect(rows).toHaveCount(VISIBLE_CHANGES);
+
+  const hidden = RECENT_CHANGES.events.length - VISIBLE_CHANGES;
+  await card.getByRole("button", { name: `Show ${hidden} more` }).click();
+
+  await expect(rows).toHaveCount(RECENT_CHANGES.events.length);
+});
+
+test("recent changes group today's events under a day heading", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  await expect(
+    changesCard(page).getByRole("heading", { name: "Today", level: 3 }),
+  ).toBeVisible();
 });

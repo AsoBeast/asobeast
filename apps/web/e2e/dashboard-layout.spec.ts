@@ -18,8 +18,7 @@ const tileBoxes = async (page: Page) => {
   );
 };
 
-const mainHeadings = (page: Page) =>
-  page.getByRole("main").getByRole("heading");
+const mainHeadings = (page: Page) => page.getByRole("main").locator("h1, h2");
 
 test("the dashboard outline reads in visual order on a phone", async ({
   page,

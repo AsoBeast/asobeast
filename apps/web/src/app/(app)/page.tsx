@@ -46,6 +46,8 @@ export default async function Page() {
     return <FirstRun />;
   }
 
+  const today = new Date().toISOString().slice(0, 10);
+
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide @container/dashboard flex flex-col gap-6">
@@ -90,7 +92,7 @@ export default async function Page() {
             </Suspense>
           </DashboardSection>
           <div className="@6xl/dashboard:col-span-4">
-            <RecentChangesCard />
+            <RecentChangesCard today={today} />
           </div>
         </div>
       </div>

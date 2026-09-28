@@ -137,9 +137,11 @@ function ChangeValue({
 export function ChangeRow({
   event,
   dense = true,
+  iconUrl = null,
 }: {
   event: ChangeEventItem;
   dense?: boolean;
+  iconUrl?: string | null;
 }) {
   return (
     <div
@@ -153,7 +155,7 @@ export function ChangeRow({
             : "border-primary",
       )}
     >
-      <AppIcon src={null} name={event.appName} size={32} />
+      <AppIcon src={iconUrl} name={event.appName} size={32} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-body font-medium">

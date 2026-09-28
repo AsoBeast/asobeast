@@ -251,6 +251,13 @@ export const actionAppParser = parseAsString.withDefault("");
 
 export const actionFocusParser = parseAsString.withDefault("");
 
+export const CHANGE_OWNERS = ["all", "yours", "competitors"] as const;
+
+export type ChangeOwner = (typeof CHANGE_OWNERS)[number];
+
+export const changeOwnerParser =
+  parseAsStringLiteral(CHANGE_OWNERS).withDefault("all");
+
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
 
