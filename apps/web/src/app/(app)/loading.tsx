@@ -1,5 +1,6 @@
 import {
   AppsDashboardSkeleton,
+  PortfolioStatusLineSkeleton,
   PortfolioTotalsSkeleton,
 } from "@/components/dashboard/skeletons";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
@@ -9,9 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function Loading() {
   return (
     <div className="page-wide @container/dashboard flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-8 w-28" />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-8 w-28" />
+        </div>
+        <PortfolioStatusLineSkeleton />
       </div>
       <PortfolioTotalsSkeleton />
       <div className="grid gap-6 @5xl/dashboard:grid-cols-12 [&>*]:min-w-0">

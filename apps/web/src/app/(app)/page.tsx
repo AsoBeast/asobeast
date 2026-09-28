@@ -15,8 +15,10 @@ import { FirstRun } from "@/components/apps/FirstRun";
 import { PortfolioSummary } from "@/components/dashboard/PortfolioSummary";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
+import { PortfolioStatusLine } from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
+  PortfolioStatusLineSkeleton,
   PortfolioTotalsSkeleton,
 } from "@/components/dashboard/skeletons";
 import { BudgetBanner } from "@/components/settings/BudgetBanner";
@@ -52,7 +54,11 @@ export default async function Page() {
           <BudgetBanner />
         </Suspense>
 
-        <DashboardHeader />
+        <DashboardHeader>
+          <Suspense fallback={<PortfolioStatusLineSkeleton />}>
+            <PortfolioStatusLine />
+          </Suspense>
+        </DashboardHeader>
 
         <Suspense fallback={<PortfolioTotalsSkeleton />}>
           <PortfolioSummary />

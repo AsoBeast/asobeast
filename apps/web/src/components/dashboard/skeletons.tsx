@@ -19,6 +19,15 @@ export function PortfolioTotalsSkeleton() {
   );
 }
 
+export function PortfolioStatusLineSkeleton() {
+  return (
+    <div className="flex flex-col gap-1">
+      <Skeleton className="h-5 w-56" />
+      <Skeleton className="h-5 w-72 max-w-full" />
+    </div>
+  );
+}
+
 export function AppsDashboardSkeleton() {
   return (
     <ul className="grid gap-4 sm:grid-cols-2">
