@@ -1,13 +1,10 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  ACTION_FORMULA_VERSION,
-  ActionRule,
-  DailyBudget,
-} from '@asobeast/shared';
+import { ACTION_FORMULA_VERSION, ActionRule } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
+import { actionContext, dailyBudget } from './rules/rule-context.fixture';
 import { ACTION_REOPEN_AFTER_DAYS } from './action-lifecycle';
 import { ActionDetector, DetectedAction } from './action-rule';
 import { ActionsGenerator } from './actions.generator';
@@ -23,24 +20,10 @@ jest.mock('./action-rule', () => ({
 const NOW = new Date('2026-07-30T03:00:00.000Z');
 const DAY_MS = 86_400_000;
 
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
+const budget = dailyBudget();
 
-const emptyContext = (): ActionContext => ({
-  workspaceId: 'ws_default',
-  apps: [],
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const emptyContext = (): ActionContext =>
+  actionContext([], { workspaceId: 'ws_default' });
 
 const detection = (
   rule: ActionRule,

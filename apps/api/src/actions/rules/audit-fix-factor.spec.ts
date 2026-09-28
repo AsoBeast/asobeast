@@ -1,4 +1,4 @@
-import { AuditFixFactorEvidence, DailyBudget } from '@asobeast/shared';
+import { AuditFixFactorEvidence } from '@asobeast/shared';
 import type {
   ActionAuditFactor,
   ActionAuditSnapshot,
@@ -14,19 +14,9 @@ import {
   auditFixFactorDetector,
   detectAuditFixFactor,
 } from './audit-fix-factor';
+import { actionContext, contextApp } from './rule-context.fixture';
 
 const NOW = new Date('2026-07-30T03:00:00.000Z');
-
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
 
 const day = (offset: number): string =>
   new Date(NOW.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
@@ -67,36 +57,14 @@ const snapshot = (
   ...overrides,
 });
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: 'own-app',
-  country: 'us',
-  trackedKeywords: [],
-  keywordsByCountry: new Map(),
-  coverage: [],
-  metadataFields: [],
-  audit: snapshot(),
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map(),
-  serpDaysByKeyword: new Map(),
-  volatilityByKeyword: new Map(),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    audit: snapshot(),
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps);
 
 describe('audit.fix_factor', () => {
   it('registers for its rule', () => {

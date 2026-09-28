@@ -1,5 +1,4 @@
 import {
-  DailyBudget,
   KeywordCoverageRow,
   KeywordPruneEvidence,
   TrackedKeywordItem,
@@ -20,42 +19,28 @@ import {
   PRUNE_MIN_OBSERVED_DAYS,
   PRUNE_UTILIZATION_FLOOR,
 } from './keyword-prune';
-
-const budget = (utilization: number): DailyBudget => ({
-  apps: 1,
-  keywords: 60,
-  categories: 0,
-  reviews: 1,
-  total: 62,
-  capacityPerDay: 100,
-  utilization,
-  stores: [],
-});
+import {
+  actionContext,
+  contextApp,
+  dailyBudget,
+  trackedKeyword,
+} from './rule-context.fixture';
 
 const keyword = (
   overrides: Partial<TrackedKeywordItem> = {},
-): TrackedKeywordItem => ({
-  keywordId: 'kw_1',
-  text: 'obscure phrase',
-  country: 'us',
-  source: 'SUGGESTED',
-  active: true,
-  latestPosition: null,
-  latestDepth: 200,
-  previousPosition: null,
-  positionDelta1d: null,
-  positionDelta7d: null,
-  traffic: 0.3,
-  difficulty: 2,
-  volume: 3,
-  relevance: 20,
-  opportunity: 12,
-  bucket: null,
-  scoredAt: '2026-07-29',
-  scoreProvenance: null,
-  serpVolatility7d: null,
-  ...overrides,
-});
+): TrackedKeywordItem =>
+  trackedKeyword({
+    text: 'obscure phrase',
+    source: 'SUGGESTED',
+    latestDepth: 200,
+    traffic: 0.3,
+    difficulty: 2,
+    volume: 3,
+    relevance: 20,
+    opportunity: 12,
+    scoredAt: '2026-07-29',
+    ...overrides,
+  });
 
 const days = (count: number, rankedCount = 0): ActionRankingDay[] =>
   Array.from({ length: count }, (_, index) => ({
@@ -63,39 +48,18 @@ const days = (count: number, rankedCount = 0): ActionRankingDay[] =>
     position: index < rankedCount ? 12 : null,
   }));
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: '1000',
-  country: 'us',
-  trackedKeywords: [keyword()],
-  keywordsByCountry: new Map(),
-  coverage: [],
-  metadataFields: [],
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map([['kw_1', days(PRUNE_MIN_OBSERVED_DAYS)]]),
-  serpDaysByKeyword: new Map(),
-  volatilityByKeyword: new Map(),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    storeAppId: '1000',
+    trackedKeywords: [keyword()],
+    rankingDaysByKeyword: new Map([['kw_1', days(PRUNE_MIN_OBSERVED_DAYS)]]),
+    ...overrides,
+  });
 
-const context = (
-  apps: ActionContextApp[],
-  utilization = 0.8,
-): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget: budget(utilization),
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[], utilization = 0.8): ActionContext =>
+  actionContext(apps, {
+    budget: dailyBudget({ keywords: 60, total: 62, utilization }),
+  });
 
 describe('keyword.prune', () => {
   it('registers for its rule', () => {

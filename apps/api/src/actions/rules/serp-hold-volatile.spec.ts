@@ -1,8 +1,4 @@
-import {
-  DailyBudget,
-  SerpHoldVolatileEvidence,
-  TrackedKeywordItem,
-} from '@asobeast/shared';
+import { SerpHoldVolatileEvidence, TrackedKeywordItem } from '@asobeast/shared';
 import { SerpSnapshotDay } from '../../rankings/serp-movers';
 import type {
   ActionContext,
@@ -18,45 +14,29 @@ import {
   VOLATILITY_THRESHOLD,
   VOLATILITY_WINDOW_DAYS,
 } from './serp-volatility';
+import {
+  actionContext,
+  contextApp,
+  trackedKeyword,
+} from './rule-context.fixture';
 
 const NOW = new Date('2026-07-30T03:00:00.000Z');
 const OWN = 'own-app';
 
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
-
 const keyword = (
   overrides: Partial<TrackedKeywordItem> = {},
-): TrackedKeywordItem => ({
-  keywordId: 'kw_1',
-  text: 'budget planner',
-  country: 'us',
-  source: 'MANUAL',
-  active: true,
-  latestPosition: 6,
-  latestDepth: 200,
-  previousPosition: 4,
-  positionDelta1d: null,
-  positionDelta7d: null,
-  traffic: 5.5,
-  difficulty: 4,
-  volume: 55,
-  relevance: 80,
-  opportunity: 60,
-  bucket: null,
-  scoredAt: null,
-  scoreProvenance: null,
-  serpVolatility7d: null,
-  ...overrides,
-});
+): TrackedKeywordItem =>
+  trackedKeyword({
+    latestPosition: 6,
+    latestDepth: 200,
+    previousPosition: 4,
+    traffic: 5.5,
+    difficulty: 4,
+    volume: 55,
+    relevance: 80,
+    opportunity: 60,
+    ...overrides,
+  });
 
 const day = (offset: number): string =>
   new Date(NOW.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
@@ -101,36 +81,18 @@ const rankingDays = (positions: Array<number | null>): ActionRankingDay[] =>
     position,
   }));
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: OWN,
-  country: 'us',
-  trackedKeywords: [keyword()],
-  keywordsByCountry: new Map(),
-  coverage: [],
-  metadataFields: [],
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map([['kw_1', rankingDays([4, 5, 6, 6, 6])]]),
-  serpDaysByKeyword: new Map([['kw_1', CHURNING]]),
-  volatilityByKeyword: new Map([['kw_1', 61]]),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    storeAppId: OWN,
+    trackedKeywords: [keyword()],
+    rankingDaysByKeyword: new Map([['kw_1', rankingDays([4, 5, 6, 6, 6])]]),
+    serpDaysByKeyword: new Map([['kw_1', CHURNING]]),
+    volatilityByKeyword: new Map([['kw_1', 61]]),
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps);
 
 describe('serp.hold_volatile', () => {
   it('registers for its rule', () => {

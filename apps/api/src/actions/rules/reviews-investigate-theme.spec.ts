@@ -1,4 +1,4 @@
-import { DailyBudget, ReviewsInvestigateThemeEvidence } from '@asobeast/shared';
+import { ReviewsInvestigateThemeEvidence } from '@asobeast/shared';
 import type {
   ActionContext,
   ActionContextApp,
@@ -13,19 +13,9 @@ import {
   REVIEW_THEME_WINDOW_DAYS,
   reviewsInvestigateThemeDetector,
 } from './reviews-investigate-theme';
+import { actionContext, contextApp } from './rule-context.fixture';
 
 const NOW = new Date('2026-07-30T03:00:00.000Z');
-
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
 
 let sequence = 0;
 
@@ -57,36 +47,16 @@ const defaultReviews = (): ActionReview[] => [
   review(PREVIOUS, 2, 'adverts everywhere now'),
 ];
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: 'own-app',
-  country: 'us',
-  trackedKeywords: [],
-  keywordsByCountry: new Map(),
-  coverage: [],
-  metadataFields: [],
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map(),
-  serpDaysByKeyword: new Map(),
-  volatilityByKeyword: new Map(),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: defaultReviews(),
-  latestVersion: CURRENT,
-  previousVersion: PREVIOUS,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    reviews: defaultReviews(),
+    latestVersion: CURRENT,
+    previousVersion: PREVIOUS,
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps);
 
 const themes = (
   detections: ReturnType<typeof detectReviewsInvestigateTheme>,
