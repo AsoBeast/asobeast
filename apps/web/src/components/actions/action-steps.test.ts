@@ -106,6 +106,16 @@ describe("actionSteps", () => {
     ]);
   });
 
+  it("confirms a stale listing fix once the store shows the update", () => {
+    const stale = ACTIONS.find((item) => item.id === "act-stale")!;
+
+    expect(actionSteps(stale)).toEqual([
+      "Plan a release, even a small one",
+      "Write release notes that say what changed",
+      "asobeast confirms the fix when the store shows the new update",
+    ]);
+  });
+
   it("turns each failing audit check into a step, in order", () => {
     const audit = ACTIONS.find((item) => item.id === "act-audit")!;
     const evidence = audit.evidence!;

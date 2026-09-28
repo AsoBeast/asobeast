@@ -3006,7 +3006,8 @@
                   "rank.investigate_unexplained_drop",
                   "competitor.investigate_overtake",
                   "reviews.investigate_rating_decline",
-                  "reviews.reply_negative"
+                  "reviews.reply_negative",
+                  "listing.ship_update"
                 ]
               }
             }
@@ -3397,7 +3398,8 @@
                   "rank.investigate_unexplained_drop",
                   "competitor.investigate_overtake",
                   "reviews.investigate_rating_decline",
-                  "reviews.reply_negative"
+                  "reviews.reply_negative",
+                  "listing.ship_update"
                 ]
               }
             }

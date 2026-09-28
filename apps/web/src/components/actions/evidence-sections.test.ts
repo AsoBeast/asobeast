@@ -188,6 +188,26 @@ describe("evidenceSections", () => {
     ).toMatchObject({ "Reply rate": "—", "Oldest unanswered": "—" });
   });
 
+  it("compares the listing age with the competitor median", () => {
+    const evidence = evidenceOf("act-stale");
+    if (evidence.rule !== "listing.ship_update") throw new Error("fixture");
+
+    expect(factValues(evidence)).toMatchObject({
+      "Days since update": "142",
+      Version: "3.1.0",
+      "Competitor median": "25 days",
+      "Competitors compared": "3",
+    });
+    expect(
+      factValues({ ...evidence, competitorMedianDays: null })[
+        "Competitor median"
+      ],
+    ).toBe("—");
+    expect(evidenceSections(evidence).summary).toBe(
+      "The store last showed an update 142 days ago, against a competitor median of 25 days.",
+    );
+  });
+
   it("lists the keywords that fell with no change of yours", () => {
     const evidence = evidenceOf("act-slide");
 

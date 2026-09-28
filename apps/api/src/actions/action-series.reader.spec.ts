@@ -131,6 +131,23 @@ describe('ActionSeriesReader', () => {
     expect(calls(empty.prisma)).toBe(0);
   });
 
+  it('reads the store update age of the app for a stale listing', async () => {
+    const { prisma, trend } = await read(item('listing.ship_update', null));
+
+    expect(prisma.appSnapshot.findMany).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        capturedAt: { gte: new Date('2026-06-25T00:00:00.000Z') },
+      },
+      select: { capturedAt: true, storeUpdatedAt: true },
+    });
+    expect(trend).toMatchObject({
+      metric: 'updateAge',
+      direction: 'lower_is_better',
+    });
+    expect(calls(prisma)).toBe(1);
+  });
+
   it('reads tracked keyword visibility for a market rule', async () => {
     const { prisma, trend } = await read(item('market.improve_country'));
 

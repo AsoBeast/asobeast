@@ -9,6 +9,7 @@ import { REGRESSION_INDEXED_FIELDS } from './rules/rank-investigate-drop';
 
 export const COMPETITOR_CHANGE_WINDOW_DAYS = 14;
 export const COMPETITOR_RANKING_WINDOW_DAYS = 21;
+export const COMPETITOR_SNAPSHOT_WINDOW_DAYS = 35;
 
 export interface ActionCompetitor {
   id: string;
@@ -38,9 +39,15 @@ interface CompetitorRankingRow {
   position: number | null;
 }
 
+interface CompetitorSnapshotRow {
+  appId: string;
+  storeUpdatedAt: Date | null;
+}
+
 export interface CompetitorRows {
   changes: CompetitorChangeRow[];
   rankings: CompetitorRankingRow[];
+  snapshots: CompetitorSnapshotRow[];
 }
 
 export const competitorRankingKey = (
@@ -85,8 +92,10 @@ export async function loadCompetitorRows(
   const keywordIds = [
     ...new Set([...homeIds.values()].flatMap((ids) => [...ids])),
   ];
-  if (competitorIds.length === 0) return { changes: [], rankings: [] };
-  const [changes, rankings] = await Promise.all([
+  if (competitorIds.length === 0) {
+    return { changes: [], rankings: [], snapshots: [] };
+  }
+  const [changes, rankings, snapshots] = await Promise.all([
     prisma.changeEvent.findMany({
       where: {
         appId: { in: competitorIds },
@@ -113,8 +122,17 @@ export async function loadCompetitorRows(
           select: { appId: true, keywordId: true, date: true, position: true },
           orderBy: { date: 'asc' },
         }),
+    prisma.appSnapshot.findMany({
+      where: {
+        appId: { in: competitorIds },
+        capturedAt: { gte: daysBefore(now, COMPETITOR_SNAPSHOT_WINDOW_DAYS) },
+      },
+      orderBy: { capturedAt: 'desc' },
+      distinct: ['appId'],
+      select: { appId: true, storeUpdatedAt: true },
+    }),
   ]);
-  return { changes, rankings };
+  return { changes, rankings, snapshots };
 }
 
 function competitorChangesFor(
@@ -166,7 +184,9 @@ export function competitorContext(
   competitors: ActionCompetitor[];
   competitorChanges: ActionCompetitorChange[];
   competitorRankingDays: Map<string, ActionRankingDay[]>;
+  competitorUpdatedAt: Date[];
 } {
+  const ids = new Set(competitors.map((competitor) => competitor.id));
   return {
     competitors: competitors.map(({ id, name }) => ({ id, name })),
     competitorChanges: competitorChangesFor(competitors, rows),
@@ -174,6 +194,9 @@ export function competitorContext(
       competitors,
       keywordIds,
       rows,
+    ),
+    competitorUpdatedAt: rows.snapshots.flatMap((row) =>
+      ids.has(row.appId) && row.storeUpdatedAt ? [row.storeUpdatedAt] : [],
     ),
   };
 }

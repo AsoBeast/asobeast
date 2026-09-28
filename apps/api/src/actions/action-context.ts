@@ -101,6 +101,8 @@ export interface ActionContextApp {
   reviews: ActionReview[];
   latestVersion: string | null;
   previousVersion: string | null;
+  latestStoreUpdatedAt: Date | null;
+  competitorUpdatedAt: Date[];
 }
 
 export interface ActionContext {
@@ -326,7 +328,12 @@ export class ActionContextLoader {
         }),
         this.prisma.appSnapshot.findMany({
           where: { appId: { in: appIds }, capturedAt: { gte: from } },
-          select: { appId: true, version: true, capturedAt: true },
+          select: {
+            appId: true,
+            version: true,
+            capturedAt: true,
+            storeUpdatedAt: true,
+          },
           orderBy: { capturedAt: 'desc' },
         }),
       ]);
@@ -437,7 +444,11 @@ export class ActionContextLoader {
         totalWeight: number;
         factors: unknown;
       } | null;
-      versions: Array<{ version: string | null; capturedAt: Date }>;
+      versions: Array<{
+        version: string | null;
+        capturedAt: Date;
+        storeUpdatedAt: Date | null;
+      }>;
       competitors: CompetitorRows;
       homeKeywordIds: ReadonlySet<string>;
     },
@@ -539,6 +550,7 @@ export class ActionContextLoader {
       reviews: rows.reviews,
       latestVersion: distinctVersions[0] ?? null,
       previousVersion: distinctVersions[1] ?? null,
+      latestStoreUpdatedAt: rows.versions[0]?.storeUpdatedAt ?? null,
     };
   }
 }

@@ -807,6 +807,7 @@ describe('ActionsGenerator', () => {
       'competitor.investigate_overtake',
       'reviews.investigate_rating_decline',
       'reviews.reply_negative',
+      'listing.ship_update',
     ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {

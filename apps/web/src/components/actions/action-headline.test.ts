@@ -296,6 +296,22 @@ describe("actionHeadline", () => {
     ).toBe("Reply to 3 unanswered low reviews");
   });
 
+  it("states how old a stale listing is", () => {
+    expect(
+      headline(
+        {
+          rule: "listing.ship_update",
+          storeUpdatedAt: "2026-03-10T00:00:00.000Z",
+          daysSinceUpdate: 142,
+          version: "3.1.0",
+          competitorMedianDays: null,
+          competitorsCompared: 0,
+        },
+        null,
+      ),
+    ).toBe("Ship an update: your listing is 142 days old");
+  });
+
   it("counts the store rule problems in a listing field", () => {
     const issue = {
       rule: "over-limit",

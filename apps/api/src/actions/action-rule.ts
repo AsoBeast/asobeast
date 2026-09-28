@@ -10,6 +10,7 @@ import { rankInvestigateUnexplainedDropDetector } from './rules/rank-investigate
 import { competitorInvestigateOvertakeDetector } from './rules/competitor-investigate-overtake';
 import { reviewsInvestigateRatingDeclineDetector } from './rules/reviews-investigate-rating-decline';
 import { reviewsReplyNegativeDetector } from './rules/reviews-reply-negative';
+import { listingShipUpdateDetector } from './rules/listing-ship-update';
 import { keywordPruneDetector } from './rules/keyword-prune';
 import { marketImproveCountryDetector } from './rules/market-improve-country';
 import { rankInvestigateDropDetector } from './rules/rank-investigate-drop';
@@ -49,4 +50,5 @@ export const ACTION_DETECTORS: readonly ActionDetector[] = Object.freeze([
   competitorInvestigateOvertakeDetector,
   reviewsInvestigateRatingDeclineDetector,
   reviewsReplyNegativeDetector,
+  listingShipUpdateDetector,
 ]);

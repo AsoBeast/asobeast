@@ -19,6 +19,7 @@ export const ACTION_RULES = [
   'competitor.investigate_overtake',
   'reviews.investigate_rating_decline',
   'reviews.reply_negative',
+  'listing.ship_update',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -60,6 +61,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'competitor.investigate_overtake': 'competition',
   'reviews.investigate_rating_decline': 'reputation',
   'reviews.reply_negative': 'reputation',
+  'listing.ship_update': 'conversion',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -313,6 +315,15 @@ export interface ReviewsReplyNegativeEvidence {
   sampleReviewIds: string[];
 }
 
+export interface ListingShipUpdateEvidence {
+  rule: 'listing.ship_update';
+  storeUpdatedAt: string;
+  daysSinceUpdate: number;
+  version: string | null;
+  competitorMedianDays: number | null;
+  competitorsCompared: number;
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -327,7 +338,8 @@ export type ActionEvidence =
   | RankInvestigateUnexplainedDropEvidence
   | CompetitorInvestigateOvertakeEvidence
   | ReviewsInvestigateRatingDeclineEvidence
-  | ReviewsReplyNegativeEvidence;
+  | ReviewsReplyNegativeEvidence
+  | ListingShipUpdateEvidence;
 
 export interface ActionAi {
   explanation: string | null;

@@ -31,6 +31,7 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'competitor.investigate_overtake': 'position',
   'reviews.investigate_rating_decline': 'rating',
   'reviews.reply_negative': 'rating',
+  'listing.ship_update': 'updateAge',
 };
 
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =

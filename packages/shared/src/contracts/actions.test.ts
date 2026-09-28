@@ -83,6 +83,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `drop ${evidence.drop}`;
     case 'reviews.reply_negative':
       return `unanswered ${evidence.unanswered}`;
+    case 'listing.ship_update':
+      return `days ${evidence.daysSinceUpdate}`;
     default: {
       const never: never = evidence;
       return never;
@@ -343,6 +345,14 @@ describe('action evidence', () => {
         replyRate: 0.25,
         sampleReviewIds: ['rev_1'],
       },
+      {
+        rule: 'listing.ship_update',
+        storeUpdatedAt: '2026-03-10T00:00:00.000Z',
+        daysSinceUpdate: 142,
+        version: '3.1.0',
+        competitorMedianDays: 25,
+        competitorsCompared: 3,
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -363,6 +373,7 @@ describe('action evidence', () => {
       'Tomato Focus 1',
       'drop 0.8',
       'unanswered 3',
+      'days 142',
     ]);
   });
 

@@ -280,6 +280,22 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts a stale listing evidence and degrades one missing its age', () => {
+    const stale = {
+      rule: 'listing.ship_update',
+      storeUpdatedAt: '2026-03-10T00:00:00.000Z',
+      daysSinceUpdate: 142,
+    };
+
+    expect(parseActionEvidence('listing.ship_update', stale)).not.toBeNull();
+    expect(
+      parseActionEvidence('listing.ship_update', {
+        ...stale,
+        daysSinceUpdate: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

@@ -9,6 +9,7 @@ import { MetadataService } from '../metadata/metadata.service';
 import {
   COMPETITOR_CHANGE_WINDOW_DAYS,
   COMPETITOR_RANKING_WINDOW_DAYS,
+  COMPETITOR_SNAPSHOT_WINDOW_DAYS,
 } from './action-competitors';
 import {
   ActionContextLoader,
@@ -98,8 +99,9 @@ interface PrismaStubData {
   auditScores?: Array<typeof AUDIT_ROW>;
   snapshots?: Array<{
     appId: string;
-    version: string | null;
-    capturedAt: Date;
+    version?: string | null;
+    capturedAt?: Date;
+    storeUpdatedAt: Date | null;
   }>;
   serpEntries?: Array<{
     keywordId: string;
@@ -203,7 +205,7 @@ describe('ActionContextLoader', () => {
     expect(prisma.changeEvent.findMany).toHaveBeenCalledTimes(2);
     expect(prisma.review.findMany).toHaveBeenCalledTimes(1);
     expect(prisma.auditScore.findMany).toHaveBeenCalledTimes(1);
-    expect(prisma.appSnapshot.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.appSnapshot.findMany).toHaveBeenCalledTimes(2);
     expect(prisma.serpEntry.findMany).toHaveBeenCalledTimes(1);
   });
 
@@ -316,6 +318,59 @@ describe('ActionContextLoader', () => {
       repliedAt,
       replyCheckedAt,
     });
+  });
+
+  it('reads your newest store update and each competitor newest one', async () => {
+    const own = new Date('2026-03-01T00:00:00.000Z');
+    const rival = new Date('2026-07-10T00:00:00.000Z');
+    const prisma = buildPrisma({
+      snapshots: [
+        {
+          appId: 'app_1',
+          version: '2.0',
+          capturedAt: new Date('2026-07-29T03:00:00.000Z'),
+          storeUpdatedAt: own,
+        },
+        {
+          appId: 'app_1',
+          version: '1.9',
+          capturedAt: new Date('2026-07-01T03:00:00.000Z'),
+          storeUpdatedAt: new Date('2026-01-01T00:00:00.000Z'),
+        },
+        { appId: 'comp_1', storeUpdatedAt: rival },
+        { appId: 'comp_9', storeUpdatedAt: rival },
+      ],
+    });
+
+    const context = await loaderFor(prisma).load(budget, NOW);
+
+    expect(prisma.appSnapshot.findMany.mock.calls[0]).toEqual([
+      expect.objectContaining({
+        select: {
+          appId: true,
+          version: true,
+          capturedAt: true,
+          storeUpdatedAt: true,
+        },
+      }),
+    ]);
+    expect(prisma.appSnapshot.findMany.mock.calls[1]).toEqual([
+      {
+        where: {
+          appId: { in: ['comp_1'] },
+          capturedAt: {
+            gte: new Date(
+              NOW.getTime() - COMPETITOR_SNAPSHOT_WINDOW_DAYS * DAY_MS,
+            ),
+          },
+        },
+        orderBy: { capturedAt: 'desc' },
+        distinct: ['appId'],
+        select: { appId: true, storeUpdatedAt: true },
+      },
+    ]);
+    expect(context.apps[0].latestStoreUpdatedAt).toEqual(own);
+    expect(context.apps[0].competitorUpdatedAt).toEqual([rival]);
   });
 
   it('bounds the ranking window and the shorter SERP window', async () => {

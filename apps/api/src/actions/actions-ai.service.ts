@@ -54,6 +54,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'The average score of reviews from the last two weeks fell clearly below the three weeks before, without a single repeated complaint theme to explain it.',
   'reviews.reply_negative':
     'Several recent low Google Play reviews were checked for a developer reply and none was found.',
+  'listing.ship_update':
+    'The store listing has not shown a new update for at least ninety days; competitors that updated recently add to the pressure.',
 };
 
 const SCHEMA = {

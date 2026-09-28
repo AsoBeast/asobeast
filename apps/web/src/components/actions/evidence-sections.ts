@@ -9,6 +9,7 @@ import type {
   KeywordDefendEvidence,
   KeywordPruneEvidence,
   KeywordPushToTop10Evidence,
+  ListingShipUpdateEvidence,
   MarketImproveCountryEvidence,
   MetadataFixLintEvidence,
   RankInvestigateDropEvidence,
@@ -65,6 +66,9 @@ const graded = (
     : { label, value: format(value), grade: { metric, value } };
 
 const fact = (label: string, value: string): EvidenceFact => ({ label, value });
+
+const optionalDays = (value: number | null): string =>
+  value === null ? "—" : `${formatMeasure(value)} days`;
 
 const capitalized = (text: string): string =>
   text.charAt(0).toUpperCase() + text.slice(1);
@@ -363,6 +367,19 @@ function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
   };
 }
 
+function staleSections(evidence: ListingShipUpdateEvidence): Sections {
+  return {
+    facts: [
+      fact("Last store update", formatDate(evidence.storeUpdatedAt)),
+      fact("Days since update", formatNumber(evidence.daysSinceUpdate)),
+      fact("Version", evidence.version ?? "—"),
+      fact("Competitor median", optionalDays(evidence.competitorMedianDays)),
+      fact("Competitors compared", formatNumber(evidence.competitorsCompared)),
+    ],
+    lists: [],
+  };
+}
+
 function marketSections(evidence: MarketImproveCountryEvidence): Sections {
   return {
     facts: [
@@ -462,6 +479,8 @@ function sections(evidence: ActionEvidence): Sections {
       return declineSections(evidence);
     case "reviews.reply_negative":
       return replySections(evidence);
+    case "listing.ship_update":
+      return staleSections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

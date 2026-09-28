@@ -21,6 +21,7 @@ export function actionHref(item: ActionItem): string {
     case "reviews.investigate_rating_decline":
       return `/apps/${appId}/reviews`;
     case "audit.fix_factor":
+    case "listing.ship_update":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":
     case "reviews.reply_negative":

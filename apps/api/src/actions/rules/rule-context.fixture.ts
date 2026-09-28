@@ -67,6 +67,8 @@ export const contextApp = (
   reviews: [],
   latestVersion: null,
   previousVersion: null,
+  latestStoreUpdatedAt: null,
+  competitorUpdatedAt: [],
   ...overrides,
 });
 

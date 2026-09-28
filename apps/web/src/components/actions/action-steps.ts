@@ -14,6 +14,8 @@ export const CONFIRMATION_STEP =
 const RULE_CONFIRMATION: Partial<Record<ActionRule, string>> = {
   "keyword.push_to_top10":
     "asobeast confirms the fix when the keyword reaches the top 10 or stops qualifying",
+  "listing.ship_update":
+    "asobeast confirms the fix when the store shows the new update",
 };
 
 const confirmationStep = (rule: ActionRule): string =>
@@ -142,6 +144,11 @@ function ruleSteps(
         `Open Reviews in ${STORE_CONSOLE[store]}`,
         "Reply to the lowest scores first and say what you are fixing",
         "asobeast rechecks replies every day",
+      ];
+    case "listing.ship_update":
+      return [
+        "Plan a release, even a small one",
+        "Write release notes that say what changed",
       ];
     case "metadata.fix_lint":
       return [

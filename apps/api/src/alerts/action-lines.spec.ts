@@ -85,6 +85,19 @@ describe('summarizeActionEvidence', () => {
     ).toBe('3 of 4 checked low reviews have no reply in 14 days');
   });
 
+  it('states how old the listing is against its competitors', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'listing.ship_update',
+        storeUpdatedAt: '2026-03-10T00:00:00.000Z',
+        daysSinceUpdate: 142,
+        version: '3.1.0',
+        competitorMedianDays: null,
+        competitorsCompared: 0,
+      }),
+    ).toBe('last store update 142 days ago, competitor median — days');
+  });
+
   it('counts the store rule problems in a listing field', () => {
     const lint = {
       rule: 'metadata.fix_lint' as const,
