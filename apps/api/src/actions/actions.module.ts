@@ -7,6 +7,7 @@ import { ActionsEngineModule } from './actions-engine.module';
 import { ActionsController, AppActionsController } from './actions.controller';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionDetailService } from './action-detail.service';
+import { ActionSeriesReader } from './action-series.reader';
 import { ActionTransitions } from './action-transitions';
 import { ActionsService } from './actions.service';
 
@@ -23,6 +24,7 @@ import { ActionsService } from './actions.service';
     ActionsAiService,
     ActionTransitions,
     ActionDetailService,
+    ActionSeriesReader,
   ],
   exports: [ActionsService],
 })

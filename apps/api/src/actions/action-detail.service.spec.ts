@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { ACTION_FORMULA_VERSION } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionDetailService } from './action-detail.service';
+import { ActionSeriesReader } from './action-series.reader';
 
 const storedRow = {
   id: 'act_1',
@@ -47,14 +48,28 @@ const event = (id: string, type: string, occurredAt: string) => ({
   user: type === 'opened' ? null : { name: 'Anna' },
 });
 
+const TREND = {
+  metric: 'position' as const,
+  direction: 'lower_is_better' as const,
+  depth: 200,
+  points: [
+    { date: '2026-07-25', checked: true, value: 14 },
+    { date: '2026-07-29', checked: true, value: 8 },
+  ],
+};
+
 const serviceFor = (row: unknown, events: unknown[] = []) => {
   const prisma = {
     actionItem: { findFirst: jest.fn(() => Promise.resolve(row)) },
     actionEvent: { findMany: jest.fn(() => Promise.resolve(events)) },
   };
+  const series = { read: jest.fn(() => Promise.resolve(TREND)) };
   return {
     prisma,
-    service: new ActionDetailService(prisma as unknown as PrismaService),
+    service: new ActionDetailService(
+      prisma as unknown as PrismaService,
+      series as unknown as ActionSeriesReader,
+    ),
   };
 };
 
@@ -83,5 +98,27 @@ describe('ActionDetailService', () => {
     expect(detail).toMatchObject({ id: 'act_1', status: 'DONE' });
     expect(detail.events.map((item) => item.type)).toEqual(['opened', 'done']);
     expect(detail.events[1].actorName).toBe('Anna');
+  });
+
+  it('measures the outcome of a done action from its trend', async () => {
+    const detail = await serviceFor(storedRow).service.get('act_1');
+
+    expect(detail.trend).toEqual(TREND);
+    expect(detail.outcome).toMatchObject({
+      before: 14,
+      after: 8,
+      change: -6,
+      verdict: 'improved',
+    });
+  });
+
+  it('measures no outcome for an action that is not done', async () => {
+    const detail = await serviceFor({
+      ...storedRow,
+      status: 'OPEN',
+    }).service.get('act_1');
+
+    expect(detail.trend).toEqual(TREND);
+    expect(detail.outcome).toBeNull();
   });
 });

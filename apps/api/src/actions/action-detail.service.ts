@@ -1,14 +1,20 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ActionDetail } from '@asobeast/shared';
+import { utcToday } from '../analytics/analytics.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { EVENT_SELECT, toActionEventItem } from './action-events';
+import { measureOutcome } from './action-outcome';
+import { ActionSeriesReader } from './action-series.reader';
 import { ROW_SELECT, toActionItem } from './actions.mapper';
 
 @Injectable()
 export class ActionDetailService {
   private readonly logger = new Logger(ActionDetailService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly series: ActionSeriesReader,
+  ) {}
 
   async get(id: string): Promise<ActionDetail> {
     const [row, events] = await Promise.all([
@@ -23,8 +29,10 @@ export class ActionDetailService {
       throw new NotFoundException('Action not found');
     }
 
+    const item = toActionItem(row);
+    const trend = await this.series.read(item, utcToday());
     return {
-      ...toActionItem(row),
+      ...item,
       events: events.flatMap((event) => {
         const item = toActionEventItem(event);
         if (!item) {
@@ -33,8 +41,11 @@ export class ActionDetailService {
         }
         return [item];
       }),
-      trend: null,
-      outcome: null,
+      trend,
+      outcome:
+        trend && item.status === 'DONE' && item.closedAt
+          ? measureOutcome(trend, new Date(item.closedAt))
+          : null,
     };
   }
 }

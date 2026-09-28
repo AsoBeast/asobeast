@@ -77,8 +77,54 @@ describe('action detail (e2e)', () => {
       ['opened', 'system'],
       ['done', 'user'],
     ]);
-    expect(trend).toBeNull();
-    expect(outcome).toBeNull();
+    expect(trend?.metric).toBe('position');
+    expect(outcome?.verdict).toBe('pending');
+  });
+
+  it('charts the keyword position and measures the outcome after done', async () => {
+    const { appId, keywordId } = await seedUncoveredKeyword(prisma);
+    await generateActionsAt(app, ACTION_DAY(0));
+    const [action] = await prisma.actionItem.findMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      select: { id: true },
+    });
+    const today = new Date(
+      Date.UTC(
+        new Date().getUTCFullYear(),
+        new Date().getUTCMonth(),
+        new Date().getUTCDate(),
+      ),
+    );
+    const daysAgo = (days: number): Date =>
+      new Date(today.getTime() - days * 86_400_000);
+    await prisma.keywordRanking.createMany({
+      data: Array.from({ length: 10 }, (_, index) => ({
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId,
+        date: daysAgo(9 - index),
+        position: 9 - index >= 5 ? 14 : 8,
+      })),
+    });
+    await prisma.actionItem.update({
+      where: { id: action.id },
+      data: { status: 'DONE', closedAt: daysAgo(5) },
+    });
+
+    const detail = (await api.get(`/actions/${action.id}`).expect(200))
+      .body as ActionDetail;
+
+    expect(detail.trend?.metric).toBe('position');
+    expect(detail.trend?.points.length).toBeGreaterThanOrEqual(36);
+    expect(detail.trend?.points.filter((point) => point.checked)).toHaveLength(
+      10,
+    );
+    expect(detail.outcome).toMatchObject({
+      before: 14,
+      after: 8,
+      change: -6,
+      verdict: 'improved',
+    });
   });
 
   it('answers 404 for an unknown action', async () => {
