@@ -1,10 +1,10 @@
-import { normalizeText } from "@asobeast/shared";
 import type {
   PortfolioApp,
   PortfolioAppInsight,
   Store,
 } from "@asobeast/shared";
 import { storeLabel } from "@/lib/format";
+import { matchesSearch } from "@/lib/search-text";
 import type { AppSort } from "@/lib/search-params";
 import type { SortDirection } from "@/lib/table/sorting";
 
@@ -163,21 +163,11 @@ export function sortRows(
     .map(({ row }) => row);
 }
 
-const searchable = (text: string): string =>
-  normalizeText(text).normalize("NFD").replace(/\p{M}/gu, "");
-
 export function matchesQuery(app: PortfolioApp, query: string): boolean {
-  const needle = searchable(query);
-  if (needle === "") return true;
-  const haystack = searchable(
-    [
-      app.name ?? "",
-      storeLabel(app.store),
-      app.country,
-      app.groupName ?? "",
-    ].join(" "),
+  return matchesSearch(
+    [app.name ?? "", storeLabel(app.store), app.country, app.groupName ?? ""],
+    query,
   );
-  return haystack.includes(needle);
 }
 
 export function filterRows(
