@@ -189,3 +189,147 @@ for (const { width, columns } of [
     await release();
   });
 }
+
+const cardOf = (page: Page, heading: string) =>
+  page
+    .getByRole("heading", { name: heading, level: 2 })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+
+const undersizedTargets = (page: Page, minimum: number) =>
+  page.getByRole("main").evaluate((main, min) => {
+    const inline = (node: HTMLElement) =>
+      node.tagName === "A" && getComputedStyle(node).display === "inline";
+    return Array.from(
+      main.querySelectorAll<HTMLElement>(
+        'a, button, input, select, [role="tab"], [tabindex="0"]',
+      ),
+    )
+      .filter((node) => node.getClientRects().length > 0 && !inline(node))
+      .filter((node) => node.getBoundingClientRect().height < min)
+      .map((node) => node.getAttribute("aria-label") ?? node.textContent)
+      .slice(0, 5);
+  }, minimum);
+
+const rowLinkHeights = async (page: Page) => {
+  const rows = [
+    cardOf(page, "Top actions").getByRole("listitem").getByRole("link"),
+    cardOf(page, "Keyword movers").getByRole("listitem").getByRole("link"),
+    cardOf(page, "Recent changes").locator('a[href$="/changes"]'),
+  ];
+  const heights = await Promise.all(
+    rows.map((row) =>
+      row.evaluateAll((nodes) =>
+        nodes
+          .filter((node) => node.getClientRects().length > 0)
+          .map((node) => node.getBoundingClientRect().height),
+      ),
+    ),
+  );
+  return heights.flat();
+};
+
+const fitsWidth = (page: Page) =>
+  page.evaluate(
+    () =>
+      document.documentElement.scrollWidth <=
+      document.documentElement.clientWidth,
+  );
+
+for (const width of [375, 768, 1024, 1440]) {
+  for (const collapsed of width < 768 ? [false] : [false, true]) {
+    test(`the dashboard fits and keeps its targets at ${width} px${collapsed ? " with the sidebar collapsed" : ""}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      if (collapsed) {
+        await page.keyboard.press("ControlOrMeta+b");
+        await expect(page.locator("[data-slot=sidebar]")).toHaveAttribute(
+          "data-state",
+          "collapsed",
+        );
+      }
+
+      expect(await fitsWidth(page), "no horizontal scroll").toBe(true);
+      expect(await undersizedTargets(page, 24)).toEqual([]);
+      if (width === 375) {
+        const rows = await rowLinkHeights(page);
+        expect(rows.length).toBeGreaterThan(0);
+        expect(rows.filter((height) => height < 40)).toEqual([]);
+      }
+    });
+  }
+}
+
+for (const { width, collapse, rows } of [
+  { width: 768, collapse: false, rows: [0, 0, 2, 2] },
+  { width: 1024, collapse: true, rows: [0, 0, 0, 0] },
+]) {
+  test(`a ${width} px tablet${collapse ? " with the sidebar collapsed" : ""} follows the dashboard width`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 1024 });
+    await page.goto("/");
+    if (collapse) await page.keyboard.press("ControlOrMeta+b");
+
+    const tiles = page.locator('[data-slot="stat-tile"]');
+    await expect(tiles).toHaveCount(4);
+    await expect
+      .poll(() =>
+        tiles.evaluateAll((nodes) => {
+          const tops = nodes.map((node) =>
+            Math.round(node.getBoundingClientRect().top),
+          );
+          return tops.map((top) => tops.indexOf(top));
+        }),
+      )
+      .toEqual(rows);
+
+    const actions = (await cardOf(page, "Top actions").boundingBox())!;
+    const movers = (await cardOf(page, "Keyword movers").boundingBox())!;
+    expect(movers.y).toBeGreaterThanOrEqual(actions.y + actions.height);
+    expect(Math.round(movers.x)).toBe(Math.round(actions.x));
+  });
+}
+
+test("keyboard focus follows the visual order of the dashboard", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    cardOf(page, "Keyword movers").getByRole("listitem").first(),
+  ).toBeVisible();
+
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("link", { name: "Skip to content" }).focus();
+  await page.keyboard.press("Enter");
+
+  const names: string[] = [];
+  for (let step = 0; step < 16; step += 1) {
+    await page.keyboard.press("Tab");
+    names.push(
+      await page.evaluate(() => {
+        const active = document.activeElement as HTMLElement;
+        return (
+          active.getAttribute("aria-label") ??
+          active.innerText.replace(/\s+/g, " ").trim()
+        );
+      }),
+    );
+  }
+  const at = (pattern: RegExp) => names.findIndex((name) => pattern.test(name));
+
+  expect(names[0]).toBe("Import app");
+  expect(names[1]).toMatch(/of the daily request budget$/);
+  expect(names[2]).toMatch(/^Critical .* Focus Timer · App Store · US$/);
+  const order = [
+    at(/^Open the Action Center$/),
+    at(/^focus timer .*Focus Timer US/),
+    at(/^Sort by$/),
+    at(/^Cards$/),
+    at(/^Focus Timer$/),
+  ];
+  expect(order.every((index) => index > 2)).toBe(true);
+  expect(order).toEqual([...order].sort((a, b) => a - b));
+});

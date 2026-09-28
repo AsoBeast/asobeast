@@ -1,8 +1,11 @@
 import { expect, test } from "./session.mts";
+import { seedCookies } from "./routes.mts";
 
 const WIDTHS = [375, 768, 1440] as const;
 
-const ROUTES = [
+const ROUTES: ReadonlyArray<
+  readonly [string, string, Readonly<Record<string, string>>?]
+> = [
   ["app overview", "/apps/app-long"],
   ["keyword workspace", "/apps/app-long/keywords"],
   ["portfolio", "/"],
@@ -13,7 +16,9 @@ const ROUTES = [
   ["keyword combinations", "/apps/app-long/keywords?combos=true"],
   ["metadata with a long listing", "/apps/app-long/metadata"],
   ["changes", "/apps/app-1/changes"],
-] as const;
+  ["dashboard table", "/?view=table"],
+  ["dashboard many apps", "/", { portfolio_many: "1" }],
+];
 
 async function overflowingElements(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
@@ -41,8 +46,12 @@ async function overflowingElements(page: import("@playwright/test").Page) {
 }
 
 for (const width of WIDTHS) {
-  for (const [name, path] of ROUTES) {
-    test(`${name} contains long user strings at ${width}`, async ({ page }) => {
+  for (const [name, path, cookies] of ROUTES) {
+    test(`${name} contains long user strings at ${width}`, async ({
+      page,
+      context,
+    }) => {
+      if (cookies) await seedCookies(context, cookies);
       await page.setViewportSize({ width, height: 900 });
       await page.goto(path);
       await page.waitForLoadState("networkidle");
