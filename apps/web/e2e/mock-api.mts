@@ -889,6 +889,8 @@ function holdFor(holds: Holds, token: string): PromiseWithResolvers<void> {
 
 const budgetHold = (token: string) => holdFor(budgetHolds, token);
 const insightsHold = (token: string) => holdFor(insightsHolds, token);
+const activityHolds: Holds = new Map();
+const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const routes: Route[] = [
   {
@@ -920,6 +922,14 @@ const routes: Route[] = [
     pattern: /^\/__budget-holds\/([^/]+)\/release$/,
     handler: ([token], _req, res) => {
       budgetHold(token).resolve();
+      json(res, 200, { released: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__activity-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      activityHold(token).resolve();
       json(res, 200, { released: true });
     },
   },
@@ -1738,12 +1748,14 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/actions\/activity$/,
-    handler: (_p, req, res) =>
-      json(
-        res,
-        200,
-        actionsUngenerated(req) ? EMPTY_ACTION_ACTIVITY : ACTION_ACTIVITY,
-      ),
+    handler: (_p, req, res) => {
+      const activity = actionsUngenerated(req)
+        ? EMPTY_ACTION_ACTIVITY
+        : ACTION_ACTIVITY;
+      const token = cookieValue(req, "e2e_activity_hold");
+      if (!token) return json(res, 200, activity);
+      void activityHold(token).promise.then(() => json(res, 200, activity));
+    },
   },
   {
     method: "GET",

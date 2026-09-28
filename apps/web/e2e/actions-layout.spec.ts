@@ -1,5 +1,8 @@
+import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 async function railBeside(page: Page): Promise<boolean> {
   const queue = await page.locator("#queue").boundingBox();
@@ -81,3 +84,53 @@ test("an app's rail shows the open work by market", async ({ page }) => {
     where.getByRole("link", { name: /United States/ }),
   ).toBeVisible();
 });
+
+const holdActivity = async (page: Page) => {
+  const token = randomUUID();
+  await page
+    .context()
+    .addCookies([
+      { name: "e2e_activity_hold", value: token, url: "http://localhost:3000" },
+    ]);
+  return () =>
+    page
+      .context()
+      .request.post(`${MOCK_API_URL}/__activity-holds/${token}/release`);
+};
+
+test("the queue stays put when the tiles stream in", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const release = await holdActivity(page);
+  await page.goto("/actions", { waitUntil: "commit" });
+
+  await expect(
+    page.locator('[data-slot="stat-tile-skeleton"]').first(),
+  ).toBeVisible();
+  const before = (await page.locator("#queue").boundingBox())!.y;
+
+  await release();
+  await expect(page.locator('[data-slot="stat-tile"]').first()).toBeVisible();
+  const after = (await page.locator("#queue").boundingBox())!.y;
+
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(8);
+});
+
+for (const [width, rows] of [
+  [1440, 1],
+  [375, 2],
+] as const) {
+  test(`the tile skeletons form ${rows} row${rows > 1 ? "s" : ""} at ${width} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await holdActivity(page);
+    await page.goto("/actions", { waitUntil: "commit" });
+
+    const tiles = page.locator('[data-slot="stat-tile-skeleton"]');
+    await expect(tiles).toHaveCount(4);
+    const tops = await tiles.evaluateAll((nodes) =>
+      nodes.map((node) => Math.round(node.getBoundingClientRect().top)),
+    );
+    expect(new Set(tops).size).toBe(rows);
+  });
+}

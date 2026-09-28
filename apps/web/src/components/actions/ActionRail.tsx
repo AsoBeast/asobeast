@@ -3,10 +3,8 @@ import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { ActionProgress } from "./ActionProgress";
 import { ActionWorkByScope } from "./ActionWorkByScope";
+import { RAIL_COLUMN } from "./skeletons";
 import type { SetQueueView } from "./use-queue-view";
-
-export const RAIL_CLASS =
-  "flex flex-col gap-6 @5xl/actions:sticky @5xl/actions:top-20 @5xl/actions:col-span-4 @5xl/actions:self-start";
 
 export function ActionRail({
   appId,
@@ -16,7 +14,7 @@ export function ActionRail({
   setView: SetQueueView;
 }) {
   return (
-    <aside aria-label="Queue progress" className={RAIL_CLASS}>
+    <aside aria-label="Queue progress" className={RAIL_COLUMN}>
       <section
         aria-labelledby="progress-heading"
         className="flex flex-col gap-3"

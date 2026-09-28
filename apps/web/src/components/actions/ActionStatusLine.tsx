@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionSummary } from "@asobeast/shared";
 import { Separated } from "@/components/ui/separated";
-import { Skeleton } from "@/components/ui/skeleton";
 import { formatDateTime, formatNumber } from "@/lib/format";
 import { actionSummaryFor } from "@/lib/queries";
 
@@ -45,8 +44,4 @@ export function ActionStatusLine({ appId }: { appId?: string }) {
       ) : null}
     </p>
   );
-}
-
-export function ActionStatusLineSkeleton() {
-  return <Skeleton className="h-6 w-full max-w-md rounded-md" />;
 }

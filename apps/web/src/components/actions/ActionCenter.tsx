@@ -19,7 +19,11 @@ import {
   isFilteredView,
 } from "./queue-filters";
 import { groupQueue, sortQueue } from "./queue-groups";
-import { ActionOverviewSkeleton } from "./skeletons";
+import {
+  ACTIONS_GRID,
+  ActionOverviewSkeleton,
+  QUEUE_COLUMN,
+} from "./skeletons";
 import { useActionSheet } from "./use-action-sheet";
 import { useBulkUpdate } from "./use-bulk-update";
 import { useQueueKeys } from "./use-queue-keys";
@@ -76,11 +80,11 @@ export function ActionCenter({ appId }: { appId?: string }) {
       <Suspense fallback={<ActionOverviewSkeleton />}>
         <ActionOverview appId={appId} />
       </Suspense>
-      <div className="grid gap-6 @5xl/actions:grid-cols-12 [&>*]:min-w-0">
+      <div className={ACTIONS_GRID}>
         <section
           id="queue"
           aria-labelledby="queue-heading"
-          className="@container/queue flex flex-col gap-4 @5xl/actions:col-span-8"
+          className={QUEUE_COLUMN}
           onKeyDown={keys.onKeyDown}
         >
           <h2 id="queue-heading" className="sr-only">

@@ -1,36 +1,33 @@
+import { ChartSkeleton } from "@/components/charts/ChartStates";
+import { CHART_HEIGHT } from "@/components/charts/theme";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatTileGroup } from "@/components/ui/stat-tile";
 
-export function ActionFiltersSkeleton() {
+export const OVERVIEW_GRID = "grid-cols-2 @3xl/actions:grid-cols-4";
+
+export const ACTIONS_GRID =
+  "grid gap-6 @5xl/actions:grid-cols-12 [&>*]:min-w-0";
+
+export const QUEUE_COLUMN =
+  "@container/queue flex flex-col gap-4 @5xl/actions:col-span-8";
+
+export const RAIL_COLUMN =
+  "flex flex-col gap-6 @5xl/actions:sticky @5xl/actions:top-20 @5xl/actions:col-span-4 @5xl/actions:self-start";
+
+export function ActionStatusLineSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      <Skeleton className="h-8 w-full max-w-md rounded-md" />
-      <Skeleton className="h-8 w-full max-w-sm rounded-md" />
-      <Skeleton className="h-8 w-full max-w-2xl rounded-md" />
-    </div>
+    <Skeleton className="h-10 w-full max-w-xl rounded-md @3xl/actions:h-5" />
   );
 }
 
-export function ActionListSkeleton({ cards = 6 }: { cards?: number }) {
-  return (
-    <div className="flex flex-col gap-4">
-      {Array.from({ length: cards }, (_, index) => (
-        <Skeleton key={index} className="h-[248px] w-full rounded-xl" />
-      ))}
-    </div>
-  );
-}
-
-export function ActionCenterHeaderSkeleton() {
+export function ActionHeaderSkeleton() {
   return (
     <div className="flex flex-col gap-2">
       <Skeleton className="h-9 w-56 rounded-md" />
-      <Skeleton className="h-6 w-full max-w-md rounded-md" />
+      <ActionStatusLineSkeleton />
     </div>
   );
 }
-
-export const OVERVIEW_GRID = "grid-cols-2 @3xl/actions:grid-cols-4";
 
 export function ActionOverviewSkeleton() {
   return (
@@ -50,13 +47,60 @@ export function ActionOverviewSkeleton() {
   );
 }
 
+export function ActionToolbarSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-8 w-80 max-w-full rounded-lg" />
+      <Skeleton className="h-9 w-full max-w-xl rounded-md" />
+      <Skeleton className="h-7 w-full max-w-2xl rounded-md" />
+      <Skeleton className="h-6 w-32 rounded-md" />
+    </div>
+  );
+}
+
+export function ActionListSkeleton({ rows = 5 }: { rows?: number }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {Array.from({ length: rows }, (_, index) => (
+        <Skeleton
+          key={index}
+          className="h-[143px] w-full rounded-lg @md/queue:h-[72px]"
+        />
+      ))}
+    </div>
+  );
+}
+
+export function ActionQueueSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-4 w-24" />
+      <ActionListSkeleton />
+    </div>
+  );
+}
+
+export function ActionRailSkeleton() {
+  return (
+    <div className={RAIL_COLUMN}>
+      <ChartSkeleton height={CHART_HEIGHT.compact} />
+      <ChartSkeleton height={CHART_HEIGHT.compact} />
+    </div>
+  );
+}
+
 export function ActionCenterSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <ActionCenterHeaderSkeleton />
+      <ActionHeaderSkeleton />
       <ActionOverviewSkeleton />
-      <ActionFiltersSkeleton />
-      <ActionListSkeleton />
+      <div className={ACTIONS_GRID}>
+        <div className={QUEUE_COLUMN}>
+          <ActionToolbarSkeleton />
+          <ActionQueueSkeleton />
+        </div>
+        <ActionRailSkeleton />
+      </div>
     </div>
   );
 }

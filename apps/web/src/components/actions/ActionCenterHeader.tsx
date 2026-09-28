@@ -6,7 +6,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ActionStatusLine, ActionStatusLineSkeleton } from "./ActionStatusLine";
+import { ActionStatusLine } from "./ActionStatusLine";
+import { ActionStatusLineSkeleton } from "./skeletons";
 import { GenerateNowButton } from "./GenerateNowButton";
 
 const HOW_ACTIONS_ARE_GENERATED =
