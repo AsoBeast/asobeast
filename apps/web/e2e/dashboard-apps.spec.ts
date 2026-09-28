@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import type { PortfolioSummary } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 
 const appsRegion = (page: Page) => page.getByRole("region", { name: "Apps" });
@@ -171,4 +172,61 @@ test("a search without matches offers to clear it", async ({ page }) => {
     .poll(async () => (await cardNames(page)).length)
     .toBeGreaterThan(6);
   await expect(page).not.toHaveURL(/[?&]q=/);
+});
+
+test("the table view lists every app as its own row", async ({ page }) => {
+  await page.goto("/");
+
+  await appsRegion(page).getByRole("tab", { name: "Table" }).click();
+
+  await expect(page).toHaveURL(/[?&]view=table/);
+  const table = appsRegion(page).getByRole("table", {
+    name: "Apps in this workspace",
+  });
+  await expect(table).toBeVisible();
+  const { apps } = (await page.request
+    .get("/api/backend/portfolio")
+    .then((response) => response.json())) as PortfolioSummary;
+  await expect(table.locator("tbody tr")).toHaveCount(apps.length);
+  await expect(
+    table.getByRole("link", { name: "Tomato Clock" }),
+  ).toHaveAttribute("href", "/apps/app-gp");
+});
+
+test("a table header sort is the same sort the cards use", async ({ page }) => {
+  await page.goto("/?view=table");
+
+  await appsRegion(page)
+    .getByRole("table")
+    .getByRole("button", { name: "Rating" })
+    .click();
+
+  await expect(page).toHaveURL(/[?&]sort=rating/);
+  await expect(
+    appsRegion(page).getByRole("columnheader", { name: /Rating/ }),
+  ).toHaveAttribute("aria-sort", "descending");
+
+  await appsRegion(page).getByRole("tab", { name: "Cards" }).click();
+
+  await expect(
+    appsRegion(page).getByRole("combobox", { name: "Sort by" }),
+  ).toHaveText("Rating");
+});
+
+test("the table keeps phone columns and reveals more on request", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/?view=table");
+
+  const headers = appsRegion(page).getByRole("columnheader");
+  await expect(headers).toHaveText(["App", "Visibility", "7d", "Open actions"]);
+
+  await appsRegion(page).getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("menuitemcheckbox", { name: "Rating" }).click();
+  await page.keyboard.press("Escape");
+
+  await expect(
+    appsRegion(page).getByRole("columnheader", { name: /Rating/ }),
+  ).toBeVisible();
 });

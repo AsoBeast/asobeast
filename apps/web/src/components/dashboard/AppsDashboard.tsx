@@ -9,12 +9,13 @@ import { portfolioInsightsOptions, portfolioOptions } from "@/lib/queries";
 import { appListParsers } from "@/lib/search-params";
 import { ImportAppDialog } from "@/components/apps/ImportAppDialog";
 import { PortfolioGrid } from "./PortfolioGrid";
-import { filterRows, sortRows, toRows } from "./portfolio-rows";
+import { PortfolioTable } from "./PortfolioTable";
+import { filterRows, matchesQuery, sortRows, toRows } from "./portfolio-rows";
 
 export function AppsDashboard() {
   const { data } = useSuspenseQuery(portfolioOptions);
   const { data: insights } = useSuspenseQuery(portfolioInsightsOptions);
-  const [{ q, sort, dir }, setList] = useQueryStates(appListParsers);
+  const [{ q, sort, dir, view }, setList] = useQueryStates(appListParsers);
   const query = useDeferredValue(q);
 
   if (data.apps.length === 0) {
@@ -48,6 +49,16 @@ export function AppsDashboard() {
       <FilteredEmpty
         title={`No apps match "${q}"`}
         onClear={() => void setList({ q: null })}
+      />
+    );
+  }
+
+  if (view === "table") {
+    return (
+      <PortfolioTable
+        rows={data.apps
+          .filter((app) => matchesQuery(app, query))
+          .map((app) => ({ app, insight: insightById.get(app.id) }))}
       />
     );
   }

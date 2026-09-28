@@ -2,6 +2,7 @@
 
 import { useQueryStates } from "nuqs";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { LayoutGrid, Rows3 } from "lucide-react";
 import { SearchInput } from "@/components/data-table/SearchInput";
 import {
   Select,
@@ -10,10 +11,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { portfolioOptions } from "@/lib/queries";
 import {
   appListParsers,
   appSortParser,
+  appViewParser,
   type AppSort,
 } from "@/lib/search-params";
 
@@ -31,7 +34,7 @@ const SORT_LABELS: Record<AppSort, string> = {
 
 export function AppsToolbar() {
   const { data } = useSuspenseQuery(portfolioOptions);
-  const [{ q, sort }, setList] = useQueryStates(appListParsers);
+  const [{ q, sort, view }, setList] = useQueryStates(appListParsers);
 
   return (
     <>
@@ -42,23 +45,40 @@ export function AppsToolbar() {
           onSearch={(next, options) => void setList({ q: next }, options)}
         />
       ) : null}
-      <Select
-        value={sort}
+      {view === "cards" ? (
+        <Select
+          value={sort}
+          onValueChange={(next) =>
+            void setList({ sort: appSortParser.parse(next), dir: null })
+          }
+        >
+          <SelectTrigger size="sm" aria-label="Sort by">
+            <SelectValue>{SORT_LABELS[sort]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(SORT_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+      <Tabs
+        value={view}
         onValueChange={(next) =>
-          void setList({ sort: appSortParser.parse(next), dir: null })
+          void setList({ view: appViewParser.parse(next) })
         }
       >
-        <SelectTrigger size="sm" aria-label="Sort by">
-          <SelectValue>{SORT_LABELS[sort]}</SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {Object.entries(SORT_LABELS).map(([value, label]) => (
-            <SelectItem key={value} value={value}>
-              {label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <TabsList>
+          <TabsTrigger value="cards" aria-label="Cards">
+            <LayoutGrid aria-hidden />
+          </TabsTrigger>
+          <TabsTrigger value="table" aria-label="Table">
+            <Rows3 aria-hidden />
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
     </>
   );
 }

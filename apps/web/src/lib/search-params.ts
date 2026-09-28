@@ -166,10 +166,16 @@ export type AppSort = (typeof APP_SORTS)[number];
 export const appSortParser =
   parseAsStringLiteral(APP_SORTS).withDefault("visibility");
 
+export const APP_VIEWS = ["cards", "table"] as const;
+
+export const appViewParser =
+  parseAsStringLiteral(APP_VIEWS).withDefault("cards");
+
 export const appListParsers = {
   q: searchParser,
   sort: appSortParser,
   dir: sortDirectionParser,
+  view: appViewParser,
 };
 
 export const rangeParser =

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
-import type { ActionSummary, PortfolioMovement } from "@asobeast/shared";
+import type { ActionSummary } from "@asobeast/shared";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { StatTile, StatTileGroup } from "@/components/ui/stat-tile";
 import { formatNumber } from "@/lib/format";
@@ -11,6 +11,7 @@ import {
   portfolioOptions,
 } from "@/lib/queries";
 import { cn } from "@/lib/utils";
+import { MovementValue } from "./MovementValue";
 import { PULSE_GRID } from "./skeletons";
 
 function Top10Note({
@@ -23,21 +24,6 @@ function Top10Note({
   return (
     <>
       <TrendChip label="7d" value={delta} /> of {formatNumber(tracked)} tracked
-    </>
-  );
-}
-
-function MovementValue({ movement }: { movement: PortfolioMovement }) {
-  return (
-    <>
-      <span aria-hidden>
-        <span className="text-signal-up">↑</span>
-        {formatNumber(movement.up)} <span className="text-signal-down">↓</span>
-        {formatNumber(movement.down)}
-      </span>
-      <span className="sr-only">
-        {movement.up} climbing, {movement.down} falling
-      </span>
     </>
   );
 }

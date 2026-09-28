@@ -39,7 +39,9 @@ import {
   actionRuleParser,
   actionStatusParser,
   APP_SORTS,
+  APP_VIEWS,
   appSortParser,
+  appViewParser,
   CHANGE_OWNERS,
   changeDaysParser,
   changeOwnerParser,
@@ -108,6 +110,7 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
   ["changeOwner", changeOwnerParser, CHANGE_OWNERS, "all"],
   ["appSort", appSortParser, APP_SORTS, "visibility"],
+  ["appView", appViewParser, APP_VIEWS, "cards"],
 ] as const;
 
 const NUMERIC_PARSERS = [
