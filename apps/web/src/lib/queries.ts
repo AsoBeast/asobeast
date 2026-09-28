@@ -569,6 +569,7 @@ export function invalidateKeywordMutation(
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
 export function invalidateCompetitorMutation(
@@ -578,6 +579,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
 export function invalidateLinkMutation(

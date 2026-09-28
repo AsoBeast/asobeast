@@ -275,7 +275,7 @@ describe("invalidation sets", () => {
   it("invalidates every query of the app once its listing settles", () => {
     expect(
       invalidatedKeys((client) => invalidateAppListing(client, APP)),
-    ).toEqual([appKeys.detail(APP)]);
+    ).toEqual([appKeys.detail(APP), portfolioKey]);
   });
 
   it("invalidates only the keyword list when keywords are refetched", () => {
@@ -313,6 +313,7 @@ describe("invalidation sets", () => {
       appKeys.detail(APP),
       appKeys.discoveryRoot(APP),
       appKeys.serpMoversRoot(APP),
+      portfolioKey,
     ]);
   });
 
