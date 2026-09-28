@@ -23,6 +23,16 @@ const LISTS: ScopedRead[] = [
     identity: (body) => ids((body as { apps: { id: string }[] }).apps),
   },
   {
+    name: 'GET /portfolio/insights',
+    path: () => '/portfolio/insights',
+    identity: (body) =>
+      ids(
+        (body as { apps: { appId: string }[] }).apps.map((app) => ({
+          id: app.appId,
+        })),
+      ),
+  },
+  {
     name: 'GET /actions',
     path: () => '/actions',
     identity: (body) => ids((body as { items: { id: string }[] }).items),
