@@ -81,7 +81,7 @@ const keywordsAt = (rows: TrackedRow[], date: Date): VisibilityKeyword[] =>
     position: positionAt(row.keyword.rankings, date),
   }));
 
-const capturedOn = (rows: TrackedRow[], date: Date): boolean =>
+export const capturedOn = (rows: TrackedRow[], date: Date): boolean =>
   rows.some((row) =>
     row.keyword.rankings.some((ranking) => isSameDay(ranking.date, date)),
   );
