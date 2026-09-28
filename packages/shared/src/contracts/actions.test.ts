@@ -75,6 +75,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `position ${evidence.latestPosition}`;
     case 'metadata.fix_lint':
       return `${evidence.field} ${evidence.issues.length}`;
+    case 'rank.investigate_unexplained_drop':
+      return `delta ${evidence.visibilityDelta}`;
     default: {
       const never: never = evidence;
       return never;
@@ -279,6 +281,18 @@ describe('action evidence', () => {
           },
         ],
       },
+      {
+        rule: 'rank.investigate_unexplained_drop',
+        country: 'us',
+        visibilityBefore: 40,
+        visibilityAfter: 32.5,
+        visibilityDelta: 7.5,
+        windowDays: 14,
+        trackedKeywords: 5,
+        droppedKeywords: [],
+        meanVolatility: 10,
+        lastOwnChangeAt: null,
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -295,6 +309,7 @@ describe('action evidence', () => {
       'gap 26.5',
       'position 12',
       'title 1',
+      'delta 7.5',
     ]);
   });
 

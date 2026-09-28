@@ -50,7 +50,7 @@ function indexedChangeDays(
     .sort((left, right) => right.date.localeCompare(left.date));
 }
 
-function mean(values: number[]): number | null {
+export function mean(values: number[]): number | null {
   if (values.length === 0) return null;
   return (
     Math.round(
@@ -104,7 +104,10 @@ function droppedKeywords(
   return dropped;
 }
 
-function meanVolatility(app: ActionContextApp, country: string): number | null {
+export function meanVolatility(
+  app: ActionContextApp,
+  country: string,
+): number | null {
   const values = app.trackedKeywords
     .filter((keyword) => keyword.country === country)
     .map((keyword) => app.volatilityByKeyword.get(keyword.keywordId) ?? null)

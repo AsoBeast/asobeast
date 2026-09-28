@@ -21,6 +21,7 @@ export function actionHref(item: ActionItem): string {
     case "reviews.investigate_theme":
       return `/apps/${appId}/reviews?score=1`;
     case "market.improve_country":
+    case "rank.investigate_unexplained_drop":
       return `/apps/${appId}/keywords?country=${country}`;
     default: {
       const never: never = item.rule;

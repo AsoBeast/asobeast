@@ -10,6 +10,7 @@ import type {
   MarketImproveCountryEvidence,
   MetadataFixLintEvidence,
   RankInvestigateDropEvidence,
+  RankInvestigateUnexplainedDropEvidence,
   ReviewsInvestigateThemeEvidence,
   SerpHoldVolatileEvidence,
 } from "@asobeast/shared";
@@ -187,6 +188,31 @@ function dropSections(evidence: RankInvestigateDropEvidence): Sections {
   };
 }
 
+function unexplainedSections(
+  evidence: RankInvestigateUnexplainedDropEvidence,
+): Sections {
+  return {
+    facts: [
+      fact("Market", evidence.country.toUpperCase()),
+      fact("Visibility before", formatMeasure(evidence.visibilityBefore)),
+      fact("Visibility after", formatMeasure(evidence.visibilityAfter)),
+      fact("Visibility delta", formatMeasure(evidence.visibilityDelta)),
+      fact("Tracked keywords", formatNumber(evidence.trackedKeywords)),
+      fact("Mean volatility", optional(evidence.meanVolatility)),
+      fact(
+        "Your last change",
+        evidence.lastOwnChangeAt ? formatDate(evidence.lastOwnChangeAt) : "—",
+      ),
+    ],
+    lists: [
+      {
+        label: "Keywords that fell",
+        items: evidence.droppedKeywords.map(droppedItem),
+      },
+    ],
+  };
+}
+
 function volatileSections(evidence: SerpHoldVolatileEvidence): Sections {
   return {
     facts: [
@@ -344,6 +370,8 @@ function sections(evidence: ActionEvidence): Sections {
       return marketSections(evidence);
     case "keyword.push_to_top10":
       return pushSections(evidence);
+    case "rank.investigate_unexplained_drop":
+      return unexplainedSections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

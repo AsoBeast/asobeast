@@ -96,7 +96,7 @@ test("the header states how fresh the queue is", async ({ page }) => {
 
   const status = page.locator('[data-slot="action-status"]');
   await expect(status).toHaveText(
-    /^13 open · 1 critical · 4 high · generated /,
+    /^14 open · 1 critical · 4 high · generated /,
   );
   await expect(status).toContainText("withheld by the per app cap");
 });

@@ -110,6 +110,7 @@ const TREND_METRIC: Record<ActionItem["rule"], ActionTrendMetric> = {
   "market.improve_country": "visibility",
   "keyword.push_to_top10": "position",
   "metadata.fix_lint": "audit",
+  "rank.investigate_unexplained_drop": "visibility",
 };
 
 const PATHS: Record<string, (offset: number) => number | null> = {

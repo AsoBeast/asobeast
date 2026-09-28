@@ -27,6 +27,7 @@ export const TREND_METRIC: Record<ActionRule, ActionTrendMetric> = {
   'market.improve_country': 'visibility',
   'keyword.push_to_top10': 'position',
   'metadata.fix_lint': 'audit',
+  'rank.investigate_unexplained_drop': 'visibility',
 };
 
 export const TREND_DIRECTION: Record<ActionTrendMetric, ActionTrendDirection> =

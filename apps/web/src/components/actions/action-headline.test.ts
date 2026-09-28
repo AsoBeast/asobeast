@@ -200,6 +200,32 @@ describe("actionHeadline", () => {
     ).toBe('Push "habit tracker" from #12 into the top 10');
   });
 
+  it("names the visibility drop that followed no change, or the keywords when it is small", () => {
+    const slide = {
+      rule: "rank.investigate_unexplained_drop" as const,
+      country: "de",
+      visibilityBefore: 40,
+      visibilityAfter: 32.5,
+      visibilityDelta: 7.5,
+      windowDays: 14,
+      trackedKeywords: 5,
+      droppedKeywords: [
+        { keywordId: "k1", text: "a", from: 4, to: 12 },
+        { keywordId: "k2", text: "b", from: 6, to: null },
+        { keywordId: "k3", text: "c", from: 9, to: 30 },
+      ],
+      meanVolatility: null,
+      lastOwnChangeAt: null,
+    };
+
+    expect(headline(slide, null)).toBe(
+      "Find out why visibility fell 7.5 points in Germany",
+    );
+    expect(
+      headline({ ...slide, visibilityAfter: 39.6, visibilityDelta: 0.4 }, null),
+    ).toBe("Find out why 3 keywords fell in Germany");
+  });
+
   it("counts the store rule problems in a listing field", () => {
     const issue = {
       rule: "over-limit",

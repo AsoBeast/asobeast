@@ -204,6 +204,25 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts an unexplained drop evidence and degrades one missing its delta', () => {
+    const drop = {
+      rule: 'rank.investigate_unexplained_drop',
+      country: 'us',
+      visibilityDelta: 7.5,
+      droppedKeywords: [],
+    };
+
+    expect(
+      parseActionEvidence('rank.investigate_unexplained_drop', drop),
+    ).not.toBeNull();
+    expect(
+      parseActionEvidence('rank.investigate_unexplained_drop', {
+        ...drop,
+        visibilityDelta: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

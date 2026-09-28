@@ -18,6 +18,23 @@ describe('summarizeActionEvidence', () => {
     ).toBe('position 12, 6/7 days in 11 to 20, covered only in keywordField');
   });
 
+  it('summarizes a drop that followed no change of yours', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'rank.investigate_unexplained_drop',
+        country: 'us',
+        visibilityBefore: 40,
+        visibilityAfter: 32.5,
+        visibilityDelta: 7.5,
+        windowDays: 14,
+        trackedKeywords: 5,
+        droppedKeywords: [],
+        meanVolatility: 10,
+        lastOwnChangeAt: null,
+      }),
+    ).toBe('visibility 40 → 32.5 with no change of yours, 0 keywords fell');
+  });
+
   it('counts the store rule problems in a listing field', () => {
     const lint = {
       rule: 'metadata.fix_lint' as const,

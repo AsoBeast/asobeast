@@ -802,6 +802,7 @@ describe('ActionsGenerator', () => {
     const NEW_RULES: ActionRule[] = [
       'keyword.push_to_top10',
       'metadata.fix_lint',
+      'rank.investigate_unexplained_drop',
     ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {

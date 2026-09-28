@@ -3002,7 +3002,8 @@
                   "reviews.investigate_theme",
                   "market.improve_country",
                   "keyword.push_to_top10",
-                  "metadata.fix_lint"
+                  "metadata.fix_lint",
+                  "rank.investigate_unexplained_drop"
                 ]
               }
             }
@@ -3389,7 +3390,8 @@
                   "reviews.investigate_theme",
                   "market.improve_country",
                   "keyword.push_to_top10",
-                  "metadata.fix_lint"
+                  "metadata.fix_lint",
+                  "rank.investigate_unexplained_drop"
                 ]
               }
             }

@@ -77,6 +77,11 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'market.improve_country': ['country', 'homeCountry', 'gap'],
   'keyword.push_to_top10': ['latestPosition', 'daysInBand', 'coveredFields'],
   'metadata.fix_lint': ['field', 'chars', 'limit', 'issues'],
+  'rank.investigate_unexplained_drop': [
+    'country',
+    'visibilityDelta',
+    'droppedKeywords',
+  ],
 };
 
 export function parseActionEvidence(

@@ -3,6 +3,7 @@ import type {
   ActionRule,
   ChangeField,
   RankInvestigateDropEvidence,
+  RankInvestigateUnexplainedDropEvidence,
 } from "@asobeast/shared";
 import {
   formatCountry,
@@ -38,6 +39,15 @@ function degradedHeadline(item: ActionItem): string {
   const title = ACTION_RULE_TITLE[item.rule];
   const keyword = item.scope.keywordText;
   return keyword ? `${title}: ${quoted(keyword)}` : title;
+}
+
+function unexplainedHeadline(
+  evidence: RankInvestigateUnexplainedDropEvidence,
+): string {
+  const country = formatCountry(evidence.country);
+  return evidence.visibilityDelta < 1 && evidence.droppedKeywords.length > 0
+    ? `Find out why ${pluralize(evidence.droppedKeywords.length, "keyword")} fell in ${country}`
+    : `Find out why visibility fell ${measure(evidence.visibilityDelta)} points in ${country}`;
 }
 
 function dropHeadline(evidence: RankInvestigateDropEvidence): string {
@@ -85,6 +95,8 @@ export function actionHeadline(item: ActionItem): string {
       return `Close the ${measure(evidence.gap)} point visibility gap in ${formatCountry(evidence.country)}`;
     case "keyword.push_to_top10":
       return `Push ${subject} from #${evidence.latestPosition} into the top 10`;
+    case "rank.investigate_unexplained_drop":
+      return unexplainedHeadline(evidence);
     case "metadata.fix_lint":
       return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
     default: {

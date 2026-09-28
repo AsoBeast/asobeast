@@ -118,6 +118,12 @@ function ruleSteps(
       ];
     case "keyword.push_to_top10":
       return pushSteps(keyword, store);
+    case "rank.investigate_unexplained_drop":
+      return [
+        "Check the keyword monitor for the keywords that fell",
+        "Look for competitor changes and new entrants in the same days",
+        "Hold listing changes until you know the cause",
+      ];
     case "metadata.fix_lint":
       return [
         ...evidence.issues.map((issue) => issue.message),

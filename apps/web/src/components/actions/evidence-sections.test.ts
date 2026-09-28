@@ -138,6 +138,21 @@ describe("evidenceSections", () => {
     });
   });
 
+  it("lists the keywords that fell with no change of yours", () => {
+    const evidence = evidenceOf("act-slide");
+
+    expect(factValues(evidence)).toMatchObject({
+      Market: "US",
+      "Visibility before": "40",
+      "Visibility after": "32.5",
+      "Visibility delta": "7.5",
+      "Your last change": "—",
+    });
+    expect(lists(evidence)["Keywords that fell"]).toEqual([
+      "streak counter 8 → 17",
+    ]);
+  });
+
   it("counts the characters of a field that breaks a store rule and lists its problems", () => {
     const evidence = evidenceOf("act-lint");
     if (evidence.rule !== "metadata.fix_lint") throw new Error("fixture");

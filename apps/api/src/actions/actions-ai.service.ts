@@ -46,6 +46,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'A relevant, valuable keyword has sat just outside the top 10 for most of the last week and appears only in a weak metadata field.',
   'metadata.fix_lint':
     'A home market listing field has error-level lint issues that break a store rule, such as exceeding its character limit.',
+  'rank.investigate_unexplained_drop':
+    'Visibility or several tracked ranks fell in a market over the last two weeks without an indexed metadata change of this app to explain it.',
 };
 
 const SCHEMA = {

@@ -15,6 +15,7 @@ export const ACTION_RULES = [
   'market.improve_country',
   'keyword.push_to_top10',
   'metadata.fix_lint',
+  'rank.investigate_unexplained_drop',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -52,6 +53,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'market.improve_country': 'markets',
   'keyword.push_to_top10': 'metadata',
   'metadata.fix_lint': 'metadata',
+  'rank.investigate_unexplained_drop': 'regression',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -245,6 +247,19 @@ export interface MetadataFixLintEvidence {
   issues: MetadataFixLintIssue[];
 }
 
+export interface RankInvestigateUnexplainedDropEvidence {
+  rule: 'rank.investigate_unexplained_drop';
+  country: string;
+  visibilityBefore: number;
+  visibilityAfter: number;
+  visibilityDelta: number;
+  windowDays: number;
+  trackedKeywords: number;
+  droppedKeywords: ActionDroppedKeyword[];
+  meanVolatility: number | null;
+  lastOwnChangeAt: string | null;
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -255,7 +270,8 @@ export type ActionEvidence =
   | ReviewsInvestigateThemeEvidence
   | MarketImproveCountryEvidence
   | KeywordPushToTop10Evidence
-  | MetadataFixLintEvidence;
+  | MetadataFixLintEvidence
+  | RankInvestigateUnexplainedDropEvidence;
 
 export interface ActionAi {
   explanation: string | null;
