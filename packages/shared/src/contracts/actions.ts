@@ -411,6 +411,20 @@ export interface ActionUpdateRequest {
   revert?: boolean;
 }
 
+export interface ActionBulkUpdateRequest {
+  ids: string[];
+  status: ActionUpdateStatus;
+  snoozedUntil?: string;
+  reason?: ActionDismissReason;
+  revert?: boolean;
+}
+
+export interface ActionBulkUpdateResult {
+  items: ActionItem[];
+  missing: string[];
+  conflicts: string[];
+}
+
 export interface ActionRunResult {
   queued: true;
   jobId: string;

@@ -93,6 +93,24 @@ describe('Write isolation', () => {
     await expect(fixture.db.actionEvent.count()).resolves.toBe(eventsBefore);
   });
 
+  it('reports another workspace action as missing in a bulk update', async () => {
+    const response = await fixture.a.agent
+      .patch('/actions')
+      .send({ ids: [fixture.b.actionId], status: 'DISMISSED' })
+      .expect(200);
+
+    expect(response.body).toEqual({
+      items: [],
+      missing: [fixture.b.actionId],
+      conflicts: [],
+    });
+    const after = await fixture.db.actionItem.findUniqueOrThrow({
+      where: { id: fixture.b.actionId },
+      select: { status: true },
+    });
+    expect(after.status).toBe('OPEN');
+  });
+
   it('refuses to attach a competitor to another workspace app', async () => {
     const before = await fixture.db.app.count({
       where: { primaryAppId: fixture.b.appleAppId },

@@ -17,6 +17,7 @@ import {
 } from './action-transitions';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
 const DAY_MS = 86_400_000;
@@ -945,5 +946,85 @@ describe('ActionsService undo', () => {
     ).rejects.toThrow(
       new ConflictException('Nothing recent to undo on this action'),
     );
+  });
+});
+
+describe('ActionsService bulk updates', () => {
+  const bulk = (
+    ids: string[],
+    body: Partial<BulkUpdateActionsDto> = {},
+  ): BulkUpdateActionsDto =>
+    Object.assign(new BulkUpdateActionsDto(), { ids, status: 'DONE', ...body });
+
+  const withRows = (rows: Array<Partial<CurrentRow>>) => {
+    const prisma = buildPrisma();
+    prisma.actionItem.findMany = jest.fn(() =>
+      Promise.resolve(rows.map((row) => currentRow(row))),
+    ) as unknown as typeof prisma.actionItem.findMany;
+    prisma.actionItem.update = jest.fn(
+      (args: { where: { id: string }; data: Record<string, unknown> }) =>
+        Promise.resolve(
+          storedRow({ id: args.where.id, status: args.data.status }),
+        ),
+    ) as unknown as typeof prisma.actionItem.update;
+    return prisma;
+  };
+
+  it('reports ids it cannot see as missing instead of failing', async () => {
+    const prisma = withRows([{ id: 'act_1' }]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_1', 'act_gone']),
+      USER,
+    );
+
+    expect(result.missing).toEqual(['act_gone']);
+    expect(result.items.map((item) => item.id)).toEqual(['act_1']);
+  });
+
+  it('refuses to close a resolved action and leaves it untouched', async () => {
+    const prisma = withRows([
+      { id: 'act_1' },
+      { id: 'act_2', status: 'RESOLVED' },
+    ]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_1', 'act_2']),
+      USER,
+    );
+
+    expect(result.conflicts).toEqual(['act_2']);
+    expect(prisma.actionItem.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('records one event per updated action in a single write', async () => {
+    const prisma = withRows([{ id: 'act_1' }, { id: 'act_2' }]);
+
+    await serviceFor(prisma).bulkUpdate(bulk(['act_1', 'act_2']), USER);
+
+    expect(prisma.actionEvent.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.events.map((event) => [event.actionId, event.type])).toEqual([
+      ['act_1', 'done'],
+      ['act_2', 'done'],
+    ]);
+  });
+
+  it('returns the items in the order they were asked for', async () => {
+    const prisma = withRows([
+      { id: 'act_1' },
+      { id: 'act_2' },
+      { id: 'act_3' },
+    ]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_3', 'act_1', 'act_2']),
+      USER,
+    );
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      'act_3',
+      'act_1',
+      'act_2',
+    ]);
   });
 });

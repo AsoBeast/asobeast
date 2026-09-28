@@ -19,6 +19,7 @@ import {
 import {
   ActionActivity,
   ActionAiStatus,
+  ActionBulkUpdateResult,
   ActionDetail,
   ActionExplanation,
   ActionItem,
@@ -37,6 +38,7 @@ import { parseSummaryScope } from './action-summary-scope';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionsService } from './actions.service';
 import { ActionActivityQueryDto } from './dto/action-activity-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
@@ -91,6 +93,19 @@ export class ActionsController {
   @ApiOperation({ summary: 'Read one action' })
   detail(@Param('id') id: string): Promise<ActionDetail> {
     return this.details.get(id);
+  }
+
+  @Patch()
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'The updated actions, with ids that were missing or refused',
+  })
+  @ApiOperation({ summary: 'Change the state of many actions' })
+  bulkUpdate(
+    @Body() body: BulkUpdateActionsDto,
+    @CurrentUser() user: User,
+  ): Promise<ActionBulkUpdateResult> {
+    return this.actions.bulkUpdate(body, user.id);
   }
 
   @Patch(':id')

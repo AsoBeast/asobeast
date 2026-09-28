@@ -6,6 +6,7 @@ import {
   ACTION_CATEGORIES,
   ACTION_PRIORITIES,
   ACTION_STATUSES,
+  ActionBulkUpdateResult,
   ActionItem,
   ActionListResult,
   ActionRule,
@@ -27,6 +28,7 @@ import {
   ACTIONS_DEFAULT_STATUSES,
   ListActionsQueryDto,
 } from './dto/list-actions-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
 const TOP_RULES_LIMIT = 5;
@@ -165,6 +167,35 @@ export class ActionsService {
       return this.transitions.apply(tx, current, body, userId);
     });
     return this.map(row);
+  }
+
+  async bulkUpdate(
+    body: BulkUpdateActionsDto,
+    userId: string,
+  ): Promise<ActionBulkUpdateResult> {
+    const result = await this.prisma.withTransaction(async (tx) => {
+      const found = await tx.actionItem.findMany({
+        where: { id: { in: body.ids } },
+        select: CURRENT_SELECT,
+      });
+      const { rows, conflicts } = await this.transitions.applyMany(
+        tx,
+        found,
+        body,
+        userId,
+      );
+      return { found, rows, conflicts };
+    });
+    const known = new Set(result.found.map((row) => row.id));
+    const updated = new Map(result.rows.map((row) => [row.id, row]));
+    return {
+      items: body.ids.flatMap((id) => {
+        const row = updated.get(id);
+        return row ? [this.map(row)] : [];
+      }),
+      missing: body.ids.filter((id) => !known.has(id)),
+      conflicts: result.conflicts,
+    };
   }
 
   private whereFor(

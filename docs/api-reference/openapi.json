@@ -3077,6 +3077,29 @@
         "tags": [
           "actions"
         ]
+      },
+      "patch": {
+        "operationId": "ActionsController_bulkUpdate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpdateActionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated actions, with ids that were missing or refused"
+          }
+        },
+        "summary": "Change the state of many actions",
+        "tags": [
+          "actions"
+        ]
       }
     },
     "/actions/summary": {
@@ -4466,6 +4489,49 @@
             "description": "An App Store localization to draft instead of the primary listing. Refused for a Google Play app"
           }
         }
+      },
+      "BulkUpdateActionsDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "OPEN",
+              "SNOOZED",
+              "DONE",
+              "DISMISSED"
+            ],
+            "type": "string"
+          },
+          "snoozedUntil": {
+            "type": "string",
+            "example": "2026-08-15T00:00:00.000Z"
+          },
+          "reason": {
+            "enum": [
+              "not_relevant",
+              "handled_elsewhere",
+              "disagree_with_data"
+            ],
+            "type": "string"
+          },
+          "revert": {
+            "type": "boolean",
+            "description": "Undo the latest change instead of making a new one"
+          },
+          "ids": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "ids"
+        ]
       },
       "UpdateActionDto": {
         "type": "object",

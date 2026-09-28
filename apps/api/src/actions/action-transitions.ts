@@ -12,7 +12,7 @@ import {
 } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
-import { ActionEventRecorder } from './action-events';
+import { ActionEventInput, ActionEventRecorder } from './action-events';
 import { ActionRow, priorityOf, ROW_SELECT } from './actions.mapper';
 
 export const CURRENT_SELECT = {
@@ -49,15 +49,52 @@ export class ActionTransitions {
     body: ActionUpdateRequest,
     userId: string,
   ): Promise<ActionRow> {
+    const { row, event } = await this.transition(tx, current, body, userId);
+    await this.recorder.record(tx, event ? [event] : []);
+    return row;
+  }
+
+  async applyMany(
+    tx: Prisma.TransactionClient,
+    currents: readonly CurrentAction[],
+    body: ActionUpdateRequest,
+    userId: string,
+  ): Promise<{ rows: ActionRow[]; conflicts: string[] }> {
+    const rows: ActionRow[] = [];
+    const conflicts: string[] = [];
+    const events: ActionEventInput[] = [];
+    for (const current of currents) {
+      try {
+        const { row, event } = await this.transition(tx, current, body, userId);
+        rows.push(row);
+        if (event) events.push(event);
+      } catch (error) {
+        if (!(error instanceof ConflictException)) throw error;
+        conflicts.push(current.id);
+      }
+    }
+    await this.recorder.record(tx, events);
+    return { rows, conflicts };
+  }
+
+  private async transition(
+    tx: Prisma.TransactionClient,
+    current: CurrentAction,
+    body: ActionUpdateRequest,
+    userId: string,
+  ): Promise<{ row: ActionRow; event: ActionEventInput | null }> {
     validateShape(body);
-    if (body.revert) return this.revert(tx, current, body);
+    if (body.revert) {
+      return { row: await this.revert(tx, current, body), event: null };
+    }
     const note = body.note === undefined ? {} : { note: body.note.trim() };
     if (isNoteOnly(current, body)) {
-      return tx.actionItem.update({
+      const row = await tx.actionItem.update({
         where: { id: current.id },
         data: note,
         select: ROW_SELECT,
       });
+      return { row, event: null };
     }
 
     const now = new Date();
@@ -81,25 +118,23 @@ export class ActionTransitions {
       select: ROW_SELECT,
     });
     const type = transitionEvent(current.status, body.status);
-    if (type) {
-      await this.recorder.record(tx, [
-        {
-          workspaceId: this.workspace.require('an action update'),
-          actionId: current.id,
-          appId: current.appId,
-          type,
-          actor: 'user',
-          userId,
-          status: body.status,
-          priority: priorityOf(current.priority),
-          impact: current.impact,
-          snoozedUntil,
-          reason: body.reason ?? null,
-          occurredAt: now,
-        },
-      ]);
-    }
-    return row;
+    return {
+      row,
+      event: type && {
+        workspaceId: this.workspace.require('an action update'),
+        actionId: current.id,
+        appId: current.appId,
+        type,
+        actor: 'user',
+        userId,
+        status: body.status,
+        priority: priorityOf(current.priority),
+        impact: current.impact,
+        snoozedUntil,
+        reason: body.reason ?? null,
+        occurredAt: now,
+      },
+    };
   }
 
   private async revert(

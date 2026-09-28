@@ -6,6 +6,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import {
   ACTION_FORMULA_VERSION,
   ActionActivity,
+  ActionBulkUpdateResult,
   ActionItem,
   ApiErrorEnvelope,
   ActionListResult,
@@ -355,6 +356,48 @@ describe('ActionsController (e2e)', () => {
     );
     await api.get('/actions/activity?days=6').expect(400);
     await api.get('/actions/activity?days=91').expect(400);
+  });
+
+  it('closes many actions in one request', async () => {
+    const ids = [await seedAction(), await seedAction(), await seedAction()];
+
+    const res = await api
+      .patch('/actions')
+      .send({ ids, status: 'DONE' })
+      .expect(200);
+    const body = res.body as ActionBulkUpdateResult;
+
+    expect(body.items.map((item) => item.id)).toEqual(ids);
+    expect(body.items.every((item) => item.status === 'DONE')).toBe(true);
+    expect(body.items.every((item) => item.closedAt !== null)).toBe(true);
+    expect(body).toMatchObject({ missing: [], conflicts: [] });
+  });
+
+  it('refuses an invalid bulk request as a whole', async () => {
+    const id = await seedAction();
+
+    await api
+      .patch('/actions')
+      .send({ ids: [id], status: 'SNOOZED' })
+      .expect(400);
+    await api
+      .patch('/actions')
+      .send({
+        ids: Array.from({ length: 101 }, (_, index) => `act_${index}`),
+        status: 'DONE',
+      })
+      .expect(400);
+    await api
+      .patch('/actions')
+      .send({ ids: [id, id], status: 'DONE' })
+      .expect(400);
+    await api.patch('/actions').send({ ids: [], status: 'DONE' }).expect(400);
+
+    const unchanged = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    expect(unchanged.status).toBe('OPEN');
   });
 
   it('marks an action done and clears its snooze', async () => {

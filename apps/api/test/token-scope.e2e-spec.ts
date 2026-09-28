@@ -98,6 +98,14 @@ describe('Read-only token scope (e2e)', () => {
     },
   );
 
+  it('refuses a bulk action update from a read-only token', async () => {
+    await request(app.getHttpServer())
+      .patch('/actions')
+      .set('Authorization', `Bearer ${READ_TOKEN}`)
+      .send({ ids: ['missing'], status: 'DONE' })
+      .expect(403);
+  });
+
   it('still refuses a write from a read-only token', async () => {
     const refused = await request(app.getHttpServer())
       .patch('/actions/missing')
