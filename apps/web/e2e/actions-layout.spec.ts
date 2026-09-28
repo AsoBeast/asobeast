@@ -52,3 +52,32 @@ test("the queue and the progress rail each have a section heading", async ({
   ).toBeVisible();
   await expect(page.getByText(/confirmed fixed in 30 days/)).toBeVisible();
 });
+
+test("the rail shows the open work by app and filters to it", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+  const where = page
+    .getByRole("heading", { name: "Where the work is" })
+    .locator("xpath=..");
+  const focus = where.getByRole("link", { name: /Focus Timer · US/ });
+
+  await expect(focus).toContainText("10");
+  await focus.click();
+
+  await expect(page).toHaveURL(/app=app-1/);
+  await expect(page.locator("[id='action-act-gp-defend']")).toHaveCount(0);
+  await expect(page.locator("[id='action-act-uncovered']")).toBeVisible();
+});
+
+test("an app's rail shows the open work by market", async ({ page }) => {
+  await page.goto("/apps/app-1/actions");
+
+  const where = page
+    .getByRole("heading", { name: "Where the work is" })
+    .locator("xpath=..");
+  await expect(where.getByRole("link", { name: /Germany/ })).toBeVisible();
+  await expect(
+    where.getByRole("link", { name: /United States/ }),
+  ).toBeVisible();
+});

@@ -125,7 +125,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
             onClear={selection.clear}
           />
         </section>
-        <ActionRail appId={appId} />
+        <ActionRail appId={appId} setView={setView} />
       </div>
       <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
       <ActionShortcutsDialog

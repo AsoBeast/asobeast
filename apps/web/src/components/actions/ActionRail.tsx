@@ -2,11 +2,19 @@ import { Suspense } from "react";
 import { ChartSkeleton } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT } from "@/components/charts/theme";
 import { ActionProgress } from "./ActionProgress";
+import { ActionWorkByScope } from "./ActionWorkByScope";
+import type { SetQueueView } from "./use-queue-view";
 
 export const RAIL_CLASS =
   "flex flex-col gap-6 @5xl/actions:sticky @5xl/actions:top-20 @5xl/actions:col-span-4 @5xl/actions:self-start";
 
-export function ActionRail({ appId }: { appId?: string }) {
+export function ActionRail({
+  appId,
+  setView,
+}: {
+  appId?: string;
+  setView: SetQueueView;
+}) {
   return (
     <aside aria-label="Queue progress" className={RAIL_CLASS}>
       <section
@@ -20,6 +28,7 @@ export function ActionRail({ appId }: { appId?: string }) {
           <ActionProgress appId={appId} />
         </Suspense>
       </section>
+      <ActionWorkByScope appId={appId} setView={setView} />
     </aside>
   );
 }
