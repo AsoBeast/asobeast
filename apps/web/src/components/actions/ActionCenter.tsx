@@ -10,6 +10,7 @@ import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionOverview } from "./ActionOverview";
 import { ActionQueue } from "./ActionQueue";
+import { ActionRail } from "./ActionRail";
 import { ActionShortcutsDialog } from "./ActionShortcutsDialog";
 import { ActionToolbar } from "./ActionToolbar";
 import {
@@ -75,54 +76,57 @@ export function ActionCenter({ appId }: { appId?: string }) {
       <Suspense fallback={<ActionOverviewSkeleton />}>
         <ActionOverview appId={appId} />
       </Suspense>
-      <section
-        id="queue"
-        aria-labelledby="queue-heading"
-        className="@container/queue flex flex-col gap-4"
-        onKeyDown={keys.onKeyDown}
-      >
-        <h2 id="queue-heading" className="sr-only">
-          Queue
-        </h2>
-        <ActionToolbar
-          appId={appId}
-          items={data.items}
-          view={view}
-          setView={setView}
-          shown={visible.length}
-          loadedTotal={data.total}
-          onShowShortcuts={() => keys.setHelpOpen(true)}
-        />
-        {visible.length === 0 ? (
-          <ActionEmptyState
-            generatedAt={data.generatedAt}
-            filtered={filtered}
-            onClearFilters={() => void setView(CLEARED_VIEW)}
+      <div className="grid gap-6 @5xl/actions:grid-cols-12 [&>*]:min-w-0">
+        <section
+          id="queue"
+          aria-labelledby="queue-heading"
+          className="@container/queue flex flex-col gap-4 @5xl/actions:col-span-8"
+          onKeyDown={keys.onKeyDown}
+        >
+          <h2 id="queue-heading" className="sr-only">
+            Queue
+          </h2>
+          <ActionToolbar
+            appId={appId}
+            items={data.items}
+            view={view}
+            setView={setView}
+            shown={visible.length}
+            loadedTotal={data.total}
+            onShowShortcuts={() => keys.setHelpOpen(true)}
           />
-        ) : (
-          <ActionQueue
-            groups={groups}
-            focusedId={sheet.id}
-            appScoped={appId !== undefined}
-            hrefFor={sheet.hrefFor}
-            onOpen={(item) => sheet.open(item.id)}
-            selection={selection}
-            keyboardId={keys.focusedId}
-            onRowFocus={keys.setFocusedId}
+          {visible.length === 0 ? (
+            <ActionEmptyState
+              generatedAt={data.generatedAt}
+              filtered={filtered}
+              onClearFilters={() => void setView(CLEARED_VIEW)}
+            />
+          ) : (
+            <ActionQueue
+              groups={groups}
+              focusedId={sheet.id}
+              appScoped={appId !== undefined}
+              hrefFor={sheet.hrefFor}
+              onOpen={(item) => sheet.open(item.id)}
+              selection={selection}
+              keyboardId={keys.focusedId}
+              onRowFocus={keys.setFocusedId}
+            />
+          )}
+          <ActionBulkBar
+            count={selection.selected.length}
+            shown={selection.selectable.length}
+            busy={bulk.isPending}
+            onUpdate={(body) => {
+              bulk.update({ ...body, ids: selection.selected });
+              selection.clear();
+            }}
+            onSelectAll={() => selection.setMany(selection.selectable, true)}
+            onClear={selection.clear}
           />
-        )}
-        <ActionBulkBar
-          count={selection.selected.length}
-          shown={selection.selectable.length}
-          busy={bulk.isPending}
-          onUpdate={(body) => {
-            bulk.update({ ...body, ids: selection.selected });
-            selection.clear();
-          }}
-          onSelectAll={() => selection.setMany(selection.selectable, true)}
-          onClear={selection.clear}
-        />
-      </section>
+        </section>
+        <ActionRail appId={appId} />
+      </div>
       <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
       <ActionShortcutsDialog
         open={keys.helpOpen}
