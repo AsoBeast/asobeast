@@ -84,6 +84,7 @@ interface StoredEvent {
   id: string;
   type: string;
   actor: string;
+  userId?: string | null;
   status: string;
   occurredAt: Date;
 }
@@ -812,8 +813,25 @@ describe('ActionsService undo', () => {
     id: 'ev_done',
     type: 'done',
     actor: 'user',
+    userId: USER,
     status: 'DONE',
     occurredAt: minutesAgo(minutes),
+  });
+
+  it('refuses to undo a change another user made', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      { ...done(), userId: 'user_2' },
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
   });
 
   it('restores open without counting a reopen and forgets the done event', async () => {
@@ -845,6 +863,7 @@ describe('ActionsService undo', () => {
         id: 'ev_snoozed',
         type: 'snoozed',
         actor: 'user',
+        userId: USER,
         status: 'SNOOZED',
         occurredAt: minutesAgo(30),
       },
@@ -852,6 +871,7 @@ describe('ActionsService undo', () => {
         id: 'ev_dismissed',
         type: 'dismissed',
         actor: 'user',
+        userId: USER,
         status: 'DISMISSED',
         occurredAt: minutesAgo(1),
       },
@@ -885,6 +905,7 @@ describe('ActionsService undo', () => {
         id: 'ev_reopened',
         type: 'reopened',
         actor: 'user',
+        userId: USER,
         status: 'OPEN',
         occurredAt: minutesAgo(1),
       },

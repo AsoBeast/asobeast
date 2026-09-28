@@ -85,7 +85,10 @@ export class ActionTransitions {
   ): Promise<{ row: ActionRow; event: ActionEventInput | null }> {
     validateShape(body);
     if (body.revert) {
-      return { row: await this.revert(tx, current, body), event: null };
+      return {
+        row: await this.revert(tx, current, body, userId),
+        event: null,
+      };
     }
     const note = body.note === undefined ? {} : { note: body.note.trim() };
     if (isNoteOnly(current, body)) {
@@ -141,6 +144,7 @@ export class ActionTransitions {
     tx: Prisma.TransactionClient,
     current: CurrentAction,
     body: ActionUpdateRequest,
+    userId: string,
   ): Promise<ActionRow> {
     const now = new Date();
     const [latest, before] = await tx.actionEvent.findMany({
@@ -151,13 +155,18 @@ export class ActionTransitions {
         id: true,
         type: true,
         actor: true,
+        userId: true,
         status: true,
         occurredAt: true,
       },
     });
     const windowStart =
       now.getTime() - ACTION_REVERT_WINDOW_MINUTES * MINUTE_MS;
-    if (latest?.actor !== 'user' || latest.occurredAt.getTime() < windowStart) {
+    if (
+      latest?.actor !== 'user' ||
+      latest.userId !== userId ||
+      latest.occurredAt.getTime() < windowStart
+    ) {
       throw new ConflictException('Nothing recent to undo on this action');
     }
     if (body.status !== (before?.status ?? 'OPEN')) {

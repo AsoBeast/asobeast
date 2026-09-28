@@ -556,6 +556,54 @@ describe('ActionsController (e2e)', () => {
     expect(events).toEqual([{ type: 'opened' }]);
   });
 
+  it('refuses to undo a change a teammate made', async () => {
+    const id = await seedAction({ status: 'DONE', closedAt: new Date() });
+    const teammate = await prisma.user.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        email: `teammate-${id}@example.com`,
+        passwordHash: 'x',
+        role: 'member',
+      },
+    });
+    await prisma.actionEvent.createMany({
+      data: [
+        {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          actionId: id,
+          appId,
+          type: 'opened',
+          actor: 'system',
+          status: 'OPEN',
+          priority: 'high',
+          impact: 71,
+          occurredAt: new Date(Date.now() - 60_000),
+        },
+        {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          actionId: id,
+          appId,
+          userId: teammate.id,
+          type: 'done',
+          actor: 'user',
+          status: 'DONE',
+          priority: 'high',
+          impact: 71,
+        },
+      ],
+    });
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'OPEN', revert: true })
+      .expect(409);
+    const row = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    expect(row.status).toBe('DONE');
+  });
+
   it('rejects an unknown id and an invalid status', async () => {
     await api.patch('/actions/missing').send({ status: 'DONE' }).expect(404);
     const id = await seedAction();
