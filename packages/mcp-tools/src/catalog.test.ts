@@ -21,6 +21,7 @@ describe("the tool catalog", () => {
       const { path } = tool.request({
         appId: "app-1",
         keywordId: "kw-1",
+        actionId: "act-1",
         strategy: "metadata",
       });
       expect(path.startsWith("/")).toBe(true);

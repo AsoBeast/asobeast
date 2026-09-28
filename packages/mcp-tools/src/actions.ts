@@ -17,12 +17,15 @@ const DOMAIN = [
   "Recommendations are computed deterministically from stored data: the typed evidence on each",
   "action is the reproducible part, and the 0-100 impact is an estimate of how much is at stake,",
   "never a prediction of downloads, revenue or rank.",
-  "Statuses: OPEN (needs attention), SNOOZED (deferred until a date), DONE (the owner acted),",
+  "Statuses: OPEN (needs attention), SNOOZED (deferred until a date), DONE (the owner acted;",
+  "confirmed fixed once its rule stops firing, and reopened if the rule fires again),",
   "DISMISSED (the owner rejected it — do not re-recommend it), RESOLVED (the underlying condition",
   "stopped on its own).",
   "Apple and Google Play scores are not comparable across stores, so never rank one against the other.",
   "This surface is read-only by design: propose changes to the human rather than attempting a write.",
 ].join(" ");
+
+const RESERVED_ACTION_PATHS = ["summary", "activity", "ai-status", "run"];
 
 const status = z
   .array(z.enum(ACTION_STATUSES))
@@ -157,6 +160,53 @@ export const ACTION_TOOLS: ReadTool[] = [
     description: `Counts for the whole action queue: open and snoozed totals, counts per priority band and per category, and the most common rules. generatedAt is the last successful generation run and is null when generation has never run. suppressedByCap reports how many lower-impact findings a run withheld to keep the queue a to-do list rather than a report. ${DOMAIN}`,
     inputSchema: z.object({}),
     request: () => ({ path: "/actions/summary" }),
+    unavailableOn404: UNAVAILABLE,
+  }),
+
+  defineReadTool({
+    name: "get_action",
+    title: "Get action",
+    description: `One action with its evidence, its full history of lifecycle events, the daily series of the metric it is about and, once marked done, the measured before and after. ${DOMAIN} An outcome is a measured change with its dates, not a promise, and other changes in the same days can also move it.`,
+    inputSchema: z.object({
+      actionId: z
+        .string()
+        .min(1)
+        .refine(
+          (id) => !RESERVED_ACTION_PATHS.includes(id),
+          "Not an action id.",
+        )
+        .describe("The action id from list_actions or app_actions."),
+    }),
+    request: ({ actionId }) => ({ path: `/actions/${seg(actionId)}` }),
+    unavailableOn404:
+      "No action with that id in this workspace. If the id is right, the action detail needs a newer asobeast API.",
+  }),
+
+  defineReadTool({
+    name: "actions_activity",
+    title: "Actions activity",
+    description: `Daily counts of actions opened, reopened, marked done, dismissed, resolved on their own and confirmed fixed, over the last 7 to 90 days. ${DOMAIN}`,
+    inputSchema: z.object({
+      days: z
+        .number()
+        .int()
+        .min(QUERY_BOUNDS.actionActivityDays.min)
+        .max(QUERY_BOUNDS.actionActivityDays.max)
+        .optional()
+        .describe(
+          `Days to cover (${QUERY_BOUNDS.actionActivityDays.min}-${QUERY_BOUNDS.actionActivityDays.max}). Defaults to ${QUERY_BOUNDS.actionActivityDays.default}.`,
+        ),
+      appId: z
+        .string()
+        .optional()
+        .describe("Restrict to one app id from list_apps."),
+      country,
+      store,
+    }),
+    request: ({ days, appId, country, store }) => ({
+      path: "/actions/activity",
+      params: { days, appId, country, store },
+    }),
     unavailableOn404: UNAVAILABLE,
   }),
 ];

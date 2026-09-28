@@ -27,6 +27,7 @@ const READ_TOKEN = `${API_TOKEN_PREFIX}${'r'.repeat(48)}`;
 const TOOL_INPUT = {
   appId: 'app_missing',
   keywordId: 'kw_missing',
+  actionId: 'act_missing',
   strategy: 'metadata',
 };
 
