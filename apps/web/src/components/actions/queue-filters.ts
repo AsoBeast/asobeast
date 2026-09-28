@@ -10,7 +10,7 @@ import type {
 import { formatCountry } from "@/lib/format";
 import { ACTION_DEFAULT_STATUSES } from "@/lib/search-params";
 import { matchesSearch } from "@/lib/search-text";
-import { ACTION_RULE_TITLE } from "./action-copy";
+import { actionHeadline } from "./action-headline";
 
 export interface QueueView {
   status: readonly ActionStatus[];
@@ -69,7 +69,7 @@ function matchesFacet(item: ActionItem, view: QueueView, key: FacetKey) {
 function matchesText(item: ActionItem, query: string): boolean {
   return matchesSearch(
     [
-      ACTION_RULE_TITLE[item.rule],
+      actionHeadline(item),
       item.scope.keywordText ?? "",
       item.scope.appName ?? "",
       formatCountry(item.scope.country),

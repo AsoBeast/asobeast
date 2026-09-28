@@ -32,6 +32,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+const listFormatter = new Intl.ListFormat("en-US", { type: "conjunction" });
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
 });
@@ -64,6 +65,10 @@ export function pluralize(
 
 export function formatPlanLimit(value: PlanLimit): string {
   return value === null ? "Unlimited" : numberFormatter.format(value);
+}
+
+export function formatList(values: readonly string[]): string {
+  return listFormatter.format(values);
 }
 
 export function formatMeasure(value: number): string {
