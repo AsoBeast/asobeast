@@ -10,6 +10,7 @@ import { ActionEvidencePanel } from "./ActionEvidencePanel";
 import { ActionExplain } from "./ActionExplain";
 import { ActionImpactMeter } from "./ActionImpactMeter";
 import { ActionSteps } from "./ActionSteps";
+import { ActionTrendChart } from "./ActionTrendChart";
 
 export const isNotFound = (error: unknown): boolean =>
   error instanceof ApiError && error.envelope.statusCode === 404;
@@ -94,6 +95,11 @@ export function ActionDetailBody({
       <Section title="How to fix">
         <ActionSteps item={shown} />
       </Section>
+      {detail.data?.trend ? (
+        <Section title="Trend">
+          <ActionTrendChart trend={detail.data.trend} item={shown} />
+        </Section>
+      ) : null}
       <ActionExplain item={shown} />
       <p className="text-caption text-muted-foreground">
         Evidence last confirmed {formatDate(shown.lastSeenAt)} · formula{" "}

@@ -104,3 +104,23 @@ test("the sheet covers a phone screen without a sideways scroll", async ({
     ),
   ).toBe(true);
 });
+
+test("the sheet charts the metric behind the action", async ({ page }) => {
+  await page.goto("/actions?action=act-uncovered");
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { name: "Trend" })).toBeVisible();
+  const chart = dialog.getByRole("region", { name: "Position over time" });
+  await expect(chart.locator("svg").first()).toBeVisible();
+  await expect(chart.getByText("Opened")).toBeVisible();
+});
+
+test("an action without readable evidence has no trend", async ({ page }) => {
+  await page.goto("/actions?action=act-degraded");
+
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("heading", { name: "How to fix" }),
+  ).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Trend" })).toHaveCount(0);
+});
