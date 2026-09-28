@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ActionDismissSubMenu } from "./ActionDismissMenu";
 import { SNOOZE_PRESET_DAYS, snoozeUntil } from "./ActionSnoozeMenu";
 
 export function ActionRowMenu({
@@ -62,9 +63,9 @@ export function ActionRowMenu({
             </DropdownMenuItem>
           ))
         )}
-        <DropdownMenuItem onSelect={() => onUpdate({ status: "DISMISSED" })}>
-          Dismiss
-        </DropdownMenuItem>
+        <ActionDismissSubMenu
+          onDismiss={(reason) => onUpdate({ status: "DISMISSED", reason })}
+        />
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => void copyLink()}>
           Copy link

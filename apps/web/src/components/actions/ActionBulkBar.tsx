@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Clock, X } from "lucide-react";
+import { Check, Clock } from "lucide-react";
 import type { ActionUpdateRequest } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatNumber } from "@/lib/format";
+import { ActionDismissMenu } from "./ActionDismissMenu";
 import { SNOOZE_PRESET_DAYS, snoozeUntil } from "./ActionSnoozeMenu";
 
 const BAR_BUTTON = "h-11 @md/queue:h-7";
@@ -77,16 +78,11 @@ export function ActionBulkBar({
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button
-        variant="ghost"
-        size="sm"
+      <ActionDismissMenu
         className={BAR_BUTTON}
         disabled={busy}
-        onClick={() => onUpdate({ status: "DISMISSED" })}
-      >
-        <X aria-hidden />
-        Dismiss
-      </Button>
+        onDismiss={(reason) => onUpdate({ status: "DISMISSED", reason })}
+      />
       {count < shown ? (
         <Button
           variant="ghost"

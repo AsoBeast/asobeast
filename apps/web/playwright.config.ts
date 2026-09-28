@@ -1,9 +1,25 @@
 import { defineConfig } from "@playwright/test";
 
+const BASELINE = process.env.CAPTURE_BASELINE ? [] : ["**/baseline.spec.ts"];
+const ACTION_STATE_SPECS = ["actions", "actions-queue", "actions-sheet"];
+
 export default defineConfig({
   testDir: "./e2e",
-  testIgnore: process.env.CAPTURE_BASELINE ? [] : ["**/baseline.spec.ts"],
   fullyParallel: true,
+  projects: [
+    {
+      name: "app",
+      testIgnore: [
+        ...BASELINE,
+        ...ACTION_STATE_SPECS.map((name) => `**/${name}.spec.ts`),
+      ],
+    },
+    ...ACTION_STATE_SPECS.map((name, index) => ({
+      name,
+      testMatch: `**/${name}.spec.ts`,
+      dependencies: ACTION_STATE_SPECS.slice(Math.max(0, index - 1), index),
+    })),
+  ],
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? [["html", { open: "never" }], ["github"]] : "list",
   use: { baseURL: "http://localhost:3000", trace: "on-first-retry" },

@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { Check, RotateCcw, StickyNote, X } from "lucide-react";
+import { Check, RotateCcw, StickyNote } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { ACTION_CATEGORY_LABEL } from "./action-copy";
 import { actionHeadline } from "./action-headline";
 import { actionStatusTag, type ActionStatusTag } from "./action-status-tag";
+import { ActionDismissMenu } from "./ActionDismissMenu";
 import { ActionImpactMeter } from "./ActionImpactMeter";
 import { ActionPriorityBadge } from "./ActionPriorityBadge";
 import { ActionRowMenu } from "./ActionRowMenu";
@@ -121,16 +122,12 @@ function RowControls({
           }
           onWake={() => mutation.mutate({ status: "OPEN" })}
         />
-        <Button
-          variant="ghost"
-          size="sm"
+        <ActionDismissMenu
           disabled={busy}
-          data-command="dismiss"
-          onClick={() => mutation.mutate({ status: "DISMISSED" })}
-        >
-          <X aria-hidden />
-          Dismiss
-        </Button>
+          onDismiss={(reason) =>
+            mutation.mutate({ status: "DISMISSED", reason })
+          }
+        />
       </div>
       <ActionRowMenu
         item={item}

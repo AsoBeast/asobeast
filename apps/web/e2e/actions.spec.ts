@@ -378,6 +378,9 @@ test("dismissing removes the card and it stays gone after a reload", async ({
   await expect(target).toBeVisible();
 
   await target.getByRole("button", { name: "Dismiss" }).click();
+  await page
+    .getByRole("menuitem", { name: "Not relevant to this app" })
+    .click();
   await expect(target).toHaveCount(0);
 
   await page.reload();

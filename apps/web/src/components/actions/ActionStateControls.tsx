@@ -1,8 +1,9 @@
 "use client";
 
-import { Check, RotateCcw, X } from "lucide-react";
+import { Check, RotateCcw } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { ActionDismissMenu } from "./ActionDismissMenu";
 import { ActionSnoozeMenu } from "./ActionSnoozeMenu";
 import { useActionUpdate } from "./use-action-update";
 
@@ -47,15 +48,10 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
         }
         onWake={() => mutation.mutate({ status: "OPEN" })}
       />
-      <Button
-        variant="ghost"
-        size="sm"
+      <ActionDismissMenu
         disabled={mutation.isPending}
-        onClick={() => mutation.mutate({ status: "DISMISSED" })}
-      >
-        <X aria-hidden className="size-4" />
-        Dismiss
-      </Button>
+        onDismiss={(reason) => mutation.mutate({ status: "DISMISSED", reason })}
+      />
     </div>
   );
 }

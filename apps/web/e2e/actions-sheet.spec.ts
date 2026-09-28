@@ -191,3 +191,20 @@ test("a row shows that its action has a note", async ({ page }) => {
     page.locator(card("act-audit")).getByText("Has a note"),
   ).toBeAttached();
 });
+
+test("a dismissal keeps its reason in the history", async ({ page }) => {
+  await page.goto("/actions");
+  await page
+    .locator(card("act-prune"))
+    .getByRole("button", { name: "Dismiss" })
+    .click();
+  await page.getByRole("menuitem", { name: "The data looks wrong" }).click();
+  await expect(page.locator(card("act-prune"))).toHaveCount(0);
+
+  await page.goto("/actions?status=DISMISSED&action=act-prune");
+  const history = page
+    .getByRole("dialog")
+    .getByRole("heading", { name: "History" })
+    .locator("xpath=..");
+  await expect(history.getByText(/The data looks wrong/)).toBeVisible();
+});
