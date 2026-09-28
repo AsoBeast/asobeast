@@ -168,14 +168,35 @@ describe('outboxRows for action.opened', () => {
     });
   });
 
-  it('gives a reopened action the same dedupe key as its first notification', () => {
+  it('gives a reopened action its own key for the day it reopened', () => {
     const reopened = {
       ...actionOpened,
+      occurredAt: '2026-09-28T03:10:00.000Z',
       action: { ...actionOpened.action, reopened: true, impact: 90 },
     };
 
     expect(outboxRows(reopened)[0].dedupeKey).toBe(
+      'action.opened~act_1~2026-09-28',
+    );
+    expect(outboxRows(reopened)[0].dedupeKey).not.toBe(
       outboxRows(actionOpened)[0].dedupeKey,
+    );
+  });
+
+  it('merges two reopen notifications on the same day', () => {
+    const morning = {
+      ...actionOpened,
+      occurredAt: '2026-09-28T03:10:00.000Z',
+      action: { ...actionOpened.action, reopened: true },
+    };
+    const evening = {
+      ...morning,
+      occurredAt: '2026-09-28T21:00:00.000Z',
+      action: { ...morning.action, impact: 90 },
+    };
+
+    expect(outboxRows(evening)[0].dedupeKey).toBe(
+      outboxRows(morning)[0].dedupeKey,
     );
   });
 });
