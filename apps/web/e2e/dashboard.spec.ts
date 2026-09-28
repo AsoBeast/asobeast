@@ -109,3 +109,32 @@ test("the open actions tile says so when no action set has been generated", asyn
   await expect(tile).toContainText("—");
   await expect(tile).toContainText("not generated yet");
 });
+
+test("the top 10 trend sits level with the rest of its note", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const note = page
+    .locator('[data-slot="stat-tile"]')
+    .filter({ hasText: "Keywords in top 10" })
+    .locator(":scope > span")
+    .nth(2);
+  await expect(note).toContainText("tracked");
+
+  const offset = await note.evaluate((node) => {
+    const chip = node.querySelector(".numeric")!.getBoundingClientRect();
+    const text = document.createRange();
+    const words = [...node.querySelectorAll("*"), node]
+      .flatMap((el) => [...el.childNodes])
+      .find(
+        (child) =>
+          child.nodeType === 3 && child.textContent!.includes("tracked"),
+      )!;
+    text.selectNodeContents(words);
+    const box = text.getBoundingClientRect();
+    return Math.abs(chip.top + chip.height / 2 - (box.top + box.height / 2));
+  });
+
+  expect(offset).toBeLessThanOrEqual(1);
+});

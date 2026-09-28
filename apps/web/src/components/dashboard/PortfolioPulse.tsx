@@ -22,9 +22,10 @@ function Top10Note({
   tracked: number;
 }) {
   return (
-    <>
-      <TrendChip label="7d" value={delta} /> of {formatNumber(tracked)} tracked
-    </>
+    <span className="flex flex-wrap items-center gap-x-1">
+      <TrendChip label="7d" value={delta} />
+      <span>of {formatNumber(tracked)} tracked</span>
+    </span>
   );
 }
 
