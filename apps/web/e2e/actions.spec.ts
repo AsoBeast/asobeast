@@ -175,8 +175,19 @@ test("the app overview counts only that app's actions", async ({ page }) => {
   const card = page
     .getByText("Top actions", { exact: true })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("3 High", { exact: true })).toBeVisible();
   await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
+});
+
+test("the app overview leaves snoozed actions out of its open counts", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const card = page
+    .getByText("Top actions", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(card.getByText("3 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("4 High", { exact: true })).toHaveCount(0);
 });
 
 test("a failing update rolls the optimistic change back", async ({ page }) => {
