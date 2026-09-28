@@ -18,6 +18,7 @@ const existing = (
 ): ExistingAction => ({
   status,
   lastSeenAt: daysBefore(1),
+  closedAt: null,
   snoozedUntil: status === 'SNOOZED' ? new Date(NOW.getTime() + DAY_MS) : null,
   reopenCount: 0,
   ...overrides,
@@ -102,7 +103,7 @@ describe('nextLifecycle', () => {
   describe('done reopening', () => {
     it('touches one day before the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS - 1),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS - 1),
       });
 
       expect(nextLifecycle(row, true, NOW)).toEqual({ kind: 'touch' });
@@ -110,7 +111,7 @@ describe('nextLifecycle', () => {
 
     it('reopens exactly at the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
         reopenCount: 2,
       });
 
@@ -123,7 +124,22 @@ describe('nextLifecycle', () => {
 
     it('reopens beyond the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS + 5),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS + 5),
+      });
+
+      expect(nextLifecycle(row, true, NOW)).toEqual({
+        kind: 'reopen',
+        status: 'OPEN',
+        reopenCount: 1,
+      });
+    });
+  });
+
+  describe('done reopening while the rule keeps firing', () => {
+    it('reopens a done action closed fourteen days ago that was touched yesterday', () => {
+      const row = existing('DONE', {
+        lastSeenAt: daysBefore(1),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
       });
 
       expect(nextLifecycle(row, true, NOW)).toEqual({

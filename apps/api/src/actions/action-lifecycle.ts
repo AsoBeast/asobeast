@@ -7,6 +7,7 @@ const DAY_MS = 86_400_000;
 export interface ExistingAction {
   status: ActionStatus;
   lastSeenAt: Date;
+  closedAt: Date | null;
   snoozedUntil: Date | null;
   reopenCount: number;
 }
@@ -20,8 +21,8 @@ export type LifecycleOutcome =
   | { kind: 'noop' };
 
 function reopenIsDue(existing: ExistingAction, now: Date): boolean {
-  const gap = now.getTime() - existing.lastSeenAt.getTime();
-  return gap >= ACTION_REOPEN_AFTER_DAYS * DAY_MS;
+  const since = existing.closedAt ?? existing.lastSeenAt;
+  return now.getTime() - since.getTime() >= ACTION_REOPEN_AFTER_DAYS * DAY_MS;
 }
 
 function firedOutcome(existing: ExistingAction, now: Date): LifecycleOutcome {

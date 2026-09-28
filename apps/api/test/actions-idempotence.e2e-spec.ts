@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
+import { ACTION_REOPEN_AFTER_DAYS } from '../src/actions/action-lifecycle';
 import { ActionsGenerator } from '../src/actions/actions.generator';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -61,7 +62,7 @@ describe('action generation (e2e)', () => {
     await app.close();
   });
 
-  it('opens nothing new on a second run over unchanged data', async () => {
+  const seedUncoveredKeyword = async (): Promise<void> => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
     );
@@ -108,14 +109,20 @@ describe('action generation (e2e)', () => {
         formulaVersion: 'app-store-v2',
       },
     });
+  };
 
+  const runAt = async (now: Date) => {
     const estimated = await asWorkspace(app, () => budget.estimate());
-    const first = await asWorkspace(app, () =>
-      generator.generateForWorkspace(estimated, D(0)),
+    return asWorkspace(app, () =>
+      generator.generateForWorkspace(estimated, now),
     );
-    const second = await asWorkspace(app, () =>
-      generator.generateForWorkspace(estimated, D(0)),
-    );
+  };
+
+  it('opens nothing new on a second run over unchanged data', async () => {
+    await seedUncoveredKeyword();
+
+    const first = await runAt(D(0));
+    const second = await runAt(D(0));
 
     expect(first.opened).toBeGreaterThan(0);
     expect(second).toMatchObject({ opened: 0, resolved: 0, reopened: 0 });
@@ -130,5 +137,30 @@ describe('action generation (e2e)', () => {
     expect(
       rows.every((row) => row.firstSeenAt.getTime() === D(0).getTime()),
     ).toBe(true);
+  });
+
+  it('reopens a done action whose rule keeps firing for fourteen days', async () => {
+    await seedUncoveredKeyword();
+    const first = await runAt(D(0));
+    expect(first.opened).toBeGreaterThan(0);
+
+    await prisma.actionItem.updateMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      data: { status: 'DONE', closedAt: D(0) },
+    });
+
+    for (let day = 1; day < ACTION_REOPEN_AFTER_DAYS; day += 1) {
+      const run = await runAt(D(-day));
+      expect(run).toMatchObject({ reopened: 0, touched: first.opened });
+    }
+    const due = await runAt(D(-ACTION_REOPEN_AFTER_DAYS));
+
+    expect(due.reopened).toBe(first.opened);
+    const rows = await prisma.actionItem.findMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      select: { status: true, reopenCount: true },
+    });
+    expect(rows.every((row) => row.status === 'OPEN')).toBe(true);
+    expect(rows.every((row) => row.reopenCount === 1)).toBe(true);
   });
 });

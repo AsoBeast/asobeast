@@ -80,6 +80,7 @@ interface Row {
   rule: string;
   status: string;
   lastSeenAt: Date;
+  closedAt: Date | null;
   snoozedUntil: Date | null;
   reopenCount: number;
 }
@@ -154,6 +155,7 @@ const storedRow = (fingerprint: string, overrides: Partial<Row>): Row[] => [
     rule: 'keyword.add_uncovered',
     status: 'OPEN',
     lastSeenAt: NOW,
+    closedAt: null,
     snoozedUntil: null,
     reopenCount: 0,
     ...overrides,
@@ -276,6 +278,7 @@ describe('ActionsGenerator', () => {
         rule: 'keyword.defend',
         status: 'OPEN',
         lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: null,
         snoozedUntil: null,
         reopenCount: 0,
       },
@@ -347,6 +350,7 @@ describe('ActionsGenerator', () => {
         rule: 'keyword.add_uncovered',
         status: 'OPEN',
         lastSeenAt: NOW,
+        closedAt: null,
         snoozedUntil: null,
         reopenCount: 0,
       })),
@@ -370,7 +374,8 @@ describe('ActionsGenerator', () => {
     const inside = buildPrisma(
       storedRow(fingerprint, {
         status: 'DONE',
-        lastSeenAt: new Date(
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(
           NOW.getTime() - (ACTION_REOPEN_AFTER_DAYS - 1) * DAY_MS,
         ),
       }),
@@ -378,7 +383,8 @@ describe('ActionsGenerator', () => {
     const outside = buildPrisma(
       storedRow(fingerprint, {
         status: 'DONE',
-        lastSeenAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
       }),
     );
 
@@ -400,6 +406,25 @@ describe('ActionsGenerator', () => {
       closedAt: null,
       resolvedAt: null,
     });
+  });
+
+  it('reopens a done row closed fourteen days ago that was touched yesterday', async () => {
+    const fingerprint = await fingerprintOf();
+    const prisma = buildPrisma(
+      storedRow(fingerprint, {
+        status: 'DONE',
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+      }),
+    );
+
+    const result = await generatorFor(
+      emptyContext(),
+      prisma,
+    ).generateForWorkspace(budget, NOW);
+
+    expect(result).toMatchObject({ reopened: 1, touched: 0 });
+    expect(prisma.updated[0].data).toMatchObject({ status: 'OPEN' });
   });
 
   it('never reopens a dismissed row, however long it keeps firing', async () => {
