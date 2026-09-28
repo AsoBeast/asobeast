@@ -146,6 +146,17 @@ test("a two status filter with no matches offers to clear the filters", async ({
   ).toBeVisible();
 });
 
+test("undoing done brings the action back without a reopen badge", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+  const row = page.locator(card("act-audit"));
+  await row.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(row).toBeVisible();
+  await expect(row.getByText(/Reopened/)).toHaveCount(0);
+});
+
 test("a failing update rolls the optimistic change back", async ({ page }) => {
   await page.goto("/actions");
   const failing = page.locator(card("act-degraded"));

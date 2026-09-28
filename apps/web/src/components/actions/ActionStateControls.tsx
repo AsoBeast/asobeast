@@ -25,6 +25,17 @@ function applyLocally(item: ActionItem, body: ActionUpdateRequest): ActionItem {
   };
 }
 
+function undoRequest(before: ActionItem): ActionUpdateRequest {
+  if (before.status === "SNOOZED" && before.snoozedUntil) {
+    return {
+      status: "SNOOZED",
+      snoozedUntil: before.snoozedUntil,
+      revert: true,
+    };
+  }
+  return { status: "OPEN", revert: true };
+}
+
 export function ActionStateControls({ item }: { item: ActionItem }) {
   const queryClient = useQueryClient();
   const closed =
@@ -51,7 +62,7 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
               }
             : list,
       );
-      return { previous };
+      return { previous, before: item };
     },
     onError: (error, _body, context) => {
       context?.previous.forEach(([key, data]) => {
@@ -63,7 +74,8 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
           : "Could not update the action",
       );
     },
-    onSuccess: (_updated, body) => {
+    onSuccess: (_updated, body, context) => {
+      if (body.revert) return;
       if (body.status === "OPEN") {
         toast.success("Action reopened");
         return;
@@ -72,7 +84,7 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
       toast.success(body.status === "DONE" ? "Marked done" : "Dismissed", {
         action: {
           label: "Undo",
-          onClick: () => mutation.mutate({ status: "OPEN" }),
+          onClick: () => mutation.mutate(undoRequest(context.before)),
         },
       });
     },

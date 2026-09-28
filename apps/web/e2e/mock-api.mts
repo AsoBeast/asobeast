@@ -1666,27 +1666,33 @@ const routes: Route[] = [
     method: "PATCH",
     pattern: /^\/actions\/([^/]+)$/,
     handler: (params, req, res) => {
-      withBody<{ status: ActionStatus; snoozedUntil?: string; note?: string }>(
-        req,
-        res,
-        (body) => {
-          const path = req.url ?? "/";
-          const action = actions.find((row) => row.id === params[0]);
-          if (!action) return json(res, 404, errorEnvelope(404, path));
-          if (action.id === "act-degraded") {
-            return json(res, 500, errorEnvelope(500, path));
-          }
-          action.status = body.status;
-          action.snoozedUntil =
-            body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
-          action.closedAt =
-            body.status === "DONE" || body.status === "DISMISSED"
-              ? new Date().toISOString()
-              : null;
-          if (body.status === "OPEN") action.reopenCount += 1;
-          json(res, 200, action);
-        },
-      );
+      withBody<{
+        status: ActionStatus;
+        snoozedUntil?: string;
+        note?: string;
+        revert?: boolean;
+      }>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const action = actions.find((row) => row.id === params[0]);
+        if (!action) return json(res, 404, errorEnvelope(404, path));
+        if (action.id === "act-degraded") {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        const reopening =
+          !body.revert &&
+          body.status === "OPEN" &&
+          action.status !== "OPEN" &&
+          action.status !== "SNOOZED";
+        action.status = body.status;
+        action.snoozedUntil =
+          body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
+        action.closedAt =
+          body.status === "DONE" || body.status === "DISMISSED"
+            ? new Date().toISOString()
+            : null;
+        if (reopening) action.reopenCount += 1;
+        json(res, 200, action);
+      });
     },
   },
   {
