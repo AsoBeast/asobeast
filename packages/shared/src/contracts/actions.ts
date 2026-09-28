@@ -246,6 +246,7 @@ export interface ActionItem {
   resolvedAt: string | null;
   snoozedUntil: string | null;
   closedAt: string | null;
+  verifiedAt: string | null;
   reopenCount: number;
   note: string | null;
   ai: ActionAi;

@@ -34,6 +34,7 @@ const row = (overrides: Partial<ActionRow> = {}): ActionRow => ({
   resolvedAt: null,
   snoozedUntil: null,
   closedAt: null,
+  verifiedAt: null,
   reopenCount: 0,
   note: null,
   aiExplanation: null,
@@ -101,6 +102,7 @@ describe('toActionItem', () => {
         resolvedAt: new Date('2026-07-25T00:00:00.000Z'),
         snoozedUntil: new Date('2026-08-05T00:00:00.000Z'),
         closedAt: new Date('2026-07-26T00:00:00.000Z'),
+        verifiedAt: new Date('2026-07-29T00:00:00.000Z'),
         aiGeneratedAt: new Date('2026-07-27T00:00:00.000Z'),
         aiExplanation: 'Summary',
         aiModel: 'gpt-4o',
@@ -111,6 +113,7 @@ describe('toActionItem', () => {
       resolvedAt: '2026-07-25T00:00:00.000Z',
       snoozedUntil: '2026-08-05T00:00:00.000Z',
       closedAt: '2026-07-26T00:00:00.000Z',
+      verifiedAt: '2026-07-29T00:00:00.000Z',
     });
     expect(item.ai).toEqual({
       explanation: 'Summary',

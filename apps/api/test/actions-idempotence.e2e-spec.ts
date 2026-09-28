@@ -163,4 +163,40 @@ describe('action generation (e2e)', () => {
     expect(rows.every((row) => row.status === 'OPEN')).toBe(true);
     expect(rows.every((row) => row.reopenCount === 1)).toBe(true);
   });
+
+  it('confirms a done action once its rule stops firing and reopens it when it returns', async () => {
+    await seedUncoveredKeyword();
+    const first = await runAt(D(0));
+    expect(first.opened).toBeGreaterThan(0);
+    await prisma.actionItem.updateMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      data: { status: 'DONE', closedAt: D(0) },
+    });
+    const coverKeyword = (title: string) =>
+      prisma.appSnapshot.updateMany({ data: { title } });
+
+    await coverKeyword('Budget Planner: Expense Tracker');
+    const verifying = await runAt(D(-1));
+    const quiet = await runAt(D(-2));
+    const verified = await prisma.actionItem.findMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      select: { verifiedAt: true },
+    });
+    await coverKeyword('Budget Planner');
+    const returned = await runAt(D(-3));
+
+    expect(verifying.verified).toBe(first.opened);
+    expect(
+      verified.every((row) => row.verifiedAt?.getTime() === D(-1).getTime()),
+    ).toBe(true);
+    expect(quiet).toMatchObject({ verified: 0, reopened: 0, touched: 0 });
+    expect(returned.reopened).toBe(first.opened);
+    const rows = await prisma.actionItem.findMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      select: { status: true, reopenCount: true, verifiedAt: true },
+    });
+    expect(rows).toEqual(
+      rows.map(() => ({ status: 'OPEN', reopenCount: 1, verifiedAt: null })),
+    );
+  });
 });

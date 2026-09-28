@@ -544,6 +544,7 @@ model ActionItem {
   resolvedAt     DateTime?
   snoozedUntil   DateTime?
   closedAt       DateTime?
+  verifiedAt     DateTime?
   reopenCount    Int       @default(0)
   note           String?
   aiExplanation  String?

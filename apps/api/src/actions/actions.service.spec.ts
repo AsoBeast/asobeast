@@ -39,6 +39,7 @@ const storedRow = (overrides: Record<string, unknown> = {}) => ({
   resolvedAt: null,
   snoozedUntil: null,
   closedAt: null,
+  verifiedAt: null,
   reopenCount: 0,
   note: null,
   aiExplanation: null,
@@ -659,4 +660,32 @@ describe('ActionsService lifecycle events', () => {
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
+});
+
+describe('ActionsService verification', () => {
+  it.each([
+    ['DONE', 'OPEN', {}],
+    ['DONE', 'DISMISSED', {}],
+    ['OPEN', 'DONE', {}],
+    [
+      'DONE',
+      'SNOOZED',
+      { snoozedUntil: new Date(Date.now() + 7 * DAY_MS).toISOString() },
+    ],
+  ] as const)(
+    'clears verifiedAt when %s moves to %s',
+    async (previous, status, extra) => {
+      const prisma = buildPrisma({ status: previous });
+
+      await serviceFor(prisma).update(
+        'act_1',
+        update({ status, ...extra }),
+        USER,
+      );
+
+      expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+        verifiedAt: null,
+      });
+    },
+  );
 });

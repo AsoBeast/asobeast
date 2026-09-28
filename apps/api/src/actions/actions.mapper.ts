@@ -29,6 +29,7 @@ export interface ActionRow {
   resolvedAt: Date | null;
   snoozedUntil: Date | null;
   closedAt: Date | null;
+  verifiedAt: Date | null;
   reopenCount: number;
   note: string | null;
   aiExplanation: string | null;
@@ -104,6 +105,7 @@ export function toActionItem(row: ActionRow): ActionItem {
     resolvedAt: iso(row.resolvedAt),
     snoozedUntil: iso(row.snoozedUntil),
     closedAt: iso(row.closedAt),
+    verifiedAt: iso(row.verifiedAt),
     reopenCount: row.reopenCount,
     note: row.note,
     ai: {

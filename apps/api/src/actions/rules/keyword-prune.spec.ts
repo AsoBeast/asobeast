@@ -206,7 +206,9 @@ describe('keyword.prune', () => {
       ),
     );
 
-    expect(detections).toHaveLength(PRUNE_MAX_PER_APP);
+    expect(detections.filter((detection) => !detection.withheld)).toHaveLength(
+      PRUNE_MAX_PER_APP,
+    );
   });
 
   it('never fires below the utilization floor on a small tracking set', () => {
@@ -249,14 +251,35 @@ describe('keyword.prune', () => {
       context([app({ trackedKeywords: items, rankingDaysByKeyword: history })]),
     );
 
-    expect(detections).toHaveLength(PRUNE_MAX_PER_APP);
-    expect(detections.map((detection) => detection.keywordId)).toEqual([
+    const reported = detections.filter((detection) => !detection.withheld);
+    expect(reported).toHaveLength(PRUNE_MAX_PER_APP);
+    expect(reported.map((detection) => detection.keywordId)).toEqual([
       'kw_b',
       'kw_c',
       'kw_d',
       'kw_e',
       'kw_f',
     ]);
+  });
+
+  it('withholds the keywords past the per-app cap instead of dropping them', () => {
+    const items = ['kw_a', 'kw_b', 'kw_c', 'kw_d', 'kw_e', 'kw_f'].map(
+      (keywordId) => keyword({ keywordId }),
+    );
+    const history = new Map(
+      items.map((item) => [item.keywordId, days(PRUNE_MIN_OBSERVED_DAYS)]),
+    );
+
+    const detections = detectKeywordPrune(
+      context([app({ trackedKeywords: items, rankingDaysByKeyword: history })]),
+    );
+
+    expect(detections).toHaveLength(items.length);
+    expect(
+      detections
+        .filter((detection) => detection.withheld)
+        .map((detection) => detection.keywordId),
+    ).toEqual(['kw_f']);
   });
 
   it('yields to keyword.add_uncovered on the same keyword', () => {

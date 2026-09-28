@@ -20,6 +20,7 @@ export interface DetectedAction {
   terms: ImpactTerms;
   evidence: ActionEvidence;
   dampenedBy?: ActionRule;
+  withheld?: true;
 }
 
 export interface ActionDetector {

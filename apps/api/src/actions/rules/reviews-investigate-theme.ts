@@ -108,8 +108,7 @@ function detectForApp(
       ([leftTheme, left], [rightTheme, right]) =>
         right - left || leftTheme.localeCompare(rightTheme),
     )
-    .slice(0, REVIEW_THEME_MAX_PER_APP)
-    .map(([theme, mentions]): DetectedAction => {
+    .map(([theme, mentions], index): DetectedAction => {
       const evidence: ReviewsInvestigateThemeEvidence = {
         rule: 'reviews.investigate_theme',
         theme,
@@ -152,6 +151,7 @@ function detectForApp(
           ),
         },
         evidence,
+        ...(index < REVIEW_THEME_MAX_PER_APP ? {} : { withheld: true }),
       };
     });
 }

@@ -86,6 +86,7 @@ export function lifecycleWrite(
           status: 'OPEN',
           reopenCount: outcome.reopenCount,
           closedAt: null,
+          verifiedAt: null,
           resolvedAt: null,
           snoozedUntil: null,
           aiExplanation: null,
@@ -124,30 +125,60 @@ export function lifecycleWrite(
   return null;
 }
 
-export function resolveWrite(
+const MISSED_WRITES = {
+  resolve: {
+    counter: 'resolved',
+    type: 'resolved',
+    status: 'RESOLVED',
+    data: (now: Date) => ({
+      status: 'RESOLVED',
+      resolvedAt: now,
+      snoozedUntil: null,
+    }),
+  },
+  verify: {
+    counter: 'verified',
+    type: 'verified',
+    status: 'DONE',
+    data: (now: Date) => ({ verifiedAt: now }),
+  },
+} as const;
+
+export interface MissedWrite {
+  write: ActionWrite;
+  counter: 'resolved' | 'verified';
+}
+
+export function missedWrite(
   workspaceId: string,
   row: ExistingRow,
   now: Date,
-): ActionWrite {
-  return async (tx, events) => {
-    await tx.actionItem.update({
-      where: { id: row.id },
-      data: { status: 'RESOLVED', resolvedAt: now, snoozedUntil: null },
-    });
-    events.push(
-      systemEvent(
-        workspaceId,
-        {
-          actionId: row.id,
-          appId: row.appId,
-          type: 'resolved',
-          status: 'RESOLVED',
-          priority: row.priority,
-          impact: row.impact,
-        },
-        now,
-      ),
-    );
+): MissedWrite | null {
+  const outcome = nextLifecycle(row, false, now);
+  if (outcome.kind !== 'resolve' && outcome.kind !== 'verify') return null;
+  const planned = MISSED_WRITES[outcome.kind];
+  return {
+    counter: planned.counter,
+    write: async (tx, events) => {
+      await tx.actionItem.update({
+        where: { id: row.id },
+        data: planned.data(now),
+      });
+      events.push(
+        systemEvent(
+          workspaceId,
+          {
+            actionId: row.id,
+            appId: row.appId,
+            type: planned.type,
+            status: planned.status,
+            priority: row.priority,
+            impact: row.impact,
+          },
+          now,
+        ),
+      );
+    },
   };
 }
 

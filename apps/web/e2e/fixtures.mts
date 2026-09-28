@@ -2209,6 +2209,7 @@ const ACTION_BASE = {
   resolvedAt: null,
   snoozedUntil: null,
   closedAt: null,
+  verifiedAt: null,
   reopenCount: 0,
   note: null,
   ai: { explanation: null, model: null, generatedAt: null },

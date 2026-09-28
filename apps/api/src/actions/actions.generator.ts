@@ -12,13 +12,13 @@ import { ActionContext, ActionContextLoader } from './action-context';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
 import { actionFingerprint } from './action-fingerprint';
 import { scoreImpact } from './action-impact';
-import { ExistingAction, nextLifecycle } from './action-lifecycle';
+import { ExistingAction } from './action-lifecycle';
 import { ACTION_DETECTORS, DetectedAction } from './action-rule';
 import {
   ActionWrite,
   ExistingRow,
   lifecycleWrite,
-  resolveWrite,
+  missedWrite,
   ScoredDetection,
 } from './action-writes';
 import { priorityOf } from './actions.mapper';
@@ -41,6 +41,7 @@ export interface ActionGenerationResult {
   refreshed: number;
   reopened: number;
   resolved: number;
+  verified: number;
   touched: number;
   suppressedByCap: number;
   durationMs: number;
@@ -52,6 +53,7 @@ const EMPTY_RESULT = (durationMs: number): ActionGenerationResult => ({
   refreshed: 0,
   reopened: 0,
   resolved: 0,
+  verified: 0,
   touched: 0,
   suppressedByCap: 0,
   durationMs,
@@ -97,6 +99,7 @@ export class ActionsGenerator {
         refreshed: result.refreshed,
         reopened: result.reopened,
         resolved: result.resolved,
+        verified: result.verified,
         touched: result.touched,
         suppressedByCap: result.suppressedByCap,
         durationMs: result.durationMs,
@@ -155,6 +158,7 @@ export class ActionsGenerator {
         impact: true,
         lastSeenAt: true,
         closedAt: true,
+        verifiedAt: true,
         snoozedUntil: true,
         reopenCount: true,
       },
@@ -172,6 +176,7 @@ export class ActionsGenerator {
           status: row.status as ExistingAction['status'],
           lastSeenAt: row.lastSeenAt,
           closedAt: row.closedAt,
+          verifiedAt: row.verifiedAt,
           snoozedUntil: row.snoozedUntil,
           reopenCount: row.reopenCount,
         },
@@ -222,10 +227,15 @@ export class ActionsGenerator {
       return result;
     }
 
-    const { kept, suppressedByCap } = this.capNewDetections(scored, existing);
+    const live = scored.filter((detection) => !detection.withheld);
+    const { kept, suppressedByCap } = this.capNewDetections(live, existing);
     result.suppressedByCap = suppressedByCap;
 
-    const detected = new Set(kept.map((detection) => detection.fingerprint));
+    const detected = new Set(
+      [...kept, ...scored.filter((detection) => detection.withheld)].map(
+        (detection) => detection.fingerprint,
+      ),
+    );
     const writes: ActionWrite[] = [];
     const opened: Array<{ detection: ScoredDetection; reopened: boolean }> = [];
 
@@ -244,10 +254,10 @@ export class ActionsGenerator {
       if (detected.has(row.fingerprint)) continue;
       const rule = row.rule;
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
-      const outcome = nextLifecycle(row, false, now);
-      if (outcome.kind !== 'resolve') continue;
-      writes.push(resolveWrite(context.workspaceId, row, now));
-      result.resolved += 1;
+      const planned = missedWrite(context.workspaceId, row, now);
+      if (!planned) continue;
+      writes.push(planned.write);
+      result[planned.counter] += 1;
     }
 
     if (writes.length > 0) {
@@ -312,6 +322,7 @@ export function mergeActionRuns(
     refreshed: total.refreshed + run.refreshed,
     reopened: total.reopened + run.reopened,
     resolved: total.resolved + run.resolved,
+    verified: total.verified + run.verified,
     touched: total.touched + run.touched,
     suppressedByCap: total.suppressedByCap + run.suppressedByCap,
     durationMs: total.durationMs + run.durationMs,

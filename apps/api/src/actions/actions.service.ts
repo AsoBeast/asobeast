@@ -56,6 +56,7 @@ const ROW_SELECT = {
   resolvedAt: true,
   snoozedUntil: true,
   closedAt: true,
+  verifiedAt: true,
   reopenCount: true,
   note: true,
   aiExplanation: true,
@@ -315,14 +316,25 @@ export class ActionsService {
   ): Prisma.ActionItemUpdateInput {
     switch (target) {
       case 'DONE':
-        return { closedAt: now, resolvedAt: null, snoozedUntil: null };
+        return {
+          closedAt: now,
+          verifiedAt: null,
+          resolvedAt: null,
+          snoozedUntil: null,
+        };
       case 'DISMISSED':
-        return { closedAt: now, snoozedUntil: null };
+        return { closedAt: now, verifiedAt: null, snoozedUntil: null };
       case 'SNOOZED':
-        return { snoozedUntil, closedAt: null, resolvedAt: null };
+        return {
+          snoozedUntil,
+          closedAt: null,
+          verifiedAt: null,
+          resolvedAt: null,
+        };
       case 'OPEN':
         return {
           closedAt: null,
+          verifiedAt: null,
           resolvedAt: null,
           snoozedUntil: null,
           ...(previous === 'OPEN' || previous === 'SNOOZED'

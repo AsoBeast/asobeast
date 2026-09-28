@@ -232,8 +232,38 @@ describe('reviews.investigate_theme', () => {
 
   it('emits at most three themes per app per run', () => {
     expect(
-      detectReviewsInvestigateTheme(context([app()]), NOW).length,
+      detectReviewsInvestigateTheme(context([app()]), NOW).filter(
+        (detection) => !detection.withheld,
+      ).length,
     ).toBeLessThanOrEqual(REVIEW_THEME_MAX_PER_APP);
+  });
+
+  it('withholds the themes past the per-app cap instead of dropping them', () => {
+    const complaint =
+      'crashes on launch, sync fails, login broken, battery drain';
+    const reviews = [
+      review(CURRENT, 1, complaint),
+      review(CURRENT, 1, complaint),
+      review(CURRENT, 1, complaint),
+      review(CURRENT, 5, 'still love this planner'),
+      review(CURRENT, 4, 'good planner overall'),
+      review(PREVIOUS, 1, 'too many adverts in the free plan'),
+    ];
+
+    const detections = detectReviewsInvestigateTheme(
+      context([app({ reviews })]),
+      NOW,
+    );
+
+    expect(detections.length).toBeGreaterThan(REVIEW_THEME_MAX_PER_APP);
+    expect(detections.filter((detection) => !detection.withheld)).toHaveLength(
+      REVIEW_THEME_MAX_PER_APP,
+    );
+    expect(
+      detections
+        .slice(REVIEW_THEME_MAX_PER_APP)
+        .every((detection) => detection.withheld),
+    ).toBe(true);
   });
 
   it('ignores reviews older than the window', () => {

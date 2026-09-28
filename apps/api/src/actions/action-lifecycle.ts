@@ -8,6 +8,7 @@ export interface ExistingAction {
   status: ActionStatus;
   lastSeenAt: Date;
   closedAt: Date | null;
+  verifiedAt: Date | null;
   snoozedUntil: Date | null;
   reopenCount: number;
 }
@@ -17,6 +18,7 @@ export type LifecycleOutcome =
   | { kind: 'refresh'; status: ActionStatus }
   | { kind: 'reopen'; status: 'OPEN'; reopenCount: number }
   | { kind: 'resolve' }
+  | { kind: 'verify' }
   | { kind: 'touch' }
   | { kind: 'noop' };
 
@@ -35,7 +37,7 @@ function firedOutcome(existing: ExistingAction, now: Date): LifecycleOutcome {
         ? { kind: 'refresh', status: 'SNOOZED' }
         : { kind: 'refresh', status: 'OPEN' };
     case 'DONE':
-      return reopenIsDue(existing, now)
+      return existing.verifiedAt !== null || reopenIsDue(existing, now)
         ? {
             kind: 'reopen',
             status: 'OPEN',
@@ -59,6 +61,9 @@ function missedOutcome(existing: ExistingAction): LifecycleOutcome {
     case 'SNOOZED':
       return { kind: 'resolve' };
     case 'DONE':
+      return existing.verifiedAt === null
+        ? { kind: 'verify' }
+        : { kind: 'noop' };
     case 'DISMISSED':
     case 'RESOLVED':
       return { kind: 'noop' };
