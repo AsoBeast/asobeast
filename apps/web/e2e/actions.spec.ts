@@ -3,6 +3,7 @@ import { expect, test } from "./session.mts";
 test.describe.configure({ mode: "serial" });
 
 const card = (id: string) => `[id='action-${id}']`;
+const ROWS = "#queue li[id^='action-']";
 const rendered = { timeout: 20_000 };
 const ACT_UNCOVERED_TITLE = 'Add "habit tracker" to your metadata';
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
@@ -16,10 +17,9 @@ test.beforeEach(async ({ request }) => {
 test("lists actions sorted by estimated impact", async ({ page }) => {
   await page.goto("/actions");
 
-  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
-    ACT_UNCOVERED_TITLE,
-  );
-  await expect(page.getByText("88", { exact: false }).first()).toBeVisible();
+  const first = page.locator(ROWS).first();
+  await expect(first).toContainText(ACT_UNCOVERED_TITLE);
+  await expect(first.getByText("88", { exact: false })).toBeVisible();
 });
 
 test("the summary counts agree with the listed actions", async ({
@@ -42,10 +42,10 @@ test("filtering by priority updates the url and survives a reload", async ({
   await page.getByRole("button", { name: /^Critical/ }).click();
 
   await expect(page).toHaveURL(/priority=critical/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(1);
+  await expect(page.locator(ROWS)).toHaveCount(1);
 
   await page.reload();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(1);
+  await expect(page.locator(ROWS)).toHaveCount(1);
 });
 
 test("evidence is reachable by keyboard and shows the stored numbers", async ({
@@ -79,10 +79,16 @@ test("a degraded row explains itself without breaking the list", async ({
 }) => {
   await page.goto("/actions");
 
+  const degraded = page.locator(card("act-degraded"));
+  await expect(degraded.getByText("Evidence unavailable")).toBeVisible();
+  await expect(page.locator(ROWS).first()).toBeVisible();
+
+  await degraded.getByRole("link").click();
   await expect(
-    page.getByText(/Evidence unavailable for this stored action/),
+    page
+      .getByRole("dialog")
+      .getByText(/Evidence unavailable for this stored action/),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
 });
 
 test("the header states how fresh the queue is", async ({ page }) => {
@@ -297,7 +303,7 @@ test("an empty filter combination offers to clear the filters", async ({
 
   await expect(page.getByText("No actions match these filters")).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  await expect(page.locator(ROWS).first()).toBeVisible();
 });
 
 test("a two status filter with no matches offers to clear the filters", async ({
@@ -443,9 +449,9 @@ test("the app detail nav exposes an actions section", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/apps\/app-1\/actions/);
   await expect(
-    page
-      .locator(card("act-uncovered"))
-      .getByRole("heading", { level: 2, name: ACT_UNCOVERED_TITLE }),
+    page.locator(card("act-uncovered")).getByRole("link", {
+      name: ACT_UNCOVERED_TITLE,
+    }),
   ).toBeVisible(rendered);
 });
 

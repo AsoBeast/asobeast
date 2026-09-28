@@ -61,7 +61,11 @@ test("the sheet writes out the steps and ends with the confirmation", async ({
 }) => {
   await page.goto("/actions?action=act-uncovered");
 
-  const steps = page.getByRole("dialog").getByRole("listitem");
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("heading", { name: "How to fix" }),
+  ).toBeVisible();
+  const steps = dialog.locator("ol > li");
   expect(await steps.count()).toBeGreaterThanOrEqual(3);
   await expect(steps.last()).toHaveText(/^asobeast confirms the fix/);
 });

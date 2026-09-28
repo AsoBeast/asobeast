@@ -1,7 +1,16 @@
 import { Meter } from "@/components/ui/meter";
+import { cn } from "@/lib/utils";
 import { ACTION_IMPACT_CAPTION } from "./action-copy";
 
-export function ActionImpactMeter({ impact }: { impact: number }) {
+export function ActionImpactMeter({
+  impact,
+  className = "w-24",
+  compact = false,
+}: {
+  impact: number;
+  className?: string;
+  compact?: boolean;
+}) {
   return (
     <div className="flex items-center gap-2">
       <div
@@ -12,13 +21,14 @@ export function ActionImpactMeter({ impact }: { impact: number }) {
         aria-valuemax={100}
         aria-valuetext={`${impact} of 100 estimated impact`}
         title={ACTION_IMPACT_CAPTION}
-        className="w-24"
+        className={className}
       >
         <Meter value={impact} tone="opportunity" />
       </div>
       <span className="numeric font-mono text-caption text-muted-foreground">
         {impact}
-        <span className="sr-only"> of 100</span> estimated impact
+        <span className="sr-only"> of 100</span>
+        <span className={cn(compact && "sr-only")}> estimated impact</span>
       </span>
     </div>
   );

@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import type { ActionPriority } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { ACTION_PRIORITY_LABEL } from "./action-copy";
 
 const PRIORITY_ICON = {
@@ -26,14 +27,21 @@ const PRIORITY_CLASS: Record<ActionPriority, string> = {
 
 export function ActionPriorityBadge({
   priority,
+  compact = false,
 }: {
   priority: ActionPriority;
+  compact?: boolean;
 }) {
   const Icon = PRIORITY_ICON[priority];
   return (
-    <Badge variant="outline" className={PRIORITY_CLASS[priority]}>
+    <Badge
+      variant="outline"
+      className={cn("shrink-0", PRIORITY_CLASS[priority])}
+    >
       <Icon aria-hidden className="size-3.5" />
-      {ACTION_PRIORITY_LABEL[priority]}
+      <span className={cn(compact && "sr-only @md/queue:not-sr-only")}>
+        {ACTION_PRIORITY_LABEL[priority]}
+      </span>
     </Badge>
   );
 }

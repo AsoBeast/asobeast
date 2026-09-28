@@ -4,14 +4,14 @@ import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queueFilters } from "@/lib/action-filters";
 import { actionsOptions } from "@/lib/queries";
-import { ActionCard } from "./ActionCard";
 import { ActionCenterHeader } from "./ActionCenterHeader";
 import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionOverview } from "./ActionOverview";
+import { ActionQueue } from "./ActionQueue";
 import { ActionToolbar } from "./ActionToolbar";
 import { filterQueue, isFilteredView } from "./queue-filters";
-import { sortQueue } from "./queue-groups";
+import { groupQueue, sortQueue } from "./queue-groups";
 import { ActionOverviewSkeleton } from "./skeletons";
 import { useActionSheet } from "./use-action-sheet";
 import { useQueueView } from "./use-queue-view";
@@ -52,35 +52,41 @@ export function ActionCenter({ appId }: { appId?: string }) {
       <Suspense fallback={<ActionOverviewSkeleton />}>
         <ActionOverview appId={appId} />
       </Suspense>
-      <ActionToolbar
-        appId={appId}
-        items={data.items}
-        view={view}
-        setView={setView}
-        shown={visible.length}
-        loadedTotal={data.total}
-      />
-
-      {visible.length === 0 ? (
-        <ActionEmptyState
-          generatedAt={data.generatedAt}
-          filtered={filtered}
-          onClearFilters={() => void setView(CLEARED_VIEW)}
+      <section
+        id="queue"
+        aria-labelledby="queue-heading"
+        className="@container/queue flex flex-col gap-4"
+      >
+        <h2 id="queue-heading" className="sr-only">
+          Queue
+        </h2>
+        <ActionToolbar
+          appId={appId}
+          items={data.items}
+          view={view}
+          setView={setView}
+          shown={visible.length}
+          loadedTotal={data.total}
         />
-      ) : (
-        <ul className="flex list-none flex-col gap-4 p-0">
-          {visible.map((item) => (
-            <li key={item.id}>
-              <ActionCard
-                item={item}
-                focused={sheet.id === item.id}
-                href={sheet.hrefFor(item.id)}
-                onOpen={() => sheet.open(item.id)}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+        {visible.length === 0 ? (
+          <ActionEmptyState
+            generatedAt={data.generatedAt}
+            filtered={filtered}
+            onClearFilters={() => void setView(CLEARED_VIEW)}
+          />
+        ) : (
+          <ActionQueue
+            groups={groupQueue(
+              visible,
+              appId && view.group === "app" ? "priority" : view.group,
+            )}
+            focusedId={sheet.id}
+            appScoped={appId !== undefined}
+            hrefFor={sheet.hrefFor}
+            onOpen={(item) => sheet.open(item.id)}
+          />
+        )}
+      </section>
       <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
     </>
   );
