@@ -138,6 +138,24 @@ describe("evidenceSections", () => {
     });
   });
 
+  it("lists the keywords a competitor passed you on after its change", () => {
+    const evidence = evidenceOf("act-overtake");
+
+    expect(factValues(evidence)).toMatchObject({
+      Competitor: "Tomato Focus",
+      "New title": "Tomato Focus: Habit Tracker",
+      "New subtitle": "—",
+      "Keywords passed": "2",
+    });
+    expect(lists(evidence)).toEqual({
+      "Changed fields": ["Title"],
+      "Keywords they passed you on": [
+        "habit tracker you 6 → 9, them 14 → 4 · in their new text",
+        "streak counter you 8 → 11, them 12 → 7",
+      ],
+    });
+  });
+
   it("lists the keywords that fell with no change of yours", () => {
     const evidence = evidenceOf("act-slide");
 

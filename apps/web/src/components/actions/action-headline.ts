@@ -97,6 +97,8 @@ export function actionHeadline(item: ActionItem): string {
       return `Push ${subject} from #${evidence.latestPosition} into the top 10`;
     case "rank.investigate_unexplained_drop":
       return unexplainedHeadline(evidence);
+    case "competitor.investigate_overtake":
+      return `${evidence.competitorName ?? "A competitor"} changed its ${changedFields(evidence.fields)} and passed you on ${pluralize(evidence.keywords.length, "keyword")}`;
     case "metadata.fix_lint":
       return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
     default: {

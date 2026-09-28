@@ -223,6 +223,26 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts an overtake evidence and degrades one missing its keywords', () => {
+    const overtake = {
+      rule: 'competitor.investigate_overtake',
+      competitorAppId: 'comp_1',
+      changedAt: '2026-07-27',
+      fields: ['title'],
+      keywords: [],
+    };
+
+    expect(
+      parseActionEvidence('competitor.investigate_overtake', overtake),
+    ).not.toBeNull();
+    expect(
+      parseActionEvidence('competitor.investigate_overtake', {
+        ...overtake,
+        keywords: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

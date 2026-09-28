@@ -35,6 +35,23 @@ describe('summarizeActionEvidence', () => {
     ).toBe('visibility 40 → 32.5 with no change of yours, 0 keywords fell');
   });
 
+  it('names the competitor that changed its listing and passed you', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'competitor.investigate_overtake',
+        competitorAppId: 'comp_1',
+        competitorName: null,
+        changedAt: '2026-07-27',
+        fields: ['title', 'subtitle'],
+        newTitle: null,
+        newSubtitle: null,
+        keywords: [],
+      }),
+    ).toBe(
+      'a competitor changed title, subtitle on 2026-07-27 and passed you on 0 keywords',
+    );
+  });
+
   it('counts the store rule problems in a listing field', () => {
     const lint = {
       rule: 'metadata.fix_lint' as const,

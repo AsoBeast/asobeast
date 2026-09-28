@@ -82,6 +82,12 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
     'visibilityDelta',
     'droppedKeywords',
   ],
+  'competitor.investigate_overtake': [
+    'competitorAppId',
+    'changedAt',
+    'fields',
+    'keywords',
+  ],
 };
 
 export function parseActionEvidence(

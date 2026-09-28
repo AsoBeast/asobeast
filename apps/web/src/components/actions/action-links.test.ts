@@ -16,6 +16,7 @@ const HREF: Record<ActionRule, string> = {
   "keyword.push_to_top10": "/apps/app-1/metadata?keyword=kw-1",
   "metadata.fix_lint": "/apps/app-1/metadata",
   "rank.investigate_unexplained_drop": "/apps/app-1/keywords?country=us",
+  "competitor.investigate_overtake": "/apps/app-1/competitors",
 };
 
 describe("actionHref", () => {
@@ -40,6 +41,7 @@ describe("actionSection", () => {
   it("names the section a link opens", () => {
     expect(actionSection("/apps/app-1/metadata?keyword=kw-1")).toBe("Metadata");
     expect(actionSection("/apps/app-1/reviews?score=1")).toBe("Reviews");
+    expect(actionSection("/apps/app-1/competitors")).toBe("Competitors");
   });
 
   it("falls back to the app for an unknown section", () => {

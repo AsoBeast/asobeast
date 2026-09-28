@@ -2,7 +2,9 @@ import type {
   ActionDroppedKeyword,
   ActionEvidence,
   ActionSerpEntrant,
+  ActionOvertakenKeyword,
   AuditFixFactorEvidence,
+  CompetitorInvestigateOvertakeEvidence,
   KeywordAddUncoveredEvidence,
   KeywordDefendEvidence,
   KeywordPruneEvidence,
@@ -74,6 +76,12 @@ const entrantItem = (entrant: ActionSerpEntrant): EvidenceListItem => ({
 const droppedItem = (keyword: ActionDroppedKeyword): EvidenceListItem => ({
   text: keyword.text,
   detail: `${formatRankPosition(keyword.from)} → ${formatRankPosition(keyword.to)}`,
+  tone: "down",
+});
+
+const overtakenItem = (keyword: ActionOvertakenKeyword): EvidenceListItem => ({
+  text: keyword.text,
+  detail: `you ${formatRankPosition(keyword.yourBefore)} → ${formatRankPosition(keyword.yourAfter)}, them ${formatRankPosition(keyword.theirBefore)} → ${formatRankPosition(keyword.theirAfter)}${keyword.mentioned ? " · in their new text" : ""}`,
   tone: "down",
 });
 
@@ -208,6 +216,32 @@ function unexplainedSections(
       {
         label: "Keywords that fell",
         items: evidence.droppedKeywords.map(droppedItem),
+      },
+    ],
+  };
+}
+
+function overtakeSections(
+  evidence: CompetitorInvestigateOvertakeEvidence,
+): Sections {
+  return {
+    facts: [
+      fact("Competitor", evidence.competitorName ?? "—"),
+      fact("Changed on", formatDate(evidence.changedAt)),
+      fact("New title", evidence.newTitle ?? "—"),
+      fact("New subtitle", evidence.newSubtitle ?? "—"),
+      fact("Keywords passed", formatNumber(evidence.keywords.length)),
+    ],
+    lists: [
+      {
+        label: "Changed fields",
+        items: evidence.fields.map((field) => ({
+          text: capitalized(CHANGE_FIELD_WORD[field]),
+        })),
+      },
+      {
+        label: "Keywords they passed you on",
+        items: evidence.keywords.map(overtakenItem),
       },
     ],
   };
@@ -372,6 +406,8 @@ function sections(evidence: ActionEvidence): Sections {
       return pushSections(evidence);
     case "rank.investigate_unexplained_drop":
       return unexplainedSections(evidence);
+    case "competitor.investigate_overtake":
+      return overtakeSections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

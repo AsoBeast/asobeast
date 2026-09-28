@@ -23,7 +23,9 @@ interface SeriesBody {
 }
 
 function trendKeywordId(item: ActionItem): string | null {
-  return item.scope.keywordId;
+  return item.evidence?.rule === 'competitor.investigate_overtake'
+    ? (item.evidence.keywords[0]?.keywordId ?? null)
+    : item.scope.keywordId;
 }
 
 @Injectable()

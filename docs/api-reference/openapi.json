@@ -3003,7 +3003,8 @@
                   "market.improve_country",
                   "keyword.push_to_top10",
                   "metadata.fix_lint",
-                  "rank.investigate_unexplained_drop"
+                  "rank.investigate_unexplained_drop",
+                  "competitor.investigate_overtake"
                 ]
               }
             }
@@ -3391,7 +3392,8 @@
                   "market.improve_country",
                   "keyword.push_to_top10",
                   "metadata.fix_lint",
-                  "rank.investigate_unexplained_drop"
+                  "rank.investigate_unexplained_drop",
+                  "competitor.investigate_overtake"
                 ]
               }
             }

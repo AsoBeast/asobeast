@@ -22,6 +22,8 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return `position ${evidence.latestPosition}, ${evidence.daysInBand}/${evidence.windowDays} days in 11 to 20, covered only in ${evidence.coveredFields.join(', ')}`;
     case 'rank.investigate_unexplained_drop':
       return `visibility ${evidence.visibilityBefore} → ${evidence.visibilityAfter} with no change of yours, ${evidence.droppedKeywords.length} keywords fell`;
+    case 'competitor.investigate_overtake':
+      return `${evidence.competitorName ?? 'a competitor'} changed ${evidence.fields.join(', ')} on ${evidence.changedAt} and passed you on ${evidence.keywords.length} keywords`;
     case 'metadata.fix_lint':
       return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {

@@ -6,6 +6,7 @@ import type {
 } from "@asobeast/shared";
 import { formatCountry, formatDate } from "@/lib/format";
 import { ACTION_RULE_TITLE } from "./action-copy";
+import { changedFields } from "./action-headline";
 
 export const CONFIRMATION_STEP =
   "asobeast confirms the fix when this recommendation stops firing";
@@ -123,6 +124,12 @@ function ruleSteps(
         "Check the keyword monitor for the keywords that fell",
         "Look for competitor changes and new entrants in the same days",
         "Hold listing changes until you know the cause",
+      ];
+    case "competitor.investigate_overtake":
+      return [
+        `Compare their new ${changedFields(evidence.fields)} with yours`,
+        "Decide whether the keywords they now target matter to you",
+        "Strengthen your coverage of the keywords you want to keep",
       ];
     case "metadata.fix_lint":
       return [

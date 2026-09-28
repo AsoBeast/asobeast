@@ -803,6 +803,7 @@ describe('ActionsGenerator', () => {
       'keyword.push_to_top10',
       'metadata.fix_lint',
       'rank.investigate_unexplained_drop',
+      'competitor.investigate_overtake',
     ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {
@@ -837,7 +838,7 @@ describe('ActionsGenerator', () => {
       const push = realDetectors.filter(
         (detector) => detector.rule === 'keyword.push_to_top10',
       );
-      useDetectors(push);
+      mockDetectors.splice(0, mockDetectors.length, ...push);
       const first = buildPrisma();
       await generatorFor(ruleSampleContext(), first).generateForWorkspace(
         budget,

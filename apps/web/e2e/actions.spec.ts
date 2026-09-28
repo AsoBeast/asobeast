@@ -96,7 +96,7 @@ test("the header states how fresh the queue is", async ({ page }) => {
 
   const status = page.locator('[data-slot="action-status"]');
   await expect(status).toHaveText(
-    /^14 open · 1 critical · 4 high · generated /,
+    /^15 open · 1 critical · 5 high · generated /,
   );
   await expect(status).toContainText("withheld by the per app cap");
 });
@@ -333,7 +333,7 @@ test("the app overview counts only that app's actions", async ({ page }) => {
   const card = page
     .getByText("Top actions", { exact: true })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(card.getByText("3 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
   await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
 });
 
@@ -344,8 +344,8 @@ test("the app overview leaves snoozed actions out of its open counts", async ({
   const card = page
     .getByText("Top actions", { exact: true })
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
-  await expect(card.getByText("3 High", { exact: true })).toBeVisible();
-  await expect(card.getByText("4 High", { exact: true })).toHaveCount(0);
+  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
 });
 
 test("a failing update rolls the optimistic change back", async ({ page }) => {

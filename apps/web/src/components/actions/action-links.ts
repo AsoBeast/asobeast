@@ -16,6 +16,8 @@ export function actionHref(item: ActionItem): string {
       return `/apps/${appId}/keywords?country=${country}&sort=volatility`;
     case "metadata.fix_lint":
       return `/apps/${appId}/metadata`;
+    case "competitor.investigate_overtake":
+      return `/apps/${appId}/competitors`;
     case "audit.fix_factor":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":
@@ -33,6 +35,7 @@ export function actionHref(item: ActionItem): string {
 const SECTION_LABEL: Record<string, string> = {
   metadata: "Metadata",
   keywords: "Keywords",
+  competitors: "Competitors",
   changes: "Changes",
   audit: "Audit",
   reviews: "Reviews",

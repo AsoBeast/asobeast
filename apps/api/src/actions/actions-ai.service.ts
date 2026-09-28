@@ -48,6 +48,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'A home market listing field has error-level lint issues that break a store rule, such as exceeding its character limit.',
   'rank.investigate_unexplained_drop':
     'Visibility or several tracked ranks fell in a market over the last two weeks without an indexed metadata change of this app to explain it.',
+  'competitor.investigate_overtake':
+    'A tracked competitor changed indexed metadata and has stayed ahead of this app on relevant, valuable keywords since the change.',
 };
 
 const SCHEMA = {

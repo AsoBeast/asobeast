@@ -89,6 +89,48 @@ describe('ActionSeriesReader', () => {
     expect(calls(prisma)).toBe(0);
   });
 
+  it('reads the first overtaken keyword for a competitor overtake', async () => {
+    const overtake = (keywordIds: string[]): ActionItem => ({
+      ...item('competitor.investigate_overtake', null),
+      degraded: false,
+      evidence: {
+        rule: 'competitor.investigate_overtake',
+        competitorAppId: 'comp_1',
+        competitorName: 'Rival',
+        changedAt: '2026-07-27',
+        fields: ['title'],
+        newTitle: 'Rival',
+        newSubtitle: null,
+        keywords: keywordIds.map((keywordId) => ({
+          keywordId,
+          text: keywordId,
+          yourBefore: 6,
+          yourAfter: 9,
+          theirBefore: 14,
+          theirAfter: 4,
+          volume: 60,
+          mentioned: false,
+        })),
+      },
+    });
+
+    const { prisma, trend } = await read(overtake(['kw_7', 'kw_8']));
+    const empty = await read(overtake([]));
+
+    expect(prisma.keywordRanking.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          appId: 'app_1',
+          keywordId: 'kw_7',
+          date: { gte: new Date('2026-06-25T00:00:00.000Z') },
+        },
+      }),
+    );
+    expect(trend).toMatchObject({ metric: 'position' });
+    expect(empty.trend).toBeNull();
+    expect(calls(empty.prisma)).toBe(0);
+  });
+
   it('reads tracked keyword visibility for a market rule', async () => {
     const { prisma, trend } = await read(item('market.improve_country'));
 

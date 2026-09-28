@@ -77,6 +77,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `${evidence.field} ${evidence.issues.length}`;
     case 'rank.investigate_unexplained_drop':
       return `delta ${evidence.visibilityDelta}`;
+    case 'competitor.investigate_overtake':
+      return `${evidence.competitorName} ${evidence.keywords.length}`;
     default: {
       const never: never = evidence;
       return never;
@@ -293,6 +295,27 @@ describe('action evidence', () => {
         meanVolatility: 10,
         lastOwnChangeAt: null,
       },
+      {
+        rule: 'competitor.investigate_overtake',
+        competitorAppId: 'comp_1',
+        competitorName: 'Tomato Focus',
+        changedAt: '2026-07-24',
+        fields: ['title'],
+        newTitle: 'Tomato Focus: Habit Tracker',
+        newSubtitle: null,
+        keywords: [
+          {
+            keywordId: 'kw_1',
+            text: 'habit tracker',
+            yourBefore: 6,
+            yourAfter: 9,
+            theirBefore: 14,
+            theirAfter: 4,
+            volume: 60,
+            mentioned: true,
+          },
+        ],
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -310,6 +333,7 @@ describe('action evidence', () => {
       'position 12',
       'title 1',
       'delta 7.5',
+      'Tomato Focus 1',
     ]);
   });
 

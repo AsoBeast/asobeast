@@ -226,6 +226,37 @@ describe("actionHeadline", () => {
     ).toBe("Find out why 3 keywords fell in Germany");
   });
 
+  it("names the competitor, the fields it changed and the keywords it passed", () => {
+    const overtake = {
+      rule: "competitor.investigate_overtake" as const,
+      competitorAppId: "comp-1",
+      competitorName: "Tomato Focus",
+      changedAt: "2026-07-24",
+      fields: ["title" as const, "summary" as const],
+      newTitle: "Tomato Focus",
+      newSubtitle: null,
+      keywords: [
+        {
+          keywordId: "k1",
+          text: "a",
+          yourBefore: 6,
+          yourAfter: 9,
+          theirBefore: 14,
+          theirAfter: 4,
+          volume: 60,
+          mentioned: false,
+        },
+      ],
+    };
+
+    expect(headline(overtake, null)).toBe(
+      "Tomato Focus changed its title and short description and passed you on 1 keyword",
+    );
+    expect(headline({ ...overtake, competitorName: null }, null)).toMatch(
+      /^A competitor changed its/,
+    );
+  });
+
   it("counts the store rule problems in a listing field", () => {
     const issue = {
       rule: "over-limit",

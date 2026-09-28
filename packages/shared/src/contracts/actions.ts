@@ -16,6 +16,7 @@ export const ACTION_RULES = [
   'keyword.push_to_top10',
   'metadata.fix_lint',
   'rank.investigate_unexplained_drop',
+  'competitor.investigate_overtake',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -54,6 +55,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'keyword.push_to_top10': 'metadata',
   'metadata.fix_lint': 'metadata',
   'rank.investigate_unexplained_drop': 'regression',
+  'competitor.investigate_overtake': 'competition',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -260,6 +262,28 @@ export interface RankInvestigateUnexplainedDropEvidence {
   lastOwnChangeAt: string | null;
 }
 
+export interface ActionOvertakenKeyword {
+  keywordId: string;
+  text: string;
+  yourBefore: number | null;
+  yourAfter: number | null;
+  theirBefore: number | null;
+  theirAfter: number | null;
+  volume: number | null;
+  mentioned: boolean;
+}
+
+export interface CompetitorInvestigateOvertakeEvidence {
+  rule: 'competitor.investigate_overtake';
+  competitorAppId: string;
+  competitorName: string | null;
+  changedAt: string;
+  fields: ChangeField[];
+  newTitle: string | null;
+  newSubtitle: string | null;
+  keywords: ActionOvertakenKeyword[];
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -271,7 +295,8 @@ export type ActionEvidence =
   | MarketImproveCountryEvidence
   | KeywordPushToTop10Evidence
   | MetadataFixLintEvidence
-  | RankInvestigateUnexplainedDropEvidence;
+  | RankInvestigateUnexplainedDropEvidence
+  | CompetitorInvestigateOvertakeEvidence;
 
 export interface ActionAi {
   explanation: string | null;
