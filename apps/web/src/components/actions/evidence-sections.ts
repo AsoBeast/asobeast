@@ -15,6 +15,7 @@ import type {
   RankInvestigateUnexplainedDropEvidence,
   ReviewsInvestigateRatingDeclineEvidence,
   ReviewsInvestigateThemeEvidence,
+  ReviewsReplyNegativeEvidence,
   SerpHoldVolatileEvidence,
 } from "@asobeast/shared";
 import { formatRankPosition } from "@asobeast/shared";
@@ -338,6 +339,30 @@ function declineSections(
   };
 }
 
+function replySections(evidence: ReviewsReplyNegativeEvidence): Sections {
+  return {
+    facts: [
+      fact("Unanswered", formatNumber(evidence.unanswered)),
+      fact("Checked for a reply", formatNumber(evidence.checked)),
+      fact("Low reviews", formatNumber(evidence.negative)),
+      fact(
+        "Reply rate",
+        evidence.replyRate === null
+          ? "—"
+          : `${Math.round(evidence.replyRate * 100)}%`,
+      ),
+      fact(
+        "Oldest unanswered",
+        evidence.oldestUnansweredAt
+          ? formatDate(evidence.oldestUnansweredAt)
+          : "—",
+      ),
+      fact("Window", `${evidence.windowDays} days`),
+    ],
+    lists: [],
+  };
+}
+
 function marketSections(evidence: MarketImproveCountryEvidence): Sections {
   return {
     facts: [
@@ -435,6 +460,8 @@ function sections(evidence: ActionEvidence): Sections {
       return overtakeSections(evidence);
     case "reviews.investigate_rating_decline":
       return declineSections(evidence);
+    case "reviews.reply_negative":
+      return replySections(evidence);
     case "metadata.fix_lint":
       return lintSections(evidence);
     default: {

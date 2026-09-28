@@ -173,6 +173,21 @@ describe("evidenceSections", () => {
     ).toEqual({ metric: "rating", value: 3.5 });
   });
 
+  it("states how many low reviews wait for a reply and the reply rate", () => {
+    const evidence = evidenceOf("act-reply");
+
+    expect(factValues(evidence)).toMatchObject({
+      Unanswered: "3",
+      "Checked for a reply": "4",
+      "Reply rate": "25%",
+      Window: "14 days",
+    });
+    if (evidence.rule !== "reviews.reply_negative") throw new Error("fixture");
+    expect(
+      factValues({ ...evidence, replyRate: null, oldestUnansweredAt: null }),
+    ).toMatchObject({ "Reply rate": "—", "Oldest unanswered": "—" });
+  });
+
   it("lists the keywords that fell with no change of yours", () => {
     const evidence = evidenceOf("act-slide");
 

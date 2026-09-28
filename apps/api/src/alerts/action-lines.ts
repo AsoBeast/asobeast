@@ -26,6 +26,8 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return `${evidence.competitorName ?? 'a competitor'} changed ${evidence.fields.join(', ')} on ${evidence.changedAt} and passed you on ${evidence.keywords.length} keywords`;
     case 'reviews.investigate_rating_decline':
       return `review scores ${evidence.baselineAverage} → ${evidence.recentAverage} over ${evidence.recentReviews} recent reviews`;
+    case 'reviews.reply_negative':
+      return `${evidence.unanswered} of ${evidence.checked} checked low reviews have no reply in ${evidence.windowDays} days`;
     case 'metadata.fix_lint':
       return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {

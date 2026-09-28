@@ -31,6 +31,8 @@ const review = (
   text,
   version,
   reviewedAt: new Date(NOW.getTime() - 86_400_000),
+  repliedAt: null,
+  replyCheckedAt: null,
   ...overrides,
 });
 

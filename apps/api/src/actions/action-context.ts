@@ -74,6 +74,8 @@ export interface ActionReview {
   text: string;
   version: string | null;
   reviewedAt: Date | null;
+  repliedAt: Date | null;
+  replyCheckedAt: Date | null;
 }
 
 export interface ActionContextApp {
@@ -312,6 +314,8 @@ export class ActionContextLoader {
             text: true,
             version: true,
             reviewedAt: true,
+            repliedAt: true,
+            replyCheckedAt: true,
           },
           orderBy: { reviewedAt: 'desc' },
         }),

@@ -94,6 +94,7 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
     'drop',
     'sampleReviewIds',
   ],
+  'reviews.reply_negative': ['unanswered', 'checked', 'sampleReviewIds'],
 };
 
 export function parseActionEvidence(

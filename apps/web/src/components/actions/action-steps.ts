@@ -137,6 +137,12 @@ function ruleSteps(
         `Check what changed in version ${evidence.latestVersion ?? "the latest version"}`,
         "Reply where a fix is on its way",
       ];
+    case "reviews.reply_negative":
+      return [
+        `Open Reviews in ${STORE_CONSOLE[store]}`,
+        "Reply to the lowest scores first and say what you are fixing",
+        "asobeast rechecks replies every day",
+      ];
     case "metadata.fix_lint":
       return [
         ...evidence.issues.map((issue) => issue.message),

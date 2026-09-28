@@ -263,6 +263,23 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts a reply evidence and degrades one missing its unanswered count', () => {
+    const reply = {
+      rule: 'reviews.reply_negative',
+      unanswered: 3,
+      checked: 4,
+      sampleReviewIds: [],
+    };
+
+    expect(parseActionEvidence('reviews.reply_negative', reply)).not.toBeNull();
+    expect(
+      parseActionEvidence('reviews.reply_negative', {
+        ...reply,
+        unanswered: undefined,
+      }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

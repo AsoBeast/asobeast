@@ -95,6 +95,17 @@ describe("actionSteps", () => {
     ]);
   });
 
+  it("sends unanswered Play reviews to Play Console", () => {
+    const reply = ACTIONS.find((item) => item.id === "act-reply")!;
+
+    expect(actionSteps(reply)).toEqual([
+      "Open Reviews in Play Console",
+      "Reply to the lowest scores first and say what you are fixing",
+      "asobeast rechecks replies every day",
+      CONFIRMATION_STEP,
+    ]);
+  });
+
   it("turns each failing audit check into a step, in order", () => {
     const audit = ACTIONS.find((item) => item.id === "act-audit")!;
     const evidence = audit.evidence!;

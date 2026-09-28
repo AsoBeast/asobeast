@@ -283,6 +283,41 @@ describe('ActionContextLoader', () => {
     ]);
   });
 
+  it('reads when each review was answered and when replies were checked', async () => {
+    const repliedAt = new Date('2026-07-28T10:00:00.000Z');
+    const replyCheckedAt = new Date('2026-07-29T03:00:00.000Z');
+    const prisma = buildPrisma({
+      reviews: [
+        {
+          id: 'rev_1',
+          appId: 'app_1',
+          score: 2,
+          title: null,
+          text: 'slow',
+          version: '1.0',
+          reviewedAt: new Date('2026-07-27T00:00:00.000Z'),
+          repliedAt,
+          replyCheckedAt,
+        },
+      ],
+    });
+
+    const context = await loaderFor(prisma).load(budget, NOW);
+
+    expect(prisma.review.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          repliedAt: true,
+          replyCheckedAt: true,
+        }) as unknown,
+      }),
+    );
+    expect(context.apps[0].reviews[0]).toMatchObject({
+      repliedAt,
+      replyCheckedAt,
+    });
+  });
+
   it('bounds the ranking window and the shorter SERP window', async () => {
     const prisma = buildPrisma();
     await loaderFor(prisma, [keyword('kw_1', 'us')]).load(budget, NOW);

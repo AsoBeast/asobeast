@@ -26,6 +26,7 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
     "Investigate a drop that followed no change of yours",
   "competitor.investigate_overtake": "Respond to a competitor that moved ahead",
   "reviews.investigate_rating_decline": "Investigate falling review scores",
+  "reviews.reply_negative": "Reply to unanswered low reviews",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -42,6 +43,7 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "rank.investigate_unexplained_drop": "Unexplained drops",
   "competitor.investigate_overtake": "Competitor overtakes",
   "reviews.investigate_rating_decline": "Rating declines",
+  "reviews.reply_negative": "Unanswered reviews",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -95,6 +97,8 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `${evidence.competitorName ?? "A competitor"} changed its listing on ${evidence.changedAt} and has stayed ahead of you on ${pluralize(evidence.keywords.length, "keyword")} since.`;
     case "reviews.investigate_rating_decline":
       return `Reviews from the last ${evidence.recentDays} days average ${measure(evidence.recentAverage)} against ${measure(evidence.baselineAverage)} before, with no single complaint theme behind it.`;
+    case "reviews.reply_negative":
+      return `${measure(evidence.unanswered)} of ${measure(evidence.checked)} low reviews checked in the last ${evidence.windowDays} days have no reply yet.`;
     case "metadata.fix_lint":
       return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {

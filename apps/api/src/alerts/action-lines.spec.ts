@@ -70,6 +70,21 @@ describe('summarizeActionEvidence', () => {
     ).toBe('review scores 4.5 → 3.5 over 8 recent reviews');
   });
 
+  it('counts the low reviews still waiting for a reply', () => {
+    expect(
+      summarizeActionEvidence({
+        rule: 'reviews.reply_negative',
+        unanswered: 3,
+        checked: 4,
+        negative: 4,
+        windowDays: 14,
+        oldestUnansweredAt: '2026-07-21T03:00:00.000Z',
+        replyRate: 0.25,
+        sampleReviewIds: [],
+      }),
+    ).toBe('3 of 4 checked low reviews have no reply in 14 days');
+  });
+
   it('counts the store rule problems in a listing field', () => {
     const lint = {
       rule: 'metadata.fix_lint' as const,

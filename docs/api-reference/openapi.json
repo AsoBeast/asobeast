@@ -3005,7 +3005,8 @@
                   "metadata.fix_lint",
                   "rank.investigate_unexplained_drop",
                   "competitor.investigate_overtake",
-                  "reviews.investigate_rating_decline"
+                  "reviews.investigate_rating_decline",
+                  "reviews.reply_negative"
                 ]
               }
             }
@@ -3395,7 +3396,8 @@
                   "metadata.fix_lint",
                   "rank.investigate_unexplained_drop",
                   "competitor.investigate_overtake",
-                  "reviews.investigate_rating_decline"
+                  "reviews.investigate_rating_decline",
+                  "reviews.reply_negative"
                 ]
               }
             }

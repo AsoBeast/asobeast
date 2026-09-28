@@ -81,6 +81,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `${evidence.competitorName} ${evidence.keywords.length}`;
     case 'reviews.investigate_rating_decline':
       return `drop ${evidence.drop}`;
+    case 'reviews.reply_negative':
+      return `unanswered ${evidence.unanswered}`;
     default: {
       const never: never = evidence;
       return never;
@@ -331,6 +333,16 @@ describe('action evidence', () => {
         negativeShare: 0.25,
         sampleReviewIds: ['rev_1'],
       },
+      {
+        rule: 'reviews.reply_negative',
+        unanswered: 3,
+        checked: 4,
+        negative: 4,
+        windowDays: 14,
+        oldestUnansweredAt: '2026-07-20T00:00:00.000Z',
+        replyRate: 0.25,
+        sampleReviewIds: ['rev_1'],
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -350,6 +362,7 @@ describe('action evidence', () => {
       'delta 7.5',
       'Tomato Focus 1',
       'drop 0.8',
+      'unanswered 3',
     ]);
   });
 

@@ -9,6 +9,7 @@ import { metadataFixLintDetector } from './rules/metadata-fix-lint';
 import { rankInvestigateUnexplainedDropDetector } from './rules/rank-investigate-unexplained-drop';
 import { competitorInvestigateOvertakeDetector } from './rules/competitor-investigate-overtake';
 import { reviewsInvestigateRatingDeclineDetector } from './rules/reviews-investigate-rating-decline';
+import { reviewsReplyNegativeDetector } from './rules/reviews-reply-negative';
 import { keywordPruneDetector } from './rules/keyword-prune';
 import { marketImproveCountryDetector } from './rules/market-improve-country';
 import { rankInvestigateDropDetector } from './rules/rank-investigate-drop';
@@ -47,4 +48,5 @@ export const ACTION_DETECTORS: readonly ActionDetector[] = Object.freeze([
   rankInvestigateUnexplainedDropDetector,
   competitorInvestigateOvertakeDetector,
   reviewsInvestigateRatingDeclineDetector,
+  reviewsReplyNegativeDetector,
 ]);

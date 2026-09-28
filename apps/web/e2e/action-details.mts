@@ -113,6 +113,7 @@ const TREND_METRIC: Record<ActionItem["rule"], ActionTrendMetric> = {
   "rank.investigate_unexplained_drop": "visibility",
   "competitor.investigate_overtake": "position",
   "reviews.investigate_rating_decline": "rating",
+  "reviews.reply_negative": "rating",
 };
 
 const PATHS: Record<string, (offset: number) => number | null> = {

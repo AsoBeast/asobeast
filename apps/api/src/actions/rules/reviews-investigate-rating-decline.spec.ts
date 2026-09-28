@@ -24,6 +24,8 @@ const review = (
   version: '4.2.0',
   reviewedAt:
     daysAgo === null ? null : new Date(NOW.getTime() - daysAgo * DAY_MS),
+  repliedAt: null,
+  replyCheckedAt: null,
   ...overrides,
 });
 

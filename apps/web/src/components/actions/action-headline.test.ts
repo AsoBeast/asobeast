@@ -278,6 +278,24 @@ describe("actionHeadline", () => {
     ).toBe("Review scores fell from 4.5 to 3.5 in the last 14 days");
   });
 
+  it("counts the low reviews waiting for a reply", () => {
+    expect(
+      headline(
+        {
+          rule: "reviews.reply_negative",
+          unanswered: 3,
+          checked: 4,
+          negative: 4,
+          windowDays: 14,
+          oldestUnansweredAt: null,
+          replyRate: 0.25,
+          sampleReviewIds: [],
+        },
+        null,
+      ),
+    ).toBe("Reply to 3 unanswered low reviews");
+  });
+
   it("counts the store rule problems in a listing field", () => {
     const issue = {
       rule: "over-limit",

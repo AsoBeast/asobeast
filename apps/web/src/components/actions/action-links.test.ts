@@ -18,6 +18,7 @@ const HREF: Record<ActionRule, string> = {
   "rank.investigate_unexplained_drop": "/apps/app-1/keywords?country=us",
   "competitor.investigate_overtake": "/apps/app-1/competitors",
   "reviews.investigate_rating_decline": "/apps/app-1/reviews",
+  "reviews.reply_negative": "/apps/app-1/reviews?score=1",
 };
 
 describe("actionHref", () => {

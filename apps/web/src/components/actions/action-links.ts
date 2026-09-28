@@ -23,6 +23,7 @@ export function actionHref(item: ActionItem): string {
     case "audit.fix_factor":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":
+    case "reviews.reply_negative":
       return `/apps/${appId}/reviews?score=1`;
     case "market.improve_country":
     case "rank.investigate_unexplained_drop":

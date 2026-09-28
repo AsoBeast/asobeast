@@ -806,6 +806,7 @@ describe('ActionsGenerator', () => {
       'rank.investigate_unexplained_drop',
       'competitor.investigate_overtake',
       'reviews.investigate_rating_decline',
+      'reviews.reply_negative',
     ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {
@@ -856,6 +857,8 @@ describe('ActionsGenerator', () => {
           text,
           version,
           reviewedAt: reviewAt(daysAgo, index),
+          repliedAt: null,
+          replyCheckedAt: null,
         }));
       const declining = (themed: boolean): ActionContext =>
         actionContext([
