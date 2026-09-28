@@ -44,9 +44,11 @@ import {
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
+  FRESH_PORTFOLIO_INSIGHTS,
   MANY_PORTFOLIO_INSIGHTS,
   PORTFOLIO_INSIGHTS,
   QUIET_PORTFOLIO_INSIGHTS,
+  UNRANKED_PORTFOLIO_INSIGHTS,
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
@@ -1021,7 +1023,11 @@ const routes: Route[] = [
       }
       const insights = hasCookie(req, "portfolio_insights_quiet", "1")
         ? QUIET_PORTFOLIO_INSIGHTS
-        : PORTFOLIO_INSIGHTS;
+        : hasCookie(req, "portfolio_insights_unranked", "1")
+          ? UNRANKED_PORTFOLIO_INSIGHTS
+          : hasCookie(req, "portfolio_insights_fresh", "1")
+            ? FRESH_PORTFOLIO_INSIGHTS
+            : PORTFOLIO_INSIGHTS;
       const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
       if (!token) return json(res, 200, insights);
       void insightsHold(token).promise.then(() => json(res, 200, insights));

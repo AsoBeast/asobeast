@@ -178,11 +178,25 @@ export const PORTFOLIO_INSIGHTS: PortfolioInsights = {
   totals: totalsOf(APPS),
 };
 
-export const QUIET_PORTFOLIO_INSIGHTS: PortfolioInsights = {
-  apps: APPS.map((app) => ({ ...app, movement: STILL })),
-  movers: { up: [], down: [] },
-  totals: totalsOf(APPS.map((app) => ({ ...app, movement: STILL }))),
+const stillWith = (
+  change: (app: PortfolioAppInsight) => PortfolioAppInsight,
+): PortfolioInsights => {
+  const apps = APPS.map((app) => change({ ...app, movement: STILL }));
+  return { apps, movers: { up: [], down: [] }, totals: totalsOf(apps) };
 };
+
+export const QUIET_PORTFOLIO_INSIGHTS = stillWith((app) => app);
+
+export const UNRANKED_PORTFOLIO_INSIGHTS = stillWith((app) => ({
+  ...app,
+  rankDistribution: { ...NO_BANDS, unranked: 3 },
+  top10Delta7d: 0,
+}));
+
+export const FRESH_PORTFOLIO_INSIGHTS = stillWith((app) => ({
+  ...app,
+  top10Delta7d: null,
+}));
 
 export const EMPTY_PORTFOLIO_INSIGHTS: PortfolioInsights = {
   apps: [],

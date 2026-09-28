@@ -124,6 +124,28 @@ test("keyword movers say so in a quiet week", async ({ page }) => {
   await expect(card.getByRole("list")).toHaveCount(0);
 });
 
+for (const { cookie, sentence } of [
+  {
+    cookie: "portfolio_insights_unranked",
+    sentence: "No keyword moved this week.",
+  },
+  {
+    cookie: "portfolio_insights_fresh",
+    sentence: "Movement appears after a week of daily runs.",
+  },
+]) {
+  test(`keyword movers explain an empty week for ${cookie}`, async ({
+    page,
+  }) => {
+    await page
+      .context()
+      .addCookies([{ name: cookie, value: "1", url: "http://localhost:3000" }]);
+    await page.goto("/");
+
+    await expect(moversCard(page)).toContainText(sentence);
+  });
+}
+
 test("recent changes filter by owner and write the url", async ({ page }) => {
   await page.goto("/");
 

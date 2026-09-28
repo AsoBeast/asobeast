@@ -23,12 +23,10 @@ const rankingsHref = (mover: PortfolioKeywordMover) =>
 function quietSentence(insights: PortfolioInsights): string | null {
   const { up, down } = insights.totals.movement;
   if (up + down > 0) return null;
-  const ranked = insights.apps.some(
-    (app) => app.rankDistribution.top50 + app.rankDistribution.beyond > 0,
-  );
-  return ranked
+  const weekOfHistory = insights.apps.some((app) => app.top10Delta7d !== null);
+  return weekOfHistory
     ? "No keyword moved this week."
-    : "Movement appears after two daily runs.";
+    : "Movement appears after a week of daily runs.";
 }
 
 export function PortfolioMoversCard() {
