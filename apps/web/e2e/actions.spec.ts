@@ -101,6 +101,17 @@ test("the header states how fresh the queue is", async ({ page }) => {
   await expect(status).toContainText("withheld by the per app cap");
 });
 
+test("the status tabs name their counts and control the queue", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+
+  const tab = page.getByRole("tab", { name: "Dismissed, 1 action" });
+  await expect(tab).toBeVisible();
+  const controls = await tab.getAttribute("aria-controls");
+  await expect(page.locator(`[id="${controls}"]`)).toBeVisible();
+});
+
 test("an app's header leaves out the workspace wide cap count", async ({
   page,
 }) => {

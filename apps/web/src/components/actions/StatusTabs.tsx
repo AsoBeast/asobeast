@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type { ActionStatus } from "@asobeast/shared";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, pluralize } from "@/lib/format";
 import { actionSummaryFor } from "@/lib/queries";
 import { presetCount, presetOf, STATUS_PRESETS } from "./status-presets";
 
@@ -32,23 +32,29 @@ function Tabbed({
         aria-label="Action status"
         className="max-w-full justify-start overflow-x-auto overflow-y-hidden"
       >
-        {STATUS_PRESETS.map((preset) => (
-          <TabsTrigger
-            key={preset.key}
-            value={preset.key}
-            className="flex-none"
-          >
-            {preset.label}
-            {byStatus ? (
-              <span
-                aria-hidden
-                className="numeric font-mono text-muted-foreground"
-              >
-                {formatNumber(presetCount(preset, byStatus))}
-              </span>
-            ) : null}
-          </TabsTrigger>
-        ))}
+        {STATUS_PRESETS.map((preset) => {
+          const count = byStatus ? presetCount(preset, byStatus) : null;
+          return (
+            <TabsTrigger
+              key={preset.key}
+              value={preset.key}
+              aria-controls="queue"
+              aria-label={
+                count === null
+                  ? undefined
+                  : `${preset.label}, ${pluralize(count, "action")}`
+              }
+              className="flex-none"
+            >
+              {preset.label}
+              {count === null ? null : (
+                <span className="numeric font-mono text-muted-foreground">
+                  {formatNumber(count)}
+                </span>
+              )}
+            </TabsTrigger>
+          );
+        })}
       </TabsList>
     </Tabs>
   );
