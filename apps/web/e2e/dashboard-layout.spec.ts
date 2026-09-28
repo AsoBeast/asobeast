@@ -286,10 +286,16 @@ for (const { width, collapse, rows } of [
       )
       .toEqual(rows);
 
-    const actions = (await cardOf(page, "Top actions").boundingBox())!;
-    const movers = (await cardOf(page, "Keyword movers").boundingBox())!;
-    expect(movers.y).toBeGreaterThanOrEqual(actions.y + actions.height);
-    expect(Math.round(movers.x)).toBe(Math.round(actions.x));
+    await expect
+      .poll(async () => {
+        const actions = (await cardOf(page, "Top actions").boundingBox())!;
+        const movers = (await cardOf(page, "Keyword movers").boundingBox())!;
+        return {
+          stacked: movers.y >= actions.y + actions.height,
+          aligned: Math.round(movers.x) === Math.round(actions.x),
+        };
+      })
+      .toEqual({ stacked: true, aligned: true });
   });
 }
 
