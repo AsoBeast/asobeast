@@ -427,6 +427,51 @@ describe('ActionsGenerator', () => {
     expect(prisma.updated[0].data).toMatchObject({ status: 'OPEN' });
   });
 
+  describe('reopening drops the previous episode ai summary', () => {
+    const cleared = {
+      aiExplanation: null,
+      aiModel: null,
+      aiGeneratedAt: null,
+    };
+
+    it('clears the ai fields when a resolved row reopens', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, { status: 'RESOLVED' }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.updated[0].data).toMatchObject({
+        status: 'OPEN',
+        ...cleared,
+      });
+    });
+
+    it('clears the ai fields when a done row reopens', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'DONE',
+          closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+        }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.updated[0].data).toMatchObject({
+        status: 'OPEN',
+        ...cleared,
+      });
+    });
+  });
+
   it('never reopens a dismissed row, however long it keeps firing', async () => {
     const fingerprint = await fingerprintOf();
     const prisma = buildPrisma(

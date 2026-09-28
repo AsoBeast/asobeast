@@ -252,6 +252,9 @@ export class ActionsGenerator {
             closedAt: null,
             resolvedAt: null,
             snoozedUntil: null,
+            aiExplanation: null,
+            aiModel: null,
+            aiGeneratedAt: null,
           }),
         );
         result.reopened += 1;
