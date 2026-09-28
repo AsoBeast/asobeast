@@ -111,3 +111,89 @@ test("the queue sits under a queue heading with group headings below it", async 
     "H3:Critical · 1",
   ]);
 });
+
+test.describe("closing several actions at once", () => {
+  const select = (page: import("@playwright/test").Page, id: string) =>
+    page.locator(card(id)).getByRole("checkbox").click();
+  const openTile = (page: import("@playwright/test").Page) =>
+    page.locator('[data-slot="stat-tile"]').first();
+
+  test("marks the selected rows done in one go", async ({ page }) => {
+    await page.goto("/actions");
+    await expect(openTile(page)).toContainText("11");
+    await select(page, "act-prune");
+    await select(page, "act-volatile");
+
+    const bar = page.getByRole("toolbar", { name: "Bulk actions" });
+    await expect(bar).toContainText("2 selected");
+    await bar.getByRole("button", { name: "Done" }).click();
+
+    await expect(page.locator(card("act-prune"))).toHaveCount(0);
+    await expect(page.locator(card("act-volatile"))).toHaveCount(0);
+    await expect(page.getByText("Marked 2 done")).toBeVisible();
+    await expect(openTile(page)).toContainText("9");
+  });
+
+  test("Undo brings the closed rows back", async ({ page }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await select(page, "act-volatile");
+    await page
+      .getByRole("toolbar", { name: "Bulk actions" })
+      .getByRole("button", { name: "Done" })
+      .click();
+    await page.getByRole("button", { name: "Undo" }).click();
+
+    await expect(page.locator(card("act-prune"))).toBeVisible();
+    await expect(page.locator(card("act-volatile"))).toBeVisible();
+    await expect(
+      page.locator(card("act-prune")).getByText(/Reopened/),
+    ).toHaveCount(0);
+  });
+
+  test("a selection that a filter hides no longer counts", async ({ page }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await expect(
+      page.getByRole("toolbar", { name: "Bulk actions" }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: /^Critical/ }).click();
+
+    await expect(
+      page.getByRole("toolbar", { name: "Bulk actions" }),
+    ).toHaveCount(0);
+  });
+
+  test("a failing bulk request rolls the rows back", async ({ page }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+    await select(page, "act-degraded");
+    await page
+      .getByRole("toolbar", { name: "Bulk actions" })
+      .getByRole("button", { name: "Done" })
+      .click();
+
+    await expect(page.locator(card("act-prune"))).toBeVisible();
+    await expect(page.locator(card("act-degraded"))).toBeVisible();
+  });
+
+  test("the bar stays on a phone screen with tappable buttons", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/actions");
+    await select(page, "act-prune");
+
+    const bar = page.getByRole("toolbar", { name: "Bulk actions" });
+    const box = await bar.boundingBox();
+    expect(
+      (box?.x ?? -1) >= 0 && (box?.x ?? 0) + (box?.width ?? 0) <= 375,
+    ).toBe(true);
+    for (const button of await bar.getByRole("button").all()) {
+      expect((await button.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(
+        44,
+      );
+    }
+  });
+});

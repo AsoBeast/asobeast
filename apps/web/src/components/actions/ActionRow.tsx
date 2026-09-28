@@ -5,6 +5,7 @@ import { Check, RotateCcw, X } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatDate, storeLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ACTION_CATEGORY_LABEL } from "./action-copy";
@@ -16,6 +17,7 @@ import { ActionRowMenu } from "./ActionRowMenu";
 import { ActionSnoozeMenu } from "./ActionSnoozeMenu";
 import { isClosed } from "./ActionStateControls";
 import { useActionUpdate } from "./use-action-update";
+import type { QueueSelection } from "./use-queue-selection";
 
 const TAG_TONE: Record<ActionStatusTag["tone"], string> = {
   warning: "border-warning/40 text-warning",
@@ -133,20 +135,43 @@ function RowControls({
   );
 }
 
+function RowSelect({
+  headline,
+  checked,
+  onToggle,
+}: {
+  headline: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <label className="relative z-20 flex size-11 items-center justify-center @md/queue:size-5">
+      <Checkbox
+        checked={checked}
+        onCheckedChange={onToggle}
+        aria-label={`Select ${headline}`}
+      />
+    </label>
+  );
+}
+
 export function ActionRow({
   item,
   focused,
   appScoped,
   href,
   onOpen,
+  selection,
 }: {
   item: ActionItem;
   focused: boolean;
   appScoped: boolean;
   href: string;
   onOpen: () => void;
+  selection: QueueSelection;
 }) {
   const headline = actionHeadline(item);
+  const selectable = selection.selectable.includes(item.id);
 
   return (
     <li
@@ -155,7 +180,15 @@ export function ActionRow({
       data-focused={focused ? "true" : undefined}
       className="relative grid grid-cols-[auto_1fr] items-start gap-x-3 gap-y-1 @md/queue:grid-cols-[auto_1fr_auto] rounded-lg border bg-card px-3 py-3 outline-none transition-colors duration-150 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring data-[focused=true]:ring-2 data-[focused=true]:ring-ring"
     >
-      <span aria-hidden className="w-4" />
+      {selectable ? (
+        <RowSelect
+          headline={headline}
+          checked={selection.isSelected(item.id)}
+          onToggle={() => selection.toggle(item.id)}
+        />
+      ) : (
+        <span aria-hidden className="w-11 @md/queue:w-5" />
+      )}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex min-w-0 items-start gap-2">
           <ActionPriorityBadge priority={item.priority} compact />

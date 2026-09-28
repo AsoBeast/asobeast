@@ -4,16 +4,23 @@ import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { queueFilters } from "@/lib/action-filters";
 import { actionsOptions } from "@/lib/queries";
+import { ActionBulkBar } from "./ActionBulkBar";
 import { ActionCenterHeader } from "./ActionCenterHeader";
 import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionOverview } from "./ActionOverview";
 import { ActionQueue } from "./ActionQueue";
 import { ActionToolbar } from "./ActionToolbar";
-import { filterQueue, isFilteredView } from "./queue-filters";
+import {
+  filterQueue,
+  isDefaultStatusSet,
+  isFilteredView,
+} from "./queue-filters";
 import { groupQueue, sortQueue } from "./queue-groups";
 import { ActionOverviewSkeleton } from "./skeletons";
 import { useActionSheet } from "./use-action-sheet";
+import { useBulkUpdate } from "./use-bulk-update";
+import { useQueueSelection } from "./use-queue-selection";
 import { useQueueView } from "./use-queue-view";
 
 const CLEARED_VIEW = {
@@ -37,6 +44,8 @@ export function ActionCenter({ appId }: { appId?: string }) {
   const visible = sortQueue(filterQueue(data.items, { ...view, q }), view.sort);
 
   const sheet = useActionSheet(view);
+  const selection = useQueueSelection(visible, isDefaultStatusSet(view.status));
+  const bulk = useBulkUpdate(appId);
 
   const filtered = isFilteredView(view);
   const emptyStateGenerates =
@@ -84,8 +93,20 @@ export function ActionCenter({ appId }: { appId?: string }) {
             appScoped={appId !== undefined}
             hrefFor={sheet.hrefFor}
             onOpen={(item) => sheet.open(item.id)}
+            selection={selection}
           />
         )}
+        <ActionBulkBar
+          count={selection.selected.length}
+          shown={selection.selectable.length}
+          busy={bulk.isPending}
+          onUpdate={(body) => {
+            bulk.update({ ...body, ids: selection.selected });
+            selection.clear();
+          }}
+          onSelectAll={() => selection.setMany(selection.selectable, true)}
+          onClear={selection.clear}
+        />
       </section>
       <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
     </>
