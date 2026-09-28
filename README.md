@@ -29,25 +29,25 @@ Every store request runs on the machine hosting asobeast. There is no ASO vendor
 - **Your keyword list is your strategy.** It never leaves your database, so no competitor intelligence product is quietly assembling it.
 - **Both stores as one tracking entity.** One app row tracks keywords across many storefronts, so `us` and `de` are markets on the same listing rather than two subscriptions.
 - **Every score shows its evidence.** Popularity and difficulty carry their source, calculation version, capture date and confidence, so you can argue with a number instead of trusting it.
-- **Deterministic recommendations.** Eight rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
+- **Deterministic recommendations.** Fifteen rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
 - **AGPL-3.0, no open core.** Every feature the hosted service runs is in this repository.
 
 ## Features
 
-| Feature                          | What it does                                                                                                                                       |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                        |
-| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 byte iOS keyword field by hand                |
-| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                       |
-| Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                         |
-| SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and free, paid and grossing category charts                                              |
-| Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                  |
-| Reviews and change detection     | Sync reviews and rating history, mine review language for keyword ideas, and detect owned and competitor metadata changes                          |
-| ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                      |
-| ASO Action Center                | Eight deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link and a full lifecycle |
-| Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                            |
-| Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                              |
-| MCP server                       | 24 read-only tools over stdio or a remote endpoint, so Claude Code and Claude Desktop can query your instance directly                             |
+| Feature                          | What it does                                                                                                                                                             |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Two live stores                  | Import an Apple App Store or Google Play URL, snapshot the metadata, refresh on demand and diff every field                                                              |
+| Keyword tracking                 | Track any validated storefront, see daily positions and history, bulk edit, and keep the private 100 byte iOS keyword field by hand                                      |
+| Rank checks to depth 200         | One search per keyword and market serves your app and all of its competitors, so competitor tracking costs no extra requests                                             |
+| Transparent scoring              | Popularity and difficulty with provenance and confidence, plus opportunity derived on read                                                                               |
+| SERP and category intelligence   | Retained SERP snapshots, volatility, entrants and movers, and free, paid and grossing category charts                                                                    |
+| Competitor discovery             | Find competitors from live search results, compare listings and find keyword gaps                                                                                        |
+| Reviews and change detection     | Sync reviews and rating history, mine review language for keyword ideas, and detect owned and competitor metadata changes                                                |
+| ASO audit and metadata workbench | A deterministic audit rubric with history, store metadata lints and strategic keyword buckets                                                                            |
+| ASO Action Center                | Fifteen deterministic rules produce recommendations with a priority, an estimated impact, the evidence behind them, a deep link, a full lifecycle and a verified outcome |
+| Portfolio analysis               | Group linked listings across stores and countries, compare group visibility and generate weekly digests                                                                  |
+| Alerts                           | Signed webhooks or SMTP email for rank, SERP, metadata, review and new action events, with resumable batched delivery                                                    |
+| MCP server                       | 24 read-only tools over stdio or a remote endpoint, so Claude Code and Claude Desktop can query your instance directly                                                   |
 
 A guide for each of these lives in the [documentation](https://docs.asobeast.com).
 
