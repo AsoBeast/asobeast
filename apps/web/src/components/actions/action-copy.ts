@@ -5,7 +5,8 @@ import type {
   ActionRule,
   ActionStatus,
 } from "@asobeast/shared";
-import { formatMeasure } from "@/lib/format";
+import { formatMeasure, pluralize } from "@/lib/format";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 
 const measure = (value: number | null): string =>
   value === null ? "—" : formatMeasure(value);
@@ -20,6 +21,7 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "reviews.investigate_theme": "Investigate a new negative review theme",
   "market.improve_country": "Investigate an underperforming market",
   "keyword.push_to_top10": "Push a keyword that sits just outside the top 10",
+  "metadata.fix_lint": "Fix listing text that breaks a store rule",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -32,6 +34,7 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "reviews.investigate_theme": "Review themes",
   "market.improve_country": "Underperforming markets",
   "keyword.push_to_top10": "Near the top 10",
+  "metadata.fix_lint": "Store rule problems",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -79,6 +82,8 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `${evidence.country.toUpperCase()} sits ${measure(evidence.gap)} visibility points behind ${evidence.homeCountry.toUpperCase()}. Investigate this market.`;
     case "keyword.push_to_top10":
       return `Ranks #${evidence.latestPosition} with volume ${measure(evidence.volume)} and sat between 11 and 20 on ${measure(evidence.daysInBand)} of ${measure(evidence.windowDays)} days, but only a weaker field contains it.`;
+    case "metadata.fix_lint":
+      return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {
       const never: never = evidence;
       return never;

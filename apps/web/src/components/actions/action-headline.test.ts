@@ -200,6 +200,28 @@ describe("actionHeadline", () => {
     ).toBe('Push "habit tracker" from #12 into the top 10');
   });
 
+  it("counts the store rule problems in a listing field", () => {
+    const issue = {
+      rule: "over-limit",
+      message: "Exceeds the 30 character limit (34).",
+      offendingText: null,
+    };
+    const lint = {
+      rule: "metadata.fix_lint" as const,
+      field: "keywordField" as const,
+      chars: 104,
+      limit: 100,
+      issues: [issue],
+    };
+
+    expect(headline(lint, null)).toBe(
+      "Fix 1 store rule problem in your keyword field",
+    );
+    expect(headline({ ...lint, issues: [issue, issue] }, null)).toBe(
+      "Fix 2 store rule problems in your keyword field",
+    );
+  });
+
   it("falls back to the rule title for degraded evidence", () => {
     expect(actionHeadline(actionItem({ scope: { keywordText: null } }))).toBe(
       "Add a high-opportunity keyword to your metadata",

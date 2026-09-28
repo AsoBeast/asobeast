@@ -3001,7 +3001,8 @@
                   "audit.fix_factor",
                   "reviews.investigate_theme",
                   "market.improve_country",
-                  "keyword.push_to_top10"
+                  "keyword.push_to_top10",
+                  "metadata.fix_lint"
                 ]
               }
             }
@@ -3387,7 +3388,8 @@
                   "audit.fix_factor",
                   "reviews.investigate_theme",
                   "market.improve_country",
-                  "keyword.push_to_top10"
+                  "keyword.push_to_top10",
+                  "metadata.fix_lint"
                 ]
               }
             }

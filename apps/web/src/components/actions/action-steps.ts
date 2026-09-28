@@ -118,6 +118,11 @@ function ruleSteps(
       ];
     case "keyword.push_to_top10":
       return pushSteps(keyword, store);
+    case "metadata.fix_lint":
+      return [
+        ...evidence.issues.map((issue) => issue.message),
+        "Save and ship the listing change",
+      ];
     default: {
       const never: never = evidence;
       return never;

@@ -73,6 +73,8 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `gap ${evidence.gap}`;
     case 'keyword.push_to_top10':
       return `position ${evidence.latestPosition}`;
+    case 'metadata.fix_lint':
+      return `${evidence.field} ${evidence.issues.length}`;
     default: {
       const never: never = evidence;
       return never;
@@ -264,6 +266,19 @@ describe('action evidence', () => {
         coveredFields: ['keywordField'],
         strongFields: ['title', 'subtitle'],
       },
+      {
+        rule: 'metadata.fix_lint',
+        field: 'title',
+        chars: 34,
+        limit: 30,
+        issues: [
+          {
+            rule: 'over-limit',
+            message: 'Exceeds the 30 character limit (34).',
+            offendingText: null,
+          },
+        ],
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -279,6 +294,7 @@ describe('action evidence', () => {
       'theme crashes on launch',
       'gap 26.5',
       'position 12',
+      'title 1',
     ]);
   });
 

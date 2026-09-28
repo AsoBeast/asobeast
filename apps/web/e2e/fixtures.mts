@@ -2444,6 +2444,29 @@ export const ACTIONS: ActionItem[] = [
   },
   {
     ...ACTION_BASE,
+    id: "act-lint",
+    rule: "metadata.fix_lint",
+    category: "metadata",
+    status: "OPEN",
+    priority: "medium",
+    impact: 50,
+    scope: { ...APP_SCOPE, keywordId: null, keywordText: null },
+    evidence: {
+      rule: "metadata.fix_lint",
+      field: "title",
+      chars: 34,
+      limit: 30,
+      issues: [
+        {
+          rule: "over-limit",
+          message: "Exceeds the 30 character limit (34).",
+          offendingText: null,
+        },
+      ],
+    },
+  },
+  {
+    ...ACTION_BASE,
     id: "act-snoozed",
     rule: "keyword.defend",
     category: "competition",

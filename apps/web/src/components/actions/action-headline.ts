@@ -10,6 +10,7 @@ import {
   formatMeasure,
   pluralize,
 } from "@/lib/format";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { ACTION_RULE_TITLE } from "./action-copy";
 
 export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
@@ -84,6 +85,8 @@ export function actionHeadline(item: ActionItem): string {
       return `Close the ${measure(evidence.gap)} point visibility gap in ${formatCountry(evidence.country)}`;
     case "keyword.push_to_top10":
       return `Push ${subject} from #${evidence.latestPosition} into the top 10`;
+    case "metadata.fix_lint":
+      return `Fix ${pluralize(evidence.issues.length, "store rule problem")} in your ${METADATA_FIELD_LABELS[evidence.field].toLowerCase()}`;
     default: {
       const never: never = evidence;
       return never;

@@ -189,6 +189,21 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('accepts a lint evidence and degrades one missing its issues', () => {
+    const lint = {
+      rule: 'metadata.fix_lint',
+      field: 'title',
+      chars: 34,
+      limit: 30,
+      issues: [],
+    };
+
+    expect(parseActionEvidence('metadata.fix_lint', lint)).not.toBeNull();
+    expect(
+      parseActionEvidence('metadata.fix_lint', { ...lint, issues: undefined }),
+    ).toBeNull();
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

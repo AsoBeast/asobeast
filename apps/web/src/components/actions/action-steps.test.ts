@@ -72,6 +72,29 @@ describe("actionSteps", () => {
     expect(actionSteps(push)).not.toContain(CONFIRMATION_STEP);
   });
 
+  it("turns each store rule problem into a step before shipping the fix", () => {
+    const lint = ACTIONS.find((item) => item.id === "act-lint")!;
+    const evidence = lint.evidence!;
+    if (evidence.rule !== "metadata.fix_lint") throw new Error("fixture");
+    const emoji = {
+      rule: "emoji",
+      message: "Emoji are not allowed in the title.",
+      offendingText: "🔥",
+    };
+
+    expect(
+      actionSteps({
+        ...lint,
+        evidence: { ...evidence, issues: [...evidence.issues, emoji] },
+      }),
+    ).toEqual([
+      "Exceeds the 30 character limit (34).",
+      "Emoji are not allowed in the title.",
+      "Save and ship the listing change",
+      CONFIRMATION_STEP,
+    ]);
+  });
+
   it("turns each failing audit check into a step, in order", () => {
     const audit = ACTIONS.find((item) => item.id === "act-audit")!;
     const evidence = audit.evidence!;

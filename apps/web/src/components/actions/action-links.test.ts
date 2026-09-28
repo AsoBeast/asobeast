@@ -14,6 +14,7 @@ const HREF: Record<ActionRule, string> = {
   "reviews.investigate_theme": "/apps/app-1/reviews?score=1",
   "market.improve_country": "/apps/app-1/keywords?country=us",
   "keyword.push_to_top10": "/apps/app-1/metadata?keyword=kw-1",
+  "metadata.fix_lint": "/apps/app-1/metadata",
 };
 
 describe("actionHref", () => {

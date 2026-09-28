@@ -14,6 +14,7 @@ export const ACTION_RULES = [
   'reviews.investigate_theme',
   'market.improve_country',
   'keyword.push_to_top10',
+  'metadata.fix_lint',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -50,6 +51,7 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'reviews.investigate_theme': 'reputation',
   'market.improve_country': 'markets',
   'keyword.push_to_top10': 'metadata',
+  'metadata.fix_lint': 'metadata',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -229,6 +231,20 @@ export interface KeywordPushToTop10Evidence {
   strongFields: MetadataField[];
 }
 
+export interface MetadataFixLintIssue {
+  rule: string;
+  message: string;
+  offendingText: string | null;
+}
+
+export interface MetadataFixLintEvidence {
+  rule: 'metadata.fix_lint';
+  field: MetadataField;
+  chars: number;
+  limit: number;
+  issues: MetadataFixLintIssue[];
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -238,7 +254,8 @@ export type ActionEvidence =
   | AuditFixFactorEvidence
   | ReviewsInvestigateThemeEvidence
   | MarketImproveCountryEvidence
-  | KeywordPushToTop10Evidence;
+  | KeywordPushToTop10Evidence
+  | MetadataFixLintEvidence;
 
 export interface ActionAi {
   explanation: string | null;

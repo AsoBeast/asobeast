@@ -8,6 +8,7 @@ import type {
   KeywordPruneEvidence,
   KeywordPushToTop10Evidence,
   MarketImproveCountryEvidence,
+  MetadataFixLintEvidence,
   RankInvestigateDropEvidence,
   ReviewsInvestigateThemeEvidence,
   SerpHoldVolatileEvidence,
@@ -300,6 +301,29 @@ function pushSections(evidence: KeywordPushToTop10Evidence): Sections {
   };
 }
 
+function lintSections(evidence: MetadataFixLintEvidence): Sections {
+  return {
+    facts: [
+      fact("Field", METADATA_FIELD_LABELS[evidence.field]),
+      fact(
+        "Characters",
+        `${formatNumber(evidence.chars)} of ${formatNumber(evidence.limit)}`,
+      ),
+      fact("Problems", formatNumber(evidence.issues.length)),
+    ],
+    lists: [
+      {
+        label: "Problems to fix",
+        items: evidence.issues.map((issue) => ({
+          text: issue.message,
+          ...(issue.offendingText ? { detail: issue.offendingText } : {}),
+          tone: "down",
+        })),
+      },
+    ],
+  };
+}
+
 function sections(evidence: ActionEvidence): Sections {
   switch (evidence.rule) {
     case "keyword.add_uncovered":
@@ -320,6 +344,8 @@ function sections(evidence: ActionEvidence): Sections {
       return marketSections(evidence);
     case "keyword.push_to_top10":
       return pushSections(evidence);
+    case "metadata.fix_lint":
+      return lintSections(evidence);
     default: {
       const never: never = evidence;
       return never;

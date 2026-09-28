@@ -44,6 +44,8 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'A non-home market is visibly behind the home market on stored visibility. This is a signal to investigate, not a localization verdict.',
   'keyword.push_to_top10':
     'A relevant, valuable keyword has sat just outside the top 10 for most of the last week and appears only in a weak metadata field.',
+  'metadata.fix_lint':
+    'A home market listing field has error-level lint issues that break a store rule, such as exceeding its character limit.',
 };
 
 const SCHEMA = {

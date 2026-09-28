@@ -799,7 +799,10 @@ describe('ActionsGenerator', () => {
       jest.requireActual<typeof import('./action-rule')>(
         './action-rule',
       ).ACTION_DETECTORS;
-    const NEW_RULES: ActionRule[] = ['keyword.push_to_top10'];
+    const NEW_RULES: ActionRule[] = [
+      'keyword.push_to_top10',
+      'metadata.fix_lint',
+    ];
 
     const createdRules = async (detectors: readonly ActionDetector[]) => {
       mockDetectors.splice(0, mockDetectors.length, ...detectors);

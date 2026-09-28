@@ -76,6 +76,7 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'reviews.investigate_theme': ['theme', 'mentions', 'sampleReviewIds'],
   'market.improve_country': ['country', 'homeCountry', 'gap'],
   'keyword.push_to_top10': ['latestPosition', 'daysInBand', 'coveredFields'],
+  'metadata.fix_lint': ['field', 'chars', 'limit', 'issues'],
 };
 
 export function parseActionEvidence(

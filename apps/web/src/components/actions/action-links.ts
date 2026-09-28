@@ -14,6 +14,8 @@ export function actionHref(item: ActionItem): string {
       return `/apps/${appId}/changes`;
     case "serp.hold_volatile":
       return `/apps/${appId}/keywords?country=${country}&sort=volatility`;
+    case "metadata.fix_lint":
+      return `/apps/${appId}/metadata`;
     case "audit.fix_factor":
       return `/apps/${appId}/audit`;
     case "reviews.investigate_theme":

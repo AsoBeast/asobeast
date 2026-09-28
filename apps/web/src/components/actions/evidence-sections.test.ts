@@ -138,6 +138,35 @@ describe("evidenceSections", () => {
     });
   });
 
+  it("counts the characters of a field that breaks a store rule and lists its problems", () => {
+    const evidence = evidenceOf("act-lint");
+    if (evidence.rule !== "metadata.fix_lint") throw new Error("fixture");
+    const withEmoji: ActionEvidence = {
+      ...evidence,
+      issues: [
+        ...evidence.issues,
+        {
+          rule: "emoji",
+          message: "Emoji are not allowed in the title.",
+          offendingText: "🔥",
+        },
+      ],
+    };
+
+    expect(factValues(evidence)).toEqual({
+      Field: "Title",
+      Characters: "34 of 30",
+      Problems: "1",
+    });
+    expect(lists(withEmoji)["Problems to fix"]).toEqual([
+      "Exceeds the 30 character limit (34).",
+      "Emoji are not allowed in the title. 🔥",
+    ]);
+    expect(evidenceSections(evidence).summary).toBe(
+      "Title has 1 store rule problem at 34 of 30 characters.",
+    );
+  });
+
   it("omits an empty list and keeps the summary sentence", () => {
     const evidence = evidenceOf("act-snoozed");
     const sections = evidenceSections(evidence);

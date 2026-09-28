@@ -133,6 +133,22 @@ export const ruleSampleContext = (): ActionContext =>
           ],
         },
       ],
+      metadataFields: [
+        {
+          field: 'title',
+          value: 'Habit Tracker and Daily Planner!',
+          chars: 32,
+          limit: 30,
+          indexed: true,
+          issues: [
+            {
+              rule: 'over-limit',
+              severity: 'error',
+              message: 'Exceeds the 30 character limit (32).',
+            },
+          ],
+        },
+      ],
       rankingDaysByKeyword: new Map([
         [
           'kw_push',

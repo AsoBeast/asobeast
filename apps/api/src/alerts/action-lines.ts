@@ -20,6 +20,8 @@ const RULE_SUMMARY = (evidence: ActionEvidence): string => {
       return `visibility ${evidence.marketVisibility} against ${evidence.homeVisibility} at home, a ${evidence.gap} point gap`;
     case 'keyword.push_to_top10':
       return `position ${evidence.latestPosition}, ${evidence.daysInBand}/${evidence.windowDays} days in 11 to 20, covered only in ${evidence.coveredFields.join(', ')}`;
+    case 'metadata.fix_lint':
+      return `${evidence.issues.length} store rule ${evidence.issues.length === 1 ? 'problem' : 'problems'} in ${evidence.field}, ${evidence.chars}/${evidence.limit} characters`;
     default: {
       const never: never = evidence;
       return never;

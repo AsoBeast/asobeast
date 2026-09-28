@@ -118,7 +118,7 @@ describe('action generation (e2e)', () => {
     const coverKeyword = (title: string) =>
       prisma.appSnapshot.updateMany({ data: { title } });
 
-    await coverKeyword('Budget Planner: Expense Tracker');
+    await coverKeyword('Budget Planner Expense Tracker');
     const verifying = await runAt(D(-1));
     const quiet = await runAt(D(-2));
     const verified = await prisma.actionItem.findMany({
