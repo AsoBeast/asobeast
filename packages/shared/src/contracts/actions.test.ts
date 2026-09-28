@@ -22,6 +22,8 @@ import type {
   ActionEvidence,
   ActionOpenedPayload,
   ActionPriority,
+  ActionStatus,
+  ActionSummary,
 } from './actions';
 import { WEBHOOK_EVENTS } from './changes';
 
@@ -315,5 +317,22 @@ describe('isActionDismissReason', () => {
     for (const value of [...REJECTED, 'NOT_RELEVANT', 'other']) {
       expect(isActionDismissReason(value)).toBe(false);
     }
+  });
+});
+
+describe('ActionSummary.byStatus', () => {
+  it('is keyed by every action status', () => {
+    const byStatus: ActionSummary['byStatus'] = {
+      OPEN: 1,
+      SNOOZED: 0,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    };
+
+    expect(Object.keys(byStatus).sort()).toEqual([...ACTION_STATUSES].sort());
+    expect(
+      ACTION_STATUSES.every((status: ActionStatus) => status in byStatus),
+    ).toBe(true);
   });
 });

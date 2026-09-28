@@ -263,6 +263,44 @@ describe('ActionsController (e2e)', () => {
       { rule: 'keyword.add_uncovered', count: 2 },
     ]);
     expect(summary.suppressedByCap).toBe(0);
+    expect(summary.openByPriority).toEqual({
+      critical: 1,
+      high: 0,
+      medium: 0,
+      low: 0,
+    });
+    expect(summary.byStatus).toEqual({
+      OPEN: 1,
+      SNOOZED: 1,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    });
+  });
+
+  it('scopes the summary to one app and still ignores unknown parameters', async () => {
+    await seedAction({ priority: 'critical' });
+    const other = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '999',
+        country: 'us',
+        name: 'Other',
+      },
+    });
+    await seedAction({ appId: other.id, priority: 'high' });
+
+    const scoped = await api
+      .get('/actions/summary')
+      .query({ appId, anything: '1' })
+      .expect(200);
+    const summary = scoped.body as ActionSummary;
+
+    expect(summary.open).toBe(1);
+    expect(summary.openByPriority).toMatchObject({ critical: 1, high: 0 });
+    await api.get('/actions/summary?anything=1').expect(200);
+    await api.get('/actions/summary?store=NOPE').expect(400);
   });
 
   it('marks an action done and clears its snooze', async () => {

@@ -307,6 +307,10 @@ describe('ActionsService reads', () => {
       .mockResolvedValueOnce([
         { rule: 'keyword.add_uncovered', _count: { _all: 5 } },
         { rule: 'mystery', _count: { _all: 9 } },
+      ])
+      .mockResolvedValueOnce([
+        { priority: 'critical', _count: { _all: 2 } },
+        { priority: 'low', _count: { _all: 2 } },
       ]);
 
     const summary = await serviceFor(prisma).summary();
@@ -319,6 +323,53 @@ describe('ActionsService reads', () => {
     });
     expect(summary.byCategory.metadata).toBe(5);
     expect(summary.byCategory.hygiene).toBe(0);
+    expect(summary.openByPriority).toEqual({
+      critical: 2,
+      high: 0,
+      medium: 0,
+      low: 2,
+    });
+    expect(summary.byStatus).toEqual({
+      OPEN: 4,
+      SNOOZED: 1,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    });
+  });
+
+  it('counts only open rows by priority for the open priority mix', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).summary();
+
+    expect(prisma.actionItem.groupBy.mock.calls).toContainEqual([
+      {
+        by: ['priority'],
+        where: { status: 'OPEN' },
+        _count: { _all: true },
+      },
+    ]);
+  });
+
+  it('restricts every count to the scope but not the run facts', async () => {
+    const prisma = buildPrisma();
+
+    const summary = await serviceFor(prisma, buildQueue('4')).summary({
+      appId: 'app_9',
+    });
+
+    const wheres = (
+      prisma.actionItem.groupBy.mock.calls as unknown as Array<
+        [{ where: Record<string, unknown> }]
+      >
+    ).map(([args]) => args.where);
+    expect(wheres).toHaveLength(5);
+    expect(wheres.every((where) => where.appId === 'app_9')).toBe(true);
+    expect(summary.suppressedByCap).toBe(4);
+    expect(prisma.actionItem.aggregate.mock.calls[0]).toEqual([
+      { _max: { lastSeenAt: true } },
+    ]);
   });
 
   it('reports the suppression count recorded by the last run', async () => {

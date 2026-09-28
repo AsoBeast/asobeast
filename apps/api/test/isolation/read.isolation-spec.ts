@@ -244,6 +244,22 @@ describe('Read isolation', () => {
     );
   });
 
+  it('counts nothing for another workspace app id in the action summary', async () => {
+    const response = await fixture.b.agent
+      .get('/actions/summary')
+      .query({ appId: fixture.a.appleAppId })
+      .expect(200);
+    const summary = response.body as {
+      open: number;
+      byStatus: Record<string, number>;
+    };
+
+    expect(summary.open).toBe(0);
+    expect(Object.values(summary.byStatus).every((count) => count === 0)).toBe(
+      true,
+    );
+  });
+
   it('refuses another workspace app id as a filter value', async () => {
     const response = await fixture.a.agent.get(
       `/apps/${fixture.b.appleAppId}/keywords`,

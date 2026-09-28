@@ -2520,6 +2520,8 @@ export const ACTION_SUMMARY: ActionSummary = {
   ],
   generatedAt: "2026-07-30T03:00:00.000Z",
   suppressedByCap: 3,
+  openByPriority: { critical: 1, high: 3, medium: 4, low: 2 },
+  byStatus: { OPEN: 10, SNOOZED: 1, DONE: 0, DISMISSED: 1, RESOLVED: 0 },
 };
 
 export const METADATA_AUDIT: MetadataAuditResult = {

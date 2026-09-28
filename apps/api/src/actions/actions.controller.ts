@@ -13,6 +13,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
@@ -22,11 +23,13 @@ import {
   ActionListResult,
   ActionRunResult,
   ActionSummary,
+  STORES,
 } from '@asobeast/shared';
 import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { ActionRunQueue } from './action-run.queue';
+import { parseSummaryScope } from './action-summary-scope';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
@@ -52,8 +55,11 @@ export class ActionsController {
   @Get('summary')
   @ApiOkResponse({ description: 'Open and snoozed action counts' })
   @ApiOperation({ summary: 'Summarize the action queue' })
-  summary(): Promise<ActionSummary> {
-    return this.actions.summary();
+  @ApiQuery({ name: 'appId', required: false, type: String })
+  @ApiQuery({ name: 'store', required: false, enum: STORES })
+  @ApiQuery({ name: 'country', required: false, type: String, example: 'us' })
+  summary(@Query() query: Record<string, unknown>): Promise<ActionSummary> {
+    return this.actions.summary(parseSummaryScope(query));
   }
 
   @Get('ai-status')

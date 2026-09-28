@@ -314,6 +314,8 @@ export interface ActionSummary {
   topRules: Array<{ rule: ActionRule; count: number }>;
   generatedAt: string | null;
   suppressedByCap: number;
+  openByPriority: ActionPriorityCounts;
+  byStatus: Record<ActionStatus, number>;
 }
 
 export type ActionUpdateStatus = Extract<

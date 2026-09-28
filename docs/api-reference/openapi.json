@@ -3082,7 +3082,37 @@
     "/actions/summary": {
       "get": {
         "operationId": "ActionsController_summary",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Open and snoozed action counts"

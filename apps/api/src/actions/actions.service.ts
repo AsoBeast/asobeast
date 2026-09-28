@@ -4,14 +4,12 @@ import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import {
   ACTION_CATEGORIES,
-  ActionCategory,
+  ACTION_PRIORITIES,
+  ACTION_STATUSES,
   ActionItem,
   ActionListResult,
-  ActionPriorityCounts,
   ActionRule,
   ActionSummary,
-  isActionCategory,
-  isActionPriority,
   isActionRule,
 } from '@asobeast/shared';
 import { ensureAppExists } from '../apps/ensure-app';
@@ -22,6 +20,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActionSummaryScope } from './action-summary-scope';
 import { CURRENT_SELECT, ActionTransitions } from './action-transitions';
 import { ActionRow, ROW_SELECT, toActionItem } from './actions.mapper';
 import {
@@ -65,56 +64,38 @@ export class ActionsService {
     return { items: rows.map((row) => this.map(row)), total, generatedAt };
   }
 
-  async summary(): Promise<ActionSummary> {
-    const live = { status: { in: ['OPEN', 'SNOOZED'] } };
-    const [byStatus, byPriority, byCategoryRows, byRule, generatedAt] =
+  async summary(scope: ActionSummaryScope = {}): Promise<ActionSummary> {
+    const live = { ...scope, status: { in: ['OPEN', 'SNOOZED'] } };
+    const count = { _count: { _all: true } } as const;
+    const [byStatus, byPriority, byCategory, byRule, openByPriority] =
       await Promise.all([
         this.prisma.actionItem.groupBy({
           by: ['status'],
-          _count: { _all: true },
+          where: scope,
+          ...count,
         }),
         this.prisma.actionItem.groupBy({
           by: ['priority'],
           where: live,
-          _count: { _all: true },
+          ...count,
         }),
         this.prisma.actionItem.groupBy({
           by: ['category'],
           where: live,
-          _count: { _all: true },
+          ...count,
         }),
+        this.prisma.actionItem.groupBy({ by: ['rule'], where: live, ...count }),
         this.prisma.actionItem.groupBy({
-          by: ['rule'],
-          where: live,
-          _count: { _all: true },
+          by: ['priority'],
+          where: { ...scope, status: 'OPEN' },
+          ...count,
         }),
-        this.generatedAt(),
       ]);
-    const suppressedByCap = await this.suppressedByCap();
-
-    const statuses = new Map(
-      byStatus.map((row) => [row.status, row._count._all]),
-    );
-    const priorities: ActionPriorityCounts = {
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0,
-    };
-    for (const row of byPriority) {
-      if (isActionPriority(row.priority)) {
-        priorities[row.priority] = row._count._all;
-      }
-    }
-
-    const byCategory = Object.fromEntries(
-      ACTION_CATEGORIES.map((category) => [category, 0]),
-    ) as Record<ActionCategory, number>;
-    for (const row of byCategoryRows) {
-      if (isActionCategory(row.category)) {
-        byCategory[row.category] = row._count._all;
-      }
-    }
+    const [generatedAt, suppressedByCap] = await Promise.all([
+      this.generatedAt(),
+      this.suppressedByCap(),
+    ]);
+    const statuses = zeroFilled(ACTION_STATUSES, byStatus, (row) => row.status);
 
     const topRules = byRule
       .filter((row): row is typeof row & { rule: ActionRule } =>
@@ -125,13 +106,27 @@ export class ActionsService {
       .slice(0, TOP_RULES_LIMIT);
 
     return {
-      open: statuses.get('OPEN') ?? 0,
-      snoozed: statuses.get('SNOOZED') ?? 0,
-      byPriority: priorities,
-      byCategory,
+      open: statuses.OPEN,
+      snoozed: statuses.SNOOZED,
+      byPriority: zeroFilled(
+        ACTION_PRIORITIES,
+        byPriority,
+        (row) => row.priority,
+      ),
+      byCategory: zeroFilled(
+        ACTION_CATEGORIES,
+        byCategory,
+        (row) => row.category,
+      ),
       topRules,
       generatedAt,
       suppressedByCap,
+      openByPriority: zeroFilled(
+        ACTION_PRIORITIES,
+        openByPriority,
+        (row) => row.priority,
+      ),
+      byStatus: statuses,
     };
   }
 
@@ -208,4 +203,20 @@ export class ActionsService {
     }
     return item;
   }
+}
+
+function zeroFilled<K extends string, R extends { _count: { _all: number } }>(
+  keys: readonly K[],
+  rows: readonly R[],
+  keyOf: (row: R) => string,
+): Record<K, number> {
+  const counts = Object.fromEntries(keys.map((key) => [key, 0])) as Record<
+    K,
+    number
+  >;
+  for (const row of rows) {
+    const key = keys.find((candidate) => candidate === keyOf(row));
+    if (key !== undefined) counts[key] = row._count._all;
+  }
+  return counts;
 }
