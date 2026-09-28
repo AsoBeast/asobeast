@@ -1,19 +1,19 @@
 "use client";
 
-import { Suspense, useDeferredValue, useEffect, useRef } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
 import { queueFilters } from "@/lib/action-filters";
 import { actionsOptions } from "@/lib/queries";
-import { actionFocusParser } from "@/lib/search-params";
 import { ActionCard } from "./ActionCard";
 import { ActionCenterHeader } from "./ActionCenterHeader";
+import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionOverview } from "./ActionOverview";
 import { ActionToolbar } from "./ActionToolbar";
 import { filterQueue, isFilteredView } from "./queue-filters";
 import { sortQueue } from "./queue-groups";
 import { ActionOverviewSkeleton } from "./skeletons";
+import { useActionSheet } from "./use-action-sheet";
 import { useQueueView } from "./use-queue-view";
 
 const CLEARED_VIEW = {
@@ -29,7 +29,6 @@ const CLEARED_VIEW = {
 
 export function ActionCenter({ appId }: { appId?: string }) {
   const [view, setView] = useQueueView();
-  const [focus] = useQueryState("action", actionFocusParser);
   const q = useDeferredValue(view.q);
 
   const { data } = useSuspenseQuery(
@@ -37,17 +36,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
   );
   const visible = sortQueue(filterQueue(data.items, { ...view, q }), view.sort);
 
-  const focusRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!focus || focusRef.current === focus) return;
-    const card = document.getElementById(`action-${focus}`);
-    if (!card) return;
-    focusRef.current = focus;
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
-    card.querySelector("details")?.setAttribute("open", "true");
-    card.setAttribute("tabindex", "-1");
-    card.focus({ preventScroll: true });
-  }, [focus, data]);
+  const sheet = useActionSheet(view);
 
   const filtered = isFilteredView(view);
   const emptyStateGenerates =
@@ -82,11 +71,17 @@ export function ActionCenter({ appId }: { appId?: string }) {
         <ul className="flex list-none flex-col gap-4 p-0">
           {visible.map((item) => (
             <li key={item.id}>
-              <ActionCard item={item} focused={focus === item.id} />
+              <ActionCard
+                item={item}
+                focused={sheet.id === item.id}
+                href={sheet.hrefFor(item.id)}
+                onOpen={() => sheet.open(item.id)}
+              />
             </li>
           ))}
         </ul>
       )}
+      <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
     </>
   );
 }

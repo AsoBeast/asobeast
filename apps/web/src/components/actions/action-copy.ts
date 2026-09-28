@@ -82,6 +82,9 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
   }
 }
 
+export const ACTION_EVIDENCE_UNAVAILABLE =
+  "Evidence unavailable for this stored action — it will be rebuilt on the next run.";
+
 export const ACTION_IMPACT_CAPTION =
   "Estimated impact, computed from the evidence below. It is not a prediction of downloads, revenue or rank.";
 

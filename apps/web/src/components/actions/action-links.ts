@@ -25,3 +25,16 @@ export function actionHref(item: ActionItem): string {
     }
   }
 }
+
+const SECTION_LABEL: Record<string, string> = {
+  metadata: "Metadata",
+  keywords: "Keywords",
+  changes: "Changes",
+  audit: "Audit",
+  reviews: "Reviews",
+};
+
+export function actionSection(href: string): string {
+  const segment = href.split("?")[0].split("/")[3] ?? "";
+  return SECTION_LABEL[segment] ?? "the app";
+}

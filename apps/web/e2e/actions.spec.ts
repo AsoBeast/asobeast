@@ -4,7 +4,7 @@ test.describe.configure({ mode: "serial" });
 
 const card = (id: string) => `[id='action-${id}']`;
 const rendered = { timeout: 20_000 };
-const ACT_UNCOVERED_TITLE = "Add a high-opportunity keyword to your metadata";
+const ACT_UNCOVERED_TITLE = 'Add "habit tracker" to your metadata';
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 test.beforeEach(async ({ request }) => {
@@ -52,30 +52,26 @@ test("evidence is reachable by keyboard and shows the stored numbers", async ({
   page,
 }) => {
   await page.goto("/actions");
-  const summary = page.locator(card("act-uncovered")).locator("summary");
+  const headline = page
+    .locator(card("act-uncovered"))
+    .getByRole("link", { name: ACT_UNCOVERED_TITLE });
 
-  await expect(summary).toBeVisible();
-  await summary.focus();
-  await summary.press("Enter");
+  await headline.focus();
+  await headline.press("Enter");
 
-  await expect(
-    page.locator(card("act-uncovered")).getByText("Opportunity", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.locator(card("act-uncovered")).getByText("66.5", { exact: true }),
-  ).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Opportunity", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("66.5", { exact: true })).toBeVisible();
 });
 
-test("a deep link scrolls to, expands and focuses the action", async ({
-  page,
-}) => {
+test("a deep link opens the action's detail", async ({ page }) => {
   await page.goto("/actions?action=act-market");
 
-  const target = page.locator(card("act-market"));
-  await expect(target).toBeFocused();
-  await expect(target.getByText("Home market")).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { level: 2 })).toHaveText(
+    "Close the 26.5 point visibility gap in Germany",
+  );
+  await expect(dialog.getByText("Home market")).toBeVisible();
 });
 
 test("a degraded row explains itself without breaking the list", async ({
@@ -372,19 +368,14 @@ test("dismissing removes the card and it stays gone after a reload", async ({
   page,
 }) => {
   await page.goto("/actions");
-  const heading = page.getByRole("heading", {
-    name: "Investigate a new negative review theme",
-  });
-  await expect(heading).toBeVisible();
+  const target = page.locator(card("act-reviews"));
+  await expect(target).toBeVisible();
 
-  await page
-    .locator(card("act-reviews"))
-    .getByRole("button", { name: "Dismiss" })
-    .click();
-  await expect(heading).toHaveCount(0);
+  await target.getByRole("button", { name: "Dismiss" }).click();
+  await expect(target).toHaveCount(0);
 
   await page.reload();
-  await expect(heading).toHaveCount(0);
+  await expect(target).toHaveCount(0);
 });
 
 test("a dismissed action can be reopened from the dismissed filter", async ({
@@ -462,7 +453,12 @@ test("hides the AI explain control when no key is configured", async ({
   page,
 }) => {
   await page.goto("/actions");
+  await page
+    .locator(card("act-uncovered"))
+    .getByRole("link", { name: ACT_UNCOVERED_TITLE })
+    .click();
 
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByText("How to fix")).toBeVisible();
   await expect(page.getByRole("button", { name: "Explain" })).toHaveCount(0);
 });

@@ -40,10 +40,9 @@ test("top actions name their app and open the exact action", async ({
 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/actions\\?action=${first.id}$`));
-  await expect(page.locator(`#action-${first.id}`)).toHaveAttribute(
-    "data-focused",
-    "true",
-  );
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { level: 2 }),
+  ).toHaveText('Add "habit tracker" to your metadata');
 });
 
 test("keyword movers list climbers and fallers side by side on a desktop", async ({
