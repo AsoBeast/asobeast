@@ -41,7 +41,7 @@ export class PortfolioSignals {
       }
       return counts;
     } catch (error) {
-      this.logger.error('action counts unavailable for this digest', error);
+      this.logger.error('action counts unavailable', error);
       return null;
     }
   }

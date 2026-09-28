@@ -56,7 +56,7 @@ describe('PortfolioSignals', () => {
 
     await expect(signals.actionCounts(['app_1'])).resolves.toBeNull();
     expect(error).toHaveBeenCalledWith(
-      'action counts unavailable for this digest',
+      'action counts unavailable',
       expect.any(Error),
     );
   });
