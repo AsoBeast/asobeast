@@ -275,3 +275,17 @@ test("the table sorts an app awaiting its first run last", async ({ page }) => {
     order.indexOf("Tomato Clock"),
   );
 });
+
+test("the phone table truncates a long app name", async ({ page }) => {
+  await withManyApps(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/?view=table");
+
+  const header = appsRegion(page).getByRole("columnheader").first();
+  await expect(header).toHaveText("App");
+  const width = await header.evaluate(
+    (node) => node.getBoundingClientRect().width,
+  );
+
+  expect(width).toBeLessThanOrEqual(200);
+});

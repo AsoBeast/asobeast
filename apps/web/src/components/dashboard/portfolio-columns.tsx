@@ -39,7 +39,7 @@ const captured = (row: PortfolioTableRow): PortfolioAppInsight | undefined =>
 function AppCell({ app }: { app: PortfolioApp }) {
   const name = app.name ?? "Untitled app";
   return (
-    <div className="flex min-w-0 items-center gap-3">
+    <div className="flex max-w-44 min-w-0 items-center gap-3 @xl/dashboard:max-w-72">
       <AppIcon src={app.iconUrl} name={app.name} size={32} />
       <div className="flex min-w-0 flex-col">
         <Link

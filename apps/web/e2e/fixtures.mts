@@ -2106,7 +2106,11 @@ const MANY_APP_NAMES = [
   ["Budget Planner", "APP_STORE", "jp"],
   ["Step Counter", "GOOGLE_PLAY", "br"],
   ["Recipe Keeper", "APP_STORE", "in"],
-  ["Language Cards", "GOOGLE_PLAY", "mx"],
+  [
+    "Language Cards: Learn Vocabulary With Spaced Repetition",
+    "GOOGLE_PLAY",
+    "mx",
+  ],
 ] as const;
 
 export const MANY_PORTFOLIO_APPS: PortfolioSummary["apps"] = MANY_APP_NAMES.map(
