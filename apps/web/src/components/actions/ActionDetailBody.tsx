@@ -10,6 +10,7 @@ import { ActionEvidencePanel } from "./ActionEvidencePanel";
 import { ActionExplain } from "./ActionExplain";
 import { ActionImpactMeter } from "./ActionImpactMeter";
 import { ActionHistory } from "./ActionHistory";
+import { ActionNote } from "./ActionNote";
 import { ActionOutcome } from "./ActionOutcome";
 import { ActionSteps } from "./ActionSteps";
 import { ActionTrendChart } from "./ActionTrendChart";
@@ -115,6 +116,9 @@ export function ActionDetailBody({
           <ActionHistory events={detail.data.events} />
         </Section>
       ) : null}
+      <Section title="Note">
+        <ActionNote key={shown.id} item={shown} />
+      </Section>
       <ActionExplain item={shown} />
       <p className="text-caption text-muted-foreground">
         Evidence last confirmed {formatDate(shown.lastSeenAt)} · formula{" "}

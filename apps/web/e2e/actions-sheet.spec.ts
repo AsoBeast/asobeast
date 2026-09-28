@@ -163,3 +163,31 @@ test("a fresh fix is still being measured", async ({ page }) => {
     page.getByRole("dialog").getByText("Measuring", { exact: true }),
   ).toBeVisible();
 });
+
+test("a note is saved and kept after a reload", async ({ page }) => {
+  await page.goto("/actions?action=act-audit");
+  const note = page.getByRole("textbox", { name: "Note for this action" });
+
+  await note.fill("Waiting on the new screenshots");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.getByText("Note saved")).toBeVisible();
+
+  await page.reload();
+  await expect(
+    page.getByRole("textbox", { name: "Note for this action" }),
+  ).toHaveValue("Waiting on the new screenshots");
+});
+
+test("a row shows that its action has a note", async ({ page }) => {
+  await page.goto("/actions?action=act-audit");
+  await page
+    .getByRole("textbox", { name: "Note for this action" })
+    .fill("Check with design");
+  await page.getByRole("button", { name: "Save note" }).click();
+  await expect(page.getByText("Note saved")).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  await expect(
+    page.locator(card("act-audit")).getByText("Has a note"),
+  ).toBeAttached();
+});

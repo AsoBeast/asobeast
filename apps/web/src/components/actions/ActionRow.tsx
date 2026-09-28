@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { Check, RotateCcw, X } from "lucide-react";
+import { Check, RotateCcw, StickyNote, X } from "lucide-react";
 import type { ActionItem } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,12 @@ function RowMeta({
         <Badge variant="outline" className={cn("h-auto", TAG_TONE[tag.tone])}>
           {tag.label}
         </Badge>
+      ) : null}
+      {item.note ? (
+        <span className="inline-flex text-muted-foreground">
+          <StickyNote aria-hidden className="size-3.5" />
+          <span className="sr-only">Has a note</span>
+        </span>
       ) : null}
     </div>
   );
