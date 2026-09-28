@@ -24,7 +24,7 @@ export function RankBandBar({
           aria-label={bandSummary(distribution)}
           tabIndex={0}
           data-slot="rank-band-bar"
-          className="flex h-6 w-full items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="relative z-20 flex h-6 w-full items-center rounded-full outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <div className="flex h-1.5 w-full gap-0.5 overflow-hidden rounded-full">
             {segments.map((segment) => (

@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import type { PortfolioSummary } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
+import { hoverForTooltip } from "./hover.mts";
 
 const appsRegion = (page: Page) => page.getByRole("region", { name: "Apps" });
 
@@ -229,4 +230,19 @@ test("the table keeps phone columns and reveals more on request", async ({
   await expect(
     appsRegion(page).getByRole("columnheader", { name: /Rating/ }),
   ).toBeVisible();
+});
+
+test("hovering the rank bands of a card shows the breakdown", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const bands = card(page, "Tomato Clock").getByRole("img", {
+    name: /^Rank bands/,
+  });
+  await hoverForTooltip(
+    page,
+    bands,
+    page.getByRole("tooltip").getByText("#11–50"),
+  );
 });
