@@ -1,11 +1,12 @@
 import {
   AppsDashboardSkeleton,
+  PortfolioMoversCardSkeleton,
   PortfolioStatusLineSkeleton,
   PortfolioPulseSkeleton,
 } from "@/components/dashboard/skeletons";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
-import { PanelCardSkeleton } from "@/components/overview/skeletons";
-import { Card, CardHeader } from "@/components/ui/card";
+import { ChangeTimelineSkeleton } from "@/components/changes/skeletons";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Loading() {
@@ -24,7 +25,7 @@ export default function Loading() {
           <ActionsSummaryCardSkeleton />
         </div>
         <div className="@5xl/dashboard:col-span-5">
-          <PanelCardSkeleton />
+          <PortfolioMoversCardSkeleton />
         </div>
       </div>
       <div className="grid gap-6 @6xl/dashboard:grid-cols-12 [&>*]:min-w-0">
@@ -37,6 +38,9 @@ export default function Loading() {
             <Skeleton className="h-5 w-32" />
             <Skeleton className="h-4 w-40" />
           </CardHeader>
+          <CardContent>
+            <ChangeTimelineSkeleton />
+          </CardContent>
         </Card>
       </div>
     </div>

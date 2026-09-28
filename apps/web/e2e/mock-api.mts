@@ -767,16 +767,23 @@ function firstRunFor(appId: string): FirstRunStatus {
 }
 
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
-const budgetHolds = new Map<string, PromiseWithResolvers<void>>();
+type Holds = Map<string, PromiseWithResolvers<void>>;
 
-function budgetHold(token: string): PromiseWithResolvers<void> {
-  const existing = budgetHolds.get(token);
+const budgetHolds: Holds = new Map();
+const insightsHolds: Holds = new Map();
+
+function holdFor(holds: Holds, token: string): PromiseWithResolvers<void> {
+  const existing = holds.get(token);
   if (existing) return existing;
   const hold = Promise.withResolvers<void>();
-  budgetHolds.set(token, hold);
+  holds.set(token, hold);
   return hold;
 }
+
+const budgetHold = (token: string) => holdFor(budgetHolds, token);
+const insightsHold = (token: string) => holdFor(insightsHolds, token);
 
 const routes: Route[] = [
   {
@@ -808,6 +815,14 @@ const routes: Route[] = [
     pattern: /^\/__budget-holds\/([^/]+)\/release$/,
     handler: ([token], _req, res) => {
       budgetHold(token).resolve();
+      json(res, 200, { released: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__insights-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      insightsHold(token).resolve();
       json(res, 200, { released: true });
     },
   },
@@ -1004,13 +1019,12 @@ const routes: Route[] = [
       if (hasCookie(req, "portfolio_many", "1")) {
         return json(res, 200, MANY_PORTFOLIO_INSIGHTS);
       }
-      json(
-        res,
-        200,
-        hasCookie(req, "portfolio_insights_quiet", "1")
-          ? QUIET_PORTFOLIO_INSIGHTS
-          : PORTFOLIO_INSIGHTS,
-      );
+      const insights = hasCookie(req, "portfolio_insights_quiet", "1")
+        ? QUIET_PORTFOLIO_INSIGHTS
+        : PORTFOLIO_INSIGHTS;
+      const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
+      if (!token) return json(res, 200, insights);
+      void insightsHold(token).promise.then(() => json(res, 200, insights));
     },
   },
   {

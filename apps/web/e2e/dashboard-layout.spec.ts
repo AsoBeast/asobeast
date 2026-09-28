@@ -1,7 +1,18 @@
-import type { Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import type { BrowserContext, Page } from "@playwright/test";
 import type { PortfolioSummary } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { PORTFOLIO_INSIGHTS } from "./portfolio-insights.mts";
+import { seedCookies } from "./routes.mts";
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
+
+const holdInsights = async (context: BrowserContext) => {
+  const token = randomUUID();
+  await seedCookies(context, { e2e_insights_hold: token });
+  return () =>
+    context.request.post(`${MOCK_API_URL}/__insights-holds/${token}/release`);
+};
 
 const statusLine = (page: Page) =>
   page.locator('[data-slot="portfolio-status"]');
@@ -124,3 +135,57 @@ test("the movement tile reads its counts aloud", async ({ page }) => {
     .filter({ hasText: "Keyword movement" });
   await expect(tile).toContainText(`${up} climbing, ${down} falling`);
 });
+
+test("the apps heading stays put when the insights stream in", async ({
+  page,
+  context,
+}) => {
+  const release = await holdInsights(context);
+  await page.goto("/", { waitUntil: "commit" });
+
+  const heading = page.getByRole("heading", { name: "Apps", level: 2 });
+  await expect(
+    page.getByRole("heading", { name: "Top actions", level: 2 }),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-slot="stat-tile-skeleton"]').first(),
+  ).toBeVisible();
+  const before = (await heading.boundingBox())!.y;
+
+  await release();
+  await expect(
+    page.locator('[data-slot="app-grid"] > li').first(),
+  ).toBeVisible();
+  const after = (await heading.boundingBox())!.y;
+
+  expect(Math.abs(after - before)).toBeLessThanOrEqual(8);
+});
+
+for (const { width, columns } of [
+  { width: 375, columns: 2 },
+  { width: 1440, columns: 4 },
+]) {
+  test(`the pulse skeleton keeps the tile arrangement at ${width} px`, async ({
+    page,
+    context,
+  }) => {
+    const release = await holdInsights(context);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/", { waitUntil: "commit" });
+
+    const tiles = page.locator('[data-slot="stat-tile-skeleton"]');
+    await expect(tiles).toHaveCount(4);
+    const rows = () =>
+      tiles.evaluateAll((nodes) => {
+        const tops = nodes.map((node) =>
+          Math.round(node.getBoundingClientRect().top),
+        );
+        return tops.map((top) => tops.indexOf(top));
+      });
+
+    await expect
+      .poll(rows)
+      .toEqual(columns === 2 ? [0, 0, 2, 2] : [0, 0, 0, 0]);
+    await release();
+  });
+}

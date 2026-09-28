@@ -168,6 +168,8 @@ export const appSortParser =
 
 export const APP_VIEWS = ["cards", "table"] as const;
 
+export type AppView = (typeof APP_VIEWS)[number];
+
 export const appViewParser =
   parseAsStringLiteral(APP_VIEWS).withDefault("cards");
 

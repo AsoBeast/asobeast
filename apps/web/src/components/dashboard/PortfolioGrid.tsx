@@ -2,6 +2,7 @@ import type { PortfolioAppInsight, PortfolioGroup } from "@asobeast/shared";
 import { PortfolioAppCard } from "./PortfolioAppCard";
 import { PortfolioGroupCard } from "./PortfolioGroupCard";
 import type { PortfolioRow } from "./portfolio-rows";
+import { APP_GRID } from "./skeletons";
 
 export function PortfolioGrid({
   rows,
@@ -16,10 +17,7 @@ export function PortfolioGrid({
   const insightFor = (appId: string) => insights.get(appId);
 
   return (
-    <ul
-      data-slot="app-grid"
-      className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(20rem,100%),1fr))]"
-    >
+    <ul data-slot="app-grid" className={APP_GRID}>
       {rows.map((row) => (
         <li
           key={row.kind === "group" ? `${row.variant}-${row.id}` : row.app.id}
