@@ -101,7 +101,7 @@ export function toRows(apps: PortfolioApp[]): PortfolioRow[] {
 
 type SortValue = number | string | null;
 
-export const APP_SORT_VALUES: Record<
+const APP_SORT_VALUES: Record<
   AppSort,
   {
     descFirst: boolean;
@@ -147,14 +147,14 @@ export function sortRows(
 ): PortfolioRow[] {
   const { descFirst, value } = APP_SORT_VALUES[sort];
   const desc = dir === null ? descFirst : dir === "desc";
-  const appValue = (app: PortfolioApp) => value(app, insights.get(app.id));
+  const appValue = (app: PortfolioApp) =>
+    value(app, app.lastCapturedAt === null ? undefined : insights.get(app.id));
   const rowValue = (row: PortfolioRow): SortValue => {
     if (row.kind === "app") return appValue(row.app);
     if (sort === "name") return row.name;
     return (
-      row.members
-        .map(appValue)
-        .sort((a, b) => compareValues(a, b, descFirst))[0] ?? null
+      row.members.map(appValue).sort((a, b) => compareValues(a, b, desc))[0] ??
+      null
     );
   };
   return rows

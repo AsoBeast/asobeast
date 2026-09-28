@@ -262,3 +262,13 @@ test("a search from the address stays visible on a short app list", async ({
     .poll(async () => (await cardNames(page)).length)
     .toBeGreaterThan(1);
 });
+
+test("the table sorts an app awaiting its first run last", async ({ page }) => {
+  await page.goto("/?view=table&sort=top10&dir=asc");
+
+  const names = appsRegion(page)
+    .getByRole("table")
+    .locator("tbody tr td:first-child a");
+  await expect(names.first()).toBeVisible();
+  await expect(names.last()).toHaveText("Pending App");
+});

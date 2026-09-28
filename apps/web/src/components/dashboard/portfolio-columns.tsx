@@ -95,7 +95,7 @@ export const portfolioColumns = columnHelper.columns([
       ),
   }),
   columnHelper.accessor(
-    (row) => nullsLast(row.insight?.rankDistribution.top10 ?? null),
+    (row) => nullsLast(captured(row)?.rankDistribution.top10 ?? null),
     {
       id: "top10",
       ...NUMBER_SORT,
@@ -131,7 +131,7 @@ export const portfolioColumns = columnHelper.columns([
     },
   }),
   columnHelper.accessor(
-    (row) => nullsLast(row.insight?.rating.average ?? null),
+    (row) => nullsLast(captured(row)?.rating.average ?? null),
     {
       id: "rating",
       ...NUMBER_SORT,
@@ -169,7 +169,7 @@ export const portfolioColumns = columnHelper.columns([
     },
   }),
   columnHelper.accessor(
-    (row) => nullsLast(row.insight?.actions?.open ?? null),
+    (row) => nullsLast(captured(row)?.actions?.open ?? null),
     {
       id: "actions",
       ...NUMBER_SORT,

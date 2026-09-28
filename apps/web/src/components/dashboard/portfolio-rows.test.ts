@@ -22,7 +22,7 @@ function app(overrides: Partial<PortfolioApp> & { id: string }): PortfolioApp {
     sparkline: [],
     trackedKeywords: 0,
     competitors: 0,
-    lastCapturedAt: null,
+    lastCapturedAt: "2026-09-28T03:00:00.000Z",
     ...overrides,
   };
 }
@@ -223,6 +223,70 @@ describe("sortRows", () => {
     expect(
       ids(sortRows(rows, { sort: "visibility", dir: null }, insights)),
     ).toEqual(["solo", "APP_STORE:1"]);
+  });
+
+  it("sorts a group by its lowest member when ascending", () => {
+    const rows = toRows([
+      app({
+        id: "solo",
+        name: "Solo",
+        storeAppId: "9",
+        visibility: { current: 50, delta7d: null },
+      }),
+      app({
+        id: "us",
+        name: "Timer",
+        storeAppId: "1",
+        country: "us",
+        visibility: { current: 90, delta7d: null },
+      }),
+      app({
+        id: "de",
+        name: "Timer",
+        storeAppId: "1",
+        country: "de",
+        visibility: { current: 2, delta7d: null },
+      }),
+    ]);
+
+    expect(
+      ids(sortRows(rows, { sort: "visibility", dir: "asc" }, new Map())),
+    ).toEqual(["APP_STORE:1", "solo"]);
+    expect(
+      ids(sortRows(rows, { sort: "visibility", dir: null }, new Map())),
+    ).toEqual(["APP_STORE:1", "solo"]);
+  });
+
+  it("gives an app awaiting its first run no insight value", () => {
+    const rows = toRows([
+      app({
+        id: "pending",
+        name: "Pending",
+        storeAppId: "1",
+        lastCapturedAt: null,
+      }),
+      app({ id: "live", name: "Live", storeAppId: "2" }),
+    ]);
+    const insights = new Map([
+      ["pending", insight("pending")],
+      [
+        "live",
+        insight("live", {
+          rankDistribution: {
+            top1: 0,
+            top3: 0,
+            top10: 1,
+            top50: 1,
+            beyond: 0,
+            unranked: 0,
+          },
+        }),
+      ],
+    ]);
+
+    expect(
+      ids(sortRows(rows, { sort: "top10", dir: "asc" }, insights)),
+    ).toEqual(["live", "pending"]);
   });
 
   it("leaves the member order of a group alone", () => {
