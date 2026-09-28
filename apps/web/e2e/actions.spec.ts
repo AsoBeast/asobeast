@@ -135,6 +135,17 @@ test("an empty filter combination offers to clear the filters", async ({
   await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
 });
 
+test("a two status filter with no matches offers to clear the filters", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-2/actions?status=DONE,RESOLVED");
+
+  await expect(page.getByText("No actions match these filters")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Clear filters" }),
+  ).toBeVisible();
+});
+
 test("a failing update rolls the optimistic change back", async ({ page }) => {
   await page.goto("/actions");
   const failing = page.locator(card("act-degraded"));

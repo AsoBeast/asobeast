@@ -14,6 +14,7 @@ import {
 import { ActionCard } from "./ActionCard";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionFilters } from "./ActionFilters";
+import { isFilteredView } from "./queue-filters";
 
 export function ActionCenter({ appId }: { appId?: string }) {
   const [status, setStatus] = useQueryState("status", actionStatusParser);
@@ -47,8 +48,7 @@ export function ActionCenter({ appId }: { appId?: string }) {
     card.focus({ preventScroll: true });
   }, [focus, data]);
 
-  const filtered =
-    priority.length > 0 || rule.length > 0 || status.length !== 2;
+  const filtered = isFilteredView({ status, priority, rule });
 
   return (
     <div className="flex flex-col gap-6">

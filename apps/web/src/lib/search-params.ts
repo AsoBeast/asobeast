@@ -8,6 +8,7 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  type ActionStatus,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -262,9 +263,14 @@ export const rankingsRangeParsers = {
   movers: moverDaysParser,
 };
 
+export const ACTION_DEFAULT_STATUSES = [
+  "OPEN",
+  "SNOOZED",
+] as const satisfies readonly ActionStatus[];
+
 export const actionStatusParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),
-).withDefault(["OPEN", "SNOOZED"]);
+).withDefault([...ACTION_DEFAULT_STATUSES]);
 
 export const actionPriorityParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_PRIORITIES),
