@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_ADVISORY_RULES,
   ACTION_CATEGORIES,
+  ACTION_DISMISS_REASONS,
   ACTION_EVENT_ACTORS,
   ACTION_EVENT_TYPES,
   ACTION_IMPACT_WEIGHTS,
@@ -12,6 +13,7 @@ import {
   ACTION_STATUSES,
   ACTION_UPDATE_STATUSES,
   isActionCategory,
+  isActionDismissReason,
   isActionPriority,
   isActionRule,
   isActionStatus,
@@ -302,5 +304,16 @@ describe('action events', () => {
   it('lists each event type and actor once', () => {
     expect(new Set(ACTION_EVENT_TYPES).size).toBe(ACTION_EVENT_TYPES.length);
     expect(new Set(ACTION_EVENT_ACTORS).size).toBe(ACTION_EVENT_ACTORS.length);
+  });
+});
+
+describe('isActionDismissReason', () => {
+  it('accepts the three reasons and nothing else', () => {
+    for (const reason of ACTION_DISMISS_REASONS) {
+      expect(isActionDismissReason(reason)).toBe(true);
+    }
+    for (const value of [...REJECTED, 'NOT_RELEVANT', 'other']) {
+      expect(isActionDismissReason(value)).toBe(false);
+    }
   });
 });

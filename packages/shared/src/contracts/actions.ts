@@ -274,6 +274,12 @@ export const ACTION_DISMISS_REASONS = [
 ] as const;
 export type ActionDismissReason = (typeof ACTION_DISMISS_REASONS)[number];
 
+export const isActionDismissReason = (
+  value: unknown,
+): value is ActionDismissReason =>
+  typeof value === 'string' &&
+  ACTION_DISMISS_REASONS.some((reason) => reason === value);
+
 export interface ActionEventItem {
   id: string;
   type: ActionEventType;
@@ -326,6 +332,7 @@ export interface ActionUpdateRequest {
   status: ActionUpdateStatus;
   snoozedUntil?: string;
   note?: string;
+  reason?: ActionDismissReason;
 }
 
 export interface ActionRunResult {

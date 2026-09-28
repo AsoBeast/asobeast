@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import {
   ACTION_RULE_CATEGORY,
   ActionCategory,
@@ -38,6 +39,32 @@ export interface ActionRow {
   app: { id: string; name: string | null };
   keyword: { id: string; text: string } | null;
 }
+
+export const ROW_SELECT = {
+  id: true,
+  rule: true,
+  category: true,
+  status: true,
+  priority: true,
+  impact: true,
+  formulaVersion: true,
+  country: true,
+  store: true,
+  evidence: true,
+  firstSeenAt: true,
+  lastSeenAt: true,
+  resolvedAt: true,
+  snoozedUntil: true,
+  closedAt: true,
+  verifiedAt: true,
+  reopenCount: true,
+  note: true,
+  aiExplanation: true,
+  aiModel: true,
+  aiGeneratedAt: true,
+  app: { select: { id: true, name: true } },
+  keyword: { select: { id: true, text: true } },
+} satisfies Prisma.ActionItemSelect;
 
 const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'keyword.add_uncovered': ['opportunity', 'indexedFields', 'uncoveredFields'],

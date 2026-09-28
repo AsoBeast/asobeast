@@ -11,6 +11,7 @@ import { Env } from '../config/env';
 import { actionsGeneratedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
+import { ActionTransitions } from './action-transitions';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
@@ -139,12 +140,15 @@ const serviceFor = (
   const workspace = new WorkspaceContext();
   const service = new ActionsService(
     prisma as unknown as PrismaService,
-    {
-      get: jest.fn(() => SNOOZE_MAX_DAYS),
-    } as unknown as ConfigService<Env, true>,
     queue,
     workspace,
-    new ActionEventRecorder(),
+    new ActionTransitions(
+      {
+        get: jest.fn(() => SNOOZE_MAX_DAYS),
+      } as unknown as ConfigService<Env, true>,
+      workspace,
+      new ActionEventRecorder(),
+    ),
   );
   return new Proxy(service, {
     get: (target, property, receiver) => {
@@ -686,6 +690,42 @@ describe('ActionsService verification', () => {
       expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
         verifiedAt: null,
       });
+    },
+  );
+});
+
+describe('ActionsService dismiss reasons', () => {
+  it('stores the reason on the dismissed event', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DISMISSED', reason: 'handled_elsewhere' }),
+      USER,
+    );
+
+    expect(prisma.events).toEqual([
+      expect.objectContaining({
+        type: 'dismissed',
+        reason: 'handled_elsewhere',
+      }),
+    ]);
+  });
+
+  it.each(['DONE', 'OPEN', 'SNOOZED'] as const)(
+    'rejects a reason with %s',
+    async (status) => {
+      await expect(
+        serviceFor(buildPrisma({ status: 'DONE' })).update(
+          'act_1',
+          update({ status, reason: 'not_relevant' }),
+          USER,
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'reason is only valid when status is DISMISSED',
+        ),
+      );
     },
   );
 });

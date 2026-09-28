@@ -1,88 +1,36 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import {
   ACTION_CATEGORIES,
   ActionCategory,
-  ActionEventType,
   ActionItem,
   ActionListResult,
   ActionPriorityCounts,
   ActionRule,
   ActionSummary,
-  ActionUpdateStatus,
   isActionCategory,
   isActionPriority,
   isActionRule,
 } from '@asobeast/shared';
 import { ensureAppExists } from '../apps/ensure-app';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { Env } from '../config/env';
 import {
   actionsGeneratedKey,
   actionsSuppressedKey,
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { ActionEventRecorder } from './action-events';
-import { ActionRow, priorityOf, toActionItem } from './actions.mapper';
+import { CURRENT_SELECT, ActionTransitions } from './action-transitions';
+import { ActionRow, ROW_SELECT, toActionItem } from './actions.mapper';
 import {
   ACTIONS_DEFAULT_STATUSES,
   ListActionsQueryDto,
 } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
-const ROW_SELECT = {
-  id: true,
-  rule: true,
-  category: true,
-  status: true,
-  priority: true,
-  impact: true,
-  formulaVersion: true,
-  country: true,
-  store: true,
-  evidence: true,
-  firstSeenAt: true,
-  lastSeenAt: true,
-  resolvedAt: true,
-  snoozedUntil: true,
-  closedAt: true,
-  verifiedAt: true,
-  reopenCount: true,
-  note: true,
-  aiExplanation: true,
-  aiModel: true,
-  aiGeneratedAt: true,
-  app: { select: { id: true, name: true } },
-  keyword: { select: { id: true, text: true } },
-} satisfies Prisma.ActionItemSelect;
-
-const CURRENT_SELECT = {
-  id: true,
-  appId: true,
-  status: true,
-  priority: true,
-  impact: true,
-  reopenCount: true,
-  snoozedUntil: true,
-  closedAt: true,
-} satisfies Prisma.ActionItemSelect;
-
-type CurrentAction = Prisma.ActionItemGetPayload<{
-  select: typeof CURRENT_SELECT;
-}>;
-
 const TOP_RULES_LIMIT = 5;
-const DAY_MS = 86_400_000;
 
 @Injectable()
 export class ActionsService {
@@ -90,10 +38,9 @@ export class ActionsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService<Env, true>,
     @InjectQueue(QUEUES.PIPELINE) private readonly pipeline: Queue,
     private readonly workspace: WorkspaceContext,
-    private readonly recorder: ActionEventRecorder,
+    private readonly transitions: ActionTransitions,
   ) {}
 
   async list(
@@ -220,128 +167,9 @@ export class ActionsService {
       if (!current) {
         throw new NotFoundException('Action not found');
       }
-      return this.applyUpdate(tx, current, body, userId, new Date());
+      return this.transitions.apply(tx, current, body, userId);
     });
     return this.map(row);
-  }
-
-  private async applyUpdate(
-    tx: Prisma.TransactionClient,
-    current: CurrentAction,
-    body: UpdateActionDto,
-    userId: string,
-    now: Date,
-  ): Promise<ActionRow> {
-    const note = body.note === undefined ? {} : { note: body.note.trim() };
-    if (isNoteOnly(current, body)) {
-      return tx.actionItem.update({
-        where: { id: current.id },
-        data: note,
-        select: ROW_SELECT,
-      });
-    }
-
-    const snoozedUntil = this.validateSnooze(body);
-    if (current.status === 'RESOLVED' && body.status !== 'OPEN') {
-      throw new ConflictException(
-        'A resolved action is already closed; reopen it instead',
-      );
-    }
-
-    const row = await tx.actionItem.update({
-      where: { id: current.id },
-      data: {
-        status: body.status,
-        ...note,
-        ...this.sideEffects(body.status, current.status, snoozedUntil, now),
-      },
-      select: ROW_SELECT,
-    });
-    const type = transitionEvent(current.status, body.status);
-    if (type) {
-      await this.recorder.record(tx, [
-        {
-          workspaceId: this.workspace.require('an action update'),
-          actionId: current.id,
-          appId: current.appId,
-          type,
-          actor: 'user',
-          userId,
-          status: body.status,
-          priority: priorityOf(current.priority),
-          impact: current.impact,
-          snoozedUntil,
-          reason: null,
-          occurredAt: now,
-        },
-      ]);
-    }
-    return row;
-  }
-
-  private validateSnooze(body: UpdateActionDto): Date | null {
-    if (body.status !== 'SNOOZED') {
-      if (body.snoozedUntil !== undefined) {
-        throw new BadRequestException(
-          'snoozedUntil is only valid when status is SNOOZED',
-        );
-      }
-      return null;
-    }
-    if (body.snoozedUntil === undefined) {
-      throw new BadRequestException('snoozedUntil is required to snooze');
-    }
-
-    const until = new Date(body.snoozedUntil);
-    const now = Date.now();
-    if (until.getTime() <= now) {
-      throw new BadRequestException('snoozedUntil must be in the future');
-    }
-    const maxDays = this.config.get('ACTIONS_SNOOZE_MAX_DAYS', {
-      infer: true,
-    });
-    if (until.getTime() > now + maxDays * DAY_MS) {
-      throw new BadRequestException(
-        `snoozedUntil must be within ${maxDays} days`,
-      );
-    }
-    return until;
-  }
-
-  private sideEffects(
-    target: ActionUpdateStatus,
-    previous: string,
-    snoozedUntil: Date | null,
-    now: Date,
-  ): Prisma.ActionItemUpdateInput {
-    switch (target) {
-      case 'DONE':
-        return {
-          closedAt: now,
-          verifiedAt: null,
-          resolvedAt: null,
-          snoozedUntil: null,
-        };
-      case 'DISMISSED':
-        return { closedAt: now, verifiedAt: null, snoozedUntil: null };
-      case 'SNOOZED':
-        return {
-          snoozedUntil,
-          closedAt: null,
-          verifiedAt: null,
-          resolvedAt: null,
-        };
-      case 'OPEN':
-        return {
-          closedAt: null,
-          verifiedAt: null,
-          resolvedAt: null,
-          snoozedUntil: null,
-          ...(previous === 'OPEN' || previous === 'SNOOZED'
-            ? {}
-            : { reopenCount: { increment: 1 } }),
-        };
-    }
   }
 
   private whereFor(
@@ -379,36 +207,5 @@ export class ActionsService {
       this.logger.warn(`action ${item.id} has unreadable ${row.rule} evidence`);
     }
     return item;
-  }
-}
-
-function isNoteOnly(current: CurrentAction, body: UpdateActionDto): boolean {
-  if (body.status !== current.status) return false;
-  if (body.status === 'SNOOZED') {
-    return (
-      body.snoozedUntil !== undefined &&
-      current.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
-    );
-  }
-  return (
-    (body.status === 'DONE' || body.status === 'DISMISSED') &&
-    body.snoozedUntil === undefined
-  );
-}
-
-function transitionEvent(
-  previous: string,
-  target: ActionUpdateStatus,
-): ActionEventType | null {
-  switch (target) {
-    case 'DONE':
-      return 'done';
-    case 'DISMISSED':
-      return 'dismissed';
-    case 'SNOOZED':
-      return 'snoozed';
-    case 'OPEN':
-      if (previous === 'OPEN') return null;
-      return previous === 'SNOOZED' ? 'woke' : 'reopened';
   }
 }

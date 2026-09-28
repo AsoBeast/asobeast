@@ -4366,6 +4366,14 @@
             "type": "string",
             "example": "2026-08-15T00:00:00.000Z"
           },
+          "reason": {
+            "enum": [
+              "not_relevant",
+              "handled_elsewhere",
+              "disagree_with_data"
+            ],
+            "type": "string"
+          },
           "note": {
             "type": "string",
             "maxLength": 500

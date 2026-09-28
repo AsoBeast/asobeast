@@ -6,6 +6,7 @@ import { ActionRunModule } from './action-run.module';
 import { ActionsEngineModule } from './actions-engine.module';
 import { ActionsController, AppActionsController } from './actions.controller';
 import { ActionsAiService } from './actions-ai.service';
+import { ActionTransitions } from './action-transitions';
 import { ActionsService } from './actions.service';
 
 @Module({
@@ -16,7 +17,7 @@ import { ActionsService } from './actions.service';
     BullModule.registerQueue({ name: QUEUES.PIPELINE }),
   ],
   controllers: [ActionsController, AppActionsController],
-  providers: [ActionsService, ActionsAiService],
+  providers: [ActionsService, ActionsAiService, ActionTransitions],
   exports: [ActionsService],
 })
 export class ActionsModule {}

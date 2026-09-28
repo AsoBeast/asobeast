@@ -357,6 +357,37 @@ describe('ActionsController (e2e)', () => {
     }
   });
 
+  it('records why an action was dismissed', async () => {
+    const id = await seedAction();
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'not_relevant' })
+      .expect(200);
+
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      select: { type: true, reason: true },
+    });
+    expect(events).toEqual([{ type: 'dismissed', reason: 'not_relevant' }]);
+  });
+
+  it('rejects a reason on any status but dismissed, and an unknown reason', async () => {
+    const id = await seedAction();
+
+    const done = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE', reason: 'not_relevant' })
+      .expect(400);
+    expect((done.body as ApiErrorEnvelope).message).toBe(
+      'reason is only valid when status is DISMISSED',
+    );
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'bored' })
+      .expect(400);
+  });
+
   it('rejects an unknown id and an invalid status', async () => {
     await api.patch('/actions/missing').send({ status: 'DONE' }).expect(404);
     const id = await seedAction();
