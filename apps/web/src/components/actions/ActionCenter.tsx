@@ -48,7 +48,16 @@ export function ActionCenter({ appId }: { appId?: string }) {
     card.focus({ preventScroll: true });
   }, [focus, data]);
 
-  const filtered = isFilteredView({ status, priority, rule });
+  const filtered = isFilteredView({
+    status,
+    priority,
+    rule,
+    category: [],
+    app: [],
+    market: [],
+    store: null,
+    q: "",
+  });
 
   return (
     <div className="flex flex-col gap-6">
