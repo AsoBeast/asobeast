@@ -42,15 +42,9 @@ import {
   type VisibilityRange,
 } from "@/lib/ranges";
 import { visibilityRangeParser } from "@/lib/search-params";
+import { RANK_BANDS, UNRANKED_BAND } from "@/components/charts/rank-bands";
 
-const BANDS = [
-  { key: "rank1", label: "#1", color: "var(--rank-band-1)" },
-  { key: "rank2to3", label: "#2–3", color: "var(--rank-band-2)" },
-  { key: "rank4to10", label: "#4–10", color: "var(--rank-band-3)" },
-  { key: "rank11to50", label: "#11–50", color: "var(--rank-band-4)" },
-  { key: "rank51plus", label: "#51+", color: "var(--rank-band-5)" },
-  { key: "unranked", label: "Unranked", color: "var(--muted-foreground)" },
-] as const;
+const BANDS = [...RANK_BANDS, UNRANKED_BAND];
 
 const chartConfig = Object.fromEntries(
   BANDS.map((band) => [band.key, { label: band.label, color: band.color }]),
