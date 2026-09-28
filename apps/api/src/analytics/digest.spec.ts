@@ -1,6 +1,7 @@
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
 import { DigestService } from './digest.service';
+import { PortfolioSignals } from './portfolio-signals.service';
 
 describe('DigestService.buildDigest', () => {
   let service: DigestService;
@@ -30,6 +31,7 @@ describe('DigestService.buildDigest', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         DigestService,
+        PortfolioSignals,
         {
           provide: PrismaService,
           useValue: {
