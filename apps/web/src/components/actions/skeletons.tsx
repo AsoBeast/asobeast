@@ -20,9 +20,19 @@ export function ActionListSkeleton({ cards = 6 }: { cards?: number }) {
   );
 }
 
+export function ActionCenterHeaderSkeleton() {
+  return (
+    <div className="flex flex-col gap-2">
+      <Skeleton className="h-9 w-56 rounded-md" />
+      <Skeleton className="h-6 w-full max-w-md rounded-md" />
+    </div>
+  );
+}
+
 export function ActionCenterSkeleton() {
   return (
     <div className="flex flex-col gap-6">
+      <ActionCenterHeaderSkeleton />
       <ActionFiltersSkeleton />
       <ActionListSkeleton />
     </div>

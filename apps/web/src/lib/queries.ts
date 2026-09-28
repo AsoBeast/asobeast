@@ -273,16 +273,13 @@ export const actionsOptions = (filters: ActionFilters, appId?: string) =>
       appId ? getAppActions(appId, filters) : getActions(filters),
   });
 
-export const actionSummaryOptions = queryOptions({
-  queryKey: actionKeys.summary,
-  queryFn: () => getActionSummary(),
-});
-
-export const appActionSummaryOptions = (appId: string) =>
+export const actionSummaryFor = (appId?: string) =>
   queryOptions({
-    queryKey: actionKeys.scopedSummary({ appId }),
-    queryFn: () => getActionSummary({ appId }),
+    queryKey: appId ? actionKeys.scopedSummary({ appId }) : actionKeys.summary,
+    queryFn: () => getActionSummary(appId ? { appId } : {}),
   });
+
+export const actionSummaryOptions = actionSummaryFor();
 
 export const actionDetailOptions = (id: string) =>
   queryOptions({

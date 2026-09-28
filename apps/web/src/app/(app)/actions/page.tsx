@@ -17,22 +17,12 @@ export default async function ActionsPage({
   const filters = actionFiltersFrom(await searchParams);
 
   const queryClient = getQueryClient();
-  await Promise.all([
-    queryClient.prefetchQuery(actionsOptions(filters)),
-    queryClient.prefetchQuery(actionSummaryOptions),
-  ]);
+  void queryClient.prefetchQuery(actionSummaryOptions);
+  await queryClient.prefetchQuery(actionsOptions(filters));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-balance">Action Center</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            What to do next and why. Every recommendation is computed
-            deterministically from your stored data — open the evidence to see
-            the exact numbers behind it.
-          </p>
-        </div>
+      <div className="page-wide @container/actions flex flex-col gap-6">
         <Suspense fallback={<ActionCenterSkeleton />}>
           <ActionCenter />
         </Suspense>

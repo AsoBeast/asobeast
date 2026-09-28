@@ -14,7 +14,7 @@ import {
   actionKeys,
   actionsOptions,
   actionSummaryOptions,
-  appActionSummaryOptions,
+  actionSummaryFor,
   alertsConfigKey,
   apiTokenKeys,
   appKeys,
@@ -290,7 +290,7 @@ describe("actionKeys", () => {
   });
 
   it("keeps the app scoped summary under the action root", () => {
-    const scoped = appActionSummaryOptions(APP).queryKey;
+    const scoped = actionSummaryFor(APP).queryKey;
 
     expect(isPrefixOf(actionKeys.all, scoped)).toBe(true);
     expect(scoped).not.toEqual(actionSummaryOptions.queryKey);

@@ -12,6 +12,7 @@ import {
   actionStatusParser,
 } from "@/lib/search-params";
 import { ActionCard } from "./ActionCard";
+import { ActionCenterHeader } from "./ActionCenterHeader";
 import { ActionEmptyState } from "./ActionEmptyState";
 import { ActionFilters } from "./ActionFilters";
 import { isFilteredView } from "./queue-filters";
@@ -59,8 +60,16 @@ export function ActionCenter({ appId }: { appId?: string }) {
     q: "",
   });
 
+  const emptyStateGenerates =
+    data.items.length === 0 && (data.generatedAt === null || !filtered);
+
   return (
-    <div className="flex flex-col gap-6">
+    <>
+      <ActionCenterHeader
+        appId={appId}
+        generatedAt={data.generatedAt}
+        showGenerate={!emptyStateGenerates}
+      />
       <ActionFilters
         status={status}
         priority={priority}
@@ -89,6 +98,6 @@ export function ActionCenter({ appId }: { appId?: string }) {
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

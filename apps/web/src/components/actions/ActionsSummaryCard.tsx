@@ -19,7 +19,7 @@ import { storeLabel } from "@/lib/format";
 import {
   actionsOptions,
   actionSummaryOptions,
-  appActionSummaryOptions,
+  actionSummaryFor,
   portfolioOptions,
 } from "@/lib/queries";
 import { ACTION_PRIORITY_LABEL, ACTION_RULE_TITLE } from "./action-copy";
@@ -151,7 +151,7 @@ function PortfolioActions() {
 }
 
 function AppActions({ appId }: { appId: string }) {
-  const { data: summary } = useSuspenseQuery(appActionSummaryOptions(appId));
+  const { data: summary } = useSuspenseQuery(actionSummaryFor(appId));
 
   return (
     <>

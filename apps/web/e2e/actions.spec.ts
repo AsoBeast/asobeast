@@ -89,6 +89,53 @@ test("a degraded row explains itself without breaking the list", async ({
   await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
 });
 
+test("the header states how fresh the queue is", async ({ page }) => {
+  await page.goto("/actions");
+
+  const status = page.locator('[data-slot="action-status"]');
+  await expect(status).toHaveText(
+    /^11 open · 1 critical · 4 high · generated /,
+  );
+  await expect(status).toContainText("withheld by the per app cap");
+});
+
+test("offers Generate now exactly once, with a queue and without one", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+  await expect(page.getByRole("button", { name: "Generate now" })).toHaveCount(
+    1,
+  );
+
+  await page.context().addCookies([
+    {
+      name: "e2e_actions_ungenerated",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/actions");
+  await expect(page.getByText("No actions generated yet")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate now" })).toHaveCount(
+    1,
+  );
+});
+
+test("the app actions page heads its section under the app name", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/actions");
+
+  const headings = page.getByRole("heading");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Focus Timer",
+  );
+  await expect(headings.nth(1)).toHaveText("Actions");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Actions" }),
+  ).toBeVisible();
+});
+
 test.describe("generating the queue on demand", () => {
   const cookie = (name: string, value: string) => ({
     name,

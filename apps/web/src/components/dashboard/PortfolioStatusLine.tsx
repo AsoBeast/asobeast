@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import type {
@@ -9,6 +9,7 @@ import type {
   RunState,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
+import { Separated } from "@/components/ui/separated";
 import { formatDate, pluralize } from "@/lib/format";
 import {
   budgetOptions,
@@ -22,15 +23,6 @@ const RUN_STATE_TEXT: Record<RunState, string | null> = {
   complete: "Daily run complete",
   delayed: "Daily run delayed",
 };
-
-function Separated({ parts }: { parts: ReactNode[] }) {
-  return parts.map((part, index) => (
-    <Fragment key={index}>
-      {index > 0 ? <span aria-hidden> · </span> : null}
-      {part}
-    </Fragment>
-  ));
-}
 
 function inventory(totals: PortfolioTotals): ReactNode[] {
   return [
