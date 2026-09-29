@@ -24,6 +24,7 @@ const day = (offset: number): string =>
   new Date(NOW.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
 
 const OFFSETS = [5, 4, 3, 2, 1];
+const CHANGE_OFFSET = 3;
 
 const captures = (
   positions: Array<number | null>,
@@ -41,7 +42,7 @@ const keyword = (
 const change = (
   field: ChangeField,
   after: string | null,
-  offset = 3,
+  offset = CHANGE_OFFSET,
   competitorAppId = 'comp_1',
 ): ActionCompetitorChange => ({
   competitorAppId,
@@ -103,13 +104,13 @@ describe('competitor.investigate_overtake', () => {
       store: 'APP_STORE',
       country: 'us',
       keywordId: null,
-      discriminator: `comp_1~${day(3)}`,
+      discriminator: `comp_1~${day(CHANGE_OFFSET)}`,
       terms: { reach: 0.6, severity: 0.6, confidence: 3 / 7 },
       evidence: {
         rule: 'competitor.investigate_overtake',
         competitorAppId: 'comp_1',
         competitorName: 'Tomato Focus',
-        changedAt: day(3),
+        changedAt: day(CHANGE_OFFSET),
         fields: ['title'],
         newTitle: 'Tomato Focus: Habit Tracker',
         newSubtitle: null,
@@ -240,7 +241,7 @@ describe('competitor.investigate_overtake', () => {
             : [],
       })),
     ).toEqual([
-      { discriminator: `comp_1~${day(3)}`, keywords: ['kw_1'] },
+      { discriminator: `comp_1~${day(CHANGE_OFFSET)}`, keywords: ['kw_1'] },
       { discriminator: `comp_1~${day(2)}`, keywords: ['kw_2'] },
     ]);
     expect(new Set(detections.map(actionFingerprint)).size).toBe(2);
@@ -265,13 +266,13 @@ describe('competitor.investigate_overtake', () => {
     expect(
       detectCompetitorInvestigateOvertake(
         races,
-        shifted(OVERTAKE_WINDOW_DAYS - 3),
+        shifted(OVERTAKE_WINDOW_DAYS - CHANGE_OFFSET),
       ),
     ).toEqual([]);
     expect(
       detectCompetitorInvestigateOvertake(
         races,
-        shifted(OVERTAKE_WINDOW_DAYS - 4),
+        shifted(OVERTAKE_WINDOW_DAYS - CHANGE_OFFSET - 1),
       ),
     ).toHaveLength(1);
   });
