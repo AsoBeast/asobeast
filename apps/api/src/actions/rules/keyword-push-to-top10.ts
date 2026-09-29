@@ -15,7 +15,7 @@ import { clampUnit, scoreImpact } from '../action-impact';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { detectKeywordDefend } from './keyword-defend';
 import { isVolatile } from './serp-volatility';
-import { windowCutoff } from './window';
+import { windowStart } from './window';
 
 export const PUSH_MIN_POSITION = 11;
 export const PUSH_MAX_POSITION = 20;
@@ -41,9 +41,9 @@ interface BandHistory {
 }
 
 function bandHistory(days: ActionRankingDay[], now: Date): BandHistory {
-  const cutoff = windowCutoff(now, PUSH_WINDOW_DAYS);
+  const start = windowStart(now, PUSH_WINDOW_DAYS);
   const window = days
-    .filter((day) => day.date > cutoff)
+    .filter((day) => day.date >= start)
     .sort((left, right) => left.date.localeCompare(right.date));
   const ranked = window
     .map((day) => day.position)

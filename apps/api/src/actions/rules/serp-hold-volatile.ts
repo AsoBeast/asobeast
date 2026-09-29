@@ -2,7 +2,7 @@ import { ActionRule, SerpHoldVolatileEvidence } from '@asobeast/shared';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { detectKeywordDefend } from './keyword-defend';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 import { detectRankInvestigateDrop } from './rank-investigate-drop';
 import {
   isVolatile,
@@ -95,7 +95,7 @@ function detectForApp(
   damped: Map<string, DampedKeyword>,
   now: Date,
 ): DetectedAction[] {
-  const cutoff = windowCutoff(now, VOLATILITY_WINDOW_DAYS);
+  const cutoff = dateDaysAgo(now, VOLATILITY_WINDOW_DAYS);
   const detections: DetectedAction[] = [];
 
   for (const keyword of app.trackedKeywords) {

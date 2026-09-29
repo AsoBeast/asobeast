@@ -11,7 +11,7 @@ import type {
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { isVolatile, VOLATILITY_DAMPED_CONFIDENCE } from './serp-volatility';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 
 export const REGRESSION_WINDOW_DAYS = 14;
 export const REGRESSION_INDEXED_FIELDS: readonly ChangeField[] = [
@@ -120,7 +120,7 @@ function detectForApp(
   rankDropThreshold: number,
   now: Date,
 ): DetectedAction[] {
-  const cutoff = windowCutoff(now, REGRESSION_WINDOW_DAYS);
+  const cutoff = dateDaysAgo(now, REGRESSION_WINDOW_DAYS);
   const changeDays = indexedChangeDays(app.changeEvents, cutoff);
   if (changeDays.length === 0) return [];
 

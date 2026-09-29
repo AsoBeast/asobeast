@@ -11,7 +11,7 @@ import type {
   ActionRankingDay,
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 import { VOLATILITY_DAMPED_CONFIDENCE, isVolatile } from './serp-volatility';
 
 export const DEFEND_WINDOW_DAYS = 7;
@@ -99,7 +99,7 @@ function detectForKeyword(
   keyword: TrackedKeywordItem,
   now: Date,
 ): DetectedAction | null {
-  const cutoff = windowCutoff(now, DEFEND_WINDOW_DAYS);
+  const cutoff = dateDaysAgo(now, DEFEND_WINDOW_DAYS);
   const snapshots = withinWindow(
     app.serpDaysByKeyword.get(keyword.keywordId) ?? [],
     cutoff,

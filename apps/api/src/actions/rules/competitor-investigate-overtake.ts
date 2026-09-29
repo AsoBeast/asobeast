@@ -18,7 +18,7 @@ import type {
 } from '../action-context';
 import { clampUnit } from '../action-impact';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 
 export const OVERTAKE_WINDOW_DAYS = 14;
 export const OVERTAKE_MIN_DAYS_AFTER = 2;
@@ -193,7 +193,7 @@ export function detectCompetitorInvestigateOvertake(
   context: ActionContext,
   now: Date,
 ): DetectedAction[] {
-  const cutoff = windowCutoff(now, OVERTAKE_WINDOW_DAYS);
+  const cutoff = dateDaysAgo(now, OVERTAKE_WINDOW_DAYS);
   return context.apps.flatMap((app) =>
     changeDays(app.competitorChanges, cutoff)
       .map((day) => detectDay(app, day))

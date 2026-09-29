@@ -5,7 +5,7 @@ import type {
   ActionVisibilityPoint,
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 
 export const MARKET_MIN_KEYWORDS = 5;
 export const MARKET_MIN_OBSERVED_DAYS = 7;
@@ -39,7 +39,7 @@ function rankedIn(app: ActionContextApp, country: string): number {
 }
 
 function detectForApp(app: ActionContextApp, now: Date): DetectedAction[] {
-  const cutoff = windowCutoff(now, MARKET_WINDOW_DAYS);
+  const cutoff = dateDaysAgo(now, MARKET_WINDOW_DAYS);
   const homeCountry = app.country;
   const homePoints = withinWindow(
     app.visibilityByCountry.get(homeCountry) ?? [],
