@@ -87,6 +87,30 @@ for (const { name, url, endpoint, ready } of DEEP_LINKS) {
   });
 }
 
+for (const url of ["/apps/app-1", "/apps/app-1/actions"]) {
+  test(`${url} names the app in its header and breadcrumb without refetching it`, async ({
+    page,
+  }) => {
+    const refetched: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/backend/apps/app-1") {
+        refetched.push(request.url());
+      }
+    });
+
+    await page.goto(url);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Focus Timer" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }),
+    ).toContainText("Focus Timer");
+    await page.waitForLoadState("networkidle");
+
+    expect(refetched).toEqual([]);
+  });
+}
+
 function collectPageErrors(page: Page) {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
