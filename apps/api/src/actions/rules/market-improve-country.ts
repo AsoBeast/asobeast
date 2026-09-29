@@ -5,7 +5,7 @@ import type {
   ActionVisibilityPoint,
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { dateDaysAgo } from './window';
+import { windowStart } from './window';
 
 export const MARKET_MIN_KEYWORDS = 5;
 export const MARKET_MIN_OBSERVED_DAYS = 7;
@@ -15,9 +15,9 @@ export const MARKET_TOTAL_SEVERITY_GAP = 40;
 
 function withinWindow(
   points: ActionVisibilityPoint[],
-  cutoff: string,
+  start: string,
 ): ActionVisibilityPoint[] {
-  return points.filter((point) => point.date >= cutoff);
+  return points.filter((point) => point.date >= start);
 }
 
 function meanVisibility(points: ActionVisibilityPoint[]): number {
@@ -39,11 +39,11 @@ function rankedIn(app: ActionContextApp, country: string): number {
 }
 
 function detectForApp(app: ActionContextApp, now: Date): DetectedAction[] {
-  const cutoff = dateDaysAgo(now, MARKET_WINDOW_DAYS);
+  const start = windowStart(now, MARKET_WINDOW_DAYS);
   const homeCountry = app.country;
   const homePoints = withinWindow(
     app.visibilityByCountry.get(homeCountry) ?? [],
-    cutoff,
+    start,
   );
   if (homePoints.length < MARKET_MIN_OBSERVED_DAYS) return [];
 
@@ -62,7 +62,7 @@ function detectForApp(app: ActionContextApp, now: Date): DetectedAction[] {
 
     const marketPoints = withinWindow(
       app.visibilityByCountry.get(country) ?? [],
-      cutoff,
+      start,
     );
     if (marketPoints.length < MARKET_MIN_OBSERVED_DAYS) continue;
 

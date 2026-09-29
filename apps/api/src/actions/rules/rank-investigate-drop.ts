@@ -11,7 +11,7 @@ import type {
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { isVolatile, VOLATILITY_DAMPED_CONFIDENCE } from './serp-volatility';
-import { dateDaysAgo } from './window';
+import { windowStart } from './window';
 
 export const REGRESSION_WINDOW_DAYS = 14;
 export const REGRESSION_INDEXED_FIELDS: readonly ChangeField[] = [
@@ -34,13 +34,13 @@ interface ChangeDay {
 
 function indexedChangeDays(
   events: ActionChangeEvent[],
-  cutoff: string,
+  start: string,
 ): ChangeDay[] {
   const byDay = new Map<string, Set<ChangeField>>();
   for (const event of events) {
     if (!REGRESSION_INDEXED_FIELDS.includes(event.field)) continue;
     const date = event.capturedAt.toISOString().slice(0, 10);
-    if (date < cutoff) continue;
+    if (date < start) continue;
     const fields = byDay.get(date) ?? new Set<ChangeField>();
     fields.add(event.field);
     byDay.set(date, fields);
@@ -120,8 +120,8 @@ function detectForApp(
   rankDropThreshold: number,
   now: Date,
 ): DetectedAction[] {
-  const cutoff = dateDaysAgo(now, REGRESSION_WINDOW_DAYS);
-  const changeDays = indexedChangeDays(app.changeEvents, cutoff);
+  const start = windowStart(now, REGRESSION_WINDOW_DAYS);
+  const changeDays = indexedChangeDays(app.changeEvents, start);
   if (changeDays.length === 0) return [];
 
   const country = app.country;

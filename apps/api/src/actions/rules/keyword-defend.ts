@@ -11,7 +11,7 @@ import type {
   ActionRankingDay,
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { dateDaysAgo } from './window';
+import { windowStart } from './window';
 import { VOLATILITY_DAMPED_CONFIDENCE, isVolatile } from './serp-volatility';
 
 export const DEFEND_WINDOW_DAYS = 7;
@@ -24,9 +24,9 @@ export const DEFEND_ENTRANT_PRESSURE_CAP = 3;
 
 function withinWindow<T extends { date: string }>(
   rows: T[],
-  cutoff: string,
+  start: string,
 ): T[] {
-  return rows.filter((row) => row.date >= cutoff);
+  return rows.filter((row) => row.date >= start);
 }
 
 interface DefendPosition {
@@ -99,16 +99,16 @@ function detectForKeyword(
   keyword: TrackedKeywordItem,
   now: Date,
 ): DetectedAction | null {
-  const cutoff = dateDaysAgo(now, DEFEND_WINDOW_DAYS);
+  const start = windowStart(now, DEFEND_WINDOW_DAYS);
   const snapshots = withinWindow(
     app.serpDaysByKeyword.get(keyword.keywordId) ?? [],
-    cutoff,
+    start,
   );
   const observedDays = new Set(snapshots.map((day) => day.date)).size;
   if (observedDays < DEFEND_MIN_OBSERVED_DAYS) return null;
 
   const position = positionsInWindow(
-    withinWindow(app.rankingDaysByKeyword.get(keyword.keywordId) ?? [], cutoff),
+    withinWindow(app.rankingDaysByKeyword.get(keyword.keywordId) ?? [], start),
   );
   if (!defensible(position)) return null;
 

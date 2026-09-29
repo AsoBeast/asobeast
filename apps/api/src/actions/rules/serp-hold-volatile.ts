@@ -2,7 +2,7 @@ import { ActionRule, SerpHoldVolatileEvidence } from '@asobeast/shared';
 import type { ActionContext, ActionContextApp } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
 import { detectKeywordDefend } from './keyword-defend';
-import { dateDaysAgo } from './window';
+import { windowStart } from './window';
 import { detectRankInvestigateDrop } from './rank-investigate-drop';
 import {
   isVolatile,
@@ -95,7 +95,7 @@ function detectForApp(
   damped: Map<string, DampedKeyword>,
   now: Date,
 ): DetectedAction[] {
-  const cutoff = dateDaysAgo(now, VOLATILITY_WINDOW_DAYS);
+  const start = windowStart(now, VOLATILITY_WINDOW_DAYS);
   const detections: DetectedAction[] = [];
 
   for (const keyword of app.trackedKeywords) {
@@ -107,7 +107,7 @@ function detectForApp(
 
     const observedDays = new Set(
       (app.serpDaysByKeyword.get(keyword.keywordId) ?? [])
-        .filter((day) => day.date >= cutoff)
+        .filter((day) => day.date >= start)
         .map((day) => day.date),
     ).size;
     if (observedDays < VOLATILITY_MIN_OBSERVED_DAYS) continue;

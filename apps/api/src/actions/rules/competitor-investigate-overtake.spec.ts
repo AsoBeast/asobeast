@@ -10,6 +10,7 @@ import {
   competitorInvestigateOvertakeDetector,
   detectCompetitorInvestigateOvertake,
   OVERTAKE_MAX_KEYWORDS,
+  OVERTAKE_WINDOW_DAYS,
 } from './competitor-investigate-overtake';
 import {
   actionContext,
@@ -254,6 +255,25 @@ describe('competitor.investigate_overtake', () => {
         ]),
       ]),
     ).toEqual([]);
+  });
+
+  it('treats the cutoff day as outside the window', () => {
+    const shifted = (days: number): Date =>
+      new Date(NOW.getTime() + days * 86_400_000);
+    const races = actionContext([app([race(HABIT)])]);
+
+    expect(
+      detectCompetitorInvestigateOvertake(
+        races,
+        shifted(OVERTAKE_WINDOW_DAYS - 3),
+      ),
+    ).toEqual([]);
+    expect(
+      detectCompetitorInvestigateOvertake(
+        races,
+        shifted(OVERTAKE_WINDOW_DAYS - 4),
+      ),
+    ).toHaveLength(1);
   });
 
   it('ignores a change older than the window', () => {

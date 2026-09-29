@@ -123,6 +123,26 @@ describe('serp.hold_volatile', () => {
     });
   });
 
+  it('observes no more days than the window holds across daily captures', () => {
+    const daily: SerpSnapshotDay[] = Array.from(
+      { length: VOLATILITY_WINDOW_DAYS + 1 },
+      (_, index) => {
+        const offset = VOLATILITY_WINDOW_DAYS - index;
+        return snapshot(offset, offset === 0 ? INVADED : BASELINE);
+      },
+    );
+    const detections = detectSerpHoldVolatile(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', daily]]) })]),
+      NOW,
+    );
+
+    expect(detections[0].evidence).toMatchObject({
+      windowDays: VOLATILITY_WINDOW_DAYS,
+      observedDays: VOLATILITY_WINDOW_DAYS,
+    });
+    expect(detections[0].terms.confidence).toBe(1);
+  });
+
   it('stays silent for a volatile keyword that damped nothing', () => {
     const quiet = app({
       serpDaysByKeyword: new Map([

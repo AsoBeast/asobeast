@@ -20,7 +20,7 @@ import {
   REGRESSION_TOTAL_SEVERITY_DROP,
 } from './rank-investigate-drop';
 import { isVolatile, VOLATILITY_DAMPED_CONFIDENCE } from './serp-volatility';
-import { dateDaysAgo } from './window';
+import { dateDaysAgo, windowStart } from './window';
 
 export const UNEXPLAINED_WINDOW_DAYS = 14;
 export const UNEXPLAINED_RECENT_DAYS = 3;
@@ -82,7 +82,7 @@ function visibilityShift(
   series: ActionVisibilityPoint[],
   now: Date,
 ): VisibilityShift | null {
-  const from = dateDaysAgo(now, UNEXPLAINED_WINDOW_DAYS);
+  const from = windowStart(now, UNEXPLAINED_WINDOW_DAYS);
   const baselineTo = dateDaysAgo(now, UNEXPLAINED_BASELINE_FROM_DAYS);
   const points = series
     .filter((point) => point.date >= from)
@@ -135,7 +135,7 @@ function detectInCountry(
   const lastOwnChangeAt = home ? lastOwnChange(app) : null;
   const explained =
     lastOwnChangeAt !== null &&
-    lastOwnChangeAt >= dateDaysAgo(now, UNEXPLAINED_WINDOW_DAYS);
+    lastOwnChangeAt >= windowStart(now, UNEXPLAINED_WINDOW_DAYS);
   const volatility = meanVolatility(app, country);
   const baseConfidence =
     clampUnit(shift.points / UNEXPLAINED_WINDOW_DAYS) *
