@@ -86,6 +86,8 @@ services:
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
       TRUST_PROXY: 1
       LOG_LEVEL: ${LOG_LEVEL:-log}
+    volumes:
+      - ./apps/api/keys:/repo/apps/api/keys:ro
     depends_on:
       postgres:
         condition: service_healthy
