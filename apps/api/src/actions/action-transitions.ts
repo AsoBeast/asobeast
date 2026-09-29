@@ -32,6 +32,20 @@ export type CurrentAction = Prisma.ActionItemGetPayload<{
 
 export const ACTION_REVERT_WINDOW_MINUTES = 10;
 
+const REVERT_EVENT_SELECT = {
+  id: true,
+  type: true,
+  actor: true,
+  userId: true,
+  status: true,
+  snoozedUntil: true,
+  occurredAt: true,
+} satisfies Prisma.ActionEventSelect;
+
+type RevertEvent = Prisma.ActionEventGetPayload<{
+  select: typeof REVERT_EVENT_SELECT;
+}>;
+
 const DAY_MS = 86_400_000;
 const MINUTE_MS = 60_000;
 
@@ -147,18 +161,11 @@ export class ActionTransitions {
     userId: string,
   ): Promise<ActionRow> {
     const now = new Date();
-    const [latest, before] = await tx.actionEvent.findMany({
+    const [latest, ...earlier] = await tx.actionEvent.findMany({
       where: { actionId: current.id },
       orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
-      take: 2,
-      select: {
-        id: true,
-        type: true,
-        actor: true,
-        userId: true,
-        status: true,
-        occurredAt: true,
-      },
+      take: 3,
+      select: REVERT_EVENT_SELECT,
     });
     const windowStart =
       now.getTime() - ACTION_REVERT_WINDOW_MINUTES * MINUTE_MS;
@@ -169,7 +176,7 @@ export class ActionTransitions {
     ) {
       throw new ConflictException('Nothing recent to undo on this action');
     }
-    if (body.status !== (before?.status ?? 'OPEN')) {
+    if (body.status !== (earlier[0]?.status ?? 'OPEN')) {
       throw new ConflictException('Undo must restore the previous status');
     }
 
@@ -177,7 +184,7 @@ export class ActionTransitions {
       where: { id: current.id },
       data: {
         status: body.status,
-        ...sideEffects(body.status, this.snoozeDate(body, now), now),
+        ...restoredState(body.status, earlier),
         ...(latest.type === 'reopened'
           ? { reopenCount: { decrement: 1 } }
           : {}),
@@ -272,6 +279,30 @@ function sideEffects(
         snoozedUntil: null,
       };
   }
+}
+
+function restoredState(
+  target: ActionUpdateStatus,
+  [before, closing]: readonly RevertEvent[],
+): Prisma.ActionItemUpdateInput {
+  const cleared = {
+    closedAt: null,
+    verifiedAt: null,
+    resolvedAt: null,
+    snoozedUntil: null,
+  };
+  if (target === 'SNOOZED') {
+    return { ...cleared, snoozedUntil: before?.snoozedUntil ?? null };
+  }
+  if (target === 'OPEN' || before === undefined) return cleared;
+  if (before.type === 'verified') {
+    return {
+      ...cleared,
+      closedAt: closing?.occurredAt ?? before.occurredAt,
+      verifiedAt: before.occurredAt,
+    };
+  }
+  return { ...cleared, closedAt: before.occurredAt };
 }
 
 function transitionEvent(

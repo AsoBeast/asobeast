@@ -865,6 +865,7 @@ describe('ActionsService undo', () => {
         actor: 'user',
         userId: USER,
         status: 'SNOOZED',
+        snoozedUntil: until,
         occurredAt: minutesAgo(30),
       },
       {

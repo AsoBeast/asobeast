@@ -19,6 +19,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
@@ -602,6 +603,109 @@ describe('ActionsController (e2e)', () => {
       select: { status: true },
     });
     expect(row.status).toBe('DONE');
+  });
+
+  const systemEvent = (
+    id: string,
+    type: string,
+    status: string,
+    occurredAt: Date,
+    snoozedUntil: Date | null = null,
+  ) => ({
+    workspaceId: DEFAULT_WORKSPACE_ID,
+    actionId: id,
+    appId,
+    type,
+    actor: 'system',
+    status,
+    priority: 'high',
+    impact: 71,
+    snoozedUntil,
+    occurredAt,
+  });
+
+  it('undoes a done on an action snoozed before its events were recorded', async () => {
+    const snoozedUntil = new Date(future(3));
+    const id = await seedAction({ status: 'SNOOZED', snoozedUntil });
+    await prisma.actionEvent.create({
+      data: systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - DAY_MS)),
+    });
+    await prisma.$executeRawUnsafe(
+      migrationSql('backfill_snoozed_action_events'),
+    );
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({
+        status: 'SNOOZED',
+        snoozedUntil: snoozedUntil.toISOString(),
+        revert: true,
+      })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: snoozedUntil.toISOString(),
+      closedAt: null,
+    });
+  });
+
+  it('undoes a done on a snooze whose wake date has passed', async () => {
+    const snoozedUntil = new Date(Date.now() - 60 * 60_000);
+    const id = await seedAction({ status: 'SNOOZED', snoozedUntil });
+    await prisma.actionEvent.createMany({
+      data: [
+        systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - 3 * DAY_MS)),
+        systemEvent(
+          id,
+          'snoozed',
+          'SNOOZED',
+          new Date(Date.now() - 2 * DAY_MS),
+          snoozedUntil,
+        ),
+      ],
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({
+        status: 'SNOOZED',
+        snoozedUntil: snoozedUntil.toISOString(),
+        revert: true,
+      })
+      .expect(200);
+
+    expect((res.body as ActionItem).snoozedUntil).toBe(
+      snoozedUntil.toISOString(),
+    );
+  });
+
+  it('undoing a reopen restores the original close and its verification', async () => {
+    const closedAt = new Date(Date.now() - 3 * DAY_MS);
+    const verifiedAt = new Date(Date.now() - DAY_MS);
+    const id = await seedAction({ status: 'DONE', closedAt, verifiedAt });
+    await prisma.actionEvent.createMany({
+      data: [
+        systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - 4 * DAY_MS)),
+        systemEvent(id, 'done', 'DONE', closedAt),
+        systemEvent(id, 'verified', 'DONE', verifiedAt),
+      ],
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'OPEN' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE', revert: true })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'DONE',
+      reopenCount: 0,
+      closedAt: closedAt.toISOString(),
+      verifiedAt: verifiedAt.toISOString(),
+    });
   });
 
   it('rejects an unknown id and an invalid status', async () => {
