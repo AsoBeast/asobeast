@@ -9,6 +9,16 @@ describe('releaseNotesText', () => {
     ).toBe('v4.6862\n- New stickers\n- New memes:\n✓ Old');
   });
 
+  it('turns a line break tag with attributes into a line', () => {
+    expect(
+      releaseNotesText('New<br class="note">features<br data-x=1/>here'),
+    ).toBe('New\nfeatures\nhere');
+  });
+
+  it('strips tags that only start like a line break', () => {
+    expect(releaseNotesText('<brand>Fixes</brand>')).toBe('Fixes');
+  });
+
   it('normalizes carriage returns to lines', () => {
     expect(releaseNotesText('One\r\nTwo\rThree')).toBe('One\nTwo\nThree');
   });

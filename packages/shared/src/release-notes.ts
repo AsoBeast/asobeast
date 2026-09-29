@@ -1,4 +1,4 @@
-const LINE_BREAK = /<br\s*\/?>|\r\n?/gi;
+const LINE_BREAK = /<br\b[^>]*>|\r\n?/gi;
 const TAG = /<\/?[a-z][^>]*>/gi;
 const CUT_TAG = /<\/?[a-z][^<>]*?(…?)$/i;
 const ENTITY = /&(#x[\da-f]+|#\d+|[a-z]+);/gi;
