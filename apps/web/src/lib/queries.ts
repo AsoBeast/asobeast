@@ -9,6 +9,8 @@ import type {
 import { QUERY_BOUNDS } from "@asobeast/shared";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
+  getAction,
+  getActionActivity,
   getActionAiStatus,
   getActions,
   getActionSummary,
@@ -41,6 +43,7 @@ import {
   getKeywords,
   getMarketAvailability,
   getPortfolio,
+  getPortfolioInsights,
   getRankDistributionHistory,
   getRankings,
   getRatingsHistogram,
@@ -57,7 +60,9 @@ import {
   getSummary,
   getVisibilityHistory,
   getWebhooks,
+  type ActionActivityScope,
   type ActionFilters,
+  type ActionSummaryScope,
   type RangeParams,
   type RankingParams,
   type ReviewFilters,
@@ -124,6 +129,7 @@ export const appKeys = {
 };
 
 export const portfolioKey = ["portfolio"] as const;
+export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
 
 export const recentChangesKey = (limit?: number) =>
   ["changes", "recent", { limit }] as const;
@@ -239,11 +245,23 @@ export const portfolioOptions = queryOptions({
   queryFn: getPortfolio,
 });
 
+export const portfolioInsightsOptions = queryOptions({
+  queryKey: portfolioInsightsKey,
+  queryFn: getPortfolioInsights,
+  staleTime: 60_000,
+});
+
 export const actionKeys = {
   all: ["actions"] as const,
+  lists: ["actions", "list"] as const,
   list: (filters: ActionFilters, appId?: string) =>
     ["actions", "list", appId ?? null, filters] as const,
   summary: ["actions", "summary"] as const,
+  scopedSummary: (scope: ActionSummaryScope) =>
+    ["actions", "summary", scope] as const,
+  detail: (id: string) => ["actions", "detail", id] as const,
+  activity: (scope: ActionActivityScope) =>
+    ["actions", "activity", scope] as const,
   aiStatus: ["actions", "ai-status"] as const,
   appRoot: (id: string) => [...appKeys.detail(id), "actions"] as const,
 };
@@ -255,10 +273,27 @@ export const actionsOptions = (filters: ActionFilters, appId?: string) =>
       appId ? getAppActions(appId, filters) : getActions(filters),
   });
 
-export const actionSummaryOptions = queryOptions({
-  queryKey: actionKeys.summary,
-  queryFn: getActionSummary,
-});
+export const actionSummaryFor = (appId?: string) =>
+  queryOptions({
+    queryKey: appId ? actionKeys.scopedSummary({ appId }) : actionKeys.summary,
+    queryFn: () => getActionSummary(appId ? { appId } : {}),
+  });
+
+export const actionSummaryOptions = actionSummaryFor();
+
+export const actionDetailOptions = (id: string) =>
+  queryOptions({
+    queryKey: actionKeys.detail(id),
+    queryFn: () => getAction(id),
+    staleTime: 30_000,
+  });
+
+export const actionActivityOptions = (scope: ActionActivityScope = {}) =>
+  queryOptions({
+    queryKey: actionKeys.activity(scope),
+    queryFn: () => getActionActivity(scope),
+    staleTime: 60_000,
+  });
 
 export const actionAiStatusOptions = queryOptions({
   queryKey: actionKeys.aiStatus,
@@ -271,6 +306,7 @@ export function invalidateActionMutation(
   appId?: string,
 ): void {
   void client.invalidateQueries({ queryKey: actionKeys.all });
+  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
   if (appId) {
     void client.invalidateQueries({ queryKey: actionKeys.appRoot(appId) });
   }
@@ -555,10 +591,12 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
+  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
 export function invalidateCompetitorMutation(
@@ -568,6 +606,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
+  void client.invalidateQueries({ queryKey: portfolioKey });
 }
 
 export function invalidateLinkMutation(

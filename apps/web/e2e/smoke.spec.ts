@@ -24,7 +24,10 @@ test("home renders the portfolio grid with totals and per-app cards", async ({
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { name: "Apps", level: 1 }),
+    page.getByRole("heading", { name: "Dashboard", level: 1 }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Apps", level: 2 }),
   ).toBeVisible();
 
   const [first, second] = PORTFOLIO.apps;

@@ -1,8 +1,9 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,8 +29,18 @@ function sectionLabel(segment: string): string {
   );
 }
 
+function useCachedAppDetail(id: string) {
+  const queryClient = useQueryClient();
+  const { queryKey } = appDetailOptions(id);
+  return useSyncExternalStore(
+    (onChange) => queryClient.getQueryCache().subscribe(onChange),
+    () => queryClient.getQueryData(queryKey),
+    () => undefined,
+  );
+}
+
 function AppCrumbs({ id, segment }: { id: string; segment: string }) {
-  const { data } = useQuery(appDetailOptions(id));
+  const data = useCachedAppDetail(id);
 
   const name = data?.name ?? "Untitled app";
 

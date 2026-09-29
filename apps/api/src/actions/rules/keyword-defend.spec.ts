@@ -1,8 +1,4 @@
-import {
-  DailyBudget,
-  KeywordDefendEvidence,
-  TrackedKeywordItem,
-} from '@asobeast/shared';
+import { KeywordDefendEvidence, TrackedKeywordItem } from '@asobeast/shared';
 import { SerpSnapshotDay } from '../../rankings/serp-movers';
 import type {
   ActionContext,
@@ -19,45 +15,29 @@ import {
   keywordDefendDetector,
 } from './keyword-defend';
 import { VOLATILITY_THRESHOLD } from './serp-volatility';
+import {
+  actionContext,
+  contextApp,
+  trackedKeyword,
+} from './rule-context.fixture';
 
 const NOW = new Date('2026-07-30T03:00:00.000Z');
 const OWN = 'own-app';
 
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
-
 const keyword = (
   overrides: Partial<TrackedKeywordItem> = {},
-): TrackedKeywordItem => ({
-  keywordId: 'kw_1',
-  text: 'budget planner',
-  country: 'us',
-  source: 'MANUAL',
-  active: true,
-  latestPosition: 6,
-  latestDepth: 200,
-  previousPosition: 4,
-  positionDelta1d: null,
-  positionDelta7d: null,
-  traffic: 5.5,
-  difficulty: 4,
-  volume: 55,
-  relevance: 80,
-  opportunity: 60,
-  bucket: null,
-  scoredAt: null,
-  scoreProvenance: null,
-  serpVolatility7d: null,
-  ...overrides,
-});
+): TrackedKeywordItem =>
+  trackedKeyword({
+    latestPosition: 6,
+    latestDepth: 200,
+    previousPosition: 4,
+    traffic: 5.5,
+    difficulty: 4,
+    volume: 55,
+    relevance: 80,
+    opportunity: 60,
+    ...overrides,
+  });
 
 const day = (offset: number): string =>
   new Date(NOW.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
@@ -101,36 +81,18 @@ const rankingDays = (positions: Array<number | null>): ActionRankingDay[] =>
     position,
   }));
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: OWN,
-  country: 'us',
-  trackedKeywords: [keyword()],
-  keywordsByCountry: new Map(),
-  coverage: [],
-  metadataFields: [],
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map([['kw_1', rankingDays([4, 5, 6, 6])]]),
-  serpDaysByKeyword: new Map([['kw_1', DEFAULT_SNAPSHOTS]]),
-  volatilityByKeyword: new Map([['kw_1', 12]]),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    storeAppId: OWN,
+    trackedKeywords: [keyword()],
+    rankingDaysByKeyword: new Map([['kw_1', rankingDays([4, 5, 6, 6])]]),
+    serpDaysByKeyword: new Map([['kw_1', DEFAULT_SNAPSHOTS]]),
+    volatilityByKeyword: new Map([['kw_1', 12]]),
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps);
 
 const evidenceOf = (detections: DetectedList): KeywordDefendEvidence =>
   detections[0].evidence as KeywordDefendEvidence;
@@ -183,6 +145,62 @@ describe('keyword.defend', () => {
     expect(
       evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
     ).toEqual(['new1', 'new2']);
+  });
+
+  it('does not count an app that held the top ten when the window opened', () => {
+    const returning: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [
+        ['x2', 1],
+        ['x3', 2],
+        [OWN, 6],
+      ]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', returning]]) })]),
+      NOW,
+    );
+
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
+    ).toEqual(['new1', 'new2']);
+  });
+
+  it('does not count an entrant that has left the top ten again', () => {
+    const passing: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [...BASELINE, ['gone', 4]]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', passing]]) })]),
+      NOW,
+    );
+
+    expect(evidenceOf(detections)).toMatchObject({ entrantsAtOrAbove: 2 });
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
+    ).toEqual(['new1', 'new2']);
+  });
+
+  it('places each entrant where it sits in the latest snapshot', () => {
+    const climbing: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [...BASELINE, ['new1', 9], ['new2', 10]]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', climbing]]) })]),
+      NOW,
+    );
+
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.position),
+    ).toEqual([1, 2]);
   });
 
   it('marks a tracked competitor entrant and resolves its app id', () => {

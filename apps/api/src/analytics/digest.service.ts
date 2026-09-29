@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   DigestAppSummary,
   DigestGroupSummary,
@@ -16,23 +16,20 @@ import {
   windowVisibility,
 } from './analytics.support';
 import { movers } from './movers';
+import {
+  EMPTY_ACTION_COUNTS,
+  PortfolioSignals,
+} from './portfolio-signals.service';
 
 const DIGEST_WINDOW_DAYS = 7;
 const DIGEST_MOVER_LIMIT = 3;
 
-type DigestActionCounts = NonNullable<DigestAppSummary['actions']>;
-
-const EMPTY_ACTION_COUNTS: DigestActionCounts = {
-  open: 0,
-  critical: 0,
-  high: 0,
-};
-
 @Injectable()
 export class DigestService {
-  private readonly logger = new Logger(DigestService.name);
-
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly signals: PortfolioSignals,
+  ) {}
 
   async buildDigest(reviewScoreMax: number): Promise<DigestWeeklyPayload> {
     const now = new Date();
@@ -54,7 +51,7 @@ export class DigestService {
       Promise.all(
         apps.map((app) => this.digestApp(app, from, to, reviewScoreMax)),
       ),
-      this.actionCounts(apps.map((app) => app.id)),
+      this.signals.actionCounts(apps.map((app) => app.id)),
     ]);
 
     return {
@@ -110,7 +107,7 @@ export class DigestService {
           createdAt: { gte: from, lt: rangeEnd },
         },
       }),
-      this.auditDelta(app.id, to),
+      this.signals.auditTrend(app.id, to),
     ]);
 
     return {
@@ -133,65 +130,5 @@ export class DigestService {
         actions: null,
       },
     };
-  }
-
-  private async actionCounts(
-    appIds: string[],
-  ): Promise<Map<string, DigestActionCounts> | null> {
-    if (appIds.length === 0) return new Map();
-    try {
-      const rows = await this.prisma.actionItem.groupBy({
-        by: ['appId', 'priority'],
-        where: {
-          appId: { in: appIds },
-          status: 'OPEN',
-        },
-        _count: { _all: true },
-      });
-
-      const counts = new Map<string, DigestActionCounts>();
-      for (const row of rows) {
-        const current = counts.get(row.appId) ?? { ...EMPTY_ACTION_COUNTS };
-        current.open += row._count._all;
-        if (row.priority === 'critical') current.critical += row._count._all;
-        if (row.priority === 'high') current.high += row._count._all;
-        counts.set(row.appId, current);
-      }
-      return counts;
-    } catch (error) {
-      this.logger.error('action counts unavailable for this digest', error);
-      return null;
-    }
-  }
-
-  private async auditDelta(
-    appId: string,
-    to: Date,
-  ): Promise<DigestAppSummary['audit']> {
-    const [current, baseline] = await Promise.all([
-      this.prisma.auditScore.findFirst({
-        where: { appId, date: { lte: to } },
-        orderBy: { date: 'desc' },
-        select: { date: true, overall: true },
-      }),
-      this.prisma.auditScore.findFirst({
-        where: { appId, date: { lte: addDays(to, -DIGEST_WINDOW_DAYS) } },
-        orderBy: { date: 'desc' },
-        select: { date: true, overall: true },
-      }),
-    ]);
-
-    if (!current) {
-      return null;
-    }
-
-    const hasBaseline =
-      baseline !== null && baseline.date.getTime() < current.date.getTime();
-    const delta7d =
-      hasBaseline && current.overall !== null && baseline.overall !== null
-        ? current.overall - baseline.overall
-        : null;
-
-    return { current: current.overall, delta7d };
   }
 }

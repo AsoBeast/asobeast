@@ -23,6 +23,16 @@ const LISTS: ScopedRead[] = [
     identity: (body) => ids((body as { apps: { id: string }[] }).apps),
   },
   {
+    name: 'GET /portfolio/insights',
+    path: () => '/portfolio/insights',
+    identity: (body) =>
+      ids(
+        (body as { apps: { appId: string }[] }).apps.map((app) => ({
+          id: app.appId,
+        })),
+      ),
+  },
+  {
     name: 'GET /actions',
     path: () => '/actions',
     identity: (body) => ids((body as { items: { id: string }[] }).items),
@@ -180,6 +190,10 @@ const BY_ID = [
     name: 'GET /apps/:id/first-run',
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/first-run`,
   },
+  {
+    name: 'GET /actions/:id',
+    path: (w: IsolationWorkspace) => `/actions/${w.actionId}`,
+  },
 ];
 
 describe('Read isolation', () => {
@@ -232,6 +246,35 @@ describe('Read isolation', () => {
     expect(await fixture.db.app.count({ where: { isCompetitor: false } })).toBe(
       owned * 2,
     );
+  });
+
+  it('counts nothing for another workspace app id in the action summary', async () => {
+    const response = await fixture.b.agent
+      .get('/actions/summary')
+      .query({ appId: fixture.a.appleAppId })
+      .expect(200);
+    const summary = response.body as {
+      open: number;
+      byStatus: Record<string, number>;
+    };
+
+    expect(summary.open).toBe(0);
+    expect(Object.values(summary.byStatus).every((count) => count === 0)).toBe(
+      true,
+    );
+  });
+
+  it('never counts another workspace action events in the activity', async () => {
+    const response = await fixture.b.agent
+      .get('/actions/activity')
+      .query({ appId: fixture.a.appleAppId })
+      .expect(200);
+    const own = await fixture.b.agent.get('/actions/activity').expect(200);
+    const opened = (body: unknown) =>
+      (body as { totals: { opened: number } }).totals.opened;
+
+    expect(opened(response.body)).toBe(0);
+    expect(opened(own.body)).toBe(1);
   });
 
   it('refuses another workspace app id as a filter value', async () => {

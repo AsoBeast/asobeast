@@ -13,6 +13,13 @@ export const ACTION_RULES = [
   'audit.fix_factor',
   'reviews.investigate_theme',
   'market.improve_country',
+  'keyword.push_to_top10',
+  'metadata.fix_lint',
+  'rank.investigate_unexplained_drop',
+  'competitor.investigate_overtake',
+  'reviews.investigate_rating_decline',
+  'reviews.reply_negative',
+  'listing.ship_update',
 ] as const;
 export type ActionRule = (typeof ACTION_RULES)[number];
 
@@ -48,6 +55,13 @@ export const ACTION_RULE_CATEGORY: Record<ActionRule, ActionCategory> = {
   'audit.fix_factor': 'conversion',
   'reviews.investigate_theme': 'reputation',
   'market.improve_country': 'markets',
+  'keyword.push_to_top10': 'metadata',
+  'metadata.fix_lint': 'metadata',
+  'rank.investigate_unexplained_drop': 'regression',
+  'competitor.investigate_overtake': 'competition',
+  'reviews.investigate_rating_decline': 'reputation',
+  'reviews.reply_negative': 'reputation',
+  'listing.ship_update': 'conversion',
 };
 
 export const isActionRule = (value: unknown): value is ActionRule =>
@@ -214,6 +228,102 @@ export interface MarketImproveCountryEvidence {
   windowDays: number;
 }
 
+export interface KeywordPushToTop10Evidence {
+  rule: 'keyword.push_to_top10';
+  latestPosition: number;
+  bestPosition: number;
+  daysInBand: number;
+  windowDays: number;
+  volume: number | null;
+  relevance: number | null;
+  opportunity: number | null;
+  coveredFields: MetadataField[];
+  strongFields: MetadataField[];
+}
+
+export interface MetadataFixLintIssue {
+  rule: string;
+  message: string;
+  offendingText: string | null;
+}
+
+export interface MetadataFixLintEvidence {
+  rule: 'metadata.fix_lint';
+  field: MetadataField;
+  chars: number;
+  limit: number;
+  issues: MetadataFixLintIssue[];
+}
+
+export interface RankInvestigateUnexplainedDropEvidence {
+  rule: 'rank.investigate_unexplained_drop';
+  country: string;
+  visibilityBefore: number;
+  visibilityAfter: number;
+  visibilityDelta: number;
+  windowDays: number;
+  trackedKeywords: number;
+  droppedKeywords: ActionDroppedKeyword[];
+  meanVolatility: number | null;
+  lastOwnChangeAt: string | null;
+}
+
+export interface ActionOvertakenKeyword {
+  keywordId: string;
+  text: string;
+  yourBefore: number | null;
+  yourAfter: number | null;
+  theirBefore: number | null;
+  theirAfter: number | null;
+  volume: number | null;
+  mentioned: boolean;
+}
+
+export interface CompetitorInvestigateOvertakeEvidence {
+  rule: 'competitor.investigate_overtake';
+  competitorAppId: string;
+  competitorName: string | null;
+  changedAt: string;
+  fields: ChangeField[];
+  newTitle: string | null;
+  newSubtitle: string | null;
+  keywords: ActionOvertakenKeyword[];
+}
+
+export interface ReviewsInvestigateRatingDeclineEvidence {
+  rule: 'reviews.investigate_rating_decline';
+  recentAverage: number;
+  baselineAverage: number;
+  drop: number;
+  recentReviews: number;
+  baselineReviews: number;
+  recentDays: number;
+  baselineDays: number;
+  latestVersion: string | null;
+  negativeShare: number;
+  sampleReviewIds: string[];
+}
+
+export interface ReviewsReplyNegativeEvidence {
+  rule: 'reviews.reply_negative';
+  unanswered: number;
+  checked: number;
+  negative: number;
+  windowDays: number;
+  oldestUnansweredAt: string | null;
+  replyRate: number | null;
+  sampleReviewIds: string[];
+}
+
+export interface ListingShipUpdateEvidence {
+  rule: 'listing.ship_update';
+  storeUpdatedAt: string;
+  daysSinceUpdate: number;
+  version: string | null;
+  competitorMedianDays: number | null;
+  competitorsCompared: number;
+}
+
 export type ActionEvidence =
   | KeywordAddUncoveredEvidence
   | KeywordDefendEvidence
@@ -222,7 +332,14 @@ export type ActionEvidence =
   | SerpHoldVolatileEvidence
   | AuditFixFactorEvidence
   | ReviewsInvestigateThemeEvidence
-  | MarketImproveCountryEvidence;
+  | MarketImproveCountryEvidence
+  | KeywordPushToTop10Evidence
+  | MetadataFixLintEvidence
+  | RankInvestigateUnexplainedDropEvidence
+  | CompetitorInvestigateOvertakeEvidence
+  | ReviewsInvestigateRatingDeclineEvidence
+  | ReviewsReplyNegativeEvidence
+  | ListingShipUpdateEvidence;
 
 export interface ActionAi {
   explanation: string | null;
@@ -246,9 +363,124 @@ export interface ActionItem {
   resolvedAt: string | null;
   snoozedUntil: string | null;
   closedAt: string | null;
+  verifiedAt: string | null;
   reopenCount: number;
   note: string | null;
   ai: ActionAi;
+}
+
+export const ACTION_EVENT_TYPES = [
+  'opened',
+  'reopened',
+  'snoozed',
+  'woke',
+  'done',
+  'dismissed',
+  'resolved',
+  'verified',
+] as const;
+export type ActionEventType = (typeof ACTION_EVENT_TYPES)[number];
+
+export const isActionEventType = (value: unknown): value is ActionEventType =>
+  typeof value === 'string' &&
+  ACTION_EVENT_TYPES.some((type) => type === value);
+
+export const ACTION_EVENT_ACTORS = ['system', 'user'] as const;
+export type ActionEventActor = (typeof ACTION_EVENT_ACTORS)[number];
+
+export const ACTION_DISMISS_REASONS = [
+  'not_relevant',
+  'handled_elsewhere',
+  'disagree_with_data',
+] as const;
+export type ActionDismissReason = (typeof ACTION_DISMISS_REASONS)[number];
+
+export const isActionDismissReason = (
+  value: unknown,
+): value is ActionDismissReason =>
+  typeof value === 'string' &&
+  ACTION_DISMISS_REASONS.some((reason) => reason === value);
+
+export interface ActionEventItem {
+  id: string;
+  type: ActionEventType;
+  actor: ActionEventActor;
+  actorName: string | null;
+  occurredAt: string;
+  status: ActionStatus;
+  priority: ActionPriority;
+  impact: number;
+  snoozedUntil: string | null;
+  reason: ActionDismissReason | null;
+}
+
+export const ACTION_TREND_METRICS = [
+  'position',
+  'visibility',
+  'audit',
+  'rating',
+  'updateAge',
+] as const;
+export type ActionTrendMetric = (typeof ACTION_TREND_METRICS)[number];
+
+export type ActionTrendDirection = 'lower_is_better' | 'higher_is_better';
+
+export interface ActionTrendPoint {
+  date: string;
+  checked: boolean;
+  value: number | null;
+}
+
+export interface ActionTrend {
+  metric: ActionTrendMetric;
+  direction: ActionTrendDirection;
+  depth: number | null;
+  points: ActionTrendPoint[];
+}
+
+export const ACTION_OUTCOME_VERDICTS = [
+  'improved',
+  'worsened',
+  'unchanged',
+  'pending',
+] as const;
+export type ActionOutcomeVerdict = (typeof ACTION_OUTCOME_VERDICTS)[number];
+
+export interface ActionOutcome {
+  metric: ActionTrendMetric;
+  direction: ActionTrendDirection;
+  before: number | null;
+  beforeDate: string | null;
+  after: number | null;
+  afterDate: string | null;
+  change: number | null;
+  verdict: ActionOutcomeVerdict;
+}
+
+export interface ActionDetail extends ActionItem {
+  events: ActionEventItem[];
+  trend: ActionTrend | null;
+  outcome: ActionOutcome | null;
+}
+
+export interface ActionActivityCounts {
+  opened: number;
+  reopened: number;
+  done: number;
+  dismissed: number;
+  resolved: number;
+  verified: number;
+}
+
+export interface ActionActivityDay extends ActionActivityCounts {
+  date: string;
+}
+
+export interface ActionActivity {
+  from: string;
+  to: string;
+  days: ActionActivityDay[];
+  totals: ActionActivityCounts;
 }
 
 export interface ActionListResult {
@@ -272,6 +504,8 @@ export interface ActionSummary {
   topRules: Array<{ rule: ActionRule; count: number }>;
   generatedAt: string | null;
   suppressedByCap: number;
+  openByPriority: ActionPriorityCounts;
+  byStatus: Record<ActionStatus, number>;
 }
 
 export type ActionUpdateStatus = Extract<
@@ -290,6 +524,22 @@ export interface ActionUpdateRequest {
   status: ActionUpdateStatus;
   snoozedUntil?: string;
   note?: string;
+  reason?: ActionDismissReason;
+  revert?: boolean;
+}
+
+export interface ActionBulkUpdateRequest {
+  ids: string[];
+  status: ActionUpdateStatus;
+  snoozedUntil?: string;
+  reason?: ActionDismissReason;
+  revert?: boolean;
+}
+
+export interface ActionBulkUpdateResult {
+  items: ActionItem[];
+  missing: string[];
+  conflicts: string[];
 }
 
 export interface ActionRunResult {

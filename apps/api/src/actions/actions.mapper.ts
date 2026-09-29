@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import {
   ACTION_RULE_CATEGORY,
   ActionCategory,
@@ -29,6 +30,7 @@ export interface ActionRow {
   resolvedAt: Date | null;
   snoozedUntil: Date | null;
   closedAt: Date | null;
+  verifiedAt: Date | null;
   reopenCount: number;
   note: string | null;
   aiExplanation: string | null;
@@ -37,6 +39,32 @@ export interface ActionRow {
   app: { id: string; name: string | null };
   keyword: { id: string; text: string } | null;
 }
+
+export const ROW_SELECT = {
+  id: true,
+  rule: true,
+  category: true,
+  status: true,
+  priority: true,
+  impact: true,
+  formulaVersion: true,
+  country: true,
+  store: true,
+  evidence: true,
+  firstSeenAt: true,
+  lastSeenAt: true,
+  resolvedAt: true,
+  snoozedUntil: true,
+  closedAt: true,
+  verifiedAt: true,
+  reopenCount: true,
+  note: true,
+  aiExplanation: true,
+  aiModel: true,
+  aiGeneratedAt: true,
+  app: { select: { id: true, name: true } },
+  keyword: { select: { id: true, text: true } },
+} satisfies Prisma.ActionItemSelect;
 
 const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'keyword.add_uncovered': ['opportunity', 'indexedFields', 'uncoveredFields'],
@@ -47,6 +75,27 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'audit.fix_factor': ['factorId', 'score', 'weight', 'auditDate'],
   'reviews.investigate_theme': ['theme', 'mentions', 'sampleReviewIds'],
   'market.improve_country': ['country', 'homeCountry', 'gap'],
+  'keyword.push_to_top10': ['latestPosition', 'daysInBand', 'coveredFields'],
+  'metadata.fix_lint': ['field', 'chars', 'limit', 'issues'],
+  'rank.investigate_unexplained_drop': [
+    'country',
+    'visibilityDelta',
+    'droppedKeywords',
+  ],
+  'competitor.investigate_overtake': [
+    'competitorAppId',
+    'changedAt',
+    'fields',
+    'keywords',
+  ],
+  'reviews.investigate_rating_decline': [
+    'recentAverage',
+    'baselineAverage',
+    'drop',
+    'sampleReviewIds',
+  ],
+  'reviews.reply_negative': ['unanswered', 'checked', 'sampleReviewIds'],
+  'listing.ship_update': ['storeUpdatedAt', 'daysSinceUpdate'],
 };
 
 export function parseActionEvidence(
@@ -67,6 +116,9 @@ export function parseActionEvidence(
 const iso = (value: Date | null): string | null =>
   value === null ? null : value.toISOString();
 
+export const priorityOf = (stored: string): ActionPriority =>
+  isActionPriority(stored) ? stored : 'low';
+
 function categoryOf(rule: string, stored: string): ActionCategory {
   if (isActionRule(rule)) return ACTION_RULE_CATEGORY[rule];
   return isActionCategory(stored) ? stored : 'hygiene';
@@ -78,16 +130,12 @@ export function toActionItem(row: ActionRow): ActionItem {
     ? row.rule
     : 'keyword.add_uncovered';
   const status: ActionStatus = isActionStatus(row.status) ? row.status : 'OPEN';
-  const priority: ActionPriority = isActionPriority(row.priority)
-    ? row.priority
-    : 'low';
-
   return {
     id: row.id,
     rule,
     category: categoryOf(row.rule, row.category),
     status,
-    priority,
+    priority: priorityOf(row.priority),
     impact: row.impact,
     formulaVersion: row.formulaVersion,
     scope: {
@@ -105,6 +153,7 @@ export function toActionItem(row: ActionRow): ActionItem {
     resolvedAt: iso(row.resolvedAt),
     snoozedUntil: iso(row.snoozedUntil),
     closedAt: iso(row.closedAt),
+    verifiedAt: iso(row.verifiedAt),
     reopenCount: row.reopenCount,
     note: row.note,
     ai: {

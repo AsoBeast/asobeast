@@ -42,6 +42,20 @@ const RULE_DESCRIPTION: Record<ActionRule, string> = {
     'A complaint theme appears in negative reviews of the latest version materially more than in the previous version.',
   'market.improve_country':
     'A non-home market is visibly behind the home market on stored visibility. This is a signal to investigate, not a localization verdict.',
+  'keyword.push_to_top10':
+    'A relevant, valuable keyword has sat just outside the top 10 for most of the last week and appears only in a weak metadata field.',
+  'metadata.fix_lint':
+    'A home market listing field has error-level lint issues that break a store rule, such as exceeding its character limit.',
+  'rank.investigate_unexplained_drop':
+    'Visibility or several tracked ranks fell in a market over the last two weeks without an indexed metadata change of this app to explain it.',
+  'competitor.investigate_overtake':
+    'A tracked competitor changed indexed metadata and has stayed ahead of this app on relevant, valuable keywords since the change.',
+  'reviews.investigate_rating_decline':
+    'The average score of reviews from the last two weeks fell clearly below the three weeks before, without a single repeated complaint theme to explain it.',
+  'reviews.reply_negative':
+    'Several recent low Google Play reviews were checked for a developer reply and none was found.',
+  'listing.ship_update':
+    'The store listing has not shown a new update for at least ninety days; competitors that updated recently add to the pressure.',
 };
 
 const SCHEMA = {

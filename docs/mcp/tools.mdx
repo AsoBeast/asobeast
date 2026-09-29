@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "22 read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics, the request budget and the Action Center queue."
+description: "24 read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics, the request budget and the Action Center queue."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","daily_budget","read only"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 22 tools, every one of them a `GET` annotated `readOnlyHint: true`. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 24 tools, every one of them a `GET` annotated `readOnlyHint: true`. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -58,6 +58,8 @@ Every parameter is validated by the tool before a request leaves, against the sa
 | `list_actions` | List actions | The prioritized ASO work queue across every tracked app: what to do next and why | `status`, `priority`, `rule`, `category`, `appId`, `country`, `store`, `limit` |
 | `app_actions` | App actions | The prioritized ASO work queue for one tracked app | `appId` (required), `status`, `priority`, `rule`, `category`, `country`, `store`, `limit` |
 | `actions_summary` | Actions summary | Counts for the whole action queue: open and snoozed totals, counts per priority band and per category, and the most common rules | None |
+| `get_action` | Get action | One action with its evidence, its full history of lifecycle events, the daily series of the metric it is about and, once marked done, the measured before and after | `actionId` (required) |
+| `actions_activity` | Actions activity | Daily counts of actions opened, reopened, marked done, dismissed, resolved on their own and confirmed fixed, over the last 7 to 90 days | `days`, `appId`, `country`, `store` |
 
 `status` defaults to `OPEN` and `SNOOZED`, and `limit` defaults to 100 with a maximum of 200. Actions exist only for tracked primary apps, never for competitors, which appear only inside evidence. See [Work the Action Center](/guides/action-center).
 

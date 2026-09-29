@@ -9,6 +9,7 @@ import {
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
 } from "@asobeast/shared";
+import { createSerializer } from "nuqs/server";
 import { describe, expect, it } from "vitest";
 import {
   COMBINATION_STATUSES,
@@ -33,11 +34,19 @@ import {
   combinationWordsParser,
   keywordFilterParsers,
   draftLocaleParser,
-  actionCategoryParser,
+  ACTION_GROUPS,
+  ACTION_SORTS,
+  actionQueueParsers,
   actionPriorityParser,
   actionRuleParser,
   actionStatusParser,
+  APP_SORTS,
+  APP_VIEWS,
+  appSortParser,
+  appViewParser,
+  CHANGE_OWNERS,
   changeDaysParser,
+  changeOwnerParser,
   countryParser,
   discoveryDaysParser,
   KEYWORD_STATUSES,
@@ -101,6 +110,9 @@ const LITERAL_PARSERS: readonly LiteralParserCase[] = [
   ["keywordStatus", keywordStatusParser, KEYWORD_STATUSES, "all"],
   ["versus", versusParser, VERSUS_FILTERS, "all"],
   ["discoverySort", discoverySortParser, DISCOVERY_SORTS, "appearances"],
+  ["changeOwner", changeOwnerParser, CHANGE_OWNERS, "all"],
+  ["appSort", appSortParser, APP_SORTS, "visibility"],
+  ["appView", appViewParser, APP_VIEWS, "cards"],
 ] as const;
 
 const NUMERIC_PARSERS = [
@@ -257,13 +269,53 @@ describe("reviewScore parser", () => {
   );
 });
 
-describe("actionCategory parser", () => {
-  it.each(ACTION_CATEGORIES)("accepts the category %s", (category) => {
-    expect(actionCategoryParser.parseServerSide(category)).toBe(category);
+describe("action queue parsers", () => {
+  const serialize = createSerializer(actionQueueParsers);
+
+  it("leaves the default view out of the url", () => {
+    expect(
+      serialize({
+        status: ["OPEN", "SNOOZED"],
+        priority: [],
+        rule: [],
+        category: [],
+        app: [],
+        market: [],
+        store: null,
+        q: "",
+        group: "priority",
+        sort: "impact",
+      }),
+    ).toBe("");
   });
 
-  it("rejects an unknown category rather than defaulting to one", () => {
-    expect(actionCategoryParser.parseServerSide("not-a-category")).toBeNull();
+  it("falls back to the default group and sort for an unknown value", () => {
+    expect(actionQueueParsers.group.parseServerSide("owner")).toBe("priority");
+    expect(actionQueueParsers.sort.parseServerSide("random")).toBe("impact");
+    expect(ACTION_GROUPS).toContain(
+      actionQueueParsers.group.parseServerSide("app"),
+    );
+    expect(ACTION_SORTS).toContain(
+      actionQueueParsers.sort.parseServerSide("newest"),
+    );
+  });
+
+  it("reads several categories and drops unknown ones", () => {
+    expect(
+      actionQueueParsers.category.parseServerSide("metadata,markets"),
+    ).toEqual(["metadata", "markets"]);
+    expect(
+      actionQueueParsers.category.parseServerSide("metadata,not-a-category"),
+    ).toEqual(["metadata"]);
+    expect(ACTION_CATEGORIES.length).toBeGreaterThan(0);
+  });
+
+  it("keeps market codes and app ids as given", () => {
+    expect(actionQueueParsers.market.parseServerSide("us,de")).toEqual([
+      "us",
+      "de",
+    ]);
+    expect(actionQueueParsers.app.parseServerSide("app-1")).toEqual(["app-1"]);
   });
 });
 
@@ -357,5 +409,17 @@ describe("draftLocale parser", () => {
     expect(draftLocaleParser.parseServerSide(undefined)).toBeNull();
     expect(draftLocaleParser.parseServerSide("es-mx")).toBeNull();
     expect(draftLocaleParser.parseServerSide("xx")).toBeNull();
+  });
+});
+
+describe("changeOwner parser", () => {
+  const serialize = createSerializer({ changes: changeOwnerParser });
+
+  it("keeps the default out of the url", () => {
+    expect(serialize({ changes: "all" })).toBe("");
+  });
+
+  it("writes a narrowed owner into the url", () => {
+    expect(serialize({ changes: "competitors" })).toBe("?changes=competitors");
   });
 });

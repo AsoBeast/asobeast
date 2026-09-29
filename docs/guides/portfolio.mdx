@@ -1,11 +1,52 @@
 ---
 title: Compare a portfolio
-description: "Link the App Store and Google Play listings of one product into a group, compare visibility across it and receive a weekly portfolio digest."
+description: "Read the dashboard, link the App Store and Google Play listings of one product into a group, compare visibility across it and receive a weekly portfolio digest."
 icon: layers
-keywords: ["portfolio","app group","linked listings","visibility","weekly digest","trends"]
+keywords: ["portfolio","dashboard","app group","linked listings","visibility","weekly digest","trends"]
 ---
 
 A portfolio view exists because most products ship on both stores, and reading two disconnected app pages hides the thing you actually want to know: whether the product is gaining visibility overall.
+
+## Read the dashboard
+
+The dashboard is the first page after you sign in. It leads with what needs you and what moved, then lists every app you track.
+
+### The status line
+
+Under the title, one line counts your apps, tracked keywords and competitors. A second line says when your portfolio was last collected, whether the daily run is in progress, complete or delayed, and what share of the daily request budget your tracking uses. The budget share links to settings. What spends that budget is explained in [Track keywords](/guides/track-keywords).
+
+### The four tiles
+
+| Tile | What it measures |
+| --- | --- |
+| Keywords in top 10 | Tracked keywords ranking in the top 10 across every app, with the change against seven days earlier and the number tracked |
+| Keyword movement | Keywords that climbed and fell over the last seven days, and how many entered the results or dropped out of them |
+| Open actions | Open Action Center items, with the critical and high counts |
+| Changes this week | Metadata changes over the last seven days, split into your apps and your competitors |
+
+The tiles add counts across apps and never average visibility, ratings or audit scores, because scores from different stores are not comparable.
+
+### Top actions and keyword movers
+
+Top actions lists the highest impact open actions with the app each one belongs to, and each row opens that action in the Action Center. See [Work the Action Center](/guides/action-center).
+
+Keyword movers lists the largest position changes of the week across every app. Each row names its app and storefront and opens that keyword on the app's rankings. See [Read rankings](/guides/read-rankings).
+
+### The app list
+
+Each card shows visibility with its seven day change, a visibility sparkline, a bar of rank bands with the number of keywords in the top 10, the rating and the audit score with a grade word, open actions and new low ratings. A value the app does not have yet is left out rather than shown as zero, and an app awaiting its first daily run shows only that. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
+
+Sort the list by visibility, seven day change, keywords in the top 10, rating, open actions, name or last collected. With more than six apps a search box filters by name, store, country or group. The table view shows the same apps as rows with one column per value, and its column headers sort the same way.
+
+The sort, the search, the view and the changes filter are kept in the page address, so a bookmark or a shared link opens the dashboard exactly as you left it.
+
+| Parameter | Values |
+| --- | --- |
+| `sort` | `visibility`, `change`, `top10`, `rating`, `actions`, `name`, `updated` |
+| `dir` | `asc` or `desc`; absent means the natural direction of the sort |
+| `q` | the search text |
+| `view` | `cards` or `table` |
+| `changes` | `all`, `yours` or `competitors` |
 
 ## Group linked listings
 
@@ -19,7 +60,7 @@ What grouping gives you is a single row for the product, with each store's numbe
 
 Visibility rolls a set of keyword positions into one number, so a group's visibility is comparable with itself over time rather than with another group.
 
-Use it as a trend, not as a score out of 100. A visibility fall is what `rank.investigate_drop` and `market.improve_country` both key off. See [Work the Action Center](/guides/action-center).
+Use it as a trend, not as a score out of 100. A visibility fall is what `rank.investigate_drop`, `rank.investigate_unexplained_drop` and `market.improve_country` all key off. See [Work the Action Center](/guides/action-center).
 
 ## Follow trends
 

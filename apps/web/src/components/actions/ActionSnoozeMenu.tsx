@@ -46,7 +46,12 @@ export function ActionSnoozeMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={disabled}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          data-command="snooze"
+        >
           <Clock aria-hidden className="size-4" />
           Snooze
         </Button>

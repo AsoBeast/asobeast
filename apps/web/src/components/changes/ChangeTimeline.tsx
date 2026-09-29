@@ -3,7 +3,11 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
+import {
+  releaseNotesText,
+  type ChangeEventItem,
+  type ChangeField,
+} from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,6 +29,7 @@ import { CHANGE_WINDOWS } from "@/lib/ranges";
 import { changeDaysParser } from "@/lib/search-params";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
+import { releaseNotesInline } from "./release-notes";
 import { ChangeTimelineSkeleton } from "./skeletons";
 
 export const FIELD_LABELS: Record<ChangeField, string> = {
@@ -55,6 +60,13 @@ function price(value: string | null): string {
   return value === null ? "—" : formatPrice(Number(value));
 }
 
+function releaseNotes(
+  value: string | null,
+  format: (notes: string) => string,
+): string {
+  return value === null ? "—" : text(format(value));
+}
+
 function count(value: string | null): string {
   return value === null ? "—" : formatNumber(Number(value));
 }
@@ -78,13 +90,21 @@ function ChangeValue({
         <TooltipTrigger asChild>
           <span className="break-words">
             <span className="text-muted-foreground">What’s New updated: </span>
-            <span className={cn("font-medium", dense ? null : "block")}>
-              {text(after)}
+            <span
+              className={cn(
+                "font-medium",
+                dense ? null : "block whitespace-pre-line",
+              )}
+            >
+              {releaseNotes(
+                after,
+                dense ? releaseNotesInline : releaseNotesText,
+              )}
             </span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          Previous: {text(before)}
+          Previous: {releaseNotes(before, releaseNotesInline)}
         </TooltipContent>
       </Tooltip>
     );
@@ -137,9 +157,11 @@ function ChangeValue({
 export function ChangeRow({
   event,
   dense = true,
+  iconUrl = null,
 }: {
   event: ChangeEventItem;
   dense?: boolean;
+  iconUrl?: string | null;
 }) {
   return (
     <div
@@ -153,7 +175,7 @@ export function ChangeRow({
             : "border-primary",
       )}
     >
-      <AppIcon src={null} name={event.appName} size={32} />
+      <AppIcon src={iconUrl} name={event.appName} size={32} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-body font-medium">

@@ -18,6 +18,8 @@ const existing = (
 ): ExistingAction => ({
   status,
   lastSeenAt: daysBefore(1),
+  closedAt: null,
+  verifiedAt: null,
   snoozedUntil: status === 'SNOOZED' ? new Date(NOW.getTime() + DAY_MS) : null,
   reopenCount: 0,
   ...overrides,
@@ -36,7 +38,7 @@ describe('nextLifecycle', () => {
       ['SNOOZED', true, { kind: 'refresh', status: 'SNOOZED' }],
       ['SNOOZED', false, { kind: 'resolve' }],
       ['DONE', true, { kind: 'touch' }],
-      ['DONE', false, { kind: 'noop' }],
+      ['DONE', false, { kind: 'verify' }],
       ['DISMISSED', true, { kind: 'touch' }],
       ['DISMISSED', false, { kind: 'noop' }],
       ['RESOLVED', true, { kind: 'reopen', status: 'OPEN', reopenCount: 1 }],
@@ -102,7 +104,7 @@ describe('nextLifecycle', () => {
   describe('done reopening', () => {
     it('touches one day before the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS - 1),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS - 1),
       });
 
       expect(nextLifecycle(row, true, NOW)).toEqual({ kind: 'touch' });
@@ -110,7 +112,7 @@ describe('nextLifecycle', () => {
 
     it('reopens exactly at the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
         reopenCount: 2,
       });
 
@@ -123,7 +125,7 @@ describe('nextLifecycle', () => {
 
     it('reopens beyond the reopen gap', () => {
       const row = existing('DONE', {
-        lastSeenAt: daysBefore(ACTION_REOPEN_AFTER_DAYS + 5),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS + 5),
       });
 
       expect(nextLifecycle(row, true, NOW)).toEqual({
@@ -131,6 +133,55 @@ describe('nextLifecycle', () => {
         status: 'OPEN',
         reopenCount: 1,
       });
+    });
+  });
+
+  describe('done reopening while the rule keeps firing', () => {
+    it('reopens a done action closed fourteen days ago that was touched yesterday', () => {
+      const row = existing('DONE', {
+        lastSeenAt: daysBefore(1),
+        closedAt: daysBefore(ACTION_REOPEN_AFTER_DAYS),
+      });
+
+      expect(nextLifecycle(row, true, NOW)).toEqual({
+        kind: 'reopen',
+        status: 'OPEN',
+        reopenCount: 1,
+      });
+    });
+  });
+
+  describe('verification', () => {
+    it('verifies a done action whose rule stopped firing', () => {
+      expect(nextLifecycle(existing('DONE'), false, NOW)).toEqual({
+        kind: 'verify',
+      });
+    });
+
+    it('leaves a verified action alone while its rule stays silent', () => {
+      const row = existing('DONE', { verifiedAt: daysBefore(2) });
+
+      expect(nextLifecycle(row, false, NOW)).toEqual({ kind: 'noop' });
+    });
+
+    it('reopens a verified action at once when its rule fires again', () => {
+      const row = existing('DONE', {
+        closedAt: daysBefore(3),
+        verifiedAt: daysBefore(1),
+        reopenCount: 1,
+      });
+
+      expect(nextLifecycle(row, true, NOW)).toEqual({
+        kind: 'reopen',
+        status: 'OPEN',
+        reopenCount: 2,
+      });
+    });
+
+    it('still touches an unverified done action inside the reopen gap', () => {
+      const row = existing('DONE', { closedAt: daysBefore(3) });
+
+      expect(nextLifecycle(row, true, NOW)).toEqual({ kind: 'touch' });
     });
   });
 

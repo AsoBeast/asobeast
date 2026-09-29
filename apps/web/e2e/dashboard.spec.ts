@@ -60,7 +60,7 @@ test("the summary tile numbers stay on one line when the strip narrows", async (
   await page.goto("/");
 
   const tiles = page.locator('[data-slot="stat-tile"]');
-  await expect(tiles).toHaveCount(5);
+  await expect(tiles).toHaveCount(4);
   await expect(tiles.last()).toBeVisible();
 
   const offsets = await tiles.evaluateAll((nodes) =>
@@ -78,11 +78,16 @@ test("the summary tile numbers stay on one line when the strip narrows", async (
 test("the summary tiles state the window they measure", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("Changes this week")).toBeVisible();
-  await expect(
-    page.getByText("metadata updates in the last 7 days"),
-  ).toBeVisible();
-  await expect(page.getByText("Open actions", { exact: true })).toBeVisible();
+  for (const label of [
+    "Keywords in top 10",
+    "Keyword movement",
+    "Open actions",
+    "Changes this week",
+  ]) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByText(/by competitors/)).toBeVisible();
+  await expect(page.getByText(/lost in 7 days/)).toBeVisible();
 });
 
 test("the open actions tile says so when no action set has been generated", async ({
@@ -103,4 +108,33 @@ test("the open actions tile says so when no action set has been generated", asyn
     .locator("xpath=..");
   await expect(tile).toContainText("—");
   await expect(tile).toContainText("not generated yet");
+});
+
+test("the top 10 trend sits level with the rest of its note", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const note = page
+    .locator('[data-slot="stat-tile"]')
+    .filter({ hasText: "Keywords in top 10" })
+    .locator(":scope > span")
+    .nth(2);
+  await expect(note).toContainText("tracked");
+
+  const offset = await note.evaluate((node) => {
+    const chip = node.querySelector(".numeric")!.getBoundingClientRect();
+    const text = document.createRange();
+    const words = [...node.querySelectorAll("*"), node]
+      .flatMap((el) => [...el.childNodes])
+      .find(
+        (child) =>
+          child.nodeType === 3 && child.textContent!.includes("tracked"),
+      )!;
+    text.selectNodeContents(words);
+    const box = text.getBoundingClientRect();
+    return Math.abs(chip.top + chip.height / 2 - (box.top + box.height / 2));
+  });
+
+  expect(offset).toBeLessThanOrEqual(1);
 });

@@ -5,7 +5,8 @@ import type {
   ActionRule,
   ActionStatus,
 } from "@asobeast/shared";
-import { formatMeasure } from "@/lib/format";
+import { formatMeasure, pluralize } from "@/lib/format";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 
 const measure = (value: number | null): string =>
   value === null ? "—" : formatMeasure(value);
@@ -19,6 +20,14 @@ export const ACTION_RULE_TITLE: Record<ActionRule, string> = {
   "audit.fix_factor": "Fix a weak audit factor",
   "reviews.investigate_theme": "Investigate a new negative review theme",
   "market.improve_country": "Investigate an underperforming market",
+  "keyword.push_to_top10": "Push a keyword that sits just outside the top 10",
+  "metadata.fix_lint": "Fix listing text that breaks a store rule",
+  "rank.investigate_unexplained_drop":
+    "Investigate a drop that followed no change of yours",
+  "competitor.investigate_overtake": "Respond to a competitor that moved ahead",
+  "reviews.investigate_rating_decline": "Investigate falling review scores",
+  "reviews.reply_negative": "Reply to unanswered low reviews",
+  "listing.ship_update": "Ship an update to a stale listing",
 };
 
 export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
@@ -30,6 +39,13 @@ export const ACTION_RULE_LABEL: Record<ActionRule, string> = {
   "audit.fix_factor": "Weak audit factors",
   "reviews.investigate_theme": "Review themes",
   "market.improve_country": "Underperforming markets",
+  "keyword.push_to_top10": "Near the top 10",
+  "metadata.fix_lint": "Store rule problems",
+  "rank.investigate_unexplained_drop": "Unexplained drops",
+  "competitor.investigate_overtake": "Competitor overtakes",
+  "reviews.investigate_rating_decline": "Rating declines",
+  "reviews.reply_negative": "Unanswered reviews",
+  "listing.ship_update": "Stale listings",
 };
 
 export const ACTION_PRIORITY_LABEL: Record<ActionPriority, string> = {
@@ -75,12 +91,29 @@ export function summarizeEvidence(evidence: ActionEvidence): string {
       return `"${evidence.theme}" appears in ${measure(evidence.mentions)} negative reviews of ${evidence.version ?? "the latest version"}, up from ${measure(evidence.previousMentions)}.`;
     case "market.improve_country":
       return `${evidence.country.toUpperCase()} sits ${measure(evidence.gap)} visibility points behind ${evidence.homeCountry.toUpperCase()}. Investigate this market.`;
+    case "keyword.push_to_top10":
+      return `Ranks #${evidence.latestPosition} with volume ${measure(evidence.volume)} and sat between 11 and 20 on ${measure(evidence.daysInBand)} of ${measure(evidence.windowDays)} days, but only a weaker field contains it.`;
+    case "rank.investigate_unexplained_drop":
+      return `${evidence.country.toUpperCase()} visibility fell from ${measure(evidence.visibilityBefore)} to ${measure(evidence.visibilityAfter)} and ${pluralize(evidence.droppedKeywords.length, "keyword")} fell, with no change of yours to explain it.`;
+    case "competitor.investigate_overtake":
+      return `${evidence.competitorName ?? "A competitor"} changed its listing on ${evidence.changedAt} and has stayed ahead of you on ${pluralize(evidence.keywords.length, "keyword")} since.`;
+    case "reviews.investigate_rating_decline":
+      return `Reviews from the last ${evidence.recentDays} days average ${measure(evidence.recentAverage)} against ${measure(evidence.baselineAverage)} before, with no single complaint theme behind it.`;
+    case "reviews.reply_negative":
+      return `${measure(evidence.unanswered)} of ${measure(evidence.checked)} low reviews checked in the last ${evidence.windowDays} days have no reply yet.`;
+    case "listing.ship_update":
+      return `The store last showed an update ${measure(evidence.daysSinceUpdate)} days ago${evidence.competitorMedianDays === null ? "" : `, against a competitor median of ${measure(evidence.competitorMedianDays)} days`}.`;
+    case "metadata.fix_lint":
+      return `${METADATA_FIELD_LABELS[evidence.field]} has ${pluralize(evidence.issues.length, "store rule problem")} at ${measure(evidence.chars)} of ${measure(evidence.limit)} characters.`;
     default: {
       const never: never = evidence;
       return never;
     }
   }
 }
+
+export const ACTION_EVIDENCE_UNAVAILABLE =
+  "Evidence unavailable for this stored action — it will be rebuilt on the next run.";
 
 export const ACTION_IMPACT_CAPTION =
   "Estimated impact, computed from the evidence below. It is not a prediction of downloads, revenue or rank.";

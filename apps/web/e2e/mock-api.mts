@@ -3,6 +3,14 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { summarizeActions } from "./actions-summary.mts";
+import {
+  ACTION_ACTIVITY,
+  EMPTY_ACTION_ACTIVITY,
+  initialActionEvents,
+  outcomeFor,
+  trendFor,
+} from "./action-details.mts";
 import {
   ACTIONS,
   ACTION_SUMMARY,
@@ -31,6 +39,7 @@ import {
   IMPORTED_APP,
   IMPORTED_APP_DETAIL,
   IMPORTED_PORTFOLIO_APP,
+  MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
   PORTFOLIO,
@@ -41,10 +50,24 @@ import {
   errorEnvelope,
   rateLimitedEnvelope,
 } from "./fixtures.mts";
+import {
+  EMPTY_PORTFOLIO_INSIGHTS,
+  FRESH_PORTFOLIO_INSIGHTS,
+  MANY_PORTFOLIO_INSIGHTS,
+  PORTFOLIO_INSIGHTS,
+  QUIET_PORTFOLIO_INSIGHTS,
+  UNRANKED_PORTFOLIO_INSIGHTS,
+} from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  ActionBulkUpdateResult,
+  ActionDetail,
+  ActionDismissReason,
+  ActionEventItem,
+  ActionEventType,
   ActionItem,
   ActionSummary,
+  ActionUpdateStatus,
   AppAuditResult,
   WorkspaceTeam,
   ActionStatus,
@@ -147,6 +170,8 @@ function annotated(
   return { ...keyword, ...annotations.get(appId)?.get(keyword.keywordId) };
 }
 const actions: ActionItem[] = ACTIONS.map((action) => structuredClone(action));
+const actionEvents: Record<string, ActionEventItem[]> =
+  initialActionEvents(ACTIONS);
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
@@ -245,6 +270,80 @@ function resetActions(): void {
     actions.length,
     ...ACTIONS.map((action) => structuredClone(action)),
   );
+  for (const id of Object.keys(actionEvents)) delete actionEvents[id];
+  Object.assign(actionEvents, initialActionEvents(ACTIONS));
+}
+
+interface ActionTransitionBody {
+  status: ActionUpdateStatus;
+  snoozedUntil?: string;
+  note?: string;
+  reason?: ActionDismissReason;
+  revert?: boolean;
+}
+
+function transitionEvent(
+  previous: ActionStatus,
+  target: ActionUpdateStatus,
+): ActionEventType | null {
+  if (target === "DONE") return "done";
+  if (target === "DISMISSED") return "dismissed";
+  if (target === "SNOOZED") return "snoozed";
+  if (previous === "OPEN") return null;
+  return previous === "SNOOZED" ? "woke" : "reopened";
+}
+
+function noteOnly(action: ActionItem, body: ActionTransitionBody): boolean {
+  if (body.revert || body.status !== action.status) return false;
+  if (body.status === "SNOOZED") {
+    return body.snoozedUntil === action.snoozedUntil;
+  }
+  return body.status === "DONE" || body.status === "DISMISSED";
+}
+
+function transition(action: ActionItem, body: ActionTransitionBody): void {
+  if (body.note !== undefined) action.note = body.note.trim();
+  if (noteOnly(action, body)) return;
+  const previous = action.status;
+  const events = (actionEvents[action.id] ??= []);
+  action.status = body.status;
+  action.snoozedUntil =
+    body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
+  action.closedAt =
+    body.status === "DONE" || body.status === "DISMISSED"
+      ? new Date().toISOString()
+      : null;
+  action.verifiedAt = null;
+  if (body.revert) {
+    const undone = events.findLastIndex((entry) => entry.actor === "user");
+    if (undone >= 0) events.splice(undone, 1);
+    return;
+  }
+  const type = transitionEvent(previous, body.status);
+  if (type === "reopened") action.reopenCount += 1;
+  if (!type) return;
+  events.push({
+    id: `${action.id}-${events.length}`,
+    type,
+    actor: "user",
+    actorName: "You",
+    occurredAt: new Date().toISOString(),
+    status: body.status,
+    priority: action.priority,
+    impact: action.impact,
+    snoozedUntil: action.snoozedUntil,
+    reason: body.reason ?? null,
+  });
+}
+
+function actionDetail(action: ActionItem): ActionDetail {
+  const trend = trendFor(action);
+  return {
+    ...action,
+    events: actionEvents[action.id] ?? [],
+    trend,
+    outcome: outcomeFor(action, trend),
+  };
 }
 
 function cookieValue(req: IncomingMessage, name: string): string | undefined {
@@ -679,9 +778,22 @@ function actionsGeneratedAt(req: IncomingMessage): string | null {
 }
 
 function actionSummaryFor(req: IncomingMessage): ActionSummary {
-  const generatedAt = actionsGeneratedAt(req);
-  if (!actionsUngenerated(req)) return { ...ACTION_SUMMARY, generatedAt };
-  return { ...ACTION_SUMMARY, open: 0, generatedAt };
+  const url = new URL(req.url ?? "/", "http://localhost");
+  const appId = url.searchParams.get("appId");
+  const store = url.searchParams.get("store");
+  const country = url.searchParams.get("country");
+  const scoped = actionsUngenerated(req)
+    ? []
+    : actions.filter(
+        (action) =>
+          (!appId || action.scope.appId === appId) &&
+          (!store || action.scope.store === store) &&
+          (!country || action.scope.country === country),
+      );
+  return summarizeActions(scoped, {
+    generatedAt: actionsGeneratedAt(req),
+    suppressedByCap: ACTION_SUMMARY.suppressedByCap,
+  });
 }
 
 function followActionRun(req: IncomingMessage, res: ServerResponse): void {
@@ -760,16 +872,25 @@ function firstRunFor(appId: string): FirstRunStatus {
 }
 
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
-const budgetHolds = new Map<string, PromiseWithResolvers<void>>();
+type Holds = Map<string, PromiseWithResolvers<void>>;
 
-function budgetHold(token: string): PromiseWithResolvers<void> {
-  const existing = budgetHolds.get(token);
+const budgetHolds: Holds = new Map();
+const insightsHolds: Holds = new Map();
+
+function holdFor(holds: Holds, token: string): PromiseWithResolvers<void> {
+  const existing = holds.get(token);
   if (existing) return existing;
   const hold = Promise.withResolvers<void>();
-  budgetHolds.set(token, hold);
+  holds.set(token, hold);
   return hold;
 }
+
+const budgetHold = (token: string) => holdFor(budgetHolds, token);
+const insightsHold = (token: string) => holdFor(insightsHolds, token);
+const activityHolds: Holds = new Map();
+const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const routes: Route[] = [
   {
@@ -801,6 +922,22 @@ const routes: Route[] = [
     pattern: /^\/__budget-holds\/([^/]+)\/release$/,
     handler: ([token], _req, res) => {
       budgetHold(token).resolve();
+      json(res, 200, { released: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__activity-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      activityHold(token).resolve();
+      json(res, 200, { released: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__insights-holds\/([^/]+)\/release$/,
+    handler: ([token], _req, res) => {
+      insightsHold(token).resolve();
       json(res, 200, { released: true });
     },
   },
@@ -973,15 +1110,40 @@ const routes: Route[] = [
         });
       }
       const empty = hasCookie(req, "portfolio_empty", "1");
+      const listed = hasCookie(req, "portfolio_many", "1")
+        ? [...portfolioApps, ...MANY_PORTFOLIO_APPS]
+        : portfolioApps;
       json(res, 200, {
         ...PORTFOLIO,
-        apps: empty ? [] : portfolioApps,
+        apps: empty ? [] : listed,
         groups: empty ? [] : PORTFOLIO.groups,
         totals: {
           ...PORTFOLIO.totals,
-          apps: empty ? 0 : portfolioApps.length,
+          apps: empty ? 0 : listed.length,
         },
       } satisfies PortfolioSummary);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/portfolio\/insights$/,
+    handler: (_p, req, res) => {
+      if (hasCookie(req, "portfolio_empty", "1")) {
+        return json(res, 200, EMPTY_PORTFOLIO_INSIGHTS);
+      }
+      if (hasCookie(req, "portfolio_many", "1")) {
+        return json(res, 200, MANY_PORTFOLIO_INSIGHTS);
+      }
+      const insights = hasCookie(req, "portfolio_insights_quiet", "1")
+        ? QUIET_PORTFOLIO_INSIGHTS
+        : hasCookie(req, "portfolio_insights_unranked", "1")
+          ? UNRANKED_PORTFOLIO_INSIGHTS
+          : hasCookie(req, "portfolio_insights_fresh", "1")
+            ? FRESH_PORTFOLIO_INSIGHTS
+            : PORTFOLIO_INSIGHTS;
+      const token = cookieValue(req, INSIGHTS_HOLD_COOKIE);
+      if (!token) return json(res, 200, insights);
+      void insightsHold(token).promise.then(() => json(res, 200, insights));
     },
   },
   {
@@ -1585,6 +1747,18 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/actions\/activity$/,
+    handler: (_p, req, res) => {
+      const activity = actionsUngenerated(req)
+        ? EMPTY_ACTION_ACTIVITY
+        : ACTION_ACTIVITY;
+      const token = cookieValue(req, "e2e_activity_hold");
+      if (!token) return json(res, 200, activity);
+      void activityHold(token).promise.then(() => json(res, 200, activity));
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/actions\/summary$/,
     handler: (_p, req, res) => followActionRun(req, res),
   },
@@ -1614,30 +1788,56 @@ const routes: Route[] = [
       ),
   },
   {
+    method: "GET",
+    pattern: /^\/actions\/([^/]+)$/,
+    handler: (params, req, res) => {
+      const action = actions.find((row) => row.id === params[0]);
+      if (!action) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      json(res, 200, actionDetail(action));
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: /^\/actions$/,
+    handler: (_params, req, res) => {
+      withBody<ActionTransitionBody & { ids: string[] }>(req, res, (body) => {
+        if (body.ids.includes("act-degraded")) {
+          return json(res, 500, errorEnvelope(500, req.url ?? "/"));
+        }
+        const result: ActionBulkUpdateResult = {
+          items: [],
+          missing: [],
+          conflicts: [],
+        };
+        for (const id of body.ids) {
+          const action = actions.find((row) => row.id === id);
+          if (!action) {
+            result.missing.push(id);
+          } else if (action.status === "RESOLVED" && body.status !== "OPEN") {
+            result.conflicts.push(id);
+          } else {
+            transition(action, body);
+            result.items.push(action);
+          }
+        }
+        json(res, 200, result);
+      });
+    },
+  },
+  {
     method: "PATCH",
     pattern: /^\/actions\/([^/]+)$/,
     handler: (params, req, res) => {
-      withBody<{ status: ActionStatus; snoozedUntil?: string; note?: string }>(
-        req,
-        res,
-        (body) => {
-          const path = req.url ?? "/";
-          const action = actions.find((row) => row.id === params[0]);
-          if (!action) return json(res, 404, errorEnvelope(404, path));
-          if (action.id === "act-degraded") {
-            return json(res, 500, errorEnvelope(500, path));
-          }
-          action.status = body.status;
-          action.snoozedUntil =
-            body.status === "SNOOZED" ? (body.snoozedUntil ?? null) : null;
-          action.closedAt =
-            body.status === "DONE" || body.status === "DISMISSED"
-              ? new Date().toISOString()
-              : null;
-          if (body.status === "OPEN") action.reopenCount += 1;
-          json(res, 200, action);
-        },
-      );
+      withBody<ActionTransitionBody>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const action = actions.find((row) => row.id === params[0]);
+        if (!action) return json(res, 404, errorEnvelope(404, path));
+        if (action.id === "act-degraded") {
+          return json(res, 500, errorEnvelope(500, path));
+        }
+        transition(action, body);
+        json(res, 200, action);
+      });
     },
   },
   {

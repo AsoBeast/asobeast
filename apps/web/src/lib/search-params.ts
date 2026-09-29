@@ -8,6 +8,8 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  STORES,
+  type ActionStatus,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -151,6 +153,35 @@ export const SORT_DIRECTIONS = ["asc", "desc"] as const;
 
 export const sortDirectionParser = parseAsStringLiteral(SORT_DIRECTIONS);
 
+export const APP_SORTS = [
+  "visibility",
+  "change",
+  "top10",
+  "rating",
+  "actions",
+  "name",
+  "updated",
+] as const;
+
+export type AppSort = (typeof APP_SORTS)[number];
+
+export const appSortParser =
+  parseAsStringLiteral(APP_SORTS).withDefault("visibility");
+
+export const APP_VIEWS = ["cards", "table"] as const;
+
+export type AppView = (typeof APP_VIEWS)[number];
+
+export const appViewParser =
+  parseAsStringLiteral(APP_VIEWS).withDefault("cards");
+
+export const appListParsers = {
+  q: searchParser,
+  sort: appSortParser,
+  dir: sortDirectionParser,
+  view: appViewParser,
+};
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 
@@ -233,9 +264,14 @@ export const rankingsRangeParsers = {
   movers: moverDaysParser,
 };
 
+export const ACTION_DEFAULT_STATUSES = [
+  "OPEN",
+  "SNOOZED",
+] as const satisfies readonly ActionStatus[];
+
 export const actionStatusParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),
-).withDefault(["OPEN", "SNOOZED"]);
+).withDefault([...ACTION_DEFAULT_STATUSES]);
 
 export const actionPriorityParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_PRIORITIES),
@@ -245,11 +281,35 @@ export const actionRuleParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_RULES),
 ).withDefault([]);
 
-export const actionCategoryParser = parseAsStringLiteral(ACTION_CATEGORIES);
+export const ACTION_GROUPS = ["priority", "app", "category"] as const;
+export type ActionGroup = (typeof ACTION_GROUPS)[number];
 
-export const actionAppParser = parseAsString.withDefault("");
+export const ACTION_SORTS = ["impact", "newest", "oldest"] as const;
+export type ActionSort = (typeof ACTION_SORTS)[number];
+
+export const actionQueueParsers = {
+  status: actionStatusParser,
+  priority: actionPriorityParser,
+  rule: actionRuleParser,
+  category: parseAsArrayOf(parseAsStringLiteral(ACTION_CATEGORIES)).withDefault(
+    [],
+  ),
+  app: parseAsArrayOf(parseAsString).withDefault([]),
+  market: parseAsArrayOf(parseAsString).withDefault([]),
+  store: parseAsStringLiteral(STORES),
+  q: parseAsString.withDefault(""),
+  group: parseAsStringLiteral(ACTION_GROUPS).withDefault("priority"),
+  sort: parseAsStringLiteral(ACTION_SORTS).withDefault("impact"),
+};
 
 export const actionFocusParser = parseAsString.withDefault("");
+
+export const CHANGE_OWNERS = ["all", "yours", "competitors"] as const;
+
+export type ChangeOwner = (typeof CHANGE_OWNERS)[number];
+
+export const changeOwnerParser =
+  parseAsStringLiteral(CHANGE_OWNERS).withDefault("all");
 
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);

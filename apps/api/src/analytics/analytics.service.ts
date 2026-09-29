@@ -8,7 +8,6 @@ import {
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
   normalizeText,
-  RankDistribution,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
@@ -27,7 +26,6 @@ import {
   DAY_MS,
   delta,
   metricAt,
-  positionAt,
   rankingAt,
   referenceDate,
   startOfUtcDay,
@@ -40,7 +38,7 @@ import {
 } from './analytics.support';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
-import { bucketPositions } from './rank-distribution';
+import { bucketPositions, rankDistributionAt } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
 
 const SUMMARY_WINDOW_DAYS = 31;
@@ -126,7 +124,7 @@ export class AnalyticsService {
 
     return {
       visibility: this.visibilitySummary(rows, reference),
-      rankDistribution: this.rankDistribution(rows, reference),
+      rankDistribution: rankDistributionAt(rows, reference),
       movers: movers(rows, reference),
       coverage: this.coverage(rows, reference, snapshot),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
@@ -235,35 +233,6 @@ export class AnalyticsService {
       delta7d: delta(rows, referenceDate, current, 7),
       delta30d: delta(rows, referenceDate, current, 30),
     };
-  }
-
-  private rankDistribution(
-    rows: TrackedRow[],
-    referenceDate: Date | null,
-  ): RankDistribution {
-    const distribution: RankDistribution = {
-      top1: 0,
-      top3: 0,
-      top10: 0,
-      top50: 0,
-      beyond: 0,
-      unranked: 0,
-    };
-    for (const row of rows) {
-      const position = referenceDate
-        ? positionAt(row.keyword.rankings, referenceDate)
-        : null;
-      if (position === null) {
-        distribution.unranked += 1;
-        continue;
-      }
-      if (position <= 1) distribution.top1 += 1;
-      if (position <= 3) distribution.top3 += 1;
-      if (position <= 10) distribution.top10 += 1;
-      if (position <= 50) distribution.top50 += 1;
-      if (position > 50) distribution.beyond += 1;
-    }
-    return distribution;
   }
 
   private coverage(

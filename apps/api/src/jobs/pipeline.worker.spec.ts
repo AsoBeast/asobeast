@@ -42,6 +42,7 @@ describe('PipelineWorker', () => {
     refreshed: 1,
     reopened: 0,
     resolved: 3,
+    verified: 0,
     touched: 0,
     suppressedByCap: 4,
     durationMs: 12,

@@ -1,12 +1,15 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  ACTION_FORMULA_VERSION,
-  ActionRule,
-  DailyBudget,
-} from '@asobeast/shared';
+import { ACTION_FORMULA_VERSION, ActionRule } from '@asobeast/shared';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
+import { ActionEventInput, ActionEventRecorder } from './action-events';
+import {
+  actionContext,
+  dailyBudget,
+  contextApp,
+  ruleSampleContext,
+} from './rules/rule-context.fixture';
 import { ACTION_REOPEN_AFTER_DAYS } from './action-lifecycle';
 import { ActionDetector, DetectedAction } from './action-rule';
 import { ActionsGenerator } from './actions.generator';
@@ -22,24 +25,10 @@ jest.mock('./action-rule', () => ({
 const NOW = new Date('2026-07-30T03:00:00.000Z');
 const DAY_MS = 86_400_000;
 
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
+const budget = dailyBudget();
 
-const emptyContext = (): ActionContext => ({
-  workspaceId: 'ws_default',
-  apps: [],
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const emptyContext = (): ActionContext =>
+  actionContext([], { workspaceId: 'ws_default' });
 
 const detection = (
   rule: ActionRule,
@@ -78,8 +67,13 @@ interface Row {
   id: string;
   fingerprint: string;
   rule: string;
+  appId: string;
   status: string;
+  priority: string;
+  impact: number;
   lastSeenAt: Date;
+  closedAt: Date | null;
+  verifiedAt: Date | null;
   snoozedUntil: Date | null;
   reopenCount: number;
 }
@@ -88,6 +82,7 @@ type CreatedRow = { fingerprint: string; keywordId: string | null };
 
 const buildPrisma = (rows: Row[] = []) => {
   const created: Array<Record<string, unknown>> = [];
+  const events: ActionEventInput[] = [];
   const updated: Array<{
     where: { id: string };
     data: Record<string, unknown>;
@@ -108,7 +103,7 @@ const buildPrisma = (rows: Row[] = []) => {
     }),
     create: jest.fn((args: { data: Record<string, unknown> }) => {
       created.push(args.data);
-      return args;
+      return Promise.resolve({ id: `created-${created.length - 1}` });
     }),
     update: jest.fn(
       (args: { where: { id: string }; data: Record<string, unknown> }) => {
@@ -118,13 +113,25 @@ const buildPrisma = (rows: Row[] = []) => {
     ),
   };
 
+  const actionEvent = {
+    createMany: jest.fn((args: { data: ActionEventInput[] }) => {
+      events.push(...args.data);
+      return Promise.resolve({ count: args.data.length });
+    }),
+  };
+
   return {
     created: created as unknown as CreatedRow[],
     updated,
+    events,
     actionItem,
     withTransaction: jest.fn(
-      (run: (tx: { actionItem: typeof actionItem }) => Promise<unknown>) =>
-        run({ actionItem }),
+      (
+        run: (tx: {
+          actionItem: typeof actionItem;
+          actionEvent: typeof actionEvent;
+        }) => Promise<unknown>,
+      ) => run({ actionItem, actionEvent }),
     ),
   };
 };
@@ -137,9 +144,14 @@ const generatorFor = (
   prisma: ReturnType<typeof buildPrisma>,
   cap = 20,
 ): ActionsGenerator =>
-  new ActionsGenerator(prisma as unknown as PrismaService, buildConfig(cap), {
-    load: jest.fn(() => Promise.resolve(context)),
-  } as unknown as ActionContextLoader);
+  new ActionsGenerator(
+    prisma as unknown as PrismaService,
+    buildConfig(cap),
+    {
+      load: jest.fn(() => Promise.resolve(context)),
+    } as unknown as ActionContextLoader,
+    new ActionEventRecorder(),
+  );
 
 const fingerprintOf = async (): Promise<string> => {
   const prisma = buildPrisma();
@@ -152,8 +164,13 @@ const storedRow = (fingerprint: string, overrides: Partial<Row>): Row[] => [
     id: 'act_1',
     fingerprint,
     rule: 'keyword.add_uncovered',
+    appId: 'app_1',
     status: 'OPEN',
+    priority: 'high',
+    impact: 70,
     lastSeenAt: NOW,
+    closedAt: null,
+    verifiedAt: null,
     snoozedUntil: null,
     reopenCount: 0,
     ...overrides,
@@ -274,8 +291,13 @@ describe('ActionsGenerator', () => {
         id: 'act_2',
         fingerprint: 'def',
         rule: 'keyword.defend',
+        appId: 'app_1',
         status: 'OPEN',
+        priority: 'high',
+        impact: 70,
         lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: null,
+        verifiedAt: null,
         snoozedUntil: null,
         reopenCount: 0,
       },
@@ -345,8 +367,13 @@ describe('ActionsGenerator', () => {
         id: `act_${index}`,
         fingerprint: row.fingerprint,
         rule: 'keyword.add_uncovered',
+        appId: 'app_1',
         status: 'OPEN',
+        priority: 'high',
+        impact: 70,
         lastSeenAt: NOW,
+        closedAt: null,
+        verifiedAt: null,
         snoozedUntil: null,
         reopenCount: 0,
       })),
@@ -370,7 +397,8 @@ describe('ActionsGenerator', () => {
     const inside = buildPrisma(
       storedRow(fingerprint, {
         status: 'DONE',
-        lastSeenAt: new Date(
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(
           NOW.getTime() - (ACTION_REOPEN_AFTER_DAYS - 1) * DAY_MS,
         ),
       }),
@@ -378,7 +406,8 @@ describe('ActionsGenerator', () => {
     const outside = buildPrisma(
       storedRow(fingerprint, {
         status: 'DONE',
-        lastSeenAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
       }),
     );
 
@@ -399,6 +428,70 @@ describe('ActionsGenerator', () => {
       reopenCount: 1,
       closedAt: null,
       resolvedAt: null,
+    });
+  });
+
+  it('reopens a done row closed fourteen days ago that was touched yesterday', async () => {
+    const fingerprint = await fingerprintOf();
+    const prisma = buildPrisma(
+      storedRow(fingerprint, {
+        status: 'DONE',
+        lastSeenAt: new Date(NOW.getTime() - DAY_MS),
+        closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+      }),
+    );
+
+    const result = await generatorFor(
+      emptyContext(),
+      prisma,
+    ).generateForWorkspace(budget, NOW);
+
+    expect(result).toMatchObject({ reopened: 1, touched: 0 });
+    expect(prisma.updated[0].data).toMatchObject({ status: 'OPEN' });
+  });
+
+  describe('reopening drops the previous episode ai summary', () => {
+    const cleared = {
+      aiExplanation: null,
+      aiModel: null,
+      aiGeneratedAt: null,
+    };
+
+    it('clears the ai fields when a resolved row reopens', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, { status: 'RESOLVED' }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.updated[0].data).toMatchObject({
+        status: 'OPEN',
+        ...cleared,
+      });
+    });
+
+    it('clears the ai fields when a done row reopens', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'DONE',
+          closedAt: new Date(NOW.getTime() - ACTION_REOPEN_AFTER_DAYS * DAY_MS),
+        }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.updated[0].data).toMatchObject({
+        status: 'OPEN',
+        ...cleared,
+      });
     });
   });
 
@@ -459,6 +552,384 @@ describe('ActionsGenerator', () => {
       lastSeenAt: NOW,
     });
     expect(prisma.updated[0].data).not.toHaveProperty('snoozedUntil');
+  });
+
+  describe('lifecycle events', () => {
+    it('records an opened event for a new action with its scored priority', async () => {
+      const prisma = buildPrisma();
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.events).toEqual([
+        {
+          workspaceId: 'ws_default',
+          actionId: 'created-0',
+          appId: 'app_1',
+          type: 'opened',
+          actor: 'system',
+          userId: null,
+          status: 'OPEN',
+          priority: 'critical',
+          impact: 80,
+          snoozedUntil: null,
+          reason: null,
+          occurredAt: NOW,
+        },
+      ]);
+    });
+
+    it('records a resolved event with the stored priority and impact', async () => {
+      useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
+      const prisma = buildPrisma(storedRow('abc', {}));
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.events).toEqual([
+        expect.objectContaining({
+          actionId: 'act_1',
+          type: 'resolved',
+          status: 'RESOLVED',
+          priority: 'high',
+          impact: 70,
+        }),
+      ]);
+    });
+
+    it('records nothing for a refreshed or touched row', async () => {
+      const fingerprint = await fingerprintOf();
+      for (const status of ['OPEN', 'DONE', 'DISMISSED']) {
+        const prisma = buildPrisma(storedRow(fingerprint, { status }));
+
+        await generatorFor(emptyContext(), prisma).generateForWorkspace(
+          budget,
+          NOW,
+        );
+
+        expect(prisma.events).toEqual([]);
+      }
+    });
+
+    it('records a woke event when an expired snooze opens again', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'SNOOZED',
+          snoozedUntil: new Date(NOW.getTime() - DAY_MS),
+        }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.events).toEqual([
+        expect.objectContaining({ actionId: 'act_1', type: 'woke' }),
+      ]);
+    });
+
+    it('records a reopened event when a resolved row fires again', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, { status: 'RESOLVED' }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.events).toEqual([
+        expect.objectContaining({
+          actionId: 'act_1',
+          type: 'reopened',
+          status: 'OPEN',
+        }),
+      ]);
+    });
+
+    it('records nothing for rows whose detector crashed', async () => {
+      useDetectors([
+        {
+          rule: 'keyword.add_uncovered',
+          detect: () => {
+            throw new Error('boom');
+          },
+        },
+      ]);
+      const prisma = buildPrisma(storedRow('abc', {}));
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.events).toEqual([]);
+      expect(prisma.withTransaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('verification', () => {
+    it('verifies a done row whose rule was evaluated and did not fire', async () => {
+      useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
+      const prisma = buildPrisma(storedRow('abc', { status: 'DONE' }));
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result).toMatchObject({ verified: 1, resolved: 0 });
+      expect(prisma.updated[0].data).toEqual({ verifiedAt: NOW });
+      expect(prisma.events).toEqual([
+        expect.objectContaining({
+          actionId: 'act_1',
+          type: 'verified',
+          status: 'DONE',
+        }),
+      ]);
+    });
+
+    it('leaves a done row untouched when its detector crashed', async () => {
+      useDetectors([
+        {
+          rule: 'keyword.add_uncovered',
+          detect: () => {
+            throw new Error('boom');
+          },
+        },
+      ]);
+      const prisma = buildPrisma(storedRow('abc', { status: 'DONE' }));
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.verified).toBe(0);
+      expect(prisma.updated).toEqual([]);
+    });
+
+    it('reopens a verified row that fires again and clears its verification', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'DONE',
+          closedAt: new Date(NOW.getTime() - 3 * DAY_MS),
+          verifiedAt: new Date(NOW.getTime() - DAY_MS),
+        }),
+      );
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.reopened).toBe(1);
+      expect(prisma.updated[0].data).toMatchObject({
+        status: 'OPEN',
+        verifiedAt: null,
+      });
+      expect(prisma.events).toEqual([
+        expect.objectContaining({ type: 'reopened' }),
+      ]);
+    });
+  });
+
+  describe('withheld detections', () => {
+    const withheld = (): DetectedAction =>
+      detection('keyword.add_uncovered', { withheld: true });
+
+    it('keeps an open row open when its subject is withheld', async () => {
+      const fingerprint = await fingerprintOf();
+      useDetectors([
+        { rule: 'keyword.add_uncovered', detect: () => [withheld()] },
+      ]);
+      const prisma = buildPrisma(storedRow(fingerprint, {}));
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result).toMatchObject({ resolved: 0, refreshed: 0 });
+      expect(prisma.updated).toEqual([]);
+    });
+
+    it('does not verify a done row whose subject is withheld', async () => {
+      const fingerprint = await fingerprintOf();
+      useDetectors([
+        { rule: 'keyword.add_uncovered', detect: () => [withheld()] },
+      ]);
+      const prisma = buildPrisma(storedRow(fingerprint, { status: 'DONE' }));
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.verified).toBe(0);
+      expect(prisma.updated).toEqual([]);
+    });
+
+    it('never creates or counts a withheld detection', async () => {
+      useDetectors([
+        { rule: 'keyword.add_uncovered', detect: () => [withheld()] },
+      ]);
+      const prisma = buildPrisma();
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+        0,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result).toMatchObject({ opened: 0, suppressedByCap: 0 });
+      expect(prisma.created).toEqual([]);
+    });
+  });
+
+  describe('new rules leave the existing rules alone', () => {
+    const realDetectors =
+      jest.requireActual<typeof import('./action-rule')>(
+        './action-rule',
+      ).ACTION_DETECTORS;
+    const NEW_RULES: ActionRule[] = [
+      'keyword.push_to_top10',
+      'metadata.fix_lint',
+      'rank.investigate_unexplained_drop',
+      'competitor.investigate_overtake',
+      'reviews.investigate_rating_decline',
+      'reviews.reply_negative',
+      'listing.ship_update',
+    ];
+
+    const createdRules = async (detectors: readonly ActionDetector[]) => {
+      mockDetectors.splice(0, mockDetectors.length, ...detectors);
+      const prisma = buildPrisma();
+      await generatorFor(ruleSampleContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      return (
+        prisma.created as unknown as Array<{
+          fingerprint: string;
+          rule: string;
+        }>
+      )
+        .filter((row) => !NEW_RULES.includes(row.rule as ActionRule))
+        .map((row) => row.fingerprint)
+        .sort();
+    };
+
+    it('detects the same existing actions with the new detectors registered', async () => {
+      const withNew = await createdRules(realDetectors);
+      const withoutNew = await createdRules(
+        realDetectors.filter((detector) => !NEW_RULES.includes(detector.rule)),
+      );
+
+      expect(withNew).toEqual(withoutNew);
+      expect(withNew.length).toBeGreaterThan(0);
+    });
+
+    it('leaves a decline row alone once a review theme explains it', async () => {
+      const decline = realDetectors.filter(
+        (detector) => detector.rule === 'reviews.investigate_rating_decline',
+      );
+      mockDetectors.splice(0, mockDetectors.length, ...decline);
+      const reviewAt = (daysAgo: number, index: number) =>
+        new Date(NOW.getTime() - (daysAgo + index / 10) * 86_400_000);
+      const scored = (
+        scores: number[],
+        daysAgo: number,
+        version: string,
+        text = 'fine',
+      ) =>
+        scores.map((score, index) => ({
+          id: `rev_${daysAgo}_${version}_${text}_${index}`,
+          score,
+          title: null,
+          text,
+          version,
+          reviewedAt: reviewAt(daysAgo, index),
+          repliedAt: null,
+          replyCheckedAt: null,
+        }));
+      const declining = (themed: boolean): ActionContext =>
+        actionContext([
+          contextApp({
+            latestVersion: '4.2.0',
+            previousVersion: themed ? '4.1.0' : null,
+            reviews: [
+              ...scored([1, 1, 2], 1, '4.2.0', 'crashes on launch every time'),
+              ...scored([5, 4, 4, 4, 4], 2, '4.2.0'),
+              ...scored([1], 20, '4.1.0', 'too many adverts'),
+              ...scored([5, 5, 5, 5, 5], 21, '4.1.0'),
+            ],
+          }),
+        ]);
+      const first = buildPrisma();
+      await generatorFor(declining(false), first).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      const fingerprint = first.created[0].fingerprint;
+
+      for (const status of ['OPEN', 'DONE'] as const) {
+        const prisma = buildPrisma(
+          storedRow(fingerprint, {
+            rule: 'reviews.investigate_rating_decline',
+            status,
+          }),
+        );
+        const result = await generatorFor(
+          declining(true),
+          prisma,
+        ).generateForWorkspace(budget, NOW);
+
+        expect(result).toMatchObject({ resolved: 0, verified: 0, opened: 0 });
+        expect(prisma.updated).toEqual([]);
+      }
+    });
+
+    it('keeps an open push action open once its results turn volatile', async () => {
+      const push = realDetectors.filter(
+        (detector) => detector.rule === 'keyword.push_to_top10',
+      );
+      mockDetectors.splice(0, mockDetectors.length, ...push);
+      const first = buildPrisma();
+      await generatorFor(ruleSampleContext(), first).generateForWorkspace(
+        budget,
+        NOW,
+      );
+      const sample = ruleSampleContext();
+      const volatile: ActionContext = {
+        ...sample,
+        apps: sample.apps.map((app) => ({
+          ...app,
+          volatilityByKeyword: new Map([['kw_push', 60]]),
+        })),
+      };
+      const prisma = buildPrisma(
+        storedRow(first.created[0].fingerprint, {
+          rule: 'keyword.push_to_top10',
+        }),
+      );
+
+      const result = await generatorFor(volatile, prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(result).toMatchObject({ opened: 0, resolved: 0, refreshed: 0 });
+      expect(prisma.updated).toEqual([]);
+    });
   });
 
   it('records how long the run took', async () => {

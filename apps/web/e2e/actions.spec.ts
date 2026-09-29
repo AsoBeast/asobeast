@@ -3,8 +3,9 @@ import { expect, test } from "./session.mts";
 test.describe.configure({ mode: "serial" });
 
 const card = (id: string) => `[id='action-${id}']`;
+const ROWS = "#queue li[id^='action-']";
 const rendered = { timeout: 20_000 };
-const ACT_UNCOVERED_TITLE = "Add a high-opportunity keyword to your metadata";
+const ACT_UNCOVERED_TITLE = 'Add "habit tracker" to your metadata';
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
 test.beforeEach(async ({ request }) => {
@@ -16,53 +17,61 @@ test.beforeEach(async ({ request }) => {
 test("lists actions sorted by estimated impact", async ({ page }) => {
   await page.goto("/actions");
 
-  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
-    ACT_UNCOVERED_TITLE,
+  const first = page.locator(ROWS).first();
+  await expect(first).toContainText(ACT_UNCOVERED_TITLE);
+  await expect(first.getByText("88", { exact: false })).toBeVisible();
+});
+
+test("the summary counts agree with the listed actions", async ({
+  request,
+}) => {
+  const summary = await request.get(`${MOCK_API_URL}/actions/summary`);
+  const list = await request.get(
+    `${MOCK_API_URL}/actions?status=OPEN&limit=200`,
   );
-  await expect(page.getByText("88", { exact: false }).first()).toBeVisible();
+
+  expect(((await summary.json()) as { open: number }).open).toBe(
+    ((await list.json()) as { total: number }).total,
+  );
 });
 
 test("filtering by priority updates the url and survives a reload", async ({
   page,
 }) => {
   await page.goto("/actions");
-  await page.getByRole("button", { name: "Critical", exact: true }).click();
+  await page.getByRole("button", { name: /^Critical/ }).click();
 
   await expect(page).toHaveURL(/priority=critical/);
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(1);
+  await expect(page.locator(ROWS)).toHaveCount(1);
 
   await page.reload();
-  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(1);
+  await expect(page.locator(ROWS)).toHaveCount(1);
 });
 
 test("evidence is reachable by keyboard and shows the stored numbers", async ({
   page,
 }) => {
   await page.goto("/actions");
-  const summary = page.locator(card("act-uncovered")).locator("summary");
+  const headline = page
+    .locator(card("act-uncovered"))
+    .getByRole("link", { name: ACT_UNCOVERED_TITLE });
 
-  await expect(summary).toBeVisible();
-  await summary.focus();
-  await summary.press("Enter");
+  await headline.focus();
+  await headline.press("Enter");
 
-  await expect(
-    page.locator(card("act-uncovered")).getByText("Opportunity", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.locator(card("act-uncovered")).getByText("66.5", { exact: true }),
-  ).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Opportunity", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("66.5", { exact: true })).toBeVisible();
 });
 
-test("a deep link scrolls to, expands and focuses the action", async ({
-  page,
-}) => {
+test("a deep link opens the action's detail", async ({ page }) => {
   await page.goto("/actions?action=act-market");
 
-  const target = page.locator(card("act-market"));
-  await expect(target).toBeFocused();
-  await expect(target.getByText("Home market")).toBeVisible();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading", { level: 2 })).toHaveText(
+    "Close the 26.5 point visibility gap in Germany",
+  );
+  await expect(dialog.getByText("Home market")).toBeVisible();
 });
 
 test("a degraded row explains itself without breaking the list", async ({
@@ -70,10 +79,195 @@ test("a degraded row explains itself without breaking the list", async ({
 }) => {
   await page.goto("/actions");
 
+  const degraded = page.locator(card("act-degraded"));
+  await expect(degraded.getByText("Evidence unavailable")).toBeVisible();
+  await expect(page.locator(ROWS).first()).toBeVisible();
+
+  await degraded.getByRole("link").click();
   await expect(
-    page.getByText(/Evidence unavailable for this stored action/),
+    page
+      .getByRole("dialog")
+      .getByText(/Evidence unavailable for this stored action/),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+});
+
+test("the header states how fresh the queue is", async ({ page }) => {
+  await page.goto("/actions");
+
+  const status = page.locator('[data-slot="action-status"]');
+  await expect(status).toHaveText(
+    /^18 open · 1 critical · 5 high · generated /,
+  );
+  await expect(status).toContainText("withheld by the per app cap");
+});
+
+test("the status tabs name their counts and control the queue", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+
+  const tab = page.getByRole("tab", { name: "Dismissed, 1 action" });
+  await expect(tab).toBeVisible();
+  const controls = await tab.getAttribute("aria-controls");
+  await expect(page.locator(`[id="${controls}"]`)).toBeVisible();
+});
+
+test("an app's header leaves out the workspace wide cap count", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/actions");
+
+  const status = page.locator('[data-slot="action-status"]');
+  await expect(status).toContainText("generated");
+  await expect(status).not.toContainText("withheld");
+});
+
+test("offers Generate now exactly once, with a queue and without one", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+  await expect(page.getByRole("button", { name: "Generate now" })).toHaveCount(
+    1,
+  );
+
+  await page.context().addCookies([
+    {
+      name: "e2e_actions_ungenerated",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/actions");
+  await expect(page.getByText("No actions generated yet")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Generate now" })).toHaveCount(
+    1,
+  );
+});
+
+test("the app actions page heads its section under the app name", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/actions");
+
+  const headings = page.getByRole("heading");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Focus Timer",
+  );
+  await expect(headings.nth(1)).toHaveText("Actions");
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Actions" }),
+  ).toBeVisible();
+});
+
+test("four tiles summarize the queue, two by two on a phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/actions");
+
+  const tiles = page.locator('[data-slot="stat-tile"]');
+  await expect(tiles).toHaveCount(4);
+  await expect
+    .poll(() =>
+      tiles.evaluateAll((nodes) => {
+        const [a, b, c, d] = nodes.map(
+          (node) => node.getBoundingClientRect().top,
+        );
+        return a === b && c === d && c > a;
+      }),
+    )
+    .toBe(true);
+});
+
+test("the tiles wait for the first generation", async ({ page }) => {
+  await page.context().addCookies([
+    {
+      name: "e2e_actions_ungenerated",
+      value: "1",
+      url: "http://localhost:3000",
+    },
+  ]);
+  await page.goto("/actions");
+
+  const tiles = page.locator('[data-slot="stat-tile"]');
+  await expect(tiles).toHaveCount(4);
+  for (const index of [0, 1, 2, 3]) {
+    await expect(tiles.nth(index)).toContainText("—");
+    await expect(tiles.nth(index)).toContainText("not generated yet");
+  }
+});
+
+test.describe("the queue toolbar", () => {
+  test("a rule facet narrows the queue and recounts the priorities", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await page.getByRole("button", { name: /^Filter by rule/ }).click();
+    await page.getByRole("option", { name: /Keywords to defend/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/rule=keyword\.defend/);
+    await expect(page.locator(card("act-uncovered"))).toHaveCount(0);
+    await expect(page.locator(card("act-defend"))).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: /^High/ }),
+    ).toHaveAccessibleName("High, 3 actions");
+  });
+
+  test("a search narrows the queue and survives a reload", async ({ page }) => {
+    await page.goto("/actions");
+    await page.getByRole("textbox", { name: "Search actions" }).fill("habit");
+
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+    await expect(page.locator(card("act-defend"))).toHaveCount(0);
+    await expect(page).toHaveURL(/q=habit/);
+
+    await page.reload();
+    await expect(
+      page.getByRole("textbox", { name: "Search actions" }),
+    ).toHaveValue("habit");
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+  });
+
+  test("the status tabs switch between the to do and closed lists", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await page.getByRole("tab", { name: "Dismissed" }).click();
+
+    await expect(page).toHaveURL(/status=DISMISSED/);
+    await expect(page.locator(card("act-dismissed"))).toBeVisible();
+
+    await page.getByRole("tab", { name: "To do" }).click();
+    await expect(page).not.toHaveURL(/status=/);
+    await expect(page.locator(card("act-uncovered"))).toBeVisible();
+  });
+
+  test("a status set without a tab shows as a removable chip", async ({
+    page,
+  }) => {
+    await page.goto("/actions?status=DONE,DISMISSED");
+
+    await expect(page.getByText("Status: Done, Dismissed")).toBeVisible();
+    await expect(page.getByRole("tab", { selected: true })).toHaveCount(0);
+  });
+
+  test("the header and toolbar stay compact on a phone", async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/actions");
+
+    const header = await page.locator("main header").first().boundingBox();
+    const toolbar = await page
+      .locator('[data-slot="action-toolbar"]')
+      .boundingBox();
+    expect(header?.height ?? 0).toBeLessThanOrEqual(140);
+    expect(toolbar?.height ?? 0).toBeLessThanOrEqual(200);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    ).toBe(true);
+  });
 });
 
 test.describe("generating the queue on demand", () => {
@@ -132,7 +326,49 @@ test("an empty filter combination offers to clear the filters", async ({
 
   await expect(page.getByText("No actions match these filters")).toBeVisible();
   await page.getByRole("button", { name: "Clear filters" }).click();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  await expect(page.locator(ROWS).first()).toBeVisible();
+});
+
+test("a two status filter with no matches offers to clear the filters", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-2/actions?status=DONE,RESOLVED");
+
+  await expect(page.getByText("No actions match these filters")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Clear filters" }),
+  ).toBeVisible();
+});
+
+test("undoing done brings the action back without a reopen badge", async ({
+  page,
+}) => {
+  await page.goto("/actions");
+  const row = page.locator(card("act-audit"));
+  await row.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(row).toBeVisible();
+  await expect(row.getByText(/Reopened/)).toHaveCount(0);
+});
+
+test("the app overview counts only that app's actions", async ({ page }) => {
+  await page.goto("/apps/app-1");
+  const card = page
+    .getByText("Top actions", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
+});
+
+test("the app overview leaves snoozed actions out of its open counts", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+  const card = page
+    .getByText("Top actions", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  await expect(card.getByText("4 High", { exact: true })).toBeVisible();
+  await expect(card.getByText("5 High", { exact: true })).toHaveCount(0);
 });
 
 test("a failing update rolls the optimistic change back", async ({ page }) => {
@@ -161,19 +397,17 @@ test("dismissing removes the card and it stays gone after a reload", async ({
   page,
 }) => {
   await page.goto("/actions");
-  const heading = page.getByRole("heading", {
-    name: "Investigate a new negative review theme",
-  });
-  await expect(heading).toBeVisible();
+  const target = page.locator(card("act-reviews"));
+  await expect(target).toBeVisible();
 
+  await target.getByRole("button", { name: "Dismiss" }).click();
   await page
-    .locator(card("act-reviews"))
-    .getByRole("button", { name: "Dismiss" })
+    .getByRole("menuitem", { name: "Not relevant to this app" })
     .click();
-  await expect(heading).toHaveCount(0);
+  await expect(target).toHaveCount(0);
 
   await page.reload();
-  await expect(heading).toHaveCount(0);
+  await expect(target).toHaveCount(0);
 });
 
 test("a dismissed action can be reopened from the dismissed filter", async ({
@@ -233,6 +467,23 @@ test("the command palette reaches the action center", async ({ page }) => {
   await expect(page).toHaveURL(/\/actions$/);
 });
 
+test("the app overview opens a top action in its sheet", async ({ page }) => {
+  await page.goto("/apps/app-1");
+  const card = page
+    .getByText("Top actions", { exact: true })
+    .locator("xpath=ancestor::*[@data-slot='card'][1]");
+  const first = card.getByRole("link").first();
+
+  await expect(first).toHaveAttribute(
+    "href",
+    "/apps/app-1/actions?action=act-uncovered",
+  );
+  await first.click();
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { level: 2 }),
+  ).toHaveText(ACT_UNCOVERED_TITLE);
+});
+
 test("the app detail nav exposes an actions section", async ({ page }) => {
   await page.goto("/apps/app-1");
 
@@ -241,9 +492,9 @@ test("the app detail nav exposes an actions section", async ({ page }) => {
 
   await expect(page).toHaveURL(/\/apps\/app-1\/actions/);
   await expect(
-    page
-      .locator(card("act-uncovered"))
-      .getByRole("heading", { level: 2, name: ACT_UNCOVERED_TITLE }),
+    page.locator(card("act-uncovered")).getByRole("link", {
+      name: ACT_UNCOVERED_TITLE,
+    }),
   ).toBeVisible(rendered);
 });
 
@@ -251,7 +502,12 @@ test("hides the AI explain control when no key is configured", async ({
   page,
 }) => {
   await page.goto("/actions");
+  await page
+    .locator(card("act-uncovered"))
+    .getByRole("link", { name: ACT_UNCOVERED_TITLE })
+    .click();
 
-  await expect(page.getByRole("heading", { level: 2 }).first()).toBeVisible();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page.getByText("How to fix")).toBeVisible();
   await expect(page.getByRole("button", { name: "Explain" })).toHaveCount(0);
 });

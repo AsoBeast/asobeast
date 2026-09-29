@@ -26,6 +26,7 @@ export interface TrackedRow {
   relevance: number | null;
   keyword: {
     text: string;
+    country: string;
     metrics: Metric[];
     rankings: Ranking[];
   };
@@ -81,7 +82,7 @@ const keywordsAt = (rows: TrackedRow[], date: Date): VisibilityKeyword[] =>
     position: positionAt(row.keyword.rankings, date),
   }));
 
-const capturedOn = (rows: TrackedRow[], date: Date): boolean =>
+export const capturedOn = (rows: TrackedRow[], date: Date): boolean =>
   rows.some((row) =>
     row.keyword.rankings.some((ranking) => isSameDay(ranking.date, date)),
   );
@@ -260,6 +261,7 @@ export async function trackedRows(
       keyword: {
         select: {
           text: true,
+          country: true,
           metrics: {
             where: window ? { date: { lte: window } } : undefined,
             orderBy: { date: 'desc' },

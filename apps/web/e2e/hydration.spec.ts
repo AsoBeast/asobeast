@@ -48,6 +48,18 @@ const DEEP_LINKS = [
       page.getByRole("heading", { level: 4, name: "After 7 days" }),
   },
   {
+    name: "the action queue",
+    url: "/actions",
+    endpoint: "/api/backend/actions",
+    ready: (page: Page) => page.locator("[id='action-act-uncovered']"),
+  },
+  {
+    name: "an app action queue",
+    url: "/apps/app-1/actions",
+    endpoint: "/api/backend/apps/app-1/actions",
+    ready: (page: Page) => page.locator("[id='action-act-uncovered']"),
+  },
+  {
     name: "a change timeline window",
     url: "/apps/app-1/changes?days=30",
     endpoint: "/api/backend/apps/app-1/changes",
@@ -69,6 +81,30 @@ for (const { name, url, endpoint, ready } of DEEP_LINKS) {
 
     await page.goto(url);
     await expect(ready(page).first()).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    expect(refetched).toEqual([]);
+  });
+}
+
+for (const url of ["/apps/app-1", "/apps/app-1/actions"]) {
+  test(`${url} names the app in its header and breadcrumb without refetching it`, async ({
+    page,
+  }) => {
+    const refetched: string[] = [];
+    page.on("request", (request) => {
+      if (new URL(request.url()).pathname === "/api/backend/apps/app-1") {
+        refetched.push(request.url());
+      }
+    });
+
+    await page.goto(url);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Focus Timer" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }),
+    ).toContainText("Focus Timer");
     await page.waitForLoadState("networkidle");
 
     expect(refetched).toEqual([]);
@@ -130,8 +166,9 @@ test("the dashboard open action count is in the html the server sent", async ({
 }) => {
   const html = await page.request.get("/").then((response) => response.text());
 
+  const { critical, high } = ACTION_SUMMARY.openByPriority;
   expect(sectionText(html, "Open actions", "</div>")).toBe(
-    `${ACTION_SUMMARY.open} waiting on you`,
+    `${ACTION_SUMMARY.open} ${critical} critical · ${high} high`,
   );
 
   await page.goto("/");

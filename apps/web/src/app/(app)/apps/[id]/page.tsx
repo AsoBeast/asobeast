@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   actionsOptions,
-  actionSummaryOptions,
+  actionSummaryFor,
   appSummaryOptions,
   categoryRanksOptions,
   firstRunOptions,
@@ -55,7 +55,7 @@ export default async function AppOverviewPage({
   void queryClient.prefetchQuery(
     rankDistributionHistoryOptions(id, presetToRange("30d")),
   );
-  void queryClient.prefetchQuery(actionSummaryOptions);
+  void queryClient.prefetchQuery(actionSummaryFor(id));
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );

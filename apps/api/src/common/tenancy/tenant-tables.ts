@@ -1,4 +1,5 @@
 export const TENANT_TABLES = [
+  'ActionEvent',
   'ActionItem',
   'AlertDelivery',
   'AlertEvent',

@@ -13,20 +13,32 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import {
+  ActionActivity,
   ActionAiStatus,
+  ActionBulkUpdateResult,
+  ActionDetail,
   ActionExplanation,
   ActionItem,
   ActionListResult,
   ActionRunResult,
   ActionSummary,
+  STORES,
 } from '@asobeast/shared';
+import type { User } from '@prisma/client';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { ActionActivityService } from './action-activity.service';
+import { ActionDetailService } from './action-detail.service';
 import { ActionRunQueue } from './action-run.queue';
+import { parseSummaryScope } from './action-summary-scope';
 import { ActionsAiService } from './actions-ai.service';
 import { ActionsService } from './actions.service';
+import { ActionActivityQueryDto } from './dto/action-activity-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
@@ -35,6 +47,8 @@ import { UpdateActionDto } from './dto/update-action.dto';
 export class ActionsController {
   constructor(
     private readonly actions: ActionsService,
+    private readonly details: ActionDetailService,
+    private readonly activityReader: ActionActivityService,
     private readonly ai: ActionsAiService,
     private readonly actionRuns: ActionRunQueue,
     private readonly workspace: WorkspaceContext,
@@ -50,8 +64,11 @@ export class ActionsController {
   @Get('summary')
   @ApiOkResponse({ description: 'Open and snoozed action counts' })
   @ApiOperation({ summary: 'Summarize the action queue' })
-  summary(): Promise<ActionSummary> {
-    return this.actions.summary();
+  @ApiQuery({ name: 'appId', required: false, type: String })
+  @ApiQuery({ name: 'store', required: false, enum: STORES })
+  @ApiQuery({ name: 'country', required: false, type: String, example: 'us' })
+  summary(@Query() query: Record<string, unknown>): Promise<ActionSummary> {
+    return this.actions.summary(parseSummaryScope(query));
   }
 
   @Get('ai-status')
@@ -61,14 +78,45 @@ export class ActionsController {
     return this.ai.status();
   }
 
+  @Get('activity')
+  @ApiOkResponse({ description: 'Actions opened and closed per UTC day' })
+  @ApiOperation({ summary: 'Report daily action activity' })
+  activity(@Query() query: ActionActivityQueryDto): Promise<ActionActivity> {
+    return this.activityReader.read(query);
+  }
+
+  @Get(':id')
+  @ApiOkResponse({
+    description: 'One action with its history, trend and measured outcome',
+  })
+  @ApiNotFoundResponse({ description: 'No such action in this workspace' })
+  @ApiOperation({ summary: 'Read one action' })
+  detail(@Param('id') id: string): Promise<ActionDetail> {
+    return this.details.get(id);
+  }
+
+  @Patch()
+  @HttpCode(200)
+  @ApiOkResponse({
+    description: 'The updated actions, with ids that were missing or refused',
+  })
+  @ApiOperation({ summary: 'Change the state of many actions' })
+  bulkUpdate(
+    @Body() body: BulkUpdateActionsDto,
+    @CurrentUser() user: User,
+  ): Promise<ActionBulkUpdateResult> {
+    return this.actions.bulkUpdate(body, user.id);
+  }
+
   @Patch(':id')
   @ApiOkResponse({ description: 'The updated action' })
   @ApiOperation({ summary: 'Change the state of one action' })
   update(
     @Param('id') id: string,
     @Body() body: UpdateActionDto,
+    @CurrentUser() user: User,
   ): Promise<ActionItem> {
-    return this.actions.update(id, body);
+    return this.actions.update(id, body, user.id);
   }
 
   @Post(':id/explain')

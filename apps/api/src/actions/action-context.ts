@@ -19,6 +19,14 @@ import { SerpSnapshotDay } from '../rankings/serp-movers';
 import { serpVolatilities } from '../keywords/keyword-volatility';
 import { visibility } from '../analytics/visibility';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import {
+  ActionCompetitor,
+  ActionCompetitorChange,
+  competitorContext,
+  CompetitorRows,
+  homeKeywordIds,
+  loadCompetitorRows,
+} from './action-competitors';
 
 export interface ActionAuditCheck {
   id: string;
@@ -66,6 +74,8 @@ export interface ActionReview {
   text: string;
   version: string | null;
   reviewedAt: Date | null;
+  repliedAt: Date | null;
+  replyCheckedAt: Date | null;
 }
 
 export interface ActionContextApp {
@@ -85,9 +95,14 @@ export interface ActionContextApp {
   serpDaysByKeyword: Map<string, SerpSnapshotDay[]>;
   volatilityByKeyword: Map<string, number | null>;
   competitorAppIdsByStoreAppId: Map<string, string>;
+  competitors: ActionCompetitor[];
+  competitorChanges: ActionCompetitorChange[];
+  competitorRankingDays: Map<string, ActionRankingDay[]>;
   reviews: ActionReview[];
   latestVersion: string | null;
   previousVersion: string | null;
+  latestStoreUpdatedAt: Date | null;
+  competitorUpdatedAt: Date[];
 }
 
 export interface ActionContext {
@@ -246,7 +261,7 @@ export class ActionContextLoader {
         store: true,
         storeAppId: true,
         country: true,
-        competitors: { select: { id: true, storeAppId: true } },
+        competitors: { select: { id: true, storeAppId: true, name: true } },
       },
       orderBy: { createdAt: 'asc' },
     });
@@ -301,6 +316,8 @@ export class ActionContextLoader {
             text: true,
             version: true,
             reviewedAt: true,
+            repliedAt: true,
+            replyCheckedAt: true,
           },
           orderBy: { reviewedAt: 'desc' },
         }),
@@ -311,7 +328,12 @@ export class ActionContextLoader {
         }),
         this.prisma.appSnapshot.findMany({
           where: { appId: { in: appIds }, capturedAt: { gte: from } },
-          select: { appId: true, version: true, capturedAt: true },
+          select: {
+            appId: true,
+            version: true,
+            capturedAt: true,
+            storeUpdatedAt: true,
+          },
           orderBy: { capturedAt: 'desc' },
         }),
       ]);
@@ -334,7 +356,8 @@ export class ActionContextLoader {
         live.flatMap((entry) => entry.tracked.map((item) => item.keywordId)),
       ),
     ];
-    const [serpEntries, volatility] = await Promise.all([
+    const homeIds = homeKeywordIds(live);
+    const [serpEntries, volatility, competitorRows] = await Promise.all([
       keywordIds.length === 0
         ? Promise.resolve([])
         : this.prisma.serpEntry.findMany({
@@ -349,6 +372,7 @@ export class ActionContextLoader {
             orderBy: [{ date: 'asc' }, { position: 'asc' }],
           }),
       serpVolatilities(this.prisma, keywordIds),
+      loadCompetitorRows(this.prisma, live, homeIds, now),
     ]);
 
     const serpByKeyword = groupBy(serpEntries, (row) => row.keywordId);
@@ -366,6 +390,8 @@ export class ActionContextLoader {
             reviews: reviewsByApp.get(app.id) ?? [],
             audit: auditByApp.get(app.id) ?? null,
             versions: versionsByApp.get(app.id) ?? [],
+            competitors: competitorRows,
+            homeKeywordIds: homeIds.get(app.id) ?? new Set(),
           },
           serpByKeyword,
           volatility,
@@ -399,7 +425,11 @@ export class ActionContextLoader {
       store: Store;
       storeAppId: string;
       country: string;
-      competitors: Array<{ id: string; storeAppId: string }>;
+      competitors: Array<{
+        id: string;
+        storeAppId: string;
+        name: string | null;
+      }>;
     },
     trackedKeywords: TrackedKeywordItem[],
     metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] },
@@ -414,7 +444,13 @@ export class ActionContextLoader {
         totalWeight: number;
         factors: unknown;
       } | null;
-      versions: Array<{ version: string | null; capturedAt: Date }>;
+      versions: Array<{
+        version: string | null;
+        capturedAt: Date;
+        storeUpdatedAt: Date | null;
+      }>;
+      competitors: CompetitorRows;
+      homeKeywordIds: ReadonlySet<string>;
     },
     serpByKeyword: Map<
       string,
@@ -506,9 +542,17 @@ export class ActionContextLoader {
           competitor.id,
         ]),
       ),
+      ...competitorContext(
+        app.competitors,
+        rows.homeKeywordIds,
+        rows.competitors,
+      ),
       reviews: rows.reviews,
       latestVersion: distinctVersions[0] ?? null,
       previousVersion: distinctVersions[1] ?? null,
+      latestStoreUpdatedAt:
+        rows.versions.find((row) => row.storeUpdatedAt !== null)
+          ?.storeUpdatedAt ?? null,
     };
   }
 }

@@ -1,30 +1,14 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsIn,
-  IsISO8601,
-  IsOptional,
-  IsString,
-  MaxLength,
-  ValidateIf,
-} from 'class-validator';
-import {
-  ACTION_UPDATE_STATUSES,
-  ActionUpdateRequest,
-  ActionUpdateStatus,
-} from '@asobeast/shared';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, MaxLength, ValidateIf } from 'class-validator';
+import { ActionUpdateRequest } from '@asobeast/shared';
+import { ActionTransitionDto } from './action-transition.dto';
 
 export const ACTION_NOTE_MAX_LENGTH = 500;
 
-export class UpdateActionDto implements ActionUpdateRequest {
-  @ApiProperty({ enum: ACTION_UPDATE_STATUSES })
-  @IsIn(ACTION_UPDATE_STATUSES)
-  status!: ActionUpdateStatus;
-
-  @ApiPropertyOptional({ example: '2026-08-15T00:00:00.000Z' })
-  @IsOptional()
-  @IsISO8601({ strict: true })
-  snoozedUntil?: string;
-
+export class UpdateActionDto
+  extends ActionTransitionDto
+  implements ActionUpdateRequest
+{
   @ApiPropertyOptional({ maxLength: ACTION_NOTE_MAX_LENGTH })
   @ValidateIf((_, value) => value !== undefined)
   @IsString()

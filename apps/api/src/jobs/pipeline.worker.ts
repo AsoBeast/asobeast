@@ -204,6 +204,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
           notifications: result.notifications,
           actionsOpened: actions?.opened ?? null,
           actionsResolved: actions?.resolved ?? null,
+          actionsVerified: actions?.verified ?? null,
           actionsSuppressed: actions?.suppressedByCap ?? null,
         })}`,
       );

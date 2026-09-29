@@ -111,6 +111,7 @@ export * from './storefronts';
 export * from './url-parser';
 export * from './contracts';
 export * from './text';
+export * from './release-notes';
 export * from './aso';
 export * from './rank';
 export * from './auth';

@@ -22,6 +22,7 @@ const row = (
   relevance: null,
   keyword: {
     text: keywordId,
+    country: 'us',
     metrics: [{ traffic, difficulty: 10, date: captures[0].date }],
     rankings: [...captures].sort((a, b) => b.date.getTime() - a.date.getTime()),
   },

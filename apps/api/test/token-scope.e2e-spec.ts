@@ -27,6 +27,7 @@ const READ_TOKEN = `${API_TOKEN_PREFIX}${'r'.repeat(48)}`;
 const TOOL_INPUT = {
   appId: 'app_missing',
   keywordId: 'kw_missing',
+  actionId: 'act_missing',
   strategy: 'metadata',
 };
 
@@ -97,6 +98,14 @@ describe('Read-only token scope (e2e)', () => {
       expect(response.status).not.toBe(401);
     },
   );
+
+  it('refuses a bulk action update from a read-only token', async () => {
+    await request(app.getHttpServer())
+      .patch('/actions')
+      .set('Authorization', `Bearer ${READ_TOKEN}`)
+      .send({ ids: ['missing'], status: 'DONE' })
+      .expect(403);
+  });
 
   it('still refuses a write from a read-only token', async () => {
     const refused = await request(app.getHttpServer())

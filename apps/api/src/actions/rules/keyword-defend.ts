@@ -4,7 +4,7 @@ import {
   SERP_DEPTH,
   TrackedKeywordItem,
 } from '@asobeast/shared';
-import { detectEntrants, SerpSnapshotDay } from '../../rankings/serp-movers';
+import type { SerpSnapshotDay } from '../../rankings/serp-movers';
 import type {
   ActionContext,
   ActionContextApp,
@@ -61,20 +61,29 @@ function entrantsFor(
   ownStoreAppId: string,
   competitorAppIds: Map<string, string>,
 ): ActionSerpEntrant[] {
-  const latest = new Map<string, ActionSerpEntrant>();
-  for (const entrant of detectEntrants(snapshots)) {
-    if (entrant.storeAppId === ownStoreAppId) continue;
-    latest.set(entrant.storeAppId, {
-      storeAppId: entrant.storeAppId,
-      title: entrant.title,
-      position: entrant.position,
-      appId: competitorAppIds.get(entrant.storeAppId) ?? null,
-      isCompetitor: competitorAppIds.has(entrant.storeAppId),
-    });
-  }
-  return [...latest.values()].sort(
-    (left, right) => left.position - right.position,
+  const ordered = [...snapshots].sort((left, right) =>
+    left.date.localeCompare(right.date),
   );
+  const opening = ordered[0];
+  const latest = ordered.at(-1);
+  if (!opening || !latest || opening === latest) return [];
+  const heldAtOpening = new Set(
+    opening.entries.map((entry) => entry.storeAppId),
+  );
+  return latest.entries
+    .filter(
+      (entry) =>
+        entry.storeAppId !== ownStoreAppId &&
+        !heldAtOpening.has(entry.storeAppId),
+    )
+    .map((entry) => ({
+      storeAppId: entry.storeAppId,
+      title: entry.title,
+      position: entry.position,
+      appId: competitorAppIds.get(entry.storeAppId) ?? null,
+      isCompetitor: competitorAppIds.has(entry.storeAppId),
+    }))
+    .sort((left, right) => left.position - right.position);
 }
 
 function positionPressure(yourPosition: number | null): number {

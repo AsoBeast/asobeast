@@ -1,5 +1,6 @@
 import type {
   AppSummary,
+  PortfolioInsights,
   PortfolioSummary,
   RankDistributionHistory,
   VisibilityHistory,
@@ -13,6 +14,10 @@ export function getSummary(appId: string): Promise<AppSummary> {
 
 export function getPortfolio(): Promise<PortfolioSummary> {
   return apiFetch<PortfolioSummary>("/portfolio");
+}
+
+export function getPortfolioInsights(): Promise<PortfolioInsights> {
+  return apiFetch<PortfolioInsights>("/portfolio/insights");
 }
 
 export function getVisibilityHistory(

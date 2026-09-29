@@ -1,70 +1,37 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
 import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import {
   ACTION_CATEGORIES,
-  ActionCategory,
+  ACTION_PRIORITIES,
+  ACTION_STATUSES,
+  ActionBulkUpdateResult,
   ActionItem,
   ActionListResult,
-  ActionPriorityCounts,
   ActionRule,
   ActionSummary,
-  ActionUpdateStatus,
-  isActionCategory,
-  isActionPriority,
   isActionRule,
 } from '@asobeast/shared';
 import { ensureAppExists } from '../apps/ensure-app';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { Env } from '../config/env';
 import {
   actionsGeneratedKey,
   actionsSuppressedKey,
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { toActionItem } from './actions.mapper';
+import { ActionSummaryScope } from './action-summary-scope';
+import { CURRENT_SELECT, ActionTransitions } from './action-transitions';
+import { ActionRow, ROW_SELECT, toActionItem } from './actions.mapper';
 import {
   ACTIONS_DEFAULT_STATUSES,
   ListActionsQueryDto,
 } from './dto/list-actions-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
-const ROW_SELECT = {
-  id: true,
-  rule: true,
-  category: true,
-  status: true,
-  priority: true,
-  impact: true,
-  formulaVersion: true,
-  country: true,
-  store: true,
-  evidence: true,
-  firstSeenAt: true,
-  lastSeenAt: true,
-  resolvedAt: true,
-  snoozedUntil: true,
-  closedAt: true,
-  reopenCount: true,
-  note: true,
-  aiExplanation: true,
-  aiModel: true,
-  aiGeneratedAt: true,
-  app: { select: { id: true, name: true } },
-  keyword: { select: { id: true, text: true } },
-} satisfies Prisma.ActionItemSelect;
-
 const TOP_RULES_LIMIT = 5;
-const DAY_MS = 86_400_000;
 
 @Injectable()
 export class ActionsService {
@@ -72,9 +39,9 @@ export class ActionsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService<Env, true>,
     @InjectQueue(QUEUES.PIPELINE) private readonly pipeline: Queue,
     private readonly workspace: WorkspaceContext,
+    private readonly transitions: ActionTransitions,
   ) {}
 
   async list(
@@ -99,56 +66,38 @@ export class ActionsService {
     return { items: rows.map((row) => this.map(row)), total, generatedAt };
   }
 
-  async summary(): Promise<ActionSummary> {
-    const live = { status: { in: ['OPEN', 'SNOOZED'] } };
-    const [byStatus, byPriority, byCategoryRows, byRule, generatedAt] =
+  async summary(scope: ActionSummaryScope = {}): Promise<ActionSummary> {
+    const live = { ...scope, status: { in: ['OPEN', 'SNOOZED'] } };
+    const count = { _count: { _all: true } } as const;
+    const [byStatus, byPriority, byCategory, byRule, openByPriority] =
       await Promise.all([
         this.prisma.actionItem.groupBy({
           by: ['status'],
-          _count: { _all: true },
+          where: scope,
+          ...count,
         }),
         this.prisma.actionItem.groupBy({
           by: ['priority'],
           where: live,
-          _count: { _all: true },
+          ...count,
         }),
         this.prisma.actionItem.groupBy({
           by: ['category'],
           where: live,
-          _count: { _all: true },
+          ...count,
         }),
+        this.prisma.actionItem.groupBy({ by: ['rule'], where: live, ...count }),
         this.prisma.actionItem.groupBy({
-          by: ['rule'],
-          where: live,
-          _count: { _all: true },
+          by: ['priority'],
+          where: { ...scope, status: 'OPEN' },
+          ...count,
         }),
-        this.generatedAt(),
       ]);
-    const suppressedByCap = await this.suppressedByCap();
-
-    const statuses = new Map(
-      byStatus.map((row) => [row.status, row._count._all]),
-    );
-    const priorities: ActionPriorityCounts = {
-      critical: 0,
-      high: 0,
-      medium: 0,
-      low: 0,
-    };
-    for (const row of byPriority) {
-      if (isActionPriority(row.priority)) {
-        priorities[row.priority] = row._count._all;
-      }
-    }
-
-    const byCategory = Object.fromEntries(
-      ACTION_CATEGORIES.map((category) => [category, 0]),
-    ) as Record<ActionCategory, number>;
-    for (const row of byCategoryRows) {
-      if (isActionCategory(row.category)) {
-        byCategory[row.category] = row._count._all;
-      }
-    }
+    const [generatedAt, suppressedByCap] = await Promise.all([
+      this.generatedAt(),
+      this.suppressedByCap(),
+    ]);
+    const statuses = zeroFilled(ACTION_STATUSES, byStatus, (row) => row.status);
 
     const topRules = byRule
       .filter((row): row is typeof row & { rule: ActionRule } =>
@@ -159,13 +108,27 @@ export class ActionsService {
       .slice(0, TOP_RULES_LIMIT);
 
     return {
-      open: statuses.get('OPEN') ?? 0,
-      snoozed: statuses.get('SNOOZED') ?? 0,
-      byPriority: priorities,
-      byCategory,
+      open: statuses.OPEN,
+      snoozed: statuses.SNOOZED,
+      byPriority: zeroFilled(
+        ACTION_PRIORITIES,
+        byPriority,
+        (row) => row.priority,
+      ),
+      byCategory: zeroFilled(
+        ACTION_CATEGORIES,
+        byCategory,
+        (row) => row.category,
+      ),
       topRules,
       generatedAt,
       suppressedByCap,
+      openByPriority: zeroFilled(
+        ACTION_PRIORITIES,
+        openByPriority,
+        (row) => row.priority,
+      ),
+      byStatus: statuses,
     };
   }
 
@@ -188,86 +151,51 @@ export class ActionsService {
     }
   }
 
-  async update(id: string, body: UpdateActionDto): Promise<ActionItem> {
-    const current = await this.prisma.actionItem.findFirst({
-      where: { id },
-      select: { id: true, status: true, reopenCount: true },
-    });
-    if (!current) {
-      throw new NotFoundException('Action not found');
-    }
-
-    const snoozedUntil = this.validateSnooze(body);
-    if (current.status === 'RESOLVED' && body.status !== 'OPEN') {
-      throw new ConflictException(
-        'A resolved action is already closed; reopen it instead',
-      );
-    }
-
-    const row = await this.prisma.actionItem.update({
-      where: { id },
-      data: {
-        status: body.status,
-        ...(body.note === undefined ? {} : { note: body.note.trim() }),
-        ...this.sideEffects(body.status, current.status, snoozedUntil),
-      },
-      select: ROW_SELECT,
+  async update(
+    id: string,
+    body: UpdateActionDto,
+    userId: string,
+  ): Promise<ActionItem> {
+    const row = await this.prisma.withTransaction(async (tx) => {
+      const current = await tx.actionItem.findFirst({
+        where: { id },
+        select: CURRENT_SELECT,
+      });
+      if (!current) {
+        throw new NotFoundException('Action not found');
+      }
+      return this.transitions.apply(tx, current, body, userId);
     });
     return this.map(row);
   }
 
-  private validateSnooze(body: UpdateActionDto): Date | null {
-    if (body.status !== 'SNOOZED') {
-      if (body.snoozedUntil !== undefined) {
-        throw new BadRequestException(
-          'snoozedUntil is only valid when status is SNOOZED',
-        );
-      }
-      return null;
-    }
-    if (body.snoozedUntil === undefined) {
-      throw new BadRequestException('snoozedUntil is required to snooze');
-    }
-
-    const until = new Date(body.snoozedUntil);
-    const now = Date.now();
-    if (until.getTime() <= now) {
-      throw new BadRequestException('snoozedUntil must be in the future');
-    }
-    const maxDays = this.config.get('ACTIONS_SNOOZE_MAX_DAYS', {
-      infer: true,
-    });
-    if (until.getTime() > now + maxDays * DAY_MS) {
-      throw new BadRequestException(
-        `snoozedUntil must be within ${maxDays} days`,
+  async bulkUpdate(
+    body: BulkUpdateActionsDto,
+    userId: string,
+  ): Promise<ActionBulkUpdateResult> {
+    const result = await this.prisma.withTransaction(async (tx) => {
+      const found = await tx.actionItem.findMany({
+        where: { id: { in: body.ids } },
+        select: CURRENT_SELECT,
+      });
+      const { rows, conflicts } = await this.transitions.applyMany(
+        tx,
+        found,
+        body,
+        userId,
       );
-    }
-    return until;
-  }
-
-  private sideEffects(
-    target: ActionUpdateStatus,
-    previous: string,
-    snoozedUntil: Date | null,
-  ): Prisma.ActionItemUpdateInput {
-    const now = new Date();
-    switch (target) {
-      case 'DONE':
-        return { closedAt: now, resolvedAt: null, snoozedUntil: null };
-      case 'DISMISSED':
-        return { closedAt: now, snoozedUntil: null };
-      case 'SNOOZED':
-        return { snoozedUntil, closedAt: null, resolvedAt: null };
-      case 'OPEN':
-        return {
-          closedAt: null,
-          resolvedAt: null,
-          snoozedUntil: null,
-          ...(previous === 'OPEN' || previous === 'SNOOZED'
-            ? {}
-            : { reopenCount: { increment: 1 } }),
-        };
-    }
+      return { found, rows, conflicts };
+    });
+    const known = new Set(result.found.map((row) => row.id));
+    const updated = new Map(result.rows.map((row) => [row.id, row]));
+    return {
+      items: body.ids.flatMap((id) => {
+        const row = updated.get(id);
+        return row ? [this.map(row)] : [];
+      }),
+      missing: body.ids.filter((id) => !known.has(id)),
+      conflicts: result.conflicts,
+    };
   }
 
   private whereFor(
@@ -299,11 +227,27 @@ export class ActionsService {
     return latest._max.lastSeenAt?.toISOString() ?? null;
   }
 
-  private map(row: Prisma.ActionItemGetPayload<{ select: typeof ROW_SELECT }>) {
+  private map(row: ActionRow) {
     const item = toActionItem(row);
     if (item.degraded) {
       this.logger.warn(`action ${item.id} has unreadable ${row.rule} evidence`);
     }
     return item;
   }
+}
+
+function zeroFilled<K extends string, R extends { _count: { _all: number } }>(
+  keys: readonly K[],
+  rows: readonly R[],
+  keyOf: (row: R) => string,
+): Record<K, number> {
+  const counts = Object.fromEntries(keys.map((key) => [key, 0])) as Record<
+    K,
+    number
+  >;
+  for (const row of rows) {
+    const key = keys.find((candidate) => candidate === keyOf(row));
+    if (key !== undefined) counts[key] = row._count._all;
+  }
+  return counts;
 }

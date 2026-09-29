@@ -14,6 +14,7 @@ const SCOPED_TABLES = [
   'review',
   'auditScore',
   'actionItem',
+  'actionEvent',
   'webhook',
   'emailAlert',
   'user',

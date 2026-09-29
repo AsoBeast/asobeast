@@ -5,6 +5,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
   ACTION_FORMULA_VERSION,
+  ActionActivity,
+  ActionBulkUpdateResult,
   ActionItem,
   ApiErrorEnvelope,
   ActionListResult,
@@ -17,6 +19,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
@@ -263,6 +266,139 @@ describe('ActionsController (e2e)', () => {
       { rule: 'keyword.add_uncovered', count: 2 },
     ]);
     expect(summary.suppressedByCap).toBe(0);
+    expect(summary.openByPriority).toEqual({
+      critical: 1,
+      high: 0,
+      medium: 0,
+      low: 0,
+    });
+    expect(summary.byStatus).toEqual({
+      OPEN: 1,
+      SNOOZED: 1,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    });
+  });
+
+  it('scopes the summary to one app and still ignores unknown parameters', async () => {
+    await seedAction({ priority: 'critical' });
+    const other = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '999',
+        country: 'us',
+        name: 'Other',
+      },
+    });
+    await seedAction({ appId: other.id, priority: 'high' });
+
+    const scoped = await api
+      .get('/actions/summary')
+      .query({ appId, anything: '1' })
+      .expect(200);
+    const summary = scoped.body as ActionSummary;
+
+    expect(summary.open).toBe(1);
+    expect(summary.openByPriority).toMatchObject({ critical: 1, high: 0 });
+    await api.get('/actions/summary?anything=1').expect(200);
+    await api.get('/actions/summary?store=NOPE').expect(400);
+  });
+
+  it('keeps the literal routes ahead of the action id route', async () => {
+    const summary = await api.get('/actions/summary').expect(200);
+    const aiStatus = await api.get('/actions/ai-status').expect(200);
+
+    expect(summary.body).toHaveProperty('byStatus');
+    expect(aiStatus.body).toHaveProperty('configured');
+  });
+
+  it('reports today in the daily activity and scopes it to one app', async () => {
+    const opened = await seedAction();
+    const done = await seedAction();
+    const dismissed = await seedAction();
+    await prisma.actionEvent.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        actionId: opened,
+        appId,
+        type: 'opened',
+        actor: 'system',
+        status: 'OPEN',
+        priority: 'high',
+        impact: 71,
+      },
+    });
+    await api.patch(`/actions/${done}`).send({ status: 'DONE' }).expect(200);
+    await api
+      .patch(`/actions/${dismissed}`)
+      .send({ status: 'DISMISSED' })
+      .expect(200);
+
+    const activity = (await api.get('/actions/activity?days=7').expect(200))
+      .body as ActionActivity;
+    const other = (
+      await api
+        .get('/actions/activity')
+        .query({ appId: 'app_elsewhere' })
+        .expect(200)
+    ).body as ActionActivity;
+
+    expect(activity.days).toHaveLength(7);
+    expect(activity.days.at(-1)).toMatchObject({
+      opened: 1,
+      done: 1,
+      dismissed: 1,
+    });
+    expect(other.days).toHaveLength(30);
+    expect(Object.values(other.totals).every((count) => count === 0)).toBe(
+      true,
+    );
+    await api.get('/actions/activity?days=6').expect(400);
+    await api.get('/actions/activity?days=91').expect(400);
+  });
+
+  it('closes many actions in one request', async () => {
+    const ids = [await seedAction(), await seedAction(), await seedAction()];
+
+    const res = await api
+      .patch('/actions')
+      .send({ ids, status: 'DONE' })
+      .expect(200);
+    const body = res.body as ActionBulkUpdateResult;
+
+    expect(body.items.map((item) => item.id)).toEqual(ids);
+    expect(body.items.every((item) => item.status === 'DONE')).toBe(true);
+    expect(body.items.every((item) => item.closedAt !== null)).toBe(true);
+    expect(body).toMatchObject({ missing: [], conflicts: [] });
+  });
+
+  it('refuses an invalid bulk request as a whole', async () => {
+    const id = await seedAction();
+
+    await api
+      .patch('/actions')
+      .send({ ids: [id], status: 'SNOOZED' })
+      .expect(400);
+    await api
+      .patch('/actions')
+      .send({
+        ids: Array.from({ length: 101 }, (_, index) => `act_${index}`),
+        status: 'DONE',
+      })
+      .expect(400);
+    await api
+      .patch('/actions')
+      .send({ ids: [id, id], status: 'DONE' })
+      .expect(400);
+    await api.patch('/actions').send({ ids: [], status: 'DONE' }).expect(400);
+
+    const unchanged = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    expect(unchanged.status).toBe('OPEN');
   });
 
   it('marks an action done and clears its snooze', async () => {
@@ -355,6 +491,241 @@ describe('ActionsController (e2e)', () => {
         resolvedAt: null,
       });
     }
+  });
+
+  it('records why an action was dismissed', async () => {
+    const id = await seedAction();
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'not_relevant' })
+      .expect(200);
+
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      select: { type: true, reason: true },
+    });
+    expect(events).toEqual([{ type: 'dismissed', reason: 'not_relevant' }]);
+  });
+
+  it('records a reason given to an action that is already dismissed', async () => {
+    const id = await seedAction();
+    await api.patch(`/actions/${id}`).send({ status: 'DISMISSED' }).expect(200);
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'handled_elsewhere' })
+      .expect(200);
+
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+      select: { type: true, reason: true },
+    });
+    expect(events).toEqual([
+      { type: 'dismissed', reason: null },
+      { type: 'dismissed', reason: 'handled_elsewhere' },
+    ]);
+  });
+
+  it('rejects a reason on any status but dismissed, and an unknown reason', async () => {
+    const id = await seedAction();
+
+    const done = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE', reason: 'not_relevant' })
+      .expect(400);
+    expect((done.body as ApiErrorEnvelope).message).toBe(
+      'reason is only valid when status is DISMISSED',
+    );
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'bored' })
+      .expect(400);
+  });
+
+  it('undoes a done without counting a reopen or keeping its event', async () => {
+    const id = await seedAction();
+    await prisma.actionEvent.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        actionId: id,
+        appId,
+        type: 'opened',
+        actor: 'system',
+        status: 'OPEN',
+        priority: 'high',
+        impact: 71,
+      },
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'OPEN', revert: true })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'OPEN',
+      reopenCount: 0,
+      closedAt: null,
+    });
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      select: { type: true },
+    });
+    expect(events).toEqual([{ type: 'opened' }]);
+  });
+
+  it('refuses to undo a change a teammate made', async () => {
+    const id = await seedAction({ status: 'DONE', closedAt: new Date() });
+    const teammate = await prisma.user.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        email: `teammate-${id}@example.com`,
+        passwordHash: 'x',
+        role: 'member',
+      },
+    });
+    await prisma.actionEvent.createMany({
+      data: [
+        {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          actionId: id,
+          appId,
+          type: 'opened',
+          actor: 'system',
+          status: 'OPEN',
+          priority: 'high',
+          impact: 71,
+          occurredAt: new Date(Date.now() - 60_000),
+        },
+        {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          actionId: id,
+          appId,
+          userId: teammate.id,
+          type: 'done',
+          actor: 'user',
+          status: 'DONE',
+          priority: 'high',
+          impact: 71,
+        },
+      ],
+    });
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'OPEN', revert: true })
+      .expect(409);
+    const row = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+      select: { status: true },
+    });
+    expect(row.status).toBe('DONE');
+  });
+
+  const systemEvent = (
+    id: string,
+    type: string,
+    status: string,
+    occurredAt: Date,
+    snoozedUntil: Date | null = null,
+  ) => ({
+    workspaceId: DEFAULT_WORKSPACE_ID,
+    actionId: id,
+    appId,
+    type,
+    actor: 'system',
+    status,
+    priority: 'high',
+    impact: 71,
+    snoozedUntil,
+    occurredAt,
+  });
+
+  it('undoes a done on an action snoozed before its events were recorded', async () => {
+    const snoozedUntil = new Date(future(3));
+    const id = await seedAction({ status: 'SNOOZED', snoozedUntil });
+    await prisma.actionEvent.create({
+      data: systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - DAY_MS)),
+    });
+    await prisma.$executeRawUnsafe(
+      migrationSql('backfill_snoozed_action_events'),
+    );
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({
+        status: 'SNOOZED',
+        snoozedUntil: snoozedUntil.toISOString(),
+        revert: true,
+      })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: snoozedUntil.toISOString(),
+      closedAt: null,
+    });
+  });
+
+  it('undoes a done on a snooze whose wake date has passed', async () => {
+    const snoozedUntil = new Date(Date.now() - 60 * 60_000);
+    const id = await seedAction({ status: 'SNOOZED', snoozedUntil });
+    await prisma.actionEvent.createMany({
+      data: [
+        systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - 3 * DAY_MS)),
+        systemEvent(
+          id,
+          'snoozed',
+          'SNOOZED',
+          new Date(Date.now() - 2 * DAY_MS),
+          snoozedUntil,
+        ),
+      ],
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'DONE' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({
+        status: 'SNOOZED',
+        snoozedUntil: snoozedUntil.toISOString(),
+        revert: true,
+      })
+      .expect(200);
+
+    expect((res.body as ActionItem).snoozedUntil).toBe(
+      snoozedUntil.toISOString(),
+    );
+  });
+
+  it('undoing a reopen restores the original close and its verification', async () => {
+    const closedAt = new Date(Date.now() - 3 * DAY_MS);
+    const verifiedAt = new Date(Date.now() - DAY_MS);
+    const id = await seedAction({ status: 'DONE', closedAt, verifiedAt });
+    await prisma.actionEvent.createMany({
+      data: [
+        systemEvent(id, 'opened', 'OPEN', new Date(Date.now() - 4 * DAY_MS)),
+        systemEvent(id, 'done', 'DONE', closedAt),
+        systemEvent(id, 'verified', 'DONE', verifiedAt),
+      ],
+    });
+
+    await api.patch(`/actions/${id}`).send({ status: 'OPEN' }).expect(200);
+    const res = await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DONE', revert: true })
+      .expect(200);
+
+    expect(res.body as ActionItem).toMatchObject({
+      status: 'DONE',
+      reopenCount: 0,
+      closedAt: closedAt.toISOString(),
+      verifiedAt: verifiedAt.toISOString(),
+    });
   });
 
   it('rejects an unknown id and an invalid status', async () => {
