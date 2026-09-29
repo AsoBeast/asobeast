@@ -1,5 +1,6 @@
 const LINE_BREAK = /<br\s*\/?>|\r\n?/gi;
 const TAG = /<\/?[a-z][^>]*>/gi;
+const CUT_TAG = /<\/?[a-z][^<>]*?(…?)$/i;
 const ENTITY = /&(#x[\da-f]+|#\d+|[a-z]+);/gi;
 const MAX_CODE_POINT = 0x10ffff;
 const SURROGATE_START = 0xd800;
@@ -35,6 +36,7 @@ export function releaseNotesText(value: string): string {
   return value
     .replace(LINE_BREAK, '\n')
     .replace(TAG, '')
+    .replace(CUT_TAG, '$1')
     .replace(ENTITY, decodeEntity)
     .split('\n')
     .map((line) => line.trim())

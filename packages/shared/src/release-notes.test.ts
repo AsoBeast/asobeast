@@ -47,6 +47,16 @@ describe('releaseNotesText', () => {
     expect(releaseNotesText('  One <br><br>  <br>Two<br>')).toBe('One\nTwo');
   });
 
+  it('drops a tag cut off by truncation and keeps the ellipsis', () => {
+    expect(releaseNotesText('Fixes<br>- New stickers<b…')).toBe(
+      'Fixes\n- New stickers…',
+    );
+    expect(releaseNotesText('Fixes<br>- Faster sync</b')).toBe(
+      'Fixes\n- Faster sync',
+    );
+    expect(releaseNotesText('We <3 you…')).toBe('We <3 you…');
+  });
+
   it('returns an empty string for markup alone', () => {
     expect(releaseNotesText('<br> <br/>')).toBe('');
   });
