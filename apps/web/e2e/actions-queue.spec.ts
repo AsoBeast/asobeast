@@ -99,6 +99,7 @@ test("the queue sits under a queue heading with group headings below it", async 
   page,
 }) => {
   await page.goto("/actions");
+  await expect(page.locator("#queue h3").first()).toBeVisible();
 
   const levels = await page.evaluate(() =>
     Array.from(document.querySelectorAll("main h1, main h2, main h3")).map(

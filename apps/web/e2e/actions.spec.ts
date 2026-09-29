@@ -167,14 +167,16 @@ test("four tiles summarize the queue, two by two on a phone", async ({
 
   const tiles = page.locator('[data-slot="stat-tile"]');
   await expect(tiles).toHaveCount(4);
-  const tops = await Promise.all(
-    [0, 1, 2, 3].map(
-      async (index) => (await tiles.nth(index).boundingBox())?.y,
-    ),
-  );
-  expect(tops[0]).toBe(tops[1]);
-  expect(tops[2]).toBe(tops[3]);
-  expect(tops[2]).toBeGreaterThan(tops[0] ?? 0);
+  await expect
+    .poll(() =>
+      tiles.evaluateAll((nodes) => {
+        const [a, b, c, d] = nodes.map(
+          (node) => node.getBoundingClientRect().top,
+        );
+        return a === b && c === d && c > a;
+      }),
+    )
+    .toBe(true);
 });
 
 test("the tiles wait for the first generation", async ({ page }) => {

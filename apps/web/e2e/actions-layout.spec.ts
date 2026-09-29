@@ -103,14 +103,16 @@ test("the queue stays put when the tiles stream in", async ({ page }) => {
   const release = await holdActivity(page);
   await page.goto("/actions", { waitUntil: "commit" });
 
+  const queue = page.locator("#queue");
+  await expect(queue).toBeVisible();
   await expect(
     page.locator('[data-slot="stat-tile-skeleton"]').first(),
   ).toBeVisible();
-  const before = (await page.locator("#queue").boundingBox())!.y;
+  const before = (await queue.boundingBox())!.y;
 
   await release();
   await expect(page.locator('[data-slot="stat-tile"]').first()).toBeVisible();
-  const after = (await page.locator("#queue").boundingBox())!.y;
+  const after = (await queue.boundingBox())!.y;
 
   expect(Math.abs(after - before)).toBeLessThanOrEqual(8);
 });
@@ -125,6 +127,7 @@ for (const [width, rows] of [
     await page.setViewportSize({ width, height: 900 });
     await holdActivity(page);
     await page.goto("/actions", { waitUntil: "commit" });
+    await expect(page.locator("#queue")).toBeVisible();
 
     const tiles = page.locator('[data-slot="stat-tile-skeleton"]');
     await expect(tiles).toHaveCount(4);
@@ -216,6 +219,7 @@ for (const theme of THEMES) {
         await expect(
           page.locator('[data-slot="stat-tile"]').first(),
         ).toBeVisible();
+        await expect(page.locator("#queue h3").first()).toBeVisible();
         await expect(page.locator("html")).toHaveClass(new RegExp(theme));
         await expect(
           page.getByRole("heading", { level: 1 }).first(),
