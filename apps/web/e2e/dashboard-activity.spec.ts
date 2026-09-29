@@ -1,6 +1,7 @@
 import { expect, test } from "./session.mts";
 import type { Page } from "@playwright/test";
 import { ACTIONS, PORTFOLIO, RECENT_CHANGES } from "./fixtures.mts";
+import { hoverForTooltip } from "./hover.mts";
 import { PORTFOLIO_INSIGHTS } from "./portfolio-insights.mts";
 
 const DASHBOARD_ACTION_LIMIT = 5;
@@ -187,6 +188,28 @@ test("recent changes show eight events and reveal the rest", async ({
   await card.getByRole("button", { name: `Show ${hidden} more` }).click();
 
   await expect(rows).toHaveCount(RECENT_CHANGES.events.length);
+});
+
+test("recent changes read what's new notes as one line, not markup", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  const card = changesCard(page);
+  await card.getByRole("button", { name: /^Show \d+ more$/ }).click();
+
+  const notes = card.getByText("v2.8 · New stickers · Faster sync & backup", {
+    exact: true,
+  });
+  await expect(notes).toBeVisible();
+  await expect(card).not.toContainText("<br");
+  await hoverForTooltip(
+    page,
+    notes,
+    page.getByRole("tooltip").filter({
+      hasText: "Previous: v2.7 · Calmer sounds",
+    }),
+  );
 });
 
 test("recent changes group today's events under a day heading", async ({
