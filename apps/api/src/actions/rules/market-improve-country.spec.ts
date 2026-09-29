@@ -67,6 +67,12 @@ const series = (
     visibility: value,
   }));
 
+const throughToday = (value: number): ActionVisibilityPoint[] =>
+  Array.from({ length: MARKET_WINDOW_DAYS + 1 }, (_, index) => ({
+    date: day(MARKET_WINDOW_DAYS - index),
+    visibility: value,
+  }));
+
 const HOME = marketKeywords('us', 10);
 const MARKET = marketKeywords('de', MARKET_MIN_KEYWORDS);
 
@@ -241,6 +247,26 @@ describe('market.improve_country', () => {
         NOW,
       ),
     ).toEqual([]);
+  });
+
+  it('observes no more days than the window holds across daily visibility', () => {
+    const detections = detectMarketImproveCountry(
+      context([
+        app({
+          visibilityByCountry: new Map([
+            ['us', throughToday(44.7)],
+            ['de', throughToday(18.2)],
+          ]),
+        }),
+      ]),
+      NOW,
+    );
+
+    expect(detections[0].evidence).toMatchObject({
+      windowDays: MARKET_WINDOW_DAYS,
+      observedDays: MARKET_WINDOW_DAYS,
+    });
+    expect(detections[0].terms.confidence).toBe(1);
   });
 
   it('ignores visibility older than the window', () => {

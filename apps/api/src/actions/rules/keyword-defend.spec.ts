@@ -373,6 +373,62 @@ describe('keyword.defend', () => {
     ).toHaveLength(1);
   });
 
+  it('observes no more days than the window holds across a full week of daily captures', () => {
+    const week: SerpSnapshotDay[] = Array.from(
+      { length: DEFEND_WINDOW_DAYS + 1 },
+      (_, index) => {
+        const offset = DEFEND_WINDOW_DAYS - index;
+        return snapshot(offset, offset === 0 ? INVADED : BASELINE);
+      },
+    );
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', week]]) })]),
+      NOW,
+    );
+
+    expect(evidenceOf(detections)).toMatchObject({
+      windowDays: DEFEND_WINDOW_DAYS,
+      observedDays: DEFEND_WINDOW_DAYS,
+    });
+    expect(detections[0].terms.confidence).toBe(1);
+  });
+
+  it('opens the window on the day after the cutoff, not on the cutoff day', () => {
+    const openedOnCutoff: SerpSnapshotDay[] = [
+      snapshot(DEFEND_WINDOW_DAYS, INVADED),
+      snapshot(DEFEND_WINDOW_DAYS - 1, BASELINE),
+      snapshot(3, BASELINE),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([
+        app({
+          serpDaysByKeyword: new Map([['kw_1', openedOnCutoff]]),
+          rankingDaysByKeyword: new Map([
+            [
+              'kw_1',
+              [
+                { date: day(DEFEND_WINDOW_DAYS), position: 2 },
+                { date: day(DEFEND_WINDOW_DAYS - 1), position: 4 },
+                { date: day(1), position: 6 },
+              ],
+            ],
+          ]),
+        }),
+      ]),
+      NOW,
+    );
+
+    expect(evidenceOf(detections)).toMatchObject({
+      previousPosition: 4,
+      observedDays: 4,
+    });
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
+    ).toEqual(['new1', 'new2']);
+  });
+
   it('ignores snapshots older than the window', () => {
     const stale = DEFAULT_SNAPSHOTS.map((snap, index) => ({
       ...snap,

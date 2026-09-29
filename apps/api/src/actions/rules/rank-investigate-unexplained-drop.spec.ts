@@ -10,6 +10,7 @@ import { detectRankInvestigateDrop } from './rank-investigate-drop';
 import {
   detectRankInvestigateUnexplainedDrop,
   rankInvestigateUnexplainedDropDetector,
+  UNEXPLAINED_WINDOW_DAYS,
 } from './rank-investigate-unexplained-drop';
 import {
   actionContext,
@@ -201,6 +202,36 @@ describe('rank.investigate_unexplained_drop', () => {
 
     expect(detection.withheld).toBeUndefined();
     expect(detection.evidence).toMatchObject({ lastOwnChangeAt: day(20) });
+  });
+
+  it('treats a change on the cutoff day as outside the window', () => {
+    const [onCutoff] = detect([
+      app([{ country: 'us' }], {
+        changeEvents: [titleChange(UNEXPLAINED_WINDOW_DAYS)],
+      }),
+    ]);
+    const [inside] = detect([
+      app([{ country: 'us' }], {
+        changeEvents: [titleChange(UNEXPLAINED_WINDOW_DAYS - 1)],
+      }),
+    ]);
+
+    expect(onCutoff.withheld).toBeUndefined();
+    expect(inside.withheld).toBe(true);
+  });
+
+  it('scores confidence against the days the window holds', () => {
+    const base = app([{ country: 'us' }]);
+    base.visibilityByCountry.set(
+      'us',
+      series(32.5).filter((point) => point.date !== day(5)),
+    );
+    const [detection] = detect([base]);
+
+    expect(detection.terms.confidence).toBeCloseTo(
+      ((UNEXPLAINED_WINDOW_DAYS - 1) / UNEXPLAINED_WINDOW_DAYS) * 0.9,
+      10,
+    );
   });
 
   it('stays silent once visibility recovered within the tolerance', () => {

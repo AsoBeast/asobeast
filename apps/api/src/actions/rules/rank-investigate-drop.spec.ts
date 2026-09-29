@@ -219,6 +219,24 @@ describe('rank.investigate_drop', () => {
     ).toEqual([]);
   });
 
+  it('treats the cutoff day as outside the window', () => {
+    const shifted = (days: number): Date =>
+      new Date(NOW.getTime() + days * 86_400_000);
+
+    expect(
+      detectRankInvestigateDrop(
+        context([app()]),
+        shifted(REGRESSION_WINDOW_DAYS - CHANGE_OFFSET),
+      ),
+    ).toEqual([]);
+    expect(
+      detectRankInvestigateDrop(
+        context([app()]),
+        shifted(REGRESSION_WINDOW_DAYS - CHANGE_OFFSET - 1),
+      ),
+    ).toHaveLength(1);
+  });
+
   it('groups several changes on one day into a single action', () => {
     const detections = detectRankInvestigateDrop(
       context([

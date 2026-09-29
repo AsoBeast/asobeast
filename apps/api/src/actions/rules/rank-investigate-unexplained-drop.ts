@@ -20,7 +20,7 @@ import {
   REGRESSION_TOTAL_SEVERITY_DROP,
 } from './rank-investigate-drop';
 import { isVolatile, VOLATILITY_DAMPED_CONFIDENCE } from './serp-volatility';
-import { windowCutoff } from './window';
+import { dateDaysAgo, windowStart, withinWindow } from './window';
 
 export const UNEXPLAINED_WINDOW_DAYS = 14;
 export const UNEXPLAINED_RECENT_DAYS = 3;
@@ -82,11 +82,10 @@ function visibilityShift(
   series: ActionVisibilityPoint[],
   now: Date,
 ): VisibilityShift | null {
-  const from = windowCutoff(now, UNEXPLAINED_WINDOW_DAYS);
-  const baselineTo = windowCutoff(now, UNEXPLAINED_BASELINE_FROM_DAYS);
-  const points = series
-    .filter((point) => point.date >= from)
-    .sort((left, right) => left.date.localeCompare(right.date));
+  const baselineTo = dateDaysAgo(now, UNEXPLAINED_BASELINE_FROM_DAYS);
+  const points = withinWindow(series, now, UNEXPLAINED_WINDOW_DAYS).sort(
+    (left, right) => left.date.localeCompare(right.date),
+  );
   const baseline = points.filter((point) => point.date <= baselineTo);
   if (baseline.length < UNEXPLAINED_MIN_BASELINE_POINTS) return null;
   const before = mean(baseline.map((point) => point.visibility));
@@ -117,7 +116,7 @@ function detectInCountry(
   const dropped = droppedSince(
     app,
     active,
-    windowCutoff(now, UNEXPLAINED_KEYWORD_LOOKBACK_DAYS),
+    dateDaysAgo(now, UNEXPLAINED_KEYWORD_LOOKBACK_DAYS),
     rankDropThreshold,
   );
   if (delta <= 0) return null;
@@ -135,7 +134,7 @@ function detectInCountry(
   const lastOwnChangeAt = home ? lastOwnChange(app) : null;
   const explained =
     lastOwnChangeAt !== null &&
-    lastOwnChangeAt >= windowCutoff(now, UNEXPLAINED_WINDOW_DAYS);
+    lastOwnChangeAt >= windowStart(now, UNEXPLAINED_WINDOW_DAYS);
   const volatility = meanVolatility(app, country);
   const baseConfidence =
     clampUnit(shift.points / UNEXPLAINED_WINDOW_DAYS) *

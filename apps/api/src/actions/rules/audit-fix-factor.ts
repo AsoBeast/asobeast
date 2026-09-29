@@ -6,7 +6,7 @@ import type {
   ActionContextApp,
 } from '../action-context';
 import type { ActionDetector, DetectedAction } from '../action-rule';
-import { windowCutoff } from './window';
+import { dateDaysAgo } from './window';
 
 export const AUDIT_WEAK_SCORE = 5;
 export const AUDIT_MIN_WEIGHT = 10;
@@ -15,7 +15,7 @@ export const AUDIT_MAX_FACTOR_SCORE = 10;
 export const AUDIT_MIN_FACTOR_CONFIDENCE = 0.5;
 
 function isFresh(snapshot: ActionAuditSnapshot, now: Date): boolean {
-  return snapshot.date >= windowCutoff(now, AUDIT_MAX_SNAPSHOT_AGE_DAYS);
+  return snapshot.date >= dateDaysAgo(now, AUDIT_MAX_SNAPSHOT_AGE_DAYS);
 }
 
 function isWeak(factor: ActionAuditFactor): factor is ActionAuditFactor & {
