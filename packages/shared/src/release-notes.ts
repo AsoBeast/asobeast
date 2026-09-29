@@ -32,10 +32,18 @@ function decodeEntity(match: string, body: string): string {
   return isCharacter(codePoint) ? String.fromCodePoint(codePoint) : match;
 }
 
+function stripTags(value: string): string {
+  let previous: string;
+  let stripped = value;
+  do {
+    previous = stripped;
+    stripped = previous.replace(TAG, '');
+  } while (stripped !== previous);
+  return stripped;
+}
+
 export function releaseNotesText(value: string): string {
-  return value
-    .replace(LINE_BREAK, '\n')
-    .replace(TAG, '')
+  return stripTags(value.replace(LINE_BREAK, '\n'))
     .replace(CUT_TAG, '$1')
     .replace(ENTITY, decodeEntity)
     .split('\n')

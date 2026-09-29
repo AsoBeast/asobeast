@@ -19,6 +19,13 @@ describe('releaseNotesText', () => {
     );
   });
 
+  it('strips markup that a single pass would reassemble', () => {
+    expect(releaseNotesText('<<b>b>Bold</b>')).toBe('Bold');
+    expect(releaseNotesText('<<script>script>alert(1)<</script>/script>')).toBe(
+      'alert(1)',
+    );
+  });
+
   it('keeps angle brackets that are not markup', () => {
     expect(releaseNotesText('We <3 you, 2 < 3 > 1')).toBe(
       'We <3 you, 2 < 3 > 1',
