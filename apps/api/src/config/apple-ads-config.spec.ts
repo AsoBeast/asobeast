@@ -1,6 +1,6 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import {
   APPLE_ADS_CREDENTIALS,
   appleAdsEnabled,
@@ -50,9 +50,10 @@ describe('apple ads configuration', () => {
   });
 
   it('refuses to boot when the key file cannot be read', () => {
-    const env = { ...complete, APPLE_ADS_PRIVATE_KEY_PATH: 'keys/missing.pem' };
+    const missingKey = join(keyDirectory, 'missing.pem');
+    const env = { ...complete, APPLE_ADS_PRIVATE_KEY_PATH: missingKey };
     expect(() => assertAppleAdsConfiguration(env)).toThrow(
-      `Apple Ads is configured but APPLE_ADS_PRIVATE_KEY_PATH cannot be read at ${resolve('keys/missing.pem')}. Put the key in apps/api/keys, where the Compose stacks mount it, or remove every APPLE_ADS_ variable.`,
+      `Apple Ads is configured but APPLE_ADS_PRIVATE_KEY_PATH cannot be read at ${missingKey}. Put the key in apps/api/keys, where the Compose stacks mount it, or remove every APPLE_ADS_ variable.`,
     );
   });
 
