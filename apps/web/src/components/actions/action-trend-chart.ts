@@ -1,6 +1,7 @@
 import {
   formatRankPosition,
   RANK_DEPTH,
+  SERP_DEPTH,
   type ActionItem,
   type ActionTrend,
   type ActionTrendMetric,
@@ -12,8 +13,14 @@ export interface TrendMarker {
   label: "Opened" | "Done";
 }
 
+export interface TrendChartRow {
+  date: string;
+  value: number | null;
+  notFound: number | null;
+}
+
 export interface TrendChartData {
-  rows: Array<{ date: string; value: number | null }>;
+  rows: TrendChartRow[];
   metricLabel: string;
   reversed: boolean;
   domain: [number, number] | ["auto", "auto"];
@@ -30,10 +37,19 @@ export const TREND_METRIC_LABEL: Record<ActionTrendMetric, string> = {
   updateAge: "Days since update",
 };
 
-function domainFor(trend: ActionTrend): TrendChartData["domain"] {
+function domainFor(
+  trend: ActionTrend,
+  rows: readonly TrendChartRow[],
+): TrendChartData["domain"] {
   switch (trend.metric) {
     case "position":
-      return [1, trend.depth ?? RANK_DEPTH];
+      return [
+        1,
+        Math.max(
+          SERP_DEPTH,
+          ...rows.map((row) => row.notFound ?? row.value ?? 0),
+        ),
+      ];
     case "visibility":
     case "audit":
       return [0, 100];
@@ -72,7 +88,8 @@ function summaryOf(trend: ActionTrend, days: number): string {
 
 function markersFor(
   item: ActionItem,
-  dates: ReadonlySet<string>,
+  dates: readonly string[],
+  firstDay: string | undefined,
 ): TrendMarker[] {
   const candidates: TrendMarker[] = [
     { date: item.firstSeenAt.slice(0, 10), label: "Opened" },
@@ -80,24 +97,39 @@ function markersFor(
       ? [{ date: item.closedAt.slice(0, 10), label: "Done" as const }]
       : []),
   ];
-  return candidates.filter((marker) => dates.has(marker.date));
+  return candidates.flatMap((marker) => {
+    if (firstDay === undefined || marker.date < firstDay) return [];
+    const next = dates.find((date) => date >= marker.date);
+    return next === undefined ? [] : [{ ...marker, date: next }];
+  });
 }
 
 export function trendChartData(
   trend: ActionTrend,
   item: ActionItem,
 ): TrendChartData {
-  const rows = trend.points.map((point) => ({
-    date: point.date,
-    value: point.value,
-  }));
+  const rows = trend.points
+    .filter((point) => point.checked)
+    .map((point) => ({
+      date: point.date,
+      value: point.value,
+      notFound:
+        trend.metric === "position" && point.value === null
+          ? (trend.depth ?? RANK_DEPTH)
+          : null,
+    }));
   return {
     rows,
     metricLabel: TREND_METRIC_LABEL[trend.metric],
     reversed: trend.metric === "position",
-    domain: domainFor(trend),
-    markers: markersFor(item, new Set(rows.map((row) => row.date))),
-    summary: summaryOf(trend, rows.length),
-    plotted: rows.filter((row) => row.value !== null).length,
+    domain: domainFor(trend, rows),
+    markers: markersFor(
+      item,
+      rows.map((row) => row.date),
+      trend.points[0]?.date,
+    ),
+    summary: summaryOf(trend, trend.points.length),
+    plotted: rows.filter((row) => row.value !== null || row.notFound !== null)
+      .length,
   };
 }

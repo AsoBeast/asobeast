@@ -54,7 +54,9 @@ export function ActionTrendChart({
 
   const config = {
     value: { label: data.metricLabel, color: seriesColor(0) },
+    notFound: { label: "Not found within", color: seriesColor(0) },
   } satisfies ChartConfig;
+  const lastDate = data.rows.at(-1)?.date;
 
   return (
     <div>
@@ -81,7 +83,8 @@ export function ActionTrendChart({
               strokeDasharray={seriesDash(1)}
               label={{
                 value: marker.label,
-                position: "insideTopLeft",
+                position:
+                  marker.date === lastDate ? "insideTopRight" : "insideTopLeft",
                 fill: "var(--muted-foreground)",
                 fontSize: 10,
               }}
@@ -95,6 +98,20 @@ export function ActionTrendChart({
             dataKey="value"
             stroke="var(--color-value)"
             connectNulls={false}
+          />
+          <Line
+            dataKey="notFound"
+            stroke="transparent"
+            legendType="none"
+            connectNulls={false}
+            isAnimationActive={false}
+            activeDot={false}
+            dot={{
+              r: 3,
+              fill: "var(--background)",
+              stroke: "var(--color-notFound)",
+              strokeWidth: 1.5,
+            }}
           />
         </LineChart>
       </ChartContainer>

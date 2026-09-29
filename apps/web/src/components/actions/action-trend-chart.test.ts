@@ -72,7 +72,44 @@ describe("trendChartData", () => {
     );
   });
 
-  it("counts only the days with a value", () => {
-    expect(trendChartData(trend(), done).plotted).toBe(3);
+  it("counts every checked day, a not found day included", () => {
+    expect(trendChartData(trend(), done).plotted).toBe(4);
+  });
+
+  it("plots only checked days so a missed check does not break the line", () => {
+    expect(trendChartData(trend(), done).rows).toEqual([
+      { date: "2026-07-19", value: null, notFound: 200 },
+      { date: "2026-07-20", value: 18, notFound: null },
+      { date: "2026-07-22", value: 11, notFound: null },
+      { date: "2026-07-23", value: 12, notFound: null },
+    ]);
+  });
+
+  it("fits the position scale to the ranks when every check found the app", () => {
+    const ranked = trend({
+      points: [
+        { date: "2026-07-20", checked: true, value: 20 },
+        { date: "2026-07-22", checked: true, value: 18 },
+      ],
+    });
+    const top = trend({
+      points: [{ date: "2026-07-20", checked: true, value: 2 }],
+    });
+
+    expect(trendChartData(ranked, done).domain).toEqual([1, 20]);
+    expect(trendChartData(top, done).domain).toEqual([1, 10]);
+  });
+
+  it("moves a marker on an unchecked day to the next check", () => {
+    const closedOnGap = actionItem({
+      status: "DONE",
+      firstSeenAt: "2026-07-20T03:00:00.000Z",
+      closedAt: "2026-07-21T09:00:00.000Z",
+    });
+
+    expect(trendChartData(trend(), closedOnGap).markers).toEqual([
+      { date: "2026-07-20", label: "Opened" },
+      { date: "2026-07-22", label: "Done" },
+    ]);
   });
 });
