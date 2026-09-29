@@ -14,20 +14,20 @@ const serialize = createSerializer({
 export function useActionSheet(view: QueueViewState) {
   const pathname = usePathname();
   const [id, setId] = useQueryState("action", actionFocusParser);
-  const pushed = useRef(false);
+  const pushed = useRef<Promise<URLSearchParams> | null>(null);
 
   return {
     id,
     hrefFor: (actionId: string) =>
       `${pathname}${serialize({ ...view, action: actionId })}`,
     open: (actionId: string) => {
-      pushed.current = true;
-      void setId(actionId, { history: "push" });
+      pushed.current = setId(actionId, { history: "push" });
     },
     close: () => {
-      if (pushed.current) {
-        pushed.current = false;
-        window.history.back();
+      const push = pushed.current;
+      if (push) {
+        pushed.current = null;
+        void push.then(() => window.history.back());
         return;
       }
       void setId(null, { history: "replace" });

@@ -225,6 +225,26 @@ test.describe("working the queue from the keyboard", () => {
     await expect(first).toBeFocused();
   });
 
+  test("Escape before the url catches up stays on the action center", async ({
+    page,
+  }) => {
+    await page.clock.install();
+    await page.goto("/settings");
+    await page.goto("/actions");
+    const first = page.locator(ROWS).first();
+    await first.focus();
+    await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1_000);
+
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.clock.resume();
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(page).toHaveURL(/\/actions$/);
+    await expect(first).toBeFocused();
+  });
+
   test("d marks the focused row done and focuses the next one", async ({
     page,
   }) => {
