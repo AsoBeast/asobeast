@@ -11,6 +11,7 @@ import {
   formatPrice,
   formatRating,
   formatRelativeTime,
+  formatList,
   pluralize,
   storeLabel,
 } from "./format";
@@ -160,6 +161,14 @@ describe("formatCountry", () => {
 
   it("falls back to the uppercased code when the region lookup throws", () => {
     expect(formatCountry("u")).toBe("U");
+  });
+});
+
+describe("formatList", () => {
+  it("joins words the way a sentence does", () => {
+    expect(formatList(["title"])).toBe("title");
+    expect(formatList(["title", "subtitle"])).toBe("title and subtitle");
+    expect(formatList(["a", "b", "c"])).toBe("a, b, and c");
   });
 });
 

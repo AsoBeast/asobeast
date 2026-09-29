@@ -34,7 +34,9 @@ import {
   combinationWordsParser,
   keywordFilterParsers,
   draftLocaleParser,
-  actionCategoryParser,
+  ACTION_GROUPS,
+  ACTION_SORTS,
+  actionQueueParsers,
   actionPriorityParser,
   actionRuleParser,
   actionStatusParser,
@@ -267,13 +269,53 @@ describe("reviewScore parser", () => {
   );
 });
 
-describe("actionCategory parser", () => {
-  it.each(ACTION_CATEGORIES)("accepts the category %s", (category) => {
-    expect(actionCategoryParser.parseServerSide(category)).toBe(category);
+describe("action queue parsers", () => {
+  const serialize = createSerializer(actionQueueParsers);
+
+  it("leaves the default view out of the url", () => {
+    expect(
+      serialize({
+        status: ["OPEN", "SNOOZED"],
+        priority: [],
+        rule: [],
+        category: [],
+        app: [],
+        market: [],
+        store: null,
+        q: "",
+        group: "priority",
+        sort: "impact",
+      }),
+    ).toBe("");
   });
 
-  it("rejects an unknown category rather than defaulting to one", () => {
-    expect(actionCategoryParser.parseServerSide("not-a-category")).toBeNull();
+  it("falls back to the default group and sort for an unknown value", () => {
+    expect(actionQueueParsers.group.parseServerSide("owner")).toBe("priority");
+    expect(actionQueueParsers.sort.parseServerSide("random")).toBe("impact");
+    expect(ACTION_GROUPS).toContain(
+      actionQueueParsers.group.parseServerSide("app"),
+    );
+    expect(ACTION_SORTS).toContain(
+      actionQueueParsers.sort.parseServerSide("newest"),
+    );
+  });
+
+  it("reads several categories and drops unknown ones", () => {
+    expect(
+      actionQueueParsers.category.parseServerSide("metadata,markets"),
+    ).toEqual(["metadata", "markets"]);
+    expect(
+      actionQueueParsers.category.parseServerSide("metadata,not-a-category"),
+    ).toEqual(["metadata"]);
+    expect(ACTION_CATEGORIES.length).toBeGreaterThan(0);
+  });
+
+  it("keeps market codes and app ids as given", () => {
+    expect(actionQueueParsers.market.parseServerSide("us,de")).toEqual([
+      "us",
+      "de",
+    ]);
+    expect(actionQueueParsers.app.parseServerSide("app-1")).toEqual(["app-1"]);
   });
 });
 

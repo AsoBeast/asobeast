@@ -1,15 +1,52 @@
 ---
 title: Work the Action Center
 sidebarTitle: Action Center
-description: "Eight deterministic rules run over your stored history and return a prioritized queue, each recommendation carrying the exact numbers behind it."
+description: "Fifteen deterministic rules run over your stored history and return a prioritized queue, each recommendation carrying the exact numbers behind it, its history and, once done, its measured outcome."
 icon: list-checks
 keywords: ["action center","recommendations","priority","impact","snooze","fingerprint","ASO tasks"]
 boost: 2
 ---
 
-The Action Center answers one question from data asobeast already collected: what should you do this week, and why. Every recommendation is a pure function of stored data with named constants, so any of them can be reproduced by hand from the evidence panel.
+The Action Center answers one question from data asobeast already collected: what should you do this week, and why. Every recommendation is a pure function of stored data with named constants, so any of them can be reproduced by hand from the evidence it carries.
 
 It reads only the database. Generation makes zero store requests and consumes none of your request budget.
+
+## Reading the queue
+
+<Frame>
+  ![The Action Center at desktop width: the header with its status line, four summary tiles, the toolbar, the queue grouped by priority and the progress rail beside it](/images/action-center/queue-light.png)
+</Frame>
+
+The header states how many actions are open, how many of them are critical or high, when the queue was last generated and how many new actions the per app cap withheld. **Generate now** queues an extra run.
+
+Four tiles sit under it:
+
+| Tile | What it counts |
+| --- | --- |
+| Open | Open actions, with the critical and high share |
+| New this week | Actions opened in the last seven days, and how many resolved on their own |
+| Confirmed fixed | Done actions whose rule stopped firing in the last 30 days, against how many you marked done |
+| Snoozed | Snoozed actions, and when the next one wakes |
+
+The toolbar filters the queue without a round trip. Status tabs switch between to do (open and snoozed), done, dismissed and resolved. Search matches the headline, the keyword, the app and the market. Priority toggles, the rule, category, app, market and store facets, the grouping (priority, app or category) and the sort all live in the URL, so a filtered view can be bookmarked and shared.
+
+Each row leads with its subject: the keyword, market, competitor or listing field the finding is about, and the numbers that made it fire. Below the headline sit the category, app, store, market and first seen date. A tag marks a snoozed action with its wake date, a done action that is still being verified or was confirmed fixed, a reopened action and a stored action whose evidence could not be read.
+
+On the right, **Progress** charts 30 days of activity: actions opened, closed by you and resolved on their own. **Where the work is** splits the open work by app, or by market on an app's own page, and each bar filters the queue to it.
+
+## Opening an action
+
+Selecting a row opens the action in a sheet without leaving the queue. The sheet has these sections:
+
+- **Why this** lists the evidence as graded facts and lists, with one sentence summarizing it.
+- **How to fix** gives the steps for this rule and store, ending with how asobeast confirms the fix.
+- **Trend** charts the rule's metric from at least 14 days before the action first appeared, with markers where it opened and where you marked it done.
+- **Outcome** appears once you marked the action done. See [Outcomes](#outcomes).
+- **History** lists every recorded transition. See [History](#history).
+- **Note** keeps a note on the action that everyone in the workspace sees.
+- **AI summary** appears only when AI is configured. See [AI explanations are optional](#ai-explanations-are-optional).
+
+The open action lives in the URL as `?action=<id>`, so a link to one opens the sheet directly, and closing it returns focus to its row.
 
 ## The lifecycle
 
@@ -19,11 +56,17 @@ An action is a finding with a life, not a row in a report. A stable fingerprint 
 | --- | --- | --- |
 | `OPEN` | Needs attention | The rule fired, or a snooze expired |
 | `SNOOZED` | Deferred until a date | You set a date, capped by `ACTIONS_SNOOZE_MAX_DAYS` |
-| `DONE` | You acted | You closed it. It reopens only if the rule keeps firing for 14 more days |
+| `DONE` | You acted | You closed it |
 | `DISMISSED` | You rejected it | You closed it. It never reopens on its own, however long it stays true |
 | `RESOLVED` | The condition went away | The system closed it, because the rule stopped firing |
 
 The difference between `RESOLVED` and `DONE` is the point. Only that distinction tells you whether your fix is what removed the problem.
+
+### Confirmed fixed
+
+A `DONE` action is confirmed fixed the first run its rule stops firing, and the page shows **Confirmed fixed** from then on. If a confirmed action's rule fires again, the action reopens at once, because the problem came back after it was gone.
+
+While the rule keeps firing after you marked it done, the action shows **Still detected**. It reopens once the rule has kept firing for 14 more days, counted from when you closed it, which leaves room for a listing change to reach the store and move the numbers.
 
 ## How are duplicate actions prevented?
 
@@ -33,22 +76,73 @@ That exclusion is the whole design. If a position were part of the fingerprint, 
 
 The fingerprint is unique per workspace, so the same finding cannot open twice.
 
+## Outcomes
+
+Once you mark an action done, asobeast measures what happened to the rule's metric. The measurement compares the last checked value on or before the day you closed it with the latest checked value.
+
+| Metric | Rules | Better when |
+| --- | --- | --- |
+| Position | `keyword.add_uncovered`, `keyword.defend`, `keyword.prune`, `serp.hold_volatile`, `keyword.push_to_top10`, and `competitor.investigate_overtake` for its first keyword | Lower |
+| Visibility in the action's market | `rank.investigate_drop`, `rank.investigate_unexplained_drop`, `market.improve_country` | Higher |
+| Overall audit score | `audit.fix_factor`, `metadata.fix_lint` | Higher |
+| Review score, a trailing 14 day mean | `reviews.investigate_theme`, `reviews.investigate_rating_decline`, `reviews.reply_negative` | Higher |
+| Days since the last store update | `listing.ship_update` | Lower |
+
+The verdict is **Improved**, **Worsened** or **No change**, with a small tolerance per metric so noise does not count as movement. It stays **Measuring** until there are three days of data after you marked the action done. A keyword that was not ranked before counts as one position below the checked depth, so moving from unranked into the results reads as an improvement.
+
+An outcome is a measured value, not proof that your change caused it: a store algorithm update, a competitor's release or seasonality move the same numbers. asobeast has no download or revenue data, so an outcome never claims either.
+
+## History
+
+Every transition is recorded as an event on the action: opened, reopened, snoozed, woke, done, dismissed, resolved and verified. Each event records whether the system or a person caused it, the name of the person, the status, priority and impact at that moment, the snooze date and, for a dismissal, the reason.
+
+History is kept with its action and pruned with it after `RETENTION_ACTIONS_DAYS`. Actions that existed before this history was recorded carry a minimal backfilled history: when they opened and, if they are closed, when and how.
+
+## Working faster
+
+Select several rows with their checkboxes, or a whole group with its heading checkbox, and a bar offers **Done**, **Snooze** and **Dismiss** for all of them at once. Every change, one action or many, offers **Undo** in its confirmation, and asobeast accepts the undo for ten minutes.
+
+Dismissing asks for a reason: not relevant to this app, already handled elsewhere, or the data looks wrong. The reason is kept in the history.
+
+The queue works from the keyboard. Press `?` on the page to see this table.
+
+| Key | Action |
+| --- | --- |
+| `j` or `↓` | Focus the next action |
+| `k` or `↑` | Focus the previous action |
+| `Enter` or `o` | Open the focused action |
+| `d` | Mark the focused action done |
+| `s` | Snooze the focused action |
+| `Shift` `D` | Dismiss the focused action |
+| `x` | Select the focused action |
+| `/` | Search actions |
+| `Esc` | Clear the selection |
+
 ## The rules
 
-Eight rules, with fixed constants.
+Fifteen rules, with fixed constants.
 
 | Rule | Fires when | Resolves when |
 | --- | --- | --- |
 | `keyword.add_uncovered` | A tracked home market keyword scores opportunity at or above 35, relevance at or above 60 and volume at or above 20, and no indexed field contains it | Metadata covers it, it drops below threshold, or it is deactivated or untracked |
-| `keyword.defend` | At least 2 new apps entered the top 10 over 7 days with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you |
+| `keyword.defend` | At least 2 apps sit in the top 10 today that were not in it when the 7 day window opened, with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you or leaves the top 10 |
 | `keyword.prune` | A keyword ranked on at most 5 percent of at least 30 checks, carries volume below 20 and relevance at most 50, and pruning would help | It ranks, gains volume, is deactivated, or the budget pressure disappears |
+| `keyword.push_to_top10` | A relevant home market keyword with volume at or above 20 sits at 11 to 20, spent at least 5 of the last 7 days there without worsening, and appears only in a weaker field than the title and subtitle, or the title and short description on Google Play | It reaches the top 10, leaves the band, or a strong field covers it |
+| `metadata.fix_lint` | A home market listing field has at least one error level lint issue, such as exceeding its limit, a policy term or an emoji | The field has no error level issue left |
 | `rank.investigate_drop` | An indexed field changed within 14 days and visibility fell by at least 5 points, or at least 3 tracked keywords fell by the rank alert threshold | Visibility recovers to within 2 points of its pre change value |
+| `rank.investigate_unexplained_drop` | In a market with at least 5 keywords, the last three days average at least 5 visibility points below the days 8 to 14 days ago, or at least 3 of its keywords fell by the rank alert threshold over 7 days, with no indexed change of yours in 14 days | Visibility recovers to within 2 points, or the fall no longer qualifies |
+| `competitor.investigate_overtake` | A tracked competitor changed its title, subtitle or description within 14 days and has stayed ahead of you on at least 2 checks since, on a relevant keyword with volume at or above 20 where you ranked in the top 20 before | You are back ahead, or the change leaves the window |
 | `serp.hold_volatile` | A keyword's 7 day SERP volatility is at least 45 over at least 5 observed days, and it actually damped another rule this run | Volatility falls below threshold, or it damped nothing |
 | `audit.fix_factor` | A factor weighing at least 10 scores below 5 of 10 in an audit snapshot no older than 7 days | The factor scores 5 or above in a newer snapshot, or leaves the rubric |
+| `listing.ship_update` | The store has shown no new update for at least 90 days | The store shows a newer update |
 | `reviews.investigate_theme` | A phrase appears in at least 3 negative reviews of the latest version and at least twice as often as in the previous version's | The version is superseded without recurrence, or mentions fall below the minimum |
+| `reviews.investigate_rating_decline` | At least 5 reviews in each window, and the last 14 days average at least 0.5 below the 21 days before them | The gap closes below 0.5, or either window has too few reviews |
+| `reviews.reply_negative` | At least 3 reviews of 3 stars or fewer from the last 14 days were checked for a reply and have none | Fewer than 3 remain unanswered |
 | `market.improve_country` | A non home market with at least 5 keywords and at least 7 observed days sits at least 15 visibility points behind home | The gap closes, or the market drops below the keyword minimum |
 
 Unanswered audit checks never count toward `audit.fix_factor`, and Apple only surfaces are skipped on Google Play rather than recommended impossibly. A factor less than half measured opens no action, and each audit action lists the checks that failed or warned.
+
+`reviews.reply_negative` runs on Google Play only, because only Google Play replies are recorded. When a more specific rule explains the same finding, the broader one stays quiet without closing: a review theme holds back a rating decline, `keyword.defend` or a volatile result holds back a push into the top 10, and your own recent change hands a drop to `rank.investigate_drop`.
 
 ## Priority and impact
 
@@ -73,9 +167,9 @@ Impact is stamped with `formulaVersion: actions-v1` and is never a promised outc
 
 ## Home market rules and market rules
 
-Two rules are worded carefully because of what asobeast can and cannot see.
+Several rules are worded carefully because of what asobeast can and cannot see.
 
-`keyword.add_uncovered` is home market only. asobeast stores one metadata snapshot per app, so it cannot claim a keyword is missing from a localized listing it has never seen.
+`keyword.add_uncovered`, `keyword.push_to_top10`, `metadata.fix_lint` and `listing.ship_update` are home market only. asobeast stores one metadata snapshot per app, so it cannot claim a keyword is missing from a localized listing it has never seen.
 
 `market.improve_country` says investigate this market rather than fix your localization, for the same reason. It reports a visibility gap, which is a fact, and leaves the diagnosis to you. See [Countries and markets](/concepts/countries).
 
@@ -85,9 +179,9 @@ Two rules are worded carefully because of what asobeast can and cannot see.
 | --- | --- | --- |
 | `ACTIONS_MAX_OPEN_PER_APP` | 20 | New actions one run may open per app, highest impact first. Existing open and snoozed actions always refresh, and the run reports how many it withheld |
 | `ACTIONS_SNOOZE_MAX_DAYS` | 90 | Furthest a snooze may be set into the future |
-| `RETENTION_ACTIONS_DAYS` | 180 | Prunes closed actions only. Open and snoozed actions are never pruned by age |
+| `RETENTION_ACTIONS_DAYS` | 180 | Prunes closed actions and their history only. Open and snoozed actions are never pruned by age |
 
-Two per rule caps also apply where a rule could flood the queue: at most 5 prune actions and at most 3 review theme actions per app.
+Per rule caps also apply where a rule could flood the queue: at most 5 prune actions, 5 pushes into the top 10 and 3 review theme actions per app.
 
 ## Running it
 
@@ -97,7 +191,7 @@ Generation runs automatically inside the daily pipeline completion barrier, befo
 
 ## AI explanations are optional
 
-With `OPENAI_API_KEY` set, an action card gains an explain button that turns its typed evidence into two to four plain sentences.
+With `OPENAI_API_KEY` set, an action gains an explain button that turns its typed evidence into two to four plain sentences.
 
 AI may only summarize an action that already exists. It can never create, rank, re order or suppress one, and the entire feature works with the key unset, which is the default. See [Enable the optional AI features](/guides/ai-features).
 
@@ -112,6 +206,8 @@ Existing alert subscribers are unaffected until they opt into the event. See [Se
 - **A dismissed action came back.** It was a different finding. Check the keyword and country: the fingerprint includes both, so the same rule on a different market is a separate action.
 - **Fewer actions than you expected.** `ACTIONS_MAX_OPEN_PER_APP` caps new actions per run. The run reports how many it withheld.
 - **A rule never fires.** Most rules need a minimum number of observed days. A recently added keyword or market has not accumulated them yet.
+- **An action says still detected.** You marked it done and the rule still fires. A listing change takes time to reach the store and move rankings, so give it a few days: the action is confirmed fixed the first run the rule stops firing, and reopens if it keeps firing for 14 days.
+- **An outcome says measuring.** asobeast needs three days of data after you marked the action done, and at least one measurement on each side of that day.
 
 ## Related
 
@@ -121,6 +217,6 @@ Existing alert subscribers are unaffected until they opt into the event. See [Se
   </Card>
 
   <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
-    Where `keyword.add_uncovered` is resolved.
+    Where `keyword.add_uncovered`, `keyword.push_to_top10` and `metadata.fix_lint` are resolved.
   </Card>
 </CardGroup>

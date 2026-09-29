@@ -1,85 +1,141 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useQueryState } from "nuqs";
-import type { ActionFilters as Filters } from "@/lib/api";
+import { queueFilters } from "@/lib/action-filters";
 import { actionsOptions } from "@/lib/queries";
-import {
-  actionFocusParser,
-  actionPriorityParser,
-  actionRuleParser,
-  actionStatusParser,
-} from "@/lib/search-params";
-import { ActionCard } from "./ActionCard";
+import { ActionBulkBar } from "./ActionBulkBar";
+import { ActionCenterHeader } from "./ActionCenterHeader";
+import { ActionDetailSheet } from "./ActionDetailSheet";
 import { ActionEmptyState } from "./ActionEmptyState";
-import { ActionFilters } from "./ActionFilters";
+import { ActionOverview } from "./ActionOverview";
+import { ActionQueue } from "./ActionQueue";
+import { ActionRail } from "./ActionRail";
+import { ActionShortcutsDialog } from "./ActionShortcutsDialog";
+import { ActionToolbar } from "./ActionToolbar";
+import {
+  filterQueue,
+  isDefaultStatusSet,
+  isFilteredView,
+} from "./queue-filters";
+import { groupQueue, sortQueue } from "./queue-groups";
+import {
+  ACTIONS_GRID,
+  ActionOverviewSkeleton,
+  QUEUE_COLUMN,
+} from "./skeletons";
+import { useActionSheet } from "./use-action-sheet";
+import { useBulkUpdate } from "./use-bulk-update";
+import { useQueueKeys } from "./use-queue-keys";
+import { useQueueSelection } from "./use-queue-selection";
+import { useQueueView } from "./use-queue-view";
+
+const CLEARED_VIEW = {
+  status: null,
+  priority: null,
+  rule: null,
+  category: null,
+  app: null,
+  market: null,
+  store: null,
+  q: null,
+};
 
 export function ActionCenter({ appId }: { appId?: string }) {
-  const [status, setStatus] = useQueryState("status", actionStatusParser);
-  const [priority, setPriority] = useQueryState(
-    "priority",
-    actionPriorityParser,
+  const [view, setView] = useQueueView();
+  const q = useDeferredValue(view.q);
+
+  const { data } = useSuspenseQuery(
+    actionsOptions(queueFilters(view.status), appId),
   );
-  const [rule, setRule] = useQueryState("rule", actionRuleParser);
-  const [focus] = useQueryState("action", actionFocusParser);
+  const visible = sortQueue(filterQueue(data.items, { ...view, q }), view.sort);
 
-  const filters = useMemo<Filters>(
-    () => ({
-      status,
-      ...(priority.length > 0 ? { priority } : {}),
-      ...(rule.length > 0 ? { rule } : {}),
-    }),
-    [status, priority, rule],
+  const sheet = useActionSheet(view);
+  const selection = useQueueSelection(visible, isDefaultStatusSet(view.status));
+  const bulk = useBulkUpdate(appId);
+  const groups = groupQueue(
+    visible,
+    appId && view.group === "app" ? "priority" : view.group,
   );
+  const keys = useQueueKeys({
+    ids: groups.flatMap((group) => group.items.map((item) => item.id)),
+    onOpen: sheet.open,
+    onSelect: (id) => {
+      if (selection.selectable.includes(id)) selection.toggle(id);
+    },
+    onClear: selection.clear,
+  });
 
-  const { data } = useSuspenseQuery(actionsOptions(filters, appId));
-
-  const focusRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (!focus || focusRef.current === focus) return;
-    const card = document.getElementById(`action-${focus}`);
-    if (!card) return;
-    focusRef.current = focus;
-    card.scrollIntoView({ behavior: "smooth", block: "center" });
-    card.querySelector("details")?.setAttribute("open", "true");
-    card.setAttribute("tabindex", "-1");
-    card.focus({ preventScroll: true });
-  }, [focus, data]);
-
-  const filtered =
-    priority.length > 0 || rule.length > 0 || status.length !== 2;
+  const filtered = isFilteredView(view);
+  const emptyStateGenerates =
+    visible.length === 0 && (data.generatedAt === null || !filtered);
 
   return (
-    <div className="flex flex-col gap-6">
-      <ActionFilters
-        status={status}
-        priority={priority}
-        rule={rule}
-        onStatusChange={(next) => void setStatus(next)}
-        onPriorityChange={(next) => void setPriority(next)}
-        onRuleChange={(next) => void setRule(next)}
+    <>
+      <ActionCenterHeader
+        appId={appId}
+        generatedAt={data.generatedAt}
+        showGenerate={!emptyStateGenerates}
       />
-
-      {data.items.length === 0 ? (
-        <ActionEmptyState
-          generatedAt={data.generatedAt}
-          filtered={filtered}
-          onClearFilters={() => {
-            void setStatus(null);
-            void setPriority(null);
-            void setRule(null);
-          }}
-        />
-      ) : (
-        <ul className="flex list-none flex-col gap-4 p-0">
-          {data.items.map((item) => (
-            <li key={item.id}>
-              <ActionCard item={item} focused={focus === item.id} />
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+      <Suspense fallback={<ActionOverviewSkeleton />}>
+        <ActionOverview appId={appId} />
+      </Suspense>
+      <div className={ACTIONS_GRID}>
+        <section
+          id="queue"
+          aria-labelledby="queue-heading"
+          className={QUEUE_COLUMN}
+          onKeyDown={keys.onKeyDown}
+        >
+          <h2 id="queue-heading" className="sr-only">
+            Queue
+          </h2>
+          <ActionToolbar
+            appId={appId}
+            items={data.items}
+            view={view}
+            setView={setView}
+            shown={visible.length}
+            loadedTotal={data.total}
+            onShowShortcuts={() => keys.setHelpOpen(true)}
+          />
+          {visible.length === 0 ? (
+            <ActionEmptyState
+              generatedAt={data.generatedAt}
+              filtered={filtered}
+              onClearFilters={() => void setView(CLEARED_VIEW)}
+            />
+          ) : (
+            <ActionQueue
+              groups={groups}
+              focusedId={sheet.id}
+              appScoped={appId !== undefined}
+              hrefFor={sheet.hrefFor}
+              onOpen={(item) => sheet.open(item.id)}
+              selection={selection}
+              keyboardId={keys.focusedId}
+              onRowFocus={keys.setFocusedId}
+            />
+          )}
+          <ActionBulkBar
+            count={selection.selected.length}
+            shown={selection.selectable.length}
+            busy={bulk.isPending}
+            onUpdate={(body) => {
+              bulk.update({ ...body, ids: selection.selected });
+              selection.clear();
+            }}
+            onSelectAll={() => selection.setMany(selection.selectable, true)}
+            onClear={selection.clear}
+          />
+        </section>
+        <ActionRail appId={appId} setView={setView} />
+      </div>
+      <ActionDetailSheet id={sheet.id} onClose={sheet.close} />
+      <ActionShortcutsDialog
+        open={keys.helpOpen}
+        onOpenChange={keys.setHelpOpen}
+      />
+    </>
   );
 }

@@ -10,6 +10,8 @@ export interface QueryBound {
 
 export const QUERY_BOUNDS = {
   actionsLimit: { min: 1, max: 200, default: 100 },
+  actionActivityDays: { min: 7, max: 90, default: 30 },
+  actionBulkIds: { min: 1, max: 100, default: 100 },
   reviewsLimit: { min: 1, max: 200, default: 50 },
   reviewScore: { min: 1, max: 5 },
   suggestionsLimit: { min: 1, max: 100, default: 30 },

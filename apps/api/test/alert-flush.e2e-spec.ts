@@ -6,6 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import {
+  ActionOpenedPayload,
   AlertBatchPayload,
   AlertFlushResult,
   MetadataChangedPayload,
@@ -26,6 +27,7 @@ import {
   QUEUES,
 } from '../src/jobs/jobs.types';
 import { AlertFlushService } from '../src/alerts/alert-flush.service';
+import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
@@ -548,6 +550,72 @@ describe('Alert flush (e2e)', () => {
       .payload as AlertBatchPayload;
     const drop = batch.apps[0].rankDrops[0];
     expect(drop.to).toBe(20);
+  });
+
+  it('alerts again when an action reopens after its first alert was flushed', async () => {
+    const primary = await seedApp('primary');
+    await prisma.webhook.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        url: 'https://hooks.example.com/actions',
+        events: ['action.opened'],
+      },
+    });
+    const opened = (
+      reopened: boolean,
+      occurredAt: string,
+    ): ActionOpenedPayload => ({
+      event: 'action.opened',
+      occurredAt,
+      app: { id: primary, name: 'primary', store: 'APP_STORE', country: 'us' },
+      action: {
+        id: 'act_1',
+        rule: 'keyword.defend',
+        category: 'competition',
+        priority: 'high',
+        impact: 71,
+        firstSeenAt: '2026-07-22T03:00:00.000Z',
+        reopened,
+      },
+      keyword: null,
+      evidence: {
+        rule: 'keyword.defend',
+        yourPosition: 4,
+        previousPosition: 3,
+        windowDays: 7,
+        observedDays: 7,
+        volatility: null,
+        entrants: [],
+        entrantsAtOrAbove: 1,
+        volume: 50,
+      },
+      link: null,
+    });
+    const flushedActions = async (): Promise<ActionOpenedPayload[]> => {
+      await obliterateQueues(app);
+      await pauseQueues(app);
+      await api.post('/alerts/flush').expect(201);
+      const jobs = await pendingJobs();
+      return jobs.flatMap(
+        (job) =>
+          ((job.data as DeliverAlertPayload).payload as AlertBatchPayload)
+            .apps[0]?.actions ?? [],
+      );
+    };
+    const dispatcher = app.get(AlertsDispatcher);
+
+    await asWorkspace(app, () =>
+      dispatcher.dispatch(opened(false, '2026-07-22T03:00:00.000Z')),
+    );
+    expect(await flushedActions()).toHaveLength(1);
+
+    await asWorkspace(app, () =>
+      dispatcher.dispatch(opened(true, '2026-07-23T03:00:00.000Z')),
+    );
+    const second = await flushedActions();
+
+    expect(second).toHaveLength(1);
+    expect(second[0].action.reopened).toBe(true);
   });
 
   it('delivers owned scope before its competitor parent', async () => {

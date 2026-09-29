@@ -1,5 +1,4 @@
 import {
-  DailyBudget,
   KeywordAddUncoveredEvidence,
   KeywordCoverageRow,
   MetadataFieldAudit,
@@ -13,47 +12,30 @@ import {
   UNCOVERED_MIN_RELEVANCE,
   UNCOVERED_MIN_VOLUME,
 } from './keyword-add-uncovered';
-
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 10,
-  categories: 0,
-  reviews: 1,
-  total: 12,
-  capacityPerDay: 100,
-  utilization: 0.12,
-  stores: [],
-};
+import {
+  actionContext,
+  contextApp,
+  trackedKeyword,
+} from './rule-context.fixture';
 
 const keyword = (
   overrides: Partial<TrackedKeywordItem> = {},
-): TrackedKeywordItem => ({
-  keywordId: 'kw_1',
-  text: 'budget planner',
-  country: 'us',
-  source: 'MANUAL',
-  active: true,
-  latestPosition: null,
-  latestDepth: null,
-  previousPosition: null,
-  positionDelta1d: null,
-  positionDelta7d: null,
-  traffic: 6.2,
-  difficulty: 4.1,
-  volume: 62,
-  relevance: 80,
-  opportunity: 66.5,
-  bucket: null,
-  scoredAt: '2026-07-29',
-  scoreProvenance: {
-    source: 'APPLE_SUGGEST_SEARCH',
-    formulaVersion: 'app-store-v1',
-    capturedAt: '2026-07-29',
-    confidence: 'HIGH',
-  },
-  serpVolatility7d: null,
-  ...overrides,
-});
+): TrackedKeywordItem =>
+  trackedKeyword({
+    traffic: 6.2,
+    difficulty: 4.1,
+    volume: 62,
+    relevance: 80,
+    opportunity: 66.5,
+    scoredAt: '2026-07-29',
+    scoreProvenance: {
+      source: 'APPLE_SUGGEST_SEARCH',
+      formulaVersion: 'app-store-v1',
+      capturedAt: '2026-07-29',
+      confidence: 'HIGH',
+    },
+    ...overrides,
+  });
 
 const APPLE_FIELDS: MetadataFieldAudit[] = [
   {
@@ -140,36 +122,17 @@ const APPLE_UNCOVERED = coverage({
   keywordField: false,
 });
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: '1000',
-  country: 'us',
-  trackedKeywords: [keyword()],
-  keywordsByCountry: new Map(),
-  coverage: [APPLE_UNCOVERED],
-  metadataFields: APPLE_FIELDS,
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map(),
-  rankingDaysByKeyword: new Map(),
-  serpDaysByKeyword: new Map(),
-  volatilityByKeyword: new Map(),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    storeAppId: '1000',
+    trackedKeywords: [keyword()],
+    coverage: [APPLE_UNCOVERED],
+    metadataFields: APPLE_FIELDS,
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps);
 
 const evidenceOf = (
   detections: ReturnType<typeof detectKeywordAddUncovered>,

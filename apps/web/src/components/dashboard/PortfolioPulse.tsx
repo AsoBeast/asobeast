@@ -31,7 +31,7 @@ function Top10Note({
 
 function OpenActionsNote({ summary }: { summary: ActionSummary }) {
   if (summary.generatedAt === null) return "not generated yet";
-  const { critical, high } = summary.byPriority;
+  const { critical, high } = summary.openByPriority;
   if (critical === 0 && high === 0) return "waiting on you";
   return (
     <>

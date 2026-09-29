@@ -18,6 +18,9 @@ const ROUTES: ReadonlyArray<
   ["changes", "/apps/app-1/changes"],
   ["dashboard table", "/?view=table"],
   ["dashboard many apps", "/", { portfolio_many: "1" }],
+  ["action center", "/actions"],
+  ["app action center", "/apps/app-1/actions"],
+  ["action sheet", "/actions?action=act-push"],
 ];
 
 async function overflowingElements(page: import("@playwright/test").Page) {
@@ -87,5 +90,25 @@ for (const width of WIDTHS) {
     });
 
     expect(lines).toBeLessThanOrEqual(2);
+  });
+
+  test(`the action sheet wraps a long keyword at ${width}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/actions?action=act-push");
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByRole("heading", { name: "Trend" })).toBeVisible();
+
+    expect(
+      await dialog.evaluate((node) => node.scrollWidth <= node.clientWidth),
+      "the sheet must not scroll sideways",
+    ).toBe(true);
+    const title = await dialog
+      .getByRole("heading", { name: /pomodoro timer for deep focus/ })
+      .first()
+      .evaluate((node) => node.scrollWidth <= node.clientWidth);
+    expect(title, "the sheet title wraps inside itself").toBe(true);
   });
 }

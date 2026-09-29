@@ -1,12 +1,12 @@
 ---
 title: MCP recipes
 sidebarTitle: Recipes
-description: "Six prompts that work well against the asobeast MCP server, each with the tools it exercises, from a weekly review to a metadata draft."
+description: "Seven prompts that work well against the asobeast MCP server, each with the tools it exercises, from a weekly review to a metadata draft."
 icon: sparkles
 keywords: ["MCP prompts","examples","agent","weekly review","keyword triage"]
 ---
 
-Six prompts that produce useful answers, each with the tools it exercises. Naming the app, the market and the window is what separates a good answer from a vague one.
+Seven prompts that produce useful answers, each with the tools it exercises. Naming the app, the market and the window is what separates a good answer from a vague one.
 
 ## Run a weekly ASO review
 
@@ -17,6 +17,19 @@ thing to do first and why.
 ```
 
 Exercises `portfolio`, `actions_summary` and `visibility_history`.
+
+## Review last month's Action Center work
+
+```text
+Summarize my Action Center work over the last 30 days: how many actions opened, how many
+I marked done, how many resolved on their own and how many were confirmed fixed. Then list
+the actions that are done, open each one and tell me which outcomes improved, which
+worsened and which are still being measured, with the before and after values.
+```
+
+Exercises `actions_activity`, `list_actions` and `get_action`.
+
+An outcome is a measured change in the rule's metric between the day you closed the action and the latest check, not proof that your change caused it. See [Work the Action Center](/guides/action-center#outcomes).
 
 ## Triage this week's keyword losses
 

@@ -3000,7 +3000,14 @@
                   "serp.hold_volatile",
                   "audit.fix_factor",
                   "reviews.investigate_theme",
-                  "market.improve_country"
+                  "market.improve_country",
+                  "keyword.push_to_top10",
+                  "metadata.fix_lint",
+                  "rank.investigate_unexplained_drop",
+                  "competitor.investigate_overtake",
+                  "reviews.investigate_rating_decline",
+                  "reviews.reply_negative",
+                  "listing.ship_update"
                 ]
               }
             }
@@ -3077,12 +3084,65 @@
         "tags": [
           "actions"
         ]
+      },
+      "patch": {
+        "operationId": "ActionsController_bulkUpdate",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkUpdateActionsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated actions, with ids that were missing or refused"
+          }
+        },
+        "summary": "Change the state of many actions",
+        "tags": [
+          "actions"
+        ]
       }
     },
     "/actions/summary": {
       "get": {
         "operationId": "ActionsController_summary",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Open and snoozed action counts"
@@ -3109,7 +3169,94 @@
         ]
       }
     },
+    "/actions/activity": {
+      "get": {
+        "operationId": "ActionsController_activity",
+        "parameters": [
+          {
+            "name": "appId",
+            "required": false,
+            "in": "query",
+            "description": "Restrict to one app",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "store",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "days",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 7,
+              "maximum": 90,
+              "default": 30,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Actions opened and closed per UTC day"
+          }
+        },
+        "summary": "Report daily action activity",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
     "/actions/{id}": {
+      "get": {
+        "operationId": "ActionsController_detail",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One action with its history, trend and measured outcome"
+          },
+          "404": {
+            "description": "No such action in this workspace"
+          }
+        },
+        "summary": "Read one action",
+        "tags": [
+          "actions"
+        ]
+      },
       "patch": {
         "operationId": "ActionsController_update",
         "parameters": [
@@ -3245,7 +3392,14 @@
                   "serp.hold_volatile",
                   "audit.fix_factor",
                   "reviews.investigate_theme",
-                  "market.improve_country"
+                  "market.improve_country",
+                  "keyword.push_to_top10",
+                  "metadata.fix_lint",
+                  "rank.investigate_unexplained_drop",
+                  "competitor.investigate_overtake",
+                  "reviews.investigate_rating_decline",
+                  "reviews.reply_negative",
+                  "listing.ship_update"
                 ]
               }
             }
@@ -4350,6 +4504,49 @@
           }
         }
       },
+      "BulkUpdateActionsDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "enum": [
+              "OPEN",
+              "SNOOZED",
+              "DONE",
+              "DISMISSED"
+            ],
+            "type": "string"
+          },
+          "snoozedUntil": {
+            "type": "string",
+            "example": "2026-08-15T00:00:00.000Z"
+          },
+          "reason": {
+            "enum": [
+              "not_relevant",
+              "handled_elsewhere",
+              "disagree_with_data"
+            ],
+            "type": "string"
+          },
+          "revert": {
+            "type": "boolean",
+            "description": "Undo the latest change instead of making a new one"
+          },
+          "ids": {
+            "uniqueItems": true,
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "status",
+          "ids"
+        ]
+      },
       "UpdateActionDto": {
         "type": "object",
         "properties": {
@@ -4365,6 +4562,18 @@
           "snoozedUntil": {
             "type": "string",
             "example": "2026-08-15T00:00:00.000Z"
+          },
+          "reason": {
+            "enum": [
+              "not_relevant",
+              "handled_elsewhere",
+              "disagree_with_data"
+            ],
+            "type": "string"
+          },
+          "revert": {
+            "type": "boolean",
+            "description": "Undo the latest change instead of making a new one"
           },
           "note": {
             "type": "string",

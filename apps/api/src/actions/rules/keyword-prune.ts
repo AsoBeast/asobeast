@@ -104,7 +104,9 @@ function detectForApp(
         right.terms.severity - left.terms.severity ||
         (left.keywordId ?? '').localeCompare(right.keywordId ?? ''),
     )
-    .slice(0, PRUNE_MAX_PER_APP);
+    .map((detection, index) =>
+      index < PRUNE_MAX_PER_APP ? detection : { ...detection, withheld: true },
+    );
 }
 
 export function detectKeywordPrune(context: ActionContext): DetectedAction[] {

@@ -9,8 +9,12 @@ import type {
 } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
+  actionActivityOptions,
+  actionDetailOptions,
   actionKeys,
   actionsOptions,
+  actionSummaryOptions,
+  actionSummaryFor,
   alertsConfigKey,
   apiTokenKeys,
   appKeys,
@@ -262,6 +266,34 @@ describe("actionKeys", () => {
     expect(actionsOptions({}, APP).queryKey).not.toEqual(
       actionsOptions({}, undefined).queryKey,
     );
+  });
+
+  it("keeps the detail and the activity under the action root", () => {
+    expect(
+      isPrefixOf(actionKeys.all, actionDetailOptions("act-1").queryKey),
+    ).toBe(true);
+    expect(
+      isPrefixOf(actionKeys.all, actionActivityOptions({ days: 30 }).queryKey),
+    ).toBe(true);
+  });
+
+  it("prefixes every action list with the lists key", () => {
+    expect(isPrefixOf(actionKeys.lists, actionsOptions({}).queryKey)).toBe(
+      true,
+    );
+    expect(
+      isPrefixOf(
+        actionKeys.lists,
+        actionsOptions({ status: ["DONE"] }, APP).queryKey,
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps the app scoped summary under the action root", () => {
+    const scoped = actionSummaryFor(APP).queryKey;
+
+    expect(isPrefixOf(actionKeys.all, scoped)).toBe(true);
+    expect(scoped).not.toEqual(actionSummaryOptions.queryKey);
   });
 
   it("separates action lists by their filters", () => {

@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTION_ADVISORY_RULES,
   ACTION_CATEGORIES,
+  ACTION_DISMISS_REASONS,
+  ACTION_EVENT_ACTORS,
+  ACTION_EVENT_TYPES,
   ACTION_IMPACT_WEIGHTS,
+  ACTION_OUTCOME_VERDICTS,
+  ACTION_TREND_METRICS,
   ACTION_PRIORITIES,
   ACTION_PRIORITY_BANDS,
   ACTION_RULES,
@@ -10,6 +15,8 @@ import {
   ACTION_STATUSES,
   ACTION_UPDATE_STATUSES,
   isActionCategory,
+  isActionDismissReason,
+  isActionEventType,
   isActionPriority,
   isActionRule,
   isActionStatus,
@@ -18,6 +25,8 @@ import type {
   ActionEvidence,
   ActionOpenedPayload,
   ActionPriority,
+  ActionStatus,
+  ActionSummary,
 } from './actions';
 import { WEBHOOK_EVENTS } from './changes';
 
@@ -62,6 +71,20 @@ const describeEvidence = (evidence: ActionEvidence): string => {
       return `theme ${evidence.theme}`;
     case 'market.improve_country':
       return `gap ${evidence.gap}`;
+    case 'keyword.push_to_top10':
+      return `position ${evidence.latestPosition}`;
+    case 'metadata.fix_lint':
+      return `${evidence.field} ${evidence.issues.length}`;
+    case 'rank.investigate_unexplained_drop':
+      return `delta ${evidence.visibilityDelta}`;
+    case 'competitor.investigate_overtake':
+      return `${evidence.competitorName} ${evidence.keywords.length}`;
+    case 'reviews.investigate_rating_decline':
+      return `drop ${evidence.drop}`;
+    case 'reviews.reply_negative':
+      return `unanswered ${evidence.unanswered}`;
+    case 'listing.ship_update':
+      return `days ${evidence.daysSinceUpdate}`;
     default: {
       const never: never = evidence;
       return never;
@@ -241,6 +264,95 @@ describe('action evidence', () => {
         observedDays: 12,
         windowDays: 14,
       },
+      {
+        rule: 'keyword.push_to_top10',
+        latestPosition: 12,
+        bestPosition: 11,
+        daysInBand: 6,
+        windowDays: 7,
+        volume: 60,
+        relevance: 80,
+        opportunity: 44,
+        coveredFields: ['keywordField'],
+        strongFields: ['title', 'subtitle'],
+      },
+      {
+        rule: 'metadata.fix_lint',
+        field: 'title',
+        chars: 34,
+        limit: 30,
+        issues: [
+          {
+            rule: 'over-limit',
+            message: 'Exceeds the 30 character limit (34).',
+            offendingText: null,
+          },
+        ],
+      },
+      {
+        rule: 'rank.investigate_unexplained_drop',
+        country: 'us',
+        visibilityBefore: 40,
+        visibilityAfter: 32.5,
+        visibilityDelta: 7.5,
+        windowDays: 14,
+        trackedKeywords: 5,
+        droppedKeywords: [],
+        meanVolatility: 10,
+        lastOwnChangeAt: null,
+      },
+      {
+        rule: 'competitor.investigate_overtake',
+        competitorAppId: 'comp_1',
+        competitorName: 'Tomato Focus',
+        changedAt: '2026-07-24',
+        fields: ['title'],
+        newTitle: 'Tomato Focus: Habit Tracker',
+        newSubtitle: null,
+        keywords: [
+          {
+            keywordId: 'kw_1',
+            text: 'habit tracker',
+            yourBefore: 6,
+            yourAfter: 9,
+            theirBefore: 14,
+            theirAfter: 4,
+            volume: 60,
+            mentioned: true,
+          },
+        ],
+      },
+      {
+        rule: 'reviews.investigate_rating_decline',
+        recentAverage: 3.6,
+        baselineAverage: 4.4,
+        drop: 0.8,
+        recentReviews: 8,
+        baselineReviews: 6,
+        recentDays: 14,
+        baselineDays: 21,
+        latestVersion: '4.2.0',
+        negativeShare: 0.25,
+        sampleReviewIds: ['rev_1'],
+      },
+      {
+        rule: 'reviews.reply_negative',
+        unanswered: 3,
+        checked: 4,
+        negative: 4,
+        windowDays: 14,
+        oldestUnansweredAt: '2026-07-20T00:00:00.000Z',
+        replyRate: 0.25,
+        sampleReviewIds: ['rev_1'],
+      },
+      {
+        rule: 'listing.ship_update',
+        storeUpdatedAt: '2026-03-10T00:00:00.000Z',
+        daysSinceUpdate: 142,
+        version: '3.1.0',
+        competitorMedianDays: 25,
+        competitorsCompared: 3,
+      },
     ];
 
     expect(samples.map((evidence) => evidence.rule).sort()).toEqual(
@@ -255,6 +367,13 @@ describe('action evidence', () => {
       'factor screenshots',
       'theme crashes on launch',
       'gap 26.5',
+      'position 12',
+      'title 1',
+      'delta 7.5',
+      'Tomato Focus 1',
+      'drop 0.8',
+      'unanswered 3',
+      'days 142',
     ]);
   });
 
@@ -292,6 +411,54 @@ describe('action evidence', () => {
     expect(payload.link).toBeNull();
     expect(ACTION_RULE_CATEGORY[payload.action.rule]).toBe(
       payload.action.category,
+    );
+  });
+});
+
+describe('action events', () => {
+  it('lists each event type and actor once', () => {
+    expect(new Set(ACTION_EVENT_TYPES).size).toBe(ACTION_EVENT_TYPES.length);
+    expect(new Set(ACTION_EVENT_ACTORS).size).toBe(ACTION_EVENT_ACTORS.length);
+    expect(ACTION_EVENT_TYPES.every(isActionEventType)).toBe(true);
+    expect(REJECTED.some(isActionEventType)).toBe(false);
+  });
+});
+
+describe('isActionDismissReason', () => {
+  it('accepts the three reasons and nothing else', () => {
+    for (const reason of ACTION_DISMISS_REASONS) {
+      expect(isActionDismissReason(reason)).toBe(true);
+    }
+    for (const value of [...REJECTED, 'NOT_RELEVANT', 'other']) {
+      expect(isActionDismissReason(value)).toBe(false);
+    }
+  });
+});
+
+describe('ActionSummary.byStatus', () => {
+  it('is keyed by every action status', () => {
+    const byStatus: ActionSummary['byStatus'] = {
+      OPEN: 1,
+      SNOOZED: 0,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    };
+
+    expect(Object.keys(byStatus).sort()).toEqual([...ACTION_STATUSES].sort());
+    expect(
+      ACTION_STATUSES.every((status: ActionStatus) => status in byStatus),
+    ).toBe(true);
+  });
+});
+
+describe('action detail vocabularies', () => {
+  it('lists each trend metric and outcome verdict once', () => {
+    expect(new Set(ACTION_TREND_METRICS).size).toBe(
+      ACTION_TREND_METRICS.length,
+    );
+    expect(new Set(ACTION_OUTCOME_VERDICTS).size).toBe(
+      ACTION_OUTCOME_VERDICTS.length,
     );
   });
 });

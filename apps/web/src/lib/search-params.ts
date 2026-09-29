@@ -8,6 +8,8 @@ import {
   KEYWORD_SOURCES,
   KEYWORD_SUGGESTION_STRATEGIES,
   APP_STORE_LOCALIZATION_IDS,
+  STORES,
+  type ActionStatus,
 } from "@asobeast/shared";
 import {
   createParser,
@@ -262,9 +264,14 @@ export const rankingsRangeParsers = {
   movers: moverDaysParser,
 };
 
+export const ACTION_DEFAULT_STATUSES = [
+  "OPEN",
+  "SNOOZED",
+] as const satisfies readonly ActionStatus[];
+
 export const actionStatusParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_STATUSES),
-).withDefault(["OPEN", "SNOOZED"]);
+).withDefault([...ACTION_DEFAULT_STATUSES]);
 
 export const actionPriorityParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_PRIORITIES),
@@ -274,9 +281,26 @@ export const actionRuleParser = parseAsArrayOf(
   parseAsStringLiteral(ACTION_RULES),
 ).withDefault([]);
 
-export const actionCategoryParser = parseAsStringLiteral(ACTION_CATEGORIES);
+export const ACTION_GROUPS = ["priority", "app", "category"] as const;
+export type ActionGroup = (typeof ACTION_GROUPS)[number];
 
-export const actionAppParser = parseAsString.withDefault("");
+export const ACTION_SORTS = ["impact", "newest", "oldest"] as const;
+export type ActionSort = (typeof ACTION_SORTS)[number];
+
+export const actionQueueParsers = {
+  status: actionStatusParser,
+  priority: actionPriorityParser,
+  rule: actionRuleParser,
+  category: parseAsArrayOf(parseAsStringLiteral(ACTION_CATEGORIES)).withDefault(
+    [],
+  ),
+  app: parseAsArrayOf(parseAsString).withDefault([]),
+  market: parseAsArrayOf(parseAsString).withDefault([]),
+  store: parseAsStringLiteral(STORES),
+  q: parseAsString.withDefault(""),
+  group: parseAsStringLiteral(ACTION_GROUPS).withDefault("priority"),
+  sort: parseAsStringLiteral(ACTION_SORTS).withDefault("impact"),
+};
 
 export const actionFocusParser = parseAsString.withDefault("");
 

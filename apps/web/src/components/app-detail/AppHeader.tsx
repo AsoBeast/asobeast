@@ -40,7 +40,7 @@ export function AppHeader({ id }: { id: string }) {
             href={storeUrl(detail)}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 rounded-sm hover:text-foreground print:hidden"
+            className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
           >
             Store page
             <ExternalLink className="size-3.5" />

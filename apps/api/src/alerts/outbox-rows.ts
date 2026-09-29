@@ -1,4 +1,5 @@
 import {
+  ActionOpenedPayload,
   AlertPayload,
   RankFirstPayload,
   RankMilestonePayload,
@@ -15,6 +16,11 @@ export interface OutboxRow {
 function dayOf(occurredAt: string): string {
   return occurredAt.slice(0, 10);
 }
+
+const actionOpenedKey = (payload: ActionOpenedPayload): string =>
+  payload.action.reopened
+    ? `action.opened~${payload.action.id}~${dayOf(payload.occurredAt)}`
+    : `action.opened~${payload.action.id}`;
 
 function hash(input: string): string {
   let value = 5381;
@@ -84,7 +90,7 @@ export function outboxRows(payload: AlertPayload): OutboxRow[] {
       {
         event: payload.event,
         appId: payload.app.id,
-        dedupeKey: `action.opened~${payload.action.id}`,
+        dedupeKey: actionOpenedKey(payload),
         payload,
       },
     ];

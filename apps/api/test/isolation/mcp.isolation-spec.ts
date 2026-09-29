@@ -65,6 +65,18 @@ describe('Remote MCP boundaries between workspaces', () => {
     expect(decode(response.text).result?.isError).toBe(true);
   });
 
+  it('cannot read another workspace action through a tool', async () => {
+    const response = await callTool(fixture.a.token, 'get_action', {
+      actionId: fixture.b.actionId,
+    }).expect(200);
+    const result = decode(response.text).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toContain(
+      'No action with that id in this workspace',
+    );
+  });
+
   it('gives each token its own portfolio', async () => {
     const [forA, forB] = await Promise.all([
       callTool(fixture.a.token, 'portfolio').expect(200),

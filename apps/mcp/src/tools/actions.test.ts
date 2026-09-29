@@ -9,7 +9,13 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const ACTION_TOOLS = ["list_actions", "app_actions", "actions_summary"];
+const ACTION_TOOLS = [
+  "list_actions",
+  "app_actions",
+  "actions_summary",
+  "get_action",
+  "actions_activity",
+];
 
 describe("action tools", () => {
   it("registers every tool as read-only", () => {

@@ -1,5 +1,4 @@
 import {
-  DailyBudget,
   MarketImproveCountryEvidence,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -16,19 +15,9 @@ import {
   MARKET_WINDOW_DAYS,
   marketImproveCountryDetector,
 } from './market-improve-country';
+import { actionContext, contextApp, dailyBudget } from './rule-context.fixture';
 
 const NOW = new Date('2026-07-30T03:00:00.000Z');
-
-const budget: DailyBudget = {
-  apps: 1,
-  keywords: 20,
-  categories: 0,
-  reviews: 1,
-  total: 22,
-  capacityPerDay: 100,
-  utilization: 0.22,
-  stores: [],
-};
 
 const day = (offset: number): string =>
   new Date(NOW.getTime() - offset * 86_400_000).toISOString().slice(0, 10);
@@ -81,42 +70,24 @@ const series = (
 const HOME = marketKeywords('us', 10);
 const MARKET = marketKeywords('de', MARKET_MIN_KEYWORDS);
 
-const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp => ({
-  id: 'app_1',
-  name: 'Budget',
-  store: 'APP_STORE',
-  storeAppId: 'own-app',
-  country: 'us',
-  trackedKeywords: [...HOME, ...MARKET],
-  keywordsByCountry: new Map([
-    ['us', HOME],
-    ['de', MARKET],
-  ]),
-  coverage: [],
-  metadataFields: [],
-  audit: null,
-  changeEvents: [],
-  visibilityByCountry: new Map([
-    ['us', series(44.7)],
-    ['de', series(18.2)],
-  ]),
-  rankingDaysByKeyword: new Map(),
-  serpDaysByKeyword: new Map(),
-  volatilityByKeyword: new Map(),
-  competitorAppIdsByStoreAppId: new Map(),
-  reviews: [],
-  latestVersion: null,
-  previousVersion: null,
-  ...overrides,
-});
+const app = (overrides: Partial<ActionContextApp> = {}): ActionContextApp =>
+  contextApp({
+    trackedKeywords: [...HOME, ...MARKET],
+    keywordsByCountry: new Map([
+      ['us', HOME],
+      ['de', MARKET],
+    ]),
+    visibilityByCountry: new Map([
+      ['us', series(44.7)],
+      ['de', series(18.2)],
+    ]),
+    ...overrides,
+  });
 
-const context = (apps: ActionContextApp[]): ActionContext => ({
-  workspaceId: 'ws_1',
-  apps,
-  budget,
-  reviewScoreMax: 2,
-  rankDropThreshold: 5,
-});
+const context = (apps: ActionContextApp[]): ActionContext =>
+  actionContext(apps, {
+    budget: dailyBudget({ keywords: 20, total: 22, utilization: 0.22 }),
+  });
 
 describe('market.improve_country', () => {
   it('registers for its rule', () => {

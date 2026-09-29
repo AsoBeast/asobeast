@@ -20,6 +20,7 @@ const NUMERIC: Array<[string, string, keyof typeof QUERY_BOUNDS]> = [
   ["serp_movers", "days", "serpMoverDays"],
   ["changes_timeline", "days", "changeTimelineDays"],
   ["change_impact", "days", "changeTimelineDays"],
+  ["actions_activity", "days", "actionActivityDays"],
 ];
 
 describe("mcp input bounds match the api", () => {
@@ -113,5 +114,13 @@ describe("mcp input bounds match the api", () => {
   it("uses the shared storefront pattern rather than a copy", () => {
     expect(COUNTRY_PATTERN.test("us")).toBe(true);
     expect(COUNTRY_PATTERN.test("us-CA")).toBe(false);
+  });
+
+  it("refuses a sibling route name as an action id", () => {
+    const actionId = fieldOf("get_action", "actionId");
+
+    expect(actionId.safeParse("summary").success).toBe(false);
+    expect(actionId.safeParse("activity").success).toBe(false);
+    expect(actionId.safeParse("act-1").success).toBe(true);
   });
 });

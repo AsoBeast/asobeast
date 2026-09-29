@@ -50,6 +50,7 @@ model Workspace {
   users       User[]
   invites     WorkspaceInvite[]
   actions     ActionItem[]
+  actionEvents ActionEvent[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -96,6 +97,7 @@ model User {
   resetExpiresAt    DateTime?
   sessionVersion    Int        @default(0)
   tokens            ApiToken[]
+  actionEvents      ActionEvent[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -184,6 +186,7 @@ model App {
   auditInsight AuditInsight?
   auditScores  AuditScore[]
   actions      ActionItem[]
+  actionEvents ActionEvent[]
   createdAt    DateTime         @default(now())
 
   @@unique([id, workspaceId])
@@ -541,19 +544,46 @@ model ActionItem {
   resolvedAt     DateTime?
   snoozedUntil   DateTime?
   closedAt       DateTime?
+  verifiedAt     DateTime?
   reopenCount    Int       @default(0)
   note           String?
   aiExplanation  String?
   aiModel        String?
   aiGeneratedAt  DateTime?
+  events         ActionEvent[]
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  @@unique([id, workspaceId])
   @@unique([workspaceId, fingerprint])
   @@index([workspaceId, status, priority])
   @@index([appId, status])
   @@index([keywordId])
   @@index([workspaceId, status, lastSeenAt])
+}
+
+model ActionEvent {
+  id           String     @id @default(cuid())
+  workspaceId  String
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actionId     String
+  action       ActionItem @relation(fields: [actionId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  appId        String
+  app          App        @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type         String
+  actor        String
+  status       String
+  priority     String
+  impact       Int
+  snoozedUntil DateTime?
+  reason       String?
+  occurredAt   DateTime   @default(now())
+
+  @@index([actionId, occurredAt])
+  @@index([workspaceId, occurredAt])
+  @@index([appId, occurredAt])
 }
 
 model SupportAccess {

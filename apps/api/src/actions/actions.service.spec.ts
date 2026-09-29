@@ -10,8 +10,14 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { actionsGeneratedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { ActionEventInput, ActionEventRecorder } from './action-events';
+import {
+  ACTION_REVERT_WINDOW_MINUTES,
+  ActionTransitions,
+} from './action-transitions';
 import { ActionsService } from './actions.service';
 import { ListActionsQueryDto } from './dto/list-actions-query.dto';
+import { BulkUpdateActionsDto } from './dto/bulk-update-actions.dto';
 import { UpdateActionDto } from './dto/update-action.dto';
 
 const DAY_MS = 86_400_000;
@@ -38,6 +44,7 @@ const storedRow = (overrides: Record<string, unknown> = {}) => ({
   resolvedAt: null,
   snoozedUntil: null,
   closedAt: null,
+  verifiedAt: null,
   reopenCount: 0,
   note: null,
   aiExplanation: null,
@@ -48,31 +55,83 @@ const storedRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const buildPrisma = (
-  current: { id: string; status: string; reopenCount: number } | null = {
-    id: 'act_1',
-    status: 'OPEN',
-    reopenCount: 0,
-  },
-) => ({
-  app: {
-    findFirst: jest.fn(() => Promise.resolve({ id: 'app_1' })),
-  },
-  actionItem: {
-    findMany: jest.fn(() => Promise.resolve([storedRow()])),
-    findFirst: jest.fn(() => Promise.resolve(current)),
-    count: jest.fn(() => Promise.resolve(1)),
-    aggregate: jest.fn((): Promise<{ _max: { lastSeenAt: Date | null } }> =>
-      Promise.resolve({
-        _max: { lastSeenAt: new Date('2026-07-30T03:00:00.000Z') },
-      }),
-    ),
-    groupBy: jest.fn(() => Promise.resolve([])),
-    update: jest.fn((args: { data: Record<string, unknown> }) =>
-      Promise.resolve(storedRow({ status: args.data.status })),
-    ),
-  },
+const USER = 'user_1';
+
+interface CurrentRow {
+  id: string;
+  appId: string;
+  status: string;
+  priority: string;
+  impact: number;
+  reopenCount: number;
+  snoozedUntil: Date | null;
+  closedAt: Date | null;
+}
+
+const currentRow = (overrides: Partial<CurrentRow> = {}): CurrentRow => ({
+  id: 'act_1',
+  appId: 'app_1',
+  status: 'OPEN',
+  priority: 'high',
+  impact: 71,
+  reopenCount: 0,
+  snoozedUntil: null,
+  closedAt: null,
+  ...overrides,
 });
+
+interface StoredEvent {
+  id: string;
+  type: string;
+  actor: string;
+  userId?: string | null;
+  status: string;
+  occurredAt: Date;
+}
+
+const buildPrisma = (
+  overrides: Partial<CurrentRow> | null = {},
+  history: StoredEvent[] = [],
+) => {
+  const current = overrides === null ? null : currentRow(overrides);
+  const events: ActionEventInput[] = [];
+  const prisma = {
+    app: {
+      findFirst: jest.fn(() => Promise.resolve({ id: 'app_1' })),
+    },
+    actionItem: {
+      findMany: jest.fn(() => Promise.resolve([storedRow()])),
+      findFirst: jest.fn(() => Promise.resolve(current)),
+      count: jest.fn(() => Promise.resolve(1)),
+      aggregate: jest.fn((): Promise<{ _max: { lastSeenAt: Date | null } }> =>
+        Promise.resolve({
+          _max: { lastSeenAt: new Date('2026-07-30T03:00:00.000Z') },
+        }),
+      ),
+      groupBy: jest.fn(() => Promise.resolve([])),
+      update: jest.fn((args: { data: Record<string, unknown> }) =>
+        Promise.resolve(
+          storedRow({ status: args.data.status ?? current?.status }),
+        ),
+      ),
+    },
+    actionEvent: {
+      createMany: jest.fn((args: { data: ActionEventInput[] }) => {
+        events.push(...args.data);
+        return Promise.resolve({ count: args.data.length });
+      }),
+      findMany: jest.fn(() => Promise.resolve([...history].reverse())),
+      delete: jest.fn(() => Promise.resolve({})),
+    },
+    events,
+  };
+  return {
+    ...prisma,
+    withTransaction: jest.fn((run: (tx: typeof prisma) => Promise<unknown>) =>
+      run(prisma),
+    ),
+  };
+};
 
 const buildQueue = (
   suppressed: string | null = null,
@@ -99,11 +158,15 @@ const serviceFor = (
   const workspace = new WorkspaceContext();
   const service = new ActionsService(
     prisma as unknown as PrismaService,
-    {
-      get: jest.fn(() => SNOOZE_MAX_DAYS),
-    } as unknown as ConfigService<Env, true>,
     queue,
     workspace,
+    new ActionTransitions(
+      {
+        get: jest.fn(() => SNOOZE_MAX_DAYS),
+      } as unknown as ConfigService<Env, true>,
+      workspace,
+      new ActionEventRecorder(),
+    ),
   );
   return new Proxy(service, {
     get: (target, property, receiver) => {
@@ -246,6 +309,10 @@ describe('ActionsService reads', () => {
       .mockResolvedValueOnce([
         { rule: 'keyword.add_uncovered', _count: { _all: 5 } },
         { rule: 'mystery', _count: { _all: 9 } },
+      ])
+      .mockResolvedValueOnce([
+        { priority: 'critical', _count: { _all: 2 } },
+        { priority: 'low', _count: { _all: 2 } },
       ]);
 
     const summary = await serviceFor(prisma).summary();
@@ -258,6 +325,53 @@ describe('ActionsService reads', () => {
     });
     expect(summary.byCategory.metadata).toBe(5);
     expect(summary.byCategory.hygiene).toBe(0);
+    expect(summary.openByPriority).toEqual({
+      critical: 2,
+      high: 0,
+      medium: 0,
+      low: 2,
+    });
+    expect(summary.byStatus).toEqual({
+      OPEN: 4,
+      SNOOZED: 1,
+      DONE: 0,
+      DISMISSED: 0,
+      RESOLVED: 0,
+    });
+  });
+
+  it('counts only open rows by priority for the open priority mix', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).summary();
+
+    expect(prisma.actionItem.groupBy.mock.calls).toContainEqual([
+      {
+        by: ['priority'],
+        where: { status: 'OPEN' },
+        _count: { _all: true },
+      },
+    ]);
+  });
+
+  it('restricts every count to the scope but not the run facts', async () => {
+    const prisma = buildPrisma();
+
+    const summary = await serviceFor(prisma, buildQueue('4')).summary({
+      appId: 'app_9',
+    });
+
+    const wheres = (
+      prisma.actionItem.groupBy.mock.calls as unknown as Array<
+        [{ where: Record<string, unknown> }]
+      >
+    ).map(([args]) => args.where);
+    expect(wheres).toHaveLength(5);
+    expect(wheres.every((where) => where.appId === 'app_9')).toBe(true);
+    expect(summary.suppressedByCap).toBe(4);
+    expect(prisma.actionItem.aggregate.mock.calls[0]).toEqual([
+      { _max: { lastSeenAt: true } },
+    ]);
   });
 
   it('reports the suppression count recorded by the last run', async () => {
@@ -325,14 +439,14 @@ describe('ActionsService transitions', () => {
     const prisma = buildPrisma(null);
 
     await expect(
-      serviceFor(prisma).update('missing', update({ status: 'DONE' })),
+      serviceFor(prisma).update('missing', update({ status: 'DONE' }), USER),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('closes a done action and clears its other timestamps', async () => {
     const prisma = buildPrisma();
 
-    await serviceFor(prisma).update('act_1', update({ status: 'DONE' }));
+    await serviceFor(prisma).update('act_1', update({ status: 'DONE' }), USER);
 
     const data = prisma.actionItem.update.mock.calls[0][0].data;
     expect(data).toMatchObject({
@@ -349,6 +463,7 @@ describe('ActionsService transitions', () => {
     await serviceFor(prisma).update(
       'act_1',
       update({ status: 'DISMISSED', note: '  not relevant  ' }),
+      USER,
     );
 
     expect(
@@ -366,6 +481,7 @@ describe('ActionsService transitions', () => {
     await serviceFor(prisma).update(
       'act_1',
       update({ status: 'SNOOZED', snoozedUntil: future(7) }),
+      USER,
     );
 
     const data = prisma.actionItem.update.mock.calls[0][0].data;
@@ -383,6 +499,7 @@ describe('ActionsService transitions', () => {
           status: 'SNOOZED',
           snoozedUntil: future(SNOOZE_MAX_DAYS - 1),
         }),
+        USER,
       ),
     ).resolves.toBeDefined();
     await expect(
@@ -392,6 +509,7 @@ describe('ActionsService transitions', () => {
           status: 'SNOOZED',
           snoozedUntil: future(SNOOZE_MAX_DAYS + 1),
         }),
+        USER,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -403,15 +521,17 @@ describe('ActionsService transitions', () => {
       service.update(
         'act_1',
         update({ status: 'SNOOZED', snoozedUntil: future(-1) }),
+        USER,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
-      service.update('act_1', update({ status: 'SNOOZED' })),
+      service.update('act_1', update({ status: 'SNOOZED' }), USER),
     ).rejects.toBeInstanceOf(BadRequestException);
     await expect(
       service.update(
         'act_1',
         update({ status: 'DONE', snoozedUntil: future(7) }),
+        USER,
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
@@ -422,15 +542,16 @@ describe('ActionsService transitions', () => {
     );
 
     await expect(
-      service.update('act_1', update({ status: 'DONE' })),
+      service.update('act_1', update({ status: 'DONE' }), USER),
     ).rejects.toBeInstanceOf(ConflictException);
     await expect(
-      service.update('act_1', update({ status: 'DISMISSED' })),
+      service.update('act_1', update({ status: 'DISMISSED' }), USER),
     ).rejects.toBeInstanceOf(ConflictException);
     await expect(
       service.update(
         'act_1',
         update({ status: 'SNOOZED', snoozedUntil: future(7) }),
+        USER,
       ),
     ).rejects.toBeInstanceOf(ConflictException);
   });
@@ -445,6 +566,7 @@ describe('ActionsService transitions', () => {
     await serviceFor(prisma).update(
       'act_1',
       update({ status: 'SNOOZED', snoozedUntil: future(7) }),
+      USER,
     );
 
     expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
@@ -458,7 +580,11 @@ describe('ActionsService transitions', () => {
     for (const status of ['DONE', 'DISMISSED', 'RESOLVED']) {
       const prisma = buildPrisma({ id: 'act_1', status, reopenCount: 1 });
 
-      await serviceFor(prisma).update('act_1', update({ status: 'OPEN' }));
+      await serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN' }),
+        USER,
+      );
 
       expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
         status: 'OPEN',
@@ -477,10 +603,450 @@ describe('ActionsService transitions', () => {
       reopenCount: 0,
     });
 
-    await serviceFor(prisma).update('act_1', update({ status: 'OPEN' }));
+    await serviceFor(prisma).update('act_1', update({ status: 'OPEN' }), USER);
 
     expect(prisma.actionItem.update.mock.calls[0][0].data).not.toHaveProperty(
       'reopenCount',
     );
+  });
+});
+
+describe('ActionsService lifecycle events', () => {
+  const inDays = (days: number): Date => new Date(Date.now() + days * DAY_MS);
+
+  it.each([
+    ['OPEN', { status: 'DONE' }, 'done'],
+    ['SNOOZED', { status: 'DONE' }, 'done'],
+    ['OPEN', { status: 'DISMISSED' }, 'dismissed'],
+    ['DONE', { status: 'DISMISSED' }, 'dismissed'],
+    ['DONE', { status: 'OPEN' }, 'reopened'],
+    ['DISMISSED', { status: 'OPEN' }, 'reopened'],
+    ['RESOLVED', { status: 'OPEN' }, 'reopened'],
+    ['SNOOZED', { status: 'OPEN' }, 'woke'],
+  ] as const)(
+    'records one user event for %s to %j',
+    async (previous, body, type) => {
+      const prisma = buildPrisma({ status: previous });
+
+      await serviceFor(prisma).update('act_1', update(body), USER);
+
+      expect(prisma.events).toEqual([
+        {
+          workspaceId: WORKSPACE,
+          actionId: 'act_1',
+          appId: 'app_1',
+          type,
+          actor: 'user',
+          userId: USER,
+          status: body.status,
+          priority: 'high',
+          impact: 71,
+          snoozedUntil: null,
+          reason: null,
+          occurredAt: expect.any(Date) as Date,
+        },
+      ]);
+    },
+  );
+
+  it('records a snoozed event with its wake date', async () => {
+    const prisma = buildPrisma();
+    const until = inDays(7);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'SNOOZED', snoozedUntil: until.toISOString() }),
+      USER,
+    );
+
+    expect(prisma.events).toEqual([
+      expect.objectContaining({ type: 'snoozed', snoozedUntil: until }),
+    ]);
+  });
+
+  it('records nothing when an open action is opened again', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).update('act_1', update({ status: 'OPEN' }), USER);
+
+    expect(prisma.events).toEqual([]);
+  });
+
+  it('writes only the note when a done action is marked done again', async () => {
+    const closedAt = new Date('2026-07-20T03:00:00.000Z');
+    const prisma = buildPrisma({ status: 'DONE', closedAt });
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DONE', note: ' shipped ' }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toEqual({
+      note: 'shipped',
+    });
+    expect(prisma.events).toEqual([]);
+  });
+
+  it('saves a note on a snooze whose date has passed without validating it', async () => {
+    const until = inDays(-1);
+    const prisma = buildPrisma({ status: 'SNOOZED', snoozedUntil: until });
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({
+        status: 'SNOOZED',
+        snoozedUntil: until.toISOString(),
+        note: 'waiting on design',
+      }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toEqual({
+      note: 'waiting on design',
+    });
+    expect(prisma.events).toEqual([]);
+  });
+
+  it('records a snoozed event when a snooze moves to a new date', async () => {
+    const prisma = buildPrisma({ status: 'SNOOZED', snoozedUntil: inDays(3) });
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'SNOOZED', snoozedUntil: inDays(10).toISOString() }),
+      USER,
+    );
+
+    expect(prisma.events).toEqual([
+      expect.objectContaining({ type: 'snoozed' }),
+    ]);
+  });
+
+  it('still rejects a wake date on a repeated done', async () => {
+    const service = serviceFor(buildPrisma({ status: 'DONE' }));
+
+    await expect(
+      service.update(
+        'act_1',
+        update({ status: 'DONE', snoozedUntil: inDays(3).toISOString() }),
+        USER,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('ActionsService verification', () => {
+  it.each([
+    ['DONE', 'OPEN', {}],
+    ['DONE', 'DISMISSED', {}],
+    ['OPEN', 'DONE', {}],
+    [
+      'DONE',
+      'SNOOZED',
+      { snoozedUntil: new Date(Date.now() + 7 * DAY_MS).toISOString() },
+    ],
+  ] as const)(
+    'clears verifiedAt when %s moves to %s',
+    async (previous, status, extra) => {
+      const prisma = buildPrisma({ status: previous });
+
+      await serviceFor(prisma).update(
+        'act_1',
+        update({ status, ...extra }),
+        USER,
+      );
+
+      expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+        verifiedAt: null,
+      });
+    },
+  );
+});
+
+describe('ActionsService dismiss reasons', () => {
+  it('stores the reason on the dismissed event', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DISMISSED', reason: 'handled_elsewhere' }),
+      USER,
+    );
+
+    expect(prisma.events).toEqual([
+      expect.objectContaining({
+        type: 'dismissed',
+        reason: 'handled_elsewhere',
+      }),
+    ]);
+  });
+
+  it.each(['DONE', 'OPEN', 'SNOOZED'] as const)(
+    'rejects a reason with %s',
+    async (status) => {
+      await expect(
+        serviceFor(buildPrisma({ status: 'DONE' })).update(
+          'act_1',
+          update({ status, reason: 'not_relevant' }),
+          USER,
+        ),
+      ).rejects.toThrow(
+        new BadRequestException(
+          'reason is only valid when status is DISMISSED',
+        ),
+      );
+    },
+  );
+});
+
+describe('ActionsService undo', () => {
+  const minutesAgo = (minutes: number): Date =>
+    new Date(Date.now() - minutes * 60_000);
+  const opened: StoredEvent = {
+    id: 'ev_opened',
+    type: 'opened',
+    actor: 'system',
+    status: 'OPEN',
+    occurredAt: minutesAgo(60 * 24),
+  };
+  const done = (minutes = 1): StoredEvent => ({
+    id: 'ev_done',
+    type: 'done',
+    actor: 'user',
+    userId: USER,
+    status: 'DONE',
+    occurredAt: minutesAgo(minutes),
+  });
+
+  it('refuses to undo a change another user made', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      { ...done(), userId: 'user_2' },
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+  });
+
+  it('restores open without counting a reopen and forgets the done event', async () => {
+    const prisma = buildPrisma({ status: 'DONE', reopenCount: 2 }, [
+      opened,
+      done(),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'OPEN', revert: true }),
+      USER,
+    );
+
+    const data = prisma.actionItem.update.mock.calls[0][0].data;
+    expect(data).toMatchObject({ status: 'OPEN', closedAt: null });
+    expect(data).not.toHaveProperty('reopenCount');
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_done' },
+    });
+    expect(prisma.events).toEqual([]);
+  });
+
+  it('restores a snooze with its wake date when a dismiss is undone', async () => {
+    const until = new Date(Date.now() + 5 * DAY_MS);
+    const prisma = buildPrisma({ status: 'DISMISSED' }, [
+      opened,
+      {
+        id: 'ev_snoozed',
+        type: 'snoozed',
+        actor: 'user',
+        userId: USER,
+        status: 'SNOOZED',
+        snoozedUntil: until,
+        occurredAt: minutesAgo(30),
+      },
+      {
+        id: 'ev_dismissed',
+        type: 'dismissed',
+        actor: 'user',
+        userId: USER,
+        status: 'DISMISSED',
+        occurredAt: minutesAgo(1),
+      },
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({
+        status: 'SNOOZED',
+        snoozedUntil: until.toISOString(),
+        revert: true,
+      }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: until,
+      closedAt: null,
+    });
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_dismissed' },
+    });
+  });
+
+  it('takes back the reopen count when a reopen is undone', async () => {
+    const prisma = buildPrisma({ status: 'OPEN', reopenCount: 1 }, [
+      opened,
+      done(20),
+      {
+        id: 'ev_reopened',
+        type: 'reopened',
+        actor: 'user',
+        userId: USER,
+        status: 'OPEN',
+        occurredAt: minutesAgo(1),
+      },
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DONE', revert: true }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'DONE',
+      reopenCount: { decrement: 1 },
+    });
+  });
+
+  it('refuses an undo after the window has passed', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      done(ACTION_REVERT_WINDOW_MINUTES + 1),
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+  });
+
+  it('refuses an undo to a status the action did not have', async () => {
+    const prisma = buildPrisma({ status: 'DONE' }, [opened, done()]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'DISMISSED', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Undo must restore the previous status'),
+    );
+  });
+
+  it('refuses an undo when the latest change was not a person', async () => {
+    const prisma = buildPrisma({ status: 'OPEN' }, [opened]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+  });
+});
+
+describe('ActionsService bulk updates', () => {
+  const bulk = (
+    ids: string[],
+    body: Partial<BulkUpdateActionsDto> = {},
+  ): BulkUpdateActionsDto =>
+    Object.assign(new BulkUpdateActionsDto(), { ids, status: 'DONE', ...body });
+
+  const withRows = (rows: Array<Partial<CurrentRow>>) => {
+    const prisma = buildPrisma();
+    prisma.actionItem.findMany = jest.fn(() =>
+      Promise.resolve(rows.map((row) => currentRow(row))),
+    ) as unknown as typeof prisma.actionItem.findMany;
+    prisma.actionItem.update = jest.fn(
+      (args: { where: { id: string }; data: Record<string, unknown> }) =>
+        Promise.resolve(
+          storedRow({ id: args.where.id, status: args.data.status }),
+        ),
+    ) as unknown as typeof prisma.actionItem.update;
+    return prisma;
+  };
+
+  it('reports ids it cannot see as missing instead of failing', async () => {
+    const prisma = withRows([{ id: 'act_1' }]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_1', 'act_gone']),
+      USER,
+    );
+
+    expect(result.missing).toEqual(['act_gone']);
+    expect(result.items.map((item) => item.id)).toEqual(['act_1']);
+  });
+
+  it('refuses to close a resolved action and leaves it untouched', async () => {
+    const prisma = withRows([
+      { id: 'act_1' },
+      { id: 'act_2', status: 'RESOLVED' },
+    ]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_1', 'act_2']),
+      USER,
+    );
+
+    expect(result.conflicts).toEqual(['act_2']);
+    expect(prisma.actionItem.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('records one event per updated action in a single write', async () => {
+    const prisma = withRows([{ id: 'act_1' }, { id: 'act_2' }]);
+
+    await serviceFor(prisma).bulkUpdate(bulk(['act_1', 'act_2']), USER);
+
+    expect(prisma.actionEvent.createMany).toHaveBeenCalledTimes(1);
+    expect(prisma.events.map((event) => [event.actionId, event.type])).toEqual([
+      ['act_1', 'done'],
+      ['act_2', 'done'],
+    ]);
+  });
+
+  it('returns the items in the order they were asked for', async () => {
+    const prisma = withRows([
+      { id: 'act_1' },
+      { id: 'act_2' },
+      { id: 'act_3' },
+    ]);
+
+    const result = await serviceFor(prisma).bulkUpdate(
+      bulk(['act_3', 'act_1', 'act_2']),
+      USER,
+    );
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      'act_3',
+      'act_1',
+      'act_2',
+    ]);
   });
 });

@@ -34,16 +34,16 @@ test("top actions name their app and open the exact action", async ({
 
   const [first] = ACTIONS;
   const link = rows.first().getByRole("link");
+  await expect(link).toContainText('Add "habit tracker" to your metadata');
   await expect(link).toContainText(first.scope.appName ?? "");
   await expect(link).toContainText(first.scope.country.toUpperCase());
   await expect(link).toHaveAttribute("href", `/actions?action=${first.id}`);
 
   await link.click();
   await expect(page).toHaveURL(new RegExp(`/actions\\?action=${first.id}$`));
-  await expect(page.locator(`#action-${first.id}`)).toHaveAttribute(
-    "data-focused",
-    "true",
-  );
+  await expect(
+    page.getByRole("dialog").getByRole("heading", { level: 2 }),
+  ).toHaveText('Add "habit tracker" to your metadata');
 });
 
 test("keyword movers list climbers and fallers side by side on a desktop", async ({
