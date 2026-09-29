@@ -1,32 +1,13 @@
 #!/usr/bin/env node
-import { execFileSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
+import { composeConfig, root } from "./compose-config.mjs";
 
-const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const STACKS = ["docker-compose.yml", "docker-compose.pull.yml"];
 const KEYS_SOURCE = resolve(root, "apps/api/keys");
 const KEYS_TARGET = "/repo/apps/api/keys";
 
-function composeConfig(file) {
-  const raw = execFileSync(
-    "docker",
-    ["compose", "-f", file, "config", "--format", "json"],
-    {
-      cwd: root,
-      encoding: "utf8",
-      env: {
-        ...process.env,
-        POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD ?? "verify",
-        AUTH_SECRET: process.env.AUTH_SECRET ?? "verify".repeat(8),
-      },
-    },
-  );
-  return JSON.parse(raw);
-}
-
 const failures = STACKS.flatMap((file) => {
-  const volumes = composeConfig(file).services.api?.volumes ?? [];
+  const volumes = composeConfig([file]).services.api?.volumes ?? [];
   const keys = volumes.find((volume) => volume.target === KEYS_TARGET);
   if (!keys) {
     return [`${file}: api does not mount ${KEYS_TARGET}`];
