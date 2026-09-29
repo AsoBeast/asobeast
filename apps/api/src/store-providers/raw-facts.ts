@@ -1,4 +1,4 @@
-import { RatingCounts, RATING_STARS } from '@asobeast/shared';
+import { RatingCounts, RATING_STARS, releaseNotesText } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 
 export interface RawAppFacts {
@@ -159,9 +159,14 @@ export function isPaid(raw: unknown): boolean {
   return typeof value === 'number' && value > 0;
 }
 
+const playReleaseNotes = (value: unknown): string | null =>
+  typeof value === 'string' ? trimmedString(releaseNotesText(value)) : null;
+
 export function releaseNotesFor(store: Store, raw: unknown): string | null {
-  const key = store === Store.GOOGLE_PLAY ? 'recentChanges' : 'releaseNotes';
-  return trimmedString(asRecord(raw)?.[key]);
+  const record = asRecord(raw);
+  return store === Store.GOOGLE_PLAY
+    ? playReleaseNotes(record?.recentChanges)
+    : trimmedString(record?.releaseNotes);
 }
 
 export function extractAppStoreRawFacts(raw: unknown): RawAppFacts {
@@ -199,7 +204,7 @@ export function extractGooglePlayRawFacts(raw: unknown): RawAppFacts {
     screenshotCount: arrayLength(record.screenshots),
     ipadScreenshotCount: null,
     genres: categoryNames(record.categories),
-    releaseNotes: nonEmptyString(record.recentChanges),
+    releaseNotes: playReleaseNotes(record.recentChanges),
     languages: [],
     contentRating: nonEmptyString(record.contentRating),
     genreKey: nonEmptyString(record.genreId),

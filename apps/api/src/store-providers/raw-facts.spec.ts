@@ -140,6 +140,14 @@ describe('extractGooglePlayRawFacts', () => {
     });
   });
 
+  it('reads release notes markup as plain text lines', () => {
+    const facts = extractGooglePlayRawFacts({
+      ...gplayPayload,
+      recentChanges: 'v4.6863<br>- New stickers<br>- New memes',
+    });
+    expect(facts.releaseNotes).toBe('v4.6863\n- New stickers\n- New memes');
+  });
+
   it('reports no video when the video field is absent', () => {
     const facts = extractGooglePlayRawFacts({
       ...gplayPayload,
@@ -230,6 +238,30 @@ describe('releaseNotesFor', () => {
     expect(
       releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: '  Updated  ' }),
     ).toBe('Updated');
+  });
+
+  it('reads google play release notes markup as plain text lines', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: 'v4.6862<br>- New stickers<br>- New memes:<br>✓ Old Man',
+      }),
+    ).toBe('v4.6862\n- New stickers\n- New memes:\n✓ Old Man');
+  });
+
+  it('reads google play notes that differ only in markup as the same notes', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: 'Fixes.<br>' }),
+    ).toBe(releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: 'Fixes.' }));
+  });
+
+  it('returns null for google play notes that hold only markup', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: '<br> <br/>' }),
+    ).toBeNull();
+    expect(
+      extractGooglePlayRawFacts({ ...gplayPayload, recentChanges: '<br>' })
+        .releaseNotes,
+    ).toBeNull();
   });
 
   it('returns null when absent, blank, or non-string', () => {
