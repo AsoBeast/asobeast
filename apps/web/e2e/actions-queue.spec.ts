@@ -152,6 +152,21 @@ test.describe("closing several actions at once", () => {
     ).toHaveCount(0);
   });
 
+  test("a partly selected group shows a dash, not a check", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await select(page, "act-prune");
+
+    const group = page
+      .locator('[data-slot="action-group"]')
+      .filter({ has: page.locator(card("act-prune")) })
+      .getByRole("checkbox", { name: /^Select all in / });
+    await expect(group).toHaveAttribute("aria-checked", "mixed");
+    await expect(group.locator("svg.lucide-minus")).toBeVisible();
+    await expect(group.locator("svg.lucide-check")).toBeHidden();
+  });
+
   test("a selection that a filter hides no longer counts", async ({ page }) => {
     await page.goto("/actions");
     await select(page, "act-prune");
