@@ -1,4 +1,4 @@
-import { accessSync, constants } from 'node:fs';
+import { accessSync, constants, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Env } from './env';
 
@@ -33,7 +33,7 @@ export function assertAppleAdsConfiguration(env: AppleAdsCredentials): void {
 function readable(path: string): boolean {
   try {
     accessSync(path, constants.R_OK);
-    return true;
+    return statSync(path).isFile();
   } catch {
     return false;
   }

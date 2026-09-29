@@ -57,6 +57,13 @@ describe('apple ads configuration', () => {
     );
   });
 
+  it('refuses to boot when the key path names a directory', () => {
+    const env = { ...complete, APPLE_ADS_PRIVATE_KEY_PATH: keyDirectory };
+    expect(() => assertAppleAdsConfiguration(env)).toThrow(
+      `Apple Ads is configured but APPLE_ADS_PRIVATE_KEY_PATH cannot be read at ${keyDirectory}. Put the key in apps/api/keys, where the Compose stacks mount it, or remove every APPLE_ADS_ variable.`,
+    );
+  });
+
   it('never repeats a credential value in the error', () => {
     expect(() =>
       assertAppleAdsConfiguration(without('APPLE_ADS_KEY_ID')),
