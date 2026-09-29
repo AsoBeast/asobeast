@@ -60,11 +60,11 @@ function price(value: string | null): string {
   return value === null ? "—" : formatPrice(Number(value));
 }
 
-function releaseNotes(value: string | null, inline: boolean): string {
-  if (value === null) {
-    return "—";
-  }
-  return text(inline ? releaseNotesInline(value) : releaseNotesText(value));
+function releaseNotes(
+  value: string | null,
+  format: (notes: string) => string,
+): string {
+  return value === null ? "—" : text(format(value));
 }
 
 function count(value: string | null): string {
@@ -96,12 +96,15 @@ function ChangeValue({
                 dense ? null : "block whitespace-pre-line",
               )}
             >
-              {releaseNotes(after, dense)}
+              {releaseNotes(
+                after,
+                dense ? releaseNotesInline : releaseNotesText,
+              )}
             </span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          Previous: {releaseNotes(before, true)}
+          Previous: {releaseNotes(before, releaseNotesInline)}
         </TooltipContent>
       </Tooltip>
     );
