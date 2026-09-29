@@ -125,7 +125,7 @@ Fifteen rules, with fixed constants.
 | Rule | Fires when | Resolves when |
 | --- | --- | --- |
 | `keyword.add_uncovered` | A tracked home market keyword scores opportunity at or above 35, relevance at or above 60 and volume at or above 20, and no indexed field contains it | Metadata covers it, it drops below threshold, or it is deactivated or untracked |
-| `keyword.defend` | At least 2 new apps entered the top 10 over 7 days with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you |
+| `keyword.defend` | At least 2 apps sit in the top 10 today that were not in it when the 7 day window opened, with at least 4 observed days, and at least 1 sits at or above you | No new entrants for a full window, or every entrant falls below you or leaves the top 10 |
 | `keyword.prune` | A keyword ranked on at most 5 percent of at least 30 checks, carries volume below 20 and relevance at most 50, and pruning would help | It ranks, gains volume, is deactivated, or the budget pressure disappears |
 | `keyword.push_to_top10` | A relevant home market keyword with volume at or above 20 sits at 11 to 20, spent at least 5 of the last 7 days there without worsening, and appears only in a weaker field than the title and subtitle, or the title and short description on Google Play | It reaches the top 10, leaves the band, or a strong field covers it |
 | `metadata.fix_lint` | A home market listing field has at least one error level lint issue, such as exceeding its limit, a policy term or an emoji | The field has no error level issue left |

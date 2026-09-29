@@ -147,6 +147,62 @@ describe('keyword.defend', () => {
     ).toEqual(['new1', 'new2']);
   });
 
+  it('does not count an app that held the top ten when the window opened', () => {
+    const returning: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [
+        ['x2', 1],
+        ['x3', 2],
+        [OWN, 6],
+      ]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', returning]]) })]),
+      NOW,
+    );
+
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
+    ).toEqual(['new1', 'new2']);
+  });
+
+  it('does not count an entrant that has left the top ten again', () => {
+    const passing: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [...BASELINE, ['gone', 4]]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', passing]]) })]),
+      NOW,
+    );
+
+    expect(evidenceOf(detections)).toMatchObject({ entrantsAtOrAbove: 2 });
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.storeAppId),
+    ).toEqual(['new1', 'new2']);
+  });
+
+  it('places each entrant where it sits in the latest snapshot', () => {
+    const climbing: SerpSnapshotDay[] = [
+      snapshot(4, BASELINE),
+      snapshot(3, [...BASELINE, ['new1', 9], ['new2', 10]]),
+      snapshot(2, BASELINE),
+      snapshot(1, INVADED),
+    ];
+    const detections = detectKeywordDefend(
+      context([app({ serpDaysByKeyword: new Map([['kw_1', climbing]]) })]),
+      NOW,
+    );
+
+    expect(
+      evidenceOf(detections).entrants.map((entrant) => entrant.position),
+    ).toEqual([1, 2]);
+  });
+
   it('marks a tracked competitor entrant and resolves its app id', () => {
     const detections = detectKeywordDefend(
       context([
