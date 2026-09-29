@@ -37,6 +37,7 @@ jobs:
       - run: pnpm turbo run lint test build
       - run: pnpm check:rate-classes
       - run: pnpm check:compose-limits
+      - run: pnpm check:compose-mounts
       - run: pnpm check:env-documented
       - run: pnpm check:image-defaults
       - run: pnpm check:release-versions

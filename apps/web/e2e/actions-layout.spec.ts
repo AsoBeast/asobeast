@@ -4,8 +4,11 @@ import { expect, test } from "./session.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
+const queueRegion = (page: Page) =>
+  page.getByRole("region", { name: "Queue", exact: true });
+
 async function railBeside(page: Page): Promise<boolean> {
-  const queue = await page.locator("#queue").boundingBox();
+  const queue = await queueRegion(page).boundingBox();
   const progress = await page
     .getByRole("heading", { name: "Progress", level: 2 })
     .boundingBox();
@@ -103,7 +106,7 @@ test("the queue stays put when the tiles stream in", async ({ page }) => {
   const release = await holdActivity(page);
   await page.goto("/actions", { waitUntil: "commit" });
 
-  const queue = page.locator("#queue");
+  const queue = queueRegion(page);
   await expect(queue).toBeVisible();
   await expect(
     page.locator('[data-slot="stat-tile-skeleton"]').first(),
@@ -127,7 +130,7 @@ for (const [width, rows] of [
     await page.setViewportSize({ width, height: 900 });
     await holdActivity(page);
     await page.goto("/actions", { waitUntil: "commit" });
-    await expect(page.locator("#queue")).toBeVisible();
+    await expect(queueRegion(page)).toBeVisible();
 
     const tiles = page.locator('[data-slot="stat-tile-skeleton"]');
     await expect(tiles).toHaveCount(4);

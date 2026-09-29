@@ -210,7 +210,7 @@ Optional, off by default. With an Apple Ads API key, asobeast reads Apple's own 
 | `APPLE_ADS_CLIENT_ID` | Empty | No | Client id from the API page of your Apple Ads account settings. The four credentials are set together or not at all, and a partial set refuses to boot |
 | `APPLE_ADS_TEAM_ID` | Empty | No | Team id from the same page |
 | `APPLE_ADS_KEY_ID` | Empty | No | Key id Apple returned when you uploaded the public key |
-| `APPLE_ADS_PRIVATE_KEY_PATH` | Empty | No | Path to the `prime256v1` private key PEM, mounted read only into the API container. Its contents are never logged |
+| `APPLE_ADS_PRIVATE_KEY_PATH` | Empty | No | Path to the `prime256v1` private key PEM. A relative path resolves against `apps/api`, and both Compose stacks mount `apps/api/keys` there read only, so `keys/apple-ads-private.pem` works with and without Docker. When the four credentials are set and the path is not a readable file, the API refuses to boot. Its contents are never logged |
 | `APPLE_ADS_AD_ACCOUNT_ID` | Empty | No | Ad account to read through. Empty uses the first one the credentials can read |
 | `CRON_APPLE_POPULARITY` | `0 9 * * 1` | No | When the weekly sync runs, UTC. Never scheduled while the credentials are unset |
 

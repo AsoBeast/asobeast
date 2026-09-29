@@ -24,22 +24,24 @@ The key belongs to the instance, not to a workspace, and the data it reads is th
     In Apple Ads, open Account Settings, then API, and paste the contents of `apple-ads-public.pem`. Apple shows a client id, a team id and a key id. Keep all three.
   </Step>
   <Step title="Keep the private key out of the repository">
-    Store `apple-ads-private.pem` next to your Compose files, readable only by the account that runs Docker, and never commit it.
+    Move `apple-ads-private.pem` into `apps/api/keys/` beside your Compose files. Git ignores that directory, so the key is never committed.
   </Step>
 </Steps>
 
 ## Give the API the key
 
-<Steps>
-  <Step title="Mount the key read only">
-    Add a `docker-compose.override.yml` beside `docker-compose.yml`:
+Both `docker-compose.yml` and `docker-compose.pull.yml` mount `apps/api/keys` read only into the API container, at the path the API resolves a relative key path against. Nothing else needs mounting, whether you start the stack with `docker compose` directly or through `pnpm compose:build:prod`.
 
-    ```yaml
-    services:
-      api:
-        volumes:
-          - ./apple-ads-private.pem:/run/secrets/apple-ads.pem:ro
+<Steps>
+  <Step title="Let the API read the key">
+    Inside the container the API runs as user id 1000. On a Linux host, give that user the file:
+
+    ```bash
+    sudo chown 1000 apps/api/keys/apple-ads-private.pem
+    sudo chmod 400 apps/api/keys/apple-ads-private.pem
     ```
+
+    Docker Desktop on macOS and Windows maps file ownership itself, so there the file only has to be readable by you.
   </Step>
   <Step title="Set the four variables">
     In `apps/api/.env`:
@@ -48,10 +50,12 @@ The key belongs to the instance, not to a workspace, and the data it reads is th
     APPLE_ADS_CLIENT_ID=SEARCHADS.your-client-id
     APPLE_ADS_TEAM_ID=SEARCHADS.your-team-id
     APPLE_ADS_KEY_ID=your-key-id
-    APPLE_ADS_PRIVATE_KEY_PATH=/run/secrets/apple-ads.pem
+    APPLE_ADS_PRIVATE_KEY_PATH=keys/apple-ads-private.pem
     ```
 
-    Set all four or none. A partial set refuses to boot and names the missing ones. `APPLE_ADS_AD_ACCOUNT_ID` is optional; see the [configuration reference](/configuration/reference#apple-search-popularity).
+    Set all four or none. A partial set refuses to boot and names the missing ones, and so does a key file the API cannot read, which names the path it tried. `APPLE_ADS_AD_ACCOUNT_ID` is optional; see the [configuration reference](/configuration/reference#apple-search-popularity).
+
+    The relative path works unchanged for `pnpm dev`, which runs the API from `apps/api`.
   </Step>
   <Step title="Recreate the API">
     ```bash
@@ -82,7 +86,7 @@ Below ten keywords with both numbers it says there is not enough data yet.
 
 ## Rotate the key
 
-Generate and upload a new key as above, replace the mounted file and `APPLE_ADS_KEY_ID`, recreate the API, then revoke the old key in Apple Ads. Stored popularity stays valid, because it is Apple's published data rather than anything tied to the key.
+Generate and upload a new key as above, replace the file in `apps/api/keys/` and `APPLE_ADS_KEY_ID`, recreate the API, then revoke the old key in Apple Ads. Stored popularity stays valid, because it is Apple's published data rather than anything tied to the key.
 
 ## Disconnect
 
