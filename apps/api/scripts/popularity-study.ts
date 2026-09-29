@@ -122,6 +122,24 @@ function readTerms(path: string): TermsFile {
   return { floors: file.floors, terms: [...strongest.values()] };
 }
 
+const hasSuggestSignals = (sample: Partial<Sample>): sample is Sample =>
+  typeof sample.continuations === 'number' &&
+  typeof sample.reach?.status === 'string';
+
+function readSamples(path: string): Sample[] {
+  if (!existsSync(path)) {
+    return [];
+  }
+  const saved = JSON.parse(readFileSync(path, 'utf8')) as Partial<Sample>[];
+  const complete = saved.filter(hasSuggestSignals);
+  if (complete.length < saved.length) {
+    console.warn(
+      `${saved.length - complete.length} samples in ${path} predate the suggestion signals; collect and reference search them again`,
+    );
+  }
+  return complete;
+}
+
 function sampleListed(file: TermsFile): ListedTerm[] {
   const byGenre = new Map<string, ListedTerm[]>();
   for (const term of file.terms) {
@@ -148,9 +166,7 @@ class SampleCollector {
   ) {
     this.listed = new Set(file.terms.map((term) => searchKey(term.term)));
     this.globalFloor = Math.min(...Object.values(file.floors));
-    this.samples = existsSync(outPath)
-      ? (JSON.parse(readFileSync(outPath, 'utf8')) as Sample[])
-      : [];
+    this.samples = readSamples(outPath);
     this.done = new Set(this.samples.map((sample) => sample.term));
   }
 
@@ -406,8 +422,7 @@ const median = (values: number[]): number => {
 };
 
 function fit(samplesPath: string): void {
-  const samples = JSON.parse(readFileSync(samplesPath, 'utf8')) as Sample[];
-  const rows: Row[] = samples.flatMap((sample) => {
+  const rows: Row[] = readSamples(samplesPath).flatMap((sample) => {
     const features = popularityFeatures(sample.results, sample.term, {
       continuations: sample.continuations,
       reach: sample.reach,
