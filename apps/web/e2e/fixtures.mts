@@ -976,6 +976,16 @@ const APP_1_CHANGES: ChangeTimeline = {
       capturedAt: utcTimestampDaysAgo(4),
     },
     {
+      id: "app-chg-8",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "whatsNew",
+      before: "v2.7<br>- Calmer sounds",
+      after: "v2.8<br>- New stickers<br/>- Faster sync &amp; backup<br>",
+      capturedAt: utcTimestampDaysAgo(4),
+    },
+    {
       id: "app-chg-5",
       appId: "app-1",
       appName: "Focus Timer",
@@ -2039,6 +2049,16 @@ export const RECENT_CHANGES: ChangeTimeline = {
       before: "2.7.0",
       after: "2.8.0",
       capturedAt: utcTimestampDaysAgo(10),
+    },
+    {
+      id: "chg-11",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "whatsNew",
+      before: "v2.7<br>- Calmer sounds",
+      after: "v2.8<br>- New stickers<br/>- Faster sync &amp; backup<br>",
+      capturedAt: utcTimestampDaysAgo(11),
     },
   ],
 };
