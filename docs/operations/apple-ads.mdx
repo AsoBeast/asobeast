@@ -53,7 +53,7 @@ Both `docker-compose.yml` and `docker-compose.pull.yml` mount `apps/api/keys` re
     APPLE_ADS_PRIVATE_KEY_PATH=keys/apple-ads-private.pem
     ```
 
-    Set all four or none. A partial set refuses to boot and names the missing ones. `APPLE_ADS_AD_ACCOUNT_ID` is optional; see the [configuration reference](/configuration/reference#apple-search-popularity).
+    Set all four or none. A partial set refuses to boot and names the missing ones, and so does a key file the API cannot read, which names the path it tried. `APPLE_ADS_AD_ACCOUNT_ID` is optional; see the [configuration reference](/configuration/reference#apple-search-popularity).
 
     The relative path works unchanged for `pnpm dev`, which runs the API from `apps/api`.
   </Step>

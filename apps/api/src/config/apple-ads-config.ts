@@ -1,3 +1,5 @@
+import { accessSync, constants } from 'node:fs';
+import { resolve } from 'node:path';
 import type { Env } from './env';
 
 export const APPLE_ADS_CREDENTIALS = [
@@ -19,5 +21,20 @@ export function assertAppleAdsConfiguration(env: AppleAdsCredentials): void {
     throw new Error(
       `Apple Ads is partly configured. Set ${missing.join(', ')} or remove every APPLE_ADS_ variable.`,
     );
+  }
+  const keyPath = env.APPLE_ADS_PRIVATE_KEY_PATH;
+  if (missing.length === 0 && keyPath && !readable(keyPath)) {
+    throw new Error(
+      `Apple Ads is configured but APPLE_ADS_PRIVATE_KEY_PATH cannot be read at ${resolve(keyPath)}. Put the key in apps/api/keys, where the Compose stacks mount it, or remove every APPLE_ADS_ variable.`,
+    );
+  }
+}
+
+function readable(path: string): boolean {
+  try {
+    accessSync(path, constants.R_OK);
+    return true;
+  } catch {
+    return false;
   }
 }
