@@ -508,6 +508,26 @@ describe('ActionsController (e2e)', () => {
     expect(events).toEqual([{ type: 'dismissed', reason: 'not_relevant' }]);
   });
 
+  it('records a reason given to an action that is already dismissed', async () => {
+    const id = await seedAction();
+    await api.patch(`/actions/${id}`).send({ status: 'DISMISSED' }).expect(200);
+
+    await api
+      .patch(`/actions/${id}`)
+      .send({ status: 'DISMISSED', reason: 'handled_elsewhere' })
+      .expect(200);
+
+    const events = await prisma.actionEvent.findMany({
+      where: { actionId: id },
+      orderBy: [{ occurredAt: 'asc' }, { id: 'asc' }],
+      select: { type: true, reason: true },
+    });
+    expect(events).toEqual([
+      { type: 'dismissed', reason: null },
+      { type: 'dismissed', reason: 'handled_elsewhere' },
+    ]);
+  });
+
   it('rejects a reason on any status but dismissed, and an unknown reason', async () => {
     const id = await seedAction();
 

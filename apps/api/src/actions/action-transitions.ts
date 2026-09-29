@@ -242,7 +242,8 @@ function isNoteOnly(
       current.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
     );
   }
-  return body.status === 'DONE' || body.status === 'DISMISSED';
+  if (body.status === 'DISMISSED') return body.reason === undefined;
+  return body.status === 'DONE';
 }
 
 function countsAsReopen(previous: string, target: ActionUpdateStatus): boolean {
