@@ -20,7 +20,7 @@ import {
   REGRESSION_TOTAL_SEVERITY_DROP,
 } from './rank-investigate-drop';
 import { isVolatile, VOLATILITY_DAMPED_CONFIDENCE } from './serp-volatility';
-import { dateDaysAgo, windowStart } from './window';
+import { dateDaysAgo, windowStart, withinWindow } from './window';
 
 export const UNEXPLAINED_WINDOW_DAYS = 14;
 export const UNEXPLAINED_RECENT_DAYS = 3;
@@ -82,11 +82,10 @@ function visibilityShift(
   series: ActionVisibilityPoint[],
   now: Date,
 ): VisibilityShift | null {
-  const from = windowStart(now, UNEXPLAINED_WINDOW_DAYS);
   const baselineTo = dateDaysAgo(now, UNEXPLAINED_BASELINE_FROM_DAYS);
-  const points = series
-    .filter((point) => point.date >= from)
-    .sort((left, right) => left.date.localeCompare(right.date));
+  const points = withinWindow(series, now, UNEXPLAINED_WINDOW_DAYS).sort(
+    (left, right) => left.date.localeCompare(right.date),
+  );
   const baseline = points.filter((point) => point.date <= baselineTo);
   if (baseline.length < UNEXPLAINED_MIN_BASELINE_POINTS) return null;
   const before = mean(baseline.map((point) => point.visibility));

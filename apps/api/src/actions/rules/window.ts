@@ -5,3 +5,12 @@ export function dateDaysAgo(now: Date, days: number): string {
 export function windowStart(now: Date, days: number): string {
   return dateDaysAgo(now, days - 1);
 }
+
+export function withinWindow<T extends { date: string }>(
+  rows: readonly T[],
+  now: Date,
+  days: number,
+): T[] {
+  const start = windowStart(now, days);
+  return rows.filter((row) => row.date >= start);
+}
