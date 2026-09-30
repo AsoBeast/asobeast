@@ -1,3 +1,4 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -295,5 +296,110 @@ test.describe("working the queue from the keyboard", () => {
     await expect(
       page.getByRole("dialog", { name: "Keyboard shortcuts" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("the page keys work before any row has focus", () => {
+  const shortcuts = (page: Page) =>
+    page.getByRole("dialog", { name: "Keyboard shortcuts" });
+
+  const pressUntil = (page: Page, key: string, settled: () => Promise<void>) =>
+    expect(async () => {
+      await page.keyboard.press(key);
+      await settled();
+    }).toPass();
+
+  const openShortcuts = (page: Page) =>
+    pressUntil(page, "Shift+?", () =>
+      expect(shortcuts(page)).toBeVisible({ timeout: 500 }),
+    );
+
+  const keysReady = async (page: Page) => {
+    await openShortcuts(page);
+    await page.keyboard.press("Escape");
+    await expect(shortcuts(page)).toHaveCount(0);
+  };
+
+  test("? opens the shortcuts on a freshly loaded page", async ({ page }) => {
+    await page.goto("/actions");
+
+    await openShortcuts(page);
+  });
+
+  test("j focuses the first row and the next j the second", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    const rows = page.locator(ROWS);
+
+    await pressUntil(page, "j", () =>
+      expect(rows.nth(0)).toBeFocused({ timeout: 500 }),
+    );
+    await page.keyboard.press("j");
+
+    await expect(rows.nth(1)).toBeFocused();
+  });
+
+  test("/ focuses the search box without typing a slash", async ({ page }) => {
+    await page.goto("/actions");
+    const search = page.getByRole("textbox", { name: "Search actions" });
+
+    await pressUntil(page, "/", () =>
+      expect(search).toBeFocused({ timeout: 500 }),
+    );
+
+    await expect(search).toHaveValue("");
+  });
+
+  test("a chord with a modifier is left to the browser", async ({ page }) => {
+    await page.goto("/actions");
+    await keysReady(page);
+
+    await page.keyboard.press("Control+j");
+
+    await expect(page.locator(`${ROWS}:focus`)).toHaveCount(0);
+  });
+
+  test("a focused sort menu keeps its own type-ahead", async ({ page }) => {
+    await page.goto("/actions");
+    await keysReady(page);
+    const sort = page.getByRole("combobox", { name: "Sort by" });
+    await sort.focus();
+
+    await page.keyboard.press("j");
+
+    await expect(sort).toBeFocused();
+    await expect(page.locator(`${ROWS}:focus`)).toHaveCount(0);
+  });
+
+  test("the arrow keys still scroll the page when no row is focused", async ({
+    page,
+  }) => {
+    await page.goto("/actions");
+    await keysReady(page);
+
+    await page.keyboard.press("ArrowDown");
+
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY))
+      .toBeGreaterThan(0);
+    await expect(page.locator(`${ROWS}:focus`)).toHaveCount(0);
+  });
+
+  test("the keys stop when the page is left", async ({ page }) => {
+    await page.goto("/actions");
+    await keysReady(page);
+    await page.getByRole("link", { name: "Settings", exact: true }).click();
+    await expect(page).toHaveURL(/\/settings$/);
+
+    await page.keyboard.press("Shift+?");
+
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
+
+  test("the app scoped queue answers too", async ({ page }) => {
+    await page.goto("/apps/app-1/actions");
+
+    await openShortcuts(page);
   });
 });
