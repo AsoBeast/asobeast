@@ -1,15 +1,17 @@
 "use client";
 
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import {
+  commandApplies,
   commandFor,
   isTypingTarget,
   nextFocus,
-  ROW_COMMANDS,
   type QueueCommand,
 } from "./queue-keys";
 
-const OVERLAY = '[role="menu"],[role="dialog"]';
+const OVERLAY = '[role="menu"],[role="dialog"],[role="listbox"]';
+const QUEUE = "#queue";
+const ROW = "li[id^='action-']";
 
 const rowElement = (id: string) => document.getElementById(`action-${id}`);
 
@@ -64,26 +66,32 @@ export function useQueueKeys({
     if (command.kind === "dismiss") press(id, "dismiss");
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
-    if (isTypingTarget(event.target) || document.querySelector(OVERLAY)) return;
-    const command = commandFor(event);
-    if (!command) return;
-    const row = (event.target as HTMLElement).closest<HTMLElement>(
-      "li[id^='action-']",
-    );
-    const needsRow = ROW_COMMANDS.includes(command.kind);
-    if (command.kind === "move" ? !row : needsRow && row !== event.target) {
+  const onKeyDown = useEffectEvent((event: KeyboardEvent) => {
+    const target = event.target instanceof Element ? event.target : null;
+    if (
+      event.defaultPrevented ||
+      isTypingTarget(target) ||
+      document.querySelector(OVERLAY)
+    ) {
       return;
     }
+    const command = commandFor(event);
+    if (!command) return;
+    const row = target?.closest<HTMLElement>(ROW) ?? null;
+    const scope = {
+      inQueue: target?.closest(QUEUE) != null,
+      withinRow: row !== null,
+      onRow: row !== null && row === target,
+    };
+    if (!commandApplies(event, command, scope)) return;
     event.preventDefault();
     run(command, row ? row.id.replace(/^action-/, "") : null);
-  };
+  });
 
-  return {
-    focusedId,
-    setFocusedId,
-    helpOpen,
-    setHelpOpen,
-    onKeyDown,
-  };
+  useEffect(() => {
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  return { focusedId, setFocusedId, helpOpen, setHelpOpen };
 }
