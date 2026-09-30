@@ -16,7 +16,7 @@ import {
   scoreStatus,
   STATUS_LABEL,
 } from "./audit-copy";
-import { storeLabel } from "@/lib/format";
+import { pluralize, storeLabel } from "@/lib/format";
 import { comparison, COMPARISON_LABEL } from "./benchmark-comparison";
 
 const DASH = "—";
@@ -115,7 +115,7 @@ const benchmarkLines = (audit: AppAuditResult): string[] =>
     ? [
         "## Competitor comparison",
         "",
-        `Compared with ${audit.benchmarks.competitors} competitors.`,
+        `Compared with ${pluralize(audit.benchmarks.competitors, "competitor")}.`,
         "",
         "| Metric | You | Competitor median | Best | Comparison |",
         "| --- | --- | --- | --- | --- |",

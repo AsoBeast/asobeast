@@ -99,4 +99,16 @@ describe("auditMarkdown", () => {
     expect(report).toContain("No change is waiting in Quick wins · Today.");
     expect(report).not.toMatch(/great work/i);
   });
+
+  it("counts one competitor in the singular", () => {
+    const report = auditMarkdown(
+      {
+        ...APP_AUDIT_EXAMPLE,
+        benchmarks: { ...APP_AUDIT_EXAMPLE.benchmarks!, competitors: 1 },
+      },
+      APP,
+    );
+
+    expect(report).toContain("Compared with 1 competitor.");
+  });
 });

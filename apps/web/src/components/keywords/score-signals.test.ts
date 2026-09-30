@@ -145,6 +145,12 @@ describe("difficultySignalLines", () => {
     ]);
   });
 
+  it("counts a median of one rating in the singular", () => {
+    expect(difficultySignalLines(signals({ medianRatingCount: 1 }))).toEqual([
+      "Typical top ten app: 1 rating.",
+    ]);
+  });
+
   it("says nothing without a median or signals", () => {
     expect(difficultySignalLines(signals({ medianRatingCount: null }))).toEqual(
       [],

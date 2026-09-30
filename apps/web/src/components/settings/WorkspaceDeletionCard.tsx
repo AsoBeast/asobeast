@@ -33,7 +33,7 @@ import {
   cancelWorkspaceDeletion,
   scheduleWorkspaceDeletion,
 } from "@/lib/api";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, pluralize } from "@/lib/format";
 import {
   invalidateWorkspaceDeletion,
   workspaceDeletionOptions,
@@ -73,8 +73,8 @@ function ScheduleDeletionDialog({ graceDays }: { graceDays: number }) {
         <AlertDialogHeader>
           <AlertDialogTitle>Delete this workspace?</AlertDialogTitle>
           <AlertDialogDescription>
-            Every app, keyword and history in it is erased after {graceDays}{" "}
-            days. You can cancel until then.
+            Every app, keyword and history in it is erased after{" "}
+            {pluralize(graceDays, "day")}. You can cancel until then.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="flex flex-col gap-2">
@@ -182,8 +182,8 @@ export function WorkspaceDeletionCard() {
         <CardTitle>Delete workspace</CardTitle>
         <CardDescription>
           Deleting erases every app, keyword and history in this workspace after
-          a grace period of {deletion.graceDays} days, during which the owner
-          can cancel it.
+          a grace period of {pluralize(deletion.graceDays, "day")}, during which
+          the owner can cancel it.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-4">

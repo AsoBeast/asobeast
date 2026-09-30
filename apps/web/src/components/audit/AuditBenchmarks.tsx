@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Meter } from "@/components/ui/meter";
+import { pluralize } from "@/lib/format";
 import {
   Table,
   TableBody,
@@ -70,7 +71,8 @@ export function AuditBenchmarks({
         <h2 className="mb-3 text-lg font-medium">Competitor comparison</h2>
         <Table>
           <TableCaption>
-            How your listing compares with {benchmarks.competitors} competitors
+            How your listing compares with{" "}
+            {pluralize(benchmarks.competitors, "competitor")}
           </TableCaption>
           <TableHeader>
             <TableRow>

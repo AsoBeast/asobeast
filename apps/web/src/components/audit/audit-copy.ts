@@ -12,7 +12,7 @@ import type {
   Store,
 } from "@asobeast/shared";
 import { healthTone, type HealthTone } from "@/components/ui/meter";
-import { storeLabel } from "@/lib/format";
+import { pluralize, storeLabel } from "@/lib/format";
 
 export const PROVISIONAL_CONFIDENCE = 0.6;
 
@@ -143,7 +143,7 @@ export const liftLabel = (lift: number | undefined): string =>
 export const emptyBucketLine = (unanswered: number): string =>
   unanswered === 0
     ? "Nothing to change here."
-    : `Nothing yet. ${unanswered} checks are not scored, so this list may grow.`;
+    : `Nothing yet. ${pluralize(unanswered, "check")} ${unanswered === 1 ? "is" : "are"} not scored, so this list may grow.`;
 
 export const scoreRingLabel = (
   overall: number | null,

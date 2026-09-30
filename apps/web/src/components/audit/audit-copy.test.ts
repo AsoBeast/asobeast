@@ -115,6 +115,13 @@ describe("emptyBucketLine", () => {
     expect(emptyBucketLine(9)).toContain("this list may grow");
     expect(emptyBucketLine(9)).not.toMatch(/great work/i);
   });
+
+  it("agrees the verb with one unscored check", () => {
+    expect(emptyBucketLine(1)).toBe(
+      "Nothing yet. 1 check is not scored, so this list may grow.",
+    );
+    expect(emptyBucketLine(9)).toContain("9 checks are not scored");
+  });
 });
 
 describe("liftLabel", () => {
