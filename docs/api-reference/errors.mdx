@@ -48,7 +48,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
 | `500` | An unhandled exception. The message is generic and the stack is logged server side |
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
-| `502` | A store request failed upstream, or the web proxy could not reach the API |
+| `502` | A store request failed upstream, or the web proxy could not reach the API. A store failure answers with a fixed sentence naming the store, and the underlying error is in the API log at warn level |
 | `503` | The health endpoint could not reach the database |
 | `504` | The web proxy timed out waiting for the API to start answering, bounded by `API_PROXY_TIMEOUT_MS` |
 
