@@ -78,7 +78,12 @@ describe('CompetitorsService.add', () => {
     const findFirst = jest.fn(({ where }: { where: { id?: string } }) =>
       Promise.resolve(
         where.id === 'primary'
-          ? { id: 'primary', store: Store.APP_STORE, country: 'us' }
+          ? {
+              id: 'primary',
+              store: Store.APP_STORE,
+              storeAppId: '1234567890',
+              country: 'us',
+            }
           : null,
       ),
     );
@@ -147,6 +152,20 @@ describe('CompetitorsService.add', () => {
         'https://play.google.com/store/apps/details?id=com.rival.app',
       ),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refuses the primary app as its own competitor before the quota', async () => {
+    const { service, workspace, getApp } = buildDeps(10);
+
+    await expect(
+      workspace.run(DEFAULT_WORKSPACE_ID, () =>
+        service.add(
+          'primary',
+          'https://apps.apple.com/gb/app/self/id1234567890',
+        ),
+      ),
+    ).rejects.toThrow(/cannot be its own competitor/);
+    expect(getApp).not.toHaveBeenCalled();
   });
 
   it('rejects once the competitor cap is reached', async () => {

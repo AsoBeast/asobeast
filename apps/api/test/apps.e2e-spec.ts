@@ -561,6 +561,22 @@ describe('AppsController (e2e)', () => {
       return (response.body as AppDetail).id;
     };
 
+    it('refuses to add an app as its own competitor', async () => {
+      const primary = await importedId(APP_STORE_URL);
+      registry.getAppCalls = [];
+
+      const response = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: APP_STORE_URL })
+        .expect(409);
+
+      expect((response.body as ApiErrorEnvelope).message).toMatch(
+        /cannot be its own competitor/,
+      );
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(0);
+      expect(registry.getAppCalls).toEqual([]);
+    });
+
     it('refuses a competitor that is already tracked as an app', async () => {
       const primary = await importedId(APP_STORE_URL);
       await importedId(RIVAL_URL);
