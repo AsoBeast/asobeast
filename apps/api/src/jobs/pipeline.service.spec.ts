@@ -566,7 +566,7 @@ describe('PipelineService', () => {
       const { service, appStoreQueue, gplayQueue } = buildService({
         prisma: prismaWith([
           tracked('old', 'app-store-v1'),
-          tracked('current', 'app-store-v3'),
+          tracked('current', 'app-store-v4'),
           tracked('never', null),
         ]),
       });
@@ -580,14 +580,14 @@ describe('PipelineService', () => {
           keywordId: 'old',
           workspaceId: DEFAULT_WORKSPACE_ID,
         }),
-        { jobId: 'score~old~app-store-v3' },
+        { jobId: 'score~old~app-store-v4' },
       );
       expect(gplayQueue.add).not.toHaveBeenCalled();
     });
 
     it('queues nothing when every score is current', async () => {
       const { service, appStoreQueue } = buildService({
-        prisma: prismaWith([tracked('current', 'app-store-v3')]),
+        prisma: prismaWith([tracked('current', 'app-store-v4')]),
       });
 
       await expect(service.fanOutOutdatedScores()).resolves.toBe(0);

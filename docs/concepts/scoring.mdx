@@ -138,7 +138,7 @@ Every persisted score is stored with the provenance needed to audit or recompute
 | Field | Example | Why it is stored |
 | --- | --- | --- |
 | Scoring source | `APPLE_SEARCH_SIGNALS`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH`, `APPLE_SUGGEST_REACH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
-| Formula version | `app-store-v3`, `google-play-v3` | Which calculation produced it, so old rows stay interpretable |
+| Formula version | `app-store-v4`, `google-play-v4` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 
