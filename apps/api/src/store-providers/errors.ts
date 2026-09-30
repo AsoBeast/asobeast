@@ -1,5 +1,10 @@
 import { Store } from '@prisma/client';
 
+const STORE_NAMES: Record<Store, string> = {
+  APP_STORE: 'The App Store',
+  GOOGLE_PLAY: 'Google Play',
+};
+
 export class StoreRequestError extends Error {
   constructor(
     readonly store: Store,
@@ -8,6 +13,10 @@ export class StoreRequestError extends Error {
   ) {
     super(`${store} ${method} failed: ${causeMessage}`);
     this.name = 'StoreRequestError';
+  }
+
+  get userMessage(): string {
+    return `${STORE_NAMES[this.store]} did not answer. Try again in a few minutes.`;
   }
 }
 
@@ -18,6 +27,10 @@ export class StoreAppNotFoundError extends Error {
   ) {
     super(`${store} has no app ${storeAppId}`);
     this.name = 'StoreAppNotFoundError';
+  }
+
+  get userMessage(): string {
+    return `${STORE_NAMES[this.store]} has no app ${this.storeAppId}.`;
   }
 }
 

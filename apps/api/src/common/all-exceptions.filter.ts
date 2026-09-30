@@ -105,14 +105,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         statusCode: HttpStatus.NOT_FOUND,
         error: 'Not Found',
-        message: exception.message,
+        message: exception.userMessage,
       };
     }
     if (exception instanceof StoreRequestError) {
+      this.logger.warn(exception.message);
       return {
         statusCode: HttpStatus.BAD_GATEWAY,
         error: 'Bad Gateway',
-        message: exception.message,
+        message: exception.userMessage,
       };
     }
     if (exception instanceof UnknownPriceError) {
