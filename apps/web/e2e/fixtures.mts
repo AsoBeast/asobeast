@@ -675,6 +675,7 @@ export const APP_1_DETAIL: AppDetail = {
   name: "Focus Timer",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(30),
+  searchable: true,
   latestSnapshot: {
     id: "snap-1",
     title: "Focus Timer",
@@ -713,6 +714,7 @@ export const APP_1_DE_DETAIL: AppDetail = {
   name: "Focus Timer",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(24),
+  searchable: true,
   latestSnapshot: {
     id: "snap-1-de",
     title: "Focus Timer",
@@ -759,6 +761,7 @@ export const APP_2_DETAIL: AppDetail = {
   name: "Habit Tracker",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(20),
+  searchable: true,
   latestSnapshot: {
     id: "snap-2",
     title: "Habit Tracker",
@@ -800,6 +803,7 @@ export const IMPORTED_APP_DETAIL: AppDetail = {
   name: "Imported App",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(0),
+  searchable: true,
   latestSnapshot: null,
   competitors: [],
   group: null,
@@ -1163,6 +1167,7 @@ export const APP_LONG_DETAIL: AppDetail = {
   name: LONG_NAME,
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(10),
+  searchable: true,
   latestSnapshot: {
     id: "snap-long",
     title: LONG_NAME,
@@ -1267,6 +1272,13 @@ export const APP_UNCHECKED_DETAIL: AppDetail = {
   name: "Freshly Imported App",
 };
 
+export const APP_IPAD_ONLY_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: "app-ipad-only",
+  name: "Procreate",
+  searchable: false,
+};
+
 export const APP_UNCHECKED_RANKINGS: RankingSeries = {
   series: APP_UNCHECKED_KEYWORDS.map((keyword) => ({
     keywordId: keyword.keywordId,
@@ -1329,6 +1341,7 @@ export const APP_COMBOS_DETAIL: AppDetail = {
   name: "Mood Journal",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(12),
+  searchable: true,
   latestSnapshot: {
     id: "snap-combos",
     title: "Mood Journal: Daily Diary",
@@ -1604,6 +1617,7 @@ export const APP_GP_DETAIL: AppDetail = {
   name: "Tomato Clock",
   iconUrl: null,
   createdAt: utcTimestampDaysAgo(25),
+  searchable: true,
   latestSnapshot: {
     id: "snap-gp",
     title: "Tomato Clock",
@@ -1828,6 +1842,12 @@ DATASETS[APP_TAGS_ID] = {
     tags: [],
     note: null,
   })),
+};
+
+DATASETS[APP_IPAD_ONLY_DETAIL.id] = {
+  ...DATASETS["app-unchecked"],
+  detail: APP_IPAD_ONLY_DETAIL,
+  changeImpact: emptyChangeImpact(APP_IPAD_ONLY_DETAIL),
 };
 
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];

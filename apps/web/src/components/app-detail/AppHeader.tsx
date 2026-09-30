@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { appDetailOptions } from "@/lib/queries";
 import { formatCountry, storeLabel } from "@/lib/format";
 import { AppLink } from "./AppLink";
+import { NotInSearchNotice } from "./NotInSearchNotice";
 
 function storeUrl(detail: AppDetail): string {
   if (detail.store === "GOOGLE_PLAY") {
@@ -20,37 +21,40 @@ export function AppHeader({ id }: { id: string }) {
   const name = detail.name ?? "Untitled app";
 
   return (
-    <header className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <h1
-          title={name}
-          className="line-clamp-2 text-display tracking-tight text-balance print:line-clamp-none"
-        >
-          {name}
-        </h1>
-        <div className="flex flex-wrap items-center gap-2 text-body text-muted-foreground">
-          <Badge variant="secondary">{storeLabel(detail.store)}</Badge>
-          <Badge
-            variant="outline"
-            title={`Home storefront · ${formatCountry(detail.country)}`}
+    <>
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <h1
+            title={name}
+            className="line-clamp-2 text-display tracking-tight text-balance print:line-clamp-none"
           >
-            {detail.country.toUpperCase()}
-          </Badge>
-          <a
-            href={storeUrl(detail)}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
-          >
-            Store page
-            <ExternalLink className="size-3.5" />
-          </a>
+            {name}
+          </h1>
+          <div className="flex flex-wrap items-center gap-2 text-body text-muted-foreground">
+            <Badge variant="secondary">{storeLabel(detail.store)}</Badge>
+            <Badge
+              variant="outline"
+              title={`Home storefront · ${formatCountry(detail.country)}`}
+            >
+              {detail.country.toUpperCase()}
+            </Badge>
+            <a
+              href={storeUrl(detail)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-6 items-center gap-1 rounded-sm hover:text-foreground print:hidden"
+            >
+              Store page
+              <ExternalLink className="size-3.5" />
+            </a>
+          </div>
         </div>
-      </div>
 
-      <div className="flex print:hidden">
-        <AppLink detail={detail} />
-      </div>
-    </header>
+        <div className="flex print:hidden">
+          <AppLink detail={detail} />
+        </div>
+      </header>
+      {detail.searchable === false ? <NotInSearchNotice /> : null}
+    </>
   );
 }

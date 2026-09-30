@@ -1333,7 +1333,7 @@
             }
           },
           "422": {
-            "description": "The listing is not available on iPhone or iPad, so it cannot rank in App Store search"
+            "description": "The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads"
           }
         },
         "summary": "Import an app from a store URL",
@@ -3593,7 +3593,7 @@
             }
           },
           "422": {
-            "description": "The listing is not available on iPhone or iPad, so it cannot rank in App Store search"
+            "description": "The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads"
           }
         },
         "summary": "Add a competitor app from a store URL",

@@ -350,9 +350,9 @@ describe('AppsController (e2e)', () => {
     expect(registry.getAppCalls).toEqual([]);
   });
 
-  describe('a listing that cannot appear in iPhone or iPad search', () => {
+  describe('a listing that iPhone search never lists', () => {
     const MESSAGE =
-      'Fixture App is not available on iPhone or iPad, so it cannot rank in App Store search';
+      'Fixture App is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads';
 
     it('is refused on import before anything is stored', async () => {
       registry.searchable = false;
@@ -393,6 +393,76 @@ describe('AppsController (e2e)', () => {
       registry.searchable = false;
 
       await api.post(`/apps/${appId}/refresh`).expect(200);
+    });
+  });
+
+  describe('an app imported before iPhone search was the rule', () => {
+    const PROCREATE_DEVICES = ['iPadAir-iPadAir', 'iPadPro13M4-iPadPro13M4'];
+    const UNIVERSAL_DEVICES = ['iPhone15-iPhone15', 'iPadAir5-iPadAir5'];
+
+    async function seed(
+      store: Store,
+      snapshots: Array<{ raw: object; capturedAt: string }>,
+    ): Promise<string> {
+      const seeded = await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store,
+          storeAppId: '425073498',
+          country: 'us',
+          name: 'Seeded',
+          snapshots: {
+            create: snapshots.map(({ raw, capturedAt }) => ({
+              title: 'Seeded',
+              description: 'Seeded description',
+              raw,
+              capturedAt: new Date(capturedAt),
+            })),
+          },
+        },
+      });
+      return seeded.id;
+    }
+
+    async function searchableOf(appId: string): Promise<boolean> {
+      const response = await api.get(`/apps/${appId}`).expect(200);
+      return (response.body as { searchable: boolean }).searchable;
+    }
+
+    it.each([
+      ['an iPad only app', { supportedDevices: PROCREATE_DEVICES }, false],
+      ['a universal app', { supportedDevices: UNIVERSAL_DEVICES }, true],
+      ['a Mac only app', { supportedDevices: [] }, false],
+      ['a snapshot that never recorded devices', { source: 'fixture' }, true],
+    ])('reports %s', async (_, raw, searchable) => {
+      const appId = await seed(Store.APP_STORE, [
+        { raw, capturedAt: '2026-09-01T00:00:00Z' },
+      ]);
+
+      expect(await searchableOf(appId)).toBe(searchable);
+    });
+
+    it('reports a Google Play app as searchable', async () => {
+      const appId = await seed(Store.GOOGLE_PLAY, [
+        { raw: { supportedDevices: [] }, capturedAt: '2026-09-01T00:00:00Z' },
+      ]);
+
+      expect(await searchableOf(appId)).toBe(true);
+    });
+
+    it('follows the newest snapshot', async () => {
+      const appId = await seed(Store.APP_STORE, [
+        {
+          raw: { supportedDevices: UNIVERSAL_DEVICES },
+          capturedAt: '2026-08-01T00:00:00Z',
+        },
+        {
+          raw: { supportedDevices: PROCREATE_DEVICES },
+          capturedAt: '2026-09-01T00:00:00Z',
+        },
+      ]);
+
+      expect(await searchableOf(appId)).toBe(false);
     });
   });
 
