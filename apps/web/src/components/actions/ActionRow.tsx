@@ -81,8 +81,9 @@ function RowControls({
   headline: string;
   href: string;
 }) {
-  const mutation = useActionUpdate(item, { moveFocus: true });
-  const busy = mutation.isPending;
+  const { update, isPending: busy } = useActionUpdate(item, {
+    moveFocus: true,
+  });
 
   if (isClosed(item)) {
     return (
@@ -91,7 +92,7 @@ function RowControls({
         size="sm"
         disabled={busy}
         className="h-11 @2xl/queue:h-7"
-        onClick={() => mutation.mutate({ status: "OPEN" })}
+        onClick={() => update({ status: "OPEN" })}
       >
         <RotateCcw aria-hidden />
         Reopen
@@ -107,7 +108,7 @@ function RowControls({
         aria-label="Done"
         data-command="done"
         className="size-11 @2xl/queue:h-7 @2xl/queue:w-auto"
-        onClick={() => mutation.mutate({ status: "DONE" })}
+        onClick={() => update({ status: "DONE" })}
       >
         <Check aria-hidden />
         <span className="hidden @2xl/queue:inline">Done</span>
@@ -118,15 +119,13 @@ function RowControls({
           snoozedUntil={item.snoozedUntil}
           disabled={busy}
           onSnooze={(snoozedUntil) =>
-            mutation.mutate({ status: "SNOOZED", snoozedUntil })
+            update({ status: "SNOOZED", snoozedUntil })
           }
-          onWake={() => mutation.mutate({ status: "OPEN" })}
+          onWake={() => update({ status: "OPEN" })}
         />
         <ActionDismissMenu
           disabled={busy}
-          onDismiss={(reason) =>
-            mutation.mutate({ status: "DISMISSED", reason })
-          }
+          onDismiss={(reason) => update({ status: "DISMISSED", reason })}
         />
       </div>
       <ActionRowMenu
@@ -134,7 +133,7 @@ function RowControls({
         headline={headline}
         href={href}
         disabled={busy}
-        onUpdate={(body) => mutation.mutate(body)}
+        onUpdate={update}
       />
     </>
   );

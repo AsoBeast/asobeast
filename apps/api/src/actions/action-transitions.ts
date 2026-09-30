@@ -105,7 +105,10 @@ export class ActionTransitions {
       };
     }
     const note = body.note === undefined ? {} : { note: body.note.trim() };
-    if (isNoteOnly(current, body)) {
+    if (
+      isNoteOnly(current, body) ||
+      (await this.repeatsDismissal(tx, current, body))
+    ) {
       const row = await tx.actionItem.update({
         where: { id: current.id },
         data: note,
@@ -154,12 +157,35 @@ export class ActionTransitions {
     };
   }
 
+  private async repeatsDismissal(
+    tx: Prisma.TransactionClient,
+    current: CurrentAction,
+    body: ActionUpdateRequest,
+  ): Promise<boolean> {
+    if (
+      current.status !== 'DISMISSED' ||
+      body.status !== 'DISMISSED' ||
+      body.reason === undefined
+    ) {
+      return false;
+    }
+    const latest = await tx.actionEvent.findFirst({
+      where: { actionId: current.id, type: 'dismissed' },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      select: { reason: true },
+    });
+    return latest?.reason === body.reason;
+  }
+
   private async revert(
     tx: Prisma.TransactionClient,
     current: CurrentAction,
     body: ActionUpdateRequest,
     userId: string,
   ): Promise<ActionRow> {
+    if (isAlreadyRestored(current, body)) {
+      throw new ConflictException('Nothing recent to undo on this action');
+    }
     const now = new Date();
     const [latest, ...earlier] = await tx.actionEvent.findMany({
       where: { actionId: current.id },
@@ -244,6 +270,20 @@ function isNoteOnly(
   }
   if (body.status === 'DISMISSED') return body.reason === undefined;
   return body.status === 'DONE';
+}
+
+function isAlreadyRestored(
+  current: CurrentAction,
+  body: ActionUpdateRequest,
+): boolean {
+  if (body.status !== current.status || body.status === 'DISMISSED') {
+    return false;
+  }
+  if (body.status !== 'SNOOZED') return true;
+  return (
+    body.snoozedUntil !== undefined &&
+    current.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
+  );
 }
 
 function countsAsReopen(previous: string, target: ActionUpdateStatus): boolean {

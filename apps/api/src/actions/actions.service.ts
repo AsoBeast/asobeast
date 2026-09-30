@@ -21,6 +21,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { lockActions } from './action-locks';
 import { ActionSummaryScope } from './action-summary-scope';
 import { CURRENT_SELECT, ActionTransitions } from './action-transitions';
 import { ActionRow, ROW_SELECT, toActionItem } from './actions.mapper';
@@ -157,6 +158,7 @@ export class ActionsService {
     userId: string,
   ): Promise<ActionItem> {
     const row = await this.prisma.withTransaction(async (tx) => {
+      await lockActions(tx, [id]);
       const current = await tx.actionItem.findFirst({
         where: { id },
         select: CURRENT_SELECT,
@@ -174,6 +176,7 @@ export class ActionsService {
     userId: string,
   ): Promise<ActionBulkUpdateResult> {
     const result = await this.prisma.withTransaction(async (tx) => {
+      await lockActions(tx, body.ids);
       const found = await tx.actionItem.findMany({
         where: { id: { in: body.ids } },
         select: CURRENT_SELECT,

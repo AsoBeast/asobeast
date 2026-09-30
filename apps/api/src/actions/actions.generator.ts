@@ -10,6 +10,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
+import { lockActions } from './action-locks';
 import { actionFingerprint } from './action-fingerprint';
 import { scoreImpact } from './action-impact';
 import { ExistingAction } from './action-lifecycle';
@@ -19,6 +20,8 @@ import {
   ExistingRow,
   lifecycleWrite,
   missedWrite,
+  MissedWrite,
+  PlannedWrite,
   ScoredDetection,
 } from './action-writes';
 import { priorityOf } from './actions.mapper';
@@ -34,6 +37,18 @@ export interface OpenedAction {
   impact: number;
   firstSeenAt: Date;
   reopened: boolean;
+}
+
+interface SurfacedDetection {
+  detection: ScoredDetection;
+  reopened: boolean;
+}
+
+interface PlannedStep {
+  actionId: string | null;
+  write: ActionWrite;
+  counter: PlannedWrite['counter'] | MissedWrite['counter'];
+  surfaced: SurfacedDetection | null;
 }
 
 export interface ActionGenerationResult {
@@ -236,18 +251,12 @@ export class ActionsGenerator {
         (detection) => detection.fingerprint,
       ),
     );
-    const writes: ActionWrite[] = [];
-    const opened: Array<{ detection: ScoredDetection; reopened: boolean }> = [];
+    const steps: PlannedStep[] = [];
 
     for (const detection of kept) {
       const row = existing.get(detection.fingerprint) ?? null;
       const planned = lifecycleWrite(context.workspaceId, row, detection, now);
-      if (!planned) continue;
-      writes.push(planned.write);
-      result[planned.counter] += 1;
-      if (planned.counter === 'opened' || planned.counter === 'reopened') {
-        opened.push({ detection, reopened: planned.counter === 'reopened' });
-      }
+      if (planned) steps.push(detectionStep(planned, row, detection));
     }
 
     for (const row of existing.values()) {
@@ -256,29 +265,38 @@ export class ActionsGenerator {
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
       const planned = missedWrite(context.workspaceId, row, now);
       if (!planned) continue;
-      writes.push(planned.write);
-      result[planned.counter] += 1;
+      steps.push({ ...planned, actionId: row.id, surfaced: null });
     }
 
-    if (writes.length > 0) {
-      await this.prisma.withTransaction(async (tx) => {
-        const events: ActionEventInput[] = [];
-        for (const write of writes) {
-          await write(tx, events);
-        }
-        await this.recorder.record(tx, events);
-      });
-    }
+    const applied = await this.applySteps(steps);
+    for (const step of applied) result[step.counter] += 1;
     result.openedActions = await this.resolveOpened(
       context.workspaceId,
-      opened,
+      applied.flatMap((step) => (step.surfaced ? [step.surfaced] : [])),
     );
     return result;
   }
 
+  private async applySteps(steps: PlannedStep[]): Promise<PlannedStep[]> {
+    if (steps.length === 0) return [];
+    return this.prisma.withTransaction(async (tx) => {
+      await lockActions(
+        tx,
+        steps.flatMap((step) => step.actionId ?? []),
+      );
+      const events: ActionEventInput[] = [];
+      const applied: PlannedStep[] = [];
+      for (const step of steps) {
+        if (await step.write(tx, events)) applied.push(step);
+      }
+      await this.recorder.record(tx, events);
+      return applied;
+    });
+  }
+
   private async resolveOpened(
     workspaceId: string,
-    opened: Array<{ detection: ScoredDetection; reopened: boolean }>,
+    opened: SurfacedDetection[],
   ): Promise<OpenedAction[]> {
     if (opened.length === 0) return [];
     const rows = await this.prisma.actionItem.findMany({
@@ -311,6 +329,22 @@ export class ActionsGenerator {
       ];
     });
   }
+}
+
+function detectionStep(
+  planned: PlannedWrite,
+  row: ExistingRow | null,
+  detection: ScoredDetection,
+): PlannedStep {
+  const surfaced =
+    planned.counter === 'opened' || planned.counter === 'reopened';
+  return {
+    ...planned,
+    actionId: row?.id ?? null,
+    surfaced: surfaced
+      ? { detection, reopened: planned.counter === 'reopened' }
+      : null,
+  };
 }
 
 export function mergeActionRuns(

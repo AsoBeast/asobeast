@@ -71,13 +71,14 @@ export function useBulkUpdate(appId?: string) {
         description: skippedNote(result),
         action: {
           label: "Undo",
-          onClick: () =>
-            mutation.mutate({ ids: changed, status: "OPEN", revert: true }),
+          onClick: () => update({ ids: changed, status: "OPEN", revert: true }),
         },
       });
     },
     onSettled: () => invalidateActionMutation(queryClient, appId),
   });
 
-  return { update: useSingleFlight(mutation), isPending: mutation.isPending };
+  const update = useSingleFlight(mutation);
+
+  return { update, isPending: mutation.isPending };
 }

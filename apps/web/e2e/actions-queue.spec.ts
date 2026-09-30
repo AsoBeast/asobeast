@@ -115,9 +115,9 @@ test("the queue sits under a queue heading with group headings below it", async 
 });
 
 test.describe("closing several actions at once", () => {
-  const select = (page: import("@playwright/test").Page, id: string) =>
+  const select = (page: Page, id: string) =>
     page.locator(card(id)).getByRole("checkbox").click();
-  const openTile = (page: import("@playwright/test").Page) =>
+  const openTile = (page: Page) =>
     page.locator('[data-slot="stat-tile"]').first();
 
   test("marks the selected rows done in one go", async ({ page }) => {
@@ -215,9 +215,34 @@ test.describe("closing several actions at once", () => {
   });
 });
 
+const shortcuts = (page: Page) =>
+  page.getByRole("dialog", { name: "Keyboard shortcuts" });
+
+const pressUntil = (page: Page, key: string, settled: () => Promise<void>) =>
+  expect(async () => {
+    await page.keyboard.press(key);
+    await settled();
+  }).toPass();
+
+const openShortcuts = (page: Page) =>
+  pressUntil(page, "Shift+?", () =>
+    expect(shortcuts(page)).toBeVisible({ timeout: 500 }),
+  );
+
+const keysReady = async (page: Page) => {
+  await openShortcuts(page);
+  await page.keyboard.press("Escape");
+  await expect(shortcuts(page)).toHaveCount(0);
+};
+
 test.describe("working the queue from the keyboard", () => {
-  test("j moves focus down the rows", async ({ page }) => {
+  const openQueue = async (page: Page) => {
     await page.goto("/actions");
+    await keysReady(page);
+  };
+
+  test("j moves focus down the rows", async ({ page }) => {
+    await openQueue(page);
     const rows = page.locator(ROWS);
     await rows.first().focus();
 
@@ -230,7 +255,7 @@ test.describe("working the queue from the keyboard", () => {
   test("Enter opens the focused row and Escape returns to it", async ({
     page,
   }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const first = page.locator(ROWS).first();
     await first.focus();
 
@@ -247,7 +272,7 @@ test.describe("working the queue from the keyboard", () => {
   }) => {
     await page.clock.install();
     await page.goto("/settings");
-    await page.goto("/actions");
+    await openQueue(page);
     const first = page.locator(ROWS).first();
     await first.focus();
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1_000);
@@ -265,7 +290,7 @@ test.describe("working the queue from the keyboard", () => {
   test("d marks the focused row done and focuses the next one", async ({
     page,
   }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const rows = page.locator(ROWS);
     await rows.nth(1).focus();
     const secondId = await rows.nth(1).getAttribute("id");
@@ -278,7 +303,7 @@ test.describe("working the queue from the keyboard", () => {
   });
 
   test("typing in the search box never moves the focus", async ({ page }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const search = page.getByRole("textbox", { name: "Search actions" });
     await search.fill("");
     await search.press("j");
@@ -288,7 +313,7 @@ test.describe("working the queue from the keyboard", () => {
   });
 
   test("? shows the keyboard shortcuts", async ({ page }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     await page.locator(ROWS).first().focus();
 
     await page.keyboard.press("Shift+?");
@@ -300,26 +325,6 @@ test.describe("working the queue from the keyboard", () => {
 });
 
 test.describe("the page keys work before any row has focus", () => {
-  const shortcuts = (page: Page) =>
-    page.getByRole("dialog", { name: "Keyboard shortcuts" });
-
-  const pressUntil = (page: Page, key: string, settled: () => Promise<void>) =>
-    expect(async () => {
-      await page.keyboard.press(key);
-      await settled();
-    }).toPass();
-
-  const openShortcuts = (page: Page) =>
-    pressUntil(page, "Shift+?", () =>
-      expect(shortcuts(page)).toBeVisible({ timeout: 500 }),
-    );
-
-  const keysReady = async (page: Page) => {
-    await openShortcuts(page);
-    await page.keyboard.press("Escape");
-    await expect(shortcuts(page)).toHaveCount(0);
-  };
-
   test("? opens the shortcuts on a freshly loaded page", async ({ page }) => {
     await page.goto("/actions");
 
