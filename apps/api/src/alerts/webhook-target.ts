@@ -60,11 +60,14 @@ export function isBlockedAddress(address: string): boolean {
   return blocked.check(address, family === 4 ? 'ipv4' : 'ipv6');
 }
 
+function withoutTrailingDots(hostname: string): string {
+  let end = hostname.length;
+  while (hostname.endsWith('.', end)) end -= 1;
+  return hostname.slice(0, end);
+}
+
 function hostnameOf(url: URL): string {
-  return url.hostname
-    .replace(/^\[|]$/g, '')
-    .toLowerCase()
-    .replace(/\.+$/, '');
+  return withoutTrailingDots(url.hostname.replace(/^\[|]$/g, '').toLowerCase());
 }
 
 function isInternalName(hostname: string): boolean {
