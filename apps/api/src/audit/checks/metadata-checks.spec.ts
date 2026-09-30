@@ -100,6 +100,19 @@ describe('shortDescriptionChecks', () => {
       'short-description-length',
     ]);
   });
+
+  it('scores a title repeat as a warning, not an error', () => {
+    const checks = shortDescriptionChecks(
+      playContext({
+        title: 'Allegro: zakupy online',
+        summary:
+          'Zakupy online, płatności, dostawa i zwroty w jednej aplikacji',
+        keywords: priority,
+      }),
+    );
+
+    expect(checkOf(checks, 'short-description-no-repetition')?.score).toBe(6);
+  });
 });
 
 const titleKeywords = [

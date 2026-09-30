@@ -54,6 +54,11 @@ describe('lintSubtitle', () => {
     expect(rules(lintSubtitle('Daily Streak Counter', ctx))).not.toContain(
       'repeats-title-word',
     );
+    expect(
+      lintSubtitle('Daily Habit Streaks', ctx).find(
+        (issue) => issue.rule === 'repeats-title-word',
+      )?.severity,
+    ).toBe('error');
   });
 });
 
@@ -77,6 +82,20 @@ describe('lintShortDescription', () => {
         lintShortDescription('Build a habit today with daily streaks', ctx),
       ),
     ).toContain('repeats-title-word');
+  });
+
+  it('warns rather than errors when a play short description repeats title words', () => {
+    const issues = lintShortDescription(
+      'Zakupy online, płatności, dostawa i zwroty w jednej aplikacji',
+      { titleWords: ['allegro', 'zakupy', 'online'] },
+    ).filter((issue) => issue.rule === 'repeats-title-word');
+
+    expect(
+      issues.map((issue) => [issue.offendingText, issue.severity]),
+    ).toEqual([
+      ['zakupy', 'warn'],
+      ['online', 'warn'],
+    ]);
   });
 
   it('flags no-tracked-keyword when none appear', () => {
@@ -162,6 +181,11 @@ describe('lintKeywordField', () => {
     expect(rules(lintKeywordField('water,sleep,mood', base))).not.toContain(
       'repeats-title-word',
     );
+    expect(
+      lintKeywordField('habit,streak,water', base).find(
+        (issue) => issue.rule === 'repeats-title-word',
+      )?.severity,
+    ).toBe('error');
   });
 
   it('flags space-after-comma', () => {
