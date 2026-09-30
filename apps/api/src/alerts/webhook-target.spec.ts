@@ -99,4 +99,84 @@ describe('assertDeliverableUrl', () => {
       assertDeliverableUrl('file:///etc/passwd', { allowPrivate: true }),
     ).toThrow(WebhookTargetError);
   });
+
+  it.each([
+    'http://hooks:8080/x',
+    'http://n8n:5678/webhook/asobeast',
+    'http://HOOKS/x',
+    'http://my_hooks:8080/x',
+    `http://${'a'.repeat(63)}/x`,
+    'http://internal/x',
+    'http://例え/x',
+  ])('refuses the bare hostname %s', (url) => {
+    expect(() => assertDeliverableUrl(url)).toThrow(
+      'resolves inside this network',
+    );
+  });
+
+  it.each([
+    'http://localhost./x',
+    'http://localhost../x',
+    'http://LOCALHOST.:8080/x',
+    'http://hooks./x',
+    'http://api.localhost./x',
+    'http://printer.local./x',
+    'http://Printer.LOCAL/x',
+    'http://nas.home.arpa./x',
+  ])('refuses %s once the trailing dot is ignored', (url) => {
+    expect(() => assertDeliverableUrl(url)).toThrow(WebhookTargetError);
+  });
+
+  it.each([
+    'http://0.0.0.0:8080/x',
+    'http://[::]/x',
+    'http://[::ffff:7f00:1]:8080/x',
+    'http://2130706433/x',
+    'http://0x7f.1/x',
+    'http://127.1/x',
+    'http://127.0.0.1./x',
+  ])('refuses the address form %s', (url) => {
+    expect(() => assertDeliverableUrl(url)).toThrow(WebhookTargetError);
+  });
+
+  it.each([
+    'https://hooks.example.com/a',
+    'http://a_b.example.com/x',
+    'http://xn--nxasmq6b.example/x',
+    'http://[2606:4700::1111]:8080/hook',
+    'http://1.1.1.1/hook',
+  ])('permits the public target %s', (url) => {
+    expect(() => assertDeliverableUrl(url)).not.toThrow();
+  });
+
+  it.each([
+    'http://hooks:8080/x',
+    'http://HOOKS:8080/x',
+    'http://my_hooks:8080/x',
+    'http://localhost:8080/x',
+    'http://localhost.:8080/x',
+    'http://[::1]:8080/x',
+    'http://0.0.0.0:8080/x',
+  ])('permits %s when private delivery is opted in', (url) => {
+    expect(() =>
+      assertDeliverableUrl(url, { allowPrivate: true }),
+    ).not.toThrow();
+  });
+
+  it('keeps the port and lowercases the hostname of a bare target', () => {
+    const url = assertDeliverableUrl('http://HOOKS:8080/x', {
+      allowPrivate: true,
+    });
+    expect(url.hostname).toBe('hooks');
+    expect(url.port).toBe('8080');
+  });
+
+  it.each(['http://user:pass@hooks:8080/x', 'http://user@localhost/x'])(
+    'refuses credentials in %s even when private delivery is opted in',
+    (url) => {
+      expect(() => assertDeliverableUrl(url, { allowPrivate: true })).toThrow(
+        'must not embed credentials',
+      );
+    },
+  );
 });

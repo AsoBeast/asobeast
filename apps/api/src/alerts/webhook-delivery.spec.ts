@@ -18,9 +18,9 @@ const PAYLOAD = {
   occurredAt: '2026-07-27T00:00:00.000Z',
 } as unknown as AlertPayload;
 
-const configOf = () =>
+const configOf = (allowPrivate = true) =>
   ({
-    get: () => true,
+    get: () => allowPrivate,
   }) as unknown as ConfigService<Env, true>;
 
 describe('WebhookDelivery', () => {
@@ -104,5 +104,68 @@ describe('WebhookDelivery', () => {
 
     expect(await drainedSockets()).toBe(0);
     expect(peakSockets).toBeLessThan(SENT);
+  });
+});
+
+describe('WebhookDelivery bare hostnames', () => {
+  let server: Server;
+  let port: number;
+  let reached = 0;
+
+  beforeAll(async () => {
+    server = createServer((_req, res) => {
+      reached += 1;
+      res.writeHead(200).end('ok');
+    });
+    await new Promise<void>((resolve) =>
+      server.listen(0, 'localhost', resolve),
+    );
+    port = (server.address() as AddressInfo).port;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
+  });
+
+  beforeEach(() => {
+    reached = 0;
+  });
+
+  it('delivers to localhost when private targets are opted in', async () => {
+    const delivery = new WebhookDelivery(configOf(true));
+
+    await expect(
+      delivery.attempt(`http://localhost:${port}/hook`, null, PAYLOAD),
+    ).resolves.toEqual({ delivered: true, status: 200 });
+    expect(reached).toBe(1);
+    await delivery.onModuleDestroy();
+  });
+
+  it('accepts a bare hostname at registration when private targets are opted in', async () => {
+    const delivery = new WebhookDelivery(configOf(true));
+
+    expect(() => delivery.assertTarget('http://hooks:8080/x')).not.toThrow();
+    await delivery.onModuleDestroy();
+  });
+
+  it('refuses a bare hostname at registration by default', async () => {
+    const delivery = new WebhookDelivery(configOf(false));
+
+    expect(() => delivery.assertTarget('http://hooks:8080/x')).toThrow(
+      'resolves inside this network',
+    );
+    await delivery.onModuleDestroy();
+  });
+
+  it('does not deliver to localhost by default', async () => {
+    const delivery = new WebhookDelivery(configOf(false));
+
+    await expect(
+      delivery.attempt(`http://localhost:${port}/hook`, null, PAYLOAD),
+    ).resolves.toEqual({ delivered: false, status: null });
+    expect(reached).toBe(0);
+    await delivery.onModuleDestroy();
   });
 });
