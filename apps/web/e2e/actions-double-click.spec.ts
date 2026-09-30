@@ -99,7 +99,17 @@ test("two activations of Undo send one undo", async ({ page }) => {
   ).click();
   await expect(toast(page, "Marked done")).toBeVisible();
 
-  await activateTwiceInOneTask(page.getByRole("button", { name: "Undo" }));
+  const undone = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().endsWith("/api/backend/actions/act-audit"),
+  );
+  await activateTwiceInOneTask(
+    page
+      .getByRole("region", { name: /^Notifications/ })
+      .getByRole("button", { name: "Undo" }),
+  );
+  await undone;
 
   await expect(page.locator(card("act-audit"))).toBeVisible();
   expect(updates).toHaveLength(2);
