@@ -46,7 +46,7 @@ export class CompetitorsController {
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
   @ApiUnprocessableEntityResponse({
     description:
-      'The listing is not available on iPhone or iPad, so it cannot rank in App Store search',
+      'The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads',
   })
   add(
     @Param('id') id: string,

@@ -16,6 +16,7 @@ import {
   isMissingApp,
 } from './app-store.lib';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { listedInIphoneSearch } from './iphone-search';
 import {
   ChartItem,
   NormalizedApp,
@@ -27,7 +28,6 @@ import {
 
 const RETRY_DELAYS_MS = [2000, 5000];
 const CHART_MAX = 200;
-const IOS_SEARCH_DEVICES = /^(iPhone|iPad|iPod)/;
 
 const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   free: 'topfreeapplications',
@@ -206,7 +206,7 @@ export class AppStoreProvider implements StoreProvider {
       releasedAt: toDate(raw.released),
       storeUpdatedAt: toDate(raw.updated),
       raw,
-      searchable: inIosSearch(raw.supportedDevices),
+      searchable: listedInIphoneSearch(raw.supportedDevices),
     };
   }
 
@@ -255,13 +255,6 @@ function listingSubtitle(html: string): string | undefined {
   }
   const text = $('p.subtitle').first().text().trim();
   return text.length > 0 ? text : undefined;
-}
-
-function inIosSearch(supportedDevices?: string[]): boolean {
-  return (
-    supportedDevices === undefined ||
-    supportedDevices.some((device) => IOS_SEARCH_DEVICES.test(device))
-  );
 }
 
 function toDate(value?: string): Date | undefined {
