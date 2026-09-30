@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -114,9 +116,9 @@ test("the queue sits under a queue heading with group headings below it", async 
 });
 
 test.describe("closing several actions at once", () => {
-  const select = (page: import("@playwright/test").Page, id: string) =>
+  const select = (page: Page, id: string) =>
     page.locator(card(id)).getByRole("checkbox").click();
-  const openTile = (page: import("@playwright/test").Page) =>
+  const openTile = (page: Page) =>
     page.locator('[data-slot="stat-tile"]').first();
 
   test("marks the selected rows done in one go", async ({ page }) => {
@@ -215,8 +217,13 @@ test.describe("closing several actions at once", () => {
 });
 
 test.describe("working the queue from the keyboard", () => {
-  test("j moves focus down the rows", async ({ page }) => {
+  const openQueue = async (page: Page) => {
     await page.goto("/actions");
+    await hydrated(page.locator(ROWS).first());
+  };
+
+  test("j moves focus down the rows", async ({ page }) => {
+    await openQueue(page);
     const rows = page.locator(ROWS);
     await rows.first().focus();
 
@@ -229,7 +236,7 @@ test.describe("working the queue from the keyboard", () => {
   test("Enter opens the focused row and Escape returns to it", async ({
     page,
   }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const first = page.locator(ROWS).first();
     await first.focus();
 
@@ -246,7 +253,7 @@ test.describe("working the queue from the keyboard", () => {
   }) => {
     await page.clock.install();
     await page.goto("/settings");
-    await page.goto("/actions");
+    await openQueue(page);
     const first = page.locator(ROWS).first();
     await first.focus();
     await page.clock.pauseAt((await page.evaluate(() => Date.now())) + 1_000);
@@ -264,7 +271,7 @@ test.describe("working the queue from the keyboard", () => {
   test("d marks the focused row done and focuses the next one", async ({
     page,
   }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const rows = page.locator(ROWS);
     await rows.nth(1).focus();
     const secondId = await rows.nth(1).getAttribute("id");
@@ -277,7 +284,7 @@ test.describe("working the queue from the keyboard", () => {
   });
 
   test("typing in the search box never moves the focus", async ({ page }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     const search = page.getByRole("textbox", { name: "Search actions" });
     await search.fill("");
     await search.press("j");
@@ -287,7 +294,7 @@ test.describe("working the queue from the keyboard", () => {
   });
 
   test("? shows the keyboard shortcuts", async ({ page }) => {
-    await page.goto("/actions");
+    await openQueue(page);
     await page.locator(ROWS).first().focus();
 
     await page.keyboard.press("Shift+?");
