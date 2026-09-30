@@ -375,9 +375,15 @@ test("the app overview leaves snoozed actions out of its open counts", async ({
 test("a failing update rolls the optimistic change back", async ({ page }) => {
   await page.goto("/actions");
   const failing = page.locator(card("act-degraded"));
+  const rejected = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().endsWith("/api/backend/actions/act-degraded"),
+  );
 
   await (await hydrated(failing.getByRole("button", { name: "Done" }))).click();
 
+  expect((await rejected).status()).toBe(500);
   await expect(failing).toBeVisible();
 });
 
