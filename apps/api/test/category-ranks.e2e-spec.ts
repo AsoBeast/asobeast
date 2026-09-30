@@ -75,7 +75,7 @@ describe('CategoryRanksController (e2e)', () => {
             title: 'You',
             description: 'desc',
             raw: {
-              primaryGenreId: 6007,
+              primaryGenreId: '6007',
               primaryGenre: 'Productivity',
               price: 0,
             },
