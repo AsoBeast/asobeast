@@ -105,6 +105,8 @@ Downloading from `main` gets the current file, and that file defaults to the rel
 
 Two variables in the root `.env` change what it pulls. `ASOBEAST_IMAGE_TAG` selects a different release, which is how you pin an older one or roll back. `ASOBEAST_IMAGE_OWNER` selects the registry namespace and exists for forks. Both are read only by this file.
 
+The published images are public and need no `docker login`. A fork that publishes its own images has to make each package public once, because GitHub creates it private and a private package answers `docker pull` with `unauthorized`. The steps are on [Recover a wedged release](/operations/release-recovery#published-images-must-be-public).
+
 The file declares no pull policy, so Compose fetches an image it does not already have and otherwise starts what is on disk. Changing the tag is therefore enough to upgrade, and a restart with the tag unchanged never needs the registry, which matters on a machine that reboots without network. Only a moving tag such as `latest` needs an explicit fetch:
 
 ```bash

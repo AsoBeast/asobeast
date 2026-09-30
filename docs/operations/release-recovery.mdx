@@ -166,6 +166,34 @@ gh api -X POST "repos/AsoBeast/asobeast/actions/runs/<id>/approve"
 
 Approving is preferable to merging with administrator privileges, because it runs the checks the branch rules ask for rather than skipping them.
 
+## Published images must be public
+
+GitHub creates every container package as private, and a private package answers `docker pull` with `unauthorized`, so `docker-compose.pull.yml` fails for everyone outside the organization. The publish workflow pushes with `GITHUB_TOKEN` and no API changes a package's visibility, so only a package admin can fix it, in the web interface, once per package name. Public visibility belongs to the package, so every later release inherits it.
+
+<Steps>
+  <Step title="Open the package settings">
+    Go to `https://github.com/orgs/AsoBeast/packages`, open `asobeast-api`, then open **Package settings**.
+  </Step>
+  <Step title="Change the visibility">
+    Under **Danger Zone**, choose **Change visibility**, select **Public**, type the package name and confirm. If **Public** is not offered, an organization owner enables it under organization **Settings**, **Packages**, **Package creation**.
+  </Step>
+  <Step title="Repeat for the web image">
+    Do the same for `asobeast-web`.
+  </Step>
+</Steps>
+
+<Warning>
+  A public package cannot be made private again. The images are built from this public repository, and the build provenance records the Sentry organization and project names passed as build arguments. No secret is baked in.
+</Warning>
+
+Check from a machine with no registry credentials. A token request prints `200` when the package is public and `401` when it is not.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ghcr.io/token?scope=repository:asobeast/asobeast-api:pull&service=ghcr.io'
+curl -s -o /dev/null -w '%{http_code}\n' 'https://ghcr.io/token?scope=repository:asobeast/asobeast-web:pull&service=ghcr.io'
+DOCKER_CONFIG="$(mktemp -d)" docker pull ghcr.io/asobeast/asobeast-api:latest
+```
+
 ## Prevention
 
 `release.yml` runs a `verify-release-state` job on every push that does not create a release. It asserts that the version in `.release-please-manifest.json` exists as a tag on `origin` and fails the workflow with an annotation when it does not. A wedged state that would otherwise report success stops the pipeline the first time it appears.
@@ -173,6 +201,8 @@ Approving is preferable to merging with administrator privileges, because it run
 `ci.yml` reports the same invariant as a warning on every pull request, so an author sees an unhealthy release pipeline before merging rather than after.
 
 A second failure shape has nothing to do with tags. Any file that states the version and is not listed in `release-please-config.json` stops moving with the release, so the release pull request carries a file that disagrees with the version it ships. The openapi document is the case that bites, because `openapi-drift` compares the captured `info.version` against the running API and reports a generic drift. `pnpm check:release-versions` runs in `checks` and names the file and the fix instead, and it fails the pull request that introduces an unregistered version rather than the release pull request months later.
+
+Two checks keep the images public. `docker-publish.yml` ends with a `verify-anonymous-pull` job that probes every published tag without credentials, so a release whose images the public cannot pull fails the Release run. The `published-images.yml` workflow repeats the probe daily against the images `docker-compose.pull.yml` names, which catches a package that was deleted and recreated private. A run shortly after a release merge can report the new default tag as missing until publishing finishes, so run it again once the publish job is green.
 
 ## Next steps
 
