@@ -96,6 +96,8 @@ An outcome is a measured value, not proof that your change caused it: a store al
 
 Every transition is recorded as an event on the action: opened, reopened, snoozed, woke, done, dismissed, resolved and verified. Each event records whether the system or a person caused it, the name of the person, the status, priority and impact at that moment, the snooze date and, for a dismissal, the reason.
 
+Sending the same change twice, or at the same moment, records it once. The second request finds the action already in that state and returns it unchanged. Two different changes sent together are both recorded, one after the other.
+
 History is kept with its action and pruned with it after `RETENTION_ACTIONS_DAYS`. Actions that existed before this history was recorded carry a minimal backfilled history: when they opened and, if they are closed, when and how.
 
 ## Working faster
