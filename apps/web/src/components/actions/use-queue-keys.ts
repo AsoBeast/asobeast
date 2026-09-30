@@ -6,10 +6,10 @@ import {
   commandFor,
   isTypingTarget,
   nextFocus,
+  overlayOpen,
   type QueueCommand,
 } from "./queue-keys";
 
-const OVERLAY = '[role="menu"],[role="dialog"],[role="listbox"]';
 const QUEUE = "#queue";
 const ROW = "li[id^='action-']";
 
@@ -71,7 +71,7 @@ export function useQueueKeys({
     if (
       event.defaultPrevented ||
       isTypingTarget(target) ||
-      document.querySelector(OVERLAY)
+      overlayOpen(document)
     ) {
       return;
     }

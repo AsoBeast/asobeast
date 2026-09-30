@@ -67,6 +67,13 @@ export function commandFor(event: KeyEvent): QueueCommand | null {
   return table[event.key] ?? null;
 }
 
+const OVERLAY_SELECTOR =
+  '[role="menu"],[role="dialog"],[role="alertdialog"],[role="listbox"]';
+
+export function overlayOpen(root: Pick<ParentNode, "querySelector">): boolean {
+  return root.querySelector(OVERLAY_SELECTOR) !== null;
+}
+
 const TYPING_SELECTOR =
   "input, textarea, select, [contenteditable='true'], [role='combobox'], [role='textbox'], [role='searchbox']";
 
