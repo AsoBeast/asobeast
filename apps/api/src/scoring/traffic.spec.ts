@@ -1,6 +1,11 @@
 import * as fixtures from './scoring-fixtures';
 import { KeywordStats } from './formulas';
-import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
+import {
+  estimatePopularity,
+  NEUTRAL_CONTINUATIONS,
+  PopularityWeights,
+  UNLISTED_POPULARITY_WEIGHTS,
+} from './popularity-model';
 import { computeTraffic, DEMAND_WEIGHT, estimateTraffic } from './traffic';
 
 const play = (stats: KeywordStats): KeywordStats => ({
@@ -8,11 +13,22 @@ const play = (stats: KeywordStats): KeywordStats => ({
   store: 'GOOGLE_PLAY',
 });
 
-const modelTraffic = (stats: KeywordStats): number =>
-  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText, {
-    continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
-    reach: stats.suggest,
-  }) ?? 0) / 10;
+const modelTraffic = (
+  stats: KeywordStats,
+  weights?: PopularityWeights,
+): number =>
+  (estimatePopularity(
+    stats.competitors ?? stats.top10,
+    stats.keywordText,
+    {
+      continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
+      reach: stats.suggest,
+    },
+    weights,
+  ) ?? 0) / 10;
+
+const unlistedTraffic = (stats: KeywordStats): number =>
+  modelTraffic(stats, UNLISTED_POPULARITY_WEIGHTS);
 
 describe('computeTraffic on google play', () => {
   it.each([
@@ -148,8 +164,28 @@ describe('computeTraffic on the app store', () => {
     );
   });
 
+  it('reads an unlisted term on the weights fitted for unlisted terms', () => {
+    const unlisted = {
+      ...fixtures.F5_TAIL,
+      official: { absentBelow: 101 },
+    };
+    expect(computeTraffic(unlisted)).toBe(unlistedTraffic(fixtures.F5_TAIL));
+    expect(unlistedTraffic(fixtures.F5_TAIL)).not.toBe(
+      modelTraffic(fixtures.F5_TAIL),
+    );
+  });
+
+  it('keeps the estimate of an unlisted term on the weights that scored it', () => {
+    expect(estimateTraffic(fixtures.F10_ABSENT_CAP)).toBe(
+      unlistedTraffic(fixtures.F1_HEAD),
+    );
+    expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeLessThanOrEqual(
+      estimateTraffic(fixtures.F10_ABSENT_CAP),
+    );
+  });
+
   it('caps an unlisted term just below its genre floor', () => {
-    const estimate = modelTraffic(fixtures.F1_HEAD);
+    const estimate = unlistedTraffic(fixtures.F1_HEAD);
     expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeCloseTo(
       Math.min(estimate, 4),
       6,
@@ -164,9 +200,19 @@ describe('computeTraffic on the app store', () => {
     (absentBelow) => {
       expect(
         computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow } }),
-      ).toBeCloseTo(Math.min(modelTraffic(fixtures.F1_HEAD), 1.5), 6);
+      ).toBeCloseTo(Math.min(unlistedTraffic(fixtures.F1_HEAD), 1.5), 6);
     },
   );
+
+  it('caps a thin unlisted page like any other', () => {
+    expect(
+      computeTraffic({
+        ...fixtures.F1_HEAD,
+        resultCount: 4,
+        official: { absentBelow: 41 },
+      }),
+    ).toBe(1);
+  });
 
   it('keeps the official value when the search returned nothing', () => {
     const empty = { ...fixtures.F9_OFFICIAL, resultCount: 0, top10: [] };

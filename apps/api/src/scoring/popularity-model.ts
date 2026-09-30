@@ -55,23 +55,41 @@ export const POPULARITY_FEATURES: readonly PopularityFeature[] = [
 export type PopularityWeights = Record<PopularityFeature | 'intercept', number>;
 
 // Fitted by `pnpm --filter api scoring:popularity-study fit` against the
-// Apple Ads top search terms and a reference of published popularity (US,
-// week of 2026-09-13). Refit with the study, never by hand.
+// Apple Ads top search terms (US, week of 2026-09-20) and a reference of
+// published popularity, and with STUDY_LISTED_WEIGHT=0 for the unlisted
+// weights. Refit with the study, never by hand.
 export const POPULARITY_WEIGHTS: PopularityWeights = {
-  intercept: 2.4357,
-  leader: 0.1811,
-  depth: 0.0856,
-  titled: 0.5979,
-  exact: 0.4935,
-  exactLeader: 0.0321,
-  words: 0.0613,
-  relevance: -0.4549,
-  weightedLeader: -0.0672,
-  results: -1.3057,
-  exactHead: -0.0417,
-  continuations: 0.5293,
-  suggested: -0.0646,
-  early: 0.8583,
+  intercept: 1.6869,
+  leader: 0.1742,
+  depth: 0.056,
+  titled: 0.3249,
+  exact: 0.4516,
+  exactLeader: 0.0473,
+  words: 0.0476,
+  relevance: -0.0247,
+  weightedLeader: -0.1278,
+  results: -0.4976,
+  exactHead: -0.0294,
+  continuations: 0.644,
+  suggested: -0.1221,
+  early: 0.9675,
+};
+
+export const UNLISTED_POPULARITY_WEIGHTS: PopularityWeights = {
+  intercept: 2.0417,
+  leader: 0.0513,
+  depth: 0.0564,
+  titled: 0.3694,
+  exact: 0.6794,
+  exactLeader: 0.0211,
+  words: 0.0267,
+  relevance: -0.5637,
+  weightedLeader: -0.0051,
+  results: -0.1843,
+  exactHead: 0.2231,
+  continuations: 0.384,
+  suggested: -0.029,
+  early: 0.656,
 };
 
 const magnitude = (count: number): number => Math.log10(1 + Math.max(0, count));

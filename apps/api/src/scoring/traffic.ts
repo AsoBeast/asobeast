@@ -1,7 +1,13 @@
 import { Store } from '@asobeast/shared';
 import { clamp, finiteNumbers, logScale, median } from './curves';
 import { KeywordStats } from './formulas';
-import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
+import {
+  estimatePopularity,
+  NEUTRAL_CONTINUATIONS,
+  POPULARITY_WEIGHTS,
+  PopularityWeights,
+  UNLISTED_POPULARITY_WEIGHTS,
+} from './popularity-model';
 import { paddingFactor } from './serp-signals';
 import { reachScore } from './suggest-reach';
 
@@ -33,7 +39,10 @@ function suggestEstimate(stats: KeywordStats): number {
   return clamp(Math.min(blend, cap));
 }
 
-function modelEstimate(stats: KeywordStats): number {
+function modelEstimate(
+  stats: KeywordStats,
+  weights: PopularityWeights,
+): number {
   const popularity = estimatePopularity(
     stats.competitors ?? stats.top10,
     stats.keywordText,
@@ -41,16 +50,24 @@ function modelEstimate(stats: KeywordStats): number {
       continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
       reach: stats.suggest,
     },
+    weights,
   );
   return popularity === null ? 0 : popularity / POPULARITY_SCALE;
 }
+
+const weightsFor = ({ official }: KeywordStats): PopularityWeights =>
+  official && 'absentBelow' in official
+    ? UNLISTED_POPULARITY_WEIGHTS
+    : POPULARITY_WEIGHTS;
 
 export function estimateTraffic(stats: KeywordStats): number {
   if (stats.resultCount === 0) {
     return 0;
   }
   const estimate =
-    stats.store === 'APP_STORE' ? modelEstimate(stats) : suggestEstimate(stats);
+    stats.store === 'APP_STORE'
+      ? modelEstimate(stats, weightsFor(stats))
+      : suggestEstimate(stats);
   return stats.resultCount < THIN_SERP_RESULTS
     ? Math.min(estimate, THIN_SERP_TRAFFIC_CAP)
     : estimate;
