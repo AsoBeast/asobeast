@@ -27,6 +27,7 @@
     "check:env-documented": "node .github/scripts/verify-env-documented.mjs",
     "check:image-defaults": "node .github/scripts/verify-image-defaults.mjs",
     "check:release-versions": "node .github/scripts/verify-release-versions.mjs",
+    "test:scripts": "node --test '.github/scripts/*.test.mjs'",
     "bench:stack": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml up -d --wait",
     "bench:stack:down": "POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-asobeast} docker compose -f docker-compose.bench.yml down -v",
     "docs:dev": "bash scripts/mint.sh dev",
