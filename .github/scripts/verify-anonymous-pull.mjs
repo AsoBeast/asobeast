@@ -60,13 +60,13 @@ async function probe(reference) {
     }
     const tokenResponse = await request(tokenUrl);
     if (!tokenResponse.ok) {
-      return `the registry refused an anonymous pull token with ${tokenResponse.status}, which means the package is private`;
+      return `the registry refused an anonymous pull token with ${tokenResponse.status}, so the package is private or does not exist`;
     }
     const { token, access_token: accessToken } = await tokenResponse.json();
     if (!token && !accessToken) {
       return "the registry answered the token request without a token";
     }
-    response = await headManifest(manifestUrl, token ?? accessToken);
+    response = await headManifest(manifestUrl, token || accessToken);
   }
 
   if (response.status === 404) {
@@ -86,7 +86,9 @@ if (references.length === 0) {
 const failures = [];
 
 for (const reference of references) {
-  const failure = await probe(reference).catch((error) => error.message);
+  const failure = await probe(reference).catch(
+    (error) => error?.message || `the probe failed with ${error}`,
+  );
   if (failure) {
     failures.push(reference);
     console.error(`FAIL ${reference}: ${failure}`);

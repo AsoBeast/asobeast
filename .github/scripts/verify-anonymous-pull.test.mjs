@@ -11,6 +11,10 @@ const script = fileURLToPath(
 const PUBLIC = "asobeast/public-image";
 const PRIVATE = "asobeast/private-image";
 const OPEN = "asobeast/open-image";
+const BASIC = "asobeast/basic-image";
+const ACCESS_TOKEN = "asobeast/access-token-image";
+const TOKENLESS = "asobeast/tokenless-image";
+const FORBIDDEN = "asobeast/forbidden-image";
 
 let server;
 let host;
@@ -28,8 +32,12 @@ before(async () => {
         response.end('{"errors":[{"code":"UNAUTHORIZED"}]}');
         return;
       }
+      const body = {
+        [ACCESS_TOKEN]: '{"access_token":"anonymous"}',
+        [TOKENLESS]: "{}",
+      };
       response.writeHead(200, { "content-type": "application/json" });
-      response.end('{"token":"anonymous"}');
+      response.end(body[repository] ?? '{"token":"anonymous"}');
       return;
     }
 
@@ -44,10 +52,24 @@ before(async () => {
       return;
     }
 
+    if (repository === BASIC) {
+      response.writeHead(401, {
+        "www-authenticate": `Basic realm="http://${host}/token"`,
+      });
+      response.end();
+      return;
+    }
+
     if (request.headers.authorization !== "Bearer anonymous") {
       response.writeHead(401, {
         "www-authenticate": `Bearer realm="http://${host}/token",service="registry.test",scope="repository:${repository}:pull"`,
       });
+      response.end();
+      return;
+    }
+
+    if (repository === FORBIDDEN) {
+      response.writeHead(403);
       response.end();
       return;
     }
@@ -93,11 +115,34 @@ describe("verify-anonymous-pull", () => {
     assert.equal(result.code, 0);
   });
 
+  it("accepts a token the registry names access_token", async () => {
+    const result = await run(`REGISTRY/${ACCESS_TOKEN}:1.0.0`);
+    assert.equal(result.code, 0);
+  });
+
+  it("fails when the registry only offers basic authentication", async () => {
+    const result = await run(`REGISTRY/${BASIC}:1.0.0`);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /without offering an anonymous token/);
+  });
+
+  it("fails when the token response carries no token", async () => {
+    const result = await run(`REGISTRY/${TOKENLESS}:1.0.0`);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /without a token/);
+  });
+
   it("fails for a private package and names the reference", async () => {
     const result = await run(`REGISTRY/${PRIVATE}:1.0.0`);
     assert.equal(result.code, 1);
     assert.match(result.stderr, new RegExp(`FAIL .*${PRIVATE}:1.0.0.*private`));
     assert.match(result.stderr, /visibility to public/);
+  });
+
+  it("fails when the registry grants a token but refuses the manifest", async () => {
+    const result = await run(`REGISTRY/${FORBIDDEN}:1.0.0`);
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /manifest request answered 403/);
   });
 
   it("fails when the tag is missing from a public package", async () => {
