@@ -6,6 +6,7 @@ import {
   AppSnapshotSummary,
   CompetitorItem,
 } from '@asobeast/shared';
+import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { NormalizedApp } from '../store-providers/types';
 
 const STORE_ORDER: Record<App['store'], number> = {
@@ -96,6 +97,9 @@ export function toAppDetail(
     name: app.name,
     iconUrl: app.iconUrl,
     createdAt: app.createdAt.toISOString(),
+    searchable: snapshot
+      ? rawListedInIphoneSearch(app.store, snapshot.raw)
+      : true,
     latestSnapshot: snapshot ? toSnapshotSummary(snapshot) : null,
     competitors: competitors.map((competitor) =>
       toCompetitorItem(competitor, competitor.snapshots[0] ?? null),

@@ -43,6 +43,7 @@ export interface AppDetail {
   name: string | null;
   iconUrl: string | null;
   createdAt: string;
+  searchable: boolean;
   latestSnapshot: AppSnapshotSummary | null;
   competitors: CompetitorItem[];
   group: AppGroupSummary | null;
