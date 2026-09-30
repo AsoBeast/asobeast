@@ -177,15 +177,15 @@ Opportunity asks how likely the keyword is to bring installs: whether enough peo
 
 | Step | Formula |
 | --- | --- |
-| Reach | Volume divided by 30, at most 1 |
+| Reach | Volume divided by 30, at most 1, raised to the power of 1.25 |
 | Openness | 100 minus difficulty |
 | Opportunity | Reach multiplied by openness, cut to a whole number |
 
-Volume counts only up to 30. Past that point a keyword brings enough searches that the competition decides whether the installs can be won, so a keyword with a volume of 30 and one with 70 score the same on the same page. Below it, opportunity falls in proportion: a volume of 15 halves the score. Difficulty counts across the whole range: a difficulty of 20 keeps 80 percent of the reach, 50 keeps half and 80 keeps a fifth.
+Volume counts only up to 30. Past that point a keyword brings enough searches that the competition decides whether the installs can be won, so a keyword with a volume of 30 and one with 70 score the same on the same page. Below it, opportunity falls a little faster than the volume does: a volume of 15 keeps 42 percent of the score and a volume of 7 keeps 16 percent. Difficulty counts across the whole range: a difficulty of 20 keeps 80 percent of the reach, 50 keeps half and 80 keeps a fifth.
 
 A popular phrase held by the largest apps therefore scores low, and a moderately searched phrase on an open page scores high. `game` at a volume of 68 and a difficulty of 71 scores 29, while `geography map game` at 33 and 23 scores 77.
 
-The shape was chosen against published keyword effectiveness. On the reference's own popularity and difficulty it orders 794 App Store and 2,101 Google Play keywords at a rank agreement of 0.93 and 0.96, against 0.90 for the previous formula. A two-dimensional table of popularity and difficulty bands fits the reference more closely on its own inputs, but orders the keywords worse from estimated popularity and difficulty, because a band edge turns a small estimation error into a jump.
+The shape was chosen against published keyword effectiveness. On the reference's own popularity and difficulty it orders 794 App Store and 2,101 Google Play keywords at a rank agreement of 0.92 and 0.95. The power on reach is there because published effectiveness falls faster than volume in the long tail: with it, the share of keywords that land on the same side of the high opportunity threshold as the reference rose from 77 to 82 percent on 770 App Store keywords and held at 81 percent on 442 Google Play keywords, scored from estimated popularity and difficulty. A two-dimensional table of popularity and difficulty bands fits the reference more closely on its own inputs, but orders the keywords worse from estimated popularity and difficulty, because a band edge turns a small estimation error into a jump.
 
 Opportunity is the same for every app that tracks the keyword. Relevance is reported next to it and not multiplied in, so the number says what the keyword is worth and relevance says whether it belongs in this listing. The action rules read both.
 

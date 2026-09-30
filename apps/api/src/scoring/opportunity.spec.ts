@@ -1,6 +1,7 @@
 import {
   computeOpportunity,
   OPPORTUNITY_HIGH,
+  REACH_CURVE,
   SUFFICIENT_VOLUME,
 } from './opportunity';
 
@@ -10,10 +11,10 @@ describe('computeOpportunity', () => {
     [30, 0, 100],
     [100, 0, 100],
     [100, 100, 0],
-    [15, 40, 30],
+    [15, 40, 25],
     [33, 23, 77],
     [68, 71, 29],
-    [22.5, 37.3, 47],
+    [22.5, 37.3, 43],
   ])('volume %s at difficulty %s is %s', (volume, difficulty, expected) => {
     expect(computeOpportunity(volume, difficulty)).toBe(expected);
   });
@@ -34,6 +35,14 @@ describe('computeOpportunity', () => {
     expect(computeOpportunity(SUFFICIENT_VOLUME, 40)).toBe(
       computeOpportunity(90, 40),
     );
+  });
+
+  it('loses more than its share of reach below a sufficient volume', () => {
+    expect(REACH_CURVE).toBe(1.25);
+    expect(computeOpportunity(15, 0)).toBe(
+      Math.trunc(100 * 0.5 ** REACH_CURVE),
+    );
+    expect(computeOpportunity(15, 0)).toBeLessThan(50);
   });
 
   it('falls with difficulty at every volume', () => {
