@@ -971,7 +971,7 @@ describe('ActionsService undo', () => {
     );
   });
 
-  it('refuses an undo that names a wake date the action did not have', async () => {
+  it('refuses an undo to the snooze the action is already in', async () => {
     const earlier = new Date(Date.now() + 3 * DAY_MS);
     const later = new Date(Date.now() + 5 * DAY_MS);
     const snoozed = (
@@ -1004,7 +1004,7 @@ describe('ActionsService undo', () => {
         USER,
       ),
     ).rejects.toThrow(
-      new ConflictException('Undo must restore the previous status'),
+      new ConflictException('Nothing recent to undo on this action'),
     );
     expect(prisma.actionItem.update).not.toHaveBeenCalled();
     expect(prisma.actionEvent.delete).not.toHaveBeenCalled();

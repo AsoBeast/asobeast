@@ -183,6 +183,9 @@ export class ActionTransitions {
     body: ActionUpdateRequest,
     userId: string,
   ): Promise<ActionRow> {
+    if (isAlreadyRestored(current, body)) {
+      throw new ConflictException('Nothing recent to undo on this action');
+    }
     const now = new Date();
     const [latest, ...earlier] = await tx.actionEvent.findMany({
       where: { actionId: current.id },
@@ -199,7 +202,7 @@ export class ActionTransitions {
     ) {
       throw new ConflictException('Nothing recent to undo on this action');
     }
-    if (!restoresPrevious(body, earlier[0])) {
+    if (body.status !== (earlier[0]?.status ?? 'OPEN')) {
       throw new ConflictException('Undo must restore the previous status');
     }
 
@@ -269,15 +272,17 @@ function isNoteOnly(
   return body.status === 'DONE';
 }
 
-function restoresPrevious(
+function isAlreadyRestored(
+  current: CurrentAction,
   body: ActionUpdateRequest,
-  before: RevertEvent | undefined,
 ): boolean {
-  if (body.status !== (before?.status ?? 'OPEN')) return false;
+  if (body.status !== current.status || body.status === 'DISMISSED') {
+    return false;
+  }
   if (body.status !== 'SNOOZED') return true;
   return (
     body.snoozedUntil !== undefined &&
-    before?.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
+    current.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
   );
 }
 
