@@ -36,6 +36,20 @@ export interface OpenedAction {
   reopened: boolean;
 }
 
+interface SurfacedDetection {
+  detection: ScoredDetection;
+  reopened: boolean;
+}
+
+interface PlannedStep {
+  write: ActionWrite;
+  counter: keyof Pick<
+    ActionGenerationResult,
+    'opened' | 'refreshed' | 'reopened' | 'resolved' | 'verified' | 'touched'
+  >;
+  surfaced: SurfacedDetection | null;
+}
+
 export interface ActionGenerationResult {
   opened: number;
   refreshed: number;
@@ -236,18 +250,19 @@ export class ActionsGenerator {
         (detection) => detection.fingerprint,
       ),
     );
-    const writes: ActionWrite[] = [];
-    const opened: Array<{ detection: ScoredDetection; reopened: boolean }> = [];
+    const steps: PlannedStep[] = [];
 
     for (const detection of kept) {
       const row = existing.get(detection.fingerprint) ?? null;
       const planned = lifecycleWrite(context.workspaceId, row, detection, now);
       if (!planned) continue;
-      writes.push(planned.write);
-      result[planned.counter] += 1;
-      if (planned.counter === 'opened' || planned.counter === 'reopened') {
-        opened.push({ detection, reopened: planned.counter === 'reopened' });
-      }
+      steps.push({
+        ...planned,
+        surfaced:
+          planned.counter === 'opened' || planned.counter === 'reopened'
+            ? { detection, reopened: planned.counter === 'reopened' }
+            : null,
+      });
     }
 
     for (const row of existing.values()) {
@@ -256,29 +271,34 @@ export class ActionsGenerator {
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
       const planned = missedWrite(context.workspaceId, row, now);
       if (!planned) continue;
-      writes.push(planned.write);
-      result[planned.counter] += 1;
+      steps.push({ ...planned, surfaced: null });
     }
 
-    if (writes.length > 0) {
-      await this.prisma.withTransaction(async (tx) => {
-        const events: ActionEventInput[] = [];
-        for (const write of writes) {
-          await write(tx, events);
-        }
-        await this.recorder.record(tx, events);
-      });
-    }
+    const applied = await this.applySteps(steps);
+    for (const step of applied) result[step.counter] += 1;
     result.openedActions = await this.resolveOpened(
       context.workspaceId,
-      opened,
+      applied.flatMap((step) => (step.surfaced ? [step.surfaced] : [])),
     );
     return result;
   }
 
+  private async applySteps(steps: PlannedStep[]): Promise<PlannedStep[]> {
+    if (steps.length === 0) return [];
+    return this.prisma.withTransaction(async (tx) => {
+      const events: ActionEventInput[] = [];
+      const applied: PlannedStep[] = [];
+      for (const step of steps) {
+        if (await step.write(tx, events)) applied.push(step);
+      }
+      await this.recorder.record(tx, events);
+      return applied;
+    });
+  }
+
   private async resolveOpened(
     workspaceId: string,
-    opened: Array<{ detection: ScoredDetection; reopened: boolean }>,
+    opened: SurfacedDetection[],
   ): Promise<OpenedAction[]> {
     if (opened.length === 0) return [];
     const rows = await this.prisma.actionItem.findMany({

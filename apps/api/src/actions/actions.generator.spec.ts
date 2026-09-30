@@ -105,12 +105,6 @@ const buildPrisma = (rows: Row[] = [], changedIds: string[] = []) => {
       created.push(args.data);
       return Promise.resolve({ id: `created-${created.length - 1}` });
     }),
-    update: jest.fn(
-      (args: { where: { id: string }; data: Record<string, unknown> }) => {
-        updated.push(args);
-        return args;
-      },
-    ),
     updateMany: jest.fn(
       (args: { where: { id: string }; data: Record<string, unknown> }) => {
         if (changedIds.includes(args.where.id)) {

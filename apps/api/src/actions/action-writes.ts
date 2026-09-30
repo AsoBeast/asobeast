@@ -28,7 +28,7 @@ export type ExistingRow = ExistingAction & {
 export type ActionWrite = (
   tx: Prisma.TransactionClient,
   events: ActionEventInput[],
-) => Promise<void>;
+) => Promise<boolean>;
 
 type LifecycleCounter = 'opened' | 'reopened' | 'refreshed' | 'touched';
 
@@ -44,6 +44,29 @@ interface SystemEvent {
   status: ActionStatus;
   priority: ActionPriority;
   impact: number;
+}
+
+function unchangedSinceRead(row: ExistingRow): Prisma.ActionItemWhereInput {
+  return {
+    id: row.id,
+    status: row.status,
+    reopenCount: row.reopenCount,
+    snoozedUntil: row.snoozedUntil,
+    closedAt: row.closedAt,
+    verifiedAt: row.verifiedAt,
+  };
+}
+
+async function updateIfUnchanged(
+  tx: Prisma.TransactionClient,
+  row: ExistingRow,
+  data: Prisma.ActionItemUpdateManyMutationInput,
+): Promise<boolean> {
+  const { count } = await tx.actionItem.updateMany({
+    where: unchangedSinceRead(row),
+    data,
+  });
+  return count === 1;
 }
 
 export function lifecycleWrite(
@@ -73,6 +96,7 @@ export function lifecycleWrite(
       write: async (tx, events) => {
         const { id } = await createWrite(tx, workspaceId, detection, now);
         events.push(event(id, 'opened'));
+        return true;
       },
     };
   }
@@ -82,7 +106,7 @@ export function lifecycleWrite(
     return {
       counter: 'reopened',
       write: async (tx, events) => {
-        await updateWrite(tx, row.id, detection, now, {
+        const applied = await updateWrite(tx, row, detection, now, {
           status: 'OPEN',
           reopenCount: outcome.reopenCount,
           closedAt: null,
@@ -93,7 +117,8 @@ export function lifecycleWrite(
           aiModel: null,
           aiGeneratedAt: null,
         });
-        events.push(event(row.id, 'reopened'));
+        if (applied) events.push(event(row.id, 'reopened'));
+        return applied;
       },
     };
   }
@@ -102,24 +127,20 @@ export function lifecycleWrite(
     return {
       counter: 'refreshed',
       write: async (tx, events) => {
-        await updateWrite(tx, row.id, detection, now, {
+        const applied = await updateWrite(tx, row, detection, now, {
           status: outcome.status,
           resolvedAt: null,
           ...(outcome.status === 'OPEN' ? { snoozedUntil: null } : {}),
         });
-        if (woke) events.push(event(row.id, 'woke'));
+        if (applied && woke) events.push(event(row.id, 'woke'));
+        return applied;
       },
     };
   }
   if (outcome.kind === 'touch') {
     return {
       counter: 'touched',
-      write: async (tx) => {
-        await tx.actionItem.update({
-          where: { id: row.id },
-          data: { lastSeenAt: now },
-        });
-      },
+      write: (tx) => updateIfUnchanged(tx, row, { lastSeenAt: now }),
     };
   }
   return null;
@@ -160,10 +181,8 @@ export function missedWrite(
   return {
     counter: planned.counter,
     write: async (tx, events) => {
-      await tx.actionItem.update({
-        where: { id: row.id },
-        data: planned.data(now),
-      });
+      const applied = await updateIfUnchanged(tx, row, planned.data(now));
+      if (!applied) return false;
       events.push(
         systemEvent(
           workspaceId,
@@ -178,6 +197,7 @@ export function missedWrite(
           now,
         ),
       );
+      return true;
     },
   };
 }
@@ -212,21 +232,18 @@ function createWrite(
 
 function updateWrite(
   tx: Prisma.TransactionClient,
-  id: string,
+  row: ExistingRow,
   detection: ScoredDetection,
   now: Date,
-  extra: Prisma.ActionItemUpdateInput,
-): Promise<unknown> {
-  return tx.actionItem.update({
-    where: { id },
-    data: {
-      priority: detection.priority,
-      impact: detection.impact,
-      formulaVersion: ACTION_FORMULA_VERSION,
-      evidence: detection.evidence as unknown as Prisma.InputJsonValue,
-      lastSeenAt: now,
-      ...extra,
-    },
+  extra: Prisma.ActionItemUpdateManyMutationInput,
+): Promise<boolean> {
+  return updateIfUnchanged(tx, row, {
+    priority: detection.priority,
+    impact: detection.impact,
+    formulaVersion: ACTION_FORMULA_VERSION,
+    evidence: detection.evidence as unknown as Prisma.InputJsonValue,
+    lastSeenAt: now,
+    ...extra,
   });
 }
 
