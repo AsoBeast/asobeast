@@ -35,6 +35,7 @@ interface StoredEvent {
   actor: string;
   userId?: string | null;
   status: string;
+  reason?: string | null;
   occurredAt: Date;
 }
 
@@ -155,6 +156,23 @@ class ConcurrentActionDb {
             })),
           );
           return { count: args.data.length };
+        },
+        findFirst: async (args: {
+          where: { actionId: string; type: string };
+        }) => {
+          await yieldToOthers();
+          return (
+            this.events
+              .filter(
+                (event) =>
+                  event.actionId === args.where.actionId &&
+                  event.type === args.where.type,
+              )
+              .sort(
+                (left, right) =>
+                  right.occurredAt.getTime() - left.occurredAt.getTime(),
+              )[0] ?? null
+          );
         },
         findMany: async (args: {
           where: { actionId: string };
@@ -336,5 +354,62 @@ describe('ActionsService concurrent transitions', () => {
     expect(rejected[0].reason).toBeInstanceOf(ConflictException);
     expect(db.row().reopenCount).toBe(0);
     expect(db.row().status).toBe('DONE');
+  });
+
+  it('records one dismissal when a dismiss with a reason is sent twice', async () => {
+    const db = new ConcurrentActionDb();
+    db.seed();
+    const service = serviceFor(db);
+
+    await Promise.all(
+      [1, 2].map(() =>
+        service.update(
+          'act_1',
+          update({ status: 'DISMISSED', reason: 'not_relevant' }),
+          USER,
+        ),
+      ),
+    );
+
+    expect(typesOf(db)).toEqual(['dismissed']);
+  });
+
+  it('ignores a dismissal that repeats the reason already recorded', async () => {
+    const db = new ConcurrentActionDb();
+    db.seed();
+    const service = serviceFor(db);
+    const dismiss = () =>
+      service.update(
+        'act_1',
+        update({ status: 'DISMISSED', reason: 'not_relevant' }),
+        USER,
+      );
+
+    await dismiss();
+    await dismiss();
+
+    expect(typesOf(db)).toEqual(['dismissed']);
+  });
+
+  it('records a dismissal that gives a different reason', async () => {
+    const db = new ConcurrentActionDb();
+    db.seed();
+    const service = serviceFor(db);
+
+    await service.update(
+      'act_1',
+      update({ status: 'DISMISSED', reason: 'not_relevant' }),
+      USER,
+    );
+    await service.update(
+      'act_1',
+      update({ status: 'DISMISSED', reason: 'handled_elsewhere' }),
+      USER,
+    );
+
+    expect(db.events.map((event) => event.reason)).toEqual([
+      'not_relevant',
+      'handled_elsewhere',
+    ]);
   });
 });

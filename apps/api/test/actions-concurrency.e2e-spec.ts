@@ -194,6 +194,18 @@ describe('Action transitions under concurrency (e2e)', () => {
     expect(row.reopenCount).toBe(1);
   });
 
+  it('records one dismissal when the same reason is sent at once', async () => {
+    const id = await seedAction();
+
+    await Promise.all(
+      Array.from({ length: 3 }, () =>
+        patch(id, { status: 'DISMISSED', reason: 'not_relevant' }),
+      ),
+    );
+
+    expect(await eventTypes(id)).toEqual(['dismissed']);
+  });
+
   it('records one event per action when overlapping bulk closes arrive in opposite order', async () => {
     const ids = [await seedAction(), await seedAction(), await seedAction()];
 
