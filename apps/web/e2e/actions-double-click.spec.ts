@@ -12,12 +12,12 @@ test.beforeEach(async ({ request }) => {
   });
 });
 
-const countUpdates = (page: Page, id: string) => {
+const countUpdates = (page: Page, path: string) => {
   const seen: string[] = [];
   page.on("request", (request) => {
     if (
       request.method() === "PATCH" &&
-      request.url().endsWith(`/api/backend/actions/${id}`)
+      request.url().endsWith(`/api/backend${path}`)
     ) {
       seen.push(request.url());
     }
@@ -48,7 +48,7 @@ const activateTwiceInOneTask = async (control: Locator) =>
 test("a double click on Done sends one update and shows one confirmation", async ({
   page,
 }) => {
-  const updates = countUpdates(page, "act-audit");
+  const updates = countUpdates(page, "/actions/act-audit");
   await page.goto("/actions");
 
   await (
@@ -64,7 +64,7 @@ test("a double click on Done sends one update and shows one confirmation", async
 test("two activations of Reopen in one task send one update", async ({
   page,
 }) => {
-  const updates = countUpdates(page, "act-dismissed");
+  const updates = countUpdates(page, "/actions/act-dismissed");
   await page.goto("/actions?status=DISMISSED");
 
   await activateTwiceInOneTask(
@@ -78,7 +78,7 @@ test("two activations of Reopen in one task send one update", async ({
 test("two activations of Done in the detail sheet send one update", async ({
   page,
 }) => {
-  const updates = countUpdates(page, "act-audit");
+  const updates = countUpdates(page, "/actions/act-audit");
   await page.goto("/actions?action=act-audit");
 
   await activateTwiceInOneTask(
@@ -90,7 +90,7 @@ test("two activations of Done in the detail sheet send one update", async ({
 });
 
 test("two activations of Undo send one undo", async ({ page }) => {
-  const updates = countUpdates(page, "act-audit");
+  const updates = countUpdates(page, "/actions/act-audit");
   await page.goto("/actions");
   await (
     await hydrated(
@@ -112,5 +112,35 @@ test("two activations of Undo send one undo", async ({ page }) => {
   await undone;
 
   await expect(page.locator(card("act-audit"))).toBeVisible();
+  expect(updates).toHaveLength(2);
+});
+
+test("two activations of a bulk Undo send one undo", async ({ page }) => {
+  const updates = countUpdates(page, "/actions");
+  await page.goto("/actions");
+  for (const id of ["act-prune", "act-volatile"]) {
+    await (
+      await hydrated(page.locator(card(id)).getByRole("checkbox"))
+    ).click();
+  }
+  await page
+    .getByRole("toolbar", { name: "Bulk actions" })
+    .getByRole("button", { name: "Done" })
+    .click();
+  await expect(toast(page, "Marked 2 done")).toBeVisible();
+
+  const undone = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().endsWith("/api/backend/actions"),
+  );
+  await activateTwiceInOneTask(
+    page
+      .getByRole("region", { name: /^Notifications/ })
+      .getByRole("button", { name: "Undo" }),
+  );
+  await undone;
+
+  await expect(page.locator(card("act-prune"))).toBeVisible();
   expect(updates).toHaveLength(2);
 });
