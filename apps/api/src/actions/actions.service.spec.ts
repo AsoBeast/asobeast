@@ -96,6 +96,9 @@ const buildPrisma = (
   const current = overrides === null ? null : currentRow(overrides);
   const events: ActionEventInput[] = [];
   const prisma = {
+    $queryRaw: jest.fn<Promise<unknown[]>, [TemplateStringsArray]>(() =>
+      Promise.resolve([]),
+    ),
     app: {
       findFirst: jest.fn(() => Promise.resolve({ id: 'app_1' })),
     },
@@ -441,6 +444,18 @@ describe('ActionsService transitions', () => {
     await expect(
       serviceFor(prisma).update('missing', update({ status: 'DONE' }), USER),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('locks the action row before it reads the action', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).update('act_1', update({ status: 'DONE' }), USER);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw.mock.calls[0][0].join('')).toContain('FOR UPDATE');
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.actionItem.findFirst.mock.invocationCallOrder[0],
+    );
   });
 
   it('closes a done action and clears its other timestamps', async () => {
@@ -991,6 +1006,18 @@ describe('ActionsService bulk updates', () => {
     ) as unknown as typeof prisma.actionItem.update;
     return prisma;
   };
+
+  it('locks every requested row in one statement before it reads them', async () => {
+    const prisma = withRows([{ id: 'act_1' }, { id: 'act_2' }]);
+
+    await serviceFor(prisma).bulkUpdate(bulk(['act_2', 'act_1']), USER);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw.mock.calls[0][0].join('')).toContain('FOR UPDATE');
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.actionItem.findMany.mock.invocationCallOrder[0],
+    );
+  });
 
   it('reports ids it cannot see as missing instead of failing', async () => {
     const prisma = withRows([{ id: 'act_1' }]);
