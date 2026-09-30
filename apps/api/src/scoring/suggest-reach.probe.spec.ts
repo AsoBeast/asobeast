@@ -1,4 +1,8 @@
-import { probeSuggestReach } from './suggest-reach.probe';
+import {
+  countContinuations,
+  countingLookup,
+  probeSuggestReach,
+} from './suggest-reach.probe';
 
 const lookupFrom = (lists: Record<string, string[]>) =>
   jest.fn((term: string) =>
@@ -93,7 +97,7 @@ describe('probeSuggestReach', () => {
     });
   });
 
-  describe('prefix matching for a store that never echoes the term', () => {
+  describe('prefix matching for a store that never echoes a single word', () => {
     const playLists = {
       game: ['games', 'gamestop', 'game changers app'],
       g: ['grindr', 'gemini'],
@@ -120,7 +124,6 @@ describe('probeSuggestReach', () => {
       ['cat', ['catholic bible', 'cats'], 2],
       ['game', ['gamestop', 'games offline'], 2],
       ['photo', ['photoshop', 'photo editor'], 2],
-      ['guess the location', ['guess the locations game'], 1],
     ])(
       'matches %s only on a word or plural boundary',
       async (keyword, list, position) => {
@@ -150,10 +153,78 @@ describe('probeSuggestReach', () => {
       ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
     });
 
+    it.each([
+      ['geography game', ['geography games', 'geography games offline']],
+      ['travel game', ['travel games', 'road trip travel game']],
+      ['guess the location', ['guess the locations game']],
+    ])(
+      'needs the exact phrase %s, not its plural or a longer search',
+      async (keyword, list) => {
+        await expect(
+          probeSuggestReach(keyword, lookupFrom({ [keyword]: list }), 'prefix'),
+        ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
+      },
+    );
+
+    it('finds a phrase the store offers exactly', async () => {
+      const lookup = lookupFrom({
+        'map quiz': ['map quiz', 'map quiz game'],
+        m: ['maps'],
+        ma: ['map quiz game', 'map quiz'],
+      });
+      await expect(
+        probeSuggestReach('map quiz', lookup, 'prefix'),
+      ).resolves.toEqual({
+        reach: { status: 'hit', prefixLength: 2, position: 2 },
+        requests: 3,
+      });
+    });
+
     it('keeps exact matching by default', async () => {
       await expect(
         probeSuggestReach('game', lookupFrom(playLists)),
       ).resolves.toEqual({ reach: { status: 'absent' }, requests: 1 });
     });
+  });
+});
+
+describe('countContinuations', () => {
+  it('counts distinct searches that are the phrase or continue it', async () => {
+    const lookup = lookupFrom({
+      map: ['maps', 'mapquest', 'map my run'],
+      'map ': ['map my run', 'map my walk', 'map tap'],
+    });
+    await expect(countContinuations('map', lookup)).resolves.toBe(3);
+    expect(lookup).toHaveBeenCalledWith('map ');
+  });
+
+  it('counts nothing for a misspelling the store corrects', async () => {
+    const lookup = lookupFrom({
+      geogusser: ['geoguessr', 'geoguessr free'],
+      'geogusser ': ['geoguessr'],
+    });
+    await expect(countContinuations('geogusser', lookup)).resolves.toBe(0);
+  });
+
+  it('compares on the search key', async () => {
+    const lookup = lookupFrom({ 'Géo Quiz': ['geo quiz', 'GEO QUIZ Maps'] });
+    await expect(countContinuations('Géo Quiz', lookup)).resolves.toBe(2);
+  });
+
+  it('returns null when a lookup throws', async () => {
+    const lookup = jest.fn().mockRejectedValue(new Error('hints down'));
+    await expect(countContinuations('map', lookup)).resolves.toBeNull();
+  });
+});
+
+describe('countingLookup', () => {
+  it('asks the store once per distinct term', async () => {
+    const lookup = lookupFrom({ map: ['maps'] });
+    const counting = countingLookup(lookup);
+    await counting.ask('map');
+    await counting.ask('map');
+    await counting.ask('map ');
+    expect(lookup).toHaveBeenCalledTimes(2);
+    expect(counting.requests()).toBe(2);
   });
 });

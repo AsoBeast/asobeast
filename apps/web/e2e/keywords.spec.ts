@@ -261,7 +261,7 @@ test("score details are persistent, keyboard accessible and store specific", asy
     "input completeness, not ranking accuracy",
   );
   await expect(page.getByRole("tooltip")).toContainText(
-    "Estimated from the first 25 App Store results",
+    "Estimated from the first 25 App Store results and search suggestions",
   );
   await expect(page.getByRole("tooltip")).not.toContainText(
     "The store suggests",

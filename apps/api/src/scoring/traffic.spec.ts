@@ -1,7 +1,7 @@
 import * as fixtures from './scoring-fixtures';
 import { KeywordStats } from './formulas';
-import { estimatePopularity } from './popularity-model';
-import { computeTraffic, estimateTraffic, WORD_FACTORS } from './traffic';
+import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
+import { computeTraffic, DEMAND_WEIGHT, estimateTraffic } from './traffic';
 
 const play = (stats: KeywordStats): KeywordStats => ({
   ...stats,
@@ -9,21 +9,23 @@ const play = (stats: KeywordStats): KeywordStats => ({
 });
 
 const modelTraffic = (stats: KeywordStats): number =>
-  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText) ??
-    0) / 10;
+  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText, {
+    continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
+    reach: stats.suggest,
+  }) ?? 0) / 10;
 
 describe('computeTraffic on google play', () => {
   it.each([
-    ['F1 head', fixtures.F1_HEAD, 5.8056],
-    ['F2 brand', fixtures.F2_BRAND, 4.0876],
-    ['F3 junk', fixtures.F3_JUNK, 0.805],
+    ['F1 head', fixtures.F1_HEAD, 4.7403],
+    ['F2 brand', fixtures.F2_BRAND, 4.063],
+    ['F3 junk', fixtures.F3_JUNK, 1.2],
     ['F4 empty', fixtures.F4_EMPTY, 0],
-    ['F5 tail', fixtures.F5_TAIL, 0.78],
-    ['F6 outlier', fixtures.F6_OUTLIER, 4.5245],
+    ['F5 tail', fixtures.F5_TAIL, 1],
+    ['F6 outlier', fixtures.F6_OUTLIER, 4.4],
     ['F7 single', fixtures.F7_SINGLE, 1],
-    ['F8 unavailable', fixtures.F8_UNAVAILABLE, 4.3181],
-    ['F12 not finite', fixtures.F12_NOT_FINITE, 5.6623],
-    ['F13 diacritics', fixtures.F13_DIACRITICS, 5.5062],
+    ['F8 unavailable', fixtures.F8_UNAVAILABLE, 3.2403],
+    ['F12 not finite', fixtures.F12_NOT_FINITE, 4.6911],
+    ['F13 diacritics', fixtures.F13_DIACRITICS, 3.616],
   ])('%s', (_name, stats, expected) => {
     expect(computeTraffic(play(stats))).toBeCloseTo(expected, 3);
   });
@@ -48,7 +50,7 @@ describe('computeTraffic on google play', () => {
     );
     expect(
       computeTraffic(play({ ...fixtures.F1_HEAD, resultCount: 5 })),
-    ).toBeCloseTo(5.8056, 3);
+    ).toBeCloseTo(4.7403, 3);
   });
 
   it('reads no demand from a page without a single finite rating count', () => {
@@ -59,20 +61,32 @@ describe('computeTraffic on google play', () => {
         ratingCount: undefined,
       })),
     };
-    expect(computeTraffic(blind)).toBeCloseTo(0.65 * 5.61, 3);
+    expect(computeTraffic(blind)).toBeCloseTo(4, 3);
   });
 
-  it('discounts by word count and stays on the scale', () => {
-    const words = ['a', 'a b', 'a b c', 'a b c d', 'a b c d e', 'a b c d e f'];
-    const scores = words.map((keywordText) =>
-      computeTraffic(play({ ...fixtures.F1_HEAD, keywordText })),
+  it('adds a small share of demand to the reach', () => {
+    const rich = computeTraffic(play(fixtures.F1_HEAD));
+    const poor = computeTraffic(play(fixtures.F6_OUTLIER));
+    expect(DEMAND_WEIGHT).toBe(0.12);
+    expect(rich - 4).toBeCloseTo(DEMAND_WEIGHT * 6.1688, 3);
+    expect(poor).toBe(4.4);
+  });
+
+  it('does not discount a longer phrase the store offers as early', () => {
+    const short = computeTraffic(
+      play({ ...fixtures.F6_OUTLIER, keywordText: 'quiz' }),
     );
-    expect(WORD_FACTORS).toEqual([1, 1, 0.92, 0.8, 0.65, 0.5]);
-    expect(scores[4]).toBe(scores[5]);
-    scores.forEach((score) => {
-      expect(score).toBeGreaterThanOrEqual(0);
-      expect(score).toBeLessThanOrEqual(10);
-    });
+    const long = computeTraffic(
+      play({ ...fixtures.F6_OUTLIER, keywordText: 'quiz games for adults' }),
+    );
+    expect(long).toBe(short);
+  });
+
+  it('scores a failed suggest lookup at a typical reach, not on demand alone', () => {
+    expect(computeTraffic(play(fixtures.F8_UNAVAILABLE))).toBeCloseTo(
+      2.5 + DEMAND_WEIGHT * 6.1688,
+      3,
+    );
   });
 });
 
@@ -92,7 +106,10 @@ describe('computeTraffic on the app store', () => {
       competitors: fixtures.headTopTen(),
     };
     expect(estimateTraffic(stats)).toBe(
-      (estimatePopularity(fixtures.headTopTen(), stats.keywordText) ?? 0) / 10,
+      (estimatePopularity(fixtures.headTopTen(), stats.keywordText, {
+        continuations: NEUTRAL_CONTINUATIONS,
+        reach: stats.suggest,
+      }) ?? 0) / 10,
     );
   });
 
@@ -114,12 +131,14 @@ describe('computeTraffic on the app store', () => {
     expect(computeTraffic(nonsense)).toBeLessThanOrEqual(1);
   });
 
-  it('ignores suggest reach', () => {
+  it('reads suggest reach', () => {
     const absent = {
       ...fixtures.F1_HEAD,
       suggest: { status: 'absent' } as const,
     };
-    expect(computeTraffic(absent)).toBe(computeTraffic(fixtures.F1_HEAD));
+    expect(computeTraffic(absent)).toBeLessThan(
+      computeTraffic(fixtures.F1_HEAD),
+    );
   });
 
   it('prefers the official value and keeps the estimate apart', () => {

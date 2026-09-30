@@ -6,9 +6,9 @@ export type SuggestReach =
   | { status: 'absent' }
   | { status: 'unavailable' };
 
-export const REACH_BY_PREFIX = [10, 9, 7.8, 6.6, 5.4, 4.2, 3.2, 2.4] as const;
-export const REACH_POSITION_DECAY = 0.03;
-export const REACH_LISTED = 1.5;
+export const REACH_BY_PREFIX = [6.8, 4.8, 4.4, 4, 3.2, 2.5, 2, 1.6] as const;
+export const REACH_LISTED = 1;
+export const REACH_ABSENT = 0.9;
 export const PREFIX_PROBE_CAP = REACH_BY_PREFIX.length;
 
 export function reachScore(reach: SuggestReach): number | null {
@@ -16,16 +16,12 @@ export function reachScore(reach: SuggestReach): number | null {
     case 'unavailable':
       return null;
     case 'absent':
-      return 0;
+      return REACH_ABSENT;
     case 'listed':
       return REACH_LISTED;
-    case 'hit': {
-      const index =
-        clamp(Math.round(reach.prefixLength), 1, PREFIX_PROBE_CAP) - 1;
-      const position = Math.max(1, reach.position);
-      return clamp(
-        REACH_BY_PREFIX[index] * (1 - REACH_POSITION_DECAY * (position - 1)),
-      );
-    }
+    case 'hit':
+      return REACH_BY_PREFIX[
+        clamp(Math.round(reach.prefixLength), 1, PREFIX_PROBE_CAP) - 1
+      ];
   }
 }

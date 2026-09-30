@@ -10,6 +10,7 @@ import {
   serpRelevance,
   titleEvidence,
   titleMatch,
+  titleTargets,
 } from './serp-signals';
 
 describe('titleEvidence', () => {
@@ -35,6 +36,21 @@ describe('titleEvidence', () => {
     ['地図ゲーム 世界', '地図 ゲーム', 0.7],
   ])('%s against %s is %s', (title, keyword, expected) => {
     expect(titleEvidence(title, keyword)).toBeCloseTo(expected, 6);
+  });
+});
+
+describe('titleTargets', () => {
+  it.each([
+    ['Geometry Dash', 'geo', true],
+    ['Géo Quiz: World', 'geo quiz', true],
+    ['BADLAND', 'bad land', false],
+    ['AMap Global', 'map', false],
+    ['Meme Maker Pro', 'mememaker', false],
+    ['Quiz Geo', 'geo quiz', false],
+    ['国家政务服务平台', '国家', true],
+    ['Any title', '  ', false],
+  ])('%s targets "%s": %s', (title, keyword, expected) => {
+    expect(titleTargets(title, keyword)).toBe(expected);
   });
 });
 

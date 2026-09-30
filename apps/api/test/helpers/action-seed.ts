@@ -1,3 +1,4 @@
+import { CURRENT_FORMULA_VERSIONS } from '@asobeast/shared';
 import type { INestApplication } from '@nestjs/common';
 import { PrismaClient, Store } from '@prisma/client';
 import {
@@ -60,7 +61,7 @@ export async function seedUncoveredKeyword(
       date: ACTION_DAY(1),
       traffic: 8,
       difficulty: 3,
-      formulaVersion: 'app-store-v2',
+      formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
     },
   });
   return { appId: app.id, keywordId: keyword.id };

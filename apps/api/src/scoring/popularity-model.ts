@@ -2,6 +2,7 @@ import { searchKey } from '@asobeast/shared';
 import { finiteNumbers, median } from './curves';
 import { SerpApp } from './formulas';
 import { EVIDENCE_EXACT, titleEvidence, titleMatch } from './serp-signals';
+import { PREFIX_PROBE_CAP, SuggestReach } from './suggest-reach';
 
 export const MODEL_DEPTH = 25;
 export const EXACT_LEADER_DEPTH = 5;
@@ -10,6 +11,12 @@ export const MAX_WORDS = 6;
 export const EXACT_HEAD_MAGNITUDE = 5;
 export const POPULARITY_MIN = 1;
 export const POPULARITY_MAX = 100;
+export const NEUTRAL_CONTINUATIONS = 5;
+
+export interface SuggestEvidence {
+  continuations: number;
+  reach: SuggestReach;
+}
 
 export interface PopularityFeatures {
   leader: number;
@@ -22,6 +29,9 @@ export interface PopularityFeatures {
   weightedLeader: number;
   results: number;
   exactHead: number;
+  continuations: number;
+  suggested: number;
+  early: number;
 }
 
 export type PopularityFeature = keyof PopularityFeatures;
@@ -37,25 +47,31 @@ export const POPULARITY_FEATURES: readonly PopularityFeature[] = [
   'weightedLeader',
   'results',
   'exactHead',
+  'continuations',
+  'suggested',
+  'early',
 ];
 
 export type PopularityWeights = Record<PopularityFeature | 'intercept', number>;
 
 // Fitted by `pnpm --filter api scoring:popularity-study fit` against the
-// Apple Ads top search terms (US, week of 2026-09-13). Refit with the study,
-// never by hand.
+// Apple Ads top search terms and a reference of published popularity (US,
+// week of 2026-09-13). Refit with the study, never by hand.
 export const POPULARITY_WEIGHTS: PopularityWeights = {
-  intercept: 39.8362,
-  leader: 1.296,
-  depth: 2.2581,
-  titled: 17.4107,
-  exact: -10.1152,
-  exactLeader: 0.8944,
-  words: -3.2445,
-  relevance: 2.3251,
-  weightedLeader: -1.2453,
-  results: -7.875,
-  exactHead: 4.0032,
+  intercept: 2.4357,
+  leader: 0.1811,
+  depth: 0.0856,
+  titled: 0.5979,
+  exact: 0.4935,
+  exactLeader: 0.0321,
+  words: 0.0613,
+  relevance: -0.4549,
+  weightedLeader: -0.0672,
+  results: -1.3057,
+  exactHead: -0.0417,
+  continuations: 0.5293,
+  suggested: -0.0646,
+  early: 0.8583,
 };
 
 const magnitude = (count: number): number => Math.log10(1 + Math.max(0, count));
@@ -65,9 +81,19 @@ const ratingsOf = (apps: SerpApp[]): number[] =>
 
 const strongest = (apps: SerpApp[]): number => Math.max(0, ...ratingsOf(apps));
 
+const suggestedShare = (reach: SuggestReach): number =>
+  reach.status === 'absent' ? 0 : 1;
+
+const earlyShare = (reach: SuggestReach): number =>
+  reach.status === 'hit'
+    ? (PREFIX_PROBE_CAP + 1 - Math.min(reach.prefixLength, PREFIX_PROBE_CAP)) /
+      PREFIX_PROBE_CAP
+    : 0;
+
 export function popularityFeatures(
   results: SerpApp[],
   keyword: string,
+  suggest: SuggestEvidence,
 ): PopularityFeatures | null {
   const page = results.slice(0, MODEL_DEPTH);
   if (page.length === 0) {
@@ -101,6 +127,9 @@ export function popularityFeatures(
     weightedLeader: leader * relevance,
     results: page.length / MODEL_DEPTH,
     exactHead: Math.max(0, exactLeader - EXACT_HEAD_MAGNITUDE) ** 2,
+    continuations: magnitude(suggest.continuations),
+    suggested: suggestedShare(suggest.reach),
+    early: earlyShare(suggest.reach),
   };
 }
 
@@ -108,18 +137,21 @@ export function predictPopularity(
   features: PopularityFeatures,
   weights: PopularityWeights = POPULARITY_WEIGHTS,
 ): number {
-  return POPULARITY_FEATURES.reduce(
-    (sum, name) => sum + weights[name] * features[name],
-    weights.intercept,
+  return Math.expm1(
+    POPULARITY_FEATURES.reduce(
+      (sum, name) => sum + weights[name] * features[name],
+      weights.intercept,
+    ),
   );
 }
 
 export function estimatePopularity(
   results: SerpApp[],
   keyword: string,
+  suggest: SuggestEvidence,
   weights: PopularityWeights = POPULARITY_WEIGHTS,
 ): number | null {
-  const features = popularityFeatures(results, keyword);
+  const features = popularityFeatures(results, keyword, suggest);
   if (features === null) {
     return null;
   }

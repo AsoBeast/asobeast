@@ -12,7 +12,12 @@
  *    two depths: search suggestions for listed terms (depth 1) and
  *    suggestions for those (depth 2). Apple publishes no value for them, so
  *    the fit places them 10 and 20 below their genre's lowest listed value.
- * 3. pnpm --filter api scoring:popularity-study fit samples.json
+ * 3. Optionally, pnpm --filter api scoring:popularity-study reference
+ *    terms.json reference.json samples.json adds terms whose popularity is
+ *    known from another source, as [{"term", "popularity"}] on Apple's
+ *    scale, so the long tail is fitted on real values. With enough of them,
+ *    STUDY_ABSENT_WEIGHT=0 drops the placed unlisted terms from the fit.
+ * 4. pnpm --filter api scoring:popularity-study fit samples.json
  *    Prints holdout metrics and the weights to paste into POPULARITY_WEIGHTS.
  */
 import { createHash } from 'node:crypto';
@@ -30,6 +35,12 @@ import {
   popularityFeatures,
   predictPopularity,
 } from '../src/scoring/popularity-model';
+import { SuggestReach } from '../src/scoring/suggest-reach';
+import {
+  countContinuations,
+  countingLookup,
+  probeSuggestReach,
+} from '../src/scoring/suggest-reach.probe';
 import { appStoreLib } from '../src/store-providers/app-store.lib';
 import { AppStoreProvider } from '../src/store-providers/app-store.provider';
 
@@ -64,6 +75,8 @@ interface ListedTerm {
   popularity: number;
 }
 
+type KnownTerm = Pick<ListedTerm, 'term' | 'popularity'> & { genre?: string };
+
 interface TermsFile {
   floors: Record<string, number>;
   terms: ListedTerm[];
@@ -76,6 +89,8 @@ interface Sample {
   floor: number;
   depth?: number;
   results: SerpApp[];
+  continuations: number;
+  reach: SuggestReach;
 }
 
 const sleep = (ms: number): Promise<void> =>
@@ -107,6 +122,24 @@ function readTerms(path: string): TermsFile {
   return { floors: file.floors, terms: [...strongest.values()] };
 }
 
+const hasSuggestSignals = (sample: Partial<Sample>): sample is Sample =>
+  typeof sample.continuations === 'number' &&
+  typeof sample.reach?.status === 'string';
+
+function readSamples(path: string): Sample[] {
+  if (!existsSync(path)) {
+    return [];
+  }
+  const saved = JSON.parse(readFileSync(path, 'utf8')) as Partial<Sample>[];
+  const complete = saved.filter(hasSuggestSignals);
+  if (complete.length < saved.length) {
+    console.warn(
+      `${saved.length - complete.length} samples in ${path} predate the suggestion signals; collect and reference search them again`,
+    );
+  }
+  return complete;
+}
+
 function sampleListed(file: TermsFile): ListedTerm[] {
   const byGenre = new Map<string, ListedTerm[]>();
   for (const term of file.terms) {
@@ -133,25 +166,28 @@ class SampleCollector {
   ) {
     this.listed = new Set(file.terms.map((term) => searchKey(term.term)));
     this.globalFloor = Math.min(...Object.values(file.floors));
-    this.samples = existsSync(outPath)
-      ? (JSON.parse(readFileSync(outPath, 'utf8')) as Sample[])
-      : [];
+    this.samples = readSamples(outPath);
     this.done = new Set(this.samples.map((sample) => sample.term));
   }
 
-  async collectListed(terms: ListedTerm[]): Promise<void> {
+  async collectKnown(terms: KnownTerm[], label: string): Promise<void> {
     for (const [index, term] of terms.entries()) {
       if (this.done.has(term.term)) continue;
       try {
-        const { apps } = await this.search(term.term);
+        const { apps, genre, continuations, reach } = await this.search(
+          term.term,
+        );
+        const known = term.genre ?? genre;
         this.add({
           term: term.term,
           popularity: term.popularity,
-          genre: term.genre,
-          floor: this.file.floors[term.genre] ?? this.globalFloor,
+          genre: known ?? null,
+          floor: (known && this.file.floors[known]) || this.globalFloor,
           results: apps,
+          continuations,
+          reach,
         });
-        console.log(`listed ${index + 1}/${terms.length} ${term.term}`);
+        console.log(`${label} ${index + 1}/${terms.length} ${term.term}`);
       } catch (error) {
         console.warn(`skip "${term.term}": ${messageOf(error)}`);
       }
@@ -176,7 +212,7 @@ class SampleCollector {
         if (found >= limit) break;
         if (this.listed.has(term) || this.done.has(term)) continue;
         try {
-          const { apps, genre } = await this.search(term);
+          const { apps, genre, continuations, reach } = await this.search(term);
           this.add({
             term,
             popularity: null,
@@ -184,6 +220,8 @@ class SampleCollector {
             floor: (genre && this.file.floors[genre]) || this.globalFloor,
             depth,
             results: apps,
+            continuations,
+            reach,
           });
           found += 1;
           console.log(`unlisted depth ${depth} ${found}/${limit} ${term}`);
@@ -215,7 +253,18 @@ class SampleCollector {
   private async search(term: string): Promise<SearchResults> {
     await sleep(DELAY_MS);
     const results = await this.provider.search(term, COUNTRY, MODEL_DEPTH);
+    const lookup = countingLookup(async (typed) => {
+      await sleep(DELAY_MS);
+      return this.provider.suggest(typed, COUNTRY);
+    });
+    const { reach } = await probeSuggestReach(term, lookup.ask);
+    const continuations = await countContinuations(term, lookup.ask);
+    if (continuations === null || reach.status === 'unavailable') {
+      throw new Error('search suggestions failed');
+    }
     return {
+      continuations,
+      reach,
       apps: results.map((item) => ({
         title: item.title,
         ...(item.developer === undefined ? {} : { developer: item.developer }),
@@ -232,7 +281,7 @@ async function collect(termsPath: string, outPath: string): Promise<void> {
   const file = readTerms(termsPath);
   const collector = new SampleCollector(file, outPath);
   const positives = sampleListed(file);
-  await collector.collectListed(positives);
+  await collector.collectKnown(positives, 'listed');
   await collector.collectUnlisted(
     spread(positives, SEEDS).map((term) => term.term),
     1,
@@ -242,9 +291,25 @@ async function collect(termsPath: string, outPath: string): Promise<void> {
   console.log(`saved ${collector.samples.length} samples to ${outPath}`);
 }
 
+async function reference(
+  termsPath: string,
+  referencePath: string,
+  outPath: string,
+): Promise<void> {
+  const known = JSON.parse(readFileSync(referencePath, 'utf8')) as KnownTerm[];
+  const collector = new SampleCollector(readTerms(termsPath), outPath);
+  await collector.collectKnown(
+    known.filter((term) => Number.isFinite(term.popularity)),
+    'reference',
+  );
+  console.log(`saved ${collector.samples.length} samples to ${outPath}`);
+}
+
 interface SearchResults {
   apps: SerpApp[];
   genre: string | undefined;
+  continuations: number;
+  reach: SuggestReach;
 }
 
 interface Row {
@@ -294,7 +359,7 @@ function fitWeights(rows: Row[]): PopularityWeights {
   for (const row of rows) {
     const x = design(row.features);
     for (let i = 0; i < size; i++) {
-      xty[i] += row.weight * x[i] * row.target;
+      xty[i] += row.weight * x[i] * Math.log1p(row.target);
       for (let j = 0; j < size; j++) xtx[i][j] += row.weight * x[i] * x[j];
     }
   }
@@ -357,9 +422,11 @@ const median = (values: number[]): number => {
 };
 
 function fit(samplesPath: string): void {
-  const samples = JSON.parse(readFileSync(samplesPath, 'utf8')) as Sample[];
-  const rows: Row[] = samples.flatMap((sample) => {
-    const features = popularityFeatures(sample.results, sample.term);
+  const rows: Row[] = readSamples(samplesPath).flatMap((sample) => {
+    const features = popularityFeatures(sample.results, sample.term, {
+      continuations: sample.continuations,
+      reach: sample.reach,
+    });
     if (features === null) return [];
     const listed = sample.popularity !== null;
     return [
@@ -397,14 +464,16 @@ function messageOf(error: unknown): string {
 }
 
 async function main(): Promise<void> {
-  const [command, first, second] = process.argv.slice(2);
+  const [command, first, second, third] = process.argv.slice(2);
   if (command === 'collect' && first && second) {
     await collect(userPath(first), userPath(second));
+  } else if (command === 'reference' && first && second && third) {
+    await reference(userPath(first), userPath(second), userPath(third));
   } else if (command === 'fit' && first) {
     fit(userPath(first));
   } else {
     console.log(
-      'usage: popularity-study collect <terms.json> <samples.json> | fit <samples.json>',
+      'usage: popularity-study collect <terms.json> <samples.json> | reference <terms.json> <reference.json> <samples.json> | fit <samples.json>',
     );
     process.exitCode = 1;
   }

@@ -77,7 +77,7 @@ describe('calibrationPairs', () => {
   it('keeps current rows that carry both numbers', () => {
     expect(
       calibrationPairs([
-        { text: 'quiz', formulaVersion: 'app-store-v2', stats: { signals } },
+        { text: 'quiz', formulaVersion: 'app-store-v3', stats: { signals } },
         {
           text: 'old',
           formulaVersion: 'app-store-v1',
@@ -85,7 +85,7 @@ describe('calibrationPairs', () => {
         },
         {
           text: 'estimate only',
-          formulaVersion: 'app-store-v2',
+          formulaVersion: 'app-store-v3',
           stats: { signals: { ...signals, officialPopularity: null } },
         },
       ]),

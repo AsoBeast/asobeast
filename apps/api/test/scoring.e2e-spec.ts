@@ -171,7 +171,7 @@ describe('Scoring pipeline (e2e)', () => {
     expect(scored?.difficulty).toBeGreaterThan(0);
     expect(scored?.scoreProvenance).toMatchObject({
       source: 'GOOGLE_PLAY_SUGGEST_REACH',
-      formulaVersion: 'google-play-v2',
+      formulaVersion: 'google-play-v3',
       confidence: 'HIGH',
     });
     const metric = await prisma.keywordMetric.findFirst({

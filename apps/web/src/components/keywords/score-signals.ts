@@ -25,12 +25,12 @@ function reachLine(signals: ScoreSignals): string {
     case "absent":
       return "The store never suggests this phrase, so volume is capped.";
     case "unavailable":
-      return "Suggestions were unavailable, so volume comes from the ranking apps alone.";
+      return "Suggestions were unavailable, so volume assumes a typical reach.";
   }
 }
 
 const SEARCH_MODEL_LINE =
-  "Estimated from the first 25 App Store results, on Apple's search popularity scale.";
+  "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.";
 const UNLISTED_CAP_LINE =
   "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.";
 

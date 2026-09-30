@@ -48,7 +48,7 @@ describe("popularitySignalLines", () => {
         suggestPrefixLength: null,
         suggestPosition: null,
       }),
-      "Suggestions were unavailable, so volume comes from the ranking apps alone.",
+      "Suggestions were unavailable, so volume assumes a typical reach.",
     ],
   ])("describes the suggest reach %#", (input, expected) => {
     expect(popularitySignalLines(input)).toEqual([expected]);
@@ -82,7 +82,7 @@ describe("popularitySignalLines", () => {
     expect(
       popularitySignalLines(signals(), "APPLE_SEARCH_SIGNALS", 46),
     ).toEqual([
-      "Estimated from the first 25 App Store results, on Apple's search popularity scale.",
+      "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.",
       "Apple does not list this term among its most searched, so it is held below the lowest popularity Apple published for its genre.",
     ]);
     expect(
@@ -106,7 +106,7 @@ describe("popularitySignalLines", () => {
         "APPLE_SEARCH_SIGNALS",
       ),
     ).toEqual([
-      "Estimated from the first 25 App Store results, on Apple's search popularity scale.",
+      "Estimated from the first 25 App Store results and search suggestions, on Apple's search popularity scale.",
     ]);
   });
 

@@ -1,31 +1,19 @@
 import {
   computeOpportunity,
-  dailySearches,
   OPPORTUNITY_HIGH,
+  SUFFICIENT_VOLUME,
 } from './opportunity';
-
-describe('dailySearches', () => {
-  it.each([
-    [0, 0],
-    [0.5, 0.5],
-    [40, 70],
-    [47.5, 210],
-    [56, 686],
-    [100, 300_000],
-    [120, 300_000],
-  ])('reads a volume of %s as %s searches a day', (volume, expected) => {
-    expect(dailySearches(volume)).toBeCloseTo(expected, 6);
-  });
-});
 
 describe('computeOpportunity', () => {
   it.each([
     [0, 0, 0],
+    [30, 0, 100],
     [100, 0, 100],
     [100, 100, 0],
-    [56, 41, 43],
-    [40, 41, 28],
-    [47.7, 43.7, 34],
+    [15, 40, 30],
+    [33, 23, 77],
+    [68, 71, 29],
+    [22.5, 37.3, 47],
   ])('volume %s at difficulty %s is %s', (volume, difficulty, expected) => {
     expect(computeOpportunity(volume, difficulty)).toBe(expected);
   });
@@ -39,19 +27,28 @@ describe('computeOpportunity', () => {
     expect(computeOpportunity(volume, difficulty)).toBeNull();
   });
 
-  it('rises with volume and falls with difficulty', () => {
-    expect(computeOpportunity(60, 40)).toBeGreaterThan(
-      computeOpportunity(50, 40) ?? 0,
+  it('rises with volume until the volume is sufficient', () => {
+    expect(computeOpportunity(20, 40)).toBeGreaterThan(
+      computeOpportunity(10, 40) ?? 0,
     );
-    expect(computeOpportunity(50, 60)).toBeLessThan(
-      computeOpportunity(50, 40) ?? 0,
+    expect(computeOpportunity(SUFFICIENT_VOLUME, 40)).toBe(
+      computeOpportunity(90, 40),
     );
   });
 
-  it('barely penalizes an easy page and closes on a hard one', () => {
-    const open = computeOpportunity(60, 0) ?? 0;
-    expect(computeOpportunity(60, 20)).toBeGreaterThan(open * 0.95);
-    expect(computeOpportunity(60, 90)).toBeLessThan(open * 0.2);
+  it('falls with difficulty at every volume', () => {
+    expect(computeOpportunity(90, 60)).toBeLessThan(
+      computeOpportunity(90, 40) ?? 0,
+    );
+    expect(computeOpportunity(10, 60)).toBeLessThan(
+      computeOpportunity(10, 40) ?? 0,
+    );
+  });
+
+  it('ranks an open long tail phrase above a contested head term', () => {
+    expect(computeOpportunity(33, 23)).toBeGreaterThan(
+      computeOpportunity(68, 71) ?? 0,
+    );
   });
 
   it('names one threshold for a high opportunity', () => {
