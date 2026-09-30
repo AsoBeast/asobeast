@@ -12,9 +12,10 @@ import {
   WebhookCreateRequest,
   WebhookEvent,
 } from '@asobeast/shared';
+import { WEBHOOK_URL_OPTIONS } from './webhook-url-options';
 
 export class CreateWebhookDto implements WebhookCreateRequest {
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
+  @IsUrl(WEBHOOK_URL_OPTIONS)
   url!: string;
 
   @IsArray()
