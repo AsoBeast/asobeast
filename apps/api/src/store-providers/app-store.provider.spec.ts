@@ -50,15 +50,31 @@ describe('AppStoreProvider', () => {
     });
   });
 
+  const IPAD_ONLY_DEVICES = [
+    'iPadAir-iPadAir',
+    'iPadProCellular-iPadProCellular',
+    'iPadPro13M4-iPadPro13M4',
+  ];
+
   it.each([
     ['a Mac only app such as Xcode', [], false],
     ['an Apple TV only app', ['AppleTV4-AppleTV4'], false],
-    ['an iPhone app', ['iPhone15-iPhone15', 'iPadAir5-iPadAir5'], true],
-    ['an iPad only app', ['iPadPro13M4-iPadPro13M4'], true],
+    ['a universal app', ['iPhone15-iPhone15', 'iPadAir5-iPadAir5'], true],
+    [
+      'an iPhone only app that lists the iPads it runs on',
+      ['iPhone5s-iPhone5s', 'iPadAir-iPadAir'],
+      true,
+    ],
+    ['an iPad only app such as Procreate', IPAD_ONLY_DEVICES, false],
+    [
+      'an iPad only app that also runs on the Mac',
+      [...IPAD_ONLY_DEVICES, 'MacDesktop-MacDesktop'],
+      false,
+    ],
     ['an iPod touch app', ['iPodTouchSeventhGen-iPodTouchSeventhGen'], true],
     ['a listing that reports no devices at all', undefined, true],
   ])(
-    'knows whether %s can appear in App Store search',
+    'knows whether %s is listed in the iPhone search it reads',
     async (_, supportedDevices, searchable) => {
       const app = jest.fn().mockResolvedValue({
         id: 497799835,

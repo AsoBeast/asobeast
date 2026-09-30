@@ -350,9 +350,9 @@ describe('AppsController (e2e)', () => {
     expect(registry.getAppCalls).toEqual([]);
   });
 
-  describe('a listing that cannot appear in iPhone or iPad search', () => {
+  describe('a listing that iPhone search never lists', () => {
     const MESSAGE =
-      'Fixture App is not available on iPhone or iPad, so it cannot rank in App Store search';
+      'Fixture App is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads';
 
     it('is refused on import before anything is stored', async () => {
       registry.searchable = false;
