@@ -105,7 +105,10 @@ export class ActionTransitions {
       };
     }
     const note = body.note === undefined ? {} : { note: body.note.trim() };
-    if (isNoteOnly(current, body)) {
+    if (
+      isNoteOnly(current, body) ||
+      (await this.repeatsDismissal(tx, current, body))
+    ) {
       const row = await tx.actionItem.update({
         where: { id: current.id },
         data: note,
@@ -152,6 +155,26 @@ export class ActionTransitions {
         occurredAt: now,
       },
     };
+  }
+
+  private async repeatsDismissal(
+    tx: Prisma.TransactionClient,
+    current: CurrentAction,
+    body: ActionUpdateRequest,
+  ): Promise<boolean> {
+    if (
+      current.status !== 'DISMISSED' ||
+      body.status !== 'DISMISSED' ||
+      body.reason === undefined
+    ) {
+      return false;
+    }
+    const latest = await tx.actionEvent.findFirst({
+      where: { actionId: current.id, type: 'dismissed' },
+      orderBy: [{ occurredAt: 'desc' }, { id: 'desc' }],
+      select: { reason: true },
+    });
+    return latest?.reason === body.reason;
   }
 
   private async revert(
