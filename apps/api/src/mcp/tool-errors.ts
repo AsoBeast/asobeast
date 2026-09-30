@@ -1,5 +1,5 @@
 import type { ApiErrorEnvelope } from '@asobeast/shared';
-import type { ReadTool } from '@asobeast/mcp-tools';
+import { notFoundText, type ReadTool } from '@asobeast/mcp-tools';
 import type { InProcessResponse } from './in-process.gateway';
 
 const UNAUTHENTICATED =
@@ -26,9 +26,7 @@ export function toolErrorText(
   const message = messageOf(envelope, response.status);
 
   if (response.status === 401) return UNAUTHENTICATED;
-  if (response.status === 404 && tool.unavailableOn404) {
-    return tool.unavailableOn404;
-  }
+  if (response.status === 404) return notFoundText(tool, message);
   if (response.status === 402 && envelope.entitlement) {
     return `${message} Retrying will not help until someone starts a plan at ${envelope.entitlement.upgradePath}.`;
   }

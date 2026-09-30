@@ -6,6 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
+import type { ApiErrorEnvelope } from '@asobeast/shared';
 import { MCP_TOOLS } from '@asobeast/mcp-tools';
 import request, { Response } from 'supertest';
 import { App } from 'supertest/types';
@@ -268,6 +269,42 @@ describe('Remote MCP transport (e2e)', () => {
 
     expect(result?.isError).toBe(true);
     expect(result?.content?.[0].text).toContain('not found');
+  });
+
+  it.each(['change_impact', 'app_actions', 'audit_history'])(
+    'names the missing app when %s is asked about an id that does not exist',
+    async (name) => {
+      const response = await rpc('tools/call', {
+        name,
+        arguments: { appId: 'missing' },
+      }).expect(200);
+      const result = sseEnvelope(response).result;
+
+      expect(result?.isError).toBe(true);
+      expect(result?.content?.[0].text).toBe('App missing not found');
+    },
+  );
+
+  it('answers a route that does not exist with the message tools read as a missing route', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/no-such-route')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .expect(404);
+
+    expect((response.body as ApiErrorEnvelope).message).toMatch(
+      /^Cannot GET \//,
+    );
+  });
+
+  it('names the missing action instead of blaming the api version', async () => {
+    const response = await rpc('tools/call', {
+      name: 'get_action',
+      arguments: { actionId: 'act_missing' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toBe('Action not found');
   });
 
   it('refuses a serp snapshot date that is not on the calendar', async () => {

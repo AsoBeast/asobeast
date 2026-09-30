@@ -1,5 +1,5 @@
 import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
-import { toolText, type ReadTool } from "@asobeast/mcp-tools";
+import { notFoundText, toolText, type ReadTool } from "@asobeast/mcp-tools";
 import type { ApiClient } from "../client.js";
 
 export function registerReadTool(
@@ -20,8 +20,8 @@ export function registerReadTool(
       const result = await client.get<unknown>(path, params);
       if (!result.ok) {
         const message =
-          result.status === 404 && def.unavailableOn404
-            ? def.unavailableOn404
+          result.status === 404
+            ? notFoundText(def, result.message)
             : result.message;
         return {
           isError: true,

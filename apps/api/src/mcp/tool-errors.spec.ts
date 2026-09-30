@@ -1,4 +1,4 @@
-import type { ReadTool } from '@asobeast/mcp-tools';
+import { MCP_TOOLS, type ReadTool } from '@asobeast/mcp-tools';
 import { toolErrorText } from './tool-errors';
 
 const tool = { name: 'list_apps' } as ReadTool;
@@ -50,7 +50,10 @@ describe('toolErrorText', () => {
   });
 
   it('explains an endpoint an older instance never had', () => {
-    const text = toolErrorText(optional, { status: 404, body: null });
+    const text = toolErrorText(optional, {
+      status: 404,
+      body: { message: 'Cannot GET /apps/app-1/audit/history' },
+    });
 
     expect(text).toBe(optional.unavailableOn404);
   });
@@ -65,5 +68,40 @@ describe('toolErrorText', () => {
     expect(toolErrorText(tool, { status: 502, body: 'gateway' })).toBe(
       'The asobeast API answered 502.',
     );
+  });
+});
+
+const mappedTools = MCP_TOOLS.filter(
+  (candidate) => candidate.unavailableOn404 !== undefined,
+);
+
+describe.each(
+  mappedTools.map((candidate) => [candidate.name, candidate] as const),
+)('toolErrorText for %s on a 404', (_name, candidate) => {
+  it('says the app was not found when the api says so', () => {
+    expect(
+      toolErrorText(candidate, {
+        status: 404,
+        body: { message: 'App nope not found' },
+      }),
+    ).toBe('App nope not found');
+  });
+
+  it('says the action was not found when the api says so', () => {
+    expect(
+      toolErrorText(candidate, {
+        status: 404,
+        body: { message: 'Action not found' },
+      }),
+    ).toBe('Action not found');
+  });
+
+  it('still says a newer api is needed when the route does not exist', () => {
+    expect(
+      toolErrorText(candidate, {
+        status: 404,
+        body: { message: 'Cannot GET /apps/nope/anything' },
+      }),
+    ).toBe(candidate.unavailableOn404);
   });
 });
