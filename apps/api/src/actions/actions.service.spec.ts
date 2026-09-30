@@ -1010,6 +1010,74 @@ describe('ActionsService undo', () => {
     expect(prisma.actionEvent.delete).not.toHaveBeenCalled();
   });
 
+  it('restores the recorded wake date when the undo names an older one', async () => {
+    const earlier = new Date(Date.now() + 3 * DAY_MS);
+    const later = new Date(Date.now() + 5 * DAY_MS);
+    const snoozed = (
+      id: string,
+      snoozedUntil: Date,
+      minutes: number,
+    ): StoredEvent => ({
+      id,
+      type: 'snoozed',
+      actor: 'user',
+      userId: USER,
+      status: 'SNOOZED',
+      snoozedUntil,
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      snoozed('ev_first', earlier, 5),
+      snoozed('ev_second', later, 3),
+      done(),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({
+        status: 'SNOOZED',
+        snoozedUntil: earlier.toISOString(),
+        revert: true,
+      }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: later,
+    });
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_done' },
+    });
+  });
+
+  it('refuses an undo to the open state the action is already in', async () => {
+    const prisma = buildPrisma({ status: 'OPEN' }, [
+      opened,
+      {
+        id: 'ev_woke',
+        type: 'woke',
+        actor: 'user',
+        userId: USER,
+        status: 'OPEN',
+        occurredAt: minutesAgo(2),
+      },
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+    expect(prisma.actionEvent.delete).not.toHaveBeenCalled();
+  });
+
   it('undoes a dismissal that only changed its reason', async () => {
     const dismissed = (id: string, minutes: number): StoredEvent => ({
       id,
