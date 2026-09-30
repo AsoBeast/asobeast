@@ -39,7 +39,7 @@ const storedJson = {
     medianRatingCount: 1_000_000,
     flags: [],
     officialPopularity: null,
-    estimatedTraffic: 10,
+    estimatedTraffic: 8.5,
     entryDifficulty: null,
   },
   evidence,
@@ -91,11 +91,11 @@ describe('ScoringService', () => {
     expect(collect).toHaveBeenCalledWith('kw1');
     const [args] = upsert.mock.calls[0];
     expect(args.create.keywordId).toBe('kw1');
-    expect(args.create.traffic).toBeCloseTo(10, 2);
+    expect(args.create.traffic).toBeCloseTo(8.5, 2);
     expect(args.create.difficulty).toBeCloseTo(7.9, 2);
     expect(args.create.stats).toEqual(storedJson);
     expect(args.create.scoringSource).toBe('APPLE_SEARCH_SIGNALS');
-    expect(args.create.formulaVersion).toBe('app-store-v3');
+    expect(args.create.formulaVersion).toBe('app-store-v4');
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.capturedAt.toISOString()).toBe(
       '2026-07-28T23:59:59.500Z',
@@ -108,7 +108,7 @@ describe('ScoringService', () => {
       difficulty: args.create.difficulty,
       stats: storedJson,
       scoringSource: 'APPLE_SEARCH_SIGNALS',
-      formulaVersion: 'app-store-v3',
+      formulaVersion: 'app-store-v4',
       confidence: 'HIGH',
       capturedAt: args.create.capturedAt,
     });
@@ -154,7 +154,7 @@ describe('ScoringService', () => {
     expect(args.create.confidence).toBe('HIGH');
     expect(args.create.stats).not.toHaveProperty('official');
     expect(args.create.stats).toMatchObject({
-      signals: { officialPopularity: 71, estimatedTraffic: 10 },
+      signals: { officialPopularity: 71, estimatedTraffic: 8.5 },
     });
   });
 

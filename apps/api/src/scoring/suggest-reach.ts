@@ -25,3 +25,17 @@ export function reachScore(reach: SuggestReach): number | null {
       ];
   }
 }
+
+export function untypedShare(
+  reach: SuggestReach,
+  keyword: string,
+): number | null {
+  if (reach.status === 'unavailable') {
+    return null;
+  }
+  const length = Array.from(keyword).length;
+  if (reach.status !== 'hit' || length === 0) {
+    return 0;
+  }
+  return clamp(1 - reach.prefixLength / length, 0, 1);
+}

@@ -1,33 +1,80 @@
 import * as fixtures from './scoring-fixtures';
 import { KeywordStats } from './formulas';
-import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
-import { computeTraffic, DEMAND_WEIGHT, estimateTraffic } from './traffic';
+import {
+  estimatePopularity,
+  NEUTRAL_CONTINUATIONS,
+  PopularityWeights,
+  UNLISTED_POPULARITY_WEIGHTS,
+} from './popularity-model';
+import { pageStrength, targetingShare } from './difficulty';
+import {
+  computeTraffic,
+  estimateTraffic,
+  SUGGEST_WEIGHTS,
+  TYPICAL_REACH,
+  TYPICAL_UNTYPED,
+} from './traffic';
 
 const play = (stats: KeywordStats): KeywordStats => ({
   ...stats,
   store: 'GOOGLE_PLAY',
 });
 
-const modelTraffic = (stats: KeywordStats): number =>
-  (estimatePopularity(stats.competitors ?? stats.top10, stats.keywordText, {
-    continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
-    reach: stats.suggest,
-  }) ?? 0) / 10;
+const modelTraffic = (
+  stats: KeywordStats,
+  weights?: PopularityWeights,
+): number =>
+  (estimatePopularity(
+    stats.competitors ?? stats.top10,
+    stats.keywordText,
+    {
+      continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
+      reach: stats.suggest,
+    },
+    weights,
+  ) ?? 0) / 10;
+
+const unlistedTraffic = (stats: KeywordStats): number =>
+  modelTraffic(stats, UNLISTED_POPULARITY_WEIGHTS);
 
 describe('computeTraffic on google play', () => {
+  const blend = (reach: number, untyped: number, stats: KeywordStats): number =>
+    SUGGEST_WEIGHTS.reach * reach +
+    SUGGEST_WEIGHTS.untyped * untyped +
+    SUGGEST_WEIGHTS.strength * pageStrength(stats.top10) +
+    SUGGEST_WEIGHTS.targeting * targetingShare(stats.top10, stats.keywordText);
+
+  it('publishes the fitted weights', () => {
+    expect(SUGGEST_WEIGHTS).toEqual({
+      reach: 0.5,
+      untyped: 1.5,
+      strength: 1.1,
+      targeting: 1.9,
+    });
+  });
+
   it.each([
-    ['F1 head', fixtures.F1_HEAD, 4.7403],
-    ['F2 brand', fixtures.F2_BRAND, 4.063],
-    ['F3 junk', fixtures.F3_JUNK, 1.2],
+    ['F1 head', fixtures.F1_HEAD, 4.4995],
+    ['F2 brand', fixtures.F2_BRAND, 3.0784],
+    ['F3 junk', fixtures.F3_JUNK, 1.5],
     ['F4 empty', fixtures.F4_EMPTY, 0],
-    ['F5 tail', fixtures.F5_TAIL, 1],
-    ['F6 outlier', fixtures.F6_OUTLIER, 4.4],
+    ['F5 tail', fixtures.F5_TAIL, 1.2629],
+    ['F6 outlier', fixtures.F6_OUTLIER, 5.1475],
     ['F7 single', fixtures.F7_SINGLE, 1],
-    ['F8 unavailable', fixtures.F8_UNAVAILABLE, 3.2403],
-    ['F12 not finite', fixtures.F12_NOT_FINITE, 4.6911],
-    ['F13 diacritics', fixtures.F13_DIACRITICS, 3.616],
+    ['F8 unavailable', fixtures.F8_UNAVAILABLE, 4.3495],
+    ['F12 not finite', fixtures.F12_NOT_FINITE, 4.449],
+    ['F13 diacritics', fixtures.F13_DIACRITICS, 4.75],
   ])('%s', (_name, stats, expected) => {
     expect(computeTraffic(play(stats))).toBeCloseTo(expected, 3);
+  });
+
+  it('adds reach, the untyped share, page strength and targeting', () => {
+    const stats = play({
+      ...fixtures.F1_HEAD,
+      keywordText: 'quiz games',
+      suggest: { status: 'hit', prefixLength: 4, position: 1 },
+    });
+    expect(computeTraffic(stats)).toBeCloseTo(blend(4, 0.6, stats), 6);
   });
 
   it('rises when the store offers the keyword sooner', () => {
@@ -50,10 +97,10 @@ describe('computeTraffic on google play', () => {
     );
     expect(
       computeTraffic(play({ ...fixtures.F1_HEAD, resultCount: 5 })),
-    ).toBeCloseTo(4.7403, 3);
+    ).toBeCloseTo(4.4995, 3);
   });
 
-  it('reads no demand from a page without a single finite rating count', () => {
+  it('reads no strength from a page without a single finite rating count', () => {
     const blind = {
       ...play(fixtures.F1_HEAD),
       top10: fixtures.F1_HEAD.top10.map((item) => ({
@@ -61,32 +108,68 @@ describe('computeTraffic on google play', () => {
         ratingCount: undefined,
       })),
     };
-    expect(computeTraffic(blind)).toBeCloseTo(4, 3);
+    expect(pageStrength(blind.top10)).toBe(0);
+    expect(computeTraffic(blind)).toBeCloseTo(blend(4, 0, blind), 6);
   });
 
-  it('adds a small share of demand to the reach', () => {
-    const rich = computeTraffic(play(fixtures.F1_HEAD));
-    const poor = computeTraffic(play(fixtures.F6_OUTLIER));
-    expect(DEMAND_WEIGHT).toBe(0.12);
-    expect(rich - 4).toBeCloseTo(DEMAND_WEIGHT * 6.1688, 3);
-    expect(poor).toBe(4.4);
+  it('rises with the strength of the page', () => {
+    const strong = play(fixtures.F1_HEAD);
+    const weak = { ...strong, top10: fixtures.tailTopTen() };
+    expect(targetingShare(weak.top10, weak.keywordText)).toBe(0);
+    expect(
+      computeTraffic({ ...strong, keywordText: 'trivia' }) -
+        computeTraffic({ ...weak, keywordText: 'trivia' }),
+    ).toBeCloseTo(
+      SUGGEST_WEIGHTS.strength *
+        (pageStrength(strong.top10) - pageStrength(weak.top10)),
+      6,
+    );
   });
 
-  it('does not discount a longer phrase the store offers as early', () => {
-    const short = computeTraffic(
-      play({ ...fixtures.F6_OUTLIER, keywordText: 'quiz' }),
+  it('rises when more of the titles target the phrase', () => {
+    const targeted = play(fixtures.F1_HEAD);
+    const untargeted = { ...targeted, keywordText: 'quip' };
+    expect(computeTraffic(targeted) - computeTraffic(untargeted)).toBeCloseTo(
+      SUGGEST_WEIGHTS.targeting,
+      6,
     );
-    const long = computeTraffic(
-      play({ ...fixtures.F6_OUTLIER, keywordText: 'quiz games for adults' }),
-    );
-    expect(long).toBe(short);
   });
 
-  it('scores a failed suggest lookup at a typical reach, not on demand alone', () => {
-    expect(computeTraffic(play(fixtures.F8_UNAVAILABLE))).toBeCloseTo(
-      2.5 + DEMAND_WEIGHT * 6.1688,
-      3,
+  it('credits a longer phrase the store offers as early', () => {
+    const offered = { status: 'hit', prefixLength: 4, position: 1 } as const;
+    const short = play({
+      ...fixtures.F6_OUTLIER,
+      keywordText: 'trivia',
+      suggest: offered,
+    });
+    const long = { ...short, keywordText: 'trivia games for adults' };
+    expect(computeTraffic(long) - computeTraffic(short)).toBeCloseTo(
+      SUGGEST_WEIGHTS.untyped * (19 / 23 - 2 / 6),
+      6,
     );
+  });
+
+  it('scores a failed suggest lookup at a typical reach and untyped share', () => {
+    const failed = play(fixtures.F8_UNAVAILABLE);
+    expect(computeTraffic(failed)).toBeCloseTo(
+      blend(TYPICAL_REACH, TYPICAL_UNTYPED, failed),
+      6,
+    );
+    expect(TYPICAL_REACH).toBe(2.5);
+    expect(TYPICAL_UNTYPED).toBe(0.4);
+  });
+
+  it('never leaves the stored scale', () => {
+    const giant = play({
+      ...fixtures.F1_HEAD,
+      keywordText: 'quiz games for adults offline',
+      suggest: { status: 'hit', prefixLength: 1, position: 1 },
+      top10: fixtures.junkTopTen().map((item) => ({
+        ...item,
+        title: 'Quiz games for adults offline',
+      })),
+    });
+    expect(computeTraffic(giant)).toBeLessThanOrEqual(10);
   });
 });
 
@@ -148,8 +231,28 @@ describe('computeTraffic on the app store', () => {
     );
   });
 
+  it('reads an unlisted term on the weights fitted for unlisted terms', () => {
+    const unlisted = {
+      ...fixtures.F5_TAIL,
+      official: { absentBelow: 101 },
+    };
+    expect(computeTraffic(unlisted)).toBe(unlistedTraffic(fixtures.F5_TAIL));
+    expect(unlistedTraffic(fixtures.F5_TAIL)).not.toBe(
+      modelTraffic(fixtures.F5_TAIL),
+    );
+  });
+
+  it('keeps the estimate of an unlisted term on the weights that scored it', () => {
+    expect(estimateTraffic(fixtures.F10_ABSENT_CAP)).toBe(
+      unlistedTraffic(fixtures.F1_HEAD),
+    );
+    expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeLessThanOrEqual(
+      estimateTraffic(fixtures.F10_ABSENT_CAP),
+    );
+  });
+
   it('caps an unlisted term just below its genre floor', () => {
-    const estimate = modelTraffic(fixtures.F1_HEAD);
+    const estimate = unlistedTraffic(fixtures.F1_HEAD);
     expect(computeTraffic(fixtures.F10_ABSENT_CAP)).toBeCloseTo(
       Math.min(estimate, 4),
       6,
@@ -164,9 +267,19 @@ describe('computeTraffic on the app store', () => {
     (absentBelow) => {
       expect(
         computeTraffic({ ...fixtures.F1_HEAD, official: { absentBelow } }),
-      ).toBeCloseTo(Math.min(modelTraffic(fixtures.F1_HEAD), 1.5), 6);
+      ).toBeCloseTo(Math.min(unlistedTraffic(fixtures.F1_HEAD), 1.5), 6);
     },
   );
+
+  it('caps a thin unlisted page like any other', () => {
+    expect(
+      computeTraffic({
+        ...fixtures.F1_HEAD,
+        resultCount: 4,
+        official: { absentBelow: 41 },
+      }),
+    ).toBe(1);
+  });
 
   it('keeps the official value when the search returned nothing', () => {
     const empty = { ...fixtures.F9_OFFICIAL, resultCount: 0, top10: [] };

@@ -1,4 +1,4 @@
-import { reachScore, SuggestReach } from './suggest-reach';
+import { reachScore, SuggestReach, untypedShare } from './suggest-reach';
 
 const hit = (prefixLength: number, position: number): SuggestReach => ({
   status: 'hit',
@@ -39,5 +39,38 @@ describe('reachScore', () => {
   it('never leaves the table for out of range evidence', () => {
     expect(reachScore(hit(0, 0))).toBe(6.8);
     expect(reachScore(hit(40, 400))).toBe(1.6);
+  });
+});
+
+describe('untypedShare', () => {
+  it('is the share of the phrase left to type when the store offers it', () => {
+    expect(untypedShare(hit(3, 1), 'trivia games')).toBeCloseTo(0.75, 6);
+    expect(untypedShare(hit(8, 4), 'map quiz')).toBe(0);
+  });
+
+  it('measures the phrase in the characters the probe types', () => {
+    expect(untypedShare(hit(3, 1), 'ﬁnance')).toBeCloseTo(0.5, 6);
+    expect(untypedShare(hit(2, 1), 'géo quiz')).toBeCloseTo(0.75, 6);
+  });
+
+  it('counts characters, not code units', () => {
+    expect(untypedShare(hit(1, 1), '𠮷野家')).toBeCloseTo(2 / 3, 6);
+  });
+
+  it.each([
+    [{ status: 'listed', position: 1 }],
+    [{ status: 'absent' }],
+  ] as Array<[SuggestReach]>)('is 0 for %j', (reach) => {
+    expect(untypedShare(reach, 'trivia games')).toBe(0);
+  });
+
+  it('is unknown when the suggest lookup failed', () => {
+    expect(untypedShare({ status: 'unavailable' }, 'trivia games')).toBeNull();
+  });
+
+  it('never leaves 0 to 1 for out of range evidence', () => {
+    expect(untypedShare(hit(40, 1), 'quiz')).toBe(0);
+    expect(untypedShare(hit(0, 1), 'quiz')).toBe(1);
+    expect(untypedShare(hit(1, 1), '')).toBe(0);
   });
 });

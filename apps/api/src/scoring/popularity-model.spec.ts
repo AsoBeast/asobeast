@@ -2,9 +2,11 @@ import {
   estimatePopularity,
   NEUTRAL_CONTINUATIONS,
   POPULARITY_FEATURES,
+  POPULARITY_WEIGHTS,
   PopularityWeights,
   popularityFeatures,
   SuggestEvidence,
+  UNLISTED_POPULARITY_WEIGHTS,
 } from './popularity-model';
 import { SuggestReach } from './suggest-reach';
 
@@ -171,5 +173,36 @@ describe('estimatePopularity', () => {
       estimatePopularity(page, 'map quiz', suggest(5, { status: 'absent' })) ??
         100,
     );
+  });
+
+  describe.each([
+    ['every term', POPULARITY_WEIGHTS],
+    ['terms Apple leaves out of its list', UNLISTED_POPULARITY_WEIGHTS],
+  ])('with the weights for %s', (_name, weights) => {
+    const page = Array.from({ length: 25 }, (_, index) =>
+      app(`Map Quiz ${index}`, 5_000),
+    );
+    const early: SuggestReach = { status: 'hit', prefixLength: 2, position: 1 };
+
+    it('carries a finite weight for every feature', () => {
+      expect(Object.keys(weights).sort()).toEqual(
+        ['intercept', ...POPULARITY_FEATURES].sort(),
+      );
+      Object.values(weights).forEach((weight) => {
+        expect(Number.isFinite(weight)).toBe(true);
+      });
+    });
+
+    it('rises with continuations and with an earlier suggestion', () => {
+      const silent = estimatePopularity(
+        page,
+        'map quiz',
+        suggest(0, { status: 'absent' }),
+        weights,
+      );
+      expect(
+        estimatePopularity(page, 'map quiz', suggest(9, early), weights),
+      ).toBeGreaterThan(silent ?? 100);
+    });
   });
 });

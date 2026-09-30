@@ -43,7 +43,16 @@ App Store popularity is estimated from the first 25 search results and the searc
 | Suggested | Whether Apple suggests the exact phrase at all, as in the reach table below |
 | Early | How few typed characters Apple needed before it suggested the exact phrase: 1 after one character, falling to 1/8 after eight, and 0 when it only suggests the whole phrase or never does |
 
-The estimate is a weighted sum of these signals taken as the logarithm of popularity plus one, so each signal scales the estimate rather than adding a fixed number of points. It is rounded and held between 1 and 100. The weights come from `pnpm --filter api scoring:popularity-study`, which searches terms whose popularity is known and fits the weights by least squares. The fit for the US week of 13 September 2026 used 440 terms Apple listed that week, 30 per genre, and 794 terms whose popularity was published elsewhere, most of them long tail phrases from games, trivia, meme and geography searches, because the terms people track are mostly long tail. Held out of the fit in five rounds, the published terms were estimated with a Spearman correlation of 0.45 and a mean error of about 6 points, and 80 percent of them landed in the same grade band. The listed terms ranked with a correlation of 0.51 but read about 16 points low on average, because a term in the head of another genre looks much like a strong long tail phrase in the search results. With an Apple Ads key, a listed term reads Apple's own number instead.
+The estimate is a weighted sum of these signals taken as the logarithm of popularity plus one, so each signal scales the estimate rather than adding a fixed number of points. It is rounded and held between 1 and 100. The weights come from `pnpm --filter api scoring:popularity-study`, which searches terms whose popularity is known and fits the weights by least squares. The fit for the US week of 20 September 2026 used 252 terms Apple listed that week, 16 per genre, and 770 terms whose popularity was published elsewhere, most of them long tail phrases from games, trivia, meme and geography searches, because the terms people track are mostly long tail.
+
+The model carries two sets of weights from that one study:
+
+| Weights | Fitted on | Used when |
+| --- | --- | --- |
+| General | Every term, listed and published | Apple's weekly list is not loaded, so the estimate has to cover head terms and the long tail alike |
+| Unlisted | The published terms only | Apple's weekly list is loaded and the term is not on it, which is the only kind of term the estimate is then asked for |
+
+Knowing that Apple left a term out of its list is evidence in itself, so the unlisted weights are not pulled upward by head terms that would read Apple's own number anyway. Held out of the fit in five rounds, the unlisted weights estimated the published terms with a Spearman correlation of 0.49 and a mean error of 5.2 points, and 85 percent of them landed in the same grade band. On terms held out of the general fit, the published terms ranked at 0.44 with a mean error of 5.1 points, and the listed terms ranked at 0.59 but read about 9 points low on average, because a term in the head of another genre looks much like a strong long tail phrase in the search results. With an Apple Ads key, a listed term reads Apple's own number instead.
 
 Apple does not suggest many short, common searches as themselves, so a phrase it never suggests can still be searched often, and the model weighs suggest reach together with the search results rather than on its own. Continuations read the suggestions differently: Apple still offers popular searches that begin with such a word, like "map my run" for "map", while a phrase few people search is continued by few, and a misspelling by none, because Apple offers the corrected spelling instead. When the suggestion lookup fails, the model reads 5 continuations, a typical count, and treats the phrase as suggested only once typed in full, so a failed lookup neither raises nor sinks a phrase.
 
@@ -60,11 +69,25 @@ Google Play popularity starts from suggest reach: how early the store offers the
 | Suggests it only once the whole phrase is typed, however short the phrase is | 1 |
 | Never suggests it | 0.9 |
 
-The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
+The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
 
-The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched. Titles are matched as on the App Store.
+Three more inputs place a phrase within its row:
 
-Google Play popularity is the reach plus 12 percent of the demand. A longer phrase is not discounted, because one the store offers after a few typed characters is searched as often as a short one it offers as early. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, the reach is taken as 2.5, the typical reach of that sample, instead of reading demand alone, and confidence drops to low.
+| Input | What it reads |
+| --- | --- |
+| Untyped share | The share of the phrase that was still untyped when the store first offered it, from 0 to 1. "trivia games" offered after 3 typed characters has 0.75 of its 12 characters left. It is 0 for a phrase the store only offers in full or never offers |
+| Strength | The strength of the first ten results, as in the difficulty rating below |
+| Targeting | The share of the first ten titles that carry the phrase as written, as in the difficulty rating below |
+
+Google Play popularity is the weighted sum of the four:
+
+| Reach | Untyped share | Strength | Targeting |
+| --- | --- | --- | --- |
+| 0.5 | 1.5 | 1.1 | 1.9 |
+
+The store completing a long phrase early says more than completing a short one after the same number of characters, which is what the untyped share adds to the reach. A phrase many people search also attracts strong apps that put it in their titles, so the page itself carries evidence of demand. The weights were fitted by least squares against published popularity for 442 US keywords and checked on 200 further keywords the fit never saw. On those 200, rank agreement with the published popularity rose from 0.73 to 0.80, the mean error fell from 5.5 to 4.6 points, and 165 landed in the same grade band against 157.
+
+Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, the reach is taken as 2.5 and the untyped share as 0.4, the typical values of that sample, and confidence drops to low.
 
 ## How is difficulty rated?
 
@@ -115,7 +138,7 @@ Every persisted score is stored with the provenance needed to audit or recompute
 | Field | Example | Why it is stored |
 | --- | --- | --- |
 | Scoring source | `APPLE_SEARCH_SIGNALS`, `GOOGLE_PLAY_SUGGEST_REACH`, `APPLE_ADS_POPULARITY` | Which evidence produced the number. Rows scored before this formula keep `APPLE_SUGGEST_SEARCH`, `APPLE_SUGGEST_REACH` or `GOOGLE_PLAY_PREFIX_SEARCH` |
-| Formula version | `app-store-v3`, `google-play-v3` | Which calculation produced it, so old rows stay interpretable |
+| Formula version | `app-store-v4`, `google-play-v4` | Which calculation produced it, so old rows stay interpretable |
 | Captured at | A timestamp | When the evidence was collected |
 | Confidence | `HIGH`, `MEDIUM`, `LOW` | How complete the evidence was for that run |
 
@@ -154,15 +177,15 @@ Opportunity asks how likely the keyword is to bring installs: whether enough peo
 
 | Step | Formula |
 | --- | --- |
-| Reach | Volume divided by 30, at most 1 |
+| Reach | Volume divided by 30, at most 1, raised to the power of 1.25 |
 | Openness | 100 minus difficulty |
 | Opportunity | Reach multiplied by openness, cut to a whole number |
 
-Volume counts only up to 30. Past that point a keyword brings enough searches that the competition decides whether the installs can be won, so a keyword with a volume of 30 and one with 70 score the same on the same page. Below it, opportunity falls in proportion: a volume of 15 halves the score. Difficulty counts across the whole range: a difficulty of 20 keeps 80 percent of the reach, 50 keeps half and 80 keeps a fifth.
+Volume counts only up to 30. Past that point a keyword brings enough searches that the competition decides whether the installs can be won, so a keyword with a volume of 30 and one with 70 score the same on the same page. Below it, opportunity falls a little faster than the volume does: a volume of 15 keeps 42 percent of the score and a volume of 7 keeps 16 percent. Difficulty counts across the whole range: a difficulty of 20 keeps 80 percent of the reach, 50 keeps half and 80 keeps a fifth.
 
 A popular phrase held by the largest apps therefore scores low, and a moderately searched phrase on an open page scores high. `game` at a volume of 68 and a difficulty of 71 scores 29, while `geography map game` at 33 and 23 scores 77.
 
-The shape was chosen against published keyword effectiveness. On the reference's own popularity and difficulty it orders 794 App Store and 2,101 Google Play keywords at a rank agreement of 0.93 and 0.96, against 0.90 for the previous formula. A two-dimensional table of popularity and difficulty bands fits the reference more closely on its own inputs, but orders the keywords worse from estimated popularity and difficulty, because a band edge turns a small estimation error into a jump.
+The shape was chosen against published keyword effectiveness. On the reference's own popularity and difficulty it orders 794 App Store and 2,101 Google Play keywords at a rank agreement of 0.92 and 0.95. The power on reach is there because published effectiveness falls faster than volume in the long tail: with it, the share of keywords that land on the same side of the high opportunity threshold as the reference rose from 77 to 82 percent on 770 App Store keywords and held at 81 percent on 442 Google Play keywords, scored from estimated popularity and difficulty. A two-dimensional table of popularity and difficulty bands fits the reference more closely on its own inputs, but orders the keywords worse from estimated popularity and difficulty, because a band edge turns a small estimation error into a jump.
 
 Opportunity is the same for every app that tracks the keyword. Relevance is reported next to it and not multiplied in, so the number says what the keyword is worth and relevance says whether it belongs in this listing. The action rules read both.
 

@@ -1,39 +1,45 @@
-import { Store } from '@asobeast/shared';
-import { clamp, finiteNumbers, logScale, median } from './curves';
+import { clamp } from './curves';
+import { pageStrength, targetingShare } from './difficulty';
 import { KeywordStats } from './formulas';
-import { estimatePopularity, NEUTRAL_CONTINUATIONS } from './popularity-model';
-import { paddingFactor } from './serp-signals';
-import { reachScore } from './suggest-reach';
+import {
+  estimatePopularity,
+  NEUTRAL_CONTINUATIONS,
+  POPULARITY_WEIGHTS,
+  PopularityWeights,
+  UNLISTED_POPULARITY_WEIGHTS,
+} from './popularity-model';
+import { reachScore, untypedShare } from './suggest-reach';
 
-export const DEMAND_WEIGHT = 0.12;
+export const SUGGEST_WEIGHTS = {
+  reach: 0.5,
+  untyped: 1.5,
+  strength: 1.1,
+  targeting: 1.9,
+} as const;
 export const TYPICAL_REACH = 2.5;
-export const DEMAND_BOUNDS: Record<Store, readonly [number, number]> = {
-  APP_STORE: [50, 500_000],
-  GOOGLE_PLAY: [100, 2_000_000],
-};
+export const TYPICAL_UNTYPED = 0.4;
 export const ABSENT_TRAFFIC_CAP = 1.5;
 export const THIN_SERP_RESULTS = 5;
 export const THIN_SERP_TRAFFIC_CAP = 1;
 const POPULARITY_SCALE = 10;
 
-export function demandScore(stats: KeywordStats): number {
-  const [min, max] = DEMAND_BOUNDS[stats.store];
-  const typical = median(
-    finiteNumbers(stats.top10.map((item) => item.ratingCount)),
-  );
-  return (
-    logScale(typical, min, max) * paddingFactor(stats.top10, stats.keywordText)
-  );
-}
-
 function suggestEstimate(stats: KeywordStats): number {
   const reach = reachScore(stats.suggest) ?? TYPICAL_REACH;
-  const blend = reach + DEMAND_WEIGHT * demandScore(stats);
+  const untyped =
+    untypedShare(stats.suggest, stats.keywordText) ?? TYPICAL_UNTYPED;
+  const blend =
+    SUGGEST_WEIGHTS.reach * reach +
+    SUGGEST_WEIGHTS.untyped * untyped +
+    SUGGEST_WEIGHTS.strength * pageStrength(stats.top10) +
+    SUGGEST_WEIGHTS.targeting * targetingShare(stats.top10, stats.keywordText);
   const cap = stats.suggest.status === 'absent' ? ABSENT_TRAFFIC_CAP : 10;
   return clamp(Math.min(blend, cap));
 }
 
-function modelEstimate(stats: KeywordStats): number {
+function modelEstimate(
+  stats: KeywordStats,
+  weights: PopularityWeights,
+): number {
   const popularity = estimatePopularity(
     stats.competitors ?? stats.top10,
     stats.keywordText,
@@ -41,16 +47,24 @@ function modelEstimate(stats: KeywordStats): number {
       continuations: stats.continuations ?? NEUTRAL_CONTINUATIONS,
       reach: stats.suggest,
     },
+    weights,
   );
   return popularity === null ? 0 : popularity / POPULARITY_SCALE;
 }
+
+const weightsFor = ({ official }: KeywordStats): PopularityWeights =>
+  official && 'absentBelow' in official
+    ? UNLISTED_POPULARITY_WEIGHTS
+    : POPULARITY_WEIGHTS;
 
 export function estimateTraffic(stats: KeywordStats): number {
   if (stats.resultCount === 0) {
     return 0;
   }
   const estimate =
-    stats.store === 'APP_STORE' ? modelEstimate(stats) : suggestEstimate(stats);
+    stats.store === 'APP_STORE'
+      ? modelEstimate(stats, weightsFor(stats))
+      : suggestEstimate(stats);
   return stats.resultCount < THIN_SERP_RESULTS
     ? Math.min(estimate, THIN_SERP_TRAFFIC_CAP)
     : estimate;
