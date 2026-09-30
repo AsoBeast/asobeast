@@ -22,6 +22,8 @@ Each field is checked against the limit for its store, and the lint reports char
 
 Fields a store does not have are hidden rather than shown empty. See [App Store and Google Play](/concepts/stores).
 
+On Google Play, a short description word that is also in the title is a warning, not an error. Google's metadata policy asks for succinct text without repeated keywords, but it does not forbid reusing a title word, so the lint points out the wasted room without calling it a rule break. On the App Store a subtitle or keyword field word that Apple already indexes from the title stays an error, and only errors open an Action Center item.
+
 ## See which localizations each storefront reads
 
 On an App Store app, the card under the fields lists your home storefront first and then every storefront where you track keywords, each with Apple's default language and additional languages. A storefront with no additional language says so.
