@@ -116,9 +116,9 @@ test("the queue sits under a queue heading with group headings below it", async 
 });
 
 test.describe("closing several actions at once", () => {
-  const select = (page: import("@playwright/test").Page, id: string) =>
+  const select = (page: Page, id: string) =>
     page.locator(card(id)).getByRole("checkbox").click();
-  const openTile = (page: import("@playwright/test").Page) =>
+  const openTile = (page: Page) =>
     page.locator('[data-slot="stat-tile"]').first();
 
   test("marks the selected rows done in one go", async ({ page }) => {
