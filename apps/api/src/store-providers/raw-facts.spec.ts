@@ -383,7 +383,7 @@ describe('ratingHistogram', () => {
 });
 
 describe('primary genre on the payload the App Store scraper maps', () => {
-  it('reads the genre from the scraper own output', async () => {
+  it("reads the genre from the scraper's own output", async () => {
     const scraped = await scrapedAppStoreRaw();
 
     expect(primaryGenreId(scraped)).toBe(6027);
@@ -401,6 +401,8 @@ describe('primary genre on the payload the App Store scraper maps', () => {
     ['a number stored by an older scraper', 6013, 6013],
     ['a numeric string', '6013', 6013],
     ['a padded numeric string', ' 6013 ', 6013],
+    ['a string padded with tabs and newlines', '\t6013\n', 6013],
+    ['a string with a leading zero', '06013', 6013],
   ])('reads %s', (_case, stored, expected) => {
     expect(primaryGenreId({ primaryGenreId: stored })).toBe(expected);
     expect(primaryGenreKey(Store.APP_STORE, { primaryGenreId: stored })).toBe(
@@ -420,6 +422,8 @@ describe('primary genre on the payload the App Store scraper maps', () => {
     ['a string with letters', '60x3'],
     ['an exponent string', '1e3'],
     ['a hexadecimal string', '0x10'],
+    ['a string of full-width digits', '\uFF16\uFF10\uFF11\uFF13'],
+    ['a string of arabic-indic digits', '\u0666\u0660\u0661\u0663'],
     ['a string beyond the safe integers', '99999999999999999999'],
     ['not a number', Number.NaN],
     ['infinity', Number.POSITIVE_INFINITY],
