@@ -34,7 +34,7 @@ Keyword movers lists the largest position changes of the week across every app. 
 
 ### The app list
 
-Each card shows visibility with its seven day change, a visibility sparkline, a bar of rank bands with the number of keywords in the top 10, the rating and the audit score with a grade word, open actions and new low ratings. A value the app does not have yet is left out rather than shown as zero, and an app awaiting its first daily run shows only that. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
+Each card shows visibility with its seven day change, a visibility sparkline, a bar of rank bands with the number of keywords in the top 10, the rating and the audit score with a grade word, open actions and new low ratings, the negative reviews written in the last seven days. How they are counted is explained in [Sync reviews and mine keyword ideas](/guides/reviews). A value the app does not have yet is left out rather than shown as zero, and an app awaiting its first daily run shows only that. What unranked means is explained in [Positions](/concepts/positions), and audit scores in [Run an ASO audit](/guides/aso-audit).
 
 Sort the list by visibility, seven day change, keywords in the top 10, rating, open actions, name or last collected. With more than six apps a search box filters by name, store, country or group. The table view shows the same apps as rows with one column per value, and its column headers sort the same way.
 
@@ -77,7 +77,7 @@ The portfolio level is what separates a market wide shift from a problem with on
 
 The digest is sent by webhook on `CRON_DIGEST`, which defaults to `0 8 * * 1`, meaning 08:00 UTC on Monday.
 
-It has its own schedule and bypasses the batched alert outbox entirely, so it arrives on time regardless of how long the daily pipeline ran. Subscribe a webhook channel to `digest.weekly`. See [Send alerts](/guides/alerts).
+It has its own schedule and bypasses the batched alert outbox entirely, so it arrives on time regardless of how long the daily pipeline ran. Subscribe a webhook channel to `digest.weekly`. See [Send alerts](/guides/alerts). Its negative review count follows the same rule as the dashboard, over the digest window.
 
 ## Troubleshooting
 
