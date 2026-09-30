@@ -1,7 +1,12 @@
 import { defineConfig } from "@playwright/test";
 
 const BASELINE = process.env.CAPTURE_BASELINE ? [] : ["**/baseline.spec.ts"];
-const ACTION_STATE_SPECS = ["actions", "actions-queue", "actions-sheet"];
+const ACTION_STATE_SPECS = [
+  "actions",
+  "actions-queue",
+  "actions-sheet",
+  "actions-double-click",
+];
 
 export default defineConfig({
   testDir: "./e2e",
