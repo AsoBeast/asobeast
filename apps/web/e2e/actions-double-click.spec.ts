@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
@@ -27,17 +28,6 @@ const countUpdates = (page: Page, path: string) => {
 
 const toast = (page: Page, text: string) =>
   page.getByRole("region", { name: /^Notifications/ }).getByText(text);
-
-const hydrated = async (control: Locator): Promise<Locator> => {
-  await expect
-    .poll(() =>
-      control.evaluate((element) =>
-        Object.keys(element).some((key) => key.startsWith("__reactProps")),
-      ),
-    )
-    .toBe(true);
-  return control;
-};
 
 const activateTwiceInOneTask = async (control: Locator) =>
   (await hydrated(control)).evaluate((element: HTMLElement) => {
