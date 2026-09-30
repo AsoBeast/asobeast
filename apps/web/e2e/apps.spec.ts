@@ -294,6 +294,31 @@ test("app overview renders summary numbers and a utc refresh date", async ({
   await expect(page.getByText(refreshDate, { exact: true })).toBeVisible();
 });
 
+test("an app that iPhone search never lists carries a notice on every page", async ({
+  page,
+}) => {
+  const notice = page
+    .getByRole("alert")
+    .filter({ hasText: "not available on iPhone" });
+
+  await page.goto("/apps/app-ipad-only");
+  await expect(notice).toBeVisible();
+
+  await page.goto("/apps/app-ipad-only/keywords");
+  await expect(notice).toBeVisible();
+});
+
+test("an app that iPhone search lists carries no such notice", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1");
+
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "not available on iPhone" }),
+  ).toHaveCount(0);
+});
+
 test("an api error renders the error boundary with a retry control", async ({
   page,
 }) => {

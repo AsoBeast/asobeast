@@ -1272,6 +1272,13 @@ export const APP_UNCHECKED_DETAIL: AppDetail = {
   name: "Freshly Imported App",
 };
 
+export const APP_IPAD_ONLY_DETAIL: AppDetail = {
+  ...APP_LONG_DETAIL,
+  id: "app-ipad-only",
+  name: "Procreate",
+  searchable: false,
+};
+
 export const APP_UNCHECKED_RANKINGS: RankingSeries = {
   series: APP_UNCHECKED_KEYWORDS.map((keyword) => ({
     keywordId: keyword.keywordId,
@@ -1835,6 +1842,12 @@ DATASETS[APP_TAGS_ID] = {
     tags: [],
     note: null,
   })),
+};
+
+DATASETS[APP_IPAD_ONLY_DETAIL.id] = {
+  ...DATASETS["app-unchecked"],
+  detail: APP_IPAD_ONLY_DETAIL,
+  changeImpact: emptyChangeImpact(APP_IPAD_ONLY_DETAIL),
 };
 
 export const INITIAL_APPS: AppListItem[] = [APP_1, APP_2, APP_LONG, APP_GP];
