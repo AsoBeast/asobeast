@@ -123,6 +123,9 @@ describe('assertDeliverableUrl', () => {
     'http://printer.local./x',
     'http://Printer.LOCAL/x',
     'http://nas.home.arpa./x',
+    'http://localhost。/x',
+    'http://hooks。/x',
+    'http://printer.local。/x',
   ])('refuses %s once the trailing dot is ignored', (url) => {
     expect(() => assertDeliverableUrl(url)).toThrow(WebhookTargetError);
   });

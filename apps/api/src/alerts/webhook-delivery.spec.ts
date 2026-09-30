@@ -117,9 +117,10 @@ describe('WebhookDelivery bare hostnames', () => {
       reached += 1;
       res.writeHead(200).end('ok');
     });
-    await new Promise<void>((resolve) =>
-      server.listen(0, 'localhost', resolve),
-    );
+    await new Promise<void>((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(0, 'localhost', resolve);
+    });
     port = (server.address() as AddressInfo).port;
   });
 

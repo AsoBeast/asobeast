@@ -181,6 +181,7 @@ describe('WebhooksController (e2e)', () => {
     'http://my_hooks:8080/x',
     'http://LOCALHOST:8080/x',
     'http://0.0.0.0:8080/x',
+    'http://printer.local。/x',
   ])('explains that %s stays inside the network', async (url) => {
     const response = await api
       .post('/webhooks')
