@@ -19,6 +19,7 @@ import { obliterateQueues } from './obliterate-queues';
 
 const LOCK_WAIT_MS = 300;
 const CONCURRENT_REQUESTS = 5;
+const DAY_MS = 86_400_000;
 
 const pause = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -240,6 +241,29 @@ describe('Action transitions under concurrency (e2e)', () => {
       select: { status: true, reopenCount: true },
     });
     expect(row).toEqual({ status: 'OPEN', reopenCount: 0 });
+  });
+
+  it('undoes one change when an undo after a second snooze arrives twice', async () => {
+    const id = await seedAction();
+    const earlier = new Date(Date.now() + 3 * DAY_MS).toISOString();
+    const later = new Date(Date.now() + 5 * DAY_MS).toISOString();
+    await patch(id, { status: 'SNOOZED', snoozedUntil: earlier });
+    await patch(id, { status: 'SNOOZED', snoozedUntil: later });
+    await patch(id, { status: 'DONE' });
+
+    const responses = await Promise.all(
+      Array.from({ length: 2 }, () =>
+        patch(id, { status: 'SNOOZED', snoozedUntil: later, revert: true }),
+      ),
+    );
+
+    expect(responses.map((res) => res.status).sort()).toEqual([200, 409]);
+    expect(await eventTypes(id)).toEqual(['snoozed', 'snoozed']);
+    const row = await prisma.actionItem.findUniqueOrThrow({
+      where: { id },
+      select: { status: true, snoozedUntil: true },
+    });
+    expect(row).toEqual({ status: 'SNOOZED', snoozedUntil: new Date(later) });
   });
 
   it('keeps both decisions when two different outcomes arrive at once', async () => {

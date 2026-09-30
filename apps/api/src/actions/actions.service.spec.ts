@@ -971,6 +971,71 @@ describe('ActionsService undo', () => {
     );
   });
 
+  it('refuses an undo that names a wake date the action did not have', async () => {
+    const earlier = new Date(Date.now() + 3 * DAY_MS);
+    const later = new Date(Date.now() + 5 * DAY_MS);
+    const snoozed = (
+      id: string,
+      snoozedUntil: Date,
+      minutes: number,
+    ): StoredEvent => ({
+      id,
+      type: 'snoozed',
+      actor: 'user',
+      userId: USER,
+      status: 'SNOOZED',
+      snoozedUntil,
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'SNOOZED', snoozedUntil: later }, [
+      opened,
+      snoozed('ev_first', earlier, 5),
+      snoozed('ev_second', later, 2),
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({
+          status: 'SNOOZED',
+          snoozedUntil: later.toISOString(),
+          revert: true,
+        }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Undo must restore the previous status'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+    expect(prisma.actionEvent.delete).not.toHaveBeenCalled();
+  });
+
+  it('undoes a dismissal that only changed its reason', async () => {
+    const dismissed = (id: string, minutes: number): StoredEvent => ({
+      id,
+      type: 'dismissed',
+      actor: 'user',
+      userId: USER,
+      status: 'DISMISSED',
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'DISMISSED' }, [
+      opened,
+      dismissed('ev_first', 30),
+      dismissed('ev_second', 1),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DISMISSED', revert: true }),
+      USER,
+    );
+
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_second' },
+    });
+  });
+
   it('refuses an undo when the latest change was not a person', async () => {
     const prisma = buildPrisma({ status: 'OPEN' }, [opened]);
 
