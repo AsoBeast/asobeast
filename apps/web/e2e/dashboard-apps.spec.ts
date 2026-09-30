@@ -180,7 +180,8 @@ test("a search without matches offers to clear it", async ({ page }) => {
 test("the table view lists every app as its own row", async ({ page }) => {
   await page.goto("/");
 
-  await appsRegion(page).getByRole("tab", { name: "Table" }).click();
+  const tableTab = appsRegion(page).getByRole("tab", { name: "Table" });
+  await (await hydrated(tableTab)).click();
 
   await expect(page).toHaveURL(/[?&]view=table/);
   const table = appsRegion(page).getByRole("table", {
