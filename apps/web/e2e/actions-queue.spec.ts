@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { hydrated } from "./hydrated.mts";
 import { expect, test } from "./session.mts";
 
 test.describe.configure({ mode: "serial" });
