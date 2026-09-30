@@ -54,7 +54,7 @@ export function AppHeader({ id }: { id: string }) {
           <AppLink detail={detail} />
         </div>
       </header>
-      {detail.searchable ? null : <NotInSearchNotice />}
+      {detail.searchable === false ? <NotInSearchNotice /> : null}
     </>
   );
 }

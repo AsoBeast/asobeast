@@ -298,7 +298,7 @@ test("an app that iPhone search never lists carries a notice on every page", asy
   page,
 }) => {
   const notice = page
-    .getByRole("alert")
+    .getByRole("note")
     .filter({ hasText: "not available on iPhone" });
 
   await page.goto("/apps/app-ipad-only");
@@ -315,7 +315,7 @@ test("an app that iPhone search lists carries no such notice", async ({
 
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(
-    page.getByRole("alert").filter({ hasText: "not available on iPhone" }),
+    page.getByRole("note").filter({ hasText: "not available on iPhone" }),
   ).toHaveCount(0);
 });
 
