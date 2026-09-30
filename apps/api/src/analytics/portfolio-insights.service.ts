@@ -25,6 +25,7 @@ import {
   EMPTY_ACTION_COUNTS,
   PortfolioSignals,
 } from './portfolio-signals.service';
+import { reviewsWrittenInWindow } from './review-window';
 
 const INSIGHT_WINDOW_DAYS = 7;
 const RATING_BASELINE_SEARCH_DAYS = 30;
@@ -166,7 +167,7 @@ export class PortfolioInsightsService {
         score: {
           lte: this.config.get('ALERT_REVIEW_SCORE_MAX', { infer: true }),
         },
-        createdAt: { gte: since },
+        ...reviewsWrittenInWindow(since),
       },
       _count: { _all: true },
     });

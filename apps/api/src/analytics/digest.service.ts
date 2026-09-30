@@ -20,6 +20,7 @@ import {
   EMPTY_ACTION_COUNTS,
   PortfolioSignals,
 } from './portfolio-signals.service';
+import { reviewsWrittenInWindow } from './review-window';
 
 const DIGEST_WINDOW_DAYS = 7;
 const DIGEST_MOVER_LIMIT = 3;
@@ -104,7 +105,7 @@ export class DigestService {
         where: {
           appId: app.id,
           score: { lte: reviewScoreMax },
-          createdAt: { gte: from, lt: rangeEnd },
+          ...reviewsWrittenInWindow(from, rangeEnd),
         },
       }),
       this.signals.auditTrend(app.id, to),
