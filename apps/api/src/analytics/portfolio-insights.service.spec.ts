@@ -13,7 +13,7 @@ describe('PortfolioInsightsService.insights', () => {
   const rankingFindFirst = jest.fn();
   const trackedFindMany = jest.fn();
   const snapshotFindMany = jest.fn();
-  const changeGroupBy = jest.fn();
+  const changeFindMany = jest.fn();
   const reviewGroupBy = jest.fn();
   const actionCounts = jest.fn();
   const auditTrend = jest.fn();
@@ -31,7 +31,7 @@ describe('PortfolioInsightsService.insights', () => {
       rankingFindFirst,
       trackedFindMany,
       snapshotFindMany,
-      changeGroupBy,
+      changeFindMany,
       reviewGroupBy,
       actionCounts,
       auditTrend,
@@ -41,7 +41,7 @@ describe('PortfolioInsightsService.insights', () => {
     rankingFindFirst.mockResolvedValue(null);
     trackedFindMany.mockResolvedValue([]);
     snapshotFindMany.mockResolvedValue([]);
-    changeGroupBy.mockResolvedValue([]);
+    changeFindMany.mockResolvedValue([]);
     reviewGroupBy.mockResolvedValue([]);
     actionCounts.mockResolvedValue(new Map());
     auditTrend.mockResolvedValue(null);
@@ -56,7 +56,7 @@ describe('PortfolioInsightsService.insights', () => {
             keywordRanking: { findFirst: rankingFindFirst },
             trackedKeyword: { findMany: trackedFindMany },
             appSnapshot: { findMany: snapshotFindMany },
-            changeEvent: { groupBy: changeGroupBy },
+            changeEvent: { findMany: changeFindMany },
             review: { groupBy: reviewGroupBy },
           },
         },
@@ -100,16 +100,24 @@ describe('PortfolioInsightsService.insights', () => {
     expect(result.totals.top10Delta7d).toBeNull();
   });
 
-  it('attributes competitor changes to their primary app', async () => {
+  it('attributes competitor changes to their primary app, one per day', async () => {
     appFindMany.mockResolvedValue([
       primary('app_1', ['rival_1', 'rival_2']),
       primary('app_2'),
     ]);
-    changeGroupBy.mockResolvedValue([
-      { appId: 'app_1', _count: { _all: 1 } },
-      { appId: 'rival_1', _count: { _all: 2 } },
-      { appId: 'rival_2', _count: { _all: 3 } },
-      { appId: 'app_2', _count: { _all: 4 } },
+    const day = (offset: number) =>
+      new Date(Date.UTC(2026, 8, 20 + offset, 12));
+    changeFindMany.mockResolvedValue([
+      { appId: 'app_1', capturedAt: day(0) },
+      { appId: 'app_1', capturedAt: day(0) },
+      { appId: 'rival_1', capturedAt: day(1) },
+      { appId: 'rival_1', capturedAt: day(1) },
+      { appId: 'rival_2', capturedAt: day(1) },
+      { appId: 'rival_2', capturedAt: day(2) },
+      { appId: 'app_2', capturedAt: day(0) },
+      { appId: 'app_2', capturedAt: day(1) },
+      { appId: 'app_2', capturedAt: day(2) },
+      { appId: 'app_2', capturedAt: day(3) },
     ]);
 
     const result = await service.insights();
@@ -117,9 +125,9 @@ describe('PortfolioInsightsService.insights', () => {
       result.apps.map((app) => [app.appId, app.changes7d]),
     );
 
-    expect(changes.get('app_1')).toEqual({ own: 1, competitors: 5 });
+    expect(changes.get('app_1')).toEqual({ own: 1, competitors: 3 });
     expect(changes.get('app_2')).toEqual({ own: 4, competitors: 0 });
-    expect(result.totals.changes7d).toEqual({ own: 5, competitors: 5 });
+    expect(result.totals.changes7d).toEqual({ own: 5, competitors: 3 });
   });
 
   it('reports no action counts when the count query fails', async () => {

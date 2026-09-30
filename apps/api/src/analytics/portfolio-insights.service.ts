@@ -13,6 +13,7 @@ import {
   startOfUtcDay,
   windowVisibility,
 } from './analytics.support';
+import { countChangeDays } from './change-days';
 import {
   insightTotals,
   mergePortfolioMovers,
@@ -133,23 +134,22 @@ export class PortfolioInsightsService {
         app.competitors.map((competitor) => [competitor.id, app.id] as const),
       ),
     );
-    const rows = await this.prisma.changeEvent.groupBy({
-      by: ['appId'],
+    const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: [...apps.map((app) => app.id), ...primaryOf.keys()] },
         capturedAt: { gte: since },
       },
-      _count: { _all: true },
+      select: { appId: true, capturedAt: true },
     });
 
     const counts = new Map<string, OwnedChangeCounts>();
-    for (const row of rows) {
-      const primaryId = primaryOf.get(row.appId) ?? row.appId;
+    for (const [appId, days] of countChangeDays(events)) {
+      const primaryId = primaryOf.get(appId) ?? appId;
       const current = counts.get(primaryId) ?? { own: 0, competitors: 0 };
-      if (primaryOf.has(row.appId)) {
-        current.competitors += row._count._all;
+      if (primaryOf.has(appId)) {
+        current.competitors += days;
       } else {
-        current.own += row._count._all;
+        current.own += days;
       }
       counts.set(primaryId, current);
     }
