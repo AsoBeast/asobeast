@@ -96,6 +96,9 @@ const buildPrisma = (
   const current = overrides === null ? null : currentRow(overrides);
   const events: ActionEventInput[] = [];
   const prisma = {
+    $queryRaw: jest.fn<Promise<unknown[]>, [TemplateStringsArray]>(() =>
+      Promise.resolve([]),
+    ),
     app: {
       findFirst: jest.fn(() => Promise.resolve({ id: 'app_1' })),
     },
@@ -441,6 +444,18 @@ describe('ActionsService transitions', () => {
     await expect(
       serviceFor(prisma).update('missing', update({ status: 'DONE' }), USER),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('locks the action row before it reads the action', async () => {
+    const prisma = buildPrisma();
+
+    await serviceFor(prisma).update('act_1', update({ status: 'DONE' }), USER);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw.mock.calls[0][0].join('')).toContain('FOR UPDATE');
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.actionItem.findFirst.mock.invocationCallOrder[0],
+    );
   });
 
   it('closes a done action and clears its other timestamps', async () => {
@@ -956,6 +971,139 @@ describe('ActionsService undo', () => {
     );
   });
 
+  it('refuses an undo to the snooze the action is already in', async () => {
+    const earlier = new Date(Date.now() + 3 * DAY_MS);
+    const later = new Date(Date.now() + 5 * DAY_MS);
+    const snoozed = (
+      id: string,
+      snoozedUntil: Date,
+      minutes: number,
+    ): StoredEvent => ({
+      id,
+      type: 'snoozed',
+      actor: 'user',
+      userId: USER,
+      status: 'SNOOZED',
+      snoozedUntil,
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'SNOOZED', snoozedUntil: later }, [
+      opened,
+      snoozed('ev_first', earlier, 5),
+      snoozed('ev_second', later, 2),
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({
+          status: 'SNOOZED',
+          snoozedUntil: later.toISOString(),
+          revert: true,
+        }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+    expect(prisma.actionEvent.delete).not.toHaveBeenCalled();
+  });
+
+  it('restores the recorded wake date when the undo names an older one', async () => {
+    const earlier = new Date(Date.now() + 3 * DAY_MS);
+    const later = new Date(Date.now() + 5 * DAY_MS);
+    const snoozed = (
+      id: string,
+      snoozedUntil: Date,
+      minutes: number,
+    ): StoredEvent => ({
+      id,
+      type: 'snoozed',
+      actor: 'user',
+      userId: USER,
+      status: 'SNOOZED',
+      snoozedUntil,
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'DONE' }, [
+      opened,
+      snoozed('ev_first', earlier, 5),
+      snoozed('ev_second', later, 3),
+      done(),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({
+        status: 'SNOOZED',
+        snoozedUntil: earlier.toISOString(),
+        revert: true,
+      }),
+      USER,
+    );
+
+    expect(prisma.actionItem.update.mock.calls[0][0].data).toMatchObject({
+      status: 'SNOOZED',
+      snoozedUntil: later,
+    });
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_done' },
+    });
+  });
+
+  it('refuses an undo to the open state the action is already in', async () => {
+    const prisma = buildPrisma({ status: 'OPEN' }, [
+      opened,
+      {
+        id: 'ev_woke',
+        type: 'woke',
+        actor: 'user',
+        userId: USER,
+        status: 'OPEN',
+        occurredAt: minutesAgo(2),
+      },
+    ]);
+
+    await expect(
+      serviceFor(prisma).update(
+        'act_1',
+        update({ status: 'OPEN', revert: true }),
+        USER,
+      ),
+    ).rejects.toThrow(
+      new ConflictException('Nothing recent to undo on this action'),
+    );
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+    expect(prisma.actionEvent.delete).not.toHaveBeenCalled();
+  });
+
+  it('undoes a dismissal that only changed its reason', async () => {
+    const dismissed = (id: string, minutes: number): StoredEvent => ({
+      id,
+      type: 'dismissed',
+      actor: 'user',
+      userId: USER,
+      status: 'DISMISSED',
+      occurredAt: minutesAgo(minutes),
+    });
+    const prisma = buildPrisma({ status: 'DISMISSED' }, [
+      opened,
+      dismissed('ev_first', 30),
+      dismissed('ev_second', 1),
+    ]);
+
+    await serviceFor(prisma).update(
+      'act_1',
+      update({ status: 'DISMISSED', revert: true }),
+      USER,
+    );
+
+    expect(prisma.actionEvent.delete).toHaveBeenCalledWith({
+      where: { id: 'ev_second' },
+    });
+  });
+
   it('refuses an undo when the latest change was not a person', async () => {
     const prisma = buildPrisma({ status: 'OPEN' }, [opened]);
 
@@ -991,6 +1139,18 @@ describe('ActionsService bulk updates', () => {
     ) as unknown as typeof prisma.actionItem.update;
     return prisma;
   };
+
+  it('locks every requested row in one statement before it reads them', async () => {
+    const prisma = withRows([{ id: 'act_1' }, { id: 'act_2' }]);
+
+    await serviceFor(prisma).bulkUpdate(bulk(['act_2', 'act_1']), USER);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$queryRaw.mock.calls[0][0].join('')).toContain('FOR UPDATE');
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.actionItem.findMany.mock.invocationCallOrder[0],
+    );
+  });
 
   it('reports ids it cannot see as missing instead of failing', async () => {
     const prisma = withRows([{ id: 'act_1' }]);

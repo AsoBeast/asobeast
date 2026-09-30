@@ -9,6 +9,7 @@ import type {
 } from "@asobeast/shared";
 import { ApiError, updateAction } from "@/lib/api";
 import { actionKeys, invalidateActionMutation } from "@/lib/queries";
+import { useSingleFlight } from "@/lib/single-flight";
 import { applyToList, listedStatuses } from "./optimistic-lists";
 import { focusAfterRemoval } from "./row-focus";
 
@@ -71,12 +72,14 @@ export function useActionUpdate(
       toast.success(body.status === "DONE" ? "Marked done" : "Dismissed", {
         action: {
           label: "Undo",
-          onClick: () => mutation.mutate(undoRequest(context.before)),
+          onClick: () => update(undoRequest(context.before)),
         },
       });
     },
     onSettled: () => invalidateActionMutation(queryClient, item.scope.appId),
   });
 
-  return mutation;
+  const update = useSingleFlight(mutation);
+
+  return { update, isPending: mutation.isPending };
 }

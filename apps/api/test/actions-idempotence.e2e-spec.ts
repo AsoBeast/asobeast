@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { ActionsGenerator } from '../src/actions/actions.generator';
 import { testDb } from './helpers/test-db';
 import { ACTION_REOPEN_AFTER_DAYS } from '../src/actions/action-lifecycle';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
@@ -17,6 +18,10 @@ import {
 } from './helpers/action-seed';
 
 const D = ACTION_DAY;
+
+interface RunReader {
+  loadExisting: (workspaceId: string) => Promise<unknown>;
+}
 
 describe('action generation (e2e)', () => {
   let app: INestApplication<App>;
@@ -60,6 +65,34 @@ describe('action generation (e2e)', () => {
   });
 
   const runAt = (now: Date) => generateActionsAt(app, now);
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  const changeAfterRunRead = (change: () => Promise<unknown>) => {
+    const generator = app.get<ActionsGenerator, RunReader>(ActionsGenerator);
+    const load = generator.loadExisting.bind(generator);
+    jest.spyOn(generator, 'loadExisting').mockImplementationOnce(async (id) => {
+      const existing = await load(id);
+      await change();
+      return existing;
+    });
+  };
+
+  const storedActions = () =>
+    prisma.actionItem.findMany({
+      where: { workspaceId: DEFAULT_WORKSPACE_ID },
+      select: {
+        status: true,
+        resolvedAt: true,
+        verifiedAt: true,
+        reopenCount: true,
+      },
+    });
+
+  const eventCount = (type: string) =>
+    prisma.actionEvent.count({ where: { type } });
 
   it('opens nothing new on a second run over unchanged data', async () => {
     await seedUncoveredKeyword(prisma);
@@ -141,5 +174,67 @@ describe('action generation (e2e)', () => {
     expect(rows).toEqual(
       rows.map(() => ({ status: 'OPEN', reopenCount: 1, verifiedAt: null })),
     );
+  });
+
+  it('keeps an action a person closed while the run was reading it', async () => {
+    await seedUncoveredKeyword(prisma);
+    await runAt(D(0));
+    await prisma.appSnapshot.updateMany({
+      data: { title: 'Budget Planner Expense Tracker' },
+    });
+    changeAfterRunRead(() =>
+      prisma.actionItem.updateMany({
+        data: { status: 'DONE', closedAt: D(0) },
+      }),
+    );
+
+    const run = await runAt(D(-1));
+
+    expect(run).toMatchObject({ resolved: 0, verified: 0 });
+    expect(await storedActions()).toEqual([
+      { status: 'DONE', resolvedAt: null, verifiedAt: null, reopenCount: 0 },
+    ]);
+    expect(await eventCount('resolved')).toBe(0);
+  });
+
+  it('keeps an action a person closed while its evidence was being refreshed', async () => {
+    await seedUncoveredKeyword(prisma);
+    await runAt(D(0));
+    changeAfterRunRead(() =>
+      prisma.actionItem.updateMany({
+        data: { status: 'DONE', closedAt: D(0) },
+      }),
+    );
+
+    const run = await runAt(D(-1));
+
+    expect(run).toMatchObject({ refreshed: 0, opened: 0 });
+    expect(await storedActions()).toEqual([
+      { status: 'DONE', resolvedAt: null, verifiedAt: null, reopenCount: 0 },
+    ]);
+  });
+
+  it('does not confirm a fix on an action a person reopened while the run was reading', async () => {
+    await seedUncoveredKeyword(prisma);
+    await runAt(D(0));
+    await prisma.actionItem.updateMany({
+      data: { status: 'DONE', closedAt: D(0) },
+    });
+    await prisma.appSnapshot.updateMany({
+      data: { title: 'Budget Planner Expense Tracker' },
+    });
+    changeAfterRunRead(() =>
+      prisma.actionItem.updateMany({
+        data: { status: 'OPEN', closedAt: null, reopenCount: { increment: 1 } },
+      }),
+    );
+
+    const run = await runAt(D(-1));
+
+    expect(run).toMatchObject({ verified: 0 });
+    expect(await storedActions()).toEqual([
+      { status: 'OPEN', resolvedAt: null, verifiedAt: null, reopenCount: 1 },
+    ]);
+    expect(await eventCount('verified')).toBe(0);
   });
 });
