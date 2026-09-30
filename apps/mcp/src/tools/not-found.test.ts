@@ -28,9 +28,9 @@ async function answerTo404(name: string, message: string): Promise<string> {
   }));
   registerTools(server, client);
 
-  const result = await tools
-    .get(name)!
-    .handler({ appId: "nope", actionId: "act-1" });
+  const tool = tools.get(name);
+  if (!tool) throw new Error(`${name} is not registered`);
+  const result = await tool.handler({ appId: "nope", actionId: "act-1" });
 
   expect(result.isError).toBe(true);
   return (result.content[0] as { text: string }).text;
