@@ -80,7 +80,7 @@ interface Row {
 
 type CreatedRow = { fingerprint: string; keywordId: string | null };
 
-const buildPrisma = (rows: Row[] = []) => {
+const buildPrisma = (rows: Row[] = [], changedIds: string[] = []) => {
   const created: Array<Record<string, unknown>> = [];
   const events: ActionEventInput[] = [];
   const updated: Array<{
@@ -109,6 +109,15 @@ const buildPrisma = (rows: Row[] = []) => {
       (args: { where: { id: string }; data: Record<string, unknown> }) => {
         updated.push(args);
         return args;
+      },
+    ),
+    updateMany: jest.fn(
+      (args: { where: { id: string }; data: Record<string, unknown> }) => {
+        if (changedIds.includes(args.where.id)) {
+          return Promise.resolve({ count: 0 });
+        }
+        updated.push(args);
+        return Promise.resolve({ count: 1 });
       },
     ),
   };
@@ -929,6 +938,118 @@ describe('ActionsGenerator', () => {
 
       expect(result).toMatchObject({ opened: 0, resolved: 0, refreshed: 0 });
       expect(prisma.updated).toEqual([]);
+    });
+  });
+
+  describe('an action a person changed while the run was reading', () => {
+    const DAYS_AGO = (days: number): Date =>
+      new Date(NOW.getTime() - days * DAY_MS);
+
+    it('does not resolve, count or record an open row that was closed meanwhile', async () => {
+      useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
+      const prisma = buildPrisma(
+        storedRow('abc', { lastSeenAt: DAYS_AGO(1) }),
+        ['act_1'],
+      );
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.resolved).toBe(0);
+      expect(prisma.events).toEqual([]);
+      expect(prisma.updated).toEqual([]);
+    });
+
+    it('does not verify a done row that was reopened meanwhile', async () => {
+      useDetectors([{ rule: 'keyword.add_uncovered', detect: () => [] }]);
+      const prisma = buildPrisma(
+        storedRow('abc', {
+          status: 'DONE',
+          closedAt: DAYS_AGO(2),
+          lastSeenAt: DAYS_AGO(1),
+        }),
+        ['act_1'],
+      );
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.verified).toBe(0);
+      expect(prisma.events).toEqual([]);
+    });
+
+    it('does not reopen, count or announce a done row a person touched meanwhile', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'DONE',
+          verifiedAt: DAYS_AGO(3),
+          closedAt: DAYS_AGO(4),
+        }),
+        ['act_1'],
+      );
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.reopened).toBe(0);
+      expect(result.openedActions).toEqual([]);
+      expect(prisma.events).toEqual([]);
+    });
+
+    it('does not wake a snooze a person extended meanwhile', async () => {
+      const fingerprint = await fingerprintOf();
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'SNOOZED',
+          snoozedUntil: DAYS_AGO(1),
+        }),
+        ['act_1'],
+      );
+
+      const result = await generatorFor(
+        emptyContext(),
+        prisma,
+      ).generateForWorkspace(budget, NOW);
+
+      expect(result.refreshed).toBe(0);
+      expect(prisma.events).toEqual([]);
+    });
+
+    it('writes a row only while it still matches what the run read', async () => {
+      const fingerprint = await fingerprintOf();
+      const closedAt = DAYS_AGO(20);
+      const prisma = buildPrisma(
+        storedRow(fingerprint, {
+          status: 'DONE',
+          closedAt,
+          reopenCount: 2,
+        }),
+      );
+
+      await generatorFor(emptyContext(), prisma).generateForWorkspace(
+        budget,
+        NOW,
+      );
+
+      expect(prisma.actionItem.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            id: 'act_1',
+            status: 'DONE',
+            reopenCount: 2,
+            snoozedUntil: null,
+            closedAt,
+            verifiedAt: null,
+          },
+        }),
+      );
     });
   });
 
