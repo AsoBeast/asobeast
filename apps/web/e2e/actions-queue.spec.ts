@@ -37,7 +37,9 @@ test("the queue groups by app on the workspace page only", async ({ page }) => {
   ]);
 
   await page.goto("/apps/app-1/actions");
-  await page.getByRole("combobox", { name: "Group by" }).click();
+  const groupBy = page.getByRole("combobox", { name: "Group by" });
+  await (await hydrated(groupBy)).click();
+  await expect(page.getByRole("option", { name: "Priority" })).toBeVisible();
   await expect(page.getByRole("option", { name: "App" })).toHaveCount(0);
 });
 
