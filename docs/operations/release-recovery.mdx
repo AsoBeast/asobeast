@@ -186,7 +186,7 @@ GitHub creates every container package as private, and a private package answers
   A public package cannot be made private again. The images are built from this public repository, and the build provenance records the Sentry organization and project names passed as build arguments. No secret is baked in.
 </Warning>
 
-Check from a machine with no registry credentials. A token request prints `200` when the package is public and `401` when it is not.
+Check from a machine with no registry credentials. A token request prints `200` when the package is public and `401` when it is private.
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' 'https://ghcr.io/token?scope=repository:asobeast/asobeast-api:pull&service=ghcr.io'
