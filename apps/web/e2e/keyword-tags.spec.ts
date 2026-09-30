@@ -133,6 +133,31 @@ test("an invalid or a ninth tag is refused and the note counts", async ({
   await expect(dialog.getByText("11 / 500")).toBeVisible();
 });
 
+test("a note of 500 emoji counts as 500 and one more is refused", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const dialog = await openEditor(page, "focus timer");
+  const note = dialog.getByRole("textbox", { name: "Note" });
+  const save = dialog.getByRole("button", { name: "Save" });
+
+  await note.fill("😀".repeat(500));
+  await expect(note).toHaveValue("😀".repeat(500));
+  await expect(dialog.getByText("500 / 500", { exact: true })).toBeVisible();
+  await expect(save).toBeEnabled();
+
+  await note.fill("😀".repeat(501));
+  await expect(
+    dialog.getByText("501 / 500 · 1 over the limit", { exact: true }),
+  ).toBeVisible();
+  await expect(note).toHaveAttribute("aria-invalid", "true");
+  await expect(save).toBeDisabled();
+
+  await note.fill(`${"😀".repeat(500)}   `);
+  await expect(dialog.getByText("500 / 500", { exact: true })).toBeVisible();
+  await expect(save).toBeEnabled();
+});
+
 test("a failed save rolls the row back and keeps the dialog open", async ({
   page,
   context,
