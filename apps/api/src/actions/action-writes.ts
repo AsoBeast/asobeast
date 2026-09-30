@@ -182,22 +182,23 @@ export function missedWrite(
     counter: planned.counter,
     write: async (tx, events) => {
       const applied = await updateIfUnchanged(tx, row, planned.data(now));
-      if (!applied) return false;
-      events.push(
-        systemEvent(
-          workspaceId,
-          {
-            actionId: row.id,
-            appId: row.appId,
-            type: planned.type,
-            status: planned.status,
-            priority: row.priority,
-            impact: row.impact,
-          },
-          now,
-        ),
-      );
-      return true;
+      if (applied) {
+        events.push(
+          systemEvent(
+            workspaceId,
+            {
+              actionId: row.id,
+              appId: row.appId,
+              type: planned.type,
+              status: planned.status,
+              priority: row.priority,
+              impact: row.impact,
+            },
+            now,
+          ),
+        );
+      }
+      return applied;
     },
   };
 }

@@ -19,6 +19,8 @@ import {
   ExistingRow,
   lifecycleWrite,
   missedWrite,
+  MissedWrite,
+  PlannedWrite,
   ScoredDetection,
 } from './action-writes';
 import { priorityOf } from './actions.mapper';
@@ -43,10 +45,7 @@ interface SurfacedDetection {
 
 interface PlannedStep {
   write: ActionWrite;
-  counter: keyof Pick<
-    ActionGenerationResult,
-    'opened' | 'refreshed' | 'reopened' | 'resolved' | 'verified' | 'touched'
-  >;
+  counter: PlannedWrite['counter'] | MissedWrite['counter'];
   surfaced: SurfacedDetection | null;
 }
 
