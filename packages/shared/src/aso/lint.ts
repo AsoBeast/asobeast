@@ -163,6 +163,7 @@ const repeats = (
   against: ReadonlySet<string>,
   rule: string,
   label: string,
+  severity: LintSeverity = 'error',
 ): LintIssue[] => {
   const seen = new Set<string>();
   const issues: LintIssue[] = [];
@@ -171,7 +172,7 @@ const repeats = (
       seen.add(token);
       issues.push({
         rule,
-        severity: 'error',
+        severity,
         message: `"${token}" already appears in the ${label}.`,
         offendingText: token,
       });
@@ -231,7 +232,13 @@ export function lintShortDescription(
   const issues: LintIssue[] = [
     ...overLimit(text, limit),
     ...underUtilized(text, limit),
-    ...repeats(text, toSet(context.titleWords), 'repeats-title-word', 'title'),
+    ...repeats(
+      text,
+      toSet(context.titleWords),
+      'repeats-title-word',
+      'title',
+      'warn',
+    ),
     ...keywordStuffing(text),
     ...policyTerms(text),
   ];

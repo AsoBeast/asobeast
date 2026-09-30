@@ -1,4 +1,9 @@
-import { LintIssue, MetadataFieldAudit } from '@asobeast/shared';
+import {
+  LintIssue,
+  lintShortDescription,
+  MetadataFieldAudit,
+  tokenize,
+} from '@asobeast/shared';
 import type { ActionContextApp } from '../action-context';
 import { actionFingerprint } from '../action-fingerprint';
 import { scoreImpact } from '../action-impact';
@@ -162,6 +167,38 @@ describe('metadata.fix_lint', () => {
       discriminator: 'shortDescription',
       terms: { reach: 0.6 },
       evidence: { field: 'shortDescription', limit: 80 },
+    });
+  });
+});
+
+describe('metadata.fix_lint on a google play short description', () => {
+  const text = 'Zakupy online, płatności, dostawa i zwroty w jednej aplikacji';
+  const titleWords = tokenize('Allegro: zakupy online');
+  const shortDescription = (extra: string) => {
+    const value = `${text}${extra}`;
+    return app(
+      [
+        field({
+          field: 'shortDescription',
+          value,
+          chars: value.length,
+          limit: 80,
+          issues: lintShortDescription(value, { titleWords }, 80),
+        }),
+      ],
+      { store: 'GOOGLE_PLAY' },
+    );
+  };
+
+  it('opens no action when the only issue is repeating title words', () => {
+    expect(detect([shortDescription('')])).toEqual([]);
+  });
+
+  it('lists only the real errors when a repeat sits beside one', () => {
+    const [detection] = detect([shortDescription(' Download now')]);
+
+    expect(detection.evidence).toMatchObject({
+      issues: [{ rule: 'policy-term', offendingText: 'download now' }],
     });
   });
 });

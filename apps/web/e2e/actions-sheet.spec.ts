@@ -178,6 +178,26 @@ test("a note is saved and kept after a reload", async ({ page }) => {
   ).toHaveValue("Waiting on the new screenshots");
 });
 
+test("a note of 500 emoji counts as 500 and one more is refused", async ({
+  page,
+}) => {
+  await page.goto("/actions?action=act-audit");
+  const note = page.getByRole("textbox", { name: "Note for this action" });
+  const save = page.getByRole("button", { name: "Save note" });
+
+  await note.fill("😀".repeat(500));
+  await expect(note).toHaveValue("😀".repeat(500));
+  await expect(page.getByText("500 / 500", { exact: true })).toBeVisible();
+  await expect(save).toBeEnabled();
+
+  await note.fill("😀".repeat(501));
+  await expect(
+    page.getByText("501 / 500 · 1 over the limit", { exact: true }),
+  ).toBeVisible();
+  await expect(note).toHaveAttribute("aria-invalid", "true");
+  await expect(save).toBeDisabled();
+});
+
 test("a row shows that its action has a note", async ({ page }) => {
   await page.goto("/actions?action=act-audit");
   await page

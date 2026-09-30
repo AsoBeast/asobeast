@@ -85,7 +85,6 @@ export function ActionCenter({ appId }: { appId?: string }) {
           id="queue"
           aria-labelledby="queue-heading"
           className={QUEUE_COLUMN}
-          onKeyDown={keys.onKeyDown}
         >
           <h2 id="queue-heading" className="sr-only">
             Queue

@@ -32,10 +32,27 @@ test("the switch still pauses a keyword through the shared update", async ({
 
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
   await row(page, "focus timer")
-    .getByRole("switch", { name: "Pause keyword" })
+    .getByRole("switch", { name: "Track keyword" })
     .click();
 
   expect((await patch).postDataJSON()).toEqual({ active: false });
+});
+
+test("the switch keeps one name whether the keyword is tracked or paused", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const toggle = row(page, "focus timer").getByRole("switch", {
+    name: "Track keyword",
+  });
+
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+
+  await expect(toggle).not.toBeChecked();
+  await expect(
+    row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
+  ).toHaveCount(1);
 });
 
 test("tags are added with enter, a comma and a suggestion, and saved", async ({
@@ -131,6 +148,31 @@ test("an invalid or a ninth tag is refused and the note counts", async ({
 
   await dialog.getByRole("textbox", { name: "Note" }).fill("Push in May");
   await expect(dialog.getByText("11 / 500")).toBeVisible();
+});
+
+test("a note of 500 emoji counts as 500 and one more is refused", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const dialog = await openEditor(page, "focus timer");
+  const note = dialog.getByRole("textbox", { name: "Note" });
+  const save = dialog.getByRole("button", { name: "Save" });
+
+  await note.fill("😀".repeat(500));
+  await expect(note).toHaveValue("😀".repeat(500));
+  await expect(dialog.getByText("500 / 500", { exact: true })).toBeVisible();
+  await expect(save).toBeEnabled();
+
+  await note.fill("😀".repeat(501));
+  await expect(
+    dialog.getByText("501 / 500 · 1 over the limit", { exact: true }),
+  ).toBeVisible();
+  await expect(note).toHaveAttribute("aria-invalid", "true");
+  await expect(save).toBeDisabled();
+
+  await note.fill(`${"😀".repeat(500)}   `);
+  await expect(dialog.getByText("500 / 500", { exact: true })).toBeVisible();
+  await expect(save).toBeEnabled();
 });
 
 test("a failed save rolls the row back and keeps the dialog open", async ({

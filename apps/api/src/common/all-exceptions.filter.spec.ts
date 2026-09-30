@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   HttpException,
   HttpStatus,
+  Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -10,7 +11,11 @@ import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
 import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
-import { StoreNotSupportedError } from '../store-providers/errors';
+import {
+  StoreAppNotFoundError,
+  StoreNotSupportedError,
+  StoreRequestError,
+} from '../store-providers/errors';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
 const FUTURE_STORE = 'AMAZON' as Store;
@@ -98,5 +103,46 @@ describe('AllExceptionsFilter', () => {
     const { headers } = capture(exception);
 
     expect(headers['WWW-Authenticate']).toBeUndefined();
+  });
+
+  it('answers a store outage with a stable sentence and keeps the 502', () => {
+    const { status, envelope } = capture(
+      new StoreRequestError(Store.APP_STORE, 'getApp', 'fetch failed'),
+    );
+
+    expect(status).toBe(HttpStatus.BAD_GATEWAY);
+    expect(envelope.error).toBe('Bad Gateway');
+    expect(envelope.message).toBe(
+      'The App Store did not answer. Try again in a few minutes.',
+    );
+    expect(envelope.message).not.toContain('fetch failed');
+  });
+
+  it('names google play when its request fails', () => {
+    const { envelope } = capture(
+      new StoreRequestError(Store.GOOGLE_PLAY, 'getApp', 'ECONNRESET'),
+    );
+
+    expect(envelope.message).toBe(
+      'Google Play did not answer. Try again in a few minutes.',
+    );
+  });
+
+  it('does not show the internal store name when an app is missing', () => {
+    const { status, envelope } = capture(
+      new StoreAppNotFoundError(Store.APP_STORE, '904237743'),
+    );
+
+    expect(status).toBe(HttpStatus.NOT_FOUND);
+    expect(envelope.message).toBe('The App Store has no app 904237743.');
+  });
+
+  it('keeps the underlying message for the operator', () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    capture(new StoreRequestError(Store.APP_STORE, 'getApp', 'fetch failed'));
+
+    expect(warn).toHaveBeenCalledWith('APP_STORE getApp failed: fetch failed');
+    warn.mockRestore();
   });
 });

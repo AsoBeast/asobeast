@@ -15,6 +15,7 @@ import {
   visibilityPoints,
   windowVisibility,
 } from './analytics.support';
+import { countChangeDays } from './change-days';
 
 const CHANGES_WINDOW_DAYS = 7;
 
@@ -123,11 +124,16 @@ export class PortfolioService {
     const apps = await this.prisma.app.findMany({
       select: { id: true },
     });
-    return this.prisma.changeEvent.count({
+    const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: apps.map((app) => app.id) },
         capturedAt: { gte: new Date(Date.now() - days * DAY_MS) },
       },
+      select: { appId: true, capturedAt: true },
     });
+    return [...countChangeDays(events).values()].reduce(
+      (total, count) => total + count,
+      0,
+    );
   }
 }

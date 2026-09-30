@@ -75,7 +75,7 @@ export function KeywordRowActions({
         checked={keyword.active}
         disabled={toggle.isPending}
         onCheckedChange={(next) => toggle.mutate({ active: next })}
-        aria-label={keyword.active ? "Pause keyword" : "Resume keyword"}
+        aria-label="Track keyword"
       />
 
       <DropdownMenu>

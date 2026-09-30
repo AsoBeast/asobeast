@@ -365,8 +365,35 @@ describe('AnalyticsController (e2e)', () => {
       .body as PortfolioInsights;
 
     expect(insights.apps.map((entry) => entry.appId)).toEqual([id]);
-    expect(insights.apps[0].changes7d).toEqual({ own: 1, competitors: 2 });
-    expect(insights.totals.changes7d).toEqual({ own: 1, competitors: 2 });
+    expect(insights.apps[0].changes7d).toEqual({ own: 1, competitors: 1 });
+    expect(insights.totals.changes7d).toEqual({ own: 1, competitors: 1 });
+  });
+
+  it('counts the fields changed together as one change and each later day as another', async () => {
+    const id = await seed();
+    const twoDaysAgo = new Date(Date.now() - 2 * 86_400_000);
+    await prisma.changeEvent.createMany({
+      data: [
+        { appId: id, field: 'title', before: 'a', after: 'b' },
+        { appId: id, field: 'subtitle', before: 'c', after: 'd' },
+        {
+          appId: id,
+          field: 'description',
+          before: 'e',
+          after: 'f',
+          capturedAt: twoDaysAgo,
+        },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+
+    expect(insights.apps[0].changes7d).toEqual({ own: 2, competitors: 0 });
+    expect(insights.totals.changes7d).toEqual({ own: 2, competitors: 0 });
+    expect(portfolio.totals.changes7d).toBe(2);
   });
 
   it('counts reviews at the negative score threshold and none above it', async () => {

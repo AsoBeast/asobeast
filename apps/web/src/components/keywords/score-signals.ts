@@ -1,6 +1,6 @@
 import { SERP_FLAGS } from "@asobeast/shared";
 import type { ScoreSignals, ScoringSource, SerpFlag } from "@asobeast/shared";
-import { formatNumber } from "@/lib/format";
+import { pluralize } from "@/lib/format";
 
 const FLAG_LINES: Record<SerpFlag, string> = {
   brand: "A brand search: one app dominates this page.",
@@ -74,6 +74,6 @@ export function difficultySignalLines(signals: ScoreSignals | null): string[] {
   return signals.medianRatingCount === null
     ? []
     : [
-        `Typical top ten app: ${formatNumber(Math.round(signals.medianRatingCount))} ratings.`,
+        `Typical top ten app: ${pluralize(Math.round(signals.medianRatingCount), "rating")}.`,
       ];
 }

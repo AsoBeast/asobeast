@@ -561,6 +561,22 @@ describe('AppsController (e2e)', () => {
       return (response.body as AppDetail).id;
     };
 
+    it('refuses to add an app as its own competitor', async () => {
+      const primary = await importedId(APP_STORE_URL);
+      registry.getAppCalls = [];
+
+      const response = await api
+        .post(`/apps/${primary}/competitors`)
+        .send({ url: APP_STORE_URL })
+        .expect(409);
+
+      expect((response.body as ApiErrorEnvelope).message).toMatch(
+        /cannot be its own competitor/,
+      );
+      expect(await prisma.app.count({ where: { isCompetitor: true } })).toBe(0);
+      expect(registry.getAppCalls).toEqual([]);
+    });
+
     it('refuses a competitor that is already tracked as an app', async () => {
       const primary = await importedId(APP_STORE_URL);
       await importedId(RIVAL_URL);
@@ -753,7 +769,10 @@ describe('AppsController (e2e)', () => {
     const body = response.body as ApiErrorEnvelope;
 
     expectEnvelope(body, 502, '/apps');
-    expect(body.message).toContain('boom');
+    expect(body.message).toBe(
+      'The App Store did not answer. Try again in a few minutes.',
+    );
+    expect(body.message).not.toContain('boom');
   });
 
   it('returns a 404 envelope when the store has no such app', async () => {
@@ -767,7 +786,9 @@ describe('AppsController (e2e)', () => {
       .send({ url: APP_STORE_URL })
       .expect(404);
 
-    expectEnvelope(response.body as ApiErrorEnvelope, 404, '/apps');
+    const body = response.body as ApiErrorEnvelope;
+    expectEnvelope(body, 404, '/apps');
+    expect(body.message).toBe('The App Store has no app 1234567890.');
     expect(await prisma.app.count()).toBe(0);
   });
 

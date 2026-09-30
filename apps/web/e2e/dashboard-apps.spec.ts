@@ -43,6 +43,21 @@ test("a captured app card shows its bands, audit and open actions", async ({
   ).toHaveAttribute("href", "/apps/app-gp/actions");
 });
 
+test("a card counts one competitor in the singular", async ({ page }) => {
+  await page.goto("/");
+
+  const tomato = card(page, "Tomato Clock");
+  await expect(tomato.getByText("3 keywords", { exact: true })).toBeVisible();
+  await expect(tomato.getByText("1 competitor", { exact: true })).toBeVisible();
+
+  const timer = card(page, "Focus Timer");
+  await expect(timer.getByText("5 keywords", { exact: true })).toBeVisible();
+  await expect(timer.getByText("1 competitor", { exact: true })).toBeVisible();
+
+  const habit = card(page, "Habit Tracker");
+  await expect(habit.getByText("0 competitors", { exact: true })).toBeVisible();
+});
+
 test("a storefront member shows its rating and open actions", async ({
   page,
 }) => {

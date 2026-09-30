@@ -8,6 +8,7 @@ import {
   formatCountry,
   formatDate,
   formatNumber,
+  pluralize,
   storeLabel,
 } from "@/lib/format";
 import { AppCardLink } from "@/components/apps/AppCardLink";
@@ -18,8 +19,8 @@ import { Sparkline } from "./Sparkline";
 export function AppStats({ app }: { app: PortfolioApp }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-muted-foreground">
-      <span>{formatNumber(app.trackedKeywords)} keywords</span>
-      <span>{formatNumber(app.competitors)} competitors</span>
+      <span>{pluralize(app.trackedKeywords, "keyword")}</span>
+      <span>{pluralize(app.competitors, "competitor")}</span>
       <span>Updated {formatDate(app.lastCapturedAt)}</span>
     </div>
   );

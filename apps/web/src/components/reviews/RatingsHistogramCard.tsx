@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDate, formatNumber } from "@/lib/format";
+import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { ratingsHistogramOptions } from "@/lib/queries";
 
 const percentOf = (count: number, total: number): number =>
@@ -67,7 +67,7 @@ export function RatingsHistogramCard({ id }: { id: string }) {
       <CardHeader>
         <CardDescription>Ratings distribution</CardDescription>
         <CardTitle>
-          {formatNumber(data.total)} ratings
+          {pluralize(data.total, "rating")}
           {data.capturedAt ? ` as of ${formatDate(data.capturedAt)}` : ""}
         </CardTitle>
       </CardHeader>

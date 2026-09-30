@@ -42,11 +42,40 @@ export const ROW_COMMANDS: ReadonlyArray<QueueCommand["kind"]> = [
   "select",
 ];
 
+const PAGE_KEYS: ReadonlySet<string> = new Set(["j", "k", "/", "?"]);
+
+export interface KeyScope {
+  inQueue: boolean;
+  withinRow: boolean;
+  onRow: boolean;
+}
+
+export function commandApplies(
+  event: Pick<KeyEvent, "key">,
+  command: QueueCommand,
+  scope: KeyScope,
+): boolean {
+  if (PAGE_KEYS.has(event.key)) return true;
+  if (!scope.inQueue) return false;
+  if (command.kind === "move") return scope.withinRow;
+  return !ROW_COMMANDS.includes(command.kind) || scope.onRow;
+}
+
 export function commandFor(event: KeyEvent): QueueCommand | null {
   if (event.metaKey || event.ctrlKey || event.altKey) return null;
   const table = event.shiftKey ? SHIFTED_KEYS : PLAIN_KEYS;
   return table[event.key] ?? null;
 }
+
+const OVERLAY_SELECTOR =
+  '[role="menu"],[role="dialog"],[role="alertdialog"],[role="listbox"]';
+
+export function overlayOpen(root: Pick<ParentNode, "querySelector">): boolean {
+  return root.querySelector(OVERLAY_SELECTOR) !== null;
+}
+
+const TYPING_SELECTOR =
+  "input, textarea, select, [contenteditable='true'], [role='combobox'], [role='textbox'], [role='searchbox']";
 
 interface TypingCandidate {
   isContentEditable?: boolean;
@@ -58,8 +87,7 @@ export function isTypingTarget(target: EventTarget | null): boolean {
   if (typeof candidate?.closest !== "function") return false;
   return (
     candidate.isContentEditable === true ||
-    candidate.closest("input, textarea, select, [contenteditable='true']") !==
-      null
+    candidate.closest(TYPING_SELECTOR) !== null
   );
 }
 

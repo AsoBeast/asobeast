@@ -7,13 +7,13 @@ describe('PortfolioService.portfolio', () => {
   const appFindMany = jest.fn();
   const rankingFindFirst = jest.fn();
   const trackedFindMany = jest.fn();
-  const changeEventCount = jest.fn();
+  const changeEventFindMany = jest.fn();
 
   beforeEach(async () => {
     appFindMany.mockReset();
     rankingFindFirst.mockReset();
     trackedFindMany.mockReset();
-    changeEventCount.mockReset();
+    changeEventFindMany.mockReset();
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -24,7 +24,7 @@ describe('PortfolioService.portfolio', () => {
             app: { findMany: appFindMany },
             keywordRanking: { findFirst: rankingFindFirst },
             trackedKeyword: { findMany: trackedFindMany },
-            changeEvent: { count: changeEventCount },
+            changeEvent: { findMany: changeEventFindMany },
           },
         },
       ],
@@ -53,7 +53,7 @@ describe('PortfolioService.portfolio', () => {
     );
     rankingFindFirst.mockResolvedValue(null);
     trackedFindMany.mockResolvedValue([]);
-    changeEventCount.mockResolvedValue(0);
+    changeEventFindMany.mockResolvedValue([]);
 
     const result = await service.portfolio();
 
@@ -129,7 +129,14 @@ describe('PortfolioService.portfolio', () => {
         },
       ];
     });
-    changeEventCount.mockResolvedValue(4);
+    const day = (offset: number) => new Date(Date.UTC(2026, 6, 7 + offset, 9));
+    changeEventFindMany.mockResolvedValue([
+      { appId: 'high', capturedAt: day(0) },
+      { appId: 'high', capturedAt: day(0) },
+      { appId: 'high', capturedAt: day(1) },
+      { appId: 'low', capturedAt: day(2) },
+      { appId: 'low', capturedAt: day(3) },
+    ]);
 
     const result = await service.portfolio();
 
@@ -166,7 +173,7 @@ describe('PortfolioService.portfolio', () => {
         ? [row('k_ios', 10, 1, reference)]
         : [row('k_android', 5, 3, reference)],
     );
-    changeEventCount.mockResolvedValue(0);
+    changeEventFindMany.mockResolvedValue([]);
 
     const result = await service.portfolio();
 
@@ -196,7 +203,7 @@ describe('PortfolioService.portfolio', () => {
     trackedFindMany.mockImplementation((args: { where: { appId: string } }) =>
       args.where.appId === 'ios' ? [row('k_ios', 10, 1, reference)] : [],
     );
-    changeEventCount.mockResolvedValue(0);
+    changeEventFindMany.mockResolvedValue([]);
 
     const result = await service.portfolio();
 
