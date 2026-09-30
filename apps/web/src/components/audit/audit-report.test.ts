@@ -101,10 +101,14 @@ describe("auditMarkdown", () => {
   });
 
   it("counts one competitor in the singular", () => {
+    const { benchmarks } = APP_AUDIT_EXAMPLE;
+    if (!benchmarks) {
+      throw new Error("Expected the example audit to carry benchmarks");
+    }
     const report = auditMarkdown(
       {
         ...APP_AUDIT_EXAMPLE,
-        benchmarks: { ...APP_AUDIT_EXAMPLE.benchmarks!, competitors: 1 },
+        benchmarks: { ...benchmarks, competitors: 1 },
       },
       APP,
     );
