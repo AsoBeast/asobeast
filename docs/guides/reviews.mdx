@@ -37,9 +37,9 @@ The action resolves when the version is superseded without the theme recurring, 
 
 Subscribe a webhook or an email channel to `review.negative` to receive them. See [Send alerts](/guides/alerts).
 
-The first review sync after an import stores the reviews the store already shows without sending alerts, so importing an app never floods a channel. Every later sync alerts for each new review at or below `ALERT_REVIEW_SCORE_MAX`.
+The review backfill queued at import, described in [Import an app](/guides/import-an-app), stores its reviews without sending alerts, so an import does not alert on reviews that were already on the store. Every later sync alerts for each new review at or below `ALERT_REVIEW_SCORE_MAX`, so when the backfill comes back empty, the first daily sync that finds reviews alerts on them.
 
-The dashboard's new low ratings and the weekly digest's negative review count answer a different question. They count reviews at or below `ALERT_REVIEW_SCORE_MAX` that were written in the window, using the date the store gives each review, so reviews stored by the first sync count only when they were written that week. A review with no store date counts from the day asobeast stored it.
+The dashboard's new low ratings and the weekly digest's negative review count answer a different question. They count reviews at or below `ALERT_REVIEW_SCORE_MAX` that were written in the window, using the date the store gives each review, so reviews stored by the backfill count only when they were written that week. A review with no store date counts from the day asobeast stored it.
 
 ## Troubleshooting
 
