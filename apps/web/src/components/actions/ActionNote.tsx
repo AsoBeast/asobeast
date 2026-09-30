@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, updateAction } from "@/lib/api";
 import { invalidateActionMutation } from "@/lib/queries";
+import { limitCounterText, textLimit } from "@/lib/text-limit";
+import { cn } from "@/lib/utils";
 import { ACTION_NOTE_MAX_LENGTH, noteRequest } from "./note-request";
 
 export function ActionNote({ item }: { item: ActionItem }) {
@@ -15,6 +17,7 @@ export function ActionNote({ item }: { item: ActionItem }) {
   const saved = item.note ?? "";
   const [draft, setDraft] = useState(saved);
   const request = noteRequest(item, draft.trim());
+  const noteLimit = textLimit(draft.trim(), ACTION_NOTE_MAX_LENGTH);
 
   const save = useMutation({
     mutationFn: () => {
@@ -52,22 +55,29 @@ export function ActionNote({ item }: { item: ActionItem }) {
     >
       <Textarea
         aria-label="Note for this action"
-        maxLength={ACTION_NOTE_MAX_LENGTH}
+        aria-invalid={noteLimit.over > 0}
         value={draft}
         onChange={(event) => setDraft(event.target.value)}
       />
       <div className="flex items-center justify-between gap-2">
         <span
           aria-live="polite"
-          className="numeric font-mono text-caption text-muted-foreground"
+          className={cn(
+            "numeric font-mono text-caption",
+            noteLimit.over > 0
+              ? "font-medium text-destructive"
+              : "text-muted-foreground",
+          )}
         >
-          {draft.length} / {ACTION_NOTE_MAX_LENGTH}
+          {limitCounterText(noteLimit, ACTION_NOTE_MAX_LENGTH)}
         </span>
         <Button
           type="submit"
           size="sm"
           variant="outline"
-          disabled={draft.trim() === saved || save.isPending}
+          disabled={
+            draft.trim() === saved || save.isPending || noteLimit.over > 0
+          }
         >
           Save note
         </Button>

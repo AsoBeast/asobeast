@@ -31,6 +31,8 @@ import {
   tagSuggestions,
   type TagRefusal,
 } from "@/lib/keyword-tags";
+import { limitCounterText, textLimit } from "@/lib/text-limit";
+import { cn } from "@/lib/utils";
 import { useKeywordUpdate } from "./useKeywordUpdate";
 
 const REFUSAL_MESSAGES: Record<TagRefusal, string> = {
@@ -55,10 +57,12 @@ function AnnotationsForm({
   const tagsId = useId();
   const messageId = useId();
   const noteId = useId();
+  const counterId = useId();
   const [tags, setTags] = useState<string[]>(keyword.tags ?? []);
   const [input, setInput] = useState("");
   const [refused, setRefused] = useState<TagRefusal | null>(null);
   const [note, setNote] = useState(keyword.note ?? "");
+  const noteLimit = textLimit(note.trim(), KEYWORD_NOTE_MAX_LENGTH);
 
   function commit(candidates: readonly string[]): TagRefusal | null {
     let next = tags;
@@ -167,12 +171,21 @@ function AnnotationsForm({
           <Textarea
             id={noteId}
             value={note}
-            maxLength={KEYWORD_NOTE_MAX_LENGTH}
             rows={3}
+            aria-invalid={noteLimit.over > 0}
+            aria-describedby={counterId}
             onChange={(event) => setNote(event.target.value)}
           />
-          <p className="text-caption text-muted-foreground numeric">
-            {note.length} / {KEYWORD_NOTE_MAX_LENGTH}
+          <p
+            id={counterId}
+            className={cn(
+              "text-caption numeric",
+              noteLimit.over > 0
+                ? "font-medium text-destructive"
+                : "text-muted-foreground",
+            )}
+          >
+            {limitCounterText(noteLimit, KEYWORD_NOTE_MAX_LENGTH)}
           </p>
         </div>
       </DialogBody>
@@ -182,7 +195,7 @@ function AnnotationsForm({
             Cancel
           </Button>
         </DialogClose>
-        <Button type="submit" disabled={update.isPending}>
+        <Button type="submit" disabled={update.isPending || noteLimit.over > 0}>
           Save
         </Button>
       </DialogFooter>
