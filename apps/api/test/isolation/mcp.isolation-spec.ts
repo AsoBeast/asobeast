@@ -72,9 +72,7 @@ describe('Remote MCP boundaries between workspaces', () => {
     const result = decode(response.text).result;
 
     expect(result?.isError).toBe(true);
-    expect(result?.content?.[0].text).toContain(
-      'No action with that id in this workspace',
-    );
+    expect(result?.content?.[0].text).toBe('Action not found');
   });
 
   it('gives each token its own portfolio', async () => {
