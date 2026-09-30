@@ -1,4 +1,3 @@
-import { searchKey } from '@asobeast/shared';
 import { clamp } from './curves';
 
 export type SuggestReach =
@@ -27,8 +26,14 @@ export function reachScore(reach: SuggestReach): number | null {
   }
 }
 
-export function untypedShare(reach: SuggestReach, keyword: string): number {
-  const length = Array.from(searchKey(keyword)).length;
+export function untypedShare(
+  reach: SuggestReach,
+  keyword: string,
+): number | null {
+  if (reach.status === 'unavailable') {
+    return null;
+  }
+  const length = Array.from(keyword).length;
   if (reach.status !== 'hit' || length === 0) {
     return 0;
   }

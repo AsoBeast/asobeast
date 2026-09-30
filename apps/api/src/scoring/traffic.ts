@@ -24,11 +24,9 @@ export const THIN_SERP_TRAFFIC_CAP = 1;
 const POPULARITY_SCALE = 10;
 
 function suggestEstimate(stats: KeywordStats): number {
-  const failed = stats.suggest.status === 'unavailable';
   const reach = reachScore(stats.suggest) ?? TYPICAL_REACH;
-  const untyped = failed
-    ? TYPICAL_UNTYPED
-    : untypedShare(stats.suggest, stats.keywordText);
+  const untyped =
+    untypedShare(stats.suggest, stats.keywordText) ?? TYPICAL_UNTYPED;
   const blend =
     SUGGEST_WEIGHTS.reach * reach +
     SUGGEST_WEIGHTS.untyped * untyped +

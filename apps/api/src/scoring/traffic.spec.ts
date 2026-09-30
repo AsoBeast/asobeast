@@ -63,7 +63,7 @@ describe('computeTraffic on google play', () => {
     ['F7 single', fixtures.F7_SINGLE, 1],
     ['F8 unavailable', fixtures.F8_UNAVAILABLE, 4.3495],
     ['F12 not finite', fixtures.F12_NOT_FINITE, 4.449],
-    ['F13 diacritics', fixtures.F13_DIACRITICS, 4.625],
+    ['F13 diacritics', fixtures.F13_DIACRITICS, 4.75],
   ])('%s', (_name, stats, expected) => {
     expect(computeTraffic(play(stats))).toBeCloseTo(expected, 3);
   });

@@ -48,8 +48,9 @@ describe('untypedShare', () => {
     expect(untypedShare(hit(8, 4), 'map quiz')).toBe(0);
   });
 
-  it('measures the phrase on its search key', () => {
-    expect(untypedShare(hit(2, 1), 'Géo  Quiz')).toBeCloseTo(0.75, 6);
+  it('measures the phrase in the characters the probe types', () => {
+    expect(untypedShare(hit(3, 1), 'ﬁnance')).toBeCloseTo(0.5, 6);
+    expect(untypedShare(hit(2, 1), 'géo quiz')).toBeCloseTo(0.75, 6);
   });
 
   it('counts characters, not code units', () => {
@@ -59,9 +60,12 @@ describe('untypedShare', () => {
   it.each([
     [{ status: 'listed', position: 1 }],
     [{ status: 'absent' }],
-    [{ status: 'unavailable' }],
   ] as Array<[SuggestReach]>)('is 0 for %j', (reach) => {
     expect(untypedShare(reach, 'trivia games')).toBe(0);
+  });
+
+  it('is unknown when the suggest lookup failed', () => {
+    expect(untypedShare({ status: 'unavailable' }, 'trivia games')).toBeNull();
   });
 
   it('never leaves 0 to 1 for out of range evidence', () => {
