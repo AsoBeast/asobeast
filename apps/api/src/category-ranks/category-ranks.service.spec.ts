@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { scrapedAppStoreRaw } from '../store-providers/app-store-scraped.fixture';
 import { CategoryRanksService } from './category-ranks.service';
 
 interface AppRow {
@@ -39,10 +40,52 @@ const makeService = (
 };
 
 describe('CategoryRanksService buckets', () => {
-  it('dedupes buckets across apps sharing a genre', async () => {
+  it('schedules an app stored the way the App Store scraper maps it', async () => {
+    const { service } = makeService([
+      app('a1', '425073498', await scrapedAppStoreRaw()),
+    ]);
+
+    const buckets = await service.buckets(['a1']);
+
+    expect(buckets).toEqual([
+      { collection: 'free', genre: '6027', country: 'us', store: 'APP_STORE' },
+      {
+        collection: 'free',
+        genre: 'overall',
+        country: 'us',
+        store: 'APP_STORE',
+      },
+      {
+        collection: 'grossing',
+        genre: '6027',
+        country: 'us',
+        store: 'APP_STORE',
+      },
+      {
+        collection: 'grossing',
+        genre: 'overall',
+        country: 'us',
+        store: 'APP_STORE',
+      },
+    ]);
+  });
+
+  it('still schedules an app whose snapshot stored the genre as a number', async () => {
     const { service } = makeService([
       app('a1', '111', { primaryGenreId: 6007, price: 0 }),
-      app('a2', '222', { primaryGenreId: 6007, price: 0 }),
+    ]);
+
+    const genres = (await service.buckets(['a1'])).map(
+      (bucket) => bucket.genre,
+    );
+
+    expect(new Set(genres)).toEqual(new Set(['6007', 'overall']));
+  });
+
+  it('dedupes buckets across apps sharing a genre', async () => {
+    const { service } = makeService([
+      app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+      app('a2', '222', { primaryGenreId: '6007', price: 0 }),
     ]);
 
     const buckets = await service.buckets(['a1', 'a2']);
@@ -72,7 +115,7 @@ describe('CategoryRanksService buckets', () => {
 
   it('schedules grossing for every app alongside its price collection', async () => {
     const { service } = makeService([
-      app('a1', '111', { primaryGenreId: 6007, price: 2.99 }),
+      app('a1', '111', { primaryGenreId: '6007', price: 2.99 }),
     ]);
 
     const collections = (await service.buckets(['a1'])).map(
@@ -84,8 +127,8 @@ describe('CategoryRanksService buckets', () => {
 
   it('splits free and paid apps into separate collections', async () => {
     const { service } = makeService([
-      app('a1', '111', { primaryGenreId: 6007, price: 0 }),
-      app('a2', '222', { primaryGenreId: 6014, price: 2.99 }),
+      app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+      app('a2', '222', { primaryGenreId: '6014', price: 2.99 }),
     ]);
 
     const buckets = await service.buckets(['a1', 'a2']);
@@ -146,9 +189,9 @@ describe('CategoryRanksService checkCategory', () => {
   it('upserts the chart position for matching apps and null for absent ones', async () => {
     const { service, upsert, registry } = makeService(
       [
-        app('a1', '111', { primaryGenreId: 6007, price: 0 }),
-        app('a2', '999', { primaryGenreId: 6007, price: 0 }),
-        app('a3', '333', { primaryGenreId: 6014, price: 0 }),
+        app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+        app('a2', '999', { primaryGenreId: '6007', price: 0 }),
+        app('a3', '333', { primaryGenreId: '6014', price: 0 }),
       ],
       [{ storeAppId: '111', title: 'First' }],
     );
@@ -176,9 +219,9 @@ describe('CategoryRanksService checkCategory', () => {
   it('matches every collection member for the overall genre bucket', async () => {
     const { service, upsert } = makeService(
       [
-        app('a1', '111', { primaryGenreId: 6007, price: 0 }),
-        app('a2', '222', { primaryGenreId: 6014, price: 0 }),
-        app('a3', '333', { primaryGenreId: 6014, price: 5 }),
+        app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+        app('a2', '222', { primaryGenreId: '6014', price: 0 }),
+        app('a3', '333', { primaryGenreId: '6014', price: 5 }),
       ],
       [{ storeAppId: '222', title: 'Second' }],
     );
@@ -200,8 +243,8 @@ describe('CategoryRanksService checkCategory', () => {
   it('writes grossing positions for paid and free apps alike', async () => {
     const { service, upsert } = makeService(
       [
-        app('a1', '111', { primaryGenreId: 6007, price: 0 }),
-        app('a2', '222', { primaryGenreId: 6007, price: 4.99 }),
+        app('a1', '111', { primaryGenreId: '6007', price: 0 }),
+        app('a2', '222', { primaryGenreId: '6007', price: 4.99 }),
       ],
       [{ storeAppId: '222', title: 'Second' }],
     );
@@ -226,7 +269,7 @@ describe('CategoryRanksService checkCategory', () => {
 
   it('reruns idempotently via the same composite key', async () => {
     const { service, upsert } = makeService(
-      [app('a1', '111', { primaryGenreId: 6007, price: 0 })],
+      [app('a1', '111', { primaryGenreId: '6007', price: 0 })],
       [{ storeAppId: '111', title: 'First' }],
     );
 

@@ -12,6 +12,7 @@ import {
   releaseNotesFor,
   screenshotsCount,
 } from './raw-facts';
+import { scrapedAppStoreRaw } from './app-store-scraped.fixture';
 
 const realPayload = {
   id: 1234567890,
@@ -20,7 +21,7 @@ const realPayload = {
   icon: 'https://example.com/icon.png',
   genres: ['Health & Fitness', 'Productivity'],
   genreIds: ['6013', '6007'],
-  primaryGenreId: 6013,
+  primaryGenreId: '6013',
   primaryGenre: 'Health & Fitness',
   price: 0,
   contentRating: '4+',
@@ -378,5 +379,61 @@ describe('ratingHistogram', () => {
     ]) {
       expect(ratingHistogram(Store.GOOGLE_PLAY, garbage)).toBeNull();
     }
+  });
+});
+
+describe('primary genre on the payload the App Store scraper maps', () => {
+  it('reads the genre from the scraper own output', async () => {
+    const scraped = await scrapedAppStoreRaw();
+
+    expect(primaryGenreId(scraped)).toBe(6027);
+    expect(primaryGenreKey(Store.APP_STORE, scraped)).toBe('6027');
+    expect(primaryGenreName(Store.APP_STORE, scraped)).toBe(
+      'Graphics & Design',
+    );
+    expect(extractAppStoreRawFacts(scraped)).toMatchObject({
+      genreKey: '6027',
+      genreName: 'Graphics & Design',
+    });
+  });
+
+  it.each([
+    ['a number stored by an older scraper', 6013, 6013],
+    ['a numeric string', '6013', 6013],
+    ['a padded numeric string', ' 6013 ', 6013],
+  ])('reads %s', (_case, stored, expected) => {
+    expect(primaryGenreId({ primaryGenreId: stored })).toBe(expected);
+    expect(primaryGenreKey(Store.APP_STORE, { primaryGenreId: stored })).toBe(
+      String(expected),
+    );
+  });
+
+  it.each([
+    ['an empty string', ''],
+    ['a blank string', '   '],
+    ['the string zero', '0'],
+    ['zero', 0],
+    ['a negative number', -6013],
+    ['a negative string', '-6013'],
+    ['a fractional number', 6013.5],
+    ['a fractional string', '6013.5'],
+    ['a string with letters', '60x3'],
+    ['an exponent string', '1e3'],
+    ['a hexadecimal string', '0x10'],
+    ['a string beyond the safe integers', '99999999999999999999'],
+    ['not a number', Number.NaN],
+    ['infinity', Number.POSITIVE_INFINITY],
+    ['a boolean', true],
+    ['null', null],
+    ['an object', {}],
+    ['an array', [6013]],
+  ])('rejects %s', (_case, stored) => {
+    expect(primaryGenreId({ primaryGenreId: stored })).toBeNull();
+    expect(
+      primaryGenreKey(Store.APP_STORE, { primaryGenreId: stored }),
+    ).toBeNull();
+    expect(
+      extractAppStoreRawFacts({ primaryGenreId: stored }).genreKey,
+    ).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { BullExplorer } from '@nestjs/bullmq/dist/bull.explorer';
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaClient, Store } from '@prisma/client';
+import { Prisma, PrismaClient, Store } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
 import {
   FIRST_RUN_HISTORY_DAYS,
@@ -22,6 +22,7 @@ import { JOBS, QUEUES, resolveSubtitleJobId } from '../src/jobs/jobs.types';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
 import { requestsFor } from '../src/jobs/request-weights';
+import { scrapedAppStoreRaw } from '../src/store-providers/app-store-scraped.fixture';
 
 const OTHER_WORKSPACE_ID = 'ws_jobs_other';
 
@@ -129,6 +130,33 @@ describe('Pipeline store routing (e2e)', () => {
     expect(gplayJobs.map((job) => job.name).sort()).toEqual(
       [JOBS.CHECK_KEYWORD, JOBS.REFRESH_APP, JOBS.SYNC_REVIEWS].sort(),
     );
+  });
+
+  it('schedules chart checks for an App Store app stored the way the scraper maps it', async () => {
+    const appId = await seedApp(Store.APP_STORE, 'apple-charts');
+    await prisma.appSnapshot.create({
+      data: {
+        appId,
+        title: 'Charts',
+        description: 'Fixture description',
+        raw: (await scrapedAppStoreRaw()) as Prisma.InputJsonObject,
+      },
+    });
+
+    const response = await api.post(`/apps/${appId}/run-daily`).expect(202);
+
+    expect(response.body).toMatchObject({ enqueued: { categories: 4 } });
+    const charts = (await jobsOn(QUEUES.APP_STORE))
+      .filter((job) => job.name === JOBS.CHECK_CATEGORY)
+      .map((job) => job.data as { collection: string; genre: string });
+    expect(
+      charts.map(({ collection, genre }) => `${collection}:${genre}`).sort(),
+    ).toEqual([
+      'free:6027',
+      'free:overall',
+      'grossing:6027',
+      'grossing:overall',
+    ]);
   });
 
   it('reports a per-store budget that sums to the top-level totals', async () => {
