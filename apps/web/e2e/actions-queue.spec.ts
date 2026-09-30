@@ -72,7 +72,7 @@ test("marking done removes the row and moves focus to the next one", async ({
   );
   const nextId = await next.getAttribute("id");
 
-  await row.getByRole("button", { name: "Done" }).click();
+  await (await hydrated(row.getByRole("button", { name: "Done" }))).click();
 
   await expect(row).toHaveCount(0);
   await expect(page.locator(`[id='${nextId}']`)).toBeFocused();
@@ -117,8 +117,8 @@ test("the queue sits under a queue heading with group headings below it", async 
 });
 
 test.describe("closing several actions at once", () => {
-  const select = (page: Page, id: string) =>
-    page.locator(card(id)).getByRole("checkbox").click();
+  const select = async (page: Page, id: string) =>
+    (await hydrated(page.locator(card(id)).getByRole("checkbox"))).click();
   const openTile = (page: Page) =>
     page.locator('[data-slot="stat-tile"]').first();
 

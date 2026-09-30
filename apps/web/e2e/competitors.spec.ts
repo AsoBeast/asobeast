@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { hydrated } from "./hydrated.mts";
 
 const matrix = (page: Page) =>
   page.getByRole("table", { name: /compared with each tracked competitor/ });
@@ -63,7 +64,8 @@ test("the comparison matrix filters to losing rows and searches", async ({
   await page.waitForLoadState("networkidle");
   const rows = matrixRows(page);
 
-  await page.getByRole("combobox", { name: "Filter by result" }).click();
+  const result = page.getByRole("combobox", { name: "Filter by result" });
+  await (await hydrated(result)).click();
   await page.getByRole("option", { name: "Losing" }).click();
 
   await expect(page).toHaveURL(/vs=losing/);

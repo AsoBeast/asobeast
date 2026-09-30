@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import type { PortfolioSummary } from "@asobeast/shared";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
+import { hydrated } from "./hydrated.mts";
 
 const appsRegion = (page: Page) => page.getByRole("region", { name: "Apps" });
 
@@ -121,7 +122,8 @@ test("app card footers line up along a grid row", async ({ page }) => {
 test("sorting the app list by name writes the url", async ({ page }) => {
   await page.goto("/");
 
-  await appsRegion(page).getByRole("combobox", { name: "Sort by" }).click();
+  const sortBy = appsRegion(page).getByRole("combobox", { name: "Sort by" });
+  await (await hydrated(sortBy)).click();
   await page.getByRole("option", { name: "Name" }).click();
 
   await expect(page).toHaveURL(/[?&]sort=name/);
@@ -193,7 +195,8 @@ test("a search without matches offers to clear it", async ({ page }) => {
 test("the table view lists every app as its own row", async ({ page }) => {
   await page.goto("/");
 
-  await appsRegion(page).getByRole("tab", { name: "Table" }).click();
+  const tableTab = appsRegion(page).getByRole("tab", { name: "Table" });
+  await (await hydrated(tableTab)).click();
 
   await expect(page).toHaveURL(/[?&]view=table/);
   const table = appsRegion(page).getByRole("table", {

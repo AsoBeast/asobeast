@@ -1,4 +1,5 @@
 import { expect, test } from "./session.mts";
+import { hydrated } from "./hydrated.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -345,7 +346,7 @@ test("undoing done brings the action back without a reopen badge", async ({
 }) => {
   await page.goto("/actions");
   const row = page.locator(card("act-audit"));
-  await row.getByRole("button", { name: "Done" }).click();
+  await (await hydrated(row.getByRole("button", { name: "Done" }))).click();
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(row).toBeVisible();
   await expect(row.getByText(/Reopened/)).toHaveCount(0);
@@ -374,9 +375,15 @@ test("the app overview leaves snoozed actions out of its open counts", async ({
 test("a failing update rolls the optimistic change back", async ({ page }) => {
   await page.goto("/actions");
   const failing = page.locator(card("act-degraded"));
+  const rejected = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PATCH" &&
+      response.url().endsWith("/api/backend/actions/act-degraded"),
+  );
 
-  await failing.getByRole("button", { name: "Done" }).click();
+  await (await hydrated(failing.getByRole("button", { name: "Done" }))).click();
 
+  expect((await rejected).status()).toBe(500);
   await expect(failing).toBeVisible();
 });
 
