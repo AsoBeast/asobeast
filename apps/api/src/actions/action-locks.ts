@@ -7,7 +7,7 @@ export async function lockActions(
   if (ids.length === 0) return;
   await tx.$queryRaw`
     SELECT "id" FROM "ActionItem"
-    WHERE "id" IN (${Prisma.join([...ids])})
+    WHERE "id" = ANY(${ids})
     ORDER BY "id"
     FOR UPDATE
   `;

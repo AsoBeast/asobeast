@@ -10,6 +10,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionContext, ActionContextLoader } from './action-context';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
+import { lockActions } from './action-locks';
 import { actionFingerprint } from './action-fingerprint';
 import { scoreImpact } from './action-impact';
 import { ExistingAction } from './action-lifecycle';
@@ -44,6 +45,7 @@ interface SurfacedDetection {
 }
 
 interface PlannedStep {
+  actionId: string | null;
   write: ActionWrite;
   counter: PlannedWrite['counter'] | MissedWrite['counter'];
   surfaced: SurfacedDetection | null;
@@ -254,14 +256,7 @@ export class ActionsGenerator {
     for (const detection of kept) {
       const row = existing.get(detection.fingerprint) ?? null;
       const planned = lifecycleWrite(context.workspaceId, row, detection, now);
-      if (!planned) continue;
-      steps.push({
-        ...planned,
-        surfaced:
-          planned.counter === 'opened' || planned.counter === 'reopened'
-            ? { detection, reopened: planned.counter === 'reopened' }
-            : null,
-      });
+      if (planned) steps.push(detectionStep(planned, row, detection));
     }
 
     for (const row of existing.values()) {
@@ -270,7 +265,7 @@ export class ActionsGenerator {
       if (!isActionRule(rule) || !evaluated.has(rule)) continue;
       const planned = missedWrite(context.workspaceId, row, now);
       if (!planned) continue;
-      steps.push({ ...planned, surfaced: null });
+      steps.push({ ...planned, actionId: row.id, surfaced: null });
     }
 
     const applied = await this.applySteps(steps);
@@ -285,6 +280,10 @@ export class ActionsGenerator {
   private async applySteps(steps: PlannedStep[]): Promise<PlannedStep[]> {
     if (steps.length === 0) return [];
     return this.prisma.withTransaction(async (tx) => {
+      await lockActions(
+        tx,
+        steps.flatMap((step) => step.actionId ?? []),
+      );
       const events: ActionEventInput[] = [];
       const applied: PlannedStep[] = [];
       for (const step of steps) {
@@ -330,6 +329,22 @@ export class ActionsGenerator {
       ];
     });
   }
+}
+
+function detectionStep(
+  planned: PlannedWrite,
+  row: ExistingRow | null,
+  detection: ScoredDetection,
+): PlannedStep {
+  const surfaced =
+    planned.counter === 'opened' || planned.counter === 'reopened';
+  return {
+    ...planned,
+    actionId: row?.id ?? null,
+    surfaced: surfaced
+      ? { detection, reopened: planned.counter === 'reopened' }
+      : null,
+  };
 }
 
 export function mergeActionRuns(

@@ -66,12 +66,9 @@ class RowLocks {
   }
 }
 
-const isJoinedList = (value: unknown): value is { values: unknown[] } =>
-  typeof value === 'object' && value !== null && 'values' in value;
-
 function lockedIds(values: unknown[]): string[] {
   return values.flatMap((value) =>
-    isJoinedList(value) ? value.values.map(String) : [String(value)],
+    Array.isArray(value) ? value.map(String) : [String(value)],
   );
 }
 
