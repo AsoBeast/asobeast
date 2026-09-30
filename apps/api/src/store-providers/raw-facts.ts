@@ -77,6 +77,22 @@ const numeric = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const DIGITS_ONLY = /^\d+$/;
+
+const digitsToNumber = (text: string): number | null => {
+  const trimmed = text.trim();
+  return DIGITS_ONLY.test(trimmed) ? Number(trimmed) : null;
+};
+
+const positiveInteger = (value: unknown): number | null => {
+  const candidate = typeof value === 'string' ? digitsToNumber(value) : value;
+  return typeof candidate === 'number' &&
+    Number.isSafeInteger(candidate) &&
+    candidate > 0
+    ? candidate
+    : null;
+};
+
 const countOf = (value: unknown): number | null => {
   const parsed = numeric(value);
   return parsed !== null && parsed >= 0 && Number.isInteger(parsed)
@@ -101,8 +117,7 @@ export function screenshotsCount(raw: unknown): number | null {
 }
 
 export function primaryGenreId(raw: unknown): number | null {
-  const value = asRecord(raw)?.primaryGenreId;
-  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  return positiveInteger(asRecord(raw)?.primaryGenreId);
 }
 
 export function primaryGenreKey(store: Store, raw: unknown): string | null {
