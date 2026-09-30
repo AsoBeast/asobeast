@@ -13,15 +13,15 @@ export const isClosed = (item: ActionItem): boolean =>
   item.status === "RESOLVED";
 
 export function ActionStateControls({ item }: { item: ActionItem }) {
-  const mutation = useActionUpdate(item);
+  const { update, isPending } = useActionUpdate(item);
 
   if (isClosed(item)) {
     return (
       <Button
         variant="outline"
         size="sm"
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate({ status: "OPEN" })}
+        disabled={isPending}
+        onClick={() => update({ status: "OPEN" })}
       >
         <RotateCcw aria-hidden className="size-4" />
         Reopen
@@ -33,8 +33,8 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
     <div className="flex flex-wrap items-center gap-2">
       <Button
         size="sm"
-        disabled={mutation.isPending}
-        onClick={() => mutation.mutate({ status: "DONE" })}
+        disabled={isPending}
+        onClick={() => update({ status: "DONE" })}
       >
         <Check aria-hidden className="size-4" />
         Done
@@ -42,15 +42,13 @@ export function ActionStateControls({ item }: { item: ActionItem }) {
       <ActionSnoozeMenu
         status={item.status}
         snoozedUntil={item.snoozedUntil}
-        disabled={mutation.isPending}
-        onSnooze={(snoozedUntil) =>
-          mutation.mutate({ status: "SNOOZED", snoozedUntil })
-        }
-        onWake={() => mutation.mutate({ status: "OPEN" })}
+        disabled={isPending}
+        onSnooze={(snoozedUntil) => update({ status: "SNOOZED", snoozedUntil })}
+        onWake={() => update({ status: "OPEN" })}
       />
       <ActionDismissMenu
-        disabled={mutation.isPending}
-        onDismiss={(reason) => mutation.mutate({ status: "DISMISSED", reason })}
+        disabled={isPending}
+        onDismiss={(reason) => update({ status: "DISMISSED", reason })}
       />
     </div>
   );
