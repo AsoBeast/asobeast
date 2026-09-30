@@ -69,11 +69,25 @@ Google Play popularity starts from suggest reach: how early the store offers the
 | Suggests it only once the whole phrase is typed, however short the phrase is | 1 |
 | Never suggests it | 0.9 |
 
-The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. The count is of typed characters, not a share of the phrase, so a long phrase gains nothing from its length. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
+The values are the typical published popularity, divided by 10, of the phrases in each row, measured on 502 US keywords across games, trivia, board game, meme and geography searches. Where the phrase sits in the suggestion list does not change its reach, because on that sample the typical popularity was the same at every position. A phrase of two or more words counts only when the store suggests it exactly as written: "geography games" or "geography game offline" does not count for "geography game", because a phrase people search is suggested as itself. A single word is different, because Google Play offers longer searches that begin with a word rather than the word alone, so for one word a suggestion counts when it is the word in the plural or continues it with more words. A search that only shares its first letters does not count.
 
-The second input is demand: the median rating count of the first page of results, on a log scale. It is discounted when the page is padded, meaning few of its titles target the phrase, because a page of unrelated giants says nothing about how often the phrase itself is searched. Titles are matched as on the App Store.
+Three more inputs place a phrase within its row:
 
-Google Play popularity is the reach plus 12 percent of the demand. A longer phrase is not discounted, because one the store offers after a few typed characters is searched as often as a short one it offers as early. Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, the reach is taken as 2.5, the typical reach of that sample, instead of reading demand alone, and confidence drops to low.
+| Input | What it reads |
+| --- | --- |
+| Untyped share | The share of the phrase that was still untyped when the store first offered it, from 0 to 1. "trivia games" offered after 3 typed characters has 0.75 of its 12 characters left. It is 0 for a phrase the store only offers in full or never offers |
+| Strength | The strength of the first ten results, as in the difficulty rating below |
+| Targeting | The share of the first ten titles that carry the phrase as written, as in the difficulty rating below |
+
+Google Play popularity is the weighted sum of the four:
+
+| Reach | Untyped share | Strength | Targeting |
+| --- | --- | --- | --- |
+| 0.5 | 1.5 | 1.1 | 1.9 |
+
+The store completing a long phrase early says more than completing a short one after the same number of characters, which is what the untyped share adds to the reach. A phrase many people search also attracts strong apps that put it in their titles, so the page itself carries evidence of demand. The weights were fitted by least squares against published popularity for 442 US keywords and checked on 200 further keywords the fit never saw. On those 200, rank agreement with the published popularity rose from 0.73 to 0.80, the mean error fell from 5.5 to 4.6 points, and 165 landed in the same grade band against 157.
+
+Two caps apply: a phrase the store never suggests stays at or below 15 on the shown scale, and a search with fewer than five results stays at or below 10. A search with no results scores 0. When the suggest lookup fails, the reach is taken as 2.5 and the untyped share as 0.4, the typical values of that sample, and confidence drops to low.
 
 ## How is difficulty rated?
 
