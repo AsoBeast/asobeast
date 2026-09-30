@@ -116,6 +116,11 @@ const buildPrisma = (rows: Row[] = [], changedIds: string[] = []) => {
     ),
   };
 
+  const $queryRaw = jest.fn<
+    Promise<unknown[]>,
+    [TemplateStringsArray, ...unknown[]]
+  >(() => Promise.resolve([]));
+
   const actionEvent = {
     createMany: jest.fn((args: { data: ActionEventInput[] }) => {
       events.push(...args.data);
@@ -128,13 +133,15 @@ const buildPrisma = (rows: Row[] = [], changedIds: string[] = []) => {
     updated,
     events,
     actionItem,
+    $queryRaw,
     withTransaction: jest.fn(
       (
         run: (tx: {
+          $queryRaw: typeof $queryRaw;
           actionItem: typeof actionItem;
           actionEvent: typeof actionEvent;
         }) => Promise<unknown>,
-      ) => run({ actionItem, actionEvent }),
+      ) => run({ $queryRaw, actionItem, actionEvent }),
     ),
   };
 };
@@ -1045,6 +1052,27 @@ describe('ActionsGenerator', () => {
         }),
       );
     });
+  });
+
+  it('locks the actions it will change in one statement before it writes them', async () => {
+    const fingerprint = await fingerprintOf();
+    const prisma = buildPrisma([
+      ...storedRow(fingerprint, { id: 'act_2' }),
+      ...storedRow('gone', { id: 'act_1' }),
+    ]);
+
+    await generatorFor(emptyContext(), prisma).generateForWorkspace(
+      budget,
+      NOW,
+    );
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    const [strings, ids] = prisma.$queryRaw.mock.calls[0];
+    expect(strings.join('')).toContain('FOR UPDATE');
+    expect([...(ids as string[])].sort()).toEqual(['act_1', 'act_2']);
+    expect(prisma.$queryRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      prisma.actionItem.updateMany.mock.invocationCallOrder[0],
+    );
   });
 
   it('records how long the run took', async () => {

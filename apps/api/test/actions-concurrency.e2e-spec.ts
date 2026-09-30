@@ -11,8 +11,10 @@ import {
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { ActionEventRecorder } from '../src/actions/action-events';
+import { ActionsGenerator } from '../src/actions/actions.generator';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { generateActionsAt } from './helpers/action-seed';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
@@ -20,6 +22,12 @@ import { obliterateQueues } from './obliterate-queues';
 const LOCK_WAIT_MS = 300;
 const CONCURRENT_REQUESTS = 5;
 const DAY_MS = 86_400_000;
+
+type StepWrite = (tx: unknown, events: unknown[]) => Promise<boolean>;
+
+interface RunWriter {
+  applySteps: (steps: Array<{ write: StepWrite }>) => Promise<unknown>;
+}
 
 const pause = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -148,6 +156,30 @@ describe('Action transitions under concurrency (e2e)', () => {
     return { inside, release };
   };
 
+  const holdBeforeLastRunWrite = () => {
+    const generator = app.get<ActionsGenerator, RunWriter>(ActionsGenerator);
+    const applySteps = generator.applySteps.bind(generator);
+    let enter!: () => void;
+    let release!: () => void;
+    const inside = new Promise<void>((resolve) => (enter = resolve));
+    const released = new Promise<void>((resolve) => (release = resolve));
+    jest.spyOn(generator, 'applySteps').mockImplementationOnce((steps) => {
+      const last = steps[steps.length - 1];
+      return applySteps([
+        ...steps.slice(0, -1),
+        {
+          ...last,
+          write: async (tx, events) => {
+            enter();
+            await released;
+            return last.write(tx, events);
+          },
+        },
+      ]);
+    });
+    return { inside, release };
+  };
+
   it('records one done event when a second done arrives while the first is still committing', async () => {
     const id = await seedAction();
     const held = holdNextEventWrite();
@@ -224,6 +256,22 @@ describe('Action transitions under concurrency (e2e)', () => {
     for (const id of ids) {
       expect(await eventTypes(id)).toEqual(['done']);
     }
+  });
+
+  it('lets a bulk close wait for a run writing the same actions in the opposite order', async () => {
+    const high = await seedAction({ id: 'act_b', fingerprint: 'fp_1' });
+    const low = await seedAction({ id: 'act_a', fingerprint: 'fp_2' });
+    const held = holdBeforeLastRunWrite();
+
+    const run = generateActionsAt(app, new Date());
+    await held.inside;
+    const bulk = bulkPatch([low, high], { status: 'DONE' });
+    await pause(LOCK_WAIT_MS);
+    held.release();
+    const [runResult, bulkRes] = await Promise.all([run, bulk]);
+
+    expect(runResult.resolved).toBe(2);
+    expect(bulkRes.status).toBe(200);
   });
 
   it('undoes once when undo arrives twice and refuses the second', async () => {
