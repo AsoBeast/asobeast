@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -55,7 +56,7 @@ export class CompetitorsService {
   async add(primaryId: string, url: string): Promise<CompetitorItem> {
     const primary = await this.prisma.app.findFirst({
       where: { id: primaryId, isCompetitor: false },
-      select: { id: true, store: true, country: true },
+      select: { id: true, store: true, storeAppId: true, country: true },
     });
 
     if (!primary) {
@@ -66,6 +67,11 @@ export class CompetitorsService {
     if (store !== primary.store) {
       throw new BadRequestException(
         'Competitor must be on the same store as the primary app',
+      );
+    }
+    if (storeAppId === primary.storeAppId) {
+      throw new ConflictException(
+        `${storeAppId} is the app you are adding competitors to. An app cannot be its own competitor.`,
       );
     }
     const known = await this.prisma.app.findFirst({
