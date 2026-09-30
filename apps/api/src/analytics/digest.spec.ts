@@ -336,4 +336,35 @@ describe('DigestService.buildDigest', () => {
 
     expect(digest.apps[0].actions).toBeNull();
   });
+
+  it('counts digest negative reviews by when they were written, not when they were stored', async () => {
+    appFindMany.mockResolvedValue([
+      {
+        id: 'app_1',
+        name: 'Mine',
+        groupId: null,
+        group: null,
+        competitors: [],
+      },
+    ]);
+    rankingFindFirst.mockResolvedValue(null);
+    trackedFindMany.mockResolvedValue([]);
+    changeEventCount.mockResolvedValue(0);
+    reviewCount.mockResolvedValue(1);
+
+    await service.buildDigest(2);
+
+    const from = new Date('2026-07-06T00:00:00Z');
+    const before = new Date('2026-07-14T00:00:00Z');
+    expect(reviewCount).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        score: { lte: 2 },
+        OR: [
+          { reviewedAt: { gte: from, lt: before } },
+          { reviewedAt: null, createdAt: { gte: from, lt: before } },
+        ],
+      },
+    });
+  });
 });

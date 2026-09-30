@@ -388,6 +388,95 @@ describe('AnalyticsController (e2e)', () => {
     expect(insights.totals.negativeReviews7d).toBe(1);
   });
 
+  it('counts a stored backlog by when its reviews were written', async () => {
+    const id = await seed();
+    const threshold = app
+      .get(ConfigService)
+      .get<number>('ALERT_REVIEW_SCORE_MAX');
+    const day = 24 * 60 * 60 * 1000;
+    const ago = (days: number): Date => new Date(Date.now() - days * day);
+    await prisma.review.createMany({
+      data: [
+        {
+          appId: id,
+          reviewId: 'old-1',
+          score: threshold,
+          text: 'a',
+          reviewedAt: ago(30),
+        },
+        {
+          appId: id,
+          reviewId: 'old-2',
+          score: 1,
+          text: 'b',
+          reviewedAt: ago(8),
+        },
+        {
+          appId: id,
+          reviewId: 'new-1',
+          score: 1,
+          text: 'c',
+          reviewedAt: ago(2),
+        },
+        {
+          appId: id,
+          reviewId: 'new-2',
+          score: threshold,
+          text: 'd',
+          reviewedAt: ago(-1),
+        },
+        {
+          appId: id,
+          reviewId: 'new-3',
+          score: threshold + 1,
+          text: 'e',
+          reviewedAt: ago(1),
+        },
+        { appId: id, reviewId: 'undated-new', score: 1, text: 'f' },
+        {
+          appId: id,
+          reviewId: 'undated-old',
+          score: 1,
+          text: 'g',
+          createdAt: ago(30),
+        },
+      ],
+    });
+
+    const insights = (await api.get('/portfolio/insights').expect(200))
+      .body as PortfolioInsights;
+
+    expect(insights.apps[0].negativeReviews7d).toBe(3);
+    expect(insights.totals.negativeReviews7d).toBe(3);
+  });
+
+  it('counts digest negative reviews by when they were written', async () => {
+    const id = await seed();
+    const day = 24 * 60 * 60 * 1000;
+    const ago = (days: number): Date => new Date(Date.now() - days * day);
+    await prisma.review.createMany({
+      data: [
+        {
+          appId: id,
+          reviewId: 'old',
+          score: 1,
+          text: 'a',
+          reviewedAt: ago(30),
+        },
+        { appId: id, reviewId: 'new', score: 1, text: 'b', reviewedAt: ago(2) },
+        { appId: id, reviewId: 'undated', score: 1, text: 'c' },
+      ],
+    });
+
+    const digest = await asWorkspace(app, () =>
+      app.get(DigestService).buildDigest(2),
+    );
+
+    expect(digest.apps.find((entry) => entry.id === id)?.negativeReviews).toBe(
+      2,
+    );
+  });
+
   it('compares the latest rating with the one a week before it', async () => {
     const id = await seed();
     const now = Date.now();

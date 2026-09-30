@@ -67,6 +67,10 @@ describe('PortfolioInsightsService.insights', () => {
     service = moduleRef.get(PortfolioInsightsService);
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('reports zeros and empty trends for an app with no data', async () => {
     appFindMany.mockResolvedValue([primary('app_1')]);
 
@@ -125,5 +129,28 @@ describe('PortfolioInsightsService.insights', () => {
     const result = await service.insights();
 
     expect(result.apps.map((app) => app.actions)).toEqual([null, null]);
+  });
+
+  it('counts negative reviews by when they were written, not when they were stored', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-09-29T12:00:00Z'));
+    appFindMany.mockResolvedValue([primary('app_1', ['rival_1'])]);
+    reviewGroupBy.mockResolvedValue([{ appId: 'app_1', _count: { _all: 4 } }]);
+
+    const result = await service.insights();
+
+    const since = new Date('2026-09-22T12:00:00Z');
+    expect(result.apps[0].negativeReviews7d).toBe(4);
+    expect(reviewGroupBy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          appId: { in: ['app_1'] },
+          score: { lte: 2 },
+          OR: [
+            { reviewedAt: { gte: since } },
+            { reviewedAt: null, createdAt: { gte: since } },
+          ],
+        },
+      }),
+    );
   });
 });
