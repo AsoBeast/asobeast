@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { hoverForTooltip } from "./hover.mts";
+import { hydrated } from "./hydrated.mts";
 
 test("table renders fixture keywords and distinguishes a paused row", async ({
   page,
@@ -463,7 +464,8 @@ test("the status filter keeps paused rows and clear all empties the url", async 
     .getByRole("table", { name: /Tracked keywords/ })
     .getByRole("row");
 
-  await page.getByRole("combobox", { name: "Filter by status" }).click();
+  const status = page.getByRole("combobox", { name: "Filter by status" });
+  await (await hydrated(status)).click();
   await page.getByRole("option", { name: "Paused" }).click();
 
   await expect(page).toHaveURL(/status=paused/);
@@ -737,7 +739,8 @@ test("the pinned columns leave the source column visible and share the row tint"
 test.describe("a market typed into the add keywords dialog", () => {
   const typeMarket = async (page: Page, code: string) => {
     await page.goto("/apps/app-1/keywords");
-    await page.getByRole("button", { name: "Add keywords" }).first().click();
+    const add = page.getByRole("button", { name: "Add keywords" }).first();
+    await (await hydrated(add)).click();
     await page.getByRole("combobox", { name: "Keyword market" }).click();
     await page.getByRole("option", { name: "Other…" }).click();
     await page
