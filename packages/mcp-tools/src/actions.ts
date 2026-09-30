@@ -179,7 +179,7 @@ export const ACTION_TOOLS: ReadTool[] = [
     }),
     request: ({ actionId }) => ({ path: `/actions/${seg(actionId)}` }),
     unavailableOn404:
-      "No action with that id in this workspace. If the id is right, the action detail needs a newer asobeast API.",
+      "The action detail is not available on this instance — it needs a newer asobeast API.",
   }),
 
   defineReadTool({

@@ -50,7 +50,10 @@ describe('toolErrorText', () => {
   });
 
   it('explains an endpoint an older instance never had', () => {
-    const text = toolErrorText(optional, { status: 404, body: null });
+    const text = toolErrorText(optional, {
+      status: 404,
+      body: { message: 'Cannot GET /apps/app-1/audit/history' },
+    });
 
     expect(text).toBe(optional.unavailableOn404);
   });

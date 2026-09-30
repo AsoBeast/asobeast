@@ -6,6 +6,7 @@ import type { ReadTool } from "./define";
 
 export * from "./define";
 export { toolText } from "./tool-text";
+export { notFoundText } from "./not-found";
 export { ACTION_TOOLS } from "./actions";
 export { APP_TOOLS } from "./apps";
 export { INSIGHT_TOOLS } from "./insights";
