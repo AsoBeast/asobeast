@@ -4,6 +4,7 @@ import {
   commandFor,
   isTypingTarget,
   nextFocus,
+  overlayOpen,
 } from "./queue-keys";
 
 const key = (value: string, modifiers: Partial<KeyboardEvent> = {}) => ({
@@ -124,5 +125,23 @@ describe("commandApplies", () => {
   it("clears the selection only from inside the queue", () => {
     expect(apply("Escape", nowhere)).toBe(false);
     expect(apply("Escape", inQueue)).toBe(true);
+  });
+});
+
+describe("overlayOpen", () => {
+  const page = (roles: string[]) =>
+    ({
+      querySelector: (selector: string) =>
+        roles.some((role) => selector.includes(`[role="${role}"]`)) ? {} : null,
+    }) as unknown as ParentNode;
+
+  it("pauses the keys under a menu, a dialog, a confirmation or a listbox", () => {
+    for (const role of ["menu", "dialog", "alertdialog", "listbox"]) {
+      expect(overlayOpen(page([role]))).toBe(true);
+    }
+  });
+
+  it("leaves a page without an overlay alone", () => {
+    expect(overlayOpen(page([]))).toBe(false);
   });
 });
