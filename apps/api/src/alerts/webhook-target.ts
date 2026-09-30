@@ -49,7 +49,6 @@ for (const [address, prefix] of BLOCKED_V6) {
 }
 
 const LOCAL_SUFFIXES = ['.localhost', '.local', '.internal', '.home.arpa'];
-const LOCAL_HOSTNAMES = new Set(['localhost', 'local', 'internal']);
 
 export interface WebhookTargetOptions {
   allowPrivate?: boolean;
@@ -61,8 +60,18 @@ export function isBlockedAddress(address: string): boolean {
   return blocked.check(address, family === 4 ? 'ipv4' : 'ipv6');
 }
 
-function isLocalHostname(hostname: string): boolean {
-  if (LOCAL_HOSTNAMES.has(hostname)) return true;
+function withoutTrailingDots(hostname: string): string {
+  let end = hostname.length;
+  while (hostname.endsWith('.', end)) end -= 1;
+  return hostname.slice(0, end);
+}
+
+function hostnameOf(url: URL): string {
+  return withoutTrailingDots(url.hostname.replace(/^\[|]$/g, '').toLowerCase());
+}
+
+function isInternalName(hostname: string): boolean {
+  if (!hostname.includes('.')) return true;
   return LOCAL_SUFFIXES.some((suffix) => hostname.endsWith(suffix));
 }
 
@@ -89,13 +98,16 @@ export function assertDeliverableUrl(
   }
   if (options.allowPrivate) return url;
 
-  const hostname = url.hostname.replace(/^\[|]$/g, '').toLowerCase();
-  if (isIP(hostname) !== 0 && isBlockedAddress(hostname)) {
-    throw new WebhookTargetError(
-      `${url.hostname} is a private or reserved address; webhooks may only reach public hosts`,
-    );
+  const hostname = hostnameOf(url);
+  if (isIP(hostname) !== 0) {
+    if (isBlockedAddress(hostname)) {
+      throw new WebhookTargetError(
+        `${url.hostname} is a private or reserved address; webhooks may only reach public hosts`,
+      );
+    }
+    return url;
   }
-  if (isLocalHostname(hostname)) {
+  if (isInternalName(hostname)) {
     throw new WebhookTargetError(
       `${url.hostname} resolves inside this network; webhooks may only reach public hosts`,
     );

@@ -175,6 +175,48 @@ describe('WebhooksController (e2e)', () => {
     },
   );
 
+  it.each([
+    'http://hooks:8080/x',
+    'http://n8n:5678/webhook/asobeast',
+    'http://my_hooks:8080/x',
+    'http://LOCALHOST:8080/x',
+    'http://0.0.0.0:8080/x',
+    'http://printer.local。/x',
+  ])('explains that %s stays inside the network', async (url) => {
+    const response = await api
+      .post('/webhooks')
+      .send({ url, events: ['metadata.changed'] })
+      .expect(400);
+    const { message } = response.body as ApiErrorEnvelope;
+    expect(message).toMatch(/private|reserved|inside this network/);
+    expect(message).not.toMatch(/must be a URL address/);
+    expect(await prisma.webhook.count()).toBe(0);
+  });
+
+  it('refuses to move an existing webhook onto a bare hostname', async () => {
+    const created = await api
+      .post('/webhooks')
+      .send({
+        url: 'https://hooks.example.com/asobeast',
+        events: ['metadata.changed'],
+      })
+      .expect(201);
+    const webhook = created.body as WebhookItem;
+
+    const response = await api
+      .patch(`/webhooks/${webhook.id}`)
+      .send({ url: 'http://hooks:8080/x' })
+      .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toMatch(
+      /inside this network/,
+    );
+
+    const stored = await prisma.webhook.findUniqueOrThrow({
+      where: { id: webhook.id },
+    });
+    expect(stored.url).toBe('https://hooks.example.com/asobeast');
+  });
+
   it('refuses to move an existing webhook onto a private target', async () => {
     const created = await api
       .post('/webhooks')
