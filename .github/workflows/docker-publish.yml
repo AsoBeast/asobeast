@@ -100,3 +100,26 @@ jobs:
             echo "::error::the metadata step produced no tags to verify"
             exit 1
           fi
+  verify-anonymous-pull:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Pull every published tag without credentials
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}"
+          version="${RELEASE_TAG#v}"
+          node .github/scripts/verify-anonymous-pull.mjs \
+            "${repository}/asobeast-api:${version}" \
+            "${repository}/asobeast-api:latest" \
+            "${repository}/asobeast-web:${version}" \
+            "${repository}/asobeast-web:latest"
