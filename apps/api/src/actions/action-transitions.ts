@@ -199,7 +199,7 @@ export class ActionTransitions {
     ) {
       throw new ConflictException('Nothing recent to undo on this action');
     }
-    if (body.status !== (earlier[0]?.status ?? 'OPEN')) {
+    if (!restoresPrevious(body, earlier[0])) {
       throw new ConflictException('Undo must restore the previous status');
     }
 
@@ -267,6 +267,18 @@ function isNoteOnly(
   }
   if (body.status === 'DISMISSED') return body.reason === undefined;
   return body.status === 'DONE';
+}
+
+function restoresPrevious(
+  body: ActionUpdateRequest,
+  before: RevertEvent | undefined,
+): boolean {
+  if (body.status !== (before?.status ?? 'OPEN')) return false;
+  if (body.status !== 'SNOOZED') return true;
+  return (
+    body.snoozedUntil !== undefined &&
+    before?.snoozedUntil?.getTime() === new Date(body.snoozedUntil).getTime()
+  );
 }
 
 function countsAsReopen(previous: string, target: ActionUpdateStatus): boolean {
