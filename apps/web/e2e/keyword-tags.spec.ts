@@ -32,10 +32,27 @@ test("the switch still pauses a keyword through the shared update", async ({
 
   const patch = page.waitForRequest((request) => request.method() === "PATCH");
   await row(page, "focus timer")
-    .getByRole("switch", { name: "Pause keyword" })
+    .getByRole("switch", { name: "Track keyword" })
     .click();
 
   expect((await patch).postDataJSON()).toEqual({ active: false });
+});
+
+test("the switch keeps one name whether the keyword is tracked or paused", async ({
+  page,
+}) => {
+  await page.goto(KEYWORDS);
+  const toggle = row(page, "focus timer").getByRole("switch", {
+    name: "Track keyword",
+  });
+
+  await expect(toggle).toBeChecked();
+  await toggle.click();
+
+  await expect(toggle).not.toBeChecked();
+  await expect(
+    row(page, "focus timer").getByRole("switch", { name: "Track keyword" }),
+  ).toHaveCount(1);
 });
 
 test("tags are added with enter, a comma and a suggestion, and saved", async ({
