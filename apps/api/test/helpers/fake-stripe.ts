@@ -12,6 +12,7 @@ export interface Recorded<T> {
 export interface FakeStripe extends StripeApi {
   createdCustomers: Recorded<Stripe.CustomerCreateParams>[];
   deletedCustomers: string[];
+  unknownCustomers: Set<string>;
   checkoutSessions: Recorded<Stripe.Checkout.SessionCreateParams>[];
   portalSessions: Recorded<Stripe.BillingPortal.SessionCreateParams>[];
   expired: string[];
@@ -70,6 +71,17 @@ function listOf<T>(items: T[]): Stripe.ApiListPromise<T> {
     },
     autoPagingToArray: ({ limit }: { limit: number }) =>
       Promise.resolve(items.slice(0, limit)),
+  });
+}
+
+function rejectedList<T>(error: Error): Stripe.ApiListPromise<T> {
+  return Object.assign(Promise.reject(error), {
+    next: () => Promise.reject(error),
+    [Symbol.asyncIterator]() {
+      return this;
+    },
+    autoPagingEach: () => Promise.reject(error),
+    autoPagingToArray: () => Promise.reject(error),
   });
 }
 
@@ -146,6 +158,7 @@ export function fakeStripe(): FakeStripe {
   const fake: FakeStripe = {
     createdCustomers: [],
     deletedCustomers: [],
+    unknownCustomers: new Set(),
     checkoutSessions: [],
     portalSessions: [],
     expired: [],
@@ -214,14 +227,18 @@ export function fakeStripe(): FakeStripe {
     },
 
     subscriptions: {
-      list: (params = {}) =>
-        listOf(
+      list: (params = {}) => {
+        if (params.customer && fake.unknownCustomers.has(params.customer)) {
+          return rejectedList(new MissingResource('customer', params.customer));
+        }
+        return listOf(
           [...fake.subscriptionStore.values()].filter(
             (subscription) =>
               !params.customer ||
               customerIdOf(subscription) === params.customer,
           ),
-        ),
+        );
+      },
       retrieve: (id) => found(fake.subscriptionStore, 'subscription', id),
     },
 
@@ -266,6 +283,7 @@ export function fakeStripe(): FakeStripe {
     reset() {
       fake.createdCustomers.length = 0;
       fake.deletedCustomers.length = 0;
+      fake.unknownCustomers.clear();
       fake.checkoutSessions.length = 0;
       fake.portalSessions.length = 0;
       fake.expired.length = 0;
