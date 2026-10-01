@@ -107,7 +107,7 @@ Run these in order, from an up to date `main`. Steps 1 and 2 are public and effe
     Release Please already wrote the notes. Extract them rather than retyping them, so the release and the changelog cannot disagree.
 
     ```bash
-    awk '/^## \[<version>\]/{f=1} /^## <previous>/{f=0} f' CHANGELOG.md > notes.md
+    awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.md
     gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
     ```
 
@@ -196,7 +196,7 @@ Release Please considers only commits after the last release tag, so an override
     gh release edit v<version> --notes-file notes.md
     ```
 
-    The `diff` must show only the added lines. Editing the notes changes no tag and publishes no images.
+    The `diff` must show only the added lines and a trailing blank line. Editing the notes changes no tag and publishes no images.
   </Step>
 </Steps>
 
