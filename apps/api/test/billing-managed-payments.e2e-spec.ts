@@ -1,7 +1,7 @@
 import './helpers/enable-billing';
 import './helpers/enable-stripe';
 import './helpers/enable-managed-payments';
-import type { BillingSession } from '@asobeast/shared';
+import type { BillingCatalog, BillingSession } from '@asobeast/shared';
 import { WORKSPACE_METADATA_KEY } from '../src/billing/workspace-link';
 import {
   resetBillingState,
@@ -43,5 +43,11 @@ describe('Billing through managed payments (e2e)', () => {
     expect(recorded.params).not.toHaveProperty('automatic_tax');
     expect(recorded.params).not.toHaveProperty('tax_id_collection');
     expect(recorded.params).not.toHaveProperty('customer_update');
+  });
+
+  it('tells the paywall that stripe sells the plan', async () => {
+    const response = await harness.owner.get('/billing/catalog').expect(200);
+
+    expect((response.body as BillingCatalog).managedPayments).toBe(true);
   });
 });

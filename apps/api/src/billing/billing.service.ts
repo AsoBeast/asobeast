@@ -67,6 +67,7 @@ export class BillingService {
     return {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
+      managedPayments: this.taxCollection() === 'managed_payments',
     };
   }
 

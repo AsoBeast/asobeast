@@ -888,6 +888,19 @@ describe('BillingService', () => {
           amountUsd: 10,
         },
       ],
+      managedPayments: false,
+    });
+  });
+
+  it('tells the paywall when stripe sells the plan as merchant of record', async () => {
+    const { service } = build(
+      null,
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_MANAGED_PAYMENTS: true },
+    );
+
+    await expect(service.catalog()).resolves.toMatchObject({
+      managedPayments: true,
     });
   });
 });
