@@ -15,6 +15,7 @@ import {
 import {
   ACTIONS,
   ACTION_SUMMARY,
+  APP_AR_ID,
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
   LONG_AUDIT,
@@ -1501,7 +1502,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
     handler: ([id], req, res) =>
-      apps.some((app) => app.id === id) || id in METADATA_AUDITS
+      apps.some((app) => app.id === id) || id === APP_AR_ID
         ? json(res, 200, {
             ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
             appId: id,
