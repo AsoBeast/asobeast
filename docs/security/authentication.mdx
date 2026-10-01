@@ -117,6 +117,8 @@ With billing enabled and SMTP configured, registration creates the account but w
 
 A workspace gets one trial, ever. `trialStartedAt` records it and is never cleared, so a cancelled customer who returns resumes on a paid plan rather than on a second free week. Where SMTP is not configured the trial starts at registration, because there is no way to deliver a confirmation.
 
+Until the address is confirmed the web app asks the account to confirm instead of asking it to pay. `GET /auth/me` reports `trialAwaitsConfirmation: true` for an account that has not confirmed its address, in a workspace that has never had a trial and has no plan in force, on an instance that sends confirmation email. The banner, the upgrade page and the plan card then say that confirming starts the free trial and offer a new link, while the plans stay available to anyone who would rather pay first. The field is `false` where SMTP is not configured, because the trial starts at registration there, and for a member of a workspace whose trial has already run, because confirming would start nothing.
+
 Registration survives a confirmation email that could not be sent, so a mail outage never costs the account. The signed in account asks for a fresh link with `POST /auth/verify/resend`, which retires the previous one; the confirmation page offers it whenever a link is refused. Opening a link while signed in as someone else is refused before the link is spent, so it stays usable for the account it belongs to. A deployment with billing and SMTP but no `WEB_PUBLIC_URL` refuses to boot, because every link it sent would carry no host.
 
 ## What an unentitled workspace keeps
