@@ -1424,6 +1424,83 @@ test("a member on a trial is not sent to an upgrade they cannot make", async ({
   ).toHaveCount(0);
 });
 
+async function holdMe(page: Page, user: AuthUser) {
+  let release = (): void => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested = (): void => undefined;
+  const asked = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  await page.route("**/api/backend/auth/me", async (route) => {
+    requested();
+    await released;
+    await route.fulfill(fulfillJson(200, user));
+  });
+  return { asked, release };
+}
+
+test("a member is shown no billing action while the account is still loading", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, INDIE_PLAN);
+  const me = await holdMe(page, MEMBER_USER);
+
+  await page.goto("/settings");
+  await me.asked;
+  await expect(
+    page.getByRole("region", { name: "Plan" }).getByText("3 of 5"),
+  ).toBeVisible();
+
+  expect(await page.getByRole("link", { name: "Upgrade plan" }).count()).toBe(
+    0,
+  );
+  expect(
+    await page.getByRole("button", { name: "Manage billing" }).count(),
+  ).toBe(0);
+
+  me.release();
+  await expect(
+    page.getByText("Your workspace owner manages billing."),
+  ).toBeVisible();
+});
+
+test("the upgrade page offers no plan while the account is still loading", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, INDIE_PLAN);
+  const me = await holdMe(page, MEMBER_USER);
+
+  await page.goto("/upgrade");
+  await me.asked;
+
+  expect(
+    await page
+      .getByRole("button", { name: /billing portal|Choose|Resume|Confirming/ })
+      .count(),
+  ).toBe(0);
+
+  me.release();
+  await expect(
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
+  ).toBeVisible();
+});
+
 test("an owner still gets every billing action", async ({ page }) => {
   await seedSession(page);
   await routeStatus(page, {
