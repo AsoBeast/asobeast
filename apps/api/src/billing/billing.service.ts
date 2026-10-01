@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
+import { checkoutSessionParams } from './checkout-session';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
@@ -79,25 +80,14 @@ export class BillingService {
     try {
       await this.closeOpenCheckout(workspaceId);
       const session = await this.stripe.createCheckoutSession(
-        {
-          mode: 'subscription',
-          customer: customerId,
-          line_items: [{ price: price.priceId, quantity: 1 }],
-          client_reference_id: workspaceId,
-          subscription_data: {
-            metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
-            billing_mode: { type: 'flexible' },
-          },
-          success_url: this.checkoutReturnUrl(),
-          cancel_url: this.webUrl(UPGRADE_PATH),
-          allow_promotion_codes: true,
-          billing_address_collection: 'required',
-          tax_id_collection: { enabled: true },
-          customer_update: { address: 'auto', name: 'auto' },
-          automatic_tax: {
-            enabled: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
-          },
-        },
+        checkoutSessionParams({
+          customerId,
+          priceId: price.priceId,
+          workspaceId,
+          successUrl: this.checkoutReturnUrl(),
+          cancelUrl: this.webUrl(UPGRADE_PATH),
+          automaticTax: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
+        }),
         `checkout:${workspaceId}:${attempt}`,
       );
 
