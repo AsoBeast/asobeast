@@ -1,4 +1,9 @@
-import { PLANS, type AccountPlan, type PaidPlanName } from "@asobeast/shared";
+import {
+  PLANS,
+  type AccountPlan,
+  type BillingCatalog,
+  type PaidPlanName,
+} from "@asobeast/shared";
 import { formatDate } from "@/lib/format";
 
 export type PlanAction =
@@ -6,6 +11,15 @@ export type PlanAction =
 
 export const PAYMENT_CONFIRMING =
   "Your payment is being confirmed. This usually takes a minute; if it has not completed within a day the attempt expires and you can choose a plan again.";
+
+export const SOLD_THROUGH_LINK =
+  "Sold through Link, our reseller. Prices are in US dollars; checkout adds sales tax or VAT where it applies and can charge in your local currency. Cancel any time from settings.";
+
+export const HANDLED_BY_STRIPE =
+  "Payments are handled by Stripe. Cancel any time from settings.";
+
+export const CHECKOUT_UNCONFIGURED =
+  "Checkout is not configured on this instance.";
 
 const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
 
@@ -82,4 +96,9 @@ export function planStatusLine(plan: AccountPlan): string {
 export function planCallToAction(plan: AccountPlan): string {
   if (plan.entitled) return "Upgrade plan";
   return stalled(plan) ? "Resume plan" : "Choose a plan";
+}
+
+export function paymentNote(catalog: BillingCatalog | undefined): string {
+  if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
+  return catalog.managedPayments ? SOLD_THROUGH_LINK : HANDLED_BY_STRIPE;
 }

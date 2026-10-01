@@ -87,6 +87,7 @@ function build(held: Stripe.Subscription[]) {
     enabled: true,
     createCheckoutSession,
     createCustomer: jest.fn(),
+    customerExists: jest.fn(() => Promise.resolve(true)),
     retrieveCheckoutSession: jest.fn(),
     expireCheckoutSession: jest.fn(),
     listCustomerSubscriptions: jest.fn(() => Promise.resolve(held)),

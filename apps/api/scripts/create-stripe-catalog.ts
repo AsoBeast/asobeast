@@ -23,21 +23,10 @@ import {
   chargesListPrice,
   lookupKeyOf,
 } from '../src/billing/price-catalog';
+import { dashboardChecklist } from '../src/billing/dashboard-checklist';
 import { createStripeClient } from '../src/billing/stripe.client';
 
 const PRICE_TAX_BEHAVIOR = 'exclusive';
-
-const DASHBOARD_CHECKLIST = [
-  'Settings, Checkout and Payment Links, Subscriptions: limit customers to one subscription, on',
-  'Settings, Billing, Subscriptions and emails: Smart Retries on, then mark the subscription unpaid',
-  'Settings, Billing, Subscriptions and emails: emails for failed payments, expiring cards and payments requiring authentication, on with the hosted invoice link',
-  'Settings, Billing, Subscriptions and emails: trial end behaviour stays irrelevant, Checkout never starts a Stripe trial',
-  'Settings, Payment methods: card, Link, Apple Pay and Google Pay on; SEPA Direct Debit and Cash App Pay off',
-  'Settings, Checkout: adaptive pricing off',
-  'Settings, Public details: legal name, support email hello@asobeast.dev, terms and privacy urls',
-  'Radar: default rules',
-  'Developers, Webhooks: one endpoint per environment with the ten handled events on the pinned api version',
-];
 
 type Say = (line: string) => void;
 
@@ -147,6 +136,7 @@ async function ensurePortal(
 async function main(): Promise<void> {
   const stripe = createStripeClient(process.env.STRIPE_SECRET_KEY);
   if (!stripe) throw new Error('STRIPE_SECRET_KEY is not set');
+  const managedPayments = process.env.STRIPE_MANAGED_PAYMENTS === 'true';
   const say: Say = (line) => process.stdout.write(`${line}\n`);
   const lines: string[] = [];
   const products: PortalProduct[] = [];
@@ -175,8 +165,12 @@ async function main(): Promise<void> {
   say(
     'the api resolves these prices by lookup key; setting STRIPE_PRICE_* replaces the whole catalog with the four ids it names',
   );
-  say('\nset these in the dashboard, which the api cannot reach:');
-  for (const item of DASHBOARD_CHECKLIST) say(`  [ ] ${item}`);
+  say(
+    managedPayments
+      ? '\ncheckout sells through Stripe Managed Payments; set these in the dashboard, which the api cannot reach:'
+      : '\ncheckout sells as this business; set these in the dashboard, which the api cannot reach:',
+  );
+  for (const item of dashboardChecklist(managedPayments)) say(`  [ ] ${item}`);
 }
 
 main().catch((error: unknown) => {

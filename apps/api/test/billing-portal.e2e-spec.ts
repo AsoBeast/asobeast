@@ -70,4 +70,27 @@ describe('Billing portal (e2e)', () => {
     }
     await portal().expect(429);
   });
+
+  it('opens the portal on a fresh customer when stripe no longer knows the stored one', async () => {
+    await resetBillingState(harness, {
+      billingCustomerId: 'cus_from_another_account',
+    });
+    harness.fake.unknownCustomers.add('cus_from_another_account');
+
+    await portal().expect(200);
+
+    expect(harness.fake.portalSessions[0].params.customer).toBe('cus_test_1');
+  });
+
+  it('opens the portal on a fresh customer when the stored one was deleted', async () => {
+    await resetBillingState(harness, { billingCustomerId: 'cus_deleted' });
+    harness.fake.deletedCustomers.push('cus_deleted');
+
+    await portal().expect(200);
+
+    expect(harness.fake.portalSessions[0].params.customer).toBe('cus_test_1');
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      billingCustomerId: 'cus_test_1',
+    });
+  });
 });

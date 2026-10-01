@@ -58,6 +58,7 @@ describe('BillingReconciler', () => {
     workspaces?: Workspace[];
     subscription?: Stripe.Subscription;
     retrieveFails?: Error;
+    listFails?: Error;
     customerSubscriptions?: Stripe.Subscription[];
     remote?: Stripe.Subscription[];
     enabled?: boolean;
@@ -73,7 +74,9 @@ describe('BillingReconciler', () => {
       },
     );
     const listCustomerSubscriptions = jest.fn(() =>
-      Promise.resolve(over.customerSubscriptions ?? []),
+      over.listFails
+        ? Promise.reject(over.listFails)
+        : Promise.resolve(over.customerSubscriptions ?? []),
     );
     const findMany = jest.fn(() => Promise.resolve(rows));
     const redisSet = jest.fn(() => Promise.resolve('OK'));
@@ -408,6 +411,71 @@ describe('BillingReconciler', () => {
     });
     const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
     expect(args.data).toMatchObject({ plan: 'free', subscriptionId: null });
+  });
+
+  it('revokes a plan when stripe knows neither its subscription nor its customer', async () => {
+    const missing = stripeErrorOf({
+      code: 'resource_missing',
+      statusCode: 404,
+    });
+    const { reconciler, rows } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'indie',
+          billingCustomerId: 'cus_from_another_account',
+          subscriptionId: 'sub_from_another_account',
+          subscriptionStatus: 'active',
+        }),
+      ],
+      retrieveFails: missing,
+      listFails: missing,
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 1,
+      unreconciled: [],
+    });
+    expect(rows[0]).toMatchObject({
+      plan: 'free',
+      subscriptionId: null,
+      subscriptionStatus: null,
+    });
+  });
+
+  it('agrees with stripe about a free workspace whose customer stripe does not know', async () => {
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'free',
+          billingCustomerId: 'cus_from_another_account',
+          subscriptionId: null,
+          subscriptionStatus: null,
+        }),
+      ],
+      listFails: stripeErrorOf({ code: 'resource_missing', statusCode: 404 }),
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 0,
+      unreconciled: [],
+    });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it('keeps the plan when listing the customer fails for another reason', async () => {
+    const { reconciler, update } = build({
+      workspaces: [workspaceOf()],
+      retrieveFails: stripeErrorOf({
+        code: 'resource_missing',
+        statusCode: 404,
+      }),
+      listFails: stripeErrorOf({ type: 'StripeConnectionError' }),
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      unreconciled: ['ws_1'],
+    });
+    expect(update).not.toHaveBeenCalled();
   });
 
   it.each([

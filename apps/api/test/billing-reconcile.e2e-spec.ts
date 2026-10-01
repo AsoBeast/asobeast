@@ -81,6 +81,25 @@ describe('Billing reconcile (e2e)', () => {
     await reconcile().expect(429);
   });
 
+  it('revokes a plan whose customer and subscription belong to another stripe account', async () => {
+    await resetBillingState(harness, {
+      plan: 'indie',
+      billingCustomerId: 'cus_from_another_account',
+      subscriptionId: 'sub_from_another_account',
+      subscriptionStatus: 'active',
+    });
+    harness.fake.unknownCustomers.add('cus_from_another_account');
+
+    const response = await reconcile().expect(200);
+
+    expect((response.body as BillingReconcileReport).corrected).toBe(1);
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      plan: 'free',
+      subscriptionId: null,
+      subscriptionStatus: null,
+    });
+  });
+
   it('converges from the checkout session the customer returned with', async () => {
     await resetBillingState(harness, { billingCustomerId: CUSTOMER });
     harness.fake.sessions.set(

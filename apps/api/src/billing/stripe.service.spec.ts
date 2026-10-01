@@ -74,4 +74,51 @@ describe('StripeService', () => {
       'stripe is down',
     );
   });
+
+  describe('customerExists', () => {
+    const serviceWith = (retrieve: jest.Mock) =>
+      new StripeService({ customers: { retrieve } } as unknown as Stripe);
+
+    it('is true for a customer stripe returns', async () => {
+      const service = serviceWith(
+        jest.fn().mockResolvedValue({ id: 'cus_1', object: 'customer' }),
+      );
+
+      await expect(service.customerExists('cus_1')).resolves.toBe(true);
+    });
+
+    it('is false for a deleted customer', async () => {
+      const service = serviceWith(
+        jest.fn().mockResolvedValue({
+          id: 'cus_1',
+          object: 'customer',
+          deleted: true,
+        }),
+      );
+
+      await expect(service.customerExists('cus_1')).resolves.toBe(false);
+    });
+
+    it('is false for a customer stripe has no record of', async () => {
+      const service = serviceWith(
+        jest.fn().mockRejectedValue(
+          Object.assign(new Error('No such customer'), {
+            code: 'resource_missing',
+            statusCode: 404,
+          }),
+        ),
+      );
+
+      await expect(service.customerExists('cus_1')).resolves.toBe(false);
+    });
+
+    it('rethrows any other failure', async () => {
+      const down = Object.assign(new Error('connection'), {
+        type: 'StripeConnectionError',
+      });
+      const service = serviceWith(jest.fn().mockRejectedValue(down));
+
+      await expect(service.customerExists('cus_1')).rejects.toBe(down);
+    });
+  });
 });

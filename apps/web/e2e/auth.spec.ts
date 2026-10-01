@@ -863,6 +863,53 @@ test("the upgrade page lists both paid plans with their limits", async ({
   await expect(page.getByText("$990", { exact: true })).toBeVisible();
 });
 
+async function openUpgradeSoldBy(page: Page, managedPayments: boolean) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, { ...INDIE_PLAN, subscribed: false });
+  await page.route("**/api/backend/billing/catalog", (route) =>
+    route.fulfill(
+      fulfillJson(200, {
+        enabled: true,
+        managedPayments,
+        prices: [
+          {
+            plan: "indie",
+            interval: "month",
+            priceId: "price_indie_month",
+            amountUsd: 10,
+          },
+        ],
+      }),
+    ),
+  );
+  await page.goto("/upgrade");
+}
+
+test("the upgrade page names link as the reseller under managed payments", async ({
+  page,
+}) => {
+  await openUpgradeSoldBy(page, true);
+
+  await expect(page.getByText(/Sold through Link, our reseller/)).toBeVisible();
+  await expect(page.getByText(/sales tax or VAT/)).toBeVisible();
+  await expect(page.getByText(/Payments are handled by Stripe/)).toHaveCount(0);
+});
+
+test("the upgrade page keeps the stripe sentence when this business sells", async ({
+  page,
+}) => {
+  await openUpgradeSoldBy(page, false);
+
+  await expect(page.getByText(/Payments are handled by Stripe/)).toBeVisible();
+  await expect(page.getByText(/Sold through Link/)).toHaveCount(0);
+});
+
 test("the upgrade page sends a configured plan to stripe checkout", async ({
   page,
 }) => {
