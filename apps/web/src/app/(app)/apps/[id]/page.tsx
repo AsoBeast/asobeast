@@ -47,7 +47,6 @@ export default async function AppOverviewPage({
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(appSummaryOptions(id));
-  void queryClient.prefetchQuery(firstRunOptions(id));
   void queryClient.prefetchQuery(visibilityOptions(id, presetToRange("30d")));
   void queryClient.prefetchQuery(
     categoryRanksOptions(id, presetToRange(categoryRange)),
@@ -59,6 +58,7 @@ export default async function AppOverviewPage({
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
+  await queryClient.prefetchQuery(firstRunOptions(id));
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

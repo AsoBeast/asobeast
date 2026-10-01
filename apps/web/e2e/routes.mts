@@ -21,6 +21,28 @@ export const SIGNED_IN_ROUTES = [
   ["app-setup", `/apps/${APP}/setup`],
 ] as const;
 
+const APP_ROUTE_PREFIX = `/apps/${APP}`;
+
+const isAppRoute = ([, path]: (typeof SIGNED_IN_ROUTES)[number]) =>
+  path.startsWith(APP_ROUTE_PREFIX);
+
+export const WORKSPACE_ROUTES = SIGNED_IN_ROUTES.filter(
+  (route) => !isAppRoute(route),
+);
+
+const APP_ROUTES = SIGNED_IN_ROUTES.filter(isAppRoute);
+
+export const appRoutesFor = (
+  appId: string,
+): ReadonlyArray<readonly [string, string]> =>
+  APP_ROUTES.map(
+    ([name, path]) =>
+      [
+        `${name} of ${appId}`,
+        path.replace(APP_ROUTE_PREFIX, `/apps/${appId}`),
+      ] as const,
+  );
+
 export const SIGNED_OUT_ROUTES = [
   ["login", "/login", {}],
   ["register", "/register", { e2e_setup_required: "1" }],

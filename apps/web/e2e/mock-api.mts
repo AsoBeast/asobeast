@@ -3,6 +3,7 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
+import { setTimeout as delay } from "node:timers/promises";
 import { summarizeActions } from "./actions-summary.mts";
 import {
   ACTION_ACTIVITY,
@@ -256,7 +257,7 @@ type Handler = (
   params: string[],
   req: IncomingMessage,
   res: ServerResponse,
-) => void;
+) => void | Promise<void>;
 
 interface Route {
   method: string;
@@ -354,6 +355,14 @@ function cookieValue(req: IncomingMessage, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+async function delayFromCookie(
+  req: IncomingMessage,
+  name: string,
+): Promise<void> {
+  const ms = Number(cookieValue(req, name));
+  if (ms > 0) await delay(ms);
 }
 
 function hasCookie(
@@ -865,12 +874,16 @@ function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
     : RUN_STATUS;
 }
 
+const FIRST_RUN_FAIL_COOKIE = "e2e_first_run_fail";
+const FIRST_RUN_LATENCY_COOKIE = "e2e_first_run_latency";
+
 function firstRunFor(appId: string): FirstRunStatus {
   if (appId === "app-new") return FIRST_RUN_MID;
   if (appId === "app-2") return FIRST_RUN_UNSCHEDULED;
   return { ...FIRST_RUN_COMPLETE, appId };
 }
 
+const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
@@ -993,7 +1006,13 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/first-run$/,
-    handler: (params, _q, res) => json(res, 200, firstRunFor(params[0])),
+    handler: async (params, req, res) => {
+      await delayFromCookie(req, FIRST_RUN_LATENCY_COOKIE);
+      if (hasCookie(req, FIRST_RUN_FAIL_COOKIE, "1")) {
+        return json(res, 500, errorEnvelope(500, req.url ?? "/"));
+      }
+      json(res, 200, firstRunFor(params[0]));
+    },
   },
   {
     method: "GET",
@@ -1856,8 +1875,9 @@ const routes: Route[] = [
   },
 ];
 
-const server = createServer((req, res) => {
+const server = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
+  await delayFromCookie(req, API_LATENCY_COOKIE);
   for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = pathname.match(route.pattern);
