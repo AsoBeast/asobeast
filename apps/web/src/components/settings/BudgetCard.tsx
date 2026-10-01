@@ -20,6 +20,7 @@ import {
   storeLabel,
 } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
+import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 
 const WARN = 0.6;
 const DANGER = 0.85;
@@ -161,22 +162,21 @@ export function BudgetCard({
               <div className="flex flex-col gap-0.5">
                 <dt className="text-muted-foreground">Apps</dt>
                 <dd className="text-lg font-semibold tabular-nums">
-                  {formatNumber(budget.quota.apps.used)} /{" "}
-                  {formatPlanLimit(budget.quota.apps.limit)}
+                  {formatQuotaUsage(budget.quota.apps)}
                 </dd>
               </div>
               <div className="flex flex-col gap-0.5">
                 <dt className="text-muted-foreground">Keyword markets</dt>
                 <dd className="text-lg font-semibold tabular-nums">
-                  {formatNumber(budget.quota.keywordMarkets.used)} /{" "}
-                  {formatPlanLimit(budget.quota.keywordMarkets.limit)}
+                  {formatQuotaUsage(budget.quota.keywordMarkets)}
                 </dd>
               </div>
             </dl>
           </div>
         ) : null}
 
-        {budget.quota?.overLimitSince ? (
+        {budget.quota?.overLimitSince &&
+        !hasNoCapacity(budget.quota.keywordMarkets) ? (
           <Alert variant="destructive">
             <TriangleAlert />
             <AlertDescription>

@@ -599,8 +599,9 @@ test("settings shows the plan, its usage and the upgrade path", async ({
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Plan" })).toBeVisible();
-  await expect(page.getByText("3 of 5")).toBeVisible();
-  await expect(page.getByText("240 of 1,000")).toBeVisible();
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("3 of 5")).toBeVisible();
+  await expect(plan.getByText("240 of 1,000")).toBeVisible();
 
   await page.getByRole("link", { name: "Upgrade plan" }).click();
   await expect(page).toHaveURL(/\/upgrade$/);

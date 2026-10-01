@@ -18,7 +18,6 @@ import {
 import { Meter } from "@/components/ui/meter";
 import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, openBillingPortal } from "@/lib/api";
-import { formatNumber, formatPlanLimit } from "@/lib/format";
 import {
   MEMBER_BILLING_NOTE,
   planAction,
@@ -26,6 +25,7 @@ import {
   planStatusLine,
 } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
+import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const RESOURCES = [
@@ -41,11 +41,11 @@ function UsageRow({ label, usage }: { label: string; usage: QuotaUsage }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-4 text-sm">
         <dt className="text-muted-foreground">{label}</dt>
-        <dd className="font-medium tabular-nums">
-          {formatNumber(usage.used)} of {formatPlanLimit(usage.limit)}
-        </dd>
+        <dd className="font-medium tabular-nums">{formatQuotaUsage(usage)}</dd>
       </div>
-      <Meter value={ratio} max={1} tone={ratio >= 1 ? "health" : "neutral"} />
+      {hasNoCapacity(usage) ? null : (
+        <Meter value={ratio} max={1} tone={ratio >= 1 ? "health" : "neutral"} />
+      )}
     </div>
   );
 }
