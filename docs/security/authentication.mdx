@@ -137,6 +137,8 @@ Reads stay open only to a browser session. A personal API token is refused outri
 
 A workspace has one owner and any number of members. The owner manages billing and the team; a member does everything else. Nobody belongs to two workspaces.
 
+A member sees the plan and its usage read only. The plan card in settings and the upgrade page say that the workspace owner manages billing, and neither offers a checkout or the billing portal, which the API refuses to anyone but the owner.
+
 - The owner invites by email from **Settings, Team**. The invitation expires after seven days.
 - asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. Otherwise the dialog shows the link for the owner to pass on.
 - The invitee opens the link, chooses a password, and joins the existing workspace as a member. The token is single use.
