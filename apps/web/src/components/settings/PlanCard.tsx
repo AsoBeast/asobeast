@@ -93,7 +93,7 @@ function BillingActions({ plan }: { plan: AccountPlan }) {
 
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
-  const { isMember, awaitingConfirmation } = useAuth();
+  const { isMember, isOwner, awaitingConfirmation } = useAuth();
 
   if (!plan.billing) return null;
 
@@ -123,9 +123,8 @@ export function PlanCard() {
           <p className="text-body text-muted-foreground">
             {MEMBER_BILLING_NOTE}
           </p>
-        ) : (
-          <BillingActions plan={plan} />
-        )}
+        ) : null}
+        {isOwner ? <BillingActions plan={plan} /> : null}
       </CardFooter>
     </Card>
   );

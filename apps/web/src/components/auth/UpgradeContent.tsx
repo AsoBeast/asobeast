@@ -47,6 +47,7 @@ import {
 import { useSingleFlight } from "@/lib/single-flight";
 import { MemberBilling } from "./MemberBilling";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
+import { SessionCheck } from "./SessionCheck";
 import { useAuth } from "./use-auth";
 
 const INCLUDED = [
@@ -169,15 +170,22 @@ function PlanOption({
 }
 
 export function UpgradeContent() {
-  const { isMember, awaitingConfirmation } = useAuth();
+  const { isLoading, isMember, awaitingConfirmation } = useAuth();
   const { data: plan } = useQuery(accountPlanOptions);
   const { data: catalog } = useQuery({
     ...billingCatalogOptions,
-    enabled: !isMember,
+    enabled: !isLoading && !isMember,
   });
   const [interval, setInterval] = useState<BillingInterval>("month");
 
   if (isMember) return <MemberBilling plan={plan} />;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <SessionCheck />
+      </div>
+    );
+  }
 
   const priceFor = (name: PaidPlanName) =>
     catalog?.prices.find(

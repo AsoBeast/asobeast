@@ -900,8 +900,9 @@ test("an unconfirmed member of a workspace whose trial ended is not asked to con
 
   await page.goto("/upgrade");
   await expect(
-    page.getByText("Your trial ended on", { exact: false }),
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
   ).toBeVisible();
+  await expect(page.getByText(CONFIRM_TO_START)).toHaveCount(0);
 });
 
 test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
