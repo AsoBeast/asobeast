@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const { REPO, PR_NUMBER, PR_TITLE, PR_BODY = "" } = process.env;
-const SQUASH_SUBJECT = /^((\w+)(?:\([\w-]+\))?!?: .+) \(#(\d+)\)$/;
+const SQUASH_SUBJECT = /^((\w+)(?:\([^)]+\))?!?: .+) \(#(\d+)\)$/;
 const OVERRIDE_BLOCK = /BEGIN_COMMIT_OVERRIDE([\s\S]*?)END_COMMIT_OVERRIDE/;
 
 const { "changelog-sections": sections } = JSON.parse(
@@ -40,9 +40,13 @@ const carried = commitSubjects()
   .filter(({ number }) => number !== PR_NUMBER)
   .map(({ line }) => line);
 
-const declared = OVERRIDE_BLOCK.exec(PR_BODY)?.[1] ?? "";
+const declared = new Set(
+  (OVERRIDE_BLOCK.exec(PR_BODY)?.[1] ?? "")
+    .split("\n")
+    .map((line) => line.trim()),
+);
 const missing = [PR_TITLE, ...carried].filter(
-  (line) => carried.length > 0 && !declared.includes(line),
+  (line) => carried.length > 0 && !declared.has(line),
 );
 
 if (missing.length > 0) {
