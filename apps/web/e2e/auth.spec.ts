@@ -642,6 +642,257 @@ test("a lapsed workspace is told what it keeps and what it must buy", async ({
   await expect(page.getByRole("link", { name: "Choose a plan" })).toBeVisible();
 });
 
+const UNCONFIRMED_USER: AuthUser = {
+  ...TRIAL_USER,
+  emailVerified: false,
+  plan: "free",
+  trialEndsAt: null,
+  entitled: false,
+  trialAwaitsConfirmation: true,
+};
+
+const UNCONFIRMED_PLAN: AccountPlan = { ...LAPSED_PLAN, trialEndsAt: null };
+
+const CONFIRM_TO_START = "Confirm your email to start your free trial.";
+
+async function openAsUnconfirmed(page: Page) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(fulfillJson(200, UNCONFIRMED_USER)),
+  );
+  await routePlan(page, UNCONFIRMED_PLAN);
+}
+
+test("a new account is asked to confirm its email, not to choose a plan", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+
+  await page.goto("/");
+
+  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
+  await expect(page.getByText("owner@example.com").first()).toBeVisible();
+  await expect(page.getByText("Collection is paused")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Choose a plan" })).toHaveCount(
+    0,
+  );
+});
+
+test("the confirmation request offers a new link and says when it was sent", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+  let resends = 0;
+  await page.route("**/api/backend/auth/verify/resend", async (route) => {
+    resends += 1;
+    await route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Send a new link" }).click();
+
+  await expect.poll(() => resends).toBe(1);
+  await expect(
+    page.getByRole("button", { name: "New link sent" }),
+  ).toBeDisabled();
+});
+
+test("a throttled request for a new link says why it was refused", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+  await page.route("**/api/backend/auth/verify/resend", (route) =>
+    route.fulfill(
+      fulfillJson(429, {
+        statusCode: 429,
+        error: "Too Many Requests",
+        message:
+          "Too many attempts from this address. Try again in 42 minutes.",
+        path: "/auth/verify/resend",
+        timestamp: new Date().toISOString(),
+        retryAfterSeconds: 2520,
+      }),
+    ),
+  );
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Send a new link" }).click();
+
+  await expect(
+    page
+      .getByRole("region", { name: /^Notifications/ })
+      .getByText("Try again in 42 minutes", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Send a new link" }),
+  ).toBeEnabled();
+});
+
+test("registration lands on the request to confirm the email", async ({
+  page,
+}) => {
+  let authenticated = false;
+  await page.context().addCookies([
+    {
+      name: "e2e_setup_required",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.route("**/api/backend/auth/status", (route) =>
+    route.fulfill(
+      fulfillJson(200, {
+        billing: true,
+        registrationOpen: true,
+        setupRequired: !authenticated,
+        authenticated,
+      }),
+    ),
+  );
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(fulfillJson(200, UNCONFIRMED_USER)),
+  );
+  await routePlan(page, UNCONFIRMED_PLAN);
+  await page.route("**/api/backend/auth/register", async (route) => {
+    authenticated = true;
+    await seedSession(page);
+    await route.fulfill(fulfillJson(201, UNCONFIRMED_USER));
+  });
+
+  await page.goto("/register");
+  await page.getByLabel("Email").fill("owner@example.com");
+  await page.getByLabel("Password").fill("supersecret1");
+  await page.getByRole("button", { name: "Create account" }).click();
+
+  await expect(page).toHaveURL("/");
+  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
+  await expect(page.getByText("Collection is paused")).toHaveCount(0);
+});
+
+test("the upgrade page asks an unconfirmed account to confirm before it pays", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+  let resends = 0;
+  await page.route("**/api/backend/auth/verify/resend", async (route) => {
+    resends += 1;
+    await route.fulfill({ status: 204, body: "" });
+  });
+
+  await page.goto("/upgrade");
+
+  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
+  await expect(page.getByText("Choose a plan to unlock asobeast.")).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByRole("button", { name: "Choose Indie" }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "Send a new link" }).click();
+  await expect.poll(() => resends).toBe(1);
+});
+
+test("settings says the trial starts when the email is confirmed", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+
+  await page.goto("/settings");
+
+  await expect(
+    page.getByText("Open the link we emailed you when you registered", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("tracking resumes when you choose a plan", { exact: false }),
+  ).toHaveCount(0);
+});
+
+test("a refused import sends an unconfirmed account to a page that asks it to confirm", async ({
+  page,
+}) => {
+  await openAsUnconfirmed(page);
+  await page.route("**/api/backend/apps", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await route.fulfill(
+      fulfillJson(402, {
+        statusCode: 402,
+        error: "Payment Required",
+        message: "Choose a plan to start using asobeast",
+        path: "/apps",
+        timestamp: new Date().toISOString(),
+        entitlement: {
+          plan: "free",
+          trialEndsAt: null,
+          planExpiresAt: null,
+          upgradeTo: "indie",
+          upgradePath: UPGRADE_PATH,
+        },
+      }),
+    );
+  });
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page).toHaveURL(/\/upgrade$/);
+  await expect(page.getByText(CONFIRM_TO_START)).toBeVisible();
+  await expect(page.getByText("Choose a plan to unlock asobeast.")).toHaveCount(
+    0,
+  );
+});
+
+test("an unconfirmed member of a workspace whose trial ended is not asked to confirm", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(
+      fulfillJson(200, {
+        ...UNCONFIRMED_USER,
+        role: "member",
+        trialEndsAt: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+        trialAwaitsConfirmation: false,
+      }),
+    ),
+  );
+  await routePlan(page, {
+    ...LAPSED_PLAN,
+    trialEndsAt: "2026-09-01T00:00:00.000Z",
+  });
+
+  await page.goto("/");
+
+  await expect(
+    page.getByText("Collection is paused", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText(CONFIRM_TO_START)).toHaveCount(0);
+
+  await page.goto("/upgrade");
+  await expect(
+    page.getByText("Your trial ended on", { exact: false }),
+  ).toBeVisible();
+});
+
 test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
   page,
 }) => {
