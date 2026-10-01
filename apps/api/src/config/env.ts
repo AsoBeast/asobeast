@@ -142,6 +142,10 @@ export const EnvSchema = z.object({
     .enum(['true', 'false'])
     .default('false')
     .transform((value) => value === 'true'),
+  STRIPE_MANAGED_PAYMENTS: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
   STRIPE_PRICE_INDIE_MONTHLY: optionalText,
   STRIPE_PRICE_INDIE_YEARLY: optionalText,
   STRIPE_PRICE_ULTIMATE_MONTHLY: optionalText,

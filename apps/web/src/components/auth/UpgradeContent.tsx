@@ -32,6 +32,7 @@ import {
 } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import {
+  paymentNote,
   planAction,
   planActionLabel,
   paywallStatusLine,
@@ -237,10 +238,7 @@ export function UpgradeContent() {
         </CardContent>
         <CardFooter>
           <p className="text-caption text-muted-foreground">
-            {catalog?.enabled
-              ? "Payments are handled by Stripe. Cancel any time from settings."
-              : "Checkout is not configured on this instance."}{" "}
-            Need help?{" "}
+            {paymentNote(catalog)} Need help?{" "}
             <a
               href="mailto:hello@asobeast.dev"
               className="font-medium underline"

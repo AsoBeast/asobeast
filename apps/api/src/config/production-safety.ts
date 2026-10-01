@@ -32,6 +32,8 @@ export function assertProductionSafety(env: Env): void {
     );
   }
 
+  assertOneTaxCollector(env);
+
   if (env.PROXY_PROVIDER !== 'none' && !env.PROXY_API_KEY) {
     throw new Error(
       `PROXY_PROVIDER is ${env.PROXY_PROVIDER} but PROXY_API_KEY is empty. The pool would never receive an endpoint and every store request would keep leaving from the host address. Set PROXY_API_KEY, or set PROXY_PROVIDER=none.`,
@@ -103,6 +105,34 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  warnings.push(...stripeWarnings(env));
+
+  if (env.ERROR_TRACKING_DSN && !env.BILLING_ENABLED) {
+    warnings.push(
+      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
+    );
+  }
+
+  if (env.API_DOCS === 'public') {
+    warnings.push(
+      'API_DOCS is public in production. The whole OpenAPI surface is served to anonymous callers. Set API_DOCS=owner to require a session or an asob_ token, or off to stop registering the routes.',
+    );
+  }
+
+  return warnings;
+}
+
+function assertOneTaxCollector(env: Env): void {
+  if (env.STRIPE_MANAGED_PAYMENTS && env.STRIPE_TAX_ENABLED) {
+    throw new Error(
+      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and applies its own tax to every checkout session, so STRIPE_TAX_ENABLED, which says this business collects the tax under its own registrations, contradicts it. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
+    );
+  }
+}
+
+function stripeWarnings(env: Env): string[] {
+  const warnings: string[] = [];
+
   if (env.BILLING_ENABLED && !env.STRIPE_SECRET_KEY) {
     warnings.push(
       'BILLING_ENABLED is true in production with no STRIPE_SECRET_KEY. Trials will expire with no way for a customer to pay. Configure Stripe, or leave billing off.',
@@ -115,6 +145,18 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  if (
+    env.BILLING_ENABLED &&
+    env.STRIPE_SECRET_KEY &&
+    !isSandboxKey(env.STRIPE_SECRET_KEY) &&
+    !env.STRIPE_TAX_ENABLED &&
+    !env.STRIPE_MANAGED_PAYMENTS
+  ) {
+    warnings.push(
+      'BILLING_ENABLED is true in production on a live STRIPE_SECRET_KEY with neither STRIPE_MANAGED_PAYMENTS nor STRIPE_TAX_ENABLED. Every checkout sells without tax, and this business stays liable for it. Set STRIPE_MANAGED_PAYMENTS=true to make Stripe the merchant of record, or register for tax and set STRIPE_TAX_ENABLED=true.',
+    );
+  }
+
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
     warnings.push(
       'STRIPE_SECRET_KEY is set in production with no STRIPE_WEBHOOK_SECRET. Every webhook delivery is refused, so a paid subscription never provisions access. Checkout stays closed until both are set.',
@@ -124,18 +166,6 @@ export function productionWarnings(env: Env): string[] {
   if (env.STRIPE_SECRET_KEY && !env.WEB_PUBLIC_URL) {
     warnings.push(
       'STRIPE_SECRET_KEY is set in production with no WEB_PUBLIC_URL. Stripe has nowhere to return a customer to after checkout, so checkout stays closed until it is set.',
-    );
-  }
-
-  if (env.ERROR_TRACKING_DSN && !env.BILLING_ENABLED) {
-    warnings.push(
-      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
-    );
-  }
-
-  if (env.API_DOCS === 'public') {
-    warnings.push(
-      'API_DOCS is public in production. The whole OpenAPI surface is served to anonymous callers. Set API_DOCS=owner to require a session or an asob_ token, or off to stop registering the routes.',
     );
   }
 

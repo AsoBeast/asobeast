@@ -185,6 +185,40 @@ describe('production safety', () => {
     });
   });
 
+  describe('tax collection', () => {
+    it('refuses to boot with managed payments and stripe tax both on', () => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_MANAGED_PAYMENTS: 'true',
+          STRIPE_TAX_ENABLED: 'true',
+        }),
+      ).toThrow(/STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED/);
+    });
+
+    it('says stripe applies its own tax rather than claiming it refuses the session', () => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_MANAGED_PAYMENTS: 'true',
+          STRIPE_TAX_ENABLED: 'true',
+        }),
+      ).toThrow(/applies its own tax to every checkout session/);
+    });
+
+    it.each([
+      { STRIPE_MANAGED_PAYMENTS: 'true' },
+      { STRIPE_TAX_ENABLED: 'true' },
+      {},
+    ])('boots with at most one tax switch on: %o', (overrides) => {
+      expect(() => validateEnv({ ...BASE, ...overrides })).not.toThrow();
+    });
+
+    it('keeps managed payments off unless it is switched on', () => {
+      expect(validateEnv(BASE).STRIPE_MANAGED_PAYMENTS).toBe(false);
+    });
+  });
+
   describe('webhook targets', () => {
     const warningsFor = (overrides: Record<string, unknown>): string[] =>
       productionWarnings(
@@ -339,6 +373,7 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           STRIPE_SECRET_KEY: 'sk_live_key',
           STRIPE_WEBHOOK_SECRET: 'whsec_key',
+          STRIPE_MANAGED_PAYMENTS: 'true',
           SMTP_HOST: 'smtp.example.com',
           SMTP_FROM: 'asobeast <alerts@example.com>',
           WEB_PUBLIC_URL: 'https://app.example.com',
@@ -388,6 +423,7 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           STRIPE_SECRET_KEY: 'sk_live_key',
           STRIPE_WEBHOOK_SECRET: 'whsec_key',
+          STRIPE_MANAGED_PAYMENTS: 'true',
           SMTP_HOST: 'smtp.example.com',
           SMTP_FROM: 'asobeast <alerts@example.com>',
           WEB_PUBLIC_URL: 'https://app.example.com',
@@ -423,6 +459,42 @@ describe('production safety', () => {
       expect(
         warningsFor({ ...configured, STRIPE_SECRET_KEY: 'sk_test_key' }),
       ).not.toContainEqual(expect.stringContaining('sandbox'));
+    });
+
+    const live = {
+      ...configured,
+      BILLING_ENABLED: 'true',
+      STRIPE_SECRET_KEY: 'sk_live_key',
+    };
+
+    it('warns when live billing collects no tax', () => {
+      expect(warningsFor(live)).toContainEqual(
+        expect.stringContaining(
+          'neither STRIPE_MANAGED_PAYMENTS nor STRIPE_TAX_ENABLED',
+        ),
+      );
+    });
+
+    it.each([
+      { STRIPE_MANAGED_PAYMENTS: 'true' },
+      { STRIPE_TAX_ENABLED: 'true' },
+    ])(
+      'stays quiet about tax once live billing collects it: %o',
+      (overrides) => {
+        expect(warningsFor({ ...live, ...overrides })).toEqual([]);
+      },
+    );
+
+    it('leaves a sandbox key to the sandbox warning', () => {
+      expect(
+        warningsFor({
+          ...configured,
+          BILLING_ENABLED: 'true',
+          STRIPE_SECRET_KEY: 'sk_test_key',
+        }),
+      ).not.toContainEqual(
+        expect.stringContaining('neither STRIPE_MANAGED_PAYMENTS'),
+      );
     });
   });
 
