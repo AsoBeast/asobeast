@@ -272,11 +272,12 @@ export class BillingReconciler {
     workspace: Workspace,
   ): Promise<boolean> {
     if (!claimsSubscription(workspace)) return false;
-    this.logger.error(
-      `workspace ${workspace.id} claims ${workspace.plan} with no subscription Stripe recognises; revoking`,
-    );
-    await this.prisma.workspace.update({
-      where: { id: workspace.id },
+    const revoked = await this.prisma.workspace.updateMany({
+      where: {
+        id: workspace.id,
+        plan: workspace.plan,
+        subscriptionId: workspace.subscriptionId,
+      },
       data: {
         plan: FREE_PLAN,
         subscriptionId: null,
@@ -284,6 +285,16 @@ export class BillingReconciler {
         cancelAtPeriodEnd: false,
       },
     });
+    if (revoked.count === 0) {
+      this.logger.warn(
+        `workspace ${workspace.id} changed while it was being reconciled; leaving it for the next run`,
+      );
+      return false;
+    }
+
+    this.logger.error(
+      `workspace ${workspace.id} claimed ${workspace.plan} with no subscription Stripe recognises; revoked it`,
+    );
     return true;
   }
 
