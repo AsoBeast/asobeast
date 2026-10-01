@@ -121,6 +121,18 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  if (
+    env.BILLING_ENABLED &&
+    env.STRIPE_SECRET_KEY &&
+    !isSandboxKey(env.STRIPE_SECRET_KEY) &&
+    !env.STRIPE_TAX_ENABLED &&
+    !env.STRIPE_MANAGED_PAYMENTS
+  ) {
+    warnings.push(
+      'BILLING_ENABLED is true in production on a live STRIPE_SECRET_KEY with neither STRIPE_MANAGED_PAYMENTS nor STRIPE_TAX_ENABLED. Every checkout sells without tax, and this business stays liable for it. Set STRIPE_MANAGED_PAYMENTS=true to make Stripe the merchant of record, or register for tax and set STRIPE_TAX_ENABLED=true.',
+    );
+  }
+
   if (env.STRIPE_SECRET_KEY && !env.STRIPE_WEBHOOK_SECRET) {
     warnings.push(
       'STRIPE_SECRET_KEY is set in production with no STRIPE_WEBHOOK_SECRET. Every webhook delivery is refused, so a paid subscription never provisions access. Checkout stays closed until both are set.',

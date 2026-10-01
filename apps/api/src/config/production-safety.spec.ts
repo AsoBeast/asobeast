@@ -363,6 +363,7 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           STRIPE_SECRET_KEY: 'sk_live_key',
           STRIPE_WEBHOOK_SECRET: 'whsec_key',
+          STRIPE_MANAGED_PAYMENTS: 'true',
           SMTP_HOST: 'smtp.example.com',
           SMTP_FROM: 'asobeast <alerts@example.com>',
           WEB_PUBLIC_URL: 'https://app.example.com',
@@ -412,6 +413,7 @@ describe('production safety', () => {
           BILLING_ENABLED: 'true',
           STRIPE_SECRET_KEY: 'sk_live_key',
           STRIPE_WEBHOOK_SECRET: 'whsec_key',
+          STRIPE_MANAGED_PAYMENTS: 'true',
           SMTP_HOST: 'smtp.example.com',
           SMTP_FROM: 'asobeast <alerts@example.com>',
           WEB_PUBLIC_URL: 'https://app.example.com',
@@ -447,6 +449,42 @@ describe('production safety', () => {
       expect(
         warningsFor({ ...configured, STRIPE_SECRET_KEY: 'sk_test_key' }),
       ).not.toContainEqual(expect.stringContaining('sandbox'));
+    });
+
+    const live = {
+      ...configured,
+      BILLING_ENABLED: 'true',
+      STRIPE_SECRET_KEY: 'sk_live_key',
+    };
+
+    it('warns when live billing collects no tax', () => {
+      expect(warningsFor(live)).toContainEqual(
+        expect.stringContaining(
+          'neither STRIPE_MANAGED_PAYMENTS nor STRIPE_TAX_ENABLED',
+        ),
+      );
+    });
+
+    it.each([
+      { STRIPE_MANAGED_PAYMENTS: 'true' },
+      { STRIPE_TAX_ENABLED: 'true' },
+    ])(
+      'stays quiet about tax once live billing collects it: %o',
+      (overrides) => {
+        expect(warningsFor({ ...live, ...overrides })).toEqual([]);
+      },
+    );
+
+    it('leaves a sandbox key to the sandbox warning', () => {
+      expect(
+        warningsFor({
+          ...configured,
+          BILLING_ENABLED: 'true',
+          STRIPE_SECRET_KEY: 'sk_test_key',
+        }),
+      ).not.toContainEqual(
+        expect.stringContaining('neither STRIPE_MANAGED_PAYMENTS'),
+      );
     });
   });
 
