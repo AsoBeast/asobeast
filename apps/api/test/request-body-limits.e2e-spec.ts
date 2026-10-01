@@ -8,13 +8,11 @@ import { INestApplication, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { API_TOKEN_PREFIX } from '@asobeast/shared';
-import type { ApiErrorEnvelope } from '@asobeast/shared';
+import type { ApiErrorEnvelope, ApiTokenCreated } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { sha256 } from '../src/auth/password-hash';
 import { ErrorTracking } from '../src/observability/error-tracking.service';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
@@ -25,7 +23,6 @@ import {
 } from './obliterate-queues';
 
 const PASSWORD = 'supersecret1';
-const TOKEN = `${API_TOKEN_PREFIX}${'b'.repeat(48)}`;
 const BODY_LIMIT_BYTES = 102_400;
 const HANG_UP_SETTLE_MS = 300;
 const MCP_ACCEPT = 'application/json, text/event-stream';
@@ -44,11 +41,12 @@ describe('Request body limits (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let port: number;
+  let token: string;
 
   const post = (path: string) =>
     request(app.getHttpServer())
       .post(path)
-      .set('Authorization', `Bearer ${TOKEN}`)
+      .set('Authorization', `Bearer ${token}`)
       .set('Accept', MCP_ACCEPT);
 
   const postJson = (path: string, body: string) =>
@@ -64,7 +62,7 @@ describe('Request body limits (e2e)', () => {
           port,
           path: '/apps',
           method: 'POST',
-          headers: { Authorization: `Bearer ${TOKEN}`, ...headers },
+          headers: { Authorization: `Bearer ${token}`, ...headers },
         },
         (res) => {
           const received: Buffer[] = [];
@@ -124,19 +122,16 @@ describe('Request body limits (e2e)', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
     );
-    const owner = await request(app.getHttpServer())
+    const owner = request.agent(app.getHttpServer());
+    await owner
       .post('/auth/register')
       .send({ email: 'limits@example.com', password: PASSWORD })
       .expect(201);
-    await prisma.apiToken.create({
-      data: {
-        userId: (owner.body as { id: string }).id,
-        name: 'body limits',
-        tokenHash: sha256(TOKEN),
-        prefix: TOKEN.slice(0, 12),
-        scope: 'write',
-      },
-    });
+    const created = await owner
+      .post('/auth/tokens')
+      .send({ name: 'body limits', scope: 'write' })
+      .expect(201);
+    token = (created.body as ApiTokenCreated).token;
   }, 60_000);
 
   beforeEach(() => clearRateLimitCounters(app));
@@ -328,7 +323,7 @@ describe('Request body limits (e2e)', () => {
         [
           'POST /apps HTTP/1.1',
           'Host: localhost',
-          `Authorization: Bearer ${TOKEN}`,
+          `Authorization: Bearer ${token}`,
           'Content-Type: application/json',
           'Content-Length: 5000',
           '',
