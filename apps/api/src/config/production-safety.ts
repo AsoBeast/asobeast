@@ -32,11 +32,7 @@ export function assertProductionSafety(env: Env): void {
     );
   }
 
-  if (env.STRIPE_MANAGED_PAYMENTS && env.STRIPE_TAX_ENABLED) {
-    throw new Error(
-      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and calculates the tax itself, and it refuses a checkout session that also asks for automatic tax. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
-    );
-  }
+  assertOneTaxCollector(env);
 
   if (env.PROXY_PROVIDER !== 'none' && !env.PROXY_API_KEY) {
     throw new Error(
@@ -109,6 +105,34 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  warnings.push(...stripeWarnings(env));
+
+  if (env.ERROR_TRACKING_DSN && !env.BILLING_ENABLED) {
+    warnings.push(
+      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
+    );
+  }
+
+  if (env.API_DOCS === 'public') {
+    warnings.push(
+      'API_DOCS is public in production. The whole OpenAPI surface is served to anonymous callers. Set API_DOCS=owner to require a session or an asob_ token, or off to stop registering the routes.',
+    );
+  }
+
+  return warnings;
+}
+
+function assertOneTaxCollector(env: Env): void {
+  if (env.STRIPE_MANAGED_PAYMENTS && env.STRIPE_TAX_ENABLED) {
+    throw new Error(
+      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and calculates the tax itself, and it refuses a checkout session that also asks for automatic tax. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
+    );
+  }
+}
+
+function stripeWarnings(env: Env): string[] {
+  const warnings: string[] = [];
+
   if (env.BILLING_ENABLED && !env.STRIPE_SECRET_KEY) {
     warnings.push(
       'BILLING_ENABLED is true in production with no STRIPE_SECRET_KEY. Trials will expire with no way for a customer to pay. Configure Stripe, or leave billing off.',
@@ -142,18 +166,6 @@ export function productionWarnings(env: Env): string[] {
   if (env.STRIPE_SECRET_KEY && !env.WEB_PUBLIC_URL) {
     warnings.push(
       'STRIPE_SECRET_KEY is set in production with no WEB_PUBLIC_URL. Stripe has nowhere to return a customer to after checkout, so checkout stays closed until it is set.',
-    );
-  }
-
-  if (env.ERROR_TRACKING_DSN && !env.BILLING_ENABLED) {
-    warnings.push(
-      'ERROR_TRACKING_DSN is set with BILLING_ENABLED false. Error tracking stays off, because a self hosted deployment never reports its errors to anyone else. Remove the dsn, or set BILLING_ENABLED=true if this is the hosted service.',
-    );
-  }
-
-  if (env.API_DOCS === 'public') {
-    warnings.push(
-      'API_DOCS is public in production. The whole OpenAPI surface is served to anonymous callers. Set API_DOCS=owner to require a session or an asob_ token, or off to stop registering the routes.',
     );
   }
 
