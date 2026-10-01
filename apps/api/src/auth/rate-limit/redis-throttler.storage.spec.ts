@@ -1,4 +1,6 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
+import { RedisUnavailableError } from '../../redis/redis.errors';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { RedisThrottlerStorage, throttlerKey } from './redis-throttler.storage';
 import { trackerOf } from './request-tracker';
 import type { AccountUser } from '../auth.types';
@@ -12,13 +14,9 @@ describe('RedisThrottlerStorage', () => {
   const pttl = jest.fn<Promise<number>, [string]>();
   const set = jest.fn<Promise<unknown>, [string, string, 'PX', number]>();
 
-  const queue = {
-    getBackend: () => ({
-      client: Promise.resolve({ incr, pexpire, pttl, set }),
-    }),
-  } as unknown as Queue;
-
-  const storage = new RedisThrottlerStorage(queue);
+  const storage = new RedisThrottlerStorage(
+    new FailFastRedis({ incr, pexpire, pttl, set } as unknown as Redis),
+  );
   const increment = (name = 'default') =>
     storage.increment('ws:acme', TTL_MS, LIMIT, TTL_MS, name);
 
@@ -115,5 +113,19 @@ describe('trackerOf', () => {
 
   it('still produces a key when express cannot name the client', () => {
     expect(trackerOf({})).toBe('ip:unknown');
+  });
+});
+
+describe('RedisThrottlerStorage while redis is unreachable', () => {
+  const storage = new RedisThrottlerStorage(
+    new FailFastRedis({
+      incr: jest.fn().mockRejectedValue(new Error('Command timed out')),
+    } as unknown as Redis),
+  );
+
+  it('refuses the attempt so a sign in is never admitted uncounted', async () => {
+    await expect(
+      storage.increment('ip:203.0.113.7', TTL_MS, LIMIT, TTL_MS, 'default'),
+    ).rejects.toBeInstanceOf(RedisUnavailableError);
   });
 });

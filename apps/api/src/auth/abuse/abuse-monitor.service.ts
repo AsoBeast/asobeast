@@ -1,29 +1,15 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
-import { Queue } from 'bullmq';
 import type { RateClass } from '@asobeast/shared';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
-import { QUEUES } from '../../jobs/jobs.types';
 import { DAY_SECONDS } from '@asobeast/shared';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { windowKey } from '../rate-limit/window';
 
 export const ABUSE_REFUSALS_PER_DAY = 500;
 
 const FLAG_JUSTIFICATION =
   'flagging sustained limit abuse writes to the workspace the refused caller belongs to';
-
-interface RefusalCounter {
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
-  exists(key: string): Promise<number>;
-  set(
-    key: string,
-    value: string,
-    mode: 'EX',
-    seconds: number,
-  ): Promise<unknown>;
-}
 
 export interface RefusedRequest {
   workspaceId: string;
@@ -37,7 +23,7 @@ export class AbuseMonitor {
   private readonly logger = new Logger(AbuseMonitor.name);
 
   constructor(
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
   ) {}
@@ -53,10 +39,12 @@ export class AbuseMonitor {
       DAY_SECONDS,
       now,
     );
-    const client = (await this.queue.getBackend()
-      .client) as unknown as RefusalCounter;
-    const refusals = await client.incr(key);
-    if (refusals === 1) await client.expire(key, DAY_SECONDS);
+    const refusals = await this.redis.runOpen(async (client) => {
+      const count = await client.incr(key);
+      if (count === 1) await client.expire(key, DAY_SECONDS);
+      return count;
+    }, null);
+    if (refusals === null) return;
 
     this.logger.warn(
       `refused ${refused.method} ${refused.route} for workspace ${refused.workspaceId}: over the ${refused.rateClass} limit, ${refusals} refusals today`,
@@ -70,10 +58,17 @@ export class AbuseMonitor {
       DAY_SECONDS,
       now,
     );
-    if ((await client.exists(flagged)) === 1) return;
+    if (
+      (await this.redis.runOpen((client) => client.exists(flagged), 0)) === 1
+    ) {
+      return;
+    }
 
     await this.flag(refused.workspaceId, now);
-    await client.set(flagged, '1', 'EX', DAY_SECONDS);
+    await this.redis.runOpen(
+      (client) => client.set(flagged, '1', 'EX', DAY_SECONDS),
+      null,
+    );
   }
 
   private async flag(workspaceId: string, now: Date): Promise<void> {
