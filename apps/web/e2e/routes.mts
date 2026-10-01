@@ -23,14 +23,19 @@ export const SIGNED_IN_ROUTES = [
 
 const APP_ROUTE_PREFIX = `/apps/${APP}`;
 
+const isAppRoute = ([, path]: (typeof SIGNED_IN_ROUTES)[number]) =>
+  path.startsWith(APP_ROUTE_PREFIX);
+
 export const WORKSPACE_ROUTES = SIGNED_IN_ROUTES.filter(
-  ([, path]) => !path.startsWith(APP_ROUTE_PREFIX),
+  (route) => !isAppRoute(route),
 );
+
+const APP_ROUTES = SIGNED_IN_ROUTES.filter(isAppRoute);
 
 export const appRoutesFor = (
   appId: string,
 ): ReadonlyArray<readonly [string, string]> =>
-  SIGNED_IN_ROUTES.filter(([, path]) => path.startsWith(APP_ROUTE_PREFIX)).map(
+  APP_ROUTES.map(
     ([name, path]) =>
       [
         `${name} of ${appId}`,

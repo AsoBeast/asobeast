@@ -24,6 +24,8 @@ import {
 
 const SLOW_API_MS = 300;
 const SLOW_FIRST_RUN_MS = 1000;
+const APP_ERROR_TITLE = "This app could not be loaded";
+const PRINT_REPORT = "Print report";
 const HYDRATION_APPS = [
   "app-1",
   "app-2",
@@ -351,13 +353,17 @@ test.describe("while the api is slow", () => {
     const html = await page.request
       .get("/apps/app-2")
       .then((response) => response.text());
+    expect(html).toContain(PRINT_REPORT);
     expect(html).not.toContain(headline);
 
     await page.goto("/apps/app-2");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: PRINT_REPORT }),
+    ).toBeVisible();
     await page.waitForLoadState("networkidle");
 
     expect(errors, `the overview threw: ${errors.join(", ")}`).toEqual([]);
+    await expect(page.getByText(APP_ERROR_TITLE)).toHaveCount(0);
     await expect(page.getByText(headline)).toHaveCount(0);
   });
 });

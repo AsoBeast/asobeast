@@ -257,7 +257,7 @@ type Handler = (
   params: string[],
   req: IncomingMessage,
   res: ServerResponse,
-) => void;
+) => void | Promise<void>;
 
 interface Route {
   method: string;
@@ -355,6 +355,14 @@ function cookieValue(req: IncomingMessage, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+async function delayFromCookie(
+  req: IncomingMessage,
+  name: string,
+): Promise<void> {
+  const ms = Number(cookieValue(req, name));
+  if (ms > 0) await delay(ms);
 }
 
 function hasCookie(
@@ -999,7 +1007,7 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/first-run$/,
     handler: async (params, req, res) => {
-      await delay(Number(cookieValue(req, FIRST_RUN_LATENCY_COOKIE) ?? 0));
+      await delayFromCookie(req, FIRST_RUN_LATENCY_COOKIE);
       if (hasCookie(req, FIRST_RUN_FAIL_COOKIE, "1")) {
         return json(res, 500, errorEnvelope(500, req.url ?? "/"));
       }
@@ -1869,7 +1877,7 @@ const routes: Route[] = [
 
 const server = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? "/", "http://localhost").pathname;
-  await delay(Number(cookieValue(req, API_LATENCY_COOKIE) ?? 0));
+  await delayFromCookie(req, API_LATENCY_COOKIE);
   for (const route of routes) {
     if (route.method !== req.method) continue;
     const match = pathname.match(route.pattern);
