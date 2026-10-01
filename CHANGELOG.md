@@ -3,6 +3,43 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.7.0](https://github.com/AsoBeast/asobeast/compare/v1.6.0...v1.7.0) (2026-10-01)
+
+
+### Features
+
+* **alerts:** alert on rank milestones, first rankings and overtakes ([#139](https://github.com/AsoBeast/asobeast/issues/139)) ([da5e16a](https://github.com/AsoBeast/asobeast/commit/da5e16ada729ceae8f2fb434aa05fcbb0e1f53dd))
+* **changes:** report how rankings and visibility moved after each change ([#138](https://github.com/AsoBeast/asobeast/issues/138)) ([3afeab3](https://github.com/AsoBeast/asobeast/commit/3afeab3741a075e8bfbea3efa52f772b5e60bfee))
+* **keywords:** tag tracked keywords and keep a note on each ([#144](https://github.com/AsoBeast/asobeast/issues/144)) ([c8ec7f8](https://github.com/AsoBeast/asobeast/commit/c8ec7f8d9c119cde45298da22b53307f586bf1b7))
+* **scoring:** calibrate popularity and difficulty on published values ([#152](https://github.com/AsoBeast/asobeast/issues/152)) ([56a0ce3](https://github.com/AsoBeast/asobeast/commit/56a0ce35c5d9c4b6e9b62dae0f3ee6f0c2f23eef))
+* **scoring:** refit popularity and opportunity as formula v4 ([#174](https://github.com/AsoBeast/asobeast/issues/174)) ([340eea0](https://github.com/AsoBeast/asobeast/commit/340eea0cffd66ff4be94994d2235a03158d29b35))
+* **web:** export competitors, gaps, reviews and serps to csv ([#146](https://github.com/AsoBeast/asobeast/issues/146)) ([86259e5](https://github.com/AsoBeast/asobeast/commit/86259e54f638e36808b17b95560cea75329ba31d))
+* **web:** list keyword combinations from the listing and track them ([#145](https://github.com/AsoBeast/asobeast/issues/145)) ([3ee53c1](https://github.com/AsoBeast/asobeast/commit/3ee53c1f39364c2c2ec25a83567599c50062c917))
+* **web:** print the overview and rankings pages as reports ([#148](https://github.com/AsoBeast/asobeast/issues/148)) ([a2e37bf](https://github.com/AsoBeast/asobeast/commit/a2e37bfd7eddd8610d871c8fbcb3eebd7b6999eb))
+* **web:** redesign the action center around triage and outcomes ([#157](https://github.com/AsoBeast/asobeast/issues/157)) ([d706188](https://github.com/AsoBeast/asobeast/commit/d7061880eebb296421f57cf2b7e0a52c2e6a612f))
+* **web:** redesign the dashboard around decisions ([#156](https://github.com/AsoBeast/asobeast/issues/156)) ([925eaaa](https://github.com/AsoBeast/asobeast/commit/925eaaab6b4a4836dcacdbe009dca5edb0e75501))
+* **web:** show the extra localizations each storefront indexes ([#140](https://github.com/AsoBeast/asobeast/issues/140)) ([223bcda](https://github.com/AsoBeast/asobeast/commit/223bcda67c3362f49aebafc0dfa2d2120bedefbf))
+
+
+### Bug Fixes
+
+* **actions:** hold rule windows to exactly their stated days ([#162](https://github.com/AsoBeast/asobeast/issues/162)) ([55e9332](https://github.com/AsoBeast/asobeast/commit/55e93325c465d8d13bc58e64f4f033edc5bad5d6))
+* **actions:** record an action transition once however often it is requested ([#178](https://github.com/AsoBeast/asobeast/issues/178)) ([83e806d](https://github.com/AsoBeast/asobeast/commit/83e806d914d53ecec556f66065a570a69cdb4b37))
+* **alerts:** accept service names and localhost for private webhooks ([#179](https://github.com/AsoBeast/asobeast/issues/179)) ([a1979c8](https://github.com/AsoBeast/asobeast/commit/a1979c89220fa939d102be2f1433fe80fa05bdbc))
+* **alerts:** reject null fields when updating an alert channel ([#149](https://github.com/AsoBeast/asobeast/issues/149)) ([4eb9e22](https://github.com/AsoBeast/asobeast/commit/4eb9e224d703b65016d1b1bba0ea14d9f32e1e18))
+* **analytics:** count new low ratings by when reviews were written ([#176](https://github.com/AsoBeast/asobeast/issues/176)) ([402fb0e](https://github.com/AsoBeast/asobeast/commit/402fb0e0534fb738888100d1474e7dd29c4967b9))
+* **api:** leave a plan alone that changed while reconciliation ran ([#189](https://github.com/AsoBeast/asobeast/issues/189)) ([f41210f](https://github.com/AsoBeast/asobeast/commit/f41210f2a2e8442deb4e0ba2257ca3c2511f1d75))
+* **api:** list undated reviews after the dated ones ([#147](https://github.com/AsoBeast/asobeast/issues/147)) ([88b3df6](https://github.com/AsoBeast/asobeast/commit/88b3df66bc475451ce0d622cc58aaa213d3a60b6))
+* **api:** recover billing rows that point at unknown stripe objects ([#187](https://github.com/AsoBeast/asobeast/issues/187)) ([a5ef1bc](https://github.com/AsoBeast/asobeast/commit/a5ef1bc3c0d397106c4e9bf11d578a02c8ea9e86))
+* **api:** reject null fields when updating keywords and actions ([#151](https://github.com/AsoBeast/asobeast/issues/151)) ([560a2e4](https://github.com/AsoBeast/asobeast/commit/560a2e4b37775155fe1c6ab0c88429f2c86f24af))
+* **docker:** mount the apple ads key in the compose stacks ([#163](https://github.com/AsoBeast/asobeast/issues/163)) ([486c6cc](https://github.com/AsoBeast/asobeast/commit/486c6cca230d471b1c3de621338045544b79c992))
+* **mcp:** report an unknown app as not found instead of a newer api ([#180](https://github.com/AsoBeast/asobeast/issues/180)) ([712273a](https://github.com/AsoBeast/asobeast/commit/712273ac2871adf47a46554122cd58603cce088a))
+* **providers:** app store apps never get category ranks ([#175](https://github.com/AsoBeast/asobeast/issues/175)) ([408a5a9](https://github.com/AsoBeast/asobeast/commit/408a5a9914cddf5c70cde93e6faf3e866f09b11a))
+* **providers:** refuse an app that iphone search never lists ([#177](https://github.com/AsoBeast/asobeast/issues/177)) ([df83b43](https://github.com/AsoBeast/asobeast/commit/df83b431d94fd0883d05b2962b2cb93207240d87))
+* **providers:** render google play release notes as plain text ([#161](https://github.com/AsoBeast/asobeast/issues/161)) ([06c5cb2](https://github.com/AsoBeast/asobeast/commit/06c5cb26928fb4a8bcee8d79158bf9c0cc10df65))
+* **web:** await the first run status before rendering the overview ([#186](https://github.com/AsoBeast/asobeast/issues/186)) ([5b359a3](https://github.com/AsoBeast/asobeast/commit/5b359a3d67a6f13a0c5d403efe75befe952bc207)), closes [#49](https://github.com/AsoBeast/asobeast/issues/49)
+* **web:** small ux findings from the 1.7.0 regression pass ([#181](https://github.com/AsoBeast/asobeast/issues/181)) ([38255e4](https://github.com/AsoBeast/asobeast/commit/38255e474e60e26216fe6c7fec4a6ef0c0c28577))
+
 ## [1.6.0](https://github.com/AsoBeast/asobeast/compare/v1.5.0...v1.6.0) (2026-09-24)
 
 
