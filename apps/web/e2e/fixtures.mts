@@ -1968,6 +1968,16 @@ export const BUDGET: DailyBudget = {
   },
 };
 
+export const LAPSED_BUDGET: DailyBudget = {
+  ...BUDGET,
+  quota: {
+    plan: "free",
+    apps: { used: 7, limit: 0 },
+    keywordMarkets: { used: 52, limit: 0 },
+    overLimitSince: "2026-09-20T03:00:00.000Z",
+  },
+};
+
 export const RECENT_CHANGES: ChangeTimeline = {
   events: [
     {

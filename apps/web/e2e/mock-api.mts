@@ -43,6 +43,7 @@ import {
   MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
+  LAPSED_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
@@ -885,6 +886,7 @@ function firstRunFor(appId: string): FirstRunStatus {
 
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
+const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
 type Holds = Map<string, PromiseWithResolvers<void>>;
@@ -1333,12 +1335,15 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/budget$/,
     handler: (_p, req, res) => {
+      const budget = hasCookie(req, BUDGET_QUOTA_COOKIE, "lapsed")
+        ? LAPSED_BUDGET
+        : BUDGET;
       const token = cookieValue(req, BUDGET_HOLD_COOKIE);
       if (!token) {
-        json(res, 200, BUDGET);
+        json(res, 200, budget);
         return;
       }
-      void budgetHold(token).promise.then(() => json(res, 200, BUDGET));
+      void budgetHold(token).promise.then(() => json(res, 200, budget));
     },
   },
   {

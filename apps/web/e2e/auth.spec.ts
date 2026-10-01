@@ -1467,6 +1467,58 @@ test("each plan card prints its price once", async ({ page }) => {
   );
 });
 
+async function openSettingsWithoutAPlan(page: Page) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, LAPSED_PLAN);
+  await page.context().addCookies([
+    {
+      name: "e2e_budget_quota",
+      value: "lapsed",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+}
+
+test("the plan card reads a workspace with no plan as tracked, not as over a limit", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("3 of 0")).toHaveCount(0);
+  await expect(plan.getByText("3 tracked, none included")).toBeVisible();
+  await expect(plan.getByText("240 tracked, none included")).toBeVisible();
+});
+
+test("the capacity card reads a workspace with no plan as tracked, not as over a limit", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const capacity = page.getByRole("region", { name: "Capacity" });
+  await expect(capacity.getByText("7 / 0")).toHaveCount(0);
+  await expect(capacity.getByText("7 tracked, none included")).toBeVisible();
+  await expect(capacity.getByText("52 tracked, none included")).toBeVisible();
+});
+
+test("the capacity card does not warn about a keyword limit a workspace with no plan never had", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const capacity = page.getByRole("region", { name: "Capacity" });
+  await expect(capacity.getByText("Plan usage")).toBeVisible();
+  await expect(capacity.getByText("Over the keyword limit")).toHaveCount(0);
+});
+
 test("a spent confirmation link offers a new one", async ({ page }) => {
   await seedSession(page);
   await page.route("**/api/backend/auth/verify", (route) =>
