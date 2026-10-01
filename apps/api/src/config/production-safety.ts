@@ -32,6 +32,12 @@ export function assertProductionSafety(env: Env): void {
     );
   }
 
+  if (env.STRIPE_MANAGED_PAYMENTS && env.STRIPE_TAX_ENABLED) {
+    throw new Error(
+      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and calculates the tax itself, and it refuses a checkout session that also asks for automatic tax. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
+    );
+  }
+
   if (env.PROXY_PROVIDER !== 'none' && !env.PROXY_API_KEY) {
     throw new Error(
       `PROXY_PROVIDER is ${env.PROXY_PROVIDER} but PROXY_API_KEY is empty. The pool would never receive an endpoint and every store request would keep leaving from the host address. Set PROXY_API_KEY, or set PROXY_PROVIDER=none.`,

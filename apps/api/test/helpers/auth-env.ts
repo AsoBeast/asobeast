@@ -15,6 +15,8 @@ const AUTH_ENV_KEYS = [
   'STRIPE_PRICE_INDIE_YEARLY',
   'STRIPE_PRICE_ULTIMATE_MONTHLY',
   'STRIPE_PRICE_ULTIMATE_YEARLY',
+  'STRIPE_TAX_ENABLED',
+  'STRIPE_MANAGED_PAYMENTS',
 ] as const;
 
 const saved = new Map(AUTH_ENV_KEYS.map((key) => [key, process.env[key]]));

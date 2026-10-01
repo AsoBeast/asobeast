@@ -17,7 +17,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
-import { checkoutSessionParams } from './checkout-session';
+import {
+  checkoutSessionParams,
+  taxCollectionOf,
+  type TaxCollection,
+} from './checkout-session';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
@@ -86,7 +90,7 @@ export class BillingService {
           workspaceId,
           successUrl: this.checkoutReturnUrl(),
           cancelUrl: this.webUrl(UPGRADE_PATH),
-          automaticTax: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
+          taxCollection: this.taxCollection(),
         }),
         `checkout:${workspaceId}:${attempt}`,
       );
@@ -237,6 +241,17 @@ export class BillingService {
       `portal:${user.workspaceId}:${minuteBucket()}`,
     );
     return session.url;
+  }
+
+  private taxCollection(): TaxCollection {
+    return taxCollectionOf({
+      STRIPE_TAX_ENABLED: this.config.get('STRIPE_TAX_ENABLED', {
+        infer: true,
+      }),
+      STRIPE_MANAGED_PAYMENTS: this.config.get('STRIPE_MANAGED_PAYMENTS', {
+        infer: true,
+      }),
+    });
   }
 
   private missingConfiguration(): string[] {

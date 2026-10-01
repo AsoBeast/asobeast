@@ -15,6 +15,7 @@ const WORKSPACE = 'ws_billing';
 const CONFIG: Record<string, string | boolean | undefined> = {
   STRIPE_SECRET_KEY: 'sk_test',
   STRIPE_TAX_ENABLED: false,
+  STRIPE_MANAGED_PAYMENTS: false,
   STRIPE_PRICE_INDIE_MONTHLY: 'price_indie_month',
   STRIPE_WEBHOOK_SECRET: 'whsec_test',
   WEB_PUBLIC_URL: 'https://app.example.com',
@@ -209,6 +210,24 @@ describe('BillingService', () => {
       Record<string, unknown>,
     ];
     expect(params.automatic_tax).toEqual({ enabled: true });
+  });
+
+  it('sells through managed payments once it is switched on', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_MANAGED_PAYMENTS: true },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params.managed_payments).toEqual({ enabled: true });
+    expect(params).not.toHaveProperty('automatic_tax');
+    expect(params).not.toHaveProperty('tax_id_collection');
+    expect(params).not.toHaveProperty('customer_update');
   });
 
   it('reuses the stored customer rather than creating a second one', async () => {

@@ -185,6 +185,30 @@ describe('production safety', () => {
     });
   });
 
+  describe('tax collection', () => {
+    it('refuses to boot with managed payments and stripe tax both on', () => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_MANAGED_PAYMENTS: 'true',
+          STRIPE_TAX_ENABLED: 'true',
+        }),
+      ).toThrow(/STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED/);
+    });
+
+    it.each([
+      { STRIPE_MANAGED_PAYMENTS: 'true' },
+      { STRIPE_TAX_ENABLED: 'true' },
+      {},
+    ])('boots with at most one tax switch on: %o', (overrides) => {
+      expect(() => validateEnv({ ...BASE, ...overrides })).not.toThrow();
+    });
+
+    it('keeps managed payments off unless it is switched on', () => {
+      expect(validateEnv(BASE).STRIPE_MANAGED_PAYMENTS).toBe(false);
+    });
+  });
+
   describe('webhook targets', () => {
     const warningsFor = (overrides: Record<string, unknown>): string[] =>
       productionWarnings(
