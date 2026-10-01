@@ -14,9 +14,10 @@ import { sha256 } from './password-hash';
 import { refuseSessionSwap } from './session-swap';
 import type { AccountUser } from './auth.types';
 import {
-  alreadyTrialed,
+  canStartTrial,
   grantTrial,
   trialAwaitsConfirmation,
+  trialStillOpen,
   type TrialGrant,
 } from './trial-grant';
 import { VerificationMailer } from './verification-mailer';
@@ -127,14 +128,21 @@ export class EmailVerificationService {
   }
 
   private async startTrial(workspaceId: string): Promise<Workspace> {
-    const workspace = await this.prisma.workspace.findUniqueOrThrow({
-      where: { id: workspaceId },
-    });
-    if (!this.billing || alreadyTrialed(workspace)) return workspace;
+    const workspace = await this.workspaceOf(workspaceId);
+    if (!this.billing || !canStartTrial(workspace, new Date())) {
+      return workspace;
+    }
 
-    return this.prisma.workspace.update({
-      where: { id: workspaceId },
+    await this.prisma.workspace.updateMany({
+      where: trialStillOpen(workspace),
       data: grantTrial(this.config.get('TRIAL_DAYS', { infer: true })),
+    });
+    return this.workspaceOf(workspaceId);
+  }
+
+  private workspaceOf(workspaceId: string): Promise<Workspace> {
+    return this.prisma.workspace.findUniqueOrThrow({
+      where: { id: workspaceId },
     });
   }
 }

@@ -28,7 +28,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { isDisposableEmail } from './disposable-email';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
-import { alreadyTrialed } from './trial-grant';
+import { canStartTrial, trialStillOpen } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -134,7 +134,6 @@ export class AuthService {
   ): Promise<string> {
     const existing = await tx.workspace.findUnique({
       where: { id: DEFAULT_WORKSPACE_ID },
-      select: { trialStartedAt: true },
     });
     if (!existing) {
       await tx.workspace.create({
@@ -147,9 +146,9 @@ export class AuthService {
       return DEFAULT_WORKSPACE_ID;
     }
     const opening = this.verification.openingGrant();
-    if (opening && !alreadyTrialed(existing)) {
-      await tx.workspace.update({
-        where: { id: DEFAULT_WORKSPACE_ID },
+    if (opening && canStartTrial(existing, new Date())) {
+      await tx.workspace.updateMany({
+        where: trialStillOpen(existing),
         data: opening,
       });
     }
