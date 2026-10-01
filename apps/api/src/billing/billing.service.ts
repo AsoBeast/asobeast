@@ -294,7 +294,12 @@ export class BillingService {
 
   private async customerFor(user: AccountUser): Promise<string> {
     const stored = await this.storedCustomer();
-    if (stored) return stored;
+    if (stored && (await this.stripe.customerExists(stored))) return stored;
+    if (stored) {
+      this.logger.warn(
+        `workspace ${user.workspaceId} names stripe customer ${stored} that Stripe has no record of; replacing it`,
+      );
+    }
 
     const customer = await this.stripe.createCustomer(
       {
@@ -302,10 +307,10 @@ export class BillingService {
         name: user.workspace.name,
         metadata: { [WORKSPACE_METADATA_KEY]: user.workspaceId },
       },
-      `customer:${user.workspaceId}`,
+      customerKeyOf(user.workspaceId, stored),
     );
     const claimed = await this.prisma.workspace.updateMany({
-      where: { id: user.workspaceId, billingCustomerId: null },
+      where: { id: user.workspaceId, billingCustomerId: stored },
       data: { billingCustomerId: customer.id },
     });
     if (claimed.count > 0) return customer.id;
@@ -345,6 +350,12 @@ export class BillingService {
 
 function minuteBucket(): number {
   return Math.floor(Date.now() / 60_000);
+}
+
+function customerKeyOf(workspaceId: string, replaced: string | null): string {
+  return replaced
+    ? `customer:${workspaceId}:replaces:${replaced}`
+    : `customer:${workspaceId}`;
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {

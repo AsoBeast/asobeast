@@ -54,6 +54,16 @@ export class StripeService {
     });
   }
 
+  async customerExists(id: string): Promise<boolean> {
+    try {
+      const customer = await this.stripe.customers.retrieve(id);
+      return !customer.deleted;
+    } catch (error) {
+      if (isMissingResource(error)) return false;
+      throw error;
+    }
+  }
+
   listCustomerSubscriptions(customer: string): Promise<Stripe.Subscription[]> {
     return this.stripe.subscriptions
       .list({ customer, status: 'all', limit: 100 })

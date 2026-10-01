@@ -53,6 +53,7 @@ describe('BillingService', () => {
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
+    const customerExists = jest.fn().mockResolvedValue(true);
     const createCheckoutSession = jest.fn().mockResolvedValue({
       id: 'cs_new',
       url: 'https://checkout.stripe.test/session',
@@ -82,6 +83,7 @@ describe('BillingService', () => {
         where: {
           OR?: Array<{ checkoutClaimedAt?: { lt?: Date } | null }>;
           checkoutClaimToken?: string;
+          billingCustomerId?: string | null;
         };
         data: Partial<typeof row>;
       }) => {
@@ -95,8 +97,8 @@ describe('BillingService', () => {
           return Promise.resolve({ count: 0 });
         }
         if (
-          'billingCustomerId' in args.data &&
-          row.billingCustomerId !== null
+          'billingCustomerId' in args.where &&
+          args.where.billingCustomerId !== row.billingCustomerId
         ) {
           return Promise.resolve({ count: 0 });
         }
@@ -126,6 +128,7 @@ describe('BillingService', () => {
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
         createCustomer,
+        customerExists,
         createCheckoutSession,
         createPortalSession,
         listCustomerSubscriptions,
@@ -141,6 +144,7 @@ describe('BillingService', () => {
     return {
       service,
       createCustomer,
+      customerExists,
       createCheckoutSession,
       createPortalSession,
       listCustomerSubscriptions,
@@ -213,6 +217,46 @@ describe('BillingService', () => {
     await service.checkout(owner('cus_existing'), 'price_indie_month');
 
     expect(createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('asks stripe once whether the stored customer still exists', async () => {
+    const { service, customerExists, createCustomer } = build('cus_existing');
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    expect(customerExists).toHaveBeenCalledTimes(1);
+    expect(customerExists).toHaveBeenCalledWith('cus_existing');
+    expect(createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('replaces a stored customer stripe has no record of before it opens checkout', async () => {
+    const {
+      service,
+      createCustomer,
+      createCheckoutSession,
+      customerExists,
+      listCustomerSubscriptions,
+      row,
+    } = build('cus_from_another_account');
+    customerExists.mockResolvedValue(false);
+
+    await service.checkout(
+      owner('cus_from_another_account'),
+      'price_indie_month',
+    );
+
+    expect(createCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+      `customer:${WORKSPACE}:replaces:cus_from_another_account`,
+    );
+    expect(row.billingCustomerId).toBe('cus_created');
+    expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_created');
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params).toMatchObject({ customer: 'cus_created' });
   });
 
   it('creates and claims a customer the first time a workspace pays', async () => {
@@ -650,6 +694,19 @@ describe('BillingService', () => {
       customer: 'cus_existing',
       return_url: 'https://app.example.com/settings',
     });
+  });
+
+  it('opens the portal on a fresh customer when the stored one is gone', async () => {
+    const { service, customerExists, createPortalSession } =
+      build('cus_deleted');
+    customerExists.mockResolvedValue(false);
+
+    await service.portal(owner('cus_deleted'));
+
+    expect(createPortalSession).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_created' }),
+      expect.any(String),
+    );
   });
 
   it('never asks Stripe for a trial, so a trialing workspace gets no second one', async () => {

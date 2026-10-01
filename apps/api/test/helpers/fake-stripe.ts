@@ -184,6 +184,19 @@ export function fakeStripe(): FakeStripe {
           metadata: params.metadata ?? {},
         } as Stripe.Customer);
       },
+      retrieve: (id) => {
+        if (fake.unknownCustomers.has(id)) {
+          return Promise.reject(new MissingResource('customer', id));
+        }
+        if (fake.deletedCustomers.includes(id)) {
+          return respond({ id, object: 'customer', deleted: true });
+        }
+        return respond({
+          id,
+          object: 'customer',
+          metadata: {},
+        } as unknown as Stripe.Customer);
+      },
       del: (id) => {
         fake.deletedCustomers.push(id);
         return respond({ id, object: 'customer', deleted: true });

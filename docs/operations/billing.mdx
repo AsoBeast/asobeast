@@ -122,6 +122,8 @@ Both are self service through the Stripe customer portal. A cancellation takes e
 
 A workspace also gets at most one checkout session it can complete. Opening a session claims a short lease, so two requests in flight together cannot both create one, and the previous session is expired at Stripe before a new one opens, so a page left open in another tab cannot be paid afterwards. Stripe itself is asked for the customer's subscriptions before any session is created, which closes the window between a completed payment and the webhook that records it. A subscription found that way is reconciled onto the workspace before the checkout is refused, so the customer keeps what they already pay for, and a refusal that rests on stored state reconciles first as well rather than trusting a row a webhook may have missed. A live subscription on the customer whose metadata names a different workspace refuses the checkout without adopting it: one customer is never billed twice, and the mismatch is logged for support. Turn on **Limit customers to one subscription** in the Stripe dashboard as well: it is the only thing that stops two checkout tabs both completing.
 
+Checkout and the billing portal first ask Stripe whether the workspace's stored customer still exists. A customer Stripe has deleted, or never had because the secret key now points at another Stripe account, is replaced by a new one before anything is charged, so moving from a sandbox to live mode needs no change to the database.
+
 A refusal carries the recovery in the error body, not only in its message, so the web app can open the portal for the customer rather than showing them a dead end.
 
 - asobeast reads the scheduled phase from Stripe and records the plan the workspace will land on.

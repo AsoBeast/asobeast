@@ -149,6 +149,29 @@ describe('Billing checkout (e2e)', () => {
     expect(harness.fake.checkoutSessions).toHaveLength(0);
   });
 
+  it('sells to a workspace whose customer and subscription belong to another stripe account', async () => {
+    await resetBillingState(harness, {
+      plan: 'indie',
+      billingCustomerId: 'cus_from_another_account',
+      subscriptionId: 'sub_from_another_account',
+      subscriptionStatus: 'active',
+    });
+    harness.fake.unknownCustomers.add('cus_from_another_account');
+
+    await checkout().expect(200);
+
+    const [customer] = harness.fake.createdCustomers;
+    expect(customer.idempotencyKey).toBe(
+      `customer:${WORKSPACE}:replaces:cus_from_another_account`,
+    );
+    expect(harness.fake.checkoutSessions[0].params.customer).toBe('cus_test_1');
+    await expect(workspaceRow(harness)).resolves.toMatchObject({
+      billingCustomerId: 'cus_test_1',
+      plan: 'free',
+      subscriptionId: null,
+    });
+  });
+
   it('sends a workspace whose subscription stopped collecting to the portal', async () => {
     await storeSubscription('unpaid');
 
