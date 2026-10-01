@@ -1,4 +1,4 @@
-import { Logger, type OnModuleDestroy } from '@nestjs/common';
+import { Logger, type OnApplicationShutdown } from '@nestjs/common';
 import { Redis, type RedisOptions } from 'ioredis';
 import { RedisUnavailableError } from './redis.errors';
 
@@ -8,7 +8,7 @@ export const FAIL_FAST_RETRY_AFTER_SECONDS = 5;
 
 const WARN_INTERVAL_MS = 30_000;
 
-export class FailFastRedis implements OnModuleDestroy {
+export class FailFastRedis implements OnApplicationShutdown {
   private readonly logger = new Logger(FailFastRedis.name);
   private lastWarnedAt = 0;
 
@@ -41,7 +41,7 @@ export class FailFastRedis implements OnModuleDestroy {
     return this.run(work).catch(() => fallback);
   }
 
-  onModuleDestroy(): void {
+  onApplicationShutdown(): void {
     this.client.disconnect();
   }
 

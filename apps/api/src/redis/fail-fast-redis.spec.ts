@@ -55,7 +55,7 @@ describe('FailFastRedis', () => {
   };
 
   afterEach(() => {
-    for (const redis of opened.splice(0)) redis.onModuleDestroy();
+    for (const redis of opened.splice(0)) redis.onApplicationShutdown();
     jest.restoreAllMocks();
   });
 
@@ -94,7 +94,7 @@ describe('FailFastRedis', () => {
 
     const waited = await elapsedMs(redis.run((client) => client.incr('key')));
 
-    redis.onModuleDestroy();
+    redis.onApplicationShutdown();
     await closed(stalled);
     expect(waited).toBeGreaterThanOrEqual(FAIL_FAST_COMMAND_TIMEOUT_MS - 50);
     expect(waited).toBeLessThan(HUNG_REFUSAL_MS);
@@ -119,12 +119,12 @@ describe('FailFastRedis', () => {
     expect(warn).toHaveBeenCalledTimes(1);
   });
 
-  it('closes its connection with the module', async () => {
+  it('closes its connection once the application has shut down', async () => {
     const redis = open(await unusedPort());
 
     const disconnect = jest.spyOn(redis.client, 'disconnect');
 
-    redis.onModuleDestroy();
+    redis.onApplicationShutdown();
 
     expect(disconnect).toHaveBeenCalledTimes(1);
   });
