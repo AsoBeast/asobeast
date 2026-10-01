@@ -259,6 +259,23 @@ describe('BillingService', () => {
     expect(params).toMatchObject({ customer: 'cus_created' });
   });
 
+  it('keeps a customer another request stored while it was replacing the stale one', async () => {
+    const { service, customerExists, createCheckoutSession, row } =
+      build('cus_stale');
+    customerExists.mockImplementation(() => {
+      row.billingCustomerId = 'cus_claimed_meanwhile';
+      return Promise.resolve(false);
+    });
+
+    await service.checkout(owner('cus_stale'), 'price_indie_month');
+
+    expect(row.billingCustomerId).toBe('cus_claimed_meanwhile');
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params).toMatchObject({ customer: 'cus_claimed_meanwhile' });
+  });
+
   it('creates and claims a customer the first time a workspace pays', async () => {
     const { service, createCustomer, createCheckoutSession } = build(null);
 
