@@ -85,6 +85,15 @@ describe('AbuseMonitor', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('leaves the flag alone when redis cannot say whether it is latched', async () => {
+    incr.mockResolvedValue(ABUSE_REFUSALS_PER_DAY + 1);
+    exists.mockRejectedValue(new Error('Command timed out'));
+
+    await monitor.recordRefusal(REFUSED, NOW);
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('still flags a workspace whose threshold refusal was never persisted', async () => {
     incr.mockResolvedValue(ABUSE_REFUSALS_PER_DAY);
     update.mockRejectedValueOnce(new Error('the write failed'));

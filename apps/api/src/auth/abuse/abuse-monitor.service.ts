@@ -59,7 +59,7 @@ export class AbuseMonitor {
       now,
     );
     if (
-      (await this.redis.runOpen((client) => client.exists(flagged), 0)) === 1
+      (await this.redis.runOpen((client) => client.exists(flagged), 1)) === 1
     ) {
       return;
     }
