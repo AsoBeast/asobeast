@@ -66,16 +66,22 @@ describe('BillingReconciler', () => {
   }) => {
     const rows = over.workspaces ?? [];
     const update = jest.fn(
-      (args: { where: { id: string }; data: Partial<Workspace> }) => {
-        const row = rows.find((workspace) => workspace.id === args.where.id);
+      (args: { where: Partial<Workspace>; data: Partial<Workspace> }) => {
+        const row = rows.find((workspace) =>
+          Object.entries(args.where).every(
+            ([key, value]) => workspace[key as keyof Workspace] === value,
+          ),
+        );
         if (row) Object.assign(row, args.data);
-        return Promise.resolve({});
+        return Promise.resolve({ count: row ? 1 : 0 });
       },
     );
     const listCustomerSubscriptions = jest.fn(() =>
       Promise.resolve(over.customerSubscriptions ?? []),
     );
-    const findMany = jest.fn(() => Promise.resolve(rows));
+    const findMany = jest.fn(() =>
+      Promise.resolve(rows.map((row) => ({ ...row }))),
+    );
     const redisSet = jest.fn(() => Promise.resolve('OK'));
     const retrieveSubscription = jest.fn(() =>
       over.retrieveFails
@@ -90,8 +96,11 @@ describe('BillingReconciler', () => {
     const prisma = {
       workspace: {
         findMany,
-        findUnique: jest.fn(() => Promise.resolve(rows[0] ?? null)),
+        findUnique: jest.fn(() =>
+          Promise.resolve(rows[0] ? { ...rows[0] } : null),
+        ),
         update,
+        updateMany: update,
       },
     } as unknown as PrismaService;
 
@@ -408,6 +417,32 @@ describe('BillingReconciler', () => {
     });
     const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
     expect(args.data).toMatchObject({ plan: 'free', subscriptionId: null });
+  });
+
+  it('leaves a plan alone that a checkout changed while reconciliation ran', async () => {
+    const { reconciler, retrieveSubscription, rows } = build({
+      workspaces: [workspaceOf({ subscriptionId: 'sub_gone' })],
+    });
+    retrieveSubscription.mockImplementation(() => {
+      Object.assign(rows[0], {
+        plan: 'ultimate',
+        subscriptionId: 'sub_new',
+        subscriptionStatus: 'active',
+      });
+      return Promise.reject(
+        stripeErrorOf({ code: 'resource_missing', statusCode: 404 }),
+      );
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 0,
+      unreconciled: [],
+    });
+    expect(rows[0]).toMatchObject({
+      plan: 'ultimate',
+      subscriptionId: 'sub_new',
+      subscriptionStatus: 'active',
+    });
   });
 
   it.each([
