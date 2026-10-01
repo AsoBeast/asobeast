@@ -4,12 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { ACTION_FORMULA_VERSION } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { actionsGeneratedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
 import {
   ACTION_REVERT_WINDOW_MINUTES,
@@ -136,32 +137,28 @@ const buildPrisma = (
   };
 };
 
-const buildQueue = (
+const buildRedis = (
   suppressed: string | null = null,
   generated: string | null = null,
 ) =>
-  ({
-    getBackend: () => ({
-      client: Promise.resolve({
-        get: jest.fn((key: string) =>
-          Promise.resolve(
-            key === actionsGeneratedKey(WORKSPACE) ? generated : suppressed,
-          ),
-        ),
-      }),
-    }),
-  }) as unknown as Queue;
+  new FailFastRedis({
+    get: jest.fn((key: string) =>
+      Promise.resolve(
+        key === actionsGeneratedKey(WORKSPACE) ? generated : suppressed,
+      ),
+    ),
+  } as unknown as Redis);
 
 const WORKSPACE = 'ws_1';
 
 const serviceFor = (
   prisma: ReturnType<typeof buildPrisma>,
-  queue: Queue = buildQueue(),
+  redis: FailFastRedis = buildRedis(),
 ): ActionsService => {
   const workspace = new WorkspaceContext();
   const service = new ActionsService(
     prisma as unknown as PrismaService,
-    queue,
+    redis,
     workspace,
     new ActionTransitions(
       {
@@ -360,7 +357,7 @@ describe('ActionsService reads', () => {
   it('restricts every count to the scope but not the run facts', async () => {
     const prisma = buildPrisma();
 
-    const summary = await serviceFor(prisma, buildQueue('4')).summary({
+    const summary = await serviceFor(prisma, buildRedis('4')).summary({
       appId: 'app_9',
     });
 
@@ -378,7 +375,7 @@ describe('ActionsService reads', () => {
   });
 
   it('reports the suppression count recorded by the last run', async () => {
-    const summary = await serviceFor(buildPrisma(), buildQueue('7')).summary();
+    const summary = await serviceFor(buildPrisma(), buildRedis('7')).summary();
 
     expect(summary.suppressedByCap).toBe(7);
   });
@@ -387,7 +384,7 @@ describe('ActionsService reads', () => {
     for (const stored of [null, '', 'many', '-1']) {
       const summary = await serviceFor(
         buildPrisma(),
-        buildQueue(stored),
+        buildRedis(stored),
       ).summary();
 
       expect(summary.suppressedByCap).toBe(0);
@@ -402,7 +399,7 @@ describe('ActionsService reads', () => {
 
     const summary = await serviceFor(
       prisma,
-      buildQueue(null, '2026-08-01T09:30:00.000Z'),
+      buildRedis(null, '2026-08-01T09:30:00.000Z'),
     ).summary();
 
     expect(summary.generatedAt).toBe('2026-08-01T09:30:00.000Z');
@@ -413,7 +410,7 @@ describe('ActionsService reads', () => {
     async (generated) => {
       const summary = await serviceFor(
         buildPrisma(),
-        buildQueue(null, generated),
+        buildRedis(null, generated),
       ).summary();
 
       expect(summary.generatedAt).toBe('2026-07-30T03:00:00.000Z');
@@ -421,12 +418,12 @@ describe('ActionsService reads', () => {
   );
 
   it('never fails a summary because the run key is unreachable', async () => {
-    const queue = {
-      getBackend: () => ({ client: Promise.reject(new Error('redis down')) }),
-    } as unknown as Queue;
+    const redis = new FailFastRedis({
+      get: jest.fn().mockRejectedValue(new Error('redis down')),
+    } as unknown as Redis);
 
     await expect(
-      serviceFor(buildPrisma(), queue).summary(),
+      serviceFor(buildPrisma(), redis).summary(),
     ).resolves.toMatchObject({
       suppressedByCap: 0,
       generatedAt: '2026-07-30T03:00:00.000Z',

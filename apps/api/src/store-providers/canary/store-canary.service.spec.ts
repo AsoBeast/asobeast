@@ -1,10 +1,11 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from '../errors';
 import { ProxyEgress } from '../egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-provider.registry';
 import { NormalizedApp, SearchItem, StoreProvider } from '../types';
 import { storeCanaryKey } from '../../jobs/jobs.types';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import {
   CANARY_TARGETS,
   StoreCanaryRecord,
@@ -58,13 +59,10 @@ function build(stored: Record<string, string> = {}) {
       ) => work(),
     ),
   };
-  const queue = {
-    getBackend: () => ({ client: Promise.resolve(client) }),
-  };
   const service = new StoreCanaryService(
     registry as unknown as StoreProviderRegistry,
     egress as unknown as ProxyEgress,
-    queue as unknown as Queue,
+    new FailFastRedis(client as unknown as Redis),
   );
   return { service, providers, registry, egress, client, redis };
 }

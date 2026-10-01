@@ -1,7 +1,5 @@
-import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { AiModule } from '../ai/ai.module';
-import { QUEUES } from '../jobs/jobs.types';
 import { ActionRunModule } from './action-run.module';
 import { ActionsEngineModule } from './actions-engine.module';
 import { ActionsController, AppActionsController } from './actions.controller';
@@ -13,12 +11,7 @@ import { ActionTransitions } from './action-transitions';
 import { ActionsService } from './actions.service';
 
 @Module({
-  imports: [
-    ActionRunModule,
-    ActionsEngineModule,
-    AiModule,
-    BullModule.registerQueue({ name: QUEUES.PIPELINE }),
-  ],
+  imports: [ActionRunModule, ActionsEngineModule, AiModule],
   controllers: [ActionsController, AppActionsController],
   providers: [
     ActionsService,

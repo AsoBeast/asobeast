@@ -1,8 +1,6 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ProxyTier, Store } from '@prisma/client';
-import { Queue } from 'bullmq';
 import { z } from 'zod';
 import type { ProxyPoolHealth } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -12,9 +10,9 @@ import type { BillingEventOutcome } from '../billing/billing-event-outcome';
 import {
   LAST_BACKUP_KEY,
   LAST_BILLING_RECONCILE_KEY,
-  QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import type { StoreCanaryRecord } from '../store-providers/canary/store-canary.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyLedger } from '../store-providers/egress/proxy-ledger.service';
@@ -144,7 +142,7 @@ export class InstanceMetricsCollector {
     private readonly resources: ResourceMetricsCollector,
     private readonly canary: StoreCanaryService,
     private readonly config: ConfigService<Env, true>,
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
   ) {}
 
   async collect(now = new Date()): Promise<InstanceMetrics> {
@@ -354,25 +352,15 @@ export class InstanceMetricsCollector {
     return Number.isNaN(at.getTime()) ? null : at;
   }
 
-  private async redisValue(key: string): Promise<string | null> {
-    try {
-      const client = await this.queue.getBackend().client;
-      return await client.get(key);
-    } catch {
-      return null;
-    }
+  private redisValue(key: string): Promise<string | null> {
+    return this.redis.runOpen((client) => client.get(key), null);
   }
 
-  private async redisAvailable(): Promise<boolean> {
-    try {
-      const client = (await this.queue.getBackend().client) as unknown as {
-        ping(): Promise<string>;
-      };
+  private redisAvailable(): Promise<boolean> {
+    return this.redis.runOpen(async (client) => {
       await client.ping();
       return true;
-    } catch {
-      return false;
-    }
+    }, false);
   }
 }
 
