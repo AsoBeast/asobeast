@@ -125,7 +125,7 @@ export function productionWarnings(env: Env): string[] {
 function assertOneTaxCollector(env: Env): void {
   if (env.STRIPE_MANAGED_PAYMENTS && env.STRIPE_TAX_ENABLED) {
     throw new Error(
-      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and calculates the tax itself, and it refuses a checkout session that also asks for automatic tax. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
+      'STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED cannot both be true. Under Managed Payments Stripe is the merchant of record and applies its own tax to every checkout session, so STRIPE_TAX_ENABLED, which says this business collects the tax under its own registrations, contradicts it. Keep STRIPE_MANAGED_PAYMENTS and set STRIPE_TAX_ENABLED=false.',
     );
   }
 }

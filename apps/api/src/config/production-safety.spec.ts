@@ -196,6 +196,16 @@ describe('production safety', () => {
       ).toThrow(/STRIPE_MANAGED_PAYMENTS and STRIPE_TAX_ENABLED/);
     });
 
+    it('says stripe applies its own tax rather than claiming it refuses the session', () => {
+      expect(() =>
+        validateEnv({
+          ...BASE,
+          STRIPE_MANAGED_PAYMENTS: 'true',
+          STRIPE_TAX_ENABLED: 'true',
+        }),
+      ).toThrow(/applies its own tax to every checkout session/);
+    });
+
     it.each([
       { STRIPE_MANAGED_PAYMENTS: 'true' },
       { STRIPE_TAX_ENABLED: 'true' },
