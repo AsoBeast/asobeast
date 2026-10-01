@@ -41,12 +41,7 @@ describe('trialAwaitsConfirmation', () => {
   const account = (
     over: {
       emailVerifiedAt?: Date | null;
-      workspace?: Partial<{
-        plan: string;
-        trialStartedAt: Date | null;
-        trialEndsAt: Date | null;
-        planExpiresAt: Date | null;
-      }>;
+      workspace?: Partial<TrialWorkspace>;
     } = {},
   ) => ({
     emailVerifiedAt: over.emailVerifiedAt ?? null,
@@ -55,6 +50,7 @@ describe('trialAwaitsConfirmation', () => {
       trialStartedAt: null,
       trialEndsAt: null,
       planExpiresAt: null,
+      subscriptionId: null,
       ...over.workspace,
     },
   });
@@ -96,6 +92,12 @@ describe('trialAwaitsConfirmation', () => {
     const paying = account({ workspace: { plan: 'indie' } });
 
     expect(trialAwaitsConfirmation(paying, NOW)).toBe(false);
+  });
+
+  it('does not wait for a trial that an earlier subscription ruled out', () => {
+    const cancelled = account({ workspace: { subscriptionId: 'sub_ended' } });
+
+    expect(trialAwaitsConfirmation(cancelled, NOW)).toBe(false);
   });
 
   it('waits again for a paid plan that ended before any trial was taken', () => {

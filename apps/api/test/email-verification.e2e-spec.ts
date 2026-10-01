@@ -479,6 +479,22 @@ describe('Email verification before the trial starts', () => {
       });
     });
 
+    it('does not tell a former subscriber that confirming starts a trial', async () => {
+      const created = await register('owner@example.com').expect(201);
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: {
+          plan: 'free',
+          subscriptionId: 'sub_ended',
+          subscriptionStatus: 'canceled',
+        },
+      });
+
+      const current = await me(sessionCookie(created)).expect(200);
+
+      expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+    });
+
     it('starts the trial for an account that only opened a checkout', async () => {
       await register('owner@example.com').expect(201);
       await prisma.workspace.update({

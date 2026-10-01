@@ -48,7 +48,7 @@ export function trialStillOpen(workspace: { id: string; plan: string }) {
 
 export interface TrialCandidate {
   emailVerifiedAt: Date | null;
-  workspace: TrialHistory & WorkspaceEntitlement;
+  workspace: TrialWorkspace;
 }
 
 export function trialAwaitsConfirmation(
@@ -56,8 +56,6 @@ export function trialAwaitsConfirmation(
   now: Date,
 ): boolean {
   return (
-    account.emailVerifiedAt === null &&
-    !alreadyTrialed(account.workspace) &&
-    !isEntitled(account.workspace, now)
+    account.emailVerifiedAt === null && canStartTrial(account.workspace, now)
   );
 }
