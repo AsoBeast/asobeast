@@ -174,6 +174,4 @@ Pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first for the
 
 ## License
 
-Copyright (C) 2026 the asobeast contributors.
-
-[AGPL-3.0-only](LICENSE), declared in every package manifest. Contributions are accepted under the same licence with no contributor licence agreement. See [licensing of contributions](CONTRIBUTING.md#licensing-of-contributions).
+This repository's source code is available under the [AGPL-3.0 license](LICENSE).
