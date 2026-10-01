@@ -4,6 +4,7 @@ on:
     types: [opened, edited, synchronize, reopened]
 permissions:
   contents: read
+  pull-requests: read
 concurrency:
   group: pr-title-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -25,3 +26,11 @@ jobs:
         env:
           TITLE: ${{ github.event.pull_request.title }}
         run: printf '%s\n' "$TITLE" | pnpm exec commitlint
+      - name: Require a changelog block for squashes this pull request carries
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node .github/scripts/verify-pr-changelog-lines.mjs
