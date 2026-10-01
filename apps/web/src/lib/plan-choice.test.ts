@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { AccountPlan } from "@asobeast/shared";
+import type { AccountPlan, BillingCatalog } from "@asobeast/shared";
 import {
+  CHECKOUT_UNCONFIGURED,
+  HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
+  SOLD_THROUGH_LINK,
+  paymentNote,
   planAction,
   planActionLabel,
   planCallToAction,
@@ -195,5 +199,36 @@ describe("a first payment still being confirmed", () => {
 
   it("still marks the plan a pending workspace is already on", () => {
     expect(planAction({ ...pending, plan: "indie" }, "indie")).toBe("current");
+  });
+});
+
+describe("paymentNote", () => {
+  const catalogOf = (over: Partial<BillingCatalog> = {}): BillingCatalog => ({
+    enabled: true,
+    prices: [],
+    ...over,
+  });
+
+  it("names link as the reseller and the tax line under managed payments", () => {
+    expect(paymentNote(catalogOf({ managedPayments: true }))).toBe(
+      SOLD_THROUGH_LINK,
+    );
+    expect(SOLD_THROUGH_LINK).toContain("Link");
+    expect(SOLD_THROUGH_LINK).toContain("VAT");
+    expect(SOLD_THROUGH_LINK).toContain("local currency");
+  });
+
+  it("keeps today's sentence when this business sells", () => {
+    expect(paymentNote(catalogOf({ managedPayments: false }))).toBe(
+      HANDLED_BY_STRIPE,
+    );
+    expect(paymentNote(catalogOf())).toBe(HANDLED_BY_STRIPE);
+  });
+
+  it("says checkout is off before it says who sells", () => {
+    expect(
+      paymentNote(catalogOf({ enabled: false, managedPayments: true })),
+    ).toBe(CHECKOUT_UNCONFIGURED);
+    expect(paymentNote(undefined)).toBe(CHECKOUT_UNCONFIGURED);
   });
 });
