@@ -2,14 +2,35 @@ import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { test as signedOut } from "./reporting.mts";
-import { seedCookies, SIGNED_IN_ROUTES, SIGNED_OUT_ROUTES } from "./routes.mts";
-import { ACTION_SUMMARY, APP_1_RATINGS_HISTOGRAM } from "./fixtures.mts";
+import {
+  appRoutesFor,
+  seedCookies,
+  SIGNED_IN_ROUTES,
+  SIGNED_OUT_ROUTES,
+  WORKSPACE_ROUTES,
+} from "./routes.mts";
+import {
+  ACTION_SUMMARY,
+  APP_1_RATINGS_HISTOGRAM,
+  FIRST_RUN_UNSCHEDULED,
+} from "./fixtures.mts";
+import { firstRunHeadline } from "../src/components/onboarding/first-run-timeline";
 import { formatNumber } from "../src/lib/format";
 import {
   NOT_STARTED_ONBOARDING,
   ONBOARDING_STORAGE_KEY,
   type OnboardingState,
 } from "../src/lib/onboarding";
+
+const SLOW_API_MS = 300;
+const SLOW_FIRST_RUN_MS = 1000;
+const HYDRATION_APPS = [
+  "app-1",
+  "app-2",
+  "app-new",
+  "app-long",
+  "app-gp",
+] as const;
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 
@@ -292,3 +313,66 @@ for (const [label, cookies] of [
     expect(errors, `the audit page threw: ${errors.join(", ")}`).toEqual([]);
   });
 }
+
+test.describe("while the api is slow", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { e2e_api_latency: String(SLOW_API_MS) });
+  });
+
+  for (const [name, path] of [
+    ...WORKSPACE_ROUTES,
+    ...HYDRATION_APPS.flatMap(appRoutesFor),
+  ]) {
+    test(`${name} hydrates without an uncaught error`, async ({ page }) => {
+      const errors = collectPageErrors(page);
+
+      await page.goto(path);
+      await page.waitForLoadState("networkidle");
+
+      expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(
+        path,
+      );
+      expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual(
+        [],
+      );
+    });
+  }
+
+  test("an overview whose first run status fails hydrates without the card", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_first_run_fail: "1" });
+    const errors = collectPageErrors(page);
+    const headline = firstRunHeadline(FIRST_RUN_UNSCHEDULED);
+
+    const html = await page.request
+      .get("/apps/app-2")
+      .then((response) => response.text());
+    expect(html).not.toContain(headline);
+
+    await page.goto("/apps/app-2");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+
+    expect(errors, `the overview threw: ${errors.join(", ")}`).toEqual([]);
+    await expect(page.getByText(headline)).toHaveCount(0);
+  });
+});
+
+test("the first run card is in the html the server sent while its status is slow", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, {
+    e2e_first_run_latency: String(SLOW_FIRST_RUN_MS),
+  });
+
+  const html = await page.request
+    .get("/apps/app-2")
+    .then((response) => response.text());
+
+  expect(html).toContain(firstRunHeadline(FIRST_RUN_UNSCHEDULED));
+});
