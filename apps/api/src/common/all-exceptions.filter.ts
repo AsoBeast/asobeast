@@ -6,6 +6,7 @@ import {
   HttpStatus,
   Logger,
 } from '@nestjs/common';
+import { STATUS_CODES } from 'node:http';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
 import {
@@ -32,6 +33,7 @@ import {
   UnsearchableAppError,
 } from '../store-providers/errors';
 
+const CLIENT_ERROR_STATUS: number = HttpStatus.BAD_REQUEST;
 const SERVER_ERROR_STATUS: number = HttpStatus.INTERNAL_SERVER_ERROR;
 const UNAUTHORIZED_STATUS: number = HttpStatus.UNAUTHORIZED;
 const BEARER_CHALLENGE = 'Bearer realm="asobeast"';
@@ -47,6 +49,26 @@ type ResolvedError = Pick<
   | 'rateLimit'
   | 'retryAfterSeconds'
 >;
+
+interface ExposableError extends Error {
+  status?: unknown;
+  expose?: unknown;
+}
+
+function exposedClientError(exception: unknown): ResolvedError | undefined {
+  if (!(exception instanceof Error)) return undefined;
+  const { status, expose } = exception as ExposableError;
+  if (expose !== true || typeof status !== 'number') return undefined;
+  const error = STATUS_CODES[status];
+  if (
+    error === undefined ||
+    status < CLIENT_ERROR_STATUS ||
+    status >= SERVER_ERROR_STATUS
+  ) {
+    return undefined;
+  }
+  return { statusCode: status, error, message: exception.message };
+}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -206,6 +228,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       return this.fromHttp(exception);
     }
+    const exposed = exposedClientError(exception);
+    if (exposed) return exposed;
     this.logger.error(
       'Unhandled exception',
       exception instanceof Error ? exception.stack : String(exception),
