@@ -9,8 +9,10 @@ All notable changes to asobeast are documented here. This project adheres to
 ### Features
 
 * **alerts:** alert on rank milestones, first rankings and overtakes ([#139](https://github.com/AsoBeast/asobeast/issues/139)) ([da5e16a](https://github.com/AsoBeast/asobeast/commit/da5e16ada729ceae8f2fb434aa05fcbb0e1f53dd))
+* **api:** sell subscriptions through stripe managed payments ([#188](https://github.com/AsoBeast/asobeast/issues/188)) ([a5ef1bc](https://github.com/AsoBeast/asobeast/commit/a5ef1bc3c0d397106c4e9bf11d578a02c8ea9e86))
 * **changes:** report how rankings and visibility moved after each change ([#138](https://github.com/AsoBeast/asobeast/issues/138)) ([3afeab3](https://github.com/AsoBeast/asobeast/commit/3afeab3741a075e8bfbea3efa52f772b5e60bfee))
 * **keywords:** tag tracked keywords and keep a note on each ([#144](https://github.com/AsoBeast/asobeast/issues/144)) ([c8ec7f8](https://github.com/AsoBeast/asobeast/commit/c8ec7f8d9c119cde45298da22b53307f586bf1b7))
+* **metadata:** draft listings for a storefront's extra localizations ([#141](https://github.com/AsoBeast/asobeast/issues/141)) ([223bcda](https://github.com/AsoBeast/asobeast/commit/223bcda67c3362f49aebafc0dfa2d2120bedefbf))
 * **scoring:** calibrate popularity and difficulty on published values ([#152](https://github.com/AsoBeast/asobeast/issues/152)) ([56a0ce3](https://github.com/AsoBeast/asobeast/commit/56a0ce35c5d9c4b6e9b62dae0f3ee6f0c2f23eef))
 * **scoring:** refit popularity and opportunity as formula v4 ([#174](https://github.com/AsoBeast/asobeast/issues/174)) ([340eea0](https://github.com/AsoBeast/asobeast/commit/340eea0cffd66ff4be94994d2235a03158d29b35))
 * **web:** export competitors, gaps, reviews and serps to csv ([#146](https://github.com/AsoBeast/asobeast/issues/146)) ([86259e5](https://github.com/AsoBeast/asobeast/commit/86259e54f638e36808b17b95560cea75329ba31d))
