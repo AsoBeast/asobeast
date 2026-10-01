@@ -166,6 +166,40 @@ gh api -X POST "repos/AsoBeast/asobeast/actions/runs/<id>/approve"
 
 Approving is preferable to merging with administrator privileges, because it runs the checks the branch rules ask for rather than skipping them.
 
+## Correct a changelog that left a change out
+
+A squash merge keeps one line per pull request. When a pull request carried another one, for example a stacked pull request merged into its base branch, the carried change is missing from the changelog and the release notes. What fixes it depends on whether the release has shipped.
+
+| State | What reads the fix | What to do |
+| --- | --- | --- |
+| The release pull request is still open | Release Please, on its next run | Add a `BEGIN_COMMIT_OVERRIDE` block to the merged pull request description, then rerun the latest Release workflow run so the release pull request regenerates |
+| The release has shipped | Nothing in Release Please | Correct `CHANGELOG.md` and the GitHub release by hand, below |
+
+Release Please considers only commits after the last release tag, so an override block added after the tag is never read.
+
+<Steps>
+  <Step title="Correct the changelog section on main">
+    Add the missing line to the shipped section in a normal pull request, in the format Release Please writes, ordered by scope and then message. The pull request number is the real one, and the hash is the commit on `main` that carries the work.
+
+    ```md
+    * **api:** sell subscriptions through stripe managed payments ([#188](https://github.com/AsoBeast/asobeast/issues/188)) ([a5ef1bc](https://github.com/AsoBeast/asobeast/commit/a5ef1bc3c0d397106c4e9bf11d578a02c8ea9e86))
+    ```
+
+    Use the `docs(repo)` commit type, which is hidden from the changelog, so no release pull request follows. Release Please reads `CHANGELOG.md` from `main` and only prepends the next section, so the edit survives.
+  </Step>
+  <Step title="Correct the published release notes">
+    The notes are the corrected section, extracted the same way as in the recovery above.
+
+    ```bash
+    awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.md
+    diff <(gh release view v<version> --json body --jq .body) notes.md
+    gh release edit v<version> --notes-file notes.md
+    ```
+
+    The `diff` must show only the added lines. Editing the notes changes no tag and publishes no images.
+  </Step>
+</Steps>
+
 ## Prevention
 
 `release.yml` runs a `verify-release-state` job on every push that does not create a release. It asserts that the version in `.release-please-manifest.json` exists as a tag on `origin` and fails the workflow with an annotation when it does not. A wedged state that would otherwise report success stops the pipeline the first time it appears.
@@ -173,6 +207,8 @@ Approving is preferable to merging with administrator privileges, because it run
 `ci.yml` reports the same invariant as a warning on every pull request, so an author sees an unhealthy release pipeline before merging rather than after.
 
 A second failure shape has nothing to do with tags. Any file that states the version and is not listed in `release-please-config.json` stops moving with the release, so the release pull request carries a file that disagrees with the version it ships. The openapi document is the case that bites, because `openapi-drift` compares the captured `info.version` against the running API and reports a generic drift. `pnpm check:release-versions` runs in `checks` and names the file and the fix instead, and it fails the pull request that introduces an unregistered version rather than the release pull request months later.
+
+A third failure shape loses changelog lines rather than tags. The `pr-title` check fails a pull request that carries a squash merged pull request without a `BEGIN_COMMIT_OVERRIDE` block listing the title and each carried line, so the loss is caught before the merge instead of after the release.
 
 ## Next steps
 
