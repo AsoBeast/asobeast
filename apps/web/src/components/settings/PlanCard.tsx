@@ -79,7 +79,7 @@ function ManageBillingButton() {
 
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
-  const { user } = useAuth();
+  const { user, awaitingConfirmation } = useAuth();
 
   if (!plan.billing) return null;
 
@@ -94,7 +94,7 @@ export function PlanCard() {
           )}
         </CardTitle>
         <p className="text-body text-muted-foreground">
-          {planStatusLine(plan)}
+          {planStatusLine(plan, awaitingConfirmation)}
         </p>
       </CardHeader>
       <CardContent>

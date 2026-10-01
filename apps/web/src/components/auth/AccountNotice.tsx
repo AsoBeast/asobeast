@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ConfirmEmailBanner } from "./ConfirmEmailBanner";
 import { useAuth } from "./use-auth";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -40,8 +41,11 @@ function TrialBanner({ remaining }: { remaining: number }) {
 }
 
 export function AccountNotice() {
-  const { user, trialOnly } = useAuth();
+  const { user, trialOnly, awaitingConfirmation } = useAuth();
 
+  if (user && awaitingConfirmation) {
+    return <ConfirmEmailBanner email={user.email} />;
+  }
   if (user && !user.entitled) return <PausedBanner />;
   if (trialOnly && user?.trialEndsAt) {
     return <TrialBanner remaining={daysLeft(user.trialEndsAt)} />;
