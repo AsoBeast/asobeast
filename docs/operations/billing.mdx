@@ -16,22 +16,50 @@ Two products and four prices, created from a committed script rather than by han
 pnpm --filter api stripe:catalog
 ```
 
-The script creates each price with the lookup key `asobeast_<plan>_<interval>`, `tax_behavior: exclusive` and each product with the software as a service tax code `txcd_10103001`, provisions the customer portal described under [Downgrade and cancellation](#downgrade-and-cancellation), and ends by printing the settings only the dashboard holds. It is idempotent: a second run finds everything it created and changes nothing. The [go live checklist](/operations/billing-go-live) repeats the dashboard settings.
+The script creates each price with the lookup key `asobeast_<plan>_<interval>`, `tax_behavior: exclusive` and each product with the software as a service tax code `txcd_10103001`, provisions the customer portal described under [Downgrade and cancellation](#downgrade-and-cancellation), and ends by printing the settings only the dashboard holds for the mode `STRIPE_MANAGED_PAYMENTS` selects. It is idempotent: a second run finds everything it created and changes nothing. The [go live checklist](/operations/billing-go-live) repeats the dashboard settings.
 
 The API resolves the four prices from their lookup keys when it boots, before every nightly reconciliation, and on the next checkout or catalog read whenever the catalog is still empty, at most once a minute. No price id has to be copied into the environment. The four `STRIPE_PRICE_*` variables remain as an override: set any of them and the catalog comes from the environment alone and never asks Stripe. A subscription on a price that has lost its lookup key, for example one archived after a price change, is still placed by the plan in the price's `asobeast_plan` metadata, which the catalog script sets on every price. A price that names no plan either way is refused loudly rather than falling back to a free plan, because a silent fallback means a paying customer gets nothing.
 
 ## Checkout
 
-A checkout session always carries what a correct invoice needs:
+A checkout session always carries:
 
 - the billing address, required;
-- a tax id field, so a business can enter its VAT number for a reverse charge;
-- `customer_update` for the name and address, so both land on the Stripe customer and print on every later invoice;
-- an explicit `flexible` billing mode, rather than whatever the pinned API version defaults to.
+- an explicit `flexible` billing mode, rather than whatever the pinned API version defaults to;
+- the workspace id as `client_reference_id` and in the subscription metadata.
 
-`STRIPE_TAX_ENABLED` adds automatic tax to every session. Leave it `false` until Stripe Tax is active with its registrations, because Checkout refuses to open while automatic tax has nothing to calculate with. The address and tax id are collected either way.
+Who collects the tax decides the rest, and exactly one of three modes applies:
+
+| Mode | Set | Who is the seller | What the session adds |
+| --- | --- | --- | --- |
+| No tax | neither variable | this business | a tax id field and `customer_update` for the name and address, so a later invoice can be corrected; no tax is charged |
+| Stripe Tax | `STRIPE_TAX_ENABLED=true` | this business, registered for tax where it must be | the same, plus automatic tax |
+| Managed Payments | `STRIPE_MANAGED_PAYMENTS=true` | Stripe, through Link | `managed_payments`, and nothing Stripe controls in that mode |
+
+The two variables refuse to boot together. A production instance on a live key with neither of them logs a warning at startup, because it sells untaxed while this business stays liable.
 
 The success URL carries `{CHECKOUT_SESSION_ID}`, which Stripe replaces with the id of the completed session. The app posts it to `POST /billing/reconcile`, and the API adopts that session's subscription at once, provided the session names this workspace as its `client_reference_id`. A session that names another workspace, holds no subscription yet or is unknown to Stripe falls back to the customer's subscriptions, so the return never depends on the id.
+
+## Selling through Stripe Managed Payments
+
+With `STRIPE_MANAGED_PAYMENTS=true` every checkout session asks Stripe to act as the merchant of record. The customer buys from Link, Stripe's reseller, and Stripe calculates, collects, files and remits sales tax, VAT and GST in the countries it covers, handles fraud and disputes, and answers payment questions. The service still owns the product, the plan, the portal and every webhook.
+
+What changes for the customer:
+
+- Checkout shows the price in their local currency at a rate guaranteed for a day. The subscription itself stays in US dollars.
+- The card statement reads `LINK.COM*` followed by the statement descriptor.
+- Receipts and invoices come from Link. Customers can also cancel or update the subscription at link.com, which reaches this service as the same subscription events as a change made in the billing portal.
+
+What changes for the operator:
+
+- Managed Payments has to be activated in the Stripe dashboard, and its terms accepted, before the variable is turned on. A session sent without it is refused by Stripe.
+- Stripe controls the tax, tax id, customer detail, payment method and currency parameters of the session, so the API stops sending them.
+- Stripe escalates payment questions to the support email in the dashboard's business details. A question left unanswered for 48 hours can be refunded by Stripe without asking.
+- Stripe can refund a purchase within 60 days to prevent a chargeback, and handles every dispute itself.
+- Sales to a country Managed Payments does not cover stay this business's tax liability. Keep Stripe Tax threshold monitoring on; it costs nothing for these transactions and says when a registration becomes necessary.
+- Payouts show the withheld tax and Stripe's fees separately in the balance reports, under `withheld_tax` and `fee_net_of_withheld_tax`.
+
+Only subscriptions bought through a Managed Payments checkout are sold by Link. Turning the variable on changes nothing about a subscription that already exists.
 
 ## The webhook endpoint
 
