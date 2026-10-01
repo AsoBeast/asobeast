@@ -34,6 +34,7 @@ import type {
   AppAuditResult,
   AuditRecommendation,
   AuditTarget,
+  KeywordCoverageRow,
   MetadataAuditResult,
   MetadataDraft,
   TrackedKeywordItem,
@@ -2908,6 +2909,93 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   keywordFieldSuggestion: null,
 };
 
+export const APP_AR_ID = "app-ar";
+
+export const APP_AR_DETAIL: AppDetail = {
+  ...APP_GP_DETAIL,
+  id: APP_AR_ID,
+  storeAppId: "com.souq.shopper",
+  country: "ae",
+  name: "سوق: تسوق أونلاين",
+};
+
+const AR_FIELDS = ["title", "shortDescription", "description"] as const;
+
+const arCoverageRow = (
+  keywordId: string,
+  text: string,
+  bucket: KeywordCoverageRow["bucket"],
+  covered: readonly boolean[],
+): KeywordCoverageRow => ({
+  keywordId,
+  text,
+  bucket,
+  fields: AR_FIELDS.map((field, index) => ({
+    field,
+    covered: covered[index] ?? false,
+  })),
+  uncovered: !covered.some(Boolean),
+});
+
+const AR_DESCRIPTION =
+  "تسوق الملابس والإلكترونيات ومنتجات المنزل من متجر واحد. شحن سريع إلى باب بيتك، ودفع آمن عند الاستلام، وعروض جديدة كل يوم. SHOP, SAVE & ENJOY مع تطبيق سوق.";
+
+export const APP_AR_METADATA_AUDIT: MetadataAuditResult = {
+  appId: APP_AR_ID,
+  store: "GOOGLE_PLAY",
+  fields: [
+    {
+      field: "title",
+      value: "سوق: تسوق أونلاين",
+      chars: 17,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "shortDescription",
+      value: "تسوق أحدث المنتجات بأفضل الأسعار مع توصيل سريع وإرجاع مجاني",
+      chars: 59,
+      limit: 80,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "description",
+      value: AR_DESCRIPTION,
+      chars: AR_DESCRIPTION.length,
+      limit: 4000,
+      indexed: true,
+      issues: [],
+    },
+  ],
+  coverage: [
+    arCoverageRow("kw-ar-1", "تسوق اون لاين", "primary", [true, true, true]),
+    arCoverageRow("kw-ar-2", "توصيل سريع", "primary", [false, true, true]),
+    arCoverageRow("kw-ar-3", "ملابس رجالية", "secondary", [false, false, true]),
+    arCoverageRow("kw-ar-4", "الكترونيات", "secondary", [false, false, true]),
+    arCoverageRow("kw-ar-5", "دفع عند الاستلام", "longtail", [
+      false,
+      false,
+      true,
+    ]),
+    arCoverageRow("kw-ar-6", "عروض الجمعة البيضاء", "longtail", [
+      false,
+      false,
+      false,
+    ]),
+    arCoverageRow("kw-ar-7", "منتجات المنزل", "longtail", [false, false, true]),
+    arCoverageRow("kw-ar-8", "شحن مجاني", "longtail", []),
+  ],
+  keywordFieldSuggestion: null,
+};
+
+DATASETS[APP_AR_ID] = {
+  ...DATASETS["app-gp"],
+  detail: APP_AR_DETAIL,
+  changeImpact: emptyChangeImpact(APP_AR_DETAIL),
+};
+
 export const METADATA_DRAFTS: MetadataDraft[] = [
   {
     field: "title",
@@ -2970,6 +3058,11 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
       ],
     },
   ],
+};
+
+export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
+  "app-long": APP_LONG_METADATA_AUDIT,
+  [APP_AR_ID]: APP_AR_METADATA_AUDIT,
 };
 
 export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(

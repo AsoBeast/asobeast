@@ -21,8 +21,8 @@ import {
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
+  METADATA_AUDITS,
   METADATA_DRAFTS,
-  APP_LONG_METADATA_AUDIT,
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
   BUDGET,
@@ -1501,9 +1501,9 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
     handler: ([id], req, res) =>
-      apps.some((app) => app.id === id)
+      apps.some((app) => app.id === id) || id in METADATA_AUDITS
         ? json(res, 200, {
-            ...(id === "app-long" ? APP_LONG_METADATA_AUDIT : METADATA_AUDIT),
+            ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
             appId: id,
             store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
           })
