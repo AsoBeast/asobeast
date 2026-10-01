@@ -17,6 +17,7 @@ export interface AuthUser {
   trialEndsAt: string | null;
   planExpiresAt: string | null;
   entitled: boolean;
+  trialAwaitsConfirmation?: boolean;
   platformOperator: boolean;
 }
 
