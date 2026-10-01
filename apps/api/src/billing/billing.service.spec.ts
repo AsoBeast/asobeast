@@ -15,6 +15,7 @@ const WORKSPACE = 'ws_billing';
 const CONFIG: Record<string, string | boolean | undefined> = {
   STRIPE_SECRET_KEY: 'sk_test',
   STRIPE_TAX_ENABLED: false,
+  STRIPE_MANAGED_PAYMENTS: false,
   STRIPE_PRICE_INDIE_MONTHLY: 'price_indie_month',
   STRIPE_WEBHOOK_SECRET: 'whsec_test',
   WEB_PUBLIC_URL: 'https://app.example.com',
@@ -53,6 +54,7 @@ describe('BillingService', () => {
   ) => {
     const values = { ...CONFIG, ...env };
     const createCustomer = jest.fn().mockResolvedValue({ id: 'cus_created' });
+    const customerExists = jest.fn().mockResolvedValue(true);
     const createCheckoutSession = jest.fn().mockResolvedValue({
       id: 'cs_new',
       url: 'https://checkout.stripe.test/session',
@@ -82,6 +84,7 @@ describe('BillingService', () => {
         where: {
           OR?: Array<{ checkoutClaimedAt?: { lt?: Date } | null }>;
           checkoutClaimToken?: string;
+          billingCustomerId?: string | null;
         };
         data: Partial<typeof row>;
       }) => {
@@ -95,8 +98,8 @@ describe('BillingService', () => {
           return Promise.resolve({ count: 0 });
         }
         if (
-          'billingCustomerId' in args.data &&
-          row.billingCustomerId !== null
+          'billingCustomerId' in args.where &&
+          args.where.billingCustomerId !== row.billingCustomerId
         ) {
           return Promise.resolve({ count: 0 });
         }
@@ -126,6 +129,7 @@ describe('BillingService', () => {
       {
         enabled: values['STRIPE_SECRET_KEY'] !== undefined,
         createCustomer,
+        customerExists,
         createCheckoutSession,
         createPortalSession,
         listCustomerSubscriptions,
@@ -141,6 +145,7 @@ describe('BillingService', () => {
     return {
       service,
       createCustomer,
+      customerExists,
       createCheckoutSession,
       createPortalSession,
       listCustomerSubscriptions,
@@ -207,12 +212,87 @@ describe('BillingService', () => {
     expect(params.automatic_tax).toEqual({ enabled: true });
   });
 
+  it('sells through managed payments once it is switched on', async () => {
+    const { service, createCheckoutSession } = build(
+      'cus_existing',
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_MANAGED_PAYMENTS: true },
+    );
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params.managed_payments).toEqual({ enabled: true });
+    expect(params).not.toHaveProperty('automatic_tax');
+    expect(params).not.toHaveProperty('tax_id_collection');
+    expect(params).not.toHaveProperty('customer_update');
+  });
+
   it('reuses the stored customer rather than creating a second one', async () => {
     const { service, createCustomer } = build('cus_existing');
 
     await service.checkout(owner('cus_existing'), 'price_indie_month');
 
     expect(createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('asks stripe once whether the stored customer still exists', async () => {
+    const { service, customerExists, createCustomer } = build('cus_existing');
+
+    await service.checkout(owner('cus_existing'), 'price_indie_month');
+
+    expect(customerExists).toHaveBeenCalledTimes(1);
+    expect(customerExists).toHaveBeenCalledWith('cus_existing');
+    expect(createCustomer).not.toHaveBeenCalled();
+  });
+
+  it('replaces a stored customer stripe has no record of before it opens checkout', async () => {
+    const {
+      service,
+      createCustomer,
+      createCheckoutSession,
+      customerExists,
+      listCustomerSubscriptions,
+      row,
+    } = build('cus_from_another_account');
+    customerExists.mockResolvedValue(false);
+
+    await service.checkout(
+      owner('cus_from_another_account'),
+      'price_indie_month',
+    );
+
+    expect(createCustomer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { [WORKSPACE_METADATA_KEY]: WORKSPACE },
+      }),
+      `customer:${WORKSPACE}:replaces:cus_from_another_account`,
+    );
+    expect(row.billingCustomerId).toBe('cus_created');
+    expect(listCustomerSubscriptions).toHaveBeenCalledWith('cus_created');
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params).toMatchObject({ customer: 'cus_created' });
+  });
+
+  it('keeps a customer another request stored while it was replacing the stale one', async () => {
+    const { service, customerExists, createCheckoutSession, row } =
+      build('cus_stale');
+    customerExists.mockImplementation(() => {
+      row.billingCustomerId = 'cus_claimed_meanwhile';
+      return Promise.resolve(false);
+    });
+
+    await service.checkout(owner('cus_stale'), 'price_indie_month');
+
+    expect(row.billingCustomerId).toBe('cus_claimed_meanwhile');
+    const [params] = createCheckoutSession.mock.calls[0] as [
+      Record<string, unknown>,
+    ];
+    expect(params).toMatchObject({ customer: 'cus_claimed_meanwhile' });
   });
 
   it('creates and claims a customer the first time a workspace pays', async () => {
@@ -652,6 +732,19 @@ describe('BillingService', () => {
     });
   });
 
+  it('opens the portal on a fresh customer when the stored one is gone', async () => {
+    const { service, customerExists, createPortalSession } =
+      build('cus_deleted');
+    customerExists.mockResolvedValue(false);
+
+    await service.portal(owner('cus_deleted'));
+
+    expect(createPortalSession).toHaveBeenCalledWith(
+      expect.objectContaining({ customer: 'cus_created' }),
+      expect.any(String),
+    );
+  });
+
   it('never asks Stripe for a trial, so a trialing workspace gets no second one', async () => {
     const { service, createCheckoutSession } = build('cus_existing');
 
@@ -795,6 +888,19 @@ describe('BillingService', () => {
           amountUsd: 10,
         },
       ],
+      managedPayments: false,
+    });
+  });
+
+  it('tells the paywall when stripe sells the plan as merchant of record', async () => {
+    const { service } = build(
+      null,
+      { subscriptionId: null, subscriptionStatus: null },
+      { STRIPE_MANAGED_PAYMENTS: true },
+    );
+
+    await expect(service.catalog()).resolves.toMatchObject({
+      managedPayments: true,
     });
   });
 });

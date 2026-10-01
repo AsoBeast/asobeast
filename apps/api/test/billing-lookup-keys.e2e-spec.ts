@@ -50,6 +50,12 @@ describe('Billing catalog from stripe lookup keys (e2e)', () => {
     );
   });
 
+  it('says this business sells the plan when managed payments is off', async () => {
+    const response = await harness.owner.get('/billing/catalog').expect(200);
+
+    expect((response.body as BillingCatalog).managedPayments).toBe(false);
+  });
+
   it('opens a checkout for a price resolved by its lookup key', async () => {
     await harness.owner
       .post('/billing/checkout')

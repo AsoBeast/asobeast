@@ -20,6 +20,7 @@ export interface BillingPrice {
 export interface BillingCatalog {
   enabled: boolean;
   prices: BillingPrice[];
+  managedPayments?: boolean;
 }
 
 export interface CheckoutRequest {

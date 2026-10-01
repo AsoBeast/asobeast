@@ -239,7 +239,10 @@ export class BillingReconciler {
     if (!workspace.billingCustomerId) return null;
 
     const adopted = heldForWorkspace(
-      await this.stripe.listCustomerSubscriptions(workspace.billingCustomerId),
+      await this.customerSubscriptions(
+        workspace.id,
+        workspace.billingCustomerId,
+      ),
       workspace.id,
     );
     if (!adopted) return null;
@@ -248,6 +251,21 @@ export class BillingReconciler {
       `workspace ${workspace.id} is billed for stripe subscription ${adopted.id} (${adopted.status}) that no webhook recorded; adopting it`,
     );
     return adopted;
+  }
+
+  private async customerSubscriptions(
+    workspaceId: string,
+    customerId: string,
+  ): Promise<Stripe.Subscription[]> {
+    try {
+      return await this.stripe.listCustomerSubscriptions(customerId);
+    } catch (error) {
+      if (!isMissingResource(error)) throw error;
+      this.logger.error(
+        `workspace ${workspaceId} names stripe customer ${customerId} that Stripe has no record of: ${reasonOf(error)}`,
+      );
+      return [];
+    }
   }
 
   private async revokeUnknownSubscription(

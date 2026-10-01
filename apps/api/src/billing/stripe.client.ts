@@ -14,7 +14,7 @@ export const STRIPE_APP_INFO = {
 export const STRIPE_CLIENT = 'STRIPE_CLIENT';
 
 export interface StripeApi {
-  customers: Pick<Stripe['customers'], 'create' | 'del'>;
+  customers: Pick<Stripe['customers'], 'create' | 'retrieve' | 'del'>;
   checkout: {
     sessions: Pick<
       Stripe['checkout']['sessions'],

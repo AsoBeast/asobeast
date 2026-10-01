@@ -333,7 +333,8 @@ AUTH_COOKIE_SECURE=false            # REFUSES TO BOOT when false and NODE_ENV=pr
 STRIPE_SECRET_KEY=                   # optional; billing is inert without it. Never logged. One sandbox per environment; a sandbox shared with another stack posts that stack's events here. WARNS in production when BILLING_ENABLED=true on a sandbox key
 STRIPE_WEBHOOK_SECRET=              # required to accept /billing/webhook; an unverified endpoint grants subscriptions to anyone
 STRIPE_PORTAL_RETURN_URL=           # where the customer portal returns to; defaults to WEB_PUBLIC_URL/settings
-STRIPE_TAX_ENABLED=false            # true adds automatic tax to every checkout. Needs Stripe Tax active with registrations and prices that carry a tax behaviour, or checkout refuses to open
+STRIPE_TAX_ENABLED=false            # true adds automatic tax to every checkout. Needs Stripe Tax active with registrations and prices that carry a tax behaviour, or checkout refuses to open. REFUSES TO BOOT together with STRIPE_MANAGED_PAYMENTS=true
+STRIPE_MANAGED_PAYMENTS=false       # true sells every checkout through Stripe Managed Payments, Stripe's merchant of record: Stripe calculates, collects and remits the tax. Needs Managed Payments activated in the dashboard. REFUSES TO BOOT when true and STRIPE_TAX_ENABLED=true. WARNS in production when BILLING_ENABLED=true on a live key with neither this nor STRIPE_TAX_ENABLED
 STRIPE_PRICE_INDIE_MONTHLY=         # optional; empty resolves the price by its lookup key, which pnpm --filter api stripe:catalog creates. Setting any of the four replaces the lookup key catalog with the ids they name
 STRIPE_PRICE_INDIE_YEARLY=          # optional override; empty resolves the price by its lookup key
 STRIPE_PRICE_ULTIMATE_MONTHLY=      # optional override; empty resolves the price by its lookup key

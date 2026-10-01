@@ -17,6 +17,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import type { AccountUser } from '../auth/auth.types';
 import { BillingConflictError } from './billing.errors';
 import { BillingReconciler } from './billing-reconciler.service';
+import {
+  checkoutSessionParams,
+  taxCollectionOf,
+  type TaxCollection,
+} from './checkout-session';
 import { PriceCatalog } from './price-catalog';
 import { isMissingResource, reasonOf } from './stripe-errors';
 import { StripeService } from './stripe.service';
@@ -62,6 +67,7 @@ export class BillingService {
     return {
       enabled: this.missingConfiguration().length === 0,
       prices: this.prices.prices,
+      managedPayments: this.taxCollection() === 'managed_payments',
     };
   }
 
@@ -79,25 +85,14 @@ export class BillingService {
     try {
       await this.closeOpenCheckout(workspaceId);
       const session = await this.stripe.createCheckoutSession(
-        {
-          mode: 'subscription',
-          customer: customerId,
-          line_items: [{ price: price.priceId, quantity: 1 }],
-          client_reference_id: workspaceId,
-          subscription_data: {
-            metadata: { [WORKSPACE_METADATA_KEY]: workspaceId },
-            billing_mode: { type: 'flexible' },
-          },
-          success_url: this.checkoutReturnUrl(),
-          cancel_url: this.webUrl(UPGRADE_PATH),
-          allow_promotion_codes: true,
-          billing_address_collection: 'required',
-          tax_id_collection: { enabled: true },
-          customer_update: { address: 'auto', name: 'auto' },
-          automatic_tax: {
-            enabled: this.config.get('STRIPE_TAX_ENABLED', { infer: true }),
-          },
-        },
+        checkoutSessionParams({
+          customerId,
+          priceId: price.priceId,
+          workspaceId,
+          successUrl: this.checkoutReturnUrl(),
+          cancelUrl: this.webUrl(UPGRADE_PATH),
+          taxCollection: this.taxCollection(),
+        }),
         `checkout:${workspaceId}:${attempt}`,
       );
 
@@ -249,6 +244,17 @@ export class BillingService {
     return session.url;
   }
 
+  private taxCollection(): TaxCollection {
+    return taxCollectionOf({
+      STRIPE_TAX_ENABLED: this.config.get('STRIPE_TAX_ENABLED', {
+        infer: true,
+      }),
+      STRIPE_MANAGED_PAYMENTS: this.config.get('STRIPE_MANAGED_PAYMENTS', {
+        infer: true,
+      }),
+    });
+  }
+
   private missingConfiguration(): string[] {
     const missing: string[] = [];
     if (!this.stripe.enabled) missing.push('STRIPE_SECRET_KEY');
@@ -294,7 +300,12 @@ export class BillingService {
 
   private async customerFor(user: AccountUser): Promise<string> {
     const stored = await this.storedCustomer();
-    if (stored) return stored;
+    if (stored && (await this.stripe.customerExists(stored))) return stored;
+    if (stored) {
+      this.logger.warn(
+        `workspace ${user.workspaceId} names stripe customer ${stored} that Stripe has no record of; replacing it`,
+      );
+    }
 
     const customer = await this.stripe.createCustomer(
       {
@@ -302,10 +313,10 @@ export class BillingService {
         name: user.workspace.name,
         metadata: { [WORKSPACE_METADATA_KEY]: user.workspaceId },
       },
-      `customer:${user.workspaceId}`,
+      customerKeyOf(user.workspaceId, stored),
     );
     const claimed = await this.prisma.workspace.updateMany({
-      where: { id: user.workspaceId, billingCustomerId: null },
+      where: { id: user.workspaceId, billingCustomerId: stored },
       data: { billingCustomerId: customer.id },
     });
     if (claimed.count > 0) return customer.id;
@@ -345,6 +356,12 @@ export class BillingService {
 
 function minuteBucket(): number {
   return Math.floor(Date.now() / 60_000);
+}
+
+function customerKeyOf(workspaceId: string, replaced: string | null): string {
+  return replaced
+    ? `customer:${workspaceId}:replaces:${replaced}`
+    : `customer:${workspaceId}`;
 }
 
 function subscriptionExists(status: string | null): BillingConflictError {

@@ -81,7 +81,7 @@ Three things survive, deliberately, and pretending otherwise would be dishonest.
 
 Beyond the application:
 
-- **Your payment provider keeps its own records.** Stripe retains payment and invoice data under its own legal obligations, and we cannot delete what a subprocessor is required to keep. Ask them directly.
+- **Your payment provider keeps its own records.** Stripe retains payment and invoice data under its own legal obligations, and we cannot delete what a subprocessor is required to keep. When a plan was sold through Link, Link keeps the receipt and invoice as the seller of record. Ask them directly.
 - **Backups contain deleted data until they rotate.** This is the real deletion horizon and it is worth stating plainly: erasure removes your data from the live database immediately, and from backups after the backup retention window passes. The shipped schedule keeps 14 daily and 8 weekly archives, and the offsite copies default to the same window, so that window is 56 days. See [Backups](/operations/backups), which is where a deployment records its own window if it changed it.
 - **Server logs** carry workspace identifiers, never your keywords or listings, and rotate with the hosting platform.
 

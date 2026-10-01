@@ -242,8 +242,11 @@ export class BillingWebhookService {
     }
 
     const state = stateFrom(subscription, this.prices);
-    await this.prisma.workspace.update({
-      where: { id: workspace.id },
+    const projected = await this.prisma.workspace.updateMany({
+      where: {
+        id: workspace.id,
+        billingCustomerId: workspace.billingCustomerId,
+      },
       data: {
         ...projectionOf(state),
         subscriptionEventAt: eventAt,
@@ -253,6 +256,11 @@ export class BillingWebhookService {
         ...(await this.pending(workspace, subscription, eventAt)),
       },
     });
+    if (projected.count === 0) {
+      throw new Error(
+        `workspace ${workspace.id} changed stripe customer while event ${event.id} was applied; retrying against the stored one`,
+      );
+    }
     this.logger.log(
       `workspace ${workspace.id} is now ${state.plan} (${state.status})`,
     );

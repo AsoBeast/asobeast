@@ -13,7 +13,7 @@ A subprocessor is a third party that processes data on our behalf. This page nam
 | Subprocessor | Purpose | What reaches it |
 | --- | --- | --- |
 | Hosting provider | Runs the application, the PostgreSQL database and the Redis queue | Everything the service stores, at rest and in transit inside the deployment |
-| Stripe | Subscriptions, payments and the customer portal | Your billing email, payment details you enter in Stripe's own interface, and a workspace identifier. **We never see or store card details** |
+| Stripe and Link | Subscriptions, payments, the customer portal and, as reseller and merchant of record, tax collection, receipts and payment support | Your billing name, email and address, any tax id you enter, payment details you enter in Stripe's own interface, and a workspace identifier. **We never see or store card details**. Link uses what you give it at checkout under its own privacy policy, as the seller of record |
 | Webshare | Datacenter network egress for store requests | The store request itself, which carries the keyword phrase and the storefront. No account data |
 | SMTP provider | Alert emails, email confirmation and billing notices | Recipient address and the message body, which can name your apps and keywords |
 | Object storage provider | Offsite backup archives | An encrypted database archive. The decryption key is not stored on the server that produced it and is never sent to the provider, so the provider holds ciphertext it cannot read |
@@ -33,7 +33,7 @@ A self hosted installation uses **none** of the above by default.
 | Subprocessor | Used when self hosted |
 | --- | --- |
 | Hosting provider | Your own infrastructure, not ours |
-| Stripe | No, unless you deliberately enable billing |
+| Stripe and Link | No, unless you deliberately enable billing. Link only when you also enable Managed Payments |
 | Webshare | No, unless you configure a proxy provider. Store requests otherwise leave from your own address |
 | SMTP provider | Only the server you configure, and email stays disabled until you do |
 | Object storage provider | Only the destination you configure, and archives stay on the host until you do |

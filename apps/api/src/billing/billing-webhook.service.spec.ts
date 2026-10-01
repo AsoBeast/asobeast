@@ -86,7 +86,7 @@ describe('BillingWebhookService', () => {
         : Promise.resolve({}),
     );
     const update = jest.fn().mockResolvedValue({});
-    const workspaceUpdate = jest.fn().mockResolvedValue({});
+    const workspaceUpdate = jest.fn().mockResolvedValue({ count: 1 });
     const constructEvent = jest.fn().mockReturnValue(eventOf());
     const notify = jest.fn().mockResolvedValue('delivered');
     const enqueue = jest.fn().mockResolvedValue(undefined);
@@ -115,7 +115,7 @@ describe('BillingWebhookService', () => {
               : over.workspace,
           ),
         ),
-        update: workspaceUpdate,
+        updateMany: workspaceUpdate,
       },
     } as unknown as PrismaService;
 
@@ -476,6 +476,42 @@ describe('BillingWebhookService', () => {
 
     expect(lastOutcome(update)).toBe('orphaned');
     expect(workspaceUpdate).not.toHaveBeenCalled();
+  });
+
+  it('keeps a customer that replaced the validated one while the event was applied', async () => {
+    const { service, update, workspaceUpdate } = build({
+      stored: { id: 'evt_1', processedAt: null, payload: eventOf() },
+      workspace: {
+        id: WORKSPACE,
+        subscriptionEventAt: null,
+        dunningNotifiedAt: null,
+        billingCustomerId: 'cus_1',
+      },
+    });
+    const row: Record<string, unknown> = { billingCustomerId: 'cus_replaced' };
+    workspaceUpdate.mockImplementation(
+      ({
+        where,
+        data,
+      }: {
+        where: { billingCustomerId?: string | null };
+        data: Record<string, unknown>;
+      }) => {
+        if (
+          'billingCustomerId' in where &&
+          where.billingCustomerId !== row.billingCustomerId
+        ) {
+          return Promise.resolve({ count: 0 });
+        }
+        Object.assign(row, data);
+        return Promise.resolve({ count: 1 });
+      },
+    );
+
+    await expect(service.process('evt_1')).rejects.toThrow(/changed/);
+
+    expect(row.billingCustomerId).toBe('cus_replaced');
+    expect(lastOutcome(update)).toBeUndefined();
   });
 
   it('names the orphaned settlement in its log line', async () => {
