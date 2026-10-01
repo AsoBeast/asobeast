@@ -69,14 +69,17 @@ describe('Request body limits (e2e)', () => {
         (res) => {
           const received: Buffer[] = [];
           res.on('data', (chunk: Buffer) => received.push(chunk));
-          res.on('end', () =>
-            resolve({
-              status: res.statusCode ?? 0,
-              body: JSON.parse(
-                Buffer.concat(received).toString(),
-              ) as ApiErrorEnvelope,
-            }),
-          );
+          res.on('end', () => {
+            const text = Buffer.concat(received).toString();
+            try {
+              resolve({
+                status: res.statusCode ?? 0,
+                body: JSON.parse(text) as ApiErrorEnvelope,
+              });
+            } catch {
+              reject(new Error(`expected a json envelope, got: ${text}`));
+            }
+          });
         },
       );
       req.on('error', reject);
@@ -320,16 +323,19 @@ describe('Request body limits (e2e)', () => {
 
     const socket = connect(port, '127.0.0.1');
     await new Promise<void>((resolve) => socket.once('connect', resolve));
-    socket.write(
-      [
-        'POST /apps HTTP/1.1',
-        'Host: localhost',
-        `Authorization: Bearer ${TOKEN}`,
-        'Content-Type: application/json',
-        'Content-Length: 5000',
-        '',
-        '{"url":"',
-      ].join('\r\n'),
+    await new Promise<void>((resolve) =>
+      socket.write(
+        [
+          'POST /apps HTTP/1.1',
+          'Host: localhost',
+          `Authorization: Bearer ${TOKEN}`,
+          'Content-Type: application/json',
+          'Content-Length: 5000',
+          '',
+          '{"url":"',
+        ].join('\r\n'),
+        () => resolve(),
+      ),
     );
     socket.destroy();
     await new Promise((resolve) => setTimeout(resolve, HANG_UP_SETTLE_MS));
