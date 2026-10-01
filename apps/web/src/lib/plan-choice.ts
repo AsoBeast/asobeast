@@ -21,6 +21,15 @@ export const HANDLED_BY_STRIPE =
 export const CHECKOUT_UNCONFIGURED =
   "Checkout is not configured on this instance.";
 
+export const COLLECTION_PAUSED =
+  "Collection is paused. Everything asobeast has already gathered stays readable and exportable.";
+
+export const MEMBER_BILLING_TITLE = "Your workspace owner manages billing";
+
+export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
+
+export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
+
 const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
 
 export const CONFIRM_EMAIL_TO_START_TRIAL =
@@ -116,4 +125,9 @@ export function planCallToAction(plan: AccountPlan): string {
 export function paymentNote(catalog: BillingCatalog | undefined): string {
   if (!catalog?.enabled) return CHECKOUT_UNCONFIGURED;
   return catalog.managedPayments ? SOLD_THROUGH_LINK : HANDLED_BY_STRIPE;
+}
+
+export function memberPlanLine(plan: AccountPlan | undefined): string {
+  if (plan && !plan.entitled) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
+  return "Only the workspace owner can change the plan or the payment method.";
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { QuotaUsage } from "@asobeast/shared";
+import type { AccountPlan, QuotaUsage } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,7 @@ import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, openBillingPortal } from "@/lib/api";
 import { formatNumber, formatPlanLimit } from "@/lib/format";
 import {
+  MEMBER_BILLING_NOTE,
   planAction,
   planCallToAction,
   planStatusLine,
@@ -77,9 +78,22 @@ function ManageBillingButton() {
   );
 }
 
+function BillingActions({ plan }: { plan: AccountPlan }) {
+  return (
+    <>
+      {plan.upgradeTo && planAction(plan, plan.upgradeTo) !== "pending" ? (
+        <Button asChild>
+          <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
+        </Button>
+      ) : null}
+      {plan.hasBillingAccount ? <ManageBillingButton /> : null}
+    </>
+  );
+}
+
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
-  const { user, awaitingConfirmation } = useAuth();
+  const { isMember, awaitingConfirmation } = useAuth();
 
   if (!plan.billing) return null;
 
@@ -105,14 +119,13 @@ export function PlanCard() {
         </dl>
       </CardContent>
       <CardFooter className="gap-2">
-        {plan.upgradeTo && planAction(plan, plan.upgradeTo) !== "pending" ? (
-          <Button asChild>
-            <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
-          </Button>
-        ) : null}
-        {user?.role === "owner" && plan.hasBillingAccount ? (
-          <ManageBillingButton />
-        ) : null}
+        {isMember ? (
+          <p className="text-body text-muted-foreground">
+            {MEMBER_BILLING_NOTE}
+          </p>
+        ) : (
+          <BillingActions plan={plan} />
+        )}
       </CardFooter>
     </Card>
   );

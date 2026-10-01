@@ -44,6 +44,7 @@ import {
   invalidateAuth,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { MemberBilling } from "./MemberBilling";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
 import { useAuth } from "./use-auth";
 
@@ -173,10 +174,15 @@ function PlanOption({
 }
 
 export function UpgradeContent() {
+  const { isMember, awaitingConfirmation } = useAuth();
   const { data: plan } = useQuery(accountPlanOptions);
-  const { awaitingConfirmation } = useAuth();
-  const { data: catalog } = useQuery(billingCatalogOptions);
+  const { data: catalog } = useQuery({
+    ...billingCatalogOptions,
+    enabled: !isMember,
+  });
   const [interval, setInterval] = useState<BillingInterval>("month");
+
+  if (isMember) return <MemberBilling plan={plan} />;
 
   const priceFor = (name: PaidPlanName) =>
     catalog?.prices.find(

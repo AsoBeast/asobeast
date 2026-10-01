@@ -12,6 +12,7 @@ export interface AuthState {
   isFetching: boolean;
   trialOnly: boolean;
   awaitingConfirmation: boolean;
+  isMember: boolean;
 }
 
 function subscribeToNothing(): () => void {
@@ -33,6 +34,7 @@ const SERVER_AUTH_STATE: AuthState = {
   isFetching: true,
   trialOnly: false,
   awaitingConfirmation: false,
+  isMember: false,
 };
 
 export function useAuth(): AuthState {
@@ -56,13 +58,15 @@ export function useAuth(): AuthState {
     user.trialEndsAt !== null,
   );
 
+  const signedIn = authenticated ? user : undefined;
+
   return {
     status,
-    user: authenticated ? user : undefined,
+    user: signedIn,
     isLoading: statusLoading || (authenticated && userLoading),
     isFetching: statusFetching,
     trialOnly,
-    awaitingConfirmation:
-      authenticated && user?.trialAwaitsConfirmation === true,
+    awaitingConfirmation: signedIn?.trialAwaitsConfirmation === true,
+    isMember: signedIn !== undefined && signedIn.role !== "owner",
   };
 }
