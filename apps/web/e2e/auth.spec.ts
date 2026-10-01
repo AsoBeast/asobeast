@@ -1444,6 +1444,29 @@ test("an owner still gets every billing action", async ({ page }) => {
   ).toHaveCount(0);
 });
 
+test("each plan card prints its price once", async ({ page }) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, { ...INDIE_PLAN, subscribed: false });
+
+  await page.goto("/upgrade");
+  await expect(page.getByText("$10 /month")).toHaveCount(1);
+  await expect(page.getByText("$99 /month")).toHaveCount(1);
+  await expect(page.getByText("Billed monthly")).toHaveCount(2);
+
+  await page.getByRole("tab", { name: "Annual" }).click();
+  await expect(page.getByText("$100 /year")).toHaveCount(1);
+  await expect(page.getByText("$990 /year")).toHaveCount(1);
+  await expect(page.getByText("two months free", { exact: false })).toHaveCount(
+    2,
+  );
+});
+
 test("a spent confirmation link offers a new one", async ({ page }) => {
   await seedSession(page);
   await page.route("**/api/backend/auth/verify", (route) =>
