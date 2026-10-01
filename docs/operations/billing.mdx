@@ -36,7 +36,7 @@ Who collects the tax decides the rest, and exactly one of three modes applies:
 | Stripe Tax | `STRIPE_TAX_ENABLED=true` | this business, registered for tax where it must be | the same, plus automatic tax |
 | Managed Payments | `STRIPE_MANAGED_PAYMENTS=true` | Stripe, through Link | `managed_payments`, and nothing Stripe controls in that mode |
 
-The two variables refuse to boot together. A production instance on a live key with neither of them logs a warning at startup, because it sells untaxed while this business stays liable.
+The two variables refuse to boot together. A production instance with billing on and a live key but neither of them logs a warning at startup, because it sells untaxed while this business stays liable.
 
 The success URL carries `{CHECKOUT_SESSION_ID}`, which Stripe replaces with the id of the completed session. The app posts it to `POST /billing/reconcile`, and the API adopts that session's subscription at once, provided the session names this workspace as its `client_reference_id`. A session that names another workspace, holds no subscription yet or is unknown to Stripe falls back to the customer's subscriptions, so the return never depends on the id.
 

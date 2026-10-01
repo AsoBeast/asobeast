@@ -6,7 +6,7 @@ icon: rocket
 keywords: ["billing","stripe","go live","live mode","checklist","stripe tax","webhook"]
 ---
 
-Everything the API can set about Stripe is set by `pnpm --filter api stripe:catalog`: the products, the prices, their tax behaviour, the product tax code and the customer portal. What is left lives only in the Stripe dashboard. This page is the checklist for it and the order to switch from a sandbox to live mode. How billing behaves once it runs is on [Billing](/operations/billing). Choose the tax mode first: [selling through Stripe Managed Payments](/operations/billing#selling-through-stripe-managed-payments) removes every tax registration from this list.
+Everything the API can set about Stripe is set by `pnpm --filter api stripe:catalog`: the products, the prices, their tax behaviour, the product tax code and the customer portal. What is left lives only in the Stripe dashboard. This page is the checklist for it and the order to switch from a sandbox to live mode. How billing behaves once it runs is on [Billing](/operations/billing). Choose the tax mode first: [selling through Stripe Managed Payments](/operations/billing#selling-through-stripe-managed-payments) removes every tax registration from the steps below.
 
 ## Dashboard settings
 
@@ -37,7 +37,7 @@ Set every row in every sandbox and again in live mode. The catalog script prints
     Run `pnpm --filter api stripe:catalog` with the live secret key in `STRIPE_SECRET_KEY`, the production `WEB_PUBLIC_URL` and `STRIPE_MANAGED_PAYMENTS` set as production will run, then read the checklist it prints for that mode, after the four lookup keys with their price ids and the portal configuration id.
   </Step>
   <Step title="Set the dashboard">
-    Set every row of the table above in live mode.
+    Set every row of the table above in live mode, or under Managed Payments every item of the checklist the catalog script printed.
   </Step>
   <Step title="Create the live endpoint">
     Register `https://app.asobeast.com/api/backend/billing/webhook` with the ten handled events on the pinned API version, and copy its signing secret.
