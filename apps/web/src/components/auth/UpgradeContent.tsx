@@ -32,6 +32,7 @@ import {
 } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import {
+  billingNote,
   paymentNote,
   planAction,
   planActionLabel,
@@ -61,12 +62,6 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   month: "Monthly",
   year: "Annual",
 };
-
-function priceLabel(interval: BillingInterval, amountUsd: number): string {
-  return interval === "month"
-    ? `$${amountUsd} /month`
-    : `$${amountUsd} /year, two months free`;
-}
 
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
@@ -124,7 +119,7 @@ function PlanOption({
           </p>
         </CardTitle>
         <p className="text-body text-muted-foreground">
-          {priceLabel(interval, amountUsd)}
+          {billingNote(interval)}
         </p>
       </CardHeader>
       <CardContent>

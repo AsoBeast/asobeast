@@ -5,6 +5,7 @@ import {
   HANDLED_BY_STRIPE,
   PAYMENT_CONFIRMING,
   SOLD_THROUGH_LINK,
+  billingNote,
   memberPlanLine,
   paymentNote,
   planAction,
@@ -303,5 +304,20 @@ describe("memberPlanLine", () => {
 
   it("does not claim a pause before the plan has loaded", () => {
     expect(memberPlanLine(undefined)).not.toContain("paused");
+  });
+});
+
+describe("billingNote", () => {
+  it("says how a monthly plan bills without repeating its price", () => {
+    expect(billingNote("month")).toBe("Billed monthly");
+  });
+
+  it("says what a yearly plan saves without repeating its price", () => {
+    expect(billingNote("year")).toBe("Billed yearly, two months free");
+  });
+
+  it("never prints a price, which the card title already carries", () => {
+    expect(billingNote("month")).not.toMatch(/[$/]/);
+    expect(billingNote("year")).not.toMatch(/[$/]/);
   });
 });

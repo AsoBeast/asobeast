@@ -2,6 +2,7 @@ import {
   PLANS,
   type AccountPlan,
   type BillingCatalog,
+  type BillingInterval,
   type PaidPlanName,
 } from "@asobeast/shared";
 import { formatDate } from "@/lib/format";
@@ -31,6 +32,11 @@ export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
 export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
 
 const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
+
+const BILLED: Record<BillingInterval, string> = {
+  month: "Billed monthly",
+  year: "Billed yearly, two months free",
+};
 
 export const CONFIRM_EMAIL_TO_START_TRIAL =
   "Confirm your email to start your free trial.";
@@ -130,4 +136,8 @@ export function paymentNote(catalog: BillingCatalog | undefined): string {
 export function memberPlanLine(plan: AccountPlan | undefined): string {
   if (plan && !plan.entitled) return `${COLLECTION_PAUSED} ${ASK_THE_OWNER}`;
   return "Only the workspace owner can change the plan or the payment method.";
+}
+
+export function billingNote(interval: BillingInterval): string {
+  return BILLED[interval];
 }
