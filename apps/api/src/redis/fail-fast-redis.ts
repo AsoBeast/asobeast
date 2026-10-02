@@ -1,5 +1,5 @@
 import { Logger, type OnApplicationShutdown } from '@nestjs/common';
-import { Redis, type RedisOptions } from 'ioredis';
+import { Redis, ReplyError, type RedisOptions } from 'ioredis';
 import { RedisUnavailableError } from './redis.errors';
 
 export const FAIL_FAST_COMMAND_TIMEOUT_MS = 500;
@@ -32,13 +32,22 @@ export class FailFastRedis implements OnApplicationShutdown {
     try {
       return await work(this.client);
     } catch (error) {
+      if (error instanceof ReplyError) throw error;
       this.warn(error);
       throw new RedisUnavailableError(FAIL_FAST_RETRY_AFTER_SECONDS);
     }
   }
 
-  runOpen<T>(work: (client: Redis) => Promise<T>, fallback: T): Promise<T> {
-    return this.run(work).catch(() => fallback);
+  async runOpen<T>(
+    work: (client: Redis) => Promise<T>,
+    fallback: T,
+  ): Promise<T> {
+    try {
+      return await this.run(work);
+    } catch (error) {
+      if (error instanceof RedisUnavailableError) return fallback;
+      throw error;
+    }
   }
 
   onApplicationShutdown(): void {
