@@ -25,9 +25,30 @@ export function alreadyTrialed(history: TrialHistory): boolean {
   return history.trialStartedAt !== null;
 }
 
+export interface TrialWorkspace extends TrialHistory, WorkspaceEntitlement {
+  subscriptionId: string | null;
+}
+
+export function canStartTrial(workspace: TrialWorkspace, now: Date): boolean {
+  return (
+    !alreadyTrialed(workspace) &&
+    workspace.subscriptionId === null &&
+    !isEntitled(workspace, now)
+  );
+}
+
+export function trialStillOpen(workspace: { id: string; plan: string }) {
+  return {
+    id: workspace.id,
+    plan: workspace.plan,
+    trialStartedAt: null,
+    subscriptionId: null,
+  };
+}
+
 export interface TrialCandidate {
   emailVerifiedAt: Date | null;
-  workspace: TrialHistory & WorkspaceEntitlement;
+  workspace: TrialWorkspace;
 }
 
 export function trialAwaitsConfirmation(
@@ -35,8 +56,6 @@ export function trialAwaitsConfirmation(
   now: Date,
 ): boolean {
   return (
-    account.emailVerifiedAt === null &&
-    !alreadyTrialed(account.workspace) &&
-    !isEntitled(account.workspace, now)
+    account.emailVerifiedAt === null && canStartTrial(account.workspace, now)
   );
 }

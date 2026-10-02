@@ -83,6 +83,8 @@ describe('Auth (billing mode)', () => {
         trialStartedAt: null,
         trialEndsAt: null,
         planExpiresAt: null,
+        subscriptionId: null,
+        subscriptionStatus: null,
       },
     });
   });
@@ -126,6 +128,34 @@ describe('Auth (billing mode)', () => {
 
     expect(created.entitled).toBe(true);
     expect(created.trialAwaitsConfirmation).toBe(false);
+  });
+
+  it('opens no trial over a plan the default workspace already pays for', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: {
+        plan: 'ultimate',
+        subscriptionId: 'sub_paid',
+        subscriptionStatus: 'active',
+        planExpiresAt: new Date(Date.now() + 30 * DAY_MS),
+      },
+    });
+
+    const register = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'first@example.com', password: 'supersecret1' })
+      .expect(201);
+
+    expect((register.body as AuthUser).plan).toBe('ultimate');
+    await expect(
+      prisma.workspace.findUniqueOrThrow({
+        where: { id: DEFAULT_WORKSPACE_ID },
+      }),
+    ).resolves.toMatchObject({
+      plan: 'ultimate',
+      trialStartedAt: null,
+      trialEndsAt: null,
+    });
   });
 
   it('rejects a duplicate email with 409 while registration is open', async () => {

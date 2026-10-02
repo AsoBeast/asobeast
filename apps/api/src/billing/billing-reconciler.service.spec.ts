@@ -178,6 +178,27 @@ describe('BillingReconciler', () => {
     });
   });
 
+  it('puts a paid plan back after a trial replaced it and keeps the trial history', async () => {
+    const trialEndsAt = new Date('2026-10-08T00:00:00.000Z');
+    const { reconciler, update } = build({
+      workspaces: [
+        workspaceOf({
+          plan: 'trial',
+          trialStartedAt: new Date('2026-10-01T00:00:00.000Z'),
+          trialEndsAt,
+        }),
+      ],
+    });
+
+    await expect(reconciler.reconcile()).resolves.toMatchObject({
+      corrected: 1,
+    });
+    const [args] = update.mock.calls[0] as [{ data: Record<string, unknown> }];
+    expect(args.data).toMatchObject({ plan: 'indie', subscriptionId: 'sub_1' });
+    expect(args.data).not.toHaveProperty('trialStartedAt');
+    expect(args.data).not.toHaveProperty('trialEndsAt');
+  });
+
   it('leaves the over limit clock alone when it corrects a plan', async () => {
     const { reconciler, update } = build({
       workspaces: [

@@ -12,6 +12,7 @@ import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { PrismaService } from '../src/prisma/prisma.service';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -46,6 +47,26 @@ describe('Email verification before the trial starts', () => {
 
   const me = (cookie: string) =>
     request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+
+  const confirm = (token: string) =>
+    request(app.getHttpServer()).post('/auth/verify').send({ token });
+
+  const workspaceRow = () =>
+    prisma.workspace.findUniqueOrThrow({
+      where: { id: DEFAULT_WORKSPACE_ID },
+    });
+
+  const subscribed = (plan: string) =>
+    prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: {
+        plan,
+        subscriptionId: 'sub_paid',
+        subscriptionStatus: 'active',
+        billingCustomerId: 'cus_paid',
+        planExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    });
 
   const tokenFrom = (mail: SentMail): string =>
     new URLSearchParams(mail.text.split('?')[1]).get('token') ?? '';
@@ -103,6 +124,9 @@ describe('Email verification before the trial starts', () => {
         trialStartedAt: null,
         trialEndsAt: null,
         planExpiresAt: null,
+        subscriptionId: null,
+        subscriptionStatus: null,
+        billingCustomerId: null,
       },
     });
   });
@@ -387,5 +411,156 @@ describe('Email verification before the trial starts', () => {
         select: { trialStartedAt: true },
       }),
     ).resolves.not.toEqual({ trialStartedAt: null });
+  });
+
+  describe('a workspace that already pays', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it.each(['indie', 'ultimate'])(
+      'keeps the %s plan when the owner confirms the address afterwards',
+      async (plan) => {
+        await register('owner@example.com').expect(201);
+        await subscribed(plan);
+
+        const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
+
+        const account = confirmed.body as AuthUser;
+        expect(account.emailVerified).toBe(true);
+        expect(account.plan).toBe(plan);
+        expect(account.trialEndsAt).toBeNull();
+        await expect(workspaceRow()).resolves.toMatchObject({
+          plan,
+          subscriptionId: 'sub_paid',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        });
+      },
+    );
+
+    it('keeps a paid plan that no subscription backs', async () => {
+      await register('owner@example.com').expect(201);
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: { plan: 'indie', planExpiresAt: null },
+      });
+
+      await confirm(tokenFrom(sent[0])).expect(200);
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'indie',
+        trialStartedAt: null,
+      });
+    });
+
+    it('starts no trial for a customer whose subscription already ended', async () => {
+      await register('owner@example.com').expect(201);
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: {
+          plan: 'free',
+          subscriptionId: 'sub_ended',
+          subscriptionStatus: 'canceled',
+          billingCustomerId: 'cus_paid',
+        },
+      });
+
+      const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
+
+      const account = confirmed.body as AuthUser;
+      expect(account.emailVerified).toBe(true);
+      expect(account.entitled).toBe(false);
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'free',
+        subscriptionId: 'sub_ended',
+        trialStartedAt: null,
+        trialEndsAt: null,
+      });
+    });
+
+    it('does not tell a former subscriber that confirming starts a trial', async () => {
+      const created = await register('owner@example.com').expect(201);
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: {
+          plan: 'free',
+          subscriptionId: 'sub_ended',
+          subscriptionStatus: 'canceled',
+        },
+      });
+
+      const current = await me(sessionCookie(created)).expect(200);
+
+      expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+    });
+
+    it('starts the trial for an account that only opened a checkout', async () => {
+      await register('owner@example.com').expect(201);
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: { billingCustomerId: 'cus_opened' },
+      });
+
+      const confirmed = await confirm(tokenFrom(sent[0])).expect(200);
+
+      expect((confirmed.body as AuthUser).plan).toBe('trial');
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'trial',
+        billingCustomerId: 'cus_opened',
+      });
+    });
+
+    it('keeps a subscription that lands between reading the workspace and writing the trial', async () => {
+      await register('owner@example.com').expect(201);
+      const workspaces = app.get(PrismaService).workspace;
+      const read = workspaces.findUniqueOrThrow.bind(workspaces);
+      jest.spyOn(workspaces, 'findUniqueOrThrow').mockImplementationOnce(((
+        args: Parameters<typeof read>[0],
+      ) =>
+        read(args).then(async (stale) => {
+          await subscribed('ultimate');
+          return stale;
+        })) as typeof read);
+
+      await confirm(tokenFrom(sent[0])).expect(200);
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'ultimate',
+        subscriptionId: 'sub_paid',
+        trialStartedAt: null,
+      });
+    });
+
+    it('keeps the plan when an invited member confirms into a paying workspace', async () => {
+      const owner = await register('owner@example.com').expect(201);
+      await subscribed('ultimate');
+      const invite = await request(app.getHttpServer())
+        .post('/workspace/invites')
+        .set('Cookie', sessionCookie(owner))
+        .send({ email: 'member@example.com' })
+        .expect(201);
+      const accepted = await request(app.getHttpServer())
+        .post('/workspace/invites/accept')
+        .send({
+          token: new URLSearchParams(
+            (invite.body as WorkspaceInviteCreated).acceptPath.split('?')[1],
+          ).get('token'),
+          password: 'supersecret1',
+        })
+        .expect(201);
+      sent.length = 0;
+      await request(app.getHttpServer())
+        .post('/auth/verify/resend')
+        .set('Cookie', sessionCookie(accepted))
+        .expect(204);
+
+      await confirm(tokenFrom(sent[0])).expect(200);
+
+      await expect(workspaceRow()).resolves.toMatchObject({
+        plan: 'ultimate',
+        trialStartedAt: null,
+      });
+    });
   });
 });
