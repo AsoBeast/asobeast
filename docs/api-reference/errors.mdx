@@ -3,7 +3,7 @@ title: Error responses
 sidebarTitle: Errors
 description: "Every failure returns the same JSON envelope with a status code, message, path and timestamp. Validation failures return 400 with the failing fields."
 icon: triangle-alert
-keywords: ["errors","400","401","402","404","409","501","error envelope","validation"]
+keywords: ["errors","400","401","402","404","409","413","415","501","error envelope","validation"]
 ---
 
 Every failure returns the same JSON envelope, whatever produced it. A single exception filter builds it, so a Prisma error, a guard rejection and a validation failure all look alike to a client.
@@ -31,7 +31,7 @@ Every failure returns the same JSON envelope, whatever produced it. A single exc
 | `entitlement` | object | Present on `402`. Names the plan in force, the trial and renewal dates, the tier to upgrade to and the path to reach it |
 | `rateLimit` | object | Present on `429` from a plan rate limit. Names the window that closed, the request class, the plan, the limit, the seconds until it reopens and the tier to upgrade to |
 | `billing` | object | Present on `409` from a billing route. Names the reason the request was refused and the recovery that clears it, either `portal` or `retry` |
-| `retryAfterSeconds` | number | Present on `429`, mirroring the `Retry-After` header |
+| `retryAfterSeconds` | number | Present on `429` and on the `503` an unreachable Redis causes, mirroring the `Retry-After` header |
 
 The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client can import it rather than redeclare it.
 
@@ -39,17 +39,19 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 
 | Status | What causes it in this API |
 | --- | --- |
-| `400` | A DTO failed validation, or a store URL could not be parsed |
+| `400` | A DTO failed validation, a store URL could not be parsed, or the body was not valid JSON or could not be decoded |
 | `401` | The session cookie or personal API token is missing, malformed or revoked. The response carries a `WWW-Authenticate: Bearer realm="asobeast"` challenge |
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
 | `404` | The resource does not exist, or an admin surface is refusing to confirm it exists |
 | `429` | A plan rate limit or an on demand allowance is spent. `Retry-After` says when it reopens, and `rateLimit` names the window. See [Rate limits and quotas](/api-reference/rate-limits) |
 | `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
+| `413` | The request body is larger than the 100 KB (102400 bytes) the API reads, counted after any `Content-Encoding` is decoded, or a form body carries more than 1000 parameters. The body is read before authentication, so an oversized request is refused even without a valid credential |
+| `415` | The body names a charset the API cannot read, or a `Content-Encoding` other than `gzip`, `deflate` or `br` |
 | `500` | An unhandled exception. The message is generic and the stack is logged server side |
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
 | `502` | A store request failed upstream, or the web proxy could not reach the API. A store failure answers with a fixed sentence naming the store, and the underlying error is in the API log at warn level |
-| `503` | The health endpoint could not reach the database |
+| `503` | The health endpoint could not reach the database, or Redis could not be reached for a sign in or a store action that must be counted first. `Retry-After` says when to try again. See [When Redis is unreachable](/api-reference/rate-limits#when-redis-is-unreachable) |
 | `504` | The web proxy timed out waiting for the API to start answering, bounded by `API_PROXY_TIMEOUT_MS` |
 
 Three of these are worth reading twice.

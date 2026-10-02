@@ -1,10 +1,11 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { MINUTE_SECONDS } from '@asobeast/shared';
 import {
   CREDENTIAL_FAILURES_PER_MINUTE,
   CredentialRateLimiter,
 } from './credential-rate.limiter';
 import { CredentialRateLimitError } from './rate-limit.errors';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { windowKey } from './window';
 
 const NOW = new Date('2026-08-14T10:30:30Z');
@@ -15,11 +16,9 @@ describe('CredentialRateLimiter', () => {
   const incr = jest.fn<Promise<number>, [string]>();
   const expire = jest.fn<Promise<number>, [string, number]>();
 
-  const queue = {
-    getBackend: () => ({ client: Promise.resolve({ get, incr, expire }) }),
-  } as unknown as Queue;
-
-  const limiter = new CredentialRateLimiter(queue);
+  const limiter = new CredentialRateLimiter(
+    new FailFastRedis({ get, incr, expire } as unknown as Redis),
+  );
 
   beforeEach(() => {
     get.mockReset().mockResolvedValue(null);
@@ -75,5 +74,30 @@ describe('CredentialRateLimiter', () => {
     await limiter.recordRejection('ip:198.51.100.4', NOW);
 
     expect(new Set(incr.mock.calls.map(([key]) => key)).size).toBe(2);
+  });
+});
+
+describe('CredentialRateLimiter while redis is unreachable', () => {
+  const unreachable = new Error(
+    "Stream isn't writeable and enableOfflineQueue options is false",
+  );
+  const limiter = new CredentialRateLimiter(
+    new FailFastRedis({
+      get: jest.fn().mockRejectedValue(unreachable),
+      incr: jest.fn().mockRejectedValue(unreachable),
+      expire: jest.fn().mockRejectedValue(unreachable),
+    } as unknown as Redis),
+  );
+
+  it('admits a credential nobody could count against', async () => {
+    await expect(
+      limiter.assertAddressMayPresentOne(ADDRESS, NOW),
+    ).resolves.toBeUndefined();
+  });
+
+  it('still lets the guard answer 401 for a refused credential', async () => {
+    await expect(
+      limiter.recordRejection(ADDRESS, NOW),
+    ).resolves.toBeUndefined();
   });
 });

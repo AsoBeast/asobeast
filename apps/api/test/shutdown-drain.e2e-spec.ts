@@ -9,6 +9,7 @@ import { Job, Queue } from 'bullmq';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import { FailFastRedis } from '../src/redis/fail-fast-redis';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
@@ -51,6 +52,7 @@ describe('Shutdown drains an active job (e2e)', () => {
   const handle = jest.fn(async (): Promise<void> => {
     started.reach();
     await release.reached;
+    await app.get(FailFastRedis).run((client) => client.ping());
   });
 
   beforeAll(async () => {

@@ -1,13 +1,12 @@
 import { type Store } from '@asobeast/shared';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
 import { fetch, type Dispatcher, type Response } from 'undici';
 import { publicOnlyDispatcher } from '../../alerts/webhook-dispatcher';
 import { assertDeliverableUrl } from '../../alerts/webhook-target';
 import { Env } from '../../config/env';
-import { PUBLISHED_STATUS_KEY, QUEUES } from '../../jobs/jobs.types';
+import { PUBLISHED_STATUS_KEY } from '../../jobs/jobs.types';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import {
   parsePublishedStatus,
   type PublishedStoreStatus,
@@ -26,11 +25,6 @@ export interface PublishedStatusRecord {
   stores: Partial<Record<Store, PublishedStoreStatus>>;
 }
 
-interface PublishedKeyValue {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<unknown>;
-}
-
 @Injectable()
 export class PublishedStatusService implements OnModuleDestroy {
   private readonly logger = new Logger(PublishedStatusService.name);
@@ -40,7 +34,7 @@ export class PublishedStatusService implements OnModuleDestroy {
 
   constructor(
     config: ConfigService<Env, true>,
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
   ) {
     this.target = this.resolveTarget(
       config.get('STORE_STATUS_URL', { infer: true }),
@@ -75,15 +69,17 @@ export class PublishedStatusService implements OnModuleDestroy {
       fetchedAt: new Date().toISOString(),
       stores,
     };
-    const client = await this.client();
-    await client.set(PUBLISHED_STATUS_KEY, JSON.stringify(record));
+    await this.redis.run((client) =>
+      client.set(PUBLISHED_STATUS_KEY, JSON.stringify(record)),
+    );
   }
 
   async published(
     now = new Date(),
   ): Promise<Partial<Record<Store, PublishedStoreStatus>>> {
-    const client = await this.client();
-    const record = parseRecord(await client.get(PUBLISHED_STATUS_KEY));
+    const record = parseRecord(
+      await this.redis.run((client) => client.get(PUBLISHED_STATUS_KEY)),
+    );
     if (!record) return {};
     return isFresh(record.fetchedAt, now) ? record.stores : {};
   }
@@ -130,10 +126,6 @@ export class PublishedStatusService implements OnModuleDestroy {
       );
       return null;
     }
-  }
-
-  private client(): Promise<PublishedKeyValue> {
-    return this.queue.getBackend().client;
   }
 }
 

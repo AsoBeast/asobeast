@@ -1,16 +1,9 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import { Queue } from 'bullmq';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { QUEUES } from '../jobs/jobs.types';
 import { OnDemandAction } from '@asobeast/shared';
 import { QuotaService } from './quota.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
-
-interface RedisCounter {
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
-}
 
 export class OnDemandLimitError extends Error {
   constructor(
@@ -28,7 +21,7 @@ export class OnDemandLimitError extends Error {
 @Injectable()
 export class OnDemandLimiter {
   constructor(
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
     private readonly workspace: WorkspaceContext,
     private readonly quota: QuotaService,
   ) {}
@@ -47,10 +40,11 @@ export class OnDemandLimiter {
       now,
     );
 
-    const client = (await this.queue.getBackend()
-      .client) as unknown as RedisCounter;
-    const used = await client.incr(key);
-    if (used === 1) await client.expire(key, rule.windowSeconds);
+    const used = await this.redis.run(async (client) => {
+      const hits = await client.incr(key);
+      if (hits === 1) await client.expire(key, rule.windowSeconds);
+      return hits;
+    });
     if (used <= rule.limit) return;
 
     throw new OnDemandLimitError(

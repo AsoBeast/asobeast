@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { ProxyLedger } from '../store-providers/egress/proxy-ledger.service';
 import { ProxyPoolHealthReport } from '../store-providers/egress/proxy-pool-health.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
@@ -28,6 +29,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
   const accountMailGroupBy = jest.fn();
   const canaryRecords = jest.fn();
   const redisGet = jest.fn();
+  const redisPing = jest.fn();
 
   const collector = new InstanceMetricsCollector(
     {
@@ -46,14 +48,10 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     { collect: resources } as unknown as ResourceMetricsCollector,
     { records: canaryRecords } as unknown as StoreCanaryService,
     { get: () => 0 } as unknown as ConfigService<Env, true>,
-    {
-      getBackend: () => ({
-        client: Promise.resolve({
-          ping: () => Promise.resolve('PONG'),
-          get: redisGet,
-        }),
-      }),
-    } as unknown as Queue,
+    new FailFastRedis({
+      ping: redisPing,
+      get: redisGet,
+    } as unknown as Redis),
   );
 
   beforeEach(() => {
@@ -65,6 +63,7 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     billingEventCount.mockReset().mockResolvedValue(0);
     canaryRecords.mockReset().mockResolvedValue({});
     redisGet.mockReset().mockResolvedValue(null);
+    redisPing.mockReset().mockResolvedValue('PONG');
     accountMailGroupBy.mockReset().mockResolvedValue([
       { status: 'delivered', _count: { _all: 4 } },
       { status: 'failed', _count: { _all: 2 } },
@@ -122,6 +121,22 @@ describe('InstanceMetricsCollector when one measurement fails', () => {
     expect(metrics.billingEventsUnprocessed).toBe(5);
     expect(metrics.billingEventsFailed).toBe(2);
     expect(metrics.billingEventsOrphaned).toBe(3);
+  });
+
+  it('reports redis as available when it answers a ping', async () => {
+    const metrics = await collector.collect(NOW);
+
+    expect(metrics.redisAvailable).toBe(true);
+  });
+
+  it('reports redis as unavailable instead of waiting when the ping fails', async () => {
+    redisPing.mockRejectedValue(new Error('Command timed out'));
+    redisGet.mockRejectedValue(new Error('Command timed out'));
+
+    const metrics = await collector.collect(NOW);
+
+    expect(metrics.redisAvailable).toBe(false);
+    expect(metrics.billingOrphanSubscriptions).toBe(0);
   });
 
   it('reads the orphans the last reconciliation stored', async () => {

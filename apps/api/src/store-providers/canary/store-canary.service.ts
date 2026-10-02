@@ -1,9 +1,8 @@
 import { SUPPORTED_STORES } from '@asobeast/shared';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { Queue } from 'bullmq';
-import { QUEUES, storeCanaryKey } from '../../jobs/jobs.types';
+import { storeCanaryKey } from '../../jobs/jobs.types';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { ProxyEgress } from '../egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-provider.registry';
 import { assertParsedApp, assertSearchResults } from './canary-checks';
@@ -42,11 +41,6 @@ export interface StoreCanaryRecord {
 
 type CanaryVerdict = Pick<StoreCanaryRecord, 'outcome' | 'detail'>;
 
-interface CanaryKeyValue {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string): Promise<unknown>;
-}
-
 @Injectable()
 export class StoreCanaryService {
   private readonly logger = new Logger(StoreCanaryService.name);
@@ -54,7 +48,7 @@ export class StoreCanaryService {
   constructor(
     private readonly registry: StoreProviderRegistry,
     private readonly egress: ProxyEgress,
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
   ) {}
 
   async run(): Promise<Record<Store, StoreCanaryRecord>> {
@@ -66,24 +60,24 @@ export class StoreCanaryService {
   }
 
   async records(): Promise<Partial<Record<Store, StoreCanaryRecord>>> {
-    const client = await this.client();
     const records: Partial<Record<Store, StoreCanaryRecord>> = {};
     for (const store of SUPPORTED_STORES) {
-      const record = await this.read(client, store);
+      const record = await this.read(store);
       if (record) records[store] = record;
     }
     return records;
   }
 
   private async check(store: Store): Promise<StoreCanaryRecord> {
-    const client = await this.client();
-    const previous = await this.read(client, store);
+    const previous = await this.read(store);
     const record = nextRecord(
       previous,
       await this.probe(store),
       new Date().toISOString(),
     );
-    await client.set(storeCanaryKey(store), JSON.stringify(record));
+    await this.redis.run((client) =>
+      client.set(storeCanaryKey(store), JSON.stringify(record)),
+    );
     this.announce(store, record);
     return record;
   }
@@ -108,15 +102,10 @@ export class StoreCanaryService {
     }
   }
 
-  private async read(
-    client: CanaryKeyValue,
-    store: Store,
-  ): Promise<StoreCanaryRecord | null> {
-    return parseRecord(await client.get(storeCanaryKey(store)));
-  }
-
-  private client(): Promise<CanaryKeyValue> {
-    return this.queue.getBackend().client;
+  private async read(store: Store): Promise<StoreCanaryRecord | null> {
+    return parseRecord(
+      await this.redis.run((client) => client.get(storeCanaryKey(store))),
+    );
   }
 
   private announce(store: Store, record: StoreCanaryRecord): void {
