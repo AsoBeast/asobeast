@@ -1,6 +1,7 @@
 import { once } from 'node:events';
 import { createServer, type Server } from 'node:net';
 import { Logger } from '@nestjs/common';
+import { ReplyError } from 'ioredis';
 import { RedisUnavailableError } from './redis.errors';
 import {
   FAIL_FAST_COMMAND_TIMEOUT_MS,
@@ -13,9 +14,26 @@ const HUNG_REFUSAL_MS = FAIL_FAST_COMMAND_TIMEOUT_MS * 3;
 
 const OK_REPLY = '+OK\r\n';
 const READY_REPLY = '$9\r\nloading:0\r\n';
+const WRONGTYPE_REPLY =
+  '-WRONGTYPE Operation against a key holding the wrong kind of value\r\n';
 
 function commandsIn(chunk: string): string[] {
   return chunk.split(/(?=\*\d+\r\n\$)/).filter((part) => part.length > 0);
+}
+
+function fakeRedis(incrReply: string | null): Server {
+  return createServer((socket) => {
+    socket.on('error', () => undefined);
+    socket.on('data', (chunk) => {
+      for (const command of commandsIn(chunk.toString())) {
+        if (/incr/i.test(command)) {
+          if (incrReply) socket.write(incrReply);
+          continue;
+        }
+        socket.write(/info/i.test(command) ? READY_REPLY : OK_REPLY);
+      }
+    });
+  });
 }
 
 function listening(server: Server): Promise<number> {
@@ -48,14 +66,21 @@ async function elapsedMs(work: Promise<unknown>): Promise<number> {
 
 describe('FailFastRedis', () => {
   const opened: FailFastRedis[] = [];
+  const served: Server[] = [];
   const open = (port: number): FailFastRedis => {
     const redis = FailFastRedis.connect({ host: '127.0.0.1', port });
     opened.push(redis);
     return redis;
   };
+  const serve = (incrReply: string | null): Promise<number> => {
+    const server = fakeRedis(incrReply);
+    served.push(server);
+    return listening(server);
+  };
 
-  afterEach(() => {
+  afterEach(async () => {
     for (const redis of opened.splice(0)) redis.onApplicationShutdown();
+    await Promise.all(served.splice(0).map(closed));
     jest.restoreAllMocks();
   });
 
@@ -80,22 +105,11 @@ describe('FailFastRedis', () => {
   });
 
   it('gives up on a redis that is ready and then stops answering', async () => {
-    const stalled = createServer((socket) => {
-      socket.on('error', () => undefined);
-      socket.on('data', (chunk) => {
-        for (const command of commandsIn(chunk.toString())) {
-          if (/incr/i.test(command)) continue;
-          socket.write(/info/i.test(command) ? READY_REPLY : OK_REPLY);
-        }
-      });
-    });
-    const redis = open(await listening(stalled));
+    const redis = open(await serve(null));
     await once(redis.client, 'ready');
 
     const waited = await elapsedMs(redis.run((client) => client.incr('key')));
 
-    redis.onApplicationShutdown();
-    await closed(stalled);
     expect(waited).toBeGreaterThanOrEqual(FAIL_FAST_COMMAND_TIMEOUT_MS - 50);
     expect(waited).toBeLessThan(HUNG_REFUSAL_MS);
   });
@@ -106,6 +120,18 @@ describe('FailFastRedis', () => {
     await expect(
       redis.runOpen((client) => client.incr('key'), -1),
     ).resolves.toBe(-1);
+  });
+
+  it('passes on an error redis answered with instead of reporting an outage', async () => {
+    const redis = open(await serve(WRONGTYPE_REPLY));
+    await once(redis.client, 'ready');
+
+    await expect(
+      redis.run((client) => client.incr('key')),
+    ).rejects.toBeInstanceOf(ReplyError);
+    await expect(
+      redis.runOpen((client) => client.incr('key'), -1),
+    ).rejects.toBeInstanceOf(ReplyError);
   });
 
   it('warns once per interval however many commands fail', async () => {
