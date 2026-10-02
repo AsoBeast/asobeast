@@ -82,6 +82,8 @@ The authentication endpoints are rate limited per client address.
 
 A refused attempt answers `429` with a `Retry-After` header and a `retryAfterSeconds` field in the error body, and the message names the wait, for example `Too many attempts from this address. Try again in 42 seconds.` The sign in card shows that message as it is.
 
+While Redis cannot be reached an attempt cannot be counted, so these endpoints answer `503` with a `Retry-After` header instead of admitting it. See [When Redis is unreachable](/api-reference/rate-limits#when-redis-is-unreachable).
+
 Behind a reverse proxy, `TRUST_PROXY` decides what the client address is. Left at `0` behind a proxy, every browser shares the proxy's address and therefore one allowance. See [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 ## Recover a forgotten password

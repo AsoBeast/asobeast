@@ -1,10 +1,10 @@
 import { ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
 import { ACTION_FORMULA_VERSION } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { ActionEventInput, ActionEventRecorder } from './action-events';
 import { ActionTransitions } from './action-transitions';
 import { ActionsService } from './actions.service';
@@ -222,7 +222,7 @@ const serviceFor = (db: ConcurrentActionDb): ActionsService => {
   const workspace = new WorkspaceContext();
   const service = new ActionsService(
     db as unknown as PrismaService,
-    {} as Queue,
+    {} as FailFastRedis,
     workspace,
     new ActionTransitions(
       { get: () => 90 } as unknown as ConfigService<Env, true>,

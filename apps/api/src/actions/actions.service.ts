@@ -1,6 +1,4 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
 import { Prisma } from '@prisma/client';
 import {
   ACTION_CATEGORIES,
@@ -15,12 +13,9 @@ import {
 } from '@asobeast/shared';
 import { ensureAppExists } from '../apps/ensure-app';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import {
-  actionsGeneratedKey,
-  actionsSuppressedKey,
-  QUEUES,
-} from '../jobs/jobs.types';
+import { actionsGeneratedKey, actionsSuppressedKey } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { lockActions } from './action-locks';
 import { ActionSummaryScope } from './action-summary-scope';
 import { CURRENT_SELECT, ActionTransitions } from './action-transitions';
@@ -40,7 +35,7 @@ export class ActionsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue(QUEUES.PIPELINE) private readonly pipeline: Queue,
+    private readonly redis: FailFastRedis,
     private readonly workspace: WorkspaceContext,
     private readonly transitions: ActionTransitions,
   ) {}
@@ -145,8 +140,8 @@ export class ActionsService {
     operation: string,
   ): Promise<string | null> {
     try {
-      const client = await this.pipeline.getBackend().client;
-      return await client.get(key(this.workspace.require(operation)));
+      const redisKey = key(this.workspace.require(operation));
+      return await this.redis.run((client) => client.get(redisKey));
     } catch {
       return null;
     }

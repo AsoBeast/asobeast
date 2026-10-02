@@ -1,9 +1,10 @@
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import * as undici from 'undici';
 import { publicOnlyDispatcher } from '../../alerts/webhook-dispatcher';
 import { Env } from '../../config/env';
 import { PUBLISHED_STATUS_KEY } from '../../jobs/jobs.types';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { PUBLISHED_STATUS_SCHEMA_VERSION } from './published-status';
 import {
   PUBLISHED_STATUS_MAX_AGE_HOURS,
@@ -90,9 +91,7 @@ function build(url: string | undefined, stored: Record<string, string> = {}) {
   };
   const service = new PublishedStatusService(
     config as unknown as ConfigService<Env, true>,
-    {
-      getBackend: () => ({ client: Promise.resolve(client) }),
-    } as unknown as Queue,
+    new FailFastRedis(client as unknown as Redis),
   );
   return { service, client, redis };
 }
