@@ -1,5 +1,7 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { sha256 } from '../password-hash';
+import { RedisUnavailableError } from '../../redis/redis.errors';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import {
   RECOVERY_REQUESTS_PER_HOUR,
   RecoveryRateLimiter,
@@ -12,9 +14,9 @@ describe('RecoveryRateLimiter', () => {
   const incr = jest.fn<Promise<number>, [string]>();
   const expire = jest.fn<Promise<number>, [string, number]>();
 
-  const limiter = new RecoveryRateLimiter({
-    getBackend: () => ({ client: Promise.resolve({ incr, expire }) }),
-  } as unknown as Queue);
+  const limiter = new RecoveryRateLimiter(
+    new FailFastRedis({ incr, expire } as unknown as Redis),
+  );
 
   beforeEach(() => {
     incr.mockReset().mockResolvedValue(1);
@@ -64,5 +66,20 @@ describe('RecoveryRateLimiter', () => {
     await limiter.claim('other@example.com', NOW);
 
     expect(incr.mock.calls[0][0]).not.toBe(incr.mock.calls[1][0]);
+  });
+});
+
+describe('RecoveryRateLimiter while redis is unreachable', () => {
+  const limiter = new RecoveryRateLimiter(
+    new FailFastRedis({
+      incr: jest.fn().mockRejectedValue(new Error('Command timed out')),
+      expire: jest.fn(),
+    } as unknown as Redis),
+  );
+
+  it('refuses the request instead of sending an uncounted email', async () => {
+    await expect(limiter.claim(ACCOUNT, NOW)).rejects.toBeInstanceOf(
+      RedisUnavailableError,
+    );
   });
 });

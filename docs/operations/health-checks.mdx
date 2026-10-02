@@ -60,6 +60,8 @@ curl --fail --silent --show-error https://your-host/api/backend/health
 
 To alert on a stalled pipeline rather than on a dead API, check the `stale` and `failedJobs` fields rather than the status code. A stale pipeline still answers `200`, because the API itself is healthy.
 
+The same is true of Redis. The API keeps answering reads from PostgreSQL while Redis is down, so `status` stays `ok` and the outage shows only in `redis`. Alert on `redis` being `down`. See [When Redis is unreachable](/api-reference/rate-limits#when-redis-is-unreachable) for what the API does meanwhile.
+
 ## Egress proxy pool
 
 Only relevant when `PROXY_PROVIDER` is set. `GET /api/backend/admin/proxy-pool` answers with the pool's shape and is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is): any other account gets `404`, the same answer the queue dashboard gives, so the surface never confirms it exists.

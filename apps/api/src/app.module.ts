@@ -31,6 +31,7 @@ import { QuotaModule } from './auth/quota.module';
 import { JobsModule } from './jobs/jobs.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { FailFastRedisModule } from './redis/fail-fast-redis.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SupportModule } from './support/support.module';
 
@@ -46,6 +47,7 @@ import { SupportModule } from './support/support.module';
     LoggingModule,
     ObservabilityModule,
     PrismaModule,
+    FailFastRedisModule,
     AuthModule,
     QuotaModule,
     HealthModule,

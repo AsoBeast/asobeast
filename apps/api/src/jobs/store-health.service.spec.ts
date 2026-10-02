@@ -1,7 +1,8 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import type { StoreHealth, StoreHealthReport } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { storeCanaryKey } from './jobs.types';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import {
@@ -196,13 +197,9 @@ describe('StoreHealthService', () => {
     const canary = new StoreCanaryService(
       {} as StoreProviderRegistry,
       {} as ProxyEgress,
-      {
-        getBackend: () => ({
-          client: Promise.resolve({
-            get: (key: string) => Promise.resolve(stored.get(key) ?? null),
-          }),
-        }),
-      } as unknown as Queue,
+      new FailFastRedis({
+        get: (key: string) => Promise.resolve(stored.get(key) ?? null),
+      } as unknown as Redis),
     );
 
     const report = await new StoreHealthService(canary, {

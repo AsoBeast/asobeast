@@ -23,6 +23,7 @@ import {
   RequestThrottledError,
 } from '../auth/rate-limit/rate-limit.errors';
 import { QuotaExceededError } from '../auth/quota.errors';
+import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { UnknownPriceError } from '../billing/price-catalog';
 import { ErrorTracking } from '../observability/error-tracking.service';
@@ -171,6 +172,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: exception.message,
         rateLimit: exception.detail,
         retryAfterSeconds: exception.detail.resetSeconds,
+      };
+    }
+    if (exception instanceof RedisUnavailableError) {
+      return {
+        statusCode: HttpStatus.SERVICE_UNAVAILABLE,
+        error: 'Service Unavailable',
+        message: exception.message,
+        retryAfterSeconds: exception.retryAfterSeconds,
       };
     }
     if (exception instanceof OnDemandLimitError) {

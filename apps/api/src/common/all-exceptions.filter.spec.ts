@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
+import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import {
@@ -246,5 +247,17 @@ describe('AllExceptionsFilter', () => {
     const { status } = capture(bodyParserError(499, 'closed', 'custom'));
 
     expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+  });
+
+  it('answers 503 with the wait when redis is unreachable', () => {
+    const { status, envelope, headers } = capture(new RedisUnavailableError(5));
+
+    expect(status).toBe(HttpStatus.SERVICE_UNAVAILABLE);
+    expect(envelope).toMatchObject({
+      statusCode: 503,
+      error: 'Service Unavailable',
+      retryAfterSeconds: 5,
+    });
+    expect(headers['Retry-After']).toBe('5');
   });
 });

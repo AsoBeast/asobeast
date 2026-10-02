@@ -2,7 +2,7 @@ import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { BullBoardModule } from '@bull-board/nestjs';
 import { BullModule } from '@nestjs/bullmq';
-import type { QueueOptions, RedisOptions } from 'bullmq';
+import type { QueueOptions } from 'bullmq';
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ActionsEngineModule } from '../actions/actions-engine.module';
@@ -14,6 +14,7 @@ import { AuditModule } from '../audit/audit.module';
 import { ADMIN_QUEUES_ROUTE, requireAdminAccess } from '../auth/admin-access';
 import { CategoryRanksModule } from '../category-ranks/category-ranks.module';
 import { Env } from '../config/env';
+import { redisConnection } from '../redis/redis-connection';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { RankingsModule } from '../rankings/rankings.module';
 import { ReviewsModule } from '../reviews/reviews.module';
@@ -64,13 +65,6 @@ const bullBoardModules: DynamicModule[] =
           { name: QUEUES.AI, adapter: BullMQAdapter },
         ),
       ];
-
-function redisConnection(config: ConfigService<Env, true>): RedisOptions {
-  const host: string = config.get('REDIS_HOST', { infer: true });
-  const port: number = config.get('REDIS_PORT', { infer: true });
-  const db: number = config.get('REDIS_DB', { infer: true });
-  return { host, port, db };
-}
 
 @Module({
   imports: [

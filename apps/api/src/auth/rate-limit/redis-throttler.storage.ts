@@ -1,8 +1,7 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import { Queue } from 'bullmq';
 import type { ThrottlerStorage } from '@nestjs/throttler';
-import { QUEUES } from '../../jobs/jobs.types';
+import type { Redis } from 'ioredis';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 
 const NAMESPACE = 'asobeast:throttle';
 
@@ -11,18 +10,6 @@ export interface ThrottlerWindow {
   timeToExpire: number;
   isBlocked: boolean;
   timeToBlockExpire: number;
-}
-
-export interface RedisWindowClient {
-  incr(key: string): Promise<number>;
-  pexpire(key: string, milliseconds: number): Promise<number>;
-  pttl(key: string): Promise<number>;
-  set(
-    key: string,
-    value: string,
-    mode: 'PX',
-    milliseconds: number,
-  ): Promise<unknown>;
 }
 
 export function throttlerKey(throttlerName: string, key: string): string {
@@ -35,42 +22,43 @@ function seconds(milliseconds: number): number {
 
 @Injectable()
 export class RedisThrottlerStorage implements ThrottlerStorage {
-  constructor(@InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue) {}
+  constructor(private readonly redis: FailFastRedis) {}
 
-  async increment(
+  increment(
     key: string,
     ttl: number,
     limit: number,
     blockDuration: number,
     throttlerName: string,
   ): Promise<ThrottlerWindow> {
-    const client = await this.client();
-    const counter = throttlerKey(throttlerName, key);
+    return this.redis.run(async (client) => {
+      const counter = throttlerKey(throttlerName, key);
 
-    const totalHits = await client.incr(counter);
-    if (totalHits === 1) await client.pexpire(counter, ttl);
-    const timeToExpire = seconds(await this.remaining(client, counter, ttl));
+      const totalHits = await client.incr(counter);
+      if (totalHits === 1) await client.pexpire(counter, ttl);
+      const timeToExpire = seconds(await this.remaining(client, counter, ttl));
 
-    if (totalHits <= limit) {
+      if (totalHits <= limit) {
+        return {
+          totalHits,
+          timeToExpire,
+          isBlocked: false,
+          timeToBlockExpire: 0,
+        };
+      }
       return {
         totalHits,
         timeToExpire,
-        isBlocked: false,
-        timeToBlockExpire: 0,
+        isBlocked: true,
+        timeToBlockExpire: seconds(
+          await this.block(client, `${counter}:blocked`, blockDuration),
+        ),
       };
-    }
-    return {
-      totalHits,
-      timeToExpire,
-      isBlocked: true,
-      timeToBlockExpire: seconds(
-        await this.block(client, `${counter}:blocked`, blockDuration),
-      ),
-    };
+    });
   }
 
   private async block(
-    client: RedisWindowClient,
+    client: Redis,
     key: string,
     blockDuration: number,
   ): Promise<number> {
@@ -81,7 +69,7 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
   }
 
   private async remaining(
-    client: RedisWindowClient,
+    client: Redis,
     key: string,
     ttl: number,
   ): Promise<number> {
@@ -89,10 +77,5 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
     if (held > 0) return held;
     await client.pexpire(key, ttl);
     return ttl;
-  }
-
-  private async client(): Promise<RedisWindowClient> {
-    return (await this.queue.getBackend()
-      .client) as unknown as RedisWindowClient;
   }
 }
