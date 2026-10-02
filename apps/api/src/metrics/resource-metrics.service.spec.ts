@@ -1,8 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { ResourceMetricsCollector } from './resource-metrics.service';
 
 const INFO = [
@@ -24,9 +25,7 @@ describe('ResourceMetricsCollector', () => {
       work: () => Promise<unknown>,
     ) => work(),
   } as unknown as CrossTenantAccess;
-  const queue = {
-    getBackend: () => ({ client: Promise.resolve({ info }) }),
-  } as unknown as Queue;
+  const redis = new FailFastRedis({ info } as unknown as Redis);
 
   const build = (diskBudgetBytes = 0): ResourceMetricsCollector =>
     new ResourceMetricsCollector(
@@ -35,7 +34,7 @@ describe('ResourceMetricsCollector', () => {
       {
         get: () => diskBudgetBytes,
       } as unknown as ConfigService<Env, true>,
-      queue,
+      redis,
     );
 
   beforeEach(() => {

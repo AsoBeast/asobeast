@@ -1,7 +1,5 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
 import {
   ON_DEMAND_ACTIONS,
   STORES,
@@ -19,9 +17,9 @@ import {
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { previousDailyRun } from '../jobs/daily-schedule';
-import { QUEUES } from '../jobs/jobs.types';
 import { requestsFor } from '../jobs/request-weights';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 
 const METRICS_JUSTIFICATION =
   'operator metrics summarise every workspace without reading their data';
@@ -78,10 +76,6 @@ interface RankingRow extends CountRow {
   completedAt: Date | null;
 }
 
-interface RedisReader {
-  mget(...keys: string[]): Promise<(string | null)[]>;
-}
-
 @Injectable()
 export class WorkspaceMetricsCollector {
   constructor(
@@ -89,7 +83,7 @@ export class WorkspaceMetricsCollector {
     private readonly crossTenant: CrossTenantAccess,
     private readonly categoryRanks: CategoryRanksService,
     private readonly config: ConfigService<Env, true>,
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
   ) {}
 
   collect(now = new Date()): Promise<WorkspaceMetrics[]> {
@@ -281,9 +275,10 @@ export class WorkspaceMetricsCollector {
         ),
       ),
     );
-    const client = (await this.queue.getBackend()
-      .client) as unknown as RedisReader;
-    const values = await client.mget(...keys);
+    const values = await this.redis.runOpen(
+      (client) => client.mget(...keys),
+      keys.map(() => null),
+    );
 
     metered.forEach(([workspaceId], index) => {
       const counts = emptyOnDemand();

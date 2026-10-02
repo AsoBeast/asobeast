@@ -1,8 +1,9 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { DAY_SECONDS } from '@asobeast/shared';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ABUSE_REFUSALS_PER_DAY, AbuseMonitor } from './abuse-monitor.service';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { windowKey } from '../rate-limit/window';
 
 const NOW = new Date('2026-08-14T10:30:30Z');
@@ -20,11 +21,12 @@ describe('AbuseMonitor', () => {
   const set = jest.fn<Promise<unknown>, [string, string, 'EX', number]>();
   const update = jest.fn().mockResolvedValue({});
 
-  const queue = {
-    getBackend: () => ({
-      client: Promise.resolve({ incr, expire, exists, set }),
-    }),
-  } as unknown as Queue;
+  const redis = new FailFastRedis({
+    incr,
+    expire,
+    exists,
+    set,
+  } as unknown as Redis);
   const prisma = { workspace: { update } } as unknown as PrismaService;
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: (
@@ -33,7 +35,7 @@ describe('AbuseMonitor', () => {
     ) => work(),
   } as unknown as CrossTenantAccess;
 
-  const monitor = new AbuseMonitor(queue, prisma, crossTenant);
+  const monitor = new AbuseMonitor(redis, prisma, crossTenant);
 
   beforeEach(() => {
     incr.mockReset().mockResolvedValue(1);
@@ -83,6 +85,15 @@ describe('AbuseMonitor', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it('leaves the flag alone when redis cannot say whether it is latched', async () => {
+    incr.mockResolvedValue(ABUSE_REFUSALS_PER_DAY + 1);
+    exists.mockRejectedValue(new Error('Command timed out'));
+
+    await monitor.recordRefusal(REFUSED, NOW);
+
+    expect(update).not.toHaveBeenCalled();
+  });
+
   it('still flags a workspace whose threshold refusal was never persisted', async () => {
     incr.mockResolvedValue(ABUSE_REFUSALS_PER_DAY);
     update.mockRejectedValueOnce(new Error('the write failed'));
@@ -102,5 +113,21 @@ describe('AbuseMonitor', () => {
       'EX',
       DAY_SECONDS,
     );
+  });
+});
+
+describe('AbuseMonitor while redis is unreachable', () => {
+  const update = jest.fn();
+  const monitor = new AbuseMonitor(
+    new FailFastRedis({
+      incr: jest.fn().mockRejectedValue(new Error('Command timed out')),
+    } as unknown as Redis),
+    { workspace: { update } } as unknown as PrismaService,
+    {} as unknown as CrossTenantAccess,
+  );
+
+  it('drops the count rather than failing the refusal it describes', async () => {
+    await expect(monitor.recordRefusal(REFUSED, NOW)).resolves.toBeUndefined();
+    expect(update).not.toHaveBeenCalled();
   });
 });

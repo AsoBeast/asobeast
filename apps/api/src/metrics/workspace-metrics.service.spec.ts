@@ -1,5 +1,5 @@
 import { ConfigService } from '@nestjs/config';
-import type { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import type { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -8,6 +8,7 @@ import {
   GOOGLE_PLAY_REQUESTS,
 } from '../jobs/request-weights';
 import type { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { WorkspaceMetricsCollector } from './workspace-metrics.service';
 
 const NOW = new Date('2026-08-18T12:00:00.000Z');
@@ -62,18 +63,16 @@ function collectorWith(wiring: Wiring = {}) {
       key === 'BILLING_ENABLED' ? true : '0 3 * * *',
     ),
   };
-  const queue = {
-    getBackend: () => ({
-      client: Promise.resolve({ mget: jest.fn().mockResolvedValue([]) }),
-    }),
-  };
+  const redis = new FailFastRedis({
+    mget: jest.fn().mockResolvedValue([]),
+  } as unknown as Redis);
 
   return new WorkspaceMetricsCollector(
     prisma as unknown as PrismaService,
     new CrossTenantAccess(new WorkspaceContext()),
     categoryRanks as unknown as CategoryRanksService,
     config as unknown as ConfigService<never, true>,
-    queue as unknown as Queue,
+    redis,
   );
 }
 

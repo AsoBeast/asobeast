@@ -1,6 +1,7 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { PLAN_LIMITS, SELF_HOSTED_LIMITS } from '@asobeast/shared';
 import { RateLimitExceededError } from './rate-limit.errors';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { RequestRateLimiter, type RateScope } from './request-rate.limiter';
 
 const NOW = new Date('2026-08-14T10:30:30Z');
@@ -27,13 +28,14 @@ describe('RequestRateLimiter', () => {
   const evaluate = jest.fn<Promise<unknown>, [string, number, ...unknown[]]>();
   const zrem = jest.fn<Promise<number>, [string, string]>();
 
-  const queue = {
-    getBackend: () => ({
-      client: Promise.resolve({ incr, expire, eval: evaluate, zrem }),
-    }),
-  } as unknown as Queue;
-
-  const limiter = new RequestRateLimiter(queue);
+  const limiter = new RequestRateLimiter(
+    new FailFastRedis({
+      incr,
+      expire,
+      eval: evaluate,
+      zrem,
+    } as unknown as Redis),
+  );
 
   const keysOf = (label: string): string[] =>
     incr.mock.calls.map(([key]) => key).filter((key) => key.includes(label));
@@ -221,5 +223,39 @@ describe('RequestRateLimiter', () => {
     await expect(limiter.consumeMcp(selfHosted, NOW)).resolves.toBeUndefined();
 
     expect(incr).not.toHaveBeenCalled();
+  });
+});
+
+describe('RequestRateLimiter while redis is unreachable', () => {
+  const unreachable = new Error('Command timed out');
+  const evaluate = jest.fn().mockRejectedValue(unreachable);
+  const zrem = jest.fn().mockRejectedValue(unreachable);
+  const limiter = new RequestRateLimiter(
+    new FailFastRedis({
+      incr: jest.fn().mockRejectedValue(unreachable),
+      expire: jest.fn(),
+      eval: evaluate,
+      zrem,
+    } as unknown as Redis),
+  );
+
+  it('serves the request uncounted instead of waiting', async () => {
+    await expect(limiter.consume(metered, 'read', NOW)).resolves.toEqual([]);
+  });
+
+  it('serves an mcp request uncounted', async () => {
+    await expect(limiter.consumeMcp(metered, NOW)).resolves.toBeUndefined();
+  });
+
+  it('admits the request without a parallel slot to give back', async () => {
+    await expect(limiter.acquire(metered, NOW)).resolves.toBeNull();
+  });
+
+  it('never rejects when a slot cannot be given back', async () => {
+    evaluate.mockResolvedValueOnce(1);
+    const release = await limiter.acquire(metered, NOW);
+
+    await expect(release?.()).resolves.toBeUndefined();
+    expect(zrem).toHaveBeenCalled();
   });
 });

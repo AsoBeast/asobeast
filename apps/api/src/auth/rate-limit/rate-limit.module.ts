@@ -1,7 +1,5 @@
-import { BullModule } from '@nestjs/bullmq';
 import { Global, Module } from '@nestjs/common';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { QUEUES } from '../../jobs/jobs.types';
 import { RateLimitStorageModule } from './rate-limit-storage.module';
 import { RedisThrottlerStorage } from './redis-throttler.storage';
 import { AbuseMonitor } from '../abuse/abuse-monitor.service';
@@ -19,7 +17,6 @@ const AUTH_THROTTLER_LIMIT = 10;
 @Global()
 @Module({
   imports: [
-    BullModule.registerQueue({ name: QUEUES.PIPELINE }),
     ThrottlerModule.forRootAsync({
       imports: [RateLimitStorageModule],
       inject: [RedisThrottlerStorage],

@@ -1,11 +1,9 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Queue } from 'bullmq';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
-import { QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 
 const SIZE_JUSTIFICATION =
   'the size of the database on disk belongs to the host, not to any workspace';
@@ -17,10 +15,6 @@ export interface ResourceUsage {
   redisMaxBytes: number | null;
 }
 
-interface RedisInfo {
-  info(section: string): Promise<string>;
-}
-
 @Injectable()
 export class ResourceMetricsCollector {
   private readonly logger = new Logger(ResourceMetricsCollector.name);
@@ -29,7 +23,7 @@ export class ResourceMetricsCollector {
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
     private readonly config: ConfigService<Env, true>,
-    @InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue,
+    private readonly redis: FailFastRedis,
   ) {}
 
   async collect(): Promise<ResourceUsage> {
@@ -68,9 +62,7 @@ export class ResourceMetricsCollector {
     max: number | null;
   }> {
     try {
-      const client = (await this.queue.getBackend()
-        .client) as unknown as RedisInfo;
-      const info = await client.info('memory');
+      const info = await this.redis.run((client) => client.info('memory'));
       return {
         used: field(info, 'used_memory'),
         max: field(info, 'maxmemory'),

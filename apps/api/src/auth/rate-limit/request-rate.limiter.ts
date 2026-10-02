@@ -1,7 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
-import { Queue } from 'bullmq';
 import {
   mcpRateRule,
   nextPlan,
@@ -12,8 +10,8 @@ import {
   type PlanLimits,
   type PlanName,
 } from '@asobeast/shared';
-import { QUEUES } from '../../jobs/jobs.types';
 import { RateLimitExceededError } from './rate-limit.errors';
+import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './window';
 
 const CONCURRENCY_TTL_MS = 60_000;
@@ -43,17 +41,6 @@ export interface RateUsage {
 
 export type RateRelease = () => Promise<void>;
 
-interface RateCounterClient {
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
-  eval(
-    script: string,
-    keyCount: number,
-    ...args: (string | number)[]
-  ): Promise<unknown>;
-  zrem(key: string, member: string): Promise<number>;
-}
-
 export interface RateScope {
   workspaceId: string;
   plan: PlanName;
@@ -62,7 +49,7 @@ export interface RateScope {
 
 @Injectable()
 export class RequestRateLimiter {
-  constructor(@InjectQueue(QUEUES.PIPELINE) private readonly queue: Queue) {}
+  constructor(private readonly redis: FailFastRedis) {}
 
   async consume(
     scope: RateScope,
@@ -74,7 +61,9 @@ export class RequestRateLimiter {
 
     const usage: RateUsage[] = [];
     for (const rule of rules) {
-      usage.push(await this.count(scope, rateClass, rule, now));
+      const counted = await this.count(scope, rateClass, rule, now);
+      if (!counted) break;
+      usage.push(counted);
     }
     return usage;
   }
@@ -89,8 +78,7 @@ export class RequestRateLimiter {
     rateClass: RateClass,
     rule: RateRule,
     now: Date,
-  ): Promise<RateUsage> {
-    const client = await this.client();
+  ): Promise<RateUsage | null> {
     const key = windowKey(
       'rate',
       scope.workspaceId,
@@ -98,8 +86,12 @@ export class RequestRateLimiter {
       rule.windowSeconds,
       now,
     );
-    const used = await client.incr(key);
-    if (used === 1) await client.expire(key, rule.windowSeconds);
+    const used = await this.redis.runOpen(async (client) => {
+      const hits = await client.incr(key);
+      if (hits === 1) await client.expire(key, rule.windowSeconds);
+      return hits;
+    }, null);
+    if (used === null) return null;
     const resetSeconds = secondsUntilReset(rule.windowSeconds, now);
     if (used > rule.limit) {
       throw this.exceeded(
@@ -120,34 +112,47 @@ export class RequestRateLimiter {
     const limit = scope.limits.apiConcurrentRequests;
     if (limit === null) return null;
 
-    const client = await this.client();
     const key = `asobeast:concurrency:${scope.workspaceId}`;
     const member = randomUUID();
 
-    const admitted = await client.eval(
-      ADMIT_SLOT,
-      1,
-      key,
-      now.getTime() - CONCURRENCY_TTL_MS,
-      limit,
-      now.getTime(),
-      member,
-      CONCURRENCY_TTL_MS,
+    const admitted = await this.redis.runOpen<unknown>(
+      (client) =>
+        client.eval(
+          ADMIT_SLOT,
+          1,
+          key,
+          now.getTime() - CONCURRENCY_TTL_MS,
+          limit,
+          now.getTime(),
+          member,
+          CONCURRENCY_TTL_MS,
+        ),
+      null,
     );
+    if (admitted === null) return null;
     if (admitted !== 1) {
       throw this.exceeded(scope, 'read', 'concurrent', limit, 1);
     }
 
     const renewal = setInterval(() => {
-      void client
-        .eval(RENEW_SLOT, 1, key, member, Date.now(), CONCURRENCY_TTL_MS)
-        .catch(() => undefined);
+      void this.redis.runOpen<unknown>(
+        (client) =>
+          client.eval(
+            RENEW_SLOT,
+            1,
+            key,
+            member,
+            Date.now(),
+            CONCURRENCY_TTL_MS,
+          ),
+        null,
+      );
     }, CONCURRENCY_RENEWAL_MS);
     renewal.unref();
 
     return async () => {
       clearInterval(renewal);
-      await client.zrem(key, member);
+      await this.redis.runOpen((client) => client.zrem(key, member), 0);
     };
   }
 
@@ -166,10 +171,5 @@ export class RequestRateLimiter {
       resetSeconds,
       upgradeTo: nextPlan(scope.plan),
     });
-  }
-
-  private async client(): Promise<RateCounterClient> {
-    return (await this.queue.getBackend()
-      .client) as unknown as RateCounterClient;
   }
 }

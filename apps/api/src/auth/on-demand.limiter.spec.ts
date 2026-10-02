@@ -1,7 +1,9 @@
-import { Queue } from 'bullmq';
+import type { Redis } from 'ioredis';
 import { PLAN_LIMITS, PlanName, SELF_HOSTED_LIMITS } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { OnDemandLimitError, OnDemandLimiter } from './on-demand.limiter';
+import { RedisUnavailableError } from '../redis/redis.errors';
+import { FailFastRedis } from '../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 import { QuotaService } from './quota.service';
 
@@ -15,12 +17,10 @@ describe('OnDemandLimiter', () => {
   const expire = jest.fn<Promise<number>, [string, number]>();
   const workspace = new WorkspaceContext();
 
-  const queue = {
-    getBackend: () => ({ client: Promise.resolve({ incr, expire }) }),
-  } as unknown as Queue;
+  const redis = new FailFastRedis({ incr, expire } as unknown as Redis);
 
   const limiterWith = (metered: boolean, plan: PlanName = 'indie') =>
-    new OnDemandLimiter(queue, workspace, {
+    new OnDemandLimiter(redis, workspace, {
       limitsOf: () =>
         Promise.resolve(metered ? PLAN_LIMITS[plan] : SELF_HOSTED_LIMITS),
     } as unknown as QuotaService);
@@ -114,5 +114,24 @@ describe('rate limit window keys', () => {
 
   it('counts down to the end of the current window', () => {
     expect(secondsUntilReset(3_600, NOW)).toBe(1_800);
+  });
+});
+
+describe('OnDemandLimiter while redis is unreachable', () => {
+  const workspace = new WorkspaceContext();
+  const limiter = new OnDemandLimiter(
+    new FailFastRedis({
+      incr: jest.fn().mockRejectedValue(new Error('Command timed out')),
+    } as unknown as Redis),
+    workspace,
+    {
+      limitsOf: () => Promise.resolve(PLAN_LIMITS.indie),
+    } as unknown as QuotaService,
+  );
+
+  it('refuses the store request instead of queueing it uncounted', async () => {
+    await expect(
+      workspace.run(WORKSPACE, () => limiter.consume('refresh')),
+    ).rejects.toBeInstanceOf(RedisUnavailableError);
   });
 });
