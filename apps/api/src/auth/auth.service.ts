@@ -294,6 +294,7 @@ export class AuthService {
       trialEndsAt: user.workspace.trialEndsAt?.toISOString() ?? null,
       planExpiresAt: user.workspace.planExpiresAt?.toISOString() ?? null,
       entitled: this.entitled(user),
+      trialAwaitsConfirmation: this.verification.awaitsConfirmation(user),
       platformOperator: isPlatformOperator(user),
     };
   }

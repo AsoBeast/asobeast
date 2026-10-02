@@ -117,6 +117,17 @@ describe('Auth (billing mode)', () => {
     expect(created.entitled).toBe(true);
   });
 
+  it('starts the trial at registration and never asks to confirm an email it cannot send', async () => {
+    const register = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'unmailed@example.com', password: 'supersecret1' })
+      .expect(201);
+    const created = register.body as AuthUser;
+
+    expect(created.entitled).toBe(true);
+    expect(created.trialAwaitsConfirmation).toBe(false);
+  });
+
   it('rejects a duplicate email with 409 while registration is open', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')

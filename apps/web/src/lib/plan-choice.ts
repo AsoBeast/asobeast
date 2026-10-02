@@ -23,6 +23,11 @@ export const CHECKOUT_UNCONFIGURED =
 
 const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
 
+export const CONFIRM_EMAIL_TO_START_TRIAL =
+  "Confirm your email to start your free trial.";
+
+const CONFIRMATION_PENDING = `${CONFIRM_EMAIL_TO_START_TRIAL} Open the link we emailed you when you registered.`;
+
 const STALLED_ON_THE_PAYWALL =
   "Your subscription stopped collecting. Add a payment method in the billing portal and it picks up where it left off.";
 
@@ -61,13 +66,19 @@ export function planActionLabel(
   return action === "checkout" ? `Choose ${displayName}` : ACTION_LABEL[action];
 }
 
-export function paywallStatusLine(plan: AccountPlan | undefined): string {
-  if (!plan) return CHOOSE_A_PLAN;
+export function paywallStatusLine(
+  plan: AccountPlan | undefined,
+  awaitingConfirmation = false,
+): string {
+  if (!plan) {
+    return awaitingConfirmation ? CONFIRMATION_PENDING : CHOOSE_A_PLAN;
+  }
   if (pending(plan)) return PAYMENT_CONFIRMING;
   if (plan.plan === "trial" && plan.trialEndsAt) {
     return `Your trial is active until ${formatDate(plan.trialEndsAt)}.`;
   }
   if (stalled(plan)) return STALLED_ON_THE_PAYWALL;
+  if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (plan.trialEndsAt && !plan.entitled) {
     return `Your trial ended on ${formatDate(plan.trialEndsAt)}. Your data is still here.`;
   }
@@ -77,9 +88,13 @@ export function paywallStatusLine(plan: AccountPlan | undefined): string {
   return CHOOSE_A_PLAN;
 }
 
-export function planStatusLine(plan: AccountPlan): string {
+export function planStatusLine(
+  plan: AccountPlan,
+  awaitingConfirmation = false,
+): string {
   if (pending(plan)) return PAYMENT_CONFIRMING;
   if (stalled(plan)) return STALLED_IN_SETTINGS;
+  if (awaitingConfirmation) return CONFIRMATION_PENDING;
   if (!plan.entitled) {
     return "Your data stays readable and exportable; tracking resumes when you choose a plan.";
   }

@@ -140,6 +140,7 @@ describe('Self hosted deployments carry no plan gating', () => {
       .set('Cookie', cookie)
       .expect(200);
     expect((me.body as AuthUser).entitled).toBe(true);
+    expect((me.body as AuthUser).trialAwaitsConfirmation).toBe(false);
   });
 
   it('reports no plan to buy and no metered limit to hit', async () => {

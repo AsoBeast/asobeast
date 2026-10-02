@@ -11,6 +11,7 @@ export interface AuthState {
   isLoading: boolean;
   isFetching: boolean;
   trialOnly: boolean;
+  awaitingConfirmation: boolean;
 }
 
 function subscribeToNothing(): () => void {
@@ -31,6 +32,7 @@ const SERVER_AUTH_STATE: AuthState = {
   isLoading: true,
   isFetching: true,
   trialOnly: false,
+  awaitingConfirmation: false,
 };
 
 export function useAuth(): AuthState {
@@ -60,5 +62,7 @@ export function useAuth(): AuthState {
     isLoading: statusLoading || (authenticated && userLoading),
     isFetching: statusFetching,
     trialOnly,
+    awaitingConfirmation:
+      authenticated && user?.trialAwaitsConfirmation === true,
   };
 }

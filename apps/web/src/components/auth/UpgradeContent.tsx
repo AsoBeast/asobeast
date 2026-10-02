@@ -44,6 +44,8 @@ import {
   invalidateAuth,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { ResendConfirmationButton } from "./ResendConfirmationButton";
+import { useAuth } from "./use-auth";
 
 const INCLUDED = [
   "Daily keyword rank tracking across every storefront",
@@ -172,6 +174,7 @@ function PlanOption({
 
 export function UpgradeContent() {
   const { data: plan } = useQuery(accountPlanOptions);
+  const { awaitingConfirmation } = useAuth();
   const { data: catalog } = useQuery(billingCatalogOptions);
   const [interval, setInterval] = useState<BillingInterval>("month");
 
@@ -188,8 +191,13 @@ export function UpgradeContent() {
             Keep optimizing without limits
           </h1>
           <p className="text-body text-muted-foreground">
-            {paywallStatusLine(plan)}
+            {paywallStatusLine(plan, awaitingConfirmation)}
           </p>
+          {awaitingConfirmation ? (
+            <div className="mt-2 flex justify-center">
+              <ResendConfirmationButton />
+            </div>
+          ) : null}
         </div>
         <Tabs
           value={interval}

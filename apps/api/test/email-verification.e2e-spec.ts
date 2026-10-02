@@ -6,7 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { AuthUser } from '@asobeast/shared';
+import { AuthUser, WorkspaceInviteCreated } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -43,6 +43,9 @@ describe('Email verification before the trial starts', () => {
     request(app.getHttpServer())
       .post('/auth/register')
       .send({ email, password: 'supersecret1' });
+
+  const me = (cookie: string) =>
+    request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
 
   const tokenFrom = (mail: SentMail): string =>
     new URLSearchParams(mail.text.split('?')[1]).get('token') ?? '';
@@ -126,6 +129,71 @@ describe('Email verification before the trial starts', () => {
       where: { id: DEFAULT_WORKSPACE_ID },
     });
     expect(workspace.trialStartedAt).toBeNull();
+  });
+
+  it('tells an account whose trial waits on its email that it does', async () => {
+    const created = await register('owner@example.com').expect(201);
+
+    expect((created.body as AuthUser).trialAwaitsConfirmation).toBe(true);
+    const current = await me(sessionCookie(created)).expect(200);
+    expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(true);
+  });
+
+  it('stops saying so once the address is confirmed', async () => {
+    await register('owner@example.com').expect(201);
+
+    const confirmed = await request(app.getHttpServer())
+      .post('/auth/verify')
+      .send({ token: tokenFrom(sent[0]) })
+      .expect(200);
+
+    expect((confirmed.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+  });
+
+  it('does not ask a customer who already pays to confirm before a trial', async () => {
+    const created = await register('payer@example.com').expect(201);
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { plan: 'indie' },
+    });
+
+    const current = await me(sessionCookie(created)).expect(200);
+
+    expect((current.body as AuthUser).entitled).toBe(true);
+    expect((current.body as AuthUser).trialAwaitsConfirmation).toBe(false);
+  });
+
+  it('never asks a member of a lapsed workspace to confirm a trial it already had', async () => {
+    await register('owner@example.com').expect(201);
+    const confirmed = await request(app.getHttpServer())
+      .post('/auth/verify')
+      .send({ token: tokenFrom(sent[0]) })
+      .expect(200);
+    const ownerCookie = sessionCookie(confirmed);
+    const invite = await request(app.getHttpServer())
+      .post('/workspace/invites')
+      .set('Cookie', ownerCookie)
+      .send({ email: 'member@example.com' })
+      .expect(201);
+    const accepted = await request(app.getHttpServer())
+      .post('/workspace/invites/accept')
+      .send({
+        token: new URLSearchParams(
+          (invite.body as WorkspaceInviteCreated).acceptPath.split('?')[1],
+        ).get('token'),
+        password: 'supersecret1',
+      })
+      .expect(201);
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { trialEndsAt: new Date(Date.now() - 1000) },
+    });
+
+    const member = await me(sessionCookie(accepted)).expect(200);
+
+    expect((member.body as AuthUser).emailVerified).toBe(false);
+    expect((member.body as AuthUser).entitled).toBe(false);
+    expect((member.body as AuthUser).trialAwaitsConfirmation).toBe(false);
   });
 
   it('emails a confirmation link to the address that registered', async () => {

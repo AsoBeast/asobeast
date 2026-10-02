@@ -202,6 +202,58 @@ describe("a first payment still being confirmed", () => {
   });
 });
 
+describe("a trial that waits on the email confirmation", () => {
+  const CONFIRM_EMAIL_TO_START_TRIAL =
+    "Confirm your email to start your free trial.";
+
+  const unconfirmed = planOf({
+    plan: "free",
+    entitled: false,
+    subscribed: false,
+    trialEndsAt: null,
+  });
+
+  it("asks for the confirmation on the paywall instead of asking for a plan", () => {
+    const line = paywallStatusLine(unconfirmed, true);
+
+    expect(line).toContain(CONFIRM_EMAIL_TO_START_TRIAL);
+    expect(line).not.toContain("Choose a plan");
+  });
+
+  it("asks for it before the plan has loaded", () => {
+    expect(paywallStatusLine(undefined, true)).toContain(
+      CONFIRM_EMAIL_TO_START_TRIAL,
+    );
+  });
+
+  it("asks for it in settings without promising that a plan resumes tracking", () => {
+    const line = planStatusLine(unconfirmed, true);
+
+    expect(line).toContain(CONFIRM_EMAIL_TO_START_TRIAL);
+    expect(line).not.toContain("choose a plan");
+  });
+
+  it("keeps asking for a plan when nothing waits on a confirmation", () => {
+    expect(paywallStatusLine(unconfirmed, false)).toContain("Choose a plan");
+    expect(paywallStatusLine(unconfirmed)).toContain("Choose a plan");
+    expect(planStatusLine(unconfirmed)).toContain("readable and exportable");
+  });
+
+  it("still says the payment is confirming when one is in flight", () => {
+    expect(paywallStatusLine(pending, true)).toBe(PAYMENT_CONFIRMING);
+    expect(planStatusLine(pending, true)).toBe(PAYMENT_CONFIRMING);
+  });
+
+  it("still sends a stalled subscription to the billing portal", () => {
+    expect(paywallStatusLine(stalled, true)).toContain("stopped collecting");
+    expect(planStatusLine(stalled, true)).toContain("payment method");
+  });
+
+  it("never replaces the account of a trial that already ended", () => {
+    expect(paywallStatusLine(lapsedTrial, false)).toContain("trial ended");
+  });
+});
+
 describe("paymentNote", () => {
   const catalogOf = (over: Partial<BillingCatalog> = {}): BillingCatalog => ({
     enabled: true,

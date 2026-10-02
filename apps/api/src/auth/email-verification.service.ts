@@ -13,7 +13,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { sha256 } from './password-hash';
 import { refuseSessionSwap } from './session-swap';
 import type { AccountUser } from './auth.types';
-import { alreadyTrialed, grantTrial, type TrialGrant } from './trial-grant';
+import {
+  alreadyTrialed,
+  grantTrial,
+  trialAwaitsConfirmation,
+  type TrialGrant,
+} from './trial-grant';
 import { VerificationMailer } from './verification-mailer';
 
 const VERIFICATION_HOURS = 24;
@@ -43,6 +48,10 @@ export class EmailVerificationService {
   openingGrant(): TrialGrant | undefined {
     if (!this.billing || this.required) return undefined;
     return grantTrial(this.config.get('TRIAL_DAYS', { infer: true }));
+  }
+
+  awaitsConfirmation(user: AccountUser, now = new Date()): boolean {
+    return this.required && trialAwaitsConfirmation(user, now);
   }
 
   async invite(user: AccountUser): Promise<void> {
