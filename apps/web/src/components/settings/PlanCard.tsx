@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { QuotaUsage } from "@asobeast/shared";
+import type { AccountPlan, QuotaUsage } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,13 +18,14 @@ import {
 import { Meter } from "@/components/ui/meter";
 import { useAuth } from "@/components/auth/use-auth";
 import { ApiError, openBillingPortal } from "@/lib/api";
-import { formatNumber, formatPlanLimit } from "@/lib/format";
 import {
+  MEMBER_BILLING_NOTE,
   planAction,
   planCallToAction,
   planStatusLine,
 } from "@/lib/plan-choice";
 import { accountPlanOptions } from "@/lib/queries";
+import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const RESOURCES = [
@@ -40,11 +41,11 @@ function UsageRow({ label, usage }: { label: string; usage: QuotaUsage }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-4 text-sm">
         <dt className="text-muted-foreground">{label}</dt>
-        <dd className="font-medium tabular-nums">
-          {formatNumber(usage.used)} of {formatPlanLimit(usage.limit)}
-        </dd>
+        <dd className="font-medium tabular-nums">{formatQuotaUsage(usage)}</dd>
       </div>
-      <Meter value={ratio} max={1} tone={ratio >= 1 ? "health" : "neutral"} />
+      {hasNoCapacity(usage) ? null : (
+        <Meter value={ratio} max={1} tone={ratio >= 1 ? "health" : "neutral"} />
+      )}
     </div>
   );
 }
@@ -77,9 +78,22 @@ function ManageBillingButton() {
   );
 }
 
+function BillingActions({ plan }: { plan: AccountPlan }) {
+  return (
+    <>
+      {plan.upgradeTo && planAction(plan, plan.upgradeTo) !== "pending" ? (
+        <Button asChild>
+          <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
+        </Button>
+      ) : null}
+      {plan.hasBillingAccount ? <ManageBillingButton /> : null}
+    </>
+  );
+}
+
 export function PlanCard() {
   const { data: plan } = useSuspenseQuery(accountPlanOptions);
-  const { user, awaitingConfirmation } = useAuth();
+  const { isMember, isOwner, awaitingConfirmation } = useAuth();
 
   if (!plan.billing) return null;
 
@@ -105,14 +119,12 @@ export function PlanCard() {
         </dl>
       </CardContent>
       <CardFooter className="gap-2">
-        {plan.upgradeTo && planAction(plan, plan.upgradeTo) !== "pending" ? (
-          <Button asChild>
-            <Link href={plan.upgradePath}>{planCallToAction(plan)}</Link>
-          </Button>
+        {isMember ? (
+          <p className="text-body text-muted-foreground">
+            {MEMBER_BILLING_NOTE}
+          </p>
         ) : null}
-        {user?.role === "owner" && plan.hasBillingAccount ? (
-          <ManageBillingButton />
-        ) : null}
+        {isOwner ? <BillingActions plan={plan} /> : null}
       </CardFooter>
     </Card>
   );

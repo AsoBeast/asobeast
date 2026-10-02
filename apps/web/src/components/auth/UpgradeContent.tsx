@@ -32,6 +32,7 @@ import {
 } from "@/lib/api";
 import { formatNumber } from "@/lib/format";
 import {
+  billingNote,
   paymentNote,
   planAction,
   planActionLabel,
@@ -44,7 +45,9 @@ import {
   invalidateAuth,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { MemberBilling } from "./MemberBilling";
 import { ResendConfirmationButton } from "./ResendConfirmationButton";
+import { SessionCheck } from "./SessionCheck";
 import { useAuth } from "./use-auth";
 
 const INCLUDED = [
@@ -60,12 +63,6 @@ const INTERVAL_LABEL: Record<BillingInterval, string> = {
   month: "Monthly",
   year: "Annual",
 };
-
-function priceLabel(interval: BillingInterval, amountUsd: number): string {
-  return interval === "month"
-    ? `$${amountUsd} /month`
-    : `$${amountUsd} /year, two months free`;
-}
 
 function failureMessage(error: unknown, action: PlanAction): string {
   if (error instanceof ApiError) return error.envelope.message;
@@ -123,7 +120,7 @@ function PlanOption({
           </p>
         </CardTitle>
         <p className="text-body text-muted-foreground">
-          {priceLabel(interval, amountUsd)}
+          {billingNote(interval)}
         </p>
       </CardHeader>
       <CardContent>
@@ -173,10 +170,22 @@ function PlanOption({
 }
 
 export function UpgradeContent() {
+  const { isLoading, isMember, awaitingConfirmation } = useAuth();
   const { data: plan } = useQuery(accountPlanOptions);
-  const { awaitingConfirmation } = useAuth();
-  const { data: catalog } = useQuery(billingCatalogOptions);
+  const { data: catalog } = useQuery({
+    ...billingCatalogOptions,
+    enabled: !isLoading && !isMember,
+  });
   const [interval, setInterval] = useState<BillingInterval>("month");
+
+  if (isMember) return <MemberBilling plan={plan} />;
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <SessionCheck />
+      </div>
+    );
+  }
 
   const priceFor = (name: PaidPlanName) =>
     catalog?.prices.find(

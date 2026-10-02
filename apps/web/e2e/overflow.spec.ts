@@ -15,6 +15,7 @@ const ROUTES: ReadonlyArray<
   ["metadata", "/apps/app-1/metadata"],
   ["keyword combinations", "/apps/app-long/keywords?combos=true"],
   ["metadata with a long listing", "/apps/app-long/metadata"],
+  ["metadata of an arabic play listing", "/apps/app-ar/metadata"],
   ["changes", "/apps/app-1/changes"],
   ["dashboard table", "/?view=table"],
   ["dashboard many apps", "/", { portfolio_many: "1" }],

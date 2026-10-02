@@ -24,6 +24,16 @@ const TRIAL_USER: AuthUser = {
   platformOperator: false,
 };
 
+const MEMBER_USER: AuthUser = {
+  ...TRIAL_USER,
+  id: "u2",
+  email: "teammate@example.com",
+  name: null,
+  role: "member",
+  plan: "indie",
+  trialEndsAt: null,
+};
+
 function fulfillJson(status: number, body: unknown) {
   return {
     status,
@@ -589,8 +599,9 @@ test("settings shows the plan, its usage and the upgrade path", async ({
 
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Plan" })).toBeVisible();
-  await expect(page.getByText("3 of 5")).toBeVisible();
-  await expect(page.getByText("240 of 1,000")).toBeVisible();
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("3 of 5")).toBeVisible();
+  await expect(plan.getByText("240 of 1,000")).toBeVisible();
 
   await page.getByRole("link", { name: "Upgrade plan" }).click();
   await expect(page).toHaveURL(/\/upgrade$/);
@@ -889,8 +900,9 @@ test("an unconfirmed member of a workspace whose trial ended is not asked to con
 
   await page.goto("/upgrade");
   await expect(
-    page.getByText("Your trial ended on", { exact: false }),
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
   ).toBeVisible();
+  await expect(page.getByText(CONFIRM_TO_START)).toHaveCount(0);
 });
 
 test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
@@ -1262,6 +1274,328 @@ test("an existing subscriber changes plan in the portal instead of buying a seco
 
   await expect.poll(() => portalCalls).toBe(1);
   expect(checkoutCalls).toBe(0);
+});
+
+async function openBillingAsMember(
+  page: Page,
+  plan: AccountPlan,
+  user: AuthUser = MEMBER_USER,
+) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routeMe(page, user);
+  await routePlan(page, plan);
+}
+
+async function trackBillingActions(page: Page) {
+  const calls: string[] = [];
+  await page.route(
+    /\/api\/backend\/billing\/(checkout|portal)$/,
+    async (route) => {
+      calls.push(route.request().url());
+      await route.fulfill(
+        fulfillJson(403, {
+          statusCode: 403,
+          error: "Forbidden",
+          message: "Only the workspace owner can do this",
+          path: "/billing",
+          timestamp: new Date().toISOString(),
+        }),
+      );
+    },
+  );
+  return calls;
+}
+
+test("a member sees the plan read only and is told the owner manages billing", async ({
+  page,
+}) => {
+  await openBillingAsMember(page, INDIE_PLAN);
+
+  await page.goto("/settings");
+
+  await expect(
+    page.getByRole("region", { name: "Plan" }).getByText("3 of 5"),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Upgrade plan" })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Manage billing" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Your workspace owner manages billing."),
+  ).toBeVisible();
+});
+
+test("the upgrade page offers a member no billing action and says who can act", async ({
+  page,
+}) => {
+  await openBillingAsMember(page, INDIE_PLAN);
+  const billingCalls = await trackBillingActions(page);
+
+  await page.goto("/upgrade");
+
+  await expect(
+    page.getByRole("button", {
+      name: /billing portal|Choose|Resume|Confirming/,
+    }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to your apps" }),
+  ).toBeVisible();
+  expect(billingCalls).toEqual([]);
+});
+
+test("a member who hits the paywall lands on a page that explains who can act", async ({
+  page,
+}) => {
+  await openBillingAsMember(page, LAPSED_PLAN, {
+    ...MEMBER_USER,
+    plan: "free",
+    entitled: false,
+  });
+  await page.route("**/api/backend/health", (route) =>
+    route.fulfill(
+      fulfillJson(402, {
+        statusCode: 402,
+        error: "Payment Required",
+        message: "Choose a plan to start using asobeast",
+        path: "/health",
+        timestamp: new Date().toISOString(),
+      }),
+    ),
+  );
+
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/upgrade$/);
+  await expect(
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Collection is paused", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Choose/ })).toHaveCount(0);
+});
+
+test("a lapsed workspace member is told to ask the owner instead of offered a plan", async ({
+  page,
+}) => {
+  await openBillingAsMember(page, LAPSED_PLAN, {
+    ...MEMBER_USER,
+    plan: "free",
+    entitled: false,
+  });
+
+  await page.goto("/settings");
+
+  await expect(
+    page.getByText("Collection is paused", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("link", { name: "Choose a plan" })).toHaveCount(
+    0,
+  );
+  await expect(
+    page.getByText("Ask your workspace owner to choose a plan.").first(),
+  ).toBeVisible();
+});
+
+test("a member on a trial is not sent to an upgrade they cannot make", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeMe(page, {
+    ...TRIAL_USER,
+    id: "u2",
+    role: "member",
+  });
+
+  await page.goto("/");
+
+  await expect(page.getByText("Trial ends in 5 days.")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Upgrade", exact: true }),
+  ).toHaveCount(0);
+});
+
+async function holdMe(page: Page, user: AuthUser) {
+  let release = (): void => undefined;
+  const released = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let requested = (): void => undefined;
+  const asked = new Promise<void>((resolve) => {
+    requested = resolve;
+  });
+  await page.route("**/api/backend/auth/me", async (route) => {
+    requested();
+    await released;
+    await route.fulfill(fulfillJson(200, user));
+  });
+  return { asked, release };
+}
+
+test("a member is shown no billing action while the account is still loading", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, INDIE_PLAN);
+  const me = await holdMe(page, MEMBER_USER);
+
+  await page.goto("/settings");
+  await me.asked;
+  await expect(
+    page.getByRole("region", { name: "Plan" }).getByText("3 of 5"),
+  ).toBeVisible();
+
+  expect(await page.getByRole("link", { name: "Upgrade plan" }).count()).toBe(
+    0,
+  );
+  expect(
+    await page.getByRole("button", { name: "Manage billing" }).count(),
+  ).toBe(0);
+
+  me.release();
+  await expect(
+    page.getByText("Your workspace owner manages billing."),
+  ).toBeVisible();
+});
+
+test("the upgrade page offers no plan while the account is still loading", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, INDIE_PLAN);
+  const me = await holdMe(page, MEMBER_USER);
+
+  await page.goto("/upgrade");
+  await me.asked;
+
+  expect(
+    await page
+      .getByRole("button", { name: /billing portal|Choose|Resume|Confirming/ })
+      .count(),
+  ).toBe(0);
+
+  me.release();
+  await expect(
+    page.getByRole("heading", { name: "Your workspace owner manages billing" }),
+  ).toBeVisible();
+});
+
+test("an owner still gets every billing action", async ({ page }) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, INDIE_PLAN);
+
+  await page.goto("/settings");
+
+  await expect(page.getByRole("link", { name: "Upgrade plan" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Manage billing" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Your workspace owner manages billing."),
+  ).toHaveCount(0);
+});
+
+test("each plan card prints its price once", async ({ page }) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, { ...INDIE_PLAN, subscribed: false });
+
+  await page.goto("/upgrade");
+  await expect(page.getByText("$10 /month")).toHaveCount(1);
+  await expect(page.getByText("$99 /month")).toHaveCount(1);
+  await expect(page.getByText("Billed monthly")).toHaveCount(2);
+
+  await page.getByRole("tab", { name: "Annual" }).click();
+  await expect(page.getByText("$100 /year")).toHaveCount(1);
+  await expect(page.getByText("$990 /year")).toHaveCount(1);
+  await expect(page.getByText("two months free", { exact: false })).toHaveCount(
+    2,
+  );
+});
+
+async function openSettingsWithoutAPlan(page: Page) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routePlan(page, LAPSED_PLAN);
+  await page.context().addCookies([
+    {
+      name: "e2e_budget_quota",
+      value: "lapsed",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+}
+
+test("the plan card reads a workspace with no plan as tracked, not as over a limit", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("3 of 0")).toHaveCount(0);
+  await expect(plan.getByText("3 tracked, none included")).toBeVisible();
+  await expect(plan.getByText("240 tracked, none included")).toBeVisible();
+});
+
+test("the capacity card reads a workspace with no plan as tracked, not as over a limit", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const capacity = page.getByRole("region", { name: "Capacity" });
+  await expect(capacity.getByText("7 / 0")).toHaveCount(0);
+  await expect(capacity.getByText("7 tracked, none included")).toBeVisible();
+  await expect(capacity.getByText("52 tracked, none included")).toBeVisible();
+});
+
+test("the capacity card does not warn about a keyword limit a workspace with no plan never had", async ({
+  page,
+}) => {
+  await openSettingsWithoutAPlan(page);
+
+  const capacity = page.getByRole("region", { name: "Capacity" });
+  await expect(capacity.getByText("Plan usage")).toBeVisible();
+  await expect(capacity.getByText("Over the keyword limit")).toHaveCount(0);
 });
 
 test("a spent confirmation link offers a new one", async ({ page }) => {
