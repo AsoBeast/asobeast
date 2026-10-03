@@ -141,7 +141,7 @@ export class ActionsAiService {
       );
     }
 
-    const output = await client.structured({
+    const { output } = await client.structured({
       system: SYSTEM_PROMPT,
       content: [
         {

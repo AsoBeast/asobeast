@@ -1,5 +1,6 @@
 import { ConflictException } from '@nestjs/common';
 import { AiClient } from '../ai/openai.client';
+import { aiCompletion } from '../ai/ai-completion.fixture';
 import { AuditAiService } from './audit-ai.service';
 import {
   CREATIVE_MAX_OUTPUT_TOKENS,
@@ -48,7 +49,7 @@ describe('AuditAiService', () => {
   });
 
   it('sends the creative prompt, the content and the strict schema', async () => {
-    const structured = jest.fn().mockResolvedValue(response);
+    const structured = jest.fn().mockResolvedValue(aiCompletion(response));
     const client: AiClient = { model: 'gpt-5.6-luna', structured };
     const service = new AuditAiService(client);
 
@@ -77,19 +78,21 @@ describe('AuditAiService', () => {
   });
 
   it('drops an observation for a screenshot it never sent', async () => {
-    const structured = jest.fn().mockResolvedValue({
-      ...response,
-      screenshots: [
-        ...response.screenshots,
-        {
-          position: 5,
-          captionText: 'never sent',
-          captionReadable: true,
-          captionLanguage: 'en',
-          message: 'feature',
-        },
-      ],
-    });
+    const structured = jest.fn().mockResolvedValue(
+      aiCompletion({
+        ...response,
+        screenshots: [
+          ...response.screenshots,
+          {
+            position: 5,
+            captionText: 'never sent',
+            captionReadable: true,
+            captionLanguage: 'en',
+            message: 'feature',
+          },
+        ],
+      }),
+    );
     const service = new AuditAiService({ model: 'gpt-4o', structured });
 
     const observations = await service.observe(inputs);
@@ -98,7 +101,9 @@ describe('AuditAiService', () => {
   });
 
   it('rejects a response that does not match the schema', async () => {
-    const structured = jest.fn().mockResolvedValue({ checks: [] });
+    const structured = jest
+      .fn()
+      .mockResolvedValue(aiCompletion({ checks: [] }));
     const service = new AuditAiService({ model: 'gpt-4o', structured });
 
     await expect(service.observe(inputs)).rejects.toMatchObject({

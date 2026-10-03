@@ -86,7 +86,7 @@ export class MetadataAssistantService {
       .map((competitor) => competitor.name)
       .filter((name): name is string => Boolean(name));
 
-    const raw = await this.client.structured({
+    const { output } = await this.client.structured({
       system: SYSTEM_PROMPT,
       content: [
         {
@@ -114,7 +114,7 @@ export class MetadataAssistantService {
       trackedKeywords: active.map((item) => item.text),
     };
 
-    const drafts = validateDrafts(raw, app.store, fields, base);
+    const drafts = validateDrafts(output, app.store, fields, base);
     const missing = fields.filter(
       (field) => !drafts.some((draft) => draft.field === field),
     );

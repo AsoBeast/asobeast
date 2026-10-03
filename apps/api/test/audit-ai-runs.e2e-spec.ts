@@ -9,6 +9,7 @@ import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
+import { aiCompletion } from '../src/ai/ai-completion.fixture';
 import { AuditAiRunsService } from '../src/audit/audit-ai-runs.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES } from '../src/jobs/jobs.types';
@@ -178,7 +179,7 @@ describe('Audit creative runs (e2e)', () => {
     structured.mockImplementation(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve(OBSERVATIONS), 60_000),
+          setTimeout(() => resolve(aiCompletion(OBSERVATIONS)), 60_000),
         ),
     );
     const id = await seed();
@@ -196,7 +197,7 @@ describe('Audit creative runs (e2e)', () => {
   });
 
   it('reuses the analysis of an unchanged listing', async () => {
-    structured.mockResolvedValue(OBSERVATIONS);
+    structured.mockResolvedValue(aiCompletion(OBSERVATIONS));
     const id = await seed();
 
     await runClaimed(id, await requestRun(id));
@@ -210,7 +211,7 @@ describe('Audit creative runs (e2e)', () => {
   });
 
   it('reports the run through the audit, and records today once it completes', async () => {
-    structured.mockResolvedValue(OBSERVATIONS);
+    structured.mockResolvedValue(aiCompletion(OBSERVATIONS));
     const id = await seed();
 
     const requestedAt = await requestRun(id);
@@ -230,7 +231,7 @@ describe('Audit creative runs (e2e)', () => {
   });
 
   it('marks the analysis stale when the screenshots change, and queues again', async () => {
-    structured.mockResolvedValue(OBSERVATIONS);
+    structured.mockResolvedValue(aiCompletion(OBSERVATIONS));
     const id = await seed();
     await runClaimed(id, await requestRun(id));
 
@@ -246,7 +247,7 @@ describe('Audit creative runs (e2e)', () => {
   });
 
   it('records a final failure as a failed run the audit reports', async () => {
-    structured.mockResolvedValue({ nonsense: true });
+    structured.mockResolvedValue(aiCompletion({ nonsense: true }));
     const id = await seed();
     const requestedAt = await requestRun(id);
 
@@ -273,7 +274,7 @@ describe('Audit creative runs (e2e)', () => {
   });
 
   it('lets a job claim only the run it was queued for', async () => {
-    structured.mockResolvedValue(OBSERVATIONS);
+    structured.mockResolvedValue(aiCompletion(OBSERVATIONS));
     const id = await seed();
     const first = await requestRun(id);
     await prisma.auditInsight.update({

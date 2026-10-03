@@ -32,7 +32,7 @@ export class AuditAiService {
     if (!this.client) {
       throw new ConflictException('AI features require OPENAI_API_KEY');
     }
-    const raw = await this.client.structured({
+    const { output } = await this.client.structured({
       system: CREATIVE_SYSTEM_PROMPT,
       content: buildCreativeContent(inputs),
       schema: {
@@ -41,7 +41,7 @@ export class AuditAiService {
       },
       maxOutputTokens: CREATIVE_MAX_OUTPUT_TOKENS,
     });
-    return parseObservations(raw, {
+    return parseObservations(output, {
       icon: inputs.iconUrl !== null,
       screenshots: Math.min(
         inputs.screenshotUrls.length,

@@ -40,9 +40,20 @@ export interface AiStructuredRequest {
   maxOutputTokens?: number;
 }
 
+export interface AiTokenUsage {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+}
+
+export interface AiCompletion {
+  output: unknown;
+  usage: AiTokenUsage | null;
+}
+
 export interface AiClient {
   readonly model: string;
-  structured(request: AiStructuredRequest): Promise<unknown>;
+  structured(request: AiStructuredRequest): Promise<AiCompletion>;
 }
 
 export class AiRequestError extends BadGatewayException {
@@ -51,6 +62,16 @@ export class AiRequestError extends BadGatewayException {
     readonly retryable: boolean,
   ) {
     super(message);
+  }
+}
+
+export class UnusableAnswerError extends AiRequestError {
+  constructor(
+    message: string,
+    retryable: boolean,
+    readonly usage: AiTokenUsage | null,
+  ) {
+    super(message, retryable);
   }
 }
 
@@ -139,13 +160,25 @@ const toContentPart = (
         image_url: { url: part.url, detail: part.detail },
       };
 
+const usageOf = (
+  completion: OpenAI.Chat.Completions.ChatCompletion,
+): AiTokenUsage | null =>
+  completion.usage
+    ? {
+        inputTokens: completion.usage.prompt_tokens,
+        cachedInputTokens:
+          completion.usage.prompt_tokens_details?.cached_tokens ?? 0,
+        outputTokens: completion.usage.completion_tokens,
+      }
+    : null;
+
 class OpenAiClient implements AiClient {
   constructor(
     private readonly openai: OpenAI,
     readonly model: string,
   ) {}
 
-  async structured(request: AiStructuredRequest): Promise<unknown> {
+  async structured(request: AiStructuredRequest): Promise<AiCompletion> {
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       { role: 'system', content: request.system },
       { role: 'user', content: request.content.map(toContentPart) },
@@ -171,30 +204,48 @@ class OpenAiClient implements AiClient {
       throw classifyRequestError(error, this.model);
     }
 
+    const usage = usageOf(completion);
     const choice = completion.choices[0];
     if (!choice) {
-      throw new AiRequestError('OpenAI returned no choices.', true);
+      throw new UnusableAnswerError('OpenAI returned no choices.', true, usage);
     }
     if (choice.message.refusal) {
-      throw new AiRequestError(
+      throw new UnusableAnswerError(
         'OpenAI refused to analyze this listing.',
         false,
+        usage,
       );
     }
     if (choice.finish_reason === 'length') {
-      throw new AiRequestError('The model ran out of output tokens.', false);
+      throw new UnusableAnswerError(
+        'The model ran out of output tokens.',
+        false,
+        usage,
+      );
     }
     if (choice.finish_reason === 'content_filter') {
-      throw new AiRequestError('OpenAI filtered the response.', false);
+      throw new UnusableAnswerError(
+        'OpenAI filtered the response.',
+        false,
+        usage,
+      );
     }
     const content = choice.message.content;
     if (!content) {
-      throw new AiRequestError('OpenAI returned an empty response.', true);
+      throw new UnusableAnswerError(
+        'OpenAI returned an empty response.',
+        true,
+        usage,
+      );
     }
     try {
-      return JSON.parse(content);
+      return { output: JSON.parse(content) as unknown, usage };
     } catch {
-      throw new AiRequestError('OpenAI returned an unreadable response.', true);
+      throw new UnusableAnswerError(
+        'OpenAI returned an unreadable response.',
+        true,
+        usage,
+      );
     }
   }
 }

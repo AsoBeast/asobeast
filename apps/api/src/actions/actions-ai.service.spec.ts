@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AiClient } from '../ai/openai.client';
+import { aiCompletion } from '../ai/ai-completion.fixture';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsAiService } from './actions-ai.service';
 
@@ -34,7 +35,9 @@ const buildPrisma = (
 
 const buildClient = (
   structured: jest.Mock = jest.fn(() =>
-    Promise.resolve({ explanation: '  Your title is missing it.  ' }),
+    Promise.resolve(
+      aiCompletion({ explanation: '  Your title is missing it.  ' }),
+    ),
   ),
 ): AiClient => ({ model: 'gpt-4o', structured });
 
@@ -86,7 +89,9 @@ describe('ActionsAiService.explain', () => {
   });
 
   it('sends only the app, rule, priority, impact and typed evidence', async () => {
-    const structured = jest.fn(() => Promise.resolve({ explanation: 'Fine.' }));
+    const structured = jest.fn(() =>
+      Promise.resolve(aiCompletion({ explanation: 'Fine.' })),
+    );
     await serviceFor(buildPrisma(), buildClient(structured)).explain('act_1');
 
     const request = structured.mock.calls[0][0] as unknown as {
@@ -104,7 +109,7 @@ describe('ActionsAiService.explain', () => {
     const structured = jest.fn(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve({ explanation: 'Once.' }), 5),
+          setTimeout(() => resolve(aiCompletion({ explanation: 'Once.' })), 5),
         ),
     );
     const prisma = buildPrisma();
@@ -121,7 +126,7 @@ describe('ActionsAiService.explain', () => {
 
   it('allows a fresh call after the in-flight one settles', async () => {
     const structured = jest.fn(() =>
-      Promise.resolve({ explanation: 'Again.' }),
+      Promise.resolve(aiCompletion({ explanation: 'Again.' })),
     );
     const service = serviceFor(buildPrisma(), buildClient(structured));
 
@@ -156,7 +161,9 @@ describe('ActionsAiService.explain', () => {
   it('never persists a malformed or empty model response', async () => {
     for (const output of [{}, { explanation: '' }, null, 'text']) {
       const prisma = buildPrisma();
-      const client = buildClient(jest.fn(() => Promise.resolve(output)));
+      const client = buildClient(
+        jest.fn(() => Promise.resolve(aiCompletion(output))),
+      );
 
       await expect(
         serviceFor(prisma, client).explain('act_1'),
@@ -181,7 +188,9 @@ describe('ActionsAiService.explain', () => {
     const prisma = buildPrisma();
     const service = serviceFor(
       prisma,
-      buildClient(jest.fn(() => Promise.resolve({ explanation: 'Newer.' }))),
+      buildClient(
+        jest.fn(() => Promise.resolve(aiCompletion({ explanation: 'Newer.' }))),
+      ),
     );
 
     await service.explain('act_1');
