@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { APIConnectionError } from 'openai';
+import type { AccountPlan, ApiErrorEnvelope } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
@@ -383,6 +384,34 @@ describe('Monthly AI allowance (e2e)', () => {
     expect(response.body).toMatchObject({
       aiAllowance: { plan: 'trial', limit: 25, upgradeTo: 'indie' },
     });
+  });
+
+  it("reports the month's ai usage and allowance on the plan", async () => {
+    await spent(3);
+
+    const plan = await api.get('/auth/plan').expect(200);
+
+    expect(plan.body).toMatchObject({
+      limits: { aiCallsPerMonth: 200 },
+      usage: {
+        aiCalls: {
+          used: 3,
+          limit: 200,
+          resetsAt: aiPeriodOf(new Date()).resetsAt.toISOString(),
+        },
+      },
+    });
+  });
+
+  it('reports the same usage the limiter refused at', async () => {
+    await spent(200);
+
+    const refused = await explain(actionId).expect(429);
+    const plan = await api.get('/auth/plan').expect(200);
+
+    expect((plan.body as AccountPlan).usage.aiCalls?.used).toBe(
+      (refused.body as ApiErrorEnvelope).aiAllowance?.used,
+    );
   });
 
   describe('metadata drafts', () => {

@@ -12,6 +12,7 @@ import { PasswordResetService } from './password-reset.service';
 import { PublicWebUrl } from './public-web-url';
 import { RecoveryMailer } from './recovery-mailer';
 import { VerificationMailer } from './verification-mailer';
+import { AiModule } from '../ai/ai.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { DailyCapacity } from '../jobs/daily-capacity.service';
@@ -19,6 +20,7 @@ import { SignupCapacityGate } from './signup-capacity.gate';
 
 @Module({
   imports: [
+    AiModule,
     AlertsModule,
     RateLimitModule,
     JwtModule.registerAsync({

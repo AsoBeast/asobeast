@@ -6,6 +6,7 @@ import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
+import { aiPeriodOf } from '../src/ai/ai-period';
 import {
   AiClient,
   AiCompletion,
@@ -104,5 +105,22 @@ describe('Monthly AI allowance on a self hosted instance (e2e)', () => {
       prisma.aiCall.count({ where: { status: 'counted', ...USAGE } }),
     ).resolves.toBe(1);
     expect(structured).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports an unlimited allowance with the month's usage", async () => {
+    await spent(7);
+
+    const plan = await api.get('/auth/plan').expect(200);
+
+    expect(plan.body).toMatchObject({
+      limits: { aiCallsPerMonth: null },
+      usage: {
+        aiCalls: {
+          used: 7,
+          limit: null,
+          resetsAt: aiPeriodOf(new Date()).resetsAt.toISOString(),
+        },
+      },
+    });
   });
 });

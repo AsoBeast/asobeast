@@ -11,6 +11,7 @@ import {
   pendingBy,
   stalledBy,
 } from '../billing/subscription-status';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { Env } from '../config/env';
 import { QuotaService } from './quota.service';
 import { isEntitled, type WorkspaceEntitlement } from './entitlement';
@@ -27,6 +28,7 @@ export class AccountPlanService {
   constructor(
     private readonly quota: QuotaService,
     private readonly config: ConfigService<Env, true>,
+    private readonly ai: AiGateway,
   ) {}
 
   async describe(
@@ -34,7 +36,9 @@ export class AccountPlanService {
     now = new Date(),
   ): Promise<AccountPlan> {
     const billing = this.config.get('BILLING_ENABLED', { infer: true });
-    const { plan, limits, apps, keywordMarkets } = await this.quota.usage();
+    const [{ plan, limits, apps, keywordMarkets }, aiCalls] = await Promise.all(
+      [this.quota.usage(), this.ai.usage(now)],
+    );
 
     return {
       plan,
@@ -59,6 +63,7 @@ export class AccountPlanService {
           used: keywordMarkets,
           limit: limits.keywordMarkets,
         },
+        aiCalls,
       },
     };
   }
