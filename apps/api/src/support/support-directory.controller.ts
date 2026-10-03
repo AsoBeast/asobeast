@@ -1,12 +1,13 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
-import type {
-  AdminAppList,
-  AdminOverview,
-  AdminUserList,
+import {
+  ALL_WORKSPACES,
+  type AdminAppList,
+  type AdminOverview,
+  type AdminUserList,
 } from '@asobeast/shared';
-import { ALL_WORKSPACES, SUPPORT_NOT_FOUND } from '../auth/admin-access';
+import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { requirePlatformOperator } from '../auth/platform-operator';
 import { AdminDirectoryQueryDto } from './dto/admin-directory-query.dto';

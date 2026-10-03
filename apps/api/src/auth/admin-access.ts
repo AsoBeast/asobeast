@@ -14,7 +14,6 @@ export const ADMIN_QUEUES_ROUTE = '/admin/queues';
 export const METRICS_ROUTE = '/metrics';
 export const SUPPORT_ROUTE = '/admin/support';
 export const SUPPORT_NOT_FOUND = `Cannot reach ${SUPPORT_ROUTE}`;
-export const ALL_WORKSPACES = 'all';
 export const DOCS_ROUTE = '/docs';
 export const DOCS_ROUTES = [
   DOCS_ROUTE,

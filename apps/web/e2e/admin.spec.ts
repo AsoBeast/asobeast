@@ -308,7 +308,7 @@ test.describe("accounts in the admin area", () => {
   });
 
   test("ignores a workspace filter the api would refuse", async ({ page }) => {
-    for (const workspace of ["", "w".repeat(65)]) {
+    for (const workspace of ["", "all", "w".repeat(65)]) {
       await page.goto(`/admin/users?workspace=${workspace}`);
 
       await expect(

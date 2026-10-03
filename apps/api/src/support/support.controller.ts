@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import {
+  ALL_WORKSPACES,
   type SupportAction,
   type SupportActionResult,
   type SupportWorkspaceDetail,
@@ -9,7 +10,7 @@ import {
 } from '@asobeast/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceSuspension } from '../auth/abuse/workspace-suspension.service';
-import { ALL_WORKSPACES, SUPPORT_NOT_FOUND } from '../auth/admin-access';
+import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
 import { requirePlatformOperator } from '../auth/platform-operator';
 import { BillingReconciler } from '../billing/billing-reconciler.service';
 import { BillingWebhookService } from '../billing/billing-webhook.service';

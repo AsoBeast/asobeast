@@ -1,4 +1,5 @@
 import {
+  ALL_WORKSPACES,
   ACTION_CATEGORIES,
   ACTION_PRIORITIES,
   ACTION_RULES,
@@ -216,7 +217,11 @@ const WORKSPACE_ID_MAX = 64;
 
 export const adminWorkspaceParser = createParser({
   parse: (value) =>
-    value.length > 0 && value.length <= WORKSPACE_ID_MAX ? value : null,
+    value.length > 0 &&
+    value.length <= WORKSPACE_ID_MAX &&
+    value !== ALL_WORKSPACES
+      ? value
+      : null,
   serialize: (value: string) => value,
 });
 

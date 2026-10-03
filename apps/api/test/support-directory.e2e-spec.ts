@@ -304,6 +304,7 @@ describe('Support directory (e2e)', () => {
       ['an overlong workspace id', { workspaceId: 'w'.repeat(65) }],
       ['an empty workspace id', { workspaceId: '' }],
       ['an unknown parameter', { x: '1' }],
+      ['the audit trail sentinel for every workspace', { workspaceId: 'all' }],
     ])('refuses %s', async (_, query) => {
       await owner.get(USERS).query(query).expect(400);
     });
