@@ -102,8 +102,12 @@ export class QuotaService {
     return { plan, limits, apps, keywordMarkets };
   }
 
+  planScope(): Promise<PlanScope> {
+    return this.entitlement(this.prisma);
+  }
+
   async limitsOf(): Promise<PlanLimits> {
-    return (await this.entitlement(this.prisma)).limits;
+    return (await this.planScope()).limits;
   }
 
   async limitFor(resource: QuotaResource): Promise<PlanLimit> {

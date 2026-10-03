@@ -15,6 +15,7 @@ import {
   ApiOperation,
   ApiQuery,
   ApiTags,
+  ApiTooManyRequestsResponse,
 } from '@nestjs/swagger';
 import {
   ActionActivity,
@@ -29,6 +30,7 @@ import {
   STORES,
 } from '@asobeast/shared';
 import type { User } from '@prisma/client';
+import { AI_ALLOWANCE_SPENT_RESPONSE } from '../ai/ai-allowance.errors';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { ActionActivityService } from './action-activity.service';
@@ -122,11 +124,15 @@ export class ActionsController {
   @Post(':id/explain')
   @HttpCode(200)
   @ApiOkResponse({ description: 'A plain-language summary of the evidence' })
+  @ApiTooManyRequestsResponse(AI_ALLOWANCE_SPENT_RESPONSE)
   @ApiOperation({
     summary: 'Summarize one action with the optional AI seam',
   })
-  explain(@Param('id') id: string): Promise<ActionExplanation> {
-    return this.ai.explain(id);
+  explain(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ): Promise<ActionExplanation> {
+    return this.ai.explain(id, user.id);
   }
 
   @Post('run')
