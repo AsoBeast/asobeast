@@ -1,6 +1,7 @@
 export const TENANT_TABLES = [
   'ActionEvent',
   'ActionItem',
+  'AiCall',
   'AlertDelivery',
   'AlertEvent',
   'ApiToken',

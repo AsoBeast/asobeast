@@ -153,6 +153,12 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         prisma.actionEvent.findMany({ skip, take, orderBy: { id: 'asc' } }),
     ),
     table(
+      'aiCall',
+      () => prisma.aiCall.count(),
+      (skip, take) =>
+        prisma.aiCall.findMany({ skip, take, orderBy: { id: 'asc' } }),
+    ),
+    table(
       'webhook',
       () => prisma.webhook.count(),
       (skip, take) =>

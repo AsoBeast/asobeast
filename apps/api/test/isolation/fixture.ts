@@ -379,6 +379,15 @@ async function seedWorkspace(
       impact: 60,
     },
   });
+  await db.aiCall.create({
+    data: {
+      workspaceId: id,
+      appId: apple.id,
+      feature: 'actionExplanation',
+      model: 'gpt-test',
+      status: 'counted',
+    },
+  });
 
   return {
     id,
