@@ -1,5 +1,6 @@
 import { ConflictException } from '@nestjs/common';
-import { AiClient } from '../ai/openai.client';
+import { buildAi } from '../ai/ai-gateway.fixture';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { aiCompletion } from '../ai/ai-completion.fixture';
 import { AuditAiService } from './audit-ai.service';
 import {
@@ -17,6 +18,9 @@ const inputs: CreativeInputs = {
   screenshotUrls: ['s1.png', 's2.png'],
   competitorIcons: [{ appId: 'app-c1', iconUrl: 'c1.png' }],
 };
+
+const serviceOf = (ai: ReturnType<typeof buildAi>) =>
+  new AuditAiService(ai as unknown as AiGateway);
 
 const response = {
   icon: {
@@ -39,25 +43,25 @@ const response = {
 
 describe('AuditAiService', () => {
   it('refuses without a client', async () => {
-    const service = new AuditAiService(null);
+    const service = serviceOf(buildAi(undefined, false));
 
     expect(service.configured).toBe(false);
     expect(service.model).toBeNull();
-    await expect(service.observe(inputs)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.observe(inputs, 'app_1', 'usr_1'),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('sends the creative prompt, the content and the strict schema', async () => {
-    const structured = jest.fn().mockResolvedValue(aiCompletion(response));
-    const client: AiClient = { model: 'gpt-5.6-luna', structured };
-    const service = new AuditAiService(client);
+    const spend = jest.fn().mockResolvedValue(aiCompletion(response));
+    const service = serviceOf(buildAi(spend));
 
-    const observations = await service.observe(inputs);
+    const observations = await service.observe(inputs, 'app_1', 'usr_1');
 
-    expect(service.model).toBe('gpt-5.6-luna');
-    const [[request]] = structured.mock.calls as Array<
+    expect(service.model).toBe('gpt-4o');
+    const [[, request]] = spend.mock.calls as Array<
       [
+        unknown,
         {
           system: string;
           schema: { name: string; schema: unknown };
@@ -93,9 +97,9 @@ describe('AuditAiService', () => {
         ],
       }),
     );
-    const service = new AuditAiService({ model: 'gpt-4o', structured });
+    const service = serviceOf(buildAi(structured));
 
-    const observations = await service.observe(inputs);
+    const observations = await service.observe(inputs, 'app_1', 'usr_1');
 
     expect(observations.screenshots.map((item) => item.position)).toEqual([1]);
   });
@@ -104,10 +108,32 @@ describe('AuditAiService', () => {
     const structured = jest
       .fn()
       .mockResolvedValue(aiCompletion({ checks: [] }));
-    const service = new AuditAiService({ model: 'gpt-4o', structured });
+    const service = serviceOf(buildAi(structured));
 
-    await expect(service.observe(inputs)).rejects.toMatchObject({
+    await expect(
+      service.observe(inputs, 'app_1', 'usr_1'),
+    ).rejects.toMatchObject({
       retryable: true,
     });
+  });
+
+  it('observes through the caller it is given', async () => {
+    const ai = buildAi(jest.fn().mockResolvedValue(aiCompletion(response)));
+    ai.charge.mockResolvedValue(aiCompletion(response));
+    const service = serviceOf(ai);
+
+    const spent = await service.observe(inputs, 'app_1', 'usr_1');
+    const charged = await service.observeReserved(inputs, 'call_1');
+
+    expect(ai.spend).toHaveBeenCalledWith(
+      { feature: 'creativeAnalysis', appId: 'app_1', userId: 'usr_1' },
+      expect.objectContaining({ system: CREATIVE_SYSTEM_PROMPT }),
+    );
+    expect(ai.charge).toHaveBeenCalledWith(
+      'call_1',
+      expect.objectContaining({ system: CREATIVE_SYSTEM_PROMPT }),
+    );
+    expect(charged).toEqual(spent);
+    expect(spent.screenshots).toHaveLength(1);
   });
 });

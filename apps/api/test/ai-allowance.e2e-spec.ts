@@ -1,9 +1,11 @@
 import './helpers/enable-billing';
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { Queue } from 'bullmq';
 import { APIConnectionError } from 'openai';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -17,7 +19,9 @@ import {
   UnusableAnswerError,
   classifyRequestError,
 } from '../src/ai/openai.client';
+import { AuditAiRunsService } from '../src/audit/audit-ai-runs.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { AuditCreativePayload, QUEUES } from '../src/jobs/jobs.types';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
   ACTION_DAY,
@@ -26,15 +30,36 @@ import {
 } from './helpers/action-seed';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { OWNER, ownerAgent, useCookies } from './helpers/session';
+import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import {
   clearOnDemandCounters,
   clearRateLimitCounters,
   obliterateQueues,
+  pauseQueues,
 } from './obliterate-queues';
 
 const USAGE = { inputTokens: 900, cachedInputTokens: 0, outputTokens: 120 };
 const OTHER_WORKSPACE = 'ws_ai_other';
+
+const OBSERVATIONS = {
+  icon: {
+    hasText: false,
+    elementCount: 'one',
+    contrast: 'high',
+    similarCompetitorPosition: null,
+  },
+  screenshots: [
+    {
+      position: 1,
+      captionText: 'Plan every budget',
+      captionReadable: true,
+      captionLanguage: 'en',
+      message: 'benefit',
+    },
+  ],
+  consistentStyle: true,
+};
 
 const DRAFTS = {
   drafts: [
@@ -409,6 +434,134 @@ describe('Monthly AI allowance (e2e)', () => {
       const rows = await prisma.aiCall.findMany();
       expect(rows).toHaveLength(1);
       expect(rows[0].status).toBe('counted');
+    });
+  });
+
+  describe('creative analysis', () => {
+    const queuedJobs = async () =>
+      (
+        await app
+          .get<Queue<AuditCreativePayload>>(getQueueToken(QUEUES.AI), {
+            strict: false,
+          })
+          .getJobs()
+      ).map((job) => job.data);
+
+    const requestRun = () => api.post(`/apps/${appId}/audit/ai/runs`);
+
+    const executeQueued = async () => {
+      const [job] = await queuedJobs();
+      const requestedAt = new Date(job.requestedAt);
+      return asWorkspace(app, async () => {
+        const runs = app.get(AuditAiRunsService);
+        await runs.start(appId, requestedAt);
+        await runs.execute(appId, requestedAt, job.aiCallId);
+      });
+    };
+
+    beforeEach(async () => {
+      structured.mockResolvedValue(aiCompletion(OBSERVATIONS, USAGE));
+      await obliterateQueues(app);
+      await pauseQueues(app);
+      await prisma.appSnapshot.create({
+        data: {
+          appId,
+          title: 'Budget Planner',
+          description: 'Track spending.',
+          raw: {
+            icon: 'https://cdn.example.com/icon.png',
+            screenshots: ['s0.png', 's1.png'],
+          },
+          capturedAt: new Date(),
+        },
+      });
+    });
+
+    it('reserves a call when a run is requested and counts it when the run finishes', async () => {
+      await requestRun().expect(202);
+
+      const [reserved] = await prisma.aiCall.findMany();
+      expect(reserved).toMatchObject({
+        feature: 'creativeAnalysis',
+        status: 'reserved',
+        appId,
+      });
+      const [job] = await queuedJobs();
+      expect(job.aiCallId).toBe(reserved.id);
+
+      await executeQueued();
+
+      const rows = await prisma.aiCall.findMany();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        id: reserved.id,
+        status: 'counted',
+        ...USAGE,
+      });
+    });
+
+    it('reserves nothing for an unchanged listing', async () => {
+      await requestRun().expect(202);
+      await executeQueued();
+
+      const again = await requestRun().expect(202);
+
+      expect(again.body).toMatchObject({ reused: true });
+      await expect(prisma.aiCall.count()).resolves.toBe(1);
+    });
+
+    it('reserves nothing while a run is already queued', async () => {
+      await requestRun().expect(202);
+      await requestRun().expect(202);
+
+      await expect(prisma.aiCall.count()).resolves.toBe(1);
+      await expect(queuedJobs()).resolves.toHaveLength(1);
+    });
+
+    it('queues nothing past the limit', async () => {
+      await spent(200);
+
+      await requestRun().expect(429);
+
+      await expect(queuedJobs()).resolves.toHaveLength(0);
+      await expect(
+        prisma.auditInsight.count({ where: { runState: 'queued' } }),
+      ).resolves.toBe(0);
+    });
+
+    it('counts the deprecated synchronous audit once', async () => {
+      await api.post(`/apps/${appId}/audit/ai`).expect(201);
+
+      const rows = await prisma.aiCall.findMany();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        feature: 'creativeAnalysis',
+        status: 'counted',
+      });
+    });
+
+    it('gives the call back when a run fails without an answer', async () => {
+      await requestRun().expect(202);
+      structured.mockRejectedValue(
+        classifyRequestError(
+          new APIConnectionError({ message: 'down' }),
+          'gpt-test',
+        ),
+      );
+      const [job] = await queuedJobs();
+      const requestedAt = new Date(job.requestedAt);
+
+      await expect(executeQueued()).rejects.toThrow('Could not reach OpenAI.');
+      await asWorkspace(app, () =>
+        app.get(AuditAiRunsService).fail(appId, requestedAt, 'x', job.aiCallId),
+      );
+
+      const rows = await prisma.aiCall.findMany();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe('released');
+      await expect(
+        prisma.auditInsight.findUniqueOrThrow({ where: { appId } }),
+      ).resolves.toMatchObject({ runState: 'failed' });
     });
   });
 });

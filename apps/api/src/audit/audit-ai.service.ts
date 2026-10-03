@@ -1,5 +1,6 @@
-import { ConflictException, Inject, Injectable } from '@nestjs/common';
-import { AiClient, OPENAI_CLIENT } from '../ai/openai.client';
+import { Injectable } from '@nestjs/common';
+import { AiCallRequest, AiGateway } from '../ai/ai-gateway.service';
+import { AiCompletion, AiStructuredRequest } from '../ai/openai.client';
 import {
   CREATIVE_MAX_OUTPUT_TOKENS,
   CREATIVE_OBSERVATIONS_JSON_SCHEMA,
@@ -14,25 +15,54 @@ import {
   CREATIVE_SYSTEM_PROMPT,
 } from './creative/creative-prompt';
 
+const creativeCall = (appId: string, userId: string | null): AiCallRequest => ({
+  feature: 'creativeAnalysis',
+  appId,
+  userId,
+});
+
 @Injectable()
 export class AuditAiService {
-  constructor(
-    @Inject(OPENAI_CLIENT) private readonly client: AiClient | null,
-  ) {}
+  constructor(private readonly ai: AiGateway) {}
 
   get configured(): boolean {
-    return this.client !== null;
+    return this.ai.configured;
   }
 
   get model(): string | null {
-    return this.client?.model ?? null;
+    return this.ai.model;
   }
 
-  async observe(inputs: CreativeInputs): Promise<CreativeObservations> {
-    if (!this.client) {
-      throw new ConflictException('AI features require OPENAI_API_KEY');
-    }
-    const { output } = await this.client.structured({
+  reserve(appId: string, userId: string | null): Promise<string> {
+    return this.ai.reserve(creativeCall(appId, userId));
+  }
+
+  release(aiCallId: string): Promise<void> {
+    return this.ai.release(aiCallId);
+  }
+
+  observe(
+    inputs: CreativeInputs,
+    appId: string,
+    userId: string | null,
+  ): Promise<CreativeObservations> {
+    return this.analyze(inputs, (request) =>
+      this.ai.spend(creativeCall(appId, userId), request),
+    );
+  }
+
+  observeReserved(
+    inputs: CreativeInputs,
+    aiCallId: string,
+  ): Promise<CreativeObservations> {
+    return this.analyze(inputs, (request) => this.ai.charge(aiCallId, request));
+  }
+
+  private async analyze(
+    inputs: CreativeInputs,
+    call: (request: AiStructuredRequest) => Promise<AiCompletion>,
+  ): Promise<CreativeObservations> {
+    const { output } = await call({
       system: CREATIVE_SYSTEM_PROMPT,
       content: buildCreativeContent(inputs),
       schema: {

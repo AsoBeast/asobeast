@@ -12,6 +12,6 @@ import { createOpenAiClient, OPENAI_CLIENT } from './openai.client';
     },
     AiGateway,
   ],
-  exports: [OPENAI_CLIENT, AiGateway],
+  exports: [AiGateway],
 })
 export class AiModule {}

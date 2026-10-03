@@ -237,9 +237,11 @@ describe('AuditService.runAi', () => {
       fanOut,
     );
 
-    void service.runAi('a');
+    void service.runAi('a', 'usr_1');
     await Promise.resolve();
 
-    await expect(service.runAi('a')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.runAi('a', 'usr_1')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 });

@@ -4,6 +4,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { Queue } from 'bullmq';
+import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { JOBS } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -81,6 +82,9 @@ const build = (options: Options = {}) => {
   const auditAi = {
     model: options.configured === false ? null : MODEL,
     observe: jest.fn(),
+    observeReserved: jest.fn(),
+    reserve: jest.fn().mockResolvedValue('call_1'),
+    release: jest.fn().mockResolvedValue(undefined),
   };
   const audit = { recordToday: jest.fn().mockResolvedValue(undefined) };
   const workspace = {
@@ -103,19 +107,22 @@ describe('AuditAiRunsService.request', () => {
 
   it('refuses an unknown app', async () => {
     await expect(
-      build({ app: null }).service.request('x'),
+      build({ app: null }).service.request('x', 'usr_1'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('refuses a competitor row', async () => {
     await expect(
-      build({ app: { id: 'a', isCompetitor: true } }).service.request('a'),
+      build({ app: { id: 'a', isCompetitor: true } }).service.request(
+        'a',
+        'usr_1',
+      ),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
   it('refuses without a key', async () => {
     await expect(
-      build({ configured: false }).service.request('a'),
+      build({ configured: false }).service.request('a', 'usr_1'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
@@ -123,7 +130,7 @@ describe('AuditAiRunsService.request', () => {
     await expect(
       build({
         inputs: { iconUrl: null, screenshotUrls: [] },
-      }).service.request('a'),
+      }).service.request('a', 'usr_1'),
     ).rejects.toBeInstanceOf(UnprocessableEntityException);
   });
 
@@ -136,7 +143,7 @@ describe('AuditAiRunsService.request', () => {
       },
     });
 
-    await expect(service.request('a')).resolves.toEqual({
+    await expect(service.request('a', 'usr_1')).resolves.toEqual({
       state: 'completed',
       reused: true,
       requestedAt: null,
@@ -151,7 +158,7 @@ describe('AuditAiRunsService.request', () => {
       insight: { runState: 'running', requestedAt: minutesAgo(9) },
     });
 
-    await expect(service.request('a')).resolves.toMatchObject({
+    await expect(service.request('a', 'usr_1')).resolves.toMatchObject({
       state: 'running',
       reused: false,
     });
@@ -163,7 +170,7 @@ describe('AuditAiRunsService.request', () => {
       insight: { runState: 'failed', requestedAt: minutesAgo(30) },
     });
 
-    await expect(service.request('a')).resolves.toMatchObject({
+    await expect(service.request('a', 'usr_1')).resolves.toMatchObject({
       state: 'queued',
       reused: false,
       requestedAt: NOW.toISOString(),
@@ -178,7 +185,12 @@ describe('AuditAiRunsService.request', () => {
     });
     expect(queue.add).toHaveBeenCalledWith(
       JOBS.AUDIT_CREATIVE,
-      { workspaceId: WORKSPACE, appId: 'a', requestedAt: NOW.toISOString() },
+      {
+        workspaceId: WORKSPACE,
+        appId: 'a',
+        requestedAt: NOW.toISOString(),
+        aiCallId: 'call_1',
+      },
       expect.objectContaining({
         deduplication: { id: `audit-creative~a~${NOW.getTime()}` },
         attempts: 2,
@@ -191,7 +203,7 @@ describe('AuditAiRunsService.request', () => {
     const outage = new Error('redis unavailable');
     queue.add.mockRejectedValue(outage);
 
-    await expect(service.request('a')).rejects.toBe(outage);
+    await expect(service.request('a', 'usr_1')).rejects.toBe(outage);
     expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
       where: { appId: 'a', requestedAt: NOW, runState: 'queued' },
       data: { runState: 'failed', runError: RUN_NOT_QUEUED_MESSAGE },
@@ -204,7 +216,7 @@ describe('AuditAiRunsService.request', () => {
     queue.add.mockRejectedValue(outage);
     prisma.auditInsight.updateMany.mockRejectedValue(new Error('db down'));
 
-    await expect(service.request('a')).rejects.toBe(outage);
+    await expect(service.request('a', 'usr_1')).rejects.toBe(outage);
   });
 
   it('queues again for a completed analysis of changed creative', async () => {
@@ -216,11 +228,67 @@ describe('AuditAiRunsService.request', () => {
       },
     });
 
-    await expect(service.request('a')).resolves.toMatchObject({
+    await expect(service.request('a', 'usr_1')).resolves.toMatchObject({
       state: 'queued',
       reused: false,
     });
     expect(queue.add).toHaveBeenCalledTimes(1);
+  });
+
+  it('reserves after the reuse and active checks and queues the reservation with the run', async () => {
+    const queued = build();
+    await queued.service.request('a', 'usr_1');
+    expect(queued.auditAi.reserve).toHaveBeenCalledTimes(1);
+    expect(queued.auditAi.reserve).toHaveBeenCalledWith('a', 'usr_1');
+    expect(
+      queued.loader.creativeInputs.mock.invocationCallOrder[0],
+    ).toBeLessThan(queued.auditAi.reserve.mock.invocationCallOrder[0]);
+    expect(queued.queue.add).toHaveBeenCalledWith(
+      JOBS.AUDIT_CREATIVE,
+      expect.objectContaining({ aiCallId: 'call_1' }),
+      expect.anything(),
+    );
+
+    for (const insight of [
+      { runState: 'completed', inputHash: FINGERPRINT, generatedAt: EARLIER },
+      { runState: 'running', requestedAt: minutesAgo(9) },
+    ]) {
+      const { service, auditAi } = build({ insight });
+      await service.request('a', 'usr_1');
+      expect(auditAi.reserve).not.toHaveBeenCalled();
+    }
+  });
+
+  it('queues nothing when the allowance is spent', async () => {
+    const { service, auditAi, prisma, queue } = build();
+    const refusal = new AiAllowanceExceededError(
+      {
+        plan: 'indie',
+        limit: 200,
+        used: 200,
+        resetsAt: '2026-10-01T00:00:00.000Z',
+        upgradeTo: 'ultimate',
+      },
+      60,
+    );
+    auditAi.reserve.mockRejectedValue(refusal);
+
+    await expect(service.request('a', 'usr_1')).rejects.toBe(refusal);
+    expect(prisma.auditInsight.upsert).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('releases the reservation when the run cannot be queued', async () => {
+    const { service, auditAi, queue, prisma } = build();
+    const outage = new Error('redis unavailable');
+    queue.add.mockRejectedValue(outage);
+
+    await expect(service.request('a', 'usr_1')).rejects.toBe(outage);
+    expect(auditAi.release).toHaveBeenCalledWith('call_1');
+    expect(prisma.auditInsight.updateMany).toHaveBeenCalledWith({
+      where: { appId: 'a', requestedAt: NOW, runState: 'queued' },
+      data: { runState: 'failed', runError: RUN_NOT_QUEUED_MESSAGE },
+    });
   });
 });
 
@@ -294,6 +362,39 @@ describe('AuditAiRunsService.execute', () => {
     >;
     expect(completion.where).toEqual({ appId: 'a', requestedAt: EARLIER });
     expect(completion.data.runState).toBe('completed');
+  });
+});
+
+describe('AuditAiRunsService reservations', () => {
+  const observations = { icon: null, screenshots: [], consistentStyle: null };
+
+  it('charges the reservation a queued run carries', async () => {
+    const { service, auditAi } = build();
+    auditAi.observeReserved.mockResolvedValue(observations);
+
+    await service.execute('a', EARLIER, 'call_1');
+
+    expect(auditAi.observeReserved).toHaveBeenCalledWith(INPUTS, 'call_1');
+    expect(auditAi.observe).not.toHaveBeenCalled();
+  });
+
+  it('spends a call for a run queued without a reservation', async () => {
+    const { service, auditAi } = build();
+    auditAi.observe.mockResolvedValue(observations);
+
+    await service.execute('a', EARLIER);
+
+    expect(auditAi.observe).toHaveBeenCalledWith(INPUTS, 'a', null);
+  });
+
+  it('releases the reservation of a failed or abandoned run', async () => {
+    const { service, auditAi } = build();
+
+    await service.fail('a', EARLIER, 'x', 'call_1');
+    await service.abandon('call_2');
+    await service.abandon(undefined);
+
+    expect(auditAi.release.mock.calls).toEqual([['call_1'], ['call_2']]);
   });
 });
 

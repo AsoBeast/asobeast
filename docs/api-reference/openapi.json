@@ -2788,6 +2788,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
           }
         },
         "summary": "Run the AI audit synchronously (deprecated: use POST /apps/{id}/audit/ai/runs)",
@@ -2821,6 +2824,9 @@
           },
           "422": {
             "description": "A competitor row, or a listing with nothing to analyze"
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
           }
         },
         "summary": "Queue the AI creative analysis for an app",
