@@ -73,7 +73,7 @@ export class AiGateway {
     try {
       return await this.charge(id, request);
     } catch (error) {
-      await this.release(id);
+      if (!(error instanceof UnusableAnswerError)) await this.release(id);
       throw error;
     }
   }

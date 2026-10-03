@@ -113,18 +113,29 @@ describe('AiGateway', () => {
 
     await expect(gateway.spend(CALL, REQUEST)).rejects.toBe(unusable);
 
-    expect(updateMany).toHaveBeenCalledTimes(2);
-    expect(updateMany).toHaveBeenNthCalledWith(1, {
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'call_1', status: { not: 'counted' } },
       data: expect.objectContaining({
         status: 'counted',
         ...USAGE,
       }) as unknown,
     });
-    expect(updateMany).toHaveBeenNthCalledWith(2, {
-      where: { id: 'call_1', status: 'reserved' },
-      data: expect.objectContaining({ status: 'released' }) as unknown,
-    });
+  });
+
+  it('never releases an unusable answer whose count could not be recorded', async () => {
+    const { gateway, updateMany, structured } = build();
+    jest.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+    const unusable = new UnusableAnswerError('x', false, USAGE);
+    structured.mockRejectedValue(unusable);
+    updateMany.mockRejectedValueOnce(new Error('database blip'));
+
+    await expect(gateway.spend(CALL, REQUEST)).rejects.toBe(unusable);
+
+    expect(updateMany).toHaveBeenCalledTimes(1);
+    expect(updateMany).not.toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'call_1', status: 'reserved' } }),
+    );
   });
 
   it('releases the call and rethrows when the model never answered', async () => {
