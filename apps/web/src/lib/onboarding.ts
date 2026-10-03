@@ -2,6 +2,36 @@ export const ONBOARDING_STORAGE_KEY = "asobeast:onboarding";
 export const ONBOARDING_VERSION = 1 as const;
 export const ONBOARDING_CHANGE_EVENT = "asobeast:onboarding-change";
 
+export const SETUP_STEPS = [
+  "markets",
+  "competitors",
+  "keywords",
+  "capacity",
+  "alerts",
+] as const;
+
+export type SetupStep = (typeof SETUP_STEPS)[number];
+
+const CUSTOMER_SETUP_STEPS: readonly SetupStep[] = SETUP_STEPS.filter(
+  (step) => step !== "capacity",
+);
+
+export function setupSteps(operator: boolean): readonly SetupStep[] {
+  return operator ? SETUP_STEPS : CUSTOMER_SETUP_STEPS;
+}
+
+export function stepLabel(
+  step: SetupStep,
+  steps: readonly SetupStep[],
+): string {
+  return `Step ${steps.indexOf(step) + 1} of ${steps.length}`;
+}
+
+export function reviewedStepsSentence(steps: readonly SetupStep[]): string {
+  const listed = `${steps.slice(0, -1).join(", ")} and ${steps.at(-1)}`;
+  return `${listed.charAt(0).toUpperCase()}${listed.slice(1)} have been reviewed.`;
+}
+
 export type OnboardingStatus =
   "not_started" | "in_progress" | "completed" | "dismissed";
 
@@ -255,6 +285,7 @@ export function canCompleteOnboarding(
   state: OnboardingState,
   competitorCount: number,
   alertCount: number,
+  steps: readonly SetupStep[],
 ): boolean {
   const ready = state.acknowledgements;
   return (
@@ -262,7 +293,7 @@ export function canCompleteOnboarding(
     state.selectedMarkets.length > 0 &&
     (competitorCount > 0 || ready.noCompetitors) &&
     ready.keywordsConfirmed &&
-    ready.capacityReviewed &&
+    (!steps.includes("capacity") || ready.capacityReviewed) &&
     (alertCount > 0 || ready.alertsSkipped)
   );
 }
@@ -271,8 +302,9 @@ export function completeOnboarding(
   state: OnboardingState,
   competitorCount: number,
   alertCount: number,
+  steps: readonly SetupStep[],
 ): OnboardingState {
-  return canCompleteOnboarding(state, competitorCount, alertCount)
+  return canCompleteOnboarding(state, competitorCount, alertCount, steps)
     ? { ...state, status: "completed" }
     : state;
 }

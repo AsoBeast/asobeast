@@ -92,7 +92,7 @@ The daily pipeline starts at `CRON_DAILY`, which defaults to `0 3 * * *`, meanin
 The import already collected the first positions, scores and action items, so the daily run is what keeps them current rather than what produces them. What it adds on day two is the second capture, which is the first point a chart can draw a line between. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 <Tip>
-  Daily request volume scales with tracked keywords multiplied by tracked markets, against a fixed budget set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. The settings page shows a daily request budget card, and `GET /jobs/budget` returns the same estimate.
+  Daily request volume scales with tracked keywords multiplied by tracked markets, against a fixed budget set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. The settings page shows the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) a daily request budget card, and `GET /jobs/budget` returns the same estimate.
 </Tip>
 
 ## Next steps

@@ -7,6 +7,7 @@ import {
   NOT_STARTED_ONBOARDING,
   ONBOARDING_STORAGE_KEY,
   setOnboardingAcknowledgement,
+  setupSteps,
 } from "../src/lib/onboarding";
 
 function finishedSetup() {
@@ -15,7 +16,7 @@ function finishedSetup() {
   state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
   state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
   state = setOnboardingAcknowledgement(state, "alertsSkipped", true);
-  return completeOnboarding(state, 0, 0);
+  return completeOnboarding(state, 0, 0, setupSteps(true));
 }
 
 const utcDateFormatter = new Intl.DateTimeFormat("en-US", {

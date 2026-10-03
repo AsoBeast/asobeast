@@ -1969,6 +1969,12 @@ export const BUDGET: DailyBudget = {
   },
 };
 
+export const HOT_BUDGET: DailyBudget = {
+  ...BUDGET,
+  utilization: 0.92,
+  stores: BUDGET.stores.map((store) => ({ ...store, utilization: 0.92 })),
+};
+
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,
   quota: {
@@ -1976,6 +1982,16 @@ export const LAPSED_BUDGET: DailyBudget = {
     apps: { used: 7, limit: 0 },
     keywordMarkets: { used: 52, limit: 0 },
     overLimitSince: "2026-09-20T03:00:00.000Z",
+  },
+};
+
+export const OVER_LIMIT_BUDGET: DailyBudget = {
+  ...BUDGET,
+  quota: {
+    plan: "indie",
+    apps: { used: 2, limit: 3 },
+    keywordMarkets: { used: 240, limit: 200 },
+    overLimitSince: "2026-09-30T03:00:00.000Z",
   },
 };
 
@@ -2353,7 +2369,6 @@ export const ACTIONS: ActionItem[] = [
       traffic: 0.3,
       relevance: 20,
       dailyRequestsSaved: 1,
-      budgetUtilization: 0.72,
     },
   },
   {
@@ -2704,7 +2719,6 @@ export const ACTIONS: ActionItem[] = [
       traffic: 0.2,
       relevance: 15,
       dailyRequestsSaved: 1,
-      budgetUtilization: 0.7,
     },
   },
   {

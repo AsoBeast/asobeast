@@ -296,6 +296,27 @@ describe('parseActionEvidence', () => {
     ).toBeNull();
   });
 
+  it('leaves the instance utilization out of a stored prune evidence', () => {
+    const stored = {
+      rule: 'keyword.prune',
+      observedDays: 40,
+      checkedDays: 40,
+      rankedDays: 0,
+      bestPosition: null,
+      volume: 3,
+      traffic: 0.3,
+      relevance: 20,
+      dailyRequestsSaved: 1,
+      budgetUtilization: 0.72,
+    };
+
+    const evidence = parseActionEvidence('keyword.prune', stored);
+
+    expect(evidence).not.toHaveProperty('budgetUtilization');
+    expect(evidence).toMatchObject({ rule: 'keyword.prune', checkedDays: 40 });
+    expect(stored.budgetUtilization).toBe(0.72);
+  });
+
   it('rejects an unknown rule', () => {
     expect(parseActionEvidence('mystery', { rule: 'mystery' })).toBeNull();
   });

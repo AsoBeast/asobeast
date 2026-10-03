@@ -83,7 +83,6 @@ describe("actionHeadline", () => {
         traffic: null,
         relevance: 20,
         dailyRequestsSaved: 1,
-        budgetUtilization: 0.6,
       }),
     ).toBe('Retire "habit tracker": ranked on 0 of 40 days');
   });

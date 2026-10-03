@@ -96,6 +96,23 @@ test("the sidebar footer names the version the build shipped", async ({
   await expect(footer).toBeHidden();
 });
 
+test("the sidebar describes asobeast without a deployment", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/settings");
+
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(
+    nav.getByText(/ASO toolkit for the App Store and Google Play/),
+  ).toBeVisible();
+  await expect(nav.getByText(/self hosted/i)).toHaveCount(0);
+  await expect(page.locator('meta[name="description"]')).not.toHaveAttribute(
+    "content",
+    /self hosted/i,
+  );
+});
+
 test("the collapsed sidebar survives a reload", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");

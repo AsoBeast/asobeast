@@ -4,6 +4,7 @@ import {
   ONBOARDING_STORAGE_KEY,
   parseOnboardingState,
 } from "../src/lib/onboarding";
+import { seedViewer } from "./viewer.mts";
 
 const storedStatus = async (page: Page): Promise<string> => {
   const stored = await page.evaluate(
@@ -84,6 +85,35 @@ test("direct setup is resumable and completes after live checks", async ({
   await page.reload();
   await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
   expect(await storedStatus(page)).toBe("completed");
+});
+
+test("a customer completes setup without the capacity step", async ({
+  page,
+  context,
+}) => {
+  await seedViewer(context, "customer");
+  await startSetup(page, "app-1");
+
+  await expect(page.getByText("Step 4 of 4", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Configure alerts", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Daily request budget", { exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByLabel("I reviewed daily request capacity"),
+  ).toHaveCount(0);
+
+  await page.getByLabel("I reviewed the keywords for these markets").click();
+  const complete = page.getByRole("button", { name: "Complete setup" });
+  await expect(complete).toBeEnabled();
+  await complete.click();
+  await expect(
+    page.getByText(
+      "Markets, competitors, keywords and alerts have been reviewed.",
+    ),
+  ).toBeVisible();
 });
 
 test("a failed live count blocks completion until a retry succeeds", async ({

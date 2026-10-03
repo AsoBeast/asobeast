@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatQuotaUsage, hasNoCapacity } from "./quota-usage";
+import {
+  formatQuotaUsage,
+  hasNoCapacity,
+  keywordLimitExceededSince,
+} from "./quota-usage";
 
 describe("formatQuotaUsage", () => {
   it("reads usage against a limit as of", () => {
@@ -46,5 +50,43 @@ describe("hasNoCapacity", () => {
     expect(hasNoCapacity({ used: 7, limit: 0 })).toBe(true);
     expect(hasNoCapacity({ used: 7, limit: 5 })).toBe(false);
     expect(hasNoCapacity({ used: 7, limit: null })).toBe(false);
+  });
+});
+
+describe("keywordLimitExceededSince", () => {
+  const SINCE = "2026-09-30T03:00:00.000Z";
+
+  it("names when a workspace went over its keyword limit", () => {
+    expect(
+      keywordLimitExceededSince({
+        plan: "indie",
+        apps: { used: 2, limit: 3 },
+        keywordMarkets: { used: 240, limit: 200 },
+        overLimitSince: SINCE,
+      }),
+    ).toBe(SINCE);
+  });
+
+  it("stays quiet for a workspace whose plan includes no keywords", () => {
+    expect(
+      keywordLimitExceededSince({
+        plan: "free",
+        apps: { used: 3, limit: 0 },
+        keywordMarkets: { used: 240, limit: 0 },
+        overLimitSince: SINCE,
+      }),
+    ).toBeNull();
+  });
+
+  it("stays quiet without quota or without an over limit date", () => {
+    expect(keywordLimitExceededSince(null)).toBeNull();
+    expect(
+      keywordLimitExceededSince({
+        plan: "indie",
+        apps: { used: 1, limit: 3 },
+        keywordMarkets: { used: 10, limit: 200 },
+        overLimitSince: null,
+      }),
+    ).toBeNull();
   });
 });

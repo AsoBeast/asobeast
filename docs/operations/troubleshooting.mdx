@@ -76,7 +76,7 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="Collection is slow or jobs are backing up">
-    Both workers run at concurrency 1 behind a rate limiter, so a large keyword and market count simply takes longer. Check the request budget card on the settings page or `GET /jobs/budget`. Remove keywords or markets rather than raising the limits, which risks the store throttling your IP address. See [The daily pipeline and rate limits](/concepts/pipeline).
+    Both workers run at concurrency 1 behind a rate limiter, so a large keyword and market count simply takes longer. As the [platform operator](/security/admin-surfaces#who-the-platform-operator-is), check the request budget card on the settings page or `GET /jobs/budget`. Remove keywords or markets rather than raising the limits, which risks the store throttling your IP address. See [The daily pipeline and rate limits](/concepts/pipeline).
   </Accordion>
 
   <Accordion title="The health badge says degraded after an upgrade">

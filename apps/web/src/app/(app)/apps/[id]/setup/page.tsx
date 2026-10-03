@@ -3,7 +3,6 @@ import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
-  budgetOptions,
   competitorsOptions,
   emailAlertsOptions,
   keywordsOptions,
@@ -21,7 +20,6 @@ export default async function SetupPage({
   await Promise.all([
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
-    queryClient.prefetchQuery(budgetOptions),
     queryClient.prefetchQuery(webhooksOptions),
     queryClient.prefetchQuery(emailAlertsOptions),
   ]);

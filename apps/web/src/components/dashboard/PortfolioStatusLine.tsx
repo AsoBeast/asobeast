@@ -37,7 +37,10 @@ function budgetShare(utilization: number): string {
   return percent === 0 ? "<1%" : `${percent}%`;
 }
 
-function freshness(run: WorkspaceRunStatus, budget: DailyBudget): ReactNode[] {
+function freshness(
+  run: WorkspaceRunStatus,
+  budget: DailyBudget | null,
+): ReactNode[] {
   const state = RUN_STATE_TEXT[run.state];
   return [
     run.lastCaptureAt ? (
@@ -49,7 +52,7 @@ function freshness(run: WorkspaceRunStatus, budget: DailyBudget): ReactNode[] {
       </span>
     ) : null,
     state,
-    budget.utilization > 0 ? (
+    budget && budget.utilization > 0 ? (
       <Link href="/settings" className="underline-offset-4 hover:underline">
         {budgetShare(budget.utilization)} of the daily request budget
       </Link>
@@ -58,8 +61,16 @@ function freshness(run: WorkspaceRunStatus, budget: DailyBudget): ReactNode[] {
 }
 
 export function PortfolioStatusLine() {
-  const { data: portfolio } = useSuspenseQuery(portfolioOptions);
+  return <StatusLine budget={null} />;
+}
+
+export function OperatorPortfolioStatusLine() {
   const { data: budget } = useSuspenseQuery(budgetOptions);
+  return <StatusLine budget={budget} />;
+}
+
+function StatusLine({ budget }: { budget: DailyBudget | null }) {
+  const { data: portfolio } = useSuspenseQuery(portfolioOptions);
   const { data: run } = useSuspenseQuery(runStatusOptions);
   const fresh = freshness(run, budget);
 

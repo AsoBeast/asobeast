@@ -18,6 +18,12 @@ That distinction matters because the two deployment shapes hand out the `owner` 
 
 Owning your own workspace still authorizes everything inside it, including scheduling its deletion and managing its team. Only the cross tenant surfaces require the operator.
 
+## Views only the operator sees
+
+The web app keeps the views that describe the whole instance for the operator too. Capacity, the request budget and the API status are facts about the machine collecting for every workspace, not about one customer's account, so only the operator sees the **Capacity** section of the settings page, the request budget share on the dashboard status line and its 85 percent warning, the capacity step of app setup and the API status badge in the header. Every other account sets up an app in four steps and reads its own usage on the plan card. A one person self hosted instance looks the same as before, because its only account is the operator. The public `/health` endpoint is unchanged, so probes keep working without credentials. See [Health checks](/operations/health-checks).
+
+These views hide the figures rather than restrict them. `GET /jobs/budget` still answers any signed in account and any personal token with the same estimate, so a script can read it. The MCP surface does not offer it as a tool.
+
 ## Why 404 and not 403?
 
 A `403` confirms that the thing you asked for exists. A `404` does not.

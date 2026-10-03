@@ -6,6 +6,7 @@ import {
   seedSession,
 } from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
+import { seedViewer } from "./viewer.mts";
 import {
   PASSWORD_RULE,
   PLAN_LIMITS,
@@ -488,19 +489,19 @@ test("a lapsed workspace is told collection paused, not that it lost its data", 
 
 test("a 402 response redirects to the upgrade page", async ({ page }) => {
   await seedSession(page);
-  await page.route("**/api/backend/health", (route) =>
+  await page.route("**/api/backend/actions/summary", (route) =>
     route.fulfill(
       fulfillJson(402, {
         statusCode: 402,
         error: "Payment Required",
         message: "Trial expired — upgrade to keep using asobeast",
-        path: "/health",
+        path: "/actions/summary",
         timestamp: new Date().toISOString(),
       }),
     ),
   );
 
-  await page.goto("/");
+  await page.goto("/settings");
   await expect(page).toHaveURL(/\/upgrade$/);
   await expect(page.getByText("Keep optimizing without limits")).toBeVisible();
 });
@@ -1333,19 +1334,19 @@ test("a member who hits the paywall lands on a page that explains who can act", 
     plan: "free",
     entitled: false,
   });
-  await page.route("**/api/backend/health", (route) =>
+  await page.route("**/api/backend/actions/summary", (route) =>
     route.fulfill(
       fulfillJson(402, {
         statusCode: 402,
         error: "Payment Required",
         message: "Choose a plan to start using asobeast",
-        path: "/health",
+        path: "/actions/summary",
         timestamp: new Date().toISOString(),
       }),
     ),
   );
 
-  await page.goto("/");
+  await page.goto("/settings");
 
   await expect(page).toHaveURL(/\/upgrade$/);
   await expect(
@@ -1518,7 +1519,11 @@ test("each plan card prints its price once", async ({ page }) => {
   );
 });
 
-async function openSettingsWithoutAPlan(page: Page) {
+async function openSettingsWithPlan(
+  page: Page,
+  plan: AccountPlan,
+  budgetQuota: "lapsed" | "over",
+) {
   await seedSession(page);
   await routeStatus(page, {
     billing: true,
@@ -1526,11 +1531,11 @@ async function openSettingsWithoutAPlan(page: Page) {
     setupRequired: false,
     authenticated: true,
   });
-  await routePlan(page, LAPSED_PLAN);
+  await routePlan(page, plan);
   await page.context().addCookies([
     {
       name: "e2e_budget_quota",
-      value: "lapsed",
+      value: budgetQuota,
       domain: "localhost",
       path: "/",
     },
@@ -1541,7 +1546,7 @@ async function openSettingsWithoutAPlan(page: Page) {
 test("the plan card reads a workspace with no plan as tracked, not as over a limit", async ({
   page,
 }) => {
-  await openSettingsWithoutAPlan(page);
+  await openSettingsWithPlan(page, LAPSED_PLAN, "lapsed");
 
   const plan = page.getByRole("region", { name: "Plan" });
   await expect(plan.getByText("3 of 0")).toHaveCount(0);
@@ -1549,25 +1554,28 @@ test("the plan card reads a workspace with no plan as tracked, not as over a lim
   await expect(plan.getByText("240 tracked, none included")).toBeVisible();
 });
 
-test("the capacity card reads a workspace with no plan as tracked, not as over a limit", async ({
+test("the plan card tells a customer their keywords exceed the plan", async ({
   page,
+  context,
 }) => {
-  await openSettingsWithoutAPlan(page);
+  await seedViewer(context, "customer");
+  await openSettingsWithPlan(page, INDIE_PLAN, "over");
 
-  const capacity = page.getByRole("region", { name: "Capacity" });
-  await expect(capacity.getByText("7 / 0")).toHaveCount(0);
-  await expect(capacity.getByText("7 tracked, none included")).toBeVisible();
-  await expect(capacity.getByText("52 tracked, none included")).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Plan" })
+      .getByText(/Over the keyword limit since/),
+  ).toBeVisible();
 });
 
-test("the capacity card does not warn about a keyword limit a workspace with no plan never had", async ({
+test("the plan card does not warn about a keyword limit a workspace with no plan never had", async ({
   page,
 }) => {
-  await openSettingsWithoutAPlan(page);
+  await openSettingsWithPlan(page, LAPSED_PLAN, "lapsed");
 
-  const capacity = page.getByRole("region", { name: "Capacity" });
-  await expect(capacity.getByText("Plan usage")).toBeVisible();
-  await expect(capacity.getByText("Over the keyword limit")).toHaveCount(0);
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("240 tracked, none included")).toBeVisible();
+  await expect(plan.getByText("Over the keyword limit")).toHaveCount(0);
 });
 
 test("a spent confirmation link offers a new one", async ({ page }) => {

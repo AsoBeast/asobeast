@@ -197,7 +197,6 @@ describe('action evidence', () => {
         traffic: 0.3,
         relevance: 20,
         dailyRequestsSaved: 1,
-        budgetUtilization: 0.72,
       },
       {
         rule: 'rank.investigate_drop',

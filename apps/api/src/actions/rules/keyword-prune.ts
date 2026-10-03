@@ -79,7 +79,6 @@ function detectForApp(
       traffic: keyword.traffic,
       relevance: keyword.relevance,
       dailyRequestsSaved: PRUNE_DAILY_REQUESTS_SAVED,
-      budgetUtilization: utilization,
     };
 
     detections.push({

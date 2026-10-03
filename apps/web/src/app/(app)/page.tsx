@@ -17,7 +17,10 @@ import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { AppsToolbar } from "@/components/dashboard/AppsToolbar";
 import { DashboardSection } from "@/components/dashboard/DashboardSection";
 import { PortfolioMoversCard } from "@/components/dashboard/PortfolioMoversCard";
-import { PortfolioStatusLine } from "@/components/dashboard/PortfolioStatusLine";
+import {
+  OperatorPortfolioStatusLine,
+  PortfolioStatusLine,
+} from "@/components/dashboard/PortfolioStatusLine";
 import {
   AppsDashboardSkeleton,
   PortfolioMoversCardSkeleton,
@@ -30,6 +33,7 @@ import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
 import { DASHBOARD_ACTION_LIMIT } from "@/lib/action-filters";
 import { appViewParser } from "@/lib/search-params";
+import { viewerIsOperator } from "@/lib/viewer";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 
 export default async function Page({
@@ -39,14 +43,17 @@ export default async function Page({
 }) {
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(recentChangesOptions());
-  void queryClient.prefetchQuery(budgetOptions);
   void queryClient.prefetchQuery(runStatusOptions);
   void queryClient.prefetchQuery(actionSummaryOptions);
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: DASHBOARD_ACTION_LIMIT }),
   );
   void queryClient.prefetchQuery(portfolioInsightsOptions);
-  const portfolio = await queryClient.fetchQuery(portfolioOptions);
+  const [portfolio, operator] = await Promise.all([
+    queryClient.fetchQuery(portfolioOptions),
+    viewerIsOperator(),
+  ]);
+  if (operator) void queryClient.prefetchQuery(budgetOptions);
 
   if (portfolio.apps.length === 0) {
     return <FirstRun />;
@@ -61,13 +68,19 @@ export default async function Page({
         <Suspense fallback={null}>
           <OnboardingBanner />
         </Suspense>
-        <Suspense fallback={null}>
-          <BudgetBanner />
-        </Suspense>
+        {operator ? (
+          <Suspense fallback={null}>
+            <BudgetBanner />
+          </Suspense>
+        ) : null}
 
         <DashboardHeader>
           <Suspense fallback={<PortfolioStatusLineSkeleton />}>
-            <PortfolioStatusLine />
+            {operator ? (
+              <OperatorPortfolioStatusLine />
+            ) : (
+              <PortfolioStatusLine />
+            )}
           </Suspense>
         </DashboardHeader>
 

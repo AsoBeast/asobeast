@@ -26,6 +26,7 @@ import {
   emailAlertsOptions,
   webhooksOptions,
 } from "@/lib/queries";
+import { viewerIsOperator } from "@/lib/viewer";
 
 export default async function SettingsPage({
   searchParams,
@@ -34,7 +35,8 @@ export default async function SettingsPage({
 }) {
   const returnedFromCheckout = pageReturnedFromCheckout(await searchParams);
   const queryClient = getQueryClient();
-  await Promise.all([
+  const [operator] = await Promise.all([
+    viewerIsOperator(),
     returnedFromCheckout
       ? undefined
       : queryClient.prefetchQuery(accountPlanOptions),
@@ -51,21 +53,23 @@ export default async function SettingsPage({
         <div className="flex flex-col gap-1">
           <h1 className="text-display tracking-tight text-balance">Settings</h1>
           <p className="text-body text-muted-foreground">
-            Configure alert channels and review your daily request budget.
+            Your plan, alerts, team and integrations.
           </p>
         </div>
 
         <PlanSection />
 
-        <SettingsSection
-          id="daily-capacity"
-          title="Capacity"
-          description="How much of your daily store request budget the pipeline uses. It governs how many markets you can track."
-        >
-          <Suspense fallback={<BudgetCardSkeleton />}>
-            <BudgetCard />
-          </Suspense>
-        </SettingsSection>
+        {operator ? (
+          <SettingsSection
+            id="daily-capacity"
+            title="Capacity"
+            description="How much of your daily store request budget the pipeline uses. It governs how many markets you can track."
+          >
+            <Suspense fallback={<BudgetCardSkeleton />}>
+              <BudgetCard />
+            </Suspense>
+          </SettingsSection>
+        ) : null}
 
         <SettingsSection
           id="alerts"

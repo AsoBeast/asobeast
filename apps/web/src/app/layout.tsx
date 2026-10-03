@@ -30,7 +30,7 @@ export const metadata: Metadata = {
     default: "asobeast",
     template: "%s · asobeast",
   },
-  description: "Self hosted App Store Optimization toolkit",
+  description: "Open source App Store Optimization toolkit",
   appleWebApp: {
     capable: true,
     title: "asobeast",

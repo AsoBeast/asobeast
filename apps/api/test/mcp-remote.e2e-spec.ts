@@ -355,7 +355,6 @@ describe('Remote MCP transport (e2e)', () => {
     const shared = [
       { tool: 'list_apps', route: '/apps' },
       { tool: 'portfolio', route: '/portfolio' },
-      { tool: 'daily_budget', route: '/jobs/budget' },
     ];
 
     for (const { tool, route } of shared) {
@@ -372,6 +371,15 @@ describe('Remote MCP transport (e2e)', () => {
 
       expect(payload).toEqual(viaRest.body);
     }
+  });
+
+  it('does not offer the daily request budget', async () => {
+    const listed = await rpc('tools/list').expect(200);
+    const names = (sseEnvelope(listed).result?.tools ?? []).map(
+      (tool) => tool.name,
+    );
+
+    expect(names).not.toContain('daily_budget');
   });
 
   it('exposes no tool that changes anything', async () => {

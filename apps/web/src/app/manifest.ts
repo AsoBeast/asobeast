@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "asobeast",
     short_name: "asobeast",
-    description: "Self hosted App Store Optimization toolkit",
+    description: "Open source App Store Optimization toolkit",
     start_url: "/",
     display: "standalone",
     background_color: "#07171e",
