@@ -488,19 +488,19 @@ test("a lapsed workspace is told collection paused, not that it lost its data", 
 
 test("a 402 response redirects to the upgrade page", async ({ page }) => {
   await seedSession(page);
-  await page.route("**/api/backend/health", (route) =>
+  await page.route("**/api/backend/actions/summary", (route) =>
     route.fulfill(
       fulfillJson(402, {
         statusCode: 402,
         error: "Payment Required",
         message: "Trial expired — upgrade to keep using asobeast",
-        path: "/health",
+        path: "/actions/summary",
         timestamp: new Date().toISOString(),
       }),
     ),
   );
 
-  await page.goto("/");
+  await page.goto("/settings");
   await expect(page).toHaveURL(/\/upgrade$/);
   await expect(page.getByText("Keep optimizing without limits")).toBeVisible();
 });
@@ -1333,19 +1333,19 @@ test("a member who hits the paywall lands on a page that explains who can act", 
     plan: "free",
     entitled: false,
   });
-  await page.route("**/api/backend/health", (route) =>
+  await page.route("**/api/backend/actions/summary", (route) =>
     route.fulfill(
       fulfillJson(402, {
         statusCode: 402,
         error: "Payment Required",
         message: "Choose a plan to start using asobeast",
-        path: "/health",
+        path: "/actions/summary",
         timestamp: new Date().toISOString(),
       }),
     ),
   );
 
-  await page.goto("/");
+  await page.goto("/settings");
 
   await expect(page).toHaveURL(/\/upgrade$/);
   await expect(

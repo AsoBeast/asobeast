@@ -14,6 +14,7 @@ export interface AuthState {
   awaitingConfirmation: boolean;
   isMember: boolean;
   isOwner: boolean;
+  isOperator: boolean;
 }
 
 function subscribeToNothing(): () => void {
@@ -37,6 +38,7 @@ const SERVER_AUTH_STATE: AuthState = {
   awaitingConfirmation: false,
   isMember: false,
   isOwner: false,
+  isOperator: false,
 };
 
 export function useAuth(): AuthState {
@@ -71,5 +73,6 @@ export function useAuth(): AuthState {
     awaitingConfirmation: signedIn?.trialAwaitsConfirmation === true,
     isMember: signedIn !== undefined && signedIn.role !== "owner",
     isOwner: signedIn?.role === "owner",
+    isOperator: signedIn?.platformOperator === true,
   };
 }

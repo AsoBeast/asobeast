@@ -113,6 +113,7 @@ import {
   UPGRADE_PATH,
   parseStoreUrl,
 } from "@asobeast/shared";
+import { VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
@@ -190,6 +191,21 @@ const AUTH_USER: AuthUser = {
   planExpiresAt: null,
   entitled: true,
   platformOperator: true,
+};
+const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
+  customer: {
+    id: "u2",
+    email: "customer@example.com",
+    name: "Customer",
+    platformOperator: false,
+  },
+  member: {
+    id: "u3",
+    email: "member@example.com",
+    name: "Member",
+    role: "member",
+    platformOperator: false,
+  },
 };
 const ACCOUNT_PLAN: AccountPlan = {
   plan: "indie",
@@ -358,6 +374,13 @@ function cookieValue(req: IncomingMessage, name: string): string | undefined {
     }
   }
   return undefined;
+}
+
+function viewerOf(req: IncomingMessage): AuthUser {
+  const viewer = VIEWERS.find(
+    (candidate) => candidate === cookieValue(req, VIEWER_COOKIE),
+  );
+  return viewer ? { ...AUTH_USER, ...VIEWER_USERS[viewer] } : AUTH_USER;
 }
 
 async function delayFromCookie(
@@ -1040,7 +1063,7 @@ const routes: Route[] = [
       if (!authenticated) {
         return json(res, 401, errorEnvelope(401, req.url ?? "/auth/me"));
       }
-      json(res, 200, AUTH_USER);
+      json(res, 200, viewerOf(req));
     },
   },
   {
