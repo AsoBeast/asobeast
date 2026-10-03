@@ -91,7 +91,7 @@ curl --silent http://127.0.0.1:3000/api/backend/jobs/budget | jq '{total, utiliz
 
 `quota` is present only when `BILLING_ENABLED` is true. It reports the plan, the apps and keyword markets used against their limits, and `overLimitSince` once a workspace has been over its keyword limit long enough for daily checks to cover only the first N keyword markets in a stable order.
 
-Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which sums demand across every workspace the daily run visits and names the ones consuming most. It is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) and answers `404` to anyone else, including a customer who owns their own workspace.
+Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which sums demand across every workspace the daily run visits and names the ones consuming most. It is reserved for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) and answers `404` to anyone else, including a customer who owns their own workspace. The admin area shows the same report at **Admin, Capacity**, with a line per store and the top consumers by name. See [The admin area](/security/admin-surfaces#the-admin-area).
 
 ## Under pressure
 

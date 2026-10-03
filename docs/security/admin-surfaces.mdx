@@ -1,12 +1,12 @@
 ---
 title: The queue dashboard and the OpenAPI surface
 sidebarTitle: Admin surfaces
-description: "The queue dashboard and the OpenAPI routes answer 404 to anyone who is not the platform operator, because the surface does not confirm it exists."
+description: "The queue dashboard, the OpenAPI routes and the admin area answer 404 to anyone who is not the platform operator, because the surface does not confirm it exists."
 icon: shield
-keywords: ["admin","queue dashboard","Bull Board","API_DOCS","Swagger","404","platform operator"]
+keywords: ["admin","admin area","queue dashboard","Bull Board","API_DOCS","Swagger","404","platform operator"]
 ---
 
-Four administrative surfaces ship with asobeast: the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`.
+Five administrative surfaces ship with asobeast: the admin area of the web app at `/admin`, the queue dashboard at `/admin/queues`, the OpenAPI surface at `/docs`, the metrics scrape at `/metrics` and the support tooling at `/admin/support`. All of them answer `404` to anyone who is not the platform operator. Two more operator endpoints answer the same way: `/admin/capacity` and `/admin/proxy-pool`.
 
 The last two matter to a hosted operator rather than a self hoster, and [Observability for a hosted instance](/operations/hosted-observability) describes what they serve.
 
@@ -23,6 +23,22 @@ Owning your own workspace still authorizes everything inside it, including sched
 The web app keeps the views that describe the whole instance for the operator too. Capacity, the request budget and the API status are facts about the machine collecting for every workspace, not about one customer's account, so only the operator sees the **Capacity** section of the settings page, the request budget share on the dashboard status line and its 85 percent warning, the capacity step of app setup and the API status badge in the header. Every other account sets up an app in four steps and reads its own usage on the plan card. A one person self hosted instance looks the same as before, because its only account is the operator. The public `/health` endpoint is unchanged, so probes keep working without credentials. See [Health checks](/operations/health-checks).
 
 These views hide the figures rather than restrict them. `GET /jobs/budget` still answers any signed in account and any personal token with the same estimate, so a script can read it. The MCP surface does not offer it as a tool.
+
+## The admin area
+
+The web app has an **Admin** area at `/admin` for the platform operator. It appears in the sidebar, the command palette and the account menu only for the operator, and any other account that opens the address sees the not found page.
+
+| Tab | What it shows | Endpoint |
+| --- | --- | --- |
+| Overview | workspaces by plan, accounts and sign ups over 30 days, tracked apps by store, keyword markets, searched keywords, AI calls this month | `GET /admin/support/overview` |
+| Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool` |
+| Workspaces | every workspace with its plan, members, apps and keyword markets | `GET /admin/support/workspaces` |
+| Users | every account, newest first, with its workspace and whether its email is confirmed | `GET /admin/support/users` |
+| Apps | every tracked app with its workspace, store, home market, competitors and keyword markets | `GET /admin/support/apps` |
+
+Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the total. Reading either list is written to the support audit trail, the same trail the workspace list writes, because both return personal data. The overview returns counts only and is not written to the trail.
+
+The admin area is read only. It lists accounts and apps; it never opens a workspace, so an app name is not a link: the operator's own session cannot read another workspace's pages.
 
 ## Why 404 and not 403?
 
