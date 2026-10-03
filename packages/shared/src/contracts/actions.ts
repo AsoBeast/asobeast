@@ -150,7 +150,6 @@ export interface KeywordPruneEvidence {
   traffic: number | null;
   relevance: number | null;
   dailyRequestsSaved: number;
-  budgetUtilization: number;
 }
 
 export interface ActionDroppedKeyword {

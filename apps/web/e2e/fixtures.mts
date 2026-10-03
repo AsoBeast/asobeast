@@ -2369,7 +2369,6 @@ export const ACTIONS: ActionItem[] = [
       traffic: 0.3,
       relevance: 20,
       dailyRequestsSaved: 1,
-      budgetUtilization: 0.72,
     },
   },
   {
@@ -2720,7 +2719,6 @@ export const ACTIONS: ActionItem[] = [
       traffic: 0.2,
       relevance: 15,
       dailyRequestsSaved: 1,
-      budgetUtilization: 0.7,
     },
   },
   {

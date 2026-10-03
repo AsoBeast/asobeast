@@ -98,6 +98,10 @@ const EVIDENCE_FIELDS: Record<ActionRule, readonly string[]> = {
   'listing.ship_update': ['storeUpdatedAt', 'daysSinceUpdate'],
 };
 
+const WITHDRAWN_EVIDENCE_FIELDS: Partial<
+  Record<ActionRule, readonly string[]>
+> = { 'keyword.prune': ['budgetUtilization'] };
+
 export function parseActionEvidence(
   rule: string,
   raw: unknown,
@@ -110,7 +114,11 @@ export function parseActionEvidence(
   if (candidate.rule !== rule) return null;
   const required = EVIDENCE_FIELDS[rule];
   if (required.some((field) => candidate[field] === undefined)) return null;
-  return candidate as unknown as ActionEvidence;
+  const withdrawn = WITHDRAWN_EVIDENCE_FIELDS[rule] ?? [];
+  const served = Object.fromEntries(
+    Object.entries(candidate).filter(([field]) => !withdrawn.includes(field)),
+  );
+  return served as unknown as ActionEvidence;
 }
 
 const iso = (value: Date | null): string | null =>

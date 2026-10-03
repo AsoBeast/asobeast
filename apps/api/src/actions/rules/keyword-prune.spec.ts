@@ -88,8 +88,8 @@ describe('keyword.prune', () => {
       rankedDays: 0,
       bestPosition: null,
       dailyRequestsSaved: 1,
-      budgetUtilization: 0.8,
     });
+    expect(evidence).not.toHaveProperty('budgetUtilization');
   });
 
   describe('thresholds', () => {
