@@ -21,11 +21,7 @@ import {
 } from "@/components/ui/card";
 import { formatNumber, formatUsd, pluralize, storeLabel } from "@/lib/format";
 import { adminCapacityOptions, adminProxyPoolOptions } from "@/lib/queries";
-import {
-  UTILIZATION_STATUS,
-  utilizationLevel,
-  utilizationPercent,
-} from "@/lib/utilization";
+import { utilizationPercent, utilizationStatus } from "@/lib/utilization";
 
 const ALERT_COPY: Record<ProxyPoolAlert, string> = {
   "pool.healthy.low":
@@ -57,8 +53,7 @@ function DemandLine({
         <span className="font-medium">{label}</span>
         <span className="text-muted-foreground tabular-nums">
           {formatNumber(requests)} of {formatNumber(capacity)} requests/day ·{" "}
-          {utilizationPercent(utilization)}% ·{" "}
-          {UTILIZATION_STATUS[utilizationLevel(utilization)]}
+          {utilizationPercent(utilization)}% · {utilizationStatus(utilization)}
         </span>
       </div>
       <UtilizationMeter label={meterLabel} utilization={utilization} />

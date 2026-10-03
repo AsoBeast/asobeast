@@ -15,9 +15,9 @@ import {
 import { formatDateTime, formatNumber, storeLabel } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
 import {
-  UTILIZATION_STATUS,
   utilizationLevel,
   utilizationPercent,
+  utilizationStatus,
 } from "@/lib/utilization";
 import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
 
@@ -86,7 +86,7 @@ export function BudgetCard({
               {formatNumber(budget.capacityPerDay)} requests/day
             </span>
             <span className="font-medium tabular-nums">
-              {UTILIZATION_STATUS[level]} ·{" "}
+              {utilizationStatus(budget.utilization)} ·{" "}
               {utilizationPercent(budget.utilization)}%
             </span>
           </div>

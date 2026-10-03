@@ -1,6 +1,6 @@
 import {
+  meterValue,
   utilizationLevel,
-  utilizationPercent,
   type UtilizationLevel,
 } from "@/lib/utilization";
 
@@ -17,12 +17,13 @@ export function UtilizationMeter({
   label: string;
   utilization: number;
 }) {
-  const percent = utilizationPercent(utilization);
+  const { now, text } = meterValue(utilization);
 
   return (
     <div
       role="meter"
-      aria-valuenow={percent}
+      aria-valuenow={now}
+      aria-valuetext={text}
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={label}
@@ -30,7 +31,7 @@ export function UtilizationMeter({
     >
       <div
         className={`h-full ${BAR_COLOR[utilizationLevel(utilization)]}`}
-        style={{ width: `${Math.min(100, percent)}%` }}
+        style={{ width: `${now}%` }}
       />
     </div>
   );

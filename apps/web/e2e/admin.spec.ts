@@ -131,6 +131,11 @@ test.describe("instance capacity in the admin area", () => {
         name: "Instance daily request utilization",
       }),
     ).toHaveAttribute("aria-valuenow", "4");
+    await expect(
+      demand.getByRole("meter", {
+        name: "Instance daily request utilization",
+      }),
+    ).toHaveAttribute("aria-valuetext", "4%");
   });
 
   test("meters each store on its own", async ({ page }) => {
