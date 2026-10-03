@@ -44,6 +44,7 @@ import {
   MANY_PORTFOLIO_APPS,
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
+  HOT_BUDGET,
   LAPSED_BUDGET,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
@@ -914,6 +915,7 @@ function firstRunFor(appId: string): FirstRunStatus {
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
+const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
@@ -1367,7 +1369,8 @@ const routes: Route[] = [
     pattern: /^\/jobs\/budget$/,
     handler: (_p, req, res) => {
       const budget =
-        BUDGETS_BY_QUOTA.get(cookieValue(req, BUDGET_QUOTA_COOKIE)) ?? BUDGET;
+        BUDGETS_BY_QUOTA.get(cookieValue(req, BUDGET_QUOTA_COOKIE)) ??
+        (hasCookie(req, BUDGET_HOT_COOKIE, "1") ? HOT_BUDGET : BUDGET);
       const token = cookieValue(req, BUDGET_HOLD_COOKIE);
       if (!token) {
         json(res, 200, budget);

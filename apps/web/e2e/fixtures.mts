@@ -1969,6 +1969,12 @@ export const BUDGET: DailyBudget = {
   },
 };
 
+export const HOT_BUDGET: DailyBudget = {
+  ...BUDGET,
+  utilization: 0.92,
+  stores: BUDGET.stores.map((store) => ({ ...store, utilization: 0.92 })),
+};
+
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,
   quota: {

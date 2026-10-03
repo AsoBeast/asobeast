@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useAuth } from "@/components/auth/use-auth";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +32,7 @@ export function TrackCombinationsDialog({
   onConfirm: () => void;
 }) {
   const storefront = formatCountry(market);
+  const { isOperator } = useAuth();
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <DialogContent>
@@ -39,14 +41,18 @@ export function TrackCombinationsDialog({
             Track {keywordCount(count)} in {storefront}?
           </DialogTitle>
           <DialogDescription>
-            Each tracked keyword adds one store search a day in {storefront},
-            counted against your daily request budget.{" "}
-            <Link
-              href="/settings#daily-capacity"
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              Review the daily request budget
-            </Link>
+            Each tracked keyword adds one store search a day in {storefront}.
+            {isOperator ? (
+              <>
+                {" "}
+                <Link
+                  href="/settings#daily-capacity"
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  Review the daily request budget
+                </Link>
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>

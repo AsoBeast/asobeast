@@ -5,6 +5,7 @@ import {
   APP_COMBOS_KEYWORD_FIELD,
   APP_GP_DETAIL,
 } from "./fixtures.mts";
+import { seedViewer } from "./viewer.mts";
 
 const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const COMBOS_PAGE = `/apps/${APP_COMBOS_DETAIL.id}/keywords`;
@@ -185,6 +186,30 @@ const trackRequest = (page: Page) =>
       request.method() === "POST" &&
       request.url().endsWith(`/apps/${APP_COMBOS_DETAIL.id}/keywords`),
   );
+
+test("the track dialog leaves the daily request budget out for a customer", async ({
+  page,
+  context,
+}) => {
+  await seedViewer(context, "customer");
+  await page.goto(`${COMBOS_PAGE}?combos=true`);
+  await expect(
+    page.getByRole("button", { name: "Account menu" }),
+  ).toBeVisible();
+  const card = combinations(page);
+  await card
+    .getByRole("checkbox", { name: "Select journal", exact: true })
+    .check();
+  await card.getByRole("button", { name: "Track selected (1)" }).click();
+
+  const dialog = page.getByRole("dialog", {
+    name: "Track 1 keyword in United States?",
+  });
+  await expect(dialog).toContainText("adds one store search a day");
+  await expect(
+    dialog.getByRole("link", { name: "Review the daily request budget" }),
+  ).toHaveCount(0);
+});
 
 test("selected combinations are tracked after one confirmation", async ({
   page,
