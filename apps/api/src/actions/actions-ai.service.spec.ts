@@ -3,7 +3,8 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { AI_NOT_CONFIGURED, AiGateway } from '../ai/ai-gateway.service';
+import { AiGateway } from '../ai/ai-gateway.service';
+import { buildAi } from '../ai/ai-gateway.fixture';
 import { aiCompletion } from '../ai/ai-completion.fixture';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsAiService } from './actions-ai.service';
@@ -32,23 +33,6 @@ const buildPrisma = (
       Promise.resolve(args.data),
     ),
   },
-});
-
-const buildAi = (
-  spend: jest.Mock = jest.fn(() =>
-    Promise.resolve(
-      aiCompletion({ explanation: '  Your title is missing it.  ' }),
-    ),
-  ),
-  configured = true,
-) => ({
-  configured,
-  model: configured ? 'gpt-4o' : null,
-  requireModel: jest.fn(() => {
-    if (!configured) throw new ConflictException(AI_NOT_CONFIGURED);
-    return 'gpt-4o';
-  }),
-  spend,
 });
 
 const serviceFor = (

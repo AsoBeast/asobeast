@@ -36,6 +36,26 @@ import {
 const USAGE = { inputTokens: 900, cachedInputTokens: 0, outputTokens: 120 };
 const OTHER_WORKSPACE = 'ws_ai_other';
 
+const DRAFTS = {
+  drafts: [
+    {
+      field: 'title',
+      value: 'Budget Planner: Expense Tracker',
+      rationale: 'Adds the primary keyword.',
+    },
+    {
+      field: 'subtitle',
+      value: 'Money & Spending Log',
+      rationale: 'Secondary keywords with no title repeats.',
+    },
+    {
+      field: 'keywordField',
+      value: 'bills,savings,wallet,finance',
+      rationale: 'Covers uncovered terms in singular form.',
+    },
+  ],
+};
+
 const structured = jest.fn<Promise<AiCompletion>, [AiStructuredRequest]>();
 const fakeAiClient: AiClient = { model: 'gpt-test', structured };
 
@@ -44,6 +64,7 @@ describe('Monthly AI allowance (e2e)', () => {
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
   let actionId: string;
+  let appId: string;
 
   const setPlan = (plan: string, trialEndsAt: Date | null = null) =>
     prisma.workspace.update({
@@ -137,7 +158,7 @@ describe('Monthly AI allowance (e2e)', () => {
     await prisma.aiCall.deleteMany();
     await prisma.workspace.deleteMany({ where: { id: OTHER_WORKSPACE } });
     await setPlan('indie');
-    await seedUncoveredKeyword(prisma);
+    ({ appId } = await seedUncoveredKeyword(prisma));
     await generateActionsAt(app, ACTION_DAY(0));
     ({ id: actionId } = await prisma.actionItem.findFirstOrThrow({
       select: { id: true },
@@ -336,6 +357,58 @@ describe('Monthly AI allowance (e2e)', () => {
 
     expect(response.body).toMatchObject({
       aiAllowance: { plan: 'trial', limit: 25, upgradeTo: 'indie' },
+    });
+  });
+
+  describe('metadata drafts', () => {
+    const draft = (body: Record<string, unknown> = {}) =>
+      api.post(`/apps/${appId}/metadata/assistant`).send(body);
+
+    beforeEach(() => {
+      structured.mockResolvedValue(aiCompletion(DRAFTS, USAGE));
+    });
+
+    it('records one counted call for a set of drafts', async () => {
+      await draft().expect(201);
+
+      const owner = await prisma.user.findUniqueOrThrow({
+        where: { email: OWNER.email },
+      });
+      const rows = await prisma.aiCall.findMany();
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({
+        feature: 'metadataDrafts',
+        status: 'counted',
+        appId,
+        userId: owner.id,
+        ...USAGE,
+      });
+    });
+
+    it('writes nothing for a field the store cannot draft', async () => {
+      await draft({ fields: ['shortDescription'] }).expect(400);
+
+      await expect(prisma.aiCall.count()).resolves.toBe(0);
+    });
+
+    it('refuses drafts past the limit without calling the model', async () => {
+      await spent(200);
+
+      await draft().expect(429);
+
+      expect(structured).not.toHaveBeenCalled();
+    });
+
+    it('keeps the call when the drafts come back incomplete', async () => {
+      structured.mockResolvedValue(
+        aiCompletion({ drafts: [DRAFTS.drafts[0]] }, USAGE),
+      );
+
+      await draft().expect(502);
+
+      const rows = await prisma.aiCall.findMany();
+      expect(rows).toHaveLength(1);
+      expect(rows[0].status).toBe('counted');
     });
   });
 });

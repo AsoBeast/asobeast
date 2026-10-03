@@ -1,8 +1,6 @@
 import {
   BadGatewayException,
   BadRequestException,
-  ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -15,7 +13,7 @@ import {
   MetadataField,
   tokenize,
 } from '@asobeast/shared';
-import { AiClient, OPENAI_CLIENT } from '../ai/openai.client';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantDto } from './dto/metadata-assistant.dto';
@@ -39,26 +37,22 @@ const DEFAULT_FIELDS: Record<Store, MetadataField[]> = {
 @Injectable()
 export class MetadataAssistantService {
   constructor(
-    @Inject(OPENAI_CLIENT) private readonly client: AiClient | null,
+    private readonly ai: AiGateway,
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
     private readonly metadata: MetadataService,
   ) {}
 
   status(): MetadataAssistantStatus {
-    return {
-      configured: this.client !== null,
-      model: this.client?.model ?? null,
-    };
+    return { configured: this.ai.configured, model: this.ai.model };
   }
 
   async generate(
     appId: string,
     dto: MetadataAssistantDto,
+    userId: string,
   ): Promise<MetadataAssistantResult> {
-    if (!this.client) {
-      throw new ConflictException('AI features require OPENAI_API_KEY');
-    }
+    const model = this.ai.requireModel();
     const app = await this.ensureApp(appId);
     const target = await this.localizationTarget(app, dto.localization);
     const fields = this.resolveFields(app.store, dto.fields);
@@ -86,25 +80,28 @@ export class MetadataAssistantService {
       .map((competitor) => competitor.name)
       .filter((name): name is string => Boolean(name));
 
-    const { output } = await this.client.structured({
-      system: SYSTEM_PROMPT,
-      content: [
-        {
-          type: 'text',
-          text: buildAssistantContext(
-            app.store,
-            fields,
-            audit,
-            active,
-            competitorTitles,
-            dto.instructions,
-            target,
-          ),
-        },
-      ],
-      schema: draftSchema(fields),
-      maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
-    });
+    const { output } = await this.ai.spend(
+      { feature: 'metadataDrafts', appId, userId },
+      {
+        system: SYSTEM_PROMPT,
+        content: [
+          {
+            type: 'text',
+            text: buildAssistantContext(
+              app.store,
+              fields,
+              audit,
+              active,
+              competitorTitles,
+              dto.instructions,
+              target,
+            ),
+          },
+        ],
+        schema: draftSchema(fields),
+        maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
+      },
+    );
 
     const base: LintContext = {
       titleWords: tokenize(currentValue(audit, 'title')),
@@ -125,7 +122,7 @@ export class MetadataAssistantService {
     }
 
     return {
-      model: this.client.model,
+      model,
       localization: target?.localization ?? null,
       drafts,
     };

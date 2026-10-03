@@ -1,10 +1,38 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { AiClient } from '../ai/openai.client';
+import { buildAi } from '../ai/ai-gateway.fixture';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantService } from './metadata-assistant.service';
 import { DRAFT_MAX_OUTPUT_TOKENS } from './metadata-drafts';
 import { MetadataService } from './metadata.service';
+
+const gateway = (ai: ReturnType<typeof buildAi>) => ai as unknown as AiGateway;
+
+const appStoreService = (spend: jest.Mock) =>
+  new MetadataAssistantService(
+    gateway(buildAi(spend)),
+    {
+      app: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'app-1',
+          store: 'APP_STORE',
+          country: 'us',
+          name: 'Where Am I',
+        }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
+    } as unknown as PrismaService,
+    {
+      keywordCountries: jest
+        .fn()
+        .mockResolvedValue([{ country: 'us', keywordCount: 1 }]),
+      listTracked: jest.fn().mockResolvedValue([]),
+    } as unknown as KeywordsService,
+    {
+      audit: jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
+    } as unknown as MetadataService,
+  );
 
 describe('MetadataAssistantService', () => {
   const deps = [
@@ -14,21 +42,23 @@ describe('MetadataAssistantService', () => {
   ] as const;
 
   it('reports unconfigured and rejects generate without a client', async () => {
-    const service = new MetadataAssistantService(null, ...deps);
+    const service = new MetadataAssistantService(
+      gateway(buildAi(undefined, false)),
+      ...deps,
+    );
     expect(service.status()).toEqual({ configured: false, model: null });
-    await expect(service.generate('app-1', {})).rejects.toBeInstanceOf(
+    await expect(service.generate('app-1', {}, 'usr_1')).rejects.toBeInstanceOf(
       ConflictException,
     );
   });
 
   it('reports configured with the model name', () => {
-    const client: AiClient = { model: 'gpt-4o', structured: jest.fn() };
-    const service = new MetadataAssistantService(client, ...deps);
+    const service = new MetadataAssistantService(gateway(buildAi()), ...deps);
     expect(service.status()).toEqual({ configured: true, model: 'gpt-4o' });
   });
 
   it('refuses a localization for a google play app before reading anything', async () => {
-    const structured = jest.fn();
+    const spend = jest.fn();
     const findFirst = jest.fn().mockResolvedValue({
       id: 'app-gp',
       store: 'GOOGLE_PLAY',
@@ -38,52 +68,47 @@ describe('MetadataAssistantService', () => {
     const keywordCountries = jest.fn();
     const audit = jest.fn();
     const service = new MetadataAssistantService(
-      { model: 'gpt-4o', structured },
+      gateway(buildAi(spend)),
       { app: { findFirst } } as unknown as PrismaService,
       { keywordCountries } as unknown as KeywordsService,
       { audit } as unknown as MetadataService,
     );
 
     await expect(
-      service.generate('app-gp', { localization: 'es-MX' }),
+      service.generate('app-gp', { localization: 'es-MX' }, 'usr_1'),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(keywordCountries).not.toHaveBeenCalled();
     expect(audit).not.toHaveBeenCalled();
-    expect(structured).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
   });
 
   it('gives a localized draft room to reason before it answers', async () => {
-    const structured = jest.fn().mockRejectedValue(new Error('stop'));
-    const service = new MetadataAssistantService(
-      { model: 'gpt-4o', structured },
-      {
-        app: {
-          findFirst: jest.fn().mockResolvedValue({
-            id: 'app-1',
-            store: 'APP_STORE',
-            country: 'us',
-            name: 'Where Am I',
-          }),
-          findMany: jest.fn().mockResolvedValue([]),
-        },
-      } as unknown as PrismaService,
-      {
-        keywordCountries: jest
-          .fn()
-          .mockResolvedValue([{ country: 'us', keywordCount: 1 }]),
-        listTracked: jest.fn().mockResolvedValue([]),
-      } as unknown as KeywordsService,
-      {
-        audit: jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
-      } as unknown as MetadataService,
-    );
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
 
     await expect(
-      service.generate('app-1', { localization: 'es-MX' }),
+      appStoreService(spend).generate(
+        'app-1',
+        { localization: 'es-MX' },
+        'usr_1',
+      ),
     ).rejects.toThrow('stop');
-    expect(structured).toHaveBeenCalledWith(
+    expect(spend).toHaveBeenCalledWith(
+      expect.anything(),
       expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
     );
     expect(DRAFT_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(4096);
+  });
+
+  it('drafts through the gateway on behalf of the requesting user', async () => {
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
+
+    await expect(
+      appStoreService(spend).generate('app-1', {}, 'usr_1'),
+    ).rejects.toThrow('stop');
+    expect(spend).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledWith(
+      { feature: 'metadataDrafts', appId: 'app-1', userId: 'usr_1' },
+      expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
+    );
   });
 });

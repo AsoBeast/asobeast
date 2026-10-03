@@ -2915,6 +2915,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "description": "The monthly AI allowance is spent; aiAllowance says when it renews"
           }
         },
         "summary": "Generate AI metadata drafts for an app",
