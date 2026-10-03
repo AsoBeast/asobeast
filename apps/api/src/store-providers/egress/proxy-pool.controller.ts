@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Header } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProxyPoolHealth } from '@asobeast/shared';
 import type { User } from '@prisma/client';
@@ -12,6 +12,7 @@ export class ProxyPoolController {
   constructor(private readonly report: ProxyPoolHealthReport) {}
 
   @Get()
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Egress proxy pool health for operators' })
   health(@CurrentUser() user: User): Promise<ProxyPoolHealth> {
     requirePlatformOperator(user, 'Cannot GET /admin/proxy-pool');

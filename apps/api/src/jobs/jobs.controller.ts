@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Controller, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CapacityReport,
@@ -83,6 +83,7 @@ export class CapacityController {
   constructor(private readonly capacity: CapacityService) {}
 
   @Get()
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Total daily demand against pool capacity' })
   report(@CurrentUser() user: User): Promise<CapacityReport> {
     requirePlatformOperator(user, 'Cannot GET /admin/capacity');

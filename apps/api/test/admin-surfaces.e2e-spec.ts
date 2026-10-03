@@ -232,6 +232,15 @@ describe('Admin surfaces (e2e)', () => {
     });
   });
 
+  it.each(['/admin/capacity', '/admin/proxy-pool'])(
+    '%s is never stored by a browser or a proxy',
+    async (path) => {
+      const response = await owner.get(path).expect(200);
+
+      expect(response.headers['cache-control']).toBe('no-store');
+    },
+  );
+
   describe('/admin/proxy-pool', () => {
     it('reports the pool to an owner', async () => {
       const response = await owner.get('/admin/proxy-pool').expect(200);
