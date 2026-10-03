@@ -45,6 +45,7 @@ import {
   PENDING_PORTFOLIO_APP,
   INITIAL_APPS,
   LAPSED_BUDGET,
+  OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
@@ -77,6 +78,7 @@ import type {
   AuthUser,
   CompetitorAddRequest,
   CompetitorItem,
+  DailyBudget,
   EmailAlertCreateRequest,
   EmailAlertUpdateRequest,
   EmailAlertItem,
@@ -912,6 +914,10 @@ function firstRunFor(appId: string): FirstRunStatus {
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
+const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
+  ["lapsed", LAPSED_BUDGET],
+  ["over", OVER_LIMIT_BUDGET],
+]);
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
 type Holds = Map<string, PromiseWithResolvers<void>>;
@@ -1360,9 +1366,8 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/jobs\/budget$/,
     handler: (_p, req, res) => {
-      const budget = hasCookie(req, BUDGET_QUOTA_COOKIE, "lapsed")
-        ? LAPSED_BUDGET
-        : BUDGET;
+      const budget =
+        BUDGETS_BY_QUOTA.get(cookieValue(req, BUDGET_QUOTA_COOKIE)) ?? BUDGET;
       const token = cookieValue(req, BUDGET_HOLD_COOKIE);
       if (!token) {
         json(res, 200, budget);

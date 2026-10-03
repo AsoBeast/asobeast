@@ -12,15 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  formatDate,
-  formatDateTime,
-  formatNumber,
-  formatPlanLimit,
-  storeLabel,
-} from "@/lib/format";
+import { formatDateTime, formatNumber, storeLabel } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
-import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 
 const WARN = 0.6;
 const DANGER = 0.85;
@@ -148,45 +141,6 @@ export function BudgetCard({
               ? null
               : ` · about ${budget.completion.hours} hours of collection`}
           </p>
-        ) : null}
-
-        {budget.quota ? (
-          <div className="flex flex-col gap-3 border-t pt-4">
-            <div className="flex items-baseline justify-between text-sm">
-              <span className="text-muted-foreground">Plan usage</span>
-              <span className="font-medium capitalize">
-                {budget.quota.plan}
-              </span>
-            </div>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-muted-foreground">Apps</dt>
-                <dd className="text-lg font-semibold tabular-nums">
-                  {formatQuotaUsage(budget.quota.apps)}
-                </dd>
-              </div>
-              <div className="flex flex-col gap-0.5">
-                <dt className="text-muted-foreground">Keyword markets</dt>
-                <dd className="text-lg font-semibold tabular-nums">
-                  {formatQuotaUsage(budget.quota.keywordMarkets)}
-                </dd>
-              </div>
-            </dl>
-          </div>
-        ) : null}
-
-        {budget.quota?.overLimitSince &&
-        !hasNoCapacity(budget.quota.keywordMarkets) ? (
-          <Alert variant="destructive">
-            <TriangleAlert />
-            <AlertDescription>
-              Over the keyword limit since{" "}
-              {formatDate(budget.quota.overLimitSince)}. Daily checks cover the
-              first {formatPlanLimit(budget.quota.keywordMarkets.limit)} keyword
-              markets in a stable order; remove keywords or upgrade to cover the
-              rest.
-            </AlertDescription>
-          </Alert>
         ) : null}
 
         {level !== "ok" ? (

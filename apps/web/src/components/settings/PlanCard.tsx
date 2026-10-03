@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import Link from "next/link";
 import { useMutation, useSuspenseQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
 import { useAuth } from "@/components/auth/use-auth";
+import { KeywordLimitNotice } from "@/components/settings/KeywordLimitNotice";
 import { ApiError, openBillingPortal } from "@/lib/api";
 import {
   MEMBER_BILLING_NOTE,
@@ -125,7 +127,7 @@ export function PlanCard() {
           {planStatusLine(plan, awaitingConfirmation)}
         </p>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex flex-col gap-4">
         <dl className="flex flex-col gap-4">
           {RESOURCES.map(({ key, label }) => (
             <UsageRow key={key} label={label} usage={plan.usage[key]} />
@@ -139,6 +141,9 @@ export function PlanCard() {
             />
           ) : null}
         </dl>
+        <Suspense fallback={null}>
+          <KeywordLimitNotice />
+        </Suspense>
       </CardContent>
       <CardFooter className="gap-2">
         {isMember ? (

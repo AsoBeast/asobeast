@@ -1979,6 +1979,16 @@ export const LAPSED_BUDGET: DailyBudget = {
   },
 };
 
+export const OVER_LIMIT_BUDGET: DailyBudget = {
+  ...BUDGET,
+  quota: {
+    plan: "indie",
+    apps: { used: 2, limit: 3 },
+    keywordMarkets: { used: 240, limit: 200 },
+    overLimitSince: "2026-09-30T03:00:00.000Z",
+  },
+};
+
 export const RECENT_CHANGES: ChangeTimeline = {
   events: [
     {
