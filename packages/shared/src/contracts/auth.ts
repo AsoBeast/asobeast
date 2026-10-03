@@ -1,4 +1,10 @@
-import type { PaidPlanName, PlanLimits, PlanName, QuotaUsage } from './plans';
+import type {
+  AiCallUsage,
+  PaidPlanName,
+  PlanLimits,
+  PlanName,
+  QuotaUsage,
+} from './plans';
 
 export interface AuthStatus {
   billing: boolean;
@@ -70,6 +76,7 @@ export interface ApiTokenCreateRequest {
 export interface AccountPlanUsage {
   apps: QuotaUsage;
   keywordMarkets: QuotaUsage;
+  aiCalls?: AiCallUsage;
 }
 
 export interface AccountPlan {

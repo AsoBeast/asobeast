@@ -78,7 +78,7 @@ describe('subscription lifecycle transitions', () => {
     const after = startTrial(before, CLOCK.registered);
 
     expect(runsInFanOut(after, CLOCK.registered)).toBe(true);
-    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.indie);
+    expect(limitsOf(after, CLOCK.registered)).toEqual(PLAN_LIMITS.trial);
   });
 
   it('trial to expired closes capacity and keeps nothing but the history', () => {
