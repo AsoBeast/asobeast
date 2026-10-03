@@ -37,6 +37,7 @@ import {
   healthKey,
   invalidateApiTokenMutation,
   invalidateActionMutation,
+  invalidateAiUsage,
   invalidateAppListing,
   invalidateAuth,
   invalidateCompetitorMutation,
@@ -386,6 +387,7 @@ describe("invalidation sets", () => {
     ["api token", invalidateApiTokenMutation, apiTokenKeys.all],
     ["webhook", invalidateWebhookMutation, webhookKeys.all],
     ["email alert", invalidateEmailAlertMutation, emailAlertKeys.all],
+    ["ai allowance", invalidateAiUsage, accountPlanKey],
   ] as const)("invalidates only the %s list", (_name, invalidate, key) => {
     expect(invalidatedKeys(invalidate)).toEqual([key]);
   });

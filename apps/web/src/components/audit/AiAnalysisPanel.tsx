@@ -5,13 +5,18 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { AppAuditResult } from "@asobeast/shared";
+import {
+  AiCallsLeft,
+  useAiAllowanceSpent,
+  useAiFailureToast,
+} from "@/components/ai/ai-allowance";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ApiError, requestAiAuditRun } from "@/lib/api";
+import { requestAiAuditRun } from "@/lib/api";
 import { formatDateTime } from "@/lib/format";
-import { appKeys, invalidateAudit } from "@/lib/queries";
+import { appKeys, invalidateAiUsage, invalidateAudit } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 import {
   AI_FEATURES_GUIDE,
@@ -86,11 +91,13 @@ function useRunTransitions(appId: string, audit: AppAuditResult): void {
         description: `Score ${overall.current ?? "—"} to ${audit.overall ?? "—"}`,
       });
       void invalidateAudit(queryClient, appId);
+      invalidateAiUsage(queryClient);
     }
     if (state === "failed") {
       toast.error("Creative analysis failed", {
         description: audit.ai.run?.error ?? undefined,
       });
+      invalidateAiUsage(queryClient);
     }
     overall.current = audit.overall;
   }, [
@@ -189,6 +196,8 @@ export function AiAnalysisPanel({
   audit: AppAuditResult;
 }) {
   const queryClient = useQueryClient();
+  const spent = useAiAllowanceSpent();
+  const failAi = useAiFailureToast();
   const mutation = useMutation({
     mutationKey: ["audit-ai-run", appId],
     mutationFn: () => requestAiAuditRun(appId),
@@ -208,13 +217,8 @@ export function AiAnalysisPanel({
             : current,
       );
     },
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : "The analysis could not be queued",
-      );
-    },
+    onError: (error) => failAi(error, "The analysis could not be queued"),
+    onSettled: () => invalidateAiUsage(queryClient),
   });
   const analyzeOnce = useSingleFlight(mutation);
   const state = analysisState(audit, mutation.isPending);
@@ -231,17 +235,20 @@ export function AiAnalysisPanel({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <AnalysisIntro state={state} audit={audit} heading={heading} />
             {action ? (
-              <Button
-                onClick={() => analyzeOnce()}
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? (
-                  <Loader2 className="animate-spin" />
-                ) : (
-                  <Sparkles />
-                )}
-                {action}
-              </Button>
+              <div className="flex flex-col items-end gap-1.5">
+                <Button
+                  onClick={() => analyzeOnce()}
+                  disabled={mutation.isPending || spent}
+                >
+                  {mutation.isPending ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    <Sparkles />
+                  )}
+                  {action}
+                </Button>
+                <AiCallsLeft />
+              </div>
             ) : null}
           </div>
 

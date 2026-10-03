@@ -1,4 +1,4 @@
-import type { AiCallUsage } from "@asobeast/shared";
+import type { AiAllowanceDetail, AiCallUsage } from "@asobeast/shared";
 import { formatDate, formatNumber } from "@/lib/format";
 
 export function aiRenewalText(resetsAt: string): string {
@@ -18,4 +18,8 @@ export function aiCallsLeftText(usage: AiCallUsage): string | null {
     return `AI calls used up. ${aiRenewalText(usage.resetsAt)}`;
   }
   return `${formatNumber(usage.limit - usage.used)} of ${formatNumber(usage.limit)} AI calls left this month`;
+}
+
+export function aiAllowanceRefusal(detail: AiAllowanceDetail): string {
+  return `This workspace has used the ${formatNumber(detail.limit)} AI calls its plan includes this month. ${aiRenewalText(detail.resetsAt)}.`;
 }

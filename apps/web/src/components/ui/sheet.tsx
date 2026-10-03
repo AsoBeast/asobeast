@@ -48,10 +48,18 @@ const SHEET_SIDES = {
     "inset-x-0 bottom-0 max-h-svh w-full border-t data-open:slide-in-from-bottom data-closed:slide-out-to-bottom",
 } as const;
 
+function insideToaster(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("[data-sonner-toaster]") !== null
+  );
+}
+
 function SheetContent({
   className,
   children,
   side = "right",
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: keyof typeof SHEET_SIDES;
@@ -66,6 +74,10 @@ function SheetContent({
           SHEET_SIDES[side],
           className,
         )}
+        onInteractOutside={(event) => {
+          if (insideToaster(event.target)) event.preventDefault();
+          onInteractOutside?.(event);
+        }}
         {...props}
       >
         {children}

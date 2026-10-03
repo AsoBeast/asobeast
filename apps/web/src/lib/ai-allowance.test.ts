@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  aiAllowanceRefusal,
   aiAllowanceSpent,
   aiCallsLeftText,
   aiRenewalText,
@@ -53,6 +54,22 @@ describe("aiRenewalText", () => {
   it("keeps the renewal on the 1st whatever the reader's time zone", () => {
     expect(aiRenewalText("2026-12-01T00:00:00.000Z")).toBe(
       "Renews Dec 1, 2026",
+    );
+  });
+});
+
+describe("aiAllowanceRefusal", () => {
+  it("explains a refusal from its allowance object", () => {
+    expect(
+      aiAllowanceRefusal({
+        plan: "indie",
+        limit: 200,
+        used: 200,
+        resetsAt: RESETS,
+        upgradeTo: "ultimate",
+      }),
+    ).toBe(
+      "This workspace has used the 200 AI calls its plan includes this month. Renews Nov 1, 2026.",
     );
   });
 });

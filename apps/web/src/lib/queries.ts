@@ -240,6 +240,10 @@ export function invalidateApiTokenMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: apiTokenKeys.all });
 }
 
+export function invalidateAiUsage(client: QueryClient): void {
+  void client.invalidateQueries({ queryKey: accountPlanKey });
+}
+
 export const portfolioOptions = queryOptions({
   queryKey: portfolioKey,
   queryFn: getPortfolio,
