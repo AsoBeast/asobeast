@@ -1,11 +1,14 @@
 import type {
   AdminOverview,
   AdminSignupDay,
+  AdminUser,
+  AdminUserList,
   CapacityReport,
   ProxyOutcomeCounts,
   ProxyPoolHealth,
+  SupportWorkspaceSummary,
 } from "@asobeast/shared";
-import { utcDaysAgo } from "./fixtures.mts";
+import { utcDaysAgo, utcTimestampDaysAgo } from "./fixtures.mts";
 
 const SIGNUP_DAYS = 30;
 
@@ -165,3 +168,138 @@ export const PROXY_POOL_ON: ProxyPoolHealth = {
   },
   alerts: ["pool.healthy.low"],
 };
+
+const WORKSPACE_DEFAULTS = {
+  suspendedAt: null,
+  suspendedReason: null,
+  trialEndsAt: null,
+  planExpiresAt: null,
+  subscriptionStatus: null,
+  hasSubscription: false,
+} as const;
+
+export const SUPPORT_WORKSPACES: SupportWorkspaceSummary[] = [
+  {
+    ...WORKSPACE_DEFAULTS,
+    workspaceId: "ws_default",
+    name: "Default",
+    plan: "free",
+    storedPlan: "free",
+    createdAt: utcTimestampDaysAgo(400),
+    members: 2,
+    apps: 2,
+    competitors: 3,
+    keywordMarkets: 30,
+  },
+  {
+    ...WORKSPACE_DEFAULTS,
+    workspaceId: "ws_ana",
+    name: "Ana Apps",
+    plan: "indie",
+    storedPlan: "indie",
+    createdAt: utcTimestampDaysAgo(20),
+    subscriptionStatus: "active",
+    hasSubscription: true,
+    members: 2,
+    apps: 2,
+    competitors: 3,
+    keywordMarkets: 40,
+  },
+  {
+    ...WORKSPACE_DEFAULTS,
+    workspaceId: "ws_lapsed",
+    name: "Lapsed Studio",
+    plan: "trial",
+    storedPlan: "free",
+    createdAt: utcTimestampDaysAgo(5),
+    trialEndsAt: utcTimestampDaysAgo(-3),
+    suspendedAt: utcTimestampDaysAgo(2),
+    suspendedReason: "Sustained rate limit abuse",
+    members: 1,
+    apps: 0,
+    competitors: 0,
+    keywordMarkets: 0,
+  },
+];
+
+const user = (
+  overrides: Pick<AdminUser, "id" | "email" | "workspaceId"> &
+    Partial<AdminUser>,
+): AdminUser => {
+  const workspace = SUPPORT_WORKSPACES.find(
+    (candidate) => candidate.workspaceId === overrides.workspaceId,
+  );
+  return {
+    name: null,
+    role: "owner",
+    emailVerified: true,
+    platformOperator: false,
+    createdAt: utcTimestampDaysAgo(1),
+    workspaceName: workspace?.name ?? overrides.workspaceId,
+    workspacePlan: workspace?.plan ?? "free",
+    ...overrides,
+  };
+};
+
+export const ADMIN_USERS: AdminUser[] = [
+  user({
+    id: "u-lee",
+    email: "lee@lapsed.example.com",
+    workspaceId: "ws_lapsed",
+    emailVerified: false,
+    createdAt: utcTimestampDaysAgo(5),
+  }),
+  user({
+    id: "u-ben",
+    email: "ben@example.com",
+    workspaceId: "ws_ana",
+    role: "member",
+    emailVerified: false,
+    createdAt: utcTimestampDaysAgo(10),
+  }),
+  user({
+    id: "u-ana",
+    email: "ana@example.com",
+    name: "Ana Nowak",
+    workspaceId: "ws_ana",
+    createdAt: utcTimestampDaysAgo(20),
+  }),
+  user({
+    id: "u3",
+    email: "member@example.com",
+    name: "Member",
+    workspaceId: "ws_default",
+    role: "member",
+    createdAt: utcTimestampDaysAgo(100),
+  }),
+  user({
+    id: "u1",
+    email: "owner@example.com",
+    name: "Owner",
+    workspaceId: "ws_default",
+    platformOperator: true,
+    createdAt: utcTimestampDaysAgo(400),
+  }),
+];
+
+export const ADMIN_LIST_TRUNCATED_TOTAL = 1204;
+
+export function adminList<T extends { workspaceId: string }>(
+  items: readonly T[],
+  workspaceId: string | null,
+  truncated: boolean,
+): { items: T[]; total: number; limit: number } {
+  const matching = workspaceId
+    ? items.filter((item) => item.workspaceId === workspaceId)
+    : [...items];
+  return {
+    items: matching,
+    total: truncated ? ADMIN_LIST_TRUNCATED_TOTAL : matching.length,
+    limit: 1000,
+  };
+}
+
+export const adminUserList = (
+  workspaceId: string | null,
+  truncated: boolean,
+): AdminUserList => adminList(ADMIN_USERS, workspaceId, truncated);

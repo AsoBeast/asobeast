@@ -182,6 +182,45 @@ export const appListParsers = {
   view: appViewParser,
 };
 
+export const ADMIN_WORKSPACE_SORTS = [
+  "created",
+  "name",
+  "plan",
+  "members",
+  "apps",
+  "keywordMarkets",
+] as const;
+
+export const adminWorkspaceSortParser = parseAsStringLiteral(
+  ADMIN_WORKSPACE_SORTS,
+).withDefault("created");
+
+export const adminWorkspaceListParsers = {
+  q: searchParser,
+  sort: adminWorkspaceSortParser,
+  dir: sortDirectionParser,
+};
+
+export const ADMIN_USER_SORTS = [
+  "joined",
+  "email",
+  "role",
+  "workspace",
+  "plan",
+] as const;
+
+export const adminUserSortParser =
+  parseAsStringLiteral(ADMIN_USER_SORTS).withDefault("joined");
+
+export const adminWorkspaceParser = parseAsString;
+
+export const adminUserListParsers = {
+  q: searchParser,
+  workspace: adminWorkspaceParser,
+  sort: adminUserSortParser,
+  dir: sortDirectionParser,
+};
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 

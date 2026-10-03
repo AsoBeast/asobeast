@@ -72,3 +72,20 @@ export function AdminCapacitySkeleton() {
     </div>
   );
 }
+
+export function AdminListSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-8 w-full sm:w-64" />
+        <Skeleton className="ml-auto h-5 w-24" />
+        <Skeleton className="h-8 w-24" />
+      </div>
+      <div className="flex flex-col gap-px overflow-hidden rounded-xl border">
+        {Array.from({ length: 8 }).map((_, index) => (
+          <Skeleton key={index} className="h-12 w-full rounded-none" />
+        ))}
+      </div>
+    </div>
+  );
+}

@@ -3,6 +3,8 @@ export const ADMIN_ROOT = "/admin";
 export const ADMIN_SECTIONS = [
   { segment: "", label: "Overview" },
   { segment: "capacity", label: "Capacity" },
+  { segment: "workspaces", label: "Workspaces" },
+  { segment: "users", label: "Users" },
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];

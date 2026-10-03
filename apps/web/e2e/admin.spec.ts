@@ -3,7 +3,7 @@ import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 import { VIEWERS, seedViewer } from "./viewer.mts";
 
-const ADMIN_TABS = ["Overview", "Capacity"];
+const ADMIN_TABS = ["Overview", "Capacity", "Workspaces", "Users"];
 
 const tile = (page: Page, label: string) =>
   page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
@@ -183,6 +183,117 @@ test.describe("instance capacity in the admin area", () => {
   });
 });
 
+test.describe("workspaces in the admin area", () => {
+  test("lists every workspace with its state", async ({ page }) => {
+    await page.goto("/admin/workspaces");
+
+    const table = page.getByRole("table", {
+      name: "Workspaces on this instance",
+    });
+    await expect(table.getByRole("row")).toHaveCount(4);
+    const lapsed = table.getByRole("row").filter({ hasText: "Lapsed Studio" });
+    await expect(lapsed).toContainText("Suspended");
+    await expect(lapsed).toContainText("Sustained rate limit abuse");
+    await expect(
+      table.getByRole("columnheader", { name: "Plan" }),
+    ).toBeVisible();
+  });
+
+  test("keeps the search in the address", async ({ page }) => {
+    await page.goto("/admin/workspaces");
+
+    await page.getByRole("textbox", { name: "Search workspaces" }).fill("ana");
+    await expect(page).toHaveURL(/[?&]q=ana/);
+    const table = page.getByRole("table", {
+      name: "Workspaces on this instance",
+    });
+    await expect(table.getByRole("row")).toHaveCount(2);
+
+    await page.reload();
+    await expect(table.getByRole("row")).toHaveCount(2);
+    await expect(table).toContainText("Ana Apps");
+  });
+
+  test("opens the members of a workspace", async ({ page }) => {
+    await page.goto("/admin/workspaces");
+
+    await page.getByRole("link", { name: "2 members in Ana Apps" }).click();
+
+    await expect(page).toHaveURL("/admin/users?workspace=ws_ana");
+    await expect(
+      page.getByRole("table", { name: "Accounts on this instance" }),
+    ).toBeVisible();
+  });
+});
+
+test.describe("accounts in the admin area", () => {
+  test("lists every account newest first", async ({ page }) => {
+    await page.goto("/admin/users");
+
+    const rows = page
+      .getByRole("table", { name: "Accounts on this instance" })
+      .getByRole("row");
+    await expect(rows).toHaveCount(6);
+    await expect(rows.nth(1)).toContainText("lee@lapsed.example.com");
+    await expect(rows.nth(1)).toContainText("Not confirmed");
+    await expect(rows.filter({ hasText: "ana@example.com" })).toContainText(
+      "Confirmed",
+    );
+    await expect(rows.filter({ hasText: "owner@example.com" })).toContainText(
+      "Operator",
+    );
+  });
+
+  test("narrows to one workspace and clears it from a chip", async ({
+    page,
+  }) => {
+    await page.goto("/admin/users?workspace=ws_ana");
+
+    const rows = page
+      .getByRole("table", { name: "Accounts on this instance" })
+      .getByRole("row");
+    await expect(rows).toHaveCount(3);
+
+    await page
+      .getByRole("button", { name: "Remove Workspace: Ana Apps" })
+      .click();
+
+    await expect(page).toHaveURL("/admin/users");
+    await expect(rows).toHaveCount(6);
+  });
+
+  test("says when the list stops short of every account", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_admin_truncated: "1" });
+    await page.goto("/admin/users");
+
+    await expect(
+      page.getByText("Showing the newest 5 of 1,204 accounts."),
+    ).toBeVisible();
+  });
+
+  test("drops the plan column on a self hosted instance", async ({
+    page,
+    context,
+  }) => {
+    await seedCookies(context, { e2e_admin_self_hosted: "1" });
+
+    for (const [path, name] of [
+      ["/admin/users", "Accounts on this instance"],
+      ["/admin/workspaces", "Workspaces on this instance"],
+    ]) {
+      await page.goto(path);
+      const table = page.getByRole("table", { name });
+      await expect(table.getByRole("row").nth(1)).toBeVisible();
+      await expect(
+        table.getByRole("columnheader", { name: "Plan" }),
+      ).toHaveCount(0);
+    }
+  });
+});
+
 for (const viewer of VIEWERS) {
   test.describe(`the admin area for a ${viewer}`, () => {
     test.beforeEach(async ({ context }) => {
@@ -223,7 +334,12 @@ for (const viewer of VIEWERS) {
       );
     });
 
-    for (const path of ["/admin", "/admin/capacity"]) {
+    for (const path of [
+      "/admin",
+      "/admin/capacity",
+      "/admin/workspaces",
+      "/admin/users",
+    ]) {
       test(`shows the not found page at ${path}`, async ({ page }) => {
         const requested = adminRequests(page);
 

@@ -123,6 +123,8 @@ import {
   CAPACITY_REPORT,
   PROXY_POOL_OFF,
   PROXY_POOL_ON,
+  SUPPORT_WORKSPACES,
+  adminUserList,
 } from "./admin-fixtures.mts";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
@@ -973,6 +975,13 @@ const routes: Route[] = [
   operatorRoute(/^\/admin\/capacity$/, () => CAPACITY_REPORT),
   operatorRoute(/^\/admin\/proxy-pool$/, (req) =>
     hasCookie(req, "e2e_proxy_pool", "1") ? PROXY_POOL_ON : PROXY_POOL_OFF,
+  ),
+  operatorRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
+  operatorRoute(/^\/admin\/support\/users$/, (req, query) =>
+    adminUserList(
+      query.get("workspaceId"),
+      hasCookie(req, "e2e_admin_truncated", "1"),
+    ),
   ),
   {
     method: "POST",
