@@ -18,17 +18,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 function StepHeader({
-  number,
+  label,
   title,
   description,
 }: {
-  number: number;
+  label: string;
   title: string;
   description: string;
 }) {
   return (
     <CardHeader>
-      <CardDescription>Step {number} of 5</CardDescription>
+      <CardDescription>{label}</CardDescription>
       <CardTitle>{title}</CardTitle>
       <CardDescription>{description}</CardDescription>
     </CardHeader>
@@ -64,11 +64,13 @@ export function SetupCheckbox({
 }
 
 export function MarketsStep({
+  label,
   appId,
   homeMarket,
   markets,
   onSelect,
 }: {
+  label: string;
   appId: string;
   homeMarket: string;
   markets: string[];
@@ -91,7 +93,7 @@ export function MarketsStep({
   return (
     <Card>
       <StepHeader
-        number={1}
+        label={label}
         title="Choose markets"
         description="Your home storefront is selected. Add any other storefronts where you want to track keywords."
       />
@@ -159,12 +161,14 @@ export function MarketsStep({
 }
 
 export function CompetitorsStep({
+  label,
   appId,
   count,
   error,
   acknowledged,
   onAcknowledge,
 }: {
+  label: string;
   appId: string;
   count: number | null;
   error: boolean;
@@ -174,7 +178,7 @@ export function CompetitorsStep({
   return (
     <Card>
       <StepHeader
-        number={2}
+        label={label}
         title="Add competitors"
         description="Track the apps you compete with so one search can compare every ranking."
       />
@@ -212,12 +216,14 @@ export interface MarketKeywordCount {
 }
 
 export function KeywordsStep({
+  label,
   appId,
   homeMarket,
   counts,
   confirmed,
   onConfirm,
 }: {
+  label: string;
   appId: string;
   homeMarket: string;
   counts: MarketKeywordCount[];
@@ -227,7 +233,7 @@ export function KeywordsStep({
   return (
     <Card>
       <StepHeader
-        number={3}
+        label={label}
         title="Confirm keywords"
         description="Review the active phrases in each selected market before the daily checks begin."
       />
@@ -272,11 +278,13 @@ export function KeywordsStep({
 }
 
 export function AlertsStep({
+  label,
   count,
   error,
   skipped,
   onSkip,
 }: {
+  label: string;
   count: number | null;
   error: boolean;
   skipped: boolean;
@@ -285,7 +293,7 @@ export function AlertsStep({
   return (
     <Card>
       <StepHeader
-        number={5}
+        label={label}
         title="Configure alerts"
         description="Alert channels are optional. Add a webhook or email, or explicitly skip this step."
       />

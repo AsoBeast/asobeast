@@ -12,6 +12,9 @@ import {
   restartOnboarding,
   setMarketSelected,
   setOnboardingAcknowledgement,
+  setupSteps,
+  stepLabel,
+  reviewedStepsSentence,
   writeOnboardingState,
   type OnboardingState,
 } from "./onboarding";
@@ -27,6 +30,13 @@ const acknowledged = (state: OnboardingState): OnboardingState =>
   ).reduce(
     (current, key) => setOnboardingAcknowledgement(current, key, true),
     state,
+  );
+
+const readyExceptCapacity = (): OnboardingState =>
+  setOnboardingAcknowledgement(
+    beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
+    "keywordsConfirmed",
+    true,
   );
 
 const unavailableStorage = {
@@ -106,13 +116,16 @@ describe("transitions", () => {
       beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
     );
 
-    expect(canCompleteOnboarding(state, 0, 0)).toBe(true);
-    expect(completeOnboarding(state, 0, 0).status).toBe("completed");
+    expect(canCompleteOnboarding(state, 0, 0, setupSteps(true))).toBe(true);
+    expect(completeOnboarding(state, 0, 0, setupSteps(true)).status).toBe(
+      "completed",
+    );
     expect(
       canCompleteOnboarding(
         setOnboardingAcknowledgement(state, "capacityReviewed", false),
         0,
         0,
+        setupSteps(true),
       ),
     ).toBe(false);
   });
@@ -122,8 +135,8 @@ describe("transitions", () => {
     state = setOnboardingAcknowledgement(state, "keywordsConfirmed", true);
     state = setOnboardingAcknowledgement(state, "capacityReviewed", true);
 
-    expect(canCompleteOnboarding(state, 2, 1)).toBe(true);
-    expect(canCompleteOnboarding(state, 0, 1)).toBe(false);
+    expect(canCompleteOnboarding(state, 2, 1, setupSteps(true))).toBe(true);
+    expect(canCompleteOnboarding(state, 0, 1, setupSteps(true))).toBe(false);
   });
 
   it("dismisses and freezes terminal records", () => {
@@ -131,7 +144,7 @@ describe("transitions", () => {
       beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"),
     );
     const dismissed = dismissOnboarding(state);
-    const completed = completeOnboarding(state, 0, 0);
+    const completed = completeOnboarding(state, 0, 0, setupSteps(true));
 
     expect(dismissed.status).toBe("dismissed");
     expect(dismissOnboarding(completed)).toBe(completed);
@@ -139,6 +152,55 @@ describe("transitions", () => {
     expect(
       setOnboardingAcknowledgement(completed, "alertsSkipped", false),
     ).toBe(completed);
+  });
+});
+
+describe("setupSteps", () => {
+  it("includes capacity for the platform operator", () => {
+    expect(setupSteps(true)).toEqual([
+      "markets",
+      "competitors",
+      "keywords",
+      "capacity",
+      "alerts",
+    ]);
+  });
+
+  it("leaves capacity out for everyone else", () => {
+    expect(setupSteps(false)).toEqual([
+      "markets",
+      "competitors",
+      "keywords",
+      "alerts",
+    ]);
+  });
+
+  it("completes without a capacity review when capacity is not a step", () => {
+    const state = readyExceptCapacity();
+    expect(canCompleteOnboarding(state, 1, 1, setupSteps(false))).toBe(true);
+    expect(canCompleteOnboarding(state, 1, 1, setupSteps(true))).toBe(false);
+    expect(completeOnboarding(state, 1, 1, setupSteps(false)).status).toBe(
+      "completed",
+    );
+  });
+});
+
+describe("stepLabel", () => {
+  it("numbers a step within the steps shown", () => {
+    expect(stepLabel("alerts", setupSteps(false))).toBe("Step 4 of 4");
+    expect(stepLabel("alerts", setupSteps(true))).toBe("Step 5 of 5");
+    expect(stepLabel("capacity", setupSteps(true))).toBe("Step 4 of 5");
+  });
+});
+
+describe("reviewedStepsSentence", () => {
+  it("names every step shown", () => {
+    expect(reviewedStepsSentence(setupSteps(true))).toBe(
+      "Markets, competitors, keywords, capacity and alerts have been reviewed.",
+    );
+    expect(reviewedStepsSentence(setupSteps(false))).toBe(
+      "Markets, competitors, keywords and alerts have been reviewed.",
+    );
   });
 });
 

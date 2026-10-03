@@ -5,6 +5,7 @@ import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { AppDetail } from "@asobeast/shared";
+import { useAuth } from "@/components/auth/use-auth";
 import { BudgetCard } from "@/components/settings/BudgetCard";
 import { BudgetCardSkeleton } from "@/components/settings/skeletons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -24,12 +25,16 @@ import {
   getServerOnboardingSnapshot,
   parseOnboardingState,
   restartOnboarding,
+  reviewedStepsSentence,
   saveOnboardingState,
   setMarketSelected,
   setOnboardingAcknowledgement,
+  setupSteps,
+  stepLabel,
   subscribeOnboarding,
   type OnboardingAcknowledgements,
   type OnboardingState,
+  type SetupStep,
 } from "@/lib/onboarding";
 import {
   appDetailOptions,
@@ -71,15 +76,26 @@ function useBrowserOnboarding() {
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { state, persist } = useBrowserOnboarding();
+  const { user, isOperator } = useAuth();
+  const steps = setupSteps(isOperator);
   const start = () => persist(() => restartOnboarding(id, app.country));
 
   if (state.appId === id && state.status === "in_progress") {
-    return <ActiveSetup app={app} state={state} persist={persist} />;
+    return (
+      <ActiveSetup
+        app={app}
+        state={state}
+        steps={steps}
+        roleKnown={user !== undefined}
+        persist={persist}
+      />
+    );
   }
   if (state.appId === id) {
     return (
       <TerminalStatus
         completed={state.status === "completed"}
+        steps={steps}
         onRestart={start}
       />
     );
@@ -95,14 +111,19 @@ export function SetupChecklist({ id }: { id: string }) {
 function ActiveSetup({
   app,
   state,
+  steps,
+  roleKnown,
   persist,
 }: {
   app: AppDetail;
   state: OnboardingState;
+  steps: readonly SetupStep[];
+  roleKnown: boolean;
   persist: Persist;
 }) {
+  const reviewsCapacity = steps.includes("capacity");
   const competitors = useQuery(competitorsOptions(app.id));
-  const budget = useQuery(budgetOptions);
+  const budget = useQuery({ ...budgetOptions, enabled: reviewsCapacity });
   const webhooks = useQuery(webhooksOptions);
   const emailAlerts = useQuery(emailAlertsOptions);
   const keywordQueries = useQueries({
@@ -110,12 +131,9 @@ function ActiveSetup({
       keywordsOptions(app.id, market),
     ),
   });
-  const channelQueries: LiveQuery[] = [
-    competitors,
-    budget,
-    webhooks,
-    emailAlerts,
-  ];
+  const channelQueries: LiveQuery[] = reviewsCapacity
+    ? [competitors, budget, webhooks, emailAlerts]
+    : [competitors, webhooks, emailAlerts];
   const liveQueries = channelQueries.concat(keywordQueries);
   const competitorCount = lengthOrZero(competitors.data);
   const alertCount =
@@ -129,7 +147,8 @@ function ActiveSetup({
   }));
   const channelsLoaded =
     webhooks.data !== undefined && emailAlerts.data !== undefined;
-  const ready = liveQueries.every((query) => query.data !== undefined);
+  const ready =
+    roleKnown && liveQueries.every((query) => query.data !== undefined);
   const failed = liveQueries.some((query) => query.isError);
   const retry = () => {
     for (const query of liveQueries) {
@@ -137,7 +156,7 @@ function ActiveSetup({
     }
   };
   const completable =
-    ready && canCompleteOnboarding(state, competitorCount, alertCount);
+    ready && canCompleteOnboarding(state, competitorCount, alertCount, steps);
   const acknowledge = (
     key: keyof OnboardingAcknowledgements,
     checked: boolean,
@@ -151,11 +170,11 @@ function ActiveSetup({
           Set up {app.name ?? "this app"}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Work through five existing product areas. Progress stays in this
-          browser.
+          Work through each area below. Progress stays in this browser.
         </p>
       </div>
       <MarketsStep
+        label={stepLabel("markets", steps)}
         appId={app.id}
         homeMarket={app.country}
         markets={state.selectedMarkets}
@@ -164,6 +183,7 @@ function ActiveSetup({
         }
       />
       <CompetitorsStep
+        label={stepLabel("competitors", steps)}
         appId={app.id}
         count={lengthOrNull(competitors.data)}
         error={competitors.isError}
@@ -171,19 +191,24 @@ function ActiveSetup({
         onAcknowledge={(checked) => acknowledge("noCompetitors", checked)}
       />
       <KeywordsStep
+        label={stepLabel("keywords", steps)}
         appId={app.id}
         homeMarket={app.country}
         counts={keywordCounts}
         confirmed={state.acknowledgements.keywordsConfirmed}
         onConfirm={(checked) => acknowledge("keywordsConfirmed", checked)}
       />
-      <CapacityStep
-        loaded={Boolean(budget.data)}
-        error={budget.isError}
-        checked={state.acknowledgements.capacityReviewed}
-        onChange={(checked) => acknowledge("capacityReviewed", checked)}
-      />
+      {reviewsCapacity ? (
+        <CapacityStep
+          label={stepLabel("capacity", steps)}
+          loaded={Boolean(budget.data)}
+          error={budget.isError}
+          checked={state.acknowledgements.capacityReviewed}
+          onChange={(checked) => acknowledge("capacityReviewed", checked)}
+        />
+      ) : null}
       <AlertsStep
+        label={stepLabel("alerts", steps)}
         count={channelsLoaded ? alertCount : null}
         error={webhooks.isError || emailAlerts.isError}
         skipped={state.acknowledgements.alertsSkipped}
@@ -197,7 +222,7 @@ function ActiveSetup({
         onDismiss={() => persist(dismissOnboarding)}
         onComplete={() =>
           persist((current) =>
-            completeOnboarding(current, competitorCount, alertCount),
+            completeOnboarding(current, competitorCount, alertCount, steps),
           )
         }
       />
@@ -206,11 +231,13 @@ function ActiveSetup({
 }
 
 function CapacityStep({
+  label,
   loaded,
   error,
   checked,
   onChange,
 }: {
+  label: string;
   loaded: boolean;
   error: boolean;
   checked: boolean;
@@ -220,7 +247,7 @@ function CapacityStep({
     return (
       <Card>
         <CardHeader>
-          <CardDescription>Step 4 of 5</CardDescription>
+          <CardDescription>{label}</CardDescription>
           <CardTitle>Daily request budget unavailable</CardTitle>
           <CardDescription>
             Try again before confirming capacity.
@@ -233,7 +260,7 @@ function CapacityStep({
   return (
     <Suspense fallback={<BudgetCardSkeleton />}>
       <BudgetCard
-        stepLabel="Step 4 of 5"
+        stepLabel={label}
         footer={
           <div className="flex w-full flex-wrap items-center justify-between gap-3">
             <SetupCheckbox
@@ -326,9 +353,11 @@ function StartStatus({
 
 function TerminalStatus({
   completed,
+  steps,
   onRestart,
 }: {
   completed: boolean;
+  steps: readonly SetupStep[];
   onRestart: () => void;
 }) {
   return (
@@ -336,7 +365,7 @@ function TerminalStatus({
       title={completed ? "Setup complete" : "Setup dismissed"}
       description={
         completed
-          ? "Markets, competitors, keywords, capacity and alerts have been reviewed."
+          ? reviewedStepsSentence(steps)
           : "The checklist will not resume automatically. You can restart it whenever you need it."
       }
       action="Restart setup"
