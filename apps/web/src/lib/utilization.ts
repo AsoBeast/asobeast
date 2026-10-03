@@ -1,5 +1,5 @@
-export const UTILIZATION_WARN = 0.6;
-export const UTILIZATION_DANGER = 0.85;
+const UTILIZATION_WARN = 0.6;
+const UTILIZATION_DANGER = 0.85;
 
 const FULL = 1;
 const PERCENT_MAX = 100;
