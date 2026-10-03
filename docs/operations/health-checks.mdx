@@ -17,6 +17,8 @@ Two endpoints answer two different questions. One says the web container is aliv
 
 Both are reachable on the web origin, so an uptime check needs no credentials and no access to the API port.
 
+The API status badge in the web header reads `/api/backend/health` and is shown only to the [platform operator](/security/admin-surfaces#views-only-the-operator-sees). The endpoint itself stays public for probes.
+
 ## What does a healthy instance look like?
 
 ```json

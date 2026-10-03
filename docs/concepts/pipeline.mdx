@@ -49,7 +49,7 @@ Daily request volume is roughly tracked keywords multiplied by tracked markets, 
 | Google Play score job | 12 to 20 requests |
 | Category ranks per app | Two charts, the grossing chart plus its free or paid chart |
 
-`GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity.
+`GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity. Both are [shown only to the platform operator](/security/admin-surfaces#views-only-the-operator-sees).
 
 Category charts are the smallest slice of the daily budget, but they count, because every app is scheduled against the grossing chart as well as its own free or paid chart.
 

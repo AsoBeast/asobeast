@@ -1,11 +1,11 @@
 ---
 title: Track keywords
-description: "Add keywords per storefront on the keyword monitor, paste the private iOS keyword field by hand, and watch the request budget that every added market draws on."
+description: "Add keywords per storefront on the keyword monitor, paste the private iOS keyword field by hand, and know what every added market costs in daily store requests."
 icon: key
 keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget"]
 ---
 
-The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and the total across markets is what your daily request budget is spent on.
+The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
 
 ## Before you start
 
@@ -140,14 +140,16 @@ The **Tags** column shows up to three tags and how many more a keyword carries. 
 
 Every keyword and every market adds daily requests against a fixed capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`.
 
-The settings page carries a daily request budget card with the estimate broken down by kind, your capacity and a utilization meter. `GET /jobs/budget` returns the same numbers, and the dashboard warns at 85 percent of capacity.
+The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) sees a daily request budget card in the **Capacity** section of the settings page, with the estimate broken down by kind, the capacity and a utilization meter, and the dashboard warns them at 85 percent of capacity. `GET /jobs/budget` returns the same numbers.
+
+A customer of a hosted instance watches their keyword markets on the plan card instead. It counts the keyword markets the workspace tracks against its plan, and says since when the workspace has been over its keyword limit.
 
 ## Troubleshooting
 
 - **A new keyword shows no position.** The first check happens on the next daily pipeline run. Nothing is wrong on the day you add it.
 - **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
-- **The budget card warns you are over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
+- **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
 
 ## Related
 
