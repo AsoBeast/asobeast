@@ -6,6 +6,8 @@ import { JobsModule } from '../jobs/jobs.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { SupportAudit } from './support-audit.service';
 import { SupportController } from './support.controller';
+import { SupportDirectoryController } from './support-directory.controller';
+import { SupportOverviewService } from './support-overview.service';
 import { SupportService } from './support.service';
 
 @Module({
@@ -18,7 +20,7 @@ import { SupportService } from './support.service';
     BillingModule,
     JobsModule,
   ],
-  controllers: [SupportController],
-  providers: [SupportService, SupportAudit],
+  controllers: [SupportController, SupportDirectoryController],
+  providers: [SupportService, SupportAudit, SupportOverviewService],
 })
 export class SupportModule {}

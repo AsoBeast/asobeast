@@ -3946,6 +3946,28 @@
           "admin"
         ]
       }
+    },
+    "/admin/support/overview": {
+      "get": {
+        "operationId": "SupportDirectoryController_totals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Instance totals for the platform operator",
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {
