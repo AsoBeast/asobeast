@@ -3,13 +3,13 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { AdminWorkspaces } from "@/components/admin/AdminWorkspaces";
 import { AdminListSkeleton } from "@/components/admin/skeletons";
 import { getQueryClient } from "@/lib/get-query-client";
-import { adminOverviewOptions, adminWorkspacesOptions } from "@/lib/queries";
+import { authStatusOptions, adminWorkspacesOptions } from "@/lib/queries";
 
 export default async function AdminWorkspacesPage() {
   const queryClient = getQueryClient();
   await Promise.all([
     queryClient.prefetchQuery(adminWorkspacesOptions),
-    queryClient.prefetchQuery(adminOverviewOptions),
+    queryClient.prefetchQuery(authStatusOptions),
   ]);
 
   return (

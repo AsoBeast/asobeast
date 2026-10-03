@@ -212,7 +212,13 @@ export const ADMIN_USER_SORTS = [
 export const adminUserSortParser =
   parseAsStringLiteral(ADMIN_USER_SORTS).withDefault("joined");
 
-export const adminWorkspaceParser = parseAsString;
+const WORKSPACE_ID_MAX = 64;
+
+export const adminWorkspaceParser = createParser({
+  parse: (value) =>
+    value.length > 0 && value.length <= WORKSPACE_ID_MAX ? value : null,
+  serialize: (value: string) => value,
+});
 
 export const adminUserListParsers = {
   q: searchParser,

@@ -4,7 +4,7 @@ import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import { workspaceMatches } from "@/lib/admin-search";
-import { adminOverviewOptions, adminWorkspacesOptions } from "@/lib/queries";
+import { adminWorkspacesOptions, authStatusOptions } from "@/lib/queries";
 import {
   adminWorkspaceListParsers,
   adminWorkspaceSortParser,
@@ -15,7 +15,7 @@ import { workspaceColumns } from "./workspace-columns";
 
 export function AdminWorkspaces() {
   const { data: workspaces } = useSuspenseQuery(adminWorkspacesOptions);
-  const { data: overview } = useSuspenseQuery(adminOverviewOptions);
+  const { data: status } = useSuspenseQuery(authStatusOptions);
   const [{ q, sort, dir }, setList] = useQueryStates(adminWorkspaceListParsers);
   const query = useDeferredValue(q);
 
@@ -31,7 +31,7 @@ export function AdminWorkspaces() {
           next.sort === null ? null : adminWorkspaceSortParser.parse(next.sort),
         dir: next.dir,
       }),
-    billing: overview.billing,
+    billing: status.billing,
   });
 
   return (
@@ -41,7 +41,7 @@ export function AdminWorkspaces() {
       noun="workspace"
       loaded={workspaces.length}
       total={workspaces.length}
-      billing={overview.billing}
+      billing={status.billing}
       search={q}
       onSearch={(next, options) => void setList({ q: next }, options)}
       onClearFilters={() => void setList({ q: null })}

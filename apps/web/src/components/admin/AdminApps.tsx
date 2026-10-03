@@ -1,13 +1,13 @@
 "use client";
 
-import { useDeferredValue } from "react";
+import { useDeferredValue, useTransition } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryStates } from "nuqs";
 import { STORES } from "@asobeast/shared";
 import { FacetFilter } from "@/components/data-table/FacetFilter";
 import { appMatches } from "@/lib/admin-search";
 import { storeLabel } from "@/lib/format";
-import { adminAppsOptions, adminOverviewOptions } from "@/lib/queries";
+import { adminAppsOptions, authStatusOptions } from "@/lib/queries";
 import { adminAppListParsers, adminAppSortParser } from "@/lib/search-params";
 import { countBy, oneOf } from "@/lib/table/facets";
 import { AdminList } from "./AdminList";
@@ -21,12 +21,17 @@ const STORE_OPTIONS = STORES.map((store) => ({
 }));
 
 export function AdminApps() {
-  const [{ q, workspace, store, sort, dir }, setList] =
-    useQueryStates(adminAppListParsers);
+  const [, startTransition] = useTransition();
+  const [{ q, workspace, store, sort, dir }, setList] = useQueryStates(
+    adminAppListParsers,
+    {
+      startTransition,
+    },
+  );
   const { data: apps } = useSuspenseQuery(
     adminAppsOptions(workspace ?? undefined),
   );
-  const { data: overview } = useSuspenseQuery(adminOverviewOptions);
+  const { data: status } = useSuspenseQuery(authStatusOptions);
   const query = useDeferredValue(q);
   const searched = apps.items.filter((app) => appMatches(app, query));
 
@@ -43,7 +48,7 @@ export function AdminApps() {
         sort: next.sort === null ? null : adminAppSortParser.parse(next.sort),
         dir: next.dir,
       }),
-    billing: overview.billing,
+    billing: status.billing,
   });
 
   return (
@@ -53,7 +58,7 @@ export function AdminApps() {
       noun="app"
       loaded={apps.items.length}
       total={apps.total}
-      billing={overview.billing}
+      billing={status.billing}
       search={q}
       onSearch={(next, options) => void setList({ q: next }, options)}
       filters={

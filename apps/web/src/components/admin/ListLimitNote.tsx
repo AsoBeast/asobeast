@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { adminHref } from "@/lib/admin-sections";
 import { formatNumber } from "@/lib/format";
 
 export function ListLimitNote({
@@ -14,7 +16,13 @@ export function ListLimitNote({
   return (
     <p className="text-sm text-muted-foreground">
       {`Showing the newest ${formatNumber(shown)} of ${formatNumber(total)} ${noun}s.`}{" "}
-      Narrow by workspace to see the rest.
+      <Link
+        href={adminHref("workspaces")}
+        className="font-medium text-foreground underline underline-offset-4"
+      >
+        Open a workspace
+      </Link>{" "}
+      to list all of its {noun}s.
     </p>
   );
 }

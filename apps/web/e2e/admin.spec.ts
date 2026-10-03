@@ -187,7 +187,8 @@ test.describe("instance capacity in the admin area", () => {
 });
 
 test.describe("workspaces in the admin area", () => {
-  test("lists every workspace with its state", async ({ page }) => {
+  test("lists every workspace with its state", async ({ page, context }) => {
+    await seedCookies(context, { e2e_billing: "1" });
     await page.goto("/admin/workspaces");
 
     const table = page.getByRole("table", {
@@ -296,14 +297,39 @@ test.describe("accounts in the admin area", () => {
     await expect(
       page.getByText("Showing the newest 5 of 1,204 accounts."),
     ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Open a workspace" }),
+    ).toHaveAttribute("href", "/admin/workspaces");
   });
 
-  test("drops the plan column on a self hosted instance", async ({
+  test("ignores a workspace filter the api would refuse", async ({ page }) => {
+    for (const workspace of ["", "w".repeat(65)]) {
+      await page.goto(`/admin/users?workspace=${workspace}`);
+
+      await expect(
+        page
+          .getByRole("table", { name: "Accounts on this instance" })
+          .getByRole("row"),
+      ).toHaveCount(6);
+      await expect(
+        page.getByRole("list", { name: "Active filters" }),
+      ).toHaveCount(0);
+    }
+  });
+
+  test("shows the plan of each account when billing is on", async ({
     page,
     context,
   }) => {
-    await seedCookies(context, { e2e_admin_self_hosted: "1" });
+    await seedCookies(context, { e2e_billing: "1" });
+    await page.goto("/admin/users");
 
+    await expect(
+      page.getByRole("columnheader", { name: "Plan" }),
+    ).toBeVisible();
+  });
+
+  test("drops the plan column on a self hosted instance", async ({ page }) => {
     for (const [path, name] of [
       ["/admin/users", "Accounts on this instance"],
       ["/admin/workspaces", "Workspaces on this instance"],
@@ -444,7 +470,9 @@ for (const viewer of VIEWERS) {
 
         await page.goto(path);
 
-        await expect(page.getByText("Page not found")).toBeVisible();
+        await expect(
+          page.getByRole("heading", { level: 1, name: "Page not found" }),
+        ).toBeVisible();
         await expect(
           page.getByRole("navigation", { name: "Main" }),
         ).toBeVisible();
