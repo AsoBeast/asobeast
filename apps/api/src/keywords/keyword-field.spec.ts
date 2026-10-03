@@ -169,7 +169,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
       prisma as unknown as PrismaService,
       new WorkspaceContext(),
       {
-        get: () => false,
+        get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>,
     ),
     new WorkspaceContext(),

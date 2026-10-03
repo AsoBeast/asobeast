@@ -382,6 +382,48 @@ describe('production safety', () => {
     });
   });
 
+  describe('ai calls on an open instance', () => {
+    const strangersSpendTheKey = {
+      AUTH_COOKIE_SECURE: 'true',
+      TRUST_PROXY: 'true',
+      OPENAI_API_KEY: 'sk-test',
+      AUTH_ALLOW_REGISTRATION: 'true',
+      BILLING_ENABLED: 'false',
+    };
+
+    const aiWarning = expect.stringContaining('AI_CALLS_PER_MONTH') as string;
+
+    it('warns when strangers can spend the openai key without a cap', () => {
+      expect(
+        productionWarnings(production(strangersSpendTheKey)),
+      ).toContainEqual(aiWarning);
+    });
+
+    it.each([
+      ['a cap', { AI_CALLS_PER_MONTH: '100' }],
+      ['registration closed', { AUTH_ALLOW_REGISTRATION: 'false' }],
+      ['no key', { OPENAI_API_KEY: '' }],
+      [
+        'billing on',
+        {
+          BILLING_ENABLED: 'true',
+          STRIPE_SECRET_KEY: 'sk_live_key',
+          STRIPE_WEBHOOK_SECRET: 'whsec_key',
+          STRIPE_MANAGED_PAYMENTS: 'true',
+          SMTP_HOST: 'smtp.example.com',
+          SMTP_FROM: 'asobeast <alerts@example.com>',
+          WEB_PUBLIC_URL: 'https://app.example.com',
+        },
+      ],
+    ])('stays quiet about ai calls with %s', (_, override) => {
+      expect(
+        productionWarnings(
+          production({ ...strangersSpendTheKey, ...override }),
+        ),
+      ).not.toContainEqual(aiWarning);
+    });
+  });
+
   describe('billing configuration', () => {
     const warningsFor = (overrides: Record<string, unknown>): string[] =>
       productionWarnings(

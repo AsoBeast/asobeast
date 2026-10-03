@@ -116,6 +116,13 @@ export const EnvSchema = z.object({
         : undefined,
     z.string().min(1).default('gpt-5.6-luna'),
   ),
+  AI_CALLS_PER_MONTH: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim().length > 0
+        ? value.trim()
+        : null,
+    z.coerce.number().int().min(0).nullable(),
+  ),
   BULL_BOARD_ENABLED: z
     .enum(['true', 'false'])
     .default('true')

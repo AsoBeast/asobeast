@@ -201,6 +201,7 @@ See [Enable the optional AI features](/guides/ai-features).
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | No | Empty disables the AI audit, metadata drafts and action explanations |
 | `AI_MODEL` | `gpt-5.6-luna` | No | Must support vision and structured outputs, because the audit reads screenshots |
+| `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
 
 ## Apple search popularity
 

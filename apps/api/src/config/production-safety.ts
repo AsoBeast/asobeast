@@ -99,6 +99,17 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  if (
+    env.OPENAI_API_KEY &&
+    env.AUTH_ALLOW_REGISTRATION &&
+    !env.BILLING_ENABLED &&
+    env.AI_CALLS_PER_MONTH === null
+  ) {
+    warnings.push(
+      'OPENAI_API_KEY is set on a self hosted instance with open registration and no AI_CALLS_PER_MONTH. Every account that registers can make unlimited AI calls on your OpenAI key. Set AI_CALLS_PER_MONTH to the calls each workspace may make per month, or close registration with AUTH_ALLOW_REGISTRATION=false.',
+    );
+  }
+
   if (env.BILLING_ENABLED && !mailConfigured(env)) {
     warnings.push(
       `BILLING_ENABLED is true in production but SMTP_HOST and SMTP_FROM are not both set${missingHalf(env)}. This instance cannot send a single account email: nobody can confirm an address, so no registration reaches its trial; nobody is warned before a trial ends, so customers are locked out without notice; and nobody who forgets a password can recover the account without you editing the database. Configure SMTP, or set BILLING_ENABLED=false.`,
