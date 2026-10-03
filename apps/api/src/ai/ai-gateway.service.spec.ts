@@ -198,4 +198,16 @@ describe('AiGateway', () => {
     expect(create).not.toHaveBeenCalled();
     expect(structured).not.toHaveBeenCalled();
   });
+
+  it('words a refusal without naming a plan, which self hosted has none of', async () => {
+    const { gateway } = build(1, 1);
+
+    const refusal = await gateway
+      .reserve(CALL, new Date('2026-10-17T09:00:00.000Z'))
+      .catch((thrown: unknown) => thrown);
+
+    expect((refusal as AiAllowanceExceededError).message).toBe(
+      'The monthly AI allowance is spent: 1 of 1 calls used. It renews at 2026-11-01T00:00:00.000Z.',
+    );
+  });
 });

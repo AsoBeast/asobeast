@@ -11,7 +11,7 @@ export class AiAllowanceExceededError extends Error {
     readonly retryAfterSeconds: number,
   ) {
     super(
-      `The monthly AI allowance is spent: ${detail.used} of ${detail.limit} calls used on the ${detail.plan} plan. It renews at ${detail.resetsAt}.`,
+      `The monthly AI allowance is spent: ${detail.used} of ${detail.limit} calls used. It renews at ${detail.resetsAt}.`,
     );
     this.name = 'AiAllowanceExceededError';
   }
