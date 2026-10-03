@@ -3,6 +3,23 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.8.0](https://github.com/AsoBeast/asobeast/compare/v1.7.0...v1.8.0) (2026-10-03)
+
+
+### Features
+
+* **api:** cap ai calls with a monthly allowance per plan ([#205](https://github.com/AsoBeast/asobeast/issues/205)) ([6e3fd97](https://github.com/AsoBeast/asobeast/commit/6e3fd97cb9afafbc1ef232d4b0cf88937fcb0c94))
+
+
+### Bug Fixes
+
+* **api:** answer a refused request body with 4xx instead of 500 ([#198](https://github.com/AsoBeast/asobeast/issues/198)) ([894d9b9](https://github.com/AsoBeast/asobeast/commit/894d9b98666dcb0c94f19e0b494c028af9b09d3e))
+* **api:** fail fast on redis in the auth path and the rate limiters ([#197](https://github.com/AsoBeast/asobeast/issues/197)) ([f8380fc](https://github.com/AsoBeast/asobeast/commit/f8380fcdbf46d5954f4166b5bcf156430c0bc13d))
+* **auth:** keep a paid plan when its owner confirms their email ([#201](https://github.com/AsoBeast/asobeast/issues/201)) ([6ef4809](https://github.com/AsoBeast/asobeast/commit/6ef4809d749038c1abb6a25d35d2879bcaa2e4b0))
+* **web:** ask a new account to confirm its email before it pays ([#199](https://github.com/AsoBeast/asobeast/issues/199)) ([3401aa7](https://github.com/AsoBeast/asobeast/commit/3401aa76b0fee1056fd3af445cf49f36ded22acc))
+* **web:** show instance capacity and api status to the operator only ([#208](https://github.com/AsoBeast/asobeast/issues/208)) ([75203dd](https://github.com/AsoBeast/asobeast/commit/75203dd6f9a5df6d6d7eddd9900903adb4355e5e))
+* **web:** small billing ux findings from the 1.7.0 regression pass ([#200](https://github.com/AsoBeast/asobeast/issues/200)) ([7071cb0](https://github.com/AsoBeast/asobeast/commit/7071cb03c72ec5b53ce9e34a02a0e718b9f3d103))
+
 ## [1.7.0](https://github.com/AsoBeast/asobeast/compare/v1.6.0...v1.7.0) (2026-10-01)
 
 
