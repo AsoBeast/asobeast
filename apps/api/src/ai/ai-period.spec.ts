@@ -1,4 +1,4 @@
-import { aiPeriodOf, secondsUntil } from './ai-period';
+import { aiCallCutoff, aiPeriodOf, secondsUntil } from './ai-period';
 
 const at = (iso: string) => new Date(iso);
 
@@ -49,5 +49,25 @@ describe('secondsUntil', () => {
         at('2026-10-31T00:00:00.000Z'),
       ),
     ).toBe(86_400);
+  });
+});
+
+describe('aiCallCutoff', () => {
+  it('prunes before the retention cutoff', () => {
+    expect(
+      aiCallCutoff(
+        at('2025-09-01T00:00:00.000Z'),
+        at('2026-10-17T00:00:00.000Z'),
+      ),
+    ).toEqual(at('2025-09-01T00:00:00.000Z'));
+  });
+
+  it('never prunes into the current month', () => {
+    expect(
+      aiCallCutoff(
+        at('2026-10-16T00:00:00.000Z'),
+        at('2026-10-17T00:00:00.000Z'),
+      ),
+    ).toEqual(at('2026-10-01T00:00:00.000Z'));
   });
 });

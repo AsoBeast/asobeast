@@ -310,6 +310,7 @@ RETENTION_DELIVERIES_DAYS=30        # alert delivery log rows; 0 keeps forever
 RETENTION_AUDIT_SCORES_DAYS=0       # audit score rows; 0 keeps forever
 RETENTION_BILLING_EVENTS_DAYS=90    # stored stripe webhook payloads; they carry customer billing details. 0 keeps forever
 RETENTION_ACTIONS_DAYS=180          # closed action items (done/dismissed/resolved); open and snoozed are never pruned by age; 0 keeps forever
+RETENTION_AI_CALLS_DAYS=400         # ai call ledger rows; never prunes the current month, which the monthly allowance still counts; 0 keeps forever
 ACTIONS_MAX_OPEN_PER_APP=20         # new actions one generation run may open per app, highest impact first
 ACTIONS_SNOOZE_MAX_DAYS=90          # furthest a snooze may be set into the future
 ALERT_ACTIONS_MIN_PRIORITY=high     # lowest priority that fires action.opened: critical|high|medium|low

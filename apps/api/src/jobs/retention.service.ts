@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { aiCallCutoff } from '../ai/ai-period';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SUGGEST_PROBE_DAYS = 7;
+const ABANDONED_RESERVATION_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class RetentionService {
@@ -37,6 +39,8 @@ export class RetentionService {
       ['auditScore', () => this.pruneAuditScores(now)],
       ['actionItem', () => this.pruneActions(now)],
       ['billingEvent', () => this.pruneBillingEvents(now)],
+      ['aiCall', () => this.pruneAiCalls(now)],
+      ['aiCallReservation', () => this.releaseAbandonedAiCalls(now)],
     ];
 
     const settled = await Promise.allSettled(rules.map(([, run]) => run()));
@@ -191,6 +195,28 @@ export class RetentionService {
           { closedAt: null, resolvedAt: { lt: cutoff } },
         ],
       },
+    });
+    return count;
+  }
+
+  private async pruneAiCalls(now: Date): Promise<number> {
+    const days = this.config.get('RETENTION_AI_CALLS_DAYS', { infer: true });
+    if (days === 0) {
+      return 0;
+    }
+    const { count } = await this.prisma.aiCall.deleteMany({
+      where: { createdAt: { lt: aiCallCutoff(this.cutoff(days, now), now) } },
+    });
+    return count;
+  }
+
+  private async releaseAbandonedAiCalls(now: Date): Promise<number> {
+    const { count } = await this.prisma.aiCall.updateMany({
+      where: {
+        status: 'reserved',
+        createdAt: { lt: new Date(now.getTime() - ABANDONED_RESERVATION_MS) },
+      },
+      data: { status: 'released', settledAt: now },
     });
     return count;
   }

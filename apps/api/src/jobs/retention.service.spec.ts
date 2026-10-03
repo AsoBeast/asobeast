@@ -19,6 +19,7 @@ const buildConfig = (days: Days): ConfigService<Env, true> => {
     RETENTION_ALERT_EVENTS_DAYS: 30,
     RETENTION_ACTIONS_DAYS: 180,
     RETENTION_BILLING_EVENTS_DAYS: 90,
+    RETENTION_AI_CALLS_DAYS: 400,
     ...days,
   };
   return {
@@ -41,6 +42,10 @@ const buildPrisma = () => ({
   },
   auditScore: { deleteMany: jest.fn().mockResolvedValue({ count: 8 }) },
   actionItem: { deleteMany: jest.fn().mockResolvedValue({ count: 10 }) },
+  aiCall: {
+    deleteMany: jest.fn().mockResolvedValue({ count: 12 }),
+    updateMany: jest.fn().mockResolvedValue({ count: 13 }),
+  },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -248,6 +253,8 @@ describe('RetentionService', () => {
     prisma.auditScore.deleteMany.mockImplementation(boom);
     prisma.actionItem.deleteMany.mockImplementation(boom);
     prisma.billingEvent.deleteMany.mockImplementation(boom);
+    prisma.aiCall.deleteMany.mockImplementation(boom);
+    prisma.aiCall.updateMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -338,6 +345,7 @@ describe('RetentionService action pruning', () => {
         RETENTION_ALERT_EVENTS_DAYS: 0,
         RETENTION_ACTIONS_DAYS: 0,
         RETENTION_BILLING_EVENTS_DAYS: 0,
+        RETENTION_AI_CALLS_DAYS: 0,
       }),
       prisma as unknown as PrismaService,
       crossTenant,
@@ -345,11 +353,12 @@ describe('RetentionService action pruning', () => {
 
     const deleted = await service.prune();
 
-    const { suggestProbe, ...configurable } = deleted;
+    const { suggestProbe, aiCallReservation, ...configurable } = deleted;
     expect(Object.values(configurable).every((count) => count === 0)).toBe(
       true,
     );
     expect(suggestProbe).toBeGreaterThanOrEqual(0);
+    expect(aiCallReservation).toBeGreaterThanOrEqual(0);
     for (const table of [
       prisma.keywordRanking,
       prisma.serpEntry,
@@ -364,5 +373,63 @@ describe('RetentionService action pruning', () => {
     ]) {
       expect(table.deleteMany).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe('RetentionService ai call ledger', () => {
+  const NOW = new Date('2026-10-17T09:30:00.000Z');
+
+  const pruneAt = async (days: number) => {
+    jest.useFakeTimers().setSystemTime(NOW);
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_AI_CALLS_DAYS: days }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+    const deleted = await service.prune();
+    jest.useRealTimers();
+    return { prisma, deleted };
+  };
+
+  const prunedBefore = (prisma: ReturnType<typeof buildPrisma>): Date => {
+    const [{ where }] = prisma.aiCall.deleteMany.mock.calls[0] as [
+      { where: { createdAt: { lt: Date } } },
+    ];
+    return where.createdAt.lt;
+  };
+
+  it('prunes ai calls older than the retention', async () => {
+    const { prisma, deleted } = await pruneAt(400);
+
+    expect(prunedBefore(prisma)).toEqual(new Date('2025-09-12T00:00:00.000Z'));
+    expect(deleted.aiCall).toBe(12);
+  });
+
+  it('keeps the current month whatever the retention', async () => {
+    const { prisma } = await pruneAt(1);
+
+    expect(prunedBefore(prisma)).toEqual(new Date('2026-10-01T00:00:00.000Z'));
+  });
+
+  it('releases reservations older than an hour', async () => {
+    const { prisma, deleted } = await pruneAt(400);
+
+    expect(prisma.aiCall.updateMany).toHaveBeenCalledWith({
+      where: {
+        status: 'reserved',
+        createdAt: { lt: new Date('2026-10-17T08:30:00.000Z') },
+      },
+      data: { status: 'released', settledAt: NOW },
+    });
+    expect(deleted.aiCallReservation).toBe(13);
+  });
+
+  it('keeps ai calls forever at 0 and still releases abandoned reservations', async () => {
+    const { prisma, deleted } = await pruneAt(0);
+
+    expect(prisma.aiCall.deleteMany).not.toHaveBeenCalled();
+    expect(deleted.aiCall).toBe(0);
+    expect(prisma.aiCall.updateMany).toHaveBeenCalledTimes(1);
   });
 });

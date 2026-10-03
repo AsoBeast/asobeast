@@ -72,8 +72,9 @@ The retention job prunes each table on its own window. `0` means keep forever. E
 | `RETENTION_ALERT_EVENTS_DAYS` | 30 | Completed alert claims, keeping unfinished ones |
 | `RETENTION_AUDIT_SCORES_DAYS` | 0 | Audit score history |
 | `RETENTION_ACTIONS_DAYS` | 180 | Closed action items only |
+| `RETENTION_AI_CALLS_DAYS` | 400 | AI call ledger rows, never from the current month |
 
-Two exceptions are worth remembering. The newest snapshot per app is always kept regardless of age, and open or snoozed action items are never pruned by age.
+Three exceptions are worth remembering. The newest snapshot per app is always kept regardless of age, open or snoozed action items are never pruned by age, and AI calls from the current month are never pruned because the monthly AI allowance still counts them. The same job also gives back AI calls that were reserved more than an hour ago and never settled.
 
 ## What happens when a job fails?
 

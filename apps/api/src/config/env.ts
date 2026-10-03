@@ -71,6 +71,7 @@ export const EnvSchema = z.object({
   RETENTION_DELIVERIES_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_AUDIT_SCORES_DAYS: z.coerce.number().int().min(0).default(0),
   RETENTION_ACTIONS_DAYS: z.coerce.number().int().min(0).default(180),
+  RETENTION_AI_CALLS_DAYS: z.coerce.number().int().min(0).default(400),
   RETENTION_BILLING_EVENTS_DAYS: z.coerce.number().int().min(0).default(90),
   ACTIONS_MAX_OPEN_PER_APP: z.coerce.number().int().positive().default(20),
   ACTIONS_SNOOZE_MAX_DAYS: z.coerce.number().int().positive().default(90),

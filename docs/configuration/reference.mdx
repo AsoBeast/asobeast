@@ -142,6 +142,7 @@ See [Work the Action Center](/guides/action-center).
 | `RETENTION_ALERT_EVENTS_DAYS` | `30` | No | Prunes completed alert claims older than N days. Unfinished claims are always retained |
 | `RETENTION_AUDIT_SCORES_DAYS` | `0` | No | Prunes audit score history older than N days |
 | `RETENTION_ACTIONS_DAYS` | `180` | No | Prunes closed action items only. Open and snoozed actions are never pruned by age |
+| `RETENTION_AI_CALLS_DAYS` | `400` | No | Days the AI call ledger is kept. Never prunes the current month, which the monthly AI allowance still counts. `0` keeps forever |
 | `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
 
 ## Runtime

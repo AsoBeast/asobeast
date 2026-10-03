@@ -17,3 +17,8 @@ export function aiPeriodOf(now: Date): AiPeriod {
 export function secondsUntil(moment: Date, now: Date): number {
   return Math.max(1, Math.ceil((moment.getTime() - now.getTime()) / SECOND_MS));
 }
+
+export function aiCallCutoff(retentionCutoff: Date, now: Date): Date {
+  const periodStart = aiPeriodOf(now).start;
+  return retentionCutoff < periodStart ? retentionCutoff : periodStart;
+}
