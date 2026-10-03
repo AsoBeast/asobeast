@@ -168,10 +168,6 @@ function pruneSections(evidence: KeywordPruneEvidence): Sections {
       graded("Volume", evidence.volume, "popularity"),
       fact("Relevance", optional(evidence.relevance)),
       fact("Requests saved per day", formatNumber(evidence.dailyRequestsSaved)),
-      fact(
-        "Budget utilization",
-        `${Math.round(evidence.budgetUtilization * 100)}%`,
-      ),
     ],
     lists: [],
   };

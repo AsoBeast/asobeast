@@ -65,6 +65,13 @@ describe("evidenceSections", () => {
     expect(evidenceSections(evidence).lists).toEqual([]);
   });
 
+  it("keeps instance utilization out of a pruned keyword's evidence", () => {
+    const evidence = evidenceOf("act-prune");
+
+    expect(factValues(evidence)).toHaveProperty("Requests saved per day");
+    expect(factValues(evidence)).not.toHaveProperty("Budget utilization");
+  });
+
   it("lists the changed fields and the keywords that fell after a drop", () => {
     const evidence = evidenceOf("act-drop");
     const sections = evidenceSections(evidence);
