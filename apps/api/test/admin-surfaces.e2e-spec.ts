@@ -274,6 +274,34 @@ describe('Admin surfaces (e2e)', () => {
       expect(Array.isArray(body.workspaces)).toBe(true);
     });
 
+    it('breaks demand down by store and names the consumers', async () => {
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'APP_STORE',
+          storeAppId: '200000001',
+          name: 'Capacity Probe',
+        },
+      });
+
+      const response = await owner.get('/admin/capacity').expect(200);
+      const body = response.body as CapacityReport;
+
+      expect(body.stores?.length).toBeGreaterThan(0);
+      for (const store of body.stores ?? []) {
+        expect(store).toEqual({
+          store: expect.any(String) as string,
+          requestsPerDay: expect.any(Number) as number,
+          capacityPerDay: expect.any(Number) as number,
+          utilization: expect.any(Number) as number,
+        });
+      }
+      expect(body.workspaces.length).toBeGreaterThan(0);
+      for (const consumer of body.workspaces) {
+        expect(typeof consumer.name).toBe('string');
+      }
+    });
+
     it('is not found for a member', async () => {
       await request(app.getHttpServer())
         .get('/admin/capacity')
