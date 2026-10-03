@@ -6,6 +6,7 @@ import { PLANS, type AdminUser } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
+import { workspaceListHref } from "@/lib/admin-sections";
 import { formatDate } from "@/lib/format";
 import { WorkspaceName } from "./cells";
 
@@ -81,6 +82,8 @@ export const userColumns = columnHelper.columns([
       <WorkspaceName
         name={row.original.workspaceName}
         workspaceId={row.original.workspaceId}
+        href={workspaceListHref("apps", row.original.workspaceId)}
+        title={`Apps in ${row.original.workspaceName}`}
       />
     ),
   }),

@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { AdminUser, SupportWorkspaceSummary } from "@asobeast/shared";
-import { userMatches, workspaceMatches } from "./admin-search";
+import type {
+  AdminApp,
+  AdminUser,
+  SupportWorkspaceSummary,
+} from "@asobeast/shared";
+import { appMatches, userMatches, workspaceMatches } from "./admin-search";
 
 const USER: AdminUser = {
   id: "u2",
@@ -56,5 +60,33 @@ describe("workspaceMatches", () => {
     expect(workspaceMatches(WORKSPACE, "ANA APPS")).toBe(true);
     expect(workspaceMatches(WORKSPACE, "ws_ana")).toBe(true);
     expect(workspaceMatches(WORKSPACE, "lapsed")).toBe(false);
+  });
+});
+
+const APP: AdminApp = {
+  id: "app-1",
+  workspaceId: "ws_ana",
+  workspaceName: "Ana Apps",
+  store: "GOOGLE_PLAY",
+  storeAppId: "com.ana.habits",
+  country: "de",
+  name: "Habits Pro",
+  iconUrl: null,
+  competitors: 1,
+  keywordMarkets: 15,
+  createdAt: "2026-10-01T10:00:00.000Z",
+};
+
+describe("appMatches", () => {
+  it("finds an app by name, store app id, workspace name or workspace id", () => {
+    expect(appMatches(APP, "habits pro")).toBe(true);
+    expect(appMatches(APP, "com.ana")).toBe(true);
+    expect(appMatches(APP, "ana apps")).toBe(true);
+    expect(appMatches(APP, "ws_ana")).toBe(true);
+    expect(appMatches(APP, "focus")).toBe(false);
+  });
+
+  it("finds an app without a name by its store app id", () => {
+    expect(appMatches({ ...APP, name: null }, "com.ana.habits")).toBe(true);
   });
 });

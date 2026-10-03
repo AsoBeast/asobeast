@@ -5,6 +5,7 @@ export const ADMIN_SECTIONS = [
   { segment: "capacity", label: "Capacity" },
   { segment: "workspaces", label: "Workspaces" },
   { segment: "users", label: "Users" },
+  { segment: "apps", label: "Apps" },
 ] as const;
 
 export type AdminSection = (typeof ADMIN_SECTIONS)[number];
@@ -15,6 +16,13 @@ const ADMIN_PATH = /^\/admin(?:\/([^/]+))?\/?$/;
 
 export function adminHref(segment: AdminSegment): string {
   return segment ? `${ADMIN_ROOT}/${segment}` : ADMIN_ROOT;
+}
+
+export function workspaceListHref(
+  segment: AdminSegment,
+  workspaceId: string,
+): string {
+  return `${adminHref(segment)}?workspace=${encodeURIComponent(workspaceId)}`;
 }
 
 export function adminSectionFrom(pathname: string): AdminSection | null {

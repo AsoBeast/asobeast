@@ -3,7 +3,7 @@ import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 import { VIEWERS, seedViewer } from "./viewer.mts";
 
-const ADMIN_TABS = ["Overview", "Capacity", "Workspaces", "Users"];
+const ADMIN_TABS = ["Overview", "Capacity", "Workspaces", "Users", "Apps"];
 
 const tile = (page: Page, label: string) =>
   page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
@@ -146,7 +146,7 @@ test.describe("instance capacity in the admin area", () => {
     ).toHaveAttribute("aria-valuenow", "3");
   });
 
-  test("names the top consumers, falling back to the id", async ({ page }) => {
+  test("names the top consumers and links to their apps", async ({ page }) => {
     await page.goto("/admin/capacity");
 
     const consumers = page
@@ -156,6 +156,9 @@ test.describe("instance capacity in the admin area", () => {
     await expect(consumers.nth(0)).toContainText("Ana Apps");
     await expect(consumers.nth(1)).toContainText("Default");
     await expect(consumers.nth(2)).toContainText("ws_unnamed");
+    await expect(
+      consumers.nth(0).getByRole("link", { name: "Ana Apps" }),
+    ).toHaveAttribute("href", "/admin/apps?workspace=ws_ana");
   });
 
   test("shows the proxy pool only when one is configured", async ({
@@ -214,6 +217,17 @@ test.describe("workspaces in the admin area", () => {
     await expect(table).toContainText("Ana Apps");
   });
 
+  test("opens the apps of a workspace", async ({ page }) => {
+    await page.goto("/admin/workspaces");
+
+    await page.getByRole("link", { name: "2 apps in Ana Apps" }).click();
+
+    await expect(page).toHaveURL("/admin/apps?workspace=ws_ana");
+    await expect(
+      page.getByRole("table", { name: "Tracked apps on this instance" }),
+    ).toBeVisible();
+  });
+
   test("opens the members of a workspace", async ({ page }) => {
     await page.goto("/admin/workspaces");
 
@@ -241,6 +255,16 @@ test.describe("accounts in the admin area", () => {
     );
     await expect(rows.filter({ hasText: "owner@example.com" })).toContainText(
       "Operator",
+    );
+  });
+
+  test("links each account to the apps of its workspace", async ({ page }) => {
+    await page.goto("/admin/users");
+
+    const row = page.getByRole("row").filter({ hasText: "ana@example.com" });
+    await expect(row.getByRole("link", { name: "Ana Apps" })).toHaveAttribute(
+      "href",
+      "/admin/apps?workspace=ws_ana",
     );
   });
 
@@ -294,6 +318,80 @@ test.describe("accounts in the admin area", () => {
   });
 });
 
+test.describe("tracked apps in the admin area", () => {
+  const appsTable = (page: Page) =>
+    page.getByRole("table", { name: "Tracked apps on this instance" });
+
+  test("lists every tracked app with its workspace", async ({ page }) => {
+    await page.goto("/admin/apps");
+
+    const table = appsTable(page);
+    await expect(table.getByRole("row")).toHaveCount(5);
+    for (const header of [
+      "App",
+      "Store",
+      "Home market",
+      "Workspace",
+      "Competitors",
+      "Keyword markets",
+      "Added",
+    ]) {
+      await expect(
+        table.getByRole("columnheader", { name: header }),
+      ).toBeVisible();
+    }
+    await expect(table).toContainText("Untitled app");
+    await expect(table).toContainText("com.ana.habits");
+  });
+
+  test("filters by store from a facet kept in the address", async ({
+    page,
+  }) => {
+    await page.goto("/admin/apps");
+
+    await page.getByRole("button", { name: "Filter by store" }).click();
+    await page.getByRole("option", { name: /Google Play/ }).click();
+    await page.keyboard.press("Escape");
+
+    await expect(page).toHaveURL(/[?&]store=GOOGLE_PLAY/);
+    await expect(appsTable(page).getByRole("row")).toHaveCount(3);
+
+    await page
+      .getByRole("button", { name: "Remove Store: Google Play" })
+      .click();
+    await expect(appsTable(page).getByRole("row")).toHaveCount(5);
+  });
+
+  test("narrows to one workspace through the api", async ({ page }) => {
+    await page.goto("/admin/apps?workspace=ws_ana");
+
+    await expect(appsTable(page).getByRole("row")).toHaveCount(3);
+    await expect(appsTable(page)).not.toContainText("Focus Timer");
+
+    await page
+      .getByRole("button", { name: "Remove Workspace: Ana Apps" })
+      .click();
+
+    await expect(page).toHaveURL("/admin/apps");
+    await expect(appsTable(page).getByRole("row")).toHaveCount(5);
+  });
+
+  test("links the workspace to its accounts and never the app itself", async ({
+    page,
+  }) => {
+    await page.goto("/admin/apps");
+
+    const row = appsTable(page)
+      .getByRole("row")
+      .filter({ hasText: "Ana Habits" });
+    await expect(row.getByRole("link", { name: "Ana Apps" })).toHaveAttribute(
+      "href",
+      "/admin/users?workspace=ws_ana",
+    );
+    await expect(row.getByRole("link", { name: "Ana Habits" })).toHaveCount(0);
+  });
+});
+
 for (const viewer of VIEWERS) {
   test.describe(`the admin area for a ${viewer}`, () => {
     test.beforeEach(async ({ context }) => {
@@ -339,6 +437,7 @@ for (const viewer of VIEWERS) {
       "/admin/capacity",
       "/admin/workspaces",
       "/admin/users",
+      "/admin/apps",
     ]) {
       test(`shows the not found page at ${path}`, async ({ page }) => {
         const requested = adminRequests(page);

@@ -221,6 +221,31 @@ export const adminUserListParsers = {
   dir: sortDirectionParser,
 };
 
+export const ADMIN_APP_SORTS = [
+  "added",
+  "name",
+  "store",
+  "market",
+  "workspace",
+  "competitors",
+  "keywordMarkets",
+] as const;
+
+export const adminAppSortParser =
+  parseAsStringLiteral(ADMIN_APP_SORTS).withDefault("added");
+
+export const adminStoreParser = parseAsArrayOf(
+  parseAsStringLiteral(STORES),
+).withDefault([]);
+
+export const adminAppListParsers = {
+  q: searchParser,
+  workspace: adminWorkspaceParser,
+  store: adminStoreParser,
+  sort: adminAppSortParser,
+  dir: sortDirectionParser,
+};
+
 export const rangeParser =
   parseAsStringLiteral(RANGE_PRESETS).withDefault("30d");
 

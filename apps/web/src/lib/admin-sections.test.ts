@@ -21,6 +21,7 @@ describe("admin sections", () => {
     expect(adminSectionFrom("/admin/capacity/extra")).toBeNull();
     expect(adminSectionFrom("/admin/users/")?.label).toBe("Users");
     expect(adminSectionFrom("/admin/workspaces")?.label).toBe("Workspaces");
+    expect(adminSectionFrom("/admin/apps")?.label).toBe("Apps");
     expect(adminSectionFrom("/admin/queues")).toBeNull();
     expect(adminSectionFrom("/admin/queues/jobs")).toBeNull();
     expect(adminSectionFrom("/settings")).toBeNull();

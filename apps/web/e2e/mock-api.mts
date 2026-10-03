@@ -124,6 +124,7 @@ import {
   PROXY_POOL_OFF,
   PROXY_POOL_ON,
   SUPPORT_WORKSPACES,
+  adminAppList,
   adminUserList,
 } from "./admin-fixtures.mts";
 
@@ -979,6 +980,12 @@ const routes: Route[] = [
   operatorRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
   operatorRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(
+      query.get("workspaceId"),
+      hasCookie(req, "e2e_admin_truncated", "1"),
+    ),
+  ),
+  operatorRoute(/^\/admin\/support\/apps$/, (req, query) =>
+    adminAppList(
       query.get("workspaceId"),
       hasCookie(req, "e2e_admin_truncated", "1"),
     ),

@@ -1,4 +1,6 @@
 import type {
+  AdminApp,
+  AdminAppList,
   AdminOverview,
   AdminSignupDay,
   AdminUser,
@@ -303,3 +305,69 @@ export const adminUserList = (
   workspaceId: string | null,
   truncated: boolean,
 ): AdminUserList => adminList(ADMIN_USERS, workspaceId, truncated);
+
+const app = (
+  overrides: Pick<AdminApp, "id" | "workspaceId" | "store" | "storeAppId"> &
+    Partial<AdminApp>,
+): AdminApp => ({
+  workspaceName:
+    SUPPORT_WORKSPACES.find(
+      (workspace) => workspace.workspaceId === overrides.workspaceId,
+    )?.name ?? overrides.workspaceId,
+  country: "us",
+  name: null,
+  iconUrl: null,
+  competitors: 0,
+  keywordMarkets: 0,
+  createdAt: utcTimestampDaysAgo(1),
+  ...overrides,
+});
+
+export const ADMIN_APPS: AdminApp[] = [
+  app({
+    id: "admin-app-ana-ios",
+    workspaceId: "ws_ana",
+    store: "APP_STORE",
+    storeAppId: "100000001",
+    name: "Ana Habits",
+    competitors: 2,
+    keywordMarkets: 25,
+    createdAt: utcTimestampDaysAgo(3),
+  }),
+  app({
+    id: "admin-app-ana-play",
+    workspaceId: "ws_ana",
+    store: "GOOGLE_PLAY",
+    storeAppId: "com.ana.habits",
+    country: "de",
+    competitors: 1,
+    keywordMarkets: 15,
+    createdAt: utcTimestampDaysAgo(6),
+  }),
+  app({
+    id: "admin-app-default-ios",
+    workspaceId: "ws_default",
+    store: "APP_STORE",
+    storeAppId: "200000001",
+    name: "Focus Timer",
+    competitors: 2,
+    keywordMarkets: 20,
+    createdAt: utcTimestampDaysAgo(300),
+  }),
+  app({
+    id: "admin-app-default-play",
+    workspaceId: "ws_default",
+    store: "GOOGLE_PLAY",
+    storeAppId: "com.example.habits",
+    country: "gb",
+    name: "Habit Tracker",
+    competitors: 1,
+    keywordMarkets: 10,
+    createdAt: utcTimestampDaysAgo(200),
+  }),
+];
+
+export const adminAppList = (
+  workspaceId: string | null,
+  truncated: boolean,
+): AdminAppList => adminList(ADMIN_APPS, workspaceId, truncated);

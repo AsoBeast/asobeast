@@ -6,6 +6,7 @@ import { PLANS, type SupportWorkspaceSummary } from "@asobeast/shared";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
+import { workspaceListHref } from "@/lib/admin-sections";
 import { formatDate, formatNumber, pluralize } from "@/lib/format";
 import { NUMBER_SORT, WorkspaceName } from "./cells";
 
@@ -88,7 +89,7 @@ export const workspaceColumns = columnHelper.columns([
     header: ({ column }) => <SortableHeader column={column} label="Members" />,
     cell: ({ row }) => (
       <Link
-        href={`/admin/users?workspace=${encodeURIComponent(row.original.workspaceId)}`}
+        href={workspaceListHref("users", row.original.workspaceId)}
         aria-label={`${pluralize(row.original.members, "member")} in ${row.original.name}`}
         className="numeric font-mono underline-offset-4 hover:underline"
       >
@@ -103,9 +104,13 @@ export const workspaceColumns = columnHelper.columns([
     header: ({ column }) => <SortableHeader column={column} label="Apps" />,
     cell: ({ row }) => (
       <div className="flex flex-col">
-        <span className="numeric font-mono">
+        <Link
+          href={workspaceListHref("apps", row.original.workspaceId)}
+          aria-label={`${pluralize(row.original.apps, "app")} in ${row.original.name}`}
+          className="numeric font-mono underline-offset-4 hover:underline"
+        >
           {formatNumber(row.original.apps)}
-        </span>
+        </Link>
         <span className="text-caption whitespace-nowrap text-muted-foreground">
           {pluralize(row.original.competitors, "competitor")}
         </span>

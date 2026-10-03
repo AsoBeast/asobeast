@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, type ReactNode } from "react";
+import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import type {
@@ -9,6 +10,7 @@ import type {
   ProxyPoolHealth,
 } from "@asobeast/shared";
 import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
+import { workspaceListHref } from "@/lib/admin-sections";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
@@ -131,9 +133,13 @@ function TopConsumers({ report }: { report: CapacityReport }) {
               key={consumer.workspaceId}
               className="flex items-baseline justify-between gap-4 py-2"
             >
-              <span className="min-w-0 truncate font-medium" translate="no">
+              <Link
+                href={workspaceListHref("apps", consumer.workspaceId)}
+                className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
+                translate="no"
+              >
                 {consumer.name ?? consumer.workspaceId}
-              </span>
+              </Link>
               <span className="shrink-0 text-muted-foreground tabular-nums">
                 {formatNumber(consumer.requests)} requests/day
               </span>

@@ -13,6 +13,7 @@ export const SIGNED_IN_ROUTES = [
   ["admin-capacity", "/admin/capacity"],
   ["admin-workspaces", "/admin/workspaces"],
   ["admin-users", "/admin/users"],
+  ["admin-apps", "/admin/apps"],
   ["app-overview", `/apps/${APP}`],
   ["app-keywords", `/apps/${APP}/keywords`],
   ["app-rankings", `/apps/${APP}/rankings`],
