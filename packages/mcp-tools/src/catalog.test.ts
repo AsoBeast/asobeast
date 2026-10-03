@@ -36,6 +36,13 @@ describe("the tool catalog", () => {
     );
   });
 
+  it("serves no instance capacity to any caller", () => {
+    expect(toolByName("daily_budget")).toBeUndefined();
+    for (const tool of MCP_TOOLS) {
+      expect(tool.request({}).path).not.toBe("/jobs/budget");
+    }
+  });
+
   it("returns nothing for a tool it does not define", () => {
     expect(toolByName("delete_everything")).toBeUndefined();
   });

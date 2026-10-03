@@ -249,13 +249,4 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     unavailableOn404:
       "Change impact is not available on this instance. It needs a newer asobeast API.",
   }),
-
-  defineReadTool({
-    name: "daily_budget",
-    title: "Daily request budget",
-    description:
-      "The estimated daily store-request fan-out for the whole instance against the configured rate limits — how close the tracked keyword set is to the budget ceiling.",
-    inputSchema: z.object({}),
-    request: () => ({ path: "/jobs/budget" }),
-  }),
 ];
