@@ -3,7 +3,7 @@ import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 import { VIEWERS, seedViewer } from "./viewer.mts";
 
-const ADMIN_TABS = ["Overview"];
+const ADMIN_TABS = ["Overview", "Capacity"];
 
 const tile = (page: Page, label: string) =>
   page.locator('[data-slot="stat-tile"]').filter({ hasText: label });
@@ -118,6 +118,71 @@ test.describe("the admin area for the platform operator", () => {
   });
 });
 
+test.describe("instance capacity in the admin area", () => {
+  test("weighs instance demand against capacity", async ({ page }) => {
+    await page.goto("/admin/capacity");
+
+    const demand = page.getByRole("region", { name: "Instance demand" });
+    await expect(demand).toContainText("1,520 of 36,000 requests/day");
+    await expect(demand).toContainText("4%");
+    await expect(demand).toContainText("Healthy");
+    await expect(
+      demand.getByRole("meter", {
+        name: "Instance daily request utilization",
+      }),
+    ).toHaveAttribute("aria-valuenow", "4");
+  });
+
+  test("meters each store on its own", async ({ page }) => {
+    await page.goto("/admin/capacity");
+
+    await expect(
+      page.getByRole("meter", { name: "App Store daily request utilization" }),
+    ).toHaveAttribute("aria-valuenow", "5");
+    await expect(
+      page.getByRole("meter", {
+        name: "Google Play daily request utilization",
+      }),
+    ).toHaveAttribute("aria-valuenow", "3");
+  });
+
+  test("names the top consumers, falling back to the id", async ({ page }) => {
+    await page.goto("/admin/capacity");
+
+    const consumers = page
+      .getByRole("region", { name: "Top consumers" })
+      .getByRole("listitem");
+    await expect(consumers).toHaveCount(3);
+    await expect(consumers.nth(0)).toContainText("Ana Apps");
+    await expect(consumers.nth(1)).toContainText("Default");
+    await expect(consumers.nth(2)).toContainText("ws_unnamed");
+  });
+
+  test("shows the proxy pool only when one is configured", async ({
+    page,
+    context,
+  }) => {
+    await page.goto("/admin/capacity");
+    await expect(
+      page.getByRole("region", { name: "Instance demand" }),
+    ).toBeVisible();
+    await expect(page.getByRole("region", { name: "Proxy pool" })).toHaveCount(
+      0,
+    );
+
+    await seedCookies(context, { e2e_proxy_pool: "1" });
+    await page.reload();
+
+    const pool = page.getByRole("region", { name: "Proxy pool" });
+    await expect(pool).toContainText("webshare");
+    await expect(pool).toContainText("12 endpoints");
+    await expect(pool).toContainText("Few healthy endpoints remain");
+    await expect(
+      pool.getByRole("link", { name: "Raw pool health" }),
+    ).toHaveAttribute("href", "/api/backend/admin/proxy-pool");
+  });
+});
+
 for (const viewer of VIEWERS) {
   test.describe(`the admin area for a ${viewer}`, () => {
     test.beforeEach(async ({ context }) => {
@@ -158,7 +223,7 @@ for (const viewer of VIEWERS) {
       );
     });
 
-    for (const path of ["/admin"]) {
+    for (const path of ["/admin", "/admin/capacity"]) {
       test(`shows the not found page at ${path}`, async ({ page }) => {
         const requested = adminRequests(page);
 

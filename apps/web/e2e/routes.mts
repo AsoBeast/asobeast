@@ -10,6 +10,7 @@ export const SIGNED_IN_ROUTES = [
   ["settings", "/settings"],
   ["upgrade", "/upgrade"],
   ["admin-overview", "/admin"],
+  ["admin-capacity", "/admin/capacity"],
   ["app-overview", `/apps/${APP}`],
   ["app-keywords", `/apps/${APP}/keywords`],
   ["app-rankings", `/apps/${APP}/rankings`],

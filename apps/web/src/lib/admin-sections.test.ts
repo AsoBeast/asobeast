@@ -10,11 +10,14 @@ describe("admin sections", () => {
 
   it("links the overview to the admin root", () => {
     expect(adminHref("")).toBe("/admin");
+    expect(adminHref("capacity")).toBe("/admin/capacity");
   });
 
   it("reads the section from a pathname", () => {
     expect(adminSectionFrom("/admin")?.label).toBe("Overview");
     expect(adminSectionFrom("/admin/")?.label).toBe("Overview");
+    expect(adminSectionFrom("/admin/capacity/")?.label).toBe("Capacity");
+    expect(adminSectionFrom("/admin/capacity/extra")).toBeNull();
     expect(adminSectionFrom("/admin/queues")).toBeNull();
     expect(adminSectionFrom("/admin/queues/jobs")).toBeNull();
     expect(adminSectionFrom("/settings")).toBeNull();

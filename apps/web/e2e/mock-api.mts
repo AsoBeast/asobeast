@@ -120,6 +120,9 @@ import { VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
 import {
   ADMIN_OVERVIEW,
   ADMIN_OVERVIEW_SELF_HOSTED,
+  CAPACITY_REPORT,
+  PROXY_POOL_OFF,
+  PROXY_POOL_ON,
 } from "./admin-fixtures.mts";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
@@ -966,6 +969,10 @@ const routes: Route[] = [
     hasCookie(req, "e2e_admin_self_hosted", "1")
       ? ADMIN_OVERVIEW_SELF_HOSTED
       : ADMIN_OVERVIEW,
+  ),
+  operatorRoute(/^\/admin\/capacity$/, () => CAPACITY_REPORT),
+  operatorRoute(/^\/admin\/proxy-pool$/, (req) =>
+    hasCookie(req, "e2e_proxy_pool", "1") ? PROXY_POOL_ON : PROXY_POOL_OFF,
   ),
   {
     method: "POST",

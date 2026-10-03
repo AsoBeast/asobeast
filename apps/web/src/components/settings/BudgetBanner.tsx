@@ -5,12 +5,11 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { budgetOptions } from "@/lib/queries";
-
-const DANGER = 0.85;
+import { utilizationLevel } from "@/lib/utilization";
 
 export function BudgetBanner() {
   const { data: budget } = useSuspenseQuery(budgetOptions);
-  if (budget.utilization <= DANGER) {
+  if (utilizationLevel(budget.utilization) !== "danger") {
     return null;
   }
 

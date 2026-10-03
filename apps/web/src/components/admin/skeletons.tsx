@@ -46,3 +46,29 @@ export function AdminOverviewSkeleton() {
     </div>
   );
 }
+
+export function AdminCapacitySkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <Card>
+        <CardHeaderSkeleton />
+        <CardContent className="flex flex-col gap-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeaderSkeleton />
+        <CardContent className="flex flex-col gap-2">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <Skeleton key={index} className="h-6 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
