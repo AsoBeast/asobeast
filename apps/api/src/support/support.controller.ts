@@ -9,7 +9,7 @@ import {
 } from '@asobeast/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceSuspension } from '../auth/abuse/workspace-suspension.service';
-import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
+import { ALL_WORKSPACES, SUPPORT_NOT_FOUND } from '../auth/admin-access';
 import { requirePlatformOperator } from '../auth/platform-operator';
 import { BillingReconciler } from '../billing/billing-reconciler.service';
 import { BillingWebhookService } from '../billing/billing-webhook.service';
@@ -17,8 +17,6 @@ import { PipelineService } from '../jobs/pipeline.service';
 import { SupportAudit } from './support-audit.service';
 import { SupportActionDto } from './dto/support-action.dto';
 import { SupportService } from './support.service';
-
-const ALL_WORKSPACES = 'all';
 
 @ApiTags('admin')
 @Controller('admin/support')

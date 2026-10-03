@@ -1,7 +1,14 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { PLAN_NAMES, STORES, type AdminOverview } from '@asobeast/shared';
+import {
+  ADMIN_LIST_LIMIT,
+  PLAN_NAMES,
+  STORES,
+  type AdminAppList,
+  type AdminOverview,
+  type AdminUserList,
+} from '@asobeast/shared';
 import * as argon2 from 'argon2';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -18,6 +25,15 @@ import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
 const OVERVIEW = '/admin/support/overview';
+const USERS = '/admin/support/users';
+const APPS = '/admin/support/apps';
+const SECRET_FIELDS = [
+  'passwordHash',
+  'verificationHash',
+  'resetHash',
+  'tokenHash',
+  'sessionVersion',
+];
 const TENANT_WORKSPACE = 'ws_directory_tenant';
 const MEMBER = {
   email: 'member@directory.example.com',
@@ -123,6 +139,7 @@ describe('Support directory (e2e)', () => {
   });
 
   afterAll(async () => {
+    await prisma.supportAccess.deleteMany({});
     await prisma.workspace.deleteMany({ where: { id: TENANT_WORKSPACE } });
     await truncateUsers(prisma);
     await prisma.$disconnect();
@@ -130,10 +147,12 @@ describe('Support directory (e2e)', () => {
     await app.close();
   });
 
-  const asBearer = (token: string) =>
+  const withBearer = (path: string, token: string) =>
     request(app.getHttpServer())
-      .get(OVERVIEW)
+      .get(path)
       .set('Authorization', `Bearer ${token}`);
+
+  const asBearer = (token: string) => withBearer(OVERVIEW, token);
 
   describe('GET /admin/support/overview', () => {
     it('is not found without credentials, with hardened headers', async () => {
@@ -185,5 +204,160 @@ describe('Support directory (e2e)', () => {
     it('answers the operator read token', async () => {
       await asBearer(operatorToken).expect(200);
     });
+  });
+
+  describe.each([USERS, APPS])(
+    '%s refuses everyone but the operator',
+    (path) => {
+      it('is not found without credentials', async () => {
+        await request(app.getHttpServer()).get(path).expect(404);
+      });
+
+      it('is not found for a member token', async () => {
+        await withBearer(path, memberToken).expect(404);
+      });
+
+      it('is not found for the owner of another workspace', async () => {
+        await withBearer(path, tenantOwnerToken).expect(404);
+      });
+    },
+  );
+
+  describe('GET /admin/support/users', () => {
+    it('lists every account newest first with its workspace', async () => {
+      const res = await owner.get(USERS).expect(200);
+      const body = res.body as AdminUserList;
+      const total = await prisma.user.count();
+      const created = body.items.map((user) => user.createdAt);
+
+      expect(body.limit).toBe(ADMIN_LIST_LIMIT);
+      expect(body.total).toBe(total);
+      expect(body.items).toHaveLength(total);
+      expect(created).toEqual([...created].sort().reverse());
+      expect(
+        body.items.find(
+          (user) => user.email === 'owner@directory-tenant.example.com',
+        ),
+      ).toMatchObject({
+        workspaceId: TENANT_WORKSPACE,
+        workspaceName: 'Directory Tenant',
+        workspacePlan: 'free',
+        role: 'owner',
+        emailVerified: false,
+        platformOperator: false,
+      });
+      expect(
+        body.items.find((user) => user.email === 'owner@example.com'),
+      ).toMatchObject({
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        platformOperator: true,
+      });
+    });
+
+    it('never carries a credential or session field', async () => {
+      const res = await owner.get(USERS).expect(200);
+      const raw = JSON.stringify(res.body);
+      for (const field of SECRET_FIELDS) {
+        expect(raw).not.toMatch(field);
+      }
+    });
+
+    it('narrows to one workspace', async () => {
+      const res = await owner
+        .get(USERS)
+        .query({ workspaceId: TENANT_WORKSPACE })
+        .expect(200);
+      const body = res.body as AdminUserList;
+
+      expect(body.total).toBe(
+        await prisma.user.count({ where: { workspaceId: TENANT_WORKSPACE } }),
+      );
+      expect(body.items.length).toBeGreaterThan(0);
+      expect(
+        body.items.every((user) => user.workspaceId === TENANT_WORKSPACE),
+      ).toBe(true);
+    });
+
+    it('lists nothing for a workspace that does not exist', async () => {
+      const res = await owner
+        .get(USERS)
+        .query({ workspaceId: 'ws_missing' })
+        .expect(200);
+      expect(res.body).toEqual({
+        items: [],
+        total: 0,
+        limit: ADMIN_LIST_LIMIT,
+      });
+    });
+
+    it.each([
+      ['an overlong workspace id', { workspaceId: 'w'.repeat(65) }],
+      ['an empty workspace id', { workspaceId: '' }],
+      ['an unknown parameter', { x: '1' }],
+    ])('refuses %s', async (_, query) => {
+      await owner.get(USERS).query(query).expect(400);
+    });
+  });
+
+  describe('GET /admin/support/apps', () => {
+    it('lists tracked apps only, with competitor and keyword counts', async () => {
+      const res = await owner
+        .get(APPS)
+        .query({ workspaceId: TENANT_WORKSPACE })
+        .expect(200);
+      const body = res.body as AdminAppList;
+
+      expect(body.total).toBe(2);
+      expect(body.limit).toBe(ADMIN_LIST_LIMIT);
+      expect(body.items.map((item) => item.name).sort()).toEqual([
+        'Tenant Habits',
+        'Tenant Habits for Android',
+      ]);
+      expect(
+        body.items.find((item) => item.store === 'APP_STORE'),
+      ).toMatchObject({
+        workspaceId: TENANT_WORKSPACE,
+        workspaceName: 'Directory Tenant',
+        storeAppId: '100000001',
+        country: 'us',
+        competitors: 1,
+        keywordMarkets: 2,
+      });
+      expect(
+        body.items.find((item) => item.store === 'GOOGLE_PLAY'),
+      ).toMatchObject({ competitors: 0, keywordMarkets: 0 });
+    });
+  });
+
+  it('writes every directory read to the support audit trail', async () => {
+    await prisma.supportAccess.deleteMany({});
+    const users = (await owner.get(USERS).expect(200)).body as AdminUserList;
+    const apps = (await owner.get(APPS).expect(200)).body as AdminAppList;
+    await owner.get(APPS).query({ workspaceId: TENANT_WORKSPACE }).expect(200);
+
+    const trail = await prisma.supportAccess.findMany({
+      orderBy: { createdAt: 'asc' },
+      select: { action: true, outcome: true, workspaceId: true, detail: true },
+    });
+    expect(trail).toEqual([
+      {
+        action: 'list',
+        outcome: 'succeeded',
+        workspaceId: 'all',
+        detail: `listed ${users.items.length} users`,
+      },
+      {
+        action: 'list',
+        outcome: 'succeeded',
+        workspaceId: 'all',
+        detail: `listed ${apps.items.length} apps`,
+      },
+      {
+        action: 'list',
+        outcome: 'succeeded',
+        workspaceId: TENANT_WORKSPACE,
+        detail: 'listed 2 apps',
+      },
+    ]);
   });
 });
