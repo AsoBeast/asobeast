@@ -31,12 +31,12 @@ The web app has an **Admin** area at `/admin` for the platform operator. It appe
 | Tab | What it shows | Endpoint |
 | --- | --- | --- |
 | Overview | workspaces by plan, accounts and sign ups over 30 days, tracked apps by store, keyword markets, searched keywords, AI calls this month | `GET /admin/support/overview` |
-| Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool` |
+| Capacity | daily demand against capacity, per store, the top consumers by name, and the proxy pool when one is configured | `GET /admin/capacity`, `GET /admin/proxy-pool`, `GET /admin/support/workspaces` |
 | Workspaces | every workspace with its plan, members, apps and keyword markets | `GET /admin/support/workspaces` |
 | Users | every account, newest first, with its workspace and whether its email is confirmed | `GET /admin/support/users` |
 | Apps | every tracked app with its workspace, store, home market, competitors and keyword markets | `GET /admin/support/apps` |
 
-Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the total. Reading either list is written to the support audit trail, the same trail the workspace list writes, because both return personal data. The overview returns counts only and is not written to the trail.
+Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the total. Reading either list is written to the support audit trail, the same trail the workspace list writes, because both return personal data. The overview returns counts only and is not written to the trail. The capacity report names its top consumers by workspace id only, because a self registered workspace is named after its owner's email; the Capacity tab takes the names from the workspace list, so reading them is written to the trail too. Every response from these endpoints carries `Cache-Control: no-store`.
 
 The admin area is read only. It lists accounts and apps; it never opens a workspace, so an app name is not a link: the operator's own session cannot read another workspace's pages.
 

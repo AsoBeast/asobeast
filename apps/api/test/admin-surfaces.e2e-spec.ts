@@ -283,7 +283,7 @@ describe('Admin surfaces (e2e)', () => {
       expect(Array.isArray(body.workspaces)).toBe(true);
     });
 
-    it('breaks demand down by store and names the consumers', async () => {
+    it('breaks demand down by store without naming the consumers', async () => {
       await prisma.app.create({
         data: {
           workspaceId: DEFAULT_WORKSPACE_ID,
@@ -307,7 +307,7 @@ describe('Admin surfaces (e2e)', () => {
       }
       expect(body.workspaces.length).toBeGreaterThan(0);
       for (const consumer of body.workspaces) {
-        expect(typeof consumer.name).toBe('string');
+        expect(consumer).not.toHaveProperty('name');
       }
     });
 

@@ -84,8 +84,8 @@ export const CAPACITY_REPORT: CapacityReport = {
   capacityPerDay: 36000,
   utilization: 0.042,
   workspaces: [
-    { workspaceId: "ws_ana", name: "Ana Apps", requests: 900 },
-    { workspaceId: "ws_default", name: "Default", requests: 500 },
+    { workspaceId: "ws_ana", requests: 900 },
+    { workspaceId: "ws_default", requests: 500 },
     { workspaceId: "ws_unnamed", requests: 120 },
   ],
   stores: [

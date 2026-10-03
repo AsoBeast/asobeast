@@ -6,6 +6,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
 import type {
   CapacityReport,
+  SupportWorkspaceSummary,
   ProxyPoolAlert,
   ProxyPoolHealth,
 } from "@asobeast/shared";
@@ -20,7 +21,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatNumber, formatUsd, pluralize, storeLabel } from "@/lib/format";
-import { adminCapacityOptions, adminProxyPoolOptions } from "@/lib/queries";
+import {
+  adminCapacityOptions,
+  adminProxyPoolOptions,
+  adminWorkspacesOptions,
+} from "@/lib/queries";
 import { utilizationPercent, utilizationStatus } from "@/lib/utilization";
 
 const ALERT_COPY: Record<ProxyPoolAlert, string> = {
@@ -111,7 +116,16 @@ function InstanceDemand({ report }: { report: CapacityReport }) {
   );
 }
 
-function TopConsumers({ report }: { report: CapacityReport }) {
+function TopConsumers({
+  report,
+  workspaces,
+}: {
+  report: CapacityReport;
+  workspaces: SupportWorkspaceSummary[];
+}) {
+  const names = new Map(
+    workspaces.map((workspace) => [workspace.workspaceId, workspace.name]),
+  );
   return (
     <SectionCard
       title="Top consumers"
@@ -133,7 +147,7 @@ function TopConsumers({ report }: { report: CapacityReport }) {
                 className="min-w-0 truncate font-medium underline-offset-4 hover:underline"
                 translate="no"
               >
-                {consumer.name ?? consumer.workspaceId}
+                {names.get(consumer.workspaceId) ?? consumer.workspaceId}
               </Link>
               <span className="shrink-0 text-muted-foreground tabular-nums">
                 {formatNumber(consumer.requests)} requests/day
@@ -218,11 +232,12 @@ function ProxyPool({ pool }: { pool: ProxyPoolHealth }) {
 export function AdminCapacity() {
   const { data: report } = useSuspenseQuery(adminCapacityOptions);
   const { data: pool } = useSuspenseQuery(adminProxyPoolOptions);
+  const { data: workspaces } = useSuspenseQuery(adminWorkspacesOptions);
 
   return (
     <div className="flex flex-col gap-6">
       <InstanceDemand report={report} />
-      <TopConsumers report={report} />
+      <TopConsumers report={report} workspaces={workspaces} />
       {pool.enabled ? <ProxyPool pool={pool} /> : null}
       <p className="text-sm text-muted-foreground">
         Each workspace sees only its own plan usage. Capacity is shown to the

@@ -62,7 +62,6 @@ export interface StoreDemand {
 
 export interface WorkspaceDemand {
   workspaceId: string;
-  name?: string;
   requests: number;
 }
 

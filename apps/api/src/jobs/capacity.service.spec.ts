@@ -1,11 +1,9 @@
 import { DailyBudget, Store, StoreDailyBudget } from '@asobeast/shared';
-import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { ActiveWorkspaces } from './active-workspaces';
 import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
-import { PrismaService } from '../prisma/prisma.service';
 
 const budgetOf = (
   total: number,
@@ -32,7 +30,6 @@ describe('CapacityService', () => {
   const workspace = new WorkspaceContext();
   const estimate = jest.fn<Promise<DailyBudget>, []>();
   const forDailyRun = jest.fn<Promise<string[]>, []>();
-  const findMany = jest.fn<Promise<{ id: string; name: string }[]>, []>();
 
   const fanOut = {
     eachOf: async <T>(workspaceIds: string[], work: () => Promise<T>) => {
@@ -49,19 +46,11 @@ describe('CapacityService', () => {
     workspace,
     { forDailyRun } as unknown as ActiveWorkspaces,
     { estimate } as unknown as DailyBudgetService,
-    { workspace: { findMany } } as unknown as PrismaService,
-    {
-      becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
-        _: string,
-        work: () => Promise<T>,
-      ) => work(),
-    } as unknown as CrossTenantAccess,
   );
 
   beforeEach(() => {
     forDailyRun.mockReset().mockResolvedValue([]);
     estimate.mockReset().mockResolvedValue(budgetOf(0, 0));
-    findMany.mockReset().mockResolvedValue([]);
   });
 
   it('reports an idle instance without dividing by zero', async () => {
@@ -100,18 +89,17 @@ describe('CapacityService', () => {
     ]);
   });
 
-  it('labels the top consumers with their workspace names', async () => {
+  it('reports consumers by id alone, never by a name that may be an email', async () => {
     forDailyRun.mockResolvedValue(['ws_small', 'ws_big']);
     estimate
       .mockResolvedValueOnce(budgetOf(10, 1_000))
       .mockResolvedValueOnce(budgetOf(900, 1_000));
-    findMany.mockResolvedValue([{ id: 'ws_big', name: 'Big Apps' }]);
 
     const report = await service.report();
 
     expect(report.workspaces).toStrictEqual([
-      { workspaceId: 'ws_big', name: 'Big Apps', requests: 900 },
-      { workspaceId: 'ws_small', name: undefined, requests: 10 },
+      { workspaceId: 'ws_big', requests: 900 },
+      { workspaceId: 'ws_small', requests: 10 },
     ]);
   });
 
