@@ -119,8 +119,9 @@ export const EnvSchema = z.object({
   ),
   AI_CALLS_PER_MONTH: z.preprocess(
     (value) =>
-      typeof value === 'string' && value.trim().length > 0
-        ? value.trim()
+      typeof value === 'number' ||
+      (typeof value === 'string' && value.trim().length > 0)
+        ? String(value).trim()
         : null,
     z.coerce.number().int().min(0).nullable(),
   ),

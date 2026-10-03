@@ -76,6 +76,13 @@ describe('AI_CALLS_PER_MONTH', () => {
     expect(withCap('0').AI_CALLS_PER_MONTH).toBe(0);
   });
 
+  it('reads a numeric cap rather than treating it as unlimited', () => {
+    expect(
+      validateEnv({ AUTH_SECRET: 'a'.repeat(32), AI_CALLS_PER_MONTH: 5 })
+        .AI_CALLS_PER_MONTH,
+    ).toBe(5);
+  });
+
   it.each(['-1', 'abc', '2.5'])('refuses an ai call cap of %s', (value) => {
     expect(() => withCap(value)).toThrow();
   });
