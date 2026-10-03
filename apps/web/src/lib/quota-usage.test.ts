@@ -25,6 +25,15 @@ describe("formatQuotaUsage", () => {
     );
   });
 
+  it("names what a plan without capacity counts", () => {
+    expect(formatQuotaUsage({ used: 0, limit: 0 }, "used")).toBe(
+      "0 used, none included",
+    );
+    expect(formatQuotaUsage({ used: 3, limit: 0 })).toBe(
+      "3 tracked, none included",
+    );
+  });
+
   it("keeps a real overage as a count against its limit", () => {
     expect(formatQuotaUsage({ used: 1200, limit: 1000 })).toBe(
       "1,200 of 1,000",

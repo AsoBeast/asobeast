@@ -24,6 +24,7 @@ import {
   planCallToAction,
   planStatusLine,
 } from "@/lib/plan-choice";
+import { aiRenewalText } from "@/lib/ai-allowance";
 import { accountPlanOptions } from "@/lib/queries";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -33,7 +34,17 @@ const RESOURCES = [
   { key: "keywordMarkets", label: "Keyword markets" },
 ] as const;
 
-function UsageRow({ label, usage }: { label: string; usage: QuotaUsage }) {
+function UsageRow({
+  label,
+  usage,
+  counted,
+  note,
+}: {
+  label: string;
+  usage: QuotaUsage;
+  counted?: string;
+  note?: string;
+}) {
   const ratio =
     usage.limit === null || usage.limit === 0 ? 0 : usage.used / usage.limit;
 
@@ -41,11 +52,14 @@ function UsageRow({ label, usage }: { label: string; usage: QuotaUsage }) {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-4 text-sm">
         <dt className="text-muted-foreground">{label}</dt>
-        <dd className="font-medium tabular-nums">{formatQuotaUsage(usage)}</dd>
+        <dd className="font-medium tabular-nums">
+          {formatQuotaUsage(usage, counted)}
+        </dd>
       </div>
       {hasNoCapacity(usage) ? null : (
         <Meter value={ratio} max={1} tone={ratio >= 1 ? "health" : "neutral"} />
       )}
+      {note ? <p className="text-xs text-muted-foreground">{note}</p> : null}
     </div>
   );
 }
@@ -116,6 +130,14 @@ export function PlanCard() {
           {RESOURCES.map(({ key, label }) => (
             <UsageRow key={key} label={label} usage={plan.usage[key]} />
           ))}
+          {plan.usage.aiCalls ? (
+            <UsageRow
+              label="AI calls this month"
+              usage={plan.usage.aiCalls}
+              counted="used"
+              note={aiRenewalText(plan.usage.aiCalls.resetsAt)}
+            />
+          ) : null}
         </dl>
       </CardContent>
       <CardFooter className="gap-2">

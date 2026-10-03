@@ -1,4 +1,10 @@
 import { type Page } from "@playwright/test";
+import {
+  fulfillJson,
+  routePlan,
+  seedPlan,
+  seedSession,
+} from "./plan-helpers.mts";
 import { expect, test } from "./reporting.mts";
 import {
   PASSWORD_RULE,
@@ -34,26 +40,10 @@ const MEMBER_USER: AuthUser = {
   trialEndsAt: null,
 };
 
-function fulfillJson(status: number, body: unknown) {
-  return {
-    status,
-    contentType: "application/json",
-    body: JSON.stringify(body),
-  };
-}
-
 async function routeStatus(page: Page, status: AuthStatus) {
   await page.route("**/api/backend/auth/status", (route) =>
     route.fulfill(fulfillJson(200, status)),
   );
-}
-
-async function seedSession(page: Page) {
-  await page
-    .context()
-    .addCookies([
-      { name: SESSION_COOKIE, value: "e2e", domain: "localhost", path: "/" },
-    ]);
 }
 
 test("guarded pages redirect to login when unauthenticated", async ({
@@ -549,17 +539,6 @@ const LAPSED_PLAN: AccountPlan = {
   },
 };
 
-async function seedPlan(page: Page, plan: AccountPlan) {
-  await page.context().addCookies([
-    {
-      name: "e2e_plan",
-      value: Buffer.from(JSON.stringify(plan)).toString("base64url"),
-      domain: "localhost",
-      path: "/",
-    },
-  ]);
-}
-
 const PENDING_PLAN: AccountPlan = {
   ...LAPSED_PLAN,
   subscribed: true,
@@ -567,13 +546,6 @@ const PENDING_PLAN: AccountPlan = {
 };
 
 const PAYMENT_CONFIRMING = "Your payment is being confirmed.";
-
-async function routePlan(page: Page, plan: AccountPlan) {
-  await seedPlan(page, plan);
-  await page.route("**/api/backend/auth/plan", (route) =>
-    route.fulfill(fulfillJson(200, plan)),
-  );
-}
 
 test("settings hides the plan section on a self hosted instance", async ({
   page,
