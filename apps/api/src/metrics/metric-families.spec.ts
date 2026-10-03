@@ -22,6 +22,8 @@ const workspace: WorkspaceMetrics = {
   storedRankings: 4_200,
   storedReviews: 310,
   onDemandUsed: { refresh: 3, runDaily: 1, score: 0, suggestions: 12 },
+  aiCallsMonth: 12,
+  aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },
 };
 
 const instance: InstanceMetrics = {
@@ -88,6 +90,26 @@ describe('metricFamilies', () => {
     workspaces: WorkspaceMetrics[] = [workspace],
     overrides: Partial<InstanceMetrics> = {},
   ) => renderMetrics(metricFamilies(workspaces, { ...instance, ...overrides }));
+
+  it('reports ai calls, their limit and tokens by kind per workspace', () => {
+    const text = render();
+
+    expect(text).toContain(
+      'asobeast_workspace_ai_calls_month{workspace="ws_a"} 12',
+    );
+    expect(text).toContain(
+      'asobeast_workspace_quota_ai_calls_limit{workspace="ws_a"} 200',
+    );
+    expect(text).toContain(
+      'asobeast_workspace_ai_tokens_month{workspace="ws_a",kind="input"} 9000',
+    );
+    expect(text).toContain(
+      'asobeast_workspace_ai_tokens_month{workspace="ws_a",kind="cached_input"} 1024',
+    );
+    expect(text).toContain(
+      'asobeast_workspace_ai_tokens_month{workspace="ws_a",kind="output"} 1400',
+    );
+  });
 
   it('labels every workspace series with its workspace id', () => {
     const text = render();

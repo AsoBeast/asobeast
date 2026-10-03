@@ -8,7 +8,13 @@ import {
   type PlanName,
   type Store,
 } from '@asobeast/shared';
-import { planScopeOf } from '../auth/plan-limits';
+import { SPENDING_STATUSES } from '../ai/ai-gateway.service';
+import { aiPeriodOf } from '../ai/ai-period';
+import {
+  planScopeOf,
+  selfHostedLimits,
+  type PlanScope,
+} from '../auth/plan-limits';
 import { windowKey } from '../auth/rate-limit/window';
 import {
   CategoryRanksService,
@@ -43,6 +49,30 @@ export interface WorkspaceMetrics {
   storedRankings: number;
   storedReviews: number;
   onDemandUsed: Record<OnDemandAction, number>;
+  aiCallsMonth: number;
+  aiTokensMonth: AiTokens;
+}
+
+interface AiTokens {
+  input: number;
+  cachedInput: number;
+  output: number;
+}
+
+interface AiSpend {
+  calls: number;
+  tokens: AiTokens;
+}
+
+interface AiCallRow {
+  workspaceId: string;
+  status: string;
+  _count: { _all: number };
+  _sum: {
+    inputTokens: number | null;
+    cachedInputTokens: number | null;
+    outputTokens: number | null;
+  };
 }
 
 interface WorkspaceRow {
@@ -107,6 +137,7 @@ export class WorkspaceMetricsCollector {
       before,
       rankings,
       reviews,
+      aiCalls,
     ] = await Promise.all([
       this.workspaces(),
       this.appCounts(),
@@ -116,18 +147,10 @@ export class WorkspaceMetricsCollector {
       this.rankingsOn(utcDate(new Date(now.getTime() - DAY_MS))),
       this.storedRankings(),
       this.storedReviews(),
+      this.aiCalls(now),
     ]);
 
-    const scopes = new Map(
-      workspaces.map((workspace) => [
-        workspace.id,
-        planScopeOf(
-          this.config.get('BILLING_ENABLED', { infer: true }),
-          workspace,
-          now,
-        ),
-      ]),
-    );
+    const scopes = this.planScopes(workspaces, now);
     const onDemand = await this.onDemandUsage(scopes, now);
 
     const appsBy = groupBy(apps);
@@ -136,6 +159,7 @@ export class WorkspaceMetricsCollector {
     const beforeBy = indexBy(before);
     const rankingsBy = indexBy(rankings);
     const reviewsBy = indexBy(reviews);
+    const aiSpend = aiSpendBy(workspaces, aiCalls);
 
     return workspaces.map((workspace) => {
       const scope = scopes.get(workspace.id)!;
@@ -143,6 +167,7 @@ export class WorkspaceMetricsCollector {
       const owned = appsBy.get(workspace.id) ?? [];
       const captured = sinceBy.get(workspace.id);
       const keywordMarkets = sum(markets);
+      const spend = aiSpend.get(workspace.id)!;
 
       return {
         workspaceId: workspace.id,
@@ -166,8 +191,26 @@ export class WorkspaceMetricsCollector {
         storedRankings: rankingsBy.get(workspace.id)?.count ?? 0,
         storedReviews: reviewsBy.get(workspace.id)?.count ?? 0,
         onDemandUsed: onDemand.get(workspace.id) ?? emptyOnDemand(),
+        aiCallsMonth: spend.calls,
+        aiTokensMonth: spend.tokens,
       };
     });
+  }
+
+  private planScopes(
+    workspaces: WorkspaceRow[],
+    now: Date,
+  ): Map<string, PlanScope> {
+    const metered = this.config.get('BILLING_ENABLED', { infer: true });
+    const selfHosted = selfHostedLimits(
+      this.config.get('AI_CALLS_PER_MONTH', { infer: true }),
+    );
+    return new Map(
+      workspaces.map((workspace) => [
+        workspace.id,
+        planScopeOf(metered, workspace, now, selfHosted),
+      ]),
+    );
   }
 
   private workspaces(): Promise<WorkspaceRow[]> {
@@ -247,6 +290,19 @@ export class WorkspaceMetricsCollector {
     `;
   }
 
+  private aiCalls(now: Date): Promise<AiCallRow[]> {
+    const period = aiPeriodOf(now);
+    return this.prisma.aiCall.groupBy({
+      by: ['workspaceId', 'status'],
+      where: {
+        status: { in: SPENDING_STATUSES },
+        createdAt: { gte: period.start, lt: period.resetsAt },
+      },
+      _count: { _all: true },
+      _sum: { inputTokens: true, cachedInputTokens: true, outputTokens: true },
+    });
+  }
+
   private countRows(
     rows: { workspaceId: string; _count: { _all: number } }[],
   ): CountRow[] {
@@ -291,6 +347,29 @@ export class WorkspaceMetricsCollector {
     });
     return usage;
   }
+}
+
+function aiSpendBy(
+  workspaces: WorkspaceRow[],
+  rows: AiCallRow[],
+): Map<string, AiSpend> {
+  const spend = new Map<string, AiSpend>(
+    workspaces.map(({ id }) => [
+      id,
+      { calls: 0, tokens: { input: 0, cachedInput: 0, output: 0 } },
+    ]),
+  );
+  for (const row of rows) {
+    const current = spend.get(row.workspaceId);
+    if (!current) continue;
+    current.calls += row._count._all;
+    if (row.status === 'counted') {
+      current.tokens.input += row._sum.inputTokens ?? 0;
+      current.tokens.cachedInput += row._sum.cachedInputTokens ?? 0;
+      current.tokens.output += row._sum.outputTokens ?? 0;
+    }
+  }
+  return spend;
 }
 
 function emptyOnDemand(): Record<OnDemandAction, number> {

@@ -42,6 +42,9 @@ Per workspace, one series per metric:
 | `asobeast_workspace_quota_apps_limit`, `asobeast_workspace_quota_keyword_markets_limit` | The plan limit, `-1` when unlimited |
 | `asobeast_workspace_daily_requests_estimated` | Store requests one daily run demands, split by store |
 | `asobeast_workspace_on_demand_used` | On demand operations spent in the current window |
+| `asobeast_workspace_ai_calls_month` | AI calls reserved or spent this UTC month |
+| `asobeast_workspace_quota_ai_calls_limit` | The monthly AI call allowance, `-1` when unlimited |
+| `asobeast_workspace_ai_tokens_month` | OpenAI tokens of counted calls this UTC month, by `kind` `input`, `cached_input` or `output`, the figure to reconcile against the OpenAI invoice |
 | `asobeast_workspace_rankings_captured` | Captures since the last daily trigger |
 | `asobeast_workspace_rankings_captured_yesterday` | The same figure for the previous UTC date, for a day over day comparison |
 | `asobeast_workspace_rankings_unresolved` | Captures with no position inside the searched depth |
