@@ -9,6 +9,7 @@ import type {
 } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
 import {
+  adminKeys,
   actionActivityOptions,
   actionDetailOptions,
   actionKeys,
@@ -445,6 +446,29 @@ describe("portfolio insights key", () => {
   it("sits under the portfolio key so a portfolio invalidation reaches it", () => {
     expect(isPrefixOf(portfolioKey, portfolioInsightsKey)).toBe(true);
     expect(portfolioInsightsOptions.queryKey).toEqual(portfolioInsightsKey);
+  });
+});
+
+describe("admin keys", () => {
+  it("keeps every admin key under the admin root", () => {
+    for (const key of [
+      adminKeys.overview(),
+      adminKeys.capacity(),
+      adminKeys.proxyPool(),
+      adminKeys.workspaces(),
+      adminKeys.users(),
+      adminKeys.users("ws_1"),
+      adminKeys.apps(),
+      adminKeys.apps("ws_1"),
+    ]) {
+      expect(isPrefixOf(adminKeys.all, key)).toBe(true);
+      expect(isPrefixOf(appKeys.all, key)).toBe(false);
+    }
+  });
+
+  it("caches one workspace's list apart from the whole list", () => {
+    expect(adminKeys.users("ws_1")).not.toEqual(adminKeys.users());
+    expect(adminKeys.apps("ws_1")).not.toEqual(adminKeys.apps());
   });
 });
 

@@ -1,4 +1,5 @@
 import {
+  ALL_WORKSPACES,
   ACTION_CATEGORIES,
   ACTION_PRIORITIES,
   ACTION_RULES,
@@ -180,6 +181,80 @@ export const appListParsers = {
   sort: appSortParser,
   dir: sortDirectionParser,
   view: appViewParser,
+};
+
+export const ADMIN_WORKSPACE_SORTS = [
+  "created",
+  "name",
+  "plan",
+  "members",
+  "apps",
+  "keywordMarkets",
+] as const;
+
+export const adminWorkspaceSortParser = parseAsStringLiteral(
+  ADMIN_WORKSPACE_SORTS,
+).withDefault("created");
+
+export const adminWorkspaceListParsers = {
+  q: searchParser,
+  sort: adminWorkspaceSortParser,
+  dir: sortDirectionParser,
+};
+
+export const ADMIN_USER_SORTS = [
+  "joined",
+  "email",
+  "role",
+  "workspace",
+  "plan",
+] as const;
+
+export const adminUserSortParser =
+  parseAsStringLiteral(ADMIN_USER_SORTS).withDefault("joined");
+
+const WORKSPACE_ID_MAX = 64;
+
+export const adminWorkspaceParser = createParser({
+  parse: (value) =>
+    value.length > 0 &&
+    value.length <= WORKSPACE_ID_MAX &&
+    value !== ALL_WORKSPACES
+      ? value
+      : null,
+  serialize: (value: string) => value,
+});
+
+export const adminUserListParsers = {
+  q: searchParser,
+  workspace: adminWorkspaceParser,
+  sort: adminUserSortParser,
+  dir: sortDirectionParser,
+};
+
+export const ADMIN_APP_SORTS = [
+  "added",
+  "name",
+  "store",
+  "market",
+  "workspace",
+  "competitors",
+  "keywordMarkets",
+] as const;
+
+export const adminAppSortParser =
+  parseAsStringLiteral(ADMIN_APP_SORTS).withDefault("added");
+
+export const adminStoreParser = parseAsArrayOf(
+  parseAsStringLiteral(STORES),
+).withDefault([]);
+
+export const adminAppListParsers = {
+  q: searchParser,
+  workspace: adminWorkspaceParser,
+  store: adminStoreParser,
+  sort: adminAppSortParser,
+  dir: sortDirectionParser,
 };
 
 export const rangeParser =

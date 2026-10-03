@@ -3946,6 +3946,94 @@
           "admin"
         ]
       }
+    },
+    "/admin/support/overview": {
+      "get": {
+        "operationId": "SupportDirectoryController_totals",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Instance totals for the platform operator",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/users": {
+      "get": {
+        "operationId": "SupportDirectoryController_users",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every account on the instance, newest first",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/admin/support/apps": {
+      "get": {
+        "operationId": "SupportDirectoryController_apps",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minLength": 1,
+              "maxLength": 64,
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Every tracked app on the instance, newest first",
+        "tags": [
+          "admin"
+        ]
+      }
     }
   },
   "info": {

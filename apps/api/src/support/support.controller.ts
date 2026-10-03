@@ -1,14 +1,8 @@
-import {
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { User } from '@prisma/client';
 import {
+  ALL_WORKSPACES,
   type SupportAction,
   type SupportActionResult,
   type SupportWorkspaceDetail,
@@ -16,16 +10,14 @@ import {
 } from '@asobeast/shared';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { WorkspaceSuspension } from '../auth/abuse/workspace-suspension.service';
-import { SUPPORT_ROUTE } from '../auth/admin-access';
-import { isPlatformOperator } from '../auth/platform-operator';
+import { SUPPORT_NOT_FOUND } from '../auth/admin-access';
+import { requirePlatformOperator } from '../auth/platform-operator';
 import { BillingReconciler } from '../billing/billing-reconciler.service';
 import { BillingWebhookService } from '../billing/billing-webhook.service';
 import { PipelineService } from '../jobs/pipeline.service';
 import { SupportAudit } from './support-audit.service';
 import { SupportActionDto } from './dto/support-action.dto';
 import { SupportService } from './support.service';
-
-const ALL_WORKSPACES = 'all';
 
 @ApiTags('admin')
 @Controller('admin/support')
@@ -42,7 +34,7 @@ export class SupportController {
   @Get('workspaces')
   @ApiOperation({ summary: 'List every workspace with its operational state' })
   list(@CurrentUser() user: User): Promise<SupportWorkspaceSummary[]> {
-    this.requireOperator(user);
+    requirePlatformOperator(user, SUPPORT_NOT_FOUND);
     return this.audit.attempt({
       actor: user,
       workspaceId: ALL_WORKSPACES,
@@ -59,7 +51,7 @@ export class SupportController {
     @CurrentUser() user: User,
     @Param('workspaceId') workspaceId: string,
   ): Promise<SupportWorkspaceDetail> {
-    this.requireOperator(user);
+    requirePlatformOperator(user, SUPPORT_NOT_FOUND);
     return this.audit.attempt({
       actor: user,
       workspaceId,
@@ -146,7 +138,7 @@ export class SupportController {
     dto: SupportActionDto,
     work: () => Promise<string>,
   ): Promise<SupportActionResult> {
-    this.requireOperator(user);
+    requirePlatformOperator(user, SUPPORT_NOT_FOUND);
     const detail = await this.audit.attempt({
       actor: user,
       workspaceId,
@@ -156,11 +148,5 @@ export class SupportController {
       describe: (summary) => summary,
     });
     return { action, workspaceId, detail };
-  }
-
-  private requireOperator(user: User): void {
-    if (!isPlatformOperator(user)) {
-      throw new NotFoundException(`Cannot reach ${SUPPORT_ROUTE}`);
-    }
   }
 }

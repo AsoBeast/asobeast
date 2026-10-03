@@ -12,6 +12,8 @@ export const SUPPORT_ACTIONS = [
 
 export type SupportAction = (typeof SUPPORT_ACTIONS)[number];
 
+export const ALL_WORKSPACES = 'all';
+
 export const SUPPORT_OUTCOMES = ['attempted', 'succeeded', 'failed'] as const;
 
 export type SupportOutcome = (typeof SUPPORT_OUTCOMES)[number];

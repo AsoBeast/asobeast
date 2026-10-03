@@ -165,9 +165,11 @@ The same reasoning covers the two places a url reaches an event by another route
 | `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
 | `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |
 
+Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area).
+
 Two rules hold the surface honest:
 
 - **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored.
-- **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
+- **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
 
-There is deliberately no way to read a customer's keywords, apps, rankings or reviews from this surface. A question that needs their data needs their consent first.
+The directory names the apps a workspace tracks, with counts, and nothing more: there is deliberately no way to read a customer's keywords, rankings or reviews from this surface. A question that needs their data needs their consent first.

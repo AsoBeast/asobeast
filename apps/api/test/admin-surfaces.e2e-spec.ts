@@ -10,7 +10,11 @@ import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { configureSecurityHeaders } from '../src/security-headers';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
-import { sha256 } from '../src/auth/password-hash';
+import {
+  seedApiToken,
+  seedWorkspace,
+  truncateUsers,
+} from './helpers/api-tokens';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES as QUEUE_NAMES } from '../src/jobs/jobs.types';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -33,67 +37,24 @@ describe('Admin surfaces (e2e)', () => {
   let prisma: PrismaClient;
   let owner: Awaited<ReturnType<typeof ownerAgent>>;
 
-  function truncateUsers(): Promise<number> {
-    return prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
-    );
-  }
+  const tenantOwnerToken = async () => {
+    await seedWorkspace(prisma, TENANT_WORKSPACE, 'Tenant');
+    return seedApiToken(prisma, {
+      seed: 'tenantowner2222',
+      email: 'owner@tenant.example.com',
+      workspaceId: TENANT_WORKSPACE,
+      role: 'owner',
+    });
+  };
 
-  async function tenantOwnerToken(): Promise<string> {
-    const plaintext = `asob_${'tenantowner'.padEnd(48, '2')}`;
-    await prisma.workspace.upsert({
-      where: { id: TENANT_WORKSPACE },
-      update: {},
-      create: { id: TENANT_WORKSPACE, name: 'Tenant' },
+  const tokenFor = (role: string, scope = 'read') =>
+    seedApiToken(prisma, {
+      seed: `${role}${scope}`,
+      email: `${role}@tokens.example.com`,
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      role,
+      scope,
     });
-    const user = await prisma.user.upsert({
-      where: { email: 'owner@tenant.example.com' },
-      update: { role: 'owner', workspaceId: TENANT_WORKSPACE },
-      create: {
-        workspaceId: TENANT_WORKSPACE,
-        email: 'owner@tenant.example.com',
-        passwordHash: 'password-login-unused',
-        role: 'owner',
-      },
-    });
-    await prisma.apiToken.upsert({
-      where: { tokenHash: sha256(plaintext) },
-      update: {},
-      create: {
-        userId: user.id,
-        name: 'e2e',
-        tokenHash: sha256(plaintext),
-        prefix: plaintext.slice(0, 12),
-      },
-    });
-    return plaintext;
-  }
-
-  async function tokenFor(role: string, scope = 'read'): Promise<string> {
-    const plaintext = `asob_${`${role}${scope}`.padEnd(48, '0')}`;
-    const user = await prisma.user.upsert({
-      where: { email: `${role}@tokens.example.com` },
-      update: { role },
-      create: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        email: `${role}@tokens.example.com`,
-        passwordHash: 'password-login-unused',
-        role,
-      },
-    });
-    await prisma.apiToken.upsert({
-      where: { tokenHash: sha256(plaintext) },
-      update: { scope },
-      create: {
-        userId: user.id,
-        name: 'e2e',
-        tokenHash: sha256(plaintext),
-        prefix: plaintext.slice(0, 12),
-        scope,
-      },
-    });
-    return plaintext;
-  }
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -112,13 +73,13 @@ describe('Admin surfaces (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
-    await truncateUsers();
+    await truncateUsers(prisma);
     owner = await ownerAgent(app);
   });
 
   afterAll(async () => {
     await prisma.$disconnect();
-    await truncateUsers();
+    await truncateUsers(prisma);
     await obliterateQueues(app);
     await app.close();
   });
@@ -271,6 +232,15 @@ describe('Admin surfaces (e2e)', () => {
     });
   });
 
+  it.each(['/admin/capacity', '/admin/proxy-pool'])(
+    '%s is never stored by a browser or a proxy',
+    async (path) => {
+      const response = await owner.get(path).expect(200);
+
+      expect(response.headers['cache-control']).toBe('no-store');
+    },
+  );
+
   describe('/admin/proxy-pool', () => {
     it('reports the pool to an owner', async () => {
       const response = await owner.get('/admin/proxy-pool').expect(200);
@@ -311,6 +281,34 @@ describe('Admin surfaces (e2e)', () => {
 
       expect(body.requestsPerDay).toBeGreaterThanOrEqual(0);
       expect(Array.isArray(body.workspaces)).toBe(true);
+    });
+
+    it('breaks demand down by store without naming the consumers', async () => {
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'APP_STORE',
+          storeAppId: '200000001',
+          name: 'Capacity Probe',
+        },
+      });
+
+      const response = await owner.get('/admin/capacity').expect(200);
+      const body = response.body as CapacityReport;
+
+      expect(body.stores?.length).toBeGreaterThan(0);
+      for (const store of body.stores ?? []) {
+        expect(store).toEqual({
+          store: expect.any(String) as string,
+          requestsPerDay: expect.any(Number) as number,
+          capacityPerDay: expect.any(Number) as number,
+          utilization: expect.any(Number) as number,
+        });
+      }
+      expect(body.workspaces.length).toBeGreaterThan(0);
+      for (const consumer of body.workspaces) {
+        expect(consumer).not.toHaveProperty('name');
+      }
     });
 
     it('is not found for a member', async () => {

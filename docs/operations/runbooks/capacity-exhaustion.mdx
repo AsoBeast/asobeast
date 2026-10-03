@@ -45,7 +45,7 @@ The decision is settled in advance: **gate registration rather than degrade payi
 ## Recovery
 
 1. Buy datacenter endpoints ahead of demand. They are the cheapest input in the business by a wide margin, and the sync job adds them on its next run.
-2. Confirm capacity with `/admin/capacity` before raising the registration gate.
+2. Confirm capacity on **Admin, Capacity** or with `/admin/capacity` before raising the registration gate.
 3. Raise the gate in steps and watch one full daily cycle at each step.
 4. Revisit the plan limits if a single plan repeatedly reaches the pool ceiling on its own. A limit that never bites is not a limit.
 

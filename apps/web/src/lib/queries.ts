@@ -11,6 +11,12 @@ import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import {
   getAction,
   getActionActivity,
+  getAdminApps,
+  getAdminOverview,
+  getAdminUsers,
+  getCapacityReport,
+  getProxyPool,
+  getSupportWorkspaces,
   getActionAiStatus,
   getActions,
   getActionSummary,
@@ -177,6 +183,58 @@ export const workspaceTeamKey = ["auth", "team"] as const;
 export const workspaceDeletionKey = ["account", "deletion"] as const;
 
 export const billingCatalogKey = ["billing", "catalog"] as const;
+
+export const adminKeys = {
+  all: ["admin"] as const,
+  overview: () => [...adminKeys.all, "overview"] as const,
+  capacity: () => [...adminKeys.all, "capacity"] as const,
+  proxyPool: () => [...adminKeys.all, "proxy-pool"] as const,
+  workspaces: () => [...adminKeys.all, "workspaces"] as const,
+  users: (workspaceId?: string) =>
+    [...adminKeys.all, "users", workspaceId ?? null] as const,
+  apps: (workspaceId?: string) =>
+    [...adminKeys.all, "apps", workspaceId ?? null] as const,
+};
+
+const ADMIN_STALE_MS = 60 * 1000;
+
+export const adminOverviewOptions = queryOptions({
+  queryKey: adminKeys.overview(),
+  queryFn: getAdminOverview,
+  staleTime: ADMIN_STALE_MS,
+});
+
+export const adminCapacityOptions = queryOptions({
+  queryKey: adminKeys.capacity(),
+  queryFn: getCapacityReport,
+  staleTime: ADMIN_STALE_MS,
+});
+
+export const adminProxyPoolOptions = queryOptions({
+  queryKey: adminKeys.proxyPool(),
+  queryFn: getProxyPool,
+  staleTime: ADMIN_STALE_MS,
+});
+
+export const adminWorkspacesOptions = queryOptions({
+  queryKey: adminKeys.workspaces(),
+  queryFn: getSupportWorkspaces,
+  staleTime: ADMIN_STALE_MS,
+});
+
+export const adminUsersOptions = (workspaceId?: string) =>
+  queryOptions({
+    queryKey: adminKeys.users(workspaceId),
+    queryFn: () => getAdminUsers(workspaceId),
+    staleTime: ADMIN_STALE_MS,
+  });
+
+export const adminAppsOptions = (workspaceId?: string) =>
+  queryOptions({
+    queryKey: adminKeys.apps(workspaceId),
+    queryFn: () => getAdminApps(workspaceId),
+    staleTime: ADMIN_STALE_MS,
+  });
 
 export const authStatusOptions = queryOptions({
   queryKey: authStatusKey,
