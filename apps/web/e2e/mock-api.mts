@@ -117,6 +117,10 @@ import {
   parseStoreUrl,
 } from "@asobeast/shared";
 import { VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
+import {
+  ADMIN_OVERVIEW,
+  ADMIN_OVERVIEW_SELF_HOSTED,
+} from "./admin-fixtures.mts";
 
 const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
@@ -462,6 +466,23 @@ function appRoute(
         200,
         pick(dataset, new URL(path, "http://localhost").searchParams),
       );
+    },
+  };
+}
+
+function operatorRoute(
+  pattern: RegExp,
+  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+): Route {
+  return {
+    method: "GET",
+    pattern,
+    handler: (_params, req, res) => {
+      const path = req.url ?? "/";
+      if (!viewerOf(req).platformOperator) {
+        return json(res, 404, errorEnvelope(404, path));
+      }
+      json(res, 200, pick(req, new URL(path, "http://localhost").searchParams));
     },
   };
 }
@@ -941,6 +962,11 @@ const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const routes: Route[] = [
+  operatorRoute(/^\/admin\/support\/overview$/, (req) =>
+    hasCookie(req, "e2e_admin_self_hosted", "1")
+      ? ADMIN_OVERVIEW_SELF_HOSTED
+      : ADMIN_OVERVIEW,
+  ),
   {
     method: "POST",
     pattern: /^\/__reset\/keywords$/,

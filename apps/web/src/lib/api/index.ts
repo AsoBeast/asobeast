@@ -15,4 +15,5 @@ export * from "./auth";
 export * from "./account";
 export * from "./billing";
 export * from "./actions";
+export * from "./admin";
 export * from "./web";

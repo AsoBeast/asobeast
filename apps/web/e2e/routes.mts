@@ -9,6 +9,7 @@ export const SIGNED_IN_ROUTES = [
   ["action-center", "/actions"],
   ["settings", "/settings"],
   ["upgrade", "/upgrade"],
+  ["admin-overview", "/admin"],
   ["app-overview", `/apps/${APP}`],
   ["app-keywords", `/apps/${APP}/keywords`],
   ["app-rankings", `/apps/${APP}/rankings`],

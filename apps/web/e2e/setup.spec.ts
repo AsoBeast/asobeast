@@ -23,7 +23,9 @@ test("unknown and unavailable apps render route boundaries", async ({
   page,
 }) => {
   await page.goto("/apps/deleted-app/setup");
-  await expect(page.getByRole("heading", { name: "404" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("Page not found"),
+  ).toBeVisible();
 
   await page.goto("/apps/err-app/setup");
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
