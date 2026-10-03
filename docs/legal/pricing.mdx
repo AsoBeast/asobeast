@@ -3,7 +3,7 @@ title: Pricing
 sidebarTitle: Pricing
 description: "Two hosted plans, the exact limits the code enforces, and the self hosted option that costs nothing and has the same features."
 icon: tag
-keywords: ["pricing","plans","indie","ultimate","self hosted","trial"]
+keywords: ["pricing","plans","indie","ultimate","self hosted","trial","ai calls"]
 ---
 
 Two hosted plans, or run it yourself for free. **Both paths have exactly the same features.** You pay for hosting, never for a feature that is locked away.
@@ -25,7 +25,7 @@ Two hosted plans, or run it yourself for free. **Both paths have exactly the sam
 | CSV and JSON export | Yes | Yes | Yes |
 | Who runs it | You | Us | Us |
 
-The trial is **7 days, no card**, with Indie limits. When it ends nothing is charged and nothing is deleted.
+The trial is **7 days, no card**, with Indie limits and 25 AI calls. When it ends nothing is charged and nothing is deleted.
 
 ## A keyword counts once per market
 
@@ -58,8 +58,9 @@ Limits are per workspace, not per token, and every response tells you where you 
 | Manual daily run | 5 per day | 20 per day |
 | Manual keyword score | 100 per day | 1,000 per day |
 | Keyword suggestions | 60 per hour | 300 per hour |
+| AI calls | 200 per month | 2,000 per month |
 
-Self hosted has no rate limits at all, because there is no shared capacity to protect. See [Rate limits](/api-reference/rate-limits) for the headers and error shapes.
+Self hosted has no rate limits at all, because there is no shared capacity to protect. AI calls are unlimited too unless you set `AI_CALLS_PER_MONTH`. See [Rate limits](/api-reference/rate-limits) for the headers and error shapes.
 
 ## Self hosting is a real option, not a footnote
 

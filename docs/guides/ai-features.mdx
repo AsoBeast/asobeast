@@ -20,6 +20,27 @@ Three features, all bring your own key.
 
 Each feature is a single completion per run. The creative analysis runs in the background after you start it, so leaving the page does not cancel it. It is reused while the icon, the screenshots, the competitor icons and `AI_MODEL` are unchanged, so analyzing an unchanged listing again costs nothing, and a finished analysis records today's audit score. The nightly score snapshot reads the stored observations and never calls OpenAI.
 
+## How many AI calls can a workspace make?
+
+Every AI call spends one call from a monthly allowance that the whole workspace shares. The allowance of each plan is listed on [Pricing](/legal/pricing#rate-limits). It renews at 00:00 UTC on the 1st of every month, and unused calls do not carry over.
+
+| Counts as one call | Costs nothing |
+| --- | --- |
+| Explaining an action, including Regenerate | A creative analysis of a listing that has not changed since the last one |
+| One set of metadata drafts | Starting an analysis while one is already queued or running |
+| One creative analysis | A request refused before it reaches the model, such as an unsupported field |
+| An answer the model gave that could not be used, such as a refusal or an incomplete set of drafts | A call OpenAI never answered: a timeout, an outage, a rejected key |
+
+Two clicks on the same button while the first is still working spend one call. A creative analysis that retries in the background is still one call.
+
+The settings page shows the calls used this month and the renewal date, and every AI button shows how many are left. When none are left the buttons are disabled until the 1st, and the API answers `429` with an `aiAllowance` object; see [Errors](/api-reference/errors#a-spent-ai-allowance).
+
+Upgrading applies the larger allowance at once and keeps what was already used. Moving to a smaller plan keeps the usage too, so a workspace already past the smaller allowance waits for the 1st.
+
+### Self hosted
+
+A self hosted instance has no allowance unless you set `AI_CALLS_PER_MONTH`, which applies to every workspace on the instance. Set it if registration is open, because each account that registers gets a workspace of its own and spends your OpenAI key. See [Configuration](/configuration/reference).
+
 ## What happens without a key?
 
 The product is fully usable. Precisely three things differ.
@@ -38,8 +59,9 @@ Every other audit check still scores. The creative checks are listed as unanswer
 | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | Empty disables all three features |
 | `AI_MODEL` | `gpt-5.6-luna` | Must accept image input and structured outputs, because the creative analysis reads images and answers in a fixed schema. `gpt-4o` also qualifies |
+| `AI_CALLS_PER_MONTH` | Empty | Calls each workspace may make per month on a self hosted instance. Empty is unlimited |
 
-Both live in `apps/api/.env`. Restart the API after changing them.
+All three live in `apps/api/.env`. Restart the API after changing them.
 
 ## What is AI never allowed to do?
 
