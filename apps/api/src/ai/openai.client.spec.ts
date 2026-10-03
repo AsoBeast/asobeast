@@ -13,7 +13,13 @@ import OpenAI, {
   RateLimitError,
   UnprocessableEntityError,
 } from 'openai';
-import { AiClient, AiRequestError, createOpenAiClient } from './openai.client';
+import {
+  AiClient,
+  AiRequestError,
+  UnusableAnswerError,
+  classifyRequestError,
+  createOpenAiClient,
+} from './openai.client';
 import { Env } from '../config/env';
 
 const mockCreate = jest.fn();
@@ -43,6 +49,18 @@ const completion = (
 
 const stop = (content: string | null, refusal: string | null = null) =>
   completion({ finish_reason: 'stop', message: { content, refusal } });
+
+const USAGE = {
+  prompt_tokens: 1_200,
+  completion_tokens: 300,
+  total_tokens: 1_500,
+  prompt_tokens_details: { cached_tokens: 1_024 },
+};
+
+const withUsage = (body: Record<string, unknown>) => ({
+  ...body,
+  usage: USAGE,
+});
 
 const request = {
   system: 'system',
@@ -88,8 +106,8 @@ describe('createOpenAiClient', () => {
 
   it('parses JSON and maps text and image content parts', async () => {
     mockCreate.mockResolvedValue(stop('{"ok":true}'));
-    const result = await build().structured(request);
-    expect(result).toEqual({ ok: true });
+    const { output } = await build().structured(request);
+    expect(output).toEqual({ ok: true });
 
     const createCalls = mockCreate.mock.calls as Array<
       [{ messages: Array<{ role: string; content: unknown }> }]
@@ -161,97 +179,102 @@ describe('createOpenAiClient', () => {
   });
 });
 
-describe('AiRequestError', () => {
-  const headers = new Headers();
+const headers = new Headers();
 
+const REQUEST_FAILURES: Array<[unknown, string, boolean]> = [
+  [
+    new AuthenticationError(401, {}, 'bad key', headers),
+    'OpenAI rejected the API key. Check OPENAI_API_KEY.',
+    false,
+  ],
+  [
+    new PermissionDeniedError(403, {}, 'denied', headers),
+    'The OpenAI key cannot use gpt-4o.',
+    false,
+  ],
+  [
+    new NotFoundError(404, {}, 'missing', headers),
+    'OpenAI does not offer the model gpt-4o. Check AI_MODEL.',
+    false,
+  ],
+  [
+    new BadRequestError(
+      400,
+      { message: 'image input not supported' },
+      undefined,
+      headers,
+    ),
+    'OpenAI refused the request: image input not supported',
+    false,
+  ],
+  [
+    new RateLimitError(429, { code: 'insufficient_quota' }, 'quota', headers),
+    'The OpenAI account has no remaining quota.',
+    false,
+  ],
+  [
+    new RateLimitError(
+      429,
+      { code: 'rate_limit_exceeded' },
+      'slow down',
+      headers,
+    ),
+    'OpenAI is rate limiting requests.',
+    true,
+  ],
+  [
+    new InternalServerError(500, {}, 'boom', headers),
+    'OpenAI had an internal error.',
+    true,
+  ],
+  [new APIConnectionTimeoutError(), 'OpenAI did not answer in time.', true],
+  [
+    new APIConnectionError({ message: 'socket hang up' }),
+    'Could not reach OpenAI.',
+    true,
+  ],
+  [
+    new APIError(408, {}, 'request timeout', headers),
+    'OpenAI request failed.',
+    true,
+  ],
+  [
+    new ConflictError(409, {}, 'conflict', headers),
+    'OpenAI request failed.',
+    true,
+  ],
+  [
+    new APIError(413, {}, 'payload too large', headers),
+    'OpenAI request failed.',
+    false,
+  ],
+  [
+    new UnprocessableEntityError(422, {}, 'unprocessable', headers),
+    'OpenAI request failed.',
+    false,
+  ],
+  [new Error('unexpected'), 'OpenAI request failed.', false],
+];
+
+describe('AiRequestError', () => {
   beforeEach(() => {
     mockCreate.mockReset();
   });
 
-  it.each([
-    [
-      new AuthenticationError(401, {}, 'bad key', headers),
-      'OpenAI rejected the API key. Check OPENAI_API_KEY.',
-      false,
-    ],
-    [
-      new PermissionDeniedError(403, {}, 'denied', headers),
-      'The OpenAI key cannot use gpt-4o.',
-      false,
-    ],
-    [
-      new NotFoundError(404, {}, 'missing', headers),
-      'OpenAI does not offer the model gpt-4o. Check AI_MODEL.',
-      false,
-    ],
-    [
-      new BadRequestError(
-        400,
-        { message: 'image input not supported' },
-        undefined,
-        headers,
-      ),
-      'OpenAI refused the request: image input not supported',
-      false,
-    ],
-    [
-      new RateLimitError(429, { code: 'insufficient_quota' }, 'quota', headers),
-      'The OpenAI account has no remaining quota.',
-      false,
-    ],
-    [
-      new RateLimitError(
-        429,
-        { code: 'rate_limit_exceeded' },
-        'slow down',
-        headers,
-      ),
-      'OpenAI is rate limiting requests.',
-      true,
-    ],
-    [
-      new InternalServerError(500, {}, 'boom', headers),
-      'OpenAI had an internal error.',
-      true,
-    ],
-    [new APIConnectionTimeoutError(), 'OpenAI did not answer in time.', true],
-    [
-      new APIConnectionError({ message: 'socket hang up' }),
-      'Could not reach OpenAI.',
-      true,
-    ],
-    [
-      new APIError(408, {}, 'request timeout', headers),
-      'OpenAI request failed.',
-      true,
-    ],
-    [
-      new ConflictError(409, {}, 'conflict', headers),
-      'OpenAI request failed.',
-      true,
-    ],
-    [
-      new APIError(413, {}, 'payload too large', headers),
-      'OpenAI request failed.',
-      false,
-    ],
-    [
-      new UnprocessableEntityError(422, {}, 'unprocessable', headers),
-      'OpenAI request failed.',
-      false,
-    ],
-    [new Error('unexpected'), 'OpenAI request failed.', false],
-  ])('maps a request failure to %s', async (error, message, retryable) => {
-    mockCreate.mockRejectedValue(error);
+  it.each(REQUEST_FAILURES)(
+    'maps a request failure to %s',
+    async (error, message, retryable) => {
+      mockCreate.mockRejectedValue(error);
 
-    const failure = await build()
-      .structured(request)
-      .catch((caught: unknown) => caught);
+      const failure = await build()
+        .structured(request)
+        .catch((caught: unknown) => caught);
 
-    expect(failure).toBeInstanceOf(AiRequestError);
-    expect(failure).toBeInstanceOf(BadGatewayException);
-    expect(failure).toMatchObject({ message, retryable });
-  });
+      expect(failure).toBeInstanceOf(AiRequestError);
+      expect(failure).toBeInstanceOf(BadGatewayException);
+      expect(failure).toMatchObject({ message, retryable });
+    },
+  );
 
   it.each([
     [
@@ -325,4 +348,71 @@ describe('AiRequestError', () => {
 
     expect(failure.message).not.toContain('sk-test');
   });
+});
+
+describe('token usage', () => {
+  beforeEach(() => {
+    mockCreate.mockReset();
+  });
+
+  it('returns the parsed output with the token usage the completion reported', async () => {
+    mockCreate.mockResolvedValue(withUsage(stop('{"ok":true}')));
+    await expect(build().structured(request)).resolves.toEqual({
+      output: { ok: true },
+      usage: {
+        inputTokens: 1_200,
+        cachedInputTokens: 1_024,
+        outputTokens: 300,
+      },
+    });
+  });
+
+  it('reports no usage when the completion carries none', async () => {
+    mockCreate.mockResolvedValue(stop('{"ok":true}'));
+    await expect(build().structured(request)).resolves.toEqual({
+      output: { ok: true },
+      usage: null,
+    });
+  });
+
+  it.each([
+    ['a refusal', stop(null, 'no')],
+    [
+      'a length cut',
+      completion({
+        finish_reason: 'length',
+        message: { content: '{', refusal: null },
+      }),
+    ],
+    [
+      'a content filter',
+      completion({
+        finish_reason: 'content_filter',
+        message: { content: '{}', refusal: null },
+      }),
+    ],
+    ['no choices', { choices: [] }],
+    ['empty content', stop('')],
+    ['unreadable json', stop('{not json')],
+  ])('throws an unusable answer carrying the usage for %s', async (_, body) => {
+    mockCreate.mockResolvedValue(withUsage(body));
+    const error = await build()
+      .structured(request)
+      .catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(UnusableAnswerError);
+    expect((error as UnusableAnswerError).usage).toEqual({
+      inputTokens: 1_200,
+      cachedInputTokens: 1_024,
+      outputTokens: 300,
+    });
+  });
+
+  it.each(REQUEST_FAILURES)(
+    'never classifies a failed request as an unusable answer: %s',
+    (error) => {
+      expect(classifyRequestError(error, 'gpt-4o')).not.toBeInstanceOf(
+        UnusableAnswerError,
+      );
+    },
+  );
 });

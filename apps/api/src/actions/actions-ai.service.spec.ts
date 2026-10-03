@@ -3,7 +3,9 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { AiClient } from '../ai/openai.client';
+import { AiGateway } from '../ai/ai-gateway.service';
+import { buildAi } from '../ai/ai-gateway.fixture';
+import { aiCompletion } from '../ai/ai-completion.fixture';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsAiService } from './actions-ai.service';
 
@@ -21,6 +23,7 @@ const buildPrisma = (
     priority: 'high',
     impact: 71,
     evidence: EVIDENCE,
+    appId: 'app_1',
     app: { name: 'Budget', store: 'APP_STORE', country: 'us' },
   },
 ) => ({
@@ -32,21 +35,20 @@ const buildPrisma = (
   },
 });
 
-const buildClient = (
-  structured: jest.Mock = jest.fn(() =>
-    Promise.resolve({ explanation: '  Your title is missing it.  ' }),
-  ),
-): AiClient => ({ model: 'gpt-4o', structured });
-
 const serviceFor = (
   prisma: ReturnType<typeof buildPrisma>,
-  client: AiClient | null = buildClient(),
+  ai: ReturnType<typeof buildAi> = buildAi(),
 ): ActionsAiService =>
-  new ActionsAiService(client, prisma as unknown as PrismaService);
+  new ActionsAiService(
+    ai as unknown as AiGateway,
+    prisma as unknown as PrismaService,
+  );
 
 describe('ActionsAiService.status', () => {
   it('reports the seam as unconfigured without a client', () => {
-    expect(serviceFor(buildPrisma(), null).status()).toEqual({
+    expect(
+      serviceFor(buildPrisma(), buildAi(undefined, false)).status(),
+    ).toEqual({
       configured: false,
       model: null,
     });
@@ -65,7 +67,7 @@ describe('ActionsAiService.explain', () => {
     const prisma = buildPrisma();
 
     await expect(
-      serviceFor(prisma, null).explain('act_1'),
+      serviceFor(prisma, buildAi(undefined, false)).explain('act_1', 'usr_1'),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.actionItem.findFirst).not.toHaveBeenCalled();
   });
@@ -73,7 +75,7 @@ describe('ActionsAiService.explain', () => {
   it('persists a trimmed explanation with its model and timestamp', async () => {
     const prisma = buildPrisma();
 
-    const result = await serviceFor(prisma).explain('act_1');
+    const result = await serviceFor(prisma).explain('act_1', 'usr_1');
 
     expect(result).toMatchObject({
       explanation: 'Your title is missing it.',
@@ -86,10 +88,12 @@ describe('ActionsAiService.explain', () => {
   });
 
   it('sends only the app, rule, priority, impact and typed evidence', async () => {
-    const structured = jest.fn(() => Promise.resolve({ explanation: 'Fine.' }));
-    await serviceFor(buildPrisma(), buildClient(structured)).explain('act_1');
+    const spend = jest.fn(() =>
+      Promise.resolve(aiCompletion({ explanation: 'Fine.' })),
+    );
+    await serviceFor(buildPrisma(), buildAi(spend)).explain('act_1', 'usr_1');
 
-    const request = structured.mock.calls[0][0] as unknown as {
+    const request = spend.mock.calls[0][1] as unknown as {
       system: string;
       content: Array<{ text: string }>;
     };
@@ -101,39 +105,39 @@ describe('ActionsAiService.explain', () => {
   });
 
   it('de-duplicates two concurrent explain calls for one action', async () => {
-    const structured = jest.fn(
+    const spend = jest.fn(
       () =>
         new Promise((resolve) =>
-          setTimeout(() => resolve({ explanation: 'Once.' }), 5),
+          setTimeout(() => resolve(aiCompletion({ explanation: 'Once.' })), 5),
         ),
     );
     const prisma = buildPrisma();
-    const service = serviceFor(prisma, buildClient(structured));
+    const service = serviceFor(prisma, buildAi(spend));
 
     const [first, second] = await Promise.all([
-      service.explain('act_1'),
-      service.explain('act_1'),
+      service.explain('act_1', 'usr_1'),
+      service.explain('act_1', 'usr_1'),
     ]);
 
-    expect(structured).toHaveBeenCalledTimes(1);
+    expect(spend).toHaveBeenCalledTimes(1);
     expect(first).toEqual(second);
   });
 
   it('allows a fresh call after the in-flight one settles', async () => {
-    const structured = jest.fn(() =>
-      Promise.resolve({ explanation: 'Again.' }),
+    const spend = jest.fn(() =>
+      Promise.resolve(aiCompletion({ explanation: 'Again.' })),
     );
-    const service = serviceFor(buildPrisma(), buildClient(structured));
+    const service = serviceFor(buildPrisma(), buildAi(spend));
 
-    await service.explain('act_1');
-    await service.explain('act_1');
+    await service.explain('act_1', 'usr_1');
+    await service.explain('act_1', 'usr_1');
 
-    expect(structured).toHaveBeenCalledTimes(2);
+    expect(spend).toHaveBeenCalledTimes(2);
   });
 
   it('rejects an unknown action with 404', async () => {
     await expect(
-      serviceFor(buildPrisma(null)).explain('missing'),
+      serviceFor(buildPrisma(null)).explain('missing', 'usr_1'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
@@ -147,19 +151,19 @@ describe('ActionsAiService.explain', () => {
       app: { name: 'Budget', store: 'APP_STORE', country: 'us' },
     });
 
-    await expect(serviceFor(prisma).explain('act_1')).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      serviceFor(prisma).explain('act_1', 'usr_1'),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(prisma.actionItem.update).not.toHaveBeenCalled();
   });
 
   it('never persists a malformed or empty model response', async () => {
     for (const output of [{}, { explanation: '' }, null, 'text']) {
       const prisma = buildPrisma();
-      const client = buildClient(jest.fn(() => Promise.resolve(output)));
+      const ai = buildAi(jest.fn(() => Promise.resolve(aiCompletion(output))));
 
       await expect(
-        serviceFor(prisma, client).explain('act_1'),
+        serviceFor(prisma, ai).explain('act_1', 'usr_1'),
       ).rejects.toBeInstanceOf(BadGatewayException);
       expect(prisma.actionItem.update).not.toHaveBeenCalled();
     }
@@ -167,12 +171,12 @@ describe('ActionsAiService.explain', () => {
 
   it('propagates an upstream failure without persisting anything', async () => {
     const prisma = buildPrisma();
-    const client = buildClient(
+    const ai = buildAi(
       jest.fn(() => Promise.reject(new BadGatewayException('upstream'))),
     );
 
     await expect(
-      serviceFor(prisma, client).explain('act_1'),
+      serviceFor(prisma, ai).explain('act_1', 'usr_1'),
     ).rejects.toBeInstanceOf(BadGatewayException);
     expect(prisma.actionItem.update).not.toHaveBeenCalled();
   });
@@ -181,12 +185,55 @@ describe('ActionsAiService.explain', () => {
     const prisma = buildPrisma();
     const service = serviceFor(
       prisma,
-      buildClient(jest.fn(() => Promise.resolve({ explanation: 'Newer.' }))),
+      buildAi(
+        jest.fn(() => Promise.resolve(aiCompletion({ explanation: 'Newer.' }))),
+      ),
     );
 
-    await service.explain('act_1');
-    await service.explain('act_1');
+    await service.explain('act_1', 'usr_1');
+    await service.explain('act_1', 'usr_1');
 
     expect(prisma.actionItem.update).toHaveBeenCalledTimes(2);
+  });
+
+  it('explains through the gateway on behalf of the requesting user', async () => {
+    const ai = buildAi();
+
+    await serviceFor(buildPrisma(), ai).explain('act_1', 'usr_1');
+
+    expect(ai.spend).toHaveBeenCalledTimes(1);
+    expect(ai.spend).toHaveBeenCalledWith(
+      { feature: 'actionExplanation', appId: 'app_1', userId: 'usr_1' },
+      expect.objectContaining({
+        schema: expect.objectContaining({
+          name: 'action_explanation',
+        }) as unknown,
+      }),
+    );
+  });
+
+  it('keeps the call counted when the explanation is blank', async () => {
+    const prisma = buildPrisma();
+    const ai = buildAi(
+      jest.fn(() => Promise.resolve(aiCompletion({ explanation: '   ' }))),
+    );
+
+    await expect(
+      serviceFor(prisma, ai).explain('act_1', 'usr_1'),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+    expect(ai.spend).toHaveBeenCalledTimes(1);
+    expect(prisma.actionItem.update).not.toHaveBeenCalled();
+  });
+
+  it('keeps the call counted when storing the explanation fails', async () => {
+    const prisma = buildPrisma();
+    const stored = new Error('database down');
+    prisma.actionItem.update.mockRejectedValue(stored);
+    const ai = buildAi();
+
+    await expect(serviceFor(prisma, ai).explain('act_1', 'usr_1')).rejects.toBe(
+      stored,
+    );
+    expect(ai.spend).toHaveBeenCalledTimes(1);
   });
 });

@@ -39,6 +39,7 @@ export interface PlanLimits {
   apiRequestsPerDay: PlanLimit;
   apiConcurrentRequests: PlanLimit;
   mcpRequestsPerMinute: PlanLimit;
+  aiCallsPerMonth: PlanLimit;
   onDemand: OnDemandRules | null;
 }
 
@@ -89,6 +90,7 @@ const NO_CAPACITY: PlanLimits = {
   competitorsPerApp: 0,
   ...INDIE_RATES,
   mcpRequestsPerMinute: 0,
+  aiCallsPerMonth: 0,
   onDemand: {
     refresh: { limit: 0, windowSeconds: DAY_SECONDS },
     runDaily: { limit: 0, windowSeconds: DAY_SECONDS },
@@ -102,6 +104,7 @@ const INDIE: PlanLimits = {
   keywordMarkets: 1_000,
   competitorsPerApp: 10,
   ...INDIE_RATES,
+  aiCallsPerMonth: 200,
   onDemand: {
     refresh: { limit: 50, windowSeconds: DAY_SECONDS },
     runDaily: { limit: 5, windowSeconds: DAY_SECONDS },
@@ -110,11 +113,14 @@ const INDIE: PlanLimits = {
   },
 };
 
+const TRIAL: PlanLimits = { ...INDIE, aiCallsPerMonth: 25 };
+
 const ULTIMATE: PlanLimits = {
   apps: 50,
   keywordMarkets: 10_000,
   competitorsPerApp: 25,
   ...ULTIMATE_RATES,
+  aiCallsPerMonth: 2_000,
   onDemand: {
     refresh: { limit: 500, windowSeconds: DAY_SECONDS },
     runDaily: { limit: 20, windowSeconds: DAY_SECONDS },
@@ -132,12 +138,13 @@ export const SELF_HOSTED_LIMITS: PlanLimits = {
   apiRequestsPerDay: null,
   apiConcurrentRequests: null,
   mcpRequestsPerMinute: null,
+  aiCallsPerMonth: null,
   onDemand: null,
 };
 
 export const PLAN_LIMITS: Record<PlanName, PlanLimits> = {
   free: NO_CAPACITY,
-  trial: INDIE,
+  trial: TRIAL,
   indie: INDIE,
   ultimate: ULTIMATE,
 };
@@ -246,5 +253,17 @@ export interface QuotaDetail {
   limit: number;
   used: number;
   requested: number;
+  upgradeTo: PaidPlanName | null;
+}
+
+export interface AiCallUsage extends QuotaUsage {
+  resetsAt: string;
+}
+
+export interface AiAllowanceDetail {
+  plan: PlanName;
+  limit: number;
+  used: number;
+  resetsAt: string;
   upgradeTo: PaidPlanName | null;
 }

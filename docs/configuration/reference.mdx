@@ -142,6 +142,7 @@ See [Work the Action Center](/guides/action-center).
 | `RETENTION_ALERT_EVENTS_DAYS` | `30` | No | Prunes completed alert claims older than N days. Unfinished claims are always retained |
 | `RETENTION_AUDIT_SCORES_DAYS` | `0` | No | Prunes audit score history older than N days |
 | `RETENTION_ACTIONS_DAYS` | `180` | No | Prunes closed action items only. Open and snoozed actions are never pruned by age |
+| `RETENTION_AI_CALLS_DAYS` | `400` | No | Days the AI call ledger is kept. Never prunes the current month, which the monthly AI allowance still counts. `0` keeps forever |
 | `RETENTION_BILLING_EVENTS_DAYS` | `90` | No | Days to keep stored Stripe webhook payloads, which carry customer billing details. `0` keeps them forever |
 
 ## Runtime
@@ -201,6 +202,7 @@ See [Enable the optional AI features](/guides/ai-features).
 | --- | --- | --- | --- |
 | `OPENAI_API_KEY` | Empty | No | Empty disables the AI audit, metadata drafts and action explanations |
 | `AI_MODEL` | `gpt-5.6-luna` | No | Must support vision and structured outputs, because the audit reads screenshots |
+| `AI_CALLS_PER_MONTH` | Empty | No | AI calls each workspace may make per calendar month (UTC) on a self hosted instance. Empty means unlimited and `0` turns AI calls off. Ignored when `BILLING_ENABLED` is true, where each plan sets its own allowance. Warns in production when empty while `OPENAI_API_KEY` is set and registration is open |
 
 ## Apple search popularity
 

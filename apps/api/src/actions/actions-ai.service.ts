@@ -1,7 +1,6 @@
 import {
   BadGatewayException,
   ConflictException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,7 +9,7 @@ import {
   ActionExplanation,
   ActionRule,
 } from '@asobeast/shared';
-import { AiClient, OPENAI_CLIENT } from '../ai/openai.client';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseActionEvidence } from './actions.mapper';
 
@@ -88,36 +87,31 @@ export class ActionsAiService {
   private readonly inFlight = new Map<string, Promise<ActionExplanation>>();
 
   constructor(
-    @Inject(OPENAI_CLIENT) private readonly client: AiClient | null,
+    private readonly ai: AiGateway,
     private readonly prisma: PrismaService,
   ) {}
 
   status(): ActionAiStatus {
-    return {
-      configured: this.client !== null,
-      model: this.client?.model ?? null,
-    };
+    return { configured: this.ai.configured, model: this.ai.model };
   }
 
-  async explain(actionId: string): Promise<ActionExplanation> {
-    if (!this.client) {
-      throw new ConflictException('AI features require OPENAI_API_KEY');
-    }
+  async explain(actionId: string, userId: string): Promise<ActionExplanation> {
+    this.ai.requireModel();
     const existing = this.inFlight.get(actionId);
     if (existing) return existing;
 
-    const run = this.generate(actionId).finally(() =>
+    const run = this.generate(actionId, userId).finally(() =>
       this.inFlight.delete(actionId),
     );
     this.inFlight.set(actionId, run);
     return run;
   }
 
-  private async generate(actionId: string): Promise<ActionExplanation> {
-    const client = this.client;
-    if (!client) {
-      throw new ConflictException('AI features require OPENAI_API_KEY');
-    }
+  private async generate(
+    actionId: string,
+    userId: string,
+  ): Promise<ActionExplanation> {
+    const model = this.ai.requireModel();
 
     const row = await this.prisma.actionItem.findFirst({
       where: { id: actionId },
@@ -127,6 +121,7 @@ export class ActionsAiService {
         priority: true,
         impact: true,
         evidence: true,
+        appId: true,
         app: { select: { name: true, store: true, country: true } },
       },
     });
@@ -141,23 +136,26 @@ export class ActionsAiService {
       );
     }
 
-    const output = await client.structured({
-      system: SYSTEM_PROMPT,
-      content: [
-        {
-          type: 'text',
-          text: [
-            `App: ${row.app.name ?? 'Unnamed'} (${row.app.store}, ${row.app.country})`,
-            `Rule: ${row.rule}`,
-            `Rule description: ${RULE_DESCRIPTION[evidence.rule]}`,
-            `Priority: ${row.priority}`,
-            `Estimated impact: ${row.impact} of 100`,
-            `Evidence: ${JSON.stringify(evidence)}`,
-          ].join('\n'),
-        },
-      ],
-      schema: SCHEMA,
-    });
+    const { output } = await this.ai.spend(
+      { feature: 'actionExplanation', appId: row.appId, userId },
+      {
+        system: SYSTEM_PROMPT,
+        content: [
+          {
+            type: 'text',
+            text: [
+              `App: ${row.app.name ?? 'Unnamed'} (${row.app.store}, ${row.app.country})`,
+              `Rule: ${row.rule}`,
+              `Rule description: ${RULE_DESCRIPTION[evidence.rule]}`,
+              `Priority: ${row.priority}`,
+              `Estimated impact: ${row.impact} of 100`,
+              `Evidence: ${JSON.stringify(evidence)}`,
+            ].join('\n'),
+          },
+        ],
+        schema: SCHEMA,
+      },
+    );
 
     if (!isExplanation(output)) {
       throw new BadGatewayException('AI returned an unusable explanation');
@@ -169,14 +167,14 @@ export class ActionsAiService {
       where: { id: actionId },
       data: {
         aiExplanation: explanation,
-        aiModel: client.model,
+        aiModel: model,
         aiGeneratedAt: generatedAt,
       },
     });
 
     return {
       explanation,
-      model: client.model,
+      model,
       generatedAt: generatedAt.toISOString(),
     };
   }

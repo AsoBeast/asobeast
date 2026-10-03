@@ -57,7 +57,7 @@ export class AuditAiRunsService {
     @InjectQueue(QUEUES.AI) private readonly queue: Queue,
   ) {}
 
-  async request(appId: string): Promise<AuditAiRunResult> {
+  async request(appId: string, userId: string): Promise<AuditAiRunResult> {
     const app = await this.loader.app(appId);
     if (app.isCompetitor) {
       throw new UnprocessableEntityException(COMPETITOR_RUN_MESSAGE);
@@ -91,18 +91,20 @@ export class AuditAiRunsService {
       return { ...effectiveRun(stored, now), reused: false };
     }
 
+    const aiCallId = await this.auditAi.reserve(appId, userId);
     const queued = { runState: 'queued', requestedAt: now, runError: null };
-    await this.prisma.auditInsight.upsert({
-      where: { appId },
-      create: { appId, model, ...queued },
-      update: queued,
-    });
     const payload: AuditCreativePayload = {
       ...this.workspace.scopeFor('a creative analysis run'),
       appId,
       requestedAt: now.toISOString(),
+      aiCallId,
     };
     try {
+      await this.prisma.auditInsight.upsert({
+        where: { appId },
+        create: { appId, model, ...queued },
+        update: queued,
+      });
       await this.queue.add(JOBS.AUDIT_CREATIVE, payload, {
         ...JOB_OPTIONS,
         attempts: CREATIVE_RUN_ATTEMPTS,
@@ -110,6 +112,7 @@ export class AuditAiRunsService {
         deduplication: { id: auditCreativeDeduplicationId(appId, now) },
       });
     } catch (error) {
+      await this.auditAi.release(aiCallId);
       await this.failUnqueued(appId, now);
       throw error;
     }
@@ -131,9 +134,15 @@ export class AuditAiRunsService {
     return count > 0;
   }
 
-  async execute(appId: string, requestedAt: Date): Promise<void> {
+  async execute(
+    appId: string,
+    requestedAt: Date,
+    aiCallId?: string,
+  ): Promise<void> {
     const inputs = await this.loader.creativeInputs(appId);
-    const observations = await this.auditAi.observe(inputs);
+    const observations = aiCallId
+      ? await this.auditAi.observeReserved(inputs, aiCallId)
+      : await this.auditAi.observe(inputs, appId, null);
     const model = this.auditAi.model ?? 'unknown';
     const { count } = await this.prisma.auditInsight.updateMany({
       where: { appId, requestedAt },
@@ -172,11 +181,21 @@ export class AuditAiRunsService {
       );
   }
 
-  async fail(appId: string, requestedAt: Date, message: string): Promise<void> {
+  async fail(
+    appId: string,
+    requestedAt: Date,
+    message: string,
+    aiCallId?: string,
+  ): Promise<void> {
     await this.prisma.auditInsight.updateMany({
       where: activeRun(appId, requestedAt),
       data: { runState: 'failed', runError: message },
     });
+    await this.abandon(aiCallId);
+  }
+
+  async abandon(aiCallId: string | undefined): Promise<void> {
+    if (aiCallId) await this.auditAi.release(aiCallId);
   }
 }
 

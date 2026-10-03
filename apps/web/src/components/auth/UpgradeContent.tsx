@@ -59,6 +59,13 @@ const INCLUDED = [
   "Personal API tokens and the MCP server",
 ];
 
+const LIMIT_ROWS = [
+  { key: "apps", label: "Apps" },
+  { key: "keywordMarkets", label: "Keyword markets" },
+  { key: "competitorsPerApp", label: "Competitors per app" },
+  { key: "aiCallsPerMonth", label: "AI calls per month" },
+] as const;
+
 const INTERVAL_LABEL: Record<BillingInterval, string> = {
   month: "Monthly",
   year: "Annual",
@@ -125,24 +132,14 @@ function PlanOption({
       </CardHeader>
       <CardContent>
         <dl className="flex flex-col gap-1.5 text-sm">
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Apps</dt>
-            <dd className="font-medium tabular-nums">
-              {formatNumber(limits.apps ?? 0)}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Keyword markets</dt>
-            <dd className="font-medium tabular-nums">
-              {formatNumber(limits.keywordMarkets ?? 0)}
-            </dd>
-          </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Competitors per app</dt>
-            <dd className="font-medium tabular-nums">
-              {formatNumber(limits.competitorsPerApp ?? 0)}
-            </dd>
-          </div>
+          {LIMIT_ROWS.map(({ key, label }) => (
+            <div key={key} className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="font-medium tabular-nums">
+                {formatNumber(limits[key] ?? 0)}
+              </dd>
+            </div>
+          ))}
         </dl>
       </CardContent>
       <CardFooter>

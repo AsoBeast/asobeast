@@ -71,6 +71,7 @@ export const EnvSchema = z.object({
   RETENTION_DELIVERIES_DAYS: z.coerce.number().int().min(0).default(30),
   RETENTION_AUDIT_SCORES_DAYS: z.coerce.number().int().min(0).default(0),
   RETENTION_ACTIONS_DAYS: z.coerce.number().int().min(0).default(180),
+  RETENTION_AI_CALLS_DAYS: z.coerce.number().int().min(0).default(400),
   RETENTION_BILLING_EVENTS_DAYS: z.coerce.number().int().min(0).default(90),
   ACTIONS_MAX_OPEN_PER_APP: z.coerce.number().int().positive().default(20),
   ACTIONS_SNOOZE_MAX_DAYS: z.coerce.number().int().positive().default(90),
@@ -115,6 +116,14 @@ export const EnvSchema = z.object({
         ? value.trim()
         : undefined,
     z.string().min(1).default('gpt-5.6-luna'),
+  ),
+  AI_CALLS_PER_MONTH: z.preprocess(
+    (value) =>
+      typeof value === 'number' ||
+      (typeof value === 'string' && value.trim().length > 0)
+        ? String(value).trim()
+        : null,
+    z.coerce.number().int().min(0).nullable(),
   ),
   BULL_BOARD_ENABLED: z
     .enum(['true', 'false'])

@@ -123,7 +123,7 @@ describe('CompetitorsService.add', () => {
       keywords as unknown as KeywordsService,
       capture,
       new QuotaService(prisma as unknown as PrismaService, workspace, {
-        get: () => false,
+        get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>),
     );
     return { service, prisma, upsert, keywords, getApp, workspace };

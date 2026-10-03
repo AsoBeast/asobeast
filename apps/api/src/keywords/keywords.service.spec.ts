@@ -9,7 +9,7 @@ import { KeywordsService } from './keywords.service';
 
 const quotaOff = (prisma: PrismaService) =>
   new QuotaService(prisma, new WorkspaceContext(), {
-    get: () => false,
+    get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
   } as unknown as ConfigService<Env, true>);
 
 describe('KeywordsService.syncFromSnapshot', () => {

@@ -37,22 +37,25 @@ export class AuditService {
     return computeAudit(await this.loader.load(appId));
   }
 
-  async runAi(appId: string): Promise<AppAuditResult> {
+  async runAi(appId: string, userId: string): Promise<AppAuditResult> {
     await this.loader.app(appId);
     const existing = this.inFlightAi.get(appId);
     if (existing) {
       return existing;
     }
-    const run = this.generateAi(appId).finally(() =>
+    const run = this.generateAi(appId, userId).finally(() =>
       this.inFlightAi.delete(appId),
     );
     this.inFlightAi.set(appId, run);
     return run;
   }
 
-  private async generateAi(appId: string): Promise<AppAuditResult> {
+  private async generateAi(
+    appId: string,
+    userId: string,
+  ): Promise<AppAuditResult> {
     const inputs = await this.loader.creativeInputs(appId);
-    const observations = await this.auditAi.observe(inputs);
+    const observations = await this.auditAi.observe(inputs, appId, userId);
     const model = this.auditAi.model ?? 'unknown';
     const stored = {
       model,

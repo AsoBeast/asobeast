@@ -12,6 +12,15 @@ import type { WorkspaceMetrics } from './workspace-metrics.service';
 
 const UNLIMITED = -1;
 
+const AI_TOKEN_KINDS: [
+  string,
+  (tokens: WorkspaceMetrics['aiTokensMonth']) => number,
+][] = [
+  ['input', (tokens) => tokens.input],
+  ['cached_input', (tokens) => tokens.cachedInput],
+  ['output', (tokens) => tokens.output],
+];
+
 export function alertFamily(
   alerts: readonly OperatorAlert[],
   isolationAnomalies: number,
@@ -99,6 +108,17 @@ function workspaceFamilies(
       'Plan limit on keyword-market pairs, -1 when unlimited',
       (metrics) => limitValue(metrics.limits.keywordMarkets),
     ),
+    gauge(
+      'asobeast_workspace_ai_calls_month',
+      'AI calls a workspace reserved or spent this UTC month',
+      (metrics) => metrics.aiCallsMonth,
+    ),
+    gauge(
+      'asobeast_workspace_quota_ai_calls_limit',
+      'Plan allowance of AI calls per month, -1 when unlimited',
+      (metrics) => limitValue(metrics.limits.aiCallsPerMonth),
+    ),
+    aiTokensFamily(workspaces),
     {
       name: 'asobeast_workspace_daily_requests_estimated',
       help: 'Store requests a workspace demands from one daily run',
@@ -344,6 +364,19 @@ function labelled(
     labels: { [label]: value },
     value: count,
   }));
+}
+
+function aiTokensFamily(workspaces: readonly WorkspaceMetrics[]): MetricFamily {
+  return {
+    name: 'asobeast_workspace_ai_tokens_month',
+    help: 'OpenAI tokens of AI calls a workspace spent this UTC month',
+    samples: workspaces.flatMap((metrics) =>
+      AI_TOKEN_KINDS.map(([kind, select]) => ({
+        labels: { workspace: metrics.workspaceId, kind },
+        value: select(metrics.aiTokensMonth),
+      })),
+    ),
+  };
 }
 
 function limitValue(limit: PlanLimit): number {

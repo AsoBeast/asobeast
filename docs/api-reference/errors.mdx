@@ -30,6 +30,7 @@ Every failure returns the same JSON envelope, whatever produced it. A single exc
 | `quota` | object | Present on `403` when a plan limit refused the write. Names the resource, the plan, the limit, the usage and the tier to upgrade to |
 | `entitlement` | object | Present on `402`. Names the plan in force, the trial and renewal dates, the tier to upgrade to and the path to reach it |
 | `rateLimit` | object | Present on `429` from a plan rate limit. Names the window that closed, the request class, the plan, the limit, the seconds until it reopens and the tier to upgrade to |
+| `aiAllowance` | object | Present on `429` when the workspace has spent the AI calls its plan includes this month. Names the plan, the allowance, the calls used, when it renews and the tier to upgrade to |
 | `billing` | object | Present on `409` from a billing route. Names the reason the request was refused and the recovery that clears it, either `portal` or `retry` |
 | `retryAfterSeconds` | number | Present on `429` and on the `503` an unreachable Redis causes, mirroring the `Retry-After` header |
 
@@ -44,7 +45,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
 | `404` | The resource does not exist, or an admin surface is refusing to confirm it exists |
-| `429` | A plan rate limit or an on demand allowance is spent. `Retry-After` says when it reopens, and `rateLimit` names the window. See [Rate limits and quotas](/api-reference/rate-limits) |
+| `429` | A plan rate limit, an on demand allowance or the monthly AI allowance is spent. `Retry-After` says when it reopens; `rateLimit` or `aiAllowance` names which. See [Rate limits and quotas](/api-reference/rate-limits) |
 | `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
 | `413` | The request body is larger than the 100 KB (102400 bytes) the API reads, counted after any `Content-Encoding` is decoded, or a form body carries more than 1000 parameters. The body is read before authentication, so an oversized request is refused even without a valid credential |
 | `415` | The body names a charset the API cannot read, or a `Content-Encoding` other than `gzip`, `deflate` or `br` |
@@ -61,6 +62,28 @@ A `429` and a `403` with a `quota` object are different problems. A `429` clears
 A `504` is produced by the Next.js proxy rather than by the API, so it appears when the API is slow rather than when a request is invalid. The same proxy returns `502` when it cannot reach the API at all. See [Web app configuration](/configuration/web).
 
 A `404` on `/docs` or `/admin/queues` is a deliberate answer rather than a missing route. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+
+## A spent AI allowance
+
+When a workspace has used every AI call its plan includes this month, the four AI endpoints answer `429` with an `aiAllowance` object, and `Retry-After` counts the seconds until 00:00 UTC on the 1st. What counts as a call is described in [AI features](/guides/ai-features#how-many-ai-calls-can-a-workspace-make).
+
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "The monthly AI allowance is spent: 200 of 200 calls used. It renews at 2026-11-01T00:00:00.000Z.",
+  "path": "/actions/act_1/explain",
+  "timestamp": "2026-10-17T09:12:44.120Z",
+  "aiAllowance": {
+    "plan": "indie",
+    "limit": 200,
+    "used": 200,
+    "resetsAt": "2026-11-01T00:00:00.000Z",
+    "upgradeTo": "ultimate"
+  },
+  "retryAfterSeconds": 1262836
+}
+```
 
 ## Validation errors
 

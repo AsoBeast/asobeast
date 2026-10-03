@@ -1,4 +1,9 @@
-import type { PaidPlanName, PlanName, QuotaDetail } from './plans';
+import type {
+  AiAllowanceDetail,
+  PaidPlanName,
+  PlanName,
+  QuotaDetail,
+} from './plans';
 import type { RateLimitDetail } from './rate-limits';
 
 export interface PipelineHealth {
@@ -49,5 +54,6 @@ export interface ApiErrorEnvelope {
   entitlement?: EntitlementDetail;
   billing?: BillingConflictDetail;
   rateLimit?: RateLimitDetail;
+  aiAllowance?: AiAllowanceDetail;
   retryAfterSeconds?: number;
 }

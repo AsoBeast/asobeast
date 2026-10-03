@@ -12,7 +12,7 @@ import {
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { planScopeOf, type PlanScope } from './plan-limits';
+import { planScopeOf, selfHostedLimits, type PlanScope } from './plan-limits';
 import { QuotaExceededError } from './quota.errors';
 
 const ADMISSION_LOCK = 4_711_903;
@@ -38,11 +38,17 @@ interface Admission<T> {
 
 @Injectable()
 export class QuotaService {
+  private readonly selfHosted: PlanLimits;
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly workspace: WorkspaceContext,
     private readonly config: ConfigService<Env, true>,
-  ) {}
+  ) {
+    this.selfHosted = selfHostedLimits(
+      config.get('AI_CALLS_PER_MONTH', { infer: true }),
+    );
+  }
 
   get enforced(): boolean {
     return this.config.get('BILLING_ENABLED', { infer: true });
@@ -102,8 +108,12 @@ export class QuotaService {
     return { plan, limits, apps, keywordMarkets };
   }
 
+  planScope(): Promise<PlanScope> {
+    return this.entitlement(this.prisma);
+  }
+
   async limitsOf(): Promise<PlanLimits> {
-    return (await this.entitlement(this.prisma)).limits;
+    return (await this.planScope()).limits;
   }
 
   async limitFor(resource: QuotaResource): Promise<PlanLimit> {
@@ -169,7 +179,7 @@ export class QuotaService {
           select: { plan: true, trialEndsAt: true, planExpiresAt: true },
         })
       : null;
-    return planScopeOf(this.enforced, workspace, new Date());
+    return planScopeOf(this.enforced, workspace, new Date(), this.selfHosted);
   }
 }
 

@@ -17,35 +17,39 @@ import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import {
   AiClient,
+  AiCompletion,
   AiStructuredRequest,
   OPENAI_CLIENT,
 } from '../src/ai/openai.client';
+import { aiCompletion } from '../src/ai/ai-completion.fixture';
 import { obliterateQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
 const D0 = new Date('2026-07-01T00:00:00.000Z');
 
 const structured = jest
-  .fn<Promise<unknown>, [AiStructuredRequest]>()
-  .mockResolvedValue({
-    drafts: [
-      {
-        field: 'title',
-        value: 'Habit Tracker: Daily Goals',
-        rationale: 'Adds the primary keyword.',
-      },
-      {
-        field: 'subtitle',
-        value: 'Sleep Timer & Water Log',
-        rationale: 'Secondary keywords with no title repeats.',
-      },
-      {
-        field: 'keywordField',
-        value: 'goal,water,reminder,sleep',
-        rationale: 'Covers uncovered terms in singular form.',
-      },
-    ],
-  });
+  .fn<Promise<AiCompletion>, [AiStructuredRequest]>()
+  .mockResolvedValue(
+    aiCompletion({
+      drafts: [
+        {
+          field: 'title',
+          value: 'Habit Tracker: Daily Goals',
+          rationale: 'Adds the primary keyword.',
+        },
+        {
+          field: 'subtitle',
+          value: 'Sleep Timer & Water Log',
+          rationale: 'Secondary keywords with no title repeats.',
+        },
+        {
+          field: 'keywordField',
+          value: 'goal,water,reminder,sleep',
+          rationale: 'Covers uncovered terms in singular form.',
+        },
+      ],
+    }),
+  );
 
 const fakeAiClient: AiClient = { model: 'gpt-4o', structured };
 

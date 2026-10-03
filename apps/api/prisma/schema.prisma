@@ -51,6 +51,7 @@ model Workspace {
   invites     WorkspaceInvite[]
   actions     ActionItem[]
   actionEvents ActionEvent[]
+  aiCalls     AiCall[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -98,6 +99,7 @@ model User {
   sessionVersion    Int        @default(0)
   tokens            ApiToken[]
   actionEvents      ActionEvent[]
+  aiCalls           AiCall[]
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
@@ -584,6 +586,26 @@ model ActionEvent {
   @@index([actionId, occurredAt])
   @@index([workspaceId, occurredAt])
   @@index([appId, occurredAt])
+}
+
+model AiCall {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  userId            String?
+  user              User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  appId             String?
+  feature           String
+  model             String
+  status            String
+  inputTokens       Int?
+  cachedInputTokens Int?
+  outputTokens      Int?
+  createdAt         DateTime  @default(now())
+  settledAt         DateTime?
+
+  @@index([workspaceId, createdAt])
+  @@index([status, createdAt])
 }
 
 model SupportAccess {

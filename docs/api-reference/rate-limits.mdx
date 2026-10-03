@@ -20,6 +20,8 @@ Two things are counted per client address instead, because no workspace is known
 
 With `BILLING_ENABLED` set to `false` there are no API rate limits at all beyond the existing authentication throttle, which answers a refusal with the same error envelope, `retryAfterSeconds` and `Retry-After` as the plan limits. See [How are sign in attempts throttled?](/security/authentication#how-are-sign-in-attempts-throttled) The only cost of a read is your own machine, and the only real constraint is store collection, bounded by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. See [The daily pipeline and rate limits](/concepts/pipeline).
 
+AI calls are the one exception an operator can opt in to, with `AI_CALLS_PER_MONTH`.
+
 Everything below applies to a metered instance.
 
 ## Request size limits apply everywhere
@@ -104,15 +106,20 @@ A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs 
 
 ## A rate limit is not a quota
 
-Three refusals look similar and mean different things. Conflating them makes all three unfixable.
+Four refusals look similar and mean different things. Conflating them makes all four unfixable.
 
 | Status | Envelope field | What it means | What fixes it |
 | --- | --- | --- | --- |
 | `429` | `rateLimit` | Too many requests too quickly | Wait for the reset, or upgrade for a larger allowance |
+| `429` | `aiAllowance` | The month's AI calls are spent | Wait for the 1st, or upgrade for a larger allowance |
 | `403` | `quota` | A plan capacity limit such as apps or tracked keyword markets | Remove something, or upgrade |
 | `402` | `entitlement` | The workspace has no live plan | Start a plan at the upgrade path in the envelope |
 
 Waiting does not help a `403`, and upgrading a plan does not clear a `429` that is already in flight.
+
+## The monthly AI allowance
+
+The four endpoints that call OpenAI (`POST /actions/{id}/explain`, `POST /apps/{id}/metadata/assistant`, `POST /apps/{id}/audit/ai/runs` and the deprecated `POST /apps/{id}/audit/ai`) also spend a monthly allowance of AI calls. When it is spent they answer `429` with an `aiAllowance` object and a `Retry-After` that points at 00:00 UTC on the 1st; see [A spent AI allowance](/api-reference/errors#a-spent-ai-allowance). `GET /auth/plan` reports the calls used in `usage.aiCalls`. What counts as a call is described in [AI features](/guides/ai-features#how-many-ai-calls-can-a-workspace-make).
 
 ## When Redis is unreachable
 

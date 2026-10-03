@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Copy, Loader2, Sparkles } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
@@ -11,10 +11,16 @@ import {
   type MetadataField,
   type Store,
 } from "@asobeast/shared";
+import {
+  AiCallsLeft,
+  useAiAllowanceSpent,
+  useAiFailureToast,
+} from "@/components/ai/ai-allowance";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ApiError, generateMetadataDrafts } from "@/lib/api";
+import { generateMetadataDrafts } from "@/lib/api";
+import { invalidateAiUsage } from "@/lib/queries";
 import {
   LINT_SEVERITY_LABEL,
   LINT_SEVERITY_VARIANT,
@@ -100,6 +106,9 @@ export function MetadataAssistantPanel({
   const [selected, setSelected] = useState<MetadataField[]>(available);
   const [instructions, setInstructions] = useState("");
   const [draftLocale] = useQueryState("draftLocale", draftLocaleParser);
+  const queryClient = useQueryClient();
+  const spent = useAiAllowanceSpent();
+  const failAi = useAiFailureToast();
 
   const mutation = useMutation({
     mutationKey: ["metadata-assistant", appId],
@@ -109,13 +118,8 @@ export function MetadataAssistantPanel({
         instructions: instructions.trim() || undefined,
         localization: canLocalize ? (draftLocale ?? undefined) : undefined,
       }),
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.envelope.message
-          : "Draft generation failed",
-      );
-    },
+    onError: (error) => failAi(error, "Draft generation failed"),
+    onSettled: () => invalidateAiUsage(queryClient),
   });
   const draftOnce = useSingleFlight(mutation);
 
@@ -171,10 +175,10 @@ export function MetadataAssistantPanel({
               </label>
             ))}
           </div>
-          <div>
+          <div className="flex flex-col items-start gap-1.5">
             <Button
               onClick={() => draftOnce()}
-              disabled={mutation.isPending || selected.length === 0}
+              disabled={mutation.isPending || selected.length === 0 || spent}
             >
               {mutation.isPending ? (
                 <Loader2 className="animate-spin" />
@@ -183,6 +187,7 @@ export function MetadataAssistantPanel({
               )}
               {drafts.length > 0 ? "Regenerate" : "Generate drafts"}
             </Button>
+            <AiCallsLeft />
           </div>
         </CardContent>
       </Card>

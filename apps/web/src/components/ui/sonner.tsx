@@ -27,6 +27,7 @@ const toasterStyle: NonNullable<ToasterProps["style"]> &
   "--error-border": "var(--destructive)",
   "--border-radius": "var(--radius)",
   boxShadow: "var(--elevation-overlay)",
+  pointerEvents: "auto",
 };
 
 const Toaster = ({ ...props }: ToasterProps) => {

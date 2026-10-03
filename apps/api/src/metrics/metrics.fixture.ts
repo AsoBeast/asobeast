@@ -22,6 +22,8 @@ export function workspaceMetricsOf(
     storedRankings: 1_000,
     storedReviews: 10,
     onDemandUsed: { refresh: 0, runDaily: 0, score: 0, suggestions: 0 },
+    aiCallsMonth: 12,
+    aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },
     ...overrides,
   };
 }

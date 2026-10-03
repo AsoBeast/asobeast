@@ -1,6 +1,7 @@
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
+import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { AiRequestError } from '../ai/openai.client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { requireJobScope } from '../jobs/job-workspace';
@@ -16,6 +17,12 @@ const requestedRun = ({ data }: Job<AuditCreativePayload>): Date | null => {
   const requestedAt = new Date(data.requestedAt);
   return Number.isNaN(requestedAt.getTime()) ? null : requestedAt;
 };
+
+const refusal = (error: unknown): unknown =>
+  error instanceof AiAllowanceExceededError ||
+  (error instanceof AiRequestError && !error.retryable)
+    ? new RefusedRunError(error.message)
+    : error;
 
 const ownerMessage = (error: Error): string =>
   error instanceof AiRequestError || error instanceof RefusedRunError
@@ -35,15 +42,16 @@ export class AuditCreativeWorker extends WorkerHost {
 
   async process(job: Job<AuditCreativePayload>): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
+      const { appId, aiCallId } = job.data;
       const requestedAt = requestedRun(job);
-      if (!requestedAt) return;
-      if (!(await this.runs.start(job.data.appId, requestedAt))) return;
+      if (!requestedAt || !(await this.runs.start(appId, requestedAt))) {
+        await this.runs.abandon(aiCallId);
+        return;
+      }
       try {
-        await this.runs.execute(job.data.appId, requestedAt);
+        await this.runs.execute(appId, requestedAt, aiCallId);
       } catch (error) {
-        throw error instanceof AiRequestError && !error.retryable
-          ? new RefusedRunError(error.message)
-          : error;
+        throw refusal(error);
       }
     });
   }
@@ -60,13 +68,13 @@ export class AuditCreativeWorker extends WorkerHost {
       error instanceof UnrecoverableError ||
       job.attemptsMade >= (job.opts.attempts ?? 1);
     if (!final) return;
-    const { appId } = job.data;
+    const { appId, aiCallId } = job.data;
     this.logger.warn(
       `creative analysis failed for app ${appId}: ${error.message}`,
     );
     await this.workspace
       .runScope(requireJobScope(job), () =>
-        this.runs.fail(appId, requestedAt, ownerMessage(error)),
+        this.runs.fail(appId, requestedAt, ownerMessage(error), aiCallId),
       )
       .catch((failure: unknown) =>
         this.logger.error(

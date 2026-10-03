@@ -44,7 +44,7 @@ apps/
       metadata/           metadata audit + keyword coverage
       actions/            aso action center: rules/, engine, lifecycle, events, detail and outcomes, endpoints
       alerts/             subscriptions, outbox, batching, webhook + smtp delivery
-      ai/                 optional openai client (audit, drafts, action explanations)
+      ai/                 AiGateway: the only holder of the optional openai client; meters every call against the monthly allowance
       jobs/               BullMQ queues, workers (appstore + gplay), pipeline, retention
       mcp/                remote streamable http endpoint (POST /mcp) + in-process gateway
     prisma/               schema.prisma, migrations, seed.ts
@@ -257,6 +257,8 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 
 13. **A request never waits on Redis through a BullMQ connection.** BullMQ connections keep an offline queue and retry forever, so a command issued while Redis is down never settles and the request behind it hangs until the web proxy gives up with a 504. Every Redis read or counter on a request path goes through `FailFastRedis` (`apps/api/src/redis/`), a dedicated ioredis client with `enableOfflineQueue: false` and a 500 ms `commandTimeout`, and the caller chooses the policy at the call site: `run` fails closed with `RedisUnavailableError` (503 and `Retry-After`), `runOpen` fails open with a fallback value. Both policies cover only an unreachable or timed out Redis; an error Redis answers with, such as `WRONGTYPE`, is a bug rather than an outage and propagates unchanged. **Fail closed anything that could be abused or that queues work Redis must run**: the authentication throttler, the recovery limiter and the on demand limiter. **Fail open anything that only meters or decorates**: plan request counters, the rejected credential count, abuse counting, run keys and operator metrics. Never read `queue.getBackend().client` for a read or a counter a request reaches; `/health` and the first run status still do, and only because each races its own one second timer. Enqueueing a job still goes through the queue and still waits for Redis, which is a known gap and not a pattern to copy.
 
+14. **Every AI call goes through `AiGateway` and spends the monthly allowance.** `OPENAI_CLIENT` is private to `AiModule`; a feature calls `AiGateway.spend`, or `reserve` when the request is accepted and `charge` when queued work runs, and never the client. The allowance is `PLAN_LIMITS[plan].aiCallsPerMonth` per workspace per UTC calendar month (`aiPeriodOf`), counted from the tenant owned `AiCall` ledger, where `reserved` and `counted` rows count and `released` rows do not; the meter on `GET /auth/plan` reads the same rows, so it can never disagree with the limiter. A call is counted when the model answered, usable or not (`UnusableAnswerError`), and released when it never answered. Reserve only after every check that can refuse the request, so a 4xx never costs a call. A spent allowance answers **429** with `aiAllowance` and `Retry-After`, never 402, because the web redirects every 402 to `/upgrade`. Self hosted instances are unlimited unless `AI_CALLS_PER_MONTH` is set.
+
 ## Environment variables
 
 `apps/api/.env.example`, `apps/web/.env.example` and the root `.env.example` are the authoritative list; the blocks below mirror them and must be updated in the same commit as any config change.
@@ -310,6 +312,7 @@ RETENTION_DELIVERIES_DAYS=30        # alert delivery log rows; 0 keeps forever
 RETENTION_AUDIT_SCORES_DAYS=0       # audit score rows; 0 keeps forever
 RETENTION_BILLING_EVENTS_DAYS=90    # stored stripe webhook payloads; they carry customer billing details. 0 keeps forever
 RETENTION_ACTIONS_DAYS=180          # closed action items (done/dismissed/resolved); open and snoozed are never pruned by age; 0 keeps forever
+RETENTION_AI_CALLS_DAYS=400         # ai call ledger rows; never prunes the current month, which the monthly allowance still counts; 0 keeps forever
 ACTIONS_MAX_OPEN_PER_APP=20         # new actions one generation run may open per app, highest impact first
 ACTIONS_SNOOZE_MAX_DAYS=90          # furthest a snooze may be set into the future
 ALERT_ACTIONS_MIN_PRIORITY=high     # lowest priority that fires action.opened: critical|high|medium|low
@@ -323,6 +326,7 @@ SMTP_PASSWORD=                      # optional
 SMTP_FROM=                          # e.g. asobeast <alerts@example.com>
 OPENAI_API_KEY=                     # optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
 AI_MODEL=gpt-5.6-luna               # OpenAI model with vision + structured outputs
+AI_CALLS_PER_MONTH=                 # optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true
 BULL_BOARD_ENABLED=true             # queue dashboard at /admin/queues; platform-operator only, proxied through the web app
 API_DOCS=owner                      # openapi surface: owner (platform-operator session or asob_ token), public, or off. WARNS in production when public
 METRICS_CACHE_SECONDS=30            # how long one /metrics scrape is reused before the collectors run again; 0 collects on every scrape

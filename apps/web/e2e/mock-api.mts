@@ -207,6 +207,7 @@ const ACCOUNT_PLAN: AccountPlan = {
   usage: {
     apps: { used: 2, limit: null },
     keywordMarkets: { used: 12, limit: null },
+    aiCalls: { used: 4, limit: null, resetsAt: "2026-11-01T00:00:00.000Z" },
   },
 };
 const BILLING_COOKIE = "e2e_billing";

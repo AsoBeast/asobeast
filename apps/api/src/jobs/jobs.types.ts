@@ -87,6 +87,7 @@ export interface RefreshAppPayload extends WorkspaceJobPayload {
 export interface AuditCreativePayload extends WorkspaceJobPayload {
   appId: string;
   requestedAt: string;
+  aiCallId?: string;
 }
 
 export function auditCreativeDeduplicationId(

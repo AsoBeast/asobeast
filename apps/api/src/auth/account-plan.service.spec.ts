@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { PLAN_LIMITS, SELF_HOSTED_LIMITS } from '@asobeast/shared';
+import { AiGateway } from '../ai/ai-gateway.service';
 import { Env } from '../config/env';
 import { AccountPlanService } from './account-plan.service';
 import { QuotaService } from './quota.service';
@@ -7,6 +8,11 @@ import { WorkspaceEntitlement } from './entitlement';
 
 const NOW = new Date('2026-08-09T00:00:00.000Z');
 const DAY_MS = 24 * 60 * 60_000;
+const AI_USAGE = {
+  used: 12,
+  limit: 200,
+  resetsAt: '2026-11-01T00:00:00.000Z',
+};
 
 describe('AccountPlanService', () => {
   const build = (
@@ -26,6 +32,9 @@ describe('AccountPlanService', () => {
           }),
       } as unknown as QuotaService,
       { get: () => billing } as unknown as ConfigService<Env, true>,
+      {
+        usage: jest.fn(() => Promise.resolve(AI_USAGE)),
+      } as unknown as AiGateway,
     );
 
   const workspace = (
@@ -69,6 +78,18 @@ describe('AccountPlanService', () => {
         },
       },
     });
+  });
+
+  it("reports the month's ai usage beside apps and keyword markets", async () => {
+    const service = build(true, {
+      plan: 'indie',
+      apps: 3,
+      keywordMarkets: 120,
+    });
+
+    const described = await service.describe(workspace({ plan: 'indie' }), NOW);
+
+    expect(described.usage.aiCalls).toEqual(AI_USAGE);
   });
 
   it('dates the trial and the renewal from the workspace', async () => {

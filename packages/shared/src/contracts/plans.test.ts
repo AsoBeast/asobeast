@@ -151,10 +151,6 @@ describe('paidPlanOf', () => {
 });
 
 describe('plan limits', () => {
-  it('gives the trial the indie limits it is sold as', () => {
-    expect(PLAN_LIMITS.trial).toEqual(PLAN_LIMITS.indie);
-  });
-
   it('holds the limits C0-02 validated', () => {
     expect(PLAN_LIMITS.indie).toMatchObject({
       apps: 5,
@@ -244,5 +240,38 @@ describe('plan definitions', () => {
     expect(PLAN_NAMES.every((plan) => PLANS[plan].displayName.length > 0)).toBe(
       true,
     );
+  });
+});
+
+describe('the monthly ai allowance', () => {
+  it.each([
+    ['free', 0],
+    ['trial', 25],
+    ['indie', 200],
+    ['ultimate', 2_000],
+  ] as const)('gives the %s plan %i ai calls a month', (plan, calls) => {
+    expect(PLAN_LIMITS[plan].aiCallsPerMonth).toBe(calls);
+  });
+
+  it('leaves ai calls unlimited on a self hosted instance', () => {
+    expect(SELF_HOSTED_LIMITS.aiCallsPerMonth).toBeNull();
+  });
+
+  it('keeps every trial limit but the ai allowance equal to indie', () => {
+    expect({ ...PLAN_LIMITS.trial, aiCallsPerMonth: null }).toEqual({
+      ...PLAN_LIMITS.indie,
+      aiCallsPerMonth: null,
+    });
+  });
+
+  it('grows the ai allowance with every step up', () => {
+    const allowances = (['free', 'trial', 'indie', 'ultimate'] as const).map(
+      (plan) => PLAN_LIMITS[plan].aiCallsPerMonth ?? Number.POSITIVE_INFINITY,
+    );
+    expect(
+      allowances.every(
+        (value, index) => index === 0 || value > allowances[index - 1],
+      ),
+    ).toBe(true);
   });
 });

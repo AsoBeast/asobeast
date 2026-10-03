@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AiGateway } from './ai-gateway.service';
 import { createOpenAiClient, OPENAI_CLIENT } from './openai.client';
 
 @Module({
@@ -9,7 +10,8 @@ import { createOpenAiClient, OPENAI_CLIENT } from './openai.client';
       useFactory: createOpenAiClient,
       inject: [ConfigService],
     },
+    AiGateway,
   ],
-  exports: [OPENAI_CLIENT],
+  exports: [AiGateway],
 })
 export class AiModule {}

@@ -37,6 +37,7 @@ interface Seeded {
   actionId: string;
   reviewId: string;
   changeId: string;
+  aiCallId: string;
 }
 
 describe('Workspace deletion (e2e)', () => {
@@ -210,6 +211,16 @@ describe('Workspace deletion (e2e)', () => {
         impact: 50,
       },
     });
+    const aiCall = await prisma.aiCall.create({
+      data: {
+        workspaceId,
+        userId: user.id,
+        appId: owned.id,
+        feature: 'actionExplanation',
+        model: 'gpt-test',
+        status: 'counted',
+      },
+    });
     const webhook = await prisma.webhook.create({
       data: {
         workspaceId,
@@ -276,6 +287,7 @@ describe('Workspace deletion (e2e)', () => {
       actionId: action.id,
       reviewId: review.id,
       changeId: change.id,
+      aiCallId: aiCall.id,
     };
   }
 
@@ -298,6 +310,7 @@ describe('Workspace deletion (e2e)', () => {
       suggestProbe,
       actionItem,
       actionEvent,
+      aiCall,
       webhook,
       emailAlert,
       alertDelivery,
@@ -322,6 +335,7 @@ describe('Workspace deletion (e2e)', () => {
       prisma.suggestProbe.count({ where: { appId: target.appId } }),
       prisma.actionItem.count({ where: { id: target.actionId } }),
       prisma.actionEvent.count({ where: { actionId: target.actionId } }),
+      prisma.aiCall.count({ where: { id: target.aiCallId } }),
       prisma.webhook.count({ where: { id: target.webhookId } }),
       prisma.emailAlert.count({ where: { id: target.emailAlertId } }),
       prisma.alertDelivery.count({ where: { id: target.deliveryId } }),
@@ -346,6 +360,7 @@ describe('Workspace deletion (e2e)', () => {
       SuggestProbe: suggestProbe,
       ActionItem: actionItem,
       ActionEvent: actionEvent,
+      AiCall: aiCall,
       Webhook: webhook,
       EmailAlert: emailAlert,
       AlertDelivery: alertDelivery,
@@ -436,6 +451,9 @@ describe('Workspace deletion (e2e)', () => {
     await expect(
       prisma.app.count({ where: { workspaceId: NEIGHBOUR } }),
     ).resolves.toBe(2);
+    await expect(
+      prisma.aiCall.count({ where: { workspaceId: NEIGHBOUR } }),
+    ).resolves.toBe(1);
   });
 
   it('keeps the shared keyword row that other workspaces still track', async () => {

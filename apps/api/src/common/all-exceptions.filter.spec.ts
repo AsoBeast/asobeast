@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
+import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
@@ -259,5 +260,26 @@ describe('AllExceptionsFilter', () => {
       retryAfterSeconds: 5,
     });
     expect(headers['Retry-After']).toBe('5');
+  });
+
+  it('answers a spent ai allowance with 429, Retry-After and the allowance', () => {
+    const detail = {
+      plan: 'indie' as const,
+      limit: 200,
+      used: 200,
+      resetsAt: '2026-11-01T00:00:00.000Z',
+      upgradeTo: 'ultimate' as const,
+    };
+    const { status, envelope, headers, tracked } = capture(
+      new AiAllowanceExceededError(detail, 3_600),
+    );
+    expect(status).toBe(429);
+    expect(headers['Retry-After']).toBe('3600');
+    expect(envelope).toMatchObject({
+      statusCode: 429,
+      aiAllowance: detail,
+      retryAfterSeconds: 3_600,
+    });
+    expect(tracked).not.toHaveBeenCalled();
   });
 });

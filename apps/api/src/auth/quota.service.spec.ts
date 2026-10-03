@@ -68,7 +68,7 @@ describe('QuotaService', () => {
 
     const workspace = new WorkspaceContext();
     const quota = new QuotaService(prisma, workspace, {
-      get: () => billingEnabled,
+      get: (key: string) => (key === 'BILLING_ENABLED' ? billingEnabled : null),
     } as unknown as ConfigService<Env, true>);
 
     return {

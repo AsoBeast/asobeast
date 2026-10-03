@@ -14,6 +14,7 @@ import {
   InvalidStoreUrlError,
   UnknownStorefrontError,
 } from '@asobeast/shared';
+import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { EntitlementRequiredError } from '../auth/auth.errors';
 import { OnDemandLimitError } from '../auth/on-demand.limiter';
 import { WorkspaceSuspendedError } from '../auth/abuse/abuse.errors';
@@ -48,6 +49,7 @@ type ResolvedError = Pick<
   | 'entitlement'
   | 'billing'
   | 'rateLimit'
+  | 'aiAllowance'
   | 'retryAfterSeconds'
 >;
 
@@ -187,6 +189,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         statusCode: HttpStatus.TOO_MANY_REQUESTS,
         error: 'Too Many Requests',
         message: exception.message,
+        retryAfterSeconds: exception.retryAfterSeconds,
+      };
+    }
+    if (exception instanceof AiAllowanceExceededError) {
+      return {
+        statusCode: HttpStatus.TOO_MANY_REQUESTS,
+        error: 'Too Many Requests',
+        message: exception.message,
+        aiAllowance: exception.detail,
         retryAfterSeconds: exception.retryAfterSeconds,
       };
     }
