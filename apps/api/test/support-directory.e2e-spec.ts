@@ -184,7 +184,17 @@ describe('Support directory (e2e)', () => {
       expect(body.workspaces.byPlan.map((row) => row.key)).toEqual([
         ...PLAN_NAMES,
       ]);
-      expect(body.users.total).toBe(await prisma.user.count());
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60_000);
+      expect(body.users).toEqual({
+        total: await prisma.user.count(),
+        emailVerified: await prisma.user.count({
+          where: { emailVerifiedAt: { not: null } },
+        }),
+        joinedLast7Days: await prisma.user.count({
+          where: { createdAt: { gte: weekAgo } },
+        }),
+        joinedLast30Days: await prisma.user.count(),
+      });
       expect(body.apps).toEqual({
         tracked: 2,
         competitors: 1,

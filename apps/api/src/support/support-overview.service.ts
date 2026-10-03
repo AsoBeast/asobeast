@@ -69,17 +69,16 @@ export class SupportOverviewService {
   }
 
   private async userTotals(now: Date): Promise<AdminOverview['users']> {
-    const joinedSince = (days: number) => ({
-      createdAt: { gte: new Date(now.getTime() - days * DAY_MS) },
-    });
-    const [total, emailVerified, joinedLast7Days, joinedLast30Days] =
-      await Promise.all([
-        this.prisma.user.count(),
-        this.prisma.user.count({ where: { emailVerifiedAt: { not: null } } }),
-        this.prisma.user.count({ where: joinedSince(7) }),
-        this.prisma.user.count({ where: joinedSince(30) }),
-      ]);
-    return { total, emailVerified, joinedLast7Days, joinedLast30Days };
+    const weekAgo = new Date(now.getTime() - 7 * DAY_MS);
+    const monthAgo = new Date(now.getTime() - 30 * DAY_MS);
+    const [row] = await this.prisma.$queryRaw<AdminOverview['users'][]>`
+      SELECT COUNT(*)::int AS "total",
+             COUNT(*) FILTER (WHERE "emailVerifiedAt" IS NOT NULL)::int AS "emailVerified",
+             COUNT(*) FILTER (WHERE "createdAt" >= ${weekAgo})::int AS "joinedLast7Days",
+             COUNT(*) FILTER (WHERE "createdAt" >= ${monthAgo})::int AS "joinedLast30Days"
+      FROM "User"
+    `;
+    return row;
   }
 
   private async appTotals(): Promise<AdminOverview['apps']> {

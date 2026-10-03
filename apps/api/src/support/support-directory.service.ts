@@ -14,7 +14,10 @@ import { PrismaService } from '../prisma/prisma.service';
 const DIRECTORY_JUSTIFICATION =
   'the operator directory lists accounts and apps across every workspace';
 
-const NEWEST_FIRST = { createdAt: 'desc' } as const;
+const NEWEST_FIRST = [{ createdAt: 'desc' }, { id: 'desc' }] satisfies {
+  createdAt?: 'desc';
+  id?: 'desc';
+}[];
 
 const inWorkspace = (workspaceId: string | undefined) =>
   workspaceId ? { workspaceId } : {};

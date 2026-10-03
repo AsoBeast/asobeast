@@ -4,7 +4,7 @@ import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 const WORKSPACE_ID_MAX = 64;
 
 export class AdminDirectoryQueryDto {
-  @ApiPropertyOptional({ maxLength: WORKSPACE_ID_MAX })
+  @ApiPropertyOptional({ minLength: 1, maxLength: WORKSPACE_ID_MAX })
   @IsOptional()
   @IsString()
   @IsNotEmpty()
