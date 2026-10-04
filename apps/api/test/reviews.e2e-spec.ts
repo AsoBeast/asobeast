@@ -173,6 +173,34 @@ describe('ReviewsController (e2e)', () => {
     expect(body.versions).toEqual(['2.0.0', '1.0.0']);
   });
 
+  it('lists the version facet newest version first, not alphabetically', async () => {
+    const seeded = await seedApp();
+    await prisma.review.createMany({
+      data: ['3.123.1', '3.95.0', '3.67.0', '450.0.0.24.77', '6.12.2'].map(
+        (version, index) => ({
+          appId: seeded.id,
+          reviewId: `v${index}`,
+          score: 4,
+          text: 'Fine',
+          version,
+          reviewedAt: new Date('2026-07-01T00:00:00Z'),
+        }),
+      ),
+    });
+
+    const response = await api.get(`/apps/${seeded.id}/reviews`).expect(200);
+
+    expect((response.body as ReviewList).versions).toEqual([
+      '450.0.0.24.77',
+      '6.12.2',
+      '3.123.1',
+      '3.95.0',
+      '3.67.0',
+      '2.0.0',
+      '1.0.0',
+    ]);
+  });
+
   it('lists undated reviews after the dated ones and outside the limit', async () => {
     const seeded = await seedApp();
     await prisma.review.create({
