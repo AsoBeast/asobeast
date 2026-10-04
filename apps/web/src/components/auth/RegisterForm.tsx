@@ -121,9 +121,15 @@ export function RegisterForm() {
             </div>
             <FieldErrorMessage error={error} field="form" id="form-error" />
             {sessionDropped ? (
-              <SessionNotKeptAlert outcome="Your account was created." />
+              <SessionNotKeptAlert
+                outcome="Your account was created."
+                offerSignIn
+              />
             ) : null}
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || sessionDropped}
+            >
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Create account
             </Button>

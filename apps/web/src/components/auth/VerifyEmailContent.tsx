@@ -67,12 +67,15 @@ export function VerifyEmailContent() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
-        <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+        <Button
+          disabled={mutation.isPending || sessionDropped}
+          onClick={() => mutation.mutate()}
+        >
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Confirm my email
         </Button>
         {sessionDropped ? (
-          <SessionNotKeptAlert outcome="Your email is confirmed." />
+          <SessionNotKeptAlert outcome="Your email is confirmed." offerSignIn />
         ) : null}
         {mutation.isError && !sessionDropped ? (
           <>

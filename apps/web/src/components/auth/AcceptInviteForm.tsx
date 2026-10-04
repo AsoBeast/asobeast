@@ -129,9 +129,15 @@ export function AcceptInviteForm() {
               </p>
             ) : null}
             {sessionDropped ? (
-              <SessionNotKeptAlert outcome="You joined the workspace." />
+              <SessionNotKeptAlert
+                outcome="You joined the workspace."
+                offerSignIn
+              />
             ) : null}
-            <Button type="submit" disabled={mutation.isPending}>
+            <Button
+              type="submit"
+              disabled={mutation.isPending || sessionDropped}
+            >
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Accept invitation
             </Button>
