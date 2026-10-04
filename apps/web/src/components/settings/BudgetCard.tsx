@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatDateTime, formatNumber, storeLabel } from "@/lib/format";
+import { formatNumber, storeLabel } from "@/lib/format";
 import { budgetOptions } from "@/lib/queries";
 import {
   utilizationLevel,
@@ -20,6 +20,7 @@ import {
   utilizationStatus,
 } from "@/lib/utilization";
 import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
+import { budgetCompletionSentence } from "./budget-completion";
 
 const WARNING_COPY =
   "Daily jobs may not finish within store rate limits; remove keywords or countries, or raise SCRAPE_ITUNES_RPM at your own risk.";
@@ -30,6 +31,7 @@ export function BudgetCard({
 }: { footer?: ReactNode; stepLabel?: string } = {}) {
   const { data: budget } = useSuspenseQuery(budgetOptions);
   const level = utilizationLevel(budget.utilization);
+  const completion = budgetCompletionSentence(budget.completion);
 
   const rows = [
     { label: "Apps", value: budget.apps },
@@ -96,15 +98,9 @@ export function BudgetCard({
           />
         </div>
 
-        {budget.completion.completesAt ? (
-          <p className="text-sm text-muted-foreground">
-            Today&rsquo;s run is expected to finish around{" "}
-            <span className="font-medium text-foreground tabular-nums">
-              {formatDateTime(budget.completion.completesAt)}
-            </span>
-            {budget.completion.hours === null
-              ? null
-              : ` · about ${budget.completion.hours} hours of collection`}
+        {completion ? (
+          <p className="text-sm text-muted-foreground tabular-nums">
+            {completion}
           </p>
         ) : null}
 
