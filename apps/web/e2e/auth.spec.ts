@@ -1578,6 +1578,51 @@ test("the plan card does not warn about a keyword limit a workspace with no plan
   await expect(plan.getByText("Over the keyword limit")).toHaveCount(0);
 });
 
+const PAID_UNCONFIRMED_USER: AuthUser = {
+  ...TRIAL_USER,
+  emailVerified: false,
+  plan: "indie",
+  trialEndsAt: null,
+  trialAwaitsConfirmation: false,
+};
+
+async function expectConfirmationWithoutTrialPromise(page: Page) {
+  await page.goto("/verify?token=link");
+
+  await expect(
+    page.getByRole("heading", { name: "Confirm your email" }),
+  ).toBeVisible();
+  await expect(page.getByText(/trial/i)).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "Confirming marks this address as yours and signs you in on this device.",
+    ),
+  ).toBeVisible();
+}
+
+test("the confirmation page promises no trial to a paid workspace", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(fulfillJson(200, PAID_UNCONFIRMED_USER)),
+  );
+
+  await expectConfirmationWithoutTrialPromise(page);
+});
+
+test("the confirmation page promises no trial to a signed out visitor", async ({
+  page,
+}) => {
+  await expectConfirmationWithoutTrialPromise(page);
+});
+
 test("a spent confirmation link offers a new one", async ({ page }) => {
   await seedSession(page);
   await page.route("**/api/backend/auth/verify", (route) =>
