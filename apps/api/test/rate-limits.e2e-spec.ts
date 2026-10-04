@@ -1,8 +1,9 @@
 import './helpers/enable-billing';
-import { TRUSTED_PROXY_HOPS } from './helpers/enable-trusted-proxy';
+import './helpers/enable-trusted-proxy';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
@@ -17,6 +18,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import type { Env } from '../src/config/env';
 import { applyTrustedProxy } from '../src/config/trusted-proxy';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
@@ -148,7 +150,10 @@ describe('Rate limits (billing mode)', () => {
     }).compile();
     const nest = moduleFixture.createNestApplication<NestExpressApplication>();
     nest.use(cookieParser());
-    applyTrustedProxy(nest, TRUSTED_PROXY_HOPS);
+    applyTrustedProxy(
+      nest,
+      nest.get(ConfigService<Env, true>).get('TRUST_PROXY', { infer: true }),
+    );
     await nest.init();
     app = nest;
     await pauseQueues(app);
