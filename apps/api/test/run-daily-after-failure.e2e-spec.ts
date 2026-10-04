@@ -251,5 +251,14 @@ describe('Run daily after a failed collection (e2e)', () => {
     expect(['waiting', 'prioritized', 'paused']).toContain(
       await checks[0].getState(),
     );
+
+    await harness.resumeQueues();
+    await harness.waitFor(async () => {
+      expect(await stateOfCheck(keyword.id)).toBe('completed');
+    });
+    const handledChecks = harness.storeJobs.handle.mock.calls.filter(
+      ([job]) => job.name === JOBS.CHECK_KEYWORD,
+    );
+    expect(handledChecks).toHaveLength(1);
   });
 });
