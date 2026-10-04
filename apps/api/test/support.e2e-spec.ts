@@ -268,10 +268,20 @@ describe('Support tooling (e2e)', () => {
     });
 
     it('records the refusal as a failed support action', async () => {
+      const refusals = {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        action: 'suspend',
+        outcome: 'failed',
+      };
+      const before = await prisma.supportAccess.count({ where: refusals });
+
       await suspendOperatorWorkspace().expect(409);
 
+      expect(await prisma.supportAccess.count({ where: refusals })).toBe(
+        before + 1,
+      );
       const [entry] = await prisma.supportAccess.findMany({
-        where: { workspaceId: DEFAULT_WORKSPACE_ID, action: 'suspend' },
+        where: refusals,
         orderBy: { createdAt: 'desc' },
         take: 1,
       });
