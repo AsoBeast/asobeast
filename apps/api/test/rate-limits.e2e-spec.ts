@@ -1,7 +1,9 @@
 import './helpers/enable-billing';
+import { TRUSTED_PROXY_HOPS } from './helpers/enable-trusted-proxy';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
@@ -15,6 +17,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { applyTrustedProxy } from '../src/config/trusted-proxy';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
@@ -33,6 +36,8 @@ const PASSWORD = 'supersecret1';
 const WRITES_PER_MINUTE = PLAN_LIMITS.indie.apiWritesPerMinute as number;
 const READS_PER_MINUTE = PLAN_LIMITS.indie.apiRequestsPerMinute as number;
 const BURN_HEADROOM_SECONDS = 15;
+const LOGIN_ATTEMPTS_PER_MINUTE = 10;
+const ROTATING_SUBNET = '2001:db8:4a1:7';
 
 async function awaitBurnHeadroom(): Promise<void> {
   const remaining = secondsUntilReset(MINUTE_SECONDS, new Date());
@@ -141,9 +146,11 @@ describe('Rate limits (billing mode)', () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
-    app = moduleFixture.createNestApplication<App>();
-    app.use(cookieParser());
-    await app.init();
+    const nest = moduleFixture.createNestApplication<NestExpressApplication>();
+    nest.use(cookieParser());
+    applyTrustedProxy(nest, TRUSTED_PROXY_HOPS);
+    await nest.init();
+    app = nest;
     await pauseQueues(app);
 
     prisma = testDb();
@@ -189,6 +196,7 @@ describe('Rate limits (billing mode)', () => {
     );
     await obliterateQueues(app);
     await app.close();
+    delete process.env.TRUST_PROXY;
     restoreAuthEnv();
     await prisma.$disconnect();
   });
@@ -360,6 +368,21 @@ describe('Rate limits (billing mode)', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ status: 'DONE' })
       .expect(403);
+  });
+
+  it('shares one login window across every address in an ipv6 /64', async () => {
+    const login = (forwardedFor: string) =>
+      request(app.getHttpServer())
+        .post('/auth/login')
+        .set('X-Forwarded-For', forwardedFor)
+        .send({ email: 'victim@example.com', password: 'guess' });
+
+    for (let attempt = 1; attempt <= LOGIN_ATTEMPTS_PER_MINUTE; attempt += 1) {
+      await login(`${ROTATING_SUBNET}::${attempt.toString(16)}`).expect(401);
+    }
+
+    await login(`${ROTATING_SUBNET}:ffff:ffff:ffff:fffe`).expect(429);
+    await login('2001:db8:4a1:8::1').expect(401);
   });
 
   it('admits one of two callers racing for the last parallel slot', async () => {
