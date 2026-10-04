@@ -114,6 +114,34 @@ describe('trackerOf', () => {
   it('still produces a key when express cannot name the client', () => {
     expect(trackerOf({})).toBe('ip:unknown');
   });
+
+  it('groups every ipv6 address in one /64 under a single key', () => {
+    const first = trackerOf({ ip: '2001:db8:abcd:12:1:2:3:4' });
+    const second = trackerOf({ ip: '2001:db8:abcd:12:ffff:ffff:ffff:9' });
+
+    expect(first).toBe('ip:2001:db8:abcd:12::/64');
+    expect(second).toBe(first);
+  });
+
+  it('keeps neighbouring ipv6 /64 networks apart', () => {
+    expect(trackerOf({ ip: '2001:db8:abcd:13::1' })).not.toBe(
+      trackerOf({ ip: '2001:db8:abcd:12::1' }),
+    );
+  });
+
+  it('keys an ipv4-mapped address as the ipv4 client it carries', () => {
+    expect(trackerOf({ ip: '::ffff:203.0.113.7' })).toBe('ip:203.0.113.7');
+  });
+
+  it('keeps ipv4 clients that share a /24 apart', () => {
+    expect(trackerOf({ ip: '203.0.113.8' })).not.toBe(
+      trackerOf({ ip: '203.0.113.7' }),
+    );
+  });
+
+  it('keeps the ipv6 loopback a single address', () => {
+    expect(trackerOf({ ip: '::1' })).toBe('ip:::1');
+  });
 });
 
 describe('RedisThrottlerStorage while redis is unreachable', () => {
