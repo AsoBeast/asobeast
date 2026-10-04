@@ -98,6 +98,14 @@ describe('compareVersions', () => {
   it('is zero only for the same text', () => {
     expect(compareVersions('1.2.3', '1.2.3')).toBe(0);
     expect(compareVersions('1.0', '1.0.0')).not.toBe(0);
+    expect(compareVersions('1.0', '1.00')).not.toBe(0);
+    expect(compareVersions('01', '1')).not.toBe(0);
+  });
+
+  it('orders versions the collator calls equal the same way whatever the input order', () => {
+    expect(sortVersionsNewestFirst(['1.0', '1.00'])).toEqual(
+      sortVersionsNewestFirst(['1.00', '1.0']),
+    );
   });
 
   it('is antisymmetric', () => {
