@@ -18,8 +18,10 @@ import type {
 } from "@asobeast/shared";
 import { apiFetch } from "./client";
 
-export function getAuthStatus(): Promise<AuthStatus> {
-  return apiFetch<AuthStatus>("/auth/status");
+export function getAuthStatus(
+  init?: Pick<RequestInit, "signal">,
+): Promise<AuthStatus> {
+  return apiFetch<AuthStatus>("/auth/status", init);
 }
 
 export function getAuthMe(): Promise<AuthUser> {

@@ -7,9 +7,14 @@ export class SessionNotKeptError extends Error {
   }
 }
 
+const SESSION_CHECK_TIMEOUT_MS = 5_000;
+
 async function sessionIsKept(): Promise<boolean> {
   try {
-    return (await getAuthStatus()).authenticated;
+    const status = await getAuthStatus({
+      signal: AbortSignal.timeout(SESSION_CHECK_TIMEOUT_MS),
+    });
+    return status.authenticated;
   } catch {
     return true;
   }
