@@ -46,6 +46,13 @@ async function signIn(page: Page) {
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
+async function expectNoResubmit(page: Page, button: string) {
+  await expect(page.getByRole("button", { name: button })).toBeDisabled();
+  await expect(
+    notice(page).getByRole("link", { name: "Go to sign in" }),
+  ).toHaveAttribute("href", "/login");
+}
+
 function trackAppNavigations(page: Page): string[] {
   const navigations: string[] = [];
   page.on("request", (request) => {
@@ -77,6 +84,9 @@ test("a sign in whose cookie the browser drops says so instead of reloading the 
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByLabel("Email")).toHaveValue("owner@example.com");
   await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+  await expect(
+    notice(page).getByRole("link", { name: "Go to sign in" }),
+  ).toHaveCount(0);
   expect(navigations).toEqual([]);
 });
 
@@ -208,6 +218,7 @@ test("a registration whose cookie the browser drops says the account exists", as
 
   await expect(notice(page)).toContainText("Your account was created.");
   await expect(page).toHaveURL(/\/register$/);
+  await expectNoResubmit(page, "Create account");
 });
 
 test("an accepted invitation whose cookie the browser drops says the invitation was used", async ({
@@ -224,6 +235,7 @@ test("an accepted invitation whose cookie the browser drops says the invitation 
 
   await expect(notice(page)).toContainText("You joined the workspace.");
   await expect(page).toHaveURL(/\/invite\?/);
+  await expectNoResubmit(page, "Accept invitation");
 });
 
 test("a confirmed email whose cookie the browser drops does not call the link spent", async ({
@@ -240,4 +252,5 @@ test("a confirmed email whose cookie the browser drops does not call the link sp
   await expect(notice(page)).toContainText("Your email is confirmed.");
   await expect(page.getByText("no longer valid")).toHaveCount(0);
   await expect(page).toHaveURL(/\/verify\?/);
+  await expectNoResubmit(page, "Confirm my email");
 });
