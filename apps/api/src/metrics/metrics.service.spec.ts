@@ -1,7 +1,8 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { IsolationMonitor } from '../common/tenancy/isolation-monitor.service';
 import { InstanceMetricsCollector } from './instance-metrics.service';
-import { instanceMetricsOf } from './metrics.fixture';
+import { instanceMetricsOf, workspaceMetricsOf } from './metrics.fixture';
 import { MetricsService } from './metrics.service';
 import { WorkspaceMetricsCollector } from './workspace-metrics.service';
 
@@ -61,5 +62,59 @@ describe('MetricsService caching', () => {
     await service.scrape(NOW);
 
     expect(workspaces.collect).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('MetricsService cost alerts', () => {
+  const UNPAID_ALERT = 'workspace.cost.unpaid';
+
+  function scrapeWith(billing: boolean, plan: 'free' | 'trial') {
+    const workspaces = {
+      collect: jest
+        .fn()
+        .mockResolvedValue([
+          workspaceMetricsOf({ workspaceId: 'ws_default', plan }),
+        ]),
+    };
+    const instance = {
+      collect: jest.fn().mockResolvedValue(instanceMetricsOf()),
+    };
+    const values: Record<string, unknown> = {
+      METRICS_CACHE_SECONDS: 0,
+      CRON_DAILY: '0 3 * * *',
+      BILLING_ENABLED: billing,
+    };
+    const config = { get: jest.fn((key: string) => values[key]) };
+    const service = new MetricsService(
+      workspaces as unknown as WorkspaceMetricsCollector,
+      instance as unknown as InstanceMetricsCollector,
+      new IsolationMonitor(),
+      config as unknown as ConfigService<never, true>,
+    );
+    return service.scrape(NOW);
+  }
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('leaves a self hosted workspace that takes the whole pool alone', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const text = await scrapeWith(false, 'free');
+
+    expect(text).not.toContain(UNPAID_ALERT);
+    expect(warn).not.toHaveBeenCalledWith(
+      expect.stringContaining(UNPAID_ALERT),
+    );
+  });
+
+  it('still flags an unpaid workspace taking the pool when billing is on', async () => {
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+
+    const text = await scrapeWith(true, 'trial');
+
+    expect(text).toContain(UNPAID_ALERT);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining(`${UNPAID_ALERT} ws_default`),
+    );
   });
 });
