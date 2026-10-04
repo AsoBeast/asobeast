@@ -83,7 +83,11 @@ export class EmailVerificationService {
         ),
       },
     });
-    await this.verification.send(user.email, token);
+    await this.verification.send(
+      user.email,
+      token,
+      this.awaitsConfirmation(user),
+    );
   }
 
   claim(token: string, signedIn: User | null): Promise<AccountUser> {
