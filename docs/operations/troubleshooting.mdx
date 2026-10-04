@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: "Sixteen symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
+description: "Twenty symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
 icon: life-buoy
 keywords: ["troubleshooting","404","409","no rankings","alerts not arriving","signed out"]
 ---
@@ -38,13 +38,37 @@ Each entry below names the symptom the way you would describe it, then gives the
 
     - Terminate TLS in front of port 3001 with your own reverse proxy and certificate.
     - Compose the Cloudflare Tunnel overlay, which terminates TLS at Cloudflare.
-    - Forward the port over SSH and open `http://localhost:3001`. Browsers treat localhost as a secure context and keep a `Secure` cookie there without TLS.
+    - Forward the port over SSH and open `http://localhost:3001` in Chrome or Firefox, which keep a `Secure` cookie on localhost without TLS. Safari does not. See [Signing in returns to the sign in form](#signing-in-returns-to-the-sign-in-form).
 
     ```bash
     ssh -N -L 3001:localhost:3001 user@nas.local
     ```
 
     See [Hosting behind TLS and a reverse proxy](/security/hosting).
+  </Accordion>
+
+  <Accordion title="Signing in returns to the sign in form">
+    The API accepted the password, but the browser did not keep the session cookie, so the next request arrived signed out. The sign in form then shows the message "Your browser did not keep the session cookie", or on an older release simply loads again. The cookie is `Secure`, and a browser stores it only over HTTPS or on an origin it treats as secure. Three causes cover almost every case.
+
+    - **Safari on plain HTTP, even on localhost.** Chrome and Firefox keep a `Secure` cookie on `http://localhost` and `http://127.0.0.1`. Safari drops it there, so `http://localhost:3001` accepts the sign in and bounces straight back. WebKit tracks the gap as [bug 281149](https://bugs.webkit.org/show_bug.cgi?id=281149), and the MDN compatibility data records it for `Set-Cookie`. As of Safari 27.0 on macOS 26.6 the cookie is still dropped.
+    - **Plain HTTP from another machine.** A LAN address or any hostname other than localhost is not a secure origin in any browser.
+    - **Cookies blocked for the site.** A browser setting, extension or policy that blocks all cookies discards the cookie even over HTTPS.
+
+    To confirm, open the developer tools and sign in. A `POST /api/backend/auth/login` that answers `200` with a `Set-Cookie: asobeast_session` header, followed by no stored `asobeast_session` cookie, is this problem.
+
+    Pick one fix.
+
+    - Use Chrome or Firefox for a local evaluation on `http://localhost:3001`.
+    - Put TLS in front of the stack. For a local evaluation that works in Safari, run Caddy with the Caddyfile below and open `https://localhost`. Caddy signs the certificate with its own local authority, which the system has to trust before Safari accepts it.
+    - Compose the Cloudflare Tunnel overlay for a host you reach from elsewhere.
+
+    ```caddyfile
+    localhost {
+      reverse_proxy 127.0.0.1:3001
+    }
+    ```
+
+    Set `TRUST_PROXY=1` as [Bring your own proxy](/security/hosting#bring-your-own-proxy) describes. Do not set `AUTH_COOKIE_SECURE=false` to get past this, because the Docker image then refuses to boot.
   </Accordion>
 </AccordionGroup>
 
