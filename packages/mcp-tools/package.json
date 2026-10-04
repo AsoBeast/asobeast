@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@asobeast/shared": "workspace:*",
-    "zod": "^4.6.2"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@asobeast/typescript-config": "workspace:*",

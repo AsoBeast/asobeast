@@ -17,13 +17,13 @@
   "dependencies": {
     "@asobeast/mcp-tools": "workspace:*",
     "@asobeast/shared": "workspace:*",
-    "@modelcontextprotocol/server": "2.0.0",
-    "zod": "^4.6.2"
+    "@modelcontextprotocol/server": "2.3.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@asobeast/typescript-config": "workspace:*",
     "@eslint/js": "^9.39.5",
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "2.3.0",
     "@types/node": "^26.6.4",
     "eslint": "^9.39.5",
     "tsup": "^8.5.1",

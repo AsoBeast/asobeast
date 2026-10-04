@@ -91,6 +91,7 @@ describe('Remote MCP modern era (e2e)', () => {
       .set('Authorization', `Bearer ${TOKEN}`)
       .set('Accept', 'application/json, text/event-stream')
       .set('Content-Type', 'application/json')
+      .set('MCP-Protocol-Version', MODERN_PROTOCOL_VERSION)
       .set('Mcp-Method', method);
     if (typeof params.name === 'string') pending.set('Mcp-Name', params.name);
     return pending.send({
@@ -275,6 +276,15 @@ describe('Remote MCP modern era (e2e)', () => {
     };
 
     expect(result.tools).toHaveLength(MCP_TOOLS.length);
+  });
+
+  it('refuses a modern request that omits its protocol version header', async () => {
+    const response = await rawModern('tools/list')
+      .unset('MCP-Protocol-Version')
+      .expect(400);
+    const { error } = JSON.parse(response.text) as { error: { code: number } };
+
+    expect(error.code).toBe(-32020);
   });
 
   it('spends one mcp budget request per protocol probe', async () => {
