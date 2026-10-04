@@ -19,6 +19,7 @@ import { ratingHistogram } from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
+import { sortVersionsNewestFirst } from './version-order';
 
 export interface ReviewListFilters {
   score?: number;
@@ -251,7 +252,6 @@ export class ReviewsService {
         tx.review.findMany({
           where: { appId, version: { not: null } },
           distinct: ['version'],
-          orderBy: { version: 'desc' },
           select: { version: true },
         }),
       ]),
@@ -260,9 +260,11 @@ export class ReviewsService {
     return {
       reviews: reviews.map((review) => this.toReviewItem(review)),
       total,
-      versions: versions
-        .map((row) => row.version)
-        .filter((version): version is string => version !== null),
+      versions: sortVersionsNewestFirst(
+        versions
+          .map((row) => row.version)
+          .filter((version): version is string => version !== null),
+      ),
     };
   }
 
