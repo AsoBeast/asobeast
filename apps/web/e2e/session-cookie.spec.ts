@@ -108,10 +108,15 @@ test("a second attempt after the browser is fixed signs in and clears the notice
 }) => {
   let attempts = 0;
   let kept = false;
+  let release = () => {};
+  const retried = new Promise<void>((resolve) => {
+    release = resolve;
+  });
   await routeStatus(page, () => kept);
   await page.route("**/api/backend/auth/login", async (route) => {
     attempts += 1;
     if (attempts === 2) {
+      await retried;
       kept = true;
       await seedSession(page);
     }
@@ -126,6 +131,8 @@ test("a second attempt after the browser is fixed signs in and clears the notice
   await expect(notice(page)).toBeVisible();
 
   await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(notice(page)).toHaveCount(0);
+  release();
 
   await expect(page).toHaveURL(/\/$/);
   expect(attempts).toBe(2);
