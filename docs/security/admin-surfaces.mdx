@@ -14,7 +14,7 @@ The last two matter to a hosted operator rather than a self hoster, and [Observa
 
 The platform operator is the owner of the bootstrap workspace, the first account the instance ever created. It is a different principal from a workspace owner.
 
-That distinction matters because the two deployment shapes hand out the `owner` role differently. Self hosted puts every account in one workspace, so its first account is both the workspace owner and the operator. Hosted gives every registration its own workspace and makes that customer the `owner` of it, so `owner` alone cannot authorize an instance wide surface. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page.
+That distinction matters because registration decides who becomes an `owner`. By default every account after the first gets a workspace of its own and owns it, on a self hosted instance as much as on a hosted one, so `owner` alone cannot authorize an instance wide surface. A one person instance has a single account, which is both the owner of the bootstrap workspace and the operator. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page, and neither is a member who joined the bootstrap workspace because the instance opted into `AUTH_REGISTRATION_WORKSPACE=shared`. See [Where a self registration lands](/security/authentication#where-a-self-registration-lands).
 
 Owning your own workspace still authorizes everything inside it, including scheduling its deletion and managing its team. Only the cross tenant surfaces require the operator.
 
