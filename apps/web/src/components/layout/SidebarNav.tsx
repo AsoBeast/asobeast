@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -18,6 +19,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { ADMIN_ENTRY } from "@/components/admin/admin-links";
 import { useAuth } from "@/components/auth/use-auth";
 import {
   SidebarGroup,
@@ -36,6 +38,7 @@ import {
   isSectionActive,
   sectionHref,
 } from "@/lib/app-sections";
+import { adminSectionFrom } from "@/lib/admin-sections";
 import { actionSummaryOptions } from "@/lib/queries";
 
 const SECTION_ICONS: Record<AppSectionSegment, LucideIcon> = {
@@ -79,9 +82,42 @@ function OpenActionBadge() {
   );
 }
 
+function NavLink({
+  href,
+  label,
+  icon: Icon,
+  active,
+  onNavigate,
+  children,
+}: {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+  active: boolean;
+  onNavigate: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild tooltip={label} isActive={active}>
+        <Link
+          href={href}
+          onClick={onNavigate}
+          aria-current={active ? "page" : undefined}
+        >
+          <Icon />
+          <span>{label}</span>
+          {children}
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
 export function SidebarNav() {
   const pathname = usePathname();
   const { setOpenMobile, isMobile } = useSidebar();
+  const { isOperator } = useAuth();
   const app = appRouteFrom(pathname);
 
   const close = () => {
@@ -94,25 +130,25 @@ export function SidebarNav() {
         <SidebarGroupLabel>Workspace</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {WORKSPACE.map(({ href, label, icon: Icon }) => (
-              <SidebarMenuItem key={href}>
-                <SidebarMenuButton
-                  asChild
-                  tooltip={label}
-                  isActive={pathname === href}
-                >
-                  <Link
-                    href={href}
-                    onClick={close}
-                    aria-current={pathname === href ? "page" : undefined}
-                  >
-                    <Icon />
-                    <span>{label}</span>
-                    {href === "/actions" ? <OpenActionBadge /> : null}
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+            {WORKSPACE.map(({ href, label, icon }) => (
+              <NavLink
+                key={href}
+                href={href}
+                label={label}
+                icon={icon}
+                active={pathname === href}
+                onNavigate={close}
+              >
+                {href === "/actions" ? <OpenActionBadge /> : null}
+              </NavLink>
             ))}
+            {isOperator ? (
+              <NavLink
+                {...ADMIN_ENTRY}
+                active={adminSectionFrom(pathname) !== null}
+                onNavigate={close}
+              />
+            ) : null}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

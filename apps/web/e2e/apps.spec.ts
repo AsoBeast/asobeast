@@ -392,6 +392,9 @@ test("an error state points at the status page once one is configured", async ({
 test("an unknown app renders the not-found boundary", async ({ page }) => {
   await page.goto("/apps/does-not-exist");
 
-  await expect(page.getByRole("heading", { name: "404" })).toBeVisible();
-  await expect(page.getByText("This page could not be found.")).toBeVisible();
+  const main = page.getByRole("main");
+  await expect(main.getByText("Page not found")).toBeVisible();
+  await expect(
+    main.getByText("There is nothing at this address."),
+  ).toBeVisible();
 });

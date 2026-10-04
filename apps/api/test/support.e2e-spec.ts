@@ -12,12 +12,16 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { AppModule } from '../src/app.module';
-import { sha256 } from '../src/auth/password-hash';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { testDb } from './helpers/test-db';
+import {
+  seedApiToken,
+  seedWorkspace,
+  truncateUsers,
+} from './helpers/api-tokens';
 
 const SUPPORT = '/admin/support/workspaces';
 const OTHER_WORKSPACE = 'ws_support_target';
@@ -29,66 +33,23 @@ describe('Support tooling (e2e)', () => {
   let prisma: PrismaClient;
   let owner: Awaited<ReturnType<typeof ownerAgent>>;
 
-  function truncateUsers(): Promise<number> {
-    return prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
-    );
-  }
+  const tenantOwnerToken = async () => {
+    await seedWorkspace(prisma, TENANT_WORKSPACE, 'Tenant');
+    return seedApiToken(prisma, {
+      seed: 'supporttenant3333',
+      email: 'owner@support-tenant.example.com',
+      workspaceId: TENANT_WORKSPACE,
+      role: 'owner',
+    });
+  };
 
-  async function tenantOwnerToken(): Promise<string> {
-    const plaintext = `asob_${'supporttenant'.padEnd(48, '3')}`;
-    await prisma.workspace.upsert({
-      where: { id: TENANT_WORKSPACE },
-      update: {},
-      create: { id: TENANT_WORKSPACE, name: 'Tenant' },
+  const memberToken = () =>
+    seedApiToken(prisma, {
+      seed: 'supportmember111',
+      email: 'member@support.example.com',
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      role: 'member',
     });
-    const user = await prisma.user.upsert({
-      where: { email: 'owner@support-tenant.example.com' },
-      update: { role: 'owner', workspaceId: TENANT_WORKSPACE },
-      create: {
-        workspaceId: TENANT_WORKSPACE,
-        email: 'owner@support-tenant.example.com',
-        passwordHash: 'password-login-unused',
-        role: 'owner',
-      },
-    });
-    await prisma.apiToken.upsert({
-      where: { tokenHash: sha256(plaintext) },
-      update: {},
-      create: {
-        userId: user.id,
-        name: 'e2e',
-        tokenHash: sha256(plaintext),
-        prefix: plaintext.slice(0, 12),
-      },
-    });
-    return plaintext;
-  }
-
-  async function memberToken(): Promise<string> {
-    const plaintext = `asob_${'member'.padEnd(48, '1')}`;
-    const user = await prisma.user.upsert({
-      where: { email: 'member@support.example.com' },
-      update: { role: 'member' },
-      create: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        email: 'member@support.example.com',
-        passwordHash: 'password-login-unused',
-        role: 'member',
-      },
-    });
-    await prisma.apiToken.upsert({
-      where: { tokenHash: sha256(plaintext) },
-      update: {},
-      create: {
-        userId: user.id,
-        name: 'e2e',
-        tokenHash: sha256(plaintext),
-        prefix: plaintext.slice(0, 12),
-      },
-    });
-    return plaintext;
-  }
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -112,7 +73,7 @@ describe('Support tooling (e2e)', () => {
       update: { suspendedAt: null, suspendedReason: null },
       create: { id: OTHER_WORKSPACE, name: 'Target' },
     });
-    await truncateUsers();
+    await truncateUsers(prisma);
     await prisma.supportAccess.deleteMany({});
     owner = await ownerAgent(app);
   });
@@ -123,7 +84,7 @@ describe('Support tooling (e2e)', () => {
     await prisma.workspace.deleteMany({
       where: { id: { in: [OTHER_WORKSPACE, TENANT_WORKSPACE] } },
     });
-    await truncateUsers();
+    await truncateUsers(prisma);
     await prisma.$disconnect();
     await obliterateQueues(app);
     await app.close();

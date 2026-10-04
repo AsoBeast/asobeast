@@ -5,6 +5,8 @@ import { LayoutDashboard, ListChecks, Search, Settings } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppIcon } from "@/components/AppIcon";
+import { ADMIN_ENTRY } from "@/components/admin/admin-links";
+import { useAuth } from "@/components/auth/use-auth";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,6 +46,8 @@ export function CommandPalette() {
   const route = appRouteFrom(pathname);
   const appId = route?.id;
   const { data: apps } = useQuery({ ...appsOptions, enabled: open });
+  const { isOperator } = useAuth();
+  const general = isOperator ? [...GENERAL, ADMIN_ENTRY] : GENERAL;
 
   const openRef = useRef(open);
 
@@ -147,7 +151,7 @@ export function CommandPalette() {
             ) : null}
 
             <CommandGroup heading="General">
-              {GENERAL.map((entry) => (
+              {general.map((entry) => (
                 <CommandItem
                   key={entry.href}
                   value={entry.label}

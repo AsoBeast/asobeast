@@ -47,6 +47,19 @@ describe("viewerIsOperator", () => {
     await expect(viewerIsOperator()).resolves.toBe(false);
   });
 
+  it("rethrows an api failure so the page shows its error state", async () => {
+    me.mockRejectedValue(
+      new ApiError({
+        statusCode: 503,
+        error: "Service Unavailable",
+        message: "Try again shortly",
+        path: "/auth/me",
+        timestamp: "2026-10-03T00:00:00.000Z",
+      }),
+    );
+    await expect(viewerIsOperator()).rejects.toThrow("Try again shortly");
+  });
+
   it("rethrows anything that is not an api answer", async () => {
     me.mockRejectedValue(new TypeError("fetch failed"));
     await expect(viewerIsOperator()).rejects.toThrow("fetch failed");

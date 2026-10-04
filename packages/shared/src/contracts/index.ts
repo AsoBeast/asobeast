@@ -21,4 +21,5 @@ export * from './plans';
 export * from './rate-limits';
 export * from './billing';
 export * from './support';
+export * from './admin';
 export * from './account';

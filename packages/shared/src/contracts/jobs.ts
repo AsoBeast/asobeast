@@ -53,6 +53,13 @@ export interface DailyBudget {
   completion: BudgetCompletion;
 }
 
+export interface StoreDemand {
+  store: Store;
+  requestsPerDay: number;
+  capacityPerDay: number;
+  utilization: number;
+}
+
 export interface WorkspaceDemand {
   workspaceId: string;
   requests: number;
@@ -63,6 +70,7 @@ export interface CapacityReport {
   capacityPerDay: number;
   utilization: number;
   workspaces: WorkspaceDemand[];
+  stores?: StoreDemand[];
 }
 
 export const RUN_STATES = ['idle', 'running', 'complete', 'delayed'] as const;

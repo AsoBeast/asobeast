@@ -2,10 +2,11 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { FileJson, ListChecks, LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User } from "lucide-react";
 import { toast } from "sonner";
 import { logout } from "@/lib/api";
 import { invalidateAuth } from "@/lib/queries";
+import { ADMIN_ENTRY, ADMIN_TOOLS } from "@/components/admin/admin-links";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,11 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChangePasswordDialog } from "./ChangePasswordDialog";
 import { useAuth } from "./use-auth";
-
-const ADMIN_LINKS = [
-  { href: "/admin/queues", label: "Queue dashboard", Icon: ListChecks },
-  { href: "/docs", label: "API docs", Icon: FileJson },
-] as const;
 
 export function UserMenu() {
   const queryClient = useQueryClient();
@@ -73,7 +69,13 @@ export function UserMenu() {
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               Admin
             </DropdownMenuLabel>
-            {ADMIN_LINKS.map(({ href, label, Icon }) => (
+            <DropdownMenuItem asChild>
+              <Link href={ADMIN_ENTRY.href}>
+                <ADMIN_ENTRY.icon />
+                Admin area
+              </Link>
+            </DropdownMenuItem>
+            {ADMIN_TOOLS.map(({ href, label, Icon }) => (
               <DropdownMenuItem key={href} asChild>
                 <a href={href} target="_blank" rel="noreferrer">
                   <Icon />

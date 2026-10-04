@@ -83,8 +83,12 @@ export function formatRating(value: number): string {
   return value.toFixed(1);
 }
 
+export function formatUsd(value: number): string {
+  return priceFormatter.format(value);
+}
+
 export function formatPrice(value: number): string {
-  return value === 0 ? "Free" : priceFormatter.format(value);
+  return value === 0 ? "Free" : formatUsd(value);
 }
 
 export function formatDate(value: string | null): string {

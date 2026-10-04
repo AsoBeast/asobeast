@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  HttpCode,
-  NotFoundException,
-  Param,
-  Post,
-} from '@nestjs/common';
+import { Controller, Get, Header, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
   CapacityReport,
@@ -19,7 +12,7 @@ import type { User } from '@prisma/client';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
-import { isPlatformOperator } from '../auth/platform-operator';
+import { requirePlatformOperator } from '../auth/platform-operator';
 import { CapacityService } from './capacity.service';
 import { DailyBudgetService } from './daily-budget.service';
 import { FirstRunStatusService } from './first-run-status.service';
@@ -90,11 +83,10 @@ export class CapacityController {
   constructor(private readonly capacity: CapacityService) {}
 
   @Get()
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'Total daily demand against pool capacity' })
   report(@CurrentUser() user: User): Promise<CapacityReport> {
-    if (!isPlatformOperator(user)) {
-      throw new NotFoundException('Cannot GET /admin/capacity');
-    }
+    requirePlatformOperator(user, 'Cannot GET /admin/capacity');
     return this.capacity.report();
   }
 }

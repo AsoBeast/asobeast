@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/auth/use-auth";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,6 +14,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ADMIN_ROOT, adminSectionFrom } from "@/lib/admin-sections";
 import { APP_SECTIONS, appRouteFrom, sectionHref } from "@/lib/app-sections";
 import { appDetailOptions } from "@/lib/queries";
 
@@ -76,25 +78,53 @@ function AppCrumbs({ id, segment }: { id: string; segment: string }) {
   );
 }
 
+function AdminCrumbs({ label }: { label: string }) {
+  return (
+    <>
+      <BreadcrumbItem className="hidden sm:inline-flex">
+        <BreadcrumbLink asChild>
+          <Link href={ADMIN_ROOT}>Admin</Link>
+        </BreadcrumbLink>
+      </BreadcrumbItem>
+      <BreadcrumbSeparator className="hidden sm:block" />
+      <BreadcrumbItem className="min-w-0">
+        <BreadcrumbPage className="truncate">{label}</BreadcrumbPage>
+      </BreadcrumbItem>
+    </>
+  );
+}
+
 export function Breadcrumbs() {
   const pathname = usePathname();
   const app = appRouteFrom(pathname);
+  const { isOperator } = useAuth();
+  const admin = adminSectionFrom(pathname);
 
   return (
     <Breadcrumb className="min-w-0 flex-1">
       <BreadcrumbList className="flex-nowrap">
-        <BreadcrumbItem className={app ? "hidden sm:inline-flex" : undefined}>
-          {app ? (
-            <BreadcrumbLink asChild>
-              <Link href="/">Apps</Link>
-            </BreadcrumbLink>
-          ) : (
-            <BreadcrumbPage>
-              {WORKSPACE_LABELS[pathname] ?? "Dashboard"}
-            </BreadcrumbPage>
-          )}
-        </BreadcrumbItem>
-        {app ? <AppCrumbs id={app.id} segment={app.segment} /> : null}
+        {admin ? (
+          isOperator ? (
+            <AdminCrumbs label={admin.label} />
+          ) : null
+        ) : (
+          <>
+            <BreadcrumbItem
+              className={app ? "hidden sm:inline-flex" : undefined}
+            >
+              {app ? (
+                <BreadcrumbLink asChild>
+                  <Link href="/">Apps</Link>
+                </BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>
+                  {WORKSPACE_LABELS[pathname] ?? "Dashboard"}
+                </BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+            {app ? <AppCrumbs id={app.id} segment={app.segment} /> : null}
+          </>
+        )}
       </BreadcrumbList>
     </Breadcrumb>
   );
