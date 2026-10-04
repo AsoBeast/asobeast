@@ -64,7 +64,7 @@ describe('refusesWhileSuspended', () => {
     ).toBe(false);
   });
 
-  it('stops a request that carries no credential from exporting', () => {
+  it('stops a request with no credential on an account route', () => {
     expect(
       refusesWhileSuspended(
         SUSPENDED,
