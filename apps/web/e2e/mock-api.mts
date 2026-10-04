@@ -512,7 +512,11 @@ function supportRoute(
 ): Route {
   return gatedRoute(pattern, pick, (req) => {
     const viewer = viewerOf(req);
-    return viewer.platformOperator && viewer.entitled;
+    return (
+      viewer.platformOperator &&
+      viewer.entitled &&
+      !hasCookie(req, "e2e_admin_refused", "1")
+    );
   });
 }
 

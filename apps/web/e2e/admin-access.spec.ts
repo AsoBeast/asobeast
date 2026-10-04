@@ -1,4 +1,5 @@
 import { expect, test } from "./session.mts";
+import { seedCookies } from "./routes.mts";
 import { UNPLANNED_OPERATORS, seedViewer } from "./viewer.mts";
 
 const DELETED_RECORD_COPY = "This app or record no longer exists";
@@ -116,4 +117,29 @@ test.describe("what the notice offers", () => {
 
     await expect(page.getByRole("navigation", { name: "Admin" })).toBeVisible();
   });
+});
+
+test.describe("an admin endpoint that refuses an operator with a plan", () => {
+  test.beforeEach(async ({ context }) => {
+    await seedCookies(context, { e2e_admin_refused: "1" });
+  });
+
+  for (const [path, title] of [
+    ["/admin", "Admin overview could not be loaded"],
+    ["/admin/workspaces", "Workspaces could not be loaded"],
+    ["/admin/users", "Accounts could not be loaded"],
+    ["/admin/apps", "Tracked apps could not be loaded"],
+  ] as const) {
+    test(`${path} does not claim a record was deleted`, async ({ page }) => {
+      await page.goto(path);
+
+      const alert = page.getByRole("main").getByRole("alert");
+      await expect(alert).toContainText(title);
+      await expect(alert).not.toContainText(DELETED_RECORD_COPY);
+      await expect(alert).toContainText("plan in force");
+      await expect(
+        alert.getByRole("link", { name: "Open settings" }),
+      ).toHaveAttribute("href", "/settings");
+    });
+  }
 });

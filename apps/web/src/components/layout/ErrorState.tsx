@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { recoveryFor } from "@/lib/error-recovery";
+import { recoveryFor, type RecoveryScope } from "@/lib/error-recovery";
 import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
 import { webHealthOptions } from "@/lib/queries";
 
@@ -13,12 +13,14 @@ export function ErrorState({
   error,
   retry,
   title,
+  scope,
 }: {
   error: Error & { digest?: string };
   retry: () => void;
   title?: string;
+  scope?: RecoveryScope;
 }) {
-  const recovery = recoveryFor(error);
+  const recovery = recoveryFor(error, scope);
   const statusPage = useQuery(webHealthOptions).data?.statusPageUrl ?? null;
 
   useEffect(() => {

@@ -13,6 +13,7 @@ export default function AdminUsersError({
     <ErrorState
       error={error}
       retry={retry}
+      scope="admin"
       title="Accounts could not be loaded"
     />
   );
