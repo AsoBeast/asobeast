@@ -418,6 +418,21 @@ describe('Email verification before the trial starts', () => {
       jest.restoreAllMocks();
     });
 
+    it('offers no trial in a link sent after the workspace paid', async () => {
+      const registered = await register('owner@example.com').expect(201);
+      expect(sent[0].text).toContain('to start your trial');
+      await subscribed('indie');
+
+      await request(app.getHttpServer())
+        .post('/auth/verify/resend')
+        .set('Cookie', sessionCookie(registered))
+        .expect(204);
+
+      expect(sent).toHaveLength(2);
+      expect(sent[1].text).not.toMatch(/trial/i);
+      expect(tokenFrom(sent[1])).toHaveLength(48);
+    });
+
     it.each(['indie', 'ultimate'])(
       'keeps the %s plan when the owner confirms the address afterwards',
       async (plan) => {
