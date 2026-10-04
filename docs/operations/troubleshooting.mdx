@@ -67,7 +67,7 @@ Each entry below names the symptom the way you would describe it, then gives the
       --command "select id, name from \"Workspace\" where id = 'ws_default';"
     ```
 
-    No row means the operator is gone. Register a fresh account, which gets a workspace of its own, then give that account the bootstrap workspace. Replace the email with the account you just registered.
+    No row means the operator is gone. Register a fresh account, which gets a workspace of its own, then give that account the bootstrap workspace. Registration is closed by default once accounts exist, so set `AUTH_ALLOW_REGISTRATION=true` and restart the API for the sign up, then set it back to `false` and restart again. An existing account whose workspace holds no apps works as well and needs no sign up. Replace the email with the account you chose.
 
     ```bash
     docker compose exec -T postgres psql --username asobeast --dbname asobeast --set=ON_ERROR_STOP=1 <<'SQL'
