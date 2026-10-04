@@ -1,6 +1,5 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
 import { SentryModule } from '@sentry/nestjs/setup';
 import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
@@ -25,7 +24,6 @@ import { AuthModule } from './auth/auth.module';
 import { CompetitorsModule } from './competitors/competitors.module';
 import { McpModule } from './mcp/mcp.module';
 import { MetadataModule } from './metadata/metadata.module';
-import { validateEnv } from './config/env';
 import { HealthModule } from './health/health.module';
 import { QuotaModule } from './auth/quota.module';
 import { JobsModule } from './jobs/jobs.module';
@@ -34,15 +32,12 @@ import { PrismaModule } from './prisma/prisma.module';
 import { FailFastRedisModule } from './redis/fail-fast-redis.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { SupportModule } from './support/support.module';
+import { envConfigModule } from './config/env-config.module';
 
 @Module({
   imports: [
     SentryModule.forRoot(),
-    ConfigModule.forRoot({
-      isGlobal: true,
-      ignoreEnvFile: process.env.NODE_ENV === 'test',
-      validate: validateEnv,
-    }),
+    envConfigModule(),
     TenancyModule,
     LoggingModule,
     ObservabilityModule,
