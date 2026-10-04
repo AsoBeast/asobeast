@@ -15,6 +15,10 @@ import {
   selfHostedLimits,
   type PlanScope,
 } from '../auth/plan-limits';
+import {
+  keywordMarketsByWorkspace,
+  type KeywordMarketRow,
+} from '../auth/keyword-markets';
 import { windowKey } from '../auth/rate-limit/window';
 import {
   CategoryRanksService,
@@ -90,12 +94,6 @@ interface AppRow {
   count: number;
 }
 
-interface StoreCountRow {
-  workspaceId: string;
-  store: Store;
-  count: number;
-}
-
 interface CountRow {
   workspaceId: string;
   count: number;
@@ -141,7 +139,7 @@ export class WorkspaceMetricsCollector {
     ] = await Promise.all([
       this.workspaces(),
       this.appCounts(),
-      this.keywordMarkets(),
+      keywordMarketsByWorkspace(this.prisma),
       this.categoryRanks.bucketsByWorkspace(),
       this.rankingsSince(trigger),
       this.rankingsOn(utcDate(new Date(now.getTime() - DAY_MS))),
@@ -237,17 +235,6 @@ export class WorkspaceMetricsCollector {
       isCompetitor: row.isCompetitor,
       count: row._count._all,
     }));
-  }
-
-  private keywordMarkets(): Promise<StoreCountRow[]> {
-    return this.prisma.$queryRaw<StoreCountRow[]>`
-      SELECT a."workspaceId", k."store", COUNT(DISTINCT t."keywordId")::int AS count
-      FROM "TrackedKeyword" t
-      JOIN "App" a ON a."id" = t."appId"
-      JOIN "Keyword" k ON k."id" = t."keywordId"
-      WHERE t."active" = true
-      GROUP BY 1, 2
-    `;
   }
 
   private rankingsSince(trigger: Date): Promise<RankingRow[]> {
@@ -405,7 +392,7 @@ function indexBy<T extends { workspaceId: string }>(rows: T[]): Map<string, T> {
 
 function estimatedRequests(
   apps: AppRow[],
-  markets: StoreCountRow[],
+  markets: KeywordMarketRow[],
   buckets: CategoryBucket[],
 ): Record<Store, number> {
   return Object.fromEntries(

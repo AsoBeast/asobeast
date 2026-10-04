@@ -9,6 +9,11 @@ import {
   type SupportWorkspaceDetail,
   type SupportWorkspaceSummary,
 } from '@asobeast/shared';
+import {
+  keywordMarketsByWorkspace,
+  sumKeywordMarkets,
+  type KeywordMarketRow,
+} from '../auth/keyword-markets';
 import { planScopeOf } from '../auth/plan-limits';
 import { scrubText } from '../common/logging/log-redaction';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -100,7 +105,7 @@ export class SupportService {
       members: CountRow[];
       apps: CountRow[];
       competitors: CountRow[];
-      keywords: CountRow[];
+      keywords: KeywordMarketRow[];
     },
     now: Date,
   ): SupportWorkspaceSummary {
@@ -119,7 +124,9 @@ export class SupportService {
       members: countOf(counts.members, workspace.id),
       apps: countOf(counts.apps, workspace.id),
       competitors: countOf(counts.competitors, workspace.id),
-      keywordMarkets: countOf(counts.keywords, workspace.id),
+      keywordMarkets: sumKeywordMarkets(
+        counts.keywords.filter((row) => row.workspaceId === workspace.id),
+      ),
     };
   }
 
@@ -141,13 +148,7 @@ export class SupportService {
         by: ['workspaceId', 'isCompetitor'],
         _count: { _all: true },
       }),
-      this.prisma.$queryRaw<CountRow[]>`
-        SELECT a."workspaceId", COUNT(*)::int AS count
-        FROM "TrackedKeyword" t
-        JOIN "App" a ON a."id" = t."appId"
-        WHERE t."active" = true
-        GROUP BY 1
-      `,
+      keywordMarketsByWorkspace(this.prisma),
     ]);
 
     return {
