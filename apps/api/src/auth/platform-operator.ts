@@ -7,6 +7,8 @@ export interface PlatformPrincipal {
   workspaceId: string;
 }
 
+export const OUTSIDE_OPERATOR_WORKSPACE = { not: DEFAULT_WORKSPACE_ID };
+
 export function isOperatorWorkspace(workspaceId: string): boolean {
   return workspaceId === DEFAULT_WORKSPACE_ID;
 }

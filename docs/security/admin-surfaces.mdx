@@ -16,7 +16,15 @@ The platform operator is the owner of the bootstrap workspace, the first account
 
 That distinction matters because the two deployment shapes hand out the `owner` role differently. Self hosted puts every account in one workspace, so its first account is both the workspace owner and the operator. Hosted gives every registration its own workspace and makes that customer the `owner` of it, so `owner` alone cannot authorize an instance wide surface. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page.
 
-Owning your own workspace still authorizes everything inside it, including scheduling its deletion and managing its team. Only the cross tenant surfaces require the operator.
+Owning your own workspace still authorizes everything inside it, including managing its team and scheduling its deletion. Only the cross tenant surfaces require the operator.
+
+## Deleting the operator workspace
+
+The operator's own workspace is the one exception to scheduling a deletion. While any account exists outside it, `POST /account/deletion` answers `409 Conflict`, because erasing the bootstrap workspace would leave an instance with accounts and no operator. Registration only hands out the role to the first account the instance ever creates, so a later sign up would never take it over.
+
+The instance is allowed to reset itself. When the operator's account is the only one, deletion works as for any workspace, and the next registration becomes the operator, because an instance with no accounts bootstraps again. The web app explains the restriction in **Settings**, under **Workspace**.
+
+The retention run checks again when the grace period ends. A deletion scheduled while the operator was alone is cancelled, not erased, if an account has registered since, and the log records `its scheduled deletion was cancelled instead of erased`. asobeast has no way to hand the operator role to another account, so to clear your own data delete its apps and keywords. If an instance has already lost its operator, see [Every admin surface answers 404 and no account is the operator](/operations/troubleshooting#every-admin-surface-answers-404-and-no-account-is-the-operator).
 
 ## Views only the operator sees
 

@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import {
+  OUTSIDE_OPERATOR_WORKSPACE,
   isOperatorWorkspace,
   isPlatformOperator,
   requirePlatformOperator,
@@ -19,6 +20,10 @@ describe('operator workspace', () => {
       expect(isOperatorWorkspace(workspaceId)).toBe(false);
     },
   );
+
+  it('is excluded by the filter for accounts outside it', () => {
+    expect(OUTSIDE_OPERATOR_WORKSPACE).toEqual({ not: DEFAULT_WORKSPACE_ID });
+  });
 });
 
 describe('platform operator', () => {

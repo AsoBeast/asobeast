@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: "Sixteen symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
+description: "Twenty symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
 icon: life-buoy
 keywords: ["troubleshooting","404","409","no rankings","alerts not arriving","signed out"]
 ---
@@ -57,6 +57,28 @@ Each entry below names the symptom the way you would describe it, then gives the
 
   <Accordion title="/docs returns 404">
     `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+
+  <Accordion title="Every admin surface answers 404 and no account is the operator">
+    The workspace `ws_default` was erased while other accounts survived, which older releases allowed from **Settings**. Check for it.
+
+    ```bash
+    docker compose exec -T postgres psql --username asobeast --dbname asobeast \
+      --command "select id, name from \"Workspace\" where id = 'ws_default';"
+    ```
+
+    No row means the operator is gone. Register a fresh account, which gets a workspace of its own, then give that account the bootstrap workspace. Replace the email with the account you just registered.
+
+    ```bash
+    docker compose exec -T postgres psql --username asobeast --dbname asobeast --set=ON_ERROR_STOP=1 <<'SQL'
+    begin;
+    insert into "Workspace" ("id", "name") values ('ws_default', 'Default');
+    update "User" set "workspaceId" = 'ws_default', "role" = 'owner' where "email" = 'you@example.com';
+    commit;
+    SQL
+    ```
+
+    The account is the platform operator from its next request, with no restart and no new sign in. The workspace it registered with stays behind empty and can be left alone. Use a fresh account rather than a customer's, because a user takes no data with it: the apps and keywords of the workspace it leaves stay there. On an instance with `BILLING_ENABLED=true` the admin surfaces also need an entitled operator, so add `"plan"` to the insert with `'ultimate'` as its value. See [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace).
   </Accordion>
 </AccordionGroup>
 

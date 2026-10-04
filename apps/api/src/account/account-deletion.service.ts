@@ -12,6 +12,11 @@ import {
 } from '@asobeast/shared';
 import { reasonOf } from '../billing/stripe-errors';
 import { StripeService } from '../billing/stripe.service';
+import { lockRegistration } from '../auth/registration-lock';
+import {
+  OUTSIDE_OPERATOR_WORKSPACE,
+  isOperatorWorkspace,
+} from '../auth/platform-operator';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
@@ -19,6 +24,32 @@ import { PrismaService } from '../prisma/prisma.service';
 
 const DELETION_JUSTIFICATION =
   'erasing a workspace removes the very scope the query would otherwise run inside';
+
+const OPERATOR_SURVIVAL_JUSTIFICATION =
+  'whether other workspaces hold accounts is a fact about the whole instance';
+
+export const OPERATOR_WORKSPACE_DELETION_REFUSED =
+  'This workspace holds the platform operator, so it cannot be deleted while other accounts exist. Deleting it would leave the instance without an operator.';
+
+const NO_DELETION_SCHEDULED = {
+  deletionRequestedAt: null,
+  deletionRequestedBy: null,
+  deletionDueAt: null,
+};
+
+interface InstanceAccounts {
+  user: {
+    count(args: {
+      where: { workspaceId: typeof OUTSIDE_OPERATOR_WORKSPACE };
+    }): Promise<number>;
+  };
+  workspace: {
+    update(args: {
+      where: { id: string };
+      data: typeof NO_DELETION_SCHEDULED & { erasureClaimedAt: null };
+    }): Promise<unknown>;
+  };
+}
 
 const DAY_MS = 24 * 60 * 60_000;
 
@@ -61,6 +92,14 @@ export class AccountDeletionService {
       );
     }
     const workspaceId = this.workspace.require('a deletion request');
+    const operatorWouldBeLost =
+      await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+        OPERATOR_SURVIVAL_JUSTIFICATION,
+        () => this.leavesAccountsWithoutOperator(workspaceId, this.prisma),
+      );
+    if (operatorWouldBeLost) {
+      throw new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED);
+    }
     const dueAt = new Date(now.getTime() + this.graceDays * DAY_MS);
     const workspace = await this.prisma.workspace.update({
       where: { id: workspaceId },
@@ -85,11 +124,7 @@ export class AccountDeletionService {
     const workspaceId = this.workspace.require('a deletion cancellation');
     const { count } = await this.prisma.workspace.updateMany({
       where: { id: workspaceId, erasureClaimedAt: null },
-      data: {
-        deletionRequestedAt: null,
-        deletionRequestedBy: null,
-        deletionDueAt: null,
-      },
+      data: NO_DELETION_SCHEDULED,
     });
     if (count === 0) {
       throw new ConflictException(
@@ -118,6 +153,9 @@ export class AccountDeletionService {
   }
 
   private async erase(workspaceId: string, now: Date): Promise<boolean> {
+    if (await this.leavesAccountsWithoutOperator(workspaceId, this.prisma)) {
+      return this.withdraw(workspaceId, this.prisma);
+    }
     const claimed = await this.claim(workspaceId, now);
     if (!claimed) {
       this.logger.log(`workspace ${workspaceId} was no longer due for erasure`);
@@ -153,6 +191,7 @@ export class AccountDeletionService {
     releasedCustomerId: string | null,
   ): Promise<boolean> {
     return this.prisma.withTransaction(async (tx) => {
+      if (isOperatorWorkspace(workspaceId)) await lockRegistration(tx);
       const [claimed] = await tx.$queryRaw<
         { billingCustomerId: string | null }[]
       >`
@@ -170,6 +209,9 @@ export class AccountDeletionService {
         );
         return false;
       }
+      if (await this.leavesAccountsWithoutOperator(workspaceId, tx)) {
+        return this.withdraw(workspaceId, tx);
+      }
       await tx.billingEvent.updateMany({
         where: { workspaceId },
         data: { workspaceId: null },
@@ -178,6 +220,31 @@ export class AccountDeletionService {
       this.logger.warn(`workspace ${workspaceId} erased`);
       return true;
     });
+  }
+
+  private async leavesAccountsWithoutOperator(
+    workspaceId: string,
+    db: InstanceAccounts,
+  ): Promise<boolean> {
+    if (!isOperatorWorkspace(workspaceId)) return false;
+    const others = await db.user.count({
+      where: { workspaceId: OUTSIDE_OPERATOR_WORKSPACE },
+    });
+    return others > 0;
+  }
+
+  private async withdraw(
+    workspaceId: string,
+    db: InstanceAccounts,
+  ): Promise<false> {
+    await db.workspace.update({
+      where: { id: workspaceId },
+      data: { ...NO_DELETION_SCHEDULED, erasureClaimedAt: null },
+    });
+    this.logger.error(
+      `workspace ${workspaceId} holds the platform operator and other accounts exist, so its scheduled deletion was cancelled instead of erased`,
+    );
+    return false;
   }
 
   private async releaseBilling(

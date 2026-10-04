@@ -1,13 +1,25 @@
 import { ConflictException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { User } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { StripeService } from '../billing/stripe.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { AccountDeletionService } from './account-deletion.service';
+import {
+  AccountDeletionService,
+  OPERATOR_WORKSPACE_DELETION_REFUSED,
+} from './account-deletion.service';
 
 const NOW = new Date('2026-09-22T05:00:00.000Z');
+const OPERATOR_WORKSPACE = 'ws_default';
+const WITHDRAWN = {
+  deletionRequestedAt: null,
+  deletionRequestedBy: null,
+  deletionDueAt: null,
+  erasureClaimedAt: null,
+};
+const ACTOR = { email: 'owner@example.com' } as User;
 
 describe('AccountDeletionService', () => {
   const prisma = {
@@ -19,14 +31,17 @@ describe('AccountDeletionService', () => {
       delete: jest.fn(),
     },
     billingEvent: { updateMany: jest.fn() },
+    user: { count: jest.fn() },
     $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
     withTransaction: jest.fn(),
   };
   const stripe = { enabled: true, deleteCustomer: jest.fn() };
+  const scope = { workspaceId: 'ws_due' };
 
   const service = new AccountDeletionService(
     prisma as unknown as PrismaService,
-    { require: () => 'ws_due' } as unknown as WorkspaceContext,
+    { require: () => scope.workspaceId } as unknown as WorkspaceContext,
     {
       becauseThisWorkIsNotOwnedByOneWorkspace: <T>(
         _justification: string,
@@ -45,6 +60,8 @@ describe('AccountDeletionService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    scope.workspaceId = 'ws_due';
+    prisma.user.count.mockResolvedValue(0);
     stripe.enabled = true;
     stripe.deleteCustomer.mockResolvedValue(undefined);
     prisma.workspace.findMany.mockResolvedValue([{ id: 'ws_due' }]);
@@ -146,6 +163,109 @@ describe('AccountDeletionService', () => {
 
       expect(stripe.deleteCustomer).not.toHaveBeenCalled();
       expect(prisma.workspace.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the workspace that holds the platform operator', () => {
+    beforeEach(() => {
+      scope.workspaceId = OPERATOR_WORKSPACE;
+      prisma.workspace.findMany.mockResolvedValue([{ id: OPERATOR_WORKSPACE }]);
+    });
+
+    it('refuses a deletion request while accounts exist outside it', async () => {
+      prisma.user.count.mockResolvedValue(2);
+
+      await expect(service.request(ACTOR, 'DELETE', NOW)).rejects.toThrow(
+        new ConflictException(OPERATOR_WORKSPACE_DELETION_REFUSED),
+      );
+
+      expect(prisma.user.count).toHaveBeenCalledWith({
+        where: { workspaceId: { not: OPERATOR_WORKSPACE } },
+      });
+      expect(prisma.workspace.update).not.toHaveBeenCalled();
+    });
+
+    it('accepts a deletion request when it holds every account', async () => {
+      prisma.user.count.mockResolvedValue(0);
+
+      await expect(
+        service.request(ACTOR, 'DELETE', NOW),
+      ).resolves.toMatchObject({
+        scheduled: true,
+      });
+    });
+
+    it('never counts accounts for an ordinary workspace', async () => {
+      scope.workspaceId = 'ws_tenant';
+      prisma.user.count.mockResolvedValue(5);
+
+      await expect(
+        service.request(ACTOR, 'DELETE', NOW),
+      ).resolves.toMatchObject({
+        scheduled: true,
+      });
+
+      expect(prisma.user.count).not.toHaveBeenCalled();
+    });
+
+    it('cancels a due deletion without claiming it or asking stripe while accounts exist', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      prisma.user.count.mockResolvedValue(3);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([]);
+
+      expect(prisma.workspace.updateMany).not.toHaveBeenCalled();
+      expect(stripe.deleteCustomer).not.toHaveBeenCalled();
+      expect(prisma.workspace.delete).not.toHaveBeenCalled();
+      expect(prisma.workspace.update).toHaveBeenCalledWith({
+        where: { id: OPERATOR_WORKSPACE },
+        data: WITHDRAWN,
+      });
+      expect(error).toHaveBeenCalledWith(
+        expect.stringMatching(/ws_default .*platform operator/),
+      );
+      error.mockRestore();
+    });
+
+    it('locks registration before it recounts accounts and deletes', async () => {
+      claims(null);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([
+        OPERATOR_WORKSPACE,
+      ]);
+
+      const lock = prisma.$executeRaw.mock.invocationCallOrder[0];
+      expect(lock).toBeLessThan(prisma.user.count.mock.invocationCallOrder[1]);
+      expect(lock).toBeLessThan(
+        prisma.workspace.delete.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('keeps the workspace when an account registered while erasure was under way', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      claims(null);
+      prisma.user.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([]);
+
+      expect(prisma.workspace.delete).not.toHaveBeenCalled();
+      expect(prisma.billingEvent.updateMany).not.toHaveBeenCalled();
+      expect(prisma.workspace.update).toHaveBeenCalledWith({
+        where: { id: OPERATOR_WORKSPACE },
+        data: WITHDRAWN,
+      });
+      error.mockRestore();
+    });
+  });
+
+  describe('an ordinary workspace', () => {
+    it('is erased without taking the registration lock', async () => {
+      claims(null);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual(['ws_due']);
+
+      expect(prisma.$executeRaw).not.toHaveBeenCalled();
+      expect(prisma.user.count).not.toHaveBeenCalled();
     });
   });
 
