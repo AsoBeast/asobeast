@@ -14,6 +14,7 @@ import type { User } from '@prisma/client';
 import type { WorkspaceDeletionStatus } from '@asobeast/shared';
 import { AllowUnentitled } from '../auth/decorators/allow-unentitled.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { ExportsWorkspaceData } from '../auth/decorators/exports-workspace-data.decorator';
 import { OWNER_ROLE } from '../auth/workspace-roles';
 import { AccountDeletionService } from './account-deletion.service';
 import { AccountExportService } from './account-export.service';
@@ -31,6 +32,7 @@ export class AccountController {
 
   @Get('export')
   @AllowUnentitled()
+  @ExportsWorkspaceData()
   @ApiOperation({
     summary: 'Stream every row this workspace owns as newline delimited JSON',
   })

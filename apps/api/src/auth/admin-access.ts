@@ -100,6 +100,7 @@ function grantAdminAccess(
           credential: session ? 'session' : 'token',
           rateClass: surface.rateClass,
           allowedWhileUnentitled: false,
+          exportsWorkspaceData: false,
         })
       ) {
         deny(req, res);

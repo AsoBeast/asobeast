@@ -313,6 +313,7 @@ At startup the server checks its configuration and calls `/auth/me` on your inst
 | `ASOBEAST_API_URL` answers with a redirect | A message naming the address it redirected to. The token is never sent across a redirect |
 | The token was rejected | A `401` message telling you to mint a fresh token in Settings and to check that the URL is the instance the token was minted on |
 | The account is not entitled | A message that the trial expired or a plan is required |
+| The workspace is suspended | A message that the workspace is suspended, with the reason the operator recorded |
 
 Diagnostics go to stderr, because on stdio the JSON-RPC stream owns stdout. The token is never logged.
 
@@ -342,7 +343,7 @@ When the preflight passes, the server logs the instance it connected to and the 
   </Accordion>
 
   <Accordion title="The process exits immediately">
-    The preflight failed. Read the stderr output in your client's MCP log, which names the exact cause: a missing token, a rejected token, or an unentitled account.
+    The preflight failed. Read the stderr output in your client's MCP log, which names the exact cause: a missing token, a rejected token, an unentitled account or a suspended workspace.
   </Accordion>
 
   <Accordion title="The tools do not appear in the client">

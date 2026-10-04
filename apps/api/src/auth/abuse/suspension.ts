@@ -9,6 +9,7 @@ export interface SuspendedRequest {
   credential: AuthCredential | undefined;
   rateClass: RateClass;
   allowedWhileUnentitled: boolean;
+  exportsWorkspaceData: boolean;
 }
 
 export function refusesWhileSuspended(
@@ -16,7 +17,7 @@ export function refusesWhileSuspended(
   req: SuspendedRequest,
 ): boolean {
   if (workspace.suspendedAt === null) return false;
+  if (req.credential !== 'session') return !req.exportsWorkspaceData;
   if (req.allowedWhileUnentitled) return false;
-  if (req.credential !== 'session') return true;
   return req.rateClass !== 'read';
 }
