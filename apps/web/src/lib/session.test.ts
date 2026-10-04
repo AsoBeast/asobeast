@@ -17,7 +17,10 @@ const STATUS: AuthStatus = {
   authenticated: true,
 };
 
-afterEach(() => status.mockReset());
+afterEach(() => {
+  status.mockReset();
+  vi.restoreAllMocks();
+});
 
 describe("holdSession", () => {
   it("returns what the request established once the session is kept", async () => {
@@ -83,5 +86,27 @@ describe("holdSession", () => {
     await expect(holdSession(async () => "signed in")).resolves.toBe(
       "signed in",
     );
+  });
+
+  it("lets the sign in through when the check hangs past its deadline", async () => {
+    const deadline = new AbortController();
+    const timeout = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(deadline.signal);
+    status.mockImplementation(
+      (init) =>
+        new Promise<AuthStatus>((_, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(init.signal?.reason),
+          );
+        }),
+    );
+
+    const held = holdSession(async () => "signed in");
+    await vi.waitFor(() => expect(status).toHaveBeenCalled());
+    deadline.abort(new DOMException("The check timed out.", "TimeoutError"));
+
+    await expect(held).resolves.toBe("signed in");
+    expect(timeout).toHaveBeenCalledWith(5_000);
   });
 });
