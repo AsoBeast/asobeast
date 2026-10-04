@@ -173,3 +173,20 @@ Two rules hold the surface honest:
 - **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
 
 The directory names the apps a workspace tracks, with counts, and nothing more: there is deliberately no way to read a customer's keywords, rankings or reviews from this surface. A question that needs their data needs their consent first.
+
+### Suspending and restoring from the command line
+
+The API image ships a command that suspends or restores a workspace without the support surface. Use it when the API cannot answer, and to restore the operator workspace on an instance that an earlier release left suspended, because a suspended operator workspace answers `404` on every support route.
+
+```bash
+docker compose exec api node dist/auth/abuse/workspace-suspension.cli.js restore ws_default
+docker compose exec api node dist/auth/abuse/workspace-suspension.cli.js suspend ws_example "sustained rate limit abuse"
+```
+
+Run it inside the `api` container, which already holds the database credentials. On a stack started from the published images, put `-f docker-compose.pull.yml` after `docker compose`.
+
+The command opens a database connection and nothing else. It starts no queue workers, schedules no jobs and needs no type checker, so it fits in the container's 768 MB memory limit beside the running API. It prints `restored` or `suspended` with the workspace id and exits `0`. A refusal or an unknown workspace id prints the reason and exits `1`.
+
+The command writes to the workspace row directly, so it is not recorded in the support audit trail.
+
+From a source checkout, build once with `pnpm --filter api build`, then run `pnpm --filter api workspace:restore ws_default`.
