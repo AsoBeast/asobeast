@@ -7,6 +7,7 @@ on:
       - "docs/**"
       - "apps/api/src/**"
       - "README.md"
+      - "scripts/mint.sh"
       - ".github/workflows/docs.yml"
   pull_request:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       - "docs/**"
       - "apps/api/src/**"
       - "README.md"
+      - "scripts/mint.sh"
       - ".github/workflows/docs.yml"
   schedule:
     - cron: "0 7 * * 1"
@@ -26,7 +28,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  MINT_VERSION: 4.2.768
   VALE_VERSION: 3.16.0
   VALE_SHA256: 1049f4a585ccd1af96dcf4bdc16800cb3ce426b432da2b27893def42dcfe0ccb
 
