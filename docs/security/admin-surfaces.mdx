@@ -40,6 +40,24 @@ Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the 
 
 The admin area is read only. It lists accounts and apps; it never opens a workspace, so an app name is not a link: the operator's own session cannot read another workspace's pages.
 
+## When the operator's workspace has no plan {#when-the-operators-workspace-has-no-plan}
+
+With billing on, the support tooling, the queue dashboard, the metrics scrape and the OpenAPI surface under the default `owner` setting need an entitled operator. An operator whose own workspace has no plan in force receives `404` from every one of them, exactly as a customer does, although `GET /auth/me` still reports `platformOperator: true` next to `entitled: false`. A plan is in force while a paid plan has not expired or a trial is running. The state is a natural one on a hosted instance: the bootstrap trial waits for the email confirmation, and every trial ends after `TRIAL_DAYS`.
+
+The admin area reads `platformOperator`, `entitled` and `trialAwaitsConfirmation` from `GET /auth/me` and follows the same rule, so it says why instead of showing five tabs that cannot load.
+
+| Operator state | What the admin area shows |
+| --- | --- |
+| A plan is in force | The five tabs |
+| No plan, and the trial waits for the email to be confirmed | A notice to confirm the email, with no offer to pay |
+| No plan, any other reason: the trial ended, the plan expired or none was ever set | A notice that the workspace needs a plan, with a link to the plans and to this page |
+
+The **Admin** entry stays in the sidebar, the command palette and the account menu, so the explanation is always one click away. To open the area again, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace to `indie` or `ultimate` in the database, as described in [Authentication and accounts](/security/authentication#entitlements-and-the-paid-plan-seam).
+
+`GET /admin/capacity` and `GET /admin/proxy-pool` check only that the caller is the operator, so they keep answering `200` for an operator without a plan. The web app closes the whole area in that state so it never half loads.
+
+An admin request can also be refused while the operator's workspace has a plan, for example when the workspace is suspended. The tab then says that the admin endpoints answer not found unless the workspace has a plan in force and is not suspended, rather than saying a record was deleted.
+
 ## Why 404 and not 403?
 
 A `403` confirms that the thing you asked for exists. A `404` does not.
