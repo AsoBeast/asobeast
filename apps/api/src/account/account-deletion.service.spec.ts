@@ -288,6 +288,29 @@ describe('AccountDeletionService', () => {
       );
       error.mockRestore();
     });
+
+    it('erases it after the other due workspaces, whose accounts go with them', async () => {
+      claims(null);
+      prisma.workspace.findMany.mockResolvedValue([
+        { id: OPERATOR_WORKSPACE },
+        { id: 'ws_tenant' },
+      ]);
+      let accountsOutside = 1;
+      prisma.user.count.mockImplementation(() =>
+        Promise.resolve(accountsOutside),
+      );
+      prisma.workspace.delete.mockImplementation(
+        ({ where }: { where: { id: string } }) => {
+          if (where.id === 'ws_tenant') accountsOutside = 0;
+          return Promise.resolve({});
+        },
+      );
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([
+        'ws_tenant',
+        OPERATOR_WORKSPACE,
+      ]);
+    });
   });
 
   describe('an ordinary workspace', () => {

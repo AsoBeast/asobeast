@@ -53,6 +53,13 @@ interface InstanceAccounts {
 
 const DAY_MS = 24 * 60 * 60_000;
 
+function operatorLast<T extends { id: string }>(workspaces: T[]): T[] {
+  return [
+    ...workspaces.filter(({ id }) => !isOperatorWorkspace(id)),
+    ...workspaces.filter(({ id }) => isOperatorWorkspace(id)),
+  ];
+}
+
 @Injectable()
 export class AccountDeletionService {
   private readonly logger = new Logger(AccountDeletionService.name);
@@ -144,7 +151,7 @@ export class AccountDeletionService {
           select: { id: true },
         });
         const erased: string[] = [];
-        for (const workspace of due) {
+        for (const workspace of operatorLast(due)) {
           if (await this.erase(workspace.id, now)) erased.push(workspace.id);
         }
         return erased;
