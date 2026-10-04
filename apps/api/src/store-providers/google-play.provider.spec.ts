@@ -1,4 +1,6 @@
-import { Store } from '@prisma/client';
+import { BlockedError } from '@mradex77/google-play-scraper';
+import { ProxyOutcome, Store } from '@prisma/client';
+import { outcomeOf } from './egress/proxy-health.service';
 import { StoreRequestError } from './errors';
 import { GooglePlayLib, GPLAY_COLLECTIONS } from './google-play.lib';
 import { GooglePlayProvider, googlePlayLanguage } from './google-play.provider';
@@ -355,6 +357,24 @@ describe('GooglePlayProvider', () => {
     }
     expect(caught).toBeInstanceOf(StoreRequestError);
     expect((caught as StoreRequestError).message).toContain('RequestError');
+  });
+
+  it('reports a scraper captcha or consent wall as a blocked egress', async () => {
+    for (const block of ['captcha challenge', 'consent wall']) {
+      const app = jest
+        .fn()
+        .mockRejectedValue(
+          new BlockedError(`Blocked by Google Play (${block})`),
+        );
+      const provider = new GooglePlayProvider(makeLib({ app }));
+
+      const caught: unknown = await provider
+        .getApp('com.example.app', 'us')
+        .catch((error: unknown) => error);
+
+      expect(caught).toBeInstanceOf(StoreRequestError);
+      expect(outcomeOf(caught)).toBe(ProxyOutcome.BLOCKED);
+    }
   });
 
   it('maps scraper availability statuses and treats error as unknown', async () => {
