@@ -210,7 +210,10 @@ export class AccountDeletionService {
         return false;
       }
       if (await this.leavesAccountsWithoutOperator(workspaceId, tx)) {
-        return this.withdraw(workspaceId, tx);
+        const deletedCustomerId = this.stripe.enabled
+          ? releasedCustomerId
+          : null;
+        return this.withdraw(workspaceId, tx, deletedCustomerId);
       }
       await tx.billingEvent.updateMany({
         where: { workspaceId },
@@ -236,13 +239,17 @@ export class AccountDeletionService {
   private async withdraw(
     workspaceId: string,
     db: InstanceAccounts,
+    deletedCustomerId: string | null = null,
   ): Promise<false> {
     await db.workspace.update({
       where: { id: workspaceId },
       data: { ...NO_DELETION_SCHEDULED, erasureClaimedAt: null },
     });
+    const billing = deletedCustomerId
+      ? `; stripe customer ${deletedCustomerId} was already deleted, so its subscription has to be started again`
+      : '';
     this.logger.error(
-      `workspace ${workspaceId} holds the platform operator and other accounts exist, so its scheduled deletion was cancelled instead of erased`,
+      `workspace ${workspaceId} holds the platform operator and other accounts exist, so its scheduled deletion was cancelled instead of erased${billing}`,
     );
     return false;
   }

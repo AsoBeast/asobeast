@@ -256,6 +256,38 @@ describe('AccountDeletionService', () => {
       });
       error.mockRestore();
     });
+
+    it('names the stripe customer it already deleted when the recount keeps the workspace', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const warn = jest.spyOn(Logger.prototype, 'warn').mockImplementation();
+      claims('cus_1');
+      prisma.user.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([]);
+
+      expect(stripe.deleteCustomer).toHaveBeenCalledWith('cus_1');
+      expect(error).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /ws_default .*cancelled instead of erased.*stripe customer cus_1 was already deleted/,
+        ),
+      );
+      error.mockRestore();
+      warn.mockRestore();
+    });
+
+    it('does not claim a stripe deletion that billing never made', async () => {
+      const error = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      stripe.enabled = false;
+      claims('cus_1');
+      prisma.user.count.mockResolvedValueOnce(0).mockResolvedValueOnce(1);
+
+      await expect(service.eraseDue(NOW)).resolves.toEqual([]);
+
+      expect(error).toHaveBeenCalledWith(
+        expect.not.stringContaining('stripe customer'),
+      );
+      error.mockRestore();
+    });
   });
 
   describe('an ordinary workspace', () => {
