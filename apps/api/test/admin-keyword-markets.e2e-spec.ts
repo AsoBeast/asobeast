@@ -6,6 +6,7 @@ import type {
   AdminAppList,
   AdminOverview,
   SupportWorkspaceDetail,
+  Store,
   SupportWorkspaceSummary,
 } from '@asobeast/shared';
 import request from 'supertest';
@@ -39,17 +40,23 @@ describe('Keyword market counts (e2e)', () => {
   interface Tracking {
     text: string;
     country?: string;
+    store?: Store;
     active?: boolean;
   }
 
   async function track(appId: string, tracking: Tracking): Promise<void> {
-    const { text, country = 'us', active = true } = tracking;
+    const {
+      text,
+      country = 'us',
+      store = 'APP_STORE',
+      active = true,
+    } = tracking;
     const keyword = await prisma.keyword.upsert({
       where: {
-        text_store_country: { text, store: 'APP_STORE', country },
+        text_store_country: { text, store, country },
       },
       update: {},
-      create: { text, store: 'APP_STORE', country },
+      create: { text, store, country },
     });
     await prisma.trackedKeyword.create({
       data: { appId, keywordId: keyword.id, source: 'MANUAL', active },
@@ -60,9 +67,10 @@ describe('Keyword market counts (e2e)', () => {
     workspaceId: string,
     storeAppId: string,
     name: string,
+    store: Store = 'APP_STORE',
   ) {
     return prisma.app.create({
-      data: { workspaceId, store: 'APP_STORE', storeAppId, name },
+      data: { workspaceId, store, storeAppId, name },
     });
   }
 
@@ -71,12 +79,19 @@ describe('Keyword market counts (e2e)', () => {
     await seedWorkspace(prisma, NEIGHBOUR, 'Markets Neighbour');
     const first = await seedApp(WORKSPACE, '300000001', 'First App');
     const second = await seedApp(WORKSPACE, '300000002', 'Second App');
+    const play = await seedApp(
+      WORKSPACE,
+      'com.markets.play',
+      'Play App',
+      'GOOGLE_PLAY',
+    );
     const neighbour = await seedApp(NEIGHBOUR, '300000003', 'Neighbour App');
     await track(first.id, { text: 'life' });
     await track(first.id, { text: 'life', country: 'gb' });
     await track(first.id, { text: 'habit tracker' });
     await track(first.id, { text: 'paused phrase', active: false });
     await track(second.id, { text: 'life' });
+    await track(play.id, { text: 'life', store: 'GOOGLE_PLAY' });
     await track(neighbour.id, { text: 'life' });
   }
 
@@ -128,7 +143,7 @@ describe('Keyword market counts (e2e)', () => {
   it('counts a phrase two apps track once on the plan, and leaves paused ones out', async () => {
     const res = await get('/auth/plan', tenantToken).expect(200);
 
-    expect((res.body as AccountPlan).usage.keywordMarkets.used).toBe(3);
+    expect((res.body as AccountPlan).usage.keywordMarkets.used).toBe(4);
   });
 
   it('gives the support workspace list the number the plan shows', async () => {
@@ -140,7 +155,7 @@ describe('Keyword market counts (e2e)', () => {
       ]),
     );
 
-    expect(markets[WORKSPACE]).toBe(3);
+    expect(markets[WORKSPACE]).toBe(4);
     expect(markets[NEIGHBOUR]).toBe(1);
   });
 
@@ -150,16 +165,16 @@ describe('Keyword market counts (e2e)', () => {
       operatorToken,
     ).expect(200);
 
-    expect((res.body as SupportWorkspaceDetail).keywordMarkets).toBe(3);
+    expect((res.body as SupportWorkspaceDetail).keywordMarkets).toBe(4);
   });
 
   it('sums the workspace counts in the overview, one search serving both', async () => {
     const res = await get(`${SUPPORT}/overview`, operatorToken).expect(200);
 
     expect((res.body as AdminOverview).keywords).toEqual({
-      trackedMarkets: 4,
-      searched: 3,
-      storefronts: 2,
+      trackedMarkets: 5,
+      searched: 4,
+      storefronts: 3,
     });
   });
 
@@ -167,7 +182,7 @@ describe('Keyword market counts (e2e)', () => {
     const res = await get(METRICS, operatorToken).expect(200);
 
     expect(res.text).toContain(
-      `asobeast_workspace_keyword_markets{workspace="${WORKSPACE}"} 3`,
+      `asobeast_workspace_keyword_markets{workspace="${WORKSPACE}"} 4`,
     );
     expect(res.text).toContain(
       `asobeast_workspace_keyword_markets{workspace="${NEIGHBOUR}"} 1`,
@@ -182,6 +197,10 @@ describe('Keyword market counts (e2e)', () => {
       (item) => `${item.name}:${item.keywordMarkets}`,
     );
 
-    expect(counts.sort()).toEqual(['First App:3', 'Second App:1']);
+    expect(counts.sort()).toEqual([
+      'First App:3',
+      'Play App:1',
+      'Second App:1',
+    ]);
   });
 });
