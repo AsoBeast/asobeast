@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,18 +14,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ApiError, resendVerification, verifyEmail } from "@/lib/api";
-import { invalidateAuth } from "@/lib/queries";
+import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
+import { useSessionEntry } from "./use-session-entry";
 
 export function VerifyEmailContent() {
-  const queryClient = useQueryClient();
   const token = useSearchParams().get("token") ?? "";
 
-  const mutation = useMutation({
-    mutationFn: () => verifyEmail(token),
-    onSuccess: () => {
-      invalidateAuth(queryClient);
-      window.location.replace("/");
-    },
+  const { mutation, sessionDropped } = useSessionEntry({
+    establish: () => verifyEmail(token),
+    destination: () => "/",
+    onFailure: () => undefined,
   });
 
   const resend = useMutation({ mutationFn: resendVerification });
@@ -75,7 +73,10 @@ export function VerifyEmailContent() {
           {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
           Confirm my email
         </Button>
-        {mutation.isError ? (
+        {sessionDropped ? (
+          <SessionNotKeptAlert outcome="Your email is confirmed." />
+        ) : null}
+        {mutation.isError && !sessionDropped ? (
           <>
             <p className="text-body text-destructive">{reason}</p>
             <Button

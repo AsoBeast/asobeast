@@ -3,12 +3,10 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PASSWORD_RULE } from "@asobeast/shared";
 import { register } from "@/lib/api";
 import { passwordError } from "@/lib/password";
-import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -25,27 +23,25 @@ import {
   type AuthFieldError,
 } from "./field-error";
 import { FieldErrorMessage } from "./FieldErrorMessage";
+import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
+import { useSessionEntry } from "./use-session-entry";
 import { useSingleFlight } from "@/lib/single-flight";
 
 export function RegisterForm() {
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<AuthFieldError | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: () =>
+  const { mutation, sessionDropped } = useSessionEntry({
+    establish: () =>
       register({
         email,
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
-    onSuccess: () => {
-      invalidateAuth(queryClient);
-      window.location.replace("/");
-    },
-    onError: (err) =>
+    destination: () => "/",
+    onFailure: (err) =>
       setError(authFieldError(err, "Could not create the account. Try again.")),
   });
   const submitOnce = useSingleFlight(mutation);
@@ -125,6 +121,9 @@ export function RegisterForm() {
               />
             </div>
             <FieldErrorMessage error={error} field="form" id="form-error" />
+            {sessionDropped ? (
+              <SessionNotKeptAlert outcome="Your account was created." />
+            ) : null}
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Create account
