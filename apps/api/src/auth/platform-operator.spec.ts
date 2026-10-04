@@ -1,11 +1,25 @@
 import { NotFoundException } from '@nestjs/common';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import {
+  isOperatorWorkspace,
   isPlatformOperator,
   requirePlatformOperator,
 } from './platform-operator';
 
 const OPERATOR = { role: 'owner', workspaceId: DEFAULT_WORKSPACE_ID };
+
+describe('operator workspace', () => {
+  it('is the bootstrap workspace', () => {
+    expect(isOperatorWorkspace(DEFAULT_WORKSPACE_ID)).toBe(true);
+  });
+
+  it.each(['ws_tenant', 'WS_DEFAULT', ' ws_default', ''])(
+    'is not the workspace %j',
+    (workspaceId) => {
+      expect(isOperatorWorkspace(workspaceId)).toBe(false);
+    },
+  );
+});
 
 describe('platform operator', () => {
   it('is the owner of the bootstrap workspace', () => {
