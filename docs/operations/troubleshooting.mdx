@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: "Sixteen symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
+description: "Twenty symptoms a self hosted asobeast instance produces, each with its cause and its fix, from a stack that refuses to start to alerts that never arrive."
 icon: life-buoy
 keywords: ["troubleshooting","404","409","no rankings","alerts not arriving","signed out"]
 ---
@@ -53,6 +53,10 @@ Each entry below names the symptom the way you would describe it, then gives the
 <AccordionGroup>
   <Accordion title="/admin/queues returns 404">
     You are not signed in as the owner in that browser. The surface answers `404` rather than `403` so it does not confirm it exists. Sign in and reload, or check that `BULL_BOARD_ENABLED` is not `false`. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+
+  <Accordion title="/admin/support returns 404 although I am signed in as the operator">
+    An earlier release let the operator suspend the bootstrap workspace, which takes the support surface and the queue dashboard away from the operator's own credentials. Restore the workspace from the command line, see [Suspending and restoring from the command line](/operations/hosted-observability#suspending-and-restoring-from-the-command-line). Current releases refuse that suspension.
   </Accordion>
 
   <Accordion title="/docs returns 404">

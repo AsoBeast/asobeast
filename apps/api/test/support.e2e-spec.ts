@@ -12,6 +12,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { AppModule } from '../src/app.module';
+import { WorkspaceSuspension } from '../src/auth/abuse/workspace-suspension.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -227,6 +228,82 @@ describe('Support tooling (e2e)', () => {
     });
     expect(entry).toMatchObject({ outcome: 'failed' });
     expect(entry.detail).toBeTruthy();
+  });
+
+  describe('the operator workspace', () => {
+    const NOT_SUSPENDABLE =
+      'The operator workspace cannot be suspended, because the operator would lose the surfaces that restore it';
+    const suspendOperatorWorkspace = () =>
+      owner
+        .post(`${SUPPORT}/${DEFAULT_WORKSPACE_ID}/suspend`)
+        .send({ confirm: true, reason: 'operator suspends self' });
+    const operatorWorkspace = () =>
+      prisma.workspace.findUniqueOrThrow({
+        where: { id: DEFAULT_WORKSPACE_ID },
+      });
+
+    afterEach(() =>
+      prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: { suspendedAt: null, suspendedReason: null },
+      }),
+    );
+
+    it('cannot be suspended through the support surface', async () => {
+      const response = await suspendOperatorWorkspace().expect(409);
+
+      expect((response.body as { message: string }).message).toBe(
+        NOT_SUSPENDABLE,
+      );
+      await expect(operatorWorkspace()).resolves.toMatchObject({
+        suspendedAt: null,
+      });
+    });
+
+    it('keeps the operator surfaces after the refused suspension', async () => {
+      await suspendOperatorWorkspace().expect(409);
+
+      await owner.get('/admin/support/overview').expect(200);
+      await owner.get(SUPPORT).expect(200);
+    });
+
+    it('records the refusal as a failed support action', async () => {
+      await suspendOperatorWorkspace().expect(409);
+
+      const [entry] = await prisma.supportAccess.findMany({
+        where: { workspaceId: DEFAULT_WORKSPACE_ID, action: 'suspend' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      });
+      expect(entry).toMatchObject({
+        outcome: 'failed',
+        detail: NOT_SUSPENDABLE,
+        reason: 'operator suspends self',
+      });
+    });
+
+    it('is restored by the service when an older release left it suspended', async () => {
+      await prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: {
+          suspendedAt: new Date(),
+          suspendedReason: 'left by an older release',
+          abuseFlaggedAt: new Date(),
+        },
+      });
+      await owner.get('/admin/support/overview').expect(404);
+
+      await app
+        .get(WorkspaceSuspension, { strict: false })
+        .restore(DEFAULT_WORKSPACE_ID);
+
+      await owner.get('/admin/support/overview').expect(200);
+      await expect(operatorWorkspace()).resolves.toMatchObject({
+        suspendedAt: null,
+        suspendedReason: null,
+        abuseFlaggedAt: null,
+      });
+    });
   });
 
   describe('replaying a stored billing event', () => {

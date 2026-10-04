@@ -55,6 +55,16 @@ describe('Workspace suspension command (e2e)', () => {
     });
   });
 
+  it('refuses to suspend the operator workspace', async () => {
+    await expect(
+      app.get(WorkspaceSuspension).suspend(DEFAULT_WORKSPACE_ID, 'self'),
+    ).rejects.toThrow('cannot be suspended');
+
+    await expect(operatorWorkspace()).resolves.toMatchObject({
+      suspendedAt: null,
+    });
+  });
+
   it('boots without the queue workers or the scheduler', () => {
     expect(() => app.get(PipelineWorker, { strict: false })).toThrow();
   });
