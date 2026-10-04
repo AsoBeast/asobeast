@@ -85,6 +85,8 @@ When a workspace has used every AI call its plan includes this month, the four A
 }
 ```
 
+A self hosted instance that sets `AI_CALLS_PER_MONTH=0` has turned AI calls off, so the same `429` carries the message `This workspace includes no AI calls.` and an `aiAllowance` whose `limit` is `0`. Nothing renews in that case, so waiting does not help until the operator raises the limit. `Retry-After` is still sent, pointing at the next period, so a client that reads it keeps working.
+
 ## Validation errors
 
 Every controller input is a DTO validated by a global pipe with whitelisting on. Two consequences follow.

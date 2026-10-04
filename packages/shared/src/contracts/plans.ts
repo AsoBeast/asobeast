@@ -260,6 +260,8 @@ export interface AiCallUsage extends QuotaUsage {
   resetsAt: string;
 }
 
+export const NO_AI_CALLS_MESSAGE = 'This workspace includes no AI calls';
+
 export interface AiAllowanceDetail {
   plan: PlanName;
   limit: number;
