@@ -35,7 +35,6 @@ export function AcceptInviteForm() {
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
-    destination: () => "/",
     onFailure: (err) => {
       setError(
         err instanceof ApiError

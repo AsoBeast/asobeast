@@ -40,7 +40,6 @@ export function RegisterForm() {
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
-    destination: () => "/",
     onFailure: (err) =>
       setError(authFieldError(err, "Could not create the account. Try again.")),
   });

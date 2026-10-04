@@ -22,8 +22,6 @@ export function VerifyEmailContent() {
 
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () => verifyEmail(token),
-    destination: () => "/",
-    onFailure: () => undefined,
   });
 
   const resend = useMutation({ mutationFn: resendVerification });

@@ -6,12 +6,12 @@ import { holdSession, SessionNotKeptError } from "@/lib/session";
 
 export function useSessionEntry<T>({
   establish,
-  destination,
+  destination = () => "/",
   onFailure,
 }: {
   establish: () => Promise<T>;
-  destination: () => string;
-  onFailure: (error: unknown) => void;
+  destination?: () => string;
+  onFailure?: (error: unknown) => void;
 }) {
   const queryClient = useQueryClient();
   const mutation = useMutation({
@@ -21,7 +21,7 @@ export function useSessionEntry<T>({
       window.location.replace(destination());
     },
     onError: (error) => {
-      if (!(error instanceof SessionNotKeptError)) onFailure(error);
+      if (!(error instanceof SessionNotKeptError)) onFailure?.(error);
     },
   });
   return {
