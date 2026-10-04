@@ -31,7 +31,7 @@ export function BudgetCard({
 }: { footer?: ReactNode; stepLabel?: string } = {}) {
   const { data: budget } = useSuspenseQuery(budgetOptions);
   const level = utilizationLevel(budget.utilization);
-  const completion = budgetCompletionSentence(budget.completion);
+  const completion = budgetCompletionSentence(budget.completion, budget.total);
 
   const rows = [
     { label: "Apps", value: budget.apps },
