@@ -56,6 +56,7 @@ export class MetricsService {
       instance,
       isolationAnomalies: this.isolation.anomalies,
       redisAvailable: instance.redisAvailable,
+      billingEnabled: this.config.get('BILLING_ENABLED', { infer: true }),
       hoursSinceTrigger: this.hoursSinceTrigger(now),
       hoursSinceBackup: hoursSince(instance.backup.lastCompletedAt, now),
     });

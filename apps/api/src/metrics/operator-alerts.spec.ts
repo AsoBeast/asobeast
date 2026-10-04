@@ -25,6 +25,7 @@ function inputOf(overrides: Partial<OperatorAlertInput> = {}) {
     instance: instanceMetricsOf(),
     isolationAnomalies: 0,
     redisAvailable: true,
+    billingEnabled: true,
     hoursSinceTrigger: 1,
     hoursSinceBackup: 1,
     ...overrides,
@@ -193,6 +194,30 @@ describe('operatorAlerts', () => {
 
     expect(ids).toContain('workspace.cost.exceeds-revenue');
     expect(COST_TO_REVENUE_RATIO_ALERT).toBeGreaterThan(1);
+  });
+
+  it('raises no cost alert on an instance without billing', () => {
+    const whole = workspaceMetricsOf({
+      workspaceId: 'ws_default',
+      plan: 'free',
+    });
+    const heavy = workspaceMetricsOf({
+      workspaceId: 'ws_heavy',
+      plan: 'free',
+      estimatedRequests: { APP_STORE: 0, GOOGLE_PLAY: 1_000 },
+    });
+    const light = workspaceMetricsOf({
+      workspaceId: 'ws_light',
+      plan: 'ultimate',
+      estimatedRequests: { APP_STORE: 10, GOOGLE_PLAY: 0 },
+    });
+
+    expect(
+      idsOf(inputOf({ billingEnabled: false, workspaces: [whole] })),
+    ).toEqual([]);
+    expect(
+      idsOf(inputOf({ billingEnabled: false, workspaces: [heavy, light] })),
+    ).toEqual([]);
   });
 
   it('reviews capacity headroom once demand crosses the share', () => {
