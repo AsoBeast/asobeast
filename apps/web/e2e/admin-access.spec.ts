@@ -129,6 +129,7 @@ test.describe("an admin endpoint that refuses an operator with a plan", () => {
     ["/admin/workspaces", "Workspaces could not be loaded"],
     ["/admin/users", "Accounts could not be loaded"],
     ["/admin/apps", "Tracked apps could not be loaded"],
+    ["/admin/capacity", "Instance capacity could not be loaded"],
   ] as const) {
     test(`${path} does not claim a record was deleted`, async ({ page }) => {
       await page.goto(path);
