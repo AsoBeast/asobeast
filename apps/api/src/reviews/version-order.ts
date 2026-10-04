@@ -39,18 +39,21 @@ function compareParsed(left: ParsedVersion, right: ParsedVersion): number {
   return compareSuffixes(left.suffix, right.suffix);
 }
 
+function compareText(left: string, right: string): number {
+  const natural = NATURAL_ORDER.compare(left, right);
+  if (natural !== 0 || left === right) return natural;
+  return left < right ? -1 : 1;
+}
+
 export function compareVersions(left: string, right: string): number {
   const parsedLeft = parse(left);
   const parsedRight = parse(right);
   if (parsedLeft && parsedRight) {
-    return (
-      compareParsed(parsedLeft, parsedRight) ||
-      NATURAL_ORDER.compare(left, right)
-    );
+    return compareParsed(parsedLeft, parsedRight) || compareText(left, right);
   }
   if (parsedLeft) return 1;
   if (parsedRight) return -1;
-  return NATURAL_ORDER.compare(left, right);
+  return compareText(left, right);
 }
 
 export function sortVersionsNewestFirst(versions: readonly string[]): string[] {
