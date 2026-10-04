@@ -21,9 +21,9 @@ describe("aiCallsLeftText", () => {
     );
   });
 
-  it("says a plan includes none", () => {
+  it("says a workspace includes none", () => {
     expect(aiCallsLeftText({ used: 0, limit: 0, resetsAt: RESETS })).toBe(
-      "This plan includes no AI calls",
+      "This workspace includes no AI calls",
     );
   });
 
@@ -71,5 +71,17 @@ describe("aiAllowanceRefusal", () => {
     ).toBe(
       "This workspace has used the 200 AI calls its plan includes this month. Renews Nov 1, 2026.",
     );
+  });
+
+  it("says AI is off for a zero allowance instead of a renewal", () => {
+    expect(
+      aiAllowanceRefusal({
+        plan: "free",
+        limit: 0,
+        used: 4,
+        resetsAt: RESETS,
+        upgradeTo: null,
+      }),
+    ).toBe("This workspace includes no AI calls.");
   });
 });

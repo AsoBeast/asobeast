@@ -199,6 +199,21 @@ describe('AiGateway', () => {
     expect(structured).not.toHaveBeenCalled();
   });
 
+  it('says AI is off for a zero allowance instead of promising a renewal', async () => {
+    const { gateway } = build(0, 4);
+
+    const refusal = await gateway
+      .reserve(CALL, new Date('2026-10-17T09:00:00.000Z'))
+      .catch((thrown: unknown) => thrown);
+
+    expect((refusal as AiAllowanceExceededError).message).toBe(
+      'This workspace includes no AI calls.',
+    );
+    expect((refusal as AiAllowanceExceededError).retryAfterSeconds).toBe(
+      1_263_600,
+    );
+  });
+
   it('words a refusal without naming a plan, which self hosted has none of', async () => {
     const { gateway } = build(1, 1);
 
