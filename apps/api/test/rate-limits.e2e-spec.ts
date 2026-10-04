@@ -336,6 +336,56 @@ describe('Rate limits (billing mode)', () => {
       .expect(403);
   });
 
+  describe('a suspended workspace and its api token', () => {
+    const suspend = () =>
+      prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data: { suspendedAt: new Date(), suspendedReason: 'abuse' },
+      });
+
+    it.each(['/auth/me', '/auth/plan', '/billing/catalog', '/workspace/team'])(
+      'answers 403 on %s, an account route open to the browser',
+      async (path) => {
+        await register('account-route@example.com');
+        const token = await mintToken(
+          'account-route@example.com',
+          'acct-token',
+        );
+        await suspend();
+
+        const refused = await request(app.getHttpServer())
+          .get(path)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(403);
+
+        expect((refused.body as ApiErrorEnvelope).message).toContain(
+          'This workspace is suspended: abuse',
+        );
+      },
+    );
+
+    it('keeps the browser session reading its own account', async () => {
+      const cookie = await register('browser@example.com');
+      await suspend();
+
+      await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Cookie', cookie)
+        .expect(200);
+    });
+
+    it('still exports the workspace data over a token', async () => {
+      await register('export@example.com');
+      const token = await mintToken('export@example.com', 'export-token');
+      await suspend();
+
+      await request(app.getHttpServer())
+        .get('/account/export')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+    });
+  });
+
   it('counts each workspace against its own allowance', async () => {
     const busy = await register('busy@example.com');
     const quiet = await register('quiet@example.com');
