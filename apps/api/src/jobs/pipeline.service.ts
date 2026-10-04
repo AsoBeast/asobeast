@@ -6,7 +6,7 @@ import {
   Store,
   STORES,
 } from '@asobeast/shared';
-import { FlowJobNode, FlowProducer, Queue } from 'bullmq';
+import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import {
@@ -32,6 +32,7 @@ import {
 } from './jobs.types';
 import { JOB_OPTIONS, reviewSyncJobOptions } from './job-options';
 import { ActiveWorkspaces } from './active-workspaces';
+import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 import { DailyCapacity } from './daily-capacity.service';
 import {
   AppTarget,
@@ -45,6 +46,13 @@ import { interleave } from './interleave';
 import { applyKeywordLimit } from './over-limit';
 import { OverLimitRegistry } from './over-limit.registry';
 import { requestsPerJob } from './request-weights';
+
+interface ManualJob {
+  store: Store;
+  name: string;
+  data: object;
+  opts: JobsOptions & { jobId: string };
+}
 
 interface ScoringTarget {
   keywordId: string;
@@ -403,7 +411,8 @@ export class PipelineService {
 
   async enqueueScore(keywordId: string): Promise<void> {
     const keyword = await this.trackedKeywords.require(keywordId);
-    await this.queueFor(keyword.store).add(
+    await enqueueReplacingFailed(
+      this.queueFor(keyword.store),
       JOBS.SCORE_KEYWORD,
       { keywordId, ...this.workspace.scopeFor('a keyword score') },
       { jobId: scoreJobId(keywordId, utcDateKey()) },
@@ -416,45 +425,36 @@ export class PipelineService {
   ): Promise<FanOutSummary> {
     const date = utcDateKey();
     const scope = { workspaceId, correlationId: this.workspace.correlationId };
-
-    for (const app of targets.apps) {
-      await this.queueFor(app.store).add(
-        JOBS.REFRESH_APP,
-        { appId: app.id, ...scope },
-        { jobId: `refresh~${app.id}~${date}` },
-      );
-    }
-    for (const keyword of targets.keywords) {
-      await this.queueFor(keyword.store).add(
-        JOBS.CHECK_KEYWORD,
-        { keywordId: keyword.keywordId, ...scope },
-        { jobId: checkJobId(keyword.keywordId, date) },
-      );
-    }
-    for (const app of targets.reviewApps) {
-      await this.queueFor(app.store).add(
-        JOBS.SYNC_REVIEWS,
-        {
-          appId: app.id,
-          pages: 1,
-          backfill: false,
-          ...scope,
-        },
-        {
-          jobId: reviewsJobId(app.id, date),
-          ...reviewSyncJobOptions(app.store),
-        },
-      );
-    }
-
     const buckets = await this.categoryRanks.buckets(
       targets.apps.map((app) => app.id),
     );
-    for (const bucket of buckets) {
-      await this.queueFor(bucket.store).add(
-        JOBS.CHECK_CATEGORY,
-        { ...bucket, ...scope },
-        {
+    const requests: ManualJob[] = [
+      ...targets.apps.map((app) => ({
+        store: app.store,
+        name: JOBS.REFRESH_APP,
+        data: { appId: app.id, ...scope },
+        opts: { jobId: `refresh~${app.id}~${date}` },
+      })),
+      ...targets.keywords.map((keyword) => ({
+        store: keyword.store,
+        name: JOBS.CHECK_KEYWORD,
+        data: { keywordId: keyword.keywordId, ...scope },
+        opts: { jobId: checkJobId(keyword.keywordId, date) },
+      })),
+      ...targets.reviewApps.map((app) => ({
+        store: app.store,
+        name: JOBS.SYNC_REVIEWS,
+        data: { appId: app.id, pages: 1, backfill: false, ...scope },
+        opts: {
+          jobId: reviewsJobId(app.id, date),
+          ...reviewSyncJobOptions(app.store),
+        },
+      })),
+      ...buckets.map((bucket) => ({
+        store: bucket.store,
+        name: JOBS.CHECK_CATEGORY,
+        data: { ...bucket, ...scope },
+        opts: {
           jobId: categoryJobId(
             workspaceId,
             bucket.collection,
@@ -463,15 +463,17 @@ export class PipelineService {
             date,
           ),
         },
-      );
-    }
+      })),
+    ];
 
-    const summary: FanOutSummary = {
-      apps: targets.apps.length,
-      keywords: targets.keywords.length,
-      categories: buckets.length,
-      reviews: targets.reviewApps.length,
-    };
+    const summary = emptySummary();
+    for (const { store, name, data, opts } of requests) {
+      if (
+        await enqueueReplacingFailed(this.queueFor(store), name, data, opts)
+      ) {
+        summary[stageOf(name)] += 1;
+      }
+    }
     this.logger.log(`fan out ${JSON.stringify(summary)}`);
     return summary;
   }
@@ -521,13 +523,12 @@ function requestsForChildren(children: FlowJobNode[]): number {
   );
 }
 
+function emptySummary(): FanOutSummary {
+  return { apps: 0, keywords: 0, categories: 0, reviews: 0 };
+}
+
 function countStages(children: FlowJobNode[]): FanOutSummary {
-  const summary: FanOutSummary = {
-    apps: 0,
-    keywords: 0,
-    categories: 0,
-    reviews: 0,
-  };
+  const summary = emptySummary();
   for (const child of children) {
     summary[stageOf(child.name)] += 1;
   }
