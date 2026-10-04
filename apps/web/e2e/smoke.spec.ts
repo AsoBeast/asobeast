@@ -74,6 +74,22 @@ test("settings exposes the weekly digest event", async ({ page }) => {
   ).toBeVisible();
 });
 
+test("settings names the next run in the request budget card", async ({
+  page,
+}) => {
+  await page.goto("/settings");
+
+  await expect(
+    page.getByText("Daily request budget", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/Today.s run is expected/)).toHaveCount(0);
+  await expect(
+    page.getByText(
+      "The next run starts Jul 31, 2026, 3:00 AM UTC and is expected to finish around Jul 31, 2026, 3:01 AM UTC, after about 0.02 hours of collection.",
+    ),
+  ).toBeVisible();
+});
+
 test("settings lists email alerts and expands their delivery log", async ({
   page,
 }) => {
