@@ -26,7 +26,7 @@ import {
   planCallToAction,
   planStatusLine,
 } from "@/lib/plan-choice";
-import { aiRenewalText } from "@/lib/ai-allowance";
+import { aiUsageNote } from "@/lib/ai-allowance";
 import { accountPlanOptions } from "@/lib/queries";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -137,7 +137,7 @@ export function PlanCard() {
               label="AI calls this month"
               usage={plan.usage.aiCalls}
               counted="used"
-              note={aiRenewalText(plan.usage.aiCalls.resetsAt)}
+              note={aiUsageNote(plan.usage.aiCalls)}
             />
           ) : null}
         </dl>

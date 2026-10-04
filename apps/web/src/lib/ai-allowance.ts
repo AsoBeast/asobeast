@@ -15,6 +15,10 @@ export function aiAllowanceSpent(usage: AiCallUsage | undefined): boolean {
   );
 }
 
+export function aiUsageNote(usage: AiCallUsage): string | undefined {
+  return usage.limit === 0 ? undefined : aiRenewalText(usage.resetsAt);
+}
+
 export function aiCallsLeftText(usage: AiCallUsage): string | null {
   if (usage.limit === null) return null;
   if (usage.limit === 0) return NO_AI_CALLS_MESSAGE;
