@@ -29,6 +29,7 @@ const SEARCH_MAX = 250;
 const CHART_MAX = 500;
 const REVIEWS_PER_PAGE = 50;
 const DEVELOPER_APPS_MAX = 30;
+const VERSION_VARIES_WITH_DEVICE = 'VARY';
 
 const toMarketAvailability = (
   status: GooglePlayCountryAvailability['status'] | undefined,
@@ -75,7 +76,8 @@ export class GooglePlayProvider implements StoreProvider {
       installs:
         raw.minInstalls === undefined ? undefined : BigInt(raw.minInstalls),
       price: raw.price,
-      version: raw.version,
+      version:
+        raw.version === VERSION_VARIES_WITH_DEVICE ? undefined : raw.version,
       releasedAt: parseDate(raw.released),
       storeUpdatedAt: new Date(raw.updated),
       raw,
