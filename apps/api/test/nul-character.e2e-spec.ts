@@ -11,6 +11,8 @@ import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { seedApiToken, truncateUsers } from './helpers/api-tokens';
 import { ownerAgent } from './helpers/session';
@@ -30,6 +32,40 @@ const stranger = (label: string) => ({
   password: PASSWORD,
 });
 const MCP_ACCEPT = 'application/json, text/event-stream';
+const LISTING_URL = 'https://apps.apple.com/us/app/fixture/id1234567890';
+
+const IMPORTED: NormalizedApp = {
+  store: Store.APP_STORE,
+  storeAppId: '1234567890',
+  title: 'Imported Fixture',
+  description: 'Imported fixture description',
+  raw: { source: 'fixture' },
+  searchable: true,
+};
+
+class CountingRegistry {
+  getAppCalls = 0;
+
+  get(store: Store): StoreProvider {
+    return {
+      store,
+      getApp: (storeAppId: string) => {
+        this.getAppCalls += 1;
+        return Promise.resolve({ ...IMPORTED, store, storeAppId });
+      },
+      search: () => Promise.resolve([]),
+      suggest: () => Promise.resolve([]),
+      similar: () => Promise.resolve([]),
+      availability: (_id: string, countries: string[]) =>
+        Promise.resolve(
+          countries.map((country) => ({
+            country,
+            status: 'available' as const,
+          })),
+        ),
+    } as unknown as StoreProvider;
+  }
+}
 
 type Verb = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -65,6 +101,7 @@ describe('A NUL character in a request (e2e)', () => {
   let keywordId: string;
   let token: string;
   let errorLog: jest.SpyInstance;
+  const registry = new CountingRegistry();
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -75,7 +112,10 @@ describe('A NUL character in a request (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(registry)
+      .compile();
     app = moduleFixture.createNestApplication<App>();
     app.use(cookieParser());
     configureAdminSurfaces(app);
@@ -301,6 +341,32 @@ describe('A NUL character in a request (e2e)', () => {
       });
       expect(row.note).toBe(before.note);
     });
+  });
+
+  describe('in a store url', () => {
+    it.each([
+      [
+        'a NUL',
+        LISTING_URL.replace('fixture', `fixture${NUL}`),
+        'url must not contain a NUL character',
+      ],
+      [
+        'a lone surrogate',
+        LISTING_URL.replace('fixture', 'fixture\ud83d'),
+        'url must be well formed Unicode text',
+      ],
+    ])(
+      'answers 400 for %s in an import url and stores nothing',
+      async (_name, url, message) => {
+        const apps = await prisma.app.count();
+
+        const response = await owner.post('/apps').send({ url }).expect(400);
+
+        expect(envelope(response).message).toBe(message);
+        expect(registry.getAppCalls).toBe(0);
+        await expect(prisma.app.count()).resolves.toBe(apps);
+      },
+    );
   });
 
   describe('on an anonymous route', () => {
