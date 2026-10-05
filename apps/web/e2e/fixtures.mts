@@ -2933,9 +2933,9 @@ export const APP_AR_DETAIL: AppDetail = {
   name: "سوق: تسوق أونلاين",
 };
 
-const AR_FIELDS = ["title", "shortDescription", "description"] as const;
+const PLAY_FIELDS = ["title", "shortDescription", "description"] as const;
 
-const arCoverageRow = (
+const playCoverageRow = (
   keywordId: string,
   text: string,
   bucket: KeywordCoverageRow["bucket"],
@@ -2944,7 +2944,7 @@ const arCoverageRow = (
   keywordId,
   text,
   bucket,
-  fields: AR_FIELDS.map((field, index) => ({
+  fields: PLAY_FIELDS.map((field, index) => ({
     field,
     covered: covered[index] ?? false,
   })),
@@ -2984,22 +2984,30 @@ export const APP_AR_METADATA_AUDIT: MetadataAuditResult = {
     },
   ],
   coverage: [
-    arCoverageRow("kw-ar-1", "تسوق اون لاين", "primary", [true, true, true]),
-    arCoverageRow("kw-ar-2", "توصيل سريع", "primary", [false, true, true]),
-    arCoverageRow("kw-ar-3", "ملابس رجالية", "secondary", [false, false, true]),
-    arCoverageRow("kw-ar-4", "الكترونيات", "secondary", [false, false, true]),
-    arCoverageRow("kw-ar-5", "دفع عند الاستلام", "longtail", [
+    playCoverageRow("kw-ar-1", "تسوق اون لاين", "primary", [true, true, true]),
+    playCoverageRow("kw-ar-2", "توصيل سريع", "primary", [false, true, true]),
+    playCoverageRow("kw-ar-3", "ملابس رجالية", "secondary", [
       false,
       false,
       true,
     ]),
-    arCoverageRow("kw-ar-6", "عروض الجمعة البيضاء", "longtail", [
+    playCoverageRow("kw-ar-4", "الكترونيات", "secondary", [false, false, true]),
+    playCoverageRow("kw-ar-5", "دفع عند الاستلام", "longtail", [
+      false,
+      false,
+      true,
+    ]),
+    playCoverageRow("kw-ar-6", "عروض الجمعة البيضاء", "longtail", [
       false,
       false,
       false,
     ]),
-    arCoverageRow("kw-ar-7", "منتجات المنزل", "longtail", [false, false, true]),
-    arCoverageRow("kw-ar-8", "شحن مجاني", "longtail", []),
+    playCoverageRow("kw-ar-7", "منتجات المنزل", "longtail", [
+      false,
+      false,
+      true,
+    ]),
+    playCoverageRow("kw-ar-8", "شحن مجاني", "longtail", []),
   ],
   keywordFieldSuggestion: null,
 };
@@ -3008,6 +3016,168 @@ DATASETS[APP_AR_ID] = {
   ...DATASETS["app-gp"],
   detail: APP_AR_DETAIL,
   changeImpact: emptyChangeImpact(APP_AR_DETAIL),
+};
+
+export const APP_FR_ID = "app-fr";
+
+export const APP_FR_DETAIL: AppDetail = {
+  ...APP_GP_DETAIL,
+  id: APP_FR_ID,
+  storeAppId: "fr.vinted",
+  country: "fr",
+  name: "Vinted : vendre et acheter",
+};
+
+const FR_SHORT_DESCRIPTION =
+  "Vends et achète des vêtements de seconde main, sans frais pour les vendeurs.";
+
+const FR_DESCRIPTION =
+  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée.";
+
+export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
+  appId: APP_FR_ID,
+  store: "GOOGLE_PLAY",
+  fields: [
+    {
+      field: "title",
+      value: "Vinted : vendre et acheter",
+      chars: 25,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "shortDescription",
+      value: FR_SHORT_DESCRIPTION,
+      chars: FR_SHORT_DESCRIPTION.length,
+      limit: 80,
+      indexed: true,
+      issues: [
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"vendre" already appears in the title.',
+          offendingText: "vendre",
+        },
+        {
+          rule: "keyword-stuffing",
+          severity: "warn",
+          message: '"vêtements" is repeated 2 times.',
+          offendingText: "vêtements",
+        },
+      ],
+    },
+    {
+      field: "description",
+      value: FR_DESCRIPTION,
+      chars: FR_DESCRIPTION.length,
+      limit: 4000,
+      indexed: true,
+      issues: [],
+    },
+  ],
+  coverage: [
+    playCoverageRow("kw-fr-1", "vêtements seconde main", "primary", [
+      false,
+      true,
+      true,
+    ]),
+    playCoverageRow("kw-fr-2", "vendre des vêtements", "primary", [
+      true,
+      true,
+      true,
+    ]),
+    playCoverageRow("kw-fr-3", "mode d'occasion", "secondary", [
+      false,
+      false,
+      true,
+    ]),
+  ],
+  keywordFieldSuggestion: null,
+};
+
+DATASETS[APP_FR_ID] = {
+  ...DATASETS["app-gp"],
+  detail: APP_FR_DETAIL,
+  changeImpact: emptyChangeImpact(APP_FR_DETAIL),
+};
+
+export const APP_HE_ID = "app-he";
+
+export const APP_HE_DETAIL: AppDetail = {
+  ...APP_GP_DETAIL,
+  id: APP_HE_ID,
+  storeAppId: "com.ideomobile.hapoalim",
+  country: "il",
+  name: "בנק הפועלים",
+};
+
+const HE_SHORT_DESCRIPTION =
+  "בנק הפועלים בכף היד: חשבון, כרטיסי אשראי והעברות כספים בכל שעה ובכל מקום";
+
+const HE_DESCRIPTION =
+  "אפליקציית בנק הפועלים מאפשרת לנהל את החשבון בצורה פשוטה ומאובטחת: לבדוק יתרה, לשלם חשבונות, להעביר כסף ולקבל התראות בזמן אמת.";
+
+export const APP_HE_METADATA_AUDIT: MetadataAuditResult = {
+  appId: APP_HE_ID,
+  store: "GOOGLE_PLAY",
+  fields: [
+    {
+      field: "title",
+      value: "בנק הפועלים",
+      chars: 11,
+      limit: 30,
+      indexed: true,
+      issues: [
+        {
+          rule: "under-utilized",
+          severity: "warn",
+          message: "Only 11 of 30 characters used.",
+        },
+      ],
+    },
+    {
+      field: "shortDescription",
+      value: HE_SHORT_DESCRIPTION,
+      chars: HE_SHORT_DESCRIPTION.length,
+      limit: 80,
+      indexed: true,
+      issues: [
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"הפועלים" already appears in the title.',
+          offendingText: "הפועלים",
+        },
+        {
+          rule: "keyword-stuffing",
+          severity: "warn",
+          message: '"בכל" is repeated 2 times.',
+          offendingText: "בכל",
+        },
+      ],
+    },
+    {
+      field: "description",
+      value: HE_DESCRIPTION,
+      chars: HE_DESCRIPTION.length,
+      limit: 4000,
+      indexed: true,
+      issues: [],
+    },
+  ],
+  coverage: [
+    playCoverageRow("kw-he-1", "בנק הפועלים", "primary", [true, true, true]),
+    playCoverageRow("kw-he-2", "העברת כספים", "secondary", [false, true, true]),
+    playCoverageRow("kw-he-3", "כרטיס אשראי", "longtail", [false, true, false]),
+  ],
+  keywordFieldSuggestion: null,
+};
+
+DATASETS[APP_HE_ID] = {
+  ...DATASETS["app-gp"],
+  detail: APP_HE_DETAIL,
+  changeImpact: emptyChangeImpact(APP_HE_DETAIL),
 };
 
 export const METADATA_DRAFTS: MetadataDraft[] = [
@@ -3069,6 +3239,13 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
           severity: "info",
           message: "No social proof (awards, press, user counts) detected.",
         },
+        {
+          rule: "repeats-subtitle-word",
+          severity: "warn",
+          message:
+            '"produktivitaetsmanagementsoftwareloesungen" already appears in the subtitle.',
+          offendingText: "produktivitaetsmanagementsoftwareloesungen",
+        },
       ],
     },
   ],
@@ -3077,6 +3254,8 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
   "app-long": APP_LONG_METADATA_AUDIT,
   [APP_AR_ID]: APP_AR_METADATA_AUDIT,
+  [APP_FR_ID]: APP_FR_METADATA_AUDIT,
+  [APP_HE_ID]: APP_HE_METADATA_AUDIT,
 };
 
 export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
