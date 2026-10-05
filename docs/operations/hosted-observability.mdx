@@ -30,7 +30,7 @@ Send `X-Correlation-Id` on a request to choose the id yourself, which lets a cus
 
 ## The metrics endpoint
 
-`GET /metrics` serves the Prometheus text format. It is gated exactly like the queue dashboard: anything other than the entitled [platform operator](/security/admin-surfaces#who-the-platform-operator-is) receives **404**, never 401 or 403, so the endpoint never confirms it exists. A customer who owns their own workspace is not an operator and receives **404**. Reach it through the web origin at `/metrics`, the same way you reach `/admin/queues`.
+`GET /metrics` serves the Prometheus text format. It is gated exactly like the queue dashboard: anything other than the entitled [platform operator](/security/admin-surfaces#who-the-platform-operator-is) receives **404**, never 401 or 403, so the endpoint never confirms it exists. A customer who owns their own workspace is not an operator and receives **404**, and so does an operator whose own workspace has no plan in force, as [the admin surfaces page](/security/admin-surfaces#when-the-operators-workspace-has-no-plan) explains. Reach it through the web origin at `/metrics`, the same way you reach `/admin/queues`.
 
 Per workspace, one series per metric:
 
@@ -163,15 +163,33 @@ The same reasoning covers the two places a url reaches an event by another route
 | `GET /admin/support/workspaces/{id}` | Adds plan limits, seven days of run history, that workspace's failed jobs and the recent audit trail |
 | `POST /admin/support/workspaces/{id}/reconcile` | Reconciles one workspace against Stripe |
 | `POST /admin/support/workspaces/{id}/billing-events/{eventId}/replay` | Clears how a stored billing event settled and queues it again, once its cause is fixed. Answers 404 for an event that names neither the workspace nor its Stripe customer |
-| `POST /admin/support/workspaces/{id}/suspend` | Suspends a workspace |
+| `POST /admin/support/workspaces/{id}/suspend` | Suspends a workspace. Answers `409` for the operator workspace, which cannot be suspended |
 | `POST /admin/support/workspaces/{id}/restore` | Lifts a suspension |
 | `POST /admin/support/workspaces/{id}/run-daily` | Queues the daily run for one workspace |
 
 Three read only routes describe the instance as a whole: `GET /admin/support/overview` for the totals, and `GET /admin/support/users` and `GET /admin/support/apps` for every account and every tracked app. The web app reads all three in [the admin area](/security/admin-surfaces#the-admin-area).
 
-Two rules hold the surface honest:
+Three rules hold the surface honest:
 
 - **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored.
 - **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
+- **The operator workspace cannot be suspended.** A suspension refuses the workspace's writes and takes the support surface and the queue dashboard away from every operator credential, so suspending the bootstrap workspace would remove the way back. The request answers `409` and the refusal is recorded in the audit trail as a failed `suspend`.
 
 The directory names the apps a workspace tracks, with counts, and nothing more: there is deliberately no way to read a customer's keywords, rankings or reviews from this surface. A question that needs their data needs their consent first.
+
+### Suspending and restoring from the command line
+
+The API image ships a command that suspends or restores a workspace without the support surface. Use it when the API cannot answer, and to restore the operator workspace on an instance that an earlier release left suspended, because a suspended operator workspace answers `404` on every support route.
+
+```bash
+docker compose exec api node dist/auth/abuse/workspace-suspension.cli.js restore ws_default
+docker compose exec api node dist/auth/abuse/workspace-suspension.cli.js suspend ws_example "sustained rate limit abuse"
+```
+
+Run it inside the `api` container, which already holds the database credentials. On a stack started from the published images, put `-f docker-compose.pull.yml` after `docker compose`.
+
+The command opens a database connection and nothing else. It starts no queue workers, schedules no jobs and needs no type checker, so it fits in the container's 768 MB memory limit beside the running API. It prints `restored` or `suspended` with the workspace id and exits `0`. A refusal or an unknown workspace id prints the reason and exits `1`.
+
+The command writes to the workspace row directly, so it is not recorded in the support audit trail. The operator workspace is still refused for `suspend`.
+
+From a source checkout, build once with `pnpm --filter api build`, then run `pnpm --filter api workspace:restore ws_default`.

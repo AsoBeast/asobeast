@@ -13,6 +13,7 @@ export default function AdminCapacityError({
     <ErrorState
       error={error}
       retry={retry}
+      scope="admin"
       title="Instance capacity could not be loaded"
     />
   );

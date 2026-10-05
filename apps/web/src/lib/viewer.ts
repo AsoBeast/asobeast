@@ -1,15 +1,24 @@
+import type { AuthUser } from "@asobeast/shared";
 import { ApiError, getAuthMe } from "@/lib/api";
+import { adminAccessOf, type AdminAccess } from "@/lib/admin-access";
 
 const REFUSALS = new Set([401, 402, 403, 404]);
 
-export async function viewerIsOperator(): Promise<boolean> {
+async function signedInViewer(): Promise<AuthUser | null> {
   try {
-    const user = await getAuthMe();
-    return user.platformOperator;
+    return await getAuthMe();
   } catch (error) {
     if (error instanceof ApiError && REFUSALS.has(error.envelope.statusCode)) {
-      return false;
+      return null;
     }
     throw error;
   }
+}
+
+export async function viewerIsOperator(): Promise<boolean> {
+  return (await signedInViewer())?.platformOperator === true;
+}
+
+export async function viewerAdminAccess(): Promise<AdminAccess> {
+  return adminAccessOf(await signedInViewer());
 }

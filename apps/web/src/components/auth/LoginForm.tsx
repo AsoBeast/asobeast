@@ -4,10 +4,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
-import { invalidateAuth } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,7 +16,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
+import { useSessionEntry } from "./use-session-entry";
 
 function destination(next: string | null): string {
   if (!next) return "/";
@@ -34,19 +34,15 @@ function destination(next: string | null): string {
 
 export function LoginForm() {
   const params = useSearchParams();
-  const queryClient = useQueryClient();
   const { status } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: () => login(email, password),
-    onSuccess: () => {
-      invalidateAuth(queryClient);
-      window.location.replace(destination(params.get("next")));
-    },
-    onError: (err) => {
+  const { mutation, sessionDropped } = useSessionEntry({
+    establish: () => login(email, password),
+    destination: () => destination(params.get("next")),
+    onFailure: (err) => {
       setError(
         err instanceof ApiError
           ? err.envelope.message
@@ -115,6 +111,9 @@ export function LoginForm() {
               />
             </div>
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
+            {sessionDropped ? (
+              <SessionNotKeptAlert outcome="Your password was accepted." />
+            ) : null}
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Sign in

@@ -4,7 +4,6 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { PASSWORD_RULE } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
@@ -19,28 +18,24 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError, acceptInvite } from "@/lib/api";
 import { passwordError } from "@/lib/password";
-import { invalidateAuth } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
+import { useSessionEntry } from "./use-session-entry";
 
 export function AcceptInviteForm() {
-  const queryClient = useQueryClient();
   const token = useSearchParams().get("token") ?? "";
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const mutation = useMutation({
-    mutationFn: () =>
+  const { mutation, sessionDropped } = useSessionEntry({
+    establish: () =>
       acceptInvite({
         token,
         password,
         name: name.trim() === "" ? undefined : name.trim(),
       }),
-    onSuccess: () => {
-      invalidateAuth(queryClient);
-      window.location.replace("/");
-    },
-    onError: (err) => {
+    onFailure: (err) => {
       setError(
         err instanceof ApiError
           ? err.envelope.message
@@ -133,7 +128,16 @@ export function AcceptInviteForm() {
                 {error}
               </p>
             ) : null}
-            <Button type="submit" disabled={mutation.isPending}>
+            {sessionDropped ? (
+              <SessionNotKeptAlert
+                outcome="You joined the workspace."
+                offerSignIn
+              />
+            ) : null}
+            <Button
+              type="submit"
+              disabled={mutation.isPending || sessionDropped}
+            >
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
               Accept invitation
             </Button>
