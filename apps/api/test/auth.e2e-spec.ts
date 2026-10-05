@@ -65,6 +65,10 @@ describe('Auth (enabled, self-hosted)', () => {
 
   beforeEach(async () => {
     await clearRateLimitCounters(app);
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { suspendedAt: null, suspendedReason: null },
+    });
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "WorkspaceInvite" RESTART IDENTITY CASCADE',
     );
@@ -279,6 +283,35 @@ describe('Auth (enabled, self-hosted)', () => {
       select: { workspaceId: true },
     });
     expect(owner.workspaceId).toBe(DEFAULT_WORKSPACE_ID);
+  });
+
+  it('tells a suspended workspace that it is suspended and why', async () => {
+    const cookie = await registerOwner();
+    const read = async (): Promise<AuthUser> =>
+      (
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Cookie', cookie)
+          .expect(200)
+      ).body as AuthUser;
+
+    await expect(read()).resolves.toMatchObject({
+      suspendedAt: null,
+      suspendedReason: null,
+    });
+
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: {
+        suspendedAt: new Date('2026-10-01T10:00:00Z'),
+        suspendedReason: 'scraping the service',
+      },
+    });
+
+    await expect(read()).resolves.toMatchObject({
+      suspendedAt: '2026-10-01T10:00:00.000Z',
+      suspendedReason: 'scraping the service',
+    });
   });
 
   it('closes registration after the first user', async () => {
