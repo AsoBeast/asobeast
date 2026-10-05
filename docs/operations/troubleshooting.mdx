@@ -79,6 +79,10 @@ Each entry below names the symptom the way you would describe it, then gives the
     You are not signed in as the owner in that browser. The surface answers `404` rather than `403` so it does not confirm it exists. Sign in and reload, or check that `BULL_BOARD_ENABLED` is not `false`. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
 
+  <Accordion title="/admin/support returns 404 although I am signed in as the operator">
+    An earlier release let the operator suspend the bootstrap workspace, which takes the support surface and the queue dashboard away from the operator's own credentials. Restore the workspace from the command line, see [Suspending and restoring from the command line](/operations/hosted-observability#suspending-and-restoring-from-the-command-line). Current releases refuse that suspension.
+  </Accordion>
+
   <Accordion title="/docs returns 404">
     `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
