@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { OVERALL_GENRE, type CategoryRankSeriesItem } from "@asobeast/shared";
+import type { CategoryRankSeriesItem } from "@asobeast/shared";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
@@ -23,10 +23,11 @@ import {
 } from "@/components/ui/card";
 import { RangePicker } from "@/components/rankings/RangePicker";
 import { formatCategoryPosition, formatDayMonth } from "@/lib/format";
-import { categoryRanksOptions } from "@/lib/queries";
+import { appDetailOptions, categoryRanksOptions } from "@/lib/queries";
 import { presetToRange, RANGE_PRESETS, type RangePreset } from "@/lib/ranges";
 import { rangeParser } from "@/lib/search-params";
 import { MAX_SERIES } from "@/components/rankings/pivot";
+import { headlineSeries } from "./category-headline";
 import { ChartNotice, ChartSkeleton } from "@/components/charts/ChartStates";
 import {
   CHART_HEIGHT,
@@ -87,12 +88,6 @@ function buildCategoryChart(all: CategoryRankSeriesItem[]): CategoryChartData {
   };
 }
 
-function primaryGenreItem(
-  series: CategoryRankSeriesItem[],
-): CategoryRankSeriesItem | undefined {
-  return series.find((item) => item.genre !== OVERALL_GENRE);
-}
-
 function CategoryTooltip({
   active,
   label,
@@ -122,24 +117,33 @@ function CategoryTooltip({
   return <SeriesTooltip title={formatDayMonth(String(label))} items={items} />;
 }
 
-function HeaderStat({ series }: { series: CategoryRankSeriesItem[] }) {
-  const primary = primaryGenreItem(series);
-  if (!primary) return null;
+function HeaderStat({
+  series,
+  price,
+}: {
+  series: CategoryRankSeriesItem[];
+  price: number | null;
+}) {
+  const headline = headlineSeries(series, price);
+  if (!headline) return null;
 
   return (
     <p className="text-sm">
-      {primary.current === null ? (
+      {headline.current === null ? (
         <span className="text-muted-foreground">
-          Not in top 200 in {primary.genreName}
+          Not in top 200 in {headline.genreName}
         </span>
       ) : (
         <>
           <span className="font-mono text-lg font-semibold numeric font-mono">
-            #{primary.current}
+            #{headline.current}
           </span>{" "}
-          <span className="text-muted-foreground">in {primary.genreName}</span>
+          <span className="text-muted-foreground">in {headline.genreName}</span>
         </>
-      )}
+      )}{" "}
+      <span className="text-muted-foreground">
+        · {headline.collection} chart
+      </span>
     </p>
   );
 }
@@ -148,6 +152,7 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
   const { data } = useSuspenseQuery(
     categoryRanksOptions(id, presetToRange(range)),
   );
+  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
 
   if (data.series.length === 0) {
     return (
@@ -163,7 +168,10 @@ function CategoryRankBody({ id, range }: { id: string; range: RangePreset }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <HeaderStat series={data.series} />
+      <HeaderStat
+        series={data.series}
+        price={detail.latestSnapshot?.price ?? null}
+      />
       <ChartContainer
         config={chart.config}
         className={`${CHART_HEIGHT.tall} w-full`}
