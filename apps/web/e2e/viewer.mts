@@ -4,7 +4,18 @@ export const VIEWER_COOKIE = "e2e_viewer";
 
 export const VIEWERS = ["customer", "member"] as const;
 
-export type Viewer = (typeof VIEWERS)[number];
+export const UNPLANNED_OPERATORS = [
+  "lapsed-operator",
+  "unconfirmed-operator",
+] as const;
+
+export type Viewer =
+  (typeof VIEWERS)[number] | (typeof UNPLANNED_OPERATORS)[number];
+
+export const ALL_VIEWERS: readonly Viewer[] = [
+  ...VIEWERS,
+  ...UNPLANNED_OPERATORS,
+];
 
 export async function seedViewer(
   context: BrowserContext,

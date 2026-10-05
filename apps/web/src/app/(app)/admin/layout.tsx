@@ -1,12 +1,14 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import { AdminAccessNotice } from "@/components/admin/AdminAccessNotice";
 import { AdminNav } from "@/components/admin/AdminNav";
-import { viewerIsOperator } from "@/lib/viewer";
+import { viewerAdminAccess } from "@/lib/viewer";
 
 export default async function AdminLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  if (!(await viewerIsOperator())) notFound();
+  const access = await viewerAdminAccess();
+  if (access === "denied") notFound();
 
   return (
     <div className="page-wide flex flex-col gap-6">
@@ -17,8 +19,14 @@ export default async function AdminLayout({
           can open this page.
         </p>
       </div>
-      <AdminNav />
-      {children}
+      {access === "granted" ? (
+        <>
+          <AdminNav />
+          {children}
+        </>
+      ) : (
+        <AdminAccessNotice access={access} />
+      )}
     </div>
   );
 }
