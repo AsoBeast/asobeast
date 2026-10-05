@@ -236,4 +236,42 @@ describe('StorableTextPipe', () => {
 
     expect(error).toBeInstanceOf(BadRequestException);
   });
+
+  it.each([
+    ['a lone high surrogate', 'a\ud83d'],
+    ['a lone low surrogate', 'a\ude00b'],
+    ['surrogates in the wrong order', '\ude00\ud83d'],
+  ])('answers 400 for %s', (_name, text) => {
+    const error = thrownBy(() =>
+      pipe.transform({ note: text }, argument('body')),
+    );
+
+    expect((error as BadRequestException).message).toBe(
+      'note must be well formed Unicode text',
+    );
+  });
+
+  it('accepts a surrogate pair', () => {
+    const value = { note: 'pair \ud83d\ude00' };
+
+    expect(pipe.transform(value, argument('body'))).toBe(value);
+  });
+
+  it('names the NUL when a value holds both problems', () => {
+    const error = thrownBy(() =>
+      pipe.transform({ note: `\ud83d${NUL}` }, argument('body')),
+    );
+
+    expect((error as BadRequestException).message).toBe(
+      'note must not contain a NUL character',
+    );
+  });
+
+  it('leaves a hashed only field with a lone surrogate unscanned', () => {
+    const value = { password: 'a\ud83d', name: 'Zoe' };
+
+    expect(
+      pipe.transform(value, argument('body', undefined, Credentials)),
+    ).toBe(value);
+  });
 });

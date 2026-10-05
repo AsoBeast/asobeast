@@ -40,7 +40,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 
 | Status | What causes it in this API |
 | --- | --- |
-| `400` | A DTO failed validation, a store URL could not be parsed, a text value contained a NUL character, or the body was not valid JSON or could not be decoded |
+| `400` | A DTO failed validation, a store URL could not be parsed, a text value contained a NUL character or an unpaired surrogate, or the body was not valid JSON or could not be decoded |
 | `401` | The session cookie or personal API token is missing, malformed or revoked. The response carries a `WWW-Authenticate: Bearer realm="asobeast"` challenge |
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
@@ -112,6 +112,8 @@ PostgreSQL text cannot hold the NUL character (`U+0000`), so the API refuses it 
 
 - A NUL in a path id answers `404` with the message `Resource not found`, because no id can contain one.
 - A NUL in a query value or a body field answers `400`, and the `message` names the value, such as `note must not contain a NUL character` or `keywords[1] must not contain a NUL character`.
+
+A JSON body can also carry half of an emoji, written as a lone escape such as `\ud83d` with no partner. That is not valid Unicode text, so it answers `400` with `must be well formed Unicode text`.
 
 Every other character is accepted, including emoji and the other control characters. Passwords and the one time tokens in confirmation, reset and invitation links are hashed rather than stored, so they are never inspected and may hold any character. A refused request stores nothing.
 

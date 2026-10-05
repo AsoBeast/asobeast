@@ -13,10 +13,16 @@ const GUARDED_SOURCES: readonly ArgumentMetadata['type'][] = [
   'body',
 ];
 
+const UNPAIRED_SURROGATE = /\p{Surrogate}/u;
+
 const TEXT_RULES = [
   {
     refuses: (text: string) => text.includes('\u0000'),
     requirement: 'must not contain a NUL character',
+  },
+  {
+    refuses: (text: string) => UNPAIRED_SURROGATE.test(text),
+    requirement: 'must be well formed Unicode text',
   },
 ] as const;
 

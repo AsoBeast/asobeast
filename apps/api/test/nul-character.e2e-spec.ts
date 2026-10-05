@@ -470,6 +470,45 @@ describe('A NUL character in a request (e2e)', () => {
       expect((response.body as { note: string }).note).toBe(note);
     });
 
+    it.each([
+      ['a lone high surrogate', 'a\ud83d'],
+      ['a lone low surrogate', 'a\ude00b'],
+      ['surrogates in the wrong order', '\ude00\ud83d'],
+    ])('answers 400 for %s in a body field', async (_name, note) => {
+      const response = await owner
+        .patch(`/apps/${appId}/keywords/${keywordId}`)
+        .send({ note })
+        .expect(400);
+
+      expect(envelope(response).message).toBe(
+        'note must be well formed Unicode text',
+      );
+      expect(errorLog).not.toHaveBeenCalled();
+    });
+
+    it('accepts a surrogate pair as the emoji it spells', async () => {
+      await owner
+        .patch(`/apps/${appId}/keywords/${keywordId}`)
+        .send({ note: 'pair \ud83d\ude00' })
+        .expect(200);
+    });
+
+    it('still registers a password with a lone surrogate and signs in with it', async () => {
+      const account = {
+        email: stranger('surrogate-password').email,
+        password: 'long\ud83denough1',
+      };
+
+      await request(app.getHttpServer())
+        .post('/auth/register')
+        .send(account)
+        .expect(201);
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send(account)
+        .expect(200);
+    });
+
     it('accepts a query value with an encoded percent sign and a plus', async () => {
       await owner.get(`/apps/${appId}/reviews?version=%2500%2B1`).expect(200);
     });
