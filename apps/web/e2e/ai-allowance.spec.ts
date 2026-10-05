@@ -60,6 +60,21 @@ test("shows the month's ai calls and their renewal on the plan card", async ({
   await expect(plan.locator('[data-slot="meter"]')).toHaveCount(3);
 });
 
+test("promises no renewal on the plan card when no ai calls are included", async ({
+  page,
+}) => {
+  await openWithBilling(
+    page,
+    indiePlan({ used: 4, limit: 0, resetsAt: RESETS_AT }),
+  );
+
+  await page.goto("/settings");
+
+  const plan = page.getByRole("region", { name: "Plan" });
+  await expect(plan.getByText("AI calls this month")).toBeVisible();
+  await expect(plan.getByText("Renews Nov 1, 2026")).toHaveCount(0);
+});
+
 test("lists the ai calls of each plan on the upgrade page", async ({
   page,
 }) => {

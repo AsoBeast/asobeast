@@ -103,6 +103,8 @@ The database being unreachable does not need an alert rule. The scrape itself fa
 | `queue.memory.high` | Redis passed 80 percent of its memory ceiling |
 | `mail.failures.clustered` | A fifth or more of at least five account emails attempted in the last day were refused |
 
+The two `workspace.cost` rules compare a workspace's share of pool demand with what it pays, so they are evaluated only when `BILLING_ENABLED` is `true`. A self hosted instance has no prices to compare against, and without that gate its only workspace would read as unpaid on every scrape.
+
 ### Review weekly
 
 | Alert | Fires when |

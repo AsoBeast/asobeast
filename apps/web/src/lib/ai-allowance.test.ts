@@ -4,6 +4,7 @@ import {
   aiAllowanceSpent,
   aiCallsLeftText,
   aiRenewalText,
+  aiUsageNote,
 } from "./ai-allowance";
 
 const RESETS = "2026-11-01T00:00:00.000Z";
@@ -21,9 +22,9 @@ describe("aiCallsLeftText", () => {
     );
   });
 
-  it("says a plan includes none", () => {
+  it("says a workspace includes none", () => {
     expect(aiCallsLeftText({ used: 0, limit: 0, resetsAt: RESETS })).toBe(
-      "This plan includes no AI calls",
+      "This workspace includes no AI calls",
     );
   });
 
@@ -71,5 +72,37 @@ describe("aiAllowanceRefusal", () => {
     ).toBe(
       "This workspace has used the 200 AI calls its plan includes this month. Renews Nov 1, 2026.",
     );
+  });
+
+  it("says AI is off for a zero allowance instead of a renewal", () => {
+    expect(
+      aiAllowanceRefusal({
+        plan: "free",
+        limit: 0,
+        used: 4,
+        resetsAt: RESETS,
+        upgradeTo: null,
+      }),
+    ).toBe("This workspace includes no AI calls.");
+  });
+});
+
+describe("aiUsageNote", () => {
+  it("says when a limited allowance renews", () => {
+    expect(aiUsageNote({ used: 37, limit: 200, resetsAt: RESETS })).toBe(
+      "Renews Nov 1, 2026",
+    );
+  });
+
+  it("says when an unlimited allowance's month ends", () => {
+    expect(aiUsageNote({ used: 37, limit: null, resetsAt: RESETS })).toBe(
+      "Renews Nov 1, 2026",
+    );
+  });
+
+  it("promises no renewal when no ai calls are included", () => {
+    expect(
+      aiUsageNote({ used: 4, limit: 0, resetsAt: RESETS }),
+    ).toBeUndefined();
   });
 });

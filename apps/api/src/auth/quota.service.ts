@@ -12,6 +12,7 @@ import {
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { countKeywordMarkets } from './keyword-markets';
 import { planScopeOf, selfHostedLimits, type PlanScope } from './plan-limits';
 import { QuotaExceededError } from './quota.errors';
 
@@ -185,17 +186,6 @@ export class QuotaService {
 
 function countApps(client: Tx | PrismaService): Promise<number> {
   return client.app.count({ where: { isCompetitor: false } });
-}
-
-async function countKeywordMarkets(
-  client: Tx | PrismaService,
-): Promise<number> {
-  const [row] = await client.$queryRaw<{ markets: bigint }[]>`
-    SELECT COUNT(DISTINCT "keywordId") AS markets
-    FROM "TrackedKeyword"
-    WHERE "active" = true
-  `;
-  return Number(row?.markets ?? 0);
 }
 
 function countCompetitors(client: Tx, appId: string): Promise<number> {

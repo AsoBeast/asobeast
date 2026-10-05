@@ -14,7 +14,7 @@ The last two matter to a hosted operator rather than a self hoster, and [Observa
 
 The platform operator is the owner of the bootstrap workspace, the first account the instance ever created. It is a different principal from a workspace owner.
 
-That distinction matters because the two deployment shapes hand out the `owner` role differently. Self hosted puts every account in one workspace, so its first account is both the workspace owner and the operator. Hosted gives every registration its own workspace and makes that customer the `owner` of it, so `owner` alone cannot authorize an instance wide surface. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page.
+That distinction matters because registration decides who becomes an `owner`. By default every account after the first gets a workspace of its own and owns it, on a self hosted instance as much as on a hosted one, so `owner` alone cannot authorize an instance wide surface. A one person instance has a single account, which is both the owner of the bootstrap workspace and the operator. A customer who owns their own workspace is not an operator and receives `404` from every surface on this page, and neither is a member who joined the bootstrap workspace because the instance opted into `AUTH_REGISTRATION_WORKSPACE=shared`. See [Where a self registration lands](/security/authentication#where-a-self-registration-lands).
 
 Owning your own workspace still authorizes everything inside it, including managing its team and scheduling its deletion. Only the cross tenant surfaces require the operator.
 
@@ -43,6 +43,8 @@ The web app has an **Admin** area at `/admin` for the platform operator. It appe
 | Workspaces | every workspace with its plan, members, apps and keyword markets | `GET /admin/support/workspaces` |
 | Users | every account, newest first, with its workspace and whether its email is confirmed | `GET /admin/support/users` |
 | Apps | every tracked app with its workspace, store, home market, competitors and keyword markets | `GET /admin/support/apps` |
+
+Keyword markets count one phrase once per workspace, however many of its apps track it, which is the number the workspace's own plan card shows. The Overview and Workspaces tabs follow that rule, and the Overview total adds the workspaces together, so a phrase two workspaces track counts once in each. The Apps tab counts what each app tracks, so its rows can add up to more than the workspace figure.
 
 Users and Apps accept `?workspaceId=` and return the newest 1,000 rows with the total. Reading either list is written to the support audit trail, the same trail the workspace list writes, because both return personal data. The overview returns counts only and is not written to the trail. The capacity report names its top consumers by workspace id only, because a self registered workspace is named after its owner's email; the Capacity tab takes the names from the workspace list, so reading them is written to the trail too. Every response from these endpoints carries `Cache-Control: no-store`.
 

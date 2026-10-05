@@ -3,6 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { STORES, type AdminOverview } from '@asobeast/shared';
 import { SPENDING_STATUSES } from '../ai/ai-gateway.service';
 import { aiPeriodOf } from '../ai/ai-period';
+import {
+  keywordMarketsByWorkspace,
+  sumKeywordMarkets,
+} from '../auth/keyword-markets';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -103,15 +107,19 @@ export class SupportOverviewService {
   }
 
   private async keywordTotals(): Promise<AdminOverview['keywords']> {
-    const [row] = await this.prisma.$queryRaw<AdminOverview['keywords'][]>`
-      SELECT COUNT(*)::int AS "trackedMarkets",
-             COUNT(DISTINCT t."keywordId")::int AS "searched",
-             COUNT(DISTINCT (k."store", k."country"))::int AS "storefronts"
-      FROM "TrackedKeyword" t
-      JOIN "Keyword" k ON k."id" = t."keywordId"
-      WHERE t."active" = true
-    `;
-    return row;
+    const [markets, [row]] = await Promise.all([
+      keywordMarketsByWorkspace(this.prisma),
+      this.prisma.$queryRaw<
+        Omit<AdminOverview['keywords'], 'trackedMarkets'>[]
+      >`
+        SELECT COUNT(DISTINCT t."keywordId")::int AS "searched",
+               COUNT(DISTINCT (k."store", k."country"))::int AS "storefronts"
+        FROM "TrackedKeyword" t
+        JOIN "Keyword" k ON k."id" = t."keywordId"
+        WHERE t."active" = true
+      `,
+    ]);
+    return { trackedMarkets: sumKeywordMarkets(markets), ...row };
   }
 
   private aiCallsSince(start: Date): Promise<number> {

@@ -140,7 +140,7 @@ A self hosted instance has no plan limits, so the first and last rows do not app
 
 ## Suspension
 
-An operator can suspend a workspace after sustained abuse. A suspended workspace keeps reading and exporting its data from the dashboard and keeps full access to billing, so it can always pay and always leave with its data. API tokens stop authenticating, every write is refused with `403`, and the daily run skips the workspace.
+An operator can suspend a workspace after sustained abuse. A suspended workspace keeps reading and exporting its data from the dashboard and keeps full access to billing, so it can always pay and always leave with its data. Its API tokens are refused with `403` on every route except `GET /account/export`, so a script can still take the data out. Every write is refused with `403` too, and the daily run skips the workspace.
 
 ## Related
 

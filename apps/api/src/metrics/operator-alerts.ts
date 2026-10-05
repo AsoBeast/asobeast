@@ -44,6 +44,7 @@ export interface OperatorAlertInput {
   instance: InstanceMetrics;
   isolationAnomalies: number;
   redisAvailable: boolean;
+  billingEnabled: boolean;
   hoursSinceTrigger: number;
   hoursSinceBackup: number | null;
 }
@@ -61,7 +62,7 @@ export function operatorAlerts(input: OperatorAlertInput): OperatorAlert[] {
     ...canaryAlerts(input.instance.storeCanary),
     ...poolAlerts(input),
     ...investigateAlerts(input),
-    ...costAlerts(input.workspaces),
+    ...(input.billingEnabled ? costAlerts(input.workspaces) : []),
     ...backupAlerts(input),
     ...resourceAlerts(input.instance.resources),
     ...accountMailAlerts(input.instance.accountMail),

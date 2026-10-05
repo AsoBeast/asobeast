@@ -124,6 +124,23 @@ describe("preflight", () => {
     );
   });
 
+  it("refuses a suspended workspace and passes on the reason", async () => {
+    const message =
+      "This workspace is suspended: abuse. Existing data stays readable and exportable, and billing remains open.";
+    const { client } = stubFetch(() => ({
+      status: 403,
+      body: {
+        statusCode: 403,
+        error: "Forbidden",
+        message,
+        path: "/auth/me",
+        timestamp: "2026-07-24T00:00:00.000Z",
+      },
+    }));
+
+    await expect(preflight(client)).resolves.toEqual({ ok: false, message });
+  });
+
   it("reports a transport failure", async () => {
     const { client } = stubFetch(() => "throw");
     const result = await preflight(client);

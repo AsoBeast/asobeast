@@ -63,7 +63,8 @@ export function VerifyEmailContent() {
           <h1>Confirm your email</h1>
         </CardTitle>
         <CardDescription>
-          Confirming starts your trial and signs you in on this device.
+          Confirming marks this address as yours and signs you in on this
+          device.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">

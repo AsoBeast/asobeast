@@ -101,7 +101,7 @@ Two guards run in order on every request.
 
 A small set of routes is marked public, and account plus paywall routes stay reachable even for an unentitled account so an expired user can sign in and pay.
 
-On a self hosted instance all users share the seeded default workspace. With billing enabled every registration creates its own workspace, so accounts never see each other's apps.
+Where a registration lands is the same on a self hosted instance and a hosted one: by default every account after the first gets a workspace of its own, so accounts never see each other's apps. `AUTH_REGISTRATION_WORKSPACE=shared` is the opt in that puts them in the bootstrap workspace instead. See [Where a self registration lands](#where-a-self-registration-lands).
 
 ## Entitlements and the paid plan seam
 

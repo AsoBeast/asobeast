@@ -3,6 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import type { AuthenticatedRequest } from '../auth.types';
 import { ALLOW_UNENTITLED_KEY } from '../decorators/allow-unentitled.decorator';
+import { EXPORTS_WORKSPACE_DATA_KEY } from '../decorators/exports-workspace-data.decorator';
 import { rateClassOf } from '../rate-limit/rate-class';
 import { WorkspaceSuspendedError } from './abuse.errors';
 import { refusesWhileSuspended } from './suspension';
@@ -22,14 +23,20 @@ export class SuspensionGuard implements CanActivate {
     const refused = refusesWhileSuspended(req.user.workspace, {
       credential: req.credential,
       rateClass: rateClassOf(this.reflector, context, req.method),
-      allowedWhileUnentitled:
-        this.reflector.getAllAndOverride<boolean>(ALLOW_UNENTITLED_KEY, [
-          context.getHandler(),
-          context.getClass(),
-        ]) === true,
+      allowedWhileUnentitled: this.flag(context, ALLOW_UNENTITLED_KEY),
+      exportsWorkspaceData: this.flag(context, EXPORTS_WORKSPACE_DATA_KEY),
     });
     if (!refused) return true;
 
     throw new WorkspaceSuspendedError(req.user.workspace.suspendedReason);
+  }
+
+  private flag(context: ExecutionContext, key: string): boolean {
+    return (
+      this.reflector.getAllAndOverride<boolean>(key, [
+        context.getHandler(),
+        context.getClass(),
+      ]) === true
+    );
   }
 }
