@@ -32,7 +32,7 @@ Docker Compose is the supported way to run asobeast. Three commands take you fro
     `--wait` returns only once every health check passes, so a successful exit means the stack is actually serving.
   </Step>
   <Step title="Create the owner account">
-    Open `http://localhost:3001`. A fresh installation redirects to registration. The first account becomes the owner, and registration closes automatically afterwards unless you set `AUTH_ALLOW_REGISTRATION=true`.
+    Open `http://localhost:3001`. A fresh installation redirects to registration. The first account becomes the owner, and registration closes automatically afterwards unless you set `AUTH_ALLOW_REGISTRATION=true`. Safari does not keep the session cookie over plain `http://localhost`, so use Chrome or Firefox, or put TLS in front of the stack. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
   </Step>
 </Steps>
 

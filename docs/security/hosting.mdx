@@ -181,7 +181,7 @@ Some settings are individually valid and jointly unsafe. The API checks those co
 | `BILLING_ENABLED=true` with `TRIAL_DAYS=0` | Every new account is locked out the moment it registers, with no route to the paywall |
 | `BILLING_ENABLED=true` with `AUTH_REGISTRATION_WORKSPACE=shared` | Hosted registration is open to strangers, so every one of them would land in the bootstrap workspace with read and write access to the data already there |
 
-The Docker image sets `NODE_ENV=production`, so the first check is live on every self hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Browsers treat `http://localhost` as a secure context, so evaluating locally over plain HTTP still works.
+The Docker image sets `NODE_ENV=production`, so the first check is live on every self hosted deployment. The Compose stack therefore defaults `AUTH_COOKIE_SECURE` to `true`. Chrome and Firefox keep the `Secure` cookie on `http://localhost`, so evaluating locally over plain HTTP works there. Safari does not, so a Safari user needs TLS. See [Signing in returns to the sign in form](/operations/troubleshooting#signing-in-returns-to-the-sign-in-form).
 
 The error names the variable, the required value and the reason. Fix the variable and start again.
 
