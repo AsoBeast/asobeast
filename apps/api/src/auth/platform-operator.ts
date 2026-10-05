@@ -7,8 +7,12 @@ export interface PlatformPrincipal {
   workspaceId: string;
 }
 
+export function isOperatorWorkspace(workspaceId: string): boolean {
+  return workspaceId === DEFAULT_WORKSPACE_ID;
+}
+
 export function isPlatformOperator(user: PlatformPrincipal): boolean {
-  return user.role === OWNER_ROLE && user.workspaceId === DEFAULT_WORKSPACE_ID;
+  return user.role === OWNER_ROLE && isOperatorWorkspace(user.workspaceId);
 }
 
 export function requirePlatformOperator(

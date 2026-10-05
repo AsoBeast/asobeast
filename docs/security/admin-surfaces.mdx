@@ -121,6 +121,8 @@ The gate applies the same suspension rules the rest of the API applies, because 
 
 A suspended account keeps reading and exporting its data, and keeps billing, so the account can always pay and always leave. See [Rate limits and quotas](/api-reference/rate-limits).
 
+The operator workspace is the one workspace that cannot be suspended. The support surface answers `409` and the command line refuses too, because a suspended operator workspace takes the support surface and the queue dashboard away from the operator, and with them the way to lift the suspension. An instance that an earlier release left with its operator workspace suspended restores it from [the command line](/operations/hosted-observability#suspending-and-restoring-from-the-command-line).
+
 ## Retired variables
 
 `BULL_BOARD_USER` and `BULL_BOARD_PASSWORD` are ignored. The dashboard used to use basic authentication and now requires an operator session or a personal API token instead.
