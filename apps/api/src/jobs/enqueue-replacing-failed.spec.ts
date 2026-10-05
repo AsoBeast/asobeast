@@ -3,18 +3,30 @@ import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 
 const JOB_ID = 'check~keyword~2026-10-04';
 const OPTS = { jobId: JOB_ID, attempts: 3 };
-const DATA = { keywordId: 'keyword' };
+const DATA = { keywordId: 'keyword', correlationId: 'request-one' };
+const OTHER_DATA = { keywordId: 'keyword', correlationId: 'request-two' };
 
-function queueHolding(existing: { failed: boolean } | undefined, removed = 1) {
-  return {
-    getJob: jest.fn().mockResolvedValue(
+function queueHolding(
+  existing: { failed: boolean } | undefined,
+  removed = 1,
+  storedAfterAdd?: object | null,
+) {
+  const queue = {
+    getJob: jest.fn().mockResolvedValueOnce(
       existing && {
         isFailed: jest.fn().mockResolvedValue(existing.failed),
       },
     ),
     remove: jest.fn().mockResolvedValue(removed),
-    add: jest.fn().mockResolvedValue(undefined),
+    add: jest.fn().mockImplementation((_name: string, data: object) => {
+      const stored = storedAfterAdd === undefined ? data : storedAfterAdd;
+      queue.getJob.mockResolvedValue(
+        stored && { data: JSON.parse(JSON.stringify(stored)) as object },
+      );
+      return Promise.resolve(undefined);
+    }),
   };
+  return queue;
 }
 
 const asQueue = (queue: ReturnType<typeof queueHolding>): Queue =>
@@ -65,5 +77,40 @@ describe('enqueueReplacingFailed', () => {
 
     expect(queue.remove).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it('does not count a job another request added first', async () => {
+    const queue = queueHolding(undefined, 1, OTHER_DATA);
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
+    ).resolves.toBe(false);
+
+    expect(queue.add).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not count a failed job another request replaced first', async () => {
+    const queue = queueHolding({ failed: true }, 1, OTHER_DATA);
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
+    ).resolves.toBe(false);
+  });
+
+  it('counts a job it added when it is already gone from the queue', async () => {
+    const queue = queueHolding(undefined, 1, null);
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
+    ).resolves.toBe(true);
+  });
+
+  it('compares the job as the queue stored it', async () => {
+    const queue = queueHolding(undefined);
+    const data = { keywordId: 'keyword', correlationId: undefined };
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', data, OPTS),
+    ).resolves.toBe(true);
   });
 });
