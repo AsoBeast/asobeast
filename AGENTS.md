@@ -106,7 +106,7 @@ pnpm format:check               # prettier; the pre-commit hook formats staged f
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-The browser suite needs its browser once: `pnpm --filter web exec playwright install chromium`.
+The browser suite needs its browsers once: `pnpm --filter web exec playwright install chromium webkit`.
 
 A fresh checkout needs its `.env` files before any of that runs:
 

@@ -75,11 +75,13 @@ Every command runs from the repository root.
 
 ## Browser tests
 
-Install the browser once before the first Playwright run.
+Install the browsers once before the first Playwright run.
 
 ```bash
-pnpm --filter web exec playwright install chromium
+pnpm --filter web exec playwright install chromium webkit
 ```
+
+The WebKit browser runs one spec, `engine-hydration.spec.ts`, which loads every signed in route in Safari's engine and fails on a hydration error. Dates and country names are worded by each engine's own ICU data, so only a real second engine notices a difference.
 
 The browser suite is hermetic. A typed `node:http` mock API runs on port 4100 and serves both server side prefetching and browser fetches, so no PostgreSQL, Redis or store request is involved. Playwright reuses a running dev server locally and builds the production bundle in continuous integration.
 
