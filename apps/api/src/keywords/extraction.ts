@@ -1,4 +1,5 @@
 import { countChars } from '@asobeast/shared';
+import { WIDE_CHARACTER } from '../common/text/scripts';
 import { isExtractionStopword } from './extraction-stopwords';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
@@ -32,7 +33,6 @@ const MAX_NGRAM = 3;
 const MAX_CANDIDATES = 60;
 const SEGMENT_SEPARATORS = /[:.,|&]/;
 const SPACELESS_PHRASE_MAX_WIDTH = 20;
-const WIDE_CHARACTER = /[\p{Script=Han}\p{scx=Hiragana}\p{scx=Katakana}]/u;
 
 const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
 

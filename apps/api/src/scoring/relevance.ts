@@ -1,6 +1,6 @@
 import { KeywordSource, normalizeText, tokenize } from '@asobeast/shared';
 import { clamp } from './curves';
-import { isUnsegmented } from './unsegmented';
+import { isUnsegmented } from '../common/text/scripts';
 
 export interface RankingEvidence {
   position: number | null;

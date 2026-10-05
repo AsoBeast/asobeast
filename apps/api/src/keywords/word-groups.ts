@@ -1,5 +1,9 @@
 import { countChars, tokenize } from '@asobeast/shared';
-import { isExtractionStopword } from './extraction-stopwords';
+import { SPACELESS_CHARACTER, SPACELESS_OR_NOT } from '../common/text/scripts';
+import {
+  isChineseParticle,
+  isExtractionStopword,
+} from './extraction-stopwords';
 
 export interface WordGroup {
   tokens: string[];
@@ -8,12 +12,6 @@ export interface WordGroup {
 
 const SPACELESS_UNIT_MAX_CHARS = 5;
 
-const SPACELESS_SCRIPTS = String.raw`\p{Script=Han}\p{scx=Hiragana}\p{scx=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}`;
-const SPACELESS_CHAR = new RegExp(`[${SPACELESS_SCRIPTS}]`, 'u');
-const SPACELESS_OR_NOT = new RegExp(
-  `[${SPACELESS_SCRIPTS}]+|[^${SPACELESS_SCRIPTS}]+`,
-  'gu',
-);
 const HIRAGANA_ONLY = /^\p{scx=Hiragana}+$/u;
 const KATAKANA_ONLY = /^\p{scx=Katakana}+$/u;
 
@@ -63,43 +61,12 @@ function joinKatakanaFragments(words: string[]): string[] {
   return joined;
 }
 
-const HAN_PARTICLES: ReadonlySet<string> = new Set([
-  '的',
-  '了',
-  '是',
-  '在',
-  '和',
-  '与',
-  '與',
-  '及',
-  '或',
-  '让',
-  '讓',
-  '你',
-  '我',
-  '他',
-  '她',
-  '都',
-  '也',
-  '就',
-  '很',
-  '把',
-  '被',
-  '给',
-  '給',
-  '从',
-  '從',
-  '对',
-  '對',
-  '为',
-  '為',
-]);
 const SINGLE_HAN = /^\p{Script=Han}$/u;
 
 export const isBoundWord = (word: string): boolean => SINGLE_HAN.test(word);
 
 const isGrammar = (word: string): boolean =>
-  HIRAGANA_ONLY.test(word) || HAN_PARTICLES.has(word);
+  HIRAGANA_ONLY.test(word) || isChineseParticle(word);
 
 function splitAtGrammar(words: string[]): string[][] {
   const groups: string[][] = [[]];
@@ -155,7 +122,7 @@ export function wordGroups(segment: string): WordGroup[] {
   };
   for (const chunk of tokenize(segment)) {
     for (const run of chunk.match(SPACELESS_OR_NOT) ?? []) {
-      if (SPACELESS_CHAR.test(run)) {
+      if (SPACELESS_CHARACTER.test(run)) {
         flushSpaced();
         groups.push(...spacelessGroups(run));
       } else {

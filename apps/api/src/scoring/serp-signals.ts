@@ -1,7 +1,7 @@
 import { searchKey } from '@asobeast/shared';
 import { clamp } from './curves';
 import { sameWord } from './plurals';
-import { isUnsegmented } from './unsegmented';
+import { isUnsegmented } from '../common/text/scripts';
 
 export const EVIDENCE_EXACT = 1;
 export const EVIDENCE_ALL_WORDS = 0.7;

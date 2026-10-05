@@ -20,6 +20,37 @@ const CHINESE = [
   '你的',
 ];
 
+const CHINESE_PARTICLES: ReadonlySet<string> = new Set([
+  '的',
+  '了',
+  '是',
+  '在',
+  '和',
+  '与',
+  '與',
+  '及',
+  '或',
+  '让',
+  '讓',
+  '你',
+  '我',
+  '他',
+  '她',
+  '都',
+  '也',
+  '就',
+  '很',
+  '把',
+  '被',
+  '给',
+  '給',
+  '从',
+  '從',
+  '对',
+  '對',
+  '为',
+  '為',
+]);
 const THAI = [
   'แอป',
   'แอปพลิเคชัน',
@@ -109,3 +140,6 @@ export const isExtractionStopword = (token: string): boolean => {
     isConjoinedArabicStopword(word)
   );
 };
+
+export const isChineseParticle = (word: string): boolean =>
+  CHINESE_PARTICLES.has(word);

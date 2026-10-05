@@ -1,4 +1,4 @@
-import { isUnsegmented } from './unsegmented';
+import { isUnsegmented } from './scripts';
 
 describe('isUnsegmented', () => {
   it.each([

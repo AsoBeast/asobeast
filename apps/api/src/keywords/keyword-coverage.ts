@@ -1,5 +1,5 @@
 import { normalizeText } from '@asobeast/shared';
-import { isUnsegmented } from '../scoring/unsegmented';
+import { isUnsegmented } from '../common/text/scripts';
 
 export const coversKeyword = (field: string, keyword: string): boolean => {
   const text = normalizeText(field);
