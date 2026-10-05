@@ -8,6 +8,8 @@ import { StorableTextPipe } from './storable-text.pipe';
 
 const NUL = '\u0000';
 const DEEPEST = 100_000;
+const DEEPEST_ALLOWED = 64;
+const TOO_DEEP = 'must not be nested more than 64 levels deep';
 
 const pipe = new StorableTextPipe();
 
@@ -185,14 +187,62 @@ describe('StorableTextPipe', () => {
     ).toBeInstanceOf(BadRequestException);
   });
 
-  it('walks a very deep body without exhausting the stack', () => {
-    const clean = nested(DEEPEST, 'text');
-    const dirty = nested(DEEPEST, NUL);
+  it('refuses a very deep body without exhausting the stack', () => {
+    const error = thrownBy(() =>
+      pipe.transform(nested(DEEPEST, 'text'), argument('body')),
+    );
 
-    expect(pipe.transform(clean, argument('body'))).toBe(clean);
-    expect(
-      thrownBy(() => pipe.transform(dirty, argument('body'))),
-    ).toBeInstanceOf(BadRequestException);
+    expect(error).toBeInstanceOf(BadRequestException);
+    expect((error as BadRequestException).message).toBe(`body ${TOO_DEEP}`);
+  });
+
+  it('accepts a body nested exactly to the limit', () => {
+    const value = nested(DEEPEST_ALLOWED, 'text');
+
+    expect(pipe.transform(value, argument('body'))).toBe(value);
+  });
+
+  it('refuses a body one level past the limit, even when it is empty', () => {
+    const error = thrownBy(() =>
+      pipe.transform(nested(DEEPEST_ALLOWED + 1, []), argument('body')),
+    );
+
+    expect((error as BadRequestException).message).toBe(`body ${TOO_DEEP}`);
+  });
+
+  it('counts the object that holds a field as a level', () => {
+    const error = thrownBy(() =>
+      pipe.transform(
+        { version: nested(DEEPEST_ALLOWED, '1') },
+        argument('query', 'version'),
+      ),
+    );
+
+    expect((error as BadRequestException).message).toBe(`query ${TOO_DEEP}`);
+  });
+
+  it('reports a NUL above the limit before the depth', () => {
+    const error = thrownBy(() =>
+      pipe.transform(
+        { note: NUL, deep: nested(DEEPEST, 'text') },
+        argument('body'),
+      ),
+    );
+
+    expect((error as BadRequestException).message).toBe(
+      'note must not contain a NUL character',
+    );
+  });
+
+  it('limits the depth of a field marked hashed only', () => {
+    const error = thrownBy(() =>
+      pipe.transform(
+        { password: nested(DEEPEST, 'text'), name: 'Zoe' },
+        argument('body', undefined, Credentials),
+      ),
+    );
+
+    expect((error as BadRequestException).message).toBe(`body ${TOO_DEEP}`);
   });
 
   it('leaves a field marked hashed only unscanned', () => {

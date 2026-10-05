@@ -32,6 +32,8 @@ const stranger = (label: string) => ({
   password: PASSWORD,
 });
 const MCP_ACCEPT = 'application/json, text/event-stream';
+const nestedArrays = (levels: number) =>
+  `${'['.repeat(levels)}${']'.repeat(levels)}`;
 const LISTING_URL = 'https://apps.apple.com/us/app/fixture/id1234567890';
 
 const IMPORTED: NormalizedApp = {
@@ -461,6 +463,38 @@ describe('A NUL character in a request (e2e)', () => {
       expect((response.body as { name: string }).name).toBe(
         'Zoe\t\u0001 \u{1F600}',
       );
+    });
+  });
+
+  describe('in a body nested deeper than validation can walk', () => {
+    it('answers 400 for an anonymous registration and creates nothing', async () => {
+      const users = await prisma.user.count();
+
+      const response = await request(app.getHttpServer())
+        .post('/auth/register')
+        .set('Content-Type', 'application/json')
+        .send(
+          `{"email":"deep-name@example.com","password":"${PASSWORD}","name":${nestedArrays(40_000)}}`,
+        )
+        .expect(400);
+
+      expect(envelope(response)).toMatchObject({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: 'body must not be nested more than 64 levels deep',
+      });
+      expect(errorLog).not.toHaveBeenCalled();
+      await expect(prisma.user.count()).resolves.toBe(users);
+    });
+
+    it('keeps the validation message for a body within the limit', async () => {
+      const response = await owner
+        .patch(`/apps/${appId}/keywords/${keywordId}`)
+        .set('Content-Type', 'application/json')
+        .send(`{"note":${nestedArrays(8)}}`)
+        .expect(400);
+
+      expect(envelope(response).message).toContain('note must be a string');
     });
   });
 

@@ -26,9 +26,19 @@ const TEXT_RULES = [
   },
 ] as const;
 
+const MAX_NESTING_DEPTH = 64;
+
 interface Pending {
   path: string;
   value: unknown;
+  depth: number;
+  stored: boolean;
+}
+
+interface Child {
+  path: string;
+  value: unknown;
+  key?: string;
 }
 
 interface Violation {
@@ -54,31 +64,53 @@ function nameOf(path: string, source: string): string {
   return path === '' || requirementBrokenBy(path) ? source : path;
 }
 
-function withoutFields(value: unknown, skipped: ReadonlySet<string>): unknown {
-  if (skipped.size === 0 || !isPlainObject(value)) return value;
-  return Object.fromEntries(
-    Object.entries(value).filter(([key]) => !skipped.has(key)),
-  );
+function childrenOf(path: string, value: unknown): Child[] | undefined {
+  if (Array.isArray(value)) {
+    return value.map((item: unknown, index) => ({
+      path: `${path}[${index}]`,
+      value: item,
+    }));
+  }
+  if (!isPlainObject(value)) return undefined;
+  return Object.entries(value).map(([key, item]) => ({
+    path: childPath(path, key),
+    value: item,
+    key,
+  }));
 }
 
 function firstViolation(
   root: unknown,
   rootPath: string,
+  hashedOnly: ReadonlySet<string>,
 ): Violation | undefined {
-  const pending: Pending[] = [{ path: rootPath, value: root }];
+  const pending: Pending[] = [
+    { path: rootPath, value: root, depth: 0, stored: true },
+  ];
   for (let next = 0; next < pending.length; next += 1) {
-    const { path, value } = pending[next];
+    const { path, value, depth, stored } = pending[next];
     if (typeof value === 'string') {
-      const requirement = requirementBrokenBy(value);
+      const requirement = stored ? requirementBrokenBy(value) : undefined;
       if (requirement) return { path, requirement };
-    } else if (Array.isArray(value)) {
-      value.forEach((item: unknown, index) =>
-        pending.push({ path: `${path}[${index}]`, value: item }),
-      );
-    } else if (isPlainObject(value)) {
-      for (const [key, item] of Object.entries(value)) {
-        pending.push({ path: childPath(path, key), value: item });
-      }
+      continue;
+    }
+    const children = childrenOf(path, value);
+    if (!children) continue;
+    if (depth >= MAX_NESTING_DEPTH) {
+      return {
+        path: '',
+        requirement: `must not be nested more than ${MAX_NESTING_DEPTH} levels deep`,
+      };
+    }
+    for (const child of children) {
+      const hashed =
+        depth === 0 && child.key !== undefined && hashedOnly.has(child.key);
+      pending.push({
+        path: child.path,
+        value: child.value,
+        depth: depth + 1,
+        stored: stored && !hashed,
+      });
     }
   }
   return undefined;
@@ -91,8 +123,11 @@ export class StorableTextPipe implements PipeTransform {
     { type, data, metatype }: ArgumentMetadata,
   ): unknown {
     if (!GUARDED_SOURCES.includes(type)) return value;
-    const scanned = withoutFields(value, hashedOnlyFieldsOf(metatype));
-    const violation = firstViolation(scanned, data ?? '');
+    const violation = firstViolation(
+      value,
+      data ?? '',
+      hashedOnlyFieldsOf(metatype),
+    );
     if (!violation) return value;
     if (type === 'param') throw new NotFoundException('Resource not found');
     throw new BadRequestException(
