@@ -86,4 +86,4 @@ Failed jobs are visible on the queue dashboard at `/admin/queues`, which answers
 
 Run daily collects today's work again for one app. A job that failed earlier today, because a store was down or blocked, is queued again with a fresh set of attempts, and its failed record leaves the dashboard. A job that is still waiting, running or finished today is left alone, so a second click does not queue it again.
 
-The response counts only what the click queued. When every count is zero, today's checks were already queued, running or done, and the click still uses one of the plan's on demand Run daily credits. Two requests that reach the API at the same moment queue each job once, and only one of them counts it.
+The response counts only what the click queued. When every count is zero, today's checks were already queued, running or done, and the click still uses one of the plan's on demand Run daily credits. Requests that reach the API at the same moment queue each job once, and at most one of them counts it, even when they replace a job that failed or carry the same request id.

@@ -32,6 +32,8 @@ function queueHolding(
 const asQueue = (queue: ReturnType<typeof queueHolding>): Queue =>
   queue as unknown as Queue;
 
+const CLAIMED_DATA = { ...DATA, enqueueClaim: expect.any(String) as string };
+
 describe('enqueueReplacingFailed', () => {
   it('adds a job nothing holds the id of', async () => {
     const queue = queueHolding(undefined);
@@ -41,7 +43,7 @@ describe('enqueueReplacingFailed', () => {
     ).resolves.toBe(true);
 
     expect(queue.remove).not.toHaveBeenCalled();
-    expect(queue.add).toHaveBeenCalledWith('check-keyword', DATA, OPTS);
+    expect(queue.add).toHaveBeenCalledWith('check-keyword', CLAIMED_DATA, OPTS);
   });
 
   it('removes a failed job before adding its replacement', async () => {
@@ -52,7 +54,7 @@ describe('enqueueReplacingFailed', () => {
     ).resolves.toBe(true);
 
     expect(queue.remove).toHaveBeenCalledWith(JOB_ID);
-    expect(queue.add).toHaveBeenCalledWith('check-keyword', DATA, OPTS);
+    expect(queue.add).toHaveBeenCalledWith('check-keyword', CLAIMED_DATA, OPTS);
     expect(queue.remove.mock.invocationCallOrder[0]).toBeLessThan(
       queue.add.mock.invocationCallOrder[0],
     );

@@ -1,7 +1,5 @@
-import { isDeepStrictEqual } from 'node:util';
+import { randomUUID } from 'node:crypto';
 import { JobsOptions, Queue } from 'bullmq';
-
-const asStored = (data: object): unknown => JSON.parse(JSON.stringify(data));
 
 export async function enqueueReplacingFailed(
   queue: Queue,
@@ -14,7 +12,10 @@ export async function enqueueReplacingFailed(
     if (!(await existing.isFailed())) return false;
     if ((await queue.remove(opts.jobId)) !== 1) return false;
   }
-  await queue.add(name, data, opts);
+  const enqueueClaim = randomUUID();
+  await queue.add(name, { ...data, enqueueClaim }, opts);
   const stored = await queue.getJob(opts.jobId);
-  return !stored || isDeepStrictEqual(stored.data, asStored(data));
+  const storedClaim = (stored?.data as { enqueueClaim?: string } | undefined)
+    ?.enqueueClaim;
+  return storedClaim === enqueueClaim;
 }
