@@ -63,6 +63,25 @@ The 80 character short description, called `summary` in the store payload, is Go
 
 The store page escapes some characters in the short description, so `Math & Music` arrives as `Math &amp; Music`. asobeast stores the short description as the plain text a user reads, keeps the payload exactly as received in `raw`, and counts characters the way Google Play does. An upgrade decodes short descriptions already stored and pauses the auto tracked keywords an escape produced, such as `amp music`, keeping their history.
 
+## How are auto tracked keywords chosen?
+
+On import and on every refresh, asobeast reads the words of the title and of the subtitle (App Store) or the short description (Google Play), and tracks up to 15 phrases of one to three words. Title phrases come first, then longer phrases before shorter ones. Stopwords such as app, free and best are skipped, and so are words of one character.
+
+Japanese, Chinese, Thai, Lao, Khmer and Burmese have no spaces between words, so asobeast splits them with the word segmenter that ships with the runtime, `Intl.Segmenter`, and joins the words of a phrase without spaces, the way a person types it in the store.
+
+- **In these scripts a phrase never crosses a space, a dash or a punctuation mark.** `メルカリ` and `フリマアプリ` in a title are two keywords, never one joined keyword.
+- **A run of five characters or fewer stays whole.** A name such as `微信` is one keyword instead of two single characters, because the segmenter does not know brand names.
+- **A grammar word ends a phrase.** Hiragana only fragments and a short list of Japanese, Chinese and Thai noise words are dropped, and a phrase is never built across them.
+- **A phrase of two or three words is at most 10 characters.** A single word is never cut, so a long loanword stays whole.
+- **Katakana pieces that the segmenter splits are joined again**, so `スマホ` is not offered as `スマ`.
+- **Latin words in the same listing form phrases as usual.** A Latin brand next to Japanese text is its own phrase.
+
+Korean keeps its spaces, so a particle attached to a word, as in `메신저를`, also stays attached. asobeast has no morphological analysis for Korean.
+
+The keyword combinations card, the review phrases, the metadata lints and keyword coverage still read words between spaces, so on a Japanese, Chinese or Thai listing they treat a run of text as one word. Only the keywords asobeast tracks for you and the suggestions drawn from listings follow the rules above.
+
+An upgrade does not change keywords already tracked. The next refresh of an app, which the daily run performs, adds the cleaner keywords next to the sentences an earlier version tracked, and those stay active until you pause or remove them on the keyword monitor.
+
 ## What stays Apple only?
 
 The subtitle and the keyword field. On a Google Play app they carry audit weight 0 and are hidden in the web app rather than shown empty, and the Action Center skips rules that would recommend an impossible edit.
