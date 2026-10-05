@@ -89,3 +89,18 @@ test("the listing fields pair up beside a collapsed sidebar at a tablet width", 
 }) => {
   expect(await columnsAt(page, 820, { sidebar_state: "false" })).toBe(2);
 });
+
+test("a lint badge that fits on one line keeps the standard badge height", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/apps/app-he/metadata");
+
+  const heights = await page
+    .locator(`${FIELD_GRID} li [data-slot=badge]`)
+    .evaluateAll((badges) =>
+      badges.map((badge) => badge.getBoundingClientRect().height),
+    );
+  expect(heights).toHaveLength(6);
+  expect(new Set(heights)).toEqual(new Set([20]));
+});

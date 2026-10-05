@@ -10,7 +10,7 @@ export function LintIssueRow({ issue }: { issue: LintIssue }) {
     <li className="flex flex-wrap items-center gap-x-2 gap-y-1 text-body text-muted-foreground">
       <Badge
         variant={LINT_SEVERITY_VARIANT[issue.severity]}
-        className="h-auto max-w-full whitespace-normal"
+        className="h-auto min-h-5 max-w-full py-px whitespace-normal"
       >
         {LINT_SEVERITY_LABEL[issue.severity]} · {issue.rule}
       </Badge>
