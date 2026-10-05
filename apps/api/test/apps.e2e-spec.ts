@@ -83,6 +83,7 @@ const GOOGLE_PLAY_URL =
 class FakeStoreProviderRegistry {
   failWith: Error | null = null;
   title: string | null = null;
+  summary: string | null = null;
   getAppCalls: Array<{ storeAppId: string; country: string }> = [];
   availabilityCalls: Array<{ storeAppId: string; countries: string[] }> = [];
   availabilityStatus: MarketAvailability = 'available';
@@ -99,6 +100,7 @@ class FakeStoreProviderRegistry {
               ...GOOGLE_PLAY_FIXTURE,
               storeAppId,
               ...(this.title ? { title: this.title } : {}),
+              ...(this.summary ? { summary: this.summary } : {}),
             });
       });
     }
@@ -178,6 +180,7 @@ describe('AppsController (e2e)', () => {
   beforeEach(async () => {
     registry.failWith = null;
     registry.title = null;
+    registry.summary = null;
     registry.getAppCalls = [];
     registry.availabilityCalls = [];
     registry.availabilityStatus = 'available';
@@ -209,6 +212,37 @@ describe('AppsController (e2e)', () => {
 
     expect(await prisma.app.count()).toBe(1);
     expect(await prisma.appSnapshot.count()).toBe(1);
+  });
+
+  it('auto tracks the words of a japanese google play listing', async () => {
+    registry.title = 'メルカリ - フリマアプリ';
+    registry.summary =
+      'かんたんスマホ決済のメルペイでお得にショッピングも ふりま あぷり';
+
+    const response = await api
+      .post('/apps')
+      .send({ url: `${GOOGLE_PLAY_URL}&gl=jp` })
+      .expect(201);
+
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: (response.body as AppDetail).id },
+      select: { source: true, keyword: { select: { text: true } } },
+    });
+    expect(
+      tracked.map(({ source, keyword }) => `${source} ${keyword.text}`).sort(),
+    ).toEqual(
+      [
+        'TITLE メルカリ',
+        'TITLE フリマアプリ',
+        'DESCRIPTION スマホ決済',
+        'DESCRIPTION スマホ',
+        'DESCRIPTION 決済',
+        'DESCRIPTION メルペイ',
+        'DESCRIPTION ショッピング',
+        'DESCRIPTION ふりま',
+        'DESCRIPTION あぷり',
+      ].sort(),
+    );
   });
 
   it('lets two workspaces track the same store app independently', async () => {

@@ -144,6 +144,33 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
   });
 
+  it('tracks the words of a japanese listing rather than its sentences', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.GOOGLE_PLAY,
+      country: 'jp',
+      isCompetitor: false,
+    });
+    prisma.appSnapshot.findFirst.mockResolvedValue({
+      title: 'メルカリ - フリマアプリ',
+      subtitle: null,
+      summary:
+        'かんたんスマホ決済のメルペイでお得にショッピングも ふりま あぷり',
+    });
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    const texts = data.map((row) => row.text);
+    expect(texts).toHaveLength(9);
+    expect(texts).toEqual(
+      expect.arrayContaining(['メルカリ', 'フリマアプリ', 'スマホ決済']),
+    );
+    expect(texts.filter((text) => text.length > 10)).toEqual([]);
+  });
+
   it('does nothing for a competitor, whose positions ride the primary search', async () => {
     const prisma = buildPrisma();
     prisma.app.findUnique.mockResolvedValue({
