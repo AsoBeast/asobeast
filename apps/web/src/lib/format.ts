@@ -3,6 +3,7 @@ import {
   type PlanLimit,
   type Store,
 } from "@asobeast/shared";
+import { COUNTRY_NAMES } from "./country-names";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 const measureFormatter = new Intl.NumberFormat("en-US", {
@@ -27,11 +28,6 @@ const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 });
-const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
-  timeZone: "UTC",
-  dateStyle: "medium",
-  timeStyle: "short",
-});
 const listFormatter = new Intl.ListFormat("en-US", { type: "conjunction" });
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en-US", {
   numeric: "auto",
@@ -48,8 +44,6 @@ const STORE_LABELS: Record<Store, string> = {
   APP_STORE: "App Store",
   GOOGLE_PLAY: "Google Play",
 };
-
-const countryNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);
@@ -100,8 +94,15 @@ export function formatDayMonth(value: string): string {
   return dayMonthFormatter.format(new Date(value));
 }
 
+function formatClock(instant: Date): string {
+  const hours = instant.getUTCHours();
+  const minutes = String(instant.getUTCMinutes()).padStart(2, "0");
+  return `${hours % 12 || 12}:${minutes} ${hours < 12 ? "AM" : "PM"}`;
+}
+
 export function formatDateTime(value: string): string {
-  return `${dateTimeFormatter.format(new Date(value))} UTC`;
+  const instant = new Date(value);
+  return `${dateFormatter.format(instant)}, ${formatClock(instant)} UTC`;
 }
 
 export function formatRelativeTime(value: string, now: number): string {
@@ -124,10 +125,5 @@ export function storeLabel(store: Store): string {
 }
 
 export function formatCountry(code: string): string {
-  const upper = code.toUpperCase();
-  try {
-    return countryNames.of(upper) ?? upper;
-  } catch {
-    return upper;
-  }
+  return COUNTRY_NAMES[code.toLowerCase()] ?? code.toUpperCase();
 }

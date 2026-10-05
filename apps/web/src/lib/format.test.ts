@@ -98,8 +98,26 @@ describe("formatDateTime", () => {
   it.each([
     ["2026-01-01T00:00:00.000Z", "Jan 1, 2026, 12:00 AM UTC"],
     ["2026-07-04T13:45:00.000Z", "Jul 4, 2026, 1:45 PM UTC"],
+    ["2026-07-04T00:05:00.000Z", "Jul 4, 2026, 12:05 AM UTC"],
+    ["2026-07-04T12:00:00.000Z", "Jul 4, 2026, 12:00 PM UTC"],
+    ["2026-10-06T03:00:00.000Z", "Oct 6, 2026, 3:00 AM UTC"],
+    ["2026-12-31T23:59:00.000Z", "Dec 31, 2026, 11:59 PM UTC"],
   ])("renders %s as %s", (value, expected) => {
     expect(formatDateTime(value)).toBe(expected);
+  });
+
+  it("drops the seconds without rounding the minute", () => {
+    expect(formatDateTime("2026-07-04T13:45:59.999Z")).toBe(
+      "Jul 4, 2026, 1:45 PM UTC",
+    );
+  });
+
+  it("still refuses an instant that does not exist", () => {
+    expect(() => formatDateTime("not a date")).toThrow(RangeError);
+  });
+
+  it("never joins the date and the time with at", () => {
+    expect(formatDateTime("2026-10-06T03:00:00.000Z")).not.toContain(" at ");
   });
 });
 
@@ -151,15 +169,23 @@ describe("formatCountry", () => {
   it.each([
     ["us", "United States"],
     ["gb", "United Kingdom"],
+    ["cn", "China"],
+    ["hk", "Hong Kong"],
+    ["tr", "Türkiye"],
   ])("names the storefront %s", (code, expected) => {
     expect(formatCountry(code)).toBe(expected);
+  });
+
+  it("accepts the code in any case", () => {
+    expect(formatCountry("CN")).toBe("China");
+    expect(formatCountry("Hk")).toBe("Hong Kong");
   });
 
   it("falls back to the uppercased code for an unknown region", () => {
     expect(formatCountry("xx")).toBe("XX");
   });
 
-  it("falls back to the uppercased code when the region lookup throws", () => {
+  it("falls back to the uppercased code for a malformed code", () => {
     expect(formatCountry("u")).toBe("U");
   });
 });
