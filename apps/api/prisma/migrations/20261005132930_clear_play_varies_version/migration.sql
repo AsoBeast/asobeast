@@ -1,3 +1,11 @@
+DELETE FROM "ChangeEvent" AS "event"
+USING "App"
+WHERE "App"."id" = "event"."appId"
+  AND "App"."store" = 'GOOGLE_PLAY'
+  AND "event"."field" = 'version'
+  AND NULLIF(NULLIF("event"."before", 'VARY'), '') IS NULL
+  AND NULLIF(NULLIF("event"."after", 'VARY'), '') IS NULL;
+
 UPDATE "AppSnapshot" AS "snapshot"
 SET "version" = NULL
 FROM "App"

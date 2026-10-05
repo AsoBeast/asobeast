@@ -81,7 +81,7 @@ Compare a keyword against other keywords in the same store. See [Popularity, dif
 | Google Play search results carry no rating counts | SERP rating columns stay empty for Google Play |
 | The App Store publishes no install count | `installs` stays empty for App Store apps and their competitors |
 | Google Play release dates are best effort outside the `en` storefront | Treat `released` as approximate there |
-| Some Google Play apps publish a different build per device | Google Play reports their version as `VARY`. asobeast stores no version for them, so the overview and the competitor list show none and a refresh records no version change while the app keeps varying. When the app later reports a real version, the change reads from no version to that version. The payload in `raw` keeps `VARY`, and an upgrade clears the marker from snapshots and version changes already stored |
+| Some Google Play apps publish a different build per device | Google Play reports their version as `VARY`. asobeast stores no version for them, so the overview and the competitor list show none and a refresh records no version change while the app keeps varying. When the app later reports a real version, the change reads from no version to that version. The payload in `raw` keeps `VARY`, and an upgrade clears the marker from snapshots and version changes already stored, dropping a stored version change that only moved between no version and `VARY` |
 
 ## What happens when a store changes its response?
 
