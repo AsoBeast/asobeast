@@ -221,7 +221,7 @@ The tracked keyword's source sets the starting relevance, which is then adjusted
 | `SUGGESTED` | 60 |
 | `COMPETITOR` | 50 |
 
-Full overlap with the snapshot text adds 10 and no overlap subtracts 10. A word overlaps when the snapshot text has it as a whole word, or anywhere at all for a Chinese, Japanese, Korean, Thai, Lao, Khmer or Burmese word. Ranking evidence follows:
+Full overlap with the snapshot text adds 10 and no overlap subtracts 10. A word overlaps when the snapshot text has it as a whole word, at the start of a word for a Korean word, or anywhere at all for a Chinese, Japanese, Thai, Lao, Khmer or Burmese word. Ranking evidence follows:
 
 - An app already ranking at position 50 or better has a relevance of at least 70, because the store already treats it as relevant.
 - A `DESCRIPTION`, `SUGGESTED` or `COMPETITOR` keyword that was checked and not found loses 10.

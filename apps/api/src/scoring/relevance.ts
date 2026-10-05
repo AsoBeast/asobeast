@@ -1,6 +1,6 @@
 import { KeywordSource, normalizeText, tokenize } from '@asobeast/shared';
 import { clamp } from './curves';
-import { isUnsegmented } from '../common/text/scripts';
+import { containsTerm } from '../common/text/scripts';
 
 export interface RankingEvidence {
   position: number | null;
@@ -39,9 +39,8 @@ function withOverlap(
     return base;
   }
   const snapshot = normalizeText(snapshotText);
-  const snapshotTokens = new Set(snapshot.split(' '));
   const overlap = tokens.filter((token) =>
-    isUnsegmented(token) ? snapshot.includes(token) : snapshotTokens.has(token),
+    containsTerm(snapshot, token),
   ).length;
   if (overlap === tokens.length) {
     return base + ASOBEAST_DEFAULTS.relevanceOverlapBonus;

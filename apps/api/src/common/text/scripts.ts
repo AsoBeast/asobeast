@@ -11,3 +11,12 @@ const HANGUL_CHARACTER = /\p{Script=Hangul}/u;
 
 export const isUnsegmented = (text: string): boolean =>
   SPACELESS_CHARACTER.test(text) || HANGUL_CHARACTER.test(text);
+
+export const containsTerm = (text: string, term: string): boolean => {
+  if (SPACELESS_CHARACTER.test(term)) {
+    return text.includes(term);
+  }
+  return HANGUL_CHARACTER.test(term)
+    ? ` ${text}`.includes(` ${term}`)
+    : ` ${text} `.includes(` ${term} `);
+};

@@ -1,4 +1,4 @@
-import { isUnsegmented } from './scripts';
+import { containsTerm, isUnsegmented } from './scripts';
 
 describe('isUnsegmented', () => {
   it.each([
@@ -18,5 +18,17 @@ describe('isUnsegmented', () => {
     ['', false],
   ])('%s is unsegmented: %s', (text, expected) => {
     expect(isUnsegmented(text)).toBe(expected);
+  });
+});
+
+describe('containsTerm', () => {
+  it.each([
+    ['フリマアプリで簡単ショッピング', 'ショッピング', true],
+    ['카카오톡 메신저를', '메신저', true],
+    ['편한가계부 지출', '계부', false],
+    ['habit tracker', 'habit', true],
+    ['roadmap planner', 'map', false],
+  ])('%s contains %s: %s', (text, term, expected) => {
+    expect(containsTerm(text, term)).toBe(expected);
   });
 });

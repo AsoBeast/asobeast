@@ -55,6 +55,16 @@ describe('defaultRelevance', () => {
     ).toBe(60);
   });
 
+  it('finds a korean word only at the start of a snapshot word', () => {
+    expect(
+      defaultRelevance('SUGGESTED', '메신저', '카카오톡 메신저를 무료로'),
+    ).toBe(70);
+    expect(defaultRelevance('SUGGESTED', '계부', '편한가계부 지출 관리')).toBe(
+      50,
+    );
+    expect(defaultRelevance('SUGGESTED', '차', '자동차 정비 기록')).toBe(50);
+  });
+
   it('keeps the base for a keyword without a word', () => {
     expect(defaultRelevance('MANUAL', '!!', 'habit tracker')).toBe(80);
   });

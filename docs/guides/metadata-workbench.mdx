@@ -34,7 +34,7 @@ The fields above exist once per localization, so each additional language is ano
 
 Coverage answers one question per tracked keyword: does any indexed field of this listing contain it?
 
-A field contains a keyword when it has the keyword as whole words. Chinese, Japanese, Korean, Thai, Lao, Khmer and Burmese do not always put spaces between words, so a keyword in one of those scripts counts wherever it appears in the field.
+A field contains a keyword when it has the keyword as whole words. Chinese, Japanese, Thai, Lao, Khmer and Burmese do not put spaces between words, so a keyword in one of those scripts counts wherever it appears in the field. Korean does put spaces between words but attaches particles to their end, so a Korean keyword counts at the start of a word: `운동` is found in `운동을`, and `계부` is not found in `가계부`.
 
 | Store | Fields that count toward coverage |
 | --- | --- |
