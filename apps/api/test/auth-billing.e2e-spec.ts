@@ -652,6 +652,21 @@ describe('Auth (billing mode)', () => {
       expect(message).not.toContain('runDaily');
     });
 
+    it('sends the rate headers of the allowance that closed', async () => {
+      const refused = await spendRunDaily();
+
+      const envelope = refused.body as ApiErrorEnvelope;
+      expect({
+        limit: refused.headers['ratelimit-limit'],
+        remaining: refused.headers['ratelimit-remaining'],
+        reset: refused.headers['ratelimit-reset'],
+      }).toEqual({
+        limit: '5',
+        remaining: '0',
+        reset: String(envelope.retryAfterSeconds),
+      });
+    });
+
     it('carries the rateLimit object the documentation promises', async () => {
       const refused = await spendRunDaily();
 
