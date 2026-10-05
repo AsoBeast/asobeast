@@ -2,7 +2,11 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { ASK_THE_OWNER, COLLECTION_PAUSED } from "@/lib/plan-choice";
+import {
+  ASK_THE_OWNER,
+  COLLECTION_PAUSED,
+  suspensionNotice,
+} from "@/lib/plan-choice";
 import { ConfirmEmailBanner } from "./ConfirmEmailBanner";
 import { useAuth } from "./use-auth";
 
@@ -53,7 +57,15 @@ function TrialBanner({
   );
 }
 
-export function AccountNotice() {
+function SuspendedBanner({ reason }: { reason: string | null }) {
+  return (
+    <div className="border-b border-destructive/30 bg-destructive/5 px-4 py-2 text-body text-destructive sm:px-6 print:hidden">
+      {suspensionNotice(reason)}
+    </div>
+  );
+}
+
+function PlanNotice() {
   const { user, trialOnly, awaitingConfirmation, isMember } = useAuth();
 
   if (user && awaitingConfirmation) {
@@ -66,4 +78,17 @@ export function AccountNotice() {
     );
   }
   return null;
+}
+
+export function AccountNotice() {
+  const { user } = useAuth();
+
+  return (
+    <>
+      {user?.suspendedAt ? (
+        <SuspendedBanner reason={user.suspendedReason ?? null} />
+      ) : null}
+      <PlanNotice />
+    </>
+  );
 }

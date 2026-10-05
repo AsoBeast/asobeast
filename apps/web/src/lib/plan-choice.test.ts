@@ -13,6 +13,7 @@ import {
   planCallToAction,
   planStatusLine,
   paywallStatusLine,
+  suspensionNotice,
 } from "./plan-choice";
 
 const planOf = (over: Partial<AccountPlan> = {}): AccountPlan =>
@@ -319,5 +320,28 @@ describe("billingNote", () => {
   it("never prints a price, which the card title already carries", () => {
     expect(billingNote("month")).not.toMatch(/[$/]/);
     expect(billingNote("year")).not.toMatch(/[$/]/);
+  });
+});
+
+describe("suspensionNotice", () => {
+  it("names the reason the operator recorded and what stays open", () => {
+    expect(suspensionNotice("scraping the service")).toBe(
+      "This workspace is suspended: scraping the service. Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.",
+    );
+  });
+
+  it.each([null, undefined, "", "   "])(
+    "says only that the workspace is suspended for the reason %j",
+    (reason) => {
+      expect(suspensionNotice(reason)).toMatch(
+        /^This workspace is suspended\. Your data stays/,
+      );
+    },
+  );
+
+  it("does not double the full stop a reason ends with", () => {
+    expect(suspensionNotice("Sustained abuse.")).toMatch(
+      /^This workspace is suspended: Sustained abuse\. Your data stays/,
+    );
   });
 });

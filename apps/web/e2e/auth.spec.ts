@@ -878,7 +878,7 @@ test("an unconfirmed member of a workspace whose trial ended is not asked to con
   await expect(page.getByText(CONFIRM_TO_START)).toHaveCount(0);
 });
 
-const SUSPENDED_USER = {
+const SUSPENDED_USER: AuthUser = {
   ...TRIAL_USER,
   plan: "indie",
   trialEndsAt: null,
@@ -889,7 +889,7 @@ const SUSPENDED_USER = {
 const SUSPENSION_NOTICE =
   "This workspace is suspended: scraping the service. Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.";
 
-async function openAs(page: Page, user: object) {
+async function openAs(page: Page, user: AuthUser) {
   await seedSession(page);
   await routeStatus(page, {
     billing: true,
@@ -897,9 +897,7 @@ async function openAs(page: Page, user: object) {
     setupRequired: false,
     authenticated: true,
   });
-  await page.route("**/api/backend/auth/me", (route) =>
-    route.fulfill(fulfillJson(200, user)),
-  );
+  await routeMe(page, user);
 }
 
 test("the owner of a suspended workspace is told it is suspended and why", async ({
