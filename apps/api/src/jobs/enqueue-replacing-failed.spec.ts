@@ -97,12 +97,28 @@ describe('enqueueReplacingFailed', () => {
     ).resolves.toBe(false);
   });
 
-  it('counts a job it added when it is already gone from the queue', async () => {
+  it('does not count a job that is gone when it reads it back', async () => {
     const queue = queueHolding(undefined, 1, null);
 
     await expect(
       enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
-    ).resolves.toBe(true);
+    ).resolves.toBe(false);
+  });
+
+  it('does not count its replacement when another request removed it', async () => {
+    const queue = queueHolding({ failed: true }, 1, null);
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
+    ).resolves.toBe(false);
+  });
+
+  it('does not count a job another request with its correlation id added', async () => {
+    const queue = queueHolding(undefined, 1, DATA);
+
+    await expect(
+      enqueueReplacingFailed(asQueue(queue), 'check-keyword', DATA, OPTS),
+    ).resolves.toBe(false);
   });
 
   it('compares the job as the queue stored it', async () => {
