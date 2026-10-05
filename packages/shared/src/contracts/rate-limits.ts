@@ -39,6 +39,8 @@ export interface RateLimitDetail {
 
 export const MINUTE_SECONDS = 60;
 
+export const HOUR_SECONDS = 60 * 60;
+
 export const DAY_SECONDS = 24 * 60 * 60;
 
 export function budgetOf(rateClass: RateClass): RateBudget {

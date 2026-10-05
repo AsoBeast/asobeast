@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   DAY_SECONDS,
+  HOUR_SECONDS,
   nextPlan,
   type OnDemandAction,
   type RateWindow,
@@ -11,8 +12,20 @@ import { FailFastRedis } from '../redis/fail-fast-redis';
 import { RateLimitExceededError } from './rate-limit/rate-limit.errors';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 
-const windowOf = (windowSeconds: number): RateWindow =>
-  windowSeconds === DAY_SECONDS ? 'day' : 'hour';
+const ON_DEMAND_WINDOWS = new Map<number, RateWindow>([
+  [HOUR_SECONDS, 'hour'],
+  [DAY_SECONDS, 'day'],
+]);
+
+function windowOf(windowSeconds: number): RateWindow {
+  const window = ON_DEMAND_WINDOWS.get(windowSeconds);
+  if (!window) {
+    throw new Error(
+      `No rate window names an on-demand allowance of ${windowSeconds} seconds`,
+    );
+  }
+  return window;
+}
 
 @Injectable()
 export class OnDemandLimiter {
