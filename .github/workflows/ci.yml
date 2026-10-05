@@ -413,9 +413,9 @@ jobs:
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          key: playwright-${{ runner.os }}-chromium-webkit-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: |
-            playwright-${{ runner.os }}-
+            playwright-${{ runner.os }}-chromium-webkit-
       - run: pnpm --filter web exec playwright install --with-deps chromium webkit
       - run: pnpm run build:packages
       - run: pnpm --filter web test:e2e
