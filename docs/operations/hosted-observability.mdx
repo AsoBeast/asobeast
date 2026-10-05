@@ -171,7 +171,7 @@ Three read only routes describe the instance as a whole: `GET /admin/support/ove
 
 Three rules hold the surface honest:
 
-- **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored.
+- **Every mutation needs `confirm: true` and a written reason** of at least eight characters. Both are stored. The reason for a suspension is also shown to every member of the suspended workspace, on every page and in every refused write, so write it for the customer rather than as an internal note.
 - **Every access is recorded, reads included**, in `SupportAccess` with the operator, the workspace, the action and the reason. The instance overview is the one exception, because it returns counts only. That table carries no foreign key, so deleting a workspace or an account leaves the audit trail intact.
 - **The operator workspace cannot be suspended.** A suspension refuses the workspace's writes and takes the support surface and the queue dashboard away from every operator credential, so suspending the bootstrap workspace would remove the way back. The request answers `409` and the refusal is recorded in the audit trail as a failed `suspend`.
 
@@ -190,6 +190,6 @@ Run it inside the `api` container, which already holds the database credentials.
 
 The command opens a database connection and nothing else. It starts no queue workers, schedules no jobs and needs no type checker, so it fits in the container's 768 MB memory limit beside the running API. It prints `restored` or `suspended` with the workspace id and exits `0`. A refusal or an unknown workspace id prints the reason and exits `1`.
 
-The command writes to the workspace row directly, so it is not recorded in the support audit trail. The operator workspace is still refused for `suspend`.
+The command writes to the workspace row directly, so it is not recorded in the support audit trail. Its reason reaches every member of the workspace the same way, so write it for the customer. The operator workspace is still refused for `suspend`.
 
 From a source checkout, build once with `pnpm --filter api build`, then run `pnpm --filter api workspace:restore ws_default`.
