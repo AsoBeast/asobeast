@@ -89,9 +89,9 @@ A self hosted instance that sets `AI_CALLS_PER_MONTH=0` has turned AI calls off,
 
 ## Validation errors
 
-Every controller input is a DTO validated by a global pipe with whitelisting on. Two consequences follow.
+Every controller input is a DTO validated by a global pipe that refuses any property the DTO does not declare. Two consequences follow.
 
-- An unknown property is stripped rather than accepted, so a typo in a field name is silently ignored rather than misapplied.
+- An unknown property answers `400` with the message `property <name> should not exist`, so a typo in a field name is refused rather than silently ignored.
 - A failing field produces a `400` whose `message` names the field and the rule it broke.
 
 ```json
@@ -104,7 +104,7 @@ Every controller input is a DTO validated by a global pipe with whitelisting on.
 }
 ```
 
-Because unknown properties are stripped rather than rejected, a request that appears to succeed but changed nothing is usually a misspelled field.
+Because unknown properties are rejected rather than stripped, a misspelled field fails the request instead of letting it succeed while changing nothing.
 
 ## Text the database cannot store
 
