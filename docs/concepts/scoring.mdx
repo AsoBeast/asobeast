@@ -56,7 +56,7 @@ Knowing that Apple left a term out of its list is evidence in itself, so the unl
 
 Apple does not suggest many short, common searches as themselves, so a phrase it never suggests can still be searched often, and the model weighs suggest reach together with the search results rather than on its own. Continuations read the suggestions differently: Apple still offers popular searches that begin with such a word, like "map my run" for "map", while a phrase few people search is continued by few, and a misspelling by none, because Apple offers the corrected spelling instead. When the suggestion lookup fails, the model reads 5 continuations, a typical count, and treats the phrase as suggested only once typed in full, so a failed lookup neither raises nor sinks a phrase.
 
-A title contains a word when it has it as a whole word, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Korean and Thai are written without spaces, so there a word counts wherever it appears in the title. A search with fewer than five results stays at or below 10 on the shown scale, and a search with no results scores 0.
+A title contains a word when it has it as a whole word, singular or plural. "map" is found in "Google Maps" but not in "Roadmap", and "geo" is not found in "Geography". Chinese, Japanese, Korean, Thai, Lao, Khmer and Burmese are written without spaces, so there a word counts wherever it appears in the title. A search with fewer than five results stays at or below 10 on the shown scale, and a search with no results scores 0.
 
 ### Google Play
 
@@ -96,7 +96,7 @@ Difficulty measures how hard it is to reach the first ten results for the phrase
 | Input | What it reads |
 | --- | --- |
 | Strength | Each app's rating count on a log scale: 1,000 ratings or fewer rate 0, about 31,600 rate 0.5 and a million or more rate 1. The page's strength is the mean over the apps whose rating count is known |
-| Targeting | The share of the ten titles that carry the phrase as written, starting at the beginning of a word. "Geometry Dash" targets `geo`, while "BADLAND" does not target `bad land` and "Quiz Geo" does not target `geo quiz`. A Chinese, Japanese, Korean or Thai phrase matches anywhere in the title |
+| Targeting | The share of the ten titles that carry the phrase as written, starting at the beginning of a word. "Geometry Dash" targets `geo`, while "BADLAND" does not target `bad land` and "Quiz Geo" does not target `geo quiz`. A Chinese, Japanese, Korean, Thai, Lao, Khmer or Burmese phrase matches anywhere in the title |
 | Phrase length | The number of characters in the phrase |
 
 Each store weighs them differently:
