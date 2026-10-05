@@ -945,6 +945,46 @@ test("a workspace that is not suspended sees no suspension notice", async ({
   ).toHaveCount(0);
 });
 
+test("a write refused for a suspension shows the notice without a reload", async ({
+  page,
+}) => {
+  let user: AuthUser = { ...SUSPENDED_USER, suspendedAt: null };
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(fulfillJson(200, user)),
+  );
+  await page.route("**/api/backend/apps", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    user = SUSPENDED_USER;
+    await route.fulfill(
+      fulfillJson(403, {
+        statusCode: 403,
+        error: "Forbidden",
+        message:
+          "This workspace is suspended: scraping the service. Existing data stays readable and exportable, and billing remains open.",
+        path: "/apps",
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  });
+
+  await page.goto("/");
+  await expect(page.getByText(SUSPENSION_NOTICE)).toHaveCount(0);
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+});
+
 test("a suspended workspace whose plan lapsed sees both notices", async ({
   page,
 }) => {
