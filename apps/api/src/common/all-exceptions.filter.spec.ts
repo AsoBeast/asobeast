@@ -7,7 +7,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
 import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
@@ -222,6 +222,30 @@ describe('AllExceptionsFilter', () => {
         false,
       ),
     );
+
+    expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(envelope.message).toBe('Internal server error');
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(tracked).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a database refusal of stored text a 500 and reports it', () => {
+    const logged = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    const refusal = new Prisma.PrismaClientKnownRequestError(
+      'Database error. Code: `22021`. Message: `invalid byte sequence for encoding "UTF8": 0x00`',
+      {
+        code: 'P2039',
+        clientVersion: '7.10.0',
+        meta: {
+          driverAdapterError: {
+            name: 'DriverAdapterError',
+            cause: { originalCode: '22021', kind: 'postgres' },
+          },
+        },
+      },
+    );
+
+    const { status, envelope, tracked } = capture(refusal);
 
     expect(status).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
     expect(envelope.message).toBe('Internal server error');
