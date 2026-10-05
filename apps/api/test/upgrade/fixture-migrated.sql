@@ -28,6 +28,10 @@ UPDATE "TrackedKeyword"
 SET "active" = false
 WHERE ("appId", "keywordId") IN (('app_play', 'kw_play_amp_meals'), ('app_play', 'kw_play_39_daily'), ('app_play', 'kw_play_amp_stretch'));
 
+UPDATE "AppSnapshot"
+SET "version" = NULL
+WHERE "id" = 'snap_play_escaped';
+
 UPDATE "BillingEvent"
 SET "outcome" = 'applied'
 WHERE "id" = 'evt_drill_applied';

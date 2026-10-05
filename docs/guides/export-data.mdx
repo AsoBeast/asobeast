@@ -43,7 +43,7 @@ The competitors page exports one row per tracked competitor from its latest snap
 | `rating`, `ratings` | The average rating, unrounded, and the number of ratings |
 | `installs` | The install count |
 | `price` | The price, `0` for a free app |
-| `version` | The latest version |
+| `version` | The latest version, empty on Google Play when the version varies by device |
 | `capturedAt` | When the snapshot was taken, in UTC |
 
 A column the store does not publish stays empty: `subtitle` on Google Play, `summary` and `installs` on the App Store. See [App Store and Google Play](/concepts/stores).
