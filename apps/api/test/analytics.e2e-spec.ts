@@ -282,6 +282,62 @@ describe('AnalyticsController (e2e)', () => {
     ).not.toContain('daily goals');
   });
 
+  it('counts the words of a japanese listing as covered by that listing', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '667861049',
+        country: 'jp',
+        name: 'メルカリ',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: created.id,
+        title: 'メルカリ - フリマアプリ',
+        subtitle: 'フリマアプリで簡単ショッピング 日本最大のフリマを楽しもう',
+        description: '',
+        raw: {},
+        capturedAt: D0,
+      },
+    });
+    for (const text of [
+      'メルカリ',
+      'フリマアプリ',
+      '簡単ショッピング',
+      'ショッピング',
+    ]) {
+      const keyword = await prisma.keyword.create({
+        data: { text, store: Store.APP_STORE, country: 'jp' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: created.id,
+          keywordId: keyword.id,
+          source: 'SUBTITLE',
+          active: true,
+        },
+      });
+      await prisma.keywordMetric.create({
+        data: {
+          keywordId: keyword.id,
+          date: D7,
+          traffic: 8,
+          difficulty: 2,
+          formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
+        },
+      });
+    }
+
+    const summary = (await api.get(`/apps/${created.id}/summary`).expect(200))
+      .body as AppSummary;
+
+    expect(summary.coverage.inTitle).toBe(2);
+    expect(summary.coverage.inSubtitle).toBe(3);
+    expect(summary.coverage.uncoveredHighOpportunity).toEqual([]);
+  });
+
   it('composes a portfolio whose numbers match the app summary', async () => {
     const id = await seed();
 

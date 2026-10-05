@@ -7,13 +7,13 @@ import {
   AppSummary,
   CoverageSummary,
   CURRENT_FORMULA_VERSIONS,
-  normalizeText,
   RankDistributionHistory,
   RatingsHistory,
   UncoveredKeyword,
   VisibilityHistory,
   VisibilitySummary,
 } from '@asobeast/shared';
+import { coversKeyword } from '../keywords/keyword-coverage';
 import { reportedSource } from '../keywords/keyword-field-membership';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppOpportunity, appOpportunity } from '../scoring/keyword-opportunity';
@@ -45,9 +45,6 @@ const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
 const HISTORY_DEFAULT_DAYS = 30;
 const HISTORY_MAX_DAYS = 180;
-
-const covers = (field: string, keyword: string): boolean =>
-  ` ${normalizeText(field)} `.includes(` ${keyword} `);
 
 interface CoverageApp {
   snapshotText: string;
@@ -257,9 +254,9 @@ export class AnalyticsService {
 
     const hits = rows.map((row) => ({
       row,
-      inTitle: covers(fields.title, row.keyword.text),
-      inSubtitle: covers(fields.subtitle, row.keyword.text),
-      inDescription: covers(fields.description, row.keyword.text),
+      inTitle: coversKeyword(fields.title, row.keyword.text),
+      inSubtitle: coversKeyword(fields.subtitle, row.keyword.text),
+      inDescription: coversKeyword(fields.description, row.keyword.text),
     }));
 
     const uncovered = hits
