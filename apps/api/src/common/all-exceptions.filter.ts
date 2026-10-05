@@ -16,7 +16,6 @@ import {
 } from '@asobeast/shared';
 import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
 import { EntitlementRequiredError } from '../auth/auth.errors';
-import { OnDemandLimitError } from '../auth/on-demand.limiter';
 import { WorkspaceSuspendedError } from '../auth/abuse/abuse.errors';
 import {
   CredentialRateLimitError,
@@ -180,14 +179,6 @@ export class AllExceptionsFilter implements ExceptionFilter {
       return {
         statusCode: HttpStatus.SERVICE_UNAVAILABLE,
         error: 'Service Unavailable',
-        message: exception.message,
-        retryAfterSeconds: exception.retryAfterSeconds,
-      };
-    }
-    if (exception instanceof OnDemandLimitError) {
-      return {
-        statusCode: HttpStatus.TOO_MANY_REQUESTS,
-        error: 'Too Many Requests',
         message: exception.message,
         retryAfterSeconds: exception.retryAfterSeconds,
       };

@@ -29,7 +29,7 @@ Every failure returns the same JSON envelope, whatever produced it. A single exc
 | `timestamp` | string | UTC ISO 8601 timestamp of the failure |
 | `quota` | object | Present on `403` when a plan limit refused the write. Names the resource, the plan, the limit, the usage and the tier to upgrade to |
 | `entitlement` | object | Present on `402`. Names the plan in force, the trial and renewal dates, the tier to upgrade to and the path to reach it |
-| `rateLimit` | object | Present on `429` from a plan rate limit. Names the window that closed, the request class, the plan, the limit, the seconds until it reopens and the tier to upgrade to |
+| `rateLimit` | object | Present on `429` from a plan rate limit or a spent on demand allowance. Names the window that closed, the request class, the plan, the limit, the seconds until it reopens, the tier to upgrade to and, for an on demand allowance, the `action` |
 | `aiAllowance` | object | Present on `429` when the workspace has spent the AI calls its plan includes this month. Names the plan, the allowance, the calls used, when it renews and the tier to upgrade to |
 | `billing` | object | Present on `409` from a billing route. Names the reason the request was refused and the recovery that clears it, either `portal` or `retry` |
 | `retryAfterSeconds` | number | Present on `429` and on the `503` an unreachable Redis causes, mirroring the `Retry-After` header |
