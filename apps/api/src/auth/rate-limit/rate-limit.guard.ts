@@ -7,11 +7,7 @@ import { AbuseMonitor } from '../abuse/abuse-monitor.service';
 import type { AccountUser, AuthenticatedRequest } from '../auth.types';
 import { planScopeOf } from '../plan-limits';
 import { rateClassOf, skipsRateLimit } from './rate-class';
-import {
-  applyRateHeaders,
-  headersForRefusal,
-  headersForUsage,
-} from './rate-headers';
+import { applyRateHeaders, headersForUsage } from './rate-headers';
 import { RateLimitExceededError } from './rate-limit.errors';
 import {
   RequestRateLimiter,
@@ -49,7 +45,6 @@ export class RateLimitGuard implements CanActivate {
       if (headers) applyRateHeaders(res, headers);
     } catch (error) {
       if (error instanceof RateLimitExceededError) {
-        applyRateHeaders(res, headersForRefusal(error.detail));
         void this.abuse
           .recordRefusal({
             workspaceId: scope.workspaceId,

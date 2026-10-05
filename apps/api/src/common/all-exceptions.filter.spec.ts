@@ -10,6 +10,7 @@ import {
 import { Store } from '@prisma/client';
 import { ApiErrorEnvelope } from '@asobeast/shared';
 import { AiAllowanceExceededError } from '../ai/ai-allowance.errors';
+import { RateLimitExceededError } from '../auth/rate-limit/rate-limit.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
 import { ErrorTracking } from '../observability/error-tracking.service';
@@ -68,6 +69,27 @@ function bodyParserError(
 
 describe('AllExceptionsFilter', () => {
   afterEach(() => jest.restoreAllMocks());
+
+  it('answers a rate refusal with the headers of the window that closed', () => {
+    const { headers } = capture(
+      new RateLimitExceededError({
+        window: 'day',
+        rateClass: 'store',
+        plan: 'trial',
+        limit: 5,
+        resetSeconds: 46_275,
+        upgradeTo: 'indie',
+        action: 'runDaily',
+      }),
+    );
+
+    expect(headers).toMatchObject({
+      'RateLimit-Limit': '5',
+      'RateLimit-Remaining': '0',
+      'RateLimit-Reset': '46275',
+      'Retry-After': '46275',
+    });
+  });
 
   it('names the store a request asked for that this version cannot serve', () => {
     const { status, envelope } = capture(

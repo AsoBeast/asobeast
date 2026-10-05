@@ -80,18 +80,6 @@ describe('RateLimitGuard', () => {
     expect(release).toHaveBeenCalledTimes(1);
   });
 
-  it('answers a refusal with the headers of the window that closed', async () => {
-    consume.mockRejectedValue(REFUSAL);
-    const res = new FakeResponse();
-
-    await expect(guard.canActivate(contextFor(res))).rejects.toBe(REFUSAL);
-    expect(res.headers).toMatchObject({
-      'RateLimit-Limit': String(REFUSAL.detail.limit),
-      'RateLimit-Remaining': '0',
-      'RateLimit-Reset': '12',
-    });
-  });
-
   it('records the refusal for abuse review', async () => {
     consume.mockRejectedValue(REFUSAL);
 

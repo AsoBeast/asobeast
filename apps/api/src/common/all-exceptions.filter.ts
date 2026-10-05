@@ -22,6 +22,10 @@ import {
   RateLimitExceededError,
   RequestThrottledError,
 } from '../auth/rate-limit/rate-limit.errors';
+import {
+  applyRateHeaders,
+  headersForRefusal,
+} from '../auth/rate-limit/rate-headers';
 import { QuotaExceededError } from '../auth/quota.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
 import { BillingConflictError } from '../billing/billing.errors';
@@ -96,6 +100,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
     if (resolved.retryAfterSeconds !== undefined) {
       response.setHeader('Retry-After', String(resolved.retryAfterSeconds));
+    }
+    if (resolved.rateLimit) {
+      applyRateHeaders(response, headersForRefusal(resolved.rateLimit));
     }
     response.status(resolved.statusCode).json(envelope);
   }
