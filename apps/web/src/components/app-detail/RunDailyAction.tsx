@@ -35,7 +35,6 @@ export function RunDailyAction({ appId }: { appId: string }) {
         keywords > 0
           ? `rank checks for ${pluralize(keywords, "keyword")}`
           : pluralize(jobs, "job"),
-        "Results land as the rate-limited worker runs (~15 searches/minute).",
       );
     },
     onError: (error) => {
