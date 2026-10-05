@@ -330,6 +330,67 @@ describe('MetadataController (e2e)', () => {
     expect(keywordField?.chars).toBe('water reminder'.length);
   });
 
+  it('counts the words of a japanese listing as covered by that listing', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '667861049',
+        country: 'jp',
+        name: 'メルカリ',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: created.id,
+        title: 'メルカリ - フリマアプリ',
+        subtitle: 'フリマアプリで簡単ショッピング 日本最大のフリマを楽しもう',
+        description: '',
+        raw: {},
+        capturedAt: D0,
+      },
+    });
+    const texts = [
+      'メルカリ',
+      'フリマアプリ',
+      '簡単ショッピング',
+      'ショッピング',
+    ];
+    for (const text of texts) {
+      const keyword = await prisma.keyword.create({
+        data: { text, store: Store.APP_STORE, country: 'jp' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: created.id,
+          keywordId: keyword.id,
+          source: 'SUBTITLE',
+          active: true,
+        },
+      });
+      await prisma.keywordMetric.create({
+        data: { keywordId: keyword.id, date: D0, traffic: 8, difficulty: 3 },
+      });
+    }
+
+    const response = await api
+      .get(`/apps/${created.id}/metadata/audit`)
+      .expect(200);
+    const result = response.body as MetadataAuditResult;
+
+    expect(
+      result.coverage
+        .filter((row) => row.uncovered)
+        .map((row) => row.text)
+        .sort(),
+    ).toEqual([]);
+    const shopping = result.coverage.find((row) => row.text === 'ショッピング');
+    expect(
+      shopping?.fields.find((field) => field.field === 'subtitle')?.covered,
+    ).toBe(true);
+    expect(result.keywordFieldSuggestion?.addedTerms).toEqual([]);
+  });
+
   it('audits a google play app across title, short description and description', async () => {
     const id = await seedPlay();
 
