@@ -20,6 +20,13 @@ describe('coversKeyword', () => {
     expect(coversKeyword('자동차 정비 기록', '차')).toBe(false);
   });
 
+  it('matches each word of a mixed script keyword on its own', () => {
+    expect(coversKeyword('online 漫画 アプリ', 'line 漫画')).toBe(false);
+    expect(coversKeyword('Ultimate 家計簿', 'mate 家計簿')).toBe(false);
+    expect(coversKeyword('LINE マンガ 漫画', 'line 漫画')).toBe(true);
+    expect(coversKeyword('iPhone用写真加工', 'iphone用 写真')).toBe(true);
+  });
+
   it('matches a spaced keyword as whole words, like the audit', () => {
     const cases: Array<[string, string]> = [
       ['Habit Tracker', 'habit tracker'],
