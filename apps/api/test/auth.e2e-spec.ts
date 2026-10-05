@@ -65,10 +65,6 @@ describe('Auth (enabled, self-hosted)', () => {
 
   beforeEach(async () => {
     await clearRateLimitCounters(app);
-    await prisma.workspace.update({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      data: { suspendedAt: null, suspendedReason: null },
-    });
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "WorkspaceInvite" RESTART IDENTITY CASCADE',
     );
@@ -286,7 +282,22 @@ describe('Auth (enabled, self-hosted)', () => {
   });
 
   it('tells a suspended workspace that it is suspended and why', async () => {
-    const cookie = await registerOwner();
+    await registerOwner();
+    const tenant = await prisma.workspace.create({
+      data: { name: 'Suspended tenant' },
+    });
+    await prisma.user.create({
+      data: {
+        email: 'tenant@example.com',
+        passwordHash: await argon2.hash('supersecret1'),
+        workspaceId: tenant.id,
+      },
+    });
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'tenant@example.com', password: 'supersecret1' })
+      .expect(200);
+    const cookie = sessionCookie(login);
     const read = async (): Promise<AuthUser> =>
       (
         await request(app.getHttpServer())
@@ -301,7 +312,7 @@ describe('Auth (enabled, self-hosted)', () => {
     });
 
     await prisma.workspace.update({
-      where: { id: DEFAULT_WORKSPACE_ID },
+      where: { id: tenant.id },
       data: {
         suspendedAt: new Date('2026-10-01T10:00:00Z'),
         suspendedReason: 'scraping the service',
