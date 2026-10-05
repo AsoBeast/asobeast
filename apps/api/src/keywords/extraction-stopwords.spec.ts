@@ -18,4 +18,26 @@ describe('isExtractionStopword', () => {
     expect(isExtractionStopword('微信')).toBe(false);
     expect(isExtractionStopword('อาหาร')).toBe(false);
   });
+
+  it('flags arabic function words and store noise', () => {
+    expect(isExtractionStopword('في')).toBe(true);
+    expect(isExtractionStopword('أكثر')).toBe(true);
+    expect(isExtractionStopword('تطبيق')).toBe(true);
+    expect(isExtractionStopword('طعام')).toBe(false);
+    expect(isExtractionStopword('كريم')).toBe(false);
+  });
+
+  it('flags an arabic stopword after the conjunction', () => {
+    expect(isExtractionStopword('وأكثر')).toBe(true);
+    expect(isExtractionStopword('وفي')).toBe(true);
+    expect(isExtractionStopword('ومن')).toBe(true);
+  });
+
+  it('keeps an arabic word that only begins with the conjunction letter', () => {
+    expect(isExtractionStopword('وقت')).toBe(false);
+    expect(isExtractionStopword('واتساب')).toBe(false);
+    expect(isExtractionStopword('وصفة')).toBe(false);
+    expect(isExtractionStopword('وطعام')).toBe(false);
+    expect(isExtractionStopword('و')).toBe(false);
+  });
 });

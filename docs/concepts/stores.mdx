@@ -76,7 +76,9 @@ Japanese, Chinese, Thai, Lao, Khmer and Burmese have no spaces between words, so
 - **Katakana pieces that the segmenter splits are joined again**, so `スマホ` is not offered as `スマ`.
 - **Latin words in the same listing form phrases as usual.** A Latin brand next to Japanese text is its own phrase.
 
-Korean keeps its spaces, so a particle attached to a word, as in `메신저를`, also stays attached. asobeast has no morphological analysis for Korean.
+Arabic is written with spaces, but a conjunction and an article attach to the word after them. asobeast drops the noise words it knows, and also the same word after the conjunction `و`, so `وأكثر` goes with `أكثر`. It keeps every other word that begins with `و`, because many Arabic words do, such as `وقت` and `واتساب`, and it never strips the article `ال`. A keyword like `وطعام` therefore stays as it was written.
+
+Korean keeps its spaces, so a particle attached to a word, as in `메신저를`, also stays attached. asobeast has no morphological analysis for Korean or Arabic.
 
 The keyword combinations card, the review phrases, the metadata lints and keyword coverage still read words between spaces, so on a Japanese, Chinese or Thai listing they treat a run of text as one word. Only the keywords asobeast tracks for you and the suggestions drawn from listings follow the rules above.
 
