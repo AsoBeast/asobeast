@@ -37,10 +37,10 @@ import { isEntitled } from './entitlement';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
 import { SignupCapacityGate } from './signup-capacity.gate';
+import { lockRegistration } from './registration-lock';
 import type { LoginDto } from './dto/login.dto';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const REGISTRATION_LOCK = 8_294_113;
 
 @Injectable()
 export class AuthService {
@@ -92,7 +92,7 @@ export class AuthService {
     }
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.prisma.withTransaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${REGISTRATION_LOCK}::bigint)`;
+      await lockRegistration(tx);
       const bootstrap = (await tx.user.count()) === 0;
       if (!bootstrap && !this.registrationAllowed()) {
         throw new ForbiddenException('Registration is closed');

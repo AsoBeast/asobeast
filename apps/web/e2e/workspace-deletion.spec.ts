@@ -1,4 +1,5 @@
 import { expect, test } from "./session.mts";
+import { seedViewer } from "./viewer.mts";
 
 const scheduleDeletion = (requestedAt: string) => ({
   name: "workspace_deletion_requested",
@@ -100,4 +101,62 @@ test("the owner is never shown the member note while their account loads", async
   await expect(
     section.getByRole("button", { name: "Delete workspace" }),
   ).toBeVisible();
+});
+
+test("the operator is told why deleting this workspace is restricted", async ({
+  page,
+}) => {
+  await page.goto("/settings#workspace");
+
+  const section = page.getByRole("region", { name: "Workspace" });
+  await expect(section).toContainText("holds the platform operator");
+  await expect(section).toContainText("asobeast has no hand over yet");
+  await expect(
+    section.getByRole("button", { name: "Delete workspace" }),
+  ).toBeVisible();
+});
+
+test("a customer who owns their own workspace sees no operator note", async ({
+  page,
+  context,
+}) => {
+  await seedViewer(context, "customer");
+  await page.goto("/settings#workspace");
+
+  const section = page.getByRole("region", { name: "Workspace" });
+  await expect(
+    section.getByRole("button", { name: "Delete workspace" }),
+  ).toBeVisible();
+  await expect(section.getByText("platform operator")).toHaveCount(0);
+});
+
+test("the operator reads the api refusal and nothing is scheduled", async ({
+  page,
+}) => {
+  const refusal =
+    "This workspace holds the platform operator, so it cannot be deleted while other accounts exist. Deleting it would leave the instance without an operator.";
+  await page.route("**/api/backend/account/deletion", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    return route.fulfill({
+      status: 409,
+      json: {
+        statusCode: 409,
+        error: "Conflict",
+        message: refusal,
+        path: "/account/deletion",
+        timestamp: new Date().toISOString(),
+      },
+    });
+  });
+  await page.goto("/settings#workspace");
+
+  const section = page.getByRole("region", { name: "Workspace" });
+  await section.getByRole("button", { name: "Delete workspace" }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByLabel("Type DELETE to confirm").fill("DELETE");
+  await dialog.getByRole("button", { name: "Delete workspace" }).click();
+
+  await expect(page.getByText(refusal)).toBeVisible();
+  await dialog.getByRole("button", { name: "Keep workspace" }).click();
+  await expect(section).not.toContainText("It is erased on or after");
 });

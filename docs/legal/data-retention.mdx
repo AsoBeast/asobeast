@@ -50,7 +50,7 @@ Deletion is confirmed, delayed and reversible. An immediate irreversible delete 
 
 <Steps>
   <Step title="Request it">
-    As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused.
+    As the workspace owner, open **Settings**, go to **Workspace** and press **Delete workspace**. The dialog enables its action only once you type `DELETE`. From the API, send `POST /account/deletion` with `{"confirm":"DELETE"}`. Anything other than the literal `DELETE` is refused. The workspace of the platform operator answers `409 Conflict` while other accounts exist, as [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace) explains.
   </Step>
   <Step title="Nothing happens yet">
     The workspace keeps running for the grace period, seven days by default and set by `ACCOUNT_DELETION_GRACE_DAYS`. Every member sees a banner on every page naming the earliest erasure date, and **Settings** shows who asked and when. `GET /account/deletion` reports the same.

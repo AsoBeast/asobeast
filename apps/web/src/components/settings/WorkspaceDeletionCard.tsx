@@ -146,6 +146,19 @@ function ScheduledStatus({ deletion }: { deletion: WorkspaceDeletionStatus }) {
   );
 }
 
+function OperatorNote() {
+  return (
+    <p className="text-body text-muted-foreground">
+      This workspace holds the platform operator. It cannot be deleted while
+      other accounts exist, because the admin area, the queue dashboard and the
+      support tools would go with it and no account could take them over.
+      asobeast has no hand over yet. To clear your own data, delete its apps and
+      keywords instead. Deleting this workspace is allowed only while yours is
+      the only account, and it resets the instance.
+    </p>
+  );
+}
+
 function DeletionControl({
   deletion,
   isOwner,
@@ -169,7 +182,7 @@ function DeletionControl({
 }
 
 export function WorkspaceDeletionCard() {
-  const { user } = useAuth();
+  const { user, isOperator } = useAuth();
   const { data: deletion } = useQuery(workspaceDeletionOptions);
 
   if (!deletion || !user) return null;
@@ -187,6 +200,7 @@ export function WorkspaceDeletionCard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col items-start gap-4">
+        {isOperator ? <OperatorNote /> : null}
         {deletion.scheduled ? <ScheduledStatus deletion={deletion} /> : null}
         <DeletionControl deletion={deletion} isOwner={isOwner} />
       </CardContent>

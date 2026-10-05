@@ -90,6 +90,28 @@ Each entry below names the symptom the way you would describe it, then gives the
   <Accordion title="The admin area says my workspace needs a plan">
     With billing on, the admin area, `/admin/queues`, `/docs` and `/metrics` open only while the operator's own workspace has a plan in force, so a lapsed trial or a trial still waiting for the email confirmation closes all of them. Confirm the email if the notice asks for it, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace in the database. See [When the operator's workspace has no plan](/security/admin-surfaces#when-the-operators-workspace-has-no-plan).
   </Accordion>
+
+  <Accordion title="Every admin surface answers 404 and no account is the operator">
+    The workspace `ws_default` was erased while other accounts survived, which older releases allowed from **Settings**. Check for it.
+
+    ```bash
+    docker compose exec -T postgres psql --username asobeast --dbname asobeast \
+      --command "select id, name from \"Workspace\" where id = 'ws_default';"
+    ```
+
+    No row means the operator is gone. Register a fresh account, which gets a workspace of its own, then give that account the bootstrap workspace. Registration is closed by default once accounts exist, so set `AUTH_ALLOW_REGISTRATION=true` and restart the API for the sign up, then set it back to `false` and restart again. An existing account whose workspace holds no apps works as well and needs no sign up. Replace the email with the account you chose.
+
+    ```bash
+    docker compose exec -T postgres psql --username asobeast --dbname asobeast --set=ON_ERROR_STOP=1 <<'SQL'
+    begin;
+    insert into "Workspace" ("id", "name") values ('ws_default', 'Default');
+    update "User" set "workspaceId" = 'ws_default', "role" = 'owner' where "email" = 'you@example.com';
+    commit;
+    SQL
+    ```
+
+    The account is the platform operator from its next request, with no restart and no new sign in. The workspace it registered with stays behind empty and can be left alone. Use a fresh account rather than a customer's, because a user takes no data with it: the apps and keywords of the workspace it leaves stay there. On an instance with `BILLING_ENABLED=true` the admin surfaces also need an entitled operator, so add `"plan"` to the insert with `'ultimate'` as its value. See [Deleting the operator workspace](/security/admin-surfaces#deleting-the-operator-workspace).
+  </Accordion>
 </AccordionGroup>
 
 ## Collection
