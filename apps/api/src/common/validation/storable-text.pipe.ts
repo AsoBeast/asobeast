@@ -50,6 +50,10 @@ function requirementBrokenBy(text: string): string | undefined {
   return TEXT_RULES.find((rule) => rule.refuses(text))?.requirement;
 }
 
+function nameOf(path: string, source: string): string {
+  return path === '' || requirementBrokenBy(path) ? source : path;
+}
+
 function withoutFields(value: unknown, skipped: ReadonlySet<string>): unknown {
   if (skipped.size === 0 || !isPlainObject(value)) return value;
   return Object.fromEntries(
@@ -92,7 +96,7 @@ export class StorableTextPipe implements PipeTransform {
     if (!violation) return value;
     if (type === 'param') throw new NotFoundException('Resource not found');
     throw new BadRequestException(
-      `${violation.path || type} ${violation.requirement}`,
+      `${nameOf(violation.path, type)} ${violation.requirement}`,
     );
   }
 }

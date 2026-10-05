@@ -111,7 +111,7 @@ Because unknown properties are stripped rather than rejected, a request that app
 PostgreSQL text cannot hold the NUL character (`U+0000`), so the API refuses it before any query runs, in the path, the query string and the body alike.
 
 - A NUL in a path id answers `404` with the message `Resource not found`, because no id can contain one.
-- A NUL in a query value or a body field answers `400`, and the `message` names the value, such as `note must not contain a NUL character` or `keywords[1] must not contain a NUL character`.
+- A NUL in a query value or a body field answers `400`, and the `message` names the value, such as `note must not contain a NUL character` or `keywords[1] must not contain a NUL character`. When a property name itself holds the character, the `message` names `body` or `query` instead, so the character never travels back in a response.
 
 A JSON body can also carry half of an emoji, written as a lone escape such as `\ud83d` with no partner. That is not valid Unicode text, so it answers `400` with `must be well formed Unicode text`.
 

@@ -141,6 +141,22 @@ describe('StorableTextPipe', () => {
     );
   });
 
+  it.each([
+    ['body', 'a top level key', { [`x${NUL}`]: NUL }],
+    ['body', 'a nested key', { owner: { [`a${NUL}`]: NUL } }],
+    ['body', 'a key with a lone surrogate', { 'a\ud83d': NUL }],
+    ['query', 'a query key', { [`v${NUL}`]: [NUL] }],
+  ] as const)(
+    'names the %s rather than echo %s that breaks a rule',
+    (source, _name, value) => {
+      const error = thrownBy(() => pipe.transform(value, argument(source)));
+
+      expect((error as BadRequestException).message).toBe(
+        `${source} must not contain a NUL character`,
+      );
+    },
+  );
+
   it('leaves property names to the validation pipe', () => {
     const value = { [`odd${NUL}`]: 'text' };
 
