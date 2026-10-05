@@ -45,6 +45,10 @@ const STORE_LABELS: Record<Store, string> = {
   GOOGLE_PLAY: "Google Play",
 };
 
+const countryNames: ReadonlyMap<string, string> = new Map(
+  Object.entries(COUNTRY_NAMES),
+);
+
 export function formatNumber(value: number): string {
   return numberFormatter.format(value);
 }
@@ -125,5 +129,5 @@ export function storeLabel(store: Store): string {
 }
 
 export function formatCountry(code: string): string {
-  return COUNTRY_NAMES[code.toLowerCase()] ?? code.toUpperCase();
+  return countryNames.get(code.toLowerCase()) ?? code.toUpperCase();
 }

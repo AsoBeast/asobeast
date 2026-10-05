@@ -188,6 +188,14 @@ describe("formatCountry", () => {
   it("falls back to the uppercased code for a malformed code", () => {
     expect(formatCountry("u")).toBe("U");
   });
+
+  it.each([
+    ["__proto__", "__PROTO__"],
+    ["constructor", "CONSTRUCTOR"],
+    ["toString", "TOSTRING"],
+  ])("falls back to the uppercased code for %s", (code, expected) => {
+    expect(formatCountry(code)).toBe(expected);
+  });
 });
 
 describe("formatList", () => {
