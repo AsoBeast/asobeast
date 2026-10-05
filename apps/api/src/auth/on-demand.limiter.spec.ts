@@ -1,5 +1,11 @@
 import type { Redis } from 'ioredis';
-import { PLAN_LIMITS, PlanName, SELF_HOSTED_LIMITS } from '@asobeast/shared';
+import {
+  ON_DEMAND_ACTIONS,
+  PLAN_LIMITS,
+  PLAN_NAMES,
+  PlanName,
+  SELF_HOSTED_LIMITS,
+} from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { OnDemandLimiter } from './on-demand.limiter';
 import { RateLimitExceededError } from './rate-limit/rate-limit.errors';
@@ -104,6 +110,51 @@ describe('OnDemandLimiter', () => {
     await expect(
       scoped(() => limiterWith(true, 'ultimate').consume('runDaily', NOW)),
     ).rejects.toMatchObject({ detail: { plan: 'ultimate', upgradeTo: null } });
+  });
+
+  it.each(
+    PLAN_NAMES.flatMap((plan) =>
+      ON_DEMAND_ACTIONS.map((action) => [plan, action] as const),
+    ),
+  )('names the window the %s %s allowance closes in', async (plan, action) => {
+    incr.mockResolvedValue(
+      (PLAN_LIMITS[plan].onDemand?.[action].limit ?? 0) + 1,
+    );
+
+    const rejection = scoped(() =>
+      limiterWith(true, plan).consume(action, NOW),
+    );
+
+    await expect(rejection).rejects.toBeInstanceOf(RateLimitExceededError);
+    await expect(rejection).rejects.toMatchObject({
+      detail: {
+        window:
+          PLAN_LIMITS[plan].onDemand?.[action].windowSeconds === 3_600
+            ? 'hour'
+            : 'day',
+      },
+    });
+  });
+
+  it('refuses to name a window it has no word for', async () => {
+    incr.mockResolvedValue(2);
+    const limiter = new OnDemandLimiter(redis, workspace, {
+      planScope: () =>
+        Promise.resolve({
+          plan: 'indie',
+          limits: {
+            ...PLAN_LIMITS.indie,
+            onDemand: {
+              ...PLAN_LIMITS.indie.onDemand,
+              refresh: { limit: 1, windowSeconds: 600 },
+            },
+          },
+        }),
+    } as unknown as QuotaService);
+
+    await expect(scoped(() => limiter.consume('refresh', NOW))).rejects.toThrow(
+      '600 seconds',
+    );
   });
 
   it('gives an ultimate workspace the larger allowance', async () => {
