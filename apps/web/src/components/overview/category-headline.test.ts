@@ -108,6 +108,19 @@ describe("headlineSeries", () => {
     expect(pick([series("paid", "6014", [5, 4], 20)], 0)).toBeUndefined();
   });
 
+  it("never reads an old capture of the app's own chart as its current position", () => {
+    expect(
+      pick(
+        [
+          series("free", "6014", [14, 12], 53),
+          series("grossing", "6014", [null]),
+          series("paid", "6014", [2]),
+        ],
+        0,
+      ),
+    ).toBe("grossing/6014");
+  });
+
   it("reads the chart of the current price when the old one is still in the window", () => {
     expect(
       pick(

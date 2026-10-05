@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import {
   APP_1_DETAIL,
+  APP_FREE_AGAIN_ID,
   APP_PAID_GROSSING_ONLY_ID,
   APP_PAID_TOP_CHART_ID,
   APP_PAID_UNRANKED_ID,
@@ -66,6 +67,16 @@ test("an app that went paid reads the paid chart, not its old free position", as
   await expect(stat).toContainText("#6 in Games");
   await expect(stat).toContainText("paid chart");
   await expect(stat).not.toContainText("#25");
+});
+
+test("an app that went free again never reads its old free capture as current", async ({
+  page,
+}) => {
+  const stat = await headline(page, APP_FREE_AGAIN_ID);
+
+  await expect(stat).toContainText("Not in top 200 in Games");
+  await expect(stat).toContainText("grossing chart");
+  await expect(stat).not.toContainText("#12");
 });
 
 test("a free app with only an overall chart reads the overall position", async ({

@@ -1882,6 +1882,7 @@ export const APP_PAID_GROSSING_ONLY_ID = "app-paid-grossing-only";
 export const APP_PAID_UNRANKED_ID = "app-paid-unranked";
 export const APP_REPRICED_FREE_ID = "app-repriced-free";
 export const APP_REPRICED_PAID_ID = "app-repriced-paid";
+export const APP_FREE_AGAIN_ID = "app-free-again";
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
@@ -1934,6 +1935,17 @@ DATASETS[APP_REPRICED_PAID_ID] = categoryDataset(
     categorySeries("free", "6014", [30, 28, 25], 20),
     categorySeries("grossing", "6014", [null, null, null]),
     categorySeries("paid", "6014", [6, 6, 6]),
+  ],
+);
+
+DATASETS[APP_FREE_AGAIN_ID] = categoryDataset(
+  APP_FREE_AGAIN_ID,
+  "Free Again",
+  0,
+  [
+    categorySeries("free", "6014", [14, 13, 12], 53),
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("paid", "6014", [3, 2, 2]),
   ],
 );
 
