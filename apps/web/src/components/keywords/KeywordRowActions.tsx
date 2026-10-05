@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useIsMutating,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { MoreHorizontal, Sparkles, Tag, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
@@ -46,7 +50,10 @@ export function KeywordRowActions({
 
   const toggle = useKeywordUpdate(appId, keyword);
 
+  const scoreKey = ["keyword-score", keyword.keywordId];
+  const scoring = useIsMutating({ mutationKey: scoreKey }) > 0;
   const score = useMutation({
+    mutationKey: scoreKey,
     mutationFn: () => scoreKeyword(keyword.keywordId),
     onSuccess: () => {
       invalidateKeywords(queryClient, appId);
@@ -95,10 +102,7 @@ export function KeywordRowActions({
             <Tag />
             Edit tags and note
           </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={score.isPending}
-            onSelect={() => scoreOnce()}
-          >
+          <DropdownMenuItem disabled={scoring} onSelect={() => scoreOnce()}>
             <Sparkles />
             Score now
           </DropdownMenuItem>
