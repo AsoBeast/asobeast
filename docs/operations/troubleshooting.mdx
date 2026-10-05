@@ -82,6 +82,10 @@ Each entry below names the symptom the way you would describe it, then gives the
   <Accordion title="/docs returns 404">
     `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
+
+  <Accordion title="The admin area says my workspace needs a plan">
+    With billing on, the admin area, `/admin/queues`, `/docs` and `/metrics` open only while the operator's own workspace has a plan in force, so a lapsed trial or a trial still waiting for the email confirmation closes all of them. Confirm the email if the notice asks for it, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace in the database. See [When the operator's workspace has no plan](/security/admin-surfaces#when-the-operators-workspace-has-no-plan).
+  </Accordion>
 </AccordionGroup>
 
 ## Collection

@@ -16,6 +16,8 @@ export interface Recovery {
   expected: boolean;
 }
 
+export type RecoveryScope = "admin";
+
 type Explanation = Omit<Recovery, "expected">;
 
 const GENERIC: Recovery = {
@@ -53,6 +55,16 @@ const BY_STATUS: Record<number, Explanation> = {
   },
 };
 
+const BY_SCOPED_STATUS: Record<RecoveryScope, Record<number, Explanation>> = {
+  admin: {
+    404: {
+      title: "The admin area is closed",
+      body: "The admin endpoints answer not found unless your own workspace has a plan in force and is not suspended. Check the plan on the settings page, then reload.",
+      action: { kind: "link", href: "/settings", label: "Open settings" },
+    },
+  },
+};
+
 function reopens(retryAfterSeconds: number | null): string {
   if (retryAfterSeconds === null) return "Try again in a moment.";
   const now = Date.now();
@@ -75,9 +87,20 @@ function refused({
   };
 }
 
-function byStatus(digest: ApiErrorDigest): Recovery | null {
-  const known =
-    digest.statusCode === 429 ? refused(digest) : BY_STATUS[digest.statusCode];
+function explanationFor(
+  digest: ApiErrorDigest,
+  scope: RecoveryScope | undefined,
+): Explanation | undefined {
+  if (digest.statusCode === 429) return refused(digest);
+  const scoped = scope && BY_SCOPED_STATUS[scope][digest.statusCode];
+  return scoped || BY_STATUS[digest.statusCode];
+}
+
+function byStatus(
+  digest: ApiErrorDigest,
+  scope: RecoveryScope | undefined,
+): Recovery | null {
+  const known = explanationFor(digest, scope);
   return known ? { ...known, expected: true } : null;
 }
 
@@ -86,10 +109,10 @@ function digestOf(error: unknown): string | undefined {
   return typeof digest === "string" ? digest : undefined;
 }
 
-export function recoveryFor(error: unknown): Recovery {
+export function recoveryFor(error: unknown, scope?: RecoveryScope): Recovery {
   if (error instanceof ApiError) {
     const { statusCode, message } = error.envelope;
-    const known = byStatus(apiErrorDigestOf(error.envelope));
+    const known = byStatus(apiErrorDigestOf(error.envelope), scope);
     if (known) return known;
     if (statusCode >= 500) {
       return {
@@ -103,5 +126,5 @@ export function recoveryFor(error: unknown): Recovery {
   }
 
   const digest = readApiErrorDigest(digestOf(error));
-  return (digest && byStatus(digest)) ?? GENERIC;
+  return (digest && byStatus(digest, scope)) ?? GENERIC;
 }

@@ -13,6 +13,7 @@ export default function AdminWorkspacesError({
     <ErrorState
       error={error}
       retry={retry}
+      scope="admin"
       title="Workspaces could not be loaded"
     />
   );

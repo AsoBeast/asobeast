@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AuthUser } from "@asobeast/shared";
 import { getAuthMe } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api";
-import { viewerIsOperator } from "./viewer";
+import { viewerAdminAccess, viewerIsOperator } from "./viewer";
 
 vi.mock("@/lib/api/auth", () => ({ getAuthMe: vi.fn() }));
 
@@ -63,5 +63,40 @@ describe("viewerIsOperator", () => {
   it("rethrows anything that is not an api answer", async () => {
     me.mockRejectedValue(new TypeError("fetch failed"));
     await expect(viewerIsOperator()).rejects.toThrow("fetch failed");
+  });
+});
+
+describe("viewerAdminAccess", () => {
+  it("is granted to an operator with a plan", async () => {
+    me.mockResolvedValue(USER);
+    await expect(viewerAdminAccess()).resolves.toBe("granted");
+  });
+
+  it("needs a plan for an operator whose workspace has none", async () => {
+    me.mockResolvedValue({ ...USER, plan: "free", entitled: false });
+    await expect(viewerAdminAccess()).resolves.toBe("needs-plan");
+  });
+
+  it("is denied to a workspace owner who is not the operator", async () => {
+    me.mockResolvedValue({ ...USER, platformOperator: false });
+    await expect(viewerAdminAccess()).resolves.toBe("denied");
+  });
+
+  it("is denied when the api refuses the session", async () => {
+    me.mockRejectedValue(
+      new ApiError({
+        statusCode: 401,
+        error: "Unauthorized",
+        message: "Sign in",
+        path: "/auth/me",
+        timestamp: "2026-10-04T00:00:00.000Z",
+      }),
+    );
+    await expect(viewerAdminAccess()).resolves.toBe("denied");
+  });
+
+  it("rethrows anything that is not an api answer", async () => {
+    me.mockRejectedValue(new TypeError("fetch failed"));
+    await expect(viewerAdminAccess()).rejects.toThrow("fetch failed");
   });
 });

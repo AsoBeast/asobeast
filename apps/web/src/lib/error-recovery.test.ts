@@ -137,6 +137,45 @@ describe("recoveryFor", () => {
     expect(recoveryFor(crossed).body).toBe(recoveryFor(new Error("x")).body);
   });
 
+  it("does not call a refused admin request a deleted record", () => {
+    const recovery = recoveryFor(apiError(404), "admin");
+
+    expect(recovery.body).not.toContain("no longer exists");
+    expect(recovery.body).toContain("plan in force");
+    expect(recovery.action).toEqual({
+      kind: "link",
+      href: "/settings",
+      label: "Open settings",
+    });
+    expect(recovery.expected).toBe(true);
+  });
+
+  it("reads a refused admin request the same across the server boundary", () => {
+    const crossed = Object.assign(new Error("An error occurred"), {
+      digest: apiError(404).digest,
+    });
+
+    expect(recoveryFor(crossed, "admin").body).not.toContain(
+      "no longer exists",
+    );
+    expect(recoveryFor(crossed, "admin")).toEqual(
+      recoveryFor(apiError(404), "admin"),
+    );
+  });
+
+  it("keeps the deleted record copy for a missing record elsewhere", () => {
+    expect(recoveryFor(apiError(404)).body).toContain("no longer exists");
+  });
+
+  it("leaves every other status alone inside the admin area", () => {
+    expect(recoveryFor(apiError(402), "admin")).toEqual(
+      recoveryFor(apiError(402)),
+    );
+    expect(recoveryFor(apiError(504), "admin")).toEqual(
+      recoveryFor(apiError(504)),
+    );
+  });
+
   it("never surfaces an internal identifier", () => {
     const error = Object.assign(new Error("kaboom"), { digest: "abc123" });
     expect(JSON.stringify(recoveryFor(error))).not.toContain("abc123");

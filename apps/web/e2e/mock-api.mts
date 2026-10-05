@@ -116,7 +116,7 @@ import {
   UPGRADE_PATH,
   parseStoreUrl,
 } from "@asobeast/shared";
-import { VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
+import { ALL_VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
 import {
   ADMIN_OVERVIEW,
   ADMIN_OVERVIEW_SELF_HOSTED,
@@ -218,6 +218,13 @@ const VIEWER_USERS: Record<Viewer, Partial<AuthUser>> = {
     name: "Member",
     role: "member",
     platformOperator: false,
+  },
+  "lapsed-operator": { plan: "free", entitled: false },
+  "unconfirmed-operator": {
+    plan: "free",
+    entitled: false,
+    emailVerified: false,
+    trialAwaitsConfirmation: true,
   },
 };
 const ACCOUNT_PLAN: AccountPlan = {
@@ -390,7 +397,7 @@ function cookieValue(req: IncomingMessage, name: string): string | undefined {
 }
 
 function viewerOf(req: IncomingMessage): AuthUser {
-  const viewer = VIEWERS.find(
+  const viewer = ALL_VIEWERS.find(
     (candidate) => candidate === cookieValue(req, VIEWER_COOKIE),
   );
   return viewer ? { ...AUTH_USER, ...VIEWER_USERS[viewer] } : AUTH_USER;
@@ -476,21 +483,41 @@ function appRoute(
   };
 }
 
-function operatorRoute(
+function gatedRoute(
   pattern: RegExp,
   pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+  admits: (req: IncomingMessage) => boolean,
 ): Route {
   return {
     method: "GET",
     pattern,
     handler: (_params, req, res) => {
       const path = req.url ?? "/";
-      if (!viewerOf(req).platformOperator) {
-        return json(res, 404, errorEnvelope(404, path));
-      }
+      if (!admits(req)) return json(res, 404, errorEnvelope(404, path));
       json(res, 200, pick(req, new URL(path, "http://localhost").searchParams));
     },
   };
+}
+
+function operatorRoute(
+  pattern: RegExp,
+  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+): Route {
+  return gatedRoute(pattern, pick, (req) => viewerOf(req).platformOperator);
+}
+
+function supportRoute(
+  pattern: RegExp,
+  pick: (req: IncomingMessage, query: URLSearchParams) => unknown,
+): Route {
+  return gatedRoute(pattern, pick, (req) => {
+    const viewer = viewerOf(req);
+    return (
+      viewer.platformOperator &&
+      viewer.entitled &&
+      !hasCookie(req, "e2e_admin_refused", "1")
+    );
+  });
 }
 
 function splitValues(value: string | null): string[] {
@@ -968,7 +995,7 @@ const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const routes: Route[] = [
-  operatorRoute(/^\/admin\/support\/overview$/, (req) =>
+  supportRoute(/^\/admin\/support\/overview$/, (req) =>
     hasCookie(req, "e2e_admin_self_hosted", "1")
       ? ADMIN_OVERVIEW_SELF_HOSTED
       : ADMIN_OVERVIEW,
@@ -977,14 +1004,14 @@ const routes: Route[] = [
   operatorRoute(/^\/admin\/proxy-pool$/, (req) =>
     hasCookie(req, "e2e_proxy_pool", "1") ? PROXY_POOL_ON : PROXY_POOL_OFF,
   ),
-  operatorRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
-  operatorRoute(/^\/admin\/support\/users$/, (req, query) =>
+  supportRoute(/^\/admin\/support\/workspaces$/, () => SUPPORT_WORKSPACES),
+  supportRoute(/^\/admin\/support\/users$/, (req, query) =>
     adminUserList(
       query.get("workspaceId"),
       hasCookie(req, "e2e_admin_truncated", "1"),
     ),
   ),
-  operatorRoute(/^\/admin\/support\/apps$/, (req, query) =>
+  supportRoute(/^\/admin\/support\/apps$/, (req, query) =>
     adminAppList(
       query.get("workspaceId"),
       hasCookie(req, "e2e_admin_truncated", "1"),
