@@ -238,7 +238,7 @@ export const adminAppsOptions = (workspaceId?: string) =>
 
 export const authStatusOptions = queryOptions({
   queryKey: authStatusKey,
-  queryFn: getAuthStatus,
+  queryFn: () => getAuthStatus(),
   staleTime: 60 * 1000,
 });
 
