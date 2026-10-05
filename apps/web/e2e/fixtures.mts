@@ -35,6 +35,7 @@ import type {
   AuditRecommendation,
   AuditTarget,
   KeywordCoverageRow,
+  LintIssue,
   MetadataAuditResult,
   MetadataDraft,
   TrackedKeywordItem,
@@ -3018,6 +3019,24 @@ DATASETS[APP_AR_ID] = {
   changeImpact: emptyChangeImpact(APP_AR_DETAIL),
 };
 
+const PLAY_DESCRIPTION_ISSUES: LintIssue[] = [
+  {
+    rule: "no-cta",
+    severity: "info",
+    message: "No clear call to action detected.",
+  },
+  {
+    rule: "no-social-proof",
+    severity: "info",
+    message: "No social proof (awards, press, user counts) detected.",
+  },
+  {
+    rule: "no-formatting",
+    severity: "info",
+    message: "No line breaks or bullets; add formatting for readability.",
+  },
+];
+
 export const APP_FR_ID = "app-fr";
 
 export const APP_FR_DETAIL: AppDetail = {
@@ -3029,7 +3048,7 @@ export const APP_FR_DETAIL: AppDetail = {
 };
 
 const FR_SHORT_DESCRIPTION =
-  "Vends et achète des vêtements de seconde main, sans frais pour les vendeurs.";
+  "Vendre tes vêtements de seconde main, acheter des vêtements sans frais";
 
 const FR_DESCRIPTION =
   "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée.";
@@ -3041,7 +3060,7 @@ export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
     {
       field: "title",
       value: "Vinted : vendre et acheter",
-      chars: 25,
+      chars: 26,
       limit: 30,
       indexed: true,
       issues: [],
@@ -3060,6 +3079,12 @@ export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
           offendingText: "vendre",
         },
         {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"acheter" already appears in the title.',
+          offendingText: "acheter",
+        },
+        {
           rule: "keyword-stuffing",
           severity: "warn",
           message: '"vêtements" is repeated 2 times.',
@@ -3073,19 +3098,19 @@ export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
       chars: FR_DESCRIPTION.length,
       limit: 4000,
       indexed: true,
-      issues: [],
+      issues: PLAY_DESCRIPTION_ISSUES,
     },
   ],
   coverage: [
-    playCoverageRow("kw-fr-1", "vêtements seconde main", "primary", [
+    playCoverageRow("kw-fr-1", "vêtements de seconde main", "primary", [
       false,
       true,
-      true,
+      false,
     ]),
-    playCoverageRow("kw-fr-2", "vendre des vêtements", "primary", [
+    playCoverageRow("kw-fr-2", "vendre et acheter", "primary", [
       true,
-      true,
-      true,
+      false,
+      false,
     ]),
     playCoverageRow("kw-fr-3", "mode d'occasion", "secondary", [
       false,
@@ -3146,14 +3171,14 @@ export const APP_HE_METADATA_AUDIT: MetadataAuditResult = {
         {
           rule: "repeats-title-word",
           severity: "warn",
-          message: '"הפועלים" already appears in the title.',
-          offendingText: "הפועלים",
+          message: '"בנק" already appears in the title.',
+          offendingText: "בנק",
         },
         {
-          rule: "keyword-stuffing",
+          rule: "repeats-title-word",
           severity: "warn",
-          message: '"בכל" is repeated 2 times.',
-          offendingText: "בכל",
+          message: '"הפועלים" already appears in the title.',
+          offendingText: "הפועלים",
         },
       ],
     },
@@ -3163,13 +3188,21 @@ export const APP_HE_METADATA_AUDIT: MetadataAuditResult = {
       chars: HE_DESCRIPTION.length,
       limit: 4000,
       indexed: true,
-      issues: [],
+      issues: PLAY_DESCRIPTION_ISSUES,
     },
   ],
   coverage: [
     playCoverageRow("kw-he-1", "בנק הפועלים", "primary", [true, true, true]),
-    playCoverageRow("kw-he-2", "העברת כספים", "secondary", [false, true, true]),
-    playCoverageRow("kw-he-3", "כרטיס אשראי", "longtail", [false, true, false]),
+    playCoverageRow("kw-he-2", "כרטיסי אשראי", "secondary", [
+      false,
+      true,
+      false,
+    ]),
+    playCoverageRow("kw-he-3", "העברת כספים", "longtail", [
+      false,
+      false,
+      false,
+    ]),
   ],
   keywordFieldSuggestion: null,
 };
@@ -3222,11 +3255,34 @@ const withLongKeywordField = <
     ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
     : row;
 
+const COMPOUND_KEYWORD = "produktivitaetsmanagementsoftwareloesung";
+
+const COMPOUND_KEYWORD_FIELD = `${COMPOUND_KEYWORD},${COMPOUND_KEYWORD}s`;
+
+const withCompoundKeywordField = (
+  row: MetadataAuditResult["fields"][number],
+): MetadataAuditResult["fields"][number] =>
+  row.field === "keywordField"
+    ? {
+        ...row,
+        value: COMPOUND_KEYWORD_FIELD,
+        chars: COMPOUND_KEYWORD_FIELD.length,
+        issues: [
+          {
+            rule: "plural-form",
+            severity: "warn",
+            message: `Apple indexes both forms; "${COMPOUND_KEYWORD}s" duplicates "${COMPOUND_KEYWORD}".`,
+            offendingText: `${COMPOUND_KEYWORD}s`,
+          },
+        ],
+      }
+    : row;
+
 export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
   ...METADATA_AUDIT,
   appId: "app-long",
   fields: [
-    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    ...METADATA_AUDIT.fields.map(withCompoundKeywordField),
     {
       field: "description",
       value: LONG_DESCRIPTION,
@@ -3238,13 +3294,6 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
           rule: "no-social-proof",
           severity: "info",
           message: "No social proof (awards, press, user counts) detected.",
-        },
-        {
-          rule: "repeats-subtitle-word",
-          severity: "warn",
-          message:
-            '"produktivitaetsmanagementsoftwareloesungen" already appears in the subtitle.',
-          offendingText: "produktivitaetsmanagementsoftwareloesungen",
         },
       ],
     },
