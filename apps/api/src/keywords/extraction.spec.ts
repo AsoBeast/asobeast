@@ -236,6 +236,49 @@ describe('extractCandidates', () => {
     });
   });
 
+  describe('arabic listings', () => {
+    const texts = (input: Parameters<typeof extractCandidates>[0]): string[] =>
+      extractCandidates(input).map((candidate) => candidate.text);
+
+    it('drops an arabic noise word and the same word after the conjunction', () => {
+      expect(texts({ title: 'كريم - توصيل طعام وأكثر' })).toEqual([
+        'كريم توصيل طعام',
+        'كريم توصيل',
+        'توصيل طعام',
+        'كريم',
+        'توصيل',
+        'طعام',
+      ]);
+    });
+
+    it('drops arabic function words and a function word after the conjunction', () => {
+      expect(texts({ title: 'الطعام في المطار ومن البيت' })).toEqual([
+        'الطعام المطار البيت',
+        'الطعام المطار',
+        'المطار البيت',
+        'الطعام',
+        'المطار',
+        'البيت',
+      ]);
+    });
+
+    it('leaves a word that begins with the conjunction letter alone', () => {
+      expect(texts({ title: 'وقت الصلاة' })).toEqual([
+        'وقت الصلاة',
+        'وقت',
+        'الصلاة',
+      ]);
+      expect(texts({ title: 'واتساب وصفة وظيفة' })).toEqual([
+        'واتساب وصفة وظيفة',
+        'واتساب وصفة',
+        'وصفة وظيفة',
+        'واتساب',
+        'وصفة',
+        'وظيفة',
+      ]);
+    });
+  });
+
   describe('scripts that keep spaces between words', () => {
     it('extracts korean, cyrillic, polish and devanagari as before', () => {
       expect(
