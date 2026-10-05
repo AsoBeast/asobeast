@@ -9,6 +9,7 @@ import { CalendarClock, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError, runDaily } from "@/lib/api";
+import { pluralize } from "@/lib/format";
 import { appKeys } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
 
@@ -21,9 +22,19 @@ export function RunDailyAction({ appId }: { appId: string }) {
     mutationFn: () => runDaily(appId),
     onSuccess: (result) => {
       void queryClient.invalidateQueries({ queryKey: appKeys.detail(appId) });
-      const count = result.enqueued.keywords;
+      const { apps, keywords, categories, reviews } = result.enqueued;
+      const jobs = apps + keywords + categories + reviews;
+      if (jobs === 0) {
+        toast.info("Nothing new to queue", {
+          description:
+            "Today's checks for this app are already queued, running or done.",
+        });
+        return;
+      }
       queuedToast(
-        `rank checks for ${count} keyword${count === 1 ? "" : "s"}`,
+        keywords > 0
+          ? `rank checks for ${pluralize(keywords, "keyword")}`
+          : pluralize(jobs, "job"),
         "Results land as the rate-limited worker runs (~15 searches/minute).",
       );
     },
