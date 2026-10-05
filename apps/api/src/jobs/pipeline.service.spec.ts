@@ -570,8 +570,17 @@ describe('PipelineService', () => {
       heldBy: Record<string, ReturnType<typeof holding>>,
     ) => {
       const queue = buildQueue();
+      const added = new Map<string, unknown>();
+      queue.add.mockImplementation((_name, data, opts) => {
+        added.set(String(opts?.jobId), JSON.parse(JSON.stringify(data)));
+        return Promise.resolve();
+      });
       queue.getJob.mockImplementation((jobId: string) =>
-        Promise.resolve(heldBy[jobId.split('~')[0]]),
+        Promise.resolve(
+          added.has(jobId)
+            ? { data: added.get(jobId) }
+            : heldBy[jobId.split('~')[0]],
+        ),
       );
       return queue;
     };
