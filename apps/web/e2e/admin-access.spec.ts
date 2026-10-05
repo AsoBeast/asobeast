@@ -1,6 +1,6 @@
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
-import { UNPLANNED_OPERATORS, seedViewer } from "./viewer.mts";
+import { UNPLANNED_OPERATORS, VIEWER_COOKIE, seedViewer } from "./viewer.mts";
 
 const DELETED_RECORD_COPY = "This app or record no longer exists";
 
@@ -112,7 +112,7 @@ test.describe("what the notice offers", () => {
       page.getByRole("region", { name: NOTICE_TITLE["lapsed-operator"] }),
     ).toBeVisible();
 
-    await context.clearCookies({ name: "e2e_viewer" });
+    await context.clearCookies({ name: VIEWER_COOKIE });
     await page.goto("/admin");
 
     await expect(page.getByRole("navigation", { name: "Admin" })).toBeVisible();
