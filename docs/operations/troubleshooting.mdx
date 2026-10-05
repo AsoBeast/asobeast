@@ -38,13 +38,37 @@ Each entry below names the symptom the way you would describe it, then gives the
 
     - Terminate TLS in front of port 3001 with your own reverse proxy and certificate.
     - Compose the Cloudflare Tunnel overlay, which terminates TLS at Cloudflare.
-    - Forward the port over SSH and open `http://localhost:3001`. Browsers treat localhost as a secure context and keep a `Secure` cookie there without TLS.
+    - Forward the port over SSH and open `http://localhost:3001` in Chrome or Firefox, which keep a `Secure` cookie on localhost without TLS. Safari does not. See [Signing in returns to the sign in form](#signing-in-returns-to-the-sign-in-form).
 
     ```bash
     ssh -N -L 3001:localhost:3001 user@nas.local
     ```
 
     See [Hosting behind TLS and a reverse proxy](/security/hosting).
+  </Accordion>
+
+  <Accordion title="Signing in returns to the sign in form">
+    The API accepted the registration or the password, but the browser did not keep the session cookie, so the next request arrived signed out. The form then shows the message "Your browser did not keep the session cookie". On an older release, registering lands on the sign in form and signing in simply loads it again. The cookie is `Secure`, and a browser stores it only over HTTPS or on an origin it treats as secure. Three causes cover almost every case.
+
+    - **Safari on plain HTTP, even on localhost.** Chrome and Firefox keep a `Secure` cookie on `http://localhost` and `http://127.0.0.1`. Safari drops it there, so `http://localhost:3001` accepts the sign in and bounces straight back. WebKit tracks the gap as [bug 281149](https://bugs.webkit.org/show_bug.cgi?id=281149), and the MDN compatibility data records it for `Set-Cookie`. Safari 27.0 announces support for `Secure` cookies on loopback hosts, but the change depends on the system cookie storage, and on macOS 26.6 that storage still drops the cookie, so Safari 27.0 there behaves as before.
+    - **Plain HTTP from another machine.** A LAN address or any hostname that is not loopback is not a secure origin in any browser.
+    - **Cookies blocked for the site.** A browser setting, extension or policy that blocks all cookies discards the cookie even over HTTPS.
+
+    To confirm, open the developer tools and register or sign in. A `POST /api/backend/auth/register` that answers `201`, or a `POST /api/backend/auth/login` that answers `200`, with a `Set-Cookie: asobeast_session` header, followed by no stored `asobeast_session` cookie, is this problem.
+
+    Pick one fix.
+
+    - Use Chrome or Firefox for a local evaluation on `http://localhost:3001`.
+    - Put TLS in front of the stack. For a local evaluation that works in Safari, run Caddy with the Caddyfile below and open `https://localhost`. Caddy signs the certificate with its own local authority, which the system has to trust before Safari accepts it.
+    - Compose the Cloudflare Tunnel overlay for a host you reach from elsewhere.
+
+    ```caddyfile
+    localhost {
+      reverse_proxy 127.0.0.1:3001
+    }
+    ```
+
+    Set `TRUST_PROXY=1` as [Bring your own proxy](/security/hosting#bring-your-own-proxy) describes. Do not set `AUTH_COOKIE_SECURE=false` to get past this, because the Docker image then refuses to boot.
   </Accordion>
 </AccordionGroup>
 
@@ -61,6 +85,10 @@ Each entry below names the symptom the way you would describe it, then gives the
 
   <Accordion title="/docs returns 404">
     `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+  </Accordion>
+
+  <Accordion title="The admin area says my workspace needs a plan">
+    With billing on, the admin area, `/admin/queues`, `/docs` and `/metrics` open only while the operator's own workspace has a plan in force, so a lapsed trial or a trial still waiting for the email confirmation closes all of them. Confirm the email if the notice asks for it, choose a plan on the upgrade page, or set `plan` on the bootstrap workspace in the database. See [When the operator's workspace has no plan](/security/admin-surfaces#when-the-operators-workspace-has-no-plan).
   </Accordion>
 </AccordionGroup>
 

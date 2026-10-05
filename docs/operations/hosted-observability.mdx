@@ -30,7 +30,7 @@ Send `X-Correlation-Id` on a request to choose the id yourself, which lets a cus
 
 ## The metrics endpoint
 
-`GET /metrics` serves the Prometheus text format. It is gated exactly like the queue dashboard: anything other than the entitled [platform operator](/security/admin-surfaces#who-the-platform-operator-is) receives **404**, never 401 or 403, so the endpoint never confirms it exists. A customer who owns their own workspace is not an operator and receives **404**. Reach it through the web origin at `/metrics`, the same way you reach `/admin/queues`.
+`GET /metrics` serves the Prometheus text format. It is gated exactly like the queue dashboard: anything other than the entitled [platform operator](/security/admin-surfaces#who-the-platform-operator-is) receives **404**, never 401 or 403, so the endpoint never confirms it exists. A customer who owns their own workspace is not an operator and receives **404**, and so does an operator whose own workspace has no plan in force, as [the admin surfaces page](/security/admin-surfaces#when-the-operators-workspace-has-no-plan) explains. Reach it through the web origin at `/metrics`, the same way you reach `/admin/queues`.
 
 Per workspace, one series per metric:
 

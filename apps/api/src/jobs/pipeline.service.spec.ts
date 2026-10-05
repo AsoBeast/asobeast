@@ -76,6 +76,8 @@ describe('PipelineService', () => {
     add: jest
       .fn<Promise<void>, [string, unknown, Record<string, unknown>?]>()
       .mockResolvedValue(undefined),
+    getJob: jest.fn().mockResolvedValue(undefined),
+    remove: jest.fn().mockResolvedValue(1),
     getWaitingCount: jest.fn().mockResolvedValue(waiting),
     getDelayedCount: jest.fn().mockResolvedValue(delayed),
   });
@@ -547,6 +549,90 @@ describe('PipelineService', () => {
       ...gplayQueue.add.mock.calls,
     ];
     expect(calls.every((call) => !('parent' in (call[2] ?? {})))).toBe(true);
+  });
+
+  describe('a manual run after earlier work', () => {
+    const manualApp = () => ({
+      app: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'primary',
+          store: 'APP_STORE',
+          isCompetitor: false,
+          competitors: [],
+          tracked: [{ keywordId: 'keyword', keyword: { store: 'APP_STORE' } }],
+        }),
+      },
+    });
+    const holding = (failed: boolean) => ({
+      isFailed: jest.fn().mockResolvedValue(failed),
+    });
+    const queueHolding = (
+      heldBy: Record<string, ReturnType<typeof holding>>,
+    ) => {
+      const queue = buildQueue();
+      queue.getJob.mockImplementation((jobId: string) =>
+        Promise.resolve(heldBy[jobId.split('~')[0]]),
+      );
+      return queue;
+    };
+
+    it('counts only the jobs it queued', async () => {
+      const appStoreQueue = queueHolding({
+        refresh: holding(false),
+        reviews: holding(false),
+      });
+      const { service } = buildService({
+        appStoreQueue,
+        prisma: manualApp(),
+      });
+
+      await expect(service.fanOutApp('primary')).resolves.toEqual({
+        apps: 0,
+        keywords: 1,
+        categories: 0,
+        reviews: 0,
+      });
+      expect(appStoreQueue.add).toHaveBeenCalledTimes(1);
+    });
+
+    it('queues the jobs that failed again and counts them', async () => {
+      const appStoreQueue = queueHolding({
+        refresh: holding(true),
+        check: holding(true),
+        reviews: holding(false),
+      });
+      const { service } = buildService({
+        appStoreQueue,
+        prisma: manualApp(),
+      });
+
+      await expect(service.fanOutApp('primary')).resolves.toEqual({
+        apps: 1,
+        keywords: 1,
+        categories: 0,
+        reviews: 0,
+      });
+      expect(appStoreQueue.remove).toHaveBeenCalledTimes(2);
+      expect(appStoreQueue.add).toHaveBeenCalledTimes(2);
+    });
+
+    it('scores a keyword again when its score job failed today', async () => {
+      const appStoreQueue = queueHolding({ score: holding(true) });
+      const { service } = buildService({ appStoreQueue });
+
+      await workspace.run(DEFAULT_WORKSPACE_ID, () =>
+        service.enqueueScore('keyword'),
+      );
+
+      expect(appStoreQueue.remove).toHaveBeenCalledWith(
+        'score~keyword~2026-07-27',
+      );
+      expect(appStoreQueue.add).toHaveBeenCalledWith(
+        JOBS.SCORE_KEYWORD,
+        expect.objectContaining({ keywordId: 'keyword' }),
+        { jobId: 'score~keyword~2026-07-27' },
+      );
+    });
   });
 
   describe('a formula change rescores outdated keywords once', () => {

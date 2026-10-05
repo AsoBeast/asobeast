@@ -63,7 +63,7 @@ chmod 600 .env
 docker compose up --build -d --wait
 ```
 
-Open http://localhost:3001 and create the owner account. Registration closes automatically once it exists. Import a store URL and keyword tracking starts immediately.
+Open http://localhost:3001 and create the owner account. Registration closes automatically once it exists. Safari does not keep the session cookie over plain HTTP, so use Chrome or Firefox for a local evaluation, or see [signing in returns to the sign in form](https://docs.asobeast.com/operations/troubleshooting#signing-in-returns-to-the-sign-in-form). Import a store URL and keyword tracking starts immediately.
 
 Prefer published images to a build? `docker-compose.pull.yml` runs the same stack from GHCR without a clone:
 
