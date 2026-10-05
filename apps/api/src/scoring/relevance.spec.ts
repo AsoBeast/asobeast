@@ -65,6 +65,15 @@ describe('defaultRelevance', () => {
     expect(defaultRelevance('SUGGESTED', '차', '자동차 정비 기록')).toBe(50);
   });
 
+  it('gives no overlap to a korean word inside a longer compound', () => {
+    expect(
+      defaultRelevance('SUGGESTED', '사전', '신작 RPG 사전예약 이벤트'),
+    ).toBe(50);
+    expect(
+      defaultRelevance('SUGGESTED', '운동', '매일 운동을 기록하세요'),
+    ).toBe(70);
+  });
+
   it('keeps the base for a keyword without a word', () => {
     expect(defaultRelevance('MANUAL', '!!', 'habit tracker')).toBe(80);
   });

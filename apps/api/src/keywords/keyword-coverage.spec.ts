@@ -20,6 +20,14 @@ describe('coversKeyword', () => {
     expect(coversKeyword('자동차 정비 기록', '차')).toBe(false);
   });
 
+  it('finds a korean keyword as a word or before a particle, not inside a compound', () => {
+    expect(coversKeyword('매일 운동을 기록하세요', '운동')).toBe(true);
+    expect(coversKeyword('운동에서는 기록이 중요', '운동')).toBe(true);
+    expect(coversKeyword('운동화 쇼핑몰', '운동')).toBe(false);
+    expect(coversKeyword('날씨 - 일기예보 미세먼지', '일기')).toBe(false);
+    expect(coversKeyword('신작 RPG 사전예약 이벤트', '사전')).toBe(false);
+  });
+
   it('matches each word of a mixed script keyword on its own', () => {
     expect(coversKeyword('online 漫画 アプリ', 'line 漫画')).toBe(false);
     expect(coversKeyword('Ultimate 家計簿', 'mate 家計簿')).toBe(false);
