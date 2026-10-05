@@ -25,6 +25,36 @@ describe('defaultRelevance', () => {
     ).toBe(60);
   });
 
+  it.each([
+    'メルカリ',
+    'フリマアプリ',
+    '簡単ショッピング',
+    'ショッピング',
+    '日本最大',
+    'フリマ',
+  ])('adds the overlap bonus for %s inside a japanese snapshot', (keyword) => {
+    expect(
+      defaultRelevance(
+        'SUBTITLE',
+        keyword,
+        'メルカリ - フリマアプリ フリマアプリで簡単ショッピング 日本最大のフリマを楽しもう',
+      ),
+    ).toBe(100);
+  });
+
+  it('matches each spaceless word of a keyword on its own', () => {
+    expect(
+      defaultRelevance(
+        'SUGGESTED',
+        'メルペイ',
+        'フリマアプリで簡単ショッピング',
+      ),
+    ).toBe(50);
+    expect(
+      defaultRelevance('SUGGESTED', 'iphone 写真', 'iPhone用写真加工'),
+    ).toBe(60);
+  });
+
   it('keeps the base for a keyword without a word', () => {
     expect(defaultRelevance('MANUAL', '!!', 'habit tracker')).toBe(80);
   });
