@@ -16,6 +16,8 @@ const CHINESE = [
   '我們',
   '什么',
   '什麼',
+  '我的',
+  '你的',
 ];
 
 const THAI = [

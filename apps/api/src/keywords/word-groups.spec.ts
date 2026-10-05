@@ -65,6 +65,16 @@ describe('wordGroups', () => {
     ]);
   });
 
+  it('merges single han characters and splits at chinese particles', () => {
+    expect(wordGroups('与朋友畅聊的免费')).toEqual([
+      { tokens: ['朋友', '畅聊'], joiner: '' },
+    ]);
+    expect(wordGroups('家計簿アプリで簡単管理')).toEqual([
+      { tokens: ['家計', '簿', 'アプリ'], joiner: '' },
+      { tokens: ['簡単', '管理'], joiner: '' },
+    ]);
+  });
+
   it('joins a katakana word the segmenter split into pieces', () => {
     expect(wordGroups('ネットフリックスで映画')).toEqual([
       { tokens: ['ネットフリックス'], joiner: '' },

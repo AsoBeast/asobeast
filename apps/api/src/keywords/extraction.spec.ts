@@ -156,6 +156,48 @@ describe('extractCandidates', () => {
       expect(texts({ title: '淘宝 - 小红书' })).toEqual(['淘宝', '小红书']);
     });
 
+    it('keeps a one character han word inside the compound it ends', () => {
+      expect(texts({ title: '家計簿アプリで簡単管理' })).toEqual([
+        '家計簿',
+        '簡単管理',
+        '家計',
+        '簡単',
+        '管理',
+      ]);
+      expect(texts({ title: '歩数計と体重記録' })).toEqual([
+        '歩数計',
+        '体重記録',
+        '歩数',
+        '体重',
+        '記録',
+      ]);
+      expect(texts({ title: '英単語帳で暗記' })).toEqual([
+        '英単語帳',
+        '英単語',
+        '暗記',
+      ]);
+      expect(texts({ title: '翻译器支持多种语言' })).toEqual([
+        '翻译器支持',
+        '支持多种语言',
+        '翻译器',
+        '支持多种',
+        '多种语言',
+        '翻译',
+        '支持',
+        '多种',
+        '语言',
+      ]);
+    });
+
+    it('never starts a phrase with a one character han word or a particle', () => {
+      expect(texts({ title: '我的记账本和钱包' })).toEqual([
+        '记账本',
+        '记账',
+        '钱包',
+      ]);
+      expect(texts({ title: '新機能で便利に' })).toEqual(['機能', '便利']);
+    });
+
     it('drops grammar and store noise words of a chinese listing', () => {
       expect(
         extractCandidates({
@@ -165,9 +207,11 @@ describe('extractCandidates', () => {
       ).toEqual([
         { text: '微信', source: 'TITLE', weight: 3 },
         { text: '随时随地', source: 'SUBTITLE', weight: 2 },
+        { text: '朋友畅聊', source: 'SUBTITLE', weight: 2 },
         { text: '随时', source: 'SUBTITLE', weight: 2 },
         { text: '随地', source: 'SUBTITLE', weight: 2 },
         { text: '朋友', source: 'SUBTITLE', weight: 2 },
+        { text: '畅聊', source: 'SUBTITLE', weight: 2 },
       ]);
     });
 

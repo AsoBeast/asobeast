@@ -1,6 +1,6 @@
 import { countChars } from '@asobeast/shared';
 import { isExtractionStopword } from './extraction-stopwords';
-import { wordGroups } from './word-groups';
+import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
 
 export interface ExtractionInput {
@@ -42,7 +42,7 @@ function usableRuns({ tokens, joiner }: WordGroup): string[][] {
   }
   const runs: string[][] = [[]];
   for (const token of tokens) {
-    if (isUsable(token)) {
+    if (isUsable(token) || isBoundWord(token)) {
       runs[runs.length - 1].push(token);
     } else {
       runs.push([]);
@@ -64,9 +64,10 @@ function* ngrams(
     for (let start = 0; start + size <= tokens.length; start += 1) {
       const text = tokens.slice(start, start + size).join(joiner);
       const fits =
-        size === 1 ||
-        joiner === ' ' ||
-        countChars(text) <= SPACELESS_PHRASE_MAX_CHARS;
+        !isBoundWord(tokens[start]) &&
+        (size === 1 ||
+          joiner === ' ' ||
+          countChars(text) <= SPACELESS_PHRASE_MAX_CHARS);
       if (fits) {
         yield { text, size };
       }

@@ -63,16 +63,67 @@ function joinKatakanaFragments(words: string[]): string[] {
   return joined;
 }
 
-function splitAtHiragana(words: string[]): string[][] {
+const HAN_PARTICLES: ReadonlySet<string> = new Set([
+  '的',
+  '了',
+  '是',
+  '在',
+  '和',
+  '与',
+  '與',
+  '及',
+  '或',
+  '让',
+  '讓',
+  '你',
+  '我',
+  '他',
+  '她',
+  '都',
+  '也',
+  '就',
+  '很',
+  '把',
+  '被',
+  '给',
+  '給',
+  '从',
+  '從',
+  '对',
+  '對',
+  '为',
+  '為',
+]);
+const SINGLE_HAN = /^\p{Script=Han}$/u;
+
+export const isBoundWord = (word: string): boolean => SINGLE_HAN.test(word);
+
+const isGrammar = (word: string): boolean =>
+  HIRAGANA_ONLY.test(word) || HAN_PARTICLES.has(word);
+
+function splitAtGrammar(words: string[]): string[][] {
   const groups: string[][] = [[]];
   for (const word of words) {
-    if (HIRAGANA_ONLY.test(word)) {
+    if (isGrammar(word)) {
       groups.push([]);
     } else {
       groups[groups.length - 1].push(word);
     }
   }
   return groups.filter((group) => group.length > 0);
+}
+
+function mergeBoundWords(words: string[]): string[] {
+  const merged: string[] = [];
+  for (const word of words) {
+    const previous = merged.at(-1);
+    if (previous !== undefined && isBoundWord(previous) && isBoundWord(word)) {
+      merged[merged.length - 1] = previous + word;
+    } else {
+      merged.push(word);
+    }
+  }
+  return merged;
 }
 
 function spacelessGroups(run: string): WordGroup[] {
@@ -87,7 +138,9 @@ function spacelessGroups(run: string): WordGroup[] {
     (countChars(run) <= SPACELESS_UNIT_MAX_CHARS || HIRAGANA_ONLY.test(core));
   const tokenGroups = keepWhole
     ? [[core]]
-    : splitAtHiragana(joinKatakanaFragments(words.map((word) => word.segment)));
+    : splitAtGrammar(
+        joinKatakanaFragments(words.map((word) => word.segment)),
+      ).map(mergeBoundWords);
   return tokenGroups.map((tokens) => ({ tokens, joiner: '' }));
 }
 
