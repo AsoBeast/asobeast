@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expectHydratesCleanly, settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
 import { SIGNED_IN_ROUTES } from "./routes.mts";
 
@@ -9,27 +9,11 @@ const AFFECTED_ROUTES = [
   ["admin-apps", "/admin/apps"],
 ] as const;
 
-function collectPageErrors(page: Page) {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  return errors;
-}
-
-async function settled(page: Page, path: string) {
-  const errors = collectPageErrors(page);
-  await page.goto(path);
-  await page.waitForLoadState("networkidle");
-  return errors;
-}
-
 for (const [name, path] of SIGNED_IN_ROUTES) {
   test(`${name} hydrates without an uncaught error in this engine`, async ({
     page,
   }) => {
-    const errors = await settled(page, path);
-
-    expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(path);
-    expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual([]);
+    await expectHydratesCleanly(page, name, path);
   });
 }
 
@@ -50,8 +34,11 @@ test("the admin app table names a storefront the same on both sides", async ({
   const errors = await settled(page, "/admin/apps");
 
   await expect(
-    page.getByRole("row").filter({ hasText: "Ana Habits" }),
-  ).toContainText("China");
+    page
+      .getByRole("row")
+      .filter({ hasText: "Ana Habits" })
+      .getByRole("cell", { name: "China", exact: true }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
 });
 
