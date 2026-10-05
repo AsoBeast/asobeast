@@ -42,8 +42,8 @@ export default async function MetadataPage({
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <div className="page-wide flex flex-col gap-8">
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="page-wide @container/metadata flex flex-col gap-8">
+        <section className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
           {result.fields.map((field) => (
             <MetadataFieldCard
               key={field.field}
