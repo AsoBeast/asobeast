@@ -14,4 +14,14 @@ describe('describeWait', () => {
   ])('describes %d seconds as %s', (seconds, words) => {
     expect(describeWait(seconds)).toBe(words);
   });
+
+  it.each([
+    [0, '1 second'],
+    [-5, '1 second'],
+    [30.5, '31 seconds'],
+    [59.5, '1 minute'],
+    [Number.NaN, '1 second'],
+  ])('never promises less than a whole second for %d', (seconds, words) => {
+    expect(describeWait(seconds)).toBe(words);
+  });
 });
