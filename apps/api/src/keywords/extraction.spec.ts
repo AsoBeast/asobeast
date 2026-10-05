@@ -131,6 +131,26 @@ describe('extractCandidates', () => {
       ]);
     });
 
+    it('joins the pieces of a katakana loanword the dictionary does not know', () => {
+      expect(texts({ title: 'ネットフリックス' })).toEqual([
+        'ネットフリックス',
+      ]);
+      expect(texts({ title: 'ユーチューブ' })).toEqual(['ユーチューブ']);
+      expect(texts({ title: 'ニンテンドースイッチオンライン' })).toEqual([
+        'ニンテンドースイッチ',
+        'スイッチオンライン',
+        'ニンテンドー',
+        'スイッチ',
+        'オンライン',
+      ]);
+      expect(texts({ title: 'メモアプリ スマホゲーム' })).toEqual([
+        'スマホゲーム',
+        'メモ',
+        'スマホ',
+        'ゲーム',
+      ]);
+    });
+
     it('keeps a short chunk whole so a brand is not split into characters', () => {
       expect(texts({ title: '微信' })).toEqual(['微信']);
       expect(texts({ title: '淘宝 - 小红书' })).toEqual(['淘宝', '小红书']);

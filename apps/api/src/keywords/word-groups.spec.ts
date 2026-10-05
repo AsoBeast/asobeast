@@ -66,6 +66,13 @@ describe('wordGroups', () => {
   });
 
   it('joins a katakana word the segmenter split into pieces', () => {
+    expect(wordGroups('ネットフリックスで映画')).toEqual([
+      { tokens: ['ネットフリックス'], joiner: '' },
+      { tokens: ['映画'], joiner: '' },
+    ]);
+    expect(wordGroups('ニンテンドースイッチ')).toEqual([
+      { tokens: ['ニンテンドー', 'スイッチ'], joiner: '' },
+    ]);
     expect(wordGroups('ラクマで売る')).toEqual([
       { tokens: ['ラクマ'], joiner: '' },
       { tokens: ['売る'], joiner: '' },

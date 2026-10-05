@@ -35,20 +35,30 @@ function trimNoise(words: Word[]): Word[] {
   return first === -1 ? [] : words.slice(first, content.lastIndexOf(true) + 1);
 }
 
-const isKatakanaFragment = (previous: string, word: string): boolean =>
-  KATAKANA_ONLY.test(previous) &&
-  KATAKANA_ONLY.test(word) &&
-  (countChars(previous) === 1 || countChars(word) === 1);
+const KATAKANA_CONTINUATION = /^[ァィゥェォッャュョヮヵヶンー]/u;
+
+const attachesLeft = (word: string): boolean =>
+  countChars(word) <= 2 || KATAKANA_CONTINUATION.test(word);
+
+const opensRight = (word: string, startsRun: boolean): boolean =>
+  word.endsWith('ッ') ||
+  (countChars(word) === 2 && word.endsWith('ー')) ||
+  (startsRun && countChars(word) === 1);
 
 function joinKatakanaFragments(words: string[]): string[] {
   const joined: string[] = [];
+  let open = false;
   for (const word of words) {
     const previous = joined.at(-1);
-    if (previous !== undefined && isKatakanaFragment(previous, word)) {
+    const katakana = KATAKANA_ONLY.test(word);
+    const continues =
+      katakana && previous !== undefined && KATAKANA_ONLY.test(previous);
+    if (continues && (open || attachesLeft(word))) {
       joined[joined.length - 1] = previous + word;
     } else {
       joined.push(word);
     }
+    open = katakana && opensRight(word, !continues);
   }
   return joined;
 }
