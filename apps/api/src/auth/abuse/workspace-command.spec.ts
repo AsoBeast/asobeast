@@ -30,6 +30,8 @@ describe('parseWorkspaceCommand', () => {
     [['suspend', 'ws_a']],
     [['suspend', 'ws_a', '']],
     [['delete', 'ws_a']],
+    [['suspend', 'ws_a', 'sustained', 'abuse']],
+    [['restore', 'ws_a', 'extra']],
   ])('refuses %j', (argv) => {
     expect(parseWorkspaceCommand(argv)).toBeNull();
   });

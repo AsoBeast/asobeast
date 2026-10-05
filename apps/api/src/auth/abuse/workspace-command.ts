@@ -12,8 +12,9 @@ export function parseWorkspaceCommand(
 ): WorkspaceCommand | null {
   const [kind, workspaceId, reason] = argv;
   if (!workspaceId) return null;
-  if (kind === 'restore') return { kind, workspaceId };
-  if (kind === 'suspend' && reason) return { kind, workspaceId, reason };
+  if (kind === 'restore' && argv.length === 2) return { kind, workspaceId };
+  if (kind === 'suspend' && argv.length === 3 && reason)
+    return { kind, workspaceId, reason };
   return null;
 }
 
