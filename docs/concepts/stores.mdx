@@ -70,8 +70,9 @@ On import and on every refresh, asobeast reads the words of the title and of the
 Japanese, Chinese, Thai, Lao, Khmer and Burmese have no spaces between words, so asobeast splits them with the word segmenter that ships with the runtime, `Intl.Segmenter`, and joins the words of a phrase without spaces, the way a person types it in the store.
 
 - **In these scripts a phrase never crosses a space, a dash or a punctuation mark.** `メルカリ` and `フリマアプリ` in a title are two keywords, never one joined keyword.
-- **A run of five characters or fewer stays whole.** A name such as `微信` is one keyword instead of two single characters, because the segmenter does not know brand names.
-- **A grammar word ends a phrase.** Hiragana only fragments and a short list of Japanese, Chinese and Thai noise words are dropped, and a phrase is never built across them.
+- **Store noise words at the start and end of a run are removed first.** `無料アプリ` gives no keyword at all, and `無料ゲーム` gives `ゲーム`.
+- **A run of five characters or fewer stays whole.** A name such as `微信` is one keyword instead of two single characters, because the segmenter does not know brand names. A hiragana name of up to five characters next to noise words is kept whole too, so `しまむら公式アプリ` gives `しまむら`.
+- **A grammar word ends a phrase.** Hiragana only fragments and a short list of Japanese, Chinese and Thai noise words are dropped, and a phrase is never built across them. A word written in hiragana inside a longer run is dropped with them, because the segmenter cannot tell it from grammar, so `ひまつぶしゲーム` gives only `ゲーム`.
 - **A phrase of two or three words is at most 10 characters.** A single word is never cut, so a long loanword stays whole.
 - **Katakana pieces that the segmenter splits are joined again**, so `スマホ` is not offered as `スマ`.
 - **Latin words in the same listing form phrases as usual.** A Latin brand next to Japanese text is its own phrase.

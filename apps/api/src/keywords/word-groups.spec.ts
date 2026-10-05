@@ -25,6 +25,16 @@ describe('wordGroups', () => {
     ]);
   });
 
+  it('trims store noise words from the edges of a run', () => {
+    expect(wordGroups('無料アプリ')).toEqual([]);
+    expect(wordGroups('無料ゲーム')).toEqual([
+      { tokens: ['ゲーム'], joiner: '' },
+    ]);
+    expect(wordGroups('しまむら公式アプリ')).toEqual([
+      { tokens: ['しまむら'], joiner: '' },
+    ]);
+  });
+
   it('splits a longer chunk at the words of the segmenter', () => {
     expect(wordGroups('フリマアプリで簡単ショッピング')).toEqual([
       { tokens: ['フリマアプリ'], joiner: '' },

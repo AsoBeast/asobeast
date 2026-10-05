@@ -1,4 +1,5 @@
 import { countChars, tokenize } from '@asobeast/shared';
+import { isExtractionStopword } from './extraction-stopwords';
 
 export interface WordGroup {
   tokens: string[];
@@ -18,10 +19,21 @@ const KATAKANA_ONLY = /^\p{scx=Katakana}+$/u;
 
 const segmenter = new Intl.Segmenter('en', { granularity: 'word' });
 
-const wordsOf = (run: string): string[] =>
+interface Word {
+  segment: string;
+  index: number;
+}
+
+const wordsOf = (run: string): Word[] =>
   [...segmenter.segment(run)]
     .filter((part) => part.isWordLike)
-    .map((part) => part.segment);
+    .map(({ segment, index }) => ({ segment, index }));
+
+function trimNoise(words: Word[]): Word[] {
+  const content = words.map((word) => !isExtractionStopword(word.segment));
+  const first = content.indexOf(true);
+  return first === -1 ? [] : words.slice(first, content.lastIndexOf(true) + 1);
+}
 
 const isKatakanaFragment = (previous: string, word: string): boolean =>
   KATAKANA_ONLY.test(previous) &&
@@ -54,10 +66,18 @@ function splitAtHiragana(words: string[]): string[][] {
 }
 
 function spacelessGroups(run: string): WordGroup[] {
-  const tokenGroups =
-    countChars(run) <= SPACELESS_UNIT_MAX_CHARS
-      ? [[run]]
-      : splitAtHiragana(joinKatakanaFragments(wordsOf(run)));
+  const words = trimNoise(wordsOf(run));
+  if (words.length === 0) {
+    return [];
+  }
+  const last = words[words.length - 1];
+  const core = run.slice(words[0].index, last.index + last.segment.length);
+  const keepWhole =
+    countChars(core) <= SPACELESS_UNIT_MAX_CHARS &&
+    (countChars(run) <= SPACELESS_UNIT_MAX_CHARS || HIRAGANA_ONLY.test(core));
+  const tokenGroups = keepWhole
+    ? [[core]]
+    : splitAtHiragana(joinKatakanaFragments(words.map((word) => word.segment)));
   return tokenGroups.map((tokens) => ({ tokens, joiner: '' }));
 }
 

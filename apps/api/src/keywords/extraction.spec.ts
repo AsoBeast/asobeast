@@ -213,6 +213,18 @@ describe('extractCandidates', () => {
       ]);
     });
 
+    it('drops store noise words at the edges of a short run', () => {
+      expect(texts({ title: '無料アプリ' })).toEqual([]);
+      expect(texts({ title: '公式アプリ' })).toEqual([]);
+      expect(texts({ title: '無料ゲーム' })).toEqual(['ゲーム']);
+    });
+
+    it('keeps a hiragana name next to store noise words whole', () => {
+      expect(texts({ title: 'しまむら公式アプリ' })).toEqual(['しまむら']);
+      expect(texts({ title: 'ぬりえアプリ' })).toEqual(['ぬりえ']);
+      expect(texts({ title: 'メルカリ公式アプリ' })).toEqual(['メルカリ']);
+    });
+
     it('returns nothing for text made only of particles and punctuation', () => {
       expect(texts({ title: 'の、に。を！' })).toEqual([]);
     });
