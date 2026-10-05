@@ -151,9 +151,13 @@ describe('extractCandidates', () => {
       ]);
     });
 
-    it('keeps a short chunk whole so a brand is not split into characters', () => {
+    it('keeps a brand together when the segmenter splits it into characters', () => {
       expect(texts({ title: '微信' })).toEqual(['微信']);
-      expect(texts({ title: '淘宝 - 小红书' })).toEqual(['淘宝', '小红书']);
+      expect(texts({ title: '淘宝 - 小红书' })).toEqual([
+        '小红书',
+        '淘宝',
+        '小红',
+      ]);
     });
 
     it('keeps a one character han word inside the compound it ends', () => {
@@ -195,7 +199,59 @@ describe('extractCandidates', () => {
         '记账',
         '钱包',
       ]);
-      expect(texts({ title: '新機能で便利に' })).toEqual(['機能', '便利']);
+      expect(texts({ title: '朋友的照片' })).toEqual(['朋友', '照片']);
+    });
+
+    it('lets a one character han word start a phrase only at the start of a chunk', () => {
+      expect(texts({ title: '新機能で便利に' })).toEqual([
+        '新機能',
+        '機能',
+        '便利',
+      ]);
+      expect(texts({ title: '筋トレ記録' })).toEqual([
+        '筋トレ記録',
+        '筋トレ',
+        'トレ記録',
+        'トレ',
+        '記録',
+      ]);
+      expect(texts({ title: 'iPhone用カメラアプリ' })).toEqual([
+        'iphone',
+        'カメラ',
+      ]);
+    });
+
+    it('does not keep a short sentence with a grammar word whole', () => {
+      expect(texts({ title: '猫のゲーム' })).toEqual(['ゲーム']);
+      expect(texts({ title: '毎日の記録' })).toEqual(['毎日', '記録']);
+      expect(texts({ title: '新闻与资讯' })).toEqual(['新闻', '资讯']);
+      expect(texts({ title: '为你推荐' })).toEqual(['推荐']);
+    });
+
+    it('offers the words of a short run as well as the run', () => {
+      expect(texts({ title: '天気予報' })).toEqual([
+        '天気予報',
+        '天気',
+        '予報',
+      ]);
+      expect(texts({ title: '超级计算器' })).toEqual([
+        '超级计算器',
+        '超级计算',
+        '计算器',
+        '超级',
+        '计算',
+      ]);
+      expect(texts({ title: '老年人手机' })).toEqual([
+        '老年人手机',
+        '老年人',
+        '手机',
+      ]);
+      expect(texts({ title: '高德地图' })).toEqual([
+        '高德地图',
+        '高德',
+        '地图',
+      ]);
+      expect(texts({ title: 'ぐるなび' })).toEqual(['ぐるなび']);
     });
 
     it('drops grammar and store noise words of a chinese listing', () => {
@@ -256,9 +312,11 @@ describe('extractCandidates', () => {
         }),
       ).toEqual([
         { text: 'photo editor', source: 'TITLE', weight: 3 },
+        { text: '写真加工', source: 'TITLE', weight: 3 },
         { text: 'photo', source: 'TITLE', weight: 3 },
         { text: 'editor', source: 'TITLE', weight: 3 },
-        { text: '写真加工', source: 'TITLE', weight: 3 },
+        { text: '写真', source: 'TITLE', weight: 3 },
+        { text: '加工', source: 'TITLE', weight: 3 },
         { text: 'iphone', source: 'SUBTITLE', weight: 2 },
         { text: 'カメラ', source: 'SUBTITLE', weight: 2 },
       ]);
@@ -269,7 +327,12 @@ describe('extractCandidates', () => {
         'メルカリ',
         'フリマアプリ',
       ]);
-      expect(texts({ title: 'Yahoo!乗換案内' })).toEqual(['yahoo', '乗換案内']);
+      expect(texts({ title: 'Yahoo!乗換案内' })).toEqual([
+        '乗換案内',
+        'yahoo',
+        '乗換',
+        '案内',
+      ]);
     });
 
     it('breaks a phrase at a grammar word rather than joining across it', () => {

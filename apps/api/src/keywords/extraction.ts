@@ -65,15 +65,19 @@ interface Gram {
   size: number;
 }
 
+const canStartPhrase = (token: string, asPrefix: boolean): boolean =>
+  asPrefix || !isBoundWord(token);
+
 function* ngrams(
   tokens: string[],
   joiner: WordGroup['joiner'],
+  leads: boolean,
 ): Generator<Gram> {
   for (let size = 1; size <= MAX_NGRAM; size += 1) {
     for (let start = 0; start + size <= tokens.length; start += 1) {
       const text = tokens.slice(start, start + size).join(joiner);
       const fits =
-        !isBoundWord(tokens[start]) &&
+        canStartPhrase(tokens[start], leads && start === 0 && size > 1) &&
         (size === 1 ||
           joiner === ' ' ||
           phraseWidth(text) <= SPACELESS_PHRASE_MAX_WIDTH);
@@ -87,8 +91,8 @@ function* ngrams(
 function* fieldGrams(text: string): Generator<Gram> {
   for (const segment of text.split(SEGMENT_SEPARATORS)) {
     for (const group of wordGroups(segment)) {
-      for (const tokens of usableRuns(group)) {
-        yield* ngrams(tokens, group.joiner);
+      for (const [index, tokens] of usableRuns(group).entries()) {
+        yield* ngrams(tokens, group.joiner, group.startsChunk && index === 0);
       }
     }
   }

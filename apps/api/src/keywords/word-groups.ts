@@ -8,6 +8,7 @@ import {
 export interface WordGroup {
   tokens: string[];
   joiner: ' ' | '';
+  startsChunk: boolean;
 }
 
 const SPACELESS_UNIT_MAX_CHARS = 5;
@@ -93,22 +94,31 @@ function mergeBoundWords(words: string[]): string[] {
   return merged;
 }
 
-function spacelessGroups(run: string): WordGroup[] {
-  const words = trimNoise(wordsOf(run));
+function spacelessGroups(run: string, startsChunk: boolean): WordGroup[] {
+  const runWords = wordsOf(run);
+  const words = trimNoise(runWords);
   if (words.length === 0) {
     return [];
   }
   const last = words[words.length - 1];
   const core = run.slice(words[0].index, last.index + last.segment.length);
-  const keepWhole =
+  if (
     countChars(core) <= SPACELESS_UNIT_MAX_CHARS &&
-    (countChars(run) <= SPACELESS_UNIT_MAX_CHARS || HIRAGANA_ONLY.test(core));
-  const tokenGroups = keepWhole
-    ? [[core]]
-    : splitAtGrammar(
-        joinKatakanaFragments(words.map((word) => word.segment)),
-      ).map(mergeBoundWords);
-  return tokenGroups.map((tokens) => ({ tokens, joiner: '' }));
+    HIRAGANA_ONLY.test(core)
+  ) {
+    return [{ tokens: [core], joiner: '', startsChunk }];
+  }
+  const leads =
+    startsChunk && words[0] === runWords[0] && !isGrammar(words[0].segment);
+  return splitAtGrammar(
+    joinKatakanaFragments(words.map((word) => word.segment)),
+  )
+    .map(mergeBoundWords)
+    .map((tokens, index): WordGroup => ({
+      tokens,
+      joiner: '',
+      startsChunk: leads && index === 0,
+    }));
 }
 
 export function wordGroups(segment: string): WordGroup[] {
@@ -116,15 +126,15 @@ export function wordGroups(segment: string): WordGroup[] {
   let spaced: string[] = [];
   const flushSpaced = () => {
     if (spaced.length > 0) {
-      groups.push({ tokens: spaced, joiner: ' ' });
+      groups.push({ tokens: spaced, joiner: ' ', startsChunk: false });
       spaced = [];
     }
   };
   for (const chunk of tokenize(segment)) {
-    for (const run of chunk.match(SPACELESS_OR_NOT) ?? []) {
+    for (const { 0: run, index } of chunk.matchAll(SPACELESS_OR_NOT)) {
       if (SPACELESS_CHARACTER.test(run)) {
         flushSpaced();
-        groups.push(...spacelessGroups(run));
+        groups.push(...spacelessGroups(run, index === 0));
       } else {
         spaced.push(run);
       }
