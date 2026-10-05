@@ -57,6 +57,7 @@ export function KeywordRowActions({
     },
     onError: () => toast.error(`Could not queue scoring for ${keyword.text}`),
   });
+  const scoreOnce = useSingleFlight(score);
 
   const remove = useMutation({
     mutationFn: () => removeKeyword(appId, keyword.keywordId),
@@ -96,7 +97,7 @@ export function KeywordRowActions({
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={score.isPending}
-            onSelect={() => score.mutate()}
+            onSelect={() => scoreOnce()}
           >
             <Sparkles />
             Score now
