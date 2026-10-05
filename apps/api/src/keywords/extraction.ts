@@ -31,7 +31,16 @@ const MIN_TOKEN_LENGTH = 2;
 const MAX_NGRAM = 3;
 const MAX_CANDIDATES = 60;
 const SEGMENT_SEPARATORS = /[:.,|&]/;
-const SPACELESS_PHRASE_MAX_CHARS = 10;
+const SPACELESS_PHRASE_MAX_WIDTH = 20;
+const WIDE_CHARACTER = /[\p{Script=Han}\p{scx=Hiragana}\p{scx=Katakana}]/u;
+
+const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
+
+const phraseWidth = (text: string): number =>
+  [...graphemes.segment(text)].reduce(
+    (width, { segment }) => width + (WIDE_CHARACTER.test(segment) ? 2 : 1),
+    0,
+  );
 
 const isUsable = (token: string): boolean =>
   countChars(token) >= MIN_TOKEN_LENGTH && !isExtractionStopword(token);
@@ -67,7 +76,7 @@ function* ngrams(
         !isBoundWord(tokens[start]) &&
         (size === 1 ||
           joiner === ' ' ||
-          countChars(text) <= SPACELESS_PHRASE_MAX_CHARS);
+          phraseWidth(text) <= SPACELESS_PHRASE_MAX_WIDTH);
       if (fits) {
         yield { text, size };
       }

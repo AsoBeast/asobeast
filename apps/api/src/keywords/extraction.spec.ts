@@ -232,6 +232,22 @@ describe('extractCandidates', () => {
       ]);
     });
 
+    it('measures a thai phrase in letters with their marks', () => {
+      expect(texts({ title: 'ธนาคารออนไลน์' })).toEqual([
+        'ธนาคารออนไลน์',
+        'ธนาคาร',
+        'ออนไลน์',
+      ]);
+      expect(texts({ title: 'สั่งอาหารออนไลน์' })).toEqual([
+        'สั่งอาหารออนไลน์',
+        'สั่งอาหาร',
+        'อาหารออนไลน์',
+        'สั่ง',
+        'อาหาร',
+        'ออนไลน์',
+      ]);
+    });
+
     it('builds latin phrases and spaceless words side by side', () => {
       expect(
         extractCandidates({
