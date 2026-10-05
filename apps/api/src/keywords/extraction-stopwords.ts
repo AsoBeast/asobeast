@@ -53,11 +53,13 @@ const ARABIC = [
   'التي',
   'الذي',
   'أو',
+  'او',
   'ثم',
   'كل',
   'هو',
   'هي',
   'أن',
+  'ان',
   'إن',
   'لا',
   'ما',
@@ -71,9 +73,13 @@ const ARABIC = [
   'اكثر',
   'أفضل',
   'افضل',
+  'الأفضل',
   'مجاني',
+  'مجانية',
   'مجانا',
   'تطبيق',
+  'تطبيقات',
+  'التطبيق',
   'رسمي',
   'جديد',
   'تحميل',
@@ -93,7 +99,13 @@ const isConjoinedArabicStopword = (token: string): boolean =>
   token.startsWith(ARABIC_CONJUNCTION) &&
   ARABIC_WORDS.has(token.slice(ARABIC_CONJUNCTION.length));
 
-export const isExtractionStopword = (token: string): boolean =>
-  isStopword(token) ||
-  EXTRACTION_STOPWORDS.has(token) ||
-  isConjoinedArabicStopword(token);
+const ARABIC_DECORATION = /\u0640|\u0670|[\u064B-\u065F]/gu;
+
+export const isExtractionStopword = (token: string): boolean => {
+  const word = token.replace(ARABIC_DECORATION, '');
+  return (
+    isStopword(word) ||
+    EXTRACTION_STOPWORDS.has(word) ||
+    isConjoinedArabicStopword(word)
+  );
+};

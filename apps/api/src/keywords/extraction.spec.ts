@@ -354,6 +354,18 @@ describe('extractCandidates', () => {
       ]);
     });
 
+    it('drops a decorated arabic stopword but keeps the written form of a word', () => {
+      expect(texts({ title: 'كريم - توصيل طعام وأكـثر' })).toEqual([
+        'كريم توصيل طعام',
+        'كريم توصيل',
+        'توصيل طعام',
+        'كريم',
+        'توصيل',
+        'طعام',
+      ]);
+      expect(texts({ title: 'مَطْعَم أَكْثَر' })).toEqual(['مَطْعَم']);
+    });
+
     it('leaves a word that begins with the conjunction letter alone', () => {
       expect(texts({ title: 'وقت الصلاة' })).toEqual([
         'وقت الصلاة',

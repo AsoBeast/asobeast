@@ -40,4 +40,17 @@ describe('isExtractionStopword', () => {
     expect(isExtractionStopword('وطعام')).toBe(false);
     expect(isExtractionStopword('و')).toBe(false);
   });
+
+  it('matches arabic stopwords written with tatweel or harakat', () => {
+    expect(isExtractionStopword('وأكـثر')).toBe(true);
+    expect(isExtractionStopword('أَكْثَر')).toBe(true);
+    expect(isExtractionStopword('تـطـبـيـق')).toBe(true);
+    expect(isExtractionStopword('وَقْت')).toBe(false);
+  });
+
+  it('flags the common arabic store forms', () => {
+    for (const word of ['او', 'ان', 'تطبيقات', 'التطبيق', 'الأفضل', 'مجانية']) {
+      expect(isExtractionStopword(word)).toBe(true);
+    }
+  });
 });
