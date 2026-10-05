@@ -80,6 +80,40 @@ describe('the clear play varies version migration', () => {
     });
   });
 
+  it('drops a stored version change that only ever moved between no version and the marker', async () => {
+    const play = await seedApp(Store.GOOGLE_PLAY);
+    await prisma.changeEvent.createMany({
+      data: [
+        { appId: play.id, field: 'version', before: null, after: 'VARY' },
+        { appId: play.id, field: 'version', before: 'VARY', after: null },
+        { appId: play.id, field: 'version', before: '', after: 'VARY' },
+        { appId: play.id, field: 'version', before: 'VARY', after: '' },
+        { appId: play.id, field: 'version', before: '5.0.0', after: '' },
+      ],
+    });
+
+    await runMigration();
+
+    const events = await prisma.changeEvent.findMany({
+      where: { appId: play.id },
+      select: { before: true, after: true },
+    });
+    expect(events).toEqual([{ before: '5.0.0', after: '' }]);
+  });
+
+  it('keeps an empty version change of an app store app', async () => {
+    const apple = await seedApp(Store.APP_STORE);
+    await prisma.changeEvent.create({
+      data: { appId: apple.id, field: 'version', before: null, after: 'VARY' },
+    });
+
+    await runMigration();
+
+    await expect(
+      prisma.changeEvent.count({ where: { appId: apple.id } }),
+    ).resolves.toBe(1);
+  });
+
   it('clears the marker from stored version changes only', async () => {
     const play = await seedApp(Store.GOOGLE_PLAY);
     await prisma.changeEvent.createMany({
