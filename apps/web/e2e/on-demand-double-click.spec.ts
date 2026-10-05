@@ -86,4 +86,42 @@ test.describe("on demand actions send one request per click", () => {
     await expect(toast(page, /^Queued · scoring$/)).toHaveCount(1);
     expect(posts).toHaveLength(1);
   });
+
+  test("Score now stays disabled while its request is pending after the keywords page remounts", async ({
+    page,
+  }) => {
+    let releaseScore!: () => void;
+    const held = new Promise<void>((resolve) => {
+      releaseScore = resolve;
+    });
+    await page.route(SCORE_URL, async (route) => {
+      await held;
+      await route.continue();
+    });
+    const posts = countPosts(page, SCORE_URL);
+    const sections = page.getByRole("navigation", { name: "App sections" });
+    const openFirstRowMenu = async () =>
+      (
+        await hydrated(
+          page.getByRole("button", { name: "Keyword actions" }).first(),
+        )
+      ).click();
+    await page.goto("/apps/app-1/keywords");
+
+    await openFirstRowMenu();
+    await page.getByRole("menuitem", { name: "Score now" }).click();
+    await expect.poll(() => posts.length).toBe(1);
+    await sections.getByRole("link", { name: "Rankings", exact: true }).click();
+    await expect(page).toHaveURL(/\/apps\/app-1\/rankings$/);
+    await sections.getByRole("link", { name: "Keywords", exact: true }).click();
+    await expect(page).toHaveURL(/\/apps\/app-1\/keywords$/);
+    await openFirstRowMenu();
+
+    await expect(
+      page.getByRole("menuitem", { name: "Score now" }),
+    ).toBeDisabled();
+    releaseScore();
+    await expect(toast(page, /^Queued · scoring$/)).toHaveCount(1);
+    expect(posts).toHaveLength(1);
+  });
 });
