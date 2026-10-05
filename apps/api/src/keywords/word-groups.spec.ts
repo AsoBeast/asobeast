@@ -123,4 +123,21 @@ describe('wordGroups', () => {
       { tokens: ['乗換', '案内'], joiner: '', startsChunk: true },
     ]);
   });
+
+  it('splits at chinese particles only in text without kana', () => {
+    expect(wordGroups('東京都防災アプリ')).toEqual([
+      { tokens: ['東京', '都', '防災'], joiner: '', startsChunk: true },
+    ]);
+    expect(wordGroups('和风天气 在线教育')).toEqual([
+      { tokens: ['和风', '天气'], joiner: '', startsChunk: true },
+      { tokens: ['在线', '教育'], joiner: '', startsChunk: true },
+    ]);
+  });
+
+  it('adds a short title with a pronoun as a whole', () => {
+    expect(wordGroups('我的世界')).toEqual([
+      { tokens: ['我的', '世界'], joiner: '', startsChunk: true },
+      { tokens: ['我的世界'], joiner: '', startsChunk: false },
+    ]);
+  });
 });

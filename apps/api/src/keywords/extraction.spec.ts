@@ -202,6 +202,37 @@ describe('extractCandidates', () => {
       expect(texts({ title: '朋友的照片' })).toEqual(['朋友', '照片']);
     });
 
+    it('keeps a short chinese title that starts with a pronoun', () => {
+      expect(texts({ title: '我的世界' })).toEqual(['世界', '我的世界']);
+      expect(texts({ title: '我的汤姆猫' })).toContain('我的汤姆猫');
+    });
+
+    it('reads chinese particle characters as words in japanese text', () => {
+      expect(texts({ title: '就活準備アプリ' })).toEqual([
+        '就活準備',
+        '就活',
+        '準備',
+      ]);
+      expect(texts({ title: '東京都防災アプリ' })).toEqual([
+        '東京都防災',
+        '東京都',
+        '東京',
+        '防災',
+      ]);
+      expect(texts({ title: '東京都公式アプリ' })).toEqual(['東京都', '東京']);
+    });
+
+    it('keeps the chinese word for online together', () => {
+      expect(texts({ title: '在线教育平台' })).toEqual([
+        '在线教育平台',
+        '在线教育',
+        '教育平台',
+        '在线',
+        '教育',
+        '平台',
+      ]);
+    });
+
     it('lets a one character han word start a phrase only at the start of a chunk', () => {
       expect(texts({ title: '新機能で便利に' })).toEqual([
         '新機能',

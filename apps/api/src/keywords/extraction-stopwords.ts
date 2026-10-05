@@ -1,15 +1,10 @@
 import { isStopword } from '@asobeast/shared';
 
-const JAPANESE = ['アプリ', '無料', '公式', 'ダウンロード'];
+const JAPANESE_NOISE = ['アプリ', '無料', '公式', 'ダウンロード'];
+
+const CHINESE_NOISE = ['应用', '應用', '免费', '免費', '官方', '下载', '下載'];
 
 const CHINESE = [
-  '应用',
-  '應用',
-  '免费',
-  '免費',
-  '官方',
-  '下载',
-  '下載',
   '一个',
   '一個',
   '我们',
@@ -24,7 +19,6 @@ const CHINESE_PARTICLES: ReadonlySet<string> = new Set([
   '的',
   '了',
   '是',
-  '在',
   '和',
   '与',
   '與',
@@ -51,10 +45,9 @@ const CHINESE_PARTICLES: ReadonlySet<string> = new Set([
   '为',
   '為',
 ]);
+const THAI_NOISE = ['แอป', 'แอปพลิเคชัน', 'ฟรี'];
+
 const THAI = [
-  'แอป',
-  'แอปพลิเคชัน',
-  'ฟรี',
   'และ',
   'ที่',
   'ที่สุด',
@@ -119,12 +112,19 @@ const ARABIC = [
 const ARABIC_CONJUNCTION = 'و';
 
 const ARABIC_WORDS: ReadonlySet<string> = new Set(ARABIC);
+const STORE_NOISE: ReadonlySet<string> = new Set([
+  ...JAPANESE_NOISE,
+  ...CHINESE_NOISE,
+  ...THAI_NOISE,
+]);
 const EXTRACTION_STOPWORDS: ReadonlySet<string> = new Set([
-  ...JAPANESE,
+  ...STORE_NOISE,
   ...CHINESE,
   ...THAI,
   ...ARABIC,
 ]);
+
+export const isStoreNoise = (word: string): boolean => STORE_NOISE.has(word);
 
 const isConjoinedArabicStopword = (token: string): boolean =>
   token.startsWith(ARABIC_CONJUNCTION) &&

@@ -1,4 +1,4 @@
-import { isExtractionStopword } from './extraction-stopwords';
+import { isExtractionStopword, isStoreNoise } from './extraction-stopwords';
 
 describe('isExtractionStopword', () => {
   it('keeps every english stopword', () => {
@@ -52,5 +52,15 @@ describe('isExtractionStopword', () => {
     for (const word of ['او', 'ان', 'تطبيقات', 'التطبيق', 'الأفضل', 'مجانية']) {
       expect(isExtractionStopword(word)).toBe(true);
     }
+  });
+});
+
+describe('isStoreNoise', () => {
+  it('flags store noise but not pronouns or particles', () => {
+    expect(isStoreNoise('アプリ')).toBe(true);
+    expect(isStoreNoise('免费')).toBe(true);
+    expect(isStoreNoise('แอป')).toBe(true);
+    expect(isStoreNoise('我的')).toBe(false);
+    expect(isStoreNoise('และ')).toBe(false);
   });
 });

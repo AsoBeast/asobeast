@@ -1,8 +1,13 @@
 import { countChars, tokenize } from '@asobeast/shared';
-import { SPACELESS_CHARACTER, SPACELESS_OR_NOT } from '../common/text/scripts';
+import {
+  KANA_CHARACTER,
+  SPACELESS_CHARACTER,
+  SPACELESS_OR_NOT,
+} from '../common/text/scripts';
 import {
   isChineseParticle,
   isExtractionStopword,
+  isStoreNoise,
 } from './extraction-stopwords';
 
 export interface WordGroup {
@@ -29,7 +34,7 @@ const wordsOf = (run: string): Word[] =>
     .map(({ segment, index }) => ({ segment, index }));
 
 function trimNoise(words: Word[]): Word[] {
-  const content = words.map((word) => !isExtractionStopword(word.segment));
+  const content = words.map((word) => !isStoreNoise(word.segment));
   const first = content.indexOf(true);
   return first === -1 ? [] : words.slice(first, content.lastIndexOf(true) + 1);
 }
@@ -66,10 +71,13 @@ const SINGLE_HAN = /^\p{Script=Han}$/u;
 
 export const isBoundWord = (word: string): boolean => SINGLE_HAN.test(word);
 
-const isGrammar = (word: string): boolean =>
+type WordTest = (word: string) => boolean;
+
+const japaneseGrammar: WordTest = (word) => HIRAGANA_ONLY.test(word);
+const chineseGrammar: WordTest = (word) =>
   HIRAGANA_ONLY.test(word) || isChineseParticle(word);
 
-function splitAtGrammar(words: string[]): string[][] {
+function splitAtGrammar(words: string[], isGrammar: WordTest): string[][] {
   const groups: string[][] = [[]];
   for (const word of words) {
     if (isGrammar(word)) {
@@ -94,7 +102,20 @@ function mergeBoundWords(words: string[]): string[] {
   return merged;
 }
 
-function spacelessGroups(run: string, startsChunk: boolean): WordGroup[] {
+const isShortTitle = (
+  core: string,
+  words: Word[],
+  isGrammar: WordTest,
+): boolean =>
+  countChars(core) <= SPACELESS_UNIT_MAX_CHARS &&
+  !words.some((word) => isGrammar(word.segment)) &&
+  words.some((word) => isExtractionStopword(word.segment));
+
+function spacelessGroups(
+  run: string,
+  startsChunk: boolean,
+  isGrammar: WordTest,
+): WordGroup[] {
   const runWords = wordsOf(run);
   const words = trimNoise(runWords);
   if (words.length === 0) {
@@ -110,8 +131,9 @@ function spacelessGroups(run: string, startsChunk: boolean): WordGroup[] {
   }
   const leads =
     startsChunk && words[0] === runWords[0] && !isGrammar(words[0].segment);
-  return splitAtGrammar(
+  const groups = splitAtGrammar(
     joinKatakanaFragments(words.map((word) => word.segment)),
+    isGrammar,
   )
     .map(mergeBoundWords)
     .map((tokens, index): WordGroup => ({
@@ -119,6 +141,9 @@ function spacelessGroups(run: string, startsChunk: boolean): WordGroup[] {
       joiner: '',
       startsChunk: leads && index === 0,
     }));
+  return startsChunk && isShortTitle(core, words, isGrammar)
+    ? [...groups, { tokens: [core], joiner: '', startsChunk: false }]
+    : groups;
 }
 
 export function wordGroups(segment: string): WordGroup[] {
@@ -130,11 +155,14 @@ export function wordGroups(segment: string): WordGroup[] {
       spaced = [];
     }
   };
+  const isGrammar = KANA_CHARACTER.test(segment)
+    ? japaneseGrammar
+    : chineseGrammar;
   for (const chunk of tokenize(segment)) {
     for (const { 0: run, index } of chunk.matchAll(SPACELESS_OR_NOT)) {
       if (SPACELESS_CHARACTER.test(run)) {
         flushSpaced();
-        groups.push(...spacelessGroups(run, index === 0));
+        groups.push(...spacelessGroups(run, index === 0, isGrammar));
       } else {
         spaced.push(run);
       }
