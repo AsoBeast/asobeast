@@ -28,7 +28,7 @@ Server rendered pages skip the proxy and call `API_INTERNAL_URL` directly, which
 | HTTP API | The NestJS API behind the proxy | Sessions and personal API tokens |
 | Remote MCP endpoint | `POST /mcp` inside the API, read only | An agent holding a personal API token |
 | Local MCP server | A read only stdio process over the HTTP API | An agent on your machine |
-| Admin surfaces | The queue dashboard and the OpenAPI surface | The owner account only |
+| Admin surfaces | The admin area, the queue dashboard and the OpenAPI surface | The platform operator only |
 
 Both MCP surfaces register one catalog of tool definitions and serve MCP `2026-07-28` alongside the 2025 revisions. The remote endpoint builds one server instance per request and holds nothing between requests, which is no longer a transport setting but a property of the protocol: `2026-07-28` has no sessions to hold. See [The asobeast MCP server](/mcp/introduction).
 

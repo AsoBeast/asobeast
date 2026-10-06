@@ -66,7 +66,7 @@ The **Admin** entry stays in the sidebar, the command palette and the account me
 
 `GET /admin/capacity` and `GET /admin/proxy-pool` check only that the caller is the operator, so they keep answering `200` for an operator without a plan. The web app closes the whole area in that state so it never half loads.
 
-An admin request can also be refused while the operator's workspace has a plan, for example when the workspace is suspended. The tab then says that the admin endpoints answer not found unless the workspace has a plan in force and is not suspended, rather than saying a record was deleted.
+An admin request can also be refused while the operator's workspace has a plan, for example on an instance an earlier release left with that workspace suspended. The tab then says that the admin endpoints answer not found unless the workspace has a plan in force and is not suspended, rather than saying a record was deleted.
 
 ## Why 404 and not 403?
 

@@ -75,8 +75,8 @@ Every service has a health check and a restart policy, and the application conta
 | `http://localhost:3001` | The dashboard is serving |
 | `http://localhost:3001/api/health` | The web container is alive |
 | `http://localhost:3001/api/backend/health` | The API is alive and reachable through the proxy |
-| `http://localhost:3001/admin/queues` | The queue dashboard, for a signed in owner |
-| `http://localhost:3001/docs` | The OpenAPI surface, for a signed in owner under the default `API_DOCS=owner` |
+| `http://localhost:3001/admin/queues` | The queue dashboard, for the signed in platform operator |
+| `http://localhost:3001/docs` | The OpenAPI surface, for the signed in platform operator under the default `API_DOCS=owner` |
 
 <Warning>
   `/admin/queues` and `/docs` answer 404 to anyone who is not a signed in owner. That is deliberate. A 403 would confirm the surface exists, so the gate answers as though it does not.

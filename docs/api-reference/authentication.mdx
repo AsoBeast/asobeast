@@ -62,7 +62,7 @@ Rate limits count per workspace rather than per token, so minting a second token
 | `402` | The account is not entitled, which only happens when `BILLING_ENABLED` is `true` |
 | `403` | The token is read only and the request would change something, or the workspace is suspended |
 | `429` | A plan rate limit is spent. `Retry-After` says when it reopens |
-| `404` on `/docs` or `/admin/queues` | You are not an owner. These surfaces answer `404` rather than confirming they exist |
+| `404` on `/docs` or `/admin/queues` | You are not the platform operator. These surfaces answer `404` rather than confirming they exist |
 
 A `401` after a deployment usually means `AUTH_SECRET` was rotated, which invalidates sessions. Personal API tokens survive a rotation, because they are stored as hashes rather than signed. See [Rotate secrets](/operations/rotate-secrets).
 
