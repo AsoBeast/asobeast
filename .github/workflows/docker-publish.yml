@@ -5,6 +5,9 @@ on:
       tag:
         required: true
         type: string
+    secrets:
+      SENTRY_AUTH_TOKEN:
+        required: false
   workflow_dispatch:
     inputs:
       tag:
