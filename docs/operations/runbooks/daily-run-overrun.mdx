@@ -17,10 +17,12 @@ The daily pipeline has one job: capture every tracked keyword market once per UT
 
 ## Triage
 
+The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. The `POST` requests need a write scoped one. See [API tokens](/security/api-tokens).
+
 <Steps>
   <Step title="Rule out the dependencies first">
     ```bash
-    curl --silent http://127.0.0.1:3000/api/backend/health | jq '{db, redis, pipeline}'
+    curl --silent http://127.0.0.1:3001/api/backend/health | jq '{db, redis, pipeline}'
     ```
 
     A `redis` of `down` means nothing is running at all. Restore Redis before reading anything else.
@@ -54,9 +56,10 @@ The pipeline already sheds load under pressure, dropping the least valuable stag
 
    ```bash
    curl --silent --request POST \
+     --header "Authorization: Bearer $ASOBEAST_API_TOKEN" \
      --header 'Content-Type: application/json' \
      --data '{"confirm":true,"reason":"catching up after an overrun"}' \
-     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/run-daily
+     http://127.0.0.1:3001/api/backend/admin/support/workspaces/<id>/run-daily
    ```
 2. Watch `asobeast_workspace_rankings_captured` reach `asobeast_workspace_keyword_markets` for each one before queuing the next.
 3. If the overrun was demand rather than a fault, the fix is capacity, not scheduling. See [Capacity exhaustion](/operations/runbooks/capacity-exhaustion).

@@ -19,10 +19,12 @@ The decision is settled in advance: **gate registration rather than degrade payi
 
 ## Triage
 
+The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. See [API tokens](/security/api-tokens).
+
 <Steps>
   <Step title="Measure the ceiling, do not estimate it">
     ```bash
-    curl --silent http://127.0.0.1:3000/api/backend/admin/capacity | jq
+    curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.0.1:3001/api/backend/admin/capacity | jq
     ```
 
     This reports demand against capacity for both stores. `GET /jobs/budget` gives the same view for one workspace.

@@ -18,11 +18,13 @@ In the order they appear:
 
 1. **The store canary reports `broken`.** A scheduled check asks each store whether it still parses on `CRON_STORE_CANARY`, four times a day by default, an hour before the daily run. It names the store before any user notices a stale number, and `store.parser.broken` pages on the first failing run.
 2. Rankings stop advancing. The most recent date on the keyword monitor stays fixed while the calendar moves.
-3. The health badge in the header turns amber and names a failed job count.
+3. For the platform operator, the health badge in the header turns amber and names a failed job count.
 4. Failed jobs accumulate in the queue dashboard at `/admin/queues`.
 5. **The data derived alerts stay silent.** This is the most misleading symptom, and it is worth stating plainly: those alerts are generated from captured data, so when nothing is captured, nothing alerts. The canary is the exception precisely because it asks the store a question of its own instead of reading what was collected. Silence from the rest is not health.
 
 ## Triage
+
+The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. See [API tokens](/security/api-tokens).
 
 Three causes look identical from the outside. This tells them apart.
 
@@ -31,7 +33,7 @@ Three causes look identical from the outside. This tells them apart.
     The canary has already classified the failure, so read it before reading the failed set:
 
     ```bash
-    curl --silent http://127.0.0.1:3000/metrics | grep asobeast_store_canary
+    curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.0.1:3001/metrics | grep asobeast_store_canary
     ```
 
     | Verdict | What it means | Where to go |
@@ -47,7 +49,7 @@ Three causes look identical from the outside. This tells them apart.
   </Step>
   <Step title="Read the failure count">
     ```bash
-    curl --silent http://127.0.0.1:3000/api/backend/health | jq '.pipeline'
+    curl --silent http://127.0.0.1:3001/api/backend/health | jq '.pipeline'
     ```
 
     `failedJobs` counts the App Store, Google Play and alert queues together. A non zero value that keeps climbing across daily runs is the signal. A single failure that clears on retry is not an incident.

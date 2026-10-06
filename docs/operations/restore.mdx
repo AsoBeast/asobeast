@@ -24,8 +24,8 @@ docker compose exec -T postgres dropdb --username asobeast --if-exists asobeast
 docker compose exec -T postgres createdb --username asobeast asobeast
 docker compose exec -T postgres pg_restore --username asobeast --dbname asobeast --clean --if-exists --no-owner --exit-on-error < "$restore_file"
 docker compose up -d --wait
-curl --fail --silent --show-error http://127.0.0.1:3000/api/health
-curl --fail --silent --show-error http://127.0.0.1:3000/api/backend/health
+curl --fail --silent --show-error http://127.0.0.1:3001/api/health
+curl --fail --silent --show-error http://127.0.0.1:3001/api/backend/health
 docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "App";'
 docker compose exec -T postgres psql --username asobeast --dbname asobeast --command 'select count(*) from "Keyword";'
 ```

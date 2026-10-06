@@ -66,16 +66,16 @@ Outbound connections to your own SMTP relay, your own webhook endpoints and the 
 
 ## Which ports does asobeast publish?
 
-One. The web container publishes `3000` and nothing else is reachable from outside the Docker network.
+One. The web container publishes host port `3001`, mapped to its port `3000`, and nothing else is reachable from outside the Docker network.
 
 | Port | Service | Published |
 | --- | --- | --- |
-| 3000 | `web` | Yes, this is the only entry point |
+| 3001 on the host, 3000 in the container | `web` | Yes, this is the only entry point |
 | 4000 | `api` | No, private to the Compose network |
 | 5432 | `postgres` | No, the backend network is marked internal |
 | 6379 | `redis` | No, the backend network is marked internal |
 
-The browser reaches the API through `/api/backend/*` on the web origin, which forwards to `API_INTERNAL_URL`. The development Compose file is different on purpose: it publishes `5432` and `6379` so a locally running API can reach them.
+The browser reaches the API through `/api/backend/*` on the web origin, which forwards to `API_INTERNAL_URL`. The development Compose file is different on purpose: it publishes `5433` and `6380` on `127.0.0.1` so a locally running API can reach them.
 
 <Warning>
   Publishing host port 3001 to the internet without TLS in front of it sends session cookies in the clear. Terminate TLS at a reverse proxy. `AUTH_COOKIE_SECURE` is already `true` in the Compose stack and must stay so, because the Docker image refuses to boot without it.
