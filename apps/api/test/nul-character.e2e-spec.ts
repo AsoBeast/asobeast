@@ -88,8 +88,9 @@ function toolResult(response: Response) {
   const frame = response.text
     .split('\n')
     .find((line) => line.startsWith('data: '));
+  if (frame === undefined) throw new Error('no SSE data frame');
   return (
-    JSON.parse(frame!.slice('data: '.length)) as {
+    JSON.parse(frame.slice('data: '.length)) as {
       result: { isError?: boolean; content: { text: string }[] };
     }
   ).result;
