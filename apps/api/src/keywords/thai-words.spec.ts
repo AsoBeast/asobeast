@@ -11,6 +11,10 @@ const wordList = readFileSync(join(__dirname, 'thai-words.txt'), 'utf8');
 const CLUSTER_CONTINUATION = /[ะ-ฺๅ-๎]/u;
 const LEADING_VOWEL = /[เ-ไ]/u;
 
+const splitsCluster = (run: string, index: number): boolean =>
+  CLUSTER_CONTINUATION.test(run.charAt(index)) ||
+  LEADING_VOWEL.test(run.charAt(index - 1));
+
 const RUNS = [
   'เดินทางด้วยความอุ่นใจ',
   'จองการเดินทางไปสนามบินล่วงหน้ากับ',
@@ -20,6 +24,8 @@ const RUNS = [
   'ทรูมันนี่วอลเล็ท',
   'เคพลัส',
   'ดูดวงรายวันแม่นๆ',
+  'อินเวสต์เมนท์',
+  'เกงการ',
 ];
 
 describe('thaiSpans', () => {
@@ -47,12 +53,18 @@ describe('thaiSpans', () => {
     });
   });
 
-  it.each(RUNS)('never starts a word of %s inside a cluster', (run) => {
+  it.each(RUNS)('never cuts a cluster of %s at a known word', (run) => {
     for (const span of thaiSpans(run).filter((each) => each.known)) {
-      expect(CLUSTER_CONTINUATION.test(span.text.charAt(0))).toBe(false);
-      expect(LEADING_VOWEL.test(run.charAt(span.index - 1))).toBe(false);
-      expect(LEADING_VOWEL.test(span.text.at(-1) ?? '')).toBe(false);
+      expect(splitsCluster(run, span.index)).toBe(false);
+      expect(splitsCluster(run, span.index + span.text.length)).toBe(false);
     }
+  });
+
+  it('prefers fewer words when two splits are both known', () => {
+    expect(thaiSpans('ชีวิตรับ').map((span) => span.text)).toEqual([
+      'ชีวิต',
+      'รับ',
+    ]);
   });
 
   it('keeps the repeat mark with the word before it', () => {
@@ -69,6 +81,12 @@ describe('thaiSpans', () => {
       'ไม่',
       'ต้อง',
       'ใช้',
+    ]);
+    expect(thaiSpans('เป็นไปไม่ได้').map((span) => span.text)).toEqual([
+      'เป็น',
+      'ไป',
+      'ไม่',
+      'ได้',
     ]);
   });
 
