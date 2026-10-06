@@ -27,7 +27,7 @@ const timeline = (page: Page) =>
     .getByText("Metadata change timeline")
     .locator("xpath=ancestor::*[@data-slot='card'][1]");
 
-test("what's new notes read as lines, not markup, in the timeline", async ({
+test("what's new notes read as lines, exactly as stored, in the timeline", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/changes");
@@ -35,9 +35,8 @@ test("what's new notes read as lines, not markup, in the timeline", async ({
   const notes = timeline(page).getByText(/^v2\.8/);
   await expect(notes).toBeVisible();
   expect(await notes.innerText()).toBe(
-    "v2.8\n- New stickers\n- Faster sync & backup",
+    "v2.8\n- New stickers\n- Type <Username> to mention\n- Faster sync &amp; backup",
   );
-  await expect(timeline(page)).not.toContainText("<br");
 });
 
 test("the impact card lists every change newest first above the timeline", async ({

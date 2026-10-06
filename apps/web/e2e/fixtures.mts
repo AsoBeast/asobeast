@@ -995,8 +995,9 @@ const APP_1_CHANGES: ChangeTimeline = {
       appName: "Rival Focus",
       isCompetitor: true,
       field: "whatsNew",
-      before: "v2.7<br>- Calmer sounds",
-      after: "v2.8<br>- New stickers<br/>- Faster sync &amp; backup<br>",
+      before: "v2.7\n- Calmer sounds",
+      after:
+        "v2.8\n- New stickers\n- Type <Username> to mention\n- Faster sync &amp; backup",
       capturedAt: utcTimestampDaysAgo(4),
     },
     {
@@ -2225,8 +2226,9 @@ export const RECENT_CHANGES: ChangeTimeline = {
       appName: "Rival Focus",
       isCompetitor: true,
       field: "whatsNew",
-      before: "v2.7<br>- Calmer sounds",
-      after: "v2.8<br>- New stickers<br/>- Faster sync &amp; backup<br>",
+      before: "v2.7\n- Calmer sounds",
+      after:
+        "v2.8\n- New stickers\n- Type <Username> to mention\n- Faster sync &amp; backup",
       capturedAt: utcTimestampDaysAgo(11),
     },
   ],
