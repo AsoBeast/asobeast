@@ -30,6 +30,15 @@ describe('containsTerm', () => {
     ['운동에서는 기록', '운동', true],
     ['habit tracker', 'habit', true],
     ['roadmap planner', 'map', false],
+    ['aiが3行要約 飲食店のクーポン', 'ai', true],
+    ['iphone用カメラアプリ', 'iphone', true],
+    ['3dゲーム', '3d', true],
+    ['grabวันนี้', 'grab', true],
+    ['smart aiが3行要約', 'smart ai', true],
+    ['ａｉが3行要約', 'ａｉ', true],
+    ['smartnewsアプリ', 'news', false],
+    ['photo 写真 editor', 'photo editor', false],
+    ['写真editor', 'photo editor', false],
   ])('%s contains %s: %s', (text, term, expected) => {
     expect(containsTerm(text, term)).toBe(expected);
   });

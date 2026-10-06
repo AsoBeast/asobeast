@@ -9,6 +9,7 @@ import {
   MetadataAssistantStatus,
   KEYWORD_FIELD_BYTE_LIMIT,
   MetadataAuditResult,
+  TrackedKeywordItem,
   utf8ByteLength,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
@@ -578,5 +579,63 @@ describe('MetadataController (e2e)', () => {
       "Storefronts among this app's markets that read it: US, MX.",
     );
     expect(lastPrompt()).toContain('Draft these fields only: keywordField.');
+  });
+
+  it('counts a latin word written against japanese text as covered', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '579581125',
+        country: 'jp',
+        name: 'SmartNews',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: created.id,
+        title: 'スマートニュース｜ニュースアプリ・ポイ活・クーポン・天気',
+        subtitle: 'AIが3行要約。飲食店のクーポン、雨雲レーダー、ポイントも',
+        description: '',
+        raw: {},
+        capturedAt: D0,
+      },
+    });
+    for (const text of ['ai', 'クーポン']) {
+      const keyword = await prisma.keyword.create({
+        data: { text, store: Store.APP_STORE, country: 'jp' },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId: created.id,
+          keywordId: keyword.id,
+          source: 'SUBTITLE',
+          active: true,
+        },
+      });
+    }
+
+    const audit = await api
+      .get(`/apps/${created.id}/metadata/audit`)
+      .expect(200);
+    const coverage = (audit.body as MetadataAuditResult).coverage.map(
+      ({ text, uncovered, fields }) => ({
+        text,
+        uncovered,
+        subtitle: fields.find((field) => field.field === 'subtitle')?.covered,
+      }),
+    );
+    expect(coverage).toEqual(
+      expect.arrayContaining([
+        { text: 'ai', uncovered: false, subtitle: true },
+        { text: 'クーポン', uncovered: false, subtitle: true },
+      ]),
+    );
+
+    const keywords = await api.get(`/apps/${created.id}/keywords`).expect(200);
+    const ai = (keywords.body as TrackedKeywordItem[]).find(
+      (item) => item.text === 'ai',
+    );
+    expect(ai?.relevance).toBe(100);
   });
 });

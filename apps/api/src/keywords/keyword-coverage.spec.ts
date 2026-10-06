@@ -1,5 +1,9 @@
 import { coversPhrase } from '../audit/audit-scoring';
+import { extractCandidates } from './extraction';
 import { coversKeyword } from './keyword-coverage';
+
+const SMARTNEWS_SUBTITLE =
+  'AIが3行要約。飲食店のクーポン、雨雲レーダー、ポイントも';
 
 describe('coversKeyword', () => {
   it('finds a spaceless keyword anywhere in the field', () => {
@@ -47,5 +51,33 @@ describe('coversKeyword', () => {
     for (const [field, keyword] of cases) {
       expect(coversKeyword(field, keyword)).toBe(coversPhrase(field, keyword));
     }
+  });
+
+  it('finds a latin word written against japanese text', () => {
+    expect(coversKeyword(SMARTNEWS_SUBTITLE, 'ai')).toBe(true);
+    expect(coversKeyword(SMARTNEWS_SUBTITLE, 'クーポン')).toBe(true);
+    expect(coversKeyword('iPhone用カメラアプリ', 'iphone')).toBe(true);
+    expect(coversKeyword('SmartNewsアプリ', 'news')).toBe(false);
+  });
+
+  it.each([
+    SMARTNEWS_SUBTITLE,
+    'スマートニュース｜ニュースアプリ・ポイ活・クーポン・天気',
+    'iPhone用カメラアプリ',
+    'Photo Editor 写真加工',
+    'Yahoo!乗換案内',
+    '3Dゲーム',
+    'メルカリ - フリマアプリ',
+    '微信 WeChat 聊天',
+    '淘宝-万能的淘宝！',
+    'Grab: แท็กซี่ และ แอปสั่งอาหาร',
+    'Grabวันนี้',
+    '카카오톡 - 무료 메신저 앱',
+    'LINE マンガ 漫画',
+  ])('covers every keyword extracted from %s', (field) => {
+    const uncovered = extractCandidates({ title: field })
+      .map((candidate) => candidate.text)
+      .filter((text) => !coversKeyword(field, text));
+    expect(uncovered).toEqual([]);
   });
 });

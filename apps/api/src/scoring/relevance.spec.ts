@@ -55,6 +55,16 @@ describe('defaultRelevance', () => {
     ).toBe(60);
   });
 
+  it('gives a latin word tracked from a japanese subtitle its full relevance', () => {
+    expect(
+      defaultRelevance(
+        'SUBTITLE',
+        'ai',
+        'スマートニュース｜ニュースアプリ・ポイ活・クーポン・天気 AIが3行要約。飲食店のクーポン、雨雲レーダー、ポイントも',
+      ),
+    ).toBe(100);
+  });
+
   it('finds a korean word only at the start of a snapshot word', () => {
     expect(
       defaultRelevance('SUGGESTED', '메신저', '카카오톡 메신저를 무료로'),
