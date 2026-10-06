@@ -512,4 +512,16 @@ test.describe("the admin area when signed out", () => {
     expect(response.status()).not.toBe(307);
     expect(response.headers().location ?? "").not.toContain("/login");
   });
+
+  test("lets a token reach the metrics scrape without a sign in", async ({
+    request,
+  }) => {
+    const response = await request.get("/metrics", {
+      maxRedirects: 0,
+      headers: { authorization: "Bearer asob_operator" },
+    });
+
+    expect(response.status()).not.toBe(307);
+    expect(response.headers().location ?? "").not.toContain("/login");
+  });
 });
