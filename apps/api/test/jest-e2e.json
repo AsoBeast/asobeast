@@ -2,6 +2,7 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "maxWorkers": 1,
+  "workerIdleMemoryLimit": "1GB",
   "testEnvironment": "node",
   "testRegex": ".e2e-spec.ts$",
   "setupFiles": ["<rootDir>/setup-e2e.ts"],
