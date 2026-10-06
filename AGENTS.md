@@ -86,6 +86,8 @@ docker-compose.dev.yml    Postgres + Redis for development
 docker-compose.yml        full self hosted stack, built from source
 docker-compose.pull.yml   the same stack from the published GHCR images, no clone or build
 docker-compose.tunnel.yml optional Cloudflare Tunnel overlay for either stack
+server.json               official MCP Registry entry for the hosted endpoint, bumped by Release Please
+glama.json                Glama directory maintainer manifest
 ```
 
 ## Commands (run from the repo root)
