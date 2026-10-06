@@ -54,11 +54,12 @@ apps/
     src/
       app/                App Router: page/layout/loading/error/not-found per segment
                           (/, /actions, /settings, /login, /register, /upgrade,
+                           /verify, /forgot-password, /reset-password, /invite,
                            /admin + capacity, workspaces, users, apps,
                            /apps/[id] + keywords, rankings, competitors, audit, metadata,
                            changes, reviews, actions, setup)
                           /api/health, /api/backend/[...path] (runtime proxy),
-                          /admin/queues and /docs* (same-path proxies to the API surfaces)
+                          /admin/queues, /docs* and /metrics (same-path proxies to the API surfaces)
       components/
         ui/               shadcn generated primitives (owned, editable)
         data-table/       table kit: sortable header, search, facet, chips, column menu, filtered empty state
@@ -174,7 +175,7 @@ by itself.
 
 - `1.0.0` is the first release of this repository. The `1.x` line takes normal feature work under semantic versioning: a `feat` bumps the minor, a `fix` bumps the patch.
 - **The compatibility promise is what constrains `1.x` now.** The HTTP contract, the `@asobeast/shared` contract types and the MCP tool surface stay compatible for the whole line; breaking any of them requires `2.0.0`. Additive change is fine — a new endpoint, a new optional field, a new tool. Removing or renaming anything on those three surfaces, or narrowing what a request accepts or a response guarantees, is not. Environment variables, the database schema and internal modules are outside the promise; schema changes always ship as forward Prisma migrations.
-- The upgrade and backup drills read their baseline from `UPGRADE_FROM_TAG`, currently `v1.0.0`. While that tag is the current commit there is nothing to upgrade from, so CI resolves the baseline first and skips the drill steps rather than running a vacuous pass. The first release that adds a migration must bump the baseline and confirm the drill actually applied one.
+- The upgrade and backup drills read their baseline from `UPGRADE_FROM_TAG`, currently `v1.0.0`, so every drill applies each migration added since the first release. CI resolves the baseline first and skips the drill steps when it is the commit under test rather than running a vacuous pass.
 - Every `fix` must include a regression test written from the reported symptom, observed failing for that reason before the fix, and passing afterward with the rest of the suite. Use a unit spec for logic, API e2e for a contract or guard, and Playwright for a user-visible flow.
 - Release Please owns tags, versions and `CHANGELOG.md`. Never cut a release by hand while the pipeline is healthy. When a manual release is unavoidable, bump the six manifests together (`package.json`, `apps/{api,web,mcp}/package.json`, `packages/{shared,mcp-tools}/package.json`), match `.release-please-manifest.json` to them and push the matching `v` tag — `.github/scripts/verify-release-state.sh` fails the Release workflow when the manifest names a version origin has no tag for. See `docs/operations/release-recovery.mdx`.
 
