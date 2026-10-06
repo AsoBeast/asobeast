@@ -80,12 +80,11 @@ BEGIN
 END;
 $$;
 
-UPDATE "ChangeEvent" AS "event"
-SET "before" = pg_temp.release_notes_text("event"."before"),
-    "after" = pg_temp.release_notes_text("event"."after")
-FROM "App"
-WHERE "App"."id" = "event"."appId"
-  AND "App"."store" = 'GOOGLE_PLAY'
+CREATE TEMPORARY TABLE "legacy_whats_new" AS
+SELECT "event"."id"
+FROM "ChangeEvent" AS "event"
+JOIN "App" ON "App"."id" = "event"."appId"
+WHERE "App"."store" = 'GOOGLE_PLAY'
   AND "event"."field" = 'whatsNew'
   AND "event"."capturedAt" < (
     SELECT max("finished_at") AT TIME ZONE 'UTC'
@@ -94,12 +93,17 @@ WHERE "App"."id" = "event"."appId"
       AND "rolled_back_at" IS NULL
   );
 
+UPDATE "ChangeEvent" AS "event"
+SET "before" = pg_temp.release_notes_text("event"."before"),
+    "after" = pg_temp.release_notes_text("event"."after")
+FROM "legacy_whats_new" AS "legacy"
+WHERE "legacy"."id" = "event"."id";
+
 DELETE FROM "ChangeEvent" AS "event"
-USING "App"
-WHERE "App"."id" = "event"."appId"
-  AND "App"."store" = 'GOOGLE_PLAY'
-  AND "event"."field" = 'whatsNew'
+USING "legacy_whats_new" AS "legacy"
+WHERE "legacy"."id" = "event"."id"
   AND "event"."before" IS NOT DISTINCT FROM "event"."after";
 
+DROP TABLE "legacy_whats_new";
 DROP FUNCTION pg_temp.release_notes_text(text);
 DROP FUNCTION pg_temp.release_notes_entity(text);

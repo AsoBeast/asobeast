@@ -161,6 +161,18 @@ describe('the plain play whats new migration', () => {
     });
   });
 
+  it('keeps a later google play event even when both sides match', async () => {
+    const play = await seedApp(Store.GOOGLE_PLAY);
+    const later = await whatsNew(play.id, 'Fixes.', 'Fixes.', new Date());
+
+    await runMigration();
+
+    expect(await valuesOf(later.id)).toEqual({
+      before: 'Fixes.',
+      after: 'Fixes.',
+    });
+  });
+
   it('leaves app store notes and other google play fields alone', async () => {
     const play = await seedApp(Store.GOOGLE_PLAY);
     const apple = await seedApp(Store.APP_STORE);
