@@ -12,9 +12,10 @@ const DATA_COLLECTION = {
   httpBodies: [],
   urlQueryParams: false,
   databaseQueryData: false,
+  queues: false,
   stackFrameVariables: false,
   genAI: { inputs: false, outputs: false },
-};
+} satisfies SentryOptions["dataCollection"];
 
 export function reportingDsn(
   dsn: string | undefined,
