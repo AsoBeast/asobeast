@@ -9,6 +9,6 @@ swap:
   "api key": "personal API token"
   "access token": "personal API token"
   "ASO score": "audit score"
-  "keyword rank": "position"
+  "keyword rank(?! tracker)": "position"
   "Postgres ": "PostgreSQL "
   "docker-compose ": "docker compose "
