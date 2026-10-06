@@ -42,7 +42,7 @@ A customer report with no anomaly counter is still this incident until proven ot
 
 ## Containment
 
-1. **Suspend the receiving workspace** if data reached a response, with a written reason. It refuses every write and every on demand action immediately.
+1. **Suspend the receiving workspace** if data reached a response, with a reason written for the customer, because every member of that workspace sees it on every page; see [Support tooling](/operations/hosted-observability#support-tooling). It refuses every write and every on demand action immediately.
 2. Revoke that workspace's API tokens if the path was the API or the remote MCP endpoint.
 3. Stop any deploy in progress. Do not ship a fix that has not been reasoned about.
 4. Confirm the policies are still in place, because a missing policy is the only way most of these can happen:

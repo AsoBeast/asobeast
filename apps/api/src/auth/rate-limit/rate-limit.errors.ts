@@ -1,12 +1,29 @@
-import type { RateLimitDetail } from '@asobeast/shared';
+import type { OnDemandAction, RateLimitDetail } from '@asobeast/shared';
+import { describeWait } from './describe-wait';
 
 const WINDOW_NAMES: Record<RateLimitDetail['window'], string> = {
   minute: 'per minute',
+  hour: 'per hour',
   day: 'per day',
   concurrent: 'in parallel',
 };
 
+const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
+  refresh: 'Refresh',
+  runDaily: 'Run daily',
+  score: 'Score',
+  suggestions: 'Keyword suggestions',
+};
+
+function onDemandMessage(
+  action: OnDemandAction,
+  detail: RateLimitDetail,
+): string {
+  return `${ON_DEMAND_LABELS[action]} limit reached: the ${detail.plan} plan allows ${detail.limit} requests ${WINDOW_NAMES[detail.window]}. Try again in ${describeWait(detail.resetSeconds)}.`;
+}
+
 export function rateLimitMessage(detail: RateLimitDetail): string {
+  if (detail.action) return onDemandMessage(detail.action, detail);
   const allowance = `the ${detail.plan} plan allows ${detail.limit} ${detail.rateClass} requests ${WINDOW_NAMES[detail.window]}`;
   const reopens =
     detail.window === 'concurrent'

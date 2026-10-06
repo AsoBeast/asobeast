@@ -1,4 +1,10 @@
-import type { PaidPlanName, PlanLimit, PlanLimits, PlanName } from './plans';
+import type {
+  OnDemandAction,
+  PaidPlanName,
+  PlanLimit,
+  PlanLimits,
+  PlanName,
+} from './plans';
 
 export const RATE_CLASSES = ['read', 'write', 'store'] as const;
 
@@ -6,7 +12,7 @@ export type RateClass = (typeof RATE_CLASSES)[number];
 
 export const DEFAULT_RATE_CLASS: RateClass = 'read';
 
-export const RATE_WINDOWS = ['minute', 'day', 'concurrent'] as const;
+export const RATE_WINDOWS = ['minute', 'hour', 'day', 'concurrent'] as const;
 
 export type RateWindow = (typeof RATE_WINDOWS)[number];
 
@@ -28,9 +34,12 @@ export interface RateLimitDetail {
   limit: number;
   resetSeconds: number;
   upgradeTo: PaidPlanName | null;
+  action?: OnDemandAction;
 }
 
 export const MINUTE_SECONDS = 60;
+
+export const HOUR_SECONDS = 60 * 60;
 
 export const DAY_SECONDS = 24 * 60 * 60;
 

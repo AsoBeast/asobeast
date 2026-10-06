@@ -55,4 +55,26 @@ test.describe("Run daily", () => {
 
     await expect(page.getByText("Queued · 2 jobs")).toBeVisible();
   });
+
+  test("promises no search rate, which differs per store and proxy pool", async ({
+    page,
+  }) => {
+    await page.route(RUN_DAILY, (route) =>
+      route.fulfill(
+        answer({ apps: 0, keywords: 3, categories: 0, reviews: 0 }),
+      ),
+    );
+
+    await page.getByRole("button", { name: "Run daily" }).click();
+
+    await expect(
+      page.getByText("Queued · rank checks for 3 keywords"),
+    ).toBeVisible();
+    expect(await page.getByText(/searches\/minute/).count()).toBe(0);
+    await expect(
+      page.getByText(
+        "The rate-limited worker runs it in the background. Results appear as the cache refetches.",
+      ),
+    ).toBeVisible();
+  });
 });

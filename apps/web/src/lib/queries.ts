@@ -246,6 +246,7 @@ export const authMeOptions = queryOptions({
   queryKey: authMeKey,
   queryFn: getAuthMe,
   retry: false,
+  refetchOnWindowFocus: true,
 });
 
 export const accountPlanOptions = queryOptions({

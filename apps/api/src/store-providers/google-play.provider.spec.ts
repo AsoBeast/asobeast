@@ -127,6 +127,28 @@ describe('GooglePlayProvider', () => {
     expect(result.summary).toBeUndefined();
   });
 
+  it('leaves the version absent when the store says it varies with the device', async () => {
+    const app = jest.fn().mockResolvedValue({ ...appPayload, version: 'VARY' });
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const result = await provider.getApp('org.telegram.messenger', 'us');
+
+    expect(result.version).toBeUndefined();
+    expect((result.raw as { version: string }).version).toBe('VARY');
+  });
+
+  it.each(['3.1.0', '12', '2026.01.15', 'VARYING'])(
+    'keeps the version %j',
+    async (version) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, version });
+      const provider = new GooglePlayProvider(makeLib({ app }));
+
+      const result = await provider.getApp('com.example.app', 'us');
+
+      expect(result.version).toBe(version);
+    },
+  );
+
   it('omits installs when minInstalls is absent', async () => {
     const app = jest
       .fn()

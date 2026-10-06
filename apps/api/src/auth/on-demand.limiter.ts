@@ -1,21 +1,30 @@
 import { Injectable } from '@nestjs/common';
+import {
+  DAY_SECONDS,
+  HOUR_SECONDS,
+  nextPlan,
+  type OnDemandAction,
+  type RateWindow,
+} from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { OnDemandAction } from '@asobeast/shared';
 import { QuotaService } from './quota.service';
 import { FailFastRedis } from '../redis/fail-fast-redis';
+import { RateLimitExceededError } from './rate-limit/rate-limit.errors';
 import { secondsUntilReset, windowKey } from './rate-limit/window';
 
-export class OnDemandLimitError extends Error {
-  constructor(
-    readonly action: OnDemandAction,
-    readonly limit: number,
-    readonly retryAfterSeconds: number,
-  ) {
-    super(
-      `Too many ${action} requests: the limit of ${limit} is reached, available again in ${retryAfterSeconds} seconds`,
+const ON_DEMAND_WINDOWS = new Map<number, RateWindow>([
+  [HOUR_SECONDS, 'hour'],
+  [DAY_SECONDS, 'day'],
+]);
+
+function windowOf(windowSeconds: number): RateWindow {
+  const window = ON_DEMAND_WINDOWS.get(windowSeconds);
+  if (!window) {
+    throw new Error(
+      `No rate window names an on-demand allowance of ${windowSeconds} seconds`,
     );
-    this.name = 'OnDemandLimitError';
   }
+  return window;
 }
 
 @Injectable()
@@ -27,7 +36,8 @@ export class OnDemandLimiter {
   ) {}
 
   async consume(action: OnDemandAction, now = new Date()): Promise<void> {
-    const rules = (await this.quota.limitsOf()).onDemand;
+    const { plan, limits } = await this.quota.planScope();
+    const rules = limits.onDemand;
     if (!rules) return;
 
     const rule = rules[action];
@@ -47,10 +57,14 @@ export class OnDemandLimiter {
     });
     if (used <= rule.limit) return;
 
-    throw new OnDemandLimitError(
+    throw new RateLimitExceededError({
+      window: windowOf(rule.windowSeconds),
+      rateClass: 'store',
+      plan,
+      limit: rule.limit,
+      resetSeconds: secondsUntilReset(rule.windowSeconds, now),
+      upgradeTo: nextPlan(plan),
       action,
-      rule.limit,
-      secondsUntilReset(rule.windowSeconds, now),
-    );
+    });
   }
 }

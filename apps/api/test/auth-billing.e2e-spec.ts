@@ -598,43 +598,89 @@ describe('Auth (billing mode)', () => {
     });
   });
 
-  it('answers an exhausted on-demand limit with Retry-After alongside the envelope', async () => {
-    await registerOwner();
-    const tenant = await request(app.getHttpServer())
-      .post('/auth/register')
-      .send({ email: 'limited@example.com', password: 'supersecret1' })
-      .expect(201);
-    const cookie = sessionCookie(tenant);
-    const { workspaceId } = await prisma.user.findUniqueOrThrow({
-      where: { id: (tenant.body as AuthUser).id },
-      select: { workspaceId: true },
+  describe('a spent on-demand allowance', () => {
+    const spendRunDaily = async (): Promise<request.Response> => {
+      await registerOwner();
+      const tenant = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'limited@example.com', password: 'supersecret1' })
+        .expect(201);
+      const cookie = sessionCookie(tenant);
+      const { workspaceId } = await prisma.user.findUniqueOrThrow({
+        where: { id: (tenant.body as AuthUser).id },
+        select: { workspaceId: true },
+      });
+      const created = await prisma.app.create({
+        data: {
+          workspaceId,
+          store: Store.APP_STORE,
+          storeAppId: 'rate-limited',
+          country: 'us',
+        },
+        select: { id: true },
+      });
+
+      const runDaily = () =>
+        request(app.getHttpServer())
+          .post(`/apps/${created.id}/run-daily`)
+          .set('Cookie', cookie);
+
+      const limit = PLAN_LIMITS.indie.onDemand?.runDaily.limit ?? 0;
+      for (let attempt = 0; attempt < limit; attempt++) {
+        await runDaily().expect(202);
+      }
+      return runDaily().expect(429);
+    };
+
+    it('answers with Retry-After alongside the envelope', async () => {
+      const refused = await spendRunDaily();
+
+      const envelope = refused.body as ApiErrorEnvelope;
+      expect(envelope.retryAfterSeconds).toBeGreaterThan(0);
+      expect(refused.headers['retry-after']).toBe(
+        String(envelope.retryAfterSeconds),
+      );
     });
-    const created = await prisma.app.create({
-      data: {
-        workspaceId,
-        store: Store.APP_STORE,
-        storeAppId: 'rate-limited',
-        country: 'us',
-      },
-      select: { id: true },
+
+    it('names the action and the wait in words', async () => {
+      const refused = await spendRunDaily();
+
+      const { message } = refused.body as ApiErrorEnvelope;
+      expect(message).toMatch(
+        /^Run daily limit reached: the trial plan allows 5 requests per day\. Try again in \d+ (hours?|minutes?|seconds?)( \d+ minutes?)?\.$/,
+      );
+      expect(message).not.toContain('runDaily');
     });
 
-    const runDaily = () =>
-      request(app.getHttpServer())
-        .post(`/apps/${created.id}/run-daily`)
-        .set('Cookie', cookie);
+    it('sends the rate headers of the allowance that closed', async () => {
+      const refused = await spendRunDaily();
 
-    const limit = PLAN_LIMITS.indie.onDemand?.runDaily.limit ?? 0;
-    for (let attempt = 0; attempt < limit; attempt++) {
-      await runDaily().expect(202);
-    }
+      const envelope = refused.body as ApiErrorEnvelope;
+      expect({
+        limit: refused.headers['ratelimit-limit'],
+        remaining: refused.headers['ratelimit-remaining'],
+        reset: refused.headers['ratelimit-reset'],
+      }).toEqual({
+        limit: '5',
+        remaining: '0',
+        reset: String(envelope.retryAfterSeconds),
+      });
+    });
 
-    const refused = await runDaily().expect(429);
-    const envelope = refused.body as ApiErrorEnvelope;
-    expect(envelope.retryAfterSeconds).toBeGreaterThan(0);
-    expect(refused.headers['retry-after']).toBe(
-      String(envelope.retryAfterSeconds),
-    );
+    it('carries the rateLimit object the documentation promises', async () => {
+      const refused = await spendRunDaily();
+
+      const envelope = refused.body as ApiErrorEnvelope;
+      expect(envelope.rateLimit).toEqual({
+        window: 'day',
+        rateClass: 'store',
+        plan: 'trial',
+        limit: 5,
+        resetSeconds: envelope.retryAfterSeconds,
+        upgradeTo: 'indie',
+        action: 'runDaily',
+      });
+    });
   });
 
   it.each([

@@ -25,6 +25,8 @@ export interface AuthUser {
   entitled: boolean;
   trialAwaitsConfirmation?: boolean;
   platformOperator: boolean;
+  suspendedAt?: string | null;
+  suspendedReason?: string | null;
 }
 
 export const API_TOKEN_SCOPES = ['read', 'write'] as const;

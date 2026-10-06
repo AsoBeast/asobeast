@@ -281,6 +281,50 @@ describe('Auth (enabled, self-hosted)', () => {
     expect(owner.workspaceId).toBe(DEFAULT_WORKSPACE_ID);
   });
 
+  it('tells a suspended workspace that it is suspended and why', async () => {
+    await registerOwner();
+    const tenant = await prisma.workspace.create({
+      data: { name: 'Suspended tenant' },
+    });
+    await prisma.user.create({
+      data: {
+        email: 'tenant@example.com',
+        passwordHash: await argon2.hash('supersecret1'),
+        workspaceId: tenant.id,
+      },
+    });
+    const login = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'tenant@example.com', password: 'supersecret1' })
+      .expect(200);
+    const cookie = sessionCookie(login);
+    const read = async (): Promise<AuthUser> =>
+      (
+        await request(app.getHttpServer())
+          .get('/auth/me')
+          .set('Cookie', cookie)
+          .expect(200)
+      ).body as AuthUser;
+
+    await expect(read()).resolves.toMatchObject({
+      suspendedAt: null,
+      suspendedReason: null,
+    });
+
+    await prisma.workspace.update({
+      where: { id: tenant.id },
+      data: {
+        suspendedAt: new Date('2026-10-01T10:00:00Z'),
+        suspendedReason: 'scraping the service',
+      },
+    });
+
+    await expect(read()).resolves.toMatchObject({
+      suspendedAt: '2026-10-01T10:00:00.000Z',
+      suspendedReason: 'scraping the service',
+    });
+  });
+
   it('closes registration after the first user', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')

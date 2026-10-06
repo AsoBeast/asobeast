@@ -39,7 +39,7 @@ The decision is settled in advance: **gate registration rather than degrade payi
 
 1. **Close the door before the room fills.** Set `SIGNUP_CAPACITY_MAX_UTILIZATION` so that registration is refused once tracked collection passes that share of daily capacity. It only applies when billing is enabled, so self hosted installs are never gated.
 2. Leave existing customers untouched. Shedding work from paying tenants to admit new ones is the wrong trade in every direction.
-3. If one unpaid workspace dominates the pool, suspend it with a written reason rather than degrading everyone. Suspension stops collection for that workspace even on keywords another tenant also tracks, because a shared search is judged per workspace before any row is written.
+3. If one unpaid workspace dominates the pool, suspend it with a reason written for the customer, who sees it on every page (see [Support tooling](/operations/hosted-observability#support-tooling)), rather than degrading everyone. Suspension stops collection for that workspace even on keywords another tenant also tracks, because a shared search is judged per workspace before any row is written.
 4. Do not lower the depth of Google Play searches as a first move. It changes the data customers already have and is hard to explain.
 
 ## Recovery

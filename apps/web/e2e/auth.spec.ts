@@ -878,6 +878,127 @@ test("an unconfirmed member of a workspace whose trial ended is not asked to con
   await expect(page.getByText(CONFIRM_TO_START)).toHaveCount(0);
 });
 
+const SUSPENDED_USER: AuthUser = {
+  ...TRIAL_USER,
+  plan: "indie",
+  trialEndsAt: null,
+  suspendedAt: "2026-10-01T10:00:00.000Z",
+  suspendedReason: "scraping the service",
+};
+
+const SUSPENSION_NOTICE =
+  "This workspace is suspended: scraping the service. Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.";
+
+async function openAs(page: Page, user: AuthUser) {
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await routeMe(page, user);
+}
+
+test("the owner of a suspended workspace is told it is suspended and why", async ({
+  page,
+}) => {
+  await openAs(page, SUSPENDED_USER);
+
+  await page.goto("/");
+
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+
+  await page.goto("/settings");
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+});
+
+test("a member of a suspended workspace is told too", async ({ page }) => {
+  await openAs(page, { ...SUSPENDED_USER, role: "member" });
+
+  await page.goto("/");
+
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+});
+
+test("a suspension without a recorded reason still says it is suspended", async ({
+  page,
+}) => {
+  await openAs(page, { ...SUSPENDED_USER, suspendedReason: null });
+
+  await page.goto("/");
+
+  await expect(
+    page.getByText("This workspace is suspended. Your data stays readable"),
+  ).toBeVisible();
+});
+
+test("a workspace that is not suspended sees no suspension notice", async ({
+  page,
+}) => {
+  await openAs(page, { ...SUSPENDED_USER, suspendedAt: null });
+
+  await page.goto("/");
+
+  await expect(
+    page.getByText("This workspace is suspended", { exact: false }),
+  ).toHaveCount(0);
+});
+
+test("a write refused for a suspension shows the notice without a reload", async ({
+  page,
+}) => {
+  let user: AuthUser = { ...SUSPENDED_USER, suspendedAt: null };
+  await seedSession(page);
+  await routeStatus(page, {
+    billing: true,
+    registrationOpen: true,
+    setupRequired: false,
+    authenticated: true,
+  });
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill(fulfillJson(200, user)),
+  );
+  await page.route("**/api/backend/apps", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    user = SUSPENDED_USER;
+    await route.fulfill(
+      fulfillJson(403, {
+        statusCode: 403,
+        error: "Forbidden",
+        message:
+          "This workspace is suspended: scraping the service. Existing data stays readable and exportable, and billing remains open.",
+        path: "/apps",
+        timestamp: new Date().toISOString(),
+      }),
+    );
+  });
+
+  await page.goto("/");
+  await expect(page.getByText(SUSPENSION_NOTICE)).toHaveCount(0);
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+});
+
+test("a suspended workspace whose plan lapsed sees both notices", async ({
+  page,
+}) => {
+  await openAs(page, { ...SUSPENDED_USER, plan: "free", entitled: false });
+  await routePlan(page, LAPSED_PLAN);
+
+  await page.goto("/");
+
+  await expect(page.getByText(SUSPENSION_NOTICE)).toBeVisible();
+  await expect(
+    page.getByText("Collection is paused", { exact: false }),
+  ).toBeVisible();
+});
+
 test("a workspace whose subscription stalled is sent to the portal, not the paywall", async ({
   page,
 }) => {

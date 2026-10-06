@@ -4707,7 +4707,7 @@
             "type": "string",
             "minLength": 8,
             "maxLength": 200,
-            "description": "Why the action was taken. Stored in the support audit trail"
+            "description": "Why the action was taken. Stored in the support audit trail. A suspension also shows it to every member of the workspace on every page and in every refused write, so write it for the customer"
           }
         },
         "required": [

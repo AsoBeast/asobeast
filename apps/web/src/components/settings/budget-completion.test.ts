@@ -104,6 +104,35 @@ describe("budgetCompletionSentence", () => {
     );
   });
 
+  it("says a run of a few seconds finishes within a minute instead of naming the start twice", () => {
+    const sentence = budgetCompletionSentence(
+      {
+        startsAt: "2026-10-06T03:00:00.000Z",
+        completesAt: "2026-10-06T03:00:36.000Z",
+        hours: 0.01,
+      },
+      13,
+    );
+
+    expect(sentence).toContain("expected to finish within a minute.");
+    expect(sentence).not.toContain("finish around");
+    expect(sentence).not.toContain("hours of collection");
+  });
+
+  it("names the finish once a run takes a minute or more", () => {
+    const sentence = budgetCompletionSentence(
+      {
+        startsAt: "2026-10-06T03:00:00.000Z",
+        completesAt: "2026-10-06T03:01:12.000Z",
+        hours: 0.02,
+      },
+      22,
+    );
+
+    expect(sentence).toContain("expected to finish around");
+    expect(sentence).not.toContain("within a minute");
+  });
+
   it("says nothing for a schedule that is not once a day", () => {
     expect(
       budgetCompletionSentence(

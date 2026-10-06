@@ -104,7 +104,33 @@ A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs 
 }
 ```
 
-`window` is `minute`, `day` or `concurrent`. Waiting for `resetSeconds` is the whole fix for the first two. For `concurrent`, reduce how many requests you have open at once.
+`window` is `minute`, `hour`, `day` or `concurrent`. Waiting for `resetSeconds` is the whole fix for every window except `concurrent`, where you reduce how many requests you have open at once.
+
+## A spent on demand allowance names its action
+
+Refresh, run daily, score and keyword suggestions each carry an allowance of their own, counted per day, or per hour for keyword suggestions. When one is spent the `429` carries the same `rateLimit` object with `rateClass` set to `store`, and `action` names which allowance closed: `refresh`, `runDaily`, `score` or `suggestions`.
+
+```json
+{
+  "statusCode": 429,
+  "error": "Too Many Requests",
+  "message": "Run daily limit reached: the trial plan allows 5 requests per day. Try again in 12 hours 52 minutes.",
+  "path": "/apps/cl123/run-daily",
+  "timestamp": "2026-10-05T10:30:26.118Z",
+  "rateLimit": {
+    "window": "day",
+    "rateClass": "store",
+    "plan": "trial",
+    "limit": 5,
+    "resetSeconds": 46275,
+    "upgradeTo": "indie",
+    "action": "runDaily"
+  },
+  "retryAfterSeconds": 46275
+}
+```
+
+The allowance resets at 00:00 UTC for a daily window and at the top of the hour for an hourly one, so `Retry-After` is the exact wait.
 
 ## A rate limit is not a quota
 
@@ -140,7 +166,7 @@ A self hosted instance has no plan limits, so the first and last rows do not app
 
 ## Suspension
 
-An operator can suspend a workspace after sustained abuse. A suspended workspace keeps reading and exporting its data from the dashboard and keeps full access to billing, so it can always pay and always leave with its data. Its API tokens are refused with `403` on every route except `GET /account/export`, so a script can still take the data out. Every write is refused with `403` too, and the daily run skips the workspace.
+An operator can suspend a workspace after sustained abuse. A suspended workspace keeps reading and exporting its data from the dashboard and keeps full access to billing, so it can always pay and always leave with its data. Its API tokens are refused with `403` on every route except `GET /account/export`, so a script can still take the data out. Every write is refused with `403` too, and the daily run skips the workspace. The web app tells every member of the workspace on every page, with the reason the operator recorded, and `GET /auth/me` reports `suspendedAt` and `suspendedReason` for any client that wants to say the same.
 
 ## Related
 

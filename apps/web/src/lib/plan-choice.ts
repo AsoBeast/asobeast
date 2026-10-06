@@ -25,6 +25,17 @@ export const CHECKOUT_UNCONFIGURED =
 export const COLLECTION_PAUSED =
   "Collection is paused. Everything asobeast has already gathered stays readable and exportable.";
 
+const SUSPENDED_SCOPE =
+  "Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.";
+
+export function suspensionNotice(reason: string | null | undefined): string {
+  const cause = reason?.trim().replace(/[.!?]+$/, "");
+  const subject = cause
+    ? `This workspace is suspended: ${cause}.`
+    : "This workspace is suspended.";
+  return `${subject} ${SUSPENDED_SCOPE}`;
+}
+
 export const MEMBER_BILLING_TITLE = "Your workspace owner manages billing";
 
 export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
