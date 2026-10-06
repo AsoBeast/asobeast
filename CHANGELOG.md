@@ -3,6 +3,43 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.8.0](https://github.com/AsoBeast/asobeast/compare/v1.7.0...v1.8.0) (2026-10-06)
+
+
+### Features
+
+* **api:** cap ai calls with a monthly allowance per plan ([#205](https://github.com/AsoBeast/asobeast/issues/205)) ([6e3fd97](https://github.com/AsoBeast/asobeast/commit/6e3fd97cb9afafbc1ef232d4b0cf88937fcb0c94))
+* **web:** add an admin area for the platform operator ([#209](https://github.com/AsoBeast/asobeast/issues/209)) ([9e451eb](https://github.com/AsoBeast/asobeast/commit/9e451ebe4a661a31c760252ad1a70e074b2b1a5b))
+
+
+### Bug Fixes
+
+* **api:** answer 4xx for a nul character in a request ([#242](https://github.com/AsoBeast/asobeast/issues/242)) ([3d2e65f](https://github.com/AsoBeast/asobeast/commit/3d2e65fcb1f744a2766bcfa98aa5e9d1d272a687))
+* **api:** answer a refused request body with 4xx instead of 500 ([#198](https://github.com/AsoBeast/asobeast/issues/198)) ([894d9b9](https://github.com/AsoBeast/asobeast/commit/894d9b98666dcb0c94f19e0b494c028af9b09d3e))
+* **api:** eight small findings from the pre launch regression pass ([#228](https://github.com/AsoBeast/asobeast/issues/228)) ([c3d076e](https://github.com/AsoBeast/asobeast/commit/c3d076e1c989da3a64ad27781478948952251853))
+* **api:** fail fast on redis in the auth path and the rate limiters ([#197](https://github.com/AsoBeast/asobeast/issues/197)) ([f8380fc](https://github.com/AsoBeast/asobeast/commit/f8380fcdbf46d5954f4166b5bcf156430c0bc13d))
+* **api:** link the billing portal to the terms and privacy policy on ([302e21e](https://github.com/AsoBeast/asobeast/commit/302e21e1387fb37b467b6eb70d28f05a00ddb320))
+* **api:** refuse to delete the workspace that holds the operator ([#227](https://github.com/AsoBeast/asobeast/issues/227)) ([7e39822](https://github.com/AsoBeast/asobeast/commit/7e39822a9fa48318c4f48ed83c5a26e05e41d106))
+* **auth:** group ipv6 clients by /64 when keying rate limits ([#212](https://github.com/AsoBeast/asobeast/issues/212)) ([26c466e](https://github.com/AsoBeast/asobeast/commit/26c466e7faacb748f16d047a5d7cfbc6e12febbe))
+* **auth:** keep a paid plan when its owner confirms their email ([#201](https://github.com/AsoBeast/asobeast/issues/201)) ([6ef4809](https://github.com/AsoBeast/asobeast/commit/6ef4809d749038c1abb6a25d35d2879bcaa2e4b0))
+* **auth:** refuse to suspend the operator workspace ([#225](https://github.com/AsoBeast/asobeast/issues/225)) ([410185e](https://github.com/AsoBeast/asobeast/commit/410185eea645feda711d979ee2bd5505666873bd))
+* **ci:** pass the sentry auth token to release image builds ([#252](https://github.com/AsoBeast/asobeast/issues/252)) ([3d99e28](https://github.com/AsoBeast/asobeast/commit/3d99e287cf2e2c5734c09772dac887582751d673))
+* **deps:** move to nestjs 12, sentry 11, ioredis 6 and play scraper 1.4 ([#249](https://github.com/AsoBeast/asobeast/issues/249)) ([85677bf](https://github.com/AsoBeast/asobeast/commit/85677bf911958dee7fc1d20f44153f2ee9e983ba))
+* **jobs:** queue failed jobs again when run daily is clicked ([#223](https://github.com/AsoBeast/asobeast/issues/223)) ([d6cc715](https://github.com/AsoBeast/asobeast/commit/d6cc715b29ffc3037ac8f220247a3a372b46a341))
+* **keywords:** split spaceless listings into words before extracting ([#241](https://github.com/AsoBeast/asobeast/issues/241)) ([0c53aec](https://github.com/AsoBeast/asobeast/commit/0c53aecd3fe4967fe4676680778f2af70208a248))
+* **web:** ask a new account to confirm its email before it pays ([#199](https://github.com/AsoBeast/asobeast/issues/199)) ([3401aa7](https://github.com/AsoBeast/asobeast/commit/3401aa76b0fee1056fd3af445cf49f36ded22acc))
+* **web:** explain why the admin area is closed without a plan ([#224](https://github.com/AsoBeast/asobeast/issues/224)) ([4535192](https://github.com/AsoBeast/asobeast/commit/45351923f3e4fb19c9c8832d6d5be72b79d36ce4))
+* **web:** five small findings from the final pre launch regression pass ([#244](https://github.com/AsoBeast/asobeast/issues/244)) ([3deb3cd](https://github.com/AsoBeast/asobeast/commit/3deb3cd54b24251177b12a19427f6a9b5537b62a))
+* **web:** format dates and country names the same in every engine ([#238](https://github.com/AsoBeast/asobeast/issues/238)) ([52b5288](https://github.com/AsoBeast/asobeast/commit/52b5288642afb4c00a981fb8940e80487ad682ca))
+* **web:** headline the chart an app competes in on category ranks ([#239](https://github.com/AsoBeast/asobeast/issues/239)) ([e8a0960](https://github.com/AsoBeast/asobeast/commit/e8a0960d77091c7f5a445af3e5c7a548b592a2f4))
+* **web:** lay the metadata listing out by its own width ([#240](https://github.com/AsoBeast/asobeast/issues/240)) ([c9029bb](https://github.com/AsoBeast/asobeast/commit/c9029bb33bb6fe9c0698ee43a52e39ce412123ae))
+* **web:** let a token reach the metrics scrape without a sign in ([302e21e](https://github.com/AsoBeast/asobeast/commit/302e21e1387fb37b467b6eb70d28f05a00ddb320))
+* **web:** say when the browser drops the session cookie after sign in ([#226](https://github.com/AsoBeast/asobeast/issues/226)) ([e52dc19](https://github.com/AsoBeast/asobeast/commit/e52dc192e90d847550240893b4c733986e8c3a39))
+* **web:** send run daily once however fast it is clicked ([#243](https://github.com/AsoBeast/asobeast/issues/243)) ([6f2ece8](https://github.com/AsoBeast/asobeast/commit/6f2ece83ba7713ac8427b0eaac3674fb7b027b2a))
+* **web:** show instance capacity and api status to the operator only ([#208](https://github.com/AsoBeast/asobeast/issues/208)) ([75203dd](https://github.com/AsoBeast/asobeast/commit/75203dd6f9a5df6d6d7eddd9900903adb4355e5e))
+* **web:** show stored whats new notes exactly as written ([#251](https://github.com/AsoBeast/asobeast/issues/251)) ([b0a47f9](https://github.com/AsoBeast/asobeast/commit/b0a47f9ecbd5bd634927a5e37c13279d32abb29f))
+* **web:** small billing ux findings from the 1.7.0 regression pass ([#200](https://github.com/AsoBeast/asobeast/issues/200)) ([7071cb0](https://github.com/AsoBeast/asobeast/commit/7071cb03c72ec5b53ce9e34a02a0e718b9f3d103))
+
 ## [1.7.0](https://github.com/AsoBeast/asobeast/compare/v1.6.0...v1.7.0) (2026-10-01)
 
 
