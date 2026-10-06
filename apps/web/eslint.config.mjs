@@ -28,6 +28,18 @@ const eslintConfig = defineConfig([
       ],
       complexity: ["warn", 15],
       "max-params": ["warn", 4],
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["next/font/google", "next/font/google/*"],
+              message:
+                "Self host fonts from an @fontsource package so the build never fetches Google Fonts (vercel/next.js#99114).",
+            },
+          ],
+        },
+      ],
     },
   },
   {
