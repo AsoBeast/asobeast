@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { collectPageErrors } from "./page-errors.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
@@ -91,8 +92,7 @@ test("a google play app never sends a localization", async ({ page }) => {
 test("a deep link to another app store language keeps it and hydrates cleanly", async ({
   page,
 }) => {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
+  const errors = collectPageErrors(page);
 
   await page.goto("/apps/app-1/metadata?draftLocale=ja");
 

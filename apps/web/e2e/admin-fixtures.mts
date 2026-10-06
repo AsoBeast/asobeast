@@ -329,6 +329,7 @@ export const ADMIN_APPS: AdminApp[] = [
     workspaceId: "ws_ana",
     store: "APP_STORE",
     storeAppId: "100000001",
+    country: "cn",
     name: "Ana Habits",
     competitors: 2,
     keywordMarkets: 25,

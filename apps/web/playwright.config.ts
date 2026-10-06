@@ -1,6 +1,7 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 const BASELINE = process.env.CAPTURE_BASELINE ? [] : ["**/baseline.spec.ts"];
+const WEBKIT_SPECS = ["**/engine-hydration.spec.ts"];
 const ACTION_STATE_SPECS = [
   "actions",
   "actions-queue",
@@ -16,8 +17,14 @@ export default defineConfig({
       name: "app",
       testIgnore: [
         ...BASELINE,
+        ...WEBKIT_SPECS,
         ...ACTION_STATE_SPECS.map((name) => `**/${name}.spec.ts`),
       ],
+    },
+    {
+      name: "webkit",
+      testMatch: WEBKIT_SPECS,
+      use: { ...devices["Desktop Safari"] },
     },
     ...ACTION_STATE_SPECS.map((name, index) => ({
       name,

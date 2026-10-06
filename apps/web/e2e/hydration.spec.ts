@@ -14,6 +14,7 @@ import {
   APP_1_RATINGS_HISTOGRAM,
   FIRST_RUN_UNSCHEDULED,
 } from "./fixtures.mts";
+import { collectPageErrors, expectHydratesCleanly } from "./page-errors.mts";
 import { firstRunHeadline } from "../src/components/onboarding/first-run-timeline";
 import { formatNumber } from "../src/lib/format";
 import {
@@ -134,21 +135,9 @@ for (const url of ["/apps/app-1", "/apps/app-1/actions"]) {
   });
 }
 
-function collectPageErrors(page: Page) {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  return errors;
-}
-
 for (const [name, path] of SIGNED_IN_ROUTES) {
   test(`${name} hydrates without an uncaught error`, async ({ page }) => {
-    const errors = collectPageErrors(page);
-
-    await page.goto(path);
-    await page.waitForLoadState("networkidle");
-
-    expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(path);
-    expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual([]);
+    await expectHydratesCleanly(page, name, path);
   });
 }
 
@@ -157,17 +146,7 @@ for (const [name, path, cookies] of SIGNED_OUT_ROUTES) {
     `${name} hydrates without an uncaught error when signed out`,
     async ({ page, context }) => {
       await seedCookies(context, cookies);
-      const errors = collectPageErrors(page);
-
-      await page.goto(path);
-      await page.waitForLoadState("networkidle");
-
-      expect(new URL(page.url()).pathname, `${name} redirected away`).toBe(
-        path,
-      );
-      expect(errors, `${name} (${path}) threw: ${errors.join(", ")}`).toEqual(
-        [],
-      );
+      await expectHydratesCleanly(page, name, path);
     },
   );
 }
