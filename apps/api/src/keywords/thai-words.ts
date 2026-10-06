@@ -94,7 +94,7 @@ function bestSteps(run: string, { words, longest }: Dictionary): Step[] {
   };
   for (let start = 0; start < run.length; start += 1) {
     const here = steps[start];
-    if (here === undefined || !isWordEdge(run, start)) continue;
+    if (here === undefined) continue;
     const limit = Math.min(run.length, start + longest);
     for (let end = start + 2; end <= limit; end += 1) {
       const stop = withRepeatMarks(run, end);
