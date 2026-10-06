@@ -39,7 +39,7 @@ The overlay is a convenience, not a requirement. When `cloudflared` already runs
 
 Point the tunnel's public hostname at `http://localhost:3001` rather than at `http://web:3000`, because the host binary is outside the Compose network and reaches the web app the same way any other local client does.
 
-The overlay is what normally pins the three settings that depend on the hop, so set them yourself. Two live in the root `.env`, which Compose passes to the web service:
+The overlay is what normally pins the three settings that depend on the hop, so set them yourself. Two live in the root `.env`, from which Compose passes `AUTH_COOKIE_SECURE` to the API service and `TRUST_PROXY` to the web service:
 
 ```bash
 AUTH_COOKIE_SECURE=true
@@ -58,18 +58,12 @@ Host port 3001 is published on this path, so bind it to the loopback or firewall
 
 ### Bring your own proxy
 
-A tunnel is not the only way. Put any reverse proxy in front of host port 3001 instead, and set the same three variables yourself. The proxy must forward the `Host` header and the request path unchanged, because the web app serves the admin surfaces at identical paths.
+A tunnel is not the only way. Put any reverse proxy in front of host port 3001 instead, and set the same three variables in the same files as the tunnel path above. The proxy must forward the `Host` header and the request path unchanged, because the web app serves the admin surfaces at identical paths.
 
 ```caddyfile
 aso.example.com {
   reverse_proxy 127.0.0.1:3001
 }
-```
-
-```bash
-AUTH_COOKIE_SECURE=true
-TRUST_PROXY=1
-WEB_PUBLIC_URL=https://aso.example.com
 ```
 
 nginx and Traefik work the same way. Whatever you choose, host port 3001 is then reachable on the machine, so bind it to the loopback or firewall it. The tunnel overlay exists partly to remove that step.

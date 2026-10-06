@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { METRICS_SCRAPE, OPERATOR_TOKEN } from "./fixtures.mts";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 import { VIEWERS, seedViewer } from "./viewer.mts";
@@ -511,5 +512,26 @@ test.describe("the admin area when signed out", () => {
 
     expect(response.status()).not.toBe(307);
     expect(response.headers().location ?? "").not.toContain("/login");
+  });
+
+  test("serves the metrics scrape to an operator token without a sign in", async ({
+    request,
+  }) => {
+    const response = await request.get("/metrics", {
+      maxRedirects: 0,
+      headers: { authorization: `Bearer ${OPERATOR_TOKEN}` },
+    });
+
+    expect(response.status()).toBe(200);
+    expect(await response.text()).toBe(METRICS_SCRAPE);
+  });
+
+  test("answers a metrics scrape without a token as not found", async ({
+    request,
+  }) => {
+    const response = await request.get("/metrics", { maxRedirects: 0 });
+
+    expect(response.status()).toBe(404);
+    expect(response.headers().location).toBeUndefined();
   });
 });

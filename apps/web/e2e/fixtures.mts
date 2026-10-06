@@ -78,6 +78,11 @@ function pointsFrom(
   }));
 }
 
+export const OPERATOR_TOKEN = "asob_operator";
+
+export const METRICS_SCRAPE =
+  'asobeast_store_canary{store="APP_STORE",outcome="ok"} 1\n';
+
 export const HEALTH: HealthStatus = {
   status: "ok",
   db: "up",

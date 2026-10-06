@@ -79,10 +79,10 @@ This is the single most expensive decision you make, and it is invisible until t
 
 ## Check your own numbers
 
-`GET /jobs/budget` estimates the fan-out from your real data, broken down per store, and the settings page renders the same figures as a budget card for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is). The estimate is verified against the actual fan-out in CI on every pull request, so the number the card shows is the number of jobs the pipeline will enqueue.
+`GET /jobs/budget` estimates the fan-out from your real data, broken down per store, and the settings page renders the same figures as a budget card for the [platform operator](/security/admin-surfaces#who-the-platform-operator-is). It answers any personal API token, read below from `ASOBEAST_API_TOKEN`. The estimate is verified against the actual fan-out in CI on every pull request, so the number the card shows is the number of jobs the pipeline will enqueue.
 
 ```bash
-curl --silent http://127.0.0.1:3000/api/backend/jobs/budget | jq '{total, utilization, stores}'
+curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.0.1:3001/api/backend/jobs/budget | jq '{total, utilization, stores}'
 ```
 
 `utilization` is the fraction of a day the run will occupy at your configured limits. Above 1.0 the run cannot finish before the next one starts.

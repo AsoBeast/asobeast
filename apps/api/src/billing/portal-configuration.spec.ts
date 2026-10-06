@@ -83,9 +83,9 @@ describe('portalConfiguration', () => {
     ).not.toHaveProperty('default_return_url');
   });
 
-  it('points at the published legal pages', () => {
-    expect(LEGAL_TERMS_URL).toBe('https://docs.asobeast.com/legal/terms');
-    expect(LEGAL_PRIVACY_URL).toBe('https://docs.asobeast.com/legal/privacy');
+  it('points at the terms and privacy policy on the website', () => {
+    expect(LEGAL_TERMS_URL).toBe('https://asobeast.com/terms');
+    expect(LEGAL_PRIVACY_URL).toBe('https://asobeast.com/privacy');
   });
 });
 

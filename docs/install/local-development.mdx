@@ -5,14 +5,14 @@ icon: code
 keywords: ["development","pnpm","turborepo","prisma migrate","playwright"]
 ---
 
-Development runs the applications on your machine and only the datastores in Docker. `pnpm dev` starts the shared package in watch mode, the API and the web app together through Turborepo.
+Development runs the applications on your machine and only the datastores in Docker. `pnpm dev` starts the shared packages and the MCP server in watch mode, the API and the web app together through Turborepo.
 
 ## Prerequisites
 
 | Requirement | Value |
 | --- | --- |
 | Node.js | 22 or newer |
-| pnpm | 10.18.2, pinned by `packageManager` in the root `package.json` |
+| pnpm | 12.4.1, pinned by `packageManager` in the root `package.json` |
 | Docker | For PostgreSQL and Redis only |
 
 ## Start the development services
@@ -44,6 +44,7 @@ These services run as the `asobeast-dev` Compose project, with their own contain
   <Step title="Apply migrations and seed">
     ```bash
     pnpm --filter api db:migrate
+    pnpm --filter api db:seed
     ```
   </Step>
   <Step title="Run everything">
@@ -61,7 +62,7 @@ Every command runs from the repository root.
 
 | Command | Purpose |
 | --- | --- |
-| `pnpm dev` | Run the shared package, the API and the web app together |
+| `pnpm dev` | Run the shared packages, the MCP server, the API and the web app together |
 | `pnpm --filter api dev` | Run only the API |
 | `pnpm --filter web dev` | Run only the web app |
 | `pnpm build` | Build every package, respecting the dependency graph |
@@ -69,7 +70,8 @@ Every command runs from the repository root.
 | `pnpm test` | Run the unit suites |
 | `pnpm --filter api test:e2e` | API end to end suite with mocked store providers |
 | `pnpm --filter web test:e2e` | Playwright suite against the typed mock API |
-| `pnpm --filter api db:migrate` | Apply migrations and seed |
+| `pnpm --filter api db:migrate` | Apply migrations |
+| `pnpm --filter api db:seed` | Seed the default workspace |
 | `pnpm --filter api db:studio` | Open Prisma Studio |
 | `pnpm format:check` | Check formatting without writing files |
 

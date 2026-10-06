@@ -21,13 +21,15 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 
 ## Triage
 
+The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. Behind the tunnel overlay, which publishes no host port, replace `http://127.0.0.1:3001` with your public origin. The `POST` requests need a write scoped one. See [API tokens](/security/api-tokens).
+
 <Steps>
   <Step title="Check the webhook secret before anything else">
     An unverified endpoint refuses every delivery, so a paid subscription never provisions. If `STRIPE_WEBHOOK_SECRET` is empty or stale, nothing else you do will hold.
   </Step>
   <Step title="Read the workspace">
     ```bash
-    curl --silent http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id> \
+    curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.0.1:3001/api/backend/admin/support/workspaces/<id> \
       | jq '{storedPlan, plan, subscriptionStatus, hasSubscription, planExpiresAt, trialEndsAt}'
     ```
 
@@ -50,18 +52,20 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 1. Reconcile the one workspace, which corrects local state from the provider and records who did it and why:
    ```bash
    curl --silent --request POST \
+     --header "Authorization: Bearer $ASOBEAST_API_TOKEN" \
      --header 'Content-Type: application/json' \
      --data '{"confirm":true,"reason":"customer locked out after a successful payment"}' \
-     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/reconcile
+     http://127.0.0.1:3001/api/backend/admin/support/workspaces/<id>/reconcile
    ```
 2. Reconciliation looks for a subscription on the workspace customer as well as by the stored id, so a customer who paid and whose webhook never landed is repaired by this step rather than needing the id pasted in by hand.
 3. If many workspaces are wrong, fix the webhook path first. Reconciling everyone against a broken cause just delays the same incident.
 4. Once the cause of a stopped event is fixed, replay it. The replay clears how the event settled, queues it again and records who asked and why:
    ```bash
    curl --silent --request POST \
+     --header "Authorization: Bearer $ASOBEAST_API_TOKEN" \
      --header 'Content-Type: application/json' \
      --data '{"confirm":true,"reason":"price added to the catalog"}' \
-     http://127.0.0.1:3000/api/backend/admin/support/workspaces/<id>/billing-events/<eventId>/replay
+     http://127.0.0.1:3001/api/backend/admin/support/workspaces/<id>/billing-events/<eventId>/replay
    ```
    Replayed events are safe. Webhook handling is idempotent, and an event older than the state the workspace already holds is ignored. An event that names neither the workspace nor its Stripe customer answers 404.
 5. A customer who deleted their account and is still charged had their workspace erased before erasure cancelled billing. Cancel the subscription in the dashboard and refund the charges since the deletion.

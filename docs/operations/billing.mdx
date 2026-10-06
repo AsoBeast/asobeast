@@ -118,7 +118,7 @@ stripe listen --project-name asobeast-local --all-snapshot --forward-to localhos
 
 | State | Entitled | Buying again | What runs |
 | --- | --- | --- | --- |
-| Trial | Yes | Checkout | Everything, at Indie limits |
+| Trial | Yes | Checkout | Everything, at Indie limits with 25 AI calls a month |
 | Paying, while the first payment confirms | No | Refused until it settles | Reads and exports only |
 | Active | Yes | Portal, to change plan | Everything, at the plan limits |
 | Past due | Yes | Portal, to change plan | Everything, while Stripe retries the charge |
@@ -136,7 +136,7 @@ A trial that ends with no payment method on file pauses or cancels the subscript
 
 ## Trial
 
-Seven days, Indie limits, no card. With SMTP configured the trial starts when the customer confirms their email, not at registration. A workspace gets one trial ever, recorded by `trialStartedAt`, so a returning customer resumes on a paid plan rather than a second free week. A workspace that holds a paid plan, or ever held a subscription, never starts one, so paying before confirming an email keeps the paid plan.
+Seven days, Indie limits with 25 AI calls a month, no card. With SMTP configured the trial starts when the customer confirms their email, not at registration. A workspace gets one trial ever, recorded by `trialStartedAt`, so a returning customer resumes on a paid plan rather than a second free week. A workspace that holds a paid plan, or ever held a subscription, never starts one, so paying before confirming an email keeps the paid plan.
 
 Milestone emails go out on days 0, 3, 5, 7 and 8 through the same SMTP transport and delivery log the product alerts use. The day 3 message is the one that matters: three days of positions is the first point at which the keyword monitor shows movement rather than a single reading.
 

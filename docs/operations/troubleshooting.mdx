@@ -84,7 +84,7 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="/docs returns 404">
-    `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the owner, or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+    `API_DOCS` defaults to `owner`, which gates the documentation routes the same way. Sign in as the [platform operator](/security/admin-surfaces#who-the-platform-operator-is), or set `API_DOCS=public` if the surface should be readable by anyone. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
 
   <Accordion title="The admin area says my workspace needs a plan">
@@ -134,7 +134,7 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="The health badge says degraded after an upgrade">
-    Failed jobs from before the upgrade are still counted. The badge reads the failed job count of the store and alert queues, and a failed job stays in that count until it is removed, so failures from a keyword the upgrade paused keep the badge degraded. Sign in as the owner, open `/admin/queues`, select the store queue, open its failed jobs and clean them. The badge recovers on the next health check. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+    Failed jobs from before the upgrade are still counted. The badge reads the failed job count of the store and alert queues, and a failed job stays in that count until it is removed, so failures from a keyword the upgrade paused keep the badge degraded. Sign in as the [platform operator](/security/admin-surfaces#who-the-platform-operator-is), open `/admin/queues`, select the store queue, open its failed jobs and clean them. The badge recovers on the next health check. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
   </Accordion>
 
   <Accordion title="Scores changed after upgrading">

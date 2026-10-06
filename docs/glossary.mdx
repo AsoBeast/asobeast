@@ -137,11 +137,11 @@ Every tracked app in the workspace, rolled up into shared totals and trends.
 
 ## Workspace
 
-The tenant boundary on every owned row. asobeast seeds one default workspace and every account shares it, so multi tenancy is prepared rather than implemented.
+The tenant boundary on every owned row, enforced by PostgreSQL row level security. The first account joins the default workspace, and every later sign up gets a workspace of its own unless the operator opts in to sharing. See [Where a self registration lands](/security/authentication#where-a-self-registration-lands).
 
 ## Owner
 
-The first account created on a fresh instance. Only the owner reaches the queue dashboard and the OpenAPI surface. See [The queue dashboard and the OpenAPI surface](/security/admin-surfaces).
+The account that owns a workspace and manages its plan, its team and its deletion. The owner of the default workspace, the first account created on a fresh instance, is also the platform operator: the only account that reaches the admin area, the queue dashboard and the OpenAPI surface. See [Who the platform operator is](/security/admin-surfaces#who-the-platform-operator-is).
 
 ## Personal API token
 

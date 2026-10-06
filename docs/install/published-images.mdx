@@ -30,10 +30,10 @@ Five tag shapes are published for every release. Pick the narrowest one your upg
 
 ## Run the stack
 
-The sequence below creates the networks and volumes, starts PostgreSQL and Redis on an internal network, attaches the API to both networks and publishes only the web app.
+The sequence below creates the networks and volumes, starts PostgreSQL and Redis on an internal network, attaches the API to both networks and publishes only the web app. Replace `<version>` with the release to run, such as the newest on the [releases page](https://github.com/AsoBeast/asobeast/releases).
 
 ```bash
-export ASOBEAST_IMAGE_TAG=1.0.0
+export ASOBEAST_IMAGE_TAG=<version>
 export ASOBEAST_POSTGRES_PASSWORD="$(openssl rand -hex 32)"
 export ASOBEAST_AUTH_SECRET="$(openssl rand -hex 32)"
 
@@ -63,6 +63,8 @@ docker run -d --name asobeast-api --restart unless-stopped \
   --env PORT=4000 \
   --env DEFAULT_COUNTRY=us \
   --env AUTH_SECRET="$ASOBEAST_AUTH_SECRET" \
+  --env AUTH_COOKIE_SECURE=true \
+  --env TRUST_PROXY=1 \
   "ghcr.io/asobeast/asobeast-api:$ASOBEAST_IMAGE_TAG"
 
 docker network connect asobeast-frontend asobeast-api

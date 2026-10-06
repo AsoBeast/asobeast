@@ -45,6 +45,8 @@ import {
   INITIAL_APPS,
   HOT_BUDGET,
   LAPSED_BUDGET,
+  METRICS_SCRAPE,
+  OPERATOR_TOKEN,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -1000,6 +1002,18 @@ const routes: Route[] = [
       : ADMIN_OVERVIEW,
   ),
   operatorRoute(/^\/admin\/capacity$/, () => CAPACITY_REPORT),
+  {
+    method: "GET",
+    pattern: /^\/metrics$/,
+    handler: (_p, req, res) => {
+      if (req.headers.authorization !== `Bearer ${OPERATOR_TOKEN}`) {
+        json(res, 404, errorEnvelope(404, req.url ?? "/metrics"));
+        return;
+      }
+      res.writeHead(200, { "content-type": "text/plain; version=0.0.4" });
+      res.end(METRICS_SCRAPE);
+    },
+  },
   operatorRoute(/^\/admin\/proxy-pool$/, (req) =>
     hasCookie(req, "e2e_proxy_pool", "1") ? PROXY_POOL_ON : PROXY_POOL_OFF,
   ),

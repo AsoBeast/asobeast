@@ -1,7 +1,8 @@
 <div align="center">
-  <img src="docs/images/logo-mark.png" alt="asobeast" width="112" />
-  <h1>asobeast</h1>
-  <p><strong>The open source, self-hosted App Store Optimization toolkit.</strong></p>
+  <a href="https://asobeast.com"><img src="docs/images/logo-mark.png" alt="AsoBeast" width="112" /></a>
+  <h1>AsoBeast</h1>
+  <p><strong><a href="https://asobeast.com">AsoBeast</a> is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play.</strong></p>
+  <p>Use the hosted service at <a href="https://asobeast.com">asobeast.com</a>, or self-host the open source edition on your own server.</p>
   <p>
     <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" /></a>
     <a href="https://github.com/AsoBeast/asobeast/releases"><img alt="Release" src="https://img.shields.io/github/v/release/AsoBeast/asobeast" /></a>
@@ -9,6 +10,7 @@
     <img alt="Stores" src="https://img.shields.io/badge/stores-App%20Store%20%2B%20Google%20Play-lightgrey" />
   </p>
   <p>
+    <a href="https://asobeast.com"><strong>Website</strong></a> ·
     <a href="https://docs.asobeast.com/quickstart"><strong>Quickstart</strong></a> ·
     <a href="https://docs.asobeast.com/install/docker-compose"><strong>Self-host</strong></a> ·
     <a href="https://docs.asobeast.com/mcp/introduction"><strong>MCP server</strong></a> ·
@@ -17,16 +19,16 @@
   </p>
 </div>
 
-## What is asobeast?
+## What is AsoBeast?
 
-asobeast is a free, open source App Store Optimization (ASO) toolkit that you run on your own server. It imports an Apple App Store or Google Play listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work.
+AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. It imports a listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work. This repository is the free, open source edition that you run on your own server, and the hosted service at [asobeast.com](https://asobeast.com) runs the same code.
 
-Every store request runs on the machine hosting asobeast. There is no ASO vendor to sign up with, no API key to buy, and no third party that learns which keywords you target. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, store status updates or OpenAI assistance.
+Every store request runs on the machine hosting AsoBeast as an ordinary public search or page request, so Apple and Google see each tracked phrase the way they see any search. There is no ASO vendor to sign up with, no API key to buy, and no ASO vendor that learns which keywords you target. Beyond those store requests, your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, OpenAI assistance, Apple Ads search popularity or store status updates.
 
-## Why asobeast?
+## Why AsoBeast?
 
-- **No accounts, no vendor API keys.** asobeast collects from the public store endpoints at a deliberately modest rate. You need Docker and nothing else.
-- **Your keyword list is your strategy.** It never leaves your database, so no competitor intelligence product is quietly assembling it.
+- **No accounts, no vendor API keys.** AsoBeast collects from the public store endpoints at a deliberately modest rate. You need Docker and nothing else.
+- **Your keyword list is your strategy.** It lives in your database and is never sent to an ASO vendor, so no competitor intelligence product is quietly assembling it. The stores only ever see one search at a time.
 - **Both stores as one tracking entity.** One app row tracks keywords across many storefronts, so `us` and `de` are markets on the same listing rather than two subscriptions.
 - **Every score shows its evidence.** Popularity and difficulty carry their source, calculation version, capture date and confidence, so you can argue with a number instead of trusting it.
 - **Deterministic recommendations.** Fifteen rules turn stored history into an explainable work queue. AI is optional garnish that can summarize an action, never invent or reorder one.
@@ -76,9 +78,9 @@ docker compose -f docker-compose.pull.yml up -d --wait
 
 Full walkthrough: [quickstart](https://docs.asobeast.com/quickstart). Image tags, pinning and upgrades: [run a published release](https://docs.asobeast.com/install/published-images).
 
-## How asobeast compares
+## How AsoBeast compares
 
-|                            | asobeast (self-hosted)            | Subscription ASO platforms       |
+|                            | AsoBeast (self-hosted)            | Subscription ASO platforms       |
 | -------------------------- | --------------------------------- | -------------------------------- |
 | Where store requests run   | Your machine                      | Their infrastructure             |
 | Who sees your keyword list | You                               | The vendor                       |
@@ -87,13 +89,13 @@ Full walkthrough: [quickstart](https://docs.asobeast.com/quickstart). Image tags
 | Score methodology          | Published, versioned, inspectable | Usually proprietary              |
 | Extending it               | Fork it, it is AGPL-3.0           | File a feature request           |
 
-A hosted asobeast is a separate product built from this same repository. Self-hosted installations get every feature.
+A hosted AsoBeast is a separate product built from this same repository. Self-hosted installations get every feature.
 
 ## Tech stack
 
 pnpm and Turborepo, TypeScript strict throughout, NestJS, Prisma, PostgreSQL 18, BullMQ, Redis 8, Next.js with Tailwind, Docker Compose.
 
-Contributor setup, architecture and the module map: [local development](https://docs.asobeast.com/install/local-development) and [how asobeast works](https://docs.asobeast.com/concepts/architecture).
+Contributor setup, architecture and the module map: [local development](https://docs.asobeast.com/install/local-development) and [how AsoBeast works](https://docs.asobeast.com/concepts/architecture).
 
 ## Configuration
 
@@ -107,11 +109,11 @@ A default installation needs two variables, `POSTGRES_PASSWORD` and `AUTH_SECRET
 
 App Store Optimization is the practice of improving how an app ranks and converts in App Store and Google Play search. It covers keyword targeting in indexed metadata fields, competitor positioning, ratings and reviews, and category performance.
 
-### Does asobeast need an App Store Connect or Google Play Console account?
+### Does AsoBeast need an App Store Connect or Google Play Console account?
 
-No. asobeast reads public store data, so you can track any app including your competitors. It never asks for store credentials or an ASO vendor API key.
+No. AsoBeast reads public store data, so you can track any app including your competitors. It never asks for store credentials or an ASO vendor API key.
 
-### Which app stores does asobeast support?
+### Which app stores does AsoBeast support?
 
 Both the Apple App Store and Google Play. Apple indexes a title, a subtitle and a private 100 byte keyword field. Google Play indexes a title, an 80 character short description and a long description, so subtitle and keyword field stay Apple only concepts. See [stores](https://docs.asobeast.com/concepts/stores).
 
@@ -125,13 +127,13 @@ Yes. An app is imported once, and keyword tracking carries its own storefront, s
 
 ### Is any of my data sent anywhere?
 
-No, unless you turn it on. Webhook alerts, SMTP email and OpenAI assistance are the only outbound paths, and each is off until configured. There is no telemetry.
+Only the store requests themselves, which send each tracked phrase to the App Store or Google Play as an ordinary search, from your own address or through a proxy provider if you configure one. Beyond those, webhook alerts, SMTP email, OpenAI assistance, Apple Ads search popularity and the store status poll are the only outbound integrations, and each is off until configured. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
 
-### Can I connect asobeast to Claude or another AI agent?
+### Can I connect AsoBeast to Claude or another AI agent?
 
-Yes. asobeast ships a Model Context Protocol server with 23 read-only tools, available as a local stdio process or as a remote endpoint on your instance. Every tool is a `GET` and requires a personal API token. See [MCP](https://docs.asobeast.com/mcp/introduction).
+Yes. AsoBeast ships a Model Context Protocol server with 23 read-only tools, available as a local stdio process or as a remote endpoint on your instance. Every tool is a `GET` and requires a personal API token. See [MCP](https://docs.asobeast.com/mcp/introduction).
 
-### Is asobeast really free?
+### Is AsoBeast really free?
 
 The software is, entirely. It is AGPL-3.0 with no open core and no feature held back for a commercial edition, so a self-hosted installation has everything. A hosted service built from this same repository is charged for the hosting it uses, never for features. If you run a modified version as a network service, the AGPL asks you to offer that modified source to its users.
 
@@ -153,13 +155,13 @@ The software is, entirely. It is AGPL-3.0 with no open core and no feature held 
 Worth knowing before you rely on it:
 
 - **Scores are store-specific estimates.** Popularity and difficulty come from different public evidence on each store, so the numbers are not comparable across stores and are not a substitute for first-party acquisition data.
-- **Scrapers can break.** asobeast reads public endpoints. When a store changes one, a parser can fail. Failures fail the job, which BullMQ retries with backoff, and never take down request handling.
+- **Scrapers can break.** AsoBeast reads public endpoints. When a store changes one, a parser can fail. Failures fail the job, which BullMQ retries with backoff, and never take down request handling.
 - **Store rate limits bind first, not hardware.** The public endpoints tolerate only modest request rates per address, which is what caps how many keyword markets one instance can track. See [capacity and limits](https://docs.asobeast.com/operations/capacity).
 - **Operations are yours.** Backups, TLS, secret rotation, monitoring and upgrades are the operator's responsibility. Verify a restore before you rely on a backup.
 
 ## Roadmap
 
-`1.0.0` is the current release. What remains open:
+The `1.x` line is current, and the [changelog](CHANGELOG.md) names the latest release. What remains open:
 
 - A per-user permission model finer than owner and member, and one account in several workspaces.
 - Better popularity calibration using licensed or first-party acquisition data.

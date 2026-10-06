@@ -66,7 +66,7 @@ Both `docker-compose.yml` and `docker-compose.pull.yml` mount `apps/api/keys` re
 
 ## Confirm the sync ran
 
-The sync runs every Monday at 09:00 UTC by default, after Apple posts the week that ended on Saturday. To run it now, sign in as the owner, open `/admin/queues`, select the `pipeline` queue and promote the `apple-popularity` repeatable job.
+The sync runs every Monday at 09:00 UTC by default, after Apple posts the week that ended on Saturday. To run it now, sign in as the [platform operator](/security/admin-surfaces#who-the-platform-operator-is), open `/admin/queues`, select the `pipeline` queue and promote the `apple-popularity` repeatable job.
 
 Then count what was stored per market and week:
 
