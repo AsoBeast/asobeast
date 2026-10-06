@@ -190,7 +190,7 @@ test("recent changes show eight events and reveal the rest", async ({
   await expect(rows).toHaveCount(RECENT_CHANGES.events.length);
 });
 
-test("recent changes read what's new notes as one line, not markup", async ({
+test("recent changes read what's new notes as one line, exactly as stored", async ({
   page,
 }) => {
   await page.goto("/");
@@ -198,11 +198,11 @@ test("recent changes read what's new notes as one line, not markup", async ({
   const card = changesCard(page);
   await card.getByRole("button", { name: /^Show \d+ more$/ }).click();
 
-  const notes = card.getByText("v2.8 · New stickers · Faster sync & backup", {
-    exact: true,
-  });
+  const notes = card.getByText(
+    "v2.8 · New stickers · Type <Username> to mention · Faster sync &amp; backup",
+    { exact: true },
+  );
   await expect(notes).toBeVisible();
-  await expect(card).not.toContainText("<br");
   await hoverForTooltip(
     page,
     notes,

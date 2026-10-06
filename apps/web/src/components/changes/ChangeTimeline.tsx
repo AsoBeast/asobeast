@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import {
-  releaseNotesText,
-  type ChangeEventItem,
-  type ChangeField,
-} from "@asobeast/shared";
+import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -60,11 +56,8 @@ function price(value: string | null): string {
   return value === null ? "—" : formatPrice(Number(value));
 }
 
-function releaseNotes(
-  value: string | null,
-  format: (notes: string) => string,
-): string {
-  return value === null ? "—" : text(format(value));
+function inlineNotes(value: string | null): string {
+  return value === null ? "—" : text(releaseNotesInline(value));
 }
 
 function count(value: string | null): string {
@@ -96,15 +89,12 @@ function ChangeValue({
                 dense ? null : "block whitespace-pre-line",
               )}
             >
-              {releaseNotes(
-                after,
-                dense ? releaseNotesInline : releaseNotesText,
-              )}
+              {dense ? inlineNotes(after) : text(after)}
             </span>
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-xs">
-          Previous: {releaseNotes(before, releaseNotesInline)}
+          Previous: {inlineNotes(before)}
         </TooltipContent>
       </Tooltip>
     );
