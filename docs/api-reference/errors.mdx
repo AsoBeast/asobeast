@@ -40,11 +40,11 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 
 | Status | What causes it in this API |
 | --- | --- |
-| `400` | A DTO failed validation, a store URL could not be parsed, or the body was not valid JSON or could not be decoded |
+| `400` | A DTO failed validation, a store URL could not be parsed, a text value contained a NUL character or an unpaired surrogate, the body or query string was nested more than 64 levels deep, or the body was not valid JSON or could not be decoded |
 | `401` | The session cookie or personal API token is missing, malformed or revoked. The response carries a `WWW-Authenticate: Bearer realm="asobeast"` challenge |
 | `402` | The workspace is not entitled. Only reachable when `BILLING_ENABLED` is `true`. Reads from a browser session stay open; see [Authentication and accounts](/security/authentication) |
 | `403` | A plan capacity limit refused the write, and the `quota` object names it. Also returned to a suspended workspace, and to a read only token that tried to change something |
-| `404` | The resource does not exist, or an admin surface is refusing to confirm it exists |
+| `404` | The resource does not exist, a path id contains a NUL character, or an admin surface is refusing to confirm it exists |
 | `429` | A plan rate limit, an on demand allowance or the monthly AI allowance is spent. `Retry-After` says when it reopens; `rateLimit` or `aiAllowance` names which. See [Rate limits and quotas](/api-reference/rate-limits) |
 | `409` | A unique constraint was violated, an AI endpoint was called with `OPENAI_API_KEY` unset, or a billing route refused a request the `billing` object explains |
 | `413` | The request body is larger than the 100 KB (102400 bytes) the API reads, counted after any `Content-Encoding` is decoded, or a form body carries more than 1000 parameters. The body is read before authentication, so an oversized request is refused even without a valid credential |
@@ -89,9 +89,9 @@ A self hosted instance that sets `AI_CALLS_PER_MONTH=0` has turned AI calls off,
 
 ## Validation errors
 
-Every controller input is a DTO validated by a global pipe with whitelisting on. Two consequences follow.
+Every controller input is a DTO validated by a global pipe that refuses any property the DTO does not declare. Two consequences follow.
 
-- An unknown property is stripped rather than accepted, so a typo in a field name is silently ignored rather than misapplied.
+- An unknown property answers `400` with the message `property <name> should not exist`, so a typo in a field name is refused rather than silently ignored.
 - A failing field produces a `400` whose `message` names the field and the rule it broke.
 
 ```json
@@ -104,7 +104,22 @@ Every controller input is a DTO validated by a global pipe with whitelisting on.
 }
 ```
 
-Because unknown properties are stripped rather than rejected, a request that appears to succeed but changed nothing is usually a misspelled field.
+Because unknown properties are rejected rather than stripped, a misspelled field fails the request instead of letting it succeed while changing nothing.
+
+## Text the database cannot store
+
+PostgreSQL text cannot hold the NUL character (`U+0000`), so the API refuses it before any query runs, in the path, the query string and the body alike.
+
+- A NUL in a path id answers `404` with the message `Resource not found`, because no id can contain one.
+- A NUL in a query value or a body field answers `400`, and the `message` names the value, such as `note must not contain a NUL character` or `keywords[1] must not contain a NUL character`. When a property name itself holds the character, the `message` names `body` or `query` instead, so the character never travels back in a response.
+
+A JSON body can also carry half of an emoji, written as a lone escape such as `\ud83d` with no partner. That is not valid Unicode text, so it answers `400` with `must be well formed Unicode text`.
+
+Every other character is accepted, including emoji and the other control characters. Passwords and the one time tokens in confirmation, reset and invitation links are hashed rather than stored, so they are never inspected and may hold any character. A refused request stores nothing.
+
+## Nesting depth
+
+No request this API accepts nests more than a few levels, so a body or query string nested more than 64 levels deep, counting every object and array, answers `400` with the message `body must not be nested more than 64 levels deep` (or `query`). The limit applies to every field, passwords included, and is checked before validation, so a deeply nested body is refused cheaply instead of exhausting the validator.
 
 ## Related
 

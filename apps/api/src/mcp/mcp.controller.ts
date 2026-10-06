@@ -1,5 +1,4 @@
 import {
-  Body,
   Controller,
   Delete,
   Get,
@@ -36,13 +35,9 @@ export class McpController {
 
   @Post()
   @HttpCode(200)
-  async handle(
-    @Req() req: Request,
-    @Res() res: Response,
-    @Body() body: unknown,
-  ): Promise<void> {
+  async handle(@Req() req: Request, @Res() res: Response): Promise<void> {
     await this.bridge.admit(req);
-    await this.bridge.serve(req, res, body);
+    await this.bridge.serve(req, res, req.body);
   }
 
   @Get()

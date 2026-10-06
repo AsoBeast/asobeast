@@ -14,6 +14,7 @@ import { TokenScopeGuard } from './auth/guards/token-scope.guard';
 import { RateLimitGuard } from './auth/rate-limit/rate-limit.guard';
 import { AllExceptionsFilter } from './common/all-exceptions.filter';
 import { LoggingModule } from './common/logging/logging.module';
+import { StorableTextPipe } from './common/validation/storable-text.pipe';
 import { ObservabilityModule } from './observability/observability.module';
 import { TenancyModule } from './common/tenancy/tenancy.module';
 import { AnalyticsModule } from './analytics/analytics.module';
@@ -65,6 +66,7 @@ import { envConfigModule } from './config/env-config.module';
   providers: [
     AppService,
     ShutdownReporter,
+    { provide: APP_PIPE, useClass: StorableTextPipe },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({

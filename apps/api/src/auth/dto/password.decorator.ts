@@ -8,6 +8,7 @@ import {
   PASSWORD_RULE,
 } from '@asobeast/shared';
 import { IsString, MaxLength, MinLength, ValidateBy } from 'class-validator';
+import { HashedOnly } from '../../common/validation/hashed-only.decorator';
 
 function meetsRuleWhenLengthIsAllowed(value: unknown): boolean {
   if (typeof value !== 'string' || !isPasswordLengthAllowed(value)) return true;
@@ -21,6 +22,7 @@ export function IsPassword(): PropertyDecorator {
       maxLength: PASSWORD_MAX_LENGTH,
       description: PASSWORD_RULE,
     }),
+    HashedOnly(),
     IsString(),
     MinLength(PASSWORD_MIN_LENGTH),
     MaxLength(PASSWORD_MAX_LENGTH),
