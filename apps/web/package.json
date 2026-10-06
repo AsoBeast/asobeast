@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "@asobeast/shared": "workspace:*",
-    "@sentry/nextjs": "^10.74.0",
+    "@sentry/nextjs": "^11.4.0",
     "@tanstack/react-query": "^5.104.1",
     "@tanstack/react-table": "^9.2.6",
     "@tanstack/react-virtual": "3.14.13",

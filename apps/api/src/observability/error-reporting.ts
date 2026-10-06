@@ -14,6 +14,7 @@ const DATA_COLLECTION: NodeOptions['dataCollection'] = {
   httpBodies: [],
   urlQueryParams: false,
   databaseQueryData: false,
+  queues: false,
   stackFrameVariables: false,
   genAI: { inputs: false, outputs: false },
 };
