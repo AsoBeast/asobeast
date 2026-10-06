@@ -1,8 +1,8 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "maple",
-  "name": "asobeast",
-  "description": "asobeast is a self hosted App Store Optimization toolkit. Point it at an App Store or Google Play URL and it tracks that listing's keywords, rankings, competitors, reviews and metadata on hardware you control.",
+  "name": "AsoBeast",
+  "description": "AsoBeast is an App Store Optimization (ASO) tool and keyword rank tracker for the Apple App Store and Google Play. Use the hosted service at https://asobeast.com or self host the open source edition.",
   "colors": {
     "primary": "#A85D05",
     "light": "#FBB04D",
@@ -30,12 +30,12 @@
     "indexing": "navigable",
     "metatags": {
       "canonical": "https://docs.asobeast.com",
-      "og:site_name": "asobeast documentation",
+      "og:site_name": "AsoBeast documentation",
       "og:locale": "en_US"
     },
     "organization": {
-      "name": "asobeast",
-      "url": "https://docs.asobeast.com",
+      "name": "AsoBeast",
+      "url": "https://asobeast.com",
       "logo": "https://docs.asobeast.com/images/logo-light.svg",
       "sameAs": ["https://github.com/AsoBeast/asobeast"]
     }
