@@ -1,8 +1,8 @@
 import type Stripe from 'stripe';
 
-export const LEGAL_TERMS_URL = 'https://docs.asobeast.com/legal/terms';
+export const LEGAL_TERMS_URL = 'https://asobeast.com/terms';
 
-export const LEGAL_PRIVACY_URL = 'https://docs.asobeast.com/legal/privacy';
+export const LEGAL_PRIVACY_URL = 'https://asobeast.com/privacy';
 
 export const SAAS_TAX_CODE = 'txcd_10103001';
 
