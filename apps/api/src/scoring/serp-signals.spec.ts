@@ -48,6 +48,9 @@ describe('titleTargets', () => {
     ['Meme Maker Pro', 'mememaker', false],
     ['Quiz Geo', 'geo quiz', false],
     ['国家政务服务平台', '国家', true],
+    ['ສະບາຍດີທຸກຄົນ', 'ທຸກຄົນ', true],
+    ['សួស្តីពិភពលោក', 'ពិភពលោក', true],
+    ['မြန်မာနိုင်ငံ', 'နိုင်ငံ', true],
     ['Any title', '  ', false],
   ])('%s targets "%s": %s', (title, keyword, expected) => {
     expect(titleTargets(title, keyword)).toBe(expected);

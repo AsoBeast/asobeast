@@ -21,7 +21,7 @@ import {
   TrackedKeywordItem,
   utf8ByteLength,
 } from '@asobeast/shared';
-import { coversPhrase } from '../audit/audit-scoring';
+import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -192,7 +192,7 @@ export class MetadataService {
   ): KeywordCoverageRow {
     const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
       field: surface.field,
-      covered: coversPhrase(surface.value, item.text),
+      covered: coversKeyword(surface.value, item.text),
     }));
     return {
       keywordId: item.keywordId,

@@ -25,6 +25,55 @@ describe('defaultRelevance', () => {
     ).toBe(60);
   });
 
+  it.each([
+    'メルカリ',
+    'フリマアプリ',
+    '簡単ショッピング',
+    'ショッピング',
+    '日本最大',
+    'フリマ',
+  ])('adds the overlap bonus for %s inside a japanese snapshot', (keyword) => {
+    expect(
+      defaultRelevance(
+        'SUBTITLE',
+        keyword,
+        'メルカリ - フリマアプリ フリマアプリで簡単ショッピング 日本最大のフリマを楽しもう',
+      ),
+    ).toBe(100);
+  });
+
+  it('matches each spaceless word of a keyword on its own', () => {
+    expect(
+      defaultRelevance(
+        'SUGGESTED',
+        'メルペイ',
+        'フリマアプリで簡単ショッピング',
+      ),
+    ).toBe(50);
+    expect(
+      defaultRelevance('SUGGESTED', 'iphone 写真', 'iPhone用写真加工'),
+    ).toBe(60);
+  });
+
+  it('finds a korean word only at the start of a snapshot word', () => {
+    expect(
+      defaultRelevance('SUGGESTED', '메신저', '카카오톡 메신저를 무료로'),
+    ).toBe(70);
+    expect(defaultRelevance('SUGGESTED', '계부', '편한가계부 지출 관리')).toBe(
+      50,
+    );
+    expect(defaultRelevance('SUGGESTED', '차', '자동차 정비 기록')).toBe(50);
+  });
+
+  it('gives no overlap to a korean word inside a longer compound', () => {
+    expect(
+      defaultRelevance('SUGGESTED', '사전', '신작 RPG 사전예약 이벤트'),
+    ).toBe(50);
+    expect(
+      defaultRelevance('SUGGESTED', '운동', '매일 운동을 기록하세요'),
+    ).toBe(70);
+  });
+
   it('keeps the base for a keyword without a word', () => {
     expect(defaultRelevance('MANUAL', '!!', 'habit tracker')).toBe(80);
   });

@@ -63,6 +63,31 @@ The 80 character short description, called `summary` in the store payload, is Go
 
 The store page escapes some characters in the short description, so `Math & Music` arrives as `Math &amp; Music`. asobeast stores the short description as the plain text a user reads, keeps the payload exactly as received in `raw`, and counts characters the way Google Play does. An upgrade decodes short descriptions already stored and pauses the auto tracked keywords an escape produced, such as `amp music`, keeping their history.
 
+## How are auto tracked keywords chosen?
+
+On import and on every refresh, asobeast reads the words of the title and of the subtitle (App Store) or the short description (Google Play), and tracks up to 15 phrases of one to three words. Title phrases come first, then longer phrases before shorter ones. Stopwords such as app, free and best are skipped, and so are words of one character.
+
+Japanese, Chinese, Thai, Lao, Khmer and Burmese have no spaces between words, so asobeast splits them with the word segmenter that ships with the runtime, `Intl.Segmenter`, and joins the words of a phrase without spaces, the way a person types it in the store.
+
+- **In these scripts a phrase never crosses a space, a dash or a punctuation mark.** `メルカリ` and `フリマアプリ` in a title are two keywords, never one joined keyword.
+- **Store noise words at the start and end of a run are removed first.** `無料アプリ` gives no keyword at all, and `無料ゲーム` gives `ゲーム`.
+- **A hiragana run of five characters or fewer stays whole.** The segmenter cuts hiragana into pieces it cannot tell from grammar, so `ふりま` and `ぐるなび` are kept as one keyword each, and `しまむら公式アプリ` gives `しまむら`. Any other short run is split like a long one, so `天気予報` gives `天気予報`, `天気` and `予報`, and `猫のゲーム` gives only `ゲーム`. A short Chinese title with a word such as `我的` in it is kept whole as well, so `我的世界` is a keyword next to `世界`.
+- **A grammar word ends a phrase.** Hiragana only fragments, single character Chinese particles such as `的` and `和`, and a short list of Japanese, Chinese and Thai noise words are dropped, and a phrase is never built across them. The Chinese particles apply only to text without kana, so a Japanese title keeps `東京都` and `就活`. A word written in hiragana inside a longer run is dropped with them, because the segmenter cannot tell it from grammar, so `ひまつぶしゲーム` gives only `ゲーム`.
+- **A single Chinese or Japanese character stays with its neighbours.** Two or more in a row form one word, as in `畅聊`. A lone one never stands alone and can end a phrase, so `家計簿` is kept and `簿` is not offered. It starts a phrase only at the very start of a run, as in `新機能` and `筋トレ`, and not after a Latin word, so `iPhone用カメラ` gives `カメラ`. Brand names the segmenter cuts into single characters are joined back this way, so `微信`, `淘宝` and `小红书` stay whole.
+- **A phrase of two or three words is at most 10 Chinese or Japanese characters, or 20 letters in Thai, Lao, Khmer and Burmese.** A letter counts together with its vowel and tone marks, so `สั่งอาหารออนไลน์` is a phrase. A single word is never cut, so a long loanword stays whole.
+- **A katakana word that the segmenter splits is joined again.** A piece of one or two characters, or one that starts with a small kana, `ン` or `ー`, joins the katakana before it. A piece that ends in `ッ`, a two character piece that ends in `ー` and a single character at the start of a katakana run join the katakana after them. So `スマホ` is not offered as `スマ`, and `ネットフリックス` and `ユーチューブ` stay whole.
+- **Latin words in the same listing form phrases as usual.** A Latin brand next to Japanese text is its own phrase.
+
+The segmenter does not know every word. A loanword it cannot place, common in Thai, still comes out in pieces: `สั่งอาหารเดลิเวอรี่` gives `อา` and `เว` next to `อาหาร` and `เดลิเวอรี่`. Pause such a fragment on the keyword monitor.
+
+Arabic is written with spaces, but a conjunction and an article attach to the word after them. asobeast drops the noise words it knows, and also the same word after the conjunction `و`, so `وأكثر` goes with `أكثر`. It keeps every other word that begins with `و`, because many Arabic words do, such as `وقت` and `واتساب`, and it never strips the article `ال`. A keyword like `وطعام` therefore stays as it was written. The tatweel and the short vowel marks are ignored when a word is compared with the noise words, so `وأكـثر` and `أَكْثَر` are dropped as well, and a keyword that stays keeps the marks it was written with.
+
+Korean keeps its spaces, so a particle attached to a word, as in `메신저를`, also stays attached. asobeast has no morphological analysis for Korean or Arabic.
+
+The metadata lints, the ASO audit, the review phrases and the keyword combinations card still read words between spaces, so on a Japanese, Chinese or Thai listing they treat a run of text as one word. The audit can therefore call a keyword missing from the title that the coverage table shows as covered. Keyword coverage, on the metadata workbench and on the overview, and keyword relevance find such a keyword anywhere in the listing, so a keyword tracked from a listing counts as covered by it and earns its full relevance. See [Check keyword coverage](/guides/metadata-workbench#check-keyword-coverage) and [Where does relevance start?](/concepts/scoring#where-does-relevance-start)
+
+An upgrade does not change keywords already tracked. The next refresh of an app, which the daily run performs, adds the cleaner keywords next to the sentences an earlier version tracked, and those stay active until you pause or remove them on the keyword monitor.
+
 ## What stays Apple only?
 
 The subtitle and the keyword field. On a Google Play app they carry audit weight 0 and are hidden in the web app rather than shown empty, and the Action Center skips rules that would recommend an impossible edit.

@@ -1,6 +1,7 @@
 import { searchKey } from '@asobeast/shared';
 import { clamp } from './curves';
 import { sameWord } from './plurals';
+import { isUnsegmented } from '../common/text/scripts';
 
 export const EVIDENCE_EXACT = 1;
 export const EVIDENCE_ALL_WORDS = 0.7;
@@ -10,15 +11,12 @@ export const PADDING_FLOOR = 0.25;
 export const MATCH_ALL_WORDS = 0.85;
 export const MATCH_PARTIAL_MAX = 0.5;
 
-const UNSEGMENTED =
-  /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}]/u;
-
 const containsWord = (
   haystack: string,
   tokens: string[],
   word: string,
 ): boolean =>
-  UNSEGMENTED.test(word)
+  isUnsegmented(word)
     ? haystack.includes(word)
     : tokens.some((token) => sameWord(token, word));
 
@@ -28,7 +26,7 @@ function containsPhrase(
   phrase: string,
   words: string[],
 ): boolean {
-  if (UNSEGMENTED.test(phrase)) {
+  if (isUnsegmented(phrase)) {
     return haystack.includes(phrase);
   }
   return tokens.some((_, start) =>
@@ -68,7 +66,7 @@ export function titleTargets(title: string, keyword: string): boolean {
     return false;
   }
   const haystack = searchKey(title);
-  return UNSEGMENTED.test(phrase)
+  return isUnsegmented(phrase)
     ? haystack.includes(phrase)
     : ` ${haystack}`.includes(` ${phrase}`);
 }
