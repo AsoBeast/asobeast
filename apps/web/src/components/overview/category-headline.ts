@@ -19,7 +19,8 @@ export function headlineSeries(
   const current = series.filter((item) => lastCapturedOn(item) === newest);
   const genreSeries = current.filter((item) => item.genre !== OVERALL_GENRE);
   const pool = genreSeries.length > 0 ? genreSeries : current;
-  const preferred = [ownCollection(price), "grossing" as const]
+  const collections: CategoryCollection[] = [ownCollection(price), "grossing"];
+  const preferred = collections
     .map((collection) => pool.find((item) => item.collection === collection))
     .filter((item): item is CategoryRankSeriesItem => item !== undefined);
   return preferred.find((item) => item.current !== null) ?? preferred[0];
