@@ -21,15 +21,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { generateMetadataDrafts } from "@/lib/api";
 import { invalidateAiUsage } from "@/lib/queries";
-import {
-  LINT_SEVERITY_LABEL,
-  LINT_SEVERITY_VARIANT,
-  METADATA_FIELD_LABELS,
-} from "@/lib/metadata-display";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { draftLocaleParser } from "@/lib/search-params";
 import { useSingleFlight } from "@/lib/single-flight";
 import { DraftLocalizationSelect } from "./DraftLocalizationSelect";
 import { DraftLocalizationSkeleton } from "./skeletons";
+import { LintIssueRow } from "./LintIssueRow";
 
 const STORE_FIELDS: Record<Store, MetadataField[]> = {
   APP_STORE: ["title", "subtitle", "keywordField"],
@@ -47,7 +44,7 @@ function DraftCard({ draft }: { draft: MetadataDraft }) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4">
+    <div className="min-w-0 rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
         <span className="font-medium text-foreground">
           {METADATA_FIELD_LABELS[draft.field]}
@@ -60,23 +57,15 @@ function DraftCard({ draft }: { draft: MetadataDraft }) {
         {draft.value}
       </pre>
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1.5">
-          {draft.issues.length === 0 ? (
-            <Badge variant="success">no issues</Badge>
-          ) : (
-            draft.issues.map((issue, index) => (
-              <span
-                key={`${issue.rule}-${index}`}
-                className="flex items-center gap-2 text-sm text-muted-foreground"
-              >
-                <Badge variant={LINT_SEVERITY_VARIANT[issue.severity]}>
-                  {LINT_SEVERITY_LABEL[issue.severity]} · {issue.rule}
-                </Badge>
-                {issue.message}
-              </span>
-            ))
-          )}
-        </div>
+        {draft.issues.length === 0 ? (
+          <Badge variant="success">no issues</Badge>
+        ) : (
+          <ul className="flex min-w-0 flex-col gap-1.5">
+            {draft.issues.map((issue, index) => (
+              <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
+            ))}
+          </ul>
+        )}
         <Button
           variant="outline"
           aria-label={`Copy ${METADATA_FIELD_LABELS[draft.field]} draft`}
@@ -197,7 +186,7 @@ export function MetadataAssistantPanel({
         </p>
       ) : null}
       {drafts.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
           {drafts.map((draft) => (
             <DraftCard key={draft.field} draft={draft} />
           ))}

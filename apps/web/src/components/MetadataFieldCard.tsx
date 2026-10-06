@@ -6,14 +6,10 @@ import {
   type LintIssue,
   type MetadataField,
 } from "@asobeast/shared";
-import { Badge } from "@/components/ui/badge";
+import { LintIssueRow } from "@/components/metadata/LintIssueRow";
 import { Meter } from "@/components/ui/meter";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  LINT_SEVERITY_LABEL,
-  LINT_SEVERITY_VARIANT,
-  METADATA_FIELD_LABELS,
-} from "@/lib/metadata-display";
+import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
 
 export function MetadataFieldCard({
@@ -34,7 +30,7 @@ export function MetadataFieldCard({
   const label = METADATA_FIELD_LABELS[field];
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+    <div className="flex min-w-0 flex-col gap-2 rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
         <span className="font-medium text-foreground">{label}</span>
         <span
@@ -70,15 +66,7 @@ export function MetadataFieldCard({
       {issues.length > 0 ? (
         <ul className="flex flex-col gap-1.5">
           {issues.map((issue, index) => (
-            <li
-              key={`${issue.rule}-${index}`}
-              className="flex items-center gap-2 text-body text-muted-foreground"
-            >
-              <Badge variant={LINT_SEVERITY_VARIANT[issue.severity]}>
-                {LINT_SEVERITY_LABEL[issue.severity]} · {issue.rule}
-              </Badge>
-              {issue.message}
-            </li>
+            <LintIssueRow key={`${issue.rule}-${index}`} issue={issue} />
           ))}
         </ul>
       ) : (

@@ -37,6 +37,7 @@ import type {
   AuditRecommendation,
   AuditTarget,
   KeywordCoverageRow,
+  LintIssue,
   MetadataAuditResult,
   MetadataDraft,
   TrackedKeywordItem,
@@ -3049,9 +3050,9 @@ export const APP_AR_DETAIL: AppDetail = {
   name: "سوق: تسوق أونلاين",
 };
 
-const AR_FIELDS = ["title", "shortDescription", "description"] as const;
+const PLAY_FIELDS = ["title", "shortDescription", "description"] as const;
 
-const arCoverageRow = (
+const playCoverageRow = (
   keywordId: string,
   text: string,
   bucket: KeywordCoverageRow["bucket"],
@@ -3060,7 +3061,7 @@ const arCoverageRow = (
   keywordId,
   text,
   bucket,
-  fields: AR_FIELDS.map((field, index) => ({
+  fields: PLAY_FIELDS.map((field, index) => ({
     field,
     covered: covered[index] ?? false,
   })),
@@ -3100,22 +3101,30 @@ export const APP_AR_METADATA_AUDIT: MetadataAuditResult = {
     },
   ],
   coverage: [
-    arCoverageRow("kw-ar-1", "تسوق اون لاين", "primary", [true, true, true]),
-    arCoverageRow("kw-ar-2", "توصيل سريع", "primary", [false, true, true]),
-    arCoverageRow("kw-ar-3", "ملابس رجالية", "secondary", [false, false, true]),
-    arCoverageRow("kw-ar-4", "الكترونيات", "secondary", [false, false, true]),
-    arCoverageRow("kw-ar-5", "دفع عند الاستلام", "longtail", [
+    playCoverageRow("kw-ar-1", "تسوق اون لاين", "primary", [true, true, true]),
+    playCoverageRow("kw-ar-2", "توصيل سريع", "primary", [false, true, true]),
+    playCoverageRow("kw-ar-3", "ملابس رجالية", "secondary", [
       false,
       false,
       true,
     ]),
-    arCoverageRow("kw-ar-6", "عروض الجمعة البيضاء", "longtail", [
+    playCoverageRow("kw-ar-4", "الكترونيات", "secondary", [false, false, true]),
+    playCoverageRow("kw-ar-5", "دفع عند الاستلام", "longtail", [
+      false,
+      false,
+      true,
+    ]),
+    playCoverageRow("kw-ar-6", "عروض الجمعة البيضاء", "longtail", [
       false,
       false,
       false,
     ]),
-    arCoverageRow("kw-ar-7", "منتجات المنزل", "longtail", [false, false, true]),
-    arCoverageRow("kw-ar-8", "شحن مجاني", "longtail", []),
+    playCoverageRow("kw-ar-7", "منتجات المنزل", "longtail", [
+      false,
+      false,
+      true,
+    ]),
+    playCoverageRow("kw-ar-8", "شحن مجاني", "longtail", []),
   ],
   keywordFieldSuggestion: null,
 };
@@ -3124,6 +3133,200 @@ DATASETS[APP_AR_ID] = {
   ...DATASETS["app-gp"],
   detail: APP_AR_DETAIL,
   changeImpact: emptyChangeImpact(APP_AR_DETAIL),
+};
+
+const PLAY_DESCRIPTION_ISSUES: LintIssue[] = [
+  {
+    rule: "no-cta",
+    severity: "info",
+    message: "No clear call to action detected.",
+  },
+  {
+    rule: "no-social-proof",
+    severity: "info",
+    message: "No social proof (awards, press, user counts) detected.",
+  },
+  {
+    rule: "no-formatting",
+    severity: "info",
+    message: "No line breaks or bullets; add formatting for readability.",
+  },
+];
+
+export const APP_FR_ID = "app-fr";
+
+export const APP_FR_DETAIL: AppDetail = {
+  ...APP_GP_DETAIL,
+  id: APP_FR_ID,
+  storeAppId: "fr.vinted",
+  country: "fr",
+  name: "Vinted : vendre et acheter",
+};
+
+const FR_SHORT_DESCRIPTION =
+  "Vendre tes vêtements de seconde main, acheter des vêtements sans frais";
+
+const FR_DESCRIPTION =
+  "Vinted est la première communauté de mode d'occasion. Vends les vêtements que tu ne portes plus, trouve des pièces uniques à petit prix et profite d'une livraison simple et sécurisée.";
+
+export const APP_FR_METADATA_AUDIT: MetadataAuditResult = {
+  appId: APP_FR_ID,
+  store: "GOOGLE_PLAY",
+  fields: [
+    {
+      field: "title",
+      value: "Vinted : vendre et acheter",
+      chars: 26,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "shortDescription",
+      value: FR_SHORT_DESCRIPTION,
+      chars: FR_SHORT_DESCRIPTION.length,
+      limit: 80,
+      indexed: true,
+      issues: [
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"vendre" already appears in the title.',
+          offendingText: "vendre",
+        },
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"acheter" already appears in the title.',
+          offendingText: "acheter",
+        },
+        {
+          rule: "keyword-stuffing",
+          severity: "warn",
+          message: '"vêtements" is repeated 2 times.',
+          offendingText: "vêtements",
+        },
+      ],
+    },
+    {
+      field: "description",
+      value: FR_DESCRIPTION,
+      chars: FR_DESCRIPTION.length,
+      limit: 4000,
+      indexed: true,
+      issues: PLAY_DESCRIPTION_ISSUES,
+    },
+  ],
+  coverage: [
+    playCoverageRow("kw-fr-1", "vêtements de seconde main", "primary", [
+      false,
+      true,
+      false,
+    ]),
+    playCoverageRow("kw-fr-2", "vendre et acheter", "primary", [
+      true,
+      false,
+      false,
+    ]),
+    playCoverageRow("kw-fr-3", "mode d'occasion", "secondary", [
+      false,
+      false,
+      true,
+    ]),
+  ],
+  keywordFieldSuggestion: null,
+};
+
+DATASETS[APP_FR_ID] = {
+  ...DATASETS["app-gp"],
+  detail: APP_FR_DETAIL,
+  changeImpact: emptyChangeImpact(APP_FR_DETAIL),
+};
+
+export const APP_HE_ID = "app-he";
+
+export const APP_HE_DETAIL: AppDetail = {
+  ...APP_GP_DETAIL,
+  id: APP_HE_ID,
+  storeAppId: "com.ideomobile.hapoalim",
+  country: "il",
+  name: "בנק הפועלים",
+};
+
+const HE_SHORT_DESCRIPTION =
+  "בנק הפועלים בכף היד: חשבון, כרטיסי אשראי והעברות כספים בכל שעה ובכל מקום";
+
+const HE_DESCRIPTION =
+  "אפליקציית בנק הפועלים מאפשרת לנהל את החשבון בצורה פשוטה ומאובטחת: לבדוק יתרה, לשלם חשבונות, להעביר כסף ולקבל התראות בזמן אמת.";
+
+export const APP_HE_METADATA_AUDIT: MetadataAuditResult = {
+  appId: APP_HE_ID,
+  store: "GOOGLE_PLAY",
+  fields: [
+    {
+      field: "title",
+      value: "בנק הפועלים",
+      chars: 11,
+      limit: 30,
+      indexed: true,
+      issues: [
+        {
+          rule: "under-utilized",
+          severity: "warn",
+          message: "Only 11 of 30 characters used.",
+        },
+      ],
+    },
+    {
+      field: "shortDescription",
+      value: HE_SHORT_DESCRIPTION,
+      chars: HE_SHORT_DESCRIPTION.length,
+      limit: 80,
+      indexed: true,
+      issues: [
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"בנק" already appears in the title.',
+          offendingText: "בנק",
+        },
+        {
+          rule: "repeats-title-word",
+          severity: "warn",
+          message: '"הפועלים" already appears in the title.',
+          offendingText: "הפועלים",
+        },
+      ],
+    },
+    {
+      field: "description",
+      value: HE_DESCRIPTION,
+      chars: HE_DESCRIPTION.length,
+      limit: 4000,
+      indexed: true,
+      issues: PLAY_DESCRIPTION_ISSUES,
+    },
+  ],
+  coverage: [
+    playCoverageRow("kw-he-1", "בנק הפועלים", "primary", [true, true, true]),
+    playCoverageRow("kw-he-2", "כרטיסי אשראי", "secondary", [
+      false,
+      true,
+      false,
+    ]),
+    playCoverageRow("kw-he-3", "העברת כספים", "longtail", [
+      false,
+      false,
+      false,
+    ]),
+  ],
+  keywordFieldSuggestion: null,
+};
+
+DATASETS[APP_HE_ID] = {
+  ...DATASETS["app-gp"],
+  detail: APP_HE_DETAIL,
+  changeImpact: emptyChangeImpact(APP_HE_DETAIL),
 };
 
 export const METADATA_DRAFTS: MetadataDraft[] = [
@@ -3168,11 +3371,34 @@ const withLongKeywordField = <
     ? { ...row, value: LONG_KEYWORD_FIELD, chars: LONG_KEYWORD_FIELD.length }
     : row;
 
+const COMPOUND_KEYWORD = "produktivitaetsmanagementsoftwareloesung";
+
+const COMPOUND_KEYWORD_FIELD = `${COMPOUND_KEYWORD},${COMPOUND_KEYWORD}s`;
+
+const withCompoundKeywordField = (
+  row: MetadataAuditResult["fields"][number],
+): MetadataAuditResult["fields"][number] =>
+  row.field === "keywordField"
+    ? {
+        ...row,
+        value: COMPOUND_KEYWORD_FIELD,
+        chars: COMPOUND_KEYWORD_FIELD.length,
+        issues: [
+          {
+            rule: "plural-form",
+            severity: "warn",
+            message: `Apple indexes both forms; "${COMPOUND_KEYWORD}s" duplicates "${COMPOUND_KEYWORD}".`,
+            offendingText: `${COMPOUND_KEYWORD}s`,
+          },
+        ],
+      }
+    : row;
+
 export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
   ...METADATA_AUDIT,
   appId: "app-long",
   fields: [
-    ...METADATA_AUDIT.fields.map(withLongKeywordField),
+    ...METADATA_AUDIT.fields.map(withCompoundKeywordField),
     {
       field: "description",
       value: LONG_DESCRIPTION,
@@ -3193,6 +3419,8 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
   "app-long": APP_LONG_METADATA_AUDIT,
   [APP_AR_ID]: APP_AR_METADATA_AUDIT,
+  [APP_FR_ID]: APP_FR_METADATA_AUDIT,
+  [APP_HE_ID]: APP_HE_METADATA_AUDIT,
 };
 
 export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
