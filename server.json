@@ -1,0 +1,34 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.asobeast/asobeast",
+  "title": "AsoBeast",
+  "description": "App Store and Google Play ASO: keyword rankings, competitors, reviews, audits and an action queue.",
+  "version": "1.7.0",
+  "websiteUrl": "https://asobeast.com/mcp",
+  "repository": {
+    "url": "https://github.com/AsoBeast/asobeast",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://app.asobeast.com/api/backend/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer authentication with a read-only AsoBeast API token",
+          "value": "Bearer {token}",
+          "isRequired": true,
+          "isSecret": true,
+          "variables": {
+            "token": {
+              "description": "Read-only AsoBeast API token (asob_...) from Settings, MCP server",
+              "isRequired": true,
+              "isSecret": true
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

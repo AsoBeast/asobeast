@@ -45,6 +45,11 @@
           "jsonpath": "$.info.version"
         },
         {
+          "type": "json",
+          "path": "server.json",
+          "jsonpath": "$.version"
+        },
+        {
           "type": "generic",
           "path": "docker-compose.pull.yml"
         }

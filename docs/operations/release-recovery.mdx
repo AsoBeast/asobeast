@@ -37,7 +37,7 @@ Release Please decides what work remains from two places: the version in `.relea
 
 When that second step does not complete, the two disagree permanently. The manifest claims a version that was never tagged, and the pull request keeps its `autorelease: pending` label. Every later run finds the same merged pull request, decides the release is still outstanding, warns and stops. It never opens the next release pull request, so the repository silently stops releasing.
 
-Because `docker-publish.yml` runs only when `release_created` is `true`, no images are built either. Documentation that tells operators to pull a published tag then points at something that does not exist.
+Because `docker-publish.yml` and `mcp-registry-publish.yml` run only when `release_created` is `true`, no images are built and the MCP Registry is not updated either. Documentation that tells operators to pull a published tag then points at something that does not exist.
 
 ## When no workflow starts at all
 
@@ -61,7 +61,7 @@ pnpm check:rate-classes && pnpm check:compose-limits && pnpm check:env-documente
 pnpm check:image-defaults && pnpm check:release-versions && pnpm docs:mcp-tools:check
 ```
 
-Then bump the version everywhere Release Please would have. Eight files move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run. `pnpm check:release-versions` reports any that were missed:
+Then bump the version everywhere Release Please would have. Nine files move together, and `.release-please-manifest.json` must agree with them or `verify-release-state.sh` fails the next Release run. `pnpm check:release-versions` reports any that were missed:
 
 | File | Why |
 | --- | --- |
@@ -73,6 +73,7 @@ Then bump the version everywhere Release Please would have. Eight files move tog
 | `packages/mcp-tools/package.json` | Tool catalog package version |
 | `docs/api-reference/openapi.json` | `info.version` in the captured document, which the drift check compares against the running API |
 | `docker-compose.pull.yml` | The `ASOBEAST_IMAGE_TAG` default an installation runs when it sets no tag |
+| `server.json` | The version the official MCP Registry lists for the hosted endpoint |
 | `.release-please-manifest.json` | What Release Please believes is released |
 
 Write the `CHANGELOG.md` section by hand in the same shape Release Please produces, then tag the release commit directly. There is no release pull request in this path, so take the commit that carries the version bump rather than looking one up:
@@ -84,7 +85,7 @@ awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.
 gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
 ```
 
-Nothing needs relabelling, because no release pull request exists. Publishing the images cannot run until the runner is available, so they arrive late; say so in the release notes rather than leaving operators to discover that a documented tag does not resolve. Dispatch `docker-publish.yml` as described in step 4 of [Recovery](#recovery) as soon as the runner works again.
+Nothing needs relabelling, because no release pull request exists. Publishing the images cannot run until the runner is available, so they arrive late; say so in the release notes rather than leaving operators to discover that a documented tag does not resolve. Dispatch `docker-publish.yml` and `mcp-registry-publish.yml` as described in steps 4 and 5 of [Recovery](#recovery) as soon as the runner works again.
 
 ## Recovery
 
@@ -107,7 +108,7 @@ Run these in order, from an up to date `main`. Steps 1 and 2 are public and effe
     Release Please already wrote the notes. Extract them rather than retyping them, so the release and the changelog cannot disagree.
 
     ```bash
-    awk '/^## \[<version>\]/{f=1} /^## <previous>/{f=0} f' CHANGELOG.md > notes.md
+    awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.md
     gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
     ```
 
@@ -133,6 +134,17 @@ Run these in order, from an up to date `main`. Steps 1 and 2 are public and effe
 
     Both manifests must list `linux/amd64` and `linux/arm64`.
   </Step>
+  <Step title="Publish to the MCP Registry">
+    `mcp-registry-publish.yml` accepts the same manual dispatch. It signs in with the `asobeast.com` domain key held in the `MCP_REGISTRY_PRIVATE_KEY` secret and refuses a tag whose `server.json` states another version, which includes every tag up to `v1.7.0` because none of them carries the file.
+
+    ```bash
+    gh workflow run mcp-registry-publish.yml -f tag=v<version>
+    gh run watch "$(gh run list --workflow=mcp-registry-publish.yml --limit 1 --json databaseId --jq '.[0].databaseId')"
+    curl -s "https://registry.modelcontextprotocol.io/v0/servers/com.asobeast%2Fasobeast/versions/<version>" | jq -r .server.version
+    ```
+
+    The registry refuses a version it already lists, so a dispatch for a tag that published on its own fails without changing anything.
+  </Step>
   <Step title="Confirm the tool recovers">
     Merge any pull request into `main`, then check that a fresh release pull request opens for the next version and that the warning is gone.
 
@@ -149,6 +161,8 @@ Run these in order, from an up to date `main`. Steps 1 and 2 are public and effe
   A recovery dispatch builds the tag you pass rather than the tip of `main`, and it publishes the same tag shapes a normal release does, including `latest`. Dispatching a version older than the newest published release therefore moves `latest`, `0` and the minor tag **backwards** onto it.
 
   Recover the newest release first, or accept that you have to re-dispatch the newest version afterwards to put the moving tags back. Verify the version tag resolves before you tell anyone to pull it.
+
+  The MCP Registry does not move backwards. It marks the highest version as the latest one, whatever order the versions were published in.
 </Warning>
 
 ## The release pull request needs its workflows approved
