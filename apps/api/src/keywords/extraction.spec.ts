@@ -541,6 +541,7 @@ describe('extractCandidates', () => {
       ['สั่งอาหารเดลิเวอรี่', ['สั่งอา', 'อาหารเดลิ', 'เดลิเว']],
       ['ดูดวงรายวัน แม่นๆ', ['ดูด', 'วงรายวัน', 'ดูดวงราย']],
       ['สกินแคร์ บำรุงผิวหน้า', ['สกิน']],
+      ['สวยๆๆ เยอะๆๆ', ['สว', 'ยๆๆ', 'เย', 'อะๆๆ']],
     ])('never cuts through a word of %s', (title, fragments) => {
       expect(
         texts({ title }).filter((text) => fragments.includes(text)),

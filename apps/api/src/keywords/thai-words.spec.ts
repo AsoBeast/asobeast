@@ -59,6 +59,9 @@ describe('thaiSpans', () => {
     expect(thaiSpans('แม่นๆ')).toEqual([
       { text: 'แม่นๆ', index: 0, known: true },
     ]);
+    expect(thaiSpans('สวยๆๆ')).toEqual([
+      { text: 'สวยๆๆ', index: 0, known: true },
+    ]);
   });
 
   it('splits a dictionary entry made only of function words', () => {
