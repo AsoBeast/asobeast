@@ -108,7 +108,7 @@ Run these in order, from an up to date `main`. Steps 1 and 2 are public and effe
     Release Please already wrote the notes. Extract them rather than retyping them, so the release and the changelog cannot disagree.
 
     ```bash
-    awk '/^## \[<version>\]/{f=1} /^## <previous>/{f=0} f' CHANGELOG.md > notes.md
+    awk '/^## \[<version>\]/{f=1} /^## \[<previous>\]/{f=0} f' CHANGELOG.md > notes.md
     gh release create v<version> --title "v<version>" --notes-file notes.md --verify-tag
     ```
 
