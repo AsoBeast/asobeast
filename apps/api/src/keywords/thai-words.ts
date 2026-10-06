@@ -75,8 +75,11 @@ const isWordEdge = (run: string, index: number): boolean =>
   (!CLUSTER_CONTINUATION.test(run.charAt(index)) &&
     !LEADING_VOWEL.test(run.charAt(index - 1)));
 
-const withRepeatMark = (run: string, end: number): number =>
-  run.charAt(end) === REPEAT_MARK ? end + 1 : end;
+function withRepeatMarks(run: string, end: number): number {
+  let stop = end;
+  while (run.charAt(stop) === REPEAT_MARK) stop += 1;
+  return stop;
+}
 
 const isBetter = (step: Step, current: Step | undefined): boolean =>
   current === undefined ||
@@ -94,7 +97,7 @@ function bestSteps(run: string, { words, longest }: Dictionary): Step[] {
     if (here === undefined || !isWordEdge(run, start)) continue;
     const limit = Math.min(run.length, start + longest);
     for (let end = start + 2; end <= limit; end += 1) {
-      const stop = withRepeatMark(run, end);
+      const stop = withRepeatMarks(run, end);
       if (isWordEdge(run, stop) && words.has(run.slice(start, end))) {
         offer(stop, {
           from: start,
