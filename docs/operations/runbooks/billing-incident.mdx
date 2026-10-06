@@ -21,7 +21,7 @@ Two failures matter and they are not equally urgent. A customer wrongly locked o
 
 ## Triage
 
-The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. The `POST` requests need a write scoped one. See [API tokens](/security/api-tokens).
+The commands run on the host and read a personal API token of the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) from `ASOBEAST_API_TOKEN`. Behind the tunnel overlay, which publishes no host port, replace `http://127.0.0.1:3001` with your public origin. The `POST` requests need a write scoped one. See [API tokens](/security/api-tokens).
 
 <Steps>
   <Step title="Check the webhook secret before anything else">
