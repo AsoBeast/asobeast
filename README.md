@@ -21,7 +21,7 @@
 
 asobeast is a free, open source App Store Optimization (ASO) toolkit that you run on your own server. It imports an Apple App Store or Google Play listing, tracks keyword rankings daily to a depth of 200, watches competitors, reviews and metadata, and turns that history into a prioritized queue of ASO work.
 
-Every store request runs on the machine hosting asobeast. There is no ASO vendor to sign up with, no API key to buy, and no third party that learns which keywords you target. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, store status updates or OpenAI assistance.
+Every store request runs on the machine hosting asobeast. There is no ASO vendor to sign up with, no API key to buy, and no third party that learns which keywords you target. Your data stays in your deployment unless you explicitly enable an outbound integration such as webhook alerts, email, OpenAI assistance, Apple Ads search popularity or store status updates.
 
 ## Why asobeast?
 
@@ -125,7 +125,7 @@ Yes. An app is imported once, and keyword tracking carries its own storefront, s
 
 ### Is any of my data sent anywhere?
 
-No, unless you turn it on. Webhook alerts, SMTP email and OpenAI assistance are the only outbound paths, and each is off until configured. There is no telemetry.
+No, unless you turn it on. Webhook alerts, SMTP email, OpenAI assistance, Apple Ads search popularity and the store status poll are the only outbound integrations, and each is off until configured. There is no telemetry. See [what leaves your deployment](https://docs.asobeast.com/legal/data-collection).
 
 ### Can I connect asobeast to Claude or another AI agent?
 
@@ -159,7 +159,7 @@ Worth knowing before you rely on it:
 
 ## Roadmap
 
-`1.0.0` is the current release. What remains open:
+The `1.x` line is current, and the [changelog](CHANGELOG.md) names the latest release. What remains open:
 
 - A per-user permission model finer than owner and member, and one account in several workspaces.
 - Better popularity calibration using licensed or first-party acquisition data.
