@@ -9,6 +9,7 @@ export const SPACELESS_OR_NOT = new RegExp(
 );
 const HANGUL_CHARACTER = /\p{Script=Hangul}/u;
 export const KANA_CHARACTER = /[\p{Script=Hiragana}\p{Script=Katakana}]/u;
+export const THAI_CHARACTER = /\p{Script=Thai}/u;
 
 export const isUnsegmented = (text: string): boolean =>
   SPACELESS_CHARACTER.test(text) || HANGUL_CHARACTER.test(text);

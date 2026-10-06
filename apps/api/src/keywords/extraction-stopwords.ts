@@ -45,7 +45,14 @@ const CHINESE_PARTICLES: ReadonlySet<string> = new Set([
   '为',
   '為',
 ]);
-const THAI_NOISE = ['แอป', 'แอปพลิเคชัน', 'ฟรี'];
+const THAI_NOISE = ['แอป', 'แอพ', 'แอปพลิเคชัน', 'ฟรี', 'วันนี้'];
+
+const THAI_PREFIXES: ReadonlySet<string> = new Set([
+  'การ',
+  'ความ',
+  'นัก',
+  'ผู้',
+]);
 
 const THAI = [
   'และ',
@@ -61,6 +68,28 @@ const THAI = [
   'มาก',
   'ทุก',
   'จาก',
+  'ด้วย',
+  'ไป',
+  'มา',
+  'นี้',
+  'นั้น',
+  'จะ',
+  'ก็',
+  'แล้ว',
+  'ยัง',
+  'คือ',
+  'โดย',
+  'เพื่อ',
+  'ถึง',
+  'แต่',
+  'ว่า',
+  'ซึ่ง',
+  'อีก',
+  'เลย',
+  'กว่า',
+  'ไม่',
+  'ต้อง',
+  'แบบ',
 ];
 
 const ARABIC = [
@@ -121,6 +150,7 @@ const EXTRACTION_STOPWORDS: ReadonlySet<string> = new Set([
   ...STORE_NOISE,
   ...CHINESE,
   ...THAI,
+  ...THAI_PREFIXES,
   ...ARABIC,
 ]);
 
@@ -143,3 +173,5 @@ export const isExtractionStopword = (token: string): boolean => {
 
 export const isChineseParticle = (word: string): boolean =>
   CHINESE_PARTICLES.has(word);
+
+export const isThaiPrefix = (word: string): boolean => THAI_PREFIXES.has(word);

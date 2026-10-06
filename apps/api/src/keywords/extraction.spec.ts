@@ -309,12 +309,9 @@ describe('extractCandidates', () => {
           subtitle: 'สั่งอาหารและร้านอาหารที่ใหญ่ที่สุด',
         }),
       ).toEqual([
-        { text: 'สั่งอาหาร', source: 'TITLE', weight: 3 },
         { text: 'grab', source: 'TITLE', weight: 3 },
-        { text: 'สั่ง', source: 'TITLE', weight: 3 },
-        { text: 'อาหาร', source: 'TITLE', weight: 3 },
+        { text: 'สั่งอาหาร', source: 'TITLE', weight: 3 },
         { text: 'ร้านอาหาร', source: 'SUBTITLE', weight: 2 },
-        { text: 'ร้าน', source: 'SUBTITLE', weight: 2 },
         { text: 'ใหญ่', source: 'SUBTITLE', weight: 2 },
       ]);
     });
@@ -328,9 +325,6 @@ describe('extractCandidates', () => {
       expect(texts({ title: 'สั่งอาหารออนไลน์' })).toEqual([
         'สั่งอาหารออนไลน์',
         'สั่งอาหาร',
-        'อาหารออนไลน์',
-        'สั่ง',
-        'อาหาร',
         'ออนไลน์',
       ]);
     });

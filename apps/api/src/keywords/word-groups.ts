@@ -3,12 +3,14 @@ import {
   KANA_CHARACTER,
   SPACELESS_CHARACTER,
   SPACELESS_OR_NOT,
+  THAI_CHARACTER,
 } from '../common/text/scripts';
 import {
   isChineseParticle,
   isExtractionStopword,
   isStoreNoise,
 } from './extraction-stopwords';
+import { attachThaiPrefixes, thaiSpans } from './thai-words';
 
 export interface WordGroup {
   tokens: string[];
@@ -28,10 +30,20 @@ interface Word {
   index: number;
 }
 
-const wordsOf = (run: string): Word[] =>
-  [...segmenter.segment(run)]
+const segmentedWords = (text: string, offset: number): Word[] =>
+  [...segmenter.segment(text)]
     .filter((part) => part.isWordLike)
-    .map(({ segment, index }) => ({ segment, index }));
+    .map(({ segment, index }) => ({ segment, index: offset + index }));
+
+const thaiWordsOf = (run: string): Word[] =>
+  thaiSpans(run).flatMap((span) =>
+    span.known
+      ? [{ segment: span.text, index: span.index }]
+      : segmentedWords(span.text, span.index),
+  );
+
+const wordsOf = (run: string): Word[] =>
+  THAI_CHARACTER.test(run) ? thaiWordsOf(run) : segmentedWords(run, 0);
 
 function trimNoise(words: Word[]): Word[] {
   const content = words.map((word) => !isStoreNoise(word.segment));
@@ -132,7 +144,9 @@ function spacelessGroups(
   const leads =
     startsChunk && words[0] === runWords[0] && !isGrammar(words[0].segment);
   const groups = splitAtGrammar(
-    joinKatakanaFragments(words.map((word) => word.segment)),
+    attachThaiPrefixes(
+      joinKatakanaFragments(words.map((word) => word.segment)),
+    ),
     isGrammar,
   )
     .map(mergeBoundWords)
