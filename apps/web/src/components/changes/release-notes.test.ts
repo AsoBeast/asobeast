@@ -30,6 +30,12 @@ describe("releaseNotesInline", () => {
     ).toBe("Type <Username> to mention · Fixes &amp; <br> more");
   });
 
+  it("trims lines and drops blank ones however the store broke them", () => {
+    expect(
+      releaseNotesInline("  New: \r\n\r\n   \n  - Faster sync  \rDone"),
+    ).toBe("New: · Faster sync · Done");
+  });
+
   it("returns an empty string for empty notes", () => {
     expect(releaseNotesInline("")).toBe("");
   });
