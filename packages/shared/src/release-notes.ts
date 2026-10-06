@@ -1,4 +1,5 @@
 const LINE_BREAK = /<br\b[^>]*>|\r\n?/gi;
+const NEWLINE = /\r\n?|\n/;
 const TAG = /<\/?[a-z][^>]*>/gi;
 const CUT_TAG = /<\/?[a-z][^<>]*?(…?)$/i;
 const ENTITY = /&(#x[\da-f]+|#\d+|[a-z]+);/gi;
@@ -42,12 +43,18 @@ function stripTags(value: string): string {
   return stripped;
 }
 
-export function releaseNotesText(value: string): string {
-  return stripTags(value.replace(LINE_BREAK, '\n'))
-    .replace(CUT_TAG, '$1')
-    .replace(ENTITY, decodeEntity)
-    .split('\n')
+export function releaseNotesLines(value: string): string {
+  return value
+    .split(NEWLINE)
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
     .join('\n');
+}
+
+export function releaseNotesText(value: string): string {
+  return releaseNotesLines(
+    stripTags(value.replace(LINE_BREAK, '\n'))
+      .replace(CUT_TAG, '$1')
+      .replace(ENTITY, decodeEntity),
+  );
 }

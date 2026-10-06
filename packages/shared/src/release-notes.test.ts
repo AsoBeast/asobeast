@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { releaseNotesText } from './release-notes';
+import { releaseNotesLines, releaseNotesText } from './release-notes';
 
 describe('releaseNotesText', () => {
   it('turns every line break tag spelling into a line', () => {
@@ -81,5 +81,23 @@ describe('releaseNotesText', () => {
   it('leaves plain multi-line notes unchanged', () => {
     const notes = 'Bug fixes\n- Faster sync\n- New widgets';
     expect(releaseNotesText(notes)).toBe(notes);
+  });
+});
+
+describe('releaseNotesLines', () => {
+  it('trims lines, drops blank ones and normalizes carriage returns', () => {
+    expect(releaseNotesLines('  One \r\n\r  \nTwo\rThree  \n')).toBe(
+      'One\nTwo\nThree',
+    );
+  });
+
+  it('leaves markup and entities as written', () => {
+    expect(releaseNotesLines('Type <br> &amp; <b>bold</b>')).toBe(
+      'Type <br> &amp; <b>bold</b>',
+    );
+  });
+
+  it('returns an empty string for whitespace alone', () => {
+    expect(releaseNotesLines(' \n \r\n ')).toBe('');
   });
 });
