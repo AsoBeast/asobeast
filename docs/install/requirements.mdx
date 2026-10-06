@@ -50,7 +50,7 @@ Working on the source needs the toolchain as well as Docker.
 
 | Requirement | Value | Source |
 | --- | --- | --- |
-| Node.js | 22.12 or newer | The images build on `node:24-alpine` |
+| Node.js | 24.9 or newer | The images build on `node:24-alpine`, and Jest loads the ESM-only NestJS packages only from 24.9 |
 | pnpm | 12.4.1 | `packageManager` in the root `package.json` |
 | Docker | For PostgreSQL and Redis only | `docker-compose.dev.yml` |
 

@@ -2,7 +2,6 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
-import { BullExplorer } from '@nestjs/bullmq/dist/bull.explorer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Prisma, PrismaClient, Store } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
@@ -16,7 +15,11 @@ import { AppModule } from '../src/app.module';
 import { asWorkspace } from './helpers/tenancy';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues, pauseQueues } from './obliterate-queues';
+import {
+  closeWorkers,
+  obliterateQueues,
+  pauseQueues,
+} from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES, resolveSubtitleJobId } from '../src/jobs/jobs.types';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
@@ -78,7 +81,7 @@ describe('Pipeline store routing (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
-    await app.get(BullExplorer, { strict: false }).onApplicationShutdown();
+    await closeWorkers(app);
     await pauseQueues(app);
 
     prisma = testDb();

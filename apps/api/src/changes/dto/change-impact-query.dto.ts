@@ -13,7 +13,7 @@ export class ChangeImpactQueryDto {
   @IsInt()
   @Min(QUERY_BOUNDS.changeTimelineDays.min)
   @Max(QUERY_BOUNDS.changeTimelineDays.max)
-  days = QUERY_BOUNDS.changeTimelineDays.default;
+  days: number = QUERY_BOUNDS.changeTimelineDays.default;
 
   @ApiPropertyOptional({ example: 'de', pattern: COUNTRY_PATTERN.source })
   @IsOptional()
