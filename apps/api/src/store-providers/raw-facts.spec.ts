@@ -255,6 +255,47 @@ describe('releaseNotesFor', () => {
     ).toBe(releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: 'Fixes.' }));
   });
 
+  it('keeps google play plain text notes as the scraper decoded them', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: 'Type <Username> to mention\nFixes &amp; more',
+        recentChangesHTML:
+          'Type &lt;Username&gt; to mention<br>Fixes &amp;amp; more',
+      }),
+    ).toBe('Type <Username> to mention\nFixes &amp; more');
+  });
+
+  it('trims google play plain text lines and drops blank ones', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: '  One \r\n\n  Two  \n',
+        recentChangesHTML: '  One <br><br>  Two  <br>',
+      }),
+    ).toBe('One\nTwo');
+  });
+
+  it('reads the same google play notes from plain text and from markup stored by older scrapers', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: 'Fixes\n- Faster sync',
+        recentChangesHTML: 'Fixes<br>- Faster sync',
+      }),
+    ).toBe(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: 'Fixes<br>- Faster sync',
+      }),
+    );
+  });
+
+  it('returns null for google play plain text notes that hold only whitespace', () => {
+    expect(
+      releaseNotesFor(Store.GOOGLE_PLAY, {
+        recentChanges: ' \n ',
+        recentChangesHTML: ' <br> ',
+      }),
+    ).toBeNull();
+  });
+
   it('returns null for google play notes that hold only markup', () => {
     expect(
       releaseNotesFor(Store.GOOGLE_PLAY, { recentChanges: '<br> <br/>' }),

@@ -8,7 +8,7 @@
 
 ## Tech stack
 
-- **Monorepo:** pnpm workspaces + Turborepo, Node.js 22+ (the images build on `node:24-alpine`), TypeScript strict everywhere
+- **Monorepo:** pnpm workspaces + Turborepo, Node.js 24.9+ (the images build on `node:24-alpine`; Jest runs the API suites with `--experimental-vm-modules` so it can `require()` the ESM-only NestJS 12 packages, which needs 24.9), TypeScript strict everywhere
 - **apps/api:** NestJS (latest stable), Prisma + PostgreSQL 18, BullMQ + Redis 8, Jest + Supertest
 - **apps/web:** Next.js (latest stable, App Router, Tailwind), consumes the API over HTTP; Vitest + Playwright
 - **apps/mcp:** stdio MCP server built with tsup, tested with Vitest. Both MCP surfaces run `@modelcontextprotocol/server@2.3.0` and serve protocol `2026-07-28` alongside the 2025 revisions from one factory

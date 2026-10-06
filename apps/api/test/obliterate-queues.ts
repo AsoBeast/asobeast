@@ -1,5 +1,6 @@
-import { getQueueToken } from '@nestjs/bullmq';
+import { getQueueToken, WorkerHost } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
+import { DiscoveryService } from '@nestjs/core';
 import { Queue } from 'bullmq';
 import { QUEUES } from '../src/jobs/jobs.types';
 
@@ -11,6 +12,17 @@ export async function obliterateQueues(app: INestApplication): Promise<void> {
     }
     await queue.obliterate({ force: true });
   }
+}
+
+export async function closeWorkers(app: INestApplication): Promise<void> {
+  const hosts = app
+    .get(DiscoveryService, { strict: false })
+    .getProviders()
+    .map((wrapper): unknown => wrapper.instance)
+    .filter(
+      (instance): instance is WorkerHost => instance instanceof WorkerHost,
+    );
+  await Promise.all(hosts.map((host) => host.worker.close()));
 }
 
 export async function pauseQueues(app: INestApplication): Promise<void> {

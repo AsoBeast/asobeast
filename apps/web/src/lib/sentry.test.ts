@@ -104,6 +104,7 @@ describe("reportingOptions", () => {
         httpBodies: [],
         urlQueryParams: false,
         databaseQueryData: false,
+        queues: false,
         stackFrameVariables: false,
         genAI: { inputs: false, outputs: false },
       },

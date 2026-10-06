@@ -68,7 +68,7 @@ export class GooglePlayProvider implements StoreProvider {
       store: this.store,
       storeAppId: raw.appId,
       title: raw.title,
-      summary: plainText(raw.summary),
+      summary: raw.summary,
       description: raw.description,
       iconUrl: raw.icon,
       ratingAvg: raw.score,
@@ -241,20 +241,6 @@ export class GooglePlayProvider implements StoreProvider {
       throw new StoreRequestError(this.store, method, messageOf(error));
     }
   }
-}
-
-const HTML_ESCAPES: Record<string, string> = {
-  '&amp;': '&',
-  '&lt;': '<',
-  '&gt;': '>',
-  '&quot;': '"',
-  '&#39;': "'",
-  '&apos;': "'",
-};
-const HTML_ESCAPE = /&(?:amp|lt|gt|quot|#39|apos);/g;
-
-function plainText(value?: string): string | undefined {
-  return value?.replace(HTML_ESCAPE, (escape) => HTML_ESCAPES[escape]);
 }
 
 function parseDate(value?: string): Date | undefined {

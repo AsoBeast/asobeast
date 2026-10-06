@@ -2,7 +2,6 @@ import { execSync } from 'child_process';
 import { createHash } from 'crypto';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
-import { BullExplorer } from '@nestjs/bullmq/dist/bull.explorer';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import * as argon2 from 'argon2';
@@ -16,6 +15,7 @@ import { useCookies } from '../helpers/session';
 import { testDb } from '../helpers/test-db';
 import {
   clearRateLimitCounters,
+  closeWorkers,
   obliterateQueues,
   pauseQueues,
 } from '../obliterate-queues';
@@ -116,7 +116,7 @@ export async function createIsolationFixture(): Promise<IsolationFixture> {
   const app: INestApplication<App> = moduleFixture.createNestApplication();
   useCookies(app);
   await app.init();
-  await app.get(BullExplorer, { strict: false }).onApplicationShutdown();
+  await closeWorkers(app);
   await pauseQueues(app);
 
   await clearRateLimitCounters(app);

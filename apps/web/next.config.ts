@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import type { NextConfig } from "next";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import { version } from "./package.json";
 
 const SECURITY_HEADERS = [

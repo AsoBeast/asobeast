@@ -2,7 +2,6 @@ import './daily-redis';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { getQueueToken } from '@nestjs/bullmq';
-import { BullExplorer } from '@nestjs/bullmq/dist/bull.explorer';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -31,6 +30,7 @@ import { PipelineWorker } from '../../src/jobs/pipeline.worker';
 import { RetentionService } from '../../src/jobs/retention.service';
 import { StoreJobsHandler } from '../../src/jobs/store-jobs.handler';
 import {
+  closeWorkers,
   obliterateQueues,
   pauseQueues,
   waitForIdleQueues,
@@ -125,7 +125,7 @@ export async function createPipelineHarness(): Promise<PipelineHarness> {
   const app = moduleFixture.createNestApplication();
   useCookies(app);
   await app.init();
-  await app.get(BullExplorer, { strict: false }).onApplicationShutdown();
+  await closeWorkers(app);
 
   const queue = (name: string): Queue =>
     app.get<Queue>(getQueueToken(name), { strict: false });
