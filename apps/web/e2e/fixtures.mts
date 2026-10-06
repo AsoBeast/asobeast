@@ -6,7 +6,9 @@ import type {
   AppDetail,
   AppListItem,
   AppSummary,
+  CategoryCollection,
   CategoryRankSeries,
+  CategoryRankSeriesItem,
   CompetitorDiscovery,
   DailyBudget,
   EmailAlertItem,
@@ -45,6 +47,7 @@ import { summarizeActions } from "./actions-summary.mts";
 import {
   FIRST_RUN_HISTORY_DAYS,
   FIRST_RUN_STAGES,
+  OVERALL_GENRE,
   PLAN_LIMITS,
   RANK_DEPTH,
 } from "@asobeast/shared";
@@ -585,7 +588,7 @@ export const APP_1_CATEGORY_RANKS: CategoryRankSeries = {
     {
       collection: "free",
       genre: "overall",
-      genreName: "Productivity",
+      genreName: "Overall",
       current: 42,
       points: Array.from({ length: 30 }, (_, index) => ({
         date: utcDaysAgo(29 - index),
@@ -1832,6 +1835,119 @@ export const DATASETS: Record<string, AppDataset> = {
     comparison: EMPTY_COMPARISON,
   },
 };
+
+function categorySeries(
+  collection: CategoryCollection,
+  genre: string,
+  positions: Array<number | null>,
+  lastCapturedDaysAgo = 0,
+): CategoryRankSeriesItem {
+  return {
+    collection,
+    genre,
+    genreName: genre === OVERALL_GENRE ? "Overall" : "Games",
+    current: positions.at(-1) ?? null,
+    points: positions.map((position, index) => ({
+      date: utcDaysAgo(lastCapturedDaysAgo + positions.length - 1 - index),
+      position,
+    })),
+  };
+}
+
+function categoryDataset(
+  id: string,
+  name: string,
+  price: number,
+  series: CategoryRankSeriesItem[],
+): AppDataset {
+  const detail = DATASETS["app-1"].detail;
+  return {
+    ...DATASETS["app-1"],
+    detail: {
+      ...detail,
+      id,
+      name,
+      latestSnapshot: detail.latestSnapshot && {
+        ...detail.latestSnapshot,
+        title: name,
+        price,
+      },
+    },
+    categoryRanks: { series },
+  };
+}
+
+export const APP_PAID_TOP_CHART_ID = "app-paid-top-chart";
+export const APP_PAID_GROSSING_ONLY_ID = "app-paid-grossing-only";
+export const APP_PAID_UNRANKED_ID = "app-paid-unranked";
+export const APP_REPRICED_FREE_ID = "app-repriced-free";
+export const APP_REPRICED_PAID_ID = "app-repriced-paid";
+export const APP_FREE_AGAIN_ID = "app-free-again";
+
+DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
+  APP_PAID_TOP_CHART_ID,
+  "Heads Up",
+  1.99,
+  [
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("grossing", OVERALL_GENRE, [null, null, null]),
+    categorySeries("paid", "6014", [3, 3, 2]),
+    categorySeries("paid", OVERALL_GENRE, [9, 8, 7]),
+  ],
+);
+
+DATASETS[APP_PAID_GROSSING_ONLY_ID] = categoryDataset(
+  APP_PAID_GROSSING_ONLY_ID,
+  "Fresh Paid",
+  2.99,
+  [
+    categorySeries("grossing", "6014", [34, 33, 31]),
+    categorySeries("grossing", OVERALL_GENRE, [140, 138, 136]),
+  ],
+);
+
+DATASETS[APP_PAID_UNRANKED_ID] = categoryDataset(
+  APP_PAID_UNRANKED_ID,
+  "Quiet Paid",
+  0.99,
+  [
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("paid", "6014", [null, null, null]),
+  ],
+);
+
+DATASETS[APP_REPRICED_FREE_ID] = categoryDataset(
+  APP_REPRICED_FREE_ID,
+  "Went Free",
+  0,
+  [
+    categorySeries("free", "6014", [12, 9, 8]),
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("paid", "6014", [5, 4, 4], 20),
+  ],
+);
+
+DATASETS[APP_REPRICED_PAID_ID] = categoryDataset(
+  APP_REPRICED_PAID_ID,
+  "Went Paid",
+  4.99,
+  [
+    categorySeries("free", "6014", [30, 28, 25], 20),
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("paid", "6014", [6, 6, 6]),
+  ],
+);
+
+DATASETS[APP_FREE_AGAIN_ID] = categoryDataset(
+  APP_FREE_AGAIN_ID,
+  "Free Again",
+  0,
+  [
+    categorySeries("free", "6014", [14, 13, 12], 53),
+    categorySeries("grossing", "6014", [null, null, null]),
+    categorySeries("paid", "6014", [3, 2, 2]),
+  ],
+);
 
 export const APP_TAGS_ID = "app-tags";
 
