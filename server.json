@@ -16,9 +16,17 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "Bearer followed by a read-only AsoBeast API token from Settings, MCP server",
+          "description": "Bearer authentication with a read-only AsoBeast API token",
+          "value": "Bearer {token}",
           "isRequired": true,
-          "isSecret": true
+          "isSecret": true,
+          "variables": {
+            "token": {
+              "description": "Read-only AsoBeast API token (asob_...) from Settings, MCP server",
+              "isRequired": true,
+              "isSecret": true
+            }
+          }
         }
       ]
     }
