@@ -39,6 +39,8 @@ describe('containsTerm', () => {
     ['smartnewsアプリ', 'news', false],
     ['photo 写真 editor', 'photo editor', false],
     ['写真editor', 'photo editor', false],
+    ['写真editor', 'editor', true],
+    ['無料写真photo editor', 'photo editor', true],
   ])('%s contains %s: %s', (text, term, expected) => {
     expect(containsTerm(text, term)).toBe(expected);
   });

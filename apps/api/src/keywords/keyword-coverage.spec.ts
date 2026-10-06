@@ -74,6 +74,7 @@ describe('coversKeyword', () => {
     'Grabวันนี้',
     '카카오톡 - 무료 메신저 앱',
     'LINE マンガ 漫画',
+    'ニュースアプリSmartNews',
   ])('covers every keyword extracted from %s', (field) => {
     const uncovered = extractCandidates({ title: field })
       .map((candidate) => candidate.text)
