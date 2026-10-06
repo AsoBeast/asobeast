@@ -3,6 +3,7 @@ const SPACELESS_SCRIPTS = String.raw`${WIDE_SCRIPTS}\p{Script=Thai}\p{Script=Lao
 
 export const WIDE_CHARACTER = new RegExp(`[${WIDE_SCRIPTS}]`, 'u');
 export const SPACELESS_CHARACTER = new RegExp(`[${SPACELESS_SCRIPTS}]`, 'u');
+const SPACELESS_RUN = new RegExp(`[${SPACELESS_SCRIPTS}]+`, 'gu');
 export const SPACELESS_OR_NOT = new RegExp(
   `[${SPACELESS_SCRIPTS}]+|[^${SPACELESS_SCRIPTS}]+`,
   'gu',
@@ -54,7 +55,7 @@ export const containsTerm = (text: string, term: string): boolean => {
   if (SPACELESS_CHARACTER.test(term)) {
     return text.includes(term);
   }
-  if (` ${text} `.includes(` ${term} `)) {
+  if (` ${text.replace(SPACELESS_RUN, ' $& ')} `.includes(` ${term} `)) {
     return true;
   }
   return (

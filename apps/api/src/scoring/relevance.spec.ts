@@ -52,7 +52,7 @@ describe('defaultRelevance', () => {
     ).toBe(50);
     expect(
       defaultRelevance('SUGGESTED', 'iphone 写真', 'iPhone用写真加工'),
-    ).toBe(60);
+    ).toBe(70);
   });
 
   it('gives a latin word tracked from a japanese subtitle its full relevance', () => {
