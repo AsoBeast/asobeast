@@ -23,6 +23,13 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
+      - name: Verify published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          draft=$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq .draft)
+          test "$draft" = "false"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ inputs.tag }}
@@ -30,7 +37,12 @@ jobs:
       - name: Assert server.json carries the release version
         env:
           RELEASE_TAG: ${{ inputs.tag }}
-        run: test "v$(jq -r .version server.json)" = "$RELEASE_TAG"
+        run: |
+          version="$(jq -er .version server.json)" || { echo "::error::${RELEASE_TAG} carries no server.json version"; exit 1; }
+          if [ "v${version}" != "$RELEASE_TAG" ]; then
+            echo "::error::server.json reads ${version} but the tag is ${RELEASE_TAG}"
+            exit 1
+          fi
       - name: Install mcp-publisher
         run: |
           curl -sSfL -o "$RUNNER_TEMP/mcp-publisher.tar.gz" "https://github.com/modelcontextprotocol/registry/releases/download/v${MCP_PUBLISHER_VERSION}/mcp-publisher_linux_amd64.tar.gz"
