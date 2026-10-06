@@ -28,6 +28,8 @@ describe('containsTerm', () => {
     ['편한가계부 지출', '계부', false],
     ['운동화 쇼핑몰', '운동', false],
     ['운동에서는 기록', '운동', true],
+    ['운동을写真', '운동', true],
+    ['운동화写真', '운동', false],
     ['habit tracker', 'habit', true],
     ['roadmap planner', 'map', false],
     ['aiが3行要約 飲食店のクーポン', 'ai', true],

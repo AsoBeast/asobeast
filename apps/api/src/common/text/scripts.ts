@@ -55,11 +55,12 @@ export const containsTerm = (text: string, term: string): boolean => {
   if (SPACELESS_CHARACTER.test(term)) {
     return text.includes(term);
   }
-  if (` ${text.replace(SPACELESS_RUN, ' $& ')} `.includes(` ${term} `)) {
+  const spaced = text.replace(SPACELESS_RUN, ' $& ');
+  if (` ${spaced} `.includes(` ${term} `)) {
     return true;
   }
   return (
     HANGUL_CHARACTER.test(term) &&
-    text.split(' ').some((word) => isKoreanForm(word, term))
+    spaced.split(' ').some((word) => isKoreanForm(word, term))
   );
 };
