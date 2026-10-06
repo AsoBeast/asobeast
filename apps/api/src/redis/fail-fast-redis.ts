@@ -5,6 +5,9 @@ import { RedisUnavailableError } from './redis.errors';
 export const FAIL_FAST_COMMAND_TIMEOUT_MS = 500;
 export const FAIL_FAST_CONNECT_TIMEOUT_MS = 1_000;
 export const FAIL_FAST_RETRY_AFTER_SECONDS = 5;
+export const FAIL_FAST_MAX_RECONNECT_DELAY_MS = 2_000;
+
+const RECONNECT_STEP_MS = 50;
 
 const WARN_INTERVAL_MS = 30_000;
 
@@ -22,6 +25,11 @@ export class FailFastRedis implements OnApplicationShutdown {
         autoResendUnfulfilledCommands: false,
         commandTimeout: FAIL_FAST_COMMAND_TIMEOUT_MS,
         connectTimeout: FAIL_FAST_CONNECT_TIMEOUT_MS,
+        retryStrategy: (attempt) =>
+          Math.min(
+            attempt * RECONNECT_STEP_MS,
+            FAIL_FAST_MAX_RECONNECT_DELAY_MS,
+          ),
       }),
     );
     redis.client.on('error', (error: Error) => redis.warn(error));

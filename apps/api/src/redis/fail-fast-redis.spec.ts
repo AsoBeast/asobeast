@@ -5,6 +5,7 @@ import { ReplyError } from 'ioredis';
 import { RedisUnavailableError } from './redis.errors';
 import {
   FAIL_FAST_COMMAND_TIMEOUT_MS,
+  FAIL_FAST_MAX_RECONNECT_DELAY_MS,
   FAIL_FAST_RETRY_AFTER_SECONDS,
   FailFastRedis,
 } from './fail-fast-redis';
@@ -144,6 +145,20 @@ describe('FailFastRedis', () => {
 
     expect(warn).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [1, 50],
+    [10, 500],
+    [40, FAIL_FAST_MAX_RECONNECT_DELAY_MS],
+    [1_000, FAIL_FAST_MAX_RECONNECT_DELAY_MS],
+  ])(
+    'waits at most two seconds before reconnecting attempt %i',
+    async (attempt, delayMs) => {
+      const redis = open(await unusedPort());
+
+      expect(redis.client.options.retryStrategy?.(attempt)).toBe(delayMs);
+    },
+  );
 
   it('closes its connection once the application has shut down', async () => {
     const redis = open(await unusedPort());
