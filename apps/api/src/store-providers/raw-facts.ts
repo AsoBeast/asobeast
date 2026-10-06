@@ -186,9 +186,9 @@ const playReleaseNotes = (
   if (typeof notes !== 'string') {
     return null;
   }
-  const decoded = typeof record?.recentChangesHTML === 'string';
+  const plainText = typeof record?.recentChangesHTML === 'string';
   return trimmedString(
-    decoded ? releaseNotesLines(notes) : releaseNotesText(notes),
+    plainText ? releaseNotesLines(notes) : releaseNotesText(notes),
   );
 };
 

@@ -72,22 +72,20 @@ describe('GooglePlayProvider', () => {
   });
 
   it.each([
-    ['Use &amp; to escape', 'Use &amp; to escape'],
-    ['Type &lt;Username&gt; to mention', 'Type &lt;Username&gt; to mention'],
-    ['Create & share photos', 'Create & share photos'],
-    ['Short description', 'Short description'],
+    'Use &amp; to escape',
+    'Type &lt;Username&gt; to mention',
+    'Create & share photos',
+    'Short description',
   ])(
     'stores the plain text short description %j unchanged',
-    async (received, stored) => {
-      const app = jest
-        .fn()
-        .mockResolvedValue({ ...appPayload, summary: received });
+    async (summary) => {
+      const app = jest.fn().mockResolvedValue({ ...appPayload, summary });
       const provider = new GooglePlayProvider(makeLib({ app }));
 
       const result = await provider.getApp('com.example.app', 'us');
 
-      expect(result.summary).toBe(stored);
-      expect((result.raw as { summary: string }).summary).toBe(received);
+      expect(result.summary).toBe(summary);
+      expect((result.raw as { summary: string }).summary).toBe(summary);
     },
   );
 
