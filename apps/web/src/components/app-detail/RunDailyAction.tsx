@@ -12,6 +12,7 @@ import { ApiError, runDaily } from "@/lib/api";
 import { pluralize } from "@/lib/format";
 import { appKeys } from "@/lib/queries";
 import { queuedToast } from "@/lib/queued-toast";
+import { useSingleFlight } from "@/lib/single-flight";
 
 export function RunDailyAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
@@ -44,12 +45,13 @@ export function RunDailyAction({ appId }: { appId: string }) {
       );
     },
   });
+  const runOnce = useSingleFlight(mutation);
 
   return (
     <Button
       variant="outline"
       disabled={busy}
-      onClick={() => mutation.mutate()}
+      onClick={() => runOnce()}
       aria-label="Run daily"
     >
       {mutation.isPending ? (

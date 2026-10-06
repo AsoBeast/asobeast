@@ -72,15 +72,22 @@ const twoWorkspaces = {
 describe('PipelineService', () => {
   const fixedDate = new Date('2026-07-27T23:59:59.000Z');
 
-  const buildQueue = (waiting = 0, delayed = 0) => ({
-    add: jest
-      .fn<Promise<void>, [string, unknown, Record<string, unknown>?]>()
-      .mockResolvedValue(undefined),
-    getJob: jest.fn().mockResolvedValue(undefined),
-    remove: jest.fn().mockResolvedValue(1),
-    getWaitingCount: jest.fn().mockResolvedValue(waiting),
-    getDelayedCount: jest.fn().mockResolvedValue(delayed),
-  });
+  const buildQueue = (waiting = 0, delayed = 0) => {
+    const stored = new Map<string, { data: unknown }>();
+    return {
+      add: jest
+        .fn<Promise<void>, [string, unknown, Record<string, unknown>?]>()
+        .mockImplementation((_name, data, opts) => {
+          const jobId = String(opts?.jobId);
+          if (!stored.has(jobId)) stored.set(jobId, { data });
+          return Promise.resolve();
+        }),
+      getJob: jest.fn((jobId: string) => Promise.resolve(stored.get(jobId))),
+      remove: jest.fn().mockResolvedValue(1),
+      getWaitingCount: jest.fn().mockResolvedValue(waiting),
+      getDelayedCount: jest.fn().mockResolvedValue(delayed),
+    };
+  };
   const buildFlowProducer = () => ({
     add: jest
       .fn<Promise<unknown>, [FlowJob, FlowOpts?]>()
@@ -570,8 +577,17 @@ describe('PipelineService', () => {
       heldBy: Record<string, ReturnType<typeof holding>>,
     ) => {
       const queue = buildQueue();
+      const added = new Map<string, unknown>();
+      queue.add.mockImplementation((_name, data, opts) => {
+        added.set(String(opts?.jobId), JSON.parse(JSON.stringify(data)));
+        return Promise.resolve();
+      });
       queue.getJob.mockImplementation((jobId: string) =>
-        Promise.resolve(heldBy[jobId.split('~')[0]]),
+        Promise.resolve(
+          added.has(jobId)
+            ? { data: added.get(jobId) }
+            : heldBy[jobId.split('~')[0]],
+        ),
       );
       return queue;
     };

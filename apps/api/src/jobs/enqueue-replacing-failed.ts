@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { JobsOptions, Queue } from 'bullmq';
 
 export async function enqueueReplacingFailed(
@@ -11,6 +12,10 @@ export async function enqueueReplacingFailed(
     if (!(await existing.isFailed())) return false;
     if ((await queue.remove(opts.jobId)) !== 1) return false;
   }
-  await queue.add(name, data, opts);
-  return true;
+  const enqueueClaim = randomUUID();
+  await queue.add(name, { ...data, enqueueClaim }, opts);
+  const stored = await queue.getJob(opts.jobId);
+  const storedClaim = (stored?.data as { enqueueClaim?: string } | undefined)
+    ?.enqueueClaim;
+  return storedClaim === enqueueClaim;
 }
