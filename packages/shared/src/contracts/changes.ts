@@ -32,6 +32,7 @@ export interface ChangeEventItem {
   before: string | null;
   after: string | null;
   capturedAt: string;
+  country?: string;
 }
 
 export interface ChangeTimeline {

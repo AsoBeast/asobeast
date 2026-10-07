@@ -2120,6 +2120,17 @@
             }
           },
           {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "List the changes of the listings in this storefront. Omitted means the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
             "name": "days",
             "required": true,
             "in": "query",

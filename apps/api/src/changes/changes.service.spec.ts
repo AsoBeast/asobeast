@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { UnknownStorefrontError } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
 import { DiffableChangeSnapshot } from './change-detector';
@@ -139,6 +140,65 @@ describe('ChangesService', () => {
   });
 
   describe('timeline', () => {
+    const primary = {
+      id: 'app_1',
+      country: 'us',
+      store: 'APP_STORE',
+      competitors: [{ id: 'comp_1' }],
+    };
+
+    const eventRow = (country: string | null) => ({
+      id: 'ev_1',
+      appId: 'app_1',
+      country,
+      field: 'title',
+      before: 'A',
+      after: 'B',
+      capturedAt: new Date('2026-07-09T00:00:00Z'),
+      app: { name: 'Mine', isCompetitor: false, country: 'us' },
+    });
+
+    it('filters the timeline to the market it is asked for', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([]);
+
+      await service.timeline('app_1', 90, 'de');
+
+      const args = findMany.mock.calls[0][0] as {
+        where: { country: string | null };
+      };
+      expect(args.where.country).toBe('de');
+    });
+
+    it('filters the timeline to the home listing when no market is named', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([]);
+
+      await service.timeline('app_1', 90);
+
+      const args = findMany.mock.calls[0][0] as {
+        where: { country: string | null };
+      };
+      expect(args.where.country).toBeNull();
+    });
+
+    it('names the market of each event', async () => {
+      findFirst.mockResolvedValue(primary);
+      findMany.mockResolvedValue([eventRow(null), eventRow('de')]);
+
+      const result = await service.timeline('app_1', 90, 'de');
+
+      expect(result.events.map((event) => event.country)).toEqual(['us', 'de']);
+    });
+
+    it('refuses a market that is not a storefront of the store', async () => {
+      findFirst.mockResolvedValue(primary);
+
+      await expect(service.timeline('app_1', 90, 'zz')).rejects.toBeInstanceOf(
+        UnknownStorefrontError,
+      );
+    });
+
     it('throws for an unknown app', async () => {
       findFirst.mockResolvedValue(null);
       await expect(service.timeline('missing', 90)).rejects.toBeInstanceOf(
@@ -208,6 +268,18 @@ describe('ChangesService', () => {
   });
 
   describe('recent', () => {
+    it('lists recent changes from the home listing only', async () => {
+      appFindMany.mockResolvedValue([{ id: 'app_1' }]);
+      findMany.mockResolvedValue([]);
+
+      await service.recent(20);
+
+      const args = findMany.mock.calls[0][0] as {
+        where: { country: string | null };
+      };
+      expect(args.where.country).toBeNull();
+    });
+
     it('queries workspace events newest first with the given limit', async () => {
       appFindMany.mockResolvedValue([{ id: 'app_1' }, { id: 'comp_1' }]);
       findMany.mockResolvedValue([

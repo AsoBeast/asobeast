@@ -22,7 +22,7 @@ export class ChangesController {
     @Param('id') id: string,
     @Query() query: ChangeTimelineQueryDto,
   ): Promise<ChangeTimeline> {
-    return this.changes.timeline(id, query.days);
+    return this.changes.timeline(id, query.days, query.country);
   }
 
   @Get('impact')
