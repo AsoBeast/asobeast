@@ -99,6 +99,45 @@ describe('ChangesService', () => {
     expect(createMany).not.toHaveBeenCalled();
   });
 
+  describe('recordMarketRefresh', () => {
+    it('persists each change with its market and dispatches no alert', async () => {
+      const changes = await service.recordMarketRefresh(
+        'app_1',
+        'de',
+        makeSnapshot({ title: 'Alt' }),
+        makeSnapshot({ title: 'Neu' }),
+      );
+
+      expect(changes).toEqual([
+        { field: 'title', before: 'Alt', after: 'Neu' },
+      ]);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            country: 'de',
+            field: 'title',
+            before: 'Alt',
+            after: 'Neu',
+          },
+        ],
+      });
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('writes nothing for the first listing of a market', async () => {
+      const changes = await service.recordMarketRefresh(
+        'app_1',
+        'de',
+        null,
+        makeSnapshot(),
+      );
+
+      expect(changes).toEqual([]);
+      expect(createMany).not.toHaveBeenCalled();
+    });
+  });
+
   describe('timeline', () => {
     it('throws for an unknown app', async () => {
       findFirst.mockResolvedValue(null);

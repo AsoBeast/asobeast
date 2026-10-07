@@ -84,6 +84,7 @@ export interface SnapshotChange {
 export interface SnapshotDiffResult {
   snapshotId: string;
   changes: SnapshotChange[];
+  country?: string;
 }
 
 export interface AppImportRequest {

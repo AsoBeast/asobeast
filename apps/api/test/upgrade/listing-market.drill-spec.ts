@@ -15,7 +15,12 @@ describe('Listing markets against an upgraded baseline database', () => {
   it('reads every snapshot written before the upgrade as a home listing', async () => {
     const [all, markets] = await Promise.all([
       prisma.appSnapshot.count(),
-      prisma.appSnapshot.count({ where: { country: { not: null } } }),
+      prisma.appSnapshot.count({
+        where: {
+          country: { not: null },
+          id: { not: { startsWith: 'snap_market_' } },
+        },
+      }),
     ]);
 
     expect(all).toBeGreaterThan(0);

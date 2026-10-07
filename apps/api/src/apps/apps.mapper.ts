@@ -1,4 +1,4 @@
-import { App, AppSnapshot, Prisma } from '@prisma/client';
+import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import {
   AppDetail,
   AppGroupSummary,
@@ -7,6 +7,7 @@ import {
   CompetitorItem,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
+import { extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 
 const STORE_ORDER: Record<App['store'], number> = {
@@ -111,9 +112,11 @@ export function toAppDetail(
 export function toSnapshotData(
   appId: string,
   normalized: NormalizedApp,
+  market: string | null = null,
 ): Prisma.AppSnapshotCreateInput {
   return {
     app: { connect: { id: appId } },
+    country: market,
     title: normalized.title,
     subtitle: normalized.subtitle,
     summary: normalized.summary,
@@ -127,4 +130,11 @@ export function toSnapshotData(
     storeUpdatedAt: normalized.storeUpdatedAt,
     raw: normalized.raw as Prisma.InputJsonValue,
   };
+}
+
+export function snapshotIcon(
+  store: Store,
+  snapshot: Pick<AppSnapshot, 'raw'>,
+): string | null {
+  return extractRawFacts(store, snapshot.raw).iconUrl;
 }

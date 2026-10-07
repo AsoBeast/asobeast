@@ -1,6 +1,11 @@
 import { InjectQueue } from '@nestjs/bullmq';
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AppSnapshot, Store } from '@prisma/client';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { App, AppSnapshot, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   AppDetail,
@@ -15,7 +20,10 @@ import { ChangesService } from '../changes/changes.service';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { StoreNotSupportedError } from '../store-providers/errors';
+import {
+  StoreAppNotFoundError,
+  StoreNotSupportedError,
+} from '../store-providers/errors';
 import {
   releaseNotesFor,
   screenshotsCount,
@@ -32,11 +40,21 @@ import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
+import {
+  snapshotIcon,
+  toAppDetail,
+  toAppListItem,
+  toSnapshotData,
+} from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { withKnownSubtitle } from './known-subtitle';
 import { diffSnapshots } from './snapshot-diff';
-import { HOME_LISTING, LATEST_HOME_LISTING, NEWEST_FIRST } from './listing';
+import {
+  LATEST_HOME_LISTING,
+  listingIn,
+  NEWEST_FIRST,
+  storedMarket,
+} from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
 
@@ -229,21 +247,66 @@ export class AppsService {
     });
   }
 
-  async refreshApp(id: string): Promise<SnapshotDiffResult> {
-    const app = await this.prisma.app.findFirst({
-      where: { id },
-    });
+  async refreshApp(id: string, country?: string): Promise<SnapshotDiffResult> {
+    const app = await this.requireApp(id);
+    const market = country ?? app.country;
+    if (market !== app.country) {
+      await this.assertTracksMarket(app, market);
+    }
+    return this.captureListing(app, market);
+  }
 
+  async refreshListing(
+    id: string,
+    country: string,
+  ): Promise<SnapshotDiffResult | null> {
+    const app = await this.requireApp(id);
+    try {
+      return await this.captureListing(app, country);
+    } catch (error: unknown) {
+      if (country !== app.country && error instanceof StoreAppNotFoundError) {
+        this.logger.log(
+          `${app.storeAppId} is not listed in ${country}, so it has no listing there`,
+        );
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  private async requireApp(id: string): Promise<App> {
+    const app = await this.prisma.app.findFirst({ where: { id } });
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
+    return app;
+  }
 
-    const normalized = await this.egress.through(app.store, app.country, () =>
-      this.registry.get(app.store).getApp(app.storeAppId, app.country),
+  private async assertTracksMarket(app: App, market: string): Promise<void> {
+    assertStorefront(app.store, market);
+    const tracked = await this.prisma.trackedKeyword.count({
+      where: {
+        appId: app.primaryAppId ?? app.id,
+        keyword: { is: { country: market } },
+      },
+    });
+    if (tracked === 0) {
+      throw new BadRequestException(
+        `No keywords are tracked in ${market}, so its listing is not captured`,
+      );
+    }
+  }
+
+  private async captureListing(
+    app: App,
+    market: string,
+  ): Promise<SnapshotDiffResult> {
+    const home = market === app.country;
+    const normalized = await this.egress.through(app.store, market, () =>
+      this.registry.get(app.store).getApp(app.storeAppId, market),
     );
-
     const previous = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id, ...HOME_LISTING },
+      where: { appId: app.id, ...listingIn(app.country, market) },
       orderBy: NEWEST_FIRST,
     });
 
@@ -252,26 +315,40 @@ export class AppsService {
         data: toSnapshotData(
           app.id,
           withKnownSubtitle(normalized, previous?.subtitle ?? null),
+          storedMarket(app.country, market),
         ),
       });
-      await tx.app.update({
-        where: { id: app.id },
-        data: { name: normalized.title, iconUrl: normalized.iconUrl },
-      });
+      if (home) {
+        await tx.app.update({
+          where: { id: app.id },
+          data: { name: normalized.title, iconUrl: normalized.iconUrl },
+        });
+      }
       return created;
     });
 
-    await this.keywords.syncFromSnapshot(app.id);
+    const icons = home
+      ? { before: app.iconUrl, after: normalized.iconUrl ?? null }
+      : {
+          before: previous ? snapshotIcon(app.store, previous) : null,
+          after: snapshotIcon(app.store, snapshot),
+        };
+    const before = previous
+      ? this.toChangeSnapshot(previous, icons.before, app.store)
+      : null;
+    const after = this.toChangeSnapshot(snapshot, icons.after, app.store);
 
-    await this.changes.recordRefresh(
-      app.id,
-      previous ? this.toChangeSnapshot(previous, app.iconUrl, app.store) : null,
-      this.toChangeSnapshot(snapshot, normalized.iconUrl ?? null, app.store),
-    );
+    if (home) {
+      await this.keywords.syncFromSnapshot(app.id);
+      await this.changes.recordRefresh(app.id, before, after);
+    } else {
+      await this.changes.recordMarketRefresh(app.id, market, before, after);
+    }
 
     return {
       snapshotId: snapshot.id,
       changes: diffSnapshots(previous, snapshot),
+      country: market,
     };
   }
 

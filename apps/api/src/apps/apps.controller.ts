@@ -26,6 +26,7 @@ import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.de
 import { AppsService } from './apps.service';
 import { ImportAppDto } from './dto/import-app.dto';
 import { LinkAppDto } from './dto/link-app.dto';
+import { ListingMarketQueryDto } from './dto/listing-market-query.dto';
 import { MarketAvailabilityQueryDto } from './dto/market-availability-query.dto';
 
 @ApiTags('apps')
@@ -78,9 +79,12 @@ export class AppsController {
   @SpendsStoreCapacity()
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh an app and return the snapshot diff' })
-  async refresh(@Param('id') id: string): Promise<SnapshotDiffResult> {
+  async refresh(
+    @Param('id') id: string,
+    @Query() query: ListingMarketQueryDto,
+  ): Promise<SnapshotDiffResult> {
     await this.limiter.consume('refresh');
-    return this.apps.refreshApp(id);
+    return this.apps.refreshApp(id, query.country);
   }
 
   @Delete(':id')
