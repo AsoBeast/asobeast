@@ -70,7 +70,9 @@ export function coverageColumns(fields: readonly MetadataField[]) {
         <span className="flex items-center gap-2 font-medium text-foreground">
           {row.original.text}
           {row.original.uncovered ? (
-            <Badge variant="warning">Uncovered</Badge>
+            <Badge variant="outline" className="border-warning/40 text-warning">
+              Uncovered
+            </Badge>
           ) : null}
         </span>
       ),
