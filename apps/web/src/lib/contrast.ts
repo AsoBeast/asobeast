@@ -22,7 +22,8 @@ interface Component {
 }
 
 const CALL = /^[a-z]+\(([^()]*)\)$/;
-const SRGB_MIX = /^color-mix\(in srgb,\s*(.+?)\s+(\d+(?:\.\d+)?)%,\s*(.+)\)$/;
+const SRGB_MIX =
+  /^color-mix\(\s*in\s+srgb\s*,\s*([\s\S]+?)\s+(\d+(?:\.\d+)?)%\s*,\s*([\s\S]+?)\s*\)$/;
 const NUMBER = /^-?(?:\d+(?:\.\d+)?|\.\d+)%?$/;
 
 function components(value: string): Component[] | null {
@@ -120,8 +121,8 @@ function fromSrgbMix(value: string): Linear | null {
   const [, first = "", weight = "", second = ""] = SRGB_MIX.exec(value) ?? [];
   const a = toLinear(first);
   const b = toLinear(second);
-  if (!a || !b) return null;
   const share = Number(weight) / 100;
+  if (!a || !b || share > 1) return null;
   return a.map((channel, index) =>
     decodeSrgb(
       share * encodeSrgb(channel) + (1 - share) * encodeSrgb(b[index]!),

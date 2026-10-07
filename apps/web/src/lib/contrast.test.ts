@@ -41,10 +41,21 @@ describe("toLinear", () => {
     );
   });
 
+  it("reads a mix wrapped across lines as a formatter writes it", () => {
+    expect(
+      toLinear(`color-mix(
+      in srgb,
+      #000000 50%,
+      #ffffff
+    )`),
+    ).toEqual(toLinear("color-mix(in srgb, #000000 50%, #ffffff)"));
+  });
+
   it("refuses a mix it cannot composite", () => {
     expect(toLinear("color-mix(in srgb, red 10%, transparent)")).toBeNull();
     expect(toLinear("color-mix(in srgb, #000000 10%, transparent)")).toBeNull();
     expect(toLinear("color-mix(in oklab, #000000 10%, #ffffff)")).toBeNull();
+    expect(toLinear("color-mix(in srgb, #000000 150%, #ffffff)")).toBeNull();
   });
 
   it("returns null for syntax it cannot read", () => {
