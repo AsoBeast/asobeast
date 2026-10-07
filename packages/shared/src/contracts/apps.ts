@@ -11,6 +11,13 @@ export interface AppSnapshotSummary {
   price: number | null;
   version: string | null;
   capturedAt: string;
+  country?: string;
+}
+
+export interface ListingMarket {
+  country: string;
+  home: boolean;
+  capturedAt: string | null;
 }
 
 export interface CompetitorItem {

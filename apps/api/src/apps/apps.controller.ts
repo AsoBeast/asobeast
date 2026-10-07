@@ -17,6 +17,7 @@ import {
   AppDetail,
   AppGroupSummary,
   AppListItem,
+  ListingMarket,
   MarketAvailabilityResult,
   SnapshotDiffResult,
 } from '@asobeast/shared';
@@ -58,8 +59,19 @@ export class AppsController {
   @ApiOperation({
     summary: 'Get an app with its latest snapshot and competitors',
   })
-  detail(@Param('id') id: string): Promise<AppDetail> {
-    return this.apps.detail(id);
+  detail(
+    @Param('id') id: string,
+    @Query() query: ListingMarketQueryDto,
+  ): Promise<AppDetail> {
+    return this.apps.detail(id, query.country);
+  }
+
+  @Get(':id/listing-markets')
+  @ApiOperation({
+    summary: 'List the markets an app has a captured listing in',
+  })
+  listingMarkets(@Param('id') id: string): Promise<ListingMarket[]> {
+    return this.apps.listingMarkets(id);
   }
 
   @Get(':id/market-availability')

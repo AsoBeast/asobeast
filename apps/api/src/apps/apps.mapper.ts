@@ -5,17 +5,22 @@ import {
   AppListItem,
   AppSnapshotSummary,
   CompetitorItem,
+  ListingMarket,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
+import { listingMarket } from './listing';
 
 const STORE_ORDER: Record<App['store'], number> = {
   APP_STORE: 0,
   GOOGLE_PLAY: 1,
 };
 
-export function toSnapshotSummary(snapshot: AppSnapshot): AppSnapshotSummary {
+export function toSnapshotSummary(
+  snapshot: AppSnapshot,
+  home: string,
+): AppSnapshotSummary {
   return {
     id: snapshot.id,
     title: snapshot.title,
@@ -27,7 +32,36 @@ export function toSnapshotSummary(snapshot: AppSnapshot): AppSnapshotSummary {
     price: snapshot.price,
     version: snapshot.version,
     capturedAt: snapshot.capturedAt.toISOString(),
+    country: listingMarket(home, snapshot.country),
   };
+}
+
+export interface ListingMarketRow {
+  country: string | null;
+  _max: { capturedAt: Date | null };
+}
+
+export function toListingMarkets(
+  home: string,
+  rows: readonly ListingMarketRow[],
+): ListingMarket[] {
+  const capturedAt = (row: ListingMarketRow | undefined) =>
+    row?._max.capturedAt?.toISOString() ?? null;
+  const others = rows
+    .flatMap((row) =>
+      row.country === null ? [] : [{ ...row, country: row.country }],
+    )
+    .sort((a, b) => a.country.localeCompare(b.country))
+    .map((row) => ({
+      country: row.country,
+      home: false,
+      capturedAt: capturedAt(row),
+    }));
+  const homeRow = rows.find((row) => row.country === null);
+  return [
+    { country: home, home: true, capturedAt: capturedAt(homeRow) },
+    ...others,
+  ];
 }
 
 export function toCompetitorItem(
@@ -39,7 +73,7 @@ export function toCompetitorItem(
     store: app.store,
     name: app.name,
     iconUrl: app.iconUrl,
-    latestSnapshot: snapshot ? toSnapshotSummary(snapshot) : null,
+    latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app.country) : null,
   };
 }
 
@@ -101,7 +135,7 @@ export function toAppDetail(
     searchable: snapshot
       ? rawListedInIphoneSearch(app.store, snapshot.raw)
       : true,
-    latestSnapshot: snapshot ? toSnapshotSummary(snapshot) : null,
+    latestSnapshot: snapshot ? toSnapshotSummary(snapshot, app.country) : null,
     competitors: competitors.map((competitor) =>
       toCompetitorItem(competitor, competitor.snapshots[0] ?? null),
     ),

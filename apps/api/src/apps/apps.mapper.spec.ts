@@ -1,6 +1,11 @@
-import { Store } from '@prisma/client';
+import { AppSnapshot, Store } from '@prisma/client';
 import { NormalizedApp } from '../store-providers/types';
-import { snapshotIcon, toSnapshotData } from './apps.mapper';
+import {
+  snapshotIcon,
+  toListingMarkets,
+  toSnapshotData,
+  toSnapshotSummary,
+} from './apps.mapper';
 
 const NORMALIZED: NormalizedApp = {
   store: Store.APP_STORE,
@@ -35,5 +40,60 @@ describe('snapshotIcon', () => {
 
   it('reads no icon from a payload without one', () => {
     expect(snapshotIcon(Store.GOOGLE_PLAY, { raw: {} })).toBeNull();
+  });
+});
+
+describe('toListingMarkets', () => {
+  const row = (country: string | null, capturedAt: string | null) => ({
+    country,
+    _max: { capturedAt: capturedAt === null ? null : new Date(capturedAt) },
+  });
+
+  it('lists the home market first even before it has a listing', () => {
+    expect(
+      toListingMarkets('us', [row('de', '2026-07-02T00:00:00.000Z')]),
+    ).toEqual([
+      { country: 'us', home: true, capturedAt: null },
+      { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
+    ]);
+  });
+
+  it('lists the other markets by code with the time of their newest listing', () => {
+    expect(
+      toListingMarkets('us', [
+        row('pl', '2026-07-03T00:00:00.000Z'),
+        row(null, '2026-07-01T00:00:00.000Z'),
+        row('de', '2026-07-02T00:00:00.000Z'),
+      ]),
+    ).toEqual([
+      { country: 'us', home: true, capturedAt: '2026-07-01T00:00:00.000Z' },
+      { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
+      { country: 'pl', home: false, capturedAt: '2026-07-03T00:00:00.000Z' },
+    ]);
+  });
+});
+
+describe('toSnapshotSummary', () => {
+  const snapshot = (country: string | null) =>
+    ({
+      id: 's1',
+      country,
+      title: 'T',
+      subtitle: null,
+      summary: null,
+      ratingAvg: null,
+      ratingCount: null,
+      installs: null,
+      price: null,
+      version: null,
+      capturedAt: new Date('2026-07-01T00:00:00.000Z'),
+    }) as AppSnapshot;
+
+  it('names the home storefront for a home snapshot', () => {
+    expect(toSnapshotSummary(snapshot(null), 'us').country).toBe('us');
+  });
+
+  it('names the market of a market snapshot', () => {
+    expect(toSnapshotSummary(snapshot('de'), 'us').country).toBe('de');
   });
 });

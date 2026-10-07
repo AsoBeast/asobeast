@@ -5,12 +5,13 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, AppSnapshot, Store } from '@prisma/client';
+import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   AppDetail,
   AppListItem,
   assertStorefront,
+  ListingMarket,
   MarketAvailabilityResult,
   parseStoreUrl,
   SnapshotDiffResult,
@@ -44,12 +45,14 @@ import {
   snapshotIcon,
   toAppDetail,
   toAppListItem,
+  toListingMarkets,
   toSnapshotData,
 } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { withKnownSubtitle } from './known-subtitle';
 import { diffSnapshots } from './snapshot-diff';
 import {
+  EVERY_LISTING,
   LATEST_HOME_LISTING,
   listingIn,
   NEWEST_FIRST,
@@ -57,6 +60,10 @@ import {
 } from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
+
+type AppWithListings = Prisma.AppGetPayload<{
+  include: { competitors: true; group: { include: { apps: true } } };
+}>;
 
 @Injectable()
 export class AppsService {
@@ -160,7 +167,7 @@ export class AppsService {
     );
   }
 
-  async detail(id: string): Promise<AppDetail> {
+  async detail(id: string, country?: string): Promise<AppDetail> {
     const app = await this.prisma.app.findFirst({
       where: { id },
       include: {
@@ -176,13 +183,56 @@ export class AppsService {
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
+    if (country === undefined || country === app.country) {
+      return toAppDetail(
+        app,
+        app.snapshots[0] ?? null,
+        app.competitors,
+        app.group,
+      );
+    }
+    assertStorefront(app.store, country);
+    return this.marketDetail(app, country);
+  }
 
-    return toAppDetail(
-      app,
-      app.snapshots[0] ?? null,
-      app.competitors,
-      app.group,
-    );
+  async listingMarkets(id: string): Promise<ListingMarket[]> {
+    const app = await this.prisma.app.findFirst({
+      where: { id },
+      select: { country: true },
+    });
+    if (!app) {
+      throw new NotFoundException(`App ${id} not found`);
+    }
+    const rows = await this.prisma.appSnapshot.groupBy({
+      by: ['country'],
+      where: { appId: id, ...EVERY_LISTING },
+      _max: { capturedAt: true },
+    });
+    return toListingMarkets(app.country, rows);
+  }
+
+  private async marketDetail(
+    app: AppWithListings,
+    market: string,
+  ): Promise<AppDetail> {
+    const rows = await this.prisma.appSnapshot.findMany({
+      where: {
+        appId: { in: [app.id, ...app.competitors.map((rival) => rival.id)] },
+        ...listingIn(app.country, market),
+      },
+      orderBy: NEWEST_FIRST,
+      distinct: ['appId'],
+    });
+    const latest = new Map(rows.map((row) => [row.appId, row]));
+    const own = latest.get(app.id);
+    if (!own) {
+      throw new NotFoundException(`No listing captured for ${market}`);
+    }
+    const competitors = app.competitors.map((rival) => {
+      const listing = latest.get(rival.id);
+      return { ...rival, snapshots: listing ? [listing] : [] };
+    });
+    return toAppDetail(app, own, competitors, app.group);
   }
 
   async marketAvailability(
