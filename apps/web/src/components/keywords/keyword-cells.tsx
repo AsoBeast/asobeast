@@ -207,7 +207,7 @@ function ScoreProvenanceDetails({
       <span>Formula {provenance.formulaVersion}</span>
       <span>{capturedAtLabel(provenance.capturedAt)}</span>
       <Badge variant="secondary">{confidence} confidence</Badge>
-      <span className="max-w-xs text-background/80">
+      <span className="max-w-xs text-background">
         Confidence measures input completeness, not ranking accuracy.
       </span>
     </>

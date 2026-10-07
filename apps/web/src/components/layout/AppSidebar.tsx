@@ -64,7 +64,7 @@ export function AppSidebar() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-          <div className="px-2 pb-1 text-caption text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+          <div className="px-2 pb-1 text-caption text-muted-foreground group-data-[collapsible=icon]:hidden">
             <p>Open source ASO toolkit for the App Store and Google Play.</p>
             {version ? <p translate="no">{version}</p> : null}
           </div>

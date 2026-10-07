@@ -88,7 +88,7 @@ function SwatchGrid({
               style={{ background: `var(${token})` }}
             />
             <code className="text-[11px] text-muted-foreground">{token}</code>
-            <code className="text-[10px] break-all text-muted-foreground/70">
+            <code className="text-[10px] break-all text-muted-foreground">
               {values[token] ?? "—"}
             </code>
           </div>
