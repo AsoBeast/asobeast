@@ -26,6 +26,7 @@
   --success-subtle: color-mix(in oklch, var(--green-600) 12%, transparent);
   --warning: var(--amber-600);
   --warning-subtle: color-mix(in oklch, var(--amber-600) 12%, transparent);
+  --info: var(--accent-700);
   --priority-critical: var(--crimson-600);
   --priority-high: var(--amber-600);
   --priority-medium: var(--yellow-600);
@@ -101,6 +102,7 @@
     --success-subtle: color-mix(in oklch, var(--green-400) 16%, transparent);
     --warning: var(--amber-400);
     --warning-subtle: color-mix(in oklch, var(--amber-400) 16%, transparent);
+    --info: var(--accent-400);
     --priority-critical: var(--crimson-400);
     --priority-high: var(--amber-400);
     --priority-medium: var(--yellow-400);

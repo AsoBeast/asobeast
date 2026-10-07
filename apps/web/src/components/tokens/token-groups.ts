@@ -52,6 +52,7 @@ export const RESERVED_SIGNALS = [
   "--success-subtle",
   "--warning",
   "--warning-subtle",
+  "--info",
   "--priority-critical",
   "--priority-high",
   "--priority-medium",
@@ -169,6 +170,18 @@ export const TEXT_PAIRS: Array<{
     label: "warning on card",
     foreground: "--warning",
     background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "info on card",
+    foreground: "--info",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "info on background",
+    foreground: "--info",
+    background: "--background",
     floor: 4.5,
   },
   {
