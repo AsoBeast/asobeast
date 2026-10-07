@@ -45,6 +45,7 @@ import {
   DailyTargetsCollector,
   dedupeBuckets,
   dedupeKeywords,
+  KeywordTarget,
   MarketListingTarget,
 } from './daily-targets.service';
 import { DailyStage, DegradationPlan, planDegradation } from './degradation';
@@ -129,7 +130,9 @@ export class PipelineService {
     date: string,
   ): Promise<{ children: FlowJobNode[] }> {
     const scope = this.workspace.scopeFor('the daily fan-out');
-    const targets = await this.withinKeywordLimit(await this.targets.collect());
+    const targets = await this.targets.collect((keywords) =>
+      this.withinKeywordLimit(keywords),
+    );
     const buckets = dedupeBuckets(
       await this.categoryRanks.buckets(targets.apps.map((app) => app.id)),
     );
@@ -267,30 +270,30 @@ export class PipelineService {
   }
 
   private async withinKeywordLimit(
-    targets: DailyTargets,
-  ): Promise<DailyTargets> {
+    keywords: KeywordTarget[],
+  ): Promise<KeywordTarget[]> {
     const limit = await this.quota.limitFor('keywordMarkets');
-    if (limit === null) return targets;
+    if (limit === null) return keywords;
 
     const state = await this.overLimit.state();
-    if (targets.keywords.length <= limit) {
+    if (keywords.length <= limit) {
       await this.overLimit.recordWithinLimit(state);
-      return targets;
+      return keywords;
     }
 
     const now = new Date();
     const decision = applyKeywordLimit({
-      keywords: targets.keywords,
+      keywords,
       limit,
       overLimitSince: state.since,
       now,
     });
     await this.overLimit.recordOverLimit(
       state,
-      { used: targets.keywords.length, limit, dropped: decision.dropped },
+      { used: keywords.length, limit, dropped: decision.dropped },
       now,
     );
-    return { ...targets, keywords: decision.covered };
+    return decision.covered;
   }
 
   async fanOutApp(appId: string): Promise<FanOutSummary> {
@@ -345,7 +348,9 @@ export class PipelineService {
       [workspaceId],
       async () =>
         this.enqueue(
-          await this.withinKeywordLimit(await this.targets.collect()),
+          await this.targets.collect((keywords) =>
+            this.withinKeywordLimit(keywords),
+          ),
           workspaceId,
         ),
     );

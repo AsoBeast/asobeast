@@ -658,7 +658,7 @@ describe('PipelineService', () => {
 
   describe('market listings', () => {
     const marketPrisma = (
-      markets: Array<{ appId: string; country: string }>,
+      markets: Array<{ appId: string; country: string; keywordId?: string }>,
     ) => ({
       app: {
         findMany: jest.fn().mockResolvedValue([
@@ -739,6 +739,45 @@ describe('PipelineService', () => {
         true,
       );
       expect(summary.apps).toBe(2);
+    });
+
+    it('captures only the markets whose keywords stay within the plan limit', async () => {
+      const prisma = {
+        ...marketPrisma([
+          { appId: 'primary', country: 'de', keywordId: 'k2_de' },
+          { appId: 'primary', country: 'pl', keywordId: 'k3_pl' },
+        ]),
+        trackedKeyword: {
+          findMany: jest.fn().mockResolvedValue(
+            ['k1_us', 'k3_pl', 'k2_de'].map((keywordId) => ({
+              keywordId,
+              keyword: { store: 'APP_STORE' },
+            })),
+          ),
+        },
+      };
+      const { service, flowProducer } = buildService({
+        prisma,
+        quota: {
+          limitFor: jest.fn().mockResolvedValue(2),
+        } as unknown as QuotaService,
+      });
+      (overLimit.state as jest.Mock).mockResolvedValue({
+        since: new Date('2026-07-01T00:00:00Z'),
+        notifiedAt: new Date('2026-07-01T00:00:00Z'),
+      });
+
+      const summary = await service.fanOutDaily();
+
+      expect(
+        refreshChildren(flowOf(flowProducer))
+          .filter((child) => marketOf(child) !== undefined)
+          .map((child) => child.opts?.jobId),
+      ).toEqual([
+        'daily~refresh~primary~de~2026-07-27',
+        'daily~refresh~rival~de~2026-07-27',
+      ]);
+      expect(summary.apps).toBe(4);
     });
 
     it('sheds market listings with the app refreshes under pressure', async () => {

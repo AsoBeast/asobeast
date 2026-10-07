@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Store } from '@asobeast/shared';
 import { CategoryBucket } from '../category-ranks/category-ranks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { TrackedMarketRow, trackedMarkets } from './tracked-markets';
+import { MarketRow, trackedMarkets } from './tracked-markets';
 
 export interface AppTarget {
   id: string;
@@ -27,6 +27,10 @@ export interface DailyTargets {
   marketListings: MarketListingTarget[];
 }
 
+export type KeywordLimit = (
+  keywords: KeywordTarget[],
+) => Promise<KeywordTarget[]>;
+
 interface ListedApp {
   id: string;
   store: Store;
@@ -37,7 +41,9 @@ interface ListedApp {
 export class DailyTargetsCollector {
   constructor(private readonly prisma: PrismaService) {}
 
-  async collect(): Promise<DailyTargets> {
+  async collect(
+    limit: KeywordLimit = (keywords) => Promise.resolve(keywords),
+  ): Promise<DailyTargets> {
     const apps = await this.prisma.app.findMany({
       select: {
         id: true,
@@ -46,21 +52,26 @@ export class DailyTargetsCollector {
         primaryAppId: true,
       },
     });
-    const keywords = await this.prisma.trackedKeyword.findMany({
+    const tracked = await this.prisma.trackedKeyword.findMany({
       where: { active: true },
       select: { keywordId: true, keyword: { select: { store: true } } },
       distinct: ['keywordId'],
     });
-    const markets = await trackedMarkets(this.prisma);
+    const keywords = dedupeKeywords(
+      tracked.map((keyword) => ({
+        keywordId: keyword.keywordId,
+        store: keyword.keyword.store,
+      })),
+    );
+    const covered = await limit(keywords);
+    const dropped = droppedKeywordIds(keywords, covered);
+    const markets = (await trackedMarkets(this.prisma)).filter(
+      (row) => !dropped.has(row.keywordId),
+    );
 
     return {
       apps: apps.map((app) => ({ id: app.id, store: app.store })),
-      keywords: dedupeKeywords(
-        keywords.map((keyword) => ({
-          keywordId: keyword.keywordId,
-          store: keyword.keyword.store,
-        })),
-      ),
+      keywords: covered,
       reviewApps: apps
         .filter((app) => !app.isCompetitor)
         .map((app) => ({ id: app.id, store: app.store })),
@@ -69,9 +80,21 @@ export class DailyTargetsCollector {
   }
 }
 
+function droppedKeywordIds(
+  keywords: readonly KeywordTarget[],
+  covered: readonly KeywordTarget[],
+): Set<string> {
+  const kept = new Set(covered.map((keyword) => keyword.keywordId));
+  return new Set(
+    keywords
+      .map((keyword) => keyword.keywordId)
+      .filter((keywordId) => !kept.has(keywordId)),
+  );
+}
+
 export function marketListingTargets(
   apps: readonly ListedApp[],
-  markets: readonly TrackedMarketRow[],
+  markets: readonly MarketRow[],
 ): MarketListingTarget[] {
   const seen = new Set<string>();
   return markets.flatMap(({ appId, country }) =>
