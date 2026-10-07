@@ -26,6 +26,8 @@ Migrations run in order against your existing rows. They never rewrite history:
 - `_prisma_migrations` records what has already been applied, so a restart never replays a migration.
 - An applied migration is never edited. A correction ships as a new forward migration.
 
+A migration that adds an index builds it with a plain `CREATE INDEX`, which blocks writes to that table until it finishes. `add_listing_market` rebuilds the snapshot and change event indexes, and `AppSnapshot` is the largest table of an instance with a long history, so expect that step to take longer there. It runs inside `prisma migrate deploy`, before the API starts, so no request or job waits on it.
+
 ## Before you upgrade
 
 Take a backup. See [Back up your data](/operations/backups). A backup taken shortly before the daily pipeline window is the cheapest point, because the least work is in flight.

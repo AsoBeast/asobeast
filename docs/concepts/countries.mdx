@@ -53,7 +53,7 @@ A store serves a different listing in each storefront. The App Store returns the
 
 | You | asobeast |
 | --- | --- |
-| Track a keyword in a new market | asks for the listing of that market at once, for the app and its competitors |
+| Track a keyword in a new market, or resume a paused one there | asks for the listing of that market at once, for the app and its competitors, unless it already has one |
 | Do nothing | refreshes each market listing in the daily run, as one job on the same store budget |
 | Click Refresh while a market is selected | refreshes that market's listing and shows what changed |
 
@@ -61,7 +61,9 @@ A keyword is then judged against the listing of its own market: its coverage on 
 
 Some things are still read once, from the home storefront, because they need more than the listing: category ranks, reviews and the ratings history, the iOS keyword field and the keywords asobeast tracks for you from your listing. The Action Center rules that judge coverage, lint and staleness also read the home listing. See [Action Center](/guides/action-center).
 
-The Apple keyword field is private, so outside the home market coverage is judged on the title and the subtitle only.
+The Apple keyword field is private and belongs to the home storefront, so a keyword judged against a market listing is covered by its title and subtitle only. A keyword whose market has no listing yet is judged against the whole home listing, keyword field included.
+
+A market whose keywords you all removed keeps its last listing readable in the switcher, but asobeast stops refreshing it, and the Refresh button says why instead of refreshing.
 
 If an app is not published in a market, asobeast tries again the next day and stores nothing, so a market with keywords and no listing simply shows no switcher entry.
 
