@@ -1,5 +1,6 @@
+import { APP_TOOLS } from "@asobeast/mcp-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerAppTools } from "./apps.js";
+import { registerCatalogTools } from "./define.js";
 import { createHarness, stubFetch } from "./harness.js";
 
 const realFetch = globalThis.fetch;
@@ -13,7 +14,7 @@ describe("app tools", () => {
   it("registers read-only tools with titles", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     for (const name of ["list_apps", "get_app", "app_summary", "portfolio"]) {
       const tool = tools.get(name);
@@ -29,7 +30,7 @@ describe("app tools", () => {
       status: 200,
       body: { id: "app-1" },
     }));
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     const result = await tools.get("get_app")!.handler({ appId: "app-1" });
 
@@ -42,7 +43,7 @@ describe("app tools", () => {
   it("encodes an app id so it cannot escape its path segment", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     await tools.get("get_app")!.handler({ appId: "../jobs/budget" });
 
@@ -52,7 +53,7 @@ describe("app tools", () => {
   it("keeps a 204 response renderable as text", async () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 204, body: null }));
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     const result = await tools.get("list_apps")!.handler({});
 
@@ -72,7 +73,7 @@ describe("app tools", () => {
         timestamp: "2026-07-24T00:00:00.000Z",
       },
     }));
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     const result = await tools.get("get_app")!.handler({ appId: "missing" });
 
@@ -87,7 +88,7 @@ describe("app tools", () => {
     const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => "throw");
-    registerAppTools(server, client);
+    registerCatalogTools(server, client, APP_TOOLS);
 
     const result = await tools.get("list_apps")!.handler({});
 

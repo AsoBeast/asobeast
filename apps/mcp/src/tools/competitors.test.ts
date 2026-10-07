@@ -1,5 +1,6 @@
+import { COMPETITOR_TOOLS } from "@asobeast/mcp-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerCompetitorTools } from "./competitors.js";
+import { registerCatalogTools } from "./define.js";
 import { createHarness, stubFetch } from "./harness.js";
 
 const realFetch = globalThis.fetch;
@@ -13,7 +14,7 @@ describe("competitor tools", () => {
   it("registers the competitor list and analysis as read only tools", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerCompetitorTools(server, client);
+    registerCatalogTools(server, client, COMPETITOR_TOOLS);
 
     for (const name of ["list_competitors", "competitor_analysis"]) {
       expect(tools.get(name)?.config.annotations?.readOnlyHint).toBe(true);
@@ -23,7 +24,7 @@ describe("competitor tools", () => {
   it("requests the competitors of the app named", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerCompetitorTools(server, client);
+    registerCatalogTools(server, client, COMPETITOR_TOOLS);
 
     await tools.get("list_competitors")!.handler({ appId: "app-1" });
     await tools.get("competitor_analysis")!.handler({ appId: "app-1" });

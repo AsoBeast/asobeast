@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MCP_WRITE_TOOLS, annotationsOf } from "@asobeast/mcp-tools";
 import { createHarness, stubFetch } from "./harness.js";
-import { registerWriteTools } from "./writes.js";
+import { registerCatalogTools } from "./define.js";
 
 const realFetch = globalThis.fetch;
 
@@ -13,7 +13,7 @@ afterEach(() => {
 function setup(responder: Parameters<typeof stubFetch>[0]) {
   const { server, tools } = createHarness();
   const stubbed = stubFetch(responder);
-  registerWriteTools(server, stubbed.client);
+  registerCatalogTools(server, stubbed.client, MCP_WRITE_TOOLS);
   return { tools, ...stubbed };
 }
 

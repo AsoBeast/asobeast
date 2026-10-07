@@ -1,5 +1,6 @@
+import { ACTION_TOOLS as ACTION_CATALOG } from "@asobeast/mcp-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerActionTools } from "./actions.js";
+import { registerCatalogTools } from "./define.js";
 import { createHarness, stubFetch } from "./harness.js";
 
 const realFetch = globalThis.fetch;
@@ -21,7 +22,7 @@ describe("action tools", () => {
   it("registers every tool as read-only", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     for (const name of ACTION_TOOLS) {
       expect(tools.get(name)?.config.annotations?.readOnlyHint).toBe(true);
@@ -31,7 +32,7 @@ describe("action tools", () => {
   it("never advertises a mutation in any description", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     for (const name of ACTION_TOOLS) {
       const description = tools.get(name)!.config.description ?? "";
@@ -43,7 +44,7 @@ describe("action tools", () => {
   it("teaches the domain in every description", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     for (const name of ACTION_TOOLS) {
       const description = tools.get(name)!.config.description ?? "";
@@ -57,7 +58,7 @@ describe("action tools", () => {
   it("joins array filters and forwards scalars for list_actions", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     await tools.get("list_actions")!.handler({
       status: ["OPEN", "SNOOZED"],
@@ -85,7 +86,7 @@ describe("action tools", () => {
   it("omits empty array filters entirely", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     await tools.get("list_actions")!.handler({ status: [], rule: [] });
 
@@ -97,7 +98,7 @@ describe("action tools", () => {
   it("encodes an app id containing a slash", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     await tools.get("app_actions")!.handler({ appId: "app/1" });
 
@@ -107,7 +108,7 @@ describe("action tools", () => {
   it("requests the summary without any filters", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     await tools.get("actions_summary")!.handler({});
 
@@ -122,7 +123,7 @@ describe("action tools", () => {
       status: 404,
       body: { statusCode: 404, message: "Cannot GET /actions" },
     }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     for (const name of ACTION_TOOLS) {
       const result = await tools.get(name)!.handler({ appId: "app-1" });
@@ -139,7 +140,7 @@ describe("action tools", () => {
       status: 402,
       body: { statusCode: 402, message: "Subscription required" },
     }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     const result = await tools.get("list_actions")!.handler({});
 
@@ -155,7 +156,7 @@ describe("action tools", () => {
       status: 200,
       body: { items: [], total: 0, generatedAt: null },
     }));
-    registerActionTools(server, client);
+    registerCatalogTools(server, client, ACTION_CATALOG);
 
     const result = await tools.get("list_actions")!.handler({});
 
