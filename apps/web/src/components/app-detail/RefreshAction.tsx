@@ -11,21 +11,29 @@ import { toast } from "sonner";
 import type { SnapshotDiffResult } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { ApiError, refreshApp } from "@/lib/api";
-import { appKeys } from "@/lib/queries";
-import { SnapshotDiffDialog } from "./SnapshotDiffDialog";
+import { formatCountry } from "@/lib/format";
+import { invalidateAppListing } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { SnapshotDiffDialog } from "./SnapshotDiffDialog";
+import { useCachedMarket } from "./use-market";
+
+interface RefreshedListing {
+  diff: SnapshotDiffResult;
+  market: string | null;
+}
 
 export function RefreshAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
-  const [diff, setDiff] = useState<SnapshotDiffResult | null>(null);
+  const country = useCachedMarket(appId);
+  const [refreshed, setRefreshed] = useState<RefreshedListing | null>(null);
   const busy = useIsMutating({ mutationKey: ["app-action", appId] }) > 0;
 
   const mutation = useMutation({
     mutationKey: ["app-action", appId, "refresh"],
-    mutationFn: () => refreshApp(appId),
-    onSuccess: (result) => {
-      void queryClient.invalidateQueries({ queryKey: appKeys.detail(appId) });
-      setDiff(result);
+    mutationFn: (market: string | undefined) => refreshApp(appId, market),
+    onSuccess: (diff, market) => {
+      invalidateAppListing(queryClient, appId);
+      setRefreshed({ diff, market: market ?? null });
     },
     onError: (error) => {
       toast.error(
@@ -40,8 +48,12 @@ export function RefreshAction({ appId }: { appId: string }) {
       <Button
         variant="outline"
         disabled={busy}
-        onClick={() => refreshOnce()}
-        aria-label="Refresh"
+        onClick={() => refreshOnce(country)}
+        aria-label={
+          country === undefined
+            ? "Refresh"
+            : `Refresh ${formatCountry(country)} listing`
+        }
       >
         {mutation.isPending ? (
           <Loader2 className="animate-spin" />
@@ -51,10 +63,11 @@ export function RefreshAction({ appId }: { appId: string }) {
         <span className="hidden lg:inline">Refresh</span>
       </Button>
       <SnapshotDiffDialog
-        diff={diff}
-        open={diff !== null}
+        diff={refreshed?.diff ?? null}
+        market={refreshed?.market ?? null}
+        open={refreshed !== null}
         onOpenChange={(open) => {
-          if (!open) setDiff(null);
+          if (!open) setRefreshed(null);
         }}
       />
     </>

@@ -1,16 +1,9 @@
-import { StorefrontLocalizationsSkeleton } from "@/components/metadata/skeletons";
-import { Skeleton } from "@/components/ui/skeleton";
+import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
 
 export default function Loading() {
   return (
     <div className="page-wide @container/metadata flex flex-col gap-8">
-      <div className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
-        {Array.from({ length: 4 }).map((_, index) => (
-          <Skeleton key={index} className="h-32 rounded-xl" />
-        ))}
-      </div>
-      <StorefrontLocalizationsSkeleton />
-      <Skeleton className="h-64 w-full rounded-xl" />
+      <MetadataAuditSkeleton />
     </div>
   );
 }

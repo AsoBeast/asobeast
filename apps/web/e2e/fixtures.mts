@@ -38,6 +38,7 @@ import type {
   AuditTarget,
   KeywordCoverageRow,
   LintIssue,
+  ListingMarket,
   MetadataAuditResult,
   MetadataDraft,
   TrackedKeywordItem,
@@ -702,6 +703,29 @@ export const APP_1_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_1_LISTING_MARKETS: ListingMarket[] = [
+  { country: "us", home: true, capturedAt: utcTimestampDaysAgo(0) },
+  { country: "pl", home: false, capturedAt: utcTimestampDaysAgo(0) },
+];
+
+export const APP_1_PL_DETAIL: AppDetail = {
+  ...APP_1_DETAIL,
+  latestSnapshot: {
+    id: "snap-1-pl",
+    title: "Minutnik Skupienia",
+    subtitle: "Pomodoro i praca głęboka",
+    summary: "Pracuj skupiony w odmierzonych sesjach.",
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+    installs: null,
+    price: 0,
+    version: "3.4.1",
+    capturedAt: utcTimestampDaysAgo(0),
+    country: "pl",
+  },
+  competitors: [],
+};
+
 export const APP_1: AppListItem = {
   id: "app-1",
   store: "APP_STORE",
@@ -943,6 +967,22 @@ const APP_1_COMPARISON: KeywordComparison = {
       you: 45,
       positions: { "comp-1": null },
       gap: false,
+    },
+  ],
+};
+
+export const APP_1_PL_CHANGES: ChangeTimeline = {
+  events: [
+    {
+      id: "chg-pl-1",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "title",
+      before: "Minutnik",
+      after: "Minutnik Skupienia",
+      capturedAt: utcTimestampDaysAgo(2),
+      country: "pl",
     },
   ],
 };
@@ -3421,6 +3461,53 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
       ],
     },
   ],
+};
+
+export const METADATA_AUDIT_PL: MetadataAuditResult = {
+  appId: "app-1",
+  store: "APP_STORE",
+  country: "pl",
+  fields: [
+    {
+      field: "title",
+      value: "Minutnik Skupienia",
+      chars: 18,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "subtitle",
+      value: "Pomodoro i praca głęboka",
+      chars: 24,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "description",
+      value: "Pracuj skupiony.",
+      chars: 16,
+      limit: 4000,
+      indexed: false,
+      issues: [],
+    },
+  ],
+  coverage: [
+    {
+      keywordId: "kw-pl-1",
+      text: "minutnik",
+      bucket: null,
+      fields: [
+        { field: "title", covered: true },
+        { field: "subtitle", covered: false },
+      ],
+      uncovered: false,
+      country: "pl",
+      listingCountry: "pl",
+    },
+  ],
+  keywordFieldSuggestion: null,
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

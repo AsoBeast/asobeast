@@ -406,9 +406,10 @@ export const listingMarketsOptions = (id: string) =>
     queryFn: () => getListingMarkets(id),
   });
 
-export const appListingOptions = (id: string, market: string) =>
+export const appListingOptions = (id: string, market?: string) =>
   queryOptions({
-    queryKey: appKeys.listing(id, market),
+    queryKey:
+      market === undefined ? appKeys.detail(id) : appKeys.listing(id, market),
     queryFn: () => getApp(id, market),
   });
 

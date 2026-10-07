@@ -3,9 +3,10 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ListingMarket } from "@asobeast/shared";
-import { resolveMarket } from "@/lib/market";
+import { queryMarket, resolveMarket } from "@/lib/market";
 import { appDetailOptions, listingMarketsOptions } from "@/lib/queries";
 import { marketParser } from "@/lib/search-params";
+import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 export interface SelectedMarket {
   market: string;
@@ -24,4 +25,15 @@ export function useMarket(id: string): SelectedMarket {
     markets,
     select: (next) => void setRequested(next === app.country ? null : next),
   };
+}
+
+export function useCachedMarket(id: string): string | undefined {
+  const app = useCachedQueryData(appDetailOptions(id).queryKey);
+  const markets = useCachedQueryData(listingMarketsOptions(id).queryKey);
+  const [requested] = useQueryState("market", marketParser);
+  if (app === undefined || markets === undefined) return undefined;
+  return queryMarket(
+    resolveMarket(requested, markets, app.country),
+    app.country,
+  );
 }

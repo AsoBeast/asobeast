@@ -2,18 +2,24 @@
 
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { AppIcon } from "@/components/AppIcon";
+import { useMarket } from "@/components/app-detail/use-market";
 import {
   formatCompact,
+  formatCountry,
   formatDate,
   formatNumber,
   formatPrice,
   formatRating,
 } from "@/lib/format";
-import { appDetailOptions } from "@/lib/queries";
+import { queryMarket } from "@/lib/market";
+import { appListingOptions } from "@/lib/queries";
 
 export function SnapshotFacts({ id }: { id: string }) {
-  const { data: detail } = useSuspenseQuery(appDetailOptions(id));
+  const { market, home } = useMarket(id);
+  const country = queryMarket(market, home);
+  const { data: detail } = useSuspenseQuery(appListingOptions(id, country));
   const snapshot = detail.latestSnapshot;
+  const where = country === undefined ? "" : ` · ${formatCountry(country)}`;
 
   const facts = [
     snapshot?.ratingAvg != null
@@ -28,7 +34,7 @@ export function SnapshotFacts({ id }: { id: string }) {
       : null,
     snapshot?.version ? `v${snapshot.version}` : null,
     snapshot?.price != null ? formatPrice(snapshot.price) : null,
-    snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}` : null,
+    snapshot ? `Snapshot ${formatDate(snapshot.capturedAt)}${where}` : null,
   ].filter((fact): fact is string => fact !== null);
 
   return (

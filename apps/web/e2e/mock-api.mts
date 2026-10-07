@@ -21,7 +21,11 @@ import {
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
+  METADATA_AUDIT_PL,
   METADATA_AUDITS,
+  APP_1_LISTING_MARKETS,
+  APP_1_PL_CHANGES,
+  APP_1_PL_DETAIL,
   METADATA_DRAFTS,
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
@@ -482,6 +486,13 @@ function appRoute(
       );
     },
   };
+}
+
+function isPolishListingOf(
+  dataset: (typeof DATASETS)[string],
+  query: URLSearchParams,
+): boolean {
+  return dataset.detail.id === "app-1" && query.get("country") === "pl";
 }
 
 function gatedRoute(
@@ -1479,7 +1490,20 @@ const routes: Route[] = [
       json(res, 201, IMPORTED_APP_DETAIL);
     },
   },
-  appRoute(/^\/apps\/([^/]+)$/, (dataset) => dataset.detail),
+  appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
+    isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
+  ),
+  appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset) =>
+    dataset.detail.id === "app-1"
+      ? APP_1_LISTING_MARKETS
+      : [
+          {
+            country: dataset.detail.country,
+            home: true,
+            capturedAt: dataset.detail.latestSnapshot?.capturedAt ?? null,
+          },
+        ],
+  ),
   {
     method: "DELETE",
     pattern: /^\/apps\/([^/]+)$/,
@@ -1622,14 +1646,33 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
-    handler: ([id], req, res) =>
-      apps.some((app) => app.id === id) || Object.hasOwn(METADATA_AUDITS, id)
-        ? json(res, 200, {
-            ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
-            appId: id,
-            store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
-          })
-        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (
+        !apps.some((app) => app.id === id) &&
+        !Object.hasOwn(METADATA_AUDITS, id)
+      ) {
+        return json(res, 404, errorEnvelope(404, path, "App not found"));
+      }
+      const market = new URL(path, "http://localhost").searchParams.get(
+        "country",
+      );
+      if (id === "app-1" && market === "pl") {
+        return json(res, 200, METADATA_AUDIT_PL);
+      }
+      if (market !== null && market !== DATASETS[id]?.detail.country) {
+        return json(
+          res,
+          404,
+          errorEnvelope(404, path, `No listing captured for ${market}`),
+        );
+      }
+      json(res, 200, {
+        ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
+        appId: id,
+        store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
+      });
+    },
   },
   {
     method: "GET",
@@ -1729,7 +1772,9 @@ const routes: Route[] = [
       ]);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset) => dataset.changes),
+  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
+    isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+  ),
   appRoute(
     /^\/apps\/([^/]+)\/changes\/impact$/,
     (dataset) => dataset.changeImpact,
@@ -1989,8 +2034,16 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/refresh$/,
-    handler: (_p, _q, res) =>
-      json(res, 200, { snapshotId: "snap-1", changes: [] }),
+    handler: (_p, req, res) =>
+      new URL(req.url ?? "/", "http://localhost").searchParams.get(
+        "country",
+      ) === "pl"
+        ? json(res, 200, {
+            snapshotId: "snap-pl",
+            changes: [{ field: "title", before: 8, after: 18 }],
+            country: "pl",
+          })
+        : json(res, 200, { snapshotId: "snap-1", changes: [] }),
   },
   {
     method: "POST",
