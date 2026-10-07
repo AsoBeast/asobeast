@@ -113,6 +113,19 @@ test("the sidebar describes asobeast without a deployment", async ({
   );
 });
 
+test("the sidebar wordmark and the tab title name the product AsoBeast", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/settings");
+
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(
+    nav.getByRole("link", { name: "AsoBeast", exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle("AsoBeast");
+});
+
 test("the collapsed sidebar survives a reload", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/");
