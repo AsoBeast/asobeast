@@ -9,7 +9,7 @@ export function FirstRun() {
           Track your first app
         </h1>
         <p className="text-body text-muted-foreground">
-          Paste an App Store or Google Play URL. asobeast imports the listing,
+          Paste an App Store or Google Play URL. AsoBeast imports the listing,
           extracts keywords and starts checking ranks on the next daily run.
         </p>
       </div>

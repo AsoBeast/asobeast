@@ -35,7 +35,7 @@ export default function GlobalError({
           Something went wrong
         </h1>
         <p style={{ maxWidth: "28rem", opacity: 0.7 }}>
-          asobeast could not render this page. Trying again usually clears a
+          AsoBeast could not render this page. Trying again usually clears a
           transient failure.
         </p>
         <button type="button" onClick={retry}>

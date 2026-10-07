@@ -7,7 +7,7 @@ export function NotInSearchNotice() {
       <TriangleAlert aria-hidden="true" />
       <AlertTitle>Not listed in iPhone search</AlertTitle>
       <AlertDescription>
-        This app is not available on iPhone, and asobeast reads iPhone search,
+        This app is not available on iPhone, and AsoBeast reads iPhone search,
         so its keywords are never found within the checked depth and its
         visibility stays at 0.
       </AlertDescription>

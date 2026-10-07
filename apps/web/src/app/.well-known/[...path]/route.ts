@@ -6,7 +6,7 @@ export function GET(request: NextRequest): Response {
     statusCode: 404,
     error: "Not Found",
     message:
-      "asobeast publishes no OAuth metadata. Connect with a personal API token sent as Authorization: Bearer asob_…",
+      "AsoBeast publishes no OAuth metadata. Connect with a personal API token sent as Authorization: Bearer asob_…",
     path: request.nextUrl.pathname,
     timestamp: new Date().toISOString(),
   };

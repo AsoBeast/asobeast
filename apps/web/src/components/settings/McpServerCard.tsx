@@ -214,7 +214,7 @@ function ConnectDialog() {
         {created ? (
           <>
             <DialogHeader>
-              <DialogTitle>Connect asobeast</DialogTitle>
+              <DialogTitle>Connect AsoBeast</DialogTitle>
               <DialogDescription>
                 The token is read-only and is shown once. Copy what you need
                 before closing.

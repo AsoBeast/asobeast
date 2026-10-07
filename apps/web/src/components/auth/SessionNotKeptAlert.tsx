@@ -22,7 +22,7 @@ export function SessionNotKeptAlert({
         <p>
           {outcome} A secure cookie is dropped on plain http, even on localhost
           in Safari, and a browser that blocks cookies for this site drops it
-          too. Open asobeast over https, allow cookies for this site, or use
+          too. Open AsoBeast over https, allow cookies for this site, or use
           another browser, then sign in again. The{" "}
           <a href={TROUBLESHOOTING_URL} target="_blank" rel="noreferrer">
             troubleshooting guide

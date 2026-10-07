@@ -56,7 +56,7 @@ describe("historyEntries", () => {
     ]);
 
     expect(opened).toMatchObject({
-      actor: "asobeast",
+      actor: "AsoBeast",
       detail: "High · impact 71",
     });
     expect(done.actor).toBe("Anna");

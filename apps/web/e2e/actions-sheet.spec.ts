@@ -70,7 +70,7 @@ test("the sheet writes out the steps and ends with the confirmation", async ({
     .locator("xpath=..")
     .locator("ol > li");
   expect(await steps.count()).toBeGreaterThanOrEqual(3);
-  await expect(steps.last()).toHaveText(/^asobeast confirms the fix/);
+  await expect(steps.last()).toHaveText(/^AsoBeast confirms the fix/);
 });
 
 test("a deep link to an action outside the list still opens it", async ({

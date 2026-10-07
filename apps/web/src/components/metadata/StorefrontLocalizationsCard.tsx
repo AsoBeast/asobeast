@@ -152,7 +152,7 @@ export function StorefrontLocalizationsCard({
             ))}
           </ul>
           <p className="text-caption text-muted-foreground">
-            asobeast reads one listing of this app, so it cannot tell which of
+            AsoBeast reads one listing of this app, so it cannot tell which of
             these localizations you have already filled in App Store Connect.
           </p>
         </CardContent>

@@ -27,7 +27,7 @@ describe("actionSteps", () => {
       const steps = actionSteps(item);
 
       expect(steps.length).toBeGreaterThanOrEqual(3);
-      expect(steps.at(-1)).toMatch(/^asobeast /);
+      expect(steps.at(-1)).toMatch(/^AsoBeast /);
     },
   );
 
@@ -58,7 +58,7 @@ describe("actionSteps", () => {
   it("moves a keyword near the top 10 into a strong field on each store", () => {
     const push = ACTIONS.find((item) => item.id === "act-push")!;
     const confirmation =
-      "asobeast confirms the fix when the keyword reaches the top 10 or stops qualifying";
+      "AsoBeast confirms the fix when the keyword reaches the top 10 or stops qualifying";
 
     expect(actionSteps(push)).toEqual([
       `Move "${LONG_KEYWORD}" into the subtitle or the title`,
@@ -104,7 +104,7 @@ describe("actionSteps", () => {
     expect(actionSteps(reply)).toEqual([
       "Open Reviews in Play Console",
       "Reply to the lowest scores first and say what you are fixing",
-      "asobeast rechecks replies every day",
+      "AsoBeast rechecks replies every day",
       CONFIRMATION_STEP,
     ]);
   });
@@ -115,7 +115,7 @@ describe("actionSteps", () => {
     expect(actionSteps(stale)).toEqual([
       "Plan a release, even a small one",
       "Write release notes that say what changed",
-      "asobeast confirms the fix when the store shows the new update",
+      "AsoBeast confirms the fix when the store shows the new update",
     ]);
   });
 

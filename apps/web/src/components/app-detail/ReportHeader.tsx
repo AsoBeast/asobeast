@@ -1,6 +1,7 @@
 "use client";
 
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { formatCountry } from "@/lib/format";
 import { appDetailOptions } from "@/lib/queries";
 import { rangeLabel, type DayPreset } from "@/lib/ranges";
@@ -39,7 +40,7 @@ export function ReportHeader({
         className="text-caption text-muted-foreground"
         suppressHydrationWarning
       >
-        {`Printed ${printedDate} (UTC) from asobeast`}
+        {`Printed ${printedDate} (UTC) from ${PRODUCT_NAME}`}
       </p>
     </div>
   );

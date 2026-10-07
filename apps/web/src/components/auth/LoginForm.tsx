@@ -64,7 +64,7 @@ export function LoginForm() {
           <CardTitle asChild>
             <h1>Sign in</h1>
           </CardTitle>
-          <CardDescription>Sign in to your asobeast workspace.</CardDescription>
+          <CardDescription>Sign in to your AsoBeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>
           {params.get("registration") === "closed" ? (

@@ -107,7 +107,7 @@ function ListingCombinations({
     return (
       <EmptyState
         title="No listing words to combine yet"
-        body="Combinations appear once asobeast has captured a listing with words in the fields this store indexes."
+        body="Combinations appear once AsoBeast has captured a listing with words in the fields this store indexes."
       />
     );
   }

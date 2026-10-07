@@ -63,7 +63,7 @@ export function RegisterForm() {
           <CardTitle asChild>
             <h1>Create account</h1>
           </CardTitle>
-          <CardDescription>Set up your asobeast workspace.</CardDescription>
+          <CardDescription>Set up your AsoBeast workspace.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-col gap-4">
