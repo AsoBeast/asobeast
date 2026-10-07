@@ -18,6 +18,7 @@ export interface ListingMarket {
   country: string;
   home: boolean;
   capturedAt: string | null;
+  tracked?: boolean;
 }
 
 export interface CompetitorItem {

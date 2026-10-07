@@ -140,8 +140,56 @@ describe('listing reads per market (e2e)', () => {
       .expect(200);
 
     expect(response.body as ListingMarket[]).toEqual([
-      { country: 'us', home: true, capturedAt: '2026-07-01T00:00:00.000Z' },
-      { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
+      {
+        country: 'us',
+        home: true,
+        capturedAt: '2026-07-01T00:00:00.000Z',
+        tracked: true,
+      },
+      {
+        country: 'de',
+        home: false,
+        capturedAt: '2026-07-02T00:00:00.000Z',
+        tracked: false,
+      },
+    ]);
+  });
+
+  it('says which listed markets still track keywords', async () => {
+    const { mine, rival } = await seed();
+    await prisma.appSnapshot.createMany({
+      data: [
+        listing(mine.id, 'fr', 'Suivi', '2026-07-03T00:00:00.000Z'),
+        listing(rival.id, 'fr', 'Rival Suivi', '2026-07-03T00:00:00.000Z'),
+      ],
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'gewohnheit', store: Store.APP_STORE, country: 'de' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: mine.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: false,
+      },
+    });
+
+    const tracked = async (appId: string) =>
+      (
+        (await api.get(`/apps/${appId}/listing-markets`).expect(200))
+          .body as ListingMarket[]
+      ).map((market) => [market.country, market.tracked]);
+
+    await expect(tracked(mine.id)).resolves.toEqual([
+      ['us', true],
+      ['de', true],
+      ['fr', false],
+    ]);
+    await expect(tracked(rival.id)).resolves.toEqual([
+      ['us', true],
+      ['de', true],
+      ['fr', false],
     ]);
   });
 
@@ -157,7 +205,12 @@ describe('listing reads per market (e2e)', () => {
       .expect(200);
 
     expect(response.body as ListingMarket[]).toEqual([
-      { country: 'us', home: true, capturedAt: '2026-07-01T00:00:00.000Z' },
+      {
+        country: 'us',
+        home: true,
+        capturedAt: '2026-07-01T00:00:00.000Z',
+        tracked: true,
+      },
     ]);
   });
 

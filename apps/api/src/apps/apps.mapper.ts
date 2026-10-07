@@ -64,6 +64,16 @@ export function toListingMarkets(
   ];
 }
 
+export function withTracking(
+  markets: readonly ListingMarket[],
+  tracked: ReadonlySet<string>,
+): ListingMarket[] {
+  return markets.map((market) => ({
+    ...market,
+    tracked: market.home || tracked.has(market.country),
+  }));
+}
+
 export function toCompetitorItem(
   app: App,
   snapshot: AppSnapshot | null,

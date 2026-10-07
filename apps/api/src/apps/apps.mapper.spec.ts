@@ -5,6 +5,7 @@ import {
   toListingMarkets,
   toSnapshotData,
   toSnapshotSummary,
+  withTracking,
 } from './apps.mapper';
 
 const NORMALIZED: NormalizedApp = {
@@ -95,5 +96,19 @@ describe('toSnapshotSummary', () => {
 
   it('names the market of a market snapshot', () => {
     expect(toSnapshotSummary(snapshot('de'), 'us').country).toBe('de');
+  });
+});
+
+describe('withTracking', () => {
+  it('marks the home market and every market with a tracked keyword', () => {
+    const markets = [
+      { country: 'us', home: true, capturedAt: null },
+      { country: 'de', home: false, capturedAt: null },
+      { country: 'fr', home: false, capturedAt: null },
+    ];
+
+    expect(
+      withTracking(markets, new Set(['de'])).map((market) => market.tracked),
+    ).toEqual([true, true, false]);
   });
 });
