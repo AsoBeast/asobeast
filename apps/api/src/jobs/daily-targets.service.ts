@@ -96,18 +96,40 @@ export function marketListingTargets(
   apps: readonly ListedApp[],
   markets: readonly MarketRow[],
 ): MarketListingTarget[] {
+  const families = familiesByPrimary(apps);
+  const visited = new Set<string>();
   const seen = new Set<string>();
-  return markets.flatMap(({ appId, country }) =>
-    apps
-      .filter((app) => app.id === appId || app.primaryAppId === appId)
+  return markets.flatMap(({ appId, country }) => {
+    const market = `${appId}~${country}`;
+    if (visited.has(market)) return [];
+    visited.add(market);
+    return (families.get(appId) ?? [])
       .filter((app) => {
         const key = `${app.id}~${country}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       })
-      .map((app) => ({ id: app.id, store: app.store, country })),
-  );
+      .map((app) => ({ id: app.id, store: app.store, country }));
+  });
+}
+
+function familiesByPrimary(
+  apps: readonly ListedApp[],
+): Map<string, ListedApp[]> {
+  const families = new Map<string, ListedApp[]>();
+  const join = (primaryId: string, app: ListedApp) => {
+    const family = families.get(primaryId);
+    if (family) family.push(app);
+    else families.set(primaryId, [app]);
+  };
+  for (const app of apps) {
+    join(app.id, app);
+    if (app.primaryAppId !== null && app.primaryAppId !== app.id) {
+      join(app.primaryAppId, app);
+    }
+  }
+  return families;
 }
 
 interface AppFamily {
