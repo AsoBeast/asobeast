@@ -479,7 +479,7 @@ describe('Remote MCP transport (e2e)', () => {
     expect(names).not.toContain('daily_budget');
   });
 
-  it('exposes no tool that changes anything', async () => {
+  it('lists no tool that changes anything to a read scoped token', async () => {
     const response = await rpc('tools/list').expect(200);
 
     for (const tool of sseEnvelope(response).result?.tools ?? []) {

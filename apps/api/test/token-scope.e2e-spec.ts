@@ -6,7 +6,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import { API_TOKEN_PREFIX, type AuthUser } from '@asobeast/shared';
-import { MCP_TOOLS } from '@asobeast/mcp-tools';
+import { MCP_TOOLS, MCP_WRITE_TOOLS, requestOf } from '@asobeast/mcp-tools';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -30,6 +30,16 @@ const TOOL_INPUT = {
   keywordId: 'kw_missing',
   actionId: 'act_missing',
   strategy: 'metadata',
+};
+
+const WRITE_INPUT = {
+  appId: 'app_missing',
+  keywordId: 'kw_missing',
+  competitorId: 'app_missing',
+  actionId: 'act_missing',
+  keywords: ['habit tracker'],
+  url: 'https://apps.apple.com/us/app/rival/id1',
+  status: 'DONE',
 };
 
 describe('Read-only token scope (e2e)', () => {
@@ -168,5 +178,36 @@ describe('Read-only token scope (e2e)', () => {
 
       expect(response.body).not.toHaveProperty('tokenScope');
     });
+  });
+
+  describe('what each scope may change through the write routes', () => {
+    it.each(MCP_WRITE_TOOLS.map((tool) => [tool.name, tool] as const))(
+      'refuses %s to a read-only token',
+      async (_name, tool) => {
+        const { method, path, body } = requestOf(tool, WRITE_INPUT);
+
+        const response = await request(app.getHttpServer())
+          [method.toLowerCase() as 'post' | 'patch' | 'delete'](urlOf({ path }))
+          .set('Authorization', `Bearer ${READ_TOKEN}`)
+          .send(body);
+
+        expect(response.status).toBe(403);
+      },
+    );
+
+    it.each(MCP_WRITE_TOOLS.map((tool) => [tool.name, tool] as const))(
+      'lets a write token reach the route of %s',
+      async (_name, tool) => {
+        const { method, path, body } = requestOf(tool, WRITE_INPUT);
+
+        const response = await request(app.getHttpServer())
+          [method.toLowerCase() as 'post' | 'patch' | 'delete'](urlOf({ path }))
+          .set('Authorization', `Bearer ${WRITE_TOKEN}`)
+          .send(body);
+
+        expect(response.status).not.toBe(403);
+        expect(response.status).not.toBe(401);
+      },
+    );
   });
 });
