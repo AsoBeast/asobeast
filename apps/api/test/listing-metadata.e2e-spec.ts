@@ -149,6 +149,26 @@ describe('metadata audit per market (e2e)', () => {
     });
   });
 
+  it('judges a fallback keyword against the whole home listing', async () => {
+    const mine = await seed();
+    await track(mine.id, Store.APP_STORE, 'kopfhoerer', 'us');
+    await prisma.trackedKeyword.updateMany({
+      where: { keyword: { text: 'kopfhoerer', country: 'us' } },
+      data: { source: 'KEYWORD_FIELD' },
+    });
+
+    const result = await audit(`/apps/${mine.id}/metadata/audit`);
+
+    const fallback = result.coverage.find(
+      (row) => row.text === 'kopfhoerer' && row.country === 'pl',
+    );
+    expect(fallback).toMatchObject({ listingCountry: 'us', uncovered: false });
+    expect(fallback?.fields).toContainEqual({
+      field: 'keywordField',
+      covered: true,
+    });
+  });
+
   it('shows the listing of one market and only its keywords', async () => {
     const mine = await seed();
 

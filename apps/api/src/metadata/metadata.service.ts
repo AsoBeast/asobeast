@@ -95,7 +95,7 @@ export class MetadataService {
         this.surfaces(
           app.store,
           own ?? listings.get(app.country),
-          item.country === app.country ? keywordFieldValue : null,
+          own && item.country !== app.country ? null : keywordFieldValue,
         ),
         own ? item.country : app.country,
       );
