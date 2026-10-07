@@ -21,7 +21,7 @@ export type RequestListener = (
   res: ServerResponse,
 ) => void;
 
-export const DISPATCH_TIMEOUT_MS = 30_000;
+export const DISPATCH_TIMEOUT_MS = 25_000;
 
 const GATEWAY_TIMEOUT = 504;
 const INTERNAL_ERROR = 500;

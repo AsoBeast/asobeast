@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { HttpAdapterHost } from '@nestjs/core';
 import {
+  DISPATCH_TIMEOUT_MS,
   InProcessGateway,
   dispatchRequest,
   type GatewayRequest,
@@ -8,6 +9,10 @@ import {
 } from './in-process.gateway';
 
 const TIMEOUT_MS = 50;
+
+const WEB_PROXY_DEFAULT_TIMEOUT_MS = 30_000;
+
+const PROXY_MARGIN_MS = 5_000;
 
 function gatewayFor(listener: RequestListener) {
   return {
@@ -220,5 +225,11 @@ describe('InProcessGateway writes', () => {
     await expect(
       gateway.send({ method: 'PATCH', url: '/actions/act-1', headers: {} }),
     ).resolves.toMatchObject({ status: 504 });
+  });
+
+  it('gives up before the web proxy default does, so a hosted agent reads the tool error rather than the proxy 504', () => {
+    expect(DISPATCH_TIMEOUT_MS).toBeLessThanOrEqual(
+      WEB_PROXY_DEFAULT_TIMEOUT_MS - PROXY_MARGIN_MS,
+    );
   });
 });
