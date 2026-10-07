@@ -5,7 +5,7 @@ import {
 } from "@/lib/utilization";
 
 const BAR_COLOR: Record<UtilizationLevel, string> = {
-  ok: "bg-primary",
+  ok: "bg-success",
   warn: "bg-warning",
   danger: "bg-destructive",
 };

@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { renderedRgb, renderedTokenRgb } from "./colour.mts";
 import { METRICS_SCRAPE, OPERATOR_TOKEN } from "./fixtures.mts";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
@@ -150,6 +151,13 @@ test.describe("instance capacity in the admin area", () => {
         name: "Google Play daily request utilization",
       }),
     ).toHaveAttribute("aria-valuenow", "3");
+
+    const healthyBar = page
+      .getByRole("meter", { name: "App Store daily request utilization" })
+      .locator(":scope > div");
+    expect(await renderedRgb(healthyBar, "backgroundColor")).toEqual(
+      await renderedTokenRgb(page, "--success"),
+    );
   });
 
   test("names the top consumers and links to their apps", async ({ page }) => {
