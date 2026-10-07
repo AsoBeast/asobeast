@@ -1,11 +1,18 @@
 import type { McpServer, CallToolResult } from "@modelcontextprotocol/server";
-import { notFoundText, toolText, type ReadTool } from "@asobeast/mcp-tools";
+import {
+  annotationsOf,
+  notFoundText,
+  requestOf,
+  toolOutput,
+  withOutcomeNote,
+  type McpTool,
+} from "@asobeast/mcp-tools";
 import type { ApiClient } from "../client.js";
 
-export function registerReadTool(
+export function registerCatalogTool(
   server: McpServer,
   client: ApiClient,
-  def: ReadTool,
+  def: McpTool,
 ): void {
   server.registerTool(
     def.name,
@@ -13,11 +20,10 @@ export function registerReadTool(
       title: def.title,
       description: def.description,
       inputSchema: def.inputSchema,
-      annotations: { readOnlyHint: true },
+      annotations: annotationsOf(def),
     },
     async (input): Promise<CallToolResult> => {
-      const { path, params } = def.request(input);
-      const result = await client.get<unknown>(path, params);
+      const result = await client.request<unknown>(requestOf(def, input));
       if (!result.ok) {
         const message =
           result.status === 404
@@ -25,20 +31,25 @@ export function registerReadTool(
             : result.message;
         return {
           isError: true,
-          content: [{ type: "text", text: message }],
+          content: [
+            {
+              type: "text",
+              text: withOutcomeNote(def, result.status, message),
+            },
+          ],
         };
       }
       return {
-        content: [{ type: "text", text: toolText(result.data) }],
+        content: [{ type: "text", text: toolOutput(def, input, result.data) }],
       };
     },
   );
 }
 
-export function registerReadTools(
+export function registerCatalogTools(
   server: McpServer,
   client: ApiClient,
-  tools: readonly ReadTool[],
+  tools: readonly McpTool[],
 ): void {
-  for (const tool of tools) registerReadTool(server, client, tool);
+  for (const tool of tools) registerCatalogTool(server, client, tool);
 }

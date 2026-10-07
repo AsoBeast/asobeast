@@ -124,3 +124,95 @@ describe("createClient content", () => {
     );
   });
 });
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    const parts: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => parts.push(chunk));
+    req.on("end", () => resolve(Buffer.concat(parts).toString("utf8")));
+  });
+}
+
+describe("createClient writes", () => {
+  it("sends the method, the json body and the credential", async () => {
+    const seen: Record<string, string | undefined> = {};
+    api = await startFakeApi((req, res) => {
+      void readBody(req).then((text) => {
+        seen.method = req.method;
+        seen.type = req.headers["content-type"];
+        seen.authorization = req.headers.authorization;
+        seen.text = text;
+        res.writeHead(201, { "content-type": "application/json" });
+        res.end('{"ok":true}');
+      });
+    });
+
+    const result = await createClient({
+      apiUrl: api.base,
+      token: TOKEN,
+    }).request({
+      method: "POST",
+      path: "/apps/app-1/keywords",
+      body: { keywords: ["habit tracker"], country: "us" },
+    });
+
+    expect(result).toEqual({ ok: true, data: { ok: true } });
+    expect(seen).toEqual({
+      method: "POST",
+      type: "application/json",
+      authorization: `Bearer ${TOKEN}`,
+      text: JSON.stringify({ keywords: ["habit tracker"], country: "us" }),
+    });
+  });
+
+  it("sends a delete with no body and reads a 204 as success", async () => {
+    const seen: Record<string, string | undefined> = {};
+    api = await startFakeApi((req, res) => {
+      seen.method = req.method;
+      seen.type = req.headers["content-type"];
+      res.writeHead(204).end();
+    });
+
+    const result = await createClient({
+      apiUrl: api.base,
+      token: TOKEN,
+    }).request({
+      method: "DELETE",
+      path: "/apps/app-1/keywords/kw-1",
+    });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+    expect(seen).toEqual({ method: "DELETE", type: undefined });
+  });
+
+  it("never follows a redirect on a write, so the token and body stay put", async () => {
+    api = await startFakeApi((_req, res) => {
+      res.writeHead(307, { location: "https://elsewhere.example/apps" }).end();
+    });
+
+    const result = await createClient({
+      apiUrl: api.base,
+      token: TOKEN,
+    }).request({
+      method: "POST",
+      path: "/apps/app-1/keywords",
+      body: { keywords: ["habit"] },
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 307 });
+    expect(api.requests).toEqual(["/apps/app-1/keywords"]);
+  });
+
+  it("reports an unreachable api as status 0", async () => {
+    const result = await createClient({
+      apiUrl: "http://127.0.0.1:1",
+      token: TOKEN,
+    }).request({
+      method: "PATCH",
+      path: "/actions/act-1",
+      body: { status: "DONE" },
+    });
+
+    expect(result).toMatchObject({ ok: false, status: 0 });
+  });
+});

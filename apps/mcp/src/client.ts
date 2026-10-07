@@ -1,4 +1,5 @@
 import type { ApiErrorEnvelope } from "@asobeast/shared";
+import type { ResolvedRequest } from "@asobeast/mcp-tools";
 import type { McpConfig } from "./config.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -56,74 +57,84 @@ export interface ApiClient {
     path: string,
     params?: Record<string, QueryValue>,
   ): Promise<ApiResult<T>>;
+  request<T>(request: ResolvedRequest): Promise<ApiResult<T>>;
 }
 
 export function createClient(config: McpConfig): ApiClient {
+  async function request<T>({
+    method,
+    path,
+    params,
+    body,
+  }: ResolvedRequest): Promise<ApiResult<T>> {
+    const url = buildUrl(config.apiUrl, path, params);
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        method,
+        headers: {
+          authorization: `Bearer ${config.token}`,
+          accept: JSON_CONTENT_TYPE,
+          ...(body === undefined ? {} : { "content-type": JSON_CONTENT_TYPE }),
+        },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        redirect: "manual",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch {
+      return {
+        ok: false,
+        status: 0,
+        message: `Could not reach the asobeast API at ${config.apiUrl}. Check ASOBEAST_API_URL and that the instance is running.`,
+      };
+    }
+
+    if (isRedirect(res.status)) {
+      return {
+        ok: false,
+        status: res.status,
+        message: redirectMessage(
+          config.apiUrl,
+          url,
+          res.headers.get("location"),
+        ),
+      };
+    }
+
+    if (!res.ok) {
+      let message = `Request failed with status ${res.status}.`;
+      try {
+        const parsed: unknown = await res.json();
+        if (isErrorEnvelope(parsed)) message = parsed.message;
+      } catch {
+        message = `Request failed with status ${res.status}.`;
+      }
+      return { ok: false, status: res.status, message };
+    }
+
+    if (res.status === 204) return { ok: true, data: undefined as T };
+    const contentType = res.headers.get("content-type") ?? "no content type";
+    if (!contentType.toLowerCase().includes(JSON_CONTENT_TYPE)) {
+      return {
+        ok: false,
+        status: res.status,
+        message: `ASOBEAST_API_URL answered with ${contentType} instead of the asobeast API. If it is your web address, append /api/backend.`,
+      };
+    }
+    try {
+      return { ok: true, data: (await res.json()) as T };
+    } catch {
+      return {
+        ok: false,
+        status: res.status,
+        message: `The asobeast API returned a ${res.status} response that was not valid JSON.`,
+      };
+    }
+  }
+
   return {
-    async get<T>(
-      path: string,
-      params?: Record<string, QueryValue>,
-    ): Promise<ApiResult<T>> {
-      const url = buildUrl(config.apiUrl, path, params);
-      let res: Response;
-      try {
-        res = await fetch(url, {
-          headers: {
-            authorization: `Bearer ${config.token}`,
-            accept: JSON_CONTENT_TYPE,
-          },
-          redirect: "manual",
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-      } catch {
-        return {
-          ok: false,
-          status: 0,
-          message: `Could not reach the asobeast API at ${config.apiUrl}. Check ASOBEAST_API_URL and that the instance is running.`,
-        };
-      }
-
-      if (isRedirect(res.status)) {
-        return {
-          ok: false,
-          status: res.status,
-          message: redirectMessage(
-            config.apiUrl,
-            url,
-            res.headers.get("location"),
-          ),
-        };
-      }
-
-      if (!res.ok) {
-        let message = `Request failed with status ${res.status}.`;
-        try {
-          const body: unknown = await res.json();
-          if (isErrorEnvelope(body)) message = body.message;
-        } catch {
-          message = `Request failed with status ${res.status}.`;
-        }
-        return { ok: false, status: res.status, message };
-      }
-
-      if (res.status === 204) return { ok: true, data: undefined as T };
-      const contentType = res.headers.get("content-type") ?? "no content type";
-      if (!contentType.toLowerCase().includes(JSON_CONTENT_TYPE)) {
-        return {
-          ok: false,
-          status: res.status,
-          message: `ASOBEAST_API_URL answered with ${contentType} instead of the asobeast API. If it is your web address, append /api/backend.`,
-        };
-      }
-      try {
-        return { ok: true, data: (await res.json()) as T };
-      } catch {
-        return {
-          ok: false,
-          status: res.status,
-          message: `The asobeast API returned a ${res.status} response that was not valid JSON.`,
-        };
-      }
-    },
+    request,
+    get: <T>(path: string, params?: Record<string, QueryValue>) =>
+      request<T>({ method: "GET", path, params }),
   };
 }
