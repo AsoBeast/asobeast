@@ -1,5 +1,6 @@
 import { expect, test } from "./reporting.mts";
 import { renderedRgb, renderedTokenRgb, type Rgb } from "./colour.mts";
+import { test as signedIn } from "./session.mts";
 
 const LANDING_ORANGE: Rgb = [248, 152, 32];
 const LANDING_HOVER: Rgb = [232, 128, 16];
@@ -66,3 +67,21 @@ for (const theme of THEMES) {
     });
   });
 }
+
+signedIn("settings keeps the orange for its main actions", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/settings");
+  await expect(
+    page.getByRole("button", { name: "Connect an agent" }),
+  ).toBeVisible();
+
+  const filled = page.locator('button[data-variant="default"]:visible');
+  expect(await filled.count()).toBeLessThanOrEqual(2);
+});
+
+signedIn("action rows mark done without a filled button", async ({ page }) => {
+  await page.goto("/actions");
+  const done = page.locator('[data-command="done"]').first();
+  await expect(done).toBeVisible();
+  await expect(done).toHaveAttribute("data-variant", "secondary");
+});

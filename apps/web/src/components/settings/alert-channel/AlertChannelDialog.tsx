@@ -36,7 +36,7 @@ export function AlertChannelDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button variant="outline" size="sm">
           <Plus />
           {label}
         </Button>
