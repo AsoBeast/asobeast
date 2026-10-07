@@ -7,6 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
+import { createMcpHandler } from '@modelcontextprotocol/server';
 import { API_TOKEN_PREFIX, type ActionItem } from '@asobeast/shared';
 import { MCP_TOOLS, MCP_WRITE_TOOLS, annotationsOf } from '@asobeast/mcp-tools';
 import request from 'supertest';
@@ -14,6 +15,8 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import { InProcessGateway } from '../src/mcp/in-process.gateway';
+import { createRemoteServer, urlOf } from '../src/mcp/remote-tools';
 import { sha256 } from '../src/auth/password-hash';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -23,7 +26,7 @@ import {
 } from './helpers/action-seed';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { FakeRegistry, RIVAL_URL } from './helpers/mcp-fixtures';
-import { mcpAs, textOf } from './helpers/mcp-rpc';
+import { mcpAs, textOf, type Envelope } from './helpers/mcp-rpc';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -65,6 +68,48 @@ describe('Remote MCP write tools (e2e)', () => {
 
   const queuedJobs = () =>
     appStoreQueue.getJobs(['wait', 'paused', 'delayed', 'waiting-children']);
+
+  const callListedForWriteAsReader = async (
+    name: string,
+    args: Record<string, unknown>,
+  ): Promise<Envelope> => {
+    const gateway = app.get(InProcessGateway);
+    const handler = createMcpHandler(
+      () =>
+        createRemoteServer(
+          '1.0.0',
+          (call) =>
+            gateway.send({
+              method: call.method,
+              url: urlOf(call),
+              headers: { authorization: `Bearer ${READ_TOKEN}` },
+              body: call.body,
+            }),
+          'write',
+        ),
+      { legacy: 'stateless' },
+    );
+    const response = await handler.fetch(
+      new Request('http://localhost/mcp', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          accept: 'application/json, text/event-stream',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name, arguments: args },
+        }),
+      }),
+    );
+    const frame = (await response.text())
+      .split('\n')
+      .find((line) => line.startsWith('data: '));
+    await handler.close();
+    return JSON.parse(frame!.slice('data: '.length)) as Envelope;
+  };
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -458,5 +503,44 @@ describe('Remote MCP write tools (e2e)', () => {
     expect(JSON.stringify(response.body) + response.text).toContain('-32602');
     expect(await tracked(fixture.id)).toHaveLength(0);
     expect(await queuedJobs()).toHaveLength(0);
+  });
+
+  describe('a write tool listed by mistake to a read token', () => {
+    const REFUSAL = 'This token is read-only.';
+
+    it('is refused by the inner route and tracks nothing', async () => {
+      const fixture = await seedApp();
+
+      const answer = await callListedForWriteAsReader('track_keywords', {
+        appId: fixture.id,
+        keywords: ['habit tracker'],
+      });
+
+      expect(answer.result?.isError).toBe(true);
+      expect(textOf(answer)).toContain(REFUSAL);
+      expect(await tracked(fixture.id)).toHaveLength(0);
+      expect(await queuedJobs()).toHaveLength(0);
+    });
+
+    it('is refused by the inner route and keeps the keyword tracked', async () => {
+      const fixture = await seedApp();
+      const added = JSON.parse(
+        textOf(
+          await writer.callTool('track_keywords', {
+            appId: fixture.id,
+            keywords: ['habit tracker'],
+          }),
+        ),
+      ) as { tracked: { keywordId: string }[] };
+
+      const answer = await callListedForWriteAsReader('untrack_keyword', {
+        appId: fixture.id,
+        keywordId: added.tracked[0].keywordId,
+      });
+
+      expect(answer.result?.isError).toBe(true);
+      expect(textOf(answer)).toContain(REFUSAL);
+      expect(await tracked(fixture.id)).toHaveLength(1);
+    });
   });
 });
