@@ -3,6 +3,7 @@ import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import { QuotaAdmission } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -26,6 +27,7 @@ export class AppCaptureService {
     private readonly workspace: WorkspaceContext,
     private readonly egress: ProxyEgress,
     private readonly subtitles: SubtitleBackfill,
+    private readonly screenshots: ScreenshotRecorder,
   ) {}
 
   async capture(
@@ -81,6 +83,7 @@ export class AppCaptureService {
         const snapshot = await tx.appSnapshot.create({
           data: toSnapshotData(app.id, normalized),
         });
+        await this.screenshots.record(tx, app, snapshot);
 
         return { app, snapshot };
       };

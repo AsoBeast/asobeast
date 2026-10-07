@@ -4,6 +4,7 @@ import { ActionRunModule } from '../actions/action-run.module';
 import { ChangesModule } from '../changes/changes.module';
 import { FLOW_PRODUCERS, QUEUES } from '../jobs/jobs.types';
 import { KeywordsModule } from '../keywords/keywords.module';
+import { ScreenshotsModule } from '../screenshots/screenshots.module';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { AppCaptureService } from './app-capture.service';
 import { AppGroupsService } from './app-groups.service';
@@ -18,6 +19,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     StoreProvidersModule,
     KeywordsModule,
     ChangesModule,
+    ScreenshotsModule,
     BullModule.registerQueue(
       { name: QUEUES.APP_STORE },
       { name: QUEUES.GPLAY },

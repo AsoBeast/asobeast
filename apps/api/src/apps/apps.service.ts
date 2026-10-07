@@ -15,6 +15,7 @@ import { ChangesService } from '../changes/changes.service';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { StoreNotSupportedError } from '../store-providers/errors';
 import {
   releaseNotesFor,
@@ -55,6 +56,7 @@ export class AppsService {
     private readonly egress: ProxyEgress,
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
+    private readonly screenshots: ScreenshotRecorder,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -257,6 +259,7 @@ export class AppsService {
         where: { id: app.id },
         data: { name: normalized.title, iconUrl: normalized.iconUrl },
       });
+      await this.screenshots.record(tx, app, created);
       return created;
     });
 

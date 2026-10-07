@@ -13,6 +13,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { CompetitorsService } from './competitors.service';
+import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 
 const passThroughEgress = {
   through: <T>(_store: unknown, _country: unknown, work: () => Promise<T>) =>
@@ -117,6 +118,9 @@ describe('CompetitorsService.add', () => {
       workspace,
       passThroughEgress,
       { request: jest.fn() } as unknown as SubtitleBackfill,
+      {
+        record: jest.fn().mockResolvedValue(0),
+      } as unknown as ScreenshotRecorder,
     );
     const service = new CompetitorsService(
       prisma as unknown as PrismaService,
