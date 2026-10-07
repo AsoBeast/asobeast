@@ -48,7 +48,6 @@ export function ImportKeywordsDialog({
   const notices =
     loaded && view && mapped
       ? fileNotices({
-          encoding: loaded.file.encoding,
           fallback: loaded.file.fallback,
           hasHeader: view.hasHeader,
           ignoredColumns: mapped.ignoredColumns,

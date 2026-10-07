@@ -11,7 +11,6 @@ import {
   type KeywordImportSummary,
   type Store,
 } from "@asobeast/shared";
-import type { CsvEncoding } from "@/lib/csv-import/decode";
 import { formatNumber } from "@/lib/format";
 import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 
@@ -120,7 +119,6 @@ export function rowNote(
 }
 
 export function fileNotices(file: {
-  encoding: CsvEncoding;
   fallback: boolean;
   hasHeader: boolean;
   ignoredColumns: number;

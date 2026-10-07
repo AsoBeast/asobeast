@@ -150,7 +150,6 @@ describe("rowNote", () => {
 
 describe("fileNotices", () => {
   const base = {
-    encoding: "utf-8" as const,
     fallback: false,
     hasHeader: true,
     ignoredColumns: 0,
@@ -161,9 +160,7 @@ describe("fileNotices", () => {
   });
 
   it("U-VIEW-05 says when letters were read as Windows-1252", () => {
-    expect(
-      fileNotices({ ...base, encoding: "windows-1252", fallback: true }),
-    ).toEqual([
+    expect(fileNotices({ ...base, fallback: true })).toEqual([
       "This file is not UTF-8, so it was read as Windows-1252. If letters look wrong, save it as CSV UTF-8 and choose it again.",
     ]);
   });
