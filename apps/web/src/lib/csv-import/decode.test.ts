@@ -83,6 +83,36 @@ describe("decodeCsvBytes", () => {
     });
   });
 
+  it("recognises UTF-16LE without a byte order mark that starts with Cyrillic", () => {
+    const text = "ключевое слово,страна\nпривет,ru\n";
+
+    expect(decodeCsvBytes(arrayBufferOf(Buffer.from(text, "utf16le")))).toEqual(
+      { text, encoding: "utf-16le", fallback: false },
+    );
+  });
+
+  it("recognises UTF-16BE without a byte order mark that starts with Cyrillic", () => {
+    const text = "ключ;страна\r\nпривет;ru\r\n";
+
+    expect(
+      decodeCsvBytes(arrayBufferOf(Buffer.from(text, "utf16le").swap16())),
+    ).toMatchObject({ text, encoding: "utf-16be" });
+  });
+
+  it("recognises UTF-16LE without a byte order mark that starts with CJK", () => {
+    const text = "关键词,国家\n习惯追踪器,cn\n";
+
+    expect(
+      decodeCsvBytes(arrayBufferOf(Buffer.from(text, "utf16le"))),
+    ).toMatchObject({ text, encoding: "utf-16le", fallback: false });
+  });
+
+  it("never hands a NUL character on", () => {
+    const bytes = Buffer.from([0x00, 0x6b, 0x65, 0x00, 0x00, 0x79, 0x0a]);
+
+    expect(decodeCsvBytes(arrayBufferOf(bytes)).text).not.toContain("\u0000");
+  });
+
   it("reads an empty file as empty text", () => {
     expect(decodeCsvBytes(new ArrayBuffer(0))).toEqual({
       text: "",

@@ -15,24 +15,33 @@ function markedEncoding(bytes: Uint8Array): CsvEncoding | null {
   return null;
 }
 
+const PARITY_SAMPLE_BYTES = 65_536;
+const PARITY_DOMINANCE = 4;
+
 function unmarkedUtf16(bytes: Uint8Array): CsvEncoding | null {
-  if (bytes.length < 4) return null;
-  const [first, second, third, fourth] = bytes;
-  if (second === 0 && fourth === 0 && first !== 0 && third !== 0) {
-    return "utf-16le";
+  const zeros = [0, 0];
+  const length = Math.min(bytes.length, PARITY_SAMPLE_BYTES);
+  for (let index = 0; index < length; index += 1) {
+    if (bytes[index] === 0) zeros[index % 2] += 1;
   }
-  if (first === 0 && third === 0 && second !== 0 && fourth !== 0) {
-    return "utf-16be";
-  }
+  const [even, odd] = zeros;
+  if (odd > even * PARITY_DOMINANCE) return "utf-16le";
+  if (even > odd * PARITY_DOMINANCE) return "utf-16be";
   return null;
 }
+
+const withoutNul = (text: string): string => text.replaceAll("\u0000", "");
 
 function decoded(
   bytes: Uint8Array,
   encoding: CsvEncoding,
   fallback: boolean,
 ): DecodedCsv {
-  return { text: new TextDecoder(encoding).decode(bytes), encoding, fallback };
+  return {
+    text: withoutNul(new TextDecoder(encoding).decode(bytes)),
+    encoding,
+    fallback,
+  };
 }
 
 export function decodeCsvBytes(buffer: ArrayBuffer): DecodedCsv {
@@ -43,7 +52,7 @@ export function decodeCsvBytes(buffer: ArrayBuffer): DecodedCsv {
   }
   try {
     return {
-      text: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
+      text: withoutNul(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
       encoding: "utf-8",
       fallback: false,
     };
