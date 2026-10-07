@@ -64,14 +64,18 @@ export function ImportMapping({
       <div className="grid gap-3 sm:grid-cols-2">
         {IMPORT_FIELDS.map((field) => {
           const value = view.mapping[field];
+          const id = `keyword-import-column-${field}`;
           return (
             <div key={field} className="flex flex-col gap-1.5">
-              <Label>{FIELD_LABELS[field]}</Label>
+              <Label htmlFor={id}>{FIELD_LABELS[field]}</Label>
               <Select
                 value={value === null ? NONE : String(value)}
                 onValueChange={(next) => pick(field, next)}
               >
-                <SelectTrigger aria-label={`${FIELD_LABELS[field]} column`}>
+                <SelectTrigger
+                  id={id}
+                  aria-label={`${FIELD_LABELS[field]} column`}
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

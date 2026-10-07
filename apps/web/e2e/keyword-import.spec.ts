@@ -78,6 +78,26 @@ test("P-WEB-01 offers the import beside Add keywords and in the empty state", as
   ).toBeVisible();
 });
 
+test("P-WEB-01 keeps both import buttons inside a phone screen without squeezing the heading", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto(KEYWORDS);
+
+  const heading = await page
+    .getByRole("heading", { name: "Tracked keywords" })
+    .boundingBox();
+  expect(heading?.height).toBeLessThan(36);
+
+  for (const name of ["Import CSV", "Add keywords"]) {
+    const box = await page.getByRole("button", { name }).first().boundingBox();
+    expect(box && box.x + box.width).toBeLessThanOrEqual(375);
+  }
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(375);
+});
+
 test("P-WEB-02 downloads a template the import reads back", async ({
   page,
 }) => {
@@ -182,6 +202,22 @@ test("P-WEB-04 says when a file has no header and what it ignores", async ({
   await expect(
     dialog.getByRole("switch", { name: "First row is a header" }),
   ).not.toBeChecked();
+});
+
+test("P-WEB-05 names every column picker by its visible label", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await choose(dialog, "keyword,country\r\ndeep work,us\r\n");
+
+  for (const field of ["Keyword", "Country", "Tags", "Note"]) {
+    const picker = dialog.getByRole("combobox", { name: `${field} column` });
+    const id = await picker.getAttribute("id");
+    expect(id).toBeTruthy();
+    await expect(
+      dialog.locator("label", { hasText: new RegExp(`^${field}$`) }),
+    ).toHaveAttribute("for", id ?? "");
+  }
 });
 
 test("P-WEB-05 lets the person correct the header and the keyword column", async ({
