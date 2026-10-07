@@ -7,7 +7,8 @@ import { contrastRatio } from "@/lib/contrast";
 import { PrimitiveGallery } from "./PrimitiveGallery";
 import { TypeScale } from "./TypeScale";
 import {
-  ACCENT_RAMP,
+  BLUE_RAMP,
+  BRAND_RAMP,
   CHART_SERIES,
   NEUTRAL_RAMP,
   RANK_BANDS,
@@ -23,7 +24,8 @@ const RADII = ["sm", "md", "lg", "xl", "2xl"] as const;
 const ALL_TOKENS = Array.from(
   new Set([
     ...NEUTRAL_RAMP,
-    ...ACCENT_RAMP,
+    ...BRAND_RAMP,
+    ...BLUE_RAMP,
     ...SEMANTIC_SURFACES,
     ...RESERVED_SIGNALS,
     ...RANK_BANDS,
@@ -218,7 +220,8 @@ export function TokenReference() {
       </header>
 
       <SwatchGrid title="Neutral ramp" tokens={NEUTRAL_RAMP} values={values} />
-      <SwatchGrid title="Accent ramp" tokens={ACCENT_RAMP} values={values} />
+      <SwatchGrid title="Brand ramp" tokens={BRAND_RAMP} values={values} />
+      <SwatchGrid title="Blue ramp" tokens={BLUE_RAMP} values={values} />
       <SwatchGrid
         title="Semantic surfaces"
         tokens={SEMANTIC_SURFACES}

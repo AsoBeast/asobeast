@@ -17,11 +17,12 @@
   --neutral-950: oklch(0.168 0.007 75);
   --neutral-white: oklch(1 0 0);
 
-  --accent-300: oklch(0.82 0.088 240);
-  --accent-400: oklch(0.73 0.122 240);
-  --accent-500: oklch(0.638 0.15 240);
-  --accent-600: oklch(0.545 0.152 240);
-  --accent-700: oklch(0.452 0.132 240);
+  --brand-500: oklch(0.762 0.164 64.4);
+  --brand-600: oklch(0.701 0.164 58);
+  --brand-700: oklch(0.52 0.13 50);
+
+  --blue-400: oklch(0.73 0.122 240);
+  --blue-700: oklch(0.452 0.132 240);
 
   --green-400: oklch(0.75 0.16 152);
   --green-600: oklch(0.52 0.14 152);
