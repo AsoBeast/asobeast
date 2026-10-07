@@ -75,18 +75,22 @@ for (const theme of THEMES) {
   });
 }
 
-signedIn("settings keeps the orange for its main actions", async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto("/settings");
-  for (const name of SETTINGS_TRIGGERS) {
-    await expect(
-      page.getByRole("button", { name, exact: true }),
-    ).toHaveAttribute("data-variant", "outline");
-  }
+signedIn(
+  "settings outlines its dialog triggers and fills nothing else",
+  async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto("/settings");
+    for (const name of SETTINGS_TRIGGERS) {
+      await expect(
+        page.getByRole("button", { name, exact: true }),
+      ).toHaveAttribute("data-variant", "outline");
+    }
 
-  const filled = page.locator('button[data-variant="default"]:visible');
-  expect(await filled.count()).toBeLessThanOrEqual(2);
-});
+    await expect(
+      page.locator('button[data-variant="default"]:visible'),
+    ).toHaveCount(0);
+  },
+);
 
 signedIn("action rows mark done without a filled button", async ({ page }) => {
   await page.goto("/actions");
