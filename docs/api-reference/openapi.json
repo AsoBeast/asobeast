@@ -1900,6 +1900,48 @@
         ]
       }
     },
+    "/apps/{id}/keywords/import/preview": {
+      "post": {
+        "description": "Validates up to 500 rows and answers, for every row, whether an import would track it, resume it, skip it or refuse it, with the daily store requests the import would add and the keyword limit of the plan. Writes nothing and queues nothing. Rows without a country use the request country, else the home market of the app.",
+        "operationId": "KeywordsController_previewImport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview a keyword import without writing",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/{keywordId}": {
       "patch": {
         "operationId": "KeywordsController_update",
@@ -4476,6 +4518,59 @@
         },
         "required": [
           "keywords"
+        ]
+      },
+      "KeywordImportRowDto": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "example": "habit tracker"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "pl"
+          },
+          "tags": {
+            "example": [
+              "core",
+              "brand"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Q4 push"
+          }
+        },
+        "required": [
+          "keyword"
+        ]
+      },
+      "KeywordImportDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeywordImportRowDto"
+            }
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "rows"
         ]
       },
       "UpdateKeywordDto": {
