@@ -9,7 +9,7 @@ import {
   type ActionItem,
   type TrackedKeywordItem,
 } from "@asobeast/shared";
-import { actionId } from "./actions";
+import { actionIdFrom } from "./actions";
 import { utcDate } from "./calendar-date";
 import { defineWriteTool, seg, type WriteTool } from "./define";
 
@@ -17,7 +17,15 @@ export const TRACK_KEYWORDS_LIMIT = 50;
 
 const STORE_URL_MAX_LENGTH = 2048;
 
-const appId = z.string().describe("The app id from list_apps.");
+const RECORD_ID_MAX_LENGTH = 64;
+
+const recordId = z
+  .string()
+  .min(1)
+  .max(RECORD_ID_MAX_LENGTH)
+  .regex(/^[A-Za-z0-9_-]+$/, "Not an id.");
+
+const appId = recordId.describe("The app id from list_apps.");
 
 function trackedOutcome(
   body: unknown,
@@ -85,10 +93,9 @@ export const MCP_WRITE_TOOLS: WriteTool[] = [
       "Stop tracking one keyword for one app, in the market the keyword belongs to. The tracking entry is deleted with its tags, note and relevance, and the daily run stops collecting positions for it; positions already recorded stay until retention prunes them. Track it again with track_keywords. Do this only when the human asked for it.",
     inputSchema: z.object({
       appId,
-      keywordId: z
-        .string()
-        .min(1)
-        .describe("The tracked keyword id from list_keywords."),
+      keywordId: recordId.describe(
+        "The tracked keyword id from list_keywords.",
+      ),
     }),
     hints: { destructive: true, idempotent: true, openWorld: false },
     request: ({ appId, keywordId }) => ({
@@ -132,10 +139,9 @@ export const MCP_WRITE_TOOLS: WriteTool[] = [
       "Remove one competitor from an app. The competitor and its stored snapshots and positions are deleted, and it disappears from competitor_analysis and keyword_comparison. Add it again with add_competitor. Do this only when the human asked for it.",
     inputSchema: z.object({
       appId,
-      competitorId: z
-        .string()
-        .min(1)
-        .describe("The competitor id from list_competitors."),
+      competitorId: recordId.describe(
+        "The competitor id from list_competitors.",
+      ),
     }),
     hints: { destructive: true, idempotent: true, openWorld: false },
     request: ({ appId, competitorId }) => ({
@@ -155,7 +161,7 @@ export const MCP_WRITE_TOOLS: WriteTool[] = [
     description:
       "Change the status of one action in the Action Center. OPEN reopens it. SNOOZED defers it until snoozedUntil, a UTC date (YYYY-MM-DD) in the future and within the instance's snooze limit (90 days by default), and it wakes at 00:00 UTC that day. DONE records that the owner acted; it is confirmed fixed once its rule stops firing and reopens if the rule fires again. DISMISSED rejects it, optionally with a reason, and a dismissed action is not recommended again. An action the system resolved on its own can only be reopened. Change an action only when the human asked for it, and use note to say why: it is saved on the action and shown to the team under the token owner's name. Returns the new status.",
     inputSchema: z.object({
-      actionId,
+      actionId: actionIdFrom(recordId),
       status: z.enum(ACTION_UPDATE_STATUSES).describe("The status to set."),
       snoozedUntil: utcDate
         .optional()

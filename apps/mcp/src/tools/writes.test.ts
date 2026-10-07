@@ -129,6 +129,22 @@ describe("write tools", () => {
   });
 
   it.each([
+    ["untrack_keyword", { appId: "app-1", keywordId: ".." }],
+    ["remove_competitor", { appId: "app-1", competitorId: "." }],
+    ["set_action_status", { actionId: ".", status: "DONE" }],
+  ])(
+    "send nothing when %s is given a dot segment as an id",
+    async (name, input) => {
+      const { tools, calls } = setup(() => ({ status: 204, body: null }));
+
+      await expect(tools.get(name)!.handler(input)).rejects.toThrow(
+        "is not an id",
+      );
+      expect(calls).toHaveLength(0);
+    },
+  );
+
+  it.each([
     ["a server error", { status: 502, body: { message: "bad gateway" } }],
     ["an api that cannot be reached", "throw" as const],
   ])(

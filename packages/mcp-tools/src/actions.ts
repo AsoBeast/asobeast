@@ -73,11 +73,16 @@ function joinValues(values: readonly string[] | undefined): string | undefined {
   return values && values.length > 0 ? values.join(",") : undefined;
 }
 
-export const actionId = z
-  .string()
-  .min(1)
-  .refine((id) => !RESERVED_ACTION_PATHS.includes(id), "Not an action id.")
-  .describe("The action id from list_actions or app_actions.");
+export function actionIdFrom(id: z.ZodString) {
+  return id
+    .refine(
+      (value) => !RESERVED_ACTION_PATHS.includes(value),
+      "Not an action id.",
+    )
+    .describe("The action id from list_actions or app_actions.");
+}
+
+const actionId = actionIdFrom(z.string().min(1));
 
 export const ACTION_TOOLS: ReadTool[] = [
   defineReadTool({

@@ -70,6 +70,11 @@ export function defineWriteTool<Shape extends z.ZodRawShape>(
 
 export type McpTool = ReadTool | WriteTool;
 
+const FOLDED_SEGMENTS = ["", ".", ".."];
+
 export function seg(value: string): string {
+  if (FOLDED_SEGMENTS.includes(value)) {
+    throw new Error(`${JSON.stringify(value)} is not an id.`);
+  }
   return encodeURIComponent(value);
 }

@@ -100,6 +100,58 @@ describe("the write tools", () => {
     ).toBe("/apps/..%2Fjobs/keywords/kw%2F1%3Fx%3Dy");
   });
 
+  const ID_FIELDS = ["appId", "keywordId", "competitorId", "actionId"];
+
+  const idFields = MCP_WRITE_TOOLS.flatMap((tool) =>
+    ID_FIELDS.filter((field) => field in tool.inputSchema.shape).map(
+      (field) => [tool.name, field, tool.inputSchema.shape[field] as z.ZodType],
+    ),
+  ) as [string, string, z.ZodType][];
+
+  it("take an id in every place an id leads to a record", () => {
+    expect(idFields.map(([name, field]) => `${name}.${field}`)).toEqual([
+      "track_keywords.appId",
+      "untrack_keyword.appId",
+      "untrack_keyword.keywordId",
+      "add_competitor.appId",
+      "remove_competitor.appId",
+      "remove_competitor.competitorId",
+      "set_action_status.actionId",
+    ]);
+  });
+
+  it.each(idFields)(
+    "%s refuses a dot segment as %s, which would climb to the route above",
+    (_name, _field, schema) => {
+      for (const value of [".", ".."]) {
+        expect(schema.safeParse(value).success).toBe(false);
+      }
+    },
+  );
+
+  it.each(idFields)(
+    "%s refuses %s when it is empty, carries a path or runs past any real id",
+    (_name, _field, schema) => {
+      for (const value of ["", "app/1", "kw?x=y", "a b", "x".repeat(65)]) {
+        expect(schema.safeParse(value).success).toBe(false);
+      }
+    },
+  );
+
+  it.each(idFields)(
+    "%s accepts every id the api hands out as %s",
+    (_name, _field, schema) => {
+      for (const value of [
+        "cmg1q2w3e0000abcd1234efgh",
+        "app_ios",
+        "kw-1",
+        "x".repeat(64),
+      ]) {
+        expect(schema.safeParse(value).success).toBe(true);
+      }
+    },
+  );
+
   it.each([
     ["track_keywords", "no phrase", { appId: "a", keywords: [] }],
     [
