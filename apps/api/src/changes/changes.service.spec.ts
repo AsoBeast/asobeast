@@ -22,6 +22,9 @@ function makeSnapshot(
   };
 }
 
+const keyed = (...keys: string[]) =>
+  keys.map((key) => ({ key, url: `${key}/392x696bb.jpg` }));
+
 describe('ChangesService', () => {
   let service: ChangesService;
   const createMany = jest.fn();
@@ -205,6 +208,96 @@ describe('ChangesService', () => {
           capturedAt: '2026-07-11T00:00:00.000Z',
         },
       ]);
+    });
+  });
+
+  describe('screenshot changes', () => {
+    it('persists the detail of a change next to its field', async () => {
+      const prev = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'b', 'c'),
+      });
+      const next = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'x', 'c'),
+        title: 'New title',
+      });
+
+      await service.recordRefresh('app_1', prev, next);
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<Record<string, unknown>> },
+      ];
+      expect(data).toHaveLength(2);
+      const title = data.find((row) => row.field === 'title');
+      const images = data.find((row) => row.field === 'screenshotImages');
+      expect(title && 'detail' in title).toBe(false);
+      expect(images).toMatchObject({
+        appId: 'app_1',
+        before: '3 screenshots',
+        after: '3 screenshots, 1 replaced',
+        detail: {
+          kind: 'images',
+          added: [2],
+          removed: [2],
+        },
+      });
+    });
+
+    it('sends alerts the field and the two readable values only', async () => {
+      const prev = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'b', 'c'),
+      });
+      const next = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'x', 'c'),
+      });
+
+      await service.recordRefresh('app_1', prev, next);
+
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<Record<string, unknown>> },
+      ];
+      expect(payload.changes).toEqual([
+        {
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, 1 replaced',
+        },
+      ]);
+    });
+
+    it('returns the detail on a timeline item and leaves it out when there is none', async () => {
+      findFirst.mockResolvedValue({ id: 'app_1', competitors: [] });
+      const detail = { kind: 'captions', added: ['B'], removed: ['A'] };
+      findMany.mockResolvedValue([
+        {
+          id: 'ev_2',
+          appId: 'app_1',
+          field: 'screenshotCaptions',
+          before: 'A',
+          after: 'B',
+          detail,
+          capturedAt: new Date('2026-07-10T00:00:00Z'),
+          app: { name: 'Mine', isCompetitor: false },
+        },
+        {
+          id: 'ev_1',
+          appId: 'app_1',
+          field: 'title',
+          before: 'A',
+          after: 'B',
+          detail: null,
+          capturedAt: new Date('2026-07-09T00:00:00Z'),
+          app: { name: 'Mine', isCompetitor: false },
+        },
+      ]);
+
+      const { events } = await service.timeline('app_1', 90);
+
+      expect(events[0].detail).toEqual(detail);
+      expect('detail' in events[1]).toBe(false);
     });
   });
 });

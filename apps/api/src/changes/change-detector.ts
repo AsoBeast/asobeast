@@ -1,4 +1,10 @@
-import { ChangeField } from '@asobeast/shared';
+import { ChangeDetail, ChangeField } from '@asobeast/shared';
+import {
+  describeImagesChange,
+  diffScreenshotImages,
+  KeyedScreenshot,
+  screenshotImagesDetail,
+} from './screenshot-diff';
 
 export interface DiffableChangeSnapshot {
   title: string;
@@ -8,6 +14,7 @@ export interface DiffableChangeSnapshot {
   version: string | null;
   price: number | null;
   screenshotsCount: number | null;
+  screenshots?: KeyedScreenshot[] | null;
   iconUrl: string | null;
   releaseNotes: string | null;
 }
@@ -16,6 +23,7 @@ export interface DetectedChange {
   field: ChangeField;
   before: string | null;
   after: string | null;
+  detail?: ChangeDetail;
 }
 
 type Strategy = 'text' | 'length' | 'number' | 'truncate';
@@ -24,7 +32,7 @@ const TRUNCATE_LIMIT = 300;
 
 interface FieldSpec {
   field: ChangeField;
-  key: keyof DiffableChangeSnapshot;
+  key: Exclude<keyof DiffableChangeSnapshot, 'screenshots'>;
   strategy: Strategy;
 }
 
@@ -61,7 +69,43 @@ export function detectChanges(
       after: render(spec.strategy, after),
     });
   }
-  return changes;
+  return withImageChanges(prev, next, changes);
+}
+
+function withImageChanges(
+  prev: DiffableChangeSnapshot,
+  next: DiffableChangeSnapshot,
+  changes: DetectedChange[],
+): DetectedChange[] {
+  if (!prev.screenshots || !next.screenshots) {
+    return changes;
+  }
+  const diff = diffScreenshotImages(prev.screenshots, next.screenshots);
+  if (diff === null) {
+    return changes;
+  }
+  const detail = screenshotImagesDetail(
+    prev.screenshots,
+    next.screenshots,
+    diff,
+  );
+  const count = changes.find((change) => change.field === 'screenshots');
+  if (count) {
+    count.detail = detail;
+    return changes;
+  }
+  return [
+    ...changes,
+    {
+      field: 'screenshotImages',
+      ...describeImagesChange(
+        prev.screenshots.length,
+        next.screenshots.length,
+        diff,
+      ),
+      detail,
+    },
+  ];
 }
 
 function render(

@@ -13,6 +13,7 @@ import {
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
+import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
@@ -294,6 +295,7 @@ export class AppsService {
       version: snapshot.version,
       price: snapshot.price,
       screenshotsCount: screenshotsCount(snapshot.raw),
+      screenshots: screenshotKeys(store, snapshot.raw),
       iconUrl,
       releaseNotes: releaseNotesFor(store, snapshot.raw),
     };
