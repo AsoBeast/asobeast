@@ -373,6 +373,16 @@ describe("the write tools", () => {
     }
   });
 
+  it("tells an agent what tracking an already tracked phrase changes", () => {
+    const { description } = writeTool("track_keywords");
+
+    expect(description).not.toContain("left as it is");
+    expect(description).toContain("is resumed if it was paused");
+    expect(description).toContain(
+      "tracked from the iOS keyword field becomes a manual keyword",
+    );
+  });
+
   it("tells an agent to change something only when asked to", () => {
     for (const name of [
       "untrack_keyword",
