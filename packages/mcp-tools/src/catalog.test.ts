@@ -93,3 +93,12 @@ describe("the market argument", () => {
     },
   );
 });
+
+describe("the get_app market", () => {
+  it("promises a market listing only once one was captured", () => {
+    const description = toolByName("get_app")?.description ?? "";
+
+    expect(description).toMatch(/not found until/);
+    expect(description).not.toMatch(/must be one the app tracks keywords in/);
+  });
+});

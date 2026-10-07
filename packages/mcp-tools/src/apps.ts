@@ -16,7 +16,7 @@ export const APP_TOOLS: ReadTool[] = [
     name: "get_app",
     title: "Get app",
     description:
-      "Full detail for one app: store metadata, home storefront, latest snapshot and category. Pass country for the listing captured from another storefront; that market must be one the app tracks keywords in. Dates are UTC date strings (YYYY-MM-DD).",
+      "Full detail for one app: store metadata, home storefront, latest snapshot and category. Pass country for the latest listing captured from another storefront. A market is captured daily while the app tracks keywords there, and its last listing stays readable after those keywords are removed; a market is not found until its first listing was captured. Dates are UTC date strings (YYYY-MM-DD).",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
       country: z
