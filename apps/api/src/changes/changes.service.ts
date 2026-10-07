@@ -7,6 +7,7 @@ import {
   DiffableChangeSnapshot,
   detectChanges,
 } from './change-detector';
+import { HOME_EVENTS } from '../apps/listing';
 
 const MAX_EVENTS = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -65,7 +66,11 @@ export class ChangesService {
     const cutoff = new Date(Date.now() - days * DAY_MS);
 
     const events = await this.prisma.changeEvent.findMany({
-      where: { appId: { in: appIds }, capturedAt: { gte: cutoff } },
+      where: {
+        appId: { in: appIds },
+        ...HOME_EVENTS,
+        capturedAt: { gte: cutoff },
+      },
       orderBy: { capturedAt: 'desc' },
       take: MAX_EVENTS,
       select: EVENT_SELECT,
@@ -80,7 +85,7 @@ export class ChangesService {
     });
 
     const events = await this.prisma.changeEvent.findMany({
-      where: { appId: { in: apps.map((app) => app.id) } },
+      where: { appId: { in: apps.map((app) => app.id) }, ...HOME_EVENTS },
       orderBy: { capturedAt: 'desc' },
       take: limit,
       select: EVENT_SELECT,

@@ -24,6 +24,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { toDifficulty100 } from '../scoring/formulas';
 import { aggregateDiscovery } from './discovery';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
+import { LATEST_HOME_LISTING } from '../apps/listing';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -76,7 +77,7 @@ export class CompetitorsService {
     }
     const known = await this.prisma.app.findFirst({
       where: { primaryAppId: primary.id, storeAppId, isCompetitor: true },
-      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+      include: { snapshots: LATEST_HOME_LISTING },
     });
     if (known) {
       return toCompetitorItem(known, known.snapshots[0] ?? null);
@@ -100,7 +101,7 @@ export class CompetitorsService {
     await this.ensureApp(primaryId);
     const competitors = await this.prisma.app.findMany({
       where: { primaryAppId: primaryId },
-      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+      include: { snapshots: LATEST_HOME_LISTING },
       orderBy: { createdAt: 'asc' },
     });
     return competitors.map((competitor) =>
@@ -294,8 +295,7 @@ export class CompetitorsService {
       id: true,
       name: true,
       snapshots: {
-        orderBy: { capturedAt: 'desc' as const },
-        take: 1,
+        ...LATEST_HOME_LISTING,
         select: { title: true, subtitle: true, ratingAvg: true },
       },
     };

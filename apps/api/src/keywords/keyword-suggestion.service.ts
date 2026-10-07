@@ -16,6 +16,11 @@ import { reportedSource } from './keyword-field-membership';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { mineReviewPhrases } from './review-mining';
 import { seasonalSuggestions } from './seasonal-suggestions';
+import {
+  HOME_LISTING,
+  LATEST_HOME_LISTING,
+  NEWEST_FIRST,
+} from '../apps/listing';
 
 const REVIEW_MINING_CAP = 500;
 const SEARCH_SEED_LIMIT = 5;
@@ -115,8 +120,7 @@ export class KeywordSuggestionService {
       where: { primaryAppId: appId },
       select: {
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { title: true, subtitle: true },
         },
       },
@@ -220,8 +224,8 @@ export class KeywordSuggestionService {
     limit: number,
   ): Promise<KeywordSuggestion[]> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
       select: { raw: true, title: true },
     });
     const devId = snapshot && developerId(app.store, snapshot.raw);
@@ -259,8 +263,8 @@ export class KeywordSuggestionService {
 
   private async latestCandidates(appId: string) {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
       select: { title: true, subtitle: true, summary: true },
     });
     if (!snapshot) {

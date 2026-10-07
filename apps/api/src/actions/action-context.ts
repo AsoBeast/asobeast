@@ -27,6 +27,7 @@ import {
   homeKeywordIds,
   loadCompetitorRows,
 } from './action-competitors';
+import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
 
 export interface ActionAuditCheck {
   id: string;
@@ -296,7 +297,11 @@ export class ActionContextLoader {
           orderBy: { date: 'asc' },
         }),
         this.prisma.changeEvent.findMany({
-          where: { appId: { in: appIds }, capturedAt: { gte: from } },
+          where: {
+            appId: { in: appIds },
+            ...HOME_EVENTS,
+            capturedAt: { gte: from },
+          },
           select: { appId: true, field: true, capturedAt: true },
           orderBy: { capturedAt: 'asc' },
         }),
@@ -327,7 +332,11 @@ export class ActionContextLoader {
           distinct: ['appId'],
         }),
         this.prisma.appSnapshot.findMany({
-          where: { appId: { in: appIds }, capturedAt: { gte: from } },
+          where: {
+            appId: { in: appIds },
+            ...HOME_LISTING,
+            capturedAt: { gte: from },
+          },
           select: {
             appId: true,
             version: true,

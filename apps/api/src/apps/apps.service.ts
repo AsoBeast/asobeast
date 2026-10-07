@@ -36,6 +36,7 @@ import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { withKnownSubtitle } from './known-subtitle';
 import { diffSnapshots } from './snapshot-diff';
+import { HOME_LISTING, LATEST_HOME_LISTING, NEWEST_FIRST } from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
 
@@ -125,7 +126,7 @@ export class AppsService {
     const apps = await this.prisma.app.findMany({
       where: { isCompetitor: false },
       include: {
-        snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 },
+        snapshots: LATEST_HOME_LISTING,
         _count: { select: { tracked: true, competitors: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -145,9 +146,9 @@ export class AppsService {
     const app = await this.prisma.app.findFirst({
       where: { id },
       include: {
-        snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 },
+        snapshots: LATEST_HOME_LISTING,
         competitors: {
-          include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+          include: { snapshots: LATEST_HOME_LISTING },
           orderBy: { createdAt: 'asc' },
         },
         group: { include: { apps: true } },
@@ -242,8 +243,8 @@ export class AppsService {
     );
 
     const previous = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId: app.id, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
     });
 
     const snapshot = await this.prisma.withTransaction(async (tx) => {

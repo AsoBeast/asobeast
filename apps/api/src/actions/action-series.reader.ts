@@ -16,6 +16,7 @@ import {
   trendWindow,
   updateAgePoints,
 } from './action-trend';
+import { HOME_LISTING } from '../apps/listing';
 
 interface SeriesBody {
   depth: number | null;
@@ -156,7 +157,11 @@ export class ActionSeriesReader {
     { from, to }: TrendWindow,
   ): Promise<SeriesBody> {
     const rows = await this.prisma.appSnapshot.findMany({
-      where: { appId: item.scope.appId, capturedAt: { gte: from } },
+      where: {
+        appId: item.scope.appId,
+        ...HOME_LISTING,
+        capturedAt: { gte: from },
+      },
       select: { capturedAt: true, storeUpdatedAt: true },
     });
     return { depth: null, points: updateAgePoints(rows, from, to) };

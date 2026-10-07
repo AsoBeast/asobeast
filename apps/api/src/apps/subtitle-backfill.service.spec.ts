@@ -140,6 +140,7 @@ describe('SubtitleBackfill', () => {
       expect(updateMany).toHaveBeenCalledWith({
         where: {
           appId: APP_ID,
+          country: null,
           subtitle: null,
           capturedAt: { gte: CAPTURED_AT },
         },

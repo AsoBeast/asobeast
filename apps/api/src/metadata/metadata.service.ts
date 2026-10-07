@@ -24,6 +24,7 @@ import {
 import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -45,8 +46,8 @@ export class MetadataService {
     const app = await this.ensureApp(appId);
     const [snapshot, tracked, competitors] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
-        where: { appId },
-        orderBy: { capturedAt: 'desc' },
+        where: { appId, ...HOME_LISTING },
+        orderBy: NEWEST_FIRST,
         select: {
           title: true,
           subtitle: true,

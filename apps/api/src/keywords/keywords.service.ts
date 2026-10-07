@@ -42,6 +42,7 @@ import {
   trackedArgs,
   trackedOrder,
 } from './keywords.support';
+import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
@@ -136,8 +137,8 @@ export class KeywordsService {
 
   private async snapshotFacts(app: KeywordApp): Promise<AppFacts> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId: app.id, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
       select: { title: true, subtitle: true, summary: true },
     });
     if (!snapshot) {
@@ -402,8 +403,8 @@ export class KeywordsService {
     }
 
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
       select: { title: true, subtitle: true, summary: true },
     });
     if (!snapshot) {
