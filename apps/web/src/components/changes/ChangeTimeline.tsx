@@ -36,6 +36,8 @@ export const FIELD_LABELS: Record<ChangeField, string> = {
   version: "Version",
   price: "Price",
   screenshots: "Screenshots",
+  screenshotImages: "Screenshot images",
+  screenshotCaptions: "Screenshot captions",
   icon: "Icon",
   whatsNew: "What's New",
 };

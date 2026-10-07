@@ -7,6 +7,7 @@ export * from './category-ranks';
 export * from './analytics';
 export * from './audit';
 export * from './metadata';
+export * from './screenshots';
 export * from './competitors';
 export * from './serp';
 export * from './changes';
