@@ -28,7 +28,10 @@ export class JobTargetCountry {
           (job.data as SpiderProbePayload).country ??
           this.appCountry((job.data as SpiderProbePayload).appId)
         );
-      case JOBS.REFRESH_APP:
+      case JOBS.REFRESH_APP: {
+        const { appId, country } = job.data as RefreshAppPayload;
+        return country ?? this.appCountry(appId);
+      }
       case JOBS.RESOLVE_SUBTITLE:
       case JOBS.SYNC_REVIEWS:
         return this.appCountry((job.data as RefreshAppPayload).appId);

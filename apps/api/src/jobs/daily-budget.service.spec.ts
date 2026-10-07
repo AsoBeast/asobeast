@@ -24,6 +24,7 @@ const targetsOf = (over: Partial<DailyTargets> = {}): DailyTargets => ({
     { keywordId: 'gplay-keyword', store: Store.GOOGLE_PLAY },
   ],
   reviewApps: [{ id: 'apple', store: Store.APP_STORE }],
+  marketListings: [],
   ...over,
 });
 
@@ -86,9 +87,47 @@ describe('DailyBudgetService', () => {
       capacityPerDay: 25 * 60 * 24,
     });
     expect(budget.stores).toEqual([
-      expect.objectContaining({ store: 'APP_STORE', total: 4 }),
+      expect.objectContaining({
+        store: 'APP_STORE',
+        total: 4,
+        marketListings: 0,
+      }),
+      expect.objectContaining({
+        store: 'GOOGLE_PLAY',
+        total: 17,
+        marketListings: 0,
+      }),
+    ]);
+  });
+
+  it('charges a market listing as an app job and reports it', async () => {
+    collect.mockResolvedValue(
+      targetsOf({
+        marketListings: [
+          { id: 'apple', store: Store.APP_STORE, country: 'de' },
+        ],
+      }),
+    );
+
+    const budget = await build().estimate();
+
+    expect(budget.apps).toBe(3);
+    expect(budget.marketListings).toBe(1);
+    expect(budget.stores).toEqual([
+      expect.objectContaining({
+        store: 'APP_STORE',
+        apps: 2,
+        marketListings: 1,
+        total: 5,
+      }),
       expect.objectContaining({ store: 'GOOGLE_PLAY', total: 17 }),
     ]);
+  });
+
+  it('reports no market listings when no market has a keyword', async () => {
+    const budget = await build().estimate();
+
+    expect(budget.marketListings).toBe(0);
   });
 
   it('charges a play search the requests it fans out to, not one', async () => {
@@ -96,6 +135,7 @@ describe('DailyBudgetService', () => {
       apps: [],
       keywords: [{ keywordId: 'gplay-keyword', store: Store.GOOGLE_PLAY }],
       reviewApps: [],
+      marketListings: [],
     });
     buckets.mockResolvedValue([]);
 
@@ -117,6 +157,7 @@ describe('DailyBudgetService', () => {
       apps: [],
       keywords: [{ keywordId: 'gplay-keyword', store: Store.GOOGLE_PLAY }],
       reviewApps: [],
+      marketListings: [],
     });
     buckets.mockResolvedValue([]);
     perDay.mockImplementation((store) =>
@@ -136,6 +177,7 @@ describe('DailyBudgetService', () => {
         { keywordId: 'apple-keyword', store: Store.APP_STORE },
       ],
       reviewApps: [],
+      marketListings: [],
     });
     buckets.mockResolvedValue([]);
     perDay.mockImplementation((store) =>
@@ -154,6 +196,7 @@ describe('DailyBudgetService', () => {
       apps: [{ id: 'apple', store: Store.APP_STORE }],
       keywords: [{ keywordId: 'apple-keyword', store: Store.APP_STORE }],
       reviewApps: [],
+      marketListings: [],
     });
     buckets.mockResolvedValue([]);
     perDay.mockImplementation((store) =>
@@ -163,8 +206,16 @@ describe('DailyBudgetService', () => {
     const budget = await build().estimate();
 
     expect(budget.stores).toEqual([
-      expect.objectContaining({ store: 'APP_STORE', total: 2 }),
-      expect.objectContaining({ store: 'GOOGLE_PLAY', total: 0 }),
+      expect.objectContaining({
+        store: 'APP_STORE',
+        total: 2,
+        marketListings: 0,
+      }),
+      expect.objectContaining({
+        store: 'GOOGLE_PLAY',
+        total: 0,
+        marketListings: 0,
+      }),
     ]);
     expect(budget.completion.hours).toBe(1);
   });

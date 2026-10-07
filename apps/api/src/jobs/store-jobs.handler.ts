@@ -48,9 +48,13 @@ export class StoreJobsHandler {
 
   private async dispatch(job: Job): Promise<void> {
     switch (job.name) {
-      case JOBS.REFRESH_APP:
-        await this.apps.refreshApp((job.data as RefreshAppPayload).appId);
+      case JOBS.REFRESH_APP: {
+        const { appId, country } = job.data as RefreshAppPayload;
+        await (country === undefined
+          ? this.apps.refreshApp(appId)
+          : this.apps.refreshListing(appId, country));
         return;
+      }
       case JOBS.RESOLVE_SUBTITLE:
         await this.subtitles.resolve(resolveSubtitlePayloadOf(job));
         return;

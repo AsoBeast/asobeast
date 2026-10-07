@@ -98,6 +98,7 @@ describe('PipelineService', () => {
   });
   const emptyPrisma = () => ({
     app: { findMany: jest.fn().mockResolvedValue([]) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
     trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
   });
   const buildTrackedKeywords = (store: Store = 'APP_STORE') => ({
@@ -168,6 +169,7 @@ describe('PipelineService', () => {
             { id: 'primary', isCompetitor: false, store: 'APP_STORE' },
           ]),
       },
+      $queryRaw: jest.fn().mockResolvedValue([]),
       trackedKeyword: {
         findMany: jest.fn().mockResolvedValue(
           ['k3', 'k1', 'k2'].map((keywordId) => ({
@@ -211,6 +213,7 @@ describe('PipelineService', () => {
   describe('a keyword two workspaces share is one job', () => {
     const sharedKeyword = () => ({
       app: { findMany: jest.fn().mockResolvedValue([]) },
+      $queryRaw: jest.fn().mockResolvedValue([]),
       trackedKeyword: {
         findMany: jest
           .fn()
@@ -311,6 +314,7 @@ describe('PipelineService', () => {
           })),
         ),
       },
+      $queryRaw: jest.fn().mockResolvedValue([]),
       trackedKeyword: {
         findMany: jest.fn().mockResolvedValue(
           keywords.map((store, index) => ({
@@ -406,6 +410,7 @@ describe('PipelineService', () => {
           { id: 'competitor', isCompetitor: true, store: 'GOOGLE_PLAY' },
         ]),
       },
+      $queryRaw: jest.fn().mockResolvedValue([]),
       trackedKeyword: {
         findMany: jest.fn().mockResolvedValue([
           { keywordId: 'apple-keyword', keyword: { store: 'APP_STORE' } },
@@ -648,6 +653,171 @@ describe('PipelineService', () => {
         expect.objectContaining({ keywordId: 'keyword' }),
         { jobId: 'score~keyword~2026-07-27' },
       );
+    });
+  });
+
+  describe('market listings', () => {
+    const marketPrisma = (
+      markets: Array<{ appId: string; country: string }>,
+    ) => ({
+      app: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            id: 'primary',
+            isCompetitor: false,
+            store: 'APP_STORE',
+            primaryAppId: null,
+          },
+          {
+            id: 'rival',
+            isCompetitor: true,
+            store: 'APP_STORE',
+            primaryAppId: 'primary',
+          },
+        ]),
+      },
+      trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+      $queryRaw: jest.fn().mockResolvedValue(markets),
+    });
+
+    const refreshChildren = (flow: FlowJob) =>
+      (flow.children ?? []).filter((child) => child.name === JOBS.REFRESH_APP);
+
+    const marketOf = (child: FlowJob) =>
+      (child.data as { country?: string }).country;
+
+    const flowOf = (flowProducer: ReturnType<typeof buildFlowProducer>) =>
+      (flowProducer.add.mock.calls[0] as [FlowJob])[0];
+
+    const refreshCalls = (queue: ReturnType<typeof buildQueue>) =>
+      queue.add.mock.calls
+        .filter(([name]) => name === JOBS.REFRESH_APP)
+        .map(([, data, opts]) => ({
+          appId: (data as { appId: string }).appId,
+          country: (data as { country?: string }).country,
+          jobId: opts?.jobId,
+        }));
+
+    it('plans one refresh per app and market beside the home refreshes', async () => {
+      const { service, flowProducer } = buildService({
+        prisma: marketPrisma([{ appId: 'primary', country: 'de' }]),
+      });
+
+      const summary = await service.fanOutDaily();
+
+      const refreshes = refreshChildren(flowOf(flowProducer));
+      expect(refreshes).toHaveLength(4);
+      expect(
+        refreshes
+          .filter((child) => marketOf(child) === 'de')
+          .map((child) => child.opts?.jobId),
+      ).toEqual([
+        'daily~refresh~primary~de~2026-07-27',
+        'daily~refresh~rival~de~2026-07-27',
+      ]);
+      expect(
+        refreshes
+          .filter((child) => marketOf(child) === undefined)
+          .map((child) => child.opts?.jobId),
+      ).toEqual([
+        'daily~refresh~primary~2026-07-27',
+        'daily~refresh~rival~2026-07-27',
+      ]);
+      expect(summary.apps).toBe(4);
+    });
+
+    it("plans exactly today's jobs when no market has a keyword", async () => {
+      const { service, flowProducer } = buildService({
+        prisma: marketPrisma([]),
+      });
+
+      const summary = await service.fanOutDaily();
+
+      const refreshes = refreshChildren(flowOf(flowProducer));
+      expect(refreshes).toHaveLength(2);
+      expect(refreshes.every((child) => marketOf(child) === undefined)).toBe(
+        true,
+      );
+      expect(summary.apps).toBe(2);
+    });
+
+    it('sheds market listings with the app refreshes under pressure', async () => {
+      const { service, flowProducer } = buildService({
+        prisma: marketPrisma([{ appId: 'primary', country: 'de' }]),
+        appStoreQueue: buildQueue(40_000),
+      });
+
+      await service.fanOutDaily();
+
+      expect(refreshChildren(flowOf(flowProducer))).toEqual([]);
+    });
+
+    it('queues a market listing on a manual workspace run', async () => {
+      const { service, appStoreQueue } = buildService({
+        prisma: marketPrisma([{ appId: 'primary', country: 'de' }]),
+      });
+
+      const summary = await service.fanOutWorkspaceDaily(DEFAULT_WORKSPACE_ID);
+
+      expect(appStoreQueue.add).toHaveBeenCalledWith(
+        JOBS.REFRESH_APP,
+        expect.objectContaining({ appId: 'primary', country: 'de' }),
+        expect.objectContaining({ jobId: 'refresh~primary~de~2026-07-27' }),
+      );
+      expect(summary.apps).toBe(4);
+    });
+
+    it('queues the markets of one app and its competitors on a per app run', async () => {
+      const appStoreQueue = buildQueue();
+      const { service } = buildService({
+        appStoreQueue,
+        prisma: {
+          app: {
+            findFirst: jest.fn().mockResolvedValue({
+              id: 'primary',
+              store: 'APP_STORE',
+              country: 'us',
+              isCompetitor: false,
+              competitors: [{ id: 'rival', store: 'APP_STORE' }],
+              tracked: [
+                {
+                  keywordId: 'k_de',
+                  keyword: { store: 'APP_STORE', country: 'de' },
+                },
+                {
+                  keywordId: 'k_us',
+                  keyword: { store: 'APP_STORE', country: 'us' },
+                },
+              ],
+            }),
+          },
+        },
+      });
+
+      await service.fanOutApp('primary');
+
+      expect(refreshCalls(appStoreQueue)).toEqual([
+        {
+          appId: 'primary',
+          country: undefined,
+          jobId: 'refresh~primary~2026-07-27',
+        },
+        {
+          appId: 'rival',
+          country: undefined,
+          jobId: 'refresh~rival~2026-07-27',
+        },
+        {
+          appId: 'primary',
+          country: 'de',
+          jobId: 'refresh~primary~de~2026-07-27',
+        },
+        {
+          appId: 'rival',
+          country: 'de',
+          jobId: 'refresh~rival~de~2026-07-27',
+        },
+      ]);
     });
   });
 

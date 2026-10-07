@@ -53,6 +53,7 @@ export class DailyBudgetService {
       stores,
       quota: await this.budgetQuota(),
       completion: this.projectCompletion(stores),
+      marketListings: sum(stores, (store) => store.marketListings ?? 0),
     };
   }
 
@@ -61,7 +62,11 @@ export class DailyBudgetService {
     targets: DailyTargets,
     buckets: { store: Store }[],
   ): Promise<StoreDailyBudget> {
-    const apps = targets.apps.filter((app) => app.store === store).length;
+    const marketListings = targets.marketListings.filter(
+      (listing) => listing.store === store,
+    ).length;
+    const apps =
+      targets.apps.filter((app) => app.store === store).length + marketListings;
     const keywords = targets.keywords.filter(
       (keyword) => keyword.store === store,
     ).length;
@@ -86,6 +91,7 @@ export class DailyBudgetService {
         capacityPerDay > 0
           ? Math.round((total / capacityPerDay) * 1000) / 1000
           : 0,
+      marketListings,
     };
   }
 

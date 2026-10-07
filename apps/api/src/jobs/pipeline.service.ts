@@ -8,7 +8,10 @@ import {
 } from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
-import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import {
+  WorkspaceContext,
+  WorkspaceScope,
+} from '../common/tenancy/workspace-context';
 import {
   WorkspaceFanOut,
   workspaceFailure,
@@ -26,6 +29,7 @@ import {
   JOBS,
   QUEUES,
   queueNameForStore,
+  refreshJobId,
   reviewsJobId,
   scoreJobId,
   utcDateKey,
@@ -40,6 +44,8 @@ import {
   DailyTargetsCollector,
   dedupeBuckets,
   dedupeKeywords,
+  MarketListingTarget,
+  marketListingTargets,
 } from './daily-targets.service';
 import { DailyStage, DegradationPlan, planDegradation } from './degradation';
 import { interleave } from './interleave';
@@ -137,8 +143,14 @@ export class PipelineService {
         name: JOBS.REFRESH_APP,
         queueName: queueNameForStore(app.store),
         data: { appId: app.id, ...scope },
-        opts: childOptions(`daily~refresh~${app.id}~${date}`),
+        opts: childOptions(`daily~${refreshJobId(app.id, date)}`),
       })),
+      ...this.marketRefreshChildren(
+        targets.marketListings,
+        scope,
+        date,
+        childOptions,
+      ),
       ...targets.keywords.map((keyword) => ({
         name: JOBS.CHECK_KEYWORD,
         queueName: queueNameForStore(keyword.store),
@@ -179,6 +191,20 @@ export class PipelineService {
       `fan out ${scope.workspaceId} ${JSON.stringify(countStages(children))}`,
     );
     return { children };
+  }
+
+  private marketRefreshChildren(
+    listings: readonly MarketListingTarget[],
+    scope: WorkspaceScope,
+    date: string,
+    options: (jobId: string) => JobsOptions & { jobId: string },
+  ): FlowJobNode[] {
+    return listings.map((listing) => ({
+      name: JOBS.REFRESH_APP,
+      queueName: queueNameForStore(listing.store),
+      data: { appId: listing.id, country: listing.country, ...scope },
+      opts: options(`daily~${refreshJobId(listing.id, date, listing.country)}`),
+    }));
   }
 
   private async shedUnderPressure(
@@ -274,11 +300,15 @@ export class PipelineService {
         id: true,
         workspaceId: true,
         store: true,
+        country: true,
         isCompetitor: true,
         competitors: { select: { id: true, store: true } },
         tracked: {
           where: { active: true },
-          select: { keywordId: true, keyword: { select: { store: true } } },
+          select: {
+            keywordId: true,
+            keyword: { select: { store: true, country: true } },
+          },
         },
       },
     });
@@ -302,8 +332,24 @@ export class PipelineService {
     const reviewApps: AppTarget[] = app.isCompetitor
       ? []
       : [{ id: app.id, store: app.store }];
+    const marketListings = marketListingTargets(
+      [
+        { id: app.id, store: app.store, primaryAppId: null },
+        ...app.competitors.map((rival) => ({
+          id: rival.id,
+          store: rival.store,
+          primaryAppId: app.id,
+        })),
+      ],
+      [...new Set(app.tracked.map((row) => row.keyword.country))]
+        .filter((country) => country !== app.country)
+        .map((country) => ({ appId: app.id, country })),
+    );
 
-    return this.enqueue({ apps, keywords, reviewApps }, app.workspaceId);
+    return this.enqueue(
+      { apps, keywords, reviewApps, marketListings },
+      app.workspaceId,
+    );
   }
 
   async fanOutWorkspaceDaily(workspaceId: string): Promise<FanOutSummary> {
@@ -433,7 +479,13 @@ export class PipelineService {
         store: app.store,
         name: JOBS.REFRESH_APP,
         data: { appId: app.id, ...scope },
-        opts: { jobId: `refresh~${app.id}~${date}` },
+        opts: { jobId: refreshJobId(app.id, date) },
+      })),
+      ...targets.marketListings.map((listing) => ({
+        store: listing.store,
+        name: JOBS.REFRESH_APP,
+        data: { appId: listing.id, country: listing.country, ...scope },
+        opts: { jobId: refreshJobId(listing.id, date, listing.country) },
       })),
       ...targets.keywords.map((keyword) => ({
         store: keyword.store,

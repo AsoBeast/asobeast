@@ -293,7 +293,7 @@ describe('Pipeline resilience (e2e)', () => {
     expect(budget.categories).toBe(summary.categories);
     expect(budget.total).toBe(
       requestsFor('APP_STORE', {
-        apps: 1,
+        apps: 2,
         keywords: 2,
         categories: 0,
         reviews: 1,
