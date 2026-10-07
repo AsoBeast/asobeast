@@ -13,6 +13,7 @@ import {
 } from "@asobeast/shared";
 import type { CsvEncoding } from "@/lib/csv-import/decode";
 import { formatNumber } from "@/lib/format";
+import { formatQuotaUsage, hasNoCapacity } from "@/lib/quota-usage";
 
 export const IMPORT_BODY_BYTES = 96_000;
 
@@ -147,6 +148,27 @@ export function marketRefusal(store: Store, market: string): string | null {
   return isStorefront(store, market)
     ? null
     : `${new UnknownStorefrontError(store, market).message}. Choose the market for rows without a country.`;
+}
+
+export interface QuotaNotice {
+  text: string;
+  upgrade: boolean;
+}
+
+export function quotaNotice({
+  summary,
+  quota,
+}: Pick<KeywordImportResult, "summary" | "quota">): QuotaNotice | null {
+  const over = summary.overQuota;
+  if (quota === null || over === 0) return null;
+  const used = hasNoCapacity(quota)
+    ? "Your plan includes no keyword markets."
+    : `${formatQuotaUsage(quota)} keyword markets used.`;
+  const rows =
+    over === 1
+      ? "1 row is over your plan's keyword limit and is skipped."
+      : `${formatNumber(over)} rows are over your plan's keyword limit and are skipped.`;
+  return { text: `${used} ${rows}`, upgrade: quota.upgradeTo !== null };
 }
 
 export function summarySentence(summary: KeywordImportSummary): string {

@@ -278,6 +278,32 @@ test("P-WEB-08 filters the review by status and counts the rows shown", async ({
   await expect(rowOf(dialog, /alpha one/)).toHaveCount(0);
 });
 
+test("P-WEB-08 shows the keyword markets used and a way to a larger plan when rows are over the limit", async ({
+  page,
+  context,
+}) => {
+  await context.addCookies([
+    { name: "e2e_keyword_quota", value: "5", domain: "localhost", path: "/" },
+  ]);
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    ["keyword", "alpha one", "beta two", "gamma three"].join("\r\n"),
+  );
+
+  const notice = dialog
+    .getByRole("note")
+    .filter({ hasText: "keyword markets used" });
+  await expect(notice).toContainText(
+    /\d+ of 5 keyword markets used\. 2 rows are over your plan's keyword limit and are skipped\./,
+  );
+  await expect(notice.getByRole("link", { name: "See plans" })).toHaveAttribute(
+    "href",
+    "/upgrade",
+  );
+});
+
 test("P-WEB-08 keeps the status and the reason of a very long phrase in view", async ({
   page,
 }) => {

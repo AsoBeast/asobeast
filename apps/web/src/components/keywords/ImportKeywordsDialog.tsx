@@ -18,6 +18,7 @@ import {
 import { columnOptions } from "@/lib/csv-import/parse-keyword-file";
 import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
 import { ImportBudgetNotice } from "./ImportBudgetNotice";
+import { ImportQuotaNotice } from "./ImportQuotaNotice";
 import { ImportFileStep } from "./ImportFileStep";
 import { ImportMapping } from "./ImportMapping";
 import { ImportPreview } from "./ImportPreview";
@@ -98,6 +99,7 @@ export function ImportKeywordsDialog({
                 lines={mapped.lines}
                 busy={flow.busy}
               />
+              <ImportQuotaNotice result={result} />
               <ImportBudgetNotice cost={result.cost} />
             </>
           ) : null}

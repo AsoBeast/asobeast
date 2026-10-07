@@ -1627,6 +1627,10 @@ const routes: Route[] = [
           ...result,
           dryRun: false,
           imported: additions.length,
+          quota: result.quota && {
+            ...result.quota,
+            used: result.quota.used + additions.length,
+          },
         });
       });
     },

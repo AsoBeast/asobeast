@@ -12,6 +12,7 @@ import {
   importButtonLabel,
   importToast,
   marketRefusal,
+  quotaNotice,
   refuseImport,
   refusalMessage,
   rowNote,
@@ -177,6 +178,38 @@ describe("fileNotices", () => {
     expect(
       fileNotices({ ...base, hasHeader: false, ignoredColumns: 1 })[1],
     ).toBe("1 other column is ignored.");
+  });
+});
+
+describe("quotaNotice", () => {
+  const quota = { used: 998, limit: 1000, upgradeTo: "ultimate" as const };
+
+  it("says nothing while every row fits the plan", () => {
+    expect(quotaNotice({ summary: summary({ new: 2 }), quota })).toBeNull();
+    expect(
+      quotaNotice({ summary: summary({ overQuota: 2 }), quota: null }),
+    ).toBeNull();
+  });
+
+  it("states the keyword markets used and the rows over the limit, with an upgrade", () => {
+    expect(
+      quotaNotice({ summary: summary({ new: 2, overQuota: 3 }), quota }),
+    ).toEqual({
+      text: "998 of 1,000 keyword markets used. 3 rows are over your plan's keyword limit and are skipped.",
+      upgrade: true,
+    });
+  });
+
+  it("offers no upgrade when there is no larger plan, and words one row and an empty plan", () => {
+    expect(
+      quotaNotice({
+        summary: summary({ overQuota: 1 }),
+        quota: { used: 0, limit: 0, upgradeTo: null },
+      }),
+    ).toEqual({
+      text: "Your plan includes no keyword markets. 1 row is over your plan's keyword limit and is skipped.",
+      upgrade: false,
+    });
   });
 });
 
