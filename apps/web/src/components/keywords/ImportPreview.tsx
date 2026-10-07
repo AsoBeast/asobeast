@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Loader2 } from "lucide-react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import {
   KEYWORD_IMPORT_STATUSES,
@@ -21,7 +22,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { IMPORT_STATUS_LABELS, summarySentence } from "@/lib/keyword-import";
-import { cn } from "@/lib/utils";
 import { importColumns, type PreviewRow } from "./import-columns";
 
 const STATUS_OPTIONS = KEYWORD_IMPORT_STATUSES.map((value) => ({
@@ -70,11 +70,19 @@ export function ImportPreview({
     <section
       aria-label="Review"
       aria-busy={busy}
-      className={cn("flex flex-col gap-3", busy && "opacity-60")}
+      className="flex flex-col gap-3"
     >
-      <p role="status" className="text-sm font-medium">
-        {summarySentence(result.summary)}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p role="status" className="text-sm font-medium">
+          {summarySentence(result.summary)}
+        </p>
+        {busy ? (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Loader2 aria-hidden className="size-3.5 animate-spin" />
+            Updating
+          </span>
+        ) : null}
+      </div>
       <div className="flex flex-wrap items-center gap-3">
         <FacetFilter
           title="Status"

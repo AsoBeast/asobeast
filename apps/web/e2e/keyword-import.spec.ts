@@ -405,6 +405,39 @@ test("P-WEB-10 lets a keyboard scroll a review longer than its box", async ({
   expect(violations.map(({ id }) => id)).toEqual([]);
 });
 
+test("P-WEB-10 marks the review busy without fading its text", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await choose(dialog, "keyword\r\nalpha one\r\n");
+  await expect(dialog.getByRole("status")).toHaveText("1 new");
+  const held = Promise.withResolvers<void>();
+  await page.route("**/keywords/import/preview", async (route) => {
+    await held.promise;
+    await route.continue();
+  });
+
+  await dialog
+    .getByRole("combobox", { name: "Market for rows without a country" })
+    .click();
+  await page.getByRole("option", { name: /PL/ }).click();
+
+  const review = dialog.getByRole("region", { name: "Review" });
+  await expect(review).toHaveAttribute("aria-busy", "true");
+  await expect(review.getByText("Updating")).toBeVisible();
+  expect(await review.evaluate((node) => getComputedStyle(node).opacity)).toBe(
+    "1",
+  );
+  const { violations } = await new AxeBuilder({ page })
+    .include('[role="dialog"]')
+    .withRules(["color-contrast"])
+    .analyze();
+  expect(violations.map(({ id }) => id)).toEqual([]);
+
+  held.resolve();
+  await expect(review).toHaveAttribute("aria-busy", "false");
+});
+
 test("P-WEB-11 closes on Escape, returns focus to the button and forgets the file", async ({
   page,
 }) => {
