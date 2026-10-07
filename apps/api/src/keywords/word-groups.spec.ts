@@ -49,7 +49,7 @@ describe('wordGroups', () => {
       { tokens: ['簡単', 'ショッピング'], joiner: '', startsChunk: false },
     ]);
     expect(wordGroups('สั่งอาหารออนไลน์')).toEqual([
-      { tokens: ['สั่ง', 'อาหาร', 'ออนไลน์'], joiner: '', startsChunk: true },
+      { tokens: ['สั่งอาหาร', 'ออนไลน์'], joiner: '', startsChunk: true },
     ]);
   });
 

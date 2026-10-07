@@ -309,12 +309,9 @@ describe('extractCandidates', () => {
           subtitle: 'สั่งอาหารและร้านอาหารที่ใหญ่ที่สุด',
         }),
       ).toEqual([
-        { text: 'สั่งอาหาร', source: 'TITLE', weight: 3 },
         { text: 'grab', source: 'TITLE', weight: 3 },
-        { text: 'สั่ง', source: 'TITLE', weight: 3 },
-        { text: 'อาหาร', source: 'TITLE', weight: 3 },
+        { text: 'สั่งอาหาร', source: 'TITLE', weight: 3 },
         { text: 'ร้านอาหาร', source: 'SUBTITLE', weight: 2 },
-        { text: 'ร้าน', source: 'SUBTITLE', weight: 2 },
         { text: 'ใหญ่', source: 'SUBTITLE', weight: 2 },
       ]);
     });
@@ -328,9 +325,6 @@ describe('extractCandidates', () => {
       expect(texts({ title: 'สั่งอาหารออนไลน์' })).toEqual([
         'สั่งอาหารออนไลน์',
         'สั่งอาหาร',
-        'อาหารออนไลน์',
-        'สั่ง',
-        'อาหาร',
         'ออนไลน์',
       ]);
     });
@@ -506,6 +500,72 @@ describe('extractCandidates', () => {
           (candidate) => candidate.text,
         ),
       ).toEqual(['हिंदी मौसम', 'हिंदी', 'मौसम']);
+    });
+  });
+
+  describe('thai listings', () => {
+    const texts = (input: Parameters<typeof extractCandidates>[0]): string[] =>
+      extractCandidates(input).map((candidate) => candidate.text);
+
+    it('tracks the words of a thai google play listing, not fragments across them', () => {
+      expect(
+        texts({
+          title: 'Grab: แท็กซี่ และ แอปสั่งอาหาร',
+          summary:
+            'เดินทางด้วยความอุ่นใจ จองการเดินทางไปสนามบินล่วงหน้ากับ Grab วันนี้',
+        }),
+      ).toEqual([
+        'grab',
+        'แท็กซี่',
+        'สั่งอาหาร',
+        'จองการเดินทาง',
+        'สนามบินล่วงหน้า',
+        'เดินทาง',
+        'ความอุ่นใจ',
+        'จอง',
+        'การเดินทาง',
+        'สนามบิน',
+        'ล่วงหน้า',
+      ]);
+    });
+
+    it.each([
+      ['ร้านขายยาออนไลน์', ['ร้านขาย', 'ยาออนไลน์']],
+      ['โรงพยาบาลสัตว์ ใกล้ฉัน', ['พยาบาลสัตว์', 'โรง', 'พยาบาล']],
+      ['นัดหมายสัตวแพทย์', ['หมายสัตวแพทย์']],
+      ['ตรวจผลสลากกินแบ่งรัฐบาล', ['ผลสลากกิน', 'สลากกิน', 'กินแบ่ง']],
+      ['ฤกษ์มงคลประจำปี', ['มงคลประจำ']],
+      ['แปลภาษาออฟไลน์', ['ภาษาออฟ', 'ออฟ']],
+      ['เครื่องสำอาง ความงาม', ['เครื่อง', 'สำอาง', 'ความ', 'งาม']],
+      ['ช้อปออนไลน์ ส่งฟรี', ['ช้อปออน', 'ปออนไลน์', 'ช้อ']],
+      ['สั่งอาหารเดลิเวอรี่', ['สั่งอา', 'อาหารเดลิ', 'เดลิเว']],
+      ['ดูดวงรายวัน แม่นๆ', ['ดูด', 'วงรายวัน', 'ดูดวงราย']],
+      ['สกินแคร์ บำรุงผิวหน้า', ['สกิน']],
+      ['สวยๆๆ เยอะๆๆ', ['สว', 'ยๆๆ', 'เย', 'อะๆๆ']],
+    ])('never cuts through a word of %s', (title, fragments) => {
+      expect(
+        texts({ title }).filter((text) => fragments.includes(text)),
+      ).toEqual([]);
+    });
+
+    it('ends a thai phrase at a function word', () => {
+      expect(texts({ title: 'เดินทางด้วยความอุ่นใจ' })).toEqual([
+        'เดินทาง',
+        'ความอุ่นใจ',
+      ]);
+      expect(texts({ title: 'ไม่ต้องใช้อุปกรณ์' })).toEqual([
+        'ใช้อุปกรณ์',
+        'ใช้',
+        'อุปกรณ์',
+      ]);
+    });
+
+    it('keeps a word that starts with a nominalizing prefix whole', () => {
+      expect(texts({ title: 'ความสวยความงาม' })).toEqual([
+        'ความสวยความงาม',
+        'ความสวย',
+        'ความงาม',
+      ]);
     });
   });
 });

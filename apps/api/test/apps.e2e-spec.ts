@@ -245,6 +245,39 @@ describe('AppsController (e2e)', () => {
     );
   });
 
+  it('auto tracks the words of a thai google play listing', async () => {
+    registry.title = 'Grab: แท็กซี่ และ แอปสั่งอาหาร';
+    registry.summary =
+      'เดินทางด้วยความอุ่นใจ จองการเดินทางไปสนามบินล่วงหน้ากับ Grab วันนี้';
+
+    const response = await api
+      .post('/apps')
+      .send({ url: `${GOOGLE_PLAY_URL}&gl=th` })
+      .expect(201);
+
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: (response.body as AppDetail).id },
+      select: { source: true, keyword: { select: { text: true } } },
+    });
+    expect(
+      tracked.map(({ source, keyword }) => `${source} ${keyword.text}`).sort(),
+    ).toEqual(
+      [
+        'TITLE grab',
+        'TITLE แท็กซี่',
+        'TITLE สั่งอาหาร',
+        'DESCRIPTION จองการเดินทาง',
+        'DESCRIPTION สนามบินล่วงหน้า',
+        'DESCRIPTION เดินทาง',
+        'DESCRIPTION ความอุ่นใจ',
+        'DESCRIPTION จอง',
+        'DESCRIPTION การเดินทาง',
+        'DESCRIPTION สนามบิน',
+        'DESCRIPTION ล่วงหน้า',
+      ].sort(),
+    );
+  });
+
   it('lets two workspaces track the same store app independently', async () => {
     await api.post('/apps').send({ url: APP_STORE_URL }).expect(201);
     await prisma.workspace.upsert({
