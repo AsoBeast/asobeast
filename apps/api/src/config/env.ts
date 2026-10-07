@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  DEFAULT_OCR_LANGUAGES,
+  OCR_LANGUAGES,
+} from '../screenshots/ocr-languages';
 import { assertAppleAdsConfiguration } from './apple-ads-config';
 import { assertProductionSafety } from './production-safety';
 import { TrustedProxyHops } from './trusted-proxy';
@@ -124,6 +128,20 @@ export const EnvSchema = z.object({
         ? String(value).trim()
         : null,
     z.coerce.number().int().min(0).nullable(),
+  ),
+  SCREENSHOT_OCR: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  SCREENSHOT_OCR_LANGUAGES: z.preprocess(
+    (value) =>
+      typeof value === 'string' && value.trim().length > 0
+        ? value
+            .split(',')
+            .map((language) => language.trim())
+            .filter((language) => language.length > 0)
+        : undefined,
+    z.array(z.enum(OCR_LANGUAGES)).min(1).default(DEFAULT_OCR_LANGUAGES),
   ),
   BULL_BOARD_ENABLED: z
     .enum(['true', 'false'])

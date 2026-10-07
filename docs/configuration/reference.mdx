@@ -127,6 +127,13 @@ See [Work the Action Center](/guides/action-center).
 | `ACTIONS_MAX_OPEN_PER_APP` | `20` | No | New actions one generation run may open per app, highest impact first. Existing open and snoozed actions always refresh |
 | `ACTIONS_SNOOZE_MAX_DAYS` | `90` | No | Furthest a snooze may be set into the future |
 
+## Screenshot captions
+
+| Variable | Default | Required | Effect |
+| --- | --- | --- | --- |
+| `SCREENSHOT_OCR` | `true` | No | Reads the large caption text printed on App Store screenshots on this machine. `false` still records the screenshot list and detects replaced or reordered screenshots, but downloads and reads nothing |
+| `SCREENSHOT_OCR_LANGUAGES` | `eng,deu,fra,spa,por,ita,jpn,kor,chi_sim,chi_tra,rus,ara,tha` | No | The bundled language packs the reader may use. A storefront reads English plus its own language when that pack is listed. The API refuses to boot on a name that is not bundled |
+
 ## Data retention
 
 `0` means keep forever. Pruning runs on `CRON_RETENTION`.
