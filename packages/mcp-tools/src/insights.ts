@@ -148,9 +148,19 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "metadata_audit",
     title: "Metadata audit",
     description:
-      "Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings.",
-    inputSchema: z.object({ appId }),
-    request: ({ appId }) => ({ path: `/apps/${seg(appId)}/metadata/audit` }),
+      "Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings. Each keyword is judged against the listing of its own market when one was captured. Pass country to audit one market's listing and only its keywords; the Apple keyword field is private, so a market other than the home one is judged on title and subtitle.",
+    inputSchema: z.object({
+      appId,
+      country: z
+        .string()
+        .regex(COUNTRY_PATTERN)
+        .optional()
+        .describe("Two-letter storefront code of the listing to audit."),
+    }),
+    request: ({ appId, country }) => ({
+      path: `/apps/${seg(appId)}/metadata/audit`,
+      params: { country },
+    }),
   }),
 
   defineReadTool({
@@ -191,7 +201,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "changes_timeline",
     title: "Changes timeline",
     description:
-      "Detected change events for one app over the last N days — metadata edits, ranking swings and rating shifts, newest first.",
+      "Detected change events for one app over the last N days — metadata edits, ranking swings and rating shifts, newest first. Changes are per storefront: omit country for the home listing, pass it for another market.",
     inputSchema: z.object({
       appId,
       days: z
@@ -203,10 +213,17 @@ export const INSIGHT_TOOLS: ReadTool[] = [
         .describe(
           `Look-back window in days (${QUERY_BOUNDS.changeTimelineDays.min}-${QUERY_BOUNDS.changeTimelineDays.max}). Defaults to ${QUERY_BOUNDS.changeTimelineDays.default}.`,
         ),
+      country: z
+        .string()
+        .regex(COUNTRY_PATTERN)
+        .optional()
+        .describe(
+          "Two-letter storefront code. Lists the changes of that market's listings; omitted means the home storefront.",
+        ),
     }),
-    request: ({ appId, days }) => ({
+    request: ({ appId, days, country }) => ({
       path: `/apps/${seg(appId)}/changes`,
-      params: { days },
+      params: { days, country },
     }),
   }),
 

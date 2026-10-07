@@ -56,3 +56,40 @@ describe("the tool catalog", () => {
     expect(summary).toContain("note");
   });
 });
+
+describe("the market argument", () => {
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "sends %s to one market when asked",
+    (name) => {
+      const request = toolByName(name)?.request({
+        appId: "app-1",
+        country: "de",
+      });
+
+      expect(request?.params).toMatchObject({ country: "de" });
+    },
+  );
+
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "sends %s without a market when none is given",
+    (name) => {
+      const request = toolByName(name)?.request({ appId: "app-1" });
+
+      expect(request?.params?.country).toBeUndefined();
+    },
+  );
+
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "refuses a market that is not a lowercase two letter code for %s",
+    (name) => {
+      const schema = toolByName(name)?.inputSchema;
+
+      expect(schema?.safeParse({ appId: "app-1", country: "DE" }).success).toBe(
+        false,
+      );
+      expect(schema?.safeParse({ appId: "app-1", country: "de" }).success).toBe(
+        true,
+      );
+    },
+  );
+});

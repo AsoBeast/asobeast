@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { COUNTRY_PATTERN } from "@asobeast/shared";
 import { defineReadTool, seg, type ReadTool } from "./define";
 
 export const APP_TOOLS: ReadTool[] = [
@@ -15,11 +16,21 @@ export const APP_TOOLS: ReadTool[] = [
     name: "get_app",
     title: "Get app",
     description:
-      "Full detail for one app: store metadata, home storefront, latest snapshot and category. Dates are UTC date strings (YYYY-MM-DD).",
+      "Full detail for one app: store metadata, home storefront, latest snapshot and category. Pass country for the listing captured from another storefront; that market must be one the app tracks keywords in. Dates are UTC date strings (YYYY-MM-DD).",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
+      country: z
+        .string()
+        .regex(COUNTRY_PATTERN)
+        .optional()
+        .describe(
+          "Two-letter storefront code. Returns the listing captured from that market instead of the home storefront.",
+        ),
     }),
-    request: ({ appId }) => ({ path: `/apps/${seg(appId)}` }),
+    request: ({ appId, country }) => ({
+      path: `/apps/${seg(appId)}`,
+      params: { country },
+    }),
   }),
 
   defineReadTool({

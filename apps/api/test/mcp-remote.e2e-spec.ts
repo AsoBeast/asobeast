@@ -271,6 +271,45 @@ describe('Remote MCP transport (e2e)', () => {
     expect(result?.content?.[0].text).toContain('not found');
   });
 
+  it('reads the listing of a market through get_app', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: fixture.id,
+        country: 'de',
+        title: 'Fernbedienung',
+        description: 'Fernbedienung description',
+        raw: {},
+      },
+    });
+
+    const response = await rpc('tools/call', {
+      name: 'get_app',
+      arguments: { appId: fixture.id, country: 'de' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBeUndefined();
+    expect(result?.content?.[0].text).toContain('Fernbedienung');
+  });
+
+  it('reports a market with no listing as a tool error', async () => {
+    const fixture = await prisma.app.findFirstOrThrow({
+      where: { storeAppId: '555000111' },
+    });
+
+    const response = await rpc('tools/call', {
+      name: 'get_app',
+      arguments: { appId: fixture.id, country: 'fr' },
+    }).expect(200);
+    const result = sseEnvelope(response).result;
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toContain('No listing captured for fr');
+  });
+
   it.each(['change_impact', 'app_actions', 'audit_history'])(
     'names the missing app when %s is asked about an id that does not exist',
     async (name) => {

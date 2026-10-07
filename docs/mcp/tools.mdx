@@ -14,11 +14,11 @@ This page is generated from the tool catalog both transports share, so it cannot
 | Tool | Title | Returns | Parameters |
 | --- | --- | --- | --- |
 | `list_apps` | List apps | List every tracked app with its store, home country, latest visibility score and keyword count | None |
-| `get_app` | Get app | Full detail for one app: store metadata, home storefront, latest snapshot and category | `appId` (required) |
+| `get_app` | Get app | Full detail for one app: store metadata, home storefront, latest snapshot and category | `appId` (required), `country` |
 | `app_summary` | App summary | Headline metrics for one app: tracked keyword count, visibility, average position and recent movement | `appId` (required) |
 | `portfolio` | Portfolio summary | Cross-app portfolio roll-up: totals and per-app visibility, keyword and movement figures across every tracked app | None |
 
-Start with `list_apps`. Nothing else works without an app id.
+Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing.
 
 ## Keywords
 
@@ -43,12 +43,12 @@ Every parameter is validated by the tool before a request leaves, against the sa
 | `ratings_history` | Ratings history | Daily average rating and rating-count history for one app over a date window (App Store home market) | `appId` (required), `from`, `to` |
 | `app_audit` | ASO audit | The latest ASO audit for one app: an overall score out of 100 with a letter grade and a confidence (the share of the rubric that could be measured), factor and check findings with the evidence behind each, recommendations ranked by the score points they would add and the effort they take, competitor benchmarks, and what the audit cannot see | `appId` (required) |
 | `audit_history` | Audit history | Historical ASO audit scores for one app over a date window | `appId` (required), `from`, `to` |
-| `metadata_audit` | Metadata audit | Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings | `appId` (required) |
+| `metadata_audit` | Metadata audit | Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings | `appId` (required), `country` |
 | `list_reviews` | List reviews | Recent store reviews for one app, optionally filtered by star score or app version | `appId` (required), `score`, `version`, `limit` |
-| `changes_timeline` | Changes timeline | Detected change events for one app over the last N days | `appId` (required), `days` |
+| `changes_timeline` | Changes timeline | Detected change events for one app over the last N days | `appId` (required), `days`, `country` |
 | `change_impact` | Change impact | Keyword position and visibility movement 7, 14, 28 days after each change to one app's own listing, newest change first | `appId` (required), `days`, `country` |
 
-`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.
+`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. Omit `country` on `metadata_audit` and `changes_timeline` for the home storefront.
 
 ## Actions
 

@@ -26,7 +26,7 @@ const GROUPS = [
   {
     title: "Apps",
     tools: APP_TOOLS,
-    note: "Start with `list_apps`. Nothing else works without an app id.",
+    note: "Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing.",
   },
   {
     title: "Keywords",
@@ -36,7 +36,7 @@ const GROUPS = [
   {
     title: "Insights",
     tools: INSIGHT_TOOLS,
-    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.",
+    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. Omit `country` on `metadata_audit` and `changes_timeline` for the home storefront.",
   },
   {
     title: "Actions",
