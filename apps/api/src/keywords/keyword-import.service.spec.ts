@@ -37,7 +37,7 @@ const build = (
     keyword: { createMany: jest.fn() },
   };
   const quota = {
-    enforced: true,
+    upgradeFrom: jest.fn(() => 'ultimate'),
     usage: jest.fn().mockResolvedValue({
       plan: 'indie',
       limits: { keywordMarkets: usage.limit },
@@ -236,5 +236,34 @@ describe('KeywordImportService.import', () => {
       ['pl:a1', 'de:a2'],
       app,
     );
+  });
+
+  it('reports the keyword markets in use after the import, not before it', async () => {
+    const { tx, quota, service } = build([], { limit: 10, used: 8 });
+    tx.trackedKeyword.createMany.mockResolvedValue({ count: 2 });
+    quota.usage.mockResolvedValueOnce({
+      plan: 'indie',
+      limits: { keywordMarkets: 10 },
+      apps: 0,
+      keywordMarkets: 8,
+    });
+    quota.usage.mockResolvedValueOnce({
+      plan: 'indie',
+      limits: { keywordMarkets: 10 },
+      apps: 0,
+      keywordMarkets: 10,
+    });
+
+    const result = await service.import('app1', {
+      rows: [{ keyword: 'a1' }, { keyword: 'a2' }, { keyword: 'a3' }],
+    });
+
+    expect(result.imported).toBe(2);
+    expect(result.summary.overQuota).toBe(1);
+    expect(result.quota).toEqual({
+      used: 10,
+      limit: 10,
+      upgradeTo: 'ultimate',
+    });
   });
 });

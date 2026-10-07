@@ -93,6 +93,21 @@ describe('Keyword import quota (e2e)', () => {
     expect(result.summary.overQuota).toBe(3);
   });
 
+  it('E-IMP-25 reports the keyword markets in use once the import has written', async () => {
+    const limit = PLAN_LIMITS.indie.keywordMarkets as number;
+    await seedTracked(limit - 2);
+
+    const response = await harness.owner
+      .post(`/apps/${appId}/keywords/import`)
+      .send({ rows: rows(5) })
+      .expect(200);
+
+    const result = response.body as KeywordImportResult;
+    expect(result.imported).toBe(2);
+    expect(result.summary).toMatchObject({ new: 2, overQuota: 3 });
+    expect(result.quota).toEqual({ used: limit, limit, upgradeTo: 'ultimate' });
+  });
+
   it('E-IMP-16 answers 402 for a workspace without a plan in force', async () => {
     await resetBillingState(harness, {
       plan: 'free',

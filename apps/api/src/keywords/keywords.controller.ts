@@ -124,7 +124,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Preview a keyword import without writing',
     description:
-      'Validates up to 500 rows and answers, for every row, whether an import would track it, resume it, skip it or refuse it, with the daily store requests the import would add and the keyword limit of the plan. Writes nothing and queues nothing. Rows without a country use the request country, else the home market of the app.',
+      'Validates up to 500 rows and answers, for every row, whether an import would track it, resume it, skip it or refuse it, with the daily store requests the import would add and the keyword limit of the plan. Writes nothing and queues nothing. Rows without a country use the request country, which is a lower case storefront code, else the home market of the app. imported is always 0 and quota.used counts the keyword markets in use now.',
   })
   previewImport(
     @Param('id') id: string,
@@ -138,7 +138,7 @@ export class KeywordsController {
   @ApiOperation({
     summary: 'Import keywords with tags, notes and markets',
     description:
-      'Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first.',
+      'Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first. summary and results report the plan the import ran, row by row. imported counts the keywords this request actually tracked or resumed, which is lower than new plus resume when another request tracked some of them in between. quota.used counts the keyword markets in use after the import.',
   })
   importKeywords(
     @Param('id') id: string,

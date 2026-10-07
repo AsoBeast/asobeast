@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 import {
   nextPlan,
+  PaidPlanName,
   PlanLimit,
   PlanLimits,
   PlanName,
@@ -53,6 +54,10 @@ export class QuotaService {
 
   get enforced(): boolean {
     return this.config.get('BILLING_ENABLED', { infer: true });
+  }
+
+  upgradeFrom(plan: PlanName): PaidPlanName | null {
+    return this.enforced ? nextPlan(plan) : null;
   }
 
   admitApp(): QuotaAdmission {
@@ -153,7 +158,7 @@ export class QuotaService {
   private exceeded(detail: Omit<QuotaDetail, 'upgradeTo'>): QuotaExceededError {
     return new QuotaExceededError({
       ...detail,
-      upgradeTo: this.enforced ? nextPlan(detail.plan) : null,
+      upgradeTo: this.upgradeFrom(detail.plan),
     });
   }
 

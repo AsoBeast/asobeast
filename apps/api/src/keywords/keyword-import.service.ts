@@ -4,7 +4,6 @@ import {
   KeywordImportQuota,
   KeywordImportRequest,
   KeywordImportResult,
-  nextPlan,
 } from '@asobeast/shared';
 import { QuotaService, WorkspaceUsage } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -48,7 +47,11 @@ export class KeywordImportService {
   ): Promise<KeywordImportResult> {
     const planned = await this.planned(appId, request);
     const imported = await this.write(planned.app, planned.plan.additions);
-    return this.result(planned, imported, false);
+    const quota =
+      planned.quota && imported > 0
+        ? this.quotaOf(await this.quota.usage())
+        : planned.quota;
+    return this.result({ ...planned, quota }, imported, false);
   }
 
   private async planned(
@@ -158,7 +161,7 @@ export class KeywordImportService {
     return {
       used: usage.keywordMarkets,
       limit,
-      upgradeTo: this.quota.enforced ? nextPlan(usage.plan) : null,
+      upgradeTo: this.quota.upgradeFrom(usage.plan),
     };
   }
 
