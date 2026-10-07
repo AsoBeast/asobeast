@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordsService } from './keywords.service';
+import { MarketListingRequests } from './market-listing.requests';
 
 const quotaOff = (prisma: PrismaService) =>
   new QuotaService(prisma, new WorkspaceContext(), {
@@ -22,6 +23,7 @@ describe('KeywordsService.syncFromSnapshot', () => {
       queue as unknown as Queue,
       quotaOff(prisma as PrismaService),
       new WorkspaceContext(),
+      { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
   const buildPrisma = () => {
@@ -206,6 +208,7 @@ describe('KeywordsService.compare', () => {
       { add: jest.fn() } as unknown as Queue,
       quotaOff(prisma as PrismaService),
       new WorkspaceContext(),
+      { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
   const buildPrisma = () => ({
@@ -274,6 +277,7 @@ describe('KeywordsService.listTracked serp volatility', () => {
       { add: jest.fn() } as unknown as Queue,
       quotaOff(prisma as PrismaService),
       new WorkspaceContext(),
+      { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
   const trackedRow = (keywordId: string, text: string) => ({
@@ -356,6 +360,7 @@ describe('KeywordsService country tracking', () => {
       queue as unknown as Queue,
       quotaOff(prisma as PrismaService),
       new WorkspaceContext(),
+      { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
   it('adds a keyword into the requested market, not the app home country', async () => {

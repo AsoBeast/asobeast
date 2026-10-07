@@ -35,6 +35,7 @@ import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
+import { MarketListingRequests } from './market-listing.requests';
 import {
   ensureApp,
   KeywordApp,
@@ -59,6 +60,7 @@ export class KeywordsService {
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
     private readonly quota: QuotaService,
     private readonly workspace: WorkspaceContext,
+    private readonly listings: MarketListingRequests,
   ) {}
 
   private async enqueueFirstScore(
@@ -221,6 +223,7 @@ export class KeywordsService {
     for (const keywordId of keywordIds) {
       await this.enqueueFirstScore(keywordId, app);
     }
+    await this.listings.request(app, market);
 
     return this.listTracked(appId, undefined, market);
   }

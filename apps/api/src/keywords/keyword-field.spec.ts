@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordsService } from './keywords.service';
+import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
@@ -173,6 +174,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
       } as unknown as ConfigService<Env, true>,
     ),
     new WorkspaceContext(),
+    { request: jest.fn() } as unknown as MarketListingRequests,
   );
 }
 

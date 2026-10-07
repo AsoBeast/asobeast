@@ -5,6 +5,7 @@ import { StoreProvidersModule } from '../store-providers/store-providers.module'
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsController } from './keywords.controller';
 import { KeywordsService } from './keywords.service';
+import { MarketListingRequests } from './market-listing.requests';
 import { SpiderService } from './spider.service';
 import { TrackedKeywordAccess } from './tracked-keyword.access';
 
@@ -20,6 +21,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   providers: [
     KeywordsService,
     KeywordSuggestionService,
+    MarketListingRequests,
     SpiderService,
     TrackedKeywordAccess,
   ],
