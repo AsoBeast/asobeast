@@ -100,6 +100,53 @@ describe("parseCsv", () => {
     expect(parseCsv("a;b;c").delimiter).toBe(";");
   });
 
+  it("reads a hand written file by its header when later rows leave trailing cells out", () => {
+    expect(parseCsv("keyword,country\nhabit tracker,us\nfocus timer")).toEqual({
+      delimiter: ",",
+      records: [
+        { line: 1, cells: ["keyword", "country"] },
+        { line: 2, cells: ["habit tracker", "us"] },
+        { line: 3, cells: ["focus timer"] },
+      ],
+    });
+  });
+
+  it("reads a file by its header when a later row carries an extra cell", () => {
+    const table = parseCsv(
+      "Keyword;Market\nhabit tracker;us;extra\nfocus timer\n",
+    );
+
+    expect(table.delimiter).toBe(";");
+    expect(table.records.map((record) => record.cells)).toEqual([
+      ["Keyword", "Market"],
+      ["habit tracker", "us", "extra"],
+      ["focus timer"],
+    ]);
+  });
+
+  it("anchors on a header only when it names a keyword column", () => {
+    expect(
+      parseCsv("name,country\nhabit tracker,us\nfocus timer").delimiter,
+    ).toBeNull();
+  });
+
+  it("counts a bare CR inside a quoted field as a physical line", () => {
+    const table = parseCsv('keyword,note\r"a\rb",x\rnext,y');
+
+    expect(table.records[1].cells).toEqual(["a\nb", "x"]);
+    expect(table.records[2]).toEqual({ line: 4, cells: ["next", "y"] });
+  });
+
+  it("ignores a record the sample cuts short when it detects the delimiter", () => {
+    const cell = "x".repeat(6_000);
+    const text = [`${cell},a`, `${cell},b`, `${cell},c`, `${cell},d`].join(
+      "\n",
+    );
+
+    expect(text.length).toBeGreaterThan(16_384);
+    expect(parseCsv(text).delimiter).toBe(",");
+  });
+
   it("goes in the order comma, semicolon, tab, pipe when two delimiters fit equally", () => {
     expect(parseCsv("a,b;c\nd,e;f\n").delimiter).toBe(",");
   });

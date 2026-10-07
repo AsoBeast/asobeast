@@ -53,6 +53,9 @@ export function headerKey(cell: string): string {
     .replace(/[^\p{L}\p{N}]+/gu, "");
 }
 
+export const namesKeyword = (cell: string): boolean =>
+  ALIASES.keyword.has(headerKey(cell));
+
 export function detectColumns(header: readonly string[]): ColumnMapping | null {
   const keys = header.map(headerKey);
   const taken = new Set<number>();

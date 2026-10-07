@@ -47,6 +47,20 @@ describe("readKeywordFile", () => {
     });
   });
 
+  it("reads a hand written file with a short last row by its header", () => {
+    const file = readKeywordFile(
+      bufferOf("keyword,country\nhabit tracker,us\nfocus timer"),
+    );
+
+    const view = initialView(file);
+
+    expect(view.hasHeader).toBe(true);
+    expect(mapKeywordFile(file, view).rows).toEqual([
+      { keyword: "habit tracker", country: "us" },
+      { keyword: "focus timer" },
+    ]);
+  });
+
   it("reads a file without a header as one column of keywords and counts what it ignores", () => {
     const file = readKeywordFile(
       bufferOf("habit tracker,us,core\nstreak counter,pl,brand\n"),
