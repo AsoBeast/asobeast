@@ -1,6 +1,11 @@
 import './helpers/enable-billing';
 import { Store } from '@prisma/client';
-import { KeywordImportResult, PLAN_LIMITS } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  KeywordImportResult,
+  PLAN_LIMITS,
+} from '@asobeast/shared';
+import { QuotaService } from '../src/auth/quota.service';
 import {
   resetBillingState,
   startBillingHarness,
@@ -96,6 +101,71 @@ describe('Keyword import quota (e2e)', () => {
 
     await harness.owner
       .post(`/apps/${appId}/keywords/import/preview`)
+      .send({ rows: rows(1) })
+      .expect(402);
+  });
+
+  it('E-IMP-14 refuses with 403 and writes nothing when the room was taken after the plan', async () => {
+    const limit = PLAN_LIMITS.indie.keywordMarkets as number;
+    await seedTracked(limit - 1);
+    const quota = harness.app.get(QuotaService, { strict: false });
+    jest.spyOn(quota, 'usage').mockResolvedValueOnce({
+      plan: 'indie',
+      limits: PLAN_LIMITS.indie,
+      apps: 1,
+      keywordMarkets: 0,
+    });
+
+    const response = await harness.owner
+      .post(`/apps/${appId}/keywords/import`)
+      .send({ rows: rows(3) })
+      .expect(403);
+
+    expect((response.body as ApiErrorEnvelope).quota).toMatchObject({
+      resource: 'keywordMarkets',
+      limit,
+      used: limit - 1,
+      requested: 3,
+    });
+    expect(
+      await harness.prisma.trackedKeyword.count({
+        where: { keyword: { text: { startsWith: 'fresh ' } } },
+      }),
+    ).toBe(0);
+  });
+
+  it('E-IMP-14 never lets two imports racing for the last slots cross the limit', async () => {
+    const limit = PLAN_LIMITS.indie.keywordMarkets as number;
+    await seedTracked(limit - 3);
+
+    const [first, second] = await Promise.all(
+      ['alpha', 'delta'].map((prefix) =>
+        harness.owner.post(`/apps/${appId}/keywords/import`).send({
+          rows: Array.from({ length: 3 }, (_, index) => ({
+            keyword: `${prefix} ${index}`,
+          })),
+        }),
+      ),
+    );
+
+    expect(
+      [first.status, second.status].every(
+        (status) => status === 200 || status === 403,
+      ),
+    ).toBe(true);
+    expect(
+      await harness.prisma.trackedKeyword.count({ where: { active: true } }),
+    ).toBeLessThanOrEqual(limit);
+  });
+
+  it('E-IMP-20 answers 402 on the import for a workspace without a plan in force', async () => {
+    await resetBillingState(harness, {
+      plan: 'free',
+      trialEndsAt: new Date(Date.now() - 1_000),
+    });
+
+    await harness.owner
+      .post(`/apps/${appId}/keywords/import`)
       .send({ rows: rows(1) })
       .expect(402);
   });

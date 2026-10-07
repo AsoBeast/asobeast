@@ -133,6 +133,20 @@ export class KeywordsController {
     return this.keywordImport.preview(id, dto);
   }
 
+  @Post('keywords/import')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Import keywords with tags, notes and markets',
+    description:
+      'Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first.',
+  })
+  importKeywords(
+    @Param('id') id: string,
+    @Body() dto: KeywordImportDto,
+  ): Promise<KeywordImportResult> {
+    return this.keywordImport.import(id, dto);
+  }
+
   @Patch('keywords/:keywordId')
   @ApiOperation({
     summary: 'Update a tracked keyword active flag or relevance',

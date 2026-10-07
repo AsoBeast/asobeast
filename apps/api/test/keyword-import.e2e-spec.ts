@@ -10,6 +10,7 @@ import {
   KEYWORD_IMPORT_LIMIT,
   KeywordImportResult,
   KeywordImportRow,
+  TrackedKeywordItem,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import request from 'supertest';
@@ -68,6 +69,18 @@ describe('Keyword import (e2e)', () => {
     (
       await api
         .post(`/apps/${id}/keywords/import/preview`)
+        .send({ rows, country })
+        .expect(200)
+    ).body as KeywordImportResult;
+
+  const commit = async (
+    id: string,
+    rows: KeywordImportRow[],
+    country?: string,
+  ) =>
+    (
+      await api
+        .post(`/apps/${id}/keywords/import`)
         .send({ rows, country })
         .expect(200)
     ).body as KeywordImportResult;
@@ -343,5 +356,184 @@ describe('Keyword import (e2e)', () => {
       .post('/apps/missing/keywords/import/preview')
       .send({ rows: [{ keyword: 'focus timer' }] })
       .expect(404);
+  });
+
+  it('E-IMP-21 tracks rows across markets with their tags and notes as manual keywords', async () => {
+    const id = await importApp();
+
+    const result = await commit(id, [
+      {
+        keyword: 'Habit Builder',
+        country: 'us',
+        tags: ['Core', 'brand'],
+        note: 'Q4 push',
+      },
+      { keyword: 'aplikacja treningowa', country: 'pl', tags: ['core'] },
+      { keyword: 'Gewohnheiten', country: 'de', note: ' ' },
+      { keyword: 'bad', country: 'zz' },
+    ]);
+
+    expect(result).toMatchObject({ dryRun: false, imported: 3 });
+    expect(result.summary).toMatchObject({ new: 3, invalid: 1 });
+    const listed = (await api.get(`/apps/${id}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const byText = (text: string) => listed.find((item) => item.text === text);
+    expect(byText('habit builder')).toMatchObject({
+      country: 'us',
+      source: 'MANUAL',
+      active: true,
+      tags: ['core', 'brand'],
+      note: 'Q4 push',
+    });
+    expect(byText('aplikacja treningowa')).toMatchObject({
+      country: 'pl',
+      tags: ['core'],
+      note: null,
+    });
+    expect(byText('gewohnheiten')).toMatchObject({
+      country: 'de',
+      tags: [],
+      note: null,
+    });
+    expect(byText('bad')).toBeUndefined();
+    const countries = (
+      await api.get(`/apps/${id}/keyword-countries`).expect(200)
+    ).body as { country: string; keywordCount: number }[];
+    expect(
+      countries
+        .filter((row) => row.country !== 'us')
+        .map((row) => row.country)
+        .sort(),
+    ).toEqual(['de', 'pl']);
+  });
+
+  it('E-IMP-10 tracks nothing the second time the same file is imported', async () => {
+    const id = await importApp();
+    const rows = [
+      { keyword: 'habit builder' },
+      { keyword: 'focus timer', country: 'pl' },
+    ];
+    await commit(id, rows);
+    const tracked = await prisma.trackedKeyword.count();
+
+    const again = await commit(id, rows);
+
+    expect(again.imported).toBe(0);
+    expect(again.results.map((row) => row.status)).toEqual([
+      'tracked',
+      'tracked',
+    ]);
+    expect(await prisma.trackedKeyword.count()).toBe(tracked);
+  });
+
+  it('E-IMP-11 tracks a phrase another app of the workspace already tracks without a new keyword row', async () => {
+    const id = await importApp();
+    const other = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '999',
+        country: 'us',
+        name: 'Other',
+      },
+    });
+    const keyword = await prisma.keyword.create({
+      data: { text: 'shared phrase', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId: other.id, keywordId: keyword.id, source: 'MANUAL' },
+    });
+    const keywords = await prisma.keyword.count();
+
+    const result = await commit(id, [
+      { keyword: 'Shared Phrase', tags: ['core'] },
+    ]);
+
+    expect(result).toMatchObject({
+      imported: 1,
+      cost: { keywordMarkets: 0, dailyRequests: 0 },
+    });
+    expect(await prisma.keyword.count()).toBe(keywords);
+    expect(
+      await prisma.trackedKeyword.count({
+        where: { appId: id, keywordId: keyword.id },
+      }),
+    ).toBe(1);
+  });
+
+  it('E-IMP-12 resumes a paused keyword and keeps its tags and note', async () => {
+    const id = await importApp();
+    await prisma.trackedKeyword.updateMany({
+      where: { appId: id, keyword: { text: 'habit' } },
+      data: { active: false, tags: ['keep'], note: 'old' },
+    });
+
+    const result = await commit(id, [
+      { keyword: 'habit', tags: ['new'], note: 'ignored' },
+    ]);
+
+    expect(result).toMatchObject({
+      imported: 1,
+      results: [{ status: 'resume' }],
+    });
+    const row = await prisma.trackedKeyword.findFirstOrThrow({
+      where: { appId: id, keyword: { text: 'habit' } },
+    });
+    expect(row).toMatchObject({ active: true, tags: ['keep'], note: 'old' });
+  });
+
+  it('E-IMP-15 refuses the import for a read only token and writes nothing', async () => {
+    const id = await importApp();
+    const token = await seedApiToken(prisma, {
+      seed: 'importreader2',
+      email: 'reader2@example.com',
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      role: 'member',
+      scope: 'read',
+    });
+    const tracked = await prisma.trackedKeyword.count();
+
+    await request(app.getHttpServer())
+      .post(`/apps/${id}/keywords/import`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ rows: [{ keyword: 'focus timer' }] })
+      .expect(403);
+
+    expect(await prisma.trackedKeyword.count()).toBe(tracked);
+  });
+
+  it('E-IMP-22 queues one first score per new keyword and none for a skipped row', async () => {
+    const id = await importApp();
+    const jobs = await queuedJobs();
+
+    await commit(id, [
+      { keyword: 'habit' },
+      { keyword: 'focus timer' },
+      { keyword: 'sleep notes', country: 'pl' },
+      { keyword: '' },
+    ]);
+
+    expect(await queuedJobs()).toBe(jobs + 2);
+  });
+
+  it('E-IMP-23 imports the largest request of realistic rows', async () => {
+    const id = await importApp();
+    const rows = Array.from({ length: KEYWORD_IMPORT_LIMIT }, (_, index) => ({
+      keyword: `fitness workout plan ${index}`,
+      tags: ['core', 'campaign q4'],
+      note: 'Imported from the shared research sheet',
+    }));
+
+    const result = await commit(id, rows);
+
+    expect(result.imported).toBe(KEYWORD_IMPORT_LIMIT);
+    expect(
+      await prisma.trackedKeyword.count({
+        where: {
+          appId: id,
+          keyword: { text: { startsWith: 'fitness workout plan' } },
+        },
+      }),
+    ).toBe(KEYWORD_IMPORT_LIMIT);
   });
 });

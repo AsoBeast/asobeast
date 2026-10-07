@@ -14,4 +14,9 @@ describe('KeywordsController import markers', () => {
     expect(marker(RATE_CLASS_KEY, 'previewImport')).toBe('read');
     expect(marker(READ_ONLY_KEY, 'previewImport')).toBe(true);
   });
+
+  it('leaves the import a write', () => {
+    expect(marker(RATE_CLASS_KEY, 'importKeywords')).toBeUndefined();
+    expect(marker(READ_ONLY_KEY, 'importKeywords')).toBeUndefined();
+  });
 });

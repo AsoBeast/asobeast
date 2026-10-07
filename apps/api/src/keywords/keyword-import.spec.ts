@@ -1,5 +1,10 @@
 import { Store } from '@prisma/client';
-import { KEYWORD_NOTE_MAX_LENGTH, KeywordImportRow } from '@asobeast/shared';
+import { maxLength } from 'class-validator';
+import {
+  KEYWORD_NOTE_MAX_LENGTH,
+  KEYWORD_TAG_MAX_LENGTH,
+  KeywordImportRow,
+} from '@asobeast/shared';
 import { classifyImportRows } from './keyword-import';
 
 const appStore = { store: Store.APP_STORE, country: 'us' };
@@ -164,6 +169,34 @@ describe('classifyImportRows', () => {
         { keyword: 'a3', note: 'x'.repeat(KEYWORD_NOTE_MAX_LENGTH + 1) },
       ])[0],
     ).toMatchObject({ kind: 'invalid', reason: 'noteTooLong' });
+  });
+
+  it.each(['😀', '❤️'])(
+    'counts a note of %s the way the keyword update does',
+    (character) => {
+      const longest = character.repeat(KEYWORD_NOTE_MAX_LENGTH);
+
+      expect(maxLength(longest, KEYWORD_NOTE_MAX_LENGTH)).toBe(true);
+      expect(classify([{ keyword: 'a1', note: longest }])[0]).toMatchObject({
+        kind: 'candidate',
+        candidate: { note: longest },
+      });
+      expect(
+        classify([{ keyword: 'a2', note: `${longest}${character}` }])[0],
+      ).toMatchObject({
+        kind: 'invalid',
+        reason: 'noteTooLong',
+        message: `A note is at most ${KEYWORD_NOTE_MAX_LENGTH} characters, this one has ${KEYWORD_NOTE_MAX_LENGTH + 1}`,
+      });
+    },
+  );
+
+  it('measures a tag in characters, so a tag of rare CJK letters at the limit is kept', () => {
+    const tag = '\u{20000}'.repeat(KEYWORD_TAG_MAX_LENGTH);
+
+    expect(classify([{ keyword: 'habit', tags: [tag] }])[0]).toMatchObject({
+      kind: 'candidate',
+    });
   });
 
   it('does not let a refused row claim its phrase for a later duplicate', () => {

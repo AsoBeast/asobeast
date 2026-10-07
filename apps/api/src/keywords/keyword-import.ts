@@ -1,5 +1,6 @@
 import { Store } from '@prisma/client';
 import {
+  countMaxLengthChars,
   isKeywordTag,
   isStorefront,
   KEYWORD_NOTE_MAX_LENGTH,
@@ -76,10 +77,11 @@ function annotationsOf(row: KeywordImportRow): Annotations | Refusal {
     };
   }
   const note = normalizeKeywordNote(row.note ?? null);
-  if (note !== null && note.length > KEYWORD_NOTE_MAX_LENGTH) {
+  const noteLength = note === null ? 0 : countMaxLengthChars(note);
+  if (noteLength > KEYWORD_NOTE_MAX_LENGTH) {
     return {
       reason: 'noteTooLong',
-      message: `A note is at most ${KEYWORD_NOTE_MAX_LENGTH} characters, this one has ${note.length}`,
+      message: `A note is at most ${KEYWORD_NOTE_MAX_LENGTH} characters, this one has ${noteLength}`,
     };
   }
   return { tags, note };

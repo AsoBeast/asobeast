@@ -1942,6 +1942,48 @@
         ]
       }
     },
+    "/apps/{id}/keywords/import": {
+      "post": {
+        "description": "Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first.",
+        "operationId": "KeywordsController_importKeywords",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Import keywords with tags, notes and markets",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/{keywordId}": {
       "patch": {
         "operationId": "KeywordsController_update",
