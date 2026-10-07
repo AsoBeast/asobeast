@@ -59,8 +59,8 @@
   --chart-8: var(--series-8-600);
   --sidebar: var(--neutral-100);
   --sidebar-foreground: var(--neutral-900);
-  --sidebar-primary: var(--brand-500);
-  --sidebar-primary-foreground: var(--neutral-950);
+  --sidebar-primary: var(--brand-700);
+  --sidebar-primary-foreground: var(--neutral-50);
   --sidebar-accent: var(--neutral-200);
   --sidebar-accent-foreground: var(--neutral-900);
   --sidebar-border: var(--neutral-200);

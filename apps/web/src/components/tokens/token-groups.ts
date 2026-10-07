@@ -164,6 +164,12 @@ export const TEXT_PAIRS: Array<{
     floor: 4.5,
   },
   {
+    label: "sidebar-primary on sidebar-accent",
+    foreground: "--sidebar-primary",
+    background: "--sidebar-accent",
+    floor: 3,
+  },
+  {
     label: "signal-up on card",
     foreground: "--signal-up",
     background: "--card",
