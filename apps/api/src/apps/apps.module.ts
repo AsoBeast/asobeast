@@ -10,6 +10,7 @@ import { AppGroupsService } from './app-groups.service';
 import { AppsController } from './apps.controller';
 import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
+import { ListingCaptureService } from './listing-capture.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
 @Module({
@@ -31,6 +32,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     AppCaptureService,
     AppGroupsService,
     FirstRunScheduler,
+    ListingCaptureService,
     SubtitleBackfill,
   ],
   exports: [AppsService, AppCaptureService, SubtitleBackfill],
