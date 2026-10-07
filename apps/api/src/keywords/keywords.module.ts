@@ -30,7 +30,6 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   exports: [
     KeywordsService,
     KeywordSuggestionService,
-    KeywordTracker,
     SpiderService,
     TrackedKeywordAccess,
   ],
