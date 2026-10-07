@@ -58,12 +58,12 @@ A file needs a keyword column and nothing else. Headers are matched ignoring cas
 
 | Column | Required | Headers that are recognised |
 | --- | --- | --- |
-| Keyword | Yes | `keyword`, `keywords`, `keyphrase`, `phrase`, `term`, `search term`, `search query`, `query`, `text` |
-| Country | No | `country`, `country code`, `storefront`, `market`, `region`, `location` |
-| Tags | No | `tags`, `tag`, `labels`, `groups`, `keyword group`, `list`, separated by semicolons, pipes or commas |
-| Note | No | `note`, `notes`, `comment`, `comments`, `remark` |
+| Keyword | Yes | `keyword`, `keywords`, `keyphrase`, `keyword phrase`, `phrase`, `term`, `search term`, `search query`, `query`, `text` |
+| Country | No | `country`, `country code`, `cc`, `storefront`, `market`, `region`, `location` |
+| Tags | No | `tags`, `tag`, `labels`, `label`, `groups`, `group`, `keyword group`, `list`, separated by semicolons, pipes or commas |
+| Note | No | `note`, `notes`, `comment`, `comments`, `remark`, `remarks` |
 
-A file with no header row is read as one column of keywords. If a header is not recognised, switch **First row is a header** on and choose the column yourself. A country is the two letter storefront code, such as `us`, `gb` or `pl`; it must be a storefront of the app's store. Upper case is fine.
+The separator is read from the header row, so a file typed by hand whose later rows leave trailing cells empty, or carry an extra one, still splits into the same columns. Without a recognised header, the separator is used only when every row has the same number of cells. A file with no header row is read with its first column as the keyword. If a header is not recognised, switch **First row is a header** on and choose the column yourself. A country is the two letter storefront code, such as `us`, `gb` or `pl`; it must be a storefront of the app's store. Upper case is fine.
 
 The keyword export is a valid import file. It ends with a `country` column, so a file exported from the `pl` market tracks in `pl` whatever market the dialog starts on. Export from one app and import into another app of the same store to copy a keyword set, tags and notes included.
 
@@ -78,7 +78,7 @@ The keyword export is a valid import file. It ends with a `country` column, so a
 | Invalid | Refused, with the reason: empty, longer than 100 characters, more than five words, not a storefront of this store, a tag that breaks the tag rules, more than 8 tags, or a note over 500 characters. Fix the row and import the file again |
 | Over limit | Importing it would pass the keyword limit of your plan. Skipped |
 
-The import tracks the new and resumed rows together, or none of them. Rows that are skipped or refused never stop the others, and the dialog says how many were skipped. Importing the same file twice is safe: the second time every row is already tracked.
+The import tracks the new and resumed rows together, or none of them. Rows that are skipped or refused never stop the others, and the dialog says how many were skipped. When rows are over the limit, the review states how many keyword markets your plan uses out of its limit and, on a hosted plan with a larger tier, links to the plans. Importing the same file twice is safe: the second time every row is already tracked.
 
 Imported keywords are tracked like keywords you typed (source `MANUAL`). The paused state of a keyword in the file is not imported, and the tags and note of a keyword that is already tracked are never overwritten; change those on the row menu. See [Tag keywords and keep notes](#tag-keywords-and-keep-notes).
 
@@ -92,7 +92,9 @@ An import takes up to 500 rows. For a longer list, split the file and import the
 
 ### Import through the API
 
-The dialog sends JSON rows, so a script can do the same: `POST /apps/{id}/keywords/import/preview` answers, for every row, what an import would do and writes nothing, and `POST /apps/{id}/keywords/import` runs it. The preview counts against the read budget and works with a read only token. See [Rate limits and quotas](/api-reference/rate-limits#request-size-limits-apply-everywhere) and the API reference.
+The dialog sends JSON rows, so a script can do the same: `POST /apps/{id}/keywords/import/preview` answers, for every row, what an import would do and writes nothing, and `POST /apps/{id}/keywords/import` runs it. The preview counts against the read budget and works with a read only token. A row's own `country` may be in either case, but the request level `country`, the default market for rows without one, must be a lower case storefront code such as `us`. See [Rate limits and quotas](/api-reference/rate-limits#request-size-limits-apply-everywhere) and the API reference.
+
+Both answers carry the same fields. `summary` and `results` describe the plan, row by row. On the import, `imported` counts the keywords that request actually tracked or resumed, which is lower than `new` plus `resume` only when another request tracked some of the same keywords in between. `quota.used` counts the keyword markets in use when the answer was made, so after an import it already includes the rows just tracked.
 
 ## Paste the iOS keyword field
 
@@ -211,7 +213,8 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 - **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
 - **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
-- **The whole file shows as one column.** The delimiter is detected only when every row has the same number of cells. Save the file again from the spreadsheet so each row has the same columns, or save it as CSV UTF-8.
+- **The whole file shows as one column.** The separator is read from a header row that names a keyword column, else only when every row has the same number of cells. Add a header such as `keyword,country`, or save the file again from the spreadsheet so each row has the same columns.
+- **The dialog says the file could not be read.** The browser could not open it, often because it moved or is still syncing. Choose it again, or save a copy and choose that.
 - **Letters look wrong in the review.** The file is not UTF-8, so it was read as Windows-1252. Save it as CSV UTF-8 and choose it again.
 - **A row says it is not a storefront.** Use the two letter code of the storefront, such as `gb` for the United Kingdom. Google Play and the App Store have different lists. See [Countries and markets](/concepts/countries).
 - **A row is over limit.** Your plan's keyword limit is full. Remove keywords you no longer need, or move to a larger plan, then import the file again; the rows that were imported are skipped as already tracked.
