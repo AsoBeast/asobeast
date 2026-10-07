@@ -76,7 +76,7 @@ No tool imports an app, edits metadata, writes the iOS keyword field, refreshes 
 
 const CHANGES_NOTE = `\`track_keywords\` takes a \`country\` and defaults to the app's home storefront. It accepts up to 50 phrases a call, queues the same store scoring job the web app queues for each new phrase, and counts against the plan's keyword market limit, so it spends store request capacity. \`untrack_keyword\` and \`remove_competitor\` delete, and take the ids that \`list_keywords\` and \`list_competitors\` return. \`add_competitor\` fetches the listing from the live store before it answers. \`set_action_status\` takes \`snoozedUntil\` as a UTC date and an optional \`note\`, and the change is recorded in the action history under the name of the person who minted the token.
 
-Every change goes through the same route, validation, plan write budget and quota as the web app, so a refused change reads the way the web app's refusal does. If a change fails with a server error or a timeout, it may or may not have been applied, and the message says so. Read the current state before retrying.`;
+Every change goes through the same route, validation, plan write budget and quota as the web app, so a refused change reads the way the web app's refusal does. If a change fails with a server error, a timeout or an answer that cannot be read, it may or may not have been applied, and the message says so. Read the current state before retrying.`;
 
 function optional(schema) {
   return schema.safeParse(undefined).success;

@@ -114,6 +114,13 @@ describe("withOutcomeNote", () => {
     },
   );
 
+  it.each([200, 201])(
+    "says a write that answered %s in a form it could not read may have been applied",
+    (status) => {
+      expect(withOutcomeNote(track, status, "unreadable")).toContain(NOTE);
+    },
+  );
+
   it.each([400, 402, 403, 404, 409, 429])(
     "leaves a refusal with %s as the api worded it",
     (status) => {
@@ -123,5 +130,6 @@ describe("withOutcomeNote", () => {
 
   it("never adds the note to a read, which is always safe to repeat", () => {
     expect(withOutcomeNote(list, 504, "slow")).toBe("slow");
+    expect(withOutcomeNote(list, 200, "unreadable")).toBe("unreadable");
   });
 });

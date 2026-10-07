@@ -145,6 +145,29 @@ describe("write tools", () => {
   );
 
   it.each([
+    ["a page that is not the api", "text/html", "<html></html>"],
+    ["json it could not parse", "application/json", "{"],
+  ])(
+    "say a change answered with %s may have been applied",
+    async (_case, contentType, text) => {
+      const { tools } = setup(() => ({ status: 200, body: {} }));
+      globalThis.fetch = (async () =>
+        new Response(text, {
+          status: 200,
+          headers: { "content-type": contentType },
+        })) as typeof fetch;
+
+      const result = await tools.get("set_action_status")!.handler({
+        actionId: "act-1",
+        status: "DONE",
+      });
+
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain("may or may not have been applied");
+    },
+  );
+
+  it.each([
     ["a server error", { status: 502, body: { message: "bad gateway" } }],
     ["an api that cannot be reached", "throw" as const],
   ])(

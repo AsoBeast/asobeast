@@ -37,12 +37,16 @@ export function toolOutput(
   return toolText(tool.kind === "write" ? tool.outcome(body, input) : body);
 }
 
+function isUnknownOutcome(status: number): boolean {
+  const unreadableSuccess = status >= 200 && status < 300;
+  return status === 0 || unreadableSuccess || status >= 500;
+}
+
 export function withOutcomeNote(
   tool: McpTool,
   status: number,
   message: string,
 ): string {
-  const unknownOutcome =
-    tool.kind === "write" && (status === 0 || status >= 500);
+  const unknownOutcome = tool.kind === "write" && isUnknownOutcome(status);
   return unknownOutcome ? `${message} ${UNCERTAIN_OUTCOME_NOTE}` : message;
 }
