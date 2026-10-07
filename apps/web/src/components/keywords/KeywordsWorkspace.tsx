@@ -1,13 +1,14 @@
 "use client";
 
 import { Suspense } from "react";
-import { Info, Plus } from "lucide-react";
+import { Info, Plus, Upload } from "lucide-react";
 import { useQueryState } from "nuqs";
 import type { Store } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { countryParser } from "@/lib/search-params";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
+import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { KeywordsToolbar } from "./KeywordsToolbar";
 import { KeywordsTable } from "./KeywordsTable";
@@ -38,12 +39,20 @@ export function KeywordsWorkspace({
             The phrases you want this app to rank for, tracked per market.
           </p>
         </div>
-        <AddKeywordsDialog appId={id} store={store} country={market}>
-          <Button>
-            <Plus />
-            Add keywords
-          </Button>
-        </AddKeywordsDialog>
+        <div className="flex items-center gap-2">
+          <ImportKeywordsDialog appId={id} store={store} country={market}>
+            <Button variant="outline">
+              <Upload />
+              Import CSV
+            </Button>
+          </ImportKeywordsDialog>
+          <AddKeywordsDialog appId={id} store={store} country={market}>
+            <Button>
+              <Plus />
+              Add keywords
+            </Button>
+          </AddKeywordsDialog>
+        </div>
       </div>
       <Suspense fallback={null}>
         <KeywordsToolbar

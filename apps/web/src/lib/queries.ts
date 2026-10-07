@@ -3,11 +3,16 @@ import type {
   AppAuditResult,
   EmailAlertItem,
   FirstRunStatus,
+  KeywordImportRequest,
   KeywordSuggestionStrategy,
   WebhookItem,
 } from "@asobeast/shared";
 import { QUERY_BOUNDS } from "@asobeast/shared";
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  skipToken,
+  type QueryClient,
+} from "@tanstack/react-query";
 import {
   getAction,
   getActionActivity,
@@ -45,6 +50,7 @@ import {
   getFirstRun,
   getHealth,
   getKeywordCountries,
+  previewKeywordImport,
   getKeywordField,
   getKeywords,
   getMarketAvailability,
@@ -86,6 +92,10 @@ export const appKeys = {
     [...appKeys.detail(id), "keywords", { country }] as const,
   keywordCountries: (id: string) =>
     [...appKeys.detail(id), "keyword-countries"] as const,
+  importPreviewRoot: (id: string) =>
+    [...appKeys.detail(id), "keyword-import-preview"] as const,
+  importPreview: (id: string, request: KeywordImportRequest | null) =>
+    [...appKeys.importPreviewRoot(id), request] as const,
   keywordField: (id: string) =>
     [...appKeys.detail(id), "keyword-field"] as const,
   suggestions: (
@@ -410,6 +420,18 @@ export const keywordCountriesOptions = (id: string) =>
     queryFn: () => getKeywordCountries(id),
   });
 
+export const keywordImportPreviewOptions = (
+  id: string,
+  request: KeywordImportRequest | null,
+) =>
+  queryOptions({
+    queryKey: appKeys.importPreview(id, request),
+    queryFn:
+      request === null ? skipToken : () => previewKeywordImport(id, request),
+    gcTime: 0,
+    retry: false,
+  });
+
 export const keywordFieldOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.keywordField(id),
@@ -655,6 +677,11 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+}
+
+export function invalidateKeywordImport(client: QueryClient, id: string): void {
+  invalidateKeywordMutation(client, id);
+  void client.invalidateQueries({ queryKey: appKeys.importPreviewRoot(id) });
 }
 
 export function invalidateAppListing(client: QueryClient, id: string): void {

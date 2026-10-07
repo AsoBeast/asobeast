@@ -10,9 +10,11 @@ import {
   IMPORT_BODY_BYTES,
   IMPORT_STATUS_LABELS,
   importButtonLabel,
+  importToast,
   refuseImport,
   refusalMessage,
   rowNote,
+  summarySentence,
 } from "./keyword-import";
 
 const rowsOf = (count: number, note = "") =>
@@ -174,5 +176,49 @@ describe("fileNotices", () => {
     expect(
       fileNotices({ ...base, hasHeader: false, ignoredColumns: 1 })[1],
     ).toBe("1 other column is ignored.");
+  });
+});
+
+describe("summarySentence", () => {
+  it("U-VIEW-07 lists only the statuses that occur, importable ones first", () => {
+    expect(
+      summarySentence(summary({ rows: 9, new: 4, tracked: 3, invalid: 2 })),
+    ).toBe("4 new, 3 already tracked, 2 invalid");
+    expect(summarySentence(summary({ rows: 1, overQuota: 1 }))).toBe(
+      "1 over limit",
+    );
+    expect(summarySentence(summary({ rows: 0 }))).toBe("No rows");
+  });
+});
+
+describe("importToast", () => {
+  it("U-VIEW-08 says what was tracked and how many rows were skipped", () => {
+    const result = {
+      dryRun: false,
+      imported: 5,
+      summary: summary({
+        rows: 9,
+        new: 4,
+        resume: 1,
+        tracked: 2,
+        invalid: 1,
+        overQuota: 1,
+      }),
+    };
+
+    expect(importToast(result)).toEqual({
+      title: "Tracking 5 keywords",
+      description: "4 rows skipped. Rankings capture on the next run.",
+    });
+    expect(
+      importToast({
+        ...result,
+        imported: 1,
+        summary: summary({ rows: 1, new: 1 }),
+      }),
+    ).toEqual({
+      title: "Tracking 1 keyword",
+      description: "Rankings capture on the next run.",
+    });
   });
 });

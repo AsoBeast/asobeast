@@ -1,6 +1,8 @@
 import {
   KEYWORD_IMPORT_LIMIT,
+  KEYWORD_IMPORT_STATUSES,
   type KeywordImportRequest,
+  type KeywordImportResult,
   type KeywordImportRow,
   type KeywordImportRowResult,
   type KeywordImportStatus,
@@ -136,4 +138,27 @@ export function fileNotices(file: {
     );
   }
   return notices;
+}
+
+export function summarySentence(summary: KeywordImportSummary): string {
+  const parts = KEYWORD_IMPORT_STATUSES.filter(
+    (status) => summary[status] > 0,
+  ).map(
+    (status) =>
+      `${formatNumber(summary[status])} ${IMPORT_STATUS_LABELS[status].toLowerCase()}`,
+  );
+  return parts.length > 0 ? parts.join(", ") : "No rows";
+}
+
+export function importToast(
+  result: Pick<KeywordImportResult, "imported" | "summary">,
+): { title: string; description: string } {
+  const skipped = result.summary.rows - importableCount(result.summary);
+  return {
+    title: `Tracking ${formatNumber(result.imported)} keyword${result.imported === 1 ? "" : "s"}`,
+    description:
+      skipped > 0
+        ? `${formatNumber(skipped)} row${skipped === 1 ? "" : "s"} skipped. Rankings capture on the next run.`
+        : "Rankings capture on the next run.",
+  };
 }
