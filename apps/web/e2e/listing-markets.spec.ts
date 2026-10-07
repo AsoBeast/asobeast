@@ -136,6 +136,37 @@ test("refreshes the market being looked at", async ({ page }) => {
   ]);
 });
 
+test("explains why a market without keywords cannot be refreshed", async ({
+  page,
+  context,
+}) => {
+  const refreshed: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && request.url().endsWith("/refresh")) {
+      refreshed.push(request.url());
+    }
+  });
+  await context.addCookies([
+    { name: "e2e_stale_market", value: "pl", domain: "localhost", path: "/" },
+  ]);
+
+  await page.goto("/apps/app-1/metadata?market=pl");
+  const refresh = page
+    .getByRole("banner")
+    .getByRole("button", { name: "Refresh Poland listing" });
+
+  await expect(refresh).toHaveAttribute("aria-disabled", "true");
+  await expect(refresh).toHaveAccessibleDescription(
+    "No keywords are tracked in Poland any more, so its listing is no longer refreshed.",
+  );
+  await refresh.click({ force: true });
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(
+    page.getByRole("textbox", { name: "Title", exact: true }).first(),
+  ).toHaveValue("Minutnik Skupienia");
+  expect(refreshed).toEqual([]);
+});
+
 test("the budget card says how many app requests are market listings", async ({
   page,
   context,

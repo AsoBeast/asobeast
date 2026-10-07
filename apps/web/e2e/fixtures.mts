@@ -704,8 +704,18 @@ export const APP_1_DETAIL: AppDetail = {
 };
 
 export const APP_1_LISTING_MARKETS: ListingMarket[] = [
-  { country: "us", home: true, capturedAt: utcTimestampDaysAgo(0) },
-  { country: "pl", home: false, capturedAt: utcTimestampDaysAgo(0) },
+  {
+    country: "us",
+    home: true,
+    capturedAt: utcTimestampDaysAgo(0),
+    tracked: true,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: utcTimestampDaysAgo(0),
+    tracked: true,
+  },
 ];
 
 export const APP_1_PL_DETAIL: AppDetail = {

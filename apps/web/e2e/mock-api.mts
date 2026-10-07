@@ -467,7 +467,11 @@ function sortKeywords(
 
 function appRoute(
   pattern: RegExp,
-  pick: (dataset: (typeof DATASETS)[string], query: URLSearchParams) => unknown,
+  pick: (
+    dataset: (typeof DATASETS)[string],
+    query: URLSearchParams,
+    req: IncomingMessage,
+  ) => unknown,
 ): Route {
   return {
     method: "GET",
@@ -483,7 +487,7 @@ function appRoute(
       json(
         res,
         200,
-        pick(dataset, new URL(path, "http://localhost").searchParams),
+        pick(dataset, new URL(path, "http://localhost").searchParams, req),
       );
     },
   };
@@ -982,6 +986,7 @@ function firstRunFor(appId: string): FirstRunStatus {
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
+const STALE_MARKET_COOKIE = "e2e_stale_market";
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
@@ -1495,14 +1500,19 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
   ),
-  appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset) =>
+  appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
     dataset.detail.id === "app-1"
-      ? APP_1_LISTING_MARKETS
+      ? APP_1_LISTING_MARKETS.map((market) => ({
+          ...market,
+          tracked:
+            market.home || !hasCookie(req, STALE_MARKET_COOKIE, market.country),
+        }))
       : [
           {
             country: dataset.detail.country,
             home: true,
             capturedAt: dataset.detail.latestSnapshot?.capturedAt ?? null,
+            tracked: true,
           },
         ],
   ),

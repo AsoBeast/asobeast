@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ListingMarket } from "@asobeast/shared";
-import { marketLabel, queryMarket, resolveMarket } from "./market";
+import {
+  isRefreshable,
+  marketLabel,
+  queryMarket,
+  resolveMarket,
+} from "./market";
 
 const MARKETS: ListingMarket[] = [
   { country: "us", home: true, capturedAt: "2026-07-01T00:00:00.000Z" },
@@ -42,5 +47,29 @@ describe("marketLabel", () => {
 
   it("names another storefront", () => {
     expect(marketLabel(MARKETS[1])).toBe("DE · Germany");
+  });
+});
+
+describe("isRefreshable", () => {
+  const markets: ListingMarket[] = [
+    ...MARKETS,
+    {
+      country: "fr",
+      home: false,
+      capturedAt: "2026-07-03T00:00:00.000Z",
+      tracked: false,
+    },
+  ];
+
+  it("refreshes a market that still tracks keywords", () => {
+    expect(isRefreshable(markets, "de")).toBe(true);
+  });
+
+  it("refreshes the home market", () => {
+    expect(isRefreshable(markets, "us")).toBe(true);
+  });
+
+  it("refuses a market whose keywords were removed", () => {
+    expect(isRefreshable(markets, "fr")).toBe(false);
   });
 });

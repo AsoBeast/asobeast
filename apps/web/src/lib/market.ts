@@ -19,3 +19,10 @@ export function marketLabel(market: ListingMarket): string {
   const name = `${market.country.toUpperCase()} · ${formatCountry(market.country)}`;
   return market.home ? `${name} (home)` : name;
 }
+
+export function isRefreshable(
+  markets: readonly ListingMarket[],
+  market: string,
+): boolean {
+  return markets.find((entry) => entry.country === market)?.tracked !== false;
+}

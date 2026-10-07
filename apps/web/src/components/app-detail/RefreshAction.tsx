@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   useIsMutating,
   useMutation,
@@ -24,7 +24,8 @@ interface RefreshedListing {
 
 export function RefreshAction({ appId }: { appId: string }) {
   const queryClient = useQueryClient();
-  const country = useCachedMarket(appId);
+  const { market: country, refreshable } = useCachedMarket(appId);
+  const reasonId = useId();
   const [refreshed, setRefreshed] = useState<RefreshedListing | null>(null);
   const busy = useIsMutating({ mutationKey: ["app-action", appId] }) > 0;
 
@@ -47,8 +48,14 @@ export function RefreshAction({ appId }: { appId: string }) {
     <>
       <Button
         variant="outline"
+        className="aria-disabled:opacity-60"
         disabled={busy}
-        onClick={() => refreshOnce(country)}
+        aria-disabled={refreshable ? undefined : true}
+        aria-describedby={refreshable ? undefined : reasonId}
+        title={refreshable ? undefined : staleReason(country)}
+        onClick={() => {
+          if (refreshable) refreshOnce(country);
+        }}
         aria-label={
           country === undefined
             ? "Refresh"
@@ -62,6 +69,11 @@ export function RefreshAction({ appId }: { appId: string }) {
         )}
         <span className="hidden lg:inline">Refresh</span>
       </Button>
+      {refreshable ? null : (
+        <span id={reasonId} className="sr-only">
+          {staleReason(country)}
+        </span>
+      )}
       <SnapshotDiffDialog
         diff={refreshed?.diff ?? null}
         market={refreshed?.market ?? null}
@@ -72,4 +84,9 @@ export function RefreshAction({ appId }: { appId: string }) {
       />
     </>
   );
+}
+
+function staleReason(country: string | undefined): string {
+  const name = country === undefined ? "this market" : formatCountry(country);
+  return `No keywords are tracked in ${name} any more, so its listing is no longer refreshed.`;
 }
