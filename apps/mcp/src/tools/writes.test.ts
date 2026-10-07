@@ -91,7 +91,16 @@ describe("write tools", () => {
   it("send an action status change as a patch", async () => {
     const { tools, calls } = setup(() => ({
       status: 200,
-      body: { id: "act-1", status: "DONE", evidence: { huge: true } },
+      body: {
+        id: "act-1",
+        rule: "keyword.add_uncovered",
+        status: "DONE",
+        priority: "high",
+        snoozedUntil: null,
+        closedAt: "2026-10-07T09:00:00.000Z",
+        note: null,
+        evidence: { huge: true },
+      },
     }));
 
     const result = await tools.get("set_action_status")!.handler({

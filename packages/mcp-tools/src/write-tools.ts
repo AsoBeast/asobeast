@@ -4,7 +4,11 @@ import {
   ACTION_NOTE_MAX_LENGTH,
   ACTION_UPDATE_STATUSES,
   COUNTRY_PATTERN,
+  KEYWORD_SOURCES,
   TRACKED_KEYWORD_CHAR_LIMIT,
+  isActionPriority,
+  isActionRule,
+  isActionStatus,
   normalizeText,
   type ActionItem,
   type TrackedKeywordItem,
@@ -27,12 +31,57 @@ const recordId = z
 
 const appId = recordId.describe("The app id from list_apps.");
 
+type TrackedFields = Pick<
+  TrackedKeywordItem,
+  "keywordId" | "text" | "country" | "active" | "source"
+>;
+
+type ActionFields = Pick<
+  ActionItem,
+  "id" | "rule" | "status" | "priority" | "snoozedUntil" | "closedAt" | "note"
+>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+const isText = (value: unknown): value is string => typeof value === "string";
+
+const isTextOrNull = (value: unknown): value is string | null =>
+  value === null || isText(value);
+
+function isTrackedItem(value: unknown): value is TrackedFields {
+  return (
+    isRecord(value) &&
+    isText(value.keywordId) &&
+    isText(value.text) &&
+    isText(value.country) &&
+    typeof value.active === "boolean" &&
+    KEYWORD_SOURCES.some((source) => source === value.source)
+  );
+}
+
+function isActionAnswer(value: unknown): value is ActionFields {
+  return (
+    isRecord(value) &&
+    isText(value.id) &&
+    isActionRule(value.rule) &&
+    isActionStatus(value.status) &&
+    isActionPriority(value.priority) &&
+    isTextOrNull(value.snoozedUntil) &&
+    isTextOrNull(value.closedAt) &&
+    isTextOrNull(value.note)
+  );
+}
+
 function trackedOutcome(
   body: unknown,
   keywords: readonly string[],
   country: string | undefined,
 ) {
-  const items = Array.isArray(body) ? (body as TrackedKeywordItem[]) : [];
+  if (!Array.isArray(body)) return body;
+  const items: unknown[] = body;
+  if (!items.every(isTrackedItem)) return body;
   const requested = new Set(keywords.map(normalizeText));
   return {
     market: items[0]?.country ?? country ?? null,
@@ -49,8 +98,8 @@ function trackedOutcome(
 }
 
 function actionOutcome(body: unknown) {
-  const { id, rule, status, priority, snoozedUntil, closedAt, note } =
-    body as ActionItem;
+  if (!isActionAnswer(body)) return body;
+  const { id, rule, status, priority, snoozedUntil, closedAt, note } = body;
   return { id, rule, status, priority, snoozedUntil, closedAt, note };
 }
 

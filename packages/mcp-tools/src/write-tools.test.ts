@@ -281,13 +281,31 @@ describe("the write tools", () => {
     ).toMatchObject({ market: "pl" });
   });
 
-  it("reports an empty answer as nothing tracked rather than crashing", () => {
+  it("reports an empty list as nothing tracked in the market asked for", () => {
     expect(
-      writeTool("track_keywords").outcome(null, {
+      writeTool("track_keywords").outcome([], {
         appId: "app-1",
         keywords: ["habit"],
+        country: "de",
       }),
-    ).toEqual({ market: null, trackedInMarket: 0, tracked: [] });
+    ).toEqual({ market: "de", trackedInMarket: 0, tracked: [] });
+  });
+
+  it.each([
+    ["no body", null],
+    ["a body that is not a list", { keywordId: "kw-1", ...ITEM }],
+    [
+      "a list holding something that is not a keyword",
+      [{ keywordId: "kw-1", ...ITEM }, null],
+    ],
+    ["a list of keywords missing their fields", [{ keywordId: "kw-1" }]],
+  ])("returns %s from track_keywords unchanged", (_case, body) => {
+    expect(
+      writeTool("track_keywords").outcome(body, {
+        appId: "app-1",
+        keywords: ["habit tracker"],
+      }),
+    ).toBe(body);
   });
 
   it.each([
@@ -308,7 +326,7 @@ describe("the write tools", () => {
   it("returns the new status of an action without its evidence", () => {
     const body = {
       id: "act-1",
-      rule: "uncovered_keyword",
+      rule: "keyword.add_uncovered",
       category: "keywords",
       status: "DONE",
       priority: "high",
@@ -327,13 +345,27 @@ describe("the write tools", () => {
       }),
     ).toEqual({
       id: "act-1",
-      rule: "uncovered_keyword",
+      rule: "keyword.add_uncovered",
       status: "DONE",
       priority: "high",
       snoozedUntil: null,
       closedAt: "2026-10-07T09:00:00.000Z",
       note: "shipped in 1.4",
     });
+  });
+
+  it.each([
+    ["no body", null],
+    ["a body that is not an object", "accepted"],
+    ["a list instead of one action", [{ id: "act-1", status: "DONE" }]],
+    ["an action missing its fields", { id: "act-1", status: "DONE" }],
+  ])("returns %s from set_action_status unchanged", (_case, body) => {
+    expect(
+      writeTool("set_action_status").outcome(body, {
+        actionId: "act-1",
+        status: "DONE",
+      }),
+    ).toBe(body);
   });
 
   it("returns a competitor as the api described it", () => {
