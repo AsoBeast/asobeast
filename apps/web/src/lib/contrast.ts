@@ -11,12 +11,18 @@ const decodeSrgb = (channel: number) =>
     ? channel / 12.92
     : Math.pow((channel + 0.055) / 1.055, 2.4);
 
+const encodeSrgb = (channel: number) =>
+  channel <= 0.0031308
+    ? channel * 12.92
+    : 1.055 * Math.pow(channel, 1 / 2.4) - 0.055;
+
 interface Component {
   value: number;
   percent: boolean;
 }
 
 const CALL = /^[a-z]+\(([^()]*)\)$/;
+const SRGB_MIX = /^color-mix\(in srgb,\s*(.+?)\s+(\d+(?:\.\d+)?)%,\s*(.+)\)$/;
 const NUMBER = /^-?(?:\d+(?:\.\d+)?|\.\d+)%?$/;
 
 function components(value: string): Component[] | null {
@@ -110,8 +116,22 @@ function fromHex(value: string): Linear | null {
   );
 }
 
+function fromSrgbMix(value: string): Linear | null {
+  const [, first = "", weight = "", second = ""] = SRGB_MIX.exec(value) ?? [];
+  const a = toLinear(first);
+  const b = toLinear(second);
+  if (!a || !b) return null;
+  const share = Number(weight) / 100;
+  return a.map((channel, index) =>
+    decodeSrgb(
+      share * encodeSrgb(channel) + (1 - share) * encodeSrgb(b[index]!),
+    ),
+  ) as Linear;
+}
+
 export function toLinear(color: string): Linear | null {
   const value = color.trim().toLowerCase();
+  if (value.startsWith("color-mix")) return fromSrgbMix(value);
   if (value.startsWith("#")) return fromHex(value);
   if (value.startsWith("oklch")) return fromOklch(components(value));
   if (value.startsWith("lab")) return fromLab(components(value));
@@ -119,18 +139,28 @@ export function toLinear(color: string): Linear | null {
   return null;
 }
 
+const luminance = ([red, green, blue]: Linear) =>
+  0.2126 * red + 0.7152 * green + 0.0722 * blue;
+
+const toByte = (channel: number) =>
+  decodeSrgb(Math.round(encodeSrgb(channel) * 255) / 255);
+
 export function relativeLuminance(color: string): number | null {
   const linear = toLinear(color);
-  if (!linear) return null;
-  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  return linear && luminance(linear);
+}
+
+function renderedLuminance(color: string): number | null {
+  const linear = toLinear(color);
+  return linear && luminance(linear.map(toByte) as Linear);
 }
 
 export function contrastRatio(
   foreground: string,
   background: string,
 ): number | null {
-  const a = relativeLuminance(foreground);
-  const b = relativeLuminance(background);
+  const a = renderedLuminance(foreground);
+  const b = renderedLuminance(background);
   if (a === null || b === null) return null;
   const [lighter, darker] = a > b ? [a, b] : [b, a];
   return (lighter + 0.05) / (darker + 0.05);

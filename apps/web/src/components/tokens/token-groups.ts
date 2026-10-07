@@ -1,3 +1,5 @@
+import { contrastRatio } from "@/lib/contrast";
+
 export const NEUTRAL_RAMP = [
   "--neutral-50",
   "--neutral-100",
@@ -97,12 +99,60 @@ export const SIDEBAR_TOKENS = [
   "--sidebar-ring",
 ];
 
-export const TEXT_PAIRS: Array<{
+export interface TextPair {
   label: string;
   foreground: string;
   background: string;
   floor: number;
-}> = [
+  tint?: number;
+}
+
+const STATUS_TEXT = [
+  "--success",
+  "--warning",
+  "--destructive",
+  "--info",
+  "--signal-up",
+  "--signal-down",
+  "--priority-critical",
+  "--priority-high",
+  "--priority-medium",
+  "--priority-low",
+  "--grade-strong",
+  "--grade-fair",
+  "--grade-weak",
+  "--grade-poor",
+];
+
+const SUBTLE_TEXT = ["--success", "--warning", "--signal-up", "--signal-down"];
+
+const GAP_ROW_TEXT = [
+  "--foreground",
+  "--muted-foreground",
+  "--grade-strong",
+  "--grade-fair",
+  "--grade-weak",
+  "--grade-poor",
+];
+
+const TINTED_TEXT = [
+  { token: "--destructive", tint: 5 },
+  { token: "--destructive", tint: 10 },
+  { token: "--info", tint: 10 },
+  { token: "--priority-critical", tint: 10 },
+  { token: "--priority-high", tint: 10 },
+  { token: "--priority-medium", tint: 10 },
+  { token: "--priority-low", tint: 10 },
+];
+
+const textOn = (foreground: string, background: string): TextPair => ({
+  label: `${foreground.slice(2)} on ${background.slice(2)}`,
+  foreground,
+  background,
+  floor: 4.5,
+});
+
+export const TEXT_PAIRS: TextPair[] = [
   {
     label: "foreground on background",
     foreground: "--foreground",
@@ -164,63 +214,39 @@ export const TEXT_PAIRS: Array<{
     floor: 4.5,
   },
   {
+    label: "muted-foreground on sidebar",
+    foreground: "--muted-foreground",
+    background: "--sidebar",
+    floor: 4.5,
+  },
+  {
+    label: "muted-foreground on sidebar-accent",
+    foreground: "--muted-foreground",
+    background: "--sidebar-accent",
+    floor: 4.5,
+  },
+  {
     label: "sidebar-primary on sidebar-accent",
     foreground: "--sidebar-primary",
     background: "--sidebar-accent",
     floor: 3,
   },
-  {
-    label: "signal-up on card",
-    foreground: "--signal-up",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "signal-down on card",
-    foreground: "--signal-down",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "warning on card",
-    foreground: "--warning",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "info on card",
-    foreground: "--info",
-    background: "--card",
-    floor: 4.5,
-  },
+  ...STATUS_TEXT.flatMap((token) =>
+    ["--card", "--muted"].map((background) => textOn(token, background)),
+  ),
+  ...SUBTLE_TEXT.map((token) => textOn(token, `${token}-subtle`)),
+  ...GAP_ROW_TEXT.map((token) => textOn(token, "--warning-subtle")),
+  ...TINTED_TEXT.flatMap(({ token, tint }) =>
+    ["--card", "--background"].map((background) => ({
+      ...textOn(token, background),
+      label: `${token.slice(2)} on its ${tint}% tint over ${background.slice(2)}`,
+      tint,
+    })),
+  ),
   {
     label: "info on background",
     foreground: "--info",
     background: "--background",
-    floor: 4.5,
-  },
-  {
-    label: "priority-critical on card",
-    foreground: "--priority-critical",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "priority-high on card",
-    foreground: "--priority-high",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "priority-medium on card",
-    foreground: "--priority-medium",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "priority-low on card",
-    foreground: "--priority-low",
-    background: "--card",
     floor: 4.5,
   },
   {
@@ -238,30 +264,6 @@ export const TEXT_PAIRS: Array<{
   {
     label: "score-high on card",
     foreground: "--score-high",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "grade-strong on card",
-    foreground: "--grade-strong",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "grade-fair on card",
-    foreground: "--grade-fair",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "grade-weak on card",
-    foreground: "--grade-weak",
-    background: "--card",
-    floor: 4.5,
-  },
-  {
-    label: "grade-poor on card",
-    foreground: "--grade-poor",
     background: "--card",
     floor: 4.5,
   },
@@ -290,3 +292,14 @@ export const TEXT_PAIRS: Array<{
     floor: 3,
   })),
 ];
+
+export function pairContrast(
+  { foreground, background, tint }: TextPair,
+  read: (token: string) => string,
+): number | null {
+  const surface =
+    tint === undefined
+      ? read(background)
+      : `color-mix(in srgb, ${read(foreground)} ${tint}%, ${read(background)})`;
+  return contrastRatio(read(foreground), surface);
+}
