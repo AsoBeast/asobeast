@@ -15,6 +15,7 @@ import { ChangesService } from '../changes/changes.service';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { StoreNotSupportedError } from '../store-providers/errors';
 import {
@@ -57,6 +58,7 @@ export class AppsService {
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
     private readonly screenshots: ScreenshotRecorder,
+    private readonly screenshotQueue: ScreenshotQueue,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -248,6 +250,7 @@ export class AppsService {
       orderBy: { capturedAt: 'desc' },
     });
 
+    let pending = 0;
     const snapshot = await this.prisma.withTransaction(async (tx) => {
       const created = await tx.appSnapshot.create({
         data: toSnapshotData(
@@ -259,7 +262,7 @@ export class AppsService {
         where: { id: app.id },
         data: { name: normalized.title, iconUrl: normalized.iconUrl },
       });
-      await this.screenshots.record(tx, app, created);
+      pending = await this.screenshots.record(tx, app, created);
       return created;
     });
 
@@ -270,6 +273,7 @@ export class AppsService {
       previous ? this.toChangeSnapshot(previous, app.iconUrl, app.store) : null,
       this.toChangeSnapshot(snapshot, normalized.iconUrl ?? null, app.store),
     );
+    if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
 
     return {
       snapshotId: snapshot.id,

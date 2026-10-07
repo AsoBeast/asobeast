@@ -13,6 +13,11 @@ export const REVIEW_SYNC_JOB_OPTIONS = {
   backoff: { type: 'exponential', delay: 2 * 60_000 },
 } satisfies DefaultJobOptions;
 
+export const READ_SCREENSHOTS_JOB_OPTIONS = {
+  attempts: 4,
+  backoff: { type: 'exponential', delay: 30_000 },
+} satisfies DefaultJobOptions;
+
 export function reviewSyncJobOptions(store: Store): DefaultJobOptions {
   return store === Store.APP_STORE ? REVIEW_SYNC_JOB_OPTIONS : {};
 }

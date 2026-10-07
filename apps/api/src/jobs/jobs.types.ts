@@ -13,6 +13,7 @@ export const QUEUES = {
   ALERTS: 'alerts',
   BILLING: 'billing',
   AI: 'ai',
+  SCREENSHOTS: 'screenshots',
 } as const;
 
 export const FLOW_PRODUCERS = {
@@ -70,6 +71,7 @@ export const JOBS = {
   BILLING_EVENT: 'billing-event',
   BILLING_RECONCILE: 'billing-reconcile',
   TRIAL_NOTICES: 'trial-notices',
+  READ_SCREENSHOTS: 'read-screenshots',
 } as const;
 
 export interface BillingEventPayload {
@@ -88,6 +90,15 @@ export interface AuditCreativePayload extends WorkspaceJobPayload {
   appId: string;
   requestedAt: string;
   aiCallId?: string;
+}
+
+export interface ReadScreenshotsPayload extends WorkspaceJobPayload {
+  appId: string;
+  snapshotId: string;
+}
+
+export function readScreenshotsJobId(snapshotId: string): string {
+  return `screenshots~${snapshotId}`;
 }
 
 export function auditCreativeDeduplicationId(
