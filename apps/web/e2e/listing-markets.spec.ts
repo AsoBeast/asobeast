@@ -125,3 +125,27 @@ test("refreshes the market being looked at", async ({ page }) => {
     "/api/backend/apps/app-1/refresh",
   ]);
 });
+
+test("the budget card says how many app requests are market listings", async ({
+  page,
+  context,
+}) => {
+  const note =
+    "3 of the app requests refresh the listing of a market you track keywords in.";
+
+  await page.goto("/settings");
+  await expect(page.getByText("Daily request budget")).toBeVisible();
+  await expect(page.getByText(note)).toHaveCount(0);
+
+  await context.addCookies([
+    {
+      name: "e2e_budget_quota",
+      value: "markets",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+
+  await expect(page.getByText(note)).toBeVisible();
+});

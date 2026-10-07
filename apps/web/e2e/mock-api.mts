@@ -22,6 +22,7 @@ import {
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   METADATA_AUDIT_PL,
+  MARKET_BUDGET,
   METADATA_AUDITS,
   APP_1_LISTING_MARKETS,
   APP_1_PL_CHANGES,
@@ -985,6 +986,7 @@ const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
+  ["markets", MARKET_BUDGET],
 ]);
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 

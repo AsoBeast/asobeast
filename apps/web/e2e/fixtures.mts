@@ -2091,6 +2091,7 @@ export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
 
 export const BUDGET: DailyBudget = {
   apps: 3,
+  marketListings: 0,
   keywords: 12,
   categories: 4,
   reviews: 2,
@@ -2101,6 +2102,7 @@ export const BUDGET: DailyBudget = {
     {
       store: "APP_STORE",
       apps: 3,
+      marketListings: 0,
       keywords: 12,
       categories: 4,
       reviews: 2,
@@ -2111,6 +2113,7 @@ export const BUDGET: DailyBudget = {
     {
       store: "GOOGLE_PLAY",
       apps: 0,
+      marketListings: 0,
       keywords: 0,
       categories: 0,
       reviews: 0,
@@ -2137,6 +2140,8 @@ export const HOT_BUDGET: DailyBudget = {
   utilization: 0.92,
   stores: BUDGET.stores.map((store) => ({ ...store, utilization: 0.92 })),
 };
+
+export const MARKET_BUDGET: DailyBudget = { ...BUDGET, marketListings: 3 };
 
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,
