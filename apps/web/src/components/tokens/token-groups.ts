@@ -107,6 +107,13 @@ export interface TextPair {
   tint?: number;
 }
 
+const GRADE_TEXT = [
+  "--grade-strong",
+  "--grade-fair",
+  "--grade-weak",
+  "--grade-poor",
+];
+
 const STATUS_TEXT = [
   "--success",
   "--warning",
@@ -118,26 +125,17 @@ const STATUS_TEXT = [
   "--priority-high",
   "--priority-medium",
   "--priority-low",
-  "--grade-strong",
-  "--grade-fair",
-  "--grade-weak",
-  "--grade-poor",
+  ...GRADE_TEXT,
 ];
 
 const SUBTLE_TEXT = ["--success", "--warning", "--signal-up", "--signal-down"];
 
-const GAP_ROW_TEXT = [
-  "--foreground",
-  "--muted-foreground",
-  "--grade-strong",
-  "--grade-fair",
-  "--grade-weak",
-  "--grade-poor",
-];
+const GAP_ROW_TEXT = ["--foreground", "--muted-foreground", ...GRADE_TEXT];
 
 const TINTED_TEXT = [
   { token: "--destructive", tint: 5 },
   { token: "--destructive", tint: 10 },
+  { token: "--destructive", tint: 12 },
   { token: "--info", tint: 10 },
   { token: "--priority-critical", tint: 10 },
   { token: "--priority-high", tint: 10 },
@@ -236,8 +234,10 @@ export const TEXT_PAIRS: TextPair[] = [
   ),
   ...SUBTLE_TEXT.map((token) => textOn(token, `${token}-subtle`)),
   ...GAP_ROW_TEXT.map((token) => textOn(token, "--warning-subtle")),
+  ...GRADE_TEXT.map((token) => textOn("--foreground", `${token}-subtle`)),
+  textOn("--muted-foreground", "--success-subtle"),
   ...TINTED_TEXT.flatMap(({ token, tint }) =>
-    ["--card", "--background"].map((background) => ({
+    ["--card", "--background", "--popover"].map((background) => ({
       ...textOn(token, background),
       label: `${token.slice(2)} on its ${tint}% tint over ${background.slice(2)}`,
       tint,

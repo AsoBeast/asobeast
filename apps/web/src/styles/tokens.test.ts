@@ -80,6 +80,11 @@ describe("design tokens", () => {
     expect(resolve("--dangling", scope)).toBe("");
   });
 
+  it("labels every text pair once", () => {
+    const labels = TEXT_PAIRS.map(({ label }) => label);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
   it("keeps every literal colour in the primitive layer", () => {
     const semanticLiterals = Object.entries({
       ...declarations(semantic, ":root"),
