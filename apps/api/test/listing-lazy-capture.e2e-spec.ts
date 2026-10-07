@@ -134,6 +134,32 @@ describe('listing capture on the first keyword of a market (e2e)', () => {
     await expect(marketRefreshes()).resolves.toHaveLength(2);
   });
 
+  it('asks for the listing when a paused market keyword resumes', async () => {
+    const { primary, rival } = await seed();
+    const keyword = await prisma.keyword.create({
+      data: { text: 'gewohnheit', store: Store.APP_STORE, country: 'de' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: primary.id,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: false,
+      },
+    });
+
+    await api
+      .patch(`/apps/${primary.id}/keywords/${keyword.id}`)
+      .send({ active: true })
+      .expect(200);
+
+    const jobs = await marketRefreshes();
+    expect(jobs.map((data) => data.appId).sort()).toEqual(
+      [primary.id, rival.id].sort(),
+    );
+    expect(jobs.every((data) => data.country === 'de')).toBe(true);
+  });
+
   it('asks for nothing when the keyword is in the home market', async () => {
     const { primary } = await seed();
 

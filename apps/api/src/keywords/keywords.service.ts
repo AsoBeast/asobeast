@@ -233,7 +233,7 @@ export class KeywordsService {
     keywordId: string,
     data: KeywordUpdateRequest,
   ): Promise<TrackedKeywordItem> {
-    await ensureApp(this.prisma, appId);
+    const app = await ensureApp(this.prisma, appId);
     const keyword = await this.ensureTracked(appId, keywordId);
     if (data.active === true) {
       assertStorefront(keyword.store, keyword.country);
@@ -252,6 +252,7 @@ export class KeywordsService {
         });
         await this.claimForManual(tx, appId, [keywordId]);
       });
+      await this.listings.request(app, keyword.country);
     } else {
       await this.prisma.trackedKeyword.update({
         where: { appId_keywordId: { appId, keywordId } },
