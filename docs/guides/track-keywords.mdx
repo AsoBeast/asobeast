@@ -1,8 +1,8 @@
 ---
 title: Track keywords
-description: "Add keywords per storefront on the keyword monitor, paste the private iOS keyword field by hand, and know what every added market costs in daily store requests."
+description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, paste the private iOS keyword field by hand, and know what every added market costs in daily store requests."
 icon: key
-keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget"]
+keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags"]
 ---
 
 The keyword monitor is where you decide what asobeast checks every day. Each keyword you add belongs to one storefront, and every keyword in every market adds one store search to the daily run.
@@ -18,7 +18,7 @@ You need an imported app. See [Import an app](/guides/import-an-app).
     The country filter at the top of the keyword monitor sets the storefront every add applies to, and shows the keyword count per market.
   </Step>
   <Step title="Add one keyword or paste several">
-    A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market.
+    A single add takes one phrase. Bulk add accepts a list, one phrase per line, and creates them all in the selected market. To add a list that carries countries, tags or notes, [import it from a CSV file](#import-keywords-from-a-csv-file).
   </Step>
   <Step title="Wait for the next daily run">
     Positions appear after the next daily pipeline, which defaults to 03:00 UTC.
@@ -32,6 +32,67 @@ Every added keyword carries a source, which sets its starting relevance. A keywo
 Switch the country filter and add the phrase again. That creates a second keyword row, checked by a second search.
 
 The two rows are genuinely independent: positions, popularity and difficulty all differ per storefront. They also cost twice as much, because each market multiplies daily search volume against one fixed budget. See [Countries and markets](/concepts/countries) and [The daily pipeline and rate limits](/concepts/pipeline).
+
+## Import keywords from a CSV file
+
+**Import CSV**, beside **Add keywords** on the keyword monitor, tracks a list from a file. Use it to bring keywords over from a spreadsheet or another tool, to track the same list across several markets in one go, or to copy the keywords of one app to another with the file the keyword monitor exports.
+
+<Steps>
+  <Step title="Choose a file">
+    Pick a file of up to 500 rows, one keyword per row. CSV, TSV and plain text files are read, saved as UTF-8 or UTF-16, separated by commas, semicolons, tabs or pipes, so the file Excel writes on any regional setting works. **Download template** gives you a file with the right header. The file is read in your browser; only the rows are sent.
+  </Step>
+  <Step title="Check the columns">
+    The dialog shows which column it read as the keyword, the country, the tags and the note, and whether it treated the first row as a header. Correct any of them in place. Rows without a country use the market selected in the dialog, which starts as the market you were looking at.
+  </Step>
+  <Step title="Review every row">
+    The table lists each row with a status and, for a refused row, the reason. Filter it by status. Nothing is saved yet.
+  </Step>
+  <Step title="Import">
+    The button says how many keywords it will track. Rankings appear after the next daily run, as for any new keyword.
+  </Step>
+</Steps>
+
+### Columns
+
+A file needs a keyword column and nothing else. Headers are matched ignoring case, spaces and punctuation, so `Search Term` and `search_term` are the same header. Every other column, such as position or popularity, is ignored.
+
+| Column | Required | Headers that are recognised |
+| --- | --- | --- |
+| Keyword | Yes | `keyword`, `keywords`, `keyphrase`, `phrase`, `term`, `search term`, `search query`, `query`, `text` |
+| Country | No | `country`, `country code`, `storefront`, `market`, `region`, `location` |
+| Tags | No | `tags`, `tag`, `labels`, `groups`, `keyword group`, `list`, separated by semicolons, pipes or commas |
+| Note | No | `note`, `notes`, `comment`, `comments`, `remark` |
+
+A file with no header row is read as one column of keywords. If a header is not recognised, switch **First row is a header** on and choose the column yourself. A country is the two letter storefront code, such as `us`, `gb` or `pl`; it must be a storefront of the app's store. Upper case is fine.
+
+The keyword export is a valid import file. It ends with a `country` column, so a file exported from the `pl` market tracks in `pl` whatever market the dialog starts on. Export from one app and import into another app of the same store to copy a keyword set, tags and notes included.
+
+### What each status means
+
+| Status | Meaning |
+| --- | --- |
+| New | The keyword will be tracked in that market, with its tags and note |
+| Resume | The app tracked it before and it is paused, so the import resumes it. Its tags and note are left as they are |
+| Already tracked | Skipped. Nothing changes |
+| Duplicate | The same phrase and market already appear on an earlier line, ignoring case and punctuation. Skipped |
+| Invalid | Refused, with the reason: empty, longer than 100 characters, more than five words, not a storefront of this store, a tag that breaks the tag rules, more than 8 tags, or a note over 500 characters. Fix the row and import the file again |
+| Over limit | Importing it would pass the keyword limit of your plan. Skipped |
+
+The import tracks the new and resumed rows together, or none of them. Rows that are skipped or refused never stop the others, and the dialog says how many were skipped. Importing the same file twice is safe: the second time every row is already tracked.
+
+Imported keywords are tracked like keywords you typed (source `MANUAL`). The paused state of a keyword in the file is not imported, and the tags and note of a keyword that is already tracked are never overwritten; change those on the row menu. See [Tag keywords and keep notes](#tag-keywords-and-keep-notes).
+
+A phrase that another app of your workspace already tracks in the same market costs no extra keyword market and no extra store request, because the search is shared.
+
+### What an import costs
+
+Every keyword market an import opens adds the same daily store requests as adding it by hand, one a day on the App Store and eight a day on Google Play, and each new keyword is scored once. The dialog states the requests a day the import adds. The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) also sees what share of the store's daily capacity that brings it to, and a warning from 85 percent. See [Watch your request budget](#watch-your-request-budget).
+
+An import takes up to 500 rows. For a longer list, split the file and import the parts one after the other, previewing each. On a hosted plan, rows beyond your keyword limit are listed as over limit and skipped, so you can see what fits before you confirm.
+
+### Import through the API
+
+The dialog sends JSON rows, so a script can do the same: `POST /apps/{id}/keywords/import/preview` answers, for every row, what an import would do and writes nothing, and `POST /apps/{id}/keywords/import` runs it. The preview counts against the read budget and works with a read only token. See [Rate limits and quotas](/api-reference/rate-limits#request-size-limits-apply-everywhere) and the API reference.
 
 ## Paste the iOS keyword field
 
@@ -150,6 +211,10 @@ A customer of a hosted instance watches their keyword markets on the plan card i
 - **A keyword shows `>200` every day.** It was checked and the app was not in the top 200. See [Positions and rank depth](/concepts/positions).
 - **Popularity and difficulty are empty.** Scoring runs weekly on `CRON_SCORING`, which defaults to Sunday 04:00 UTC.
 - **The budget card warns the operator the instance is over capacity.** Remove keywords or markets, or raise the per store rate limit and accept the risk of the store throttling your IP address.
+- **The whole file shows as one column.** The delimiter is detected only when every row has the same number of cells. Save the file again from the spreadsheet so each row has the same columns, or save it as CSV UTF-8.
+- **Letters look wrong in the review.** The file is not UTF-8, so it was read as Windows-1252. Save it as CSV UTF-8 and choose it again.
+- **A row says it is not a storefront.** Use the two letter code of the storefront, such as `gb` for the United Kingdom. Google Play and the App Store have different lists. See [Countries and markets](/concepts/countries).
+- **A row is over limit.** Your plan's keyword limit is full. Remove keywords you no longer need, or move to a larger plan, then import the file again; the rows that were imported are skipped as already tracked.
 
 ## Related
 
