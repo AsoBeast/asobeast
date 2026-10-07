@@ -249,4 +249,16 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     unavailableOn404:
       "Change impact is not available on this instance. It needs a newer asobeast API.",
   }),
+
+  defineReadTool({
+    name: "category_ranks",
+    title: "Category ranks",
+    description:
+      "Daily chart positions of one app over a date window: one series per chart it was captured in, for the free, paid and grossing collections, in its own category and overall, each with the current position and the daily points. Home storefront only. Position is 1-based; null means the app was not found within the captured chart depth (render as >200), never zero. Defaults to the last 90 days, at most 365.",
+    inputSchema: z.object({ appId, from, to }),
+    request: ({ appId, from, to }) => ({
+      path: `/apps/${seg(appId)}/category-ranks`,
+      params: { from, to },
+    }),
+  }),
 ];

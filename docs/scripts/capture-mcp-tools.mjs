@@ -6,13 +6,19 @@ const CATALOG = new URL(
   import.meta.url,
 );
 
-const { ACTION_TOOLS, APP_TOOLS, INSIGHT_TOOLS, KEYWORD_TOOLS, MCP_TOOLS } =
-  await import(CATALOG).catch(() => {
-    console.error(
-      "the tool catalog is not built, run pnpm --filter @asobeast/mcp-tools build first",
-    );
-    process.exit(1);
-  });
+const {
+  ACTION_TOOLS,
+  APP_TOOLS,
+  COMPETITOR_TOOLS,
+  INSIGHT_TOOLS,
+  KEYWORD_TOOLS,
+  MCP_TOOLS,
+} = await import(CATALOG).catch(() => {
+  console.error(
+    "the tool catalog is not built, run pnpm --filter @asobeast/mcp-tools build first",
+  );
+  process.exit(1);
+});
 
 const CHECK = process.argv.includes("--check");
 const OUTPUT = join(
@@ -34,9 +40,14 @@ const GROUPS = [
     note: "Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews.\n\nEvery parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.",
   },
   {
+    title: "Competitors",
+    tools: COMPETITOR_TOOLS,
+    note: "Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads.",
+  },
+  {
     title: "Insights",
     tools: INSIGHT_TOOLS,
-    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.",
+    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. `category_ranks` is the home storefront only and defaults to the last 90 days.",
   },
   {
     title: "Actions",
