@@ -12,7 +12,7 @@ const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const KEYWORDS = `/apps/${APP_IMPORT_ID}/keywords`;
 
 test.beforeEach(async ({ request }) => {
-  await request.post(`${MOCK_API_URL}/__reset/keywords`, {
+  await request.post(`${MOCK_API_URL}/__reset/keywords/${APP_IMPORT_ID}`, {
     failOnStatusCode: true,
   });
 });

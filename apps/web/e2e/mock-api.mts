@@ -144,9 +144,11 @@ const initialKeywords = new Map(
   ]),
 );
 
-function resetKeywords(): void {
+function resetKeywords(only?: string): void {
   for (const [id, keywords] of initialKeywords) {
-    DATASETS[id].keywords = structuredClone(keywords);
+    if (only === undefined || id === only) {
+      DATASETS[id].keywords = structuredClone(keywords);
+    }
   }
 }
 
@@ -1035,9 +1037,9 @@ const routes: Route[] = [
   ),
   {
     method: "POST",
-    pattern: /^\/__reset\/keywords$/,
-    handler: (_p, _req, res) => {
-      resetKeywords();
+    pattern: /^\/__reset\/keywords(?:\/([^/]+))?$/,
+    handler: ([id], _req, res) => {
+      resetKeywords(id);
       json(res, 200, { reset: true });
     },
   },
