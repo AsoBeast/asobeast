@@ -26,4 +26,5 @@ allowBuilds:
   msgpackr-extract: false
   prisma: false
   sharp: false
+  tesseract.js: false
   unrs-resolver: false
