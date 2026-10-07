@@ -1,7 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
-import { normalizeText, TRACKED_KEYWORD_CHAR_LIMIT } from '@asobeast/shared';
+import {
+  KeywordImportReason,
+  normalizeText,
+  TRACKED_KEYWORD_CHAR_LIMIT,
+} from '@asobeast/shared';
 import { QUEUES, queueNameForStore } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -16,22 +20,43 @@ export interface KeywordApp {
   storeAppId: string;
 }
 
-export function normalizeKeyword(raw: string): string {
+type KeywordTextReason = Extract<
+  KeywordImportReason,
+  'empty' | 'tooLong' | 'tooManyWords'
+>;
+
+export type KeywordTextCheck =
+  | { ok: true; text: string }
+  | { ok: false; reason: KeywordTextReason; message: string };
+
+export function checkKeywordText(raw: string): KeywordTextCheck {
   const text = normalizeText(raw);
   if (!text) {
-    throw new BadRequestException('Keyword must not be empty');
+    return { ok: false, reason: 'empty', message: 'Keyword must not be empty' };
   }
   if (text.length > TRACKED_KEYWORD_CHAR_LIMIT) {
-    throw new BadRequestException(
-      `Keyword exceeds ${TRACKED_KEYWORD_CHAR_LIMIT} characters`,
-    );
+    return {
+      ok: false,
+      reason: 'tooLong',
+      message: `Keyword exceeds ${TRACKED_KEYWORD_CHAR_LIMIT} characters`,
+    };
   }
   if (text.split(' ').length > MAX_KEYWORD_WORDS) {
-    throw new BadRequestException(
-      `Keyword "${text}" exceeds ${MAX_KEYWORD_WORDS} words`,
-    );
+    return {
+      ok: false,
+      reason: 'tooManyWords',
+      message: `Keyword "${text}" exceeds ${MAX_KEYWORD_WORDS} words`,
+    };
   }
-  return text;
+  return { ok: true, text };
+}
+
+export function normalizeKeyword(raw: string): string {
+  const check = checkKeywordText(raw);
+  if (!check.ok) {
+    throw new BadRequestException(check.message);
+  }
+  return check.text;
 }
 
 export async function ensureApp(
