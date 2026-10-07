@@ -104,7 +104,7 @@ describe('ChangesService', () => {
     it('persists each change with its market and dispatches no alert', async () => {
       const changes = await service.recordMarketRefresh(
         'app_1',
-        'de',
+        { home: 'us', market: 'de' },
         makeSnapshot({ title: 'Alt' }),
         makeSnapshot({ title: 'Neu' }),
       );
@@ -126,10 +126,31 @@ describe('ChangesService', () => {
       expect(dispatch).not.toHaveBeenCalled();
     });
 
+    it('files a change of the home market under the home timeline', async () => {
+      await service.recordMarketRefresh(
+        'app_1',
+        { home: 'us', market: 'us' },
+        makeSnapshot({ title: 'Alt' }),
+        makeSnapshot({ title: 'Neu' }),
+      );
+
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            country: null,
+            field: 'title',
+            before: 'Alt',
+            after: 'Neu',
+          },
+        ],
+      });
+    });
+
     it('writes nothing for the first listing of a market', async () => {
       const changes = await service.recordMarketRefresh(
         'app_1',
-        'de',
+        { home: 'us', market: 'de' },
         null,
         makeSnapshot(),
       );

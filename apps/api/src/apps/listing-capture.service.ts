@@ -134,7 +134,12 @@ export class ListingCaptureService {
       await this.keywords.syncFromSnapshot(app.id);
       await this.changes.recordRefresh(app.id, before, after);
     } else {
-      await this.changes.recordMarketRefresh(app.id, market, before, after);
+      await this.changes.recordMarketRefresh(
+        app.id,
+        { home: app.country, market },
+        before,
+        after,
+      );
     }
 
     return {

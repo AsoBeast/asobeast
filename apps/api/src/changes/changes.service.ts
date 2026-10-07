@@ -11,7 +11,12 @@ import {
   DiffableChangeSnapshot,
   detectChanges,
 } from './change-detector';
-import { eventsIn, HOME_EVENTS, listingMarket } from '../apps/listing';
+import {
+  eventsIn,
+  HOME_EVENTS,
+  listingMarket,
+  storedMarket,
+} from '../apps/listing';
 
 const MAX_EVENTS = 200;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -117,14 +122,15 @@ export class ChangesService {
 
   async recordMarketRefresh(
     appId: string,
-    market: string,
+    listing: { home: string; market: string },
     prev: DiffableChangeSnapshot | null,
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
     const changes = detectChanges(prev, next);
+    const country = storedMarket(listing.home, listing.market);
     if (changes.length > 0) {
       await this.prisma.changeEvent.createMany({
-        data: changes.map((change) => ({ appId, country: market, ...change })),
+        data: changes.map((change) => ({ appId, country, ...change })),
       });
     }
     return changes;
