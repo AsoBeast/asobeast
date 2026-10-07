@@ -160,6 +160,9 @@ test("P-WEB-03 reviews every row, then imports the new and paused ones with thei
   await expect(
     rowOf(page, /deep work/).getByRole("group", { name: "Tags: core, brand" }),
   ).toBeVisible();
+  expect(
+    sent.filter((request) => request.url().includes("/preview")),
+  ).toHaveLength(1);
 });
 
 test("P-WEB-04 says when a file has no header and what it ignores", async ({

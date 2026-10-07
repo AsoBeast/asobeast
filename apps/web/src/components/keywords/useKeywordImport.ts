@@ -31,6 +31,7 @@ import {
 } from "@/lib/keyword-import";
 import {
   invalidateKeywordImport,
+  invalidateKeywordMutation,
   keywordImportPreviewOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
@@ -93,7 +94,10 @@ export function useKeywordImport(
       return importKeywords(appId, request);
     },
     onSuccess: (outcome) => {
-      invalidateKeywordImport(queryClient, appId);
+      setLoaded(null);
+      setView(null);
+      setMarket(homeMarket);
+      invalidateKeywordMutation(queryClient, appId);
       const { title, description } = importToast(outcome);
       toast.success(title, { description });
       onImported();
