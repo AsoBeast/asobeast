@@ -218,8 +218,9 @@ async function seedWorkspace(
     },
   });
 
+  const snapshots = new Map<string, string>();
   for (const target of [apple, play, competitor]) {
-    await db.appSnapshot.create({
+    const snapshot = await db.appSnapshot.create({
       data: {
         appId: target.id,
         title: `${id} ${target.storeAppId}`,
@@ -229,7 +230,21 @@ async function seedWorkspace(
         raw: { source: 'isolation', primaryGenreId: 6007, price: 0 },
       },
     });
+    snapshots.set(target.id, snapshot.id);
   }
+  await db.snapshotScreenshot.create({
+    data: {
+      snapshotId: snapshots.get(apple.id) as string,
+      workspaceId: id,
+      position: 1,
+      url: `https://is1-ssl.mzstatic.com/image/thumb/${id}/1.jpg/392x696bb.jpg`,
+      assetKey: `https://is1-ssl.mzstatic.com/image/thumb/${id}/1.jpg`,
+      status: 'read',
+      caption: `${id} caption`,
+      recipe: 'ocr1:eng',
+      readAt: new Date(),
+    },
+  });
 
   const keyword = await db.keyword.upsert({
     where: {

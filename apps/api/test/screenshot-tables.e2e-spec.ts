@@ -1,0 +1,145 @@
+import { execSync } from 'child_process';
+import { join } from 'path';
+import { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { PrismaClient, Store } from '@prisma/client';
+import { AppModule } from '../src/app.module';
+import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { testDb } from './helpers/test-db';
+import { obliterateQueues } from './obliterate-queues';
+
+const ASSET =
+  'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/cc/1.jpg';
+
+describe('Screenshot tables (e2e)', () => {
+  let app: INestApplication;
+  let prisma: PrismaClient;
+
+  beforeAll(async () => {
+    execSync('pnpm prisma migrate deploy', {
+      cwd: join(__dirname, '..'),
+      env: process.env,
+      stdio: 'ignore',
+    });
+    const moduleFixture = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleFixture.createNestApplication();
+    await app.init();
+    prisma = testDb();
+    await prisma.workspace.upsert({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      update: {},
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
+    });
+  });
+
+  beforeEach(async () => {
+    await prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "ScreenshotText" RESTART IDENTITY CASCADE',
+    );
+  });
+
+  afterAll(async () => {
+    await prisma.$disconnect();
+    await obliterateQueues(app);
+    await app.close();
+  });
+
+  const seedSnapshot = async () => {
+    const owned = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '111',
+        country: 'us',
+        name: 'Mine',
+      },
+    });
+    const snapshot = await prisma.appSnapshot.create({
+      data: { appId: owned.id, title: 'Mine', description: 'd', raw: {} },
+    });
+    await prisma.snapshotScreenshot.createMany({
+      data: [1, 2].map((position) => ({
+        snapshotId: snapshot.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        position,
+        url: `${ASSET}/392x696bb.jpg`,
+        assetKey: ASSET,
+      })),
+    });
+    return { owned, snapshot };
+  };
+
+  it('defaults a new screenshot to pending with no caption', async () => {
+    const { snapshot } = await seedSnapshot();
+
+    const rows = await prisma.snapshotScreenshot.findMany({
+      where: { snapshotId: snapshot.id },
+      orderBy: { position: 'asc' },
+    });
+
+    expect(rows.map((row) => [row.position, row.status, row.caption])).toEqual([
+      [1, 'pending', null],
+      [2, 'pending', null],
+    ]);
+  });
+
+  it('removes the screenshots of a snapshot when the snapshot is deleted', async () => {
+    const { snapshot } = await seedSnapshot();
+
+    await prisma.appSnapshot.delete({ where: { id: snapshot.id } });
+
+    await expect(prisma.snapshotScreenshot.count()).resolves.toBe(0);
+  });
+
+  it('removes the screenshots of an app when the app is deleted and keeps the shared text', async () => {
+    const { owned } = await seedSnapshot();
+    await prisma.screenshotText.create({
+      data: {
+        assetKey: ASSET,
+        recipe: 'ocr1:eng',
+        status: 'read',
+        caption: 'Track every habit',
+        engine: 'tesseract.js@7.0.0',
+      },
+    });
+
+    await prisma.app.delete({ where: { id: owned.id } });
+
+    await expect(prisma.snapshotScreenshot.count()).resolves.toBe(0);
+    await expect(prisma.screenshotText.count()).resolves.toBe(1);
+  });
+
+  it('keeps one cached text per image and recipe and lets another recipe coexist', async () => {
+    const data = {
+      assetKey: ASSET,
+      status: 'read',
+      engine: 'tesseract.js@7.0.0',
+    };
+    await prisma.screenshotText.create({
+      data: { ...data, recipe: 'ocr1:eng' },
+    });
+    await prisma.screenshotText.create({
+      data: { ...data, recipe: 'ocr1:eng+jpn' },
+    });
+
+    await expect(
+      prisma.screenshotText.create({ data: { ...data, recipe: 'ocr1:eng' } }),
+    ).rejects.toThrow();
+    await expect(prisma.screenshotText.count()).resolves.toBe(2);
+  });
+
+  it('stores a structured detail on a change event and reads it back', async () => {
+    const { owned } = await seedSnapshot();
+    const detail = { kind: 'captions', added: ['Track habits'], removed: [] };
+
+    const event = await prisma.changeEvent.create({
+      data: { appId: owned.id, field: 'screenshotCaptions', detail },
+    });
+
+    await expect(
+      prisma.changeEvent.findUnique({ where: { id: event.id } }),
+    ).resolves.toMatchObject({ detail });
+  });
+});

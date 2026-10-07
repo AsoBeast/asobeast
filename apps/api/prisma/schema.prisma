@@ -52,6 +52,7 @@ model Workspace {
   actions     ActionItem[]
   actionEvents ActionEvent[]
   aiCalls     AiCall[]
+  snapshotScreenshots SnapshotScreenshot[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -215,9 +216,40 @@ model AppSnapshot {
   releasedAt     DateTime?
   storeUpdatedAt DateTime?
   raw            Json
+  screenshots    SnapshotScreenshot[]
   capturedAt     DateTime  @default(now())
 
   @@index([appId, capturedAt])
+}
+
+model SnapshotScreenshot {
+  snapshotId  String
+  snapshot    AppSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+  workspaceId String
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  position    Int
+  url         String
+  assetKey    String
+  status      String      @default("pending")
+  caption     String?
+  recipe      String?
+  readAt      DateTime?
+
+  @@id([snapshotId, position])
+  @@index([workspaceId])
+}
+
+model ScreenshotText {
+  assetKey  String
+  recipe    String
+  status    String
+  caption   String?
+  engine    String
+  createdAt DateTime @default(now())
+  usedAt    DateTime @default(now())
+
+  @@id([assetKey, recipe])
+  @@index([usedAt])
 }
 
 model Keyword {
@@ -353,6 +385,7 @@ model ChangeEvent {
   field      String
   before     String?
   after      String?
+  detail     Json?
   capturedAt DateTime @default(now())
 
   @@index([appId, capturedAt])

@@ -125,6 +125,16 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         prisma.changeEvent.findMany({ skip, take, orderBy: { id: 'asc' } }),
     ),
     table(
+      'snapshotScreenshot',
+      () => prisma.snapshotScreenshot.count(),
+      (skip, take) =>
+        prisma.snapshotScreenshot.findMany({
+          skip,
+          take,
+          orderBy: [{ snapshotId: 'asc' }, { position: 'asc' }],
+        }),
+    ),
+    table(
       'auditInsight',
       () => prisma.auditInsight.count(),
       (skip, take) =>
