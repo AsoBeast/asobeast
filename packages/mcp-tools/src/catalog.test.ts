@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { MCP_TOOLS, toolByName } from "./index";
+import { MCP_TOOLS, requestOf, toolByName } from "./index";
 
 describe("the tool catalog", () => {
+  it("lists no write tool among the read tools", () => {
+    for (const tool of MCP_TOOLS) {
+      expect(tool.kind).toBe("read");
+      expect(requestOf(tool, {}).method).toBe("GET");
+    }
+  });
+
   it("names every tool once", () => {
     const names = MCP_TOOLS.map((tool) => tool.name);
 

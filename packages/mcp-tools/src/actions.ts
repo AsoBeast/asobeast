@@ -22,7 +22,7 @@ const DOMAIN = [
   "DISMISSED (the owner rejected it — do not re-recommend it), RESOLVED (the underlying condition",
   "stopped on its own).",
   "Apple and Google Play scores are not comparable across stores, so never rank one against the other.",
-  "This surface is read-only by design: propose changes to the human rather than attempting a write.",
+  "Change an action's status only when the human asked for it. A read-only connection cannot change anything, so propose the change to the human instead.",
 ].join(" ");
 
 const RESERVED_ACTION_PATHS = ["summary", "activity", "ai-status", "run"];
@@ -72,6 +72,12 @@ const limit = z
 function joinValues(values: readonly string[] | undefined): string | undefined {
   return values && values.length > 0 ? values.join(",") : undefined;
 }
+
+export const actionId = z
+  .string()
+  .min(1)
+  .refine((id) => !RESERVED_ACTION_PATHS.includes(id), "Not an action id.")
+  .describe("The action id from list_actions or app_actions.");
 
 export const ACTION_TOOLS: ReadTool[] = [
   defineReadTool({
@@ -168,14 +174,7 @@ export const ACTION_TOOLS: ReadTool[] = [
     title: "Get action",
     description: `One action with its evidence, its full history of lifecycle events, the daily series of the metric it is about and, once marked done, the measured before and after. ${DOMAIN} An outcome is a measured change with its dates, not a promise, and other changes in the same days can also move it.`,
     inputSchema: z.object({
-      actionId: z
-        .string()
-        .min(1)
-        .refine(
-          (id) => !RESERVED_ACTION_PATHS.includes(id),
-          "Not an action id.",
-        )
-        .describe("The action id from list_actions or app_actions."),
+      actionId,
     }),
     request: ({ actionId }) => ({ path: `/actions/${seg(actionId)}` }),
     unavailableOn404:

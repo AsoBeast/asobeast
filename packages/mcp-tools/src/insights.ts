@@ -3,16 +3,11 @@ import {
   CHANGE_IMPACT_WINDOWS,
   COUNTRY_PATTERN,
   QUERY_BOUNDS,
-  UTC_DATE_PATTERN,
 } from "@asobeast/shared";
-import { isUtcCalendarDate } from "./calendar-date";
+import { utcDate } from "./calendar-date";
 import { defineReadTool, seg, type ReadTool } from "./define";
 
 const appId = z.string().describe("The app id from list_apps.");
-const utcDate = z
-  .string()
-  .regex(UTC_DATE_PATTERN)
-  .refine(isUtcCalendarDate, { error: "must be a date on the calendar" });
 const from = utcDate
   .optional()
   .describe("Inclusive start date as a UTC date string (YYYY-MM-DD).");
