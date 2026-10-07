@@ -203,6 +203,7 @@ model AppSnapshot {
   id             String    @id @default(cuid())
   appId          String
   app            App       @relation(fields: [appId], references: [id], onDelete: Cascade)
+  country        String?
   title          String
   subtitle       String?
   summary        String?
@@ -217,7 +218,7 @@ model AppSnapshot {
   raw            Json
   capturedAt     DateTime  @default(now())
 
-  @@index([appId, capturedAt])
+  @@index([appId, country, capturedAt])
 }
 
 model Keyword {
@@ -350,12 +351,13 @@ model ChangeEvent {
   id         String   @id @default(cuid())
   appId      String
   app        App      @relation(fields: [appId], references: [id], onDelete: Cascade)
+  country    String?
   field      String
   before     String?
   after      String?
   capturedAt DateTime @default(now())
 
-  @@index([appId, capturedAt])
+  @@index([appId, country, capturedAt])
 }
 
 model Review {
