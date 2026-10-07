@@ -1,9 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsString, MaxLength, ValidateIf } from 'class-validator';
-import { ActionUpdateRequest } from '@asobeast/shared';
+import { ACTION_NOTE_MAX_LENGTH, ActionUpdateRequest } from '@asobeast/shared';
 import { ActionTransitionDto } from './action-transition.dto';
-
-export const ACTION_NOTE_MAX_LENGTH = 500;
 
 export class UpdateActionDto
   extends ActionTransitionDto

@@ -512,12 +512,14 @@ export type ActionUpdateStatus = Extract<
   'OPEN' | 'SNOOZED' | 'DONE' | 'DISMISSED'
 >;
 
-export const ACTION_UPDATE_STATUSES: readonly ActionUpdateStatus[] = [
+export const ACTION_UPDATE_STATUSES = [
   'OPEN',
   'SNOOZED',
   'DONE',
   'DISMISSED',
-];
+] as const satisfies readonly ActionUpdateStatus[];
+
+export const ACTION_NOTE_MAX_LENGTH = 500;
 
 export interface ActionUpdateRequest {
   status: ActionUpdateStatus;
