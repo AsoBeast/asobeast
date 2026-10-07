@@ -87,6 +87,30 @@ export function marketListingTargets(
   );
 }
 
+interface AppFamily {
+  id: string;
+  store: Store;
+  country: string;
+  competitors: ReadonlyArray<{ id: string; store: Store }>;
+  tracked: ReadonlyArray<{ keyword: { country: string } }>;
+}
+
+export function appFamilyMarketListings(app: AppFamily): MarketListingTarget[] {
+  return marketListingTargets(
+    [
+      { id: app.id, store: app.store, primaryAppId: null },
+      ...app.competitors.map((rival) => ({
+        id: rival.id,
+        store: rival.store,
+        primaryAppId: app.id,
+      })),
+    ],
+    [...new Set(app.tracked.map((row) => row.keyword.country))]
+      .filter((country) => country !== app.country)
+      .map((country) => ({ appId: app.id, country })),
+  );
+}
+
 export function dedupeKeywords(keywords: KeywordTarget[]): KeywordTarget[] {
   const seen = new Map<string, KeywordTarget>();
   for (const keyword of keywords) {

@@ -39,13 +39,13 @@ import { ActiveWorkspaces } from './active-workspaces';
 import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 import { DailyCapacity } from './daily-capacity.service';
 import {
+  appFamilyMarketListings,
   AppTarget,
   DailyTargets,
   DailyTargetsCollector,
   dedupeBuckets,
   dedupeKeywords,
   MarketListingTarget,
-  marketListingTargets,
 } from './daily-targets.service';
 import { DailyStage, DegradationPlan, planDegradation } from './degradation';
 import { interleave } from './interleave';
@@ -332,19 +332,7 @@ export class PipelineService {
     const reviewApps: AppTarget[] = app.isCompetitor
       ? []
       : [{ id: app.id, store: app.store }];
-    const marketListings = marketListingTargets(
-      [
-        { id: app.id, store: app.store, primaryAppId: null },
-        ...app.competitors.map((rival) => ({
-          id: rival.id,
-          store: rival.store,
-          primaryAppId: app.id,
-        })),
-      ],
-      [...new Set(app.tracked.map((row) => row.keyword.country))]
-        .filter((country) => country !== app.country)
-        .map((country) => ({ appId: app.id, country })),
-    );
+    const marketListings = appFamilyMarketListings(app);
 
     return this.enqueue(
       { apps, keywords, reviewApps, marketListings },
