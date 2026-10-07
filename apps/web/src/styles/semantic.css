@@ -7,6 +7,7 @@
   --popover-foreground: var(--neutral-900);
   --primary: var(--accent-700);
   --primary-foreground: var(--neutral-50);
+  --primary-hover: color-mix(in oklab, var(--primary) 80%, transparent);
   --secondary: var(--neutral-100);
   --secondary-foreground: var(--neutral-900);
   --muted: var(--neutral-100);
@@ -83,6 +84,7 @@
     --popover-foreground: var(--neutral-50);
     --primary: var(--accent-400);
     --primary-foreground: var(--neutral-950);
+    --primary-hover: color-mix(in oklab, var(--primary) 80%, transparent);
     --secondary: var(--neutral-850);
     --secondary-foreground: var(--neutral-50);
     --muted: var(--neutral-850);

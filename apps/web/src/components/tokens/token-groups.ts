@@ -31,6 +31,7 @@ export const SEMANTIC_SURFACES = [
   "--popover-foreground",
   "--primary",
   "--primary-foreground",
+  "--primary-hover",
   "--secondary",
   "--secondary-foreground",
   "--muted",
