@@ -353,7 +353,7 @@ export class ActionContextLoader {
     const auditByApp = new Map(auditScores.map((row) => [row.appId, row]));
     const versionsByApp = groupBy(snapshots, (row) => row.appId);
 
-    const derived = await Promise.all(apps.map((app) => this.derive(app.id)));
+    const derived = await Promise.all(apps.map((app) => this.derive(app)));
     const live = apps.flatMap((app, index) => {
       const rows = derived[index];
       return rows === null ? [] : [{ app, ...rows }];
@@ -409,19 +409,19 @@ export class ActionContextLoader {
     };
   }
 
-  private async derive(appId: string): Promise<{
+  private async derive(app: { id: string; country: string }): Promise<{
     tracked: TrackedKeywordItem[];
     metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] };
   } | null> {
     try {
       const [tracked, metadata] = await Promise.all([
-        this.keywords.listTracked(appId),
-        this.metadata.audit(appId),
+        this.keywords.listTracked(app.id),
+        this.metadata.audit(app.id, app.country),
       ]);
       return { tracked, metadata };
     } catch (error) {
       this.logger.warn(
-        `skipping app ${appId} in this action run: ${messageOf(error)}`,
+        `skipping app ${app.id} in this action run: ${messageOf(error)}`,
       );
       return null;
     }

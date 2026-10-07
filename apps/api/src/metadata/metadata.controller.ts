@@ -1,6 +1,7 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { MetadataAuditResult } from '@asobeast/shared';
+import { ListingMarketQueryDto } from '../apps/dto/listing-market-query.dto';
 import { MetadataService } from './metadata.service';
 
 @ApiTags('metadata')
@@ -10,7 +11,10 @@ export class MetadataController {
 
   @Get('audit')
   @ApiOperation({ summary: 'Metadata lint and keyword coverage matrix' })
-  audit(@Param('id') id: string): Promise<MetadataAuditResult> {
-    return this.metadata.audit(id);
+  audit(
+    @Param('id') id: string,
+    @Query() query: ListingMarketQueryDto,
+  ): Promise<MetadataAuditResult> {
+    return this.metadata.audit(id, query.country);
   }
 }

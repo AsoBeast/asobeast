@@ -23,6 +23,8 @@ export interface KeywordCoverageRow {
   bucket: KeywordBucket | null;
   fields: CoverageFieldStatus[];
   uncovered: boolean;
+  country?: string;
+  listingCountry?: string;
 }
 
 export interface KeywordFieldSuggestion {
@@ -38,6 +40,7 @@ export interface MetadataAuditResult {
   fields: MetadataFieldAudit[];
   coverage: KeywordCoverageRow[];
   keywordFieldSuggestion: KeywordFieldSuggestion | null;
+  country?: string;
 }
 
 export interface MetadataDraft {

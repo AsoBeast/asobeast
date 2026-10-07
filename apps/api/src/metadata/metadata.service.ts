@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  assertStorefront,
   fieldLength,
   KEYWORD_FIELD_BYTE_LIMIT,
   packKeywordField,
@@ -24,7 +25,7 @@ import {
 import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
+import { latestListingTexts, ListingTexts } from '../apps/listing-texts';
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -42,108 +43,143 @@ export class MetadataService {
     private readonly keywords: KeywordsService,
   ) {}
 
-  async audit(appId: string): Promise<MetadataAuditResult> {
+  async audit(appId: string, country?: string): Promise<MetadataAuditResult> {
     const app = await this.ensureApp(appId);
-    const [snapshot, tracked, competitors] = await Promise.all([
-      this.prisma.appSnapshot.findFirst({
-        where: { appId, ...HOME_LISTING },
-        orderBy: NEWEST_FIRST,
-        select: {
-          title: true,
-          subtitle: true,
-          summary: true,
-          description: true,
-        },
-      }),
-      this.keywords.listTracked(appId),
+    const market = country ?? app.country;
+    const home = market === app.country;
+    if (!home) {
+      assertStorefront(app.store, market);
+    }
+    const [tracked, competitors] = await Promise.all([
+      this.keywords.listTracked(appId, undefined, country),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
         select: { name: true },
       }),
     ]);
-
     const active = tracked.filter((item) => item.active);
-    const title = snapshot?.title ?? '';
-    const subtitle = snapshot?.subtitle ?? '';
-    const summary = snapshot?.summary ?? '';
-    const description = snapshot?.description ?? '';
+    const listings = await latestListingTexts(this.prisma, appId, app.country, [
+      app.country,
+      market,
+      ...active.map((item) => item.country),
+    ]);
+    const view = listings.get(market);
+    if (!home && !view) {
+      throw new NotFoundException(`No listing captured for ${market}`);
+    }
 
+    const keywordFieldValue = home
+      ? active
+          .filter((item) => item.source === 'KEYWORD_FIELD')
+          .map((item) => item.text)
+          .join(',')
+      : '';
     const context: LintContext = {
-      titleWords: tokenize(title),
-      subtitleWords: tokenize(subtitle),
+      titleWords: tokenize(view?.title ?? ''),
+      subtitleWords: tokenize(view?.subtitle ?? ''),
       brandTokens: tokenize(app.name ?? ''),
       competitorNames: competitors
         .map((competitor) => competitor.name)
         .filter((name): name is string => Boolean(name)),
       trackedKeywords: active.map((item) => item.text),
     };
+    const fields =
+      app.store === Store.GOOGLE_PLAY
+        ? this.playFields(view, context)
+        : this.appStoreFields(view, context, keywordFieldValue);
 
-    if (app.store === Store.GOOGLE_PLAY) {
-      const fields: MetadataFieldAudit[] = [
-        this.field(app.store, 'title', title, lintTitle(title, 30, app.store)),
-        this.field(
+    const coverage = active.map((item) => {
+      const own = listings.get(item.country);
+      return this.coverageRow(
+        item,
+        this.surfaces(
           app.store,
-          'shortDescription',
-          summary,
-          lintShortDescription(summary, context, 80),
+          own ?? listings.get(app.country),
+          item.country === app.country ? keywordFieldValue : null,
         ),
-        this.field(
-          app.store,
-          'description',
-          description,
-          lintDescription(
-            description,
-            STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit,
-          ),
-        ),
-      ];
-      const coverage = active.map((item) =>
-        this.coverageRow(item, [
-          { field: 'title', value: title },
-          { field: 'shortDescription', value: summary },
-          { field: 'description', value: description },
-        ]),
+        own ? item.country : app.country,
       );
-      return {
-        appId,
-        store: app.store,
-        fields,
-        coverage,
-        keywordFieldSuggestion: null,
-      };
-    }
+    });
 
-    const keywordFieldValue = active
-      .filter((item) => item.source === 'KEYWORD_FIELD')
-      .map((item) => item.text)
-      .join(',');
+    return {
+      appId,
+      store: app.store,
+      fields,
+      coverage,
+      keywordFieldSuggestion:
+        home && app.store === Store.APP_STORE
+          ? this.suggestion(
+              active.filter((item) => item.country === app.country),
+              coverage.filter((row) => row.country === app.country),
+            )
+          : null,
+      country: market,
+    };
+  }
 
-    const fields: MetadataFieldAudit[] = [
-      this.field(app.store, 'title', title, lintTitle(title, 30, app.store)),
+  private playFields(
+    view: ListingTexts | undefined,
+    context: LintContext,
+  ): MetadataFieldAudit[] {
+    const store = Store.GOOGLE_PLAY;
+    const title = view?.title ?? '';
+    const summary = view?.summary ?? '';
+    const description = view?.description ?? '';
+    return [
+      this.field(store, 'title', title, lintTitle(title, 30, store)),
       this.field(
-        app.store,
+        store,
+        'shortDescription',
+        summary,
+        lintShortDescription(summary, context, 80),
+      ),
+      this.field(
+        store,
+        'description',
+        description,
+        lintDescription(
+          description,
+          STORE_FIELD_LIMITS.GOOGLE_PLAY.description!.limit,
+        ),
+      ),
+    ];
+  }
+
+  private appStoreFields(
+    view: ListingTexts | undefined,
+    context: LintContext,
+    keywordFieldValue: string,
+  ): MetadataFieldAudit[] {
+    const store = Store.APP_STORE;
+    const title = view?.title ?? '';
+    const subtitle = view?.subtitle ?? '';
+    const description = view?.description ?? '';
+    const keywordField =
+      keywordFieldValue.length > 0
+        ? [
+            this.field(
+              store,
+              'keywordField',
+              keywordFieldValue,
+              lintKeywordField(
+                keywordFieldValue,
+                context,
+                KEYWORD_FIELD_BYTE_LIMIT,
+              ),
+            ),
+          ]
+        : [];
+    return [
+      this.field(store, 'title', title, lintTitle(title, 30, store)),
+      this.field(
+        store,
         'subtitle',
         subtitle,
         lintSubtitle(subtitle, context, 30),
       ),
-    ];
-    if (keywordFieldValue.length > 0) {
-      fields.push(
-        this.field(
-          app.store,
-          'keywordField',
-          keywordFieldValue,
-          lintKeywordField(
-            keywordFieldValue,
-            context,
-            KEYWORD_FIELD_BYTE_LIMIT,
-          ),
-        ),
-      );
-    }
-    fields.push(
+      ...keywordField,
       this.field(
-        app.store,
+        store,
         'description',
         description,
         lintDescription(
@@ -151,23 +187,29 @@ export class MetadataService {
           STORE_FIELD_LIMITS.APP_STORE.description!.limit,
         ),
       ),
-    );
+    ];
+  }
 
-    const coverage = active.map((item) =>
-      this.coverageRow(item, [
-        { field: 'title', value: title },
-        { field: 'subtitle', value: subtitle },
-        { field: 'keywordField', value: keywordFieldValue },
-      ]),
-    );
-
-    return {
-      appId,
-      store: app.store,
-      fields,
-      coverage,
-      keywordFieldSuggestion: this.suggestion(active, coverage),
+  private surfaces(
+    store: Store,
+    listing: ListingTexts | undefined,
+    keywordField: string | null,
+  ): Array<{ field: MetadataField; value: string }> {
+    const title = { field: 'title' as const, value: listing?.title ?? '' };
+    if (store === Store.GOOGLE_PLAY) {
+      return [
+        title,
+        { field: 'shortDescription', value: listing?.summary ?? '' },
+        { field: 'description', value: listing?.description ?? '' },
+      ];
+    }
+    const subtitle = {
+      field: 'subtitle' as const,
+      value: listing?.subtitle ?? '',
     };
+    return keywordField === null
+      ? [title, subtitle]
+      : [title, subtitle, { field: 'keywordField', value: keywordField }];
   }
 
   private field(
@@ -190,6 +232,7 @@ export class MetadataService {
   private coverageRow(
     item: TrackedKeywordItem,
     surfaces: Array<{ field: MetadataField; value: string }>,
+    listingCountry: string,
   ): KeywordCoverageRow {
     const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
       field: surface.field,
@@ -201,6 +244,8 @@ export class MetadataService {
       bucket: item.bucket,
       fields,
       uncovered: fields.every((field) => !field.covered),
+      country: item.country,
+      listingCountry,
     };
   }
 
@@ -232,12 +277,15 @@ export class MetadataService {
     };
   }
 
-  private async ensureApp(
-    appId: string,
-  ): Promise<{ id: string; store: Store; name: string | null }> {
+  private async ensureApp(appId: string): Promise<{
+    id: string;
+    store: Store;
+    name: string | null;
+    country: string;
+  }> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
-      select: { id: true, store: true, name: true },
+      select: { id: true, store: true, name: true, country: true },
     });
     if (!app) {
       throw new NotFoundException(`App ${appId} not found`);
