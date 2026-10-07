@@ -4,6 +4,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import { setTimeout as delay } from "node:timers/promises";
+import { planMockImport } from "./keyword-import.mts";
 import { summarizeActions } from "./actions-summary.mts";
 import {
   ACTION_ACTIVITY,
@@ -88,6 +89,7 @@ import type {
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
+  KeywordImportRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
   KeywordSort,
@@ -105,6 +107,7 @@ import type {
 import {
   DELETION_CONFIRMATION,
   KEYWORD_BULK_ADD_LIMIT,
+  KEYWORD_IMPORT_LIMIT,
   isKeywordTag,
   KEYWORD_FIELD_BYTE_LIMIT,
   KEYWORD_TAGS_MAX,
@@ -1552,6 +1555,79 @@ const routes: Route[] = [
           201,
           dataset.keywords.filter((row) => row.country === country),
         );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keywords\/import(\/preview)?$/,
+    handler: ([id, preview], req, res) => {
+      withBody<KeywordImportRequest>(req, res, (body) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (body.rows.length > KEYWORD_IMPORT_LIMIT) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              `rows must contain no more than ${KEYWORD_IMPORT_LIMIT} elements`,
+            ),
+          );
+        }
+        const limit = Number(cookieValue(req, KEYWORD_QUOTA_COOKIE)) || null;
+        const { result, additions } = planMockImport(
+          dataset.keywords,
+          dataset.detail.store,
+          dataset.detail.country,
+          body,
+          limit,
+        );
+        if (preview) return json(res, 200, result);
+        if (hasCookie(req, "e2e_import_race", "1")) {
+          return json(res, 403, {
+            ...errorEnvelope(
+              403,
+              path,
+              "keywordMarkets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
+            ),
+            quota: {
+              resource: "keywordMarkets",
+              plan: "indie",
+              limit: 1000,
+              used: 998,
+              requested: 5,
+              upgradeTo: "ultimate",
+            },
+          });
+        }
+        for (const addition of additions) {
+          const existing = dataset.keywords.find(
+            (row) =>
+              row.text === addition.text && row.country === addition.country,
+          );
+          if (existing) {
+            existing.active = true;
+          } else {
+            dataset.keywords.push({
+              ...manualKeyword(
+                id,
+                addition.text,
+                addition.country,
+                dataset.keywords.length + 1,
+              ),
+              tags: addition.tags,
+              note: addition.note,
+            });
+          }
+        }
+        json(res, 200, {
+          ...result,
+          dryRun: false,
+          imported: additions.length,
+        });
       });
     },
   },
