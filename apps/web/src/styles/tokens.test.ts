@@ -1,8 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { contrastRatio } from "@/lib/contrast";
-import { TEXT_PAIRS } from "@/components/tokens/token-groups";
+import { pairContrast, TEXT_PAIRS } from "@/components/tokens/token-groups";
 
 type Scope = Record<string, string>;
 
@@ -81,6 +80,11 @@ describe("design tokens", () => {
     expect(resolve("--dangling", scope)).toBe("");
   });
 
+  it("labels every text pair once", () => {
+    const labels = TEXT_PAIRS.map(({ label }) => label);
+    expect(new Set(labels).size).toBe(labels.length);
+  });
+
   it("keeps every literal colour in the primitive layer", () => {
     const semanticLiterals = Object.entries({
       ...declarations(semantic, ":root"),
@@ -96,16 +100,10 @@ describe("design tokens", () => {
 });
 
 describe.each(Object.entries(THEMES))("%s theme contrast", (_theme, scope) => {
-  it.each(TEXT_PAIRS)(
-    "$label clears $floor:1",
-    ({ foreground, background, floor }) => {
-      const ratio = contrastRatio(
-        resolve(foreground, scope),
-        resolve(background, scope),
-      );
+  it.each(TEXT_PAIRS)("$label clears $floor:1", (pair) => {
+    const ratio = pairContrast(pair, (token) => resolve(token, scope));
 
-      expect(ratio).not.toBeNull();
-      expect(ratio!).toBeGreaterThanOrEqual(floor);
-    },
-  );
+    expect(ratio).not.toBeNull();
+    expect(ratio!).toBeGreaterThanOrEqual(pair.floor);
+  });
 });

@@ -25,15 +25,15 @@
   --blue-700: oklch(0.452 0.132 240);
 
   --green-400: oklch(0.75 0.16 152);
-  --green-600: oklch(0.52 0.14 152);
+  --green-600: oklch(0.51 0.13 152);
   --red-400: oklch(0.7 0.17 22);
   --red-600: oklch(0.53 0.19 22);
-  --crimson-400: oklch(0.66 0.19 20);
+  --crimson-400: oklch(0.695 0.19 20);
   --crimson-600: oklch(0.53 0.2 20);
   --amber-400: oklch(0.75 0.15 55);
-  --amber-600: oklch(0.55 0.13 55);
+  --amber-600: oklch(0.53 0.13 55);
   --yellow-400: oklch(0.82 0.12 90);
-  --yellow-600: oklch(0.56 0.11 90);
+  --yellow-600: oklch(0.52 0.105 90);
 
   --score-low-400: oklch(0.62 0.05 240);
   --score-mid-400: oklch(0.7 0.11 240);

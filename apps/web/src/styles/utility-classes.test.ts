@@ -9,6 +9,17 @@ const PALETTE =
 
 const DANGLING_MODIFIER = /\s\/\d+(?=["'\s])/g;
 
+const COLOUR_TOKENS = [
+  ...readFileSync(join(import.meta.dirname, "semantic.css"), "utf8").matchAll(
+    /^\s*--([\w-]+):/gm,
+  ),
+].map(([, name]) => name);
+
+const TRANSLUCENT_TEXT = new RegExp(
+  `\\btext-(?:${COLOUR_TOKENS.join("|")})\\/\\d+`,
+  "g",
+);
+
 function sources(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const path = join(directory, entry.name);
@@ -27,6 +38,10 @@ function offenders(pattern: RegExp): string[] {
 describe("utility classes", () => {
   it("paints every opaque surface with a semantic token", () => {
     expect(offenders(PALETTE)).toEqual([]);
+  });
+
+  it("draws text in a token colour rather than a translucent one", () => {
+    expect(offenders(TRANSLUCENT_TEXT)).toEqual([]);
   });
 
   it("leaves no opacity modifier detached from its utility", () => {

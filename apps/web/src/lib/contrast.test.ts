@@ -33,6 +33,31 @@ describe("toLinear", () => {
     expect(viaOklch).toBeCloseTo(viaLab!, 3);
   });
 
+  it("mixes two opaque colours in srgb as a browser composites them", () => {
+    const grey = toLinear("color-mix(in srgb, #000000 50%, #ffffff)");
+    const expected = toLinear("rgb(127.5 127.5 127.5)")!;
+    expected.forEach((channel, index) =>
+      expect(grey?.[index]).toBeCloseTo(channel, 6),
+    );
+  });
+
+  it("reads a mix wrapped across lines as a formatter writes it", () => {
+    expect(
+      toLinear(`color-mix(
+      in srgb,
+      #000000 50%,
+      #ffffff
+    )`),
+    ).toEqual(toLinear("color-mix(in srgb, #000000 50%, #ffffff)"));
+  });
+
+  it("refuses a mix it cannot composite", () => {
+    expect(toLinear("color-mix(in srgb, red 10%, transparent)")).toBeNull();
+    expect(toLinear("color-mix(in srgb, #000000 10%, transparent)")).toBeNull();
+    expect(toLinear("color-mix(in oklab, #000000 10%, #ffffff)")).toBeNull();
+    expect(toLinear("color-mix(in srgb, #000000 150%, #ffffff)")).toBeNull();
+  });
+
   it("returns null for syntax it cannot read", () => {
     expect(toLinear("color-mix(in oklch, red 10%, transparent)")).toBeNull();
     expect(toLinear("transparent")).toBeNull();
@@ -64,6 +89,24 @@ describe("contrastRatio", () => {
 
   it("matches a published reference pair", () => {
     expect(contrastRatio("#777777", "#ffffff")).toBeCloseTo(4.48, 2);
+  });
+
+  it("measures colours as a browser renders them, in whole sRGB bytes", () => {
+    expect(contrastRatio("rgb(0 0 0)", "rgb(118.6 118.6 118.6)")).toBe(
+      contrastRatio("#000000", "#777777"),
+    );
+    expect(
+      contrastRatio(
+        "oklch(0.52 0.14 152)",
+        "color-mix(in srgb, oklch(0.52 0.14 152) 12%, oklch(1 0 0))",
+      ),
+    ).toBeCloseTo(4.33, 1);
+    expect(
+      contrastRatio(
+        "color-mix(in srgb, oklch(0.212 0.008 75) 60%, oklch(0.962 0.004 75))",
+        "oklch(0.962 0.004 75)",
+      ),
+    ).toBeCloseTo(4.46, 1);
   });
 
   it("returns null when either colour is unreadable", () => {

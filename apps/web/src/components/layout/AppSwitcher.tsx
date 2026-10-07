@@ -67,7 +67,7 @@ function TriggerLabel({
         <span className="truncate font-medium">
           {current ? appLabel(current) : "All apps"}
         </span>
-        <span className="truncate text-caption text-sidebar-foreground/70">
+        <span className="truncate text-caption text-muted-foreground">
           {current ? appMarket(current) : `${total} tracked`}
         </span>
       </span>

@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
-import { contrastRatio } from "@/lib/contrast";
 import { PrimitiveGallery } from "./PrimitiveGallery";
 import { TypeScale } from "./TypeScale";
 import {
@@ -11,6 +10,7 @@ import {
   BRAND_RAMP,
   CHART_SERIES,
   NEUTRAL_RAMP,
+  pairContrast,
   RANK_BANDS,
   RESERVED_SIGNALS,
   SEMANTIC_SURFACES,
@@ -88,7 +88,7 @@ function SwatchGrid({
               style={{ background: `var(${token})` }}
             />
             <code className="text-[11px] text-muted-foreground">{token}</code>
-            <code className="text-[10px] break-all text-muted-foreground/70">
+            <code className="text-[10px] break-all text-muted-foreground">
               {values[token] ?? "—"}
             </code>
           </div>
@@ -126,10 +126,7 @@ function ContrastTable({ values }: { values: Resolved }) {
           </thead>
           <tbody className="divide-y">
             {TEXT_PAIRS.map((pair) => {
-              const ratio = contrastRatio(
-                values[pair.foreground] ?? "",
-                values[pair.background] ?? "",
-              );
+              const ratio = pairContrast(pair, (token) => values[token] ?? "");
               const passing = ratio !== null && ratio >= pair.floor;
               return (
                 <tr key={pair.label}>

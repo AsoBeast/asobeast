@@ -114,7 +114,10 @@ export function KeywordsDataTable({
             data-index={index}
             aria-rowindex={index + 2}
             data-state={row.getIsSelected() ? "selected" : undefined}
-            className={cn("group/row", !row.original.active && "opacity-55")}
+            className={cn(
+              "group/row",
+              !row.original.active && "text-muted-foreground",
+            )}
           >
             {row.getVisibleCells().map((cell) => (
               <TableCell
