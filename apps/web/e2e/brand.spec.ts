@@ -47,5 +47,22 @@ for (const theme of THEMES) {
         )
         .toBeLessThanOrEqual(1);
     });
+
+    test("the primary button shows a solid ring offset from its fill", async ({
+      page,
+    }) => {
+      const signIn = page.getByRole("button", { name: "Sign in" });
+      await signIn.focus();
+      await expect
+        .poll(() =>
+          signIn.evaluate((element) => element.matches(":focus-visible")),
+        )
+        .toBe(true);
+
+      const boxShadow = () =>
+        signIn.evaluate((element) => getComputedStyle(element).boxShadow);
+      await expect.poll(boxShadow).toMatch(/0px 0px 0px 2px.*0px 0px 0px 4px/);
+      expect(await boxShadow()).not.toMatch(/\/\s*0?\.5\)|50%/);
+    });
   });
 }
