@@ -33,7 +33,8 @@ import {
 } from './keyword-gaps';
 import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
-import { AppFacts, toTrackedKeywordItem } from './keywords.mapper';
+import { toTrackedKeywordItem } from './keywords.mapper';
+import { listingFacts } from './listing-facts';
 import {
   ensureApp,
   KeywordApp,
@@ -93,7 +94,9 @@ export class KeywordsService {
       ...trackedArgs(appId),
     });
     const [facts, volatility] = await Promise.all([
-      this.snapshotFacts(app),
+      listingFacts(this.prisma, app, [
+        ...new Set(rows.map((row) => row.keyword.country)),
+      ]),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
@@ -133,22 +136,6 @@ export class KeywordsService {
         if (b.country === app.country) return 1;
         return b.keywordCount - a.keywordCount;
       });
-  }
-
-  private async snapshotFacts(app: KeywordApp): Promise<AppFacts> {
-    const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id, ...HOME_LISTING },
-      orderBy: NEWEST_FIRST,
-      select: { title: true, subtitle: true, summary: true },
-    });
-    if (!snapshot) {
-      return { snapshotText: '' };
-    }
-    return {
-      snapshotText: [snapshot.title, snapshot.subtitle, snapshot.summary]
-        .filter((part): part is string => Boolean(part))
-        .join(' '),
-    };
   }
 
   async compare(appId: string, onlyGaps: boolean): Promise<KeywordComparison> {
@@ -309,7 +296,7 @@ export class KeywordsService {
       orderBy: [{ fieldOrder: 'asc' }, ...trackedOrder()],
     });
     const [facts, volatility] = await Promise.all([
-      this.snapshotFacts(app),
+      listingFacts(this.prisma, app),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
