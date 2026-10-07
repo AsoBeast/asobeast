@@ -17,3 +17,7 @@ export function AppHeaderSkeleton() {
     </div>
   );
 }
+
+export function MarketSwitcherSkeleton() {
+  return <Skeleton className="h-9 w-[340px] max-w-full" />;
+}

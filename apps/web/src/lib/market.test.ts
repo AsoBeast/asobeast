@@ -1,0 +1,46 @@
+import { describe, expect, it } from "vitest";
+import type { ListingMarket } from "@asobeast/shared";
+import { marketLabel, queryMarket, resolveMarket } from "./market";
+
+const MARKETS: ListingMarket[] = [
+  { country: "us", home: true, capturedAt: "2026-07-01T00:00:00.000Z" },
+  { country: "de", home: false, capturedAt: "2026-07-02T00:00:00.000Z" },
+];
+
+describe("resolveMarket", () => {
+  it("keeps a market that has a listing", () => {
+    expect(resolveMarket("de", MARKETS, "us")).toBe("de");
+  });
+
+  it("falls back to the home market for a market without a listing", () => {
+    expect(resolveMarket("pl", MARKETS, "us")).toBe("us");
+  });
+
+  it("falls back to the home market when none is requested", () => {
+    expect(resolveMarket("", MARKETS, "us")).toBe("us");
+  });
+
+  it("falls back to the home market when no market is known", () => {
+    expect(resolveMarket("de", [], "us")).toBe("us");
+  });
+});
+
+describe("queryMarket", () => {
+  it("sends no market for the home storefront", () => {
+    expect(queryMarket("us", "us")).toBeUndefined();
+  });
+
+  it("sends the market for any other storefront", () => {
+    expect(queryMarket("de", "us")).toBe("de");
+  });
+});
+
+describe("marketLabel", () => {
+  it("names the home storefront as home", () => {
+    expect(marketLabel(MARKETS[0])).toBe("US · United States (home)");
+  });
+
+  it("names another storefront", () => {
+    expect(marketLabel(MARKETS[1])).toBe("DE · Germany");
+  });
+});

@@ -66,6 +66,7 @@ import {
   keywordStatusParser,
   keywordSortParser,
   keywordTagsParser,
+  marketParser,
   mcpClientParser,
   moverDaysParser,
   onlyGapsParser,
@@ -135,6 +136,7 @@ const LIST_PARSERS = [
 
 const STRING_PARSERS = [
   ["country", countryParser],
+  ["market", marketParser],
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
   ["search", searchParser],

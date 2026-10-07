@@ -4,10 +4,15 @@ import type {
   MetadataAssistantStatus,
   MetadataAuditResult,
 } from "@asobeast/shared";
-import { apiFetch } from "./client";
+import { apiFetch, marketParams, withQuery } from "./client";
 
-export function getMetadataAudit(appId: string): Promise<MetadataAuditResult> {
-  return apiFetch<MetadataAuditResult>(`/apps/${appId}/metadata/audit`);
+export function getMetadataAudit(
+  appId: string,
+  country?: string,
+): Promise<MetadataAuditResult> {
+  return apiFetch<MetadataAuditResult>(
+    withQuery(`/apps/${appId}/metadata/audit`, marketParams(country)),
+  );
 }
 
 export function getMetadataAssistantStatus(): Promise<MetadataAssistantStatus> {

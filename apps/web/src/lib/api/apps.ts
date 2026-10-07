@@ -4,16 +4,21 @@ import type {
   AppImportRequest,
   AppLinkRequest,
   AppListItem,
+  ListingMarket,
   MarketAvailabilityResult,
 } from "@asobeast/shared";
-import { apiFetch, withQuery } from "./client";
+import { apiFetch, marketParams, withQuery } from "./client";
 
 export function getApps(): Promise<AppListItem[]> {
   return apiFetch<AppListItem[]>("/apps");
 }
 
-export function getApp(id: string): Promise<AppDetail> {
-  return apiFetch<AppDetail>(`/apps/${id}`);
+export function getApp(id: string, country?: string): Promise<AppDetail> {
+  return apiFetch<AppDetail>(withQuery(`/apps/${id}`, marketParams(country)));
+}
+
+export function getListingMarkets(id: string): Promise<ListingMarket[]> {
+  return apiFetch<ListingMarket[]>(`/apps/${id}/listing-markets`);
 }
 
 export function importApp(url: string, country?: string): Promise<AppDetail> {

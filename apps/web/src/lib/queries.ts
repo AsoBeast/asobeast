@@ -47,7 +47,9 @@ import {
   getKeywordCountries,
   getKeywordField,
   getKeywords,
+  getListingMarkets,
   getMarketAvailability,
+  getMetadataAudit,
   getPortfolio,
   getPortfolioInsights,
   getRankDistributionHistory,
@@ -117,8 +119,8 @@ export const appKeys = {
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
-  changes: (id: string, days: number) =>
-    [...appKeys.detail(id), "changes", { days }] as const,
+  changes: (id: string, days: number, market?: string) =>
+    [...appKeys.detail(id), "changes", { days, market }] as const,
   changeImpact: (id: string, days: number, country: string) =>
     [...appKeys.detail(id), "changes", "impact", { days, country }] as const,
   reviewsRoot: (id: string) => [...appKeys.detail(id), "reviews"] as const,
@@ -131,6 +133,12 @@ export const appKeys = {
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
+  listingMarkets: (id: string) =>
+    [...appKeys.detail(id), "listing-markets"] as const,
+  listing: (id: string, market: string) =>
+    [...appKeys.detail(id), "listing", { market }] as const,
+  metadataAudit: (id: string, market: string) =>
+    [...appKeys.detail(id), "metadata-audit", { market }] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
 
@@ -392,6 +400,24 @@ export const appDetailOptions = (id: string) =>
     queryFn: () => getApp(id),
   });
 
+export const listingMarketsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.listingMarkets(id),
+    queryFn: () => getListingMarkets(id),
+  });
+
+export const appListingOptions = (id: string, market: string) =>
+  queryOptions({
+    queryKey: appKeys.listing(id, market),
+    queryFn: () => getApp(id, market),
+  });
+
+export const metadataAuditOptions = (id: string, market: string) =>
+  queryOptions({
+    queryKey: appKeys.metadataAudit(id, market),
+    queryFn: () => getMetadataAudit(id, market),
+  });
+
 export const appSummaryOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.summary(id),
@@ -518,10 +544,10 @@ export const discoveryOptions = (id: string, days: number) =>
     queryFn: () => getCompetitorDiscovery(id, days),
   });
 
-export const changesOptions = (id: string, days: number) =>
+export const changesOptions = (id: string, days: number, market?: string) =>
   queryOptions({
-    queryKey: appKeys.changes(id, days),
-    queryFn: () => getChanges(id, days),
+    queryKey: appKeys.changes(id, days, market),
+    queryFn: () => getChanges(id, days, market),
   });
 
 export const changeImpactOptions = (
