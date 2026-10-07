@@ -5,7 +5,8 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { API_TOKEN_PREFIX, type AuthUser } from '@asobeast/shared';
+import { API_TOKEN_PREFIX } from '@asobeast/shared';
+import type { AuthUser } from '@asobeast/shared';
 import { MCP_TOOLS, MCP_WRITE_TOOLS, requestOf } from '@asobeast/mcp-tools';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -13,6 +14,7 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { sha256 } from '../src/auth/password-hash';
 import { urlOf } from '../src/mcp/remote-tools';
+import { mintApiToken } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -23,7 +25,6 @@ import {
 
 const PASSWORD = 'supersecret1';
 const READ_TOKEN = `${API_TOKEN_PREFIX}${'r'.repeat(48)}`;
-const WRITE_TOKEN = `${API_TOKEN_PREFIX}${'w'.repeat(48)}`;
 
 const TOOL_INPUT = {
   appId: 'app_missing',
@@ -45,6 +46,7 @@ const WRITE_INPUT = {
 describe('Read-only token scope (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
+  let writeToken: string;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -84,15 +86,7 @@ describe('Read-only token scope (e2e)', () => {
         scope: 'read',
       },
     });
-    await prisma.apiToken.create({
-      data: {
-        userId: (owner.body as { id: string }).id,
-        name: 'read and write',
-        tokenHash: sha256(WRITE_TOKEN),
-        prefix: WRITE_TOKEN.slice(0, 12),
-        scope: 'write',
-      },
-    });
+    writeToken = await mintApiToken(app, owner, 'write');
   });
 
   beforeEach(() => clearRateLimitCounters(app));
@@ -152,7 +146,7 @@ describe('Read-only token scope (e2e)', () => {
     it('tells a write token it can write', async () => {
       const response = await request(app.getHttpServer())
         .get('/auth/me')
-        .set('Authorization', `Bearer ${WRITE_TOKEN}`)
+        .set('Authorization', `Bearer ${writeToken}`)
         .expect(200);
 
       expect((response.body as AuthUser).tokenScope).toBe('write');
@@ -202,7 +196,7 @@ describe('Read-only token scope (e2e)', () => {
 
         const response = await request(app.getHttpServer())
           [method.toLowerCase() as 'post' | 'patch' | 'delete'](urlOf({ path }))
-          .set('Authorization', `Bearer ${WRITE_TOKEN}`)
+          .set('Authorization', `Bearer ${writeToken}`)
           .send(body);
 
         expect(response.status).not.toBe(403);

@@ -8,7 +8,7 @@ import { PrismaClient, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import cookieParser from 'cookie-parser';
 import { createMcpHandler } from '@modelcontextprotocol/server';
-import { API_TOKEN_PREFIX, type ActionItem } from '@asobeast/shared';
+import type { ActionItem } from '@asobeast/shared';
 import { MCP_TOOLS, MCP_WRITE_TOOLS, annotationsOf } from '@asobeast/mcp-tools';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -17,13 +17,13 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { InProcessGateway } from '../src/mcp/in-process.gateway';
 import { createRemoteServer, urlOf } from '../src/mcp/remote-tools';
-import { sha256 } from '../src/auth/password-hash';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
   ACTION_DAY,
   generateActionsAt,
   seedUncoveredKeyword,
 } from './helpers/action-seed';
+import { mintApiToken } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { FakeRegistry, RIVAL_URL } from './helpers/mcp-fixtures';
 import { mcpAs, textOf, type Envelope } from './helpers/mcp-rpc';
@@ -35,8 +35,6 @@ import {
 } from './obliterate-queues';
 
 const PASSWORD = 'supersecret1';
-const READ_TOKEN = `${API_TOKEN_PREFIX}${'r'.repeat(48)}`;
-const WRITE_TOKEN = `${API_TOKEN_PREFIX}${'w'.repeat(48)}`;
 const PLAY_URL = 'https://play.google.com/store/apps/details?id=com.rival.app';
 
 const isoDay = (offset: number): string =>
@@ -46,6 +44,8 @@ describe('Remote MCP write tools (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let appStoreQueue: Queue;
+  let readToken: string;
+  let writeToken: string;
   let reader: ReturnType<typeof mcpAs>;
   let writer: ReturnType<typeof mcpAs>;
 
@@ -82,7 +82,7 @@ describe('Remote MCP write tools (e2e)', () => {
             gateway.send({
               method: call.method,
               url: urlOf(call),
-              headers: { authorization: `Bearer ${READ_TOKEN}` },
+              headers: { authorization: `Bearer ${readToken}` },
               body: call.body,
             }),
           'write',
@@ -144,22 +144,10 @@ describe('Remote MCP write tools (e2e)', () => {
       .post('/auth/register')
       .send({ email: 'mcp-write@example.com', password: PASSWORD })
       .expect(201);
-    for (const [token, scope] of [
-      [READ_TOKEN, 'read'],
-      [WRITE_TOKEN, 'write'],
-    ] as const) {
-      await prisma.apiToken.create({
-        data: {
-          userId: (owner.body as { id: string }).id,
-          name: `mcp ${scope}`,
-          tokenHash: sha256(token),
-          prefix: token.slice(0, 12),
-          scope,
-        },
-      });
-    }
-    reader = mcpAs(app, READ_TOKEN);
-    writer = mcpAs(app, WRITE_TOKEN);
+    readToken = await mintApiToken(app, owner, 'read');
+    writeToken = await mintApiToken(app, owner, 'write');
+    reader = mcpAs(app, readToken);
+    writer = mcpAs(app, writeToken);
   }, 60_000);
 
   beforeEach(async () => {
@@ -243,7 +231,7 @@ describe('Remote MCP write tools (e2e)', () => {
       const viaRest = await seedApp();
       await request(app.getHttpServer())
         .post(`/apps/${viaRest.id}/keywords`)
-        .set('Authorization', `Bearer ${WRITE_TOKEN}`)
+        .set('Authorization', `Bearer ${writeToken}`)
         .send({ keywords: ['Habit Tracker'] })
         .expect(201);
       const restRows = (await tracked(viaRest.id)).map(
@@ -485,7 +473,7 @@ describe('Remote MCP write tools (e2e)', () => {
 
       const viaRest = await request(app.getHttpServer())
         .get(`/actions/${actionId}`)
-        .set('Authorization', `Bearer ${READ_TOKEN}`)
+        .set('Authorization', `Bearer ${readToken}`)
         .expect(200);
 
       expect((viaRest.body as ActionItem).status).toBe('DONE');

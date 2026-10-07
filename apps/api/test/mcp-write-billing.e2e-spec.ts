@@ -5,19 +5,15 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import {
-  API_TOKEN_PREFIX,
-  MINUTE_SECONDS,
-  PLAN_LIMITS,
-} from '@asobeast/shared';
+import { MINUTE_SECONDS, PLAN_LIMITS } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { sha256 } from '../src/auth/password-hash';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
 import { secondsUntilReset } from '../src/auth/rate-limit/window';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
+import { mintApiToken } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { FakeRegistry, RIVAL_URL } from './helpers/mcp-fixtures';
 import { mcpAs, textOf } from './helpers/mcp-rpc';
@@ -29,7 +25,6 @@ import {
 } from './obliterate-queues';
 
 const PASSWORD = 'supersecret1';
-const TOKEN = `${API_TOKEN_PREFIX}${'v'.repeat(48)}`;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WRITES_PER_MINUTE = PLAN_LIMITS.indie.apiWritesPerMinute as number;
 const BURN_HEADROOM_SECONDS = 15;
@@ -45,6 +40,7 @@ describe('Remote MCP write tools with billing (e2e)', () => {
 
   let app: INestApplication<App>;
   let prisma: PrismaClient;
+  let token: string;
   let mcp: ReturnType<typeof mcpAs>;
 
   const seedApp = () =>
@@ -80,7 +76,6 @@ describe('Remote MCP write tools with billing (e2e)', () => {
       update: {},
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
-    mcp = mcpAs(app, TOKEN);
   }, 60_000);
 
   beforeEach(async () => {
@@ -100,15 +95,9 @@ describe('Remote MCP write tools with billing (e2e)', () => {
       .post('/auth/register')
       .send({ email: 'agent-writes@example.com', password: PASSWORD })
       .expect(201);
-    await prisma.apiToken.create({
-      data: {
-        userId: (owner.body as { id: string }).id,
-        name: 'agent writes',
-        tokenHash: sha256(TOKEN),
-        prefix: TOKEN.slice(0, 12),
-        scope: 'write',
-      },
-    });
+    token = await mintApiToken(app, owner, 'write');
+    mcp = mcpAs(app, token);
+    await clearRateLimitCounters(app);
   });
 
   afterAll(async () => {
@@ -188,7 +177,7 @@ describe('Remote MCP write tools with billing (e2e)', () => {
     for (let spent = 0; spent < WRITES_PER_MINUTE; spent += 1) {
       await request(app.getHttpServer())
         .patch('/actions/missing')
-        .set('Authorization', `Bearer ${TOKEN}`)
+        .set('Authorization', `Bearer ${token}`)
         .send({ status: 'DONE' })
         .expect(404);
     }

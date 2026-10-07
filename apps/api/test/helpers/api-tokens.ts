@@ -1,4 +1,8 @@
+import type { INestApplication } from '@nestjs/common';
 import type { PrismaClient } from '@prisma/client';
+import type { ApiTokenCreated, ApiTokenScope } from '@asobeast/shared';
+import request, { type Response } from 'supertest';
+import type { App } from 'supertest/types';
 import { sha256 } from '../../src/auth/password-hash';
 
 export interface TokenHolder {
@@ -55,4 +59,24 @@ export async function seedApiToken(
     },
   });
   return plaintext;
+}
+
+function sessionOf(signedIn: Response): string {
+  const raw = signedIn.headers['set-cookie'] as unknown as string[] | undefined;
+  const cookie = raw?.find((entry) => entry.startsWith('asobeast_session='));
+  if (!cookie) throw new Error('no session cookie set');
+  return cookie.split(';')[0];
+}
+
+export async function mintApiToken(
+  app: INestApplication<App>,
+  signedIn: Response,
+  scope: ApiTokenScope,
+): Promise<string> {
+  const created = await request(app.getHttpServer())
+    .post('/auth/tokens')
+    .set('Cookie', sessionOf(signedIn))
+    .send({ name: `e2e ${scope}`, scope })
+    .expect(201);
+  return (created.body as ApiTokenCreated).token;
 }
