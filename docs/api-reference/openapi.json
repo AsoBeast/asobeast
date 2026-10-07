@@ -2187,6 +2187,37 @@
         ]
       }
     },
+    "/apps/{id}/screenshots": {
+      "get": {
+        "operationId": "ScreenshotsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Screenshots of the latest snapshot with the caption read from each",
+        "tags": [
+          "screenshots"
+        ]
+      }
+    },
     "/apps/{id}/rankings": {
       "get": {
         "operationId": "RankingsController_history",
