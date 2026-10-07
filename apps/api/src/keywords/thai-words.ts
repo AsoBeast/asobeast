@@ -65,9 +65,7 @@ function loadDictionary(): Dictionary {
   return { words, longest };
 }
 
-let dictionary: Dictionary | undefined;
-
-const thaiDictionary = (): Dictionary => (dictionary ??= loadDictionary());
+const dictionary = loadDictionary();
 
 const isWordEdge = (run: string, index: number): boolean =>
   index === 0 ||
@@ -120,7 +118,7 @@ function bestSteps(run: string, { words, longest }: Dictionary): Step[] {
 }
 
 export function thaiSpans(run: string): ThaiSpan[] {
-  const steps = bestSteps(run, thaiDictionary());
+  const steps = bestSteps(run, dictionary);
   const spans: ThaiSpan[] = [];
   for (let end = run.length; end > 0;) {
     const { from, known } = steps[end];
