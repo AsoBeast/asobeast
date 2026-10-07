@@ -5,7 +5,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { API_TOKEN_PREFIX } from '@asobeast/shared';
+import { API_TOKEN_PREFIX, type AuthUser } from '@asobeast/shared';
 import { MCP_TOOLS } from '@asobeast/mcp-tools';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -23,6 +23,7 @@ import {
 
 const PASSWORD = 'supersecret1';
 const READ_TOKEN = `${API_TOKEN_PREFIX}${'r'.repeat(48)}`;
+const WRITE_TOKEN = `${API_TOKEN_PREFIX}${'w'.repeat(48)}`;
 
 const TOOL_INPUT = {
   appId: 'app_missing',
@@ -73,6 +74,15 @@ describe('Read-only token scope (e2e)', () => {
         scope: 'read',
       },
     });
+    await prisma.apiToken.create({
+      data: {
+        userId: (owner.body as { id: string }).id,
+        name: 'read and write',
+        tokenHash: sha256(WRITE_TOKEN),
+        prefix: WRITE_TOKEN.slice(0, 12),
+        scope: 'write',
+      },
+    });
   });
 
   beforeEach(() => clearRateLimitCounters(app));
@@ -117,5 +127,46 @@ describe('Read-only token scope (e2e)', () => {
     expect((refused.body as { message: string }).message).toContain(
       'read-only',
     );
+  });
+
+  describe('the scope a token reports about itself', () => {
+    it('tells a read-only token it is read-only', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${READ_TOKEN}`)
+        .expect(200);
+
+      expect((response.body as AuthUser).tokenScope).toBe('read');
+    });
+
+    it('tells a write token it can write', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/auth/me')
+        .set('Authorization', `Bearer ${WRITE_TOKEN}`)
+        .expect(200);
+
+      expect((response.body as AuthUser).tokenScope).toBe('write');
+    });
+
+    it('reports no scope to a signed in browser session', async () => {
+      const agent = request.agent(app.getHttpServer());
+      await agent
+        .post('/auth/login')
+        .send({ email: 'scope@example.com', password: PASSWORD })
+        .expect(200);
+
+      const response = await agent.get('/auth/me').expect(200);
+
+      expect(response.body).not.toHaveProperty('tokenScope');
+    });
+
+    it('leaves the sign in response as it was', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'scope@example.com', password: PASSWORD })
+        .expect(200);
+
+      expect(response.body).not.toHaveProperty('tokenScope');
+    });
   });
 });

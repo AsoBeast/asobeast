@@ -17,6 +17,7 @@ import type { User } from '@prisma/client';
 import {
   SESSION_COOKIE,
   type AccountPlan,
+  type ApiTokenScope,
   type ApiTokenCreated,
   type ApiTokenItem,
   type AuthStatus,
@@ -28,6 +29,7 @@ import type { AccountUser } from './auth.types';
 import { EmailVerificationService } from './email-verification.service';
 import { PasswordResetService } from './password-reset.service';
 import { AllowUnentitled } from './decorators/allow-unentitled.decorator';
+import { CurrentTokenScope } from './decorators/current-token-scope.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -89,8 +91,11 @@ export class AuthController {
   @Get('me')
   @AllowUnentitled()
   @ApiOperation({ summary: 'Current authenticated user' })
-  me(@CurrentUser() user: AccountUser): AuthUser {
-    return this.auth.toAuthUser(user);
+  me(
+    @CurrentUser() user: AccountUser,
+    @CurrentTokenScope() tokenScope: ApiTokenScope | undefined,
+  ): AuthUser {
+    return this.auth.toAuthUser(user, tokenScope);
   }
 
   @Get('plan')
