@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { columnOptions } from "@/lib/csv-import/parse-keyword-file";
 import { fileNotices, importButtonLabel } from "@/lib/keyword-import";
+import { ImportBudgetNotice } from "./ImportBudgetNotice";
 import { ImportFileStep } from "./ImportFileStep";
 import { ImportMapping } from "./ImportMapping";
 import { ImportPreview } from "./ImportPreview";
@@ -91,11 +92,14 @@ export function ImportKeywordsDialog({
             </Alert>
           ) : null}
           {result && mapped ? (
-            <ImportPreview
-              result={result}
-              lines={mapped.lines}
-              busy={flow.busy}
-            />
+            <>
+              <ImportPreview
+                result={result}
+                lines={mapped.lines}
+                busy={flow.busy}
+              />
+              <ImportBudgetNotice cost={result.cost} />
+            </>
           ) : null}
         </DialogBody>
 

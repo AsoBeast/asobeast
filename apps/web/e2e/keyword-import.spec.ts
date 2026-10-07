@@ -2,8 +2,9 @@ import { readFileSync } from "node:fs";
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page, Request } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import { APP_IMPORT_ID } from "./fixtures.mts";
+import { APP_IMPORT_ID, BUDGET } from "./fixtures.mts";
 import { hydrated } from "./hydrated.mts";
+import { seedViewer } from "./viewer.mts";
 
 test.describe.configure({ mode: "serial" });
 
@@ -446,4 +447,58 @@ test("P-WEB-14 gives a row without a country the market chosen in the dialog", a
 
   await preview;
   await expect(rowOf(dialog, /alpha one/).getByText("PL")).toBeVisible();
+});
+
+const budgetNear = async (page: Page, total: number) => {
+  await page.route("**/api/backend/jobs/budget", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        ...BUDGET,
+        stores: BUDGET.stores.map((entry) =>
+          entry.store === "APP_STORE"
+            ? { ...entry, total, capacityPerDay: 21_600 }
+            : entry,
+        ),
+      }),
+    }),
+  );
+};
+
+test("P-WEB-15 tells the operator what the import does to the daily capacity", async ({
+  page,
+}) => {
+  await budgetNear(page, 21_550);
+  const dialog = await openDialog(page);
+
+  await choose(
+    dialog,
+    [
+      "keyword",
+      ...Array.from({ length: 100 }, (_, index) => `phrase ${index}`),
+    ].join("\r\n"),
+  );
+
+  await expect(dialog.getByRole("note")).toContainText(
+    "Adds about 100 store requests a day, taking App Store to 100% of its daily capacity",
+  );
+});
+
+test("P-WEB-15 tells a customer the requests added and not the instance capacity", async ({
+  page,
+  context,
+}) => {
+  await seedViewer(context, "customer");
+  await budgetNear(page, 21_550);
+  const dialog = await openDialog(page);
+
+  await choose(dialog, ["keyword", "alpha one", "beta two"].join("\r\n"));
+
+  await expect(
+    dialog
+      .getByRole("note")
+      .filter({ hasText: "Adds about 2 store requests a day." }),
+  ).toBeVisible();
+  await expect(dialog.getByText("daily capacity")).toHaveCount(0);
 });
