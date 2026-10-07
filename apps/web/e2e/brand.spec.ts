@@ -5,6 +5,13 @@ import { test as signedIn } from "./session.mts";
 const LANDING_ORANGE: Rgb = [248, 152, 32];
 const LANDING_HOVER: Rgb = [232, 128, 16];
 const THEMES = ["light", "dark"] as const;
+const SETTINGS_TRIGGERS = [
+  "Flush now",
+  "Add webhook",
+  "Add email alert",
+  "New token",
+  "Connect an agent",
+];
 
 function channelGap(actual: Rgb, expected: Rgb): number {
   return Math.max(
@@ -71,9 +78,11 @@ for (const theme of THEMES) {
 signedIn("settings keeps the orange for its main actions", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/settings");
-  await expect(
-    page.getByRole("button", { name: "Connect an agent" }),
-  ).toBeVisible();
+  for (const name of SETTINGS_TRIGGERS) {
+    await expect(
+      page.getByRole("button", { name, exact: true }),
+    ).toHaveAttribute("data-variant", "outline");
+  }
 
   const filled = page.locator('button[data-variant="default"]:visible');
   expect(await filled.count()).toBeLessThanOrEqual(2);
