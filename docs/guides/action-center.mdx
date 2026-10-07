@@ -173,7 +173,7 @@ Impact is stamped with `formulaVersion: actions-v1` and is never a promised outc
 
 Several rules are worded carefully because of what asobeast can and cannot see.
 
-`keyword.add_uncovered`, `keyword.push_to_top10`, `metadata.fix_lint` and `listing.ship_update` are home market only. asobeast stores one metadata snapshot per app, so it cannot claim a keyword is missing from a localized listing it has never seen.
+`keyword.add_uncovered`, `keyword.push_to_top10`, `metadata.fix_lint` and `listing.ship_update` read the home listing. asobeast captures market listings too, but these rules do not yet judge them, so they never claim a keyword is missing from a localized listing.
 
 `market.improve_country` says investigate this market rather than fix your localization, for the same reason. It reports a visibility gap, which is a fact, and leaves the diagnosis to you. See [Countries and markets](/concepts/countries).
 

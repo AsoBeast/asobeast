@@ -1,9 +1,9 @@
 ---
 title: Countries and markets
 sidebarTitle: Countries
-description: "An app is one row with a home storefront. Each tracked keyword carries its own country, and one search serves the app and every competitor at once."
+description: "An app is one row with a home storefront. Each tracked keyword carries its own country, one search serves the app and every competitor, and the listing is captured in every market you track."
 icon: globe
-keywords: ["country","storefront","market","multi country","keyword tracking","DEFAULT_COUNTRY","localization"]
+keywords: ["country","storefront","market","multi country","keyword tracking","DEFAULT_COUNTRY","localization","listing"]
 ---
 
 You import an app once. The app row carries one home storefront, and every tracked keyword carries its own country, so a single app tracks keywords across as many markets as you want.
@@ -18,13 +18,13 @@ The home storefront drives everything that asobeast stores once per app.
 
 | Stays on the home market | Per market |
 | --- | --- |
-| Metadata snapshots | Tracked keywords |
-| Category ranks | Positions and SERP snapshots |
-| Reviews and ratings history | Popularity and difficulty scores |
-| The iOS keyword field | Market comparison in the Action Center |
-| Auto tracked keywords from the listing |  |
+| Category ranks | Tracked keywords |
+| Reviews and ratings history | Positions and SERP snapshots |
+| The iOS keyword field | Popularity and difficulty scores |
+| Auto tracked keywords from the listing | Market comparison in the Action Center |
+|  | Listings: metadata snapshots and their changes |
 
-A full per market app detail switcher is backlog, not a shipped feature.
+A keyword is judged against the listing its own storefront serves. See [What is a market listing?](#what-is-a-market-listing)
 
 ## How does one search serve everyone?
 
@@ -43,11 +43,31 @@ Two places show you the cost before it bites.
 - The settings page shows the [platform operator](/security/admin-surfaces#who-the-platform-operator-is) a daily request budget card with the estimated requests broken down by kind, the capacity and a utilization meter.
 - `GET /jobs/budget` returns the same estimate, and the dashboard warns the platform operator when the daily pipeline would exceed 85 percent of capacity.
 
+Each market with keywords also adds one listing refresh per app and competitor to the daily run, and the budget counts them: `GET /jobs/budget` reports them as `marketListings`, a part of `apps`.
+
 When you are over budget, remove keywords or markets, or raise `SCRAPE_ITUNES_RPM` and accept the risk. See [The daily pipeline and rate limits](/concepts/pipeline).
+
+## What is a market listing?
+
+A store serves a different listing in each storefront. The App Store returns the title, the description and the rating count of the storefront you ask, so the same app can have a German title, a Japanese title and a Brazilian one, and a rating count that differs in each. asobeast captures that listing, as its own snapshot, for every market where you track at least one keyword, for your app and for each of its competitors.
+
+| You | asobeast |
+| --- | --- |
+| Track a keyword in a new market | asks for the listing of that market at once, for the app and its competitors |
+| Do nothing | refreshes each market listing in the daily run, as one job on the same store budget |
+| Click Refresh while a market is selected | refreshes that market's listing and shows what changed |
+
+A keyword is then judged against the listing of its own market: its coverage on the metadata page and its relevance next to the opportunity score. Until a market has a listing, a keyword is judged against the home listing, as every keyword was before.
+
+Some things are still read once, from the home storefront, because they need more than the listing: category ranks, reviews and the ratings history, the iOS keyword field and the keywords asobeast tracks for you from your listing. The Action Center rules that judge coverage, lint and staleness also read the home listing. See [Action Center](/guides/action-center).
+
+The Apple keyword field is private, so outside the home market coverage is judged on the title and the subtitle only.
+
+If an app is not published in a market, asobeast tries again the next day and stores nothing, so a market with keywords and no listing simply shows no switcher entry.
 
 ## How do you add a market?
 
-On the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button.
+On the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button. The first keyword you add there asks for the market's listing, so the market appears in the listing market switcher after the next job runs.
 
 ## Which codes are storefronts?
 

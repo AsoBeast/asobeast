@@ -39,7 +39,7 @@ Raising `SCRAPE_ITUNES_RPM` or `SCRAPE_GPLAY_RPM` puts the host IP address at ri
 
 ## How do you estimate your daily budget?
 
-Daily request volume is roughly tracked keywords multiplied by tracked markets, plus per app work for snapshots, reviews and category ranks.
+Daily request volume is roughly tracked keywords multiplied by tracked markets, plus per app work for snapshots, reviews and category ranks, and one listing refresh per app, competitor and extra market.
 
 | Job | Approximate cost |
 | --- | --- |
@@ -48,6 +48,7 @@ Daily request volume is roughly tracked keywords multiplied by tracked markets, 
 | Apple score job | 3 to 11 requests |
 | Google Play score job | 12 to 20 requests |
 | Category ranks per app | Two charts, the grossing chart plus its free or paid chart |
+| Market listing refresh | One job per app and market, the same weight as an app refresh |
 
 `GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity. Both are [shown only to the platform operator](/security/admin-surfaces#views-only-the-operator-sees).
 
@@ -65,7 +66,7 @@ The retention job prunes each table on its own window. `0` means keep forever. E
 | --- | --- | --- |
 | `RETENTION_RANKINGS_DAYS` | 365 | Keyword positions |
 | `RETENTION_SERP_DAYS` | 90 | SERP entries |
-| `RETENTION_SNAPSHOTS_DAYS` | 180 | App snapshots, keeping the newest per app |
+| `RETENTION_SNAPSHOTS_DAYS` | 180 | App snapshots, keeping the newest per app and market |
 | `RETENTION_CATEGORY_RANKS_DAYS` | 365 | Category ranks |
 | `RETENTION_CHANGE_EVENTS_DAYS` | 0 | Metadata change events |
 | `RETENTION_DELIVERIES_DAYS` | 30 | Alert delivery log rows |

@@ -85,6 +85,8 @@ This is the single most expensive decision you make, and it is invisible until t
 curl --silent --header "Authorization: Bearer $ASOBEAST_API_TOKEN" http://127.0.0.1:3001/api/backend/jobs/budget | jq '{total, utilization, stores}'
 ```
 
+`marketListings` is how many of the `apps` jobs refresh the listing of a market, one per app and competitor for each market with a tracked keyword.
+
 `utilization` is the fraction of a day the run will occupy at your configured limits. Above 1.0 the run cannot finish before the next one starts.
 
 `completion` answers the question a customer actually asks: `startsAt` is the next scheduled run, `hours` is how long the work takes at the current capacity, and `completesAt` is when the run should finish. When an egress proxy pool is configured the capacity behind those numbers is the healthy endpoint count rather than the single host budget, so the projection degrades honestly as endpoints cool down.
