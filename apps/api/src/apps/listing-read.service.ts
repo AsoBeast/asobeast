@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import { AppDetail, ListingMarket } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { toAppDetail, toListingMarkets } from './apps.mapper';
-import { EVERY_LISTING, listingIn, NEWEST_FIRST } from './listing';
+import { EVERY_LISTING, latestListingIn } from './listing';
 
 export type AppWithListings = Prisma.AppGetPayload<{
   include: { competitors: true; group: { include: { apps: true } } };
@@ -30,23 +30,26 @@ export class ListingReadService {
   }
 
   async marketDetail(app: AppWithListings, market: string): Promise<AppDetail> {
-    const rows = await this.prisma.appSnapshot.findMany({
-      where: {
-        appId: { in: [app.id, ...app.competitors.map((rival) => rival.id)] },
-        ...listingIn(app.country, market),
+    const loaded = await this.prisma.app.findFirst({
+      where: { id: app.id },
+      select: {
+        snapshots: latestListingIn(app.country, market),
+        competitors: {
+          select: { id: true, snapshots: latestListingIn(app.country, market) },
+        },
       },
-      orderBy: NEWEST_FIRST,
-      distinct: ['appId'],
     });
-    const latest = new Map(rows.map((row) => [row.appId, row]));
-    const own = latest.get(app.id);
-    if (!own) {
+    const own = loaded?.snapshots[0];
+    if (!loaded || !own) {
       throw new NotFoundException(`No listing captured for ${market}`);
     }
-    const competitors = app.competitors.map((rival) => {
-      const listing = latest.get(rival.id);
-      return { ...rival, snapshots: listing ? [listing] : [] };
-    });
+    const latest = new Map(
+      loaded.competitors.map((rival) => [rival.id, rival.snapshots]),
+    );
+    const competitors = app.competitors.map((rival) => ({
+      ...rival,
+      snapshots: latest.get(rival.id) ?? [],
+    }));
     return toAppDetail(app, own, competitors, app.group);
   }
 }
