@@ -49,14 +49,20 @@ const build = (
     ),
   };
   const tracker = {
-    keywordIdMap: jest.fn((texts: string[], _store: string, country: string) =>
-      Promise.resolve(
-        new Map(texts.map((text) => [text, `${country}:${text}`])),
-      ),
+    keywordIdsAcrossMarkets: jest.fn(
+      (pairs: { text: string; country: string }[]) =>
+        Promise.resolve(
+          new Map(
+            pairs.map(({ text, country }) => [
+              `${country}~${text}`,
+              `${country}:${text}`,
+            ]),
+          ),
+        ),
     ),
     claimForManual: jest.fn().mockResolvedValue({ count: 0 }),
-    enqueueFirstScore: jest
-      .fn<Promise<void>, [string, unknown]>()
+    enqueueFirstScores: jest
+      .fn<Promise<void>, [string[], unknown]>()
       .mockResolvedValue(undefined),
   };
   const service = new KeywordImportService(
@@ -196,10 +202,10 @@ describe('KeywordImportService.import', () => {
 
     expect(result.imported).toBe(0);
     expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
-    expect(tracker.enqueueFirstScore).not.toHaveBeenCalled();
+    expect(tracker.enqueueFirstScores).not.toHaveBeenCalled();
   });
 
-  it('writes only the rows that fit, groups the lookups by market and queues each first score', async () => {
+  it('writes only the rows that fit, looks every market up at once and queues the first scores in one batch', async () => {
     const { tx, tracker, service } = build([], { limit: 10, used: 8 });
     tx.trackedKeyword.createMany.mockResolvedValue({ count: 2 });
 
@@ -216,10 +222,19 @@ describe('KeywordImportService.import', () => {
       'new',
       'overQuota',
     ]);
-    expect(tracker.keywordIdMap).toHaveBeenCalledTimes(2);
+    expect(tracker.keywordIdsAcrossMarkets).toHaveBeenCalledTimes(1);
+    expect(tracker.keywordIdsAcrossMarkets).toHaveBeenCalledWith(
+      [
+        { text: 'a1', country: 'pl' },
+        { text: 'a2', country: 'de' },
+      ],
+      Store.APP_STORE,
+    );
     expect(tx.trackedKeyword.createMany.mock.calls[0][0].data).toHaveLength(2);
-    expect(
-      tracker.enqueueFirstScore.mock.calls.map(([id]) => id).sort(),
-    ).toEqual(['de:a2', 'pl:a1']);
+    expect(tracker.enqueueFirstScores).toHaveBeenCalledTimes(1);
+    expect(tracker.enqueueFirstScores).toHaveBeenCalledWith(
+      ['pl:a1', 'de:a2'],
+      app,
+    );
   });
 });
