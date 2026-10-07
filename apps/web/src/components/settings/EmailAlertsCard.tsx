@@ -90,7 +90,7 @@ function AddEmailAlertDialog() {
       open={open}
       onOpenChange={setOpen}
       label="Add email alert"
-      description="asobeast emails this recipient when a subscribed event fires, using your configured SMTP server."
+      description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server."
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
@@ -165,7 +165,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       activePending={toggle.isPending}
       onActiveChange={(active) => toggle.mutate(active)}
       confirmTitle="Delete this email alert?"
-      confirmDescription={`asobeast will stop emailing ${alert.email}. This cannot be undone.`}
+      confirmDescription={`AsoBeast will stop emailing ${alert.email}. This cannot be undone.`}
       testPending={test.isPending}
       onTest={() => test.mutate()}
       deletePending={remove.isPending}

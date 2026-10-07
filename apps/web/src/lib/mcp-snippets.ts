@@ -187,7 +187,7 @@ export function hostedSnippets(
           {
             type: "promptString",
             id: VSCODE_TOKEN_INPUT,
-            description: "asobeast personal API token",
+            description: "AsoBeast personal API token",
             password: true,
           },
         ],

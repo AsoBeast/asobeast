@@ -68,12 +68,12 @@ const LIMITATIONS = [
   {
     id: "preview-video",
     label: "App previews",
-    detail: "asobeast cannot see App Store previews.",
+    detail: "AsoBeast cannot see App Store previews.",
   },
   {
     id: "promotional-text",
     label: "Promotional text",
-    detail: "Not in the data asobeast reads.",
+    detail: "Not in the data AsoBeast reads.",
   },
   {
     id: "review-replies",

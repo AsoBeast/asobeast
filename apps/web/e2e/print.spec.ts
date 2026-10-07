@@ -178,7 +178,7 @@ test("prints an overview report header with the ranges shown", async ({
     await expect(page.getByText(fact, { exact: true })).toBeVisible();
   }
   await expect(
-    page.getByText(/^Printed .+ \(UTC\) from asobeast$/),
+    page.getByText(/^Printed .+ \(UTC\) from AsoBeast$/),
   ).toBeVisible();
 });
 
@@ -194,7 +194,7 @@ test("stamps the date printing starts on after a utc midnight", async ({
   await printed(page);
 
   await expect(
-    page.getByText("Printed Mar 15, 2026 (UTC) from asobeast", {
+    page.getByText("Printed Mar 15, 2026 (UTC) from AsoBeast", {
       exact: true,
     }),
   ).toBeVisible();

@@ -14,13 +14,9 @@ export const NEUTRAL_RAMP = [
   "--neutral-white",
 ];
 
-export const ACCENT_RAMP = [
-  "--accent-300",
-  "--accent-400",
-  "--accent-500",
-  "--accent-600",
-  "--accent-700",
-];
+export const BRAND_RAMP = ["--brand-500", "--brand-600", "--brand-700"];
+
+export const BLUE_RAMP = ["--blue-400", "--blue-700"];
 
 export const SEMANTIC_SURFACES = [
   "--background",
@@ -31,6 +27,7 @@ export const SEMANTIC_SURFACES = [
   "--popover-foreground",
   "--primary",
   "--primary-foreground",
+  "--primary-hover",
   "--secondary",
   "--secondary-foreground",
   "--muted",
@@ -52,6 +49,7 @@ export const RESERVED_SIGNALS = [
   "--success-subtle",
   "--warning",
   "--warning-subtle",
+  "--info",
   "--priority-critical",
   "--priority-high",
   "--priority-medium",
@@ -142,6 +140,18 @@ export const TEXT_PAIRS: Array<{
     floor: 4.5,
   },
   {
+    label: "primary-foreground on primary-hover",
+    foreground: "--primary-foreground",
+    background: "--primary-hover",
+    floor: 4.5,
+  },
+  {
+    label: "sidebar-primary-foreground on sidebar-primary",
+    foreground: "--sidebar-primary-foreground",
+    background: "--sidebar-primary",
+    floor: 4.5,
+  },
+  {
     label: "popover-foreground on popover",
     foreground: "--popover-foreground",
     background: "--popover",
@@ -152,6 +162,12 @@ export const TEXT_PAIRS: Array<{
     foreground: "--sidebar-foreground",
     background: "--sidebar",
     floor: 4.5,
+  },
+  {
+    label: "sidebar-primary on sidebar-accent",
+    foreground: "--sidebar-primary",
+    background: "--sidebar-accent",
+    floor: 3,
   },
   {
     label: "signal-up on card",
@@ -169,6 +185,18 @@ export const TEXT_PAIRS: Array<{
     label: "warning on card",
     foreground: "--warning",
     background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "info on card",
+    foreground: "--info",
+    background: "--card",
+    floor: 4.5,
+  },
+  {
+    label: "info on background",
+    foreground: "--info",
+    background: "--background",
     floor: 4.5,
   },
   {
@@ -241,6 +269,12 @@ export const TEXT_PAIRS: Array<{
     label: "ring on background",
     foreground: "--ring",
     background: "--background",
+    floor: 3,
+  },
+  {
+    label: "ring on card",
+    foreground: "--ring",
+    background: "--card",
     floor: 3,
   },
   ...CHART_SERIES.map((token) => ({

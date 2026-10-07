@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { reportBrowserError, worthReporting } from "@/lib/error-reporting";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export default function GlobalError({
   error,
@@ -29,12 +30,12 @@ export default function GlobalError({
           textAlign: "center",
         }}
       >
-        <title>Something went wrong · asobeast</title>
+        <title>{`Something went wrong · ${PRODUCT_NAME}`}</title>
         <h1 style={{ fontSize: "1rem", fontWeight: 600 }}>
           Something went wrong
         </h1>
         <p style={{ maxWidth: "28rem", opacity: 0.7 }}>
-          asobeast could not render this page. Trying again usually clears a
+          AsoBeast could not render this page. Trying again usually clears a
           transient failure.
         </p>
         <button type="button" onClick={retry}>

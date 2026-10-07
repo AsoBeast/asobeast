@@ -3,6 +3,7 @@ import type {
   ActionEventItem,
   ActionEventType,
 } from "@asobeast/shared";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { formatDate } from "@/lib/format";
 import { ACTION_PRIORITY_LABEL } from "./action-copy";
 
@@ -57,6 +58,8 @@ export function historyEntries(
     label: ACTION_EVENT_LABEL[event.type],
     detail: detailOf(event),
     actor:
-      event.actor === "system" ? "asobeast" : (event.actorName ?? "A teammate"),
+      event.actor === "system"
+        ? PRODUCT_NAME
+        : (event.actorName ?? "A teammate"),
   }));
 }

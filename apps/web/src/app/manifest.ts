@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "asobeast",
-    short_name: "asobeast",
+    name: PRODUCT_NAME,
+    short_name: PRODUCT_NAME,
     description: "Open source App Store Optimization toolkit",
     start_url: "/",
     display: "standalone",

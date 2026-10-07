@@ -1,4 +1,5 @@
 import { version } from "../package.json";
+import { renderedRgb, renderedTokenRgb } from "./colour.mts";
 import { expect, test } from "./session.mts";
 import { SIGNED_IN_ROUTES } from "./routes.mts";
 
@@ -33,6 +34,24 @@ test("the active section carries aria-current in the sidebar", async ({
     sections.getByRole("link", { name: "Keywords", exact: true }),
   ).toHaveAttribute("aria-current", "page");
   await expect(sections.locator('[aria-current="page"]')).toHaveCount(1);
+});
+
+test("the active section icon takes the brand colour", async ({ page }) => {
+  await page.goto("/apps/app-1/keywords");
+
+  const sections = page.getByRole("navigation", { name: "App sections" });
+  const active = sections.getByRole("link", { name: "Keywords", exact: true });
+  const inactive = sections.getByRole("link", {
+    name: "Rankings",
+    exact: true,
+  });
+  await expect(active).toHaveAttribute("aria-current", "page");
+  const brand = await renderedTokenRgb(page, "--sidebar-primary");
+
+  expect(await renderedRgb(active.locator("svg"), "color")).toEqual(brand);
+  expect(await renderedRgb(inactive.locator("svg"), "color")).not.toEqual(
+    brand,
+  );
 });
 
 for (const width of DESKTOP_WIDTHS) {
@@ -111,6 +130,19 @@ test("the sidebar describes asobeast without a deployment", async ({
     "content",
     /self hosted/i,
   );
+});
+
+test("the sidebar wordmark and the tab title name the product AsoBeast", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/settings");
+
+  const nav = page.getByRole("navigation", { name: "Main" });
+  await expect(
+    nav.getByRole("link", { name: "AsoBeast", exact: true }),
+  ).toBeVisible();
+  await expect(page).toHaveTitle("AsoBeast");
 });
 
 test("the collapsed sidebar survives a reload", async ({ page }) => {

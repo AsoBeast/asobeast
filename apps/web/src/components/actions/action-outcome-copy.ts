@@ -33,7 +33,7 @@ export function outcomeSentence(
 ): string {
   if (outcome.verdict === "pending") {
     const from = outcome.beforeDate ?? outcome.afterDate;
-    return `${from ? `Measured from ${formatDate(from)}. ` : ""}asobeast needs three days of data after you marked it done.`;
+    return `${from ? `Measured from ${formatDate(from)}. ` : ""}AsoBeast needs three days of data after you marked it done.`;
   }
   const scale = depth ?? RANK_DEPTH;
   const label = TREND_METRIC_LABEL[outcome.metric];

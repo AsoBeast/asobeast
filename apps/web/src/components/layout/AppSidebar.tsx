@@ -11,6 +11,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { PRODUCT_NAME } from "@/lib/brand";
 import { appVersionLabel } from "./app-version";
 import { AppSwitcher } from "./AppSwitcher";
 import { SidebarNav } from "./SidebarNav";
@@ -38,7 +39,7 @@ export function AppSidebar() {
               translate="no"
               className="truncate group-data-[collapsible=icon]:hidden"
             >
-              asobeast
+              {PRODUCT_NAME}
             </span>
           </Link>
           <AppSwitcher />

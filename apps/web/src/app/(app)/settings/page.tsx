@@ -74,7 +74,7 @@ export default async function SettingsPage({
         <SettingsSection
           id="alerts"
           title="Alerts"
-          description="When asobeast tells you something changed, and where it sends that."
+          description="When AsoBeast tells you something changed, and where it sends that."
         >
           <Suspense fallback={<DeliveryCardSkeleton />}>
             <DeliveryCard />

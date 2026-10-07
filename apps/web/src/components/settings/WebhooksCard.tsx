@@ -98,7 +98,7 @@ function AddWebhookDialog() {
       open={open}
       onOpenChange={setOpen}
       label="Add webhook"
-      description="asobeast POSTs a JSON payload to this URL when a subscribed event fires. Add a secret to receive an HMAC signature header."
+      description="AsoBeast POSTs a JSON payload to this URL when a subscribed event fires. Add a secret to receive an HMAC signature header."
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
@@ -193,7 +193,7 @@ function WebhookRow({ webhook }: { webhook: WebhookItem }) {
       activePending={toggle.isPending}
       onActiveChange={(active) => toggle.mutate(active)}
       confirmTitle="Delete this webhook?"
-      confirmDescription={`asobeast will stop delivering alerts to ${webhook.url}. This cannot be undone.`}
+      confirmDescription={`AsoBeast will stop delivering alerts to ${webhook.url}. This cannot be undone.`}
       testPending={test.isPending}
       onTest={() => test.mutate()}
       deletePending={remove.isPending}

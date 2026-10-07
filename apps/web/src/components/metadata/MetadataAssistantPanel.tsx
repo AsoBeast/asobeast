@@ -193,7 +193,7 @@ export function MetadataAssistantPanel({
         </div>
       ) : null}
       <p className="text-xs text-muted-foreground">
-        Drafts are suggestions — asobeast never writes to the store.
+        Drafts are suggestions — AsoBeast never writes to the store.
       </p>
     </section>
   );

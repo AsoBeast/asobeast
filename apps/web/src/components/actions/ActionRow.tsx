@@ -103,6 +103,7 @@ function RowControls({
   return (
     <>
       <Button
+        variant="secondary"
         size="sm"
         disabled={busy}
         aria-label="Done"

@@ -72,6 +72,7 @@ export function DeliveryCard() {
           <CardTitle>Delivery</CardTitle>
         </div>
         <Button
+          variant="outline"
           size="sm"
           disabled={flush.isPending}
           aria-busy={flush.isPending}

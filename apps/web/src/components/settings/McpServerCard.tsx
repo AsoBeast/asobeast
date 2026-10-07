@@ -205,7 +205,7 @@ function ConnectDialog() {
   return (
     <Dialog open={open} onOpenChange={reset}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button variant="outline" size="sm">
           <Plug />
           Connect an agent
         </Button>
@@ -214,7 +214,7 @@ function ConnectDialog() {
         {created ? (
           <>
             <DialogHeader>
-              <DialogTitle>Connect asobeast</DialogTitle>
+              <DialogTitle>Connect AsoBeast</DialogTitle>
               <DialogDescription>
                 The token is read-only and is shown once. Copy what you need
                 before closing.

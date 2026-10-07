@@ -23,7 +23,7 @@ export const CHECKOUT_UNCONFIGURED =
   "Checkout is not configured on this instance.";
 
 export const COLLECTION_PAUSED =
-  "Collection is paused. Everything asobeast has already gathered stays readable and exportable.";
+  "Collection is paused. Everything AsoBeast has already gathered stays readable and exportable.";
 
 const SUSPENDED_SCOPE =
   "Your data stays readable and exportable and billing stays open, but changes and the daily run are paused. Contact the operator of this instance to lift it.";
@@ -42,7 +42,7 @@ export const MEMBER_BILLING_NOTE = `${MEMBER_BILLING_TITLE}.`;
 
 export const ASK_THE_OWNER = "Ask your workspace owner to choose a plan.";
 
-const CHOOSE_A_PLAN = "Choose a plan to unlock asobeast.";
+const CHOOSE_A_PLAN = "Choose a plan to unlock AsoBeast.";
 
 const BILLED: Record<BillingInterval, string> = {
   month: "Billed monthly",

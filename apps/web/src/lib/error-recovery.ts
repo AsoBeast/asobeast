@@ -50,7 +50,7 @@ const BY_STATUS: Record<number, Explanation> = {
   },
   504: {
     title: "The API did not answer in time",
-    body: "asobeast runs on your own machine. Check that the api container is up and that the database and Redis are reachable, then try again.",
+    body: "AsoBeast runs on your own machine. Check that the api container is up and that the database and Redis are reachable, then try again.",
     action: { kind: "retry" },
   },
 };

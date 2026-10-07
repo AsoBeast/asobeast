@@ -46,6 +46,7 @@
   --color-success-subtle: var(--success-subtle);
   --color-warning: var(--warning);
   --color-warning-subtle: var(--warning-subtle);
+  --color-info: var(--info);
   --color-priority-critical: var(--priority-critical);
   --color-priority-high: var(--priority-high);
   --color-priority-medium: var(--priority-medium);
@@ -75,6 +76,7 @@
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
   --color-popover-foreground: var(--popover-foreground);

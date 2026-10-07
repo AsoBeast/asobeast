@@ -232,7 +232,7 @@ export function KeywordFieldEditor({
           This {KEYWORD_FIELD_BYTE_LIMIT}-byte field is private — Apple never
           shows it and it cannot be scraped. Letters such as ą take 2 bytes.
           Paste exactly what you submitted in App Store Connect. It applies to
-          your home market only. The field shows the phrases asobeast tracks in
+          your home market only. The field shows the phrases AsoBeast tracks in
           the order you pasted them. Spacing and casing can differ, and a
           repeated phrase is kept once, where it first appeared.
         </CardDescription>

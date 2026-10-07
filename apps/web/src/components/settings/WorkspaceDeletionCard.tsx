@@ -152,7 +152,7 @@ function OperatorNote() {
       This workspace holds the platform operator. It cannot be deleted while
       other accounts exist, because the admin area, the queue dashboard and the
       support tools would go with it and no account could take them over.
-      asobeast has no hand over yet. To clear your own data, delete its apps and
+      AsoBeast has no hand over yet. To clear your own data, delete its apps and
       keywords instead. Deleting this workspace is allowed only while yours is
       the only account, and it resets the instance.
     </p>

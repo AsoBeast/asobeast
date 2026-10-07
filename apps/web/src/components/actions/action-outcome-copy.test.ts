@@ -48,7 +48,7 @@ describe("outcomeSentence", () => {
         200,
       ),
     ).toBe(
-      "Measured from Jul 29, 2026. asobeast needs three days of data after you marked it done.",
+      "Measured from Jul 29, 2026. AsoBeast needs three days of data after you marked it done.",
     );
   });
 

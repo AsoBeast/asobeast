@@ -110,7 +110,7 @@ test("the operator is told why deleting this workspace is restricted", async ({
 
   const section = page.getByRole("region", { name: "Workspace" });
   await expect(section).toContainText("holds the platform operator");
-  await expect(section).toContainText("asobeast has no hand over yet");
+  await expect(section).toContainText("AsoBeast has no hand over yet");
   await expect(
     section.getByRole("button", { name: "Delete workspace" }),
   ).toBeVisible();

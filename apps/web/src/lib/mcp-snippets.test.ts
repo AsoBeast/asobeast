@@ -279,7 +279,7 @@ describe("mcp snippets", () => {
       expect(file().inputs[0]).toEqual({
         type: "promptString",
         id: "asobeast-token",
-        description: "asobeast personal API token",
+        description: "AsoBeast personal API token",
         password: true,
       });
       expect(file().servers.asobeast.headers.Authorization).toBe(

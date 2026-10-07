@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { PRODUCT_NAME } from "@/lib/brand";
 
 export default function AuthLayout({
   children,
@@ -21,7 +22,7 @@ export default function AuthLayout({
             priority
             className="rounded-[6px]"
           />
-          <span translate="no">asobeast</span>
+          <span translate="no">{PRODUCT_NAME}</span>
         </Link>
         <ThemeToggle />
       </header>
