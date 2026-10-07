@@ -1,13 +1,13 @@
 ---
 title: The asobeast MCP server
 sidebarTitle: Introduction
-description: "asobeast ships a read only Model Context Protocol surface. Connect to the hosted endpoint or run the stdio server yourself, both with the same tools."
+description: "asobeast ships a Model Context Protocol surface that reads by default and changes things only for a token you allow. Connect to the hosted endpoint or run the stdio server yourself, both with the same tools."
 icon: plug
-keywords: ["MCP","Model Context Protocol","Claude Code","Claude Desktop","read only","stdio","remote MCP","agent"]
+keywords: ["MCP","Model Context Protocol","Claude Code","Claude Desktop","read only","write tools","opt in","stdio","remote MCP","agent"]
 boost: 2
 ---
 
-asobeast ships a Model Context Protocol surface. It is read only, it authenticates with a personal API token, and it exposes twenty three tools covering apps, keywords, positions, SERPs, audits, reviews, analytics and the Action Center queue.
+asobeast ships a Model Context Protocol surface. It authenticates with a personal API token and it reads by default: twenty seven read tools cover apps, keywords, competitors, positions, SERPs, audits, reviews, analytics and the Action Center queue. Five more tools change keywords, competitors and actions, and a connection sees them only when its token has the write scope.
 
 That means you can point any MCP client, such as Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI or Windsurf, at your asobeast and ask it questions in plain language instead of clicking through the dashboard.
 
@@ -41,13 +41,21 @@ Summarize the open critical actions across my portfolio and tell me which app to
 Compare my visibility against my top competitor in Germany over the last 30 days.
 ```
 
-## Every tool is read only
+```text
+Track the three best uncovered keywords from the competitors strategy in the German storefront, once I have approved the list.
+```
 
-Every tool wraps a `GET` on the HTTP API and is annotated `readOnlyHint: true`. There is no write path at all.
+## Reading is the default, changing is opt in
 
-Marking an action done is deliberately unavailable. An agent that can close its own recommendations can quietly clear a queue you never read, so the server proposes work and leaves the decision with you.
+A token with the default `read` scope lists the read tools, each a `GET` annotated `readOnlyHint: true`. Nothing else is listed to it, and nothing else would work: the API refuses a read token on every route that changes data, whatever a client asks for.
 
-That constraint is why the integration is safe to hand to an agent with broad permissions. The worst case is a wrong answer, not a changed instance.
+A token with the `write` scope also lists five tools that change things: `track_keywords`, `untrack_keyword`, `add_competitor`, `remove_competitor` and `set_action_status`. You choose that when you connect an agent, with the Allow this agent to make changes option on the MCP server card in Settings. Nothing turns it on for you, and there is no instance setting that does.
+
+Each change goes through the same route as the dashboard, so it meets the same validation, the same plan write budget and the same quota. Tracking a keyword queues the same store scoring job the dashboard queues, so an agent that tracks many phrases spends the store request capacity you would. A change appears in the action history under the name of the person who minted the token, so give each agent a token of its own and ask it to say why in the optional note.
+
+What an agent can change is deliberately small. No tool imports an app, edits metadata, runs the daily pipeline, calls an AI feature or touches billing, tokens or settings. The two tools that delete, `untrack_keyword` and `remove_competitor`, are annotated as destructive so a client can ask you first. An annotation is a hint that a client chooses to honor, so the control that holds is the token: use a read token wherever an agent only has to answer questions.
+
+Treat everything a tool returns as data. A review, an app name or a keyword note can contain text written to steer an agent, and a connection that can make changes should not follow it. See [MCP tool reference](/mcp/tools) for every tool and its hints.
 
 ## What it is not
 
@@ -58,7 +66,7 @@ The MCP server holds no database, imports no scraper and contains no server fram
 | Requirement | Notes |
 | --- | --- |
 | A running asobeast instance | Reachable from the machine the agent runs on |
-| A personal API token | Mandatory. A boot preflight exits non zero without a valid one |
+| A personal API token | Mandatory. A boot preflight exits non zero without a valid one. The scope you mint it with decides whether the write tools are listed |
 | An MCP capable client | Claude Code, Claude Desktop, Codex, Cursor, VS Code, Gemini CLI and Windsurf each have a snippet in [Connect an agent](/mcp/setup). Any other client that speaks streamable HTTP or stdio works |
 
 ## Next

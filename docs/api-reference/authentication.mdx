@@ -50,7 +50,9 @@ Both carry the same entitlement checks. A token can be narrower than a session: 
 | Scope | `read` or `write` | `read` |
 | Expiry | Up to 365 days, or never | Never |
 
-Read only is the right default for anything agentic, including the MCP server, which never writes. An expired token fails authentication with `401` exactly like a revoked one.
+Read only is the right default for anything agentic. The MCP server lists the tools that change things only to a token with the write scope, so give an agent a read token unless it has to change something. An expired token fails authentication with `401` exactly like a revoked one.
+
+Called with a token, `GET /auth/me` also reports the token's scope as `tokenScope`. A browser session has no scope, so the field is absent.
 
 Rate limits count per workspace rather than per token, so minting a second token buys no extra capacity. See [Rate limits and quotas](/api-reference/rate-limits).
 
