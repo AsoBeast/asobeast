@@ -12,6 +12,7 @@ import {
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
+import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { RetentionService } from '../src/jobs/retention.service';
 import { StoreAppNotFoundError } from '../src/store-providers/errors';
@@ -197,6 +198,20 @@ describe('market listing refresh (e2e)', () => {
       /not an App Store storefront/,
     );
     expect(registry.getAppCalls).toEqual([]);
+  });
+
+  it('spends a refresh credit only on a market it accepts', async () => {
+    const appId = await importApp();
+    await trackIn(appId, 'de');
+    const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
+
+    await api.post(`/apps/${appId}/refresh?country=fr`).expect(400);
+    await api.post(`/apps/${appId}/refresh?country=zz`).expect(400);
+    await api.post('/apps/missing/refresh').expect(404);
+    expect(consume).not.toHaveBeenCalled();
+
+    await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+    expect(consume.mock.calls).toEqual([['refresh']]);
   });
 
   it('records a market change without an alert or a home side effect', async () => {

@@ -232,8 +232,12 @@ export class AppsService {
     });
   }
 
-  refreshApp(id: string, country?: string): Promise<SnapshotDiffResult> {
-    return this.listingCapture.refresh(id, country);
+  refreshApp(
+    id: string,
+    country?: string,
+    spend?: () => Promise<void>,
+  ): Promise<SnapshotDiffResult> {
+    return this.listingCapture.refresh(id, country, spend);
   }
 
   refreshListing(

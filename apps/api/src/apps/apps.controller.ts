@@ -91,12 +91,13 @@ export class AppsController {
   @SpendsStoreCapacity()
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh an app and return the snapshot diff' })
-  async refresh(
+  refresh(
     @Param('id') id: string,
     @Query() query: ListingMarketQueryDto,
   ): Promise<SnapshotDiffResult> {
-    await this.limiter.consume('refresh');
-    return this.apps.refreshApp(id, query.country);
+    return this.apps.refreshApp(id, query.country, () =>
+      this.limiter.consume('refresh'),
+    );
   }
 
   @Delete(':id')

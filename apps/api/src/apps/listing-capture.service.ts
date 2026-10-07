@@ -34,12 +34,17 @@ export class ListingCaptureService {
     private readonly changes: ChangesService,
   ) {}
 
-  async refresh(id: string, country?: string): Promise<SnapshotDiffResult> {
+  async refresh(
+    id: string,
+    country?: string,
+    spend: () => Promise<void> = () => Promise.resolve(),
+  ): Promise<SnapshotDiffResult> {
     const app = await this.requireApp(id);
     const market = country ?? app.country;
     if (market !== app.country) {
       await this.assertTracksMarket(app, market);
     }
+    await spend();
     return this.captureListing(app, market);
   }
 
