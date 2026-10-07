@@ -1,6 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { Prisma, Store } from '@prisma/client';
+import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   AppDetail,
@@ -27,21 +27,13 @@ import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { toAppDetail, toAppListItem, toListingMarkets } from './apps.mapper';
+import { toAppDetail, toAppListItem } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
-import {
-  EVERY_LISTING,
-  LATEST_HOME_LISTING,
-  listingIn,
-  NEWEST_FIRST,
-} from './listing';
+import { ListingReadService } from './listing-read.service';
+import { LATEST_HOME_LISTING } from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
-
-type AppWithListings = Prisma.AppGetPayload<{
-  include: { competitors: true; group: { include: { apps: true } } };
-}>;
 
 @Injectable()
 export class AppsService {
@@ -52,7 +44,8 @@ export class AppsService {
     private readonly registry: StoreProviderRegistry,
     private readonly capture: AppCaptureService,
     private readonly keywords: KeywordsService,
-    private readonly listings: ListingCaptureService,
+    private readonly listingCapture: ListingCaptureService,
+    private readonly listingReads: ListingReadService,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
     private readonly quota: QuotaService,
@@ -170,47 +163,11 @@ export class AppsService {
       );
     }
     assertStorefront(app.store, country);
-    return this.marketDetail(app, country);
+    return this.listingReads.marketDetail(app, country);
   }
 
-  async listingMarkets(id: string): Promise<ListingMarket[]> {
-    const app = await this.prisma.app.findFirst({
-      where: { id },
-      select: { country: true },
-    });
-    if (!app) {
-      throw new NotFoundException(`App ${id} not found`);
-    }
-    const rows = await this.prisma.appSnapshot.groupBy({
-      by: ['country'],
-      where: { appId: id, ...EVERY_LISTING },
-      _max: { capturedAt: true },
-    });
-    return toListingMarkets(app.country, rows);
-  }
-
-  private async marketDetail(
-    app: AppWithListings,
-    market: string,
-  ): Promise<AppDetail> {
-    const rows = await this.prisma.appSnapshot.findMany({
-      where: {
-        appId: { in: [app.id, ...app.competitors.map((rival) => rival.id)] },
-        ...listingIn(app.country, market),
-      },
-      orderBy: NEWEST_FIRST,
-      distinct: ['appId'],
-    });
-    const latest = new Map(rows.map((row) => [row.appId, row]));
-    const own = latest.get(app.id);
-    if (!own) {
-      throw new NotFoundException(`No listing captured for ${market}`);
-    }
-    const competitors = app.competitors.map((rival) => {
-      const listing = latest.get(rival.id);
-      return { ...rival, snapshots: listing ? [listing] : [] };
-    });
-    return toAppDetail(app, own, competitors, app.group);
+  listingMarkets(id: string): Promise<ListingMarket[]> {
+    return this.listingReads.markets(id);
   }
 
   async marketAvailability(
@@ -276,14 +233,14 @@ export class AppsService {
   }
 
   refreshApp(id: string, country?: string): Promise<SnapshotDiffResult> {
-    return this.listings.refresh(id, country);
+    return this.listingCapture.refresh(id, country);
   }
 
   refreshListing(
     id: string,
     country: string,
   ): Promise<SnapshotDiffResult | null> {
-    return this.listings.refreshListing(id, country);
+    return this.listingCapture.refreshListing(id, country);
   }
 }
 
