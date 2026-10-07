@@ -53,6 +53,16 @@ test("switching the market shows that listing and keeps it in the url", async ({
   await expect(title).toHaveValue("Focus Timer");
 });
 
+test("the home view keeps the keywords tracked in other markets", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/metadata");
+
+  await expect(
+    page.getByRole("table", { name: /Keyword coverage across/ }),
+  ).toContainText("productivity app");
+});
+
 test("falls back to the home listing for a market without one", async ({
   page,
 }) => {

@@ -7,7 +7,7 @@ import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
 import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
 import { ApiError, getMetadataAssistantStatus } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
-import { resolveMarket } from "@/lib/market";
+import { queryMarket, resolveMarket } from "@/lib/market";
 import {
   appDetailOptions,
   keywordCountriesOptions,
@@ -33,7 +33,7 @@ export default async function MetadataPage({
   const market = resolveMarket(requested, markets, app.country);
 
   const result = await queryClient
-    .fetchQuery(metadataAuditOptions(id, market))
+    .fetchQuery(metadataAuditOptions(id, queryMarket(market, app.country)))
     .catch((err) => {
       if (err instanceof ApiError && err.envelope.statusCode === 404)
         notFound();

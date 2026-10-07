@@ -1669,10 +1669,16 @@ const routes: Route[] = [
           errorEnvelope(404, path, `No listing captured for ${market}`),
         );
       }
+      const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+      const home = DATASETS[id]?.detail.country;
       json(res, 200, {
-        ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
+        ...audit,
         appId: id,
         store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
+        coverage:
+          market === null
+            ? audit.coverage
+            : audit.coverage.filter((row) => (row.country ?? home) === home),
       });
     },
   },

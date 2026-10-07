@@ -137,7 +137,7 @@ export const appKeys = {
     [...appKeys.detail(id), "listing-markets"] as const,
   listing: (id: string, market: string) =>
     [...appKeys.detail(id), "listing", { market }] as const,
-  metadataAudit: (id: string, market: string) =>
+  metadataAudit: (id: string, market?: string) =>
     [...appKeys.detail(id), "metadata-audit", { market }] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
@@ -413,7 +413,7 @@ export const appListingOptions = (id: string, market?: string) =>
     queryFn: () => getApp(id, market),
   });
 
-export const metadataAuditOptions = (id: string, market: string) =>
+export const metadataAuditOptions = (id: string, market?: string) =>
   queryOptions({
     queryKey: appKeys.metadataAudit(id, market),
     queryFn: () => getMetadataAudit(id, market),

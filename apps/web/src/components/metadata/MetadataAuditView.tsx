@@ -5,6 +5,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
+import { queryMarket } from "@/lib/market";
 import { metadataAuditOptions } from "@/lib/queries";
 import { CoverageTable } from "./CoverageTable";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
@@ -21,7 +22,9 @@ export function MetadataAuditView({
   hasLocalizations: boolean;
 }) {
   const { market, home } = useMarket(id);
-  const { data: result } = useSuspenseQuery(metadataAuditOptions(id, market));
+  const { data: result } = useSuspenseQuery(
+    metadataAuditOptions(id, queryMarket(market, home)),
+  );
 
   return (
     <>

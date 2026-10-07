@@ -8,6 +8,7 @@ import type {
   WebhookItem,
 } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
+import { queryMarket } from "./market";
 import {
   adminKeys,
   actionActivityOptions,
@@ -274,6 +275,26 @@ describe("appKeys", () => {
     expect(appKeys.changes(APP, 90, "de")).not.toEqual(
       appKeys.changes(APP, 90, "pl"),
     );
+  });
+
+  it("audits the home listing without naming its country", async () => {
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return Promise.resolve(
+        new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+
+    const options = metadataAuditOptions(APP, queryMarket("us", "us"));
+    await new QueryClient().fetchQuery(options);
+    vi.unstubAllGlobals();
+
+    expect(options.queryKey).toEqual(appKeys.metadataAudit(APP));
+    expect(requested[0]).toMatch(/\/apps\/app-1\/metadata\/audit$/);
   });
 
   it("keys the metadata audit and the listing of each market apart", () => {

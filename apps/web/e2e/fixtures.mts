@@ -3087,6 +3087,8 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: false },
       ],
       uncovered: true,
+      country: "de",
+      listingCountry: "us",
     },
   ],
   keywordFieldSuggestion: null,
