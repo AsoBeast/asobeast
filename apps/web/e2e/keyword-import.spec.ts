@@ -431,6 +431,67 @@ test("P-WEB-13 refuses a file too large to be a keyword list without reading it"
   expect(sent).toEqual([]);
 });
 
+test("P-WEB-13 says when the chosen file cannot be read", async ({ page }) => {
+  const sent = importRequests(page);
+  const dialog = await openDialog(page);
+  await page.evaluate(() => {
+    File.prototype.arrayBuffer = () =>
+      Promise.reject(
+        new DOMException("The file could not be read", "NotReadableError"),
+      );
+  });
+
+  await choose(dialog, "keyword\r\nalpha one\r\n");
+
+  await expect(dialog.getByRole("alert")).toContainText(
+    "That file could not be read.",
+  );
+  expect(sent).toEqual([]);
+});
+
+test("P-WEB-13 keeps the file chosen last when an earlier one finishes reading later", async ({
+  page,
+}) => {
+  const dialog = await openDialog(page);
+  await page.evaluate(() => {
+    const read = File.prototype.arrayBuffer;
+    const held = Promise.withResolvers<void>();
+    Object.assign(window, { releaseLargeFile: held.resolve });
+    File.prototype.arrayBuffer = function (this: File) {
+      return this.name === "large.csv"
+        ? held.promise.then(() => read.call(this))
+        : read.call(this);
+    };
+  });
+
+  await choose(dialog, "keyword\r\nlarge one\r\n", "large.csv");
+  await choose(dialog, "keyword\r\nsmall one\r\n", "small.csv");
+  await expect(rowOf(dialog, /small one/)).toBeVisible();
+
+  await page.evaluate(async () => {
+    (window as unknown as { releaseLargeFile: () => void }).releaseLargeFile();
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  });
+
+  await expect(dialog.getByText(/Reading large\.csv/)).toHaveCount(0);
+  await expect(dialog.getByText(/Reading small\.csv/)).toBeVisible();
+  await expect(rowOf(dialog, /small one/)).toBeVisible();
+});
+
+test("P-WEB-14 says when the market the dialog starts on is not a storefront", async ({
+  page,
+}) => {
+  const sent = importRequests(page);
+  const dialog = await openDialog(page, `${KEYWORDS}?country=zz`);
+
+  await choose(dialog, "keyword\r\nalpha one\r\n");
+
+  await expect(dialog.getByRole("alert")).toContainText(
+    "zz is not an App Store storefront. Choose the market for rows without a country.",
+  );
+  expect(sent).toEqual([]);
+});
+
 test("P-WEB-14 gives a row without a country the market chosen in the dialog", async ({
   page,
 }) => {

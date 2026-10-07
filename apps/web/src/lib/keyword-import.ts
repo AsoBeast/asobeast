@@ -1,12 +1,15 @@
 import {
+  isStorefront,
   KEYWORD_IMPORT_LIMIT,
   KEYWORD_IMPORT_STATUSES,
+  UnknownStorefrontError,
   type KeywordImportRequest,
   type KeywordImportResult,
   type KeywordImportRow,
   type KeywordImportRowResult,
   type KeywordImportStatus,
   type KeywordImportSummary,
+  type Store,
 } from "@asobeast/shared";
 import type { CsvEncoding } from "@/lib/csv-import/decode";
 import { formatNumber } from "@/lib/format";
@@ -138,6 +141,12 @@ export function fileNotices(file: {
     );
   }
   return notices;
+}
+
+export function marketRefusal(store: Store, market: string): string | null {
+  return isStorefront(store, market)
+    ? null
+    : `${new UnknownStorefrontError(store, market).message}. Choose the market for rows without a country.`;
 }
 
 export function summarySentence(summary: KeywordImportSummary): string {

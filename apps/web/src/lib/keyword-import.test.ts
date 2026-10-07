@@ -11,6 +11,7 @@ import {
   IMPORT_STATUS_LABELS,
   importButtonLabel,
   importToast,
+  marketRefusal,
   refuseImport,
   refusalMessage,
   rowNote,
@@ -176,6 +177,18 @@ describe("fileNotices", () => {
     expect(
       fileNotices({ ...base, hasHeader: false, ignoredColumns: 1 })[1],
     ).toBe("1 other column is ignored.");
+  });
+});
+
+describe("marketRefusal", () => {
+  it("accepts a storefront of the app's store", () => {
+    expect(marketRefusal("APP_STORE", "pl")).toBeNull();
+  });
+
+  it("asks for a market when the default market is not a storefront", () => {
+    expect(marketRefusal("APP_STORE", "zz")).toBe(
+      "zz is not an App Store storefront. Choose the market for rows without a country.",
+    );
   });
 });
 
