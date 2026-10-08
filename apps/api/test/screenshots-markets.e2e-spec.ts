@@ -147,13 +147,16 @@ describe('Screenshots of market listings (e2e)', () => {
   };
 
   const runRefreshJob = async (appId: string, country: string) => {
-    const job = await app
-      .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
-      .add(JOBS.REFRESH_APP, {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        appId,
-        country,
-      });
+    const queue = app.get<Queue>(getQueueToken(QUEUES.APP_STORE), {
+      strict: false,
+    });
+    await queue.drain(true);
+    await queue.removeRateLimitKey();
+    const job = await queue.add(JOBS.REFRESH_APP, {
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      appId,
+      country,
+    });
     await until(async () => (await job.getState()) === 'completed');
     const latest = await prisma.appSnapshot.findFirstOrThrow({
       where: { appId, country },
