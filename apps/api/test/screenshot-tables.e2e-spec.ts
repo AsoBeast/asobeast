@@ -191,4 +191,49 @@ describe('Screenshot tables (e2e)', () => {
     ).resolves.not.toBeNull();
     await expect(prisma.snapshotScreenshot.count()).resolves.toBe(0);
   });
+
+  it('prunes market snapshots per market and keeps the screenshot rows of the newest one', async () => {
+    const { owned, snapshot: home } = await seedSnapshot();
+    const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000);
+    const marketSnapshot = async (capturedAt: Date) => {
+      const created = await prisma.appSnapshot.create({
+        data: {
+          appId: owned.id,
+          country: 'de',
+          title: 'Mine',
+          description: 'd',
+          raw: {},
+          capturedAt,
+        },
+      });
+      await prisma.snapshotScreenshot.create({
+        data: {
+          snapshotId: created.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          position: 1,
+          url: `${ASSET}/392x696bb.jpg`,
+          assetKey: ASSET,
+        },
+      });
+      return created;
+    };
+    const pruned = await marketSnapshot(daysAgo(500));
+    const kept = await marketSnapshot(daysAgo(400));
+    await prisma.appSnapshot.update({
+      where: { id: home.id },
+      data: { capturedAt: daysAgo(450) },
+    });
+
+    await app.get(RetentionService).prune();
+
+    const rows = await prisma.snapshotScreenshot.findMany({
+      select: { snapshotId: true },
+    });
+    expect(new Set(rows.map((row) => row.snapshotId))).toEqual(
+      new Set([home.id, kept.id]),
+    );
+    await expect(
+      prisma.appSnapshot.findUnique({ where: { id: pruned.id } }),
+    ).resolves.toBeNull();
+  });
 });
