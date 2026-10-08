@@ -18,7 +18,7 @@ export type OcrLanguage = (typeof OCR_LANGUAGES)[number];
 
 export const DEFAULT_OCR_LANGUAGES: OcrLanguage[] = [...OCR_LANGUAGES];
 
-export const OCR_RECIPE_VERSION = 'ocr1';
+export const OCR_RECIPE_VERSION = 'ocr2';
 
 const STOREFRONT_LANGUAGE: Readonly<Record<string, OcrLanguage>> = {
   jp: 'jpn',

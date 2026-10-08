@@ -27,6 +27,7 @@ import {
   FakeScreenshotRegistry,
 } from './helpers/screenshot-store';
 import {
+  greyPassEngine,
   lines,
   readsFinished,
   solidPng,
@@ -58,7 +59,7 @@ describe('Screenshots of market listings (e2e)', () => {
       .overrideProvider(ScreenshotImageSource)
       .useValue({ read })
       .overrideProvider(OCR_ENGINE)
-      .useValue({ name: 'fake-engine', read: engineRead })
+      .useValue(greyPassEngine(engineRead))
       .compile();
     app = moduleFixture.createNestApplication();
     useCookies(app);
@@ -182,8 +183,8 @@ describe('Screenshots of market listings (e2e)', () => {
       orderBy: { position: 'asc' },
     });
     expect(rows.map((row) => [row.status, row.caption, row.recipe])).toEqual([
-      ['read', 'Gewohnheiten', 'ocr1:eng+deu'],
-      ['read', 'Plane deine Woche', 'ocr1:eng+deu'],
+      ['read', 'Gewohnheiten', 'ocr2:eng+deu'],
+      ['read', 'Plane deine Woche', 'ocr2:eng+deu'],
     ]);
     expect(engineRead).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
 
@@ -246,8 +247,8 @@ describe('Screenshots of market listings (e2e)', () => {
       orderBy: { position: 'asc' },
     });
     expect(rows.map((row) => [row.status, row.caption, row.recipe])).toEqual([
-      ['read', 'Gewohnheiten', 'ocr1:eng+deu'],
-      ['read', 'Gewohnheiten', 'ocr1:eng+deu'],
+      ['read', 'Gewohnheiten', 'ocr2:eng+deu'],
+      ['read', 'Gewohnheiten', 'ocr2:eng+deu'],
     ]);
     expect(engineRead).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
   });

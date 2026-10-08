@@ -4,6 +4,9 @@ import { PrismaClient } from '@prisma/client';
 import { Queue } from 'bullmq';
 import sharp from 'sharp';
 import { QUEUES } from '../../src/jobs/jobs.types';
+import type { OcrLine } from '../../src/screenshots/caption-text';
+import type { OcrEngine } from '../../src/screenshots/ocr-engine';
+import type { OcrLanguage } from '../../src/screenshots/ocr-languages';
 
 export const solidPng = () =>
   sharp({
@@ -15,6 +18,17 @@ export const solidPng = () =>
 export const lines = (text: string) => [
   { text, confidence: 96, left: 0, top: 198, width: 900, height: 102 },
 ];
+
+export const greyPassEngine = (
+  read: (
+    image: Buffer,
+    languages: readonly OcrLanguage[],
+  ) => Promise<OcrLine[]>,
+): OcrEngine => ({
+  name: 'fake-engine',
+  read: (image, languages, thresholding) =>
+    thresholding === 'otsu' ? read(image, languages) : Promise.resolve([]),
+});
 
 export const until = async (
   check: () => Promise<boolean>,
