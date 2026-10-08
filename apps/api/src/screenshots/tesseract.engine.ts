@@ -1,12 +1,6 @@
 import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  createWorker,
-  type InitOptions,
-  OEM,
-  PSM,
-  type Worker,
-} from 'tesseract.js';
+import { createWorker, OEM, PSM, type Worker } from 'tesseract.js';
 import { withTimeout } from '../common/async/with-timeout';
 import type { Env } from '../config/env';
 import type { OcrLine } from './caption-text';
@@ -17,9 +11,9 @@ import { disposeTessdata, tessdataDirectory } from './tessdata';
 export const IDLE_TERMINATE_MS = 5 * 60 * 1000;
 export const RECOGNIZE_TIMEOUT_MS = 60_000;
 
-const THRESHOLDING: Record<OcrThresholding, Partial<InitOptions>> = {
-  otsu: { thresholding_method: '0' } as Partial<InitOptions>,
-  sauvola: { thresholding_method: '2' } as Partial<InitOptions>,
+const THRESHOLDING: Record<OcrThresholding, string> = {
+  otsu: '0',
+  sauvola: '2',
 };
 
 @Injectable()
@@ -90,32 +84,23 @@ export class TesseractOcrEngine implements OcrEngine, OnModuleDestroy {
   ): Promise<Worker> {
     this.refuseWhileClosing();
     const joined = languages.join('+');
-    const key = `${joined}~${thresholding}`;
     if (this.worker === null) {
       const enabled = this.config.get('SCREENSHOT_OCR_LANGUAGES', {
         infer: true,
       });
-      this.worker = await createWorker(
-        [...languages],
-        OEM.LSTM_ONLY,
-        {
-          langPath: await tessdataDirectory(enabled),
-          gzip: true,
-          cacheMethod: 'none',
-        },
-        THRESHOLDING[thresholding],
-      );
+      this.worker = await createWorker([...languages], OEM.LSTM_ONLY, {
+        langPath: await tessdataDirectory(enabled),
+        gzip: true,
+        cacheMethod: 'none',
+      });
       this.refuseWhileClosing();
-    } else if (this.configured !== key) {
-      await this.worker.reinitialize(
-        joined,
-        OEM.LSTM_ONLY,
-        THRESHOLDING[thresholding],
-      );
+    } else if (this.configured !== joined) {
+      await this.worker.reinitialize(joined, OEM.LSTM_ONLY);
     }
-    this.configured = key;
+    this.configured = joined;
     await this.worker.setParameters({
       tessedit_pageseg_mode: PSM.SPARSE_TEXT,
+      thresholding_method: THRESHOLDING[thresholding],
     });
     return this.worker;
   }

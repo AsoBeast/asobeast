@@ -101,11 +101,12 @@ describe('TesseractOcrEngine', () => {
     ]);
   });
 
-  it('reads with sparse text segmentation', async () => {
+  it('reads with sparse text segmentation and the thresholding of the pass', async () => {
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
 
     expect(worker.setParameters).toHaveBeenCalledWith({
       tessedit_pageseg_mode: 11,
+      thresholding_method: '0',
     });
   });
 
@@ -117,33 +118,26 @@ describe('TesseractOcrEngine', () => {
     await engine.read(Buffer.from('x'), ['eng', 'jpn'], 'otsu');
 
     expect(createWorkerMock).toHaveBeenCalledTimes(1);
-    expect(worker.reinitialize).toHaveBeenCalledWith('eng+jpn', 1, {
-      thresholding_method: '0',
-    });
+    expect(worker.reinitialize).toHaveBeenCalledWith('eng+jpn', 1);
   });
 
-  it('creates the first worker with the thresholding of the first pass', async () => {
-    await engine.read(Buffer.from('x'), ['eng'], 'otsu');
-
-    const [, , , config] = createWorkerMock.mock.calls[0];
-    expect(config).toEqual({ thresholding_method: '0' });
-  });
-
-  it('reinitialises with sauvola for the inverted pass and back to otsu after it', async () => {
+  it('switches to sauvola for the inverted pass and back to otsu without reloading the languages', async () => {
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
     await engine.read(Buffer.from('x'), ['eng'], 'sauvola');
 
-    expect(createWorkerMock).toHaveBeenCalledTimes(1);
-    expect(worker.reinitialize).toHaveBeenLastCalledWith('eng', 1, {
+    expect(worker.setParameters).toHaveBeenLastCalledWith({
+      tessedit_pageseg_mode: 11,
       thresholding_method: '2',
     });
 
     await engine.read(Buffer.from('x'), ['eng'], 'otsu');
 
-    expect(worker.reinitialize).toHaveBeenLastCalledWith('eng', 1, {
+    expect(worker.setParameters).toHaveBeenLastCalledWith({
+      tessedit_pageseg_mode: 11,
       thresholding_method: '0',
     });
-    expect(worker.reinitialize).toHaveBeenCalledTimes(2);
+    expect(createWorkerMock).toHaveBeenCalledTimes(1);
+    expect(worker.reinitialize).not.toHaveBeenCalled();
   });
 
   it('runs reads one at a time', async () => {
