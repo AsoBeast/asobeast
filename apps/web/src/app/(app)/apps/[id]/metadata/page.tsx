@@ -1,13 +1,14 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
+import { LocalizationSwitcher } from "@/components/app-detail/LocalizationSwitcher";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
 import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
 import { ApiError, getMetadataAssistantStatus } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
-import { queryMarket, resolveMarket } from "@/lib/market";
+import { queryMarket, resolveLocalization, resolveMarket } from "@/lib/market";
 import {
   appDetailOptions,
   keywordCountriesOptions,
@@ -15,26 +16,38 @@ import {
   metadataAuditOptions,
   screenshotsOptions,
 } from "@/lib/queries";
-import { marketParser } from "@/lib/search-params";
+import { localizationParser, marketParser } from "@/lib/search-params";
 
 export default async function MetadataPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ market?: string | string[] }>;
+  searchParams: Promise<{
+    market?: string | string[];
+    localization?: string | string[];
+  }>;
 }) {
   const { id } = await params;
-  const requested = marketParser.parseServerSide((await searchParams).market);
+  const query = await searchParams;
+  const requested = marketParser.parseServerSide(query.market);
   const queryClient = getQueryClient();
   const [app, markets] = await Promise.all([
     queryClient.fetchQuery(appDetailOptions(id)),
     queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
   ]);
   const market = resolveMarket(requested, markets, app.country);
+  const localization =
+    resolveLocalization(
+      localizationParser.parseServerSide(query.localization),
+      markets,
+      market,
+    ) ?? undefined;
 
   const result = await queryClient
-    .fetchQuery(metadataAuditOptions(id, queryMarket(market, app.country)))
+    .fetchQuery(
+      metadataAuditOptions(id, queryMarket(market, app.country), localization),
+    )
     .catch((err) => {
       if (err instanceof ApiError && err.envelope.statusCode === 404)
         notFound();
@@ -49,7 +62,7 @@ export default async function MetadataPage({
   }
   if (result.store === "APP_STORE") {
     void queryClient.prefetchQuery(
-      screenshotsOptions(id, queryMarket(market, app.country)),
+      screenshotsOptions(id, queryMarket(market, app.country), localization),
     );
   }
   const [keywordMarkets, assistant] = await Promise.all([
@@ -63,7 +76,10 @@ export default async function MetadataPage({
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide @container/metadata flex flex-col gap-8">
         <Suspense fallback={<MarketSwitcherSkeleton />}>
-          <MarketSwitcher id={id} />
+          <div className="flex flex-wrap items-center gap-4">
+            <MarketSwitcher id={id} />
+            <LocalizationSwitcher id={id} />
+          </div>
         </Suspense>
         <Suspense fallback={<MetadataAuditSkeleton />}>
           <MetadataAuditView

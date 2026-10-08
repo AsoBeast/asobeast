@@ -1,5 +1,7 @@
 import {
+  APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
+  isAppStoreLocalization,
   KEYWORD_FIELD_BYTE_LIMIT,
   STORE_FIELD_LIMITS,
   storefrontLocalizations,
@@ -49,4 +51,15 @@ export function draftableLocalizations(
   return [...new Set(rows.flatMap((row) => row.additional))].filter(
     (localization) => localization !== primary,
   );
+}
+
+export function localizationName(tag: string): string {
+  return isAppStoreLocalization(tag) ? APP_STORE_LOCALIZATIONS[tag] : tag;
+}
+
+export function localizedLabel(
+  label: string,
+  localization?: string | null,
+): string {
+  return localization ? `${label} · ${localizationName(localization)}` : label;
 }

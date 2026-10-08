@@ -22,6 +22,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
+import { localizedLabel } from "@/lib/localizations";
 import { changesOptions } from "@/lib/queries";
 import {
   formatCountry,
@@ -178,7 +179,12 @@ export function ChangeRow({
           <Badge variant={event.isCompetitor ? "secondary" : "outline"}>
             {event.isCompetitor ? "Competitor" : "Your app"}
           </Badge>
-          <Badge variant="outline">{CHANGE_FIELD_LABELS[event.field]}</Badge>
+          <Badge variant="outline">
+            {localizedLabel(
+              CHANGE_FIELD_LABELS[event.field],
+              event.localization,
+            )}
+          </Badge>
         </div>
         <div className="text-body">
           <ChangeValue event={event} dense={dense} />

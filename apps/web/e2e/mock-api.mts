@@ -23,7 +23,9 @@ import {
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
   APP_1_PL_SCREENSHOTS,
+  APP_1_PL_LOCALIZED_SCREENSHOTS,
   METADATA_AUDIT_PL,
+  METADATA_AUDIT_PL_LOCALIZED,
   MARKET_BUDGET,
   METADATA_AUDITS,
   UNREAD_MARKET_COOKIE,
@@ -1784,11 +1786,19 @@ const routes: Route[] = [
       ) {
         return json(res, 404, errorEnvelope(404, path, "App not found"));
       }
-      const market = new URL(path, "http://localhost").searchParams.get(
-        "country",
-      );
+      const query = new URL(path, "http://localhost").searchParams;
+      const market = query.get("country");
       if (id === "app-1" && market === "pl") {
-        return json(res, 200, withScreenshotText(req, METADATA_AUDIT_PL));
+        return json(
+          res,
+          200,
+          withScreenshotText(
+            req,
+            query.get("localization") === "pl"
+              ? METADATA_AUDIT_PL_LOCALIZED
+              : METADATA_AUDIT_PL,
+          ),
+        );
       }
       if (market !== null && market !== DATASETS[id]?.detail.country) {
         return json(
@@ -1927,7 +1937,13 @@ const routes: Route[] = [
       const query = new URL(path, "http://localhost").searchParams;
       const market = query.get("country");
       if (isPolishListingOf(dataset, query)) {
-        return json(res, 200, APP_1_PL_SCREENSHOTS);
+        return json(
+          res,
+          200,
+          query.get("localization") === "pl"
+            ? APP_1_PL_LOCALIZED_SCREENSHOTS
+            : APP_1_PL_SCREENSHOTS,
+        );
       }
       if (market !== null && !isStorefront(dataset.detail.store, market)) {
         return json(

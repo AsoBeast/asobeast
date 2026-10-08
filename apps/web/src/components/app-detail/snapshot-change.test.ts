@@ -6,24 +6,34 @@ import { snapshotChangeCells, snapshotChangeLabel } from "./snapshot-change";
 describe("snapshotChangeLabel", () => {
   it("names every recorded change field like the changes timeline", () => {
     for (const field of CHANGE_FIELDS) {
-      expect(snapshotChangeLabel(field)).toBe(CHANGE_FIELD_LABELS[field]);
+      expect(snapshotChangeLabel({ field: field })).toBe(
+        CHANGE_FIELD_LABELS[field],
+      );
     }
   });
 
   it("prints the labels the changes timeline prints", () => {
-    expect(snapshotChangeLabel("screenshotImages")).toBe("Screenshot images");
-    expect(snapshotChangeLabel("whatsNew")).toBe("What's New");
+    expect(snapshotChangeLabel({ field: "screenshotImages" })).toBe(
+      "Screenshot images",
+    );
+    expect(snapshotChangeLabel({ field: "whatsNew" })).toBe("What's New");
   });
 
   it("names the fields only a snapshot diff reports", () => {
-    expect(snapshotChangeLabel("ratingAvg")).toBe("Rating");
-    expect(snapshotChangeLabel("ratingCount")).toBe("Ratings");
-    expect(snapshotChangeLabel("installs")).toBe("Installs");
+    expect(snapshotChangeLabel({ field: "ratingAvg" })).toBe("Rating");
+    expect(snapshotChangeLabel({ field: "ratingCount" })).toBe("Ratings");
+    expect(snapshotChangeLabel({ field: "installs" })).toBe("Installs");
+  });
+
+  it("names the language of a localized change", () => {
+    expect(snapshotChangeLabel({ field: "title", localization: "pl" })).toBe(
+      "Title · Polish",
+    );
   });
 
   it("passes a field it does not know through", () => {
-    expect(snapshotChangeLabel("somethingNew")).toBe("somethingNew");
-    expect(snapshotChangeLabel("toString")).toBe("toString");
+    expect(snapshotChangeLabel({ field: "somethingNew" })).toBe("somethingNew");
+    expect(snapshotChangeLabel({ field: "toString" })).toBe("toString");
   });
 });
 

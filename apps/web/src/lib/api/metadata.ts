@@ -9,9 +9,13 @@ import { apiFetch, marketParams, withQuery } from "./client";
 export function getMetadataAudit(
   appId: string,
   country?: string,
+  localization?: string,
 ): Promise<MetadataAuditResult> {
   return apiFetch<MetadataAuditResult>(
-    withQuery(`/apps/${appId}/metadata/audit`, marketParams(country)),
+    withQuery(
+      `/apps/${appId}/metadata/audit`,
+      marketParams(country, localization),
+    ),
   );
 }
 

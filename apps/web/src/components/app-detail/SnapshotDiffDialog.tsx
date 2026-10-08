@@ -68,9 +68,11 @@ export function SnapshotDiffDialog({
                 {changes.map((change) => {
                   const cells = snapshotChangeCells(change);
                   return (
-                    <TableRow key={change.field}>
+                    <TableRow
+                      key={`${change.field}:${change.localization ?? ""}`}
+                    >
                       <TableCell className="font-medium">
-                        {snapshotChangeLabel(change.field)}
+                        {snapshotChangeLabel(change)}
                       </TableCell>
                       <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">
                         {cells.before}

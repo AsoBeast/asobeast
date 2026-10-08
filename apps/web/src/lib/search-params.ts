@@ -391,6 +391,8 @@ export const changeOwnerParser =
 export const mcpClientParser =
   parseAsStringLiteral(MCP_CLIENTS).withDefault(DEFAULT_MCP_CLIENT);
 
-export const draftLocaleParser = parseAsStringLiteral(
+export const localizationParser = parseAsStringLiteral(
   APP_STORE_LOCALIZATION_IDS,
 );
+
+export const draftLocaleParser = localizationParser;

@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
@@ -26,8 +27,9 @@ export function MetadataAuditView({
   hasLocalizations: boolean;
 }) {
   const { market, home } = useMarket(id);
+  const localization = useLocalization(id).localization ?? undefined;
   const { data: result } = useSuspenseQuery(
-    metadataAuditOptions(id, queryMarket(market, home)),
+    metadataAuditOptions(id, queryMarket(market, home), localization),
   );
 
   return (
@@ -35,7 +37,7 @@ export function MetadataAuditView({
       <section className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
         {result.fields.map((field) => (
           <MetadataFieldCard
-            key={`${market}:${field.field}`}
+            key={`${market}:${localization ?? ""}:${field.field}`}
             field={field.field}
             value={field.value ?? ""}
             limit={field.limit}
@@ -46,7 +48,11 @@ export function MetadataAuditView({
 
       {result.store === "APP_STORE" ? (
         <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
-          <ScreenshotCaptionsCard id={id} market={queryMarket(market, home)} />
+          <ScreenshotCaptionsCard
+            id={id}
+            market={queryMarket(market, home)}
+            localization={localization}
+          />
         </Suspense>
       ) : null}
 

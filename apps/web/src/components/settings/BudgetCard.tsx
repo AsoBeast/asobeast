@@ -21,7 +21,7 @@ import {
 } from "@/lib/utilization";
 import { UtilizationMeter } from "@/components/capacity/UtilizationMeter";
 import { budgetCompletionSentence } from "./budget-completion";
-import { marketListingsNote } from "./market-listings-note";
+import { localizationsNote, marketListingsNote } from "./market-listings-note";
 
 const WARNING_COPY =
   "Daily jobs may not finish within store rate limits; remove keywords or countries, or raise SCRAPE_ITUNES_RPM at your own risk.";
@@ -33,7 +33,10 @@ export function BudgetCard({
   const { data: budget } = useSuspenseQuery(budgetOptions);
   const level = utilizationLevel(budget.utilization);
   const completion = budgetCompletionSentence(budget.completion, budget.total);
-  const marketNote = marketListingsNote(budget.marketListings);
+  const notes = [
+    marketListingsNote(budget.marketListings),
+    localizationsNote(budget.localizations),
+  ].filter((note): note is string => note !== null);
 
   const rows = [
     { label: "Apps", value: budget.apps },
@@ -64,9 +67,11 @@ export function BudgetCard({
           ))}
         </dl>
 
-        {marketNote ? (
-          <p className="text-sm text-muted-foreground">{marketNote}</p>
-        ) : null}
+        {notes.map((note) => (
+          <p key={note} className="text-sm text-muted-foreground">
+            {note}
+          </p>
+        ))}
 
         <div className="flex flex-col gap-4">
           {budget.stores.map((store) => (

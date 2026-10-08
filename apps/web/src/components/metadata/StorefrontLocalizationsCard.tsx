@@ -152,8 +152,10 @@ export function StorefrontLocalizationsCard({
             ))}
           </ul>
           <p className="text-caption text-muted-foreground">
-            AsoBeast reads one listing of this app, so it cannot tell which of
-            these localizations you have already filled in App Store Connect.
+            AsoBeast reads the default listing of every storefront, and the
+            native localization of a storefront whose default is English, so it
+            cannot tell which other localizations you have already filled in App
+            Store Connect.
           </p>
         </CardContent>
       </Card>
