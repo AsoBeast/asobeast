@@ -3,7 +3,11 @@ import { createWorker } from 'tesseract.js';
 import type { Env } from '../config/env';
 import { OCR_LANGUAGES } from './ocr-languages';
 import { disposeTessdata, tessdataDirectory } from './tessdata';
-import { IDLE_TERMINATE_MS, TesseractOcrEngine } from './tesseract.engine';
+import {
+  IDLE_TERMINATE_MS,
+  RECOGNIZE_TIMEOUT_MS,
+  TesseractOcrEngine,
+} from './tesseract.engine';
 
 jest.mock('tesseract.js', () => ({
   createWorker: jest.fn(),
@@ -164,5 +168,50 @@ describe('TesseractOcrEngine', () => {
     await engine.onModuleDestroy();
     expect(worker.terminate).toHaveBeenCalledTimes(2);
     expect(disposeTessdata).toHaveBeenCalled();
+  });
+
+  it('gives up on a read that hangs and builds a new worker for the next one', async () => {
+    worker.recognize.mockImplementationOnce(() => new Promise(() => undefined));
+
+    const hung = engine.read(Buffer.from('x'), ['eng']);
+    const outcome = expect(hung).rejects.toThrow(`${RECOGNIZE_TIMEOUT_MS} ms`);
+    await jest.advanceTimersByTimeAsync(RECOGNIZE_TIMEOUT_MS);
+    await outcome;
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+
+    await expect(engine.read(Buffer.from('x'), ['eng'])).resolves.toHaveLength(
+      1,
+    );
+    expect(createWorkerMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('builds no worker once the module is shutting down', async () => {
+    await engine.onModuleDestroy();
+    jest.mocked(tessdataDirectory).mockClear();
+
+    await expect(engine.read(Buffer.from('x'), ['eng'])).rejects.toThrow(
+      'shutting down',
+    );
+    expect(createWorkerMock).not.toHaveBeenCalled();
+    expect(tessdataDirectory).not.toHaveBeenCalled();
+  });
+
+  it('terminates a worker that finished starting after shutdown began', async () => {
+    let started: (value: unknown) => void = () => undefined;
+    createWorkerMock.mockReturnValueOnce(
+      new Promise((resolve) => {
+        started = resolve;
+      }),
+    );
+
+    const read = engine.read(Buffer.from('x'), ['eng']);
+    const outcome = expect(read).rejects.toThrow('shutting down');
+    await jest.advanceTimersByTimeAsync(0);
+    await engine.onModuleDestroy();
+    started(worker);
+
+    await outcome;
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
+    expect(worker.recognize).not.toHaveBeenCalled();
   });
 });

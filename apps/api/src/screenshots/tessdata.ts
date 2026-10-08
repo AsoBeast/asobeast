@@ -20,17 +20,25 @@ let directory: Promise<string> | null = null;
 export function tessdataDirectory(
   languages: readonly OcrLanguage[],
 ): Promise<string> {
-  directory ??= link(languages);
+  directory ??= link(languages).catch((error: unknown) => {
+    directory = null;
+    throw error;
+  });
   return directory;
 }
 
 async function link(languages: readonly OcrLanguage[]): Promise<string> {
   const target = await mkdtemp(join(tmpdir(), 'asobeast-tessdata-'));
-  await Promise.all(
-    languages.map((language) =>
-      symlink(modelOf(language), join(target, `${language}.traineddata.gz`)),
-    ),
-  );
+  try {
+    await Promise.all(
+      languages.map((language) =>
+        symlink(modelOf(language), join(target, `${language}.traineddata.gz`)),
+      ),
+    );
+  } catch (error) {
+    await rm(target, { recursive: true, force: true });
+    throw error;
+  }
   return target;
 }
 
