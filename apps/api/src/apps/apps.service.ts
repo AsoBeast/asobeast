@@ -266,6 +266,7 @@ export class AppsService {
       pending = await this.screenshots.record(tx, app, created);
       return created;
     });
+    if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
 
     await this.keywords.syncFromSnapshot(app.id);
 
@@ -274,7 +275,6 @@ export class AppsService {
       previous ? this.toChangeSnapshot(previous, app.iconUrl, app.store) : null,
       this.toChangeSnapshot(snapshot, normalized.iconUrl ?? null, app.store),
     );
-    if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
 
     return {
       snapshotId: snapshot.id,
