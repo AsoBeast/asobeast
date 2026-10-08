@@ -15,7 +15,7 @@ import { ScreenshotImageSource } from '../src/store-providers/screenshot-image.s
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
 import {
-  apple,
+  appleKey,
   appleShot,
   APP_STORE_URL,
   FakeScreenshotRegistry,
@@ -133,7 +133,7 @@ describe('Reading screenshots (e2e)', () => {
         workspaceId: OTHER_WORKSPACE,
         position: 1,
         url: appleShot(1),
-        assetKey: apple(1),
+        assetKey: appleKey(1),
       },
     });
 

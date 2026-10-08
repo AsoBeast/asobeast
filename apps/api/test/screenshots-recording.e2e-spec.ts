@@ -11,7 +11,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
 import {
-  apple,
+  appleKey,
   appleShot,
   APP_STORE_URL,
   FakeScreenshotRegistry,
@@ -79,9 +79,9 @@ describe('Recording screenshots (e2e)', () => {
 
     expect(rows.map((row) => [row.position, row.status, row.assetKey])).toEqual(
       [
-        [1, 'pending', apple(1)],
-        [2, 'pending', apple(2)],
-        [3, 'pending', apple(3)],
+        [1, 'pending', appleKey(1)],
+        [2, 'pending', appleKey(2)],
+        [3, 'pending', appleKey(3)],
       ],
     );
     expect(rows.every((row) => row.workspaceId === DEFAULT_WORKSPACE_ID)).toBe(
@@ -105,8 +105,8 @@ describe('Recording screenshots (e2e)', () => {
       include: { screenshots: { orderBy: { position: 'asc' } } },
     });
     expect(latest?.screenshots.map((row) => row.assetKey)).toEqual([
-      apple(3),
-      apple(1),
+      appleKey(3),
+      appleKey(1),
     ]);
     await expect(prisma.snapshotScreenshot.count()).resolves.toBe(5);
   });

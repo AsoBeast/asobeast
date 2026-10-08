@@ -132,7 +132,12 @@ describe('screenshotKeys', () => {
       screenshotKeys(Store.APP_STORE, {
         screenshots: [`${apple}/392x696bb.jpg`],
       }),
-    ).toEqual([{ key: apple, url: `${apple}/392x696bb.jpg` }]);
+    ).toEqual([
+      {
+        key: 'https://mzstatic.com/image/thumb/p/v4/aa/1.jpg',
+        url: `${apple}/392x696bb.jpg`,
+      },
+    ]);
   });
 
   it('returns null for a payload that carries no screenshot list', () => {

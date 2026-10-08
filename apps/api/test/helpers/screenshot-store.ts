@@ -4,6 +4,8 @@ import { StoreProvider } from '../../src/store-providers/types';
 export const apple = (n: number) =>
   `https://is1-ssl.mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/${n}/shot.jpg`;
 export const appleShot = (n: number) => `${apple(n)}/392x696bb.jpg`;
+export const appleKey = (n: number) =>
+  `https://mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/${n}/shot.jpg`;
 export const PLAY_SHOT =
   'https://play-lh.googleusercontent.com/AbC=w526-h296-rw';
 export const APP_STORE_URL =

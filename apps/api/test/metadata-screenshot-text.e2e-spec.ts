@@ -9,7 +9,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ownerAgent, useCookies } from './helpers/session';
-import { apple, appleShot } from './helpers/screenshot-store';
+import { appleKey, appleShot } from './helpers/screenshot-store';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
@@ -107,7 +107,7 @@ describe('Screenshot text in the metadata audit (e2e)', () => {
         workspaceId: DEFAULT_WORKSPACE_ID,
         position: index + 1,
         url: appleShot(index + 1),
-        assetKey: apple(index + 1),
+        assetKey: appleKey(index + 1),
         ...row,
       })),
     });

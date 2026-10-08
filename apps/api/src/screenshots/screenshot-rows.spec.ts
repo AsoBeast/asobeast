@@ -3,6 +3,8 @@ import { MAX_RECORDED_SCREENSHOTS, screenshotRows } from './screenshot-rows';
 
 const apple = (n: number) =>
   `https://is1-ssl.mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/${n}/shot.jpg`;
+const appleKey = (n: number) =>
+  `https://mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/${n}/shot.jpg`;
 
 describe('screenshotRows', () => {
   it('numbers the screenshots from 1 in store order and keys each by its asset', () => {
@@ -12,13 +14,13 @@ describe('screenshotRows', () => {
       {
         position: 1,
         url: `${apple(1)}/392x696bb.jpg`,
-        assetKey: apple(1),
+        assetKey: appleKey(1),
         status: 'pending',
       },
       {
         position: 2,
         url: `${apple(2)}/392x696bb.jpg`,
-        assetKey: apple(2),
+        assetKey: appleKey(2),
         status: 'pending',
       },
     ]);
