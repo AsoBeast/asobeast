@@ -160,6 +160,33 @@ describe('listing capture on the first keyword of a market (e2e)', () => {
     expect(jobs.every((data) => data.country === 'de')).toBe(true);
   });
 
+  it('asks for the listing of every market a keyword import tracks in', async () => {
+    const { primary, rival } = await seed();
+
+    await api
+      .post(`/apps/${primary.id}/keywords/import`)
+      .send({
+        rows: [
+          { keyword: 'gewohnheit', country: 'de' },
+          { keyword: 'habitude', country: 'fr' },
+          { keyword: 'habit tracker' },
+        ],
+      })
+      .expect(200);
+
+    const jobs = await marketRefreshes();
+    expect(
+      jobs.map((data) => `${data.appId}~${data.country ?? ''}`).sort(),
+    ).toEqual(
+      [
+        `${primary.id}~de`,
+        `${rival.id}~de`,
+        `${primary.id}~fr`,
+        `${rival.id}~fr`,
+      ].sort(),
+    );
+  });
+
   it('asks for nothing when the keyword is in the home market', async () => {
     const { primary } = await seed();
 

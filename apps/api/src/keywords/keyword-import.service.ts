@@ -19,6 +19,7 @@ import {
 } from './keyword-import-plan';
 import { KeywordTracker } from './keyword-tracker';
 import { ensureApp, KeywordApp } from './keywords.support';
+import { MarketListingRequests } from './market-listing.requests';
 
 interface PlannedImport {
   app: KeywordApp;
@@ -32,6 +33,7 @@ export class KeywordImportService {
     private readonly prisma: PrismaService,
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
+    private readonly listings: MarketListingRequests,
   ) {}
 
   async preview(
@@ -135,6 +137,12 @@ export class KeywordImportService {
       located.map(({ keywordId }) => keywordId),
       app,
     );
+    const markets = new Set(
+      located.map(({ addition }) => addition.candidate.country),
+    );
+    for (const market of markets) {
+      await this.listings.request(app, market);
+    }
     return imported;
   }
 
