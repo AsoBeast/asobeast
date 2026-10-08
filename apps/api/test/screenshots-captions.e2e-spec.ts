@@ -222,14 +222,19 @@ describe('Caption changes (e2e)', () => {
       ['read', 'Sleep better'],
     ]);
     const recorder = app.get(CaptionChangeRecorder);
+    const home = { home: 'us', market: 'us' };
 
-    await asWorkspace(app, () => recorder.record(latest));
+    await asWorkspace(app, () => recorder.record({ ...latest, listing: home }));
     await prisma.snapshotScreenshot.update({
       where: { snapshotId_position: { snapshotId: delayed.id, position: 2 } },
       data: { status: 'read', caption: 'Plan your day' },
     });
-    await asWorkspace(app, () => recorder.record(delayed));
-    await asWorkspace(app, () => recorder.record(delayed));
+    await asWorkspace(app, () =>
+      recorder.record({ ...delayed, listing: home }),
+    );
+    await asWorkspace(app, () =>
+      recorder.record({ ...delayed, listing: home }),
+    );
 
     const captions = await events(appId, 'screenshotCaptions');
     expect(

@@ -47,6 +47,7 @@ const build = (
     country?: string;
     found?: unknown;
     snapshot?: boolean;
+    market?: string | null;
   } = {},
 ) => {
   const rows = options.rows ?? [pendingRow(1), pendingRow(2)];
@@ -63,6 +64,7 @@ const build = (
               id: 'snap_1',
               appId: 'app_1',
               capturedAt: new Date('2026-10-07T03:00:00.000Z'),
+              country: options.market ?? null,
               app: { store: Store.APP_STORE, country: options.country ?? 'us' },
             },
       ),
@@ -272,7 +274,18 @@ describe('ScreenshotReader.read', () => {
       id: 'snap_1',
       appId: 'app_1',
       capturedAt: new Date('2026-10-07T03:00:00.000Z'),
+      listing: { home: 'us', market: 'us' },
     });
+  });
+
+  it('records the caption changes of a market snapshot against its own market', async () => {
+    const { reader, captionChanges } = build({ market: 'de' });
+
+    await reader.read('snap_1');
+
+    expect(captionChanges.record).toHaveBeenCalledWith(
+      expect.objectContaining({ listing: { home: 'us', market: 'de' } }),
+    );
   });
 
   it('does not record a caption change when a read is interrupted', async () => {

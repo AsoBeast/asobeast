@@ -17,15 +17,17 @@ const DEFAULT_SHOTS = [1, 2, 3].map(appleShot);
 
 export class FakeScreenshotRegistry {
   screenshots: string[] = DEFAULT_SHOTS;
+  readonly markets = new Map<string, string[]>();
 
   reset(): void {
     this.screenshots = DEFAULT_SHOTS;
+    this.markets.clear();
   }
 
   get(store: Store): StoreProvider {
     return {
       store,
-      getApp: (storeAppId: string) =>
+      getApp: (storeAppId: string, country: string) =>
         Promise.resolve({
           store,
           storeAppId,
@@ -35,7 +37,9 @@ export class FakeScreenshotRegistry {
           price: 0,
           raw: {
             screenshots:
-              store === Store.GOOGLE_PLAY ? [PLAY_SHOT] : this.screenshots,
+              store === Store.GOOGLE_PLAY
+                ? [PLAY_SHOT]
+                : (this.markets.get(country) ?? this.screenshots),
           },
           searchable: true,
         }),

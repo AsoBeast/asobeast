@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { SnapshotScreenshot } from '@prisma/client';
-import { EVERY_LISTING } from '../apps/listing';
+import { EVERY_LISTING, listingMarket } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotFetchError } from '../store-providers/errors';
 import { ScreenshotImageSource } from '../store-providers/screenshot-image.source';
@@ -38,6 +38,7 @@ export class ScreenshotReader {
         id: true,
         appId: true,
         capturedAt: true,
+        country: true,
         app: { select: { store: true, country: true } },
       },
     });
@@ -63,6 +64,10 @@ export class ScreenshotReader {
       id: snapshot.id,
       appId: snapshot.appId,
       capturedAt: snapshot.capturedAt,
+      listing: {
+        home: snapshot.app.country,
+        market: listingMarket(snapshot.app.country, snapshot.country),
+      },
     });
   }
 

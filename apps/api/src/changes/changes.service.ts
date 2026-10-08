@@ -51,6 +51,7 @@ interface EventRow {
 
 export interface CaptionChange {
   appId: string;
+  listing: { home: string; market: string };
   since: Date;
   before: string[];
   after: string[];
@@ -186,7 +187,7 @@ export class ChangesService {
     const recorded = await this.prisma.changeEvent.findFirst({
       where: {
         appId: change.appId,
-        ...HOME_EVENTS,
+        ...eventsIn(change.listing.home, change.listing.market),
         field: 'screenshotCaptions',
         capturedAt: change.since,
       },
@@ -195,22 +196,30 @@ export class ChangesService {
     if (recorded) {
       return;
     }
-    await this.persist(
-      change.appId,
-      [
+    const caption: DetectedChange = {
+      field: 'screenshotCaptions',
+      before: joined(change.before),
+      after: joined(change.after),
+      detail: {
+        kind: 'captions',
+        added: change.added,
+        removed: change.removed,
+      },
+    };
+    const country = storedMarket(change.listing.home, change.listing.market);
+    if (country === null) {
+      await this.persist(change.appId, [caption], change.since);
+      return;
+    }
+    await this.prisma.changeEvent.createMany({
+      data: [
         {
-          field: 'screenshotCaptions',
-          before: joined(change.before),
-          after: joined(change.after),
-          detail: {
-            kind: 'captions',
-            added: change.added,
-            removed: change.removed,
-          },
+          ...eventData(change.appId, caption),
+          country,
+          capturedAt: change.since,
         },
       ],
-      change.since,
-    );
+    });
   }
 
   private async persist(

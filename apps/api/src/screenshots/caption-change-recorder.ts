@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ChangesService } from '../changes/changes.service';
-import { HOME_LISTING } from '../apps/listing';
+import { listingIn } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { diffCaptions } from './caption-diff';
 
@@ -13,6 +13,7 @@ interface SnapshotRef {
   id: string;
   appId: string;
   capturedAt: Date;
+  listing: { home: string; market: string };
 }
 
 const isSettled = (rows: SettledRow[]): boolean =>
@@ -35,7 +36,7 @@ export class CaptionChangeRecorder {
     const previous = await this.prisma.appSnapshot.findFirst({
       where: {
         appId: snapshot.appId,
-        ...HOME_LISTING,
+        ...listingIn(snapshot.listing.home, snapshot.listing.market),
         capturedAt: { lt: snapshot.capturedAt },
       },
       orderBy: { capturedAt: 'desc' },
@@ -47,7 +48,7 @@ export class CaptionChangeRecorder {
     const next = await this.prisma.appSnapshot.findFirst({
       where: {
         appId: snapshot.appId,
-        ...HOME_LISTING,
+        ...listingIn(snapshot.listing.home, snapshot.listing.market),
         capturedAt: { gt: snapshot.capturedAt },
       },
       orderBy: { capturedAt: 'asc' },
@@ -55,7 +56,7 @@ export class CaptionChangeRecorder {
     });
     if (next) {
       await this.compare(
-        { ...next, appId: snapshot.appId },
+        { ...next, appId: snapshot.appId, listing: snapshot.listing },
         current,
         await this.rows(next.id),
       );
@@ -75,6 +76,7 @@ export class CaptionChangeRecorder {
     if (added.length === 0 && removed.length === 0) return;
     await this.changes.recordCaptionChange({
       appId: later.appId,
+      listing: later.listing,
       since: later.capturedAt,
       before: captionsOf(before),
       after: captionsOf(after),

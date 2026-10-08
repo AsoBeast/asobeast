@@ -3,7 +3,13 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { CaptionChangeRecorder } from './caption-change-recorder';
 
 const CAPTURED = new Date('2026-10-07T03:00:00.000Z');
-const snapshot = { id: 'snap_2', appId: 'app_1', capturedAt: CAPTURED };
+const HOME = { home: 'us', market: 'us' };
+const snapshot = {
+  id: 'snap_2',
+  appId: 'app_1',
+  capturedAt: CAPTURED,
+  listing: HOME,
+};
 
 const row = (status: string, caption: string | null) => ({ status, caption });
 
@@ -56,6 +62,7 @@ describe('CaptionChangeRecorder.record', () => {
 
     expect(recordCaptionChange).toHaveBeenCalledWith({
       appId: 'app_1',
+      listing: HOME,
       since: CAPTURED,
       before: ['Plan your week', 'Keep this'],
       after: ['Plan your day', 'Keep this'],
@@ -150,6 +157,30 @@ describe('CaptionChangeRecorder.record', () => {
     );
   });
 
+  it('compares a market snapshot with the snapshots of that market only', async () => {
+    const { recorder, findFirst, recordCaptionChange } = build({
+      previous: [row('read', 'Plane deine Woche')],
+      current: [row('read', 'Plane deinen Tag')],
+    });
+    const listing = { home: 'us', market: 'de' };
+
+    await recorder.record({ ...snapshot, listing });
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { appId: 'app_1', country: 'de', capturedAt: { lt: CAPTURED } },
+      orderBy: { capturedAt: 'desc' },
+      select: { id: true },
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { appId: 'app_1', country: 'de', capturedAt: { gt: CAPTURED } },
+      orderBy: { capturedAt: 'asc' },
+      select: { id: true, capturedAt: true },
+    });
+    expect(recordCaptionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ listing }),
+    );
+  });
+
   it('looks for the oldest snapshot captured after this one', async () => {
     const { recorder, findFirst } = build({
       previous: [row('read', 'a')],
@@ -178,6 +209,7 @@ describe('CaptionChangeRecorder.record', () => {
     expect(recordCaptionChange).toHaveBeenCalledTimes(1);
     expect(recordCaptionChange).toHaveBeenCalledWith({
       appId: 'app_1',
+      listing: HOME,
       since: NEXT_CAPTURED,
       before: ['Plan your week'],
       after: ['Plan your day'],

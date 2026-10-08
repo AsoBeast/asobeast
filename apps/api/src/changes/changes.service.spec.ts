@@ -440,6 +440,7 @@ describe('ChangesService', () => {
 
     const captionChange = {
       appId: 'app_1',
+      listing: { home: 'us', market: 'us' },
       since: new Date('2026-10-07T03:00:00.000Z'),
       before: ['A', 'B'],
       after: ['A', 'C'],
@@ -531,6 +532,71 @@ describe('ChangesService', () => {
         select: { id: true },
       });
       expect(createMany).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('records a market caption change in that market and sends no alert', async () => {
+      await service.recordCaptionChange({
+        ...captionChange,
+        listing: { home: 'us', market: 'de' },
+      });
+
+      expect(changeEventFindFirst).toHaveBeenCalledWith({
+        where: {
+          appId: 'app_1',
+          country: 'de',
+          field: 'screenshotCaptions',
+          capturedAt: captionChange.since,
+        },
+        select: { id: true },
+      });
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            country: 'de',
+            field: 'screenshotCaptions',
+            before: 'A | B',
+            after: 'A | C',
+            detail: { kind: 'captions', added: ['C'], removed: ['B'] },
+            capturedAt: captionChange.since,
+          },
+        ],
+      });
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('records a market screenshot change with its detail in that market', async () => {
+      await service.recordMarketRefresh(
+        'app_1',
+        { home: 'us', market: 'de' },
+        makeSnapshot({
+          screenshotsCount: 3,
+          screenshots: keyed('a', 'b', 'c'),
+        }),
+        makeSnapshot({
+          screenshotsCount: 3,
+          screenshots: keyed('a', 'x', 'c'),
+        }),
+      );
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<Record<string, unknown>> },
+      ];
+      expect(data).toEqual([
+        {
+          appId: 'app_1',
+          country: 'de',
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, 1 replaced',
+          detail: expect.objectContaining({
+            kind: 'images',
+            added: [2],
+            removed: [2],
+          }) as unknown,
+        },
+      ]);
       expect(dispatch).not.toHaveBeenCalled();
     });
   });
