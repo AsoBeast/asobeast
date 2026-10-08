@@ -27,10 +27,10 @@ export default async function MetadataPage({
   const { id } = await params;
   const requested = marketParser.parseServerSide((await searchParams).market);
   const queryClient = getQueryClient();
-  const app = await queryClient.fetchQuery(appDetailOptions(id));
-  const markets = await queryClient
-    .fetchQuery(listingMarketsOptions(id))
-    .catch(() => []);
+  const [app, markets] = await Promise.all([
+    queryClient.fetchQuery(appDetailOptions(id)),
+    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+  ]);
   const market = resolveMarket(requested, markets, app.country);
 
   const result = await queryClient
