@@ -133,7 +133,7 @@ export class MetadataService {
               coverage.filter((row) => row.country === app.country),
             )
           : null,
-      screenshotText,
+      ...(screenshotText ? { screenshotText } : {}),
       country: market,
     };
   }
