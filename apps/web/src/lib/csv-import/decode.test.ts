@@ -113,6 +113,20 @@ describe("decodeCsvBytes", () => {
     expect(decodeCsvBytes(arrayBufferOf(bytes)).text).not.toContain("\u0000");
   });
 
+  it("keeps UTF-8 with one stray NUL byte as UTF-8", () => {
+    const bytes = Buffer.concat([
+      Buffer.from("k", "utf8"),
+      Buffer.from([0x00]),
+      Buffer.from(TEXT.slice(1), "utf8"),
+    ]);
+
+    expect(decodeCsvBytes(arrayBufferOf(bytes))).toEqual({
+      text: TEXT,
+      encoding: "utf-8",
+      fallback: false,
+    });
+  });
+
   it("reads an empty file as empty text", () => {
     expect(decodeCsvBytes(new ArrayBuffer(0))).toEqual({
       text: "",

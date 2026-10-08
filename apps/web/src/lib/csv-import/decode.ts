@@ -17,6 +17,7 @@ function markedEncoding(bytes: Uint8Array): CsvEncoding | null {
 
 const PARITY_SAMPLE_BYTES = 65_536;
 const PARITY_DOMINANCE = 4;
+const PARITY_MINIMUM_SHARE = 32;
 
 function unmarkedUtf16(bytes: Uint8Array): CsvEncoding | null {
   const zeros = [0, 0];
@@ -25,8 +26,9 @@ function unmarkedUtf16(bytes: Uint8Array): CsvEncoding | null {
     if (bytes[index] === 0) zeros[index % 2] += 1;
   }
   const [even, odd] = zeros;
-  if (odd > even * PARITY_DOMINANCE) return "utf-16le";
-  if (even > odd * PARITY_DOMINANCE) return "utf-16be";
+  const minimum = Math.max(2, Math.floor(length / PARITY_MINIMUM_SHARE));
+  if (odd >= minimum && odd > even * PARITY_DOMINANCE) return "utf-16le";
+  if (even >= minimum && even > odd * PARITY_DOMINANCE) return "utf-16be";
   return null;
 }
 
