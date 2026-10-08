@@ -61,6 +61,36 @@ describe('servesLocalization', () => {
     ).toBe(false);
   });
 
+  it('ignores the translated category the store shows in place of a missing subtitle', () => {
+    const untitled = {
+      ...english,
+      subtitle: 'Social Networking',
+      raw: { ...english.raw, genres: ['Social Networking', 'Lifestyle'] },
+    };
+
+    expect(
+      servesLocalization(Store.APP_STORE, untitled, {
+        ...untitled,
+        subtitle: 'Sieci społecznościowe',
+        raw: {
+          ...untitled.raw,
+          genres: ['Sieci społecznościowe', 'Styl życia'],
+        },
+      }),
+    ).toBe(false);
+    expect(
+      servesLocalization(Store.APP_STORE, untitled, {
+        ...untitled,
+        subtitle: 'Sieci społecznościowe',
+        description: 'Odkrywaj świat',
+        raw: {
+          ...untitled.raw,
+          genres: ['Sieci społecznościowe', 'Styl życia'],
+        },
+      }),
+    ).toBe(true);
+  });
+
   it('ignores a change of rendition size of the same screenshots', () => {
     expect(
       servesLocalization(Store.APP_STORE, english, {
