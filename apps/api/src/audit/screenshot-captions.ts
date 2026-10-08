@@ -6,6 +6,7 @@ interface Settled {
 export function readCaptionTexts(
   screenshots: readonly Settled[],
 ): string[] | null {
+  if (screenshots.some((item) => item.status === 'pending')) return null;
   const settled = screenshots.filter(
     (item) => item.status === 'read' || item.status === 'blank',
   );

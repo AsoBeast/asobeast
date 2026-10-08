@@ -24,6 +24,12 @@ describe('readCaptionTexts', () => {
     expect(readCaptionTexts([shot('skipped', null)])).toBeNull();
   });
 
+  it('returns null while any screenshot is still being read', () => {
+    expect(
+      readCaptionTexts([shot('read', 'one'), shot('pending', null)]),
+    ).toBeNull();
+  });
+
   it('returns null for no screenshots', () => {
     expect(readCaptionTexts([])).toBeNull();
   });
