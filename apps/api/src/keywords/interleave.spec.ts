@@ -1,9 +1,9 @@
-import { interleave } from './interleave';
+import { interleaveDistinct } from './interleave';
 
-describe('interleave', () => {
+describe('interleaveDistinct', () => {
   it('takes one item from each list in turn', () => {
     expect(
-      interleave(
+      interleaveDistinct(
         [
           ['a', 'b', 'c'],
           ['x', 'y'],
@@ -15,7 +15,7 @@ describe('interleave', () => {
 
   it('stops at the limit', () => {
     expect(
-      interleave(
+      interleaveDistinct(
         [
           ['a', 'b'],
           ['x', 'y'],
@@ -27,7 +27,7 @@ describe('interleave', () => {
 
   it('keeps the first occurrence of a repeated item', () => {
     expect(
-      interleave(
+      interleaveDistinct(
         [
           ['quiz', 'mapa'],
           ['quiz', 'map'],
@@ -39,7 +39,7 @@ describe('interleave', () => {
 
   it('compares items by the key it is given', () => {
     expect(
-      interleave(
+      interleaveDistinct(
         [[{ text: 'quiz' }], [{ text: 'quiz' }]],
         10,
         (item) => item.text,
@@ -48,11 +48,11 @@ describe('interleave', () => {
   });
 
   it('returns one list unchanged up to the limit', () => {
-    expect(interleave([['a', 'b', 'c']], 2)).toEqual(['a', 'b']);
+    expect(interleaveDistinct([['a', 'b', 'c']], 2)).toEqual(['a', 'b']);
   });
 
   it('handles no lists and empty lists', () => {
-    expect(interleave([], 5)).toEqual([]);
-    expect(interleave([[], ['a']], 5)).toEqual(['a']);
+    expect(interleaveDistinct([], 5)).toEqual([]);
+    expect(interleaveDistinct([[], ['a']], 5)).toEqual(['a']);
   });
 });

@@ -22,7 +22,7 @@ import { classifyBuckets } from './buckets';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
 import { homeListingTexts } from './home-listings';
-import { interleave } from './interleave';
+import { interleaveDistinct } from './interleave';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
@@ -381,7 +381,7 @@ export class KeywordsService {
         ? ['TITLE', 'DESCRIPTION']
         : ['TITLE', 'SUBTITLE'];
 
-    const candidates = interleave(
+    const candidates = interleaveDistinct(
       listings.map((listing) =>
         extractCandidates({
           title: listing.title,

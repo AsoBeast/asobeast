@@ -1,21 +1,17 @@
-export function interleave<T>(
+import { interleave } from '../jobs/interleave';
+
+export function interleaveDistinct<T>(
   lists: readonly (readonly T[])[],
   limit: number,
   keyOf: (item: T) => unknown = (item) => item,
 ): T[] {
-  const taken: T[] = [];
   const seen = new Set<unknown>();
-  const longest = Math.max(0, ...lists.map((list) => list.length));
-  for (let index = 0; index < longest && taken.length < limit; index++) {
-    for (const list of lists) {
-      if (index >= list.length) continue;
-      const item = list[index];
+  return interleave(lists)
+    .filter((item) => {
       const key = keyOf(item);
-      if (seen.has(key)) continue;
+      if (seen.has(key)) return false;
       seen.add(key);
-      taken.push(item);
-      if (taken.length === limit) break;
-    }
-  }
-  return taken;
+      return true;
+    })
+    .slice(0, limit);
 }
