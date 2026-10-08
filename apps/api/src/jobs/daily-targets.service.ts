@@ -7,6 +7,7 @@ import { MarketRow, trackedMarkets } from './tracked-markets';
 export interface AppTarget {
   id: string;
   store: Store;
+  country: string;
 }
 
 export interface KeywordTarget {
@@ -49,6 +50,7 @@ export class DailyTargetsCollector {
         id: true,
         isCompetitor: true,
         store: true,
+        country: true,
         primaryAppId: true,
       },
     });
@@ -70,11 +72,11 @@ export class DailyTargetsCollector {
     );
 
     return {
-      apps: apps.map((app) => ({ id: app.id, store: app.store })),
+      apps: apps.map(({ id, store, country }) => ({ id, store, country })),
       keywords: covered,
       reviewApps: apps
         .filter((app) => !app.isCompetitor)
-        .map((app) => ({ id: app.id, store: app.store })),
+        .map(({ id, store, country }) => ({ id, store, country })),
       marketListings: marketListingTargets(apps, markets),
     };
   }

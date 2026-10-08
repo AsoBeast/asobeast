@@ -26,6 +26,7 @@ export interface StoreDailyBudget {
   capacityPerDay: number;
   utilization: number;
   marketListings?: number;
+  localizations?: number;
 }
 
 export interface BudgetQuota {
@@ -53,6 +54,7 @@ export interface DailyBudget {
   quota: BudgetQuota | null;
   completion: BudgetCompletion;
   marketListings?: number;
+  localizations?: number;
 }
 
 export interface StoreDemand {

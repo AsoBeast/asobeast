@@ -14,6 +14,7 @@ import { Env } from '../config/env';
 import { DailyCapacity } from './daily-capacity.service';
 import { completionHours, nextDailyRun } from './daily-schedule';
 import { DailyTargets, DailyTargetsCollector } from './daily-targets.service';
+import { localizationReads } from './localization-reads';
 import { OverLimitRegistry } from './over-limit.registry';
 import { requestsFor } from './request-weights';
 
@@ -54,6 +55,7 @@ export class DailyBudgetService {
       quota: await this.budgetQuota(),
       completion: this.projectCompletion(stores),
       marketListings: sum(stores, (store) => store.marketListings ?? 0),
+      localizations: sum(stores, (store) => store.localizations ?? 0),
     };
   }
 
@@ -65,8 +67,12 @@ export class DailyBudgetService {
     const marketListings = targets.marketListings.filter(
       (listing) => listing.store === store,
     ).length;
-    const apps =
-      targets.apps.filter((app) => app.store === store).length + marketListings;
+    const listings = [
+      ...targets.apps.filter((app) => app.store === store),
+      ...targets.marketListings.filter((listing) => listing.store === store),
+    ];
+    const localizations = localizationReads(listings);
+    const apps = listings.length + localizations;
     const keywords = targets.keywords.filter(
       (keyword) => keyword.store === store,
     ).length;
@@ -92,6 +98,7 @@ export class DailyBudgetService {
           ? Math.round((total / capacityPerDay) * 1000) / 1000
           : 0,
       marketListings,
+      localizations,
     };
   }
 
