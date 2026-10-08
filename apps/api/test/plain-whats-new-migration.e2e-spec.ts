@@ -1,13 +1,16 @@
 import { execSync } from 'child_process';
+import { createHash } from 'crypto';
 import { join } from 'path';
 import { releaseNotesText } from '@asobeast/shared';
 import { PrismaClient, Store } from '@prisma/client';
 import { Client } from 'pg';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { migrationSql } from './helpers/migration-sql';
+import { migrationFolder, migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
 
 const LEGACY = new Date('2026-09-01T00:00:00Z');
+const RELEASED_CHECKSUM =
+  'a1aa73b64d3f87af0c3e11a822ab2909a287a7d1253eb87600b8a54238697ce7';
 
 const LEGACY_NOTES = [
   'v4.6862<br>- New stickers<br/>- New memes:<BR />✓ Old',
@@ -71,15 +74,17 @@ describe('the plain play whats new migration', () => {
       },
     });
 
-  const runMigration = async () => {
+  const runSql = async (script: string) => {
     const client = new Client({ connectionString: process.env.DATABASE_URL });
     await client.connect();
     try {
-      await client.query(sql);
+      await client.query(script);
     } finally {
       await client.end();
     }
   };
+
+  const runMigration = () => runSql(sql);
 
   const whatsNew = (
     appId: string,
@@ -197,6 +202,45 @@ describe('the plain play whats new migration', () => {
     expect(await valuesOf(title.id)).toEqual({
       before: 'Old &amp; title',
       after: 'New<br>title',
+    });
+  });
+
+  describe('the checksum follow-up', () => {
+    const name = migrationFolder('plain_play_whats_new_events');
+    const editedChecksum = createHash('sha256').update(sql).digest('hex');
+
+    const storeChecksum = (checksum: string) =>
+      prisma.$executeRaw`
+        UPDATE "_prisma_migrations" SET "checksum" = ${checksum}
+        WHERE "migration_name" = ${name}`;
+
+    const storedChecksums = async () =>
+      (
+        await prisma.$queryRaw<{ checksum: string }[]>`
+          SELECT "checksum" FROM "_prisma_migrations"
+          WHERE "migration_name" = ${name}`
+      ).map(({ checksum }) => checksum);
+
+    const runFollowUp = () =>
+      runSql(migrationSql('record_plain_play_whats_new_checksum'));
+
+    afterEach(() => storeChecksum(editedChecksum));
+
+    it('records the edited checksum where the 1.8.0 checksum is stored', async () => {
+      await storeChecksum(RELEASED_CHECKSUM);
+
+      await runFollowUp();
+
+      expect(await storedChecksums()).toEqual([editedChecksum]);
+    });
+
+    it('leaves any other stored checksum alone', async () => {
+      const other = 'f'.repeat(64);
+      await storeChecksum(other);
+
+      await runFollowUp();
+
+      expect(await storedChecksums()).toEqual([other]);
     });
   });
 });

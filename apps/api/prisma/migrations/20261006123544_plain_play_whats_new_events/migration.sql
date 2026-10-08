@@ -80,18 +80,28 @@ BEGIN
 END;
 $$;
 
+CREATE FUNCTION pg_temp.plain_text_release_applied_at() RETURNS timestamp
+LANGUAGE plpgsql STABLE AS $$
+BEGIN
+  IF to_regclass('_prisma_migrations') IS NULL THEN
+    RETURN NULL;
+  END IF;
+  RETURN (
+    SELECT max("finished_at") AT TIME ZONE 'UTC'
+    FROM "_prisma_migrations"
+    WHERE "migration_name" = '20260929080231_backfill_snoozed_action_events'
+      AND "rolled_back_at" IS NULL
+  );
+END;
+$$;
+
 CREATE TEMPORARY TABLE "legacy_whats_new" AS
 SELECT "event"."id"
 FROM "ChangeEvent" AS "event"
 JOIN "App" ON "App"."id" = "event"."appId"
 WHERE "App"."store" = 'GOOGLE_PLAY'
   AND "event"."field" = 'whatsNew'
-  AND "event"."capturedAt" < (
-    SELECT max("finished_at") AT TIME ZONE 'UTC'
-    FROM "_prisma_migrations"
-    WHERE "migration_name" = '20260929080231_backfill_snoozed_action_events'
-      AND "rolled_back_at" IS NULL
-  );
+  AND "event"."capturedAt" < (SELECT pg_temp.plain_text_release_applied_at());
 
 UPDATE "ChangeEvent" AS "event"
 SET "before" = pg_temp.release_notes_text("event"."before"),
@@ -105,5 +115,6 @@ WHERE "legacy"."id" = "event"."id"
   AND "event"."before" IS NOT DISTINCT FROM "event"."after";
 
 DROP TABLE "legacy_whats_new";
+DROP FUNCTION pg_temp.plain_text_release_applied_at();
 DROP FUNCTION pg_temp.release_notes_text(text);
 DROP FUNCTION pg_temp.release_notes_entity(text);
