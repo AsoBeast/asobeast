@@ -130,6 +130,12 @@ export function withQuery(path: string, params: URLSearchParams): string {
   return query ? `${path}?${query}` : path;
 }
 
-export function marketParams(country?: string): URLSearchParams {
-  return new URLSearchParams(country === undefined ? {} : { country });
+export function marketParams(
+  country?: string,
+  localization?: string,
+): URLSearchParams {
+  return new URLSearchParams({
+    ...(country === undefined ? {} : { country }),
+    ...(localization === undefined ? {} : { localization }),
+  });
 }

@@ -26,3 +26,13 @@ export function isRefreshable(
 ): boolean {
   return markets.find((entry) => entry.country === market)?.tracked !== false;
 }
+
+export function resolveLocalization(
+  requested: string | null,
+  markets: readonly ListingMarket[],
+  market: string,
+): string | null {
+  const captured =
+    markets.find((entry) => entry.country === market)?.localizations ?? [];
+  return requested !== null && captured.includes(requested) ? requested : null;
+}

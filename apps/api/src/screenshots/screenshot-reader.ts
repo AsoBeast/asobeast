@@ -39,6 +39,7 @@ export class ScreenshotReader {
         appId: true,
         capturedAt: true,
         country: true,
+        localization: true,
         app: { select: { store: true, country: true } },
       },
     });
@@ -47,10 +48,12 @@ export class ScreenshotReader {
     const listing = {
       home: snapshot.app.country,
       market: listingMarket(snapshot.app.country, snapshot.country),
+      localization: snapshot.localization,
     };
     const languages = this.policy.languagesFor({
       store: snapshot.app.store,
       country: listing.market,
+      localization: listing.localization,
     });
     if (languages.length === 0) {
       await this.prisma.snapshotScreenshot.updateMany({

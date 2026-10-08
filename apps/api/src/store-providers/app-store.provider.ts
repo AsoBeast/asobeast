@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import {
+  AppStoreLocalization,
   CategoryCollection,
   MarketAvailability,
   MarketAvailabilityResult,
@@ -15,6 +16,7 @@ import {
   AppStoreSearchResult,
   isMissingApp,
 } from './app-store.lib';
+import { lookupLanguage, pageLanguage } from './app-store-languages';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import {
@@ -47,15 +49,25 @@ export class AppStoreProvider implements StoreProvider {
 
   constructor(@Inject(APP_STORE_LIB) private readonly lib: AppStoreLib) {}
 
-  async getApp(storeAppId: string, country: string): Promise<NormalizedApp> {
+  async getApp(
+    storeAppId: string,
+    country: string,
+    localization?: AppStoreLocalization,
+  ): Promise<NormalizedApp> {
     const raw = await this.withRetry(
       'getApp',
-      () => this.lib.app({ id: Number(storeAppId), country, ratings: true }),
+      () =>
+        this.lib.app({
+          id: Number(storeAppId),
+          country,
+          ratings: true,
+          ...(localization ? { lang: lookupLanguage(localization) } : {}),
+        }),
       storeAppId,
     );
     const read: SubtitleRead =
       raw.subtitle === undefined
-        ? await this.readSubtitle(storeAppId, country)
+        ? await this.readSubtitle(storeAppId, country, localization)
         : { subtitle: raw.subtitle, unavailable: false };
     return this.toNormalizedApp(raw, read);
   }
@@ -171,11 +183,16 @@ export class AppStoreProvider implements StoreProvider {
   private async readSubtitle(
     storeAppId: string,
     country: string,
+    localization?: AppStoreLocalization,
   ): Promise<SubtitleRead> {
     try {
       const subtitle = await this.withRetry('page', async () =>
         listingSubtitle(
-          await this.lib.page({ id: Number(storeAppId), country }),
+          await this.lib.page({
+            id: Number(storeAppId),
+            country,
+            ...(localization ? { language: pageLanguage(localization) } : {}),
+          }),
         ),
       );
       return { subtitle, unavailable: false };

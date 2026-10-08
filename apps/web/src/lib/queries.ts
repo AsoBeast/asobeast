@@ -148,14 +148,22 @@ export const appKeys = {
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
-  screenshots: (id: string, market?: string) =>
-    [...appKeys.detail(id), "screenshots", { market }] as const,
+  screenshots: (id: string, market?: string, localization?: string) =>
+    [
+      ...appKeys.detail(id),
+      "screenshots",
+      { market, ...(localization === undefined ? {} : { localization }) },
+    ] as const,
   listingMarkets: (id: string) =>
     [...appKeys.detail(id), "listing-markets"] as const,
   listing: (id: string, market: string) =>
     [...appKeys.detail(id), "listing", { market }] as const,
-  metadataAudit: (id: string, market?: string) =>
-    [...appKeys.detail(id), "metadata-audit", { market }] as const,
+  metadataAudit: (id: string, market?: string, localization?: string) =>
+    [
+      ...appKeys.detail(id),
+      "metadata-audit",
+      { market, ...(localization === undefined ? {} : { localization }) },
+    ] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
 
@@ -430,10 +438,14 @@ export const appListingOptions = (id: string, market?: string) =>
     queryFn: () => getApp(id, market),
   });
 
-export const metadataAuditOptions = (id: string, market?: string) =>
+export const metadataAuditOptions = (
+  id: string,
+  market?: string,
+  localization?: string,
+) =>
   queryOptions({
-    queryKey: appKeys.metadataAudit(id, market),
-    queryFn: () => getMetadataAudit(id, market),
+    queryKey: appKeys.metadataAudit(id, market, localization),
+    queryFn: () => getMetadataAudit(id, market, localization),
   });
 
 export const appSummaryOptions = (id: string) =>
@@ -580,10 +592,14 @@ export const changesOptions = (id: string, days: number, market?: string) =>
     queryFn: () => getChanges(id, days, market),
   });
 
-export const screenshotsOptions = (id: string, market?: string) =>
+export const screenshotsOptions = (
+  id: string,
+  market?: string,
+  localization?: string,
+) =>
   queryOptions({
-    queryKey: appKeys.screenshots(id, market),
-    queryFn: () => getAppScreenshots(id, market),
+    queryKey: appKeys.screenshots(id, market, localization),
+    queryFn: () => getAppScreenshots(id, market, localization),
     refetchInterval: (query) =>
       hasPendingScreenshots(query.state.data) ? SCREENSHOT_POLL_MS : false,
   });

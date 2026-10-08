@@ -716,6 +716,7 @@ export const APP_1_LISTING_MARKETS: ListingMarket[] = [
     home: false,
     capturedAt: utcTimestampDaysAgo(0),
     tracked: true,
+    localizations: ["pl"],
   },
 ];
 
@@ -986,6 +987,18 @@ const e2eScreenshotUrl = (position: number): string =>
   `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 export const APP_1_PL_CHANGES: ChangeTimeline = {
   events: [
+    {
+      id: "chg-pl-loc-1",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "title",
+      before: "Minutnik Pracy",
+      after: "Skupienie: Minutnik Pracy",
+      capturedAt: utcTimestampDaysAgo(1),
+      country: "pl",
+      localization: "pl",
+    },
     {
       id: "chg-pl-1",
       appId: "app-1",
@@ -3264,6 +3277,20 @@ export const APP_1_PL_SCREENSHOTS: AppScreenshots = {
   ],
 };
 
+export const APP_1_PL_LOCALIZED_SCREENSHOTS: AppScreenshots = {
+  ...APP_1_PL_SCREENSHOTS,
+  snapshotId: "snap-app-1-pl-pl",
+  localization: "pl",
+  screenshots: [
+    {
+      position: 1,
+      url: e2eScreenshotUrl(14),
+      caption: "Skup się na jednym zadaniu",
+      status: "read",
+    },
+  ],
+};
+
 export const SCREENSHOTS: Record<string, AppScreenshots> = {
   "app-1": APP_1_SCREENSHOTS,
 };
@@ -3700,9 +3727,38 @@ export const METADATA_AUDIT_PL: MetadataAuditResult = {
       listingCountry: "pl",
       screenshotText: { covered: true, positions: [1] },
     },
+    {
+      keywordId: "kw-pl-2",
+      text: "skupienie",
+      bucket: null,
+      fields: [
+        { field: "title", covered: true, localization: "pl" },
+        { field: "subtitle", covered: false },
+      ],
+      uncovered: false,
+      country: "pl",
+      listingCountry: "pl",
+      screenshotText: { covered: false, positions: [] },
+    },
   ],
   keywordFieldSuggestion: null,
   screenshotText: { status: "ready", read: 1, total: 2 },
+};
+
+export const APP_1_PL_LOCALIZED_TITLE = "Skupienie: Minutnik Pracy";
+
+export const METADATA_AUDIT_PL_LOCALIZED: MetadataAuditResult = {
+  ...METADATA_AUDIT_PL,
+  localization: "pl",
+  fields: METADATA_AUDIT_PL.fields.map((field) =>
+    field.field === "title"
+      ? {
+          ...field,
+          value: APP_1_PL_LOCALIZED_TITLE,
+          chars: APP_1_PL_LOCALIZED_TITLE.length,
+        }
+      : field,
+  ),
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

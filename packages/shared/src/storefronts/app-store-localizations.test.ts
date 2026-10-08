@@ -6,6 +6,7 @@ import {
   APP_STORE_STOREFRONT_LOCALIZATIONS,
   APP_STORE_STOREFRONTS,
   isAppStoreLocalization,
+  nativeLocalizations,
   storefrontLocalizations,
 } from './index';
 
@@ -100,5 +101,67 @@ describe('isAppStoreLocalization', () => {
     ]);
     expect(APP_STORE_LOCALIZATIONS['en-US']).toBe('English (U.S.)');
     expect(APP_STORE_LOCALIZATIONS.sl).toBe('Slovenian');
+  });
+});
+
+describe('nativeLocalizations', () => {
+  it('names the native localization an english default storefront reads', () => {
+    expect(nativeLocalizations('pl')).toEqual(['pl']);
+    expect(nativeLocalizations('tr')).toEqual(['tr']);
+    expect(nativeLocalizations('no')).toEqual(['no']);
+    expect(nativeLocalizations('sg')).toEqual(['zh-Hans']);
+    expect(nativeLocalizations('bz')).toEqual(['es-MX']);
+    expect(nativeLocalizations('ca')).toEqual(['fr-CA']);
+  });
+
+  it('keeps every native localization of a storefront in table order', () => {
+    expect(nativeLocalizations('be')).toEqual(['nl', 'fr']);
+    expect(nativeLocalizations('ua')).toEqual(['ru', 'uk']);
+    expect(nativeLocalizations('in')).toHaveLength(11);
+  });
+
+  it('names none for a native default, an english only storefront or the united states', () => {
+    for (const country of ['de', 'fr', 'jp', 'ch', 'gb', 'au', 'us']) {
+      expect(nativeLocalizations(country)).toEqual([]);
+    }
+  });
+
+  it('accepts an upper case code and refuses an unknown one', () => {
+    expect(nativeLocalizations('PL')).toEqual(['pl']);
+    expect(nativeLocalizations('zz')).toEqual([]);
+  });
+
+  it('applies to exactly 65 storefronts', () => {
+    const covered = APP_STORE_STOREFRONTS.filter(
+      (country) => nativeLocalizations(country).length > 0,
+    );
+    expect(covered).toHaveLength(65);
+    expect(covered).toEqual(
+      expect.arrayContaining([
+        'pl',
+        'tr',
+        'cz',
+        'gr',
+        'ua',
+        'vn',
+        'th',
+        'id',
+        'my',
+        'sa',
+        'ae',
+        'il',
+        'in',
+        'ca',
+      ]),
+    );
+    expect(covered).not.toContain('us');
+  });
+
+  it('never names an english localization', () => {
+    for (const country of APP_STORE_STOREFRONTS) {
+      for (const localization of nativeLocalizations(country)) {
+        expect(localization.startsWith('en')).toBe(false);
+      }
+    }
   });
 });

@@ -13,7 +13,7 @@ const QUERY_OBJECT = /\b(?:include|select)\s*:\s*$/;
 const QUERY_ARGS =
   /^\s*(?:true\b|\{[\s\S]*(?:\b(?:where|orderBy|take|select|distinct)\s*:|\.\.\.))/;
 const SCOPE_PATTERN =
-  /HOME_LISTING|HOME_EVENTS|EVERY_LISTING|listingIn\(|eventsIn\(|latestListingIn\(/;
+  /HOME_LISTING|HOME_EVENTS|EVERY_LISTING|listingIn\(|eventsIn\(|eventsOfMarket\(|latestListingIn\(/;
 const OWNERS = new Set([
   'account/export-tables.ts',
   'apps/listing.ts',

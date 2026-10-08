@@ -47,3 +47,30 @@ describe('appStoreLib.reviews', () => {
     ).rejects.toThrow(SyntaxError);
   });
 });
+
+describe('appStoreLib.page', () => {
+  beforeEach(() => fetchMock.mockReset());
+
+  it('asks for the default localization without a language', async () => {
+    answer(200, '<h1>App</h1>');
+
+    await appStoreLib.page({ id: 1, country: 'pl' });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://apps.apple.com/pl/app/id1',
+    );
+  });
+
+  it('asks for a localization with the page language', async () => {
+    answer(200, '<h1>App</h1>');
+    answer(200, '<h1>App</h1>');
+
+    await appStoreLib.page({ id: 1, country: 'pl', language: 'pl' });
+    await appStoreLib.page({ id: 1, country: 'sg', language: 'zh-Hans' });
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      'https://apps.apple.com/pl/app/id1?l=pl',
+      'https://apps.apple.com/sg/app/id1?l=zh-Hans',
+    ]);
+  });
+});

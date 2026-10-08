@@ -4,6 +4,7 @@ import {
   isRefreshable,
   marketLabel,
   queryMarket,
+  resolveLocalization,
   resolveMarket,
 } from "./market";
 
@@ -71,5 +72,28 @@ describe("isRefreshable", () => {
 
   it("refuses a market whose keywords were removed", () => {
     expect(isRefreshable(markets, "fr")).toBe(false);
+  });
+});
+
+describe("resolveLocalization", () => {
+  const markets: ListingMarket[] = [
+    { country: "us", home: true, capturedAt: null },
+    { country: "pl", home: false, capturedAt: null, localizations: ["pl"] },
+  ];
+
+  it("keeps a localization the market captured", () => {
+    expect(resolveLocalization("pl", markets, "pl")).toBe("pl");
+  });
+
+  it("falls back to the default listing for one it did not capture", () => {
+    expect(resolveLocalization("tr", markets, "pl")).toBeNull();
+  });
+
+  it("falls back to the default listing for a localization of another market", () => {
+    expect(resolveLocalization("pl", markets, "us")).toBeNull();
+  });
+
+  it("reads the default listing when none is requested", () => {
+    expect(resolveLocalization(null, markets, "pl")).toBeNull();
   });
 });

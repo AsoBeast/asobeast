@@ -59,6 +59,33 @@ describe('toListingMarkets', () => {
     ]);
   });
 
+  it('folds the captured localizations of a market into it in table order', () => {
+    expect(
+      toListingMarkets('pl', [
+        row(null, '2026-07-01T00:00:00.000Z'),
+        { ...row(null, '2026-07-01T00:01:00.000Z'), localization: 'pl' },
+        row('be', '2026-07-02T00:00:00.000Z'),
+        { ...row('be', '2026-07-02T00:01:00.000Z'), localization: 'fr' },
+        { ...row('be', '2026-07-02T00:02:00.000Z'), localization: 'nl' },
+        row('de', '2026-07-03T00:00:00.000Z'),
+      ]),
+    ).toEqual([
+      {
+        country: 'pl',
+        home: true,
+        capturedAt: '2026-07-01T00:00:00.000Z',
+        localizations: ['pl'],
+      },
+      {
+        country: 'be',
+        home: false,
+        capturedAt: '2026-07-02T00:00:00.000Z',
+        localizations: ['nl', 'fr'],
+      },
+      { country: 'de', home: false, capturedAt: '2026-07-03T00:00:00.000Z' },
+    ]);
+  });
+
   it('lists the other markets by code with the time of their newest listing', () => {
     expect(
       toListingMarkets('us', [

@@ -6,6 +6,7 @@ import {
   AppSnapshotSummary,
   CompetitorItem,
   ListingMarket,
+  nativeLocalizations,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { extractRawFacts } from '../store-providers/raw-facts';
@@ -38,7 +39,29 @@ export function toSnapshotSummary(
 
 export interface ListingMarketRow {
   country: string | null;
+  localization?: string | null;
   _max: { capturedAt: Date | null };
+}
+
+function localizationsByMarket(
+  home: string,
+  rows: readonly ListingMarketRow[],
+): Map<string, string[]> {
+  const captured = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (!row.localization) continue;
+    const market = row.country ?? home;
+    captured.set(
+      market,
+      (captured.get(market) ?? new Set()).add(row.localization),
+    );
+  }
+  return new Map(
+    [...captured].map(([market, tags]) => [
+      market,
+      nativeLocalizations(market).filter((tag) => tags.has(tag)),
+    ]),
+  );
 }
 
 export function toListingMarkets(
@@ -47,7 +70,15 @@ export function toListingMarkets(
 ): ListingMarket[] {
   const capturedAt = (row: ListingMarketRow | undefined) =>
     row?._max.capturedAt?.toISOString() ?? null;
-  const others = rows
+  const defaults = rows.filter((row) => !row.localization);
+  const localizations = localizationsByMarket(home, rows);
+  const withLocalizations = (market: ListingMarket): ListingMarket => {
+    const captured = localizations.get(market.country) ?? [];
+    return captured.length > 0
+      ? { ...market, localizations: captured }
+      : market;
+  };
+  const others = defaults
     .flatMap((row) =>
       row.country === null ? [] : [{ ...row, country: row.country }],
     )
@@ -57,11 +88,11 @@ export function toListingMarkets(
       home: false,
       capturedAt: capturedAt(row),
     }));
-  const homeRow = rows.find((row) => row.country === null);
+  const homeRow = defaults.find((row) => row.country === null);
   return [
     { country: home, home: true, capturedAt: capturedAt(homeRow) },
     ...others,
-  ];
+  ].map(withLocalizations);
 }
 
 export function withTracking(
@@ -133,6 +164,7 @@ export function toAppDetail(
   snapshot: AppSnapshot | null,
   competitors: CompetitorWithSnapshot[],
   group: GroupWithApps | null,
+  localization: string | null = null,
 ): AppDetail {
   return {
     id: app.id,
@@ -150,6 +182,7 @@ export function toAppDetail(
       toCompetitorItem(competitor, competitor.snapshots[0] ?? null),
     ),
     group: group ? toAppGroupSummary(group) : null,
+    ...(localization ? { localization } : {}),
   };
 }
 
@@ -157,10 +190,12 @@ export function toSnapshotData(
   appId: string,
   normalized: NormalizedApp,
   market: string | null = null,
+  localization: string | null = null,
 ): Prisma.AppSnapshotCreateInput {
   return {
     app: { connect: { id: appId } },
     country: market,
+    localization,
     title: normalized.title,
     subtitle: normalized.subtitle,
     summary: normalized.summary,

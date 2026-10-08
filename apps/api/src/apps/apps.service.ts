@@ -5,6 +5,7 @@ import { Queue } from 'bullmq';
 import {
   AppDetail,
   AppListItem,
+  AppStoreLocalization,
   assertStorefront,
   ListingMarket,
   MarketAvailabilityResult,
@@ -31,6 +32,7 @@ import { toAppDetail, toAppListItem } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
 import { ListingReadService } from './listing-read.service';
+import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { LATEST_HOME_LISTING } from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
@@ -52,6 +54,7 @@ export class AppsService {
     private readonly egress: ProxyEgress,
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
+    private readonly localizations: LocalizedListingCapture,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -89,6 +92,7 @@ export class AppsService {
       { admit: this.quota.admitApp() },
     );
 
+    await this.localizations.capture(app, market, snapshot);
     await this.keywords.syncFromSnapshot(app.id);
 
     await this.queueFor(store).add(
@@ -138,7 +142,11 @@ export class AppsService {
     );
   }
 
-  async detail(id: string, country?: string): Promise<AppDetail> {
+  async detail(
+    id: string,
+    country?: string,
+    localization?: AppStoreLocalization,
+  ): Promise<AppDetail> {
     const app = await this.prisma.app.findFirst({
       where: { id },
       include: {
@@ -154,7 +162,8 @@ export class AppsService {
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
-    if (country === undefined || country === app.country) {
+    const market = country ?? app.country;
+    if (localization === undefined && market === app.country) {
       return toAppDetail(
         app,
         app.snapshots[0] ?? null,
@@ -162,8 +171,8 @@ export class AppsService {
         app.group,
       );
     }
-    assertStorefront(app.store, country);
-    return this.listingReads.marketDetail(app, country);
+    assertStorefront(app.store, market);
+    return this.listingReads.marketDetail(app, market, localization ?? null);
   }
 
   listingMarkets(id: string): Promise<ListingMarket[]> {

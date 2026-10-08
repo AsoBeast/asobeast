@@ -48,14 +48,45 @@ const shot = (snapshotId: string, position: number, caption: string) => ({
   readAt: null,
 });
 
-const build = (store: Store) => {
-  const listings: Record<string, ReturnType<typeof listing>> = {
+const build = (
+  store: Store,
+  options: {
+    listings?: Record<string, ReturnType<typeof listing>>;
+    tracked?: TrackedKeywordItem[];
+    country?: string;
+  } = {},
+) => {
+  const listings = options.listings ?? {
     home: listing('snap_us', 'Focus Timer'),
     de: listing('snap_de', 'Fokus Timer'),
   };
   const appSnapshot = {
-    findFirst: jest.fn(({ where }: { where: { country: string | null } }) =>
-      Promise.resolve(listings[where.country ?? 'home'] ?? null),
+    findMany: jest.fn(
+      ({
+        where,
+      }: {
+        where: { country: string | null; localization: { in: string[] } };
+      }) =>
+        Promise.resolve(
+          where.localization.in.flatMap((tag) => {
+            const found = listings[`${where.country ?? 'home'}:${tag}`];
+            return found ? [{ ...found, localization: tag }] : [];
+          }),
+        ),
+    ),
+    findFirst: jest.fn(
+      ({
+        where,
+      }: {
+        where: { country: string | null; localization: string | null };
+      }) =>
+        Promise.resolve(
+          listings[
+            [where.country ?? 'home', where.localization]
+              .filter(Boolean)
+              .join(':')
+          ] ?? null,
+        ),
     ),
   };
   const snapshotScreenshot = {
@@ -72,7 +103,7 @@ const build = (store: Store) => {
         id: 'app_1',
         store,
         name: 'Focus Timer',
-        country: 'us',
+        country: options.country ?? 'us',
       }),
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -82,11 +113,13 @@ const build = (store: Store) => {
   const keywords = {
     listTracked: jest
       .fn()
-      .mockResolvedValue([
-        tracked('habit', 'us'),
-        tracked('gewohnheiten', 'de'),
-        tracked('habit', 'de'),
-      ]),
+      .mockResolvedValue(
+        options.tracked ?? [
+          tracked('habit', 'us'),
+          tracked('gewohnheiten', 'de'),
+          tracked('habit', 'de'),
+        ],
+      ),
   } as unknown as KeywordsService;
   const policy = {
     state: jest
@@ -121,6 +154,45 @@ describe('MetadataService.audit', () => {
       ['gewohnheiten', { covered: true, positions: [1] }],
       ['habit', { covered: false, positions: [] }],
     ]);
+  });
+
+  it('covers a keyword of a market through the native localization of that market', async () => {
+    const { service } = build(Store.APP_STORE, {
+      listings: {
+        home: listing('snap_us', 'Where Am I? GeoGuess Map Quiz'),
+        pl: listing('snap_pl', 'Where Am I? GeoGuess Map Quiz'),
+        'pl:pl': listing('snap_pl_pl', 'Where Am I? Quiz Geograficzny'),
+      },
+      tracked: [tracked('quiz geograficzny', 'pl')],
+    });
+
+    const result = await service.audit('app_1');
+
+    expect(result.coverage[0]).toMatchObject({
+      uncovered: false,
+      listingCountry: 'pl',
+      fields: [
+        { field: 'title', covered: true, localization: 'pl' },
+        { field: 'subtitle', covered: false },
+      ],
+    });
+  });
+
+  it('suggests no keyword field while a localization is read', async () => {
+    const { service } = build(Store.APP_STORE, {
+      listings: {
+        home: listing('snap_us', 'Where Am I? GeoGuess Map Quiz'),
+        'home:pl': listing('snap_us_pl', 'Where Am I? Quiz Geograficzny'),
+      },
+      tracked: [tracked('quiz geograficzny', 'pl')],
+      country: 'pl',
+    });
+
+    const result = await service.audit('app_1', undefined, 'pl');
+
+    expect(result.localization).toBe('pl');
+
+    expect(result.keywordFieldSuggestion).toBeNull();
   });
 
   it('never reads screenshots for a google play audit', async () => {

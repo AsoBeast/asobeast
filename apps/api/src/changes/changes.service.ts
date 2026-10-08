@@ -17,6 +17,7 @@ import {
 } from './change-detector';
 import {
   eventsIn,
+  eventsOfMarket,
   HOME_EVENTS,
   listingMarket,
   storedMarket,
@@ -29,6 +30,7 @@ const EVENT_SELECT = {
   id: true,
   appId: true,
   country: true,
+  localization: true,
   field: true,
   before: true,
   after: true,
@@ -41,6 +43,7 @@ interface EventRow {
   id: string;
   appId: string;
   country: string | null;
+  localization: string | null;
   field: string;
   before: string | null;
   after: string | null;
@@ -51,7 +54,7 @@ interface EventRow {
 
 export interface CaptionChange {
   appId: string;
-  listing: { home: string; market: string };
+  listing: { home: string; market: string; localization: string | null };
   since: Date;
   before: string[];
   after: string[];
@@ -84,6 +87,7 @@ const toChangeEventItem = (event: EventRow): ChangeEventItem => {
     capturedAt: event.capturedAt.toISOString(),
     country: listingMarket(event.app.country, event.country),
     ...(detail ? { detail } : {}),
+    ...(event.localization ? { localization: event.localization } : {}),
   };
 };
 
@@ -126,7 +130,7 @@ export class ChangesService {
     const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: appIds },
-        ...eventsIn(app.country, market),
+        ...eventsOfMarket(app.country, market),
         capturedAt: { gte: cutoff },
       },
       orderBy: { capturedAt: 'desc' },
@@ -154,17 +158,19 @@ export class ChangesService {
 
   async recordMarketRefresh(
     appId: string,
-    listing: { home: string; market: string },
+    listing: { home: string; market: string; localization?: string | null },
     prev: DiffableChangeSnapshot | null,
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
     const changes = detectChanges(prev, next);
     const country = storedMarket(listing.home, listing.market);
+    const localization = listing.localization ?? null;
     if (changes.length > 0) {
       await this.prisma.changeEvent.createMany({
         data: changes.map((change) => ({
           ...eventData(appId, change),
           country,
+          localization,
         })),
       });
     }
@@ -187,7 +193,11 @@ export class ChangesService {
     const recorded = await this.prisma.changeEvent.findFirst({
       where: {
         appId: change.appId,
-        ...eventsIn(change.listing.home, change.listing.market),
+        ...eventsIn(
+          change.listing.home,
+          change.listing.market,
+          change.listing.localization,
+        ),
         field: 'screenshotCaptions',
         capturedAt: change.since,
       },
@@ -207,7 +217,8 @@ export class ChangesService {
       },
     };
     const country = storedMarket(change.listing.home, change.listing.market);
-    if (country === null) {
+    const localization = change.listing.localization;
+    if (country === null && localization === null) {
       await this.persist(change.appId, [caption], change.since);
       return;
     }
@@ -216,6 +227,7 @@ export class ChangesService {
         {
           ...eventData(change.appId, caption),
           country,
+          localization,
           capturedAt: change.since,
         },
       ],

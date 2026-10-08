@@ -3,6 +3,8 @@ import {
   draftableLocalizations,
   extraRoom,
   LOCALIZED_FIELDS_NOTE,
+  localizationName,
+  localizedLabel,
   storefrontRows,
 } from "./localizations";
 
@@ -77,4 +79,26 @@ describe("draftableLocalizations", () => {
       );
     },
   );
+});
+
+describe("localizationName", () => {
+  it("names an app store localization", () => {
+    expect(localizationName("pl")).toBe("Polish");
+    expect(localizationName("zh-Hans")).toBe("Chinese (Simplified)");
+  });
+
+  it("passes a tag it does not know through", () => {
+    expect(localizationName("xx")).toBe("xx");
+  });
+});
+
+describe("localizedLabel", () => {
+  it("names the language of a localized value", () => {
+    expect(localizedLabel("Title", "pl")).toBe("Title · Polish");
+  });
+
+  it("keeps the label of a default value", () => {
+    expect(localizedLabel("Title")).toBe("Title");
+    expect(localizedLabel("Title", null)).toBe("Title");
+  });
 });

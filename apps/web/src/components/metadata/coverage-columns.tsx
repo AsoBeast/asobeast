@@ -3,6 +3,7 @@
 import { createColumnHelper } from "@tanstack/react-table";
 import { Check, CircleDashed, Minus } from "lucide-react";
 import {
+  type CoverageFieldStatus,
   KEYWORD_BUCKETS,
   type KeywordCoverageRow,
   type MetadataField,
@@ -11,6 +12,12 @@ import { BucketBadge } from "@/components/BucketBadge";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { localizationName } from "@/lib/localizations";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
 import { screenshotTextMark } from "./screenshot-text-marks";
@@ -49,6 +56,32 @@ function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
         {covered ? "in" : "missing from"} {label}
       </span>
     </span>
+  );
+}
+
+function FieldMark({
+  field,
+  status,
+}: {
+  field: MetadataField;
+  status: CoverageFieldStatus | undefined;
+}) {
+  const covered = status?.covered ?? false;
+  if (!covered || status?.localization === undefined) {
+    return (
+      <CoverageMark covered={covered} label={METADATA_FIELD_LABELS[field]} />
+    );
+  }
+  const label = `${METADATA_FIELD_LABELS[field]} (${localizationName(status.localization)})`;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span tabIndex={0} className="inline-flex rounded-full">
+          <CoverageMark covered label={label} />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>in {label}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -112,12 +145,9 @@ export function coverageColumns(
         id: field,
         header: METADATA_FIELD_LABELS[field],
         cell: ({ row }) => (
-          <CoverageMark
-            covered={
-              row.original.fields.find((entry) => entry.field === field)
-                ?.covered ?? false
-            }
-            label={METADATA_FIELD_LABELS[field]}
+          <FieldMark
+            field={field}
+            status={row.original.fields.find((entry) => entry.field === field)}
           />
         ),
       }),

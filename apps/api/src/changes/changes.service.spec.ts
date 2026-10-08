@@ -126,6 +126,7 @@ describe('ChangesService', () => {
           {
             appId: 'app_1',
             country: 'de',
+            localization: null,
             field: 'title',
             before: 'Alt',
             after: 'Neu',
@@ -148,6 +149,7 @@ describe('ChangesService', () => {
           {
             appId: 'app_1',
             country: null,
+            localization: null,
             field: 'title',
             before: 'Alt',
             after: 'Neu',
@@ -440,7 +442,7 @@ describe('ChangesService', () => {
 
     const captionChange = {
       appId: 'app_1',
-      listing: { home: 'us', market: 'us' },
+      listing: { home: 'us', market: 'us', localization: null },
       since: new Date('2026-10-07T03:00:00.000Z'),
       before: ['A', 'B'],
       after: ['A', 'C'],
@@ -526,6 +528,7 @@ describe('ChangesService', () => {
         where: {
           appId: 'app_1',
           country: null,
+          localization: null,
           field: 'screenshotCaptions',
           capturedAt: captionChange.since,
         },
@@ -538,13 +541,14 @@ describe('ChangesService', () => {
     it('records a market caption change in that market and sends no alert', async () => {
       await service.recordCaptionChange({
         ...captionChange,
-        listing: { home: 'us', market: 'de' },
+        listing: { home: 'us', market: 'de', localization: null },
       });
 
       expect(changeEventFindFirst).toHaveBeenCalledWith({
         where: {
           appId: 'app_1',
           country: 'de',
+          localization: null,
           field: 'screenshotCaptions',
           capturedAt: captionChange.since,
         },
@@ -555,12 +559,41 @@ describe('ChangesService', () => {
           {
             appId: 'app_1',
             country: 'de',
+            localization: null,
             field: 'screenshotCaptions',
             before: 'A | B',
             after: 'A | C',
             detail: { kind: 'captions', added: ['C'], removed: ['B'] },
             capturedAt: captionChange.since,
           },
+        ],
+      });
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('records a caption change of a localized listing in that localization and sends no alert', async () => {
+      await service.recordCaptionChange({
+        ...captionChange,
+        listing: { home: 'pl', market: 'pl', localization: 'pl' },
+      });
+
+      expect(changeEventFindFirst).toHaveBeenCalledWith({
+        where: {
+          appId: 'app_1',
+          country: null,
+          localization: 'pl',
+          field: 'screenshotCaptions',
+          capturedAt: captionChange.since,
+        },
+        select: { id: true },
+      });
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            country: null,
+            localization: 'pl',
+            field: 'screenshotCaptions',
+          }),
         ],
       });
       expect(dispatch).not.toHaveBeenCalled();
@@ -587,6 +620,7 @@ describe('ChangesService', () => {
         {
           appId: 'app_1',
           country: 'de',
+          localization: null,
           field: 'screenshotImages',
           before: '3 screenshots',
           after: '3 screenshots, 1 replaced',

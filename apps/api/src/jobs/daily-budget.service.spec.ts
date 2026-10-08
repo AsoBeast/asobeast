@@ -16,14 +16,14 @@ const NOW = new Date('2026-07-27T23:59:59.000Z');
 
 const targetsOf = (over: Partial<DailyTargets> = {}): DailyTargets => ({
   apps: [
-    { id: 'apple', store: Store.APP_STORE },
-    { id: 'gplay', store: Store.GOOGLE_PLAY },
+    { id: 'apple', store: Store.APP_STORE, country: 'us' },
+    { id: 'gplay', store: Store.GOOGLE_PLAY, country: 'us' },
   ],
   keywords: [
     { keywordId: 'apple-keyword', store: Store.APP_STORE },
     { keywordId: 'gplay-keyword', store: Store.GOOGLE_PLAY },
   ],
-  reviewApps: [{ id: 'apple', store: Store.APP_STORE }],
+  reviewApps: [{ id: 'apple', store: Store.APP_STORE, country: 'us' }],
   marketListings: [],
   ...over,
 });
@@ -124,6 +124,36 @@ describe('DailyBudgetService', () => {
     ]);
   });
 
+  it('charges a read per native localization of an english default storefront and reports it', async () => {
+    collect.mockResolvedValue(
+      targetsOf({
+        apps: [{ id: 'apple', store: Store.APP_STORE, country: 'pl' }],
+        marketListings: [
+          { id: 'apple', store: Store.APP_STORE, country: 'tr' },
+        ],
+      }),
+    );
+    const plain = await build().estimate();
+    collect.mockResolvedValue(
+      targetsOf({
+        apps: [{ id: 'apple', store: Store.APP_STORE, country: 'us' }],
+        marketListings: [
+          { id: 'apple', store: Store.APP_STORE, country: 'de' },
+        ],
+      }),
+    );
+    const without = await build().estimate();
+
+    expect(plain.stores[0]).toMatchObject({
+      store: 'APP_STORE',
+      apps: 4,
+      localizations: 2,
+    });
+    expect(plain.localizations).toBe(2);
+    expect(plain.total).toBe(without.total + 2);
+    expect(without.localizations).toBe(0);
+  });
+
   it('reports no market listings when no market has a keyword', async () => {
     const budget = await build().estimate();
 
@@ -193,7 +223,7 @@ describe('DailyBudgetService', () => {
 
   it('still projects completion when an idle store has no capacity', async () => {
     collect.mockResolvedValue({
-      apps: [{ id: 'apple', store: Store.APP_STORE }],
+      apps: [{ id: 'apple', store: Store.APP_STORE, country: 'us' }],
       keywords: [{ keywordId: 'apple-keyword', store: Store.APP_STORE }],
       reviewApps: [],
       marketListings: [],

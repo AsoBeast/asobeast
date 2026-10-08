@@ -1,4 +1,4 @@
-export function interleave<T>(batches: T[][]): T[] {
+export function interleave<T>(batches: readonly (readonly T[])[]): T[] {
   const longest = batches.reduce(
     (length, batch) => Math.max(length, batch.length),
     0,

@@ -7,6 +7,7 @@ import type { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import type { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import type { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ListingCaptureService } from './listing-capture.service';
+import type { LocalizedListingCapture } from './localized-listing-capture.service';
 
 const APP = {
   id: 'app_1',
@@ -47,6 +48,7 @@ const build = (overrides: {
   syncFromSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
   recordMarketRefresh?: jest.Mock;
+  localized?: unknown[];
 }) => {
   const tx = {
     appSnapshot: { create: jest.fn().mockResolvedValue(SNAPSHOT) },
@@ -86,6 +88,7 @@ const build = (overrides: {
   const record = jest.fn().mockResolvedValue(2);
   const screenshots = { record } as unknown as ScreenshotRecorder;
   const request = jest.fn().mockResolvedValue(undefined);
+  const capture = jest.fn().mockResolvedValue(overrides.localized ?? []);
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -94,8 +97,9 @@ const build = (overrides: {
     changes,
     screenshots,
     { request } as unknown as ScreenshotQueue,
+    { capture } as unknown as LocalizedListingCapture,
   );
-  return { service, request, record };
+  return { service, request, record, capture };
 };
 
 describe('ListingCaptureService.refresh', () => {
@@ -162,6 +166,88 @@ describe('ListingCaptureService refresh answer', () => {
       ],
       country: 'de',
     });
+  });
+});
+
+describe('ListingCaptureService localized listings', () => {
+  it('appends the changes of the localized listings to the refresh answer', async () => {
+    const titled = {
+      field: 'title',
+      before: 29,
+      after: 31,
+      localization: 'pl',
+    };
+    const { service } = build({ localized: [titled] });
+
+    const answer = await service.refresh(APP.id);
+
+    expect(answer.changes).toEqual([titled]);
+  });
+
+  it('captures the localizations after the default listing and compares them with it', async () => {
+    const { service, capture } = build({});
+
+    await service.refresh(APP.id);
+
+    expect(capture).toHaveBeenCalledWith(
+      expect.objectContaining({ id: APP.id }),
+      'us',
+      SNAPSHOT,
+    );
+  });
+
+  it('captures the localizations before the keyword sync reads them', async () => {
+    const order: string[] = [];
+    const { service, capture } = build({
+      syncFromSnapshot: jest.fn(() => {
+        order.push('sync');
+        return Promise.resolve();
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
+    });
+
+    await service.refresh(APP.id);
+
+    expect(order).toEqual(['localizations', 'sync']);
+  });
+
+  it('records the changes of the default listing before it asks for a localization', async () => {
+    const order: string[] = [];
+    const { service, capture } = build({
+      recordRefresh: jest.fn(() => {
+        order.push('record');
+        return Promise.resolve([]);
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
+    });
+
+    await service.refresh(APP.id);
+
+    expect(order).toEqual(['record', 'localizations']);
+  });
+
+  it('records the changes of a market listing before it asks for a localization', async () => {
+    const order: string[] = [];
+    const { service, capture } = build({
+      recordMarketRefresh: jest.fn(() => {
+        order.push('record');
+        return Promise.resolve([]);
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
+    });
+
+    await service.refreshListing(APP.id, 'pl');
+
+    expect(order).toEqual(['record', 'localizations']);
   });
 });
 

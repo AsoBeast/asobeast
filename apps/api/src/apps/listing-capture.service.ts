@@ -4,28 +4,21 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, AppSnapshot, Store } from '@prisma/client';
+import { App } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
-import {
-  DetectedChange,
-  DiffableChangeSnapshot,
-} from '../changes/change-detector';
-import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
-import {
-  releaseNotesFor,
-  screenshotsCount,
-} from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
+import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 @Injectable()
@@ -40,6 +33,7 @@ export class ListingCaptureService {
     private readonly changes: ChangesService,
     private readonly screenshots: ScreenshotRecorder,
     private readonly screenshotQueue: ScreenshotQueue,
+    private readonly localizations: LocalizedListingCapture,
   ) {}
 
   async refresh(
@@ -141,51 +135,28 @@ export class ListingCaptureService {
           after: snapshotIcon(app.store, snapshot),
         };
     const before = previous
-      ? this.toChangeSnapshot(previous, icons.before, app.store)
+      ? toChangeSnapshot(previous, icons.before, app.store)
       : null;
-    const after = this.toChangeSnapshot(snapshot, icons.after, app.store);
+    const after = toChangeSnapshot(snapshot, icons.after, app.store);
 
     const recorded = home
-      ? await this.recordHomeRefresh(app.id, before, after)
+      ? await this.changes.recordRefresh(app.id, before, after)
       : await this.changes.recordMarketRefresh(
           app.id,
           { home: app.country, market },
           before,
           after,
         );
+    const localized = await this.localizations.capture(app, market, snapshot);
+    if (home) await this.keywords.syncFromSnapshot(app.id);
 
     return {
       snapshotId: snapshot.id,
-      changes: withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+      changes: [
+        ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+        ...localized,
+      ],
       country: market,
-    };
-  }
-
-  private async recordHomeRefresh(
-    appId: string,
-    before: DiffableChangeSnapshot | null,
-    after: DiffableChangeSnapshot,
-  ): Promise<DetectedChange[]> {
-    await this.keywords.syncFromSnapshot(appId);
-    return this.changes.recordRefresh(appId, before, after);
-  }
-
-  private toChangeSnapshot(
-    snapshot: AppSnapshot,
-    iconUrl: string | null,
-    store: Store,
-  ): DiffableChangeSnapshot {
-    return {
-      title: snapshot.title,
-      subtitle: snapshot.subtitle,
-      summary: snapshot.summary,
-      description: snapshot.description,
-      version: snapshot.version,
-      price: snapshot.price,
-      screenshotsCount: screenshotsCount(snapshot.raw),
-      screenshots: screenshotKeys(store, snapshot.raw),
-      iconUrl,
-      releaseNotes: releaseNotesFor(store, snapshot.raw),
     };
   }
 }

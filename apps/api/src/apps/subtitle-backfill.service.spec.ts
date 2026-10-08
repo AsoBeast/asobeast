@@ -141,6 +141,7 @@ describe('SubtitleBackfill', () => {
         where: {
           appId: APP_ID,
           country: null,
+          localization: null,
           subtitle: null,
           capturedAt: { gte: CAPTURED_AT },
         },

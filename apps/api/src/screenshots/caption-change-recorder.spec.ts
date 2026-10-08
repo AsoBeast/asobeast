@@ -3,7 +3,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { CaptionChangeRecorder } from './caption-change-recorder';
 
 const CAPTURED = new Date('2026-10-07T03:00:00.000Z');
-const HOME = { home: 'us', market: 'us' };
+const HOME = { home: 'us', market: 'us', localization: null };
 const snapshot = {
   id: 'snap_2',
   appId: 'app_1',
@@ -84,7 +84,12 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: null, capturedAt: { lt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: null,
+        capturedAt: { lt: CAPTURED },
+      },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
@@ -207,23 +212,64 @@ describe('CaptionChangeRecorder.record', () => {
       previous: [row('read', 'Plane deine Woche')],
       current: [row('read', 'Plane deinen Tag')],
     });
-    const listing = { home: 'us', market: 'de' };
+    const listing = { home: 'us', market: 'de', localization: null };
 
     await recorder.record({ ...snapshot, listing });
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: 'de', capturedAt: { lt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: 'de',
+        localization: null,
+        capturedAt: { lt: CAPTURED },
+      },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: 'de', capturedAt: { gt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: 'de',
+        localization: null,
+        capturedAt: { gt: CAPTURED },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });
     expect(recordCaptionChange).toHaveBeenCalledWith(
       expect.objectContaining({ listing }),
     );
+  });
+
+  it('compares a localized snapshot with the snapshots of that localization only', async () => {
+    const { recorder, findFirst } = build({
+      previous: [row('read', 'Zwiedzaj')],
+      current: [row('read', 'Odkrywaj')],
+    });
+    const listing = { home: 'pl', market: 'pl', localization: 'pl' };
+
+    await recorder.record({ ...snapshot, listing });
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: 'pl',
+        capturedAt: { lt: CAPTURED },
+      },
+      orderBy: { capturedAt: 'desc' },
+      select: { id: true },
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: 'pl',
+        capturedAt: { gt: CAPTURED },
+      },
+      orderBy: { capturedAt: 'asc' },
+      select: { id: true, capturedAt: true },
+    });
   });
 
   it('looks for the oldest snapshot captured after this one', async () => {
@@ -235,7 +281,12 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: null, capturedAt: { gt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: null,
+        capturedAt: { gt: CAPTURED },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });

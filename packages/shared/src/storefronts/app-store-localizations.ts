@@ -282,3 +282,24 @@ export function storefrontLocalizations(
     ? APP_STORE_STOREFRONT_LOCALIZATIONS[key]
     : null;
 }
+
+const ENGLISH_DEFAULTS: ReadonlySet<AppStoreLocalization> = new Set([
+  'en-GB',
+  'en-CA',
+  'en-AU',
+]);
+
+const isEnglish = (localization: AppStoreLocalization): boolean =>
+  localization.startsWith('en');
+
+export function nativeLocalizations(
+  country: string,
+): readonly AppStoreLocalization[] {
+  const localizations = storefrontLocalizations(country);
+  if (localizations === null || !ENGLISH_DEFAULTS.has(localizations.primary)) {
+    return [];
+  }
+  return localizations.additional.filter(
+    (localization) => !isEnglish(localization),
+  );
+}

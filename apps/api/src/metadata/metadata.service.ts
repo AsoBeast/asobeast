@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  AppStoreLocalization,
   assertStorefront,
   fieldLength,
   KEYWORD_FIELD_BYTE_LIMIT,
   packKeywordField,
-  CoverageFieldStatus,
   KeywordCoverageRow,
   KeywordFieldSuggestion,
   lintDescription,
@@ -23,10 +23,16 @@ import {
   TrackedKeywordItem,
   utf8ByteLength,
 } from '@asobeast/shared';
-import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { latestListingTexts, ListingTexts } from '../apps/listing-texts';
+import { judgeFields, LocalizedSurfaces, Surface } from './localized-coverage';
+import {
+  latestListingTexts,
+  latestLocalizedTexts,
+  ListingTexts,
+  LocalizedTexts,
+} from '../apps/listing-texts';
+import { missingListing } from '../apps/missing-listing';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
 import {
   screenshotTextCoverage,
@@ -34,6 +40,12 @@ import {
 } from './screenshot-coverage';
 
 type JudgedCoverageRow = KeywordCoverageRow & { listingCountry: string };
+
+interface AuditListings {
+  listings: Map<string, ListingTexts>;
+  localized: Map<string, LocalizedTexts[]>;
+  view: ListingTexts | undefined;
+}
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -52,7 +64,11 @@ export class MetadataService {
     private readonly screenshots: ScreenshotsService,
   ) {}
 
-  async audit(appId: string, country?: string): Promise<MetadataAuditResult> {
+  async audit(
+    appId: string,
+    country?: string,
+    localization: AppStoreLocalization | null = null,
+  ): Promise<MetadataAuditResult> {
     const app = await this.ensureApp(appId);
     const market = country ?? app.country;
     const home = market === app.country;
@@ -67,15 +83,8 @@ export class MetadataService {
       }),
     ]);
     const active = tracked.filter((item) => item.active);
-    const listings = await latestListingTexts(this.prisma, appId, app.country, [
-      app.country,
-      market,
-      ...active.map((item) => item.country),
-    ]);
-    const view = listings.get(market);
-    if (!home && !view) {
-      throw new NotFoundException(`No listing captured for ${market}`);
-    }
+    const read = await this.readListings(app, market, localization, active);
+    const { listings, view } = read;
 
     const keywordFieldValue = home
       ? active
@@ -95,20 +104,13 @@ export class MetadataService {
     const fields =
       app.store === Store.GOOGLE_PLAY
         ? this.playFields(view, context)
-        : this.appStoreFields(view, context, keywordFieldValue);
+        : this.appStoreFields(
+            view,
+            context,
+            localization === null ? keywordFieldValue : '',
+          );
 
-    const coverage = active.map((item) => {
-      const own = listings.get(item.country);
-      return this.coverageRow(
-        item,
-        this.surfaces(
-          app.store,
-          own ?? listings.get(app.country),
-          own && item.country !== app.country ? null : keywordFieldValue,
-        ),
-        own ? item.country : app.country,
-      );
-    });
+    const coverage = this.judgeCoverage(app, active, read, keywordFieldValue);
     const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
@@ -134,7 +136,7 @@ export class MetadataService {
           : row,
       ),
       keywordFieldSuggestion:
-        home && app.store === Store.APP_STORE
+        home && localization === null && app.store === Store.APP_STORE
           ? this.suggestion(
               active.filter((item) => item.country === app.country),
               coverage.filter((row) => row.country === app.country),
@@ -142,7 +144,41 @@ export class MetadataService {
           : null,
       ...(screenshotText ? { screenshotText } : {}),
       country: market,
+      ...(localization === null ? {} : { localization }),
     };
+  }
+
+  private async readListings(
+    app: { id: string; store: Store; country: string },
+    market: string,
+    localization: AppStoreLocalization | null,
+    active: TrackedKeywordItem[],
+  ): Promise<AuditListings> {
+    const listings = await latestListingTexts(
+      this.prisma,
+      app.id,
+      app.country,
+      [app.country, market, ...active.map((item) => item.country)],
+    );
+    const localized =
+      app.store === Store.APP_STORE
+        ? await latestLocalizedTexts(this.prisma, app.id, app.country, [
+            ...listings.keys(),
+          ])
+        : new Map<string, LocalizedTexts[]>();
+    const view =
+      localization === null
+        ? listings.get(market)
+        : localized
+            .get(market)
+            ?.find((entry) => entry.localization === localization)?.texts;
+    if (localization !== null && !view) {
+      throw missingListing(market, localization);
+    }
+    if (market !== app.country && !view) {
+      throw missingListing(market);
+    }
+    return { listings, localized, view };
   }
 
   private async screenshotsOf(
@@ -240,11 +276,36 @@ export class MetadataService {
     ];
   }
 
+  private judgeCoverage(
+    app: { store: Store; country: string },
+    active: TrackedKeywordItem[],
+    { listings, localized }: AuditListings,
+    keywordFieldValue: string,
+  ): JudgedCoverageRow[] {
+    return active.map((item) => {
+      const own = listings.get(item.country);
+      const judging = own ? item.country : app.country;
+      return this.coverageRow(
+        item,
+        this.surfaces(
+          app.store,
+          own ?? listings.get(app.country),
+          own && item.country !== app.country ? null : keywordFieldValue,
+        ),
+        (localized.get(judging) ?? []).map(({ localization, texts }) => ({
+          localization,
+          surfaces: this.surfaces(app.store, texts, null),
+        })),
+        judging,
+      );
+    });
+  }
+
   private surfaces(
     store: Store,
     listing: ListingTexts | undefined,
     keywordField: string | null,
-  ): Array<{ field: MetadataField; value: string }> {
+  ): Surface[] {
     const title = { field: 'title' as const, value: listing?.title ?? '' };
     if (store === Store.GOOGLE_PLAY) {
       return [
@@ -281,13 +342,11 @@ export class MetadataService {
 
   private coverageRow(
     item: TrackedKeywordItem,
-    surfaces: Array<{ field: MetadataField; value: string }>,
+    surfaces: Surface[],
+    localized: LocalizedSurfaces[],
     listingCountry: string,
   ): JudgedCoverageRow {
-    const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
-      field: surface.field,
-      covered: coversKeyword(surface.value, item.text),
-    }));
+    const fields = judgeFields(item.text, surfaces, localized);
     return {
       keywordId: item.keywordId,
       text: item.text,

@@ -1,3 +1,5 @@
+import { AppStoreLocalization, isAppStoreLocalization } from '@asobeast/shared';
+
 export const OCR_LANGUAGES = [
   'eng',
   'deu',
@@ -76,11 +78,41 @@ const STOREFRONT_LANGUAGE: Readonly<Record<string, OcrLanguage>> = {
   pl: 'pol',
 };
 
+const LOCALIZATION_LANGUAGE: Readonly<
+  Partial<Record<AppStoreLocalization, OcrLanguage>>
+> = {
+  ar: 'ara',
+  de: 'deu',
+  fr: 'fra',
+  'fr-CA': 'fra',
+  'es-MX': 'spa',
+  'es-ES': 'spa',
+  'pt-BR': 'por',
+  'pt-PT': 'por',
+  it: 'ita',
+  ja: 'jpn',
+  ko: 'kor',
+  'zh-Hans': 'chi_sim',
+  'zh-Hant': 'chi_tra',
+  ru: 'rus',
+  th: 'tha',
+  pl: 'pol',
+};
+
+const localizationLanguage = (localization: string): OcrLanguage | undefined =>
+  isAppStoreLocalization(localization)
+    ? LOCALIZATION_LANGUAGE[localization]
+    : undefined;
+
 export function ocrLanguagesFor(
   country: string,
   enabled: readonly OcrLanguage[],
+  localization: string | null = null,
 ): OcrLanguage[] {
-  const native = STOREFRONT_LANGUAGE[country.toLowerCase()];
+  const native =
+    localization === null
+      ? STOREFRONT_LANGUAGE[country.toLowerCase()]
+      : localizationLanguage(localization);
   const wanted: OcrLanguage[] = native ? ['eng', native] : ['eng'];
   return wanted.filter((language) => enabled.includes(language));
 }

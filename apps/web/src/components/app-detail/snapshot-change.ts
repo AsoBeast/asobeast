@@ -1,6 +1,7 @@
 import { isChangeField, type SnapshotChange } from "@asobeast/shared";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { formatNumber } from "@/lib/format";
+import { localizedLabel } from "@/lib/localizations";
 import { releaseNotesInline } from "@/components/changes/release-notes";
 
 type ChangeValue = SnapshotChange["before"];
@@ -20,11 +21,18 @@ const TEXT_LENGTH_FIELDS: ReadonlySet<string> = new Set([
   "description",
 ]);
 
-export function snapshotChangeLabel(field: string): string {
+function fieldLabel(field: string): string {
   if (isChangeField(field)) return CHANGE_FIELD_LABELS[field];
   return Object.hasOwn(SNAPSHOT_ONLY_LABELS, field)
     ? SNAPSHOT_ONLY_LABELS[field]
     : field;
+}
+
+export function snapshotChangeLabel({
+  field,
+  localization,
+}: Pick<SnapshotChange, "field" | "localization">): string {
+  return localizedLabel(fieldLabel(field), localization);
 }
 
 function cell(value: ChangeValue): string {

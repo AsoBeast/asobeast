@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppScreenshots } from '@asobeast/shared';
-import { ListingMarketQueryDto } from '../apps/dto/listing-market-query.dto';
+import { ListingQueryDto } from '../apps/dto/listing-query.dto';
 import { ScreenshotsService } from './screenshots.service';
 
 @ApiTags('screenshots')
@@ -16,8 +16,12 @@ export class ScreenshotsController {
   })
   list(
     @Param('id') id: string,
-    @Query() query: ListingMarketQueryDto,
+    @Query() query: ListingQueryDto,
   ): Promise<AppScreenshots> {
-    return this.screenshots.forApp(id, query.country);
+    return this.screenshots.forApp(
+      id,
+      query.country,
+      query.localization ?? null,
+    );
   }
 }

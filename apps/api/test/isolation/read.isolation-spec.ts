@@ -231,6 +231,32 @@ describe('Read isolation', () => {
     },
   );
 
+  it('answers 404 for the localized listing of another workspace app', async () => {
+    await fixture.db.appSnapshot.create({
+      data: {
+        appId: fixture.a.appleAppId,
+        localization: 'pl',
+        title: 'Polski tytuł',
+        description: 'Opis',
+        raw: { screenshots: [] },
+      },
+    });
+
+    const own = await fixture.a.agent
+      .get(`/apps/${fixture.a.appleAppId}?localization=pl`)
+      .expect(200);
+    expect((own.body as { localization?: string }).localization).toBe('pl');
+
+    for (const path of [
+      `/apps/${fixture.a.appleAppId}?localization=pl`,
+      `/apps/${fixture.a.appleAppId}/screenshots?localization=pl`,
+      `/apps/${fixture.a.appleAppId}/metadata/audit?localization=pl`,
+      `/apps/${fixture.a.appleAppId}/listing-markets`,
+    ]) {
+      await fixture.b.agent.get(path).expect(404);
+    }
+  });
+
   it('keeps another workspace out of an aggregate that returns only numbers', async () => {
     const forA = await fixture.a.agent.get('/portfolio').expect(200);
     const forB = await fixture.b.agent.get('/portfolio').expect(200);

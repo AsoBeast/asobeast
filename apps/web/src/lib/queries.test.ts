@@ -346,6 +346,36 @@ describe("appKeys", () => {
   });
 });
 
+describe("localized listing keys", () => {
+  it("keeps the key of a default listing and extends it for a localization", () => {
+    expect(appKeys.metadataAudit(APP, "pl")).toEqual(
+      appKeys.metadataAudit(APP, "pl", undefined),
+    );
+    expect(appKeys.metadataAudit(APP, "pl", "pl")).not.toEqual(
+      appKeys.metadataAudit(APP, "pl"),
+    );
+    expect(appKeys.screenshots(APP, "pl", "pl")).not.toEqual(
+      appKeys.screenshots(APP, "pl"),
+    );
+  });
+
+  it("invalidates a localized listing with the rest of the app", () => {
+    const client = new QueryClient();
+    client.setQueryData(appKeys.metadataAudit(APP, "pl", "pl"), {});
+    client.setQueryData(appKeys.screenshots(APP, "pl", "pl"), {});
+
+    invalidateAppListing(client, APP);
+
+    expect(
+      client.getQueryState(appKeys.metadataAudit(APP, "pl", "pl"))
+        ?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(appKeys.screenshots(APP, "pl", "pl"))?.isInvalidated,
+    ).toBe(true);
+  });
+});
+
 describe("actionKeys", () => {
   it("separates a global action list from an app scoped one", () => {
     expect(actionsOptions({}, APP).queryKey).not.toEqual(

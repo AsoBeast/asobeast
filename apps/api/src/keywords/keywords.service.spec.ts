@@ -82,6 +82,56 @@ describe('KeywordsService.syncFromSnapshot', () => {
     };
   };
 
+  it('tracks phrases of the native localization first, then the default, in turn', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.APP_STORE,
+      country: 'pl',
+      isCompetitor: false,
+    });
+    prisma.appSnapshot.findFirst.mockImplementation(
+      ({ where }: { where: { localization: string | null } }) =>
+        Promise.resolve(
+          where.localization === 'pl'
+            ? {
+                title: 'Quiz Geograficzny',
+                subtitle: 'Mapa Świata',
+                summary: null,
+              }
+            : {
+                title: 'GeoGuess Map Quiz',
+                subtitle: 'Geography Trivia',
+                summary: null,
+              },
+        ),
+    );
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    const texts = data.map((row) => row.text);
+    expect(texts).toContain('quiz geograficzny');
+    expect(texts).toContain('geoguess map quiz');
+    expect(texts.length).toBeLessThanOrEqual(15);
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it('reads only the default listing of a storefront without a native localization', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledTimes(1);
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { appId: 'app1', country: null, localization: null },
+      }),
+    );
+  });
+
   it('tracks only title and subtitle candidates without touching existing rows', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());

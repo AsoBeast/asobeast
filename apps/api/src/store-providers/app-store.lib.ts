@@ -74,8 +74,13 @@ export interface AppStoreLib {
     id: number;
     country: string;
     ratings: boolean;
+    lang?: string;
   }): Promise<AppStoreAppResult>;
-  page(options: { id: number; country: string }): Promise<string>;
+  page(options: {
+    id: number;
+    country: string;
+    language?: string;
+  }): Promise<string>;
   search(options: {
     term: string;
     country: string;
@@ -118,10 +123,16 @@ async function fetchText(url: string, userAgent: string): Promise<string> {
   return response.text();
 }
 
+const pageUrl = (id: number, country: string, language?: string): string => {
+  const url = new URL(`https://apps.apple.com/${country}/app/id${id}`);
+  if (language !== undefined) url.searchParams.set('l', language);
+  return url.toString();
+};
+
 export const appStoreLib: AppStoreLib = {
   app: (options) => appStore.app(options),
-  page: ({ id, country }) =>
-    fetchText(`https://apps.apple.com/${country}/app/id${id}`, PAGE_USER_AGENT),
+  page: ({ id, country, language }) =>
+    fetchText(pageUrl(id, country, language), PAGE_USER_AGENT),
   search: (options) =>
     appStore.search(options) as Promise<AppStoreSearchResult[]>,
   suggest: (options) => appStore.suggest(options),

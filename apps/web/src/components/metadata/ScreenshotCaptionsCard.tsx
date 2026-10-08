@@ -17,11 +17,15 @@ const THUMB_WIDTH = 112;
 export function ScreenshotCaptionsCard({
   id,
   market,
+  localization,
 }: {
   id: string;
   market?: string;
+  localization?: string;
 }) {
-  const { data } = useSuspenseQuery(screenshotsOptions(id, market));
+  const { data } = useSuspenseQuery(
+    screenshotsOptions(id, market, localization),
+  );
 
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">

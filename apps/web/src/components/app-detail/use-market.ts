@@ -5,7 +5,7 @@ import { useQueryState } from "nuqs";
 import type { ListingMarket } from "@asobeast/shared";
 import { isRefreshable, queryMarket, resolveMarket } from "@/lib/market";
 import { appDetailOptions, listingMarketsOptions } from "@/lib/queries";
-import { marketParser } from "@/lib/search-params";
+import { localizationParser, marketParser } from "@/lib/search-params";
 import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 export interface SelectedMarket {
@@ -19,11 +19,15 @@ export function useMarket(id: string): SelectedMarket {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
   const { data: markets } = useSuspenseQuery(listingMarketsOptions(id));
   const [requested, setRequested] = useQueryState("market", marketParser);
+  const [, setLocalization] = useQueryState("localization", localizationParser);
   return {
     market: resolveMarket(requested, markets, app.country),
     home: app.country,
     markets,
-    select: (next) => void setRequested(next === app.country ? null : next),
+    select: (next) => {
+      void setRequested(next === app.country ? null : next);
+      void setLocalization(null);
+    },
   };
 }
 

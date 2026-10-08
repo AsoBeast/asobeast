@@ -1,9 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { AppDetail, ListingMarket } from '@asobeast/shared';
+import {
+  AppDetail,
+  AppStoreLocalization,
+  ListingMarket,
+} from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { toAppDetail, toListingMarkets, withTracking } from './apps.mapper';
 import { EVERY_LISTING, latestListingIn } from './listing';
+import { missingListing } from './missing-listing';
 
 export type AppWithListings = Prisma.AppGetPayload<{
   include: { competitors: true; group: { include: { apps: true } } };
@@ -23,7 +28,7 @@ export class ListingReadService {
     }
     const [rows, keywords] = await Promise.all([
       this.prisma.appSnapshot.groupBy({
-        by: ['country'],
+        by: ['country', 'localization'],
         where: { appId: id, ...EVERY_LISTING },
         _max: { capturedAt: true },
       }),
@@ -39,11 +44,15 @@ export class ListingReadService {
     );
   }
 
-  async marketDetail(app: AppWithListings, market: string): Promise<AppDetail> {
+  async marketDetail(
+    app: AppWithListings,
+    market: string,
+    localization: AppStoreLocalization | null = null,
+  ): Promise<AppDetail> {
     const loaded = await this.prisma.app.findFirst({
       where: { id: app.id },
       select: {
-        snapshots: latestListingIn(app.country, market),
+        snapshots: latestListingIn(app.country, market, localization),
         competitors: {
           select: { id: true, snapshots: latestListingIn(app.country, market) },
         },
@@ -51,7 +60,7 @@ export class ListingReadService {
     });
     const own = loaded?.snapshots[0];
     if (!loaded || !own) {
-      throw new NotFoundException(`No listing captured for ${market}`);
+      throw missingListing(market, localization);
     }
     const latest = new Map(
       loaded.competitors.map((rival) => [rival.id, rival.snapshots]),
@@ -60,6 +69,6 @@ export class ListingReadService {
       ...rival,
       snapshots: latest.get(rival.id) ?? [],
     }));
-    return toAppDetail(app, own, competitors, app.group);
+    return toAppDetail(app, own, competitors, app.group, localization);
   }
 }

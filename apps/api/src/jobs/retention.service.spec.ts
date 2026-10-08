@@ -95,7 +95,7 @@ describe('RetentionService', () => {
     await service.prune();
 
     expect(prisma.appSnapshot.findMany).toHaveBeenCalledWith({
-      distinct: ['appId', 'country'],
+      distinct: ['appId', 'country', 'localization'],
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });

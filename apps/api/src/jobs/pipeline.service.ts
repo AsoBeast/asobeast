@@ -305,7 +305,7 @@ export class PipelineService {
         store: true,
         country: true,
         isCompetitor: true,
-        competitors: { select: { id: true, store: true } },
+        competitors: { select: { id: true, store: true, country: true } },
         tracked: {
           where: { active: true },
           select: {
@@ -319,11 +319,17 @@ export class PipelineService {
       throw new NotFoundException(`App ${appId} not found`);
     }
 
+    const own: AppTarget = {
+      id: app.id,
+      store: app.store,
+      country: app.country,
+    };
     const apps: AppTarget[] = [
-      { id: app.id, store: app.store },
-      ...app.competitors.map((competitor) => ({
-        id: competitor.id,
-        store: competitor.store,
+      own,
+      ...app.competitors.map(({ id, store, country }) => ({
+        id,
+        store,
+        country,
       })),
     ];
     const keywords = dedupeKeywords(
@@ -332,9 +338,7 @@ export class PipelineService {
         store: tracked.keyword.store,
       })),
     );
-    const reviewApps: AppTarget[] = app.isCompetitor
-      ? []
-      : [{ id: app.id, store: app.store }];
+    const reviewApps: AppTarget[] = app.isCompetitor ? [] : [own];
     const marketListings = appFamilyMarketListings(app);
 
     return this.enqueue(
