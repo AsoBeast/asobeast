@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
-import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
+import type { ChangeEventItem } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { useMarket } from "@/components/app-detail/use-market";
@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { changesOptions } from "@/lib/queries";
 import {
   formatCountry,
@@ -37,20 +38,6 @@ import { releaseNotesInline } from "./release-notes";
 import { hasScreenshotDetail } from "./screenshot-change";
 import { ScreenshotChangeValue } from "./ScreenshotChangeValue";
 import { ChangeTimelineSkeleton } from "./skeletons";
-
-export const FIELD_LABELS: Record<ChangeField, string> = {
-  title: "Title",
-  subtitle: "Subtitle",
-  summary: "Summary",
-  description: "Description",
-  version: "Version",
-  price: "Price",
-  screenshots: "Screenshots",
-  screenshotImages: "Screenshot images",
-  screenshotCaptions: "Screenshot captions",
-  icon: "Icon",
-  whatsNew: "What's New",
-};
 
 function dayKey(capturedAt: string): string {
   return capturedAt.slice(0, 10);
@@ -191,7 +178,7 @@ export function ChangeRow({
           <Badge variant={event.isCompetitor ? "secondary" : "outline"}>
             {event.isCompetitor ? "Competitor" : "Your app"}
           </Badge>
-          <Badge variant="outline">{FIELD_LABELS[event.field]}</Badge>
+          <Badge variant="outline">{CHANGE_FIELD_LABELS[event.field]}</Badge>
         </div>
         <div className="text-body">
           <ChangeValue event={event} dense={dense} />

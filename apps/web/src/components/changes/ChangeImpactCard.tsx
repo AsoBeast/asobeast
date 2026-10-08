@@ -25,7 +25,7 @@ import { formatCountry, formatDate } from "@/lib/format";
 import { changeImpactOptions, keywordCountriesOptions } from "@/lib/queries";
 import { changeDaysParser, countryParser } from "@/lib/search-params";
 import { ChangeImpactWindowTile } from "./ChangeImpactWindowTile";
-import { FIELD_LABELS } from "./ChangeTimeline";
+import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { impactScopeLine } from "./change-impact-copy";
 import { ChangeImpactSkeleton } from "./skeletons";
 
@@ -42,7 +42,7 @@ function ChangeImpactRow({ item }: { item: ChangeImpactItem }) {
         <h3 className="text-body font-medium">{formatDate(item.changedOn)}</h3>
         {item.fields.map((field) => (
           <Badge key={field} variant="outline">
-            {FIELD_LABELS[field]}
+            {CHANGE_FIELD_LABELS[field]}
           </Badge>
         ))}
       </div>

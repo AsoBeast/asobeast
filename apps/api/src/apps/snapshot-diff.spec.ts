@@ -1,4 +1,8 @@
-import { diffSnapshots, DiffableSnapshot } from './snapshot-diff';
+import {
+  diffSnapshots,
+  DiffableSnapshot,
+  withRecordedChanges,
+} from './snapshot-diff';
 
 function makeSnapshot(
   overrides: Partial<DiffableSnapshot> = {},
@@ -71,5 +75,84 @@ describe('diffSnapshots', () => {
     expect(diffSnapshots(prev, next)).toEqual([
       { field: 'subtitle', before: null, after: 7 },
     ]);
+  });
+});
+
+describe('withRecordedChanges', () => {
+  const titleDiff = { field: 'title', before: 3, after: 15 };
+
+  it('returns the diff unchanged when nothing was recorded', () => {
+    expect(withRecordedChanges([titleDiff], [])).toEqual([titleDiff]);
+  });
+
+  it('appends a recorded screenshot change without its detail', () => {
+    expect(
+      withRecordedChanges(
+        [],
+        [
+          {
+            field: 'screenshotImages',
+            before: '8 screenshots',
+            after: '8 screenshots, reordered',
+            detail: {
+              kind: 'images',
+              before: [],
+              after: [],
+              added: [],
+              removed: [],
+              reordered: true,
+            },
+          },
+        ],
+      ),
+    ).toEqual([
+      {
+        field: 'screenshotImages',
+        before: '8 screenshots',
+        after: '8 screenshots, reordered',
+      },
+    ]);
+  });
+
+  it('appends recorded price, icon and whats new changes in recorded order', () => {
+    expect(
+      withRecordedChanges(
+        [],
+        [
+          { field: 'price', before: '0', after: '2.99' },
+          {
+            field: 'icon',
+            before: 'https://example.com/a.png',
+            after: 'https://example.com/b.png',
+          },
+          { field: 'whatsNew', before: 'Bug fixes', after: 'New maps' },
+        ],
+      ).map((change) => change.field),
+    ).toEqual(['price', 'icon', 'whatsNew']);
+  });
+
+  it('keeps a recorded change of a field the diff did not report', () => {
+    expect(
+      withRecordedChanges(
+        [],
+        [{ field: 'subtitle', before: 'Old', after: 'New' }],
+      ),
+    ).toEqual([{ field: 'subtitle', before: 'Old', after: 'New' }]);
+  });
+
+  it('keeps the diff entry for a field both report and never reports it twice', () => {
+    const diff = [
+      titleDiff,
+      { field: 'summary', before: 10, after: 12 },
+      { field: 'version', before: '1.0.0', after: '1.1.0' },
+    ];
+
+    expect(
+      withRecordedChanges(diff, [
+        { field: 'title', before: 'Old', after: 'Brand New Title' },
+        { field: 'summary', before: '10', after: '12' },
+        { field: 'version', before: '1.0.0', after: '1.1.0' },
+      ]),
+    ).toEqual(diff);
   });
 });

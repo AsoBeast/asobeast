@@ -1,6 +1,6 @@
 "use client";
 
-import type { SnapshotChange, SnapshotDiffResult } from "@asobeast/shared";
+import type { SnapshotDiffResult } from "@asobeast/shared";
 import {
   Dialog,
   DialogBody,
@@ -19,10 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-function cell(value: SnapshotChange["before"]): string {
-  return value === null || value === "" ? "—" : String(value);
-}
+import { snapshotChangeCells, snapshotChangeLabel } from "./snapshot-change";
 
 export function SnapshotDiffDialog({
   diff,
@@ -68,17 +65,22 @@ export function SnapshotDiffDialog({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {changes.map((change) => (
-                  <TableRow key={change.field}>
-                    <TableCell className="font-medium">
-                      {change.field}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {cell(change.before)}
-                    </TableCell>
-                    <TableCell>{cell(change.after)}</TableCell>
-                  </TableRow>
-                ))}
+                {changes.map((change) => {
+                  const cells = snapshotChangeCells(change);
+                  return (
+                    <TableRow key={change.field}>
+                      <TableCell className="font-medium">
+                        {snapshotChangeLabel(change.field)}
+                      </TableCell>
+                      <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">
+                        {cells.before}
+                      </TableCell>
+                      <TableCell className="whitespace-normal wrap-anywhere">
+                        {cells.after}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
