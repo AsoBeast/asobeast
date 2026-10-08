@@ -1,7 +1,7 @@
 ---
 title: The daily pipeline and rate limits
 sidebarTitle: Pipeline and limits
-description: "A daily cron enqueues rank checks, snapshots, reviews and category ranks. Two workers run at concurrency 1 behind per store rate limiters."
+description: "A daily cron enqueues rank checks, snapshots, reviews and category ranks. Two workers run at concurrency 1 behind per store rate limiters. A third reads screenshot text."
 icon: clock
 keywords: ["cron","daily pipeline","BullMQ","rate limit","SCRAPE_ITUNES_RPM","SCRAPE_GPLAY_RPM","retention"]
 ---
@@ -30,6 +30,8 @@ Batched alerts do not have their own schedule. They send once the daily pipeline
 | `gplay` | 1 | `SCRAPE_GPLAY_RPM` job starts per minute | 10 |
 
 The difference matters. The Apple limiter spaces requests, while the Google Play limiter spaces job starts, because one Google Play job fans out into many sequential requests of its own.
+
+Reading screenshot captions runs in a third queue, `screenshots`, with its own worker at concurrency 1. It spends no store request budget and no OpenAI call. See [Read screenshot captions](/guides/screenshot-captions).
 
 ## Why are the limits conservative?
 

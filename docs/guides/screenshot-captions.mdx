@@ -1,0 +1,94 @@
+---
+title: Read screenshot captions
+sidebarTitle: Screenshot captions
+description: "asobeast reads the large caption text printed on App Store screenshots on your own machine, shows it per screenshot, reports it beside keyword coverage and records screenshot and caption edits as change events."
+icon: image
+keywords: ["screenshot captions","OCR","screenshot text","keyword coverage","competitor screenshots","change events","SCREENSHOT_OCR"]
+---
+
+Screenshots are the biggest part of an App Store listing and the only part asobeast could not read. This feature reads the caption text printed on them, keeps it with the snapshot it came from, and uses it in three places: the metadata page, keyword coverage and the change feed.
+
+It runs on the machine that hosts asobeast. It needs no OpenAI key, no account and no language data from the internet.
+
+## Does Apple read screenshot text?
+
+Probably, a little, and Apple has not confirmed it. ASO practitioners reported in early June 2025 that apps started ranking for words that appear only in their screenshot captions, first measured by Appfigures and later repeated by Phiture and AppTweak. Apple has not documented screenshot text as an indexed field. A controlled test by ConsultMyApp of 64 caption phrases across eight apps found one phrase that ranked without an explanation in the title, subtitle or keyword field.
+
+Treat it as a weak, secondary signal. That is why asobeast shows it beside keyword coverage and never inside it: a keyword that only a screenshot caption mentions still counts as uncovered. The evidence and its limits are in [App Store and Google Play](/concepts/stores#is-screenshot-text-indexed).
+
+## What does it read?
+
+| Included | Not included |
+| --- | --- |
+| The large marketing text of each iPhone screenshot on the App Store, in store order | The small interface text inside the device frame |
+| Up to the first 10 screenshots of each snapshot | iPad screenshots and app preview videos |
+| Your apps and your competitors, in every market you import | Google Play screenshots |
+
+The reader keeps the lines that are at least 55 percent as tall as the tallest confident line and at least 2 percent of the image height. A screenshot that shows only interface text reads as having no caption, which is correct.
+
+Every snapshot records its screenshots, so the caption belongs to the snapshot rather than to the app. When a screenshot has the same address as one already read, in your workspace or in anyone else's, the reader reuses the result instead of reading the image again. Screenshots are public store data, so the reads are shared the same way keyword searches are.
+
+## What state can a screenshot be in?
+
+| State | Meaning |
+| --- | --- |
+| Reading | Queued or being read. The card refreshes by itself |
+| Caption read | A caption was found and is shown |
+| No caption | The image was read and carries no large text |
+| Could not read | The store no longer serves the image, or it is not a readable image. The other screenshots are unaffected |
+| Not read | Reading is switched off, the store is Google Play, or no language pack applies to the storefront |
+
+A temporary problem, such as the image server being busy, is retried with growing delays and then recorded as could not read.
+
+## Which languages does it read?
+
+A storefront reads English plus the language of the storefront: Japanese for `jp`, Korean for `kr`, Simplified Chinese for `cn`, Traditional Chinese for `tw`, `hk` and `mo`, Thai for `th`, Russian for `ru`, `by` and `kz`, Arabic for the Arabic speaking storefronts, and German, French, Spanish, Portuguese and Italian for the storefronts that speak them. Any other storefront reads English alone. The language packs ship inside the API image, so reading never downloads anything from the internet.
+
+Reading is most reliable on large, high contrast type on a plain or gradient background, which is what captions usually are. Decorative scripts, text on busy photographs and heavily rotated text may be missed or misread. Small differences between two reads of similar images do not create change events.
+
+## Where do you see the result?
+
+- **Metadata page.** The Screenshot captions card shows the screenshots in store order with the caption under each. See [Optimize listing metadata](/guides/metadata-workbench).
+- **Keyword coverage.** A Screenshot text column marks the tracked keywords found in a caption and lists nothing else. It does not change the Uncovered filter, the keyword field suggestion or the Action Center.
+- **Changes.** Replaced, added, removed and reordered screenshots, and edited captions, appear for your apps and your competitors. See [Watch listing changes](/guides/listing-changes).
+- **ASO audit.** The check Keywords in captions answers from the read text when no AI analysis exists. See [Score your listing](/guides/aso-audit).
+
+The same data is available as `GET /apps/{id}/screenshots` (see [asobeast API](/api-reference/introduction)), and the optional `screenshotText` fields of `metadata_audit` and the `detail` field of `changes_timeline` carry it to an agent (see [MCP tool reference](/mcp/tools)).
+
+## What does it cost?
+
+| Resource | Cost |
+| --- | --- |
+| Time | About 0.2 to 0.8 seconds per new screenshot. An app is read once per distinct image, and an unchanged listing is never read again |
+| Memory | Up to about 190 MB while the reader works, returned after five idle minutes. The API container ceiling is 1024 MB for this reason |
+| Disk | About 95 MB more in the API image: the OCR engine, the language packs and the image library |
+| Network | One image download of about 300 KB per new screenshot from Apple's image server, from your own address. It does not use the proxy pool or the store request budget |
+| OpenAI | None. The allowance for AI calls is not touched |
+
+## How do you turn it off or narrow it?
+
+Set `SCREENSHOT_OCR=false` to stop downloading and reading. Screenshots are still recorded with every snapshot and replaced or reordered screenshots are still detected, because that needs no reading. Set `SCREENSHOT_OCR_LANGUAGES` to a shorter list, such as `eng,jpn`, to read fewer languages. See [Configuration reference](/configuration/reference#screenshot-captions).
+
+## Retention
+
+Screenshot records leave with their snapshot, so `RETENTION_SNAPSHOTS_DAYS` governs them. The shared cache of read text is pruned nightly when no read has used an entry for 90 days.
+
+## Troubleshooting
+
+- **Every screenshot says Not read.** Check `SCREENSHOT_OCR`, and that the storefront has an enabled language pack. Google Play apps are never read.
+- **The card says Reading for a long time.** The reader runs one screenshot at a time. Open the queue dashboard at `/admin/queues` as the operator and look at the `screenshots` queue.
+- **A caption is wrong or missing.** Open the screenshot in the store at full size. Thin, decorative or low contrast lettering is the usual cause. The reader never changes your store listing, so nothing needs repair.
+- **No caption change appeared after you edited captions.** Changes are recorded after the snapshot is fully read, one snapshot later than the first import. They are skipped when a screenshot of either snapshot could not be read, because a missing read would otherwise look like a removed caption.
+- **The API container restarts.** See [Capacity and limits](/operations/capacity) for the memory ceiling.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Optimize listing metadata" icon="pencil-ruler" href="/guides/metadata-workbench">
+    Coverage across the indexed fields, and where screenshot text fits.
+  </Card>
+
+  <Card title="Watch listing changes" icon="git-compare" href="/guides/listing-changes">
+    Screenshot and caption edits for your apps and your competitors.
+  </Card>
+</CardGroup>

@@ -107,12 +107,14 @@ Compose sets a memory ceiling per service and rotates every container log.
 
 | Service | Memory ceiling | Measured at rest | What happens at the ceiling |
 | --- | --- | --- | --- |
-| `api` | 768 MB | ~230 MB | The kernel stops the container and `restart: unless-stopped` brings it back. In flight jobs are retried on the next run |
+| `api` | 1024 MB | ~230 MB | The kernel stops the container and `restart: unless-stopped` brings it back. In flight jobs are retried on the next run |
 | `web` | 384 MB | ~58 MB | The kernel stops the container and Compose restarts it. The API keeps running, so nothing is lost |
 | `postgres` | 384 MB | ~48 MB | The kernel stops the container. This is the one to watch, because recovery on the next start replays the write ahead log |
 | `redis` | 320 MB | ~14 MB | Redis refuses writes before the kernel gets involved. See below |
 
-The ceilings sum to roughly 1.8 GB, which is why [System requirements](/install/requirements) asks for about 2 GB. The at rest figures come from an idle stack with a small portfolio.
+The ceilings sum to roughly 2.1 GB, which is why [System requirements](/install/requirements) asks for about 2.5 GB. The at rest figures come from an idle stack with a small portfolio.
+
+The API ceiling includes about 190 MB for the screenshot reader while it works. It is returned after five idle minutes. The ~230 MB at rest was measured before the reader existed. See [Read screenshot captions](/guides/screenshot-captions).
 
 Under load the picture is tighter, and it was measured rather than assumed.
 

@@ -1,6 +1,6 @@
 ---
 title: System requirements
-description: "asobeast needs Docker with Compose, roughly 2 GB of memory and an outbound internet connection. PostgreSQL 18 and Redis 8 ship with the stack."
+description: "asobeast needs Docker with Compose, roughly 2.5 GB of memory and an outbound internet connection. PostgreSQL 18 and Redis 8 ship with the stack."
 icon: server
 keywords: ["requirements","docker","memory","postgresql","redis","self hosted"]
 ---
@@ -12,8 +12,8 @@ Docker with the Compose plugin is the only hard requirement. PostgreSQL, Redis, 
 | Requirement | Value | Why |
 | --- | --- | --- |
 | Docker Engine | Current release with the Compose plugin | Runs every service. `docker compose version` must succeed |
-| Memory | Roughly 2 GB free | Four containers with memory ceilings summing to about 1.8 GB, of which the API is the largest. See [Capacity](/operations/capacity) |
-| Disk | Roughly 5 GB free | The PostgreSQL volume grows with ranking history. Retention settings bound it, and container logs are capped at 30 MB per service |
+| Memory | Roughly 2.5 GB free | Four containers with memory ceilings summing to about 2.1 GB, of which the API is the largest. See [Capacity](/operations/capacity) |
+| Disk | Roughly 5 GB free | The PostgreSQL volume grows with ranking history. Retention settings bound it, and container logs are capped at 30 MB per service. The API image is about 95 MB larger than before the screenshot reader: the OCR engine, the language packs and the image library |
 | Network | Outbound HTTPS | Store collection runs from this machine |
 | Architecture | `linux/amd64` or `linux/arm64` | Published images are multi architecture |
 

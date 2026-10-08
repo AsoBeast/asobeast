@@ -36,7 +36,7 @@ const GROUPS = [
   {
     title: "Insights",
     tools: INSIGHT_TOOLS,
-    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.",
+    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one.\n\nOn the App Store, `metadata_audit` returns an optional `screenshotText` summary and, per keyword, which screenshot positions contain it. `changes_timeline` events may carry a `detail` object for screenshot and caption changes. Both are optional and absent when there is nothing to report. See [Read screenshot captions](/guides/screenshot-captions).",
   },
   {
     title: "Actions",
