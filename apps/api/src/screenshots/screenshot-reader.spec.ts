@@ -338,7 +338,11 @@ describe('ScreenshotReader.read', () => {
     await reader.read('snap_1');
 
     expect(find).toHaveBeenCalledWith(asset(1), ocrRecipe(['eng']));
-    expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng']);
+    expect(recognize).toHaveBeenCalledWith(
+      expect.anything(),
+      ['eng'],
+      expect.anything(),
+    );
     expect(captionChanges.record).toHaveBeenCalledWith(
       expect.objectContaining({
         listing: { home: 'us', market: 'be', localization: 'nl' },
