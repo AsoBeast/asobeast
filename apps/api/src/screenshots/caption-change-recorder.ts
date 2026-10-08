@@ -13,7 +13,7 @@ interface SnapshotRef {
   id: string;
   appId: string;
   capturedAt: Date;
-  listing: { home: string; market: string };
+  listing: { home: string; market: string; localization?: string | null };
 }
 
 const isSettled = (rows: SettledRow[]): boolean =>
@@ -36,7 +36,11 @@ export class CaptionChangeRecorder {
     const previous = await this.prisma.appSnapshot.findFirst({
       where: {
         appId: snapshot.appId,
-        ...listingIn(snapshot.listing.home, snapshot.listing.market),
+        ...listingIn(
+          snapshot.listing.home,
+          snapshot.listing.market,
+          snapshot.listing.localization ?? null,
+        ),
         capturedAt: { lt: snapshot.capturedAt },
       },
       orderBy: { capturedAt: 'desc' },
@@ -48,7 +52,11 @@ export class CaptionChangeRecorder {
     const next = await this.prisma.appSnapshot.findFirst({
       where: {
         appId: snapshot.appId,
-        ...listingIn(snapshot.listing.home, snapshot.listing.market),
+        ...listingIn(
+          snapshot.listing.home,
+          snapshot.listing.market,
+          snapshot.listing.localization ?? null,
+        ),
         capturedAt: { gt: snapshot.capturedAt },
       },
       orderBy: { capturedAt: 'asc' },

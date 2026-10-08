@@ -118,7 +118,7 @@ describe('LocalizedListingCapture', () => {
     });
     expect(record).toHaveBeenCalledWith(
       expect.anything(),
-      { store: Store.APP_STORE, country: 'pl' },
+      { store: Store.APP_STORE, country: 'pl', localization: 'pl' },
       expect.objectContaining({ id: 'snap_pl' }),
     );
     expect(request).toHaveBeenCalledWith(APP.id, 'snap_pl');

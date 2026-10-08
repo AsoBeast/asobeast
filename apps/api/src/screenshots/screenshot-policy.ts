@@ -5,15 +5,22 @@ import type { ScreenshotReadingState } from '@asobeast/shared';
 import type { Env } from '../config/env';
 import { OcrLanguage, ocrLanguagesFor } from './ocr-languages';
 
+export interface ReadListing {
+  store: Store;
+  country: string;
+  localization?: string | null;
+}
+
 @Injectable()
 export class ScreenshotPolicy {
   constructor(private readonly config: ConfigService<Env, true>) {}
 
-  languagesFor(app: { store: Store; country: string }): OcrLanguage[] {
-    if (app.store !== Store.APP_STORE || !this.enabled) return [];
+  languagesFor(listing: ReadListing): OcrLanguage[] {
+    if (listing.store !== Store.APP_STORE || !this.enabled) return [];
     return ocrLanguagesFor(
-      app.country,
+      listing.country,
       this.config.get('SCREENSHOT_OCR_LANGUAGES', { infer: true }),
+      listing.localization ?? null,
     );
   }
 

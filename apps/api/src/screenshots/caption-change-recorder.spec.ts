@@ -196,6 +196,37 @@ describe('CaptionChangeRecorder.record', () => {
     );
   });
 
+  it('compares a localized snapshot with the snapshots of that localization only', async () => {
+    const { recorder, findFirst } = build({
+      previous: [row('read', 'Zwiedzaj')],
+      current: [row('read', 'Odkrywaj')],
+    });
+    const listing = { home: 'pl', market: 'pl', localization: 'pl' };
+
+    await recorder.record({ ...snapshot, listing });
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: 'pl',
+        capturedAt: { lt: CAPTURED },
+      },
+      orderBy: { capturedAt: 'desc' },
+      select: { id: true },
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: 'pl',
+        capturedAt: { gt: CAPTURED },
+      },
+      orderBy: { capturedAt: 'asc' },
+      select: { id: true, capturedAt: true },
+    });
+  });
+
   it('looks for the oldest snapshot captured after this one', async () => {
     const { recorder, findFirst } = build({
       previous: [row('read', 'a')],

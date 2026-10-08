@@ -22,6 +22,23 @@ describe('ScreenshotPolicy.languagesFor', () => {
     ).toEqual(['eng', 'jpn']);
   });
 
+  it('reads a localized listing with english and the language of its localization', () => {
+    expect(
+      policy().languagesFor({
+        store: Store.APP_STORE,
+        country: 'be',
+        localization: 'fr',
+      }),
+    ).toEqual(['eng', 'fra']);
+    expect(
+      policy().languagesFor({
+        store: Store.APP_STORE,
+        country: 'be',
+        localization: 'nl',
+      }),
+    ).toEqual(['eng']);
+  });
+
   it('reads nothing on google play', () => {
     expect(
       policy().languagesFor({ store: Store.GOOGLE_PLAY, country: 'us' }),

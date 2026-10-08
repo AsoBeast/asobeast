@@ -78,3 +78,29 @@ describe('ocrRecipe', () => {
     expect(ocrRecipe(['eng'])).not.toBe(ocrRecipe(['eng', 'jpn']));
   });
 });
+
+describe('ocrLanguagesFor a localized listing', () => {
+  const all = [...OCR_LANGUAGES];
+
+  it('reads a localization with its own pack', () => {
+    expect(ocrLanguagesFor('sg', all, 'zh-Hans')).toEqual(['eng', 'chi_sim']);
+    expect(ocrLanguagesFor('be', all, 'fr')).toEqual(['eng', 'fra']);
+    expect(ocrLanguagesFor('bz', all, 'es-MX')).toEqual(['eng', 'spa']);
+    expect(ocrLanguagesFor('ca', all, 'fr-CA')).toEqual(['eng', 'fra']);
+    expect(ocrLanguagesFor('ua', all, 'ru')).toEqual(['eng', 'rus']);
+  });
+
+  it('reads a localization without a bundled pack in english only', () => {
+    expect(ocrLanguagesFor('be', all, 'nl')).toEqual(['eng']);
+    expect(ocrLanguagesFor('cz', all, 'cs')).toEqual(['eng']);
+  });
+
+  it('never reads a pack that is not enabled', () => {
+    expect(ocrLanguagesFor('sg', ['eng'], 'zh-Hans')).toEqual(['eng']);
+  });
+
+  it('reads the default listing as before', () => {
+    expect(ocrLanguagesFor('sa', all)).toEqual(['eng', 'ara']);
+    expect(ocrLanguagesFor('sa', all, null)).toEqual(['eng', 'ara']);
+  });
+});

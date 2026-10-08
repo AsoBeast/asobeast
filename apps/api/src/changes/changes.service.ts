@@ -51,7 +51,7 @@ interface EventRow {
 
 export interface CaptionChange {
   appId: string;
-  listing: { home: string; market: string };
+  listing: { home: string; market: string; localization?: string | null };
   since: Date;
   before: string[];
   after: string[];
@@ -189,7 +189,11 @@ export class ChangesService {
     const recorded = await this.prisma.changeEvent.findFirst({
       where: {
         appId: change.appId,
-        ...eventsIn(change.listing.home, change.listing.market),
+        ...eventsIn(
+          change.listing.home,
+          change.listing.market,
+          change.listing.localization ?? null,
+        ),
         field: 'screenshotCaptions',
         capturedAt: change.since,
       },
@@ -209,7 +213,8 @@ export class ChangesService {
       },
     };
     const country = storedMarket(change.listing.home, change.listing.market);
-    if (country === null) {
+    const localization = change.listing.localization ?? null;
+    if (country === null && localization === null) {
       await this.persist(change.appId, [caption], change.since);
       return;
     }
@@ -218,6 +223,7 @@ export class ChangesService {
         {
           ...eventData(change.appId, caption),
           country,
+          localization,
           capturedAt: change.since,
         },
       ],

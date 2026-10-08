@@ -120,7 +120,7 @@ export class LocalizedListingCapture {
       });
       pending = await this.screenshots.record(
         tx,
-        { store: app.store, country: market },
+        { store: app.store, country: market, localization },
         created,
       );
       return created;

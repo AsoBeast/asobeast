@@ -48,6 +48,7 @@ const build = (
     found?: unknown;
     snapshot?: boolean;
     market?: string | null;
+    localization?: string | null;
   } = {},
 ) => {
   const rows = options.rows ?? [pendingRow(1), pendingRow(2)];
@@ -65,14 +66,24 @@ const build = (
               appId: 'app_1',
               capturedAt: new Date('2026-10-07T03:00:00.000Z'),
               country: options.market ?? null,
+              localization: options.localization ?? null,
               app: { store: Store.APP_STORE, country: options.country ?? 'us' },
             },
       ),
     },
     snapshotScreenshot: { findMany, update, updateMany },
   } as unknown as PrismaService;
-  const languagesFor = jest.fn((app: { store: Store; country: string }) =>
-    ocrLanguagesFor(app.country, OCR_LANGUAGES),
+  const languagesFor = jest.fn(
+    (listing: {
+      store: Store;
+      country: string;
+      localization?: string | null;
+    }) =>
+      ocrLanguagesFor(
+        listing.country,
+        OCR_LANGUAGES,
+        listing.localization ?? null,
+      ),
   );
   const policy = { languagesFor } as unknown as ScreenshotPolicy;
   const find = jest.fn().mockResolvedValue(options.found ?? null);
@@ -245,6 +256,25 @@ describe('ScreenshotReader.read', () => {
     expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
   });
 
+  it('reads a localized snapshot with the language of its localization', async () => {
+    const { reader, find, recognize, captionChanges } = build({
+      rows: [pendingRow(1)],
+      country: 'us',
+      market: 'be',
+      localization: 'nl',
+    });
+
+    await reader.read('snap_1');
+
+    expect(find).toHaveBeenCalledWith(asset(1), 'ocr1:eng');
+    expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng']);
+    expect(captionChanges.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listing: { home: 'us', market: 'be', localization: 'nl' },
+      }),
+    );
+  });
+
   it('marks every pending screenshot skipped when no language applies', async () => {
     const { reader, updateMany, languagesFor, recognize } = build();
     languagesFor.mockReturnValue([]);
@@ -287,7 +317,7 @@ describe('ScreenshotReader.read', () => {
       id: 'snap_1',
       appId: 'app_1',
       capturedAt: new Date('2026-10-07T03:00:00.000Z'),
-      listing: { home: 'us', market: 'us' },
+      listing: { home: 'us', market: 'us', localization: null },
     });
   });
 
@@ -297,7 +327,9 @@ describe('ScreenshotReader.read', () => {
     await reader.read('snap_1');
 
     expect(captionChanges.record).toHaveBeenCalledWith(
-      expect.objectContaining({ listing: { home: 'us', market: 'de' } }),
+      expect.objectContaining({
+        listing: { home: 'us', market: 'de', localization: null },
+      }),
     );
   });
 
