@@ -10,6 +10,11 @@ describe("snapshotChangeLabel", () => {
     }
   });
 
+  it("prints the labels the changes timeline prints", () => {
+    expect(snapshotChangeLabel("screenshotImages")).toBe("Screenshot images");
+    expect(snapshotChangeLabel("whatsNew")).toBe("What's New");
+  });
+
   it("names the fields only a snapshot diff reports", () => {
     expect(snapshotChangeLabel("ratingAvg")).toBe("Rating");
     expect(snapshotChangeLabel("ratingCount")).toBe("Ratings");
@@ -45,11 +50,20 @@ describe("snapshotChangeCells", () => {
 
   it("renders empty values as a dash and numbers as text", () => {
     expect(
-      snapshotChangeCells({ field: "subtitle", before: null, after: 7 }),
+      snapshotChangeCells({ field: "ratingCount", before: null, after: 7 }),
     ).toEqual({ before: "—", after: "7" });
     expect(
       snapshotChangeCells({ field: "version", before: "", after: "1.1.0" }),
     ).toEqual({ before: "—", after: "1.1.0" });
+  });
+
+  it("reports the length of a text field in characters", () => {
+    expect(
+      snapshotChangeCells({ field: "title", before: 3, after: 1200 }),
+    ).toEqual({ before: "3 chars", after: "1,200 chars" });
+    expect(
+      snapshotChangeCells({ field: "subtitle", before: null, after: 7 }),
+    ).toEqual({ before: "—", after: "7 chars" });
   });
 
   it("keeps the recorded screenshot wording", () => {

@@ -72,10 +72,10 @@ export function SnapshotDiffDialog({
                       <TableCell className="font-medium">
                         {snapshotChangeLabel(change.field)}
                       </TableCell>
-                      <TableCell className="whitespace-normal break-words text-muted-foreground">
+                      <TableCell className="whitespace-normal wrap-anywhere text-muted-foreground">
                         {cells.before}
                       </TableCell>
-                      <TableCell className="whitespace-normal break-words">
+                      <TableCell className="whitespace-normal wrap-anywhere">
                         {cells.after}
                       </TableCell>
                     </TableRow>
