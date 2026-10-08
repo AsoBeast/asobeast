@@ -1,5 +1,9 @@
 import { PrismaService } from '../prisma/prisma.service';
-import { latestListingTexts, relevanceText } from './listing-texts';
+import {
+  latestListingTexts,
+  latestLocalizedTexts,
+  relevanceText,
+} from './listing-texts';
 
 const texts = (title: string) => ({
   id: `snap_${title}`,
@@ -67,5 +71,44 @@ describe('latestListingTexts', () => {
 describe('relevanceText', () => {
   it('joins the indexed words of a listing, leaving out empty fields', () => {
     expect(relevanceText(texts('Habit'))).toBe('Habit Habit subtitle');
+  });
+});
+
+describe('latestLocalizedTexts', () => {
+  it('asks nothing for a market without a native localization', async () => {
+    const { findFirst, prisma } = prismaOf({});
+
+    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', [
+      'us',
+      'de',
+    ]);
+
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(localized.get('de')).toEqual([]);
+  });
+
+  it('reads the newest snapshot of each native localization of a market', async () => {
+    const findFirst = jest.fn(
+      ({ where }: { where: { localization: string | null } }) =>
+        Promise.resolve(
+          where.localization === 'pl' ? texts('Quiz Geograficzny') : null,
+        ),
+    );
+    const prisma = { appSnapshot: { findFirst } } as unknown as PrismaService;
+
+    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', [
+      'pl',
+      'pl',
+    ]);
+
+    expect(findFirst).toHaveBeenCalledTimes(1);
+    expect(findFirst.mock.calls[0][0].where).toEqual({
+      appId: 'app_1',
+      country: 'pl',
+      localization: 'pl',
+    });
+    expect(localized.get('pl')).toEqual([
+      { localization: 'pl', texts: texts('Quiz Geograficzny') },
+    ]);
   });
 });

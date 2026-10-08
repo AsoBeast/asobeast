@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   AppDetail,
+  MetadataAuditResult,
   SnapshotDiffResult,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -109,6 +110,32 @@ describe('Native localizations of a listing (e2e)', () => {
     expect(texts.some((text) => text.includes('geoguess'))).toBe(true);
     expect(texts.length).toBeLessThanOrEqual(15);
     expect(keywords.every((keyword) => keyword.country === 'pl')).toBe(true);
+  });
+
+  it('covers a polish keyword in a polish title', async () => {
+    registry.listings.set('pl:pl', POLISH);
+    const appId = await importFrom(US_APP_URL);
+    await api
+      .post(`/apps/${appId}/keywords`)
+      .send({ keywords: ['quiz geograficzny'], country: 'pl' })
+      .expect(201);
+    await api.post(`/apps/${appId}/refresh?country=pl`).expect(200);
+
+    const audit = (
+      await api.get(`/apps/${appId}/metadata/audit?country=pl`).expect(200)
+    ).body as MetadataAuditResult;
+    const row = audit.coverage.find(
+      (item) => item.text === 'quiz geograficzny',
+    );
+
+    expect(row).toMatchObject({
+      uncovered: false,
+      listingCountry: 'pl',
+      fields: [
+        { field: 'title', covered: true, localization: 'pl' },
+        { field: 'subtitle', covered: false },
+      ],
+    });
   });
 
   it('stores only the default listing of an app without a polish listing', async () => {

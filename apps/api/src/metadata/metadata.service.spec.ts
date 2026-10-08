@@ -48,14 +48,31 @@ const shot = (snapshotId: string, position: number, caption: string) => ({
   readAt: null,
 });
 
-const build = (store: Store) => {
-  const listings: Record<string, ReturnType<typeof listing>> = {
+const build = (
+  store: Store,
+  options: {
+    listings?: Record<string, ReturnType<typeof listing>>;
+    tracked?: TrackedKeywordItem[];
+  } = {},
+) => {
+  const listings = options.listings ?? {
     home: listing('snap_us', 'Focus Timer'),
     de: listing('snap_de', 'Fokus Timer'),
   };
   const appSnapshot = {
-    findFirst: jest.fn(({ where }: { where: { country: string | null } }) =>
-      Promise.resolve(listings[where.country ?? 'home'] ?? null),
+    findFirst: jest.fn(
+      ({
+        where,
+      }: {
+        where: { country: string | null; localization: string | null };
+      }) =>
+        Promise.resolve(
+          listings[
+            [where.country ?? 'home', where.localization]
+              .filter(Boolean)
+              .join(':')
+          ] ?? null,
+        ),
     ),
   };
   const snapshotScreenshot = {
@@ -82,11 +99,13 @@ const build = (store: Store) => {
   const keywords = {
     listTracked: jest
       .fn()
-      .mockResolvedValue([
-        tracked('habit', 'us'),
-        tracked('gewohnheiten', 'de'),
-        tracked('habit', 'de'),
-      ]),
+      .mockResolvedValue(
+        options.tracked ?? [
+          tracked('habit', 'us'),
+          tracked('gewohnheiten', 'de'),
+          tracked('habit', 'de'),
+        ],
+      ),
   } as unknown as KeywordsService;
   const policy = {
     state: jest
@@ -121,6 +140,28 @@ describe('MetadataService.audit', () => {
       ['gewohnheiten', { covered: true, positions: [1] }],
       ['habit', { covered: false, positions: [] }],
     ]);
+  });
+
+  it('covers a keyword of a market through the native localization of that market', async () => {
+    const { service } = build(Store.APP_STORE, {
+      listings: {
+        home: listing('snap_us', 'Where Am I? GeoGuess Map Quiz'),
+        pl: listing('snap_pl', 'Where Am I? GeoGuess Map Quiz'),
+        'pl:pl': listing('snap_pl_pl', 'Where Am I? Quiz Geograficzny'),
+      },
+      tracked: [tracked('quiz geograficzny', 'pl')],
+    });
+
+    const result = await service.audit('app_1');
+
+    expect(result.coverage[0]).toMatchObject({
+      uncovered: false,
+      listingCountry: 'pl',
+      fields: [
+        { field: 'title', covered: true, localization: 'pl' },
+        { field: 'subtitle', covered: false },
+      ],
+    });
   });
 
   it('never reads screenshots for a google play audit', async () => {

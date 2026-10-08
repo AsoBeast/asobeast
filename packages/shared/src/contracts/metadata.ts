@@ -19,6 +19,7 @@ export interface MetadataFieldAudit {
 export interface CoverageFieldStatus {
   field: MetadataField;
   covered: boolean;
+  localization?: string;
 }
 
 export interface KeywordCoverageRow {

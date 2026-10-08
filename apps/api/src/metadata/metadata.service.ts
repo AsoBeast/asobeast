@@ -5,7 +5,6 @@ import {
   fieldLength,
   KEYWORD_FIELD_BYTE_LIMIT,
   packKeywordField,
-  CoverageFieldStatus,
   KeywordCoverageRow,
   KeywordFieldSuggestion,
   lintDescription,
@@ -23,10 +22,14 @@ import {
   TrackedKeywordItem,
   utf8ByteLength,
 } from '@asobeast/shared';
-import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { latestListingTexts, ListingTexts } from '../apps/listing-texts';
+import { judgeFields, LocalizedSurfaces, Surface } from './localized-coverage';
+import {
+  latestListingTexts,
+  latestLocalizedTexts,
+  ListingTexts,
+} from '../apps/listing-texts';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
 import {
   screenshotTextCoverage,
@@ -97,18 +100,12 @@ export class MetadataService {
         ? this.playFields(view, context)
         : this.appStoreFields(view, context, keywordFieldValue);
 
-    const coverage = active.map((item) => {
-      const own = listings.get(item.country);
-      return this.coverageRow(
-        item,
-        this.surfaces(
-          app.store,
-          own ?? listings.get(app.country),
-          own && item.country !== app.country ? null : keywordFieldValue,
-        ),
-        own ? item.country : app.country,
-      );
-    });
+    const coverage = await this.judgeCoverage(
+      app,
+      active,
+      listings,
+      keywordFieldValue,
+    );
     const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
@@ -240,11 +237,42 @@ export class MetadataService {
     ];
   }
 
+  private async judgeCoverage(
+    app: { id: string; store: Store; country: string },
+    active: TrackedKeywordItem[],
+    listings: Map<string, ListingTexts>,
+    keywordFieldValue: string,
+  ): Promise<JudgedCoverageRow[]> {
+    const localized = await latestLocalizedTexts(
+      this.prisma,
+      app.id,
+      app.country,
+      [...listings.keys()],
+    );
+    return active.map((item) => {
+      const own = listings.get(item.country);
+      const judging = own ? item.country : app.country;
+      return this.coverageRow(
+        item,
+        this.surfaces(
+          app.store,
+          own ?? listings.get(app.country),
+          own && item.country !== app.country ? null : keywordFieldValue,
+        ),
+        (localized.get(judging) ?? []).map(({ localization, texts }) => ({
+          localization,
+          surfaces: this.surfaces(app.store, texts, null),
+        })),
+        judging,
+      );
+    });
+  }
+
   private surfaces(
     store: Store,
     listing: ListingTexts | undefined,
     keywordField: string | null,
-  ): Array<{ field: MetadataField; value: string }> {
+  ): Surface[] {
     const title = { field: 'title' as const, value: listing?.title ?? '' };
     if (store === Store.GOOGLE_PLAY) {
       return [
@@ -281,13 +309,11 @@ export class MetadataService {
 
   private coverageRow(
     item: TrackedKeywordItem,
-    surfaces: Array<{ field: MetadataField; value: string }>,
+    surfaces: Surface[],
+    localized: LocalizedSurfaces[],
     listingCountry: string,
   ): JudgedCoverageRow {
-    const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
-      field: surface.field,
-      covered: coversKeyword(surface.value, item.text),
-    }));
+    const fields = judgeFields(item.text, surfaces, localized);
     return {
       keywordId: item.keywordId,
       text: item.text,
