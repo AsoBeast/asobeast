@@ -1,11 +1,9 @@
-import { InjectQueue } from '@nestjs/bullmq';
 import {
   BadRequestException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { KeywordSource, Prisma, Store } from '@prisma/client';
-import { Queue } from 'bullmq';
 import {
   assertStorefront,
   KeywordComparison,
@@ -18,13 +16,12 @@ import {
   parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
-import { isoWeekKey, JOBS, QUEUES, scoreJobId } from '../jobs/jobs.types';
 import { QuotaService } from '../auth/quota.service';
-import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
+import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
   latestPositions,
@@ -40,7 +37,6 @@ import {
   ensureApp,
   KeywordApp,
   normalizeKeyword,
-  queueFor,
   trackedArgs,
   trackedOrder,
 } from './keywords.support';
@@ -49,41 +45,14 @@ import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
 
-const keywordRows = (texts: string[], store: Store, country: string) =>
-  [...texts].sort().map((text) => ({ text, store, country }));
-
 @Injectable()
 export class KeywordsService {
   constructor(
     private readonly prisma: PrismaService,
-    @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
-    @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
+    private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
-    private readonly workspace: WorkspaceContext,
     private readonly listings: MarketListingRequests,
   ) {}
-
-  private async enqueueFirstScore(
-    keywordId: string,
-    app: Pick<KeywordApp, 'store' | 'workspaceId'>,
-  ): Promise<void> {
-    const existing = await this.prisma.keywordMetric.findFirst({
-      where: { keywordId },
-      select: { keywordId: true },
-    });
-    if (existing) {
-      return;
-    }
-    await queueFor(app.store, this.appStoreQueue, this.gplayQueue).add(
-      JOBS.SCORE_KEYWORD,
-      {
-        keywordId,
-        workspaceId: app.workspaceId,
-        correlationId: this.workspace.correlationId,
-      },
-      { jobId: scoreJobId(keywordId, isoWeekKey()) },
-    );
-  }
 
   async listTracked(
     appId: string,
@@ -207,21 +176,25 @@ export class KeywordsService {
     assertStorefront(app.store, market);
     const texts = new Set(rawKeywords.map((raw) => normalizeKeyword(raw)));
 
-    const keywordIds = await this.keywordIdsFor([...texts], app.store, market);
+    const keywordIds = await this.tracker.keywordIdsFor(
+      [...texts],
+      app.store,
+      market,
+    );
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       for (const keywordId of keywordIds) {
-        await this.trackKeyword(
+        await this.tracker.track(
           tx,
           { appId, keywordId, source: 'MANUAL', active: true },
           { active: true },
         );
       }
-      await this.claimForManual(tx, appId, keywordIds);
+      await this.tracker.claimForManual(tx, appId, keywordIds);
     });
 
     for (const keywordId of keywordIds) {
-      await this.enqueueFirstScore(keywordId, app);
+      await this.tracker.enqueueFirstScore(keywordId, app);
     }
     await this.listings.request(app, market);
 
@@ -250,7 +223,7 @@ export class KeywordsService {
           where: { appId_keywordId: { appId, keywordId } },
           data: update,
         });
-        await this.claimForManual(tx, appId, [keywordId]);
+        await this.tracker.claimForManual(tx, appId, [keywordId]);
       });
       await this.listings.request(app, keyword.country);
     } else {
@@ -339,12 +312,16 @@ export class KeywordsService {
       );
     }
 
-    const keywordIds = await this.keywordIdsFor(unique, app.store, app.country);
+    const keywordIds = await this.tracker.keywordIdsFor(
+      unique,
+      app.store,
+      app.country,
+    );
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       await this.serializeKeywordField(tx, appId);
       for (const [fieldOrder, keywordId] of keywordIds.entries()) {
-        await this.trackKeyword(
+        await this.tracker.track(
           tx,
           {
             appId,
@@ -372,7 +349,7 @@ export class KeywordsService {
     });
 
     for (const keywordId of keywordIds) {
-      await this.enqueueFirstScore(keywordId, app);
+      await this.tracker.enqueueFirstScore(keywordId, app);
     }
 
     return this.keywordFieldResult(app, duplicatesRemoved);
@@ -457,32 +434,8 @@ export class KeywordsService {
     await this.claimForSnapshot(app.id, tracked);
 
     for (const row of tracked) {
-      await this.enqueueFirstScore(row.keywordId, app);
+      await this.tracker.enqueueFirstScore(row.keywordId, app);
     }
-  }
-
-  private async keywordIdsFor(
-    texts: string[],
-    store: Store,
-    country: string,
-  ): Promise<string[]> {
-    await this.prisma.keyword.createMany({
-      data: keywordRows(texts, store, country),
-      skipDuplicates: true,
-    });
-
-    const keywords = await this.prisma.keyword.findMany({
-      where: { store, country, text: { in: texts } },
-      select: { id: true, text: true },
-    });
-    const idByText = new Map(
-      keywords.map((keyword) => [keyword.text, keyword.id]),
-    );
-
-    return texts.flatMap((text) => {
-      const id = idByText.get(text);
-      return id ? [id] : [];
-    });
   }
 
   private async claimForSnapshot(
@@ -503,35 +456,6 @@ export class KeywordsService {
         data: { source },
       });
     }
-  }
-
-  private claimForManual(
-    client: Prisma.TransactionClient,
-    appId: string,
-    keywordIds: string[],
-  ): Promise<Prisma.BatchPayload> {
-    return client.trackedKeyword.updateMany({
-      where: { appId, keywordId: { in: keywordIds }, source: 'KEYWORD_FIELD' },
-      data: { source: 'MANUAL' },
-    });
-  }
-
-  private async trackKeyword(
-    client: Prisma.TransactionClient | PrismaService,
-    row: Prisma.TrackedKeywordCreateManyInput,
-    onExisting: Prisma.TrackedKeywordUpdateManyMutationInput,
-  ): Promise<void> {
-    const { count } = await client.trackedKeyword.createMany({
-      data: [row],
-      skipDuplicates: true,
-    });
-    if (count > 0) {
-      return;
-    }
-    await client.trackedKeyword.updateMany({
-      where: { appId: row.appId, keywordId: row.keywordId },
-      data: onExisting,
-    });
   }
 
   private async ensureTracked(

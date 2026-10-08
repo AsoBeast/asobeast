@@ -39,12 +39,14 @@ async function main(): Promise<void> {
         name: "asobeast",
         version: packageVersion(),
       });
-      registerTools(server, client);
+      registerTools(server, client, gate.tokenScope);
       return server;
     },
     { onerror: (error) => logError(`stdio transport: ${error.message}`) },
   );
-  logInfo(`connected to ${config.apiUrl} on the ${gate.limits}`);
+  const access =
+    gate.tokenScope === "write" ? ", write tools enabled" : ", read only";
+  logInfo(`connected to ${config.apiUrl} on the ${gate.limits}${access}`);
 
   const shutdown = () => {
     void handle.close().finally(() => process.exit(0));

@@ -4,6 +4,7 @@ import {
   isKeywordTag,
   KEYWORD_NOTE_MAX_LENGTH,
   KEYWORD_TAG_MAX_LENGTH,
+  KEYWORD_TAG_RULE,
   KEYWORD_TAGS_MAX,
   normalizeKeywordNote,
   normalizeKeywordTag,
@@ -76,5 +77,13 @@ describe('keyword tag limits', () => {
   it('suggests only valid tags', () => {
     expect(SUGGESTED_KEYWORD_TAGS).toEqual(['brand', 'core', 'testing']);
     expect(SUGGESTED_KEYWORD_TAGS.every(isKeywordTag)).toBe(true);
+  });
+});
+
+describe('KEYWORD_TAG_RULE', () => {
+  it('states the length and the first character rule the pattern enforces', () => {
+    expect(KEYWORD_TAG_RULE).toBe(
+      `at most ${KEYWORD_TAG_MAX_LENGTH} letters, numbers, spaces, hyphens or underscores and starts with a letter or number`,
+    );
   });
 });

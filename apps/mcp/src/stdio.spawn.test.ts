@@ -9,12 +9,23 @@ import {
   StdioClientTransport,
   getDefaultEnvironment,
 } from "@modelcontextprotocol/client/stdio";
-import { MCP_TOOLS, toolText } from "@asobeast/mcp-tools";
+import { MCP_TOOLS, toolText, toolsFor } from "@asobeast/mcp-tools";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
 const BINARY = join(PACKAGE_ROOT, "dist", "index.js");
 const TOKEN = `asob_${"a".repeat(48)}`;
+const WRITE_TOKEN = `asob_${"w".repeat(48)}`;
+const TRACKED = [
+  {
+    keywordId: "kw-1",
+    text: "habit tracker",
+    country: "us",
+    active: true,
+    source: "MANUAL",
+  },
+];
+const writes: { method: string; path: string; body: string }[] = [];
 const SCHEMA_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 
 const OWNER = { id: "user-1", email: "owner@example.com", entitled: true };
@@ -42,18 +53,35 @@ function buildBinary(): void {
 function startFakeApi(): Promise<FakeApi> {
   const server = createServer((req, res) => {
     const { pathname } = new URL(req.url ?? "/", "http://127.0.0.1");
-    if (req.headers.authorization !== `Bearer ${TOKEN}`) {
+    const bearer = req.headers.authorization;
+    if (bearer !== `Bearer ${TOKEN}` && bearer !== `Bearer ${WRITE_TOKEN}`) {
       res.writeHead(401, { "content-type": "application/json" });
       res.end(JSON.stringify({ message: "Not authenticated" }));
       return;
     }
-    const body = ROUTES[pathname];
-    res.writeHead(body === undefined ? 404 : 200, {
-      "content-type": "application/json",
+    const chunks: Buffer[] = [];
+    req.on("data", (chunk: Buffer) => chunks.push(chunk));
+    req.on("end", () => {
+      const method = req.method ?? "GET";
+      if (method !== "GET") {
+        writes.push({
+          method,
+          path: pathname,
+          body: Buffer.concat(chunks).toString("utf8"),
+        });
+      }
+      const body =
+        pathname === "/auth/me" && bearer === `Bearer ${WRITE_TOKEN}`
+          ? { ...OWNER, tokenScope: "write" }
+          : method === "POST" && pathname === "/apps/app-1/keywords"
+            ? TRACKED
+            : ROUTES[pathname];
+      res.writeHead(body === undefined ? 404 : method === "POST" ? 201 : 200, {
+        "content-type": "application/json",
+      });
+      res.end(JSON.stringify(body ?? { message: `${pathname} not found` }));
     });
-    res.end(JSON.stringify(body ?? { message: `${pathname} not found` }));
   });
-
   return new Promise<FakeApi>((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", () => {
@@ -244,5 +272,55 @@ describe("misconfigured", () => {
     } finally {
       await client.close();
     }
+  });
+});
+
+describe("the stdio binary with a write scoped token", () => {
+  let writer: Client;
+
+  beforeAll(async () => {
+    writer = await spawnClient(api.url, undefined, WRITE_TOKEN);
+  }, 60_000);
+
+  afterAll(async () => {
+    await writer?.close();
+  });
+
+  it("lists the read tools then the write tools, each with its hints", async () => {
+    const { tools } = await writer.listTools();
+
+    expect(tools.map((tool) => tool.name)).toEqual(
+      toolsFor("write").map((tool) => tool.name),
+    );
+    const track = tools.find((tool) => tool.name === "track_keywords");
+    expect(track?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    });
+    for (const tool of tools.filter((entry) =>
+      MCP_TOOLS.some((read) => read.name === entry.name),
+    )) {
+      expect(tool.annotations?.readOnlyHint).toBe(true);
+    }
+  });
+
+  it("sends a tool call to the api as the post the catalog describes", async () => {
+    const result = await writer.callTool({
+      name: "track_keywords",
+      arguments: { appId: "app-1", keywords: ["Habit Tracker"] },
+    });
+
+    expect(result.isError).toBeFalsy();
+    expect(writes.at(-1)).toEqual({
+      method: "POST",
+      path: "/apps/app-1/keywords",
+      body: JSON.stringify({ keywords: ["Habit Tracker"] }),
+    });
+    expect(JSON.parse(textOf(result))).toMatchObject({
+      trackedInMarket: 1,
+      tracked: [{ keywordId: "kw-1", text: "habit tracker" }],
+    });
   });
 });

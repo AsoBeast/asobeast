@@ -1,17 +1,25 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { HttpAdapterHost } from '@nestjs/core';
 import {
+  DISPATCH_TIMEOUT_MS,
   InProcessGateway,
-  dispatchGet,
+  dispatchRequest,
+  type GatewayRequest,
   type RequestListener,
 } from './in-process.gateway';
 
 const TIMEOUT_MS = 50;
 
+const WEB_PROXY_DEFAULT_TIMEOUT_MS = 30_000;
+
+const PROXY_MARGIN_MS = 5_000;
+
 function gatewayFor(listener: RequestListener) {
   return {
+    send: (request: GatewayRequest) =>
+      dispatchRequest(listener, request, TIMEOUT_MS),
     get: (url: string, headers: Record<string, string | undefined>) =>
-      dispatchGet(listener, url, headers, TIMEOUT_MS),
+      dispatchRequest(listener, { method: 'GET', url, headers }, TIMEOUT_MS),
   };
 }
 
@@ -124,7 +132,104 @@ describe('InProcessGateway', () => {
     } as unknown as HttpAdapterHost;
 
     await expect(
-      new InProcessGateway(adapterHost).get('/health', {}),
+      new InProcessGateway(adapterHost).send({
+        method: 'GET',
+        url: '/health',
+        headers: {},
+      }),
     ).resolves.toMatchObject({ status: 200, body: { ok: true } });
+  });
+});
+
+function readBody(req: IncomingMessage): Promise<string> {
+  return new Promise((resolve) => {
+    const parts: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => parts.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(parts).toString('utf8')));
+  });
+}
+
+function echo(req: IncomingMessage, res: ServerResponse): void {
+  void readBody(req).then((text) =>
+    res.end(
+      JSON.stringify({
+        method: req.method,
+        url: req.url,
+        type: req.headers['content-type'],
+        length: req.headers['content-length'],
+        authorization: req.headers.authorization,
+        text,
+      }),
+    ),
+  );
+}
+
+describe('InProcessGateway writes', () => {
+  it('delivers the method and the json body with its type and length', async () => {
+    const gateway = gatewayFor(echo);
+    const body = { keywords: ['habit tracker'], country: 'us' };
+
+    const response = await gateway.send({
+      method: 'POST',
+      url: '/apps/app-1/keywords',
+      headers: { authorization: 'Bearer asob_x' },
+      body,
+    });
+
+    expect(response.body).toEqual({
+      method: 'POST',
+      url: '/apps/app-1/keywords',
+      type: 'application/json',
+      length: String(Buffer.byteLength(JSON.stringify(body))),
+      authorization: 'Bearer asob_x',
+      text: JSON.stringify(body),
+    });
+  });
+
+  it('counts a body in bytes, not characters', async () => {
+    const gateway = gatewayFor(echo);
+    const body = { keywords: ['żółw'] };
+
+    const response = await gateway.send({
+      method: 'POST',
+      url: '/apps/app-1/keywords',
+      headers: {},
+      body,
+    });
+
+    expect(response.body).toMatchObject({
+      length: String(Buffer.byteLength(JSON.stringify(body))),
+    });
+  });
+
+  it('sends no body headers for a delete', async () => {
+    const gateway = gatewayFor(echo);
+
+    const response = await gateway.send({
+      method: 'DELETE',
+      url: '/apps/app-1/keywords/kw-1',
+      headers: { authorization: 'Bearer asob_x' },
+    });
+
+    expect(response.body).toEqual({
+      method: 'DELETE',
+      url: '/apps/app-1/keywords/kw-1',
+      authorization: 'Bearer asob_x',
+      text: '',
+    });
+  });
+
+  it('answers a write that never completes with a gateway timeout', async () => {
+    const gateway = gatewayFor(() => undefined);
+
+    await expect(
+      gateway.send({ method: 'PATCH', url: '/actions/act-1', headers: {} }),
+    ).resolves.toMatchObject({ status: 504 });
+  });
+
+  it('gives up before the web proxy default does, so a hosted agent reads the tool error rather than the proxy 504', () => {
+    expect(DISPATCH_TIMEOUT_MS).toBeLessThanOrEqual(
+      WEB_PROXY_DEFAULT_TIMEOUT_MS - PROXY_MARGIN_MS,
+    );
   });
 });

@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { PaidPlanName, QuotaUsage } from './plans';
 
 export interface ScoreSignals {
   suggestReach: SuggestReachStatus;
@@ -124,6 +125,73 @@ export function keywordLabel(scope: {
   return scope.country
     ? `${scope.text} (${scope.country.toUpperCase()})`
     : scope.text;
+}
+
+export const KEYWORD_IMPORT_STATUSES = [
+  'new',
+  'resume',
+  'tracked',
+  'duplicate',
+  'invalid',
+  'overQuota',
+] as const;
+export type KeywordImportStatus = (typeof KEYWORD_IMPORT_STATUSES)[number];
+
+export const KEYWORD_IMPORT_REASONS = [
+  'empty',
+  'tooLong',
+  'tooManyWords',
+  'unknownCountry',
+  'invalidTag',
+  'tooManyTags',
+  'noteTooLong',
+] as const;
+export type KeywordImportReason = (typeof KEYWORD_IMPORT_REASONS)[number];
+
+export interface KeywordImportRow {
+  keyword: string;
+  country?: string | null;
+  tags?: string[];
+  note?: string | null;
+}
+
+export interface KeywordImportRequest {
+  rows: KeywordImportRow[];
+  country?: string;
+}
+
+export interface KeywordImportRowResult {
+  index: number;
+  keyword: string;
+  country: string;
+  status: KeywordImportStatus;
+  reason?: KeywordImportReason;
+  message?: string;
+  duplicateOf?: number;
+}
+
+export type KeywordImportSummary = { rows: number } & Record<
+  KeywordImportStatus,
+  number
+>;
+
+export interface KeywordImportCost {
+  store: Store;
+  keywordMarkets: number;
+  dailyRequests: number;
+}
+
+export interface KeywordImportQuota extends QuotaUsage {
+  upgradeTo: PaidPlanName | null;
+}
+
+export interface KeywordImportResult {
+  dryRun: boolean;
+  imported: number;
+  summary: KeywordImportSummary;
+  cost: KeywordImportCost;
+  quota: KeywordImportQuota | null;
+  results: KeywordImportRowResult[];
 }
 
 export interface SpiderStartRequest {

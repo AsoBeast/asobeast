@@ -18,7 +18,7 @@ import {
 import {
   isKeywordTag,
   KEYWORD_NOTE_MAX_LENGTH,
-  KEYWORD_TAG_MAX_LENGTH,
+  KEYWORD_TAG_RULE,
   KEYWORD_TAGS_MAX,
   KeywordUpdateRequest,
   normalizeKeywordNote,
@@ -35,7 +35,7 @@ class KeywordTagConstraint implements ValidatorConstraintInterface {
   }
 
   defaultMessage(): string {
-    return `each tag is at most ${KEYWORD_TAG_MAX_LENGTH} letters, numbers, spaces, hyphens or underscores and starts with a letter or number`;
+    return `each tag is ${KEYWORD_TAG_RULE}`;
   }
 }
 

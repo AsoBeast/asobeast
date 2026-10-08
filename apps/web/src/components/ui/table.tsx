@@ -8,14 +8,19 @@ function Table({
   className,
   containerClassName,
   containerRef,
+  scrollLabel,
   ...props
 }: React.ComponentProps<"table"> & {
   containerClassName?: string;
   containerRef?: React.Ref<HTMLDivElement>;
+  scrollLabel?: string;
 }) {
   return (
     <div
       ref={containerRef}
+      {...(scrollLabel
+        ? { role: "region", "aria-label": scrollLabel, tabIndex: 0 }
+        : {})}
       data-slot="table-container"
       className={cn(
         "relative w-full overflow-x-auto overscroll-x-contain",

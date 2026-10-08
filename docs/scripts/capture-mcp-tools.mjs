@@ -6,13 +6,20 @@ const CATALOG = new URL(
   import.meta.url,
 );
 
-const { ACTION_TOOLS, APP_TOOLS, INSIGHT_TOOLS, KEYWORD_TOOLS, MCP_TOOLS } =
-  await import(CATALOG).catch(() => {
-    console.error(
-      "the tool catalog is not built, run pnpm --filter @asobeast/mcp-tools build first",
-    );
-    process.exit(1);
-  });
+const {
+  ACTION_TOOLS,
+  APP_TOOLS,
+  COMPETITOR_TOOLS,
+  INSIGHT_TOOLS,
+  KEYWORD_TOOLS,
+  MCP_TOOLS,
+  MCP_WRITE_TOOLS,
+} = await import(CATALOG).catch(() => {
+  console.error(
+    "the tool catalog is not built, run pnpm --filter @asobeast/mcp-tools build first",
+  );
+  process.exit(1);
+});
 
 const CHECK = process.argv.includes("--check");
 const OUTPUT = join(
@@ -34,9 +41,14 @@ const GROUPS = [
     note: "Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews.\n\nEvery parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.",
   },
   {
+    title: "Competitors",
+    tools: COMPETITOR_TOOLS,
+    note: "Competitors belong to one primary app, so pass the primary app's id. `keyword_comparison`, listed under Keywords, puts the positions of the app and each competitor side by side, and `onlyGaps` narrows it to the keywords where a competitor leads.",
+  },
+  {
     title: "Insights",
     tools: INSIGHT_TOOLS,
-    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. Omit `country` on `metadata_audit` and `changes_timeline` for the home storefront.",
+    note: "`from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. Omit `country` on `metadata_audit` and `changes_timeline` for the home storefront. `category_ranks` is the home storefront only and defaults to the last 90 days.",
   },
   {
     title: "Actions",
@@ -55,14 +67,16 @@ Apple and Google Play scores come from different public evidence and are not com
 
 ## Every tool maps to an endpoint
 
-Each tool wraps one \`GET\` on the HTTP API, so the data an agent can reach is exactly the data the endpoint returns and nothing more. Both transports read the same catalog, so the hosted endpoint and the local stdio server expose an identical surface. See [asobeast API](/api-reference/introduction).
+Each tool wraps one route on the HTTP API, so the data an agent can reach and the changes it can make are exactly what that route allows and nothing more. Both transports read the same catalog, so the hosted endpoint and the local stdio server expose an identical surface for a given token. See [asobeast API](/api-reference/introduction).
 
 ## What is deliberately missing
 
-There are no write tools. No tool imports, tracks, untracks, edits metadata, closes an action or queues a job.
-
-Mutations stay backlog behind an explicit opt in. Until then an agent proposes work and you decide.
+No tool imports an app, edits metadata, writes the iOS keyword field, refreshes a listing, runs the daily pipeline, calls an AI feature or touches billing, tokens, webhooks or settings. Those either spend store capacity in bulk, spend your AI allowance, or publish a decision you should own. An agent proposes them and you decide.
 `;
+
+const CHANGES_NOTE = `\`track_keywords\` takes a \`country\` and defaults to the app's home storefront. It accepts up to 50 phrases a call, queues the same store scoring job the web app queues for each new phrase, and counts against the plan's keyword market limit, so it spends store request capacity. \`untrack_keyword\` and \`remove_competitor\` delete, and take the ids that \`list_keywords\` and \`list_competitors\` return. \`add_competitor\` fetches the listing from the live store before it answers. \`set_action_status\` takes \`snoozedUntil\` as a UTC date and an optional \`note\`, and the change is recorded in the action history under the name of the person who minted the token.
+
+Every change goes through the same route, validation, plan write budget and quota as the web app, so a refused change reads the way the web app's refusal does. If a change fails with a server error, a timeout or an answer that cannot be read, it may or may not have been applied, and the message says so. Read the current state before retrying.`;
 
 function optional(schema) {
   return schema.safeParse(undefined).success;
@@ -95,19 +109,52 @@ function tableFor(tools) {
   ].join("\n");
 }
 
+function hintsOf(tool) {
+  const { destructive, idempotent, openWorld } = tool.hints;
+  return [
+    destructive ? "deletes" : "does not delete",
+    idempotent ? "idempotent" : "not idempotent",
+    openWorld ? "uses the store" : "no store requests",
+  ].join(", ");
+}
+
+function writeTableFor(tools) {
+  const rows = tools.map(
+    (tool) =>
+      `| \`${tool.name}\` | ${tool.title} | ${summaryOf(tool)} | ${parametersOf(tool)} | ${hintsOf(tool)} |`,
+  );
+  return [
+    "| Tool | Title | Does | Parameters | Hints |",
+    "| --- | --- | --- | --- | --- |",
+    ...rows,
+  ].join("\n");
+}
+
 function render() {
-  const count = MCP_TOOLS.length;
+  const reads = MCP_TOOLS.length;
+  const writes = MCP_WRITE_TOOLS.length;
   const front = [
     "---",
     "title: MCP tool reference",
     "sidebarTitle: Tools",
-    `description: "${count} read only tools covering apps, keywords, rankings, SERPs, audits, reviews, analytics and the Action Center queue."`,
+    `description: "${reads} read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus ${writes} opt in tools that change keywords, competitors and actions."`,
     "icon: wrench",
-    'keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","read only"]',
+    'keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]',
     "mode: wide",
     "---",
     "",
-    `This page is generated from the tool catalog both transports share, so it cannot drift. ${count} tools, every one of them a \`GET\` annotated \`readOnlyHint: true\`. Almost all of them take an \`appId\`, which you get from \`list_apps\`.`,
+    `This page is generated from the tool catalog both transports share, so it cannot drift. ${reads} tools read and nothing else: each is a \`GET\` annotated \`readOnlyHint: true\`. ${writes} more tools change things and are listed only to a token with the write scope. Almost all of them take an \`appId\`, which you get from \`list_apps\`.`,
+    "",
+  ];
+
+  const changes = [
+    "## Changes",
+    "",
+    "These tools are listed only when the connection's token has the write scope. A read only token never sees them and cannot call them. Each wraps one existing route and is annotated `readOnlyHint: false` with its own destructive, idempotent and open world hints.",
+    "",
+    writeTableFor(MCP_WRITE_TOOLS),
+    "",
+    CHANGES_NOTE,
     "",
   ];
 
@@ -120,7 +167,7 @@ function render() {
     "",
   ]);
 
-  return [...front, ...groups, TAIL].join("\n");
+  return [...front, ...groups, ...changes, TAIL].join("\n");
 }
 
 const rendered = render();

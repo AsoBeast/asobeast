@@ -282,7 +282,7 @@ export class AuthService {
     return this.jwt.signAsync(claims);
   }
 
-  toAuthUser(user: AccountUser): AuthUser {
+  toAuthUser(user: AccountUser, tokenScope?: ApiTokenScope): AuthUser {
     return {
       id: user.id,
       email: user.email,
@@ -297,6 +297,7 @@ export class AuthService {
       platformOperator: isPlatformOperator(user),
       suspendedAt: user.workspace.suspendedAt?.toISOString() ?? null,
       suspendedReason: user.workspace.suspendedReason,
+      ...(tokenScope === undefined ? {} : { tokenScope }),
     };
   }
 

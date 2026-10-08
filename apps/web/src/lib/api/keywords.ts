@@ -4,6 +4,8 @@ import type {
   KeywordCountrySummary,
   KeywordFieldRequest,
   KeywordFieldResult,
+  KeywordImportRequest,
+  KeywordImportResult,
   KeywordSort,
   KeywordSuggestion,
   KeywordSuggestionStrategy,
@@ -43,6 +45,29 @@ export function addKeywords(
   return apiFetch<TrackedKeywordItem[]>(`/apps/${appId}/keywords`, {
     method: "POST",
     body: JSON.stringify({ keywords, country } satisfies KeywordAddRequest),
+  });
+}
+
+export function previewKeywordImport(
+  appId: string,
+  request: KeywordImportRequest,
+): Promise<KeywordImportResult> {
+  return apiFetch<KeywordImportResult>(
+    `/apps/${appId}/keywords/import/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(request satisfies KeywordImportRequest),
+    },
+  );
+}
+
+export function importKeywords(
+  appId: string,
+  request: KeywordImportRequest,
+): Promise<KeywordImportResult> {
+  return apiFetch<KeywordImportResult>(`/apps/${appId}/keywords/import`, {
+    method: "POST",
+    body: JSON.stringify(request satisfies KeywordImportRequest),
   });
 }
 

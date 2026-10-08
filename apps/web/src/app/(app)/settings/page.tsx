@@ -102,7 +102,7 @@ export default async function SettingsPage({
         <SettingsSection
           id="integrations"
           title="Integrations"
-          description="Personal tokens and the read-only MCP server for your editor or agent."
+          description="Personal tokens and the MCP server for your editor or agent."
         >
           <ApiTokensCard />
           <McpServerCard />

@@ -16,6 +16,23 @@ export default tseslint.config(
     },
   },
   {
+    files: ["src/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@modelcontextprotocol/*"],
+              message:
+                "The tool catalog is shared by both transports and imports no MCP SDK package.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["**/*.test.ts"],
     rules: { "max-lines": "off" },
   },

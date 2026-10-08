@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { UTC_DATE_PATTERN } from "@asobeast/shared";
 
 export function isUtcCalendarDate(value: string): boolean {
@@ -7,3 +8,8 @@ export function isUtcCalendarDate(value: string): boolean {
     !Number.isNaN(instant) && new Date(instant).toISOString().startsWith(value)
   );
 }
+
+export const utcDate = z
+  .string()
+  .regex(UTC_DATE_PATTERN)
+  .refine(isUtcCalendarDate, { error: "must be a date on the calendar" });

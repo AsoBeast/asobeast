@@ -1,5 +1,9 @@
 import type { ApiErrorEnvelope } from '@asobeast/shared';
-import { notFoundText, type ReadTool } from '@asobeast/mcp-tools';
+import {
+  notFoundText,
+  withOutcomeNote,
+  type McpTool,
+} from '@asobeast/mcp-tools';
 import type { InProcessResponse } from './in-process.gateway';
 
 const UNAUTHENTICATED =
@@ -18,10 +22,7 @@ function messageOf(
     : `The asobeast API answered ${status}.`;
 }
 
-export function toolErrorText(
-  tool: ReadTool,
-  response: InProcessResponse,
-): string {
+function describeFailure(tool: McpTool, response: InProcessResponse): string {
   const envelope = envelopeOf(response.body);
   const message = messageOf(envelope, response.status);
 
@@ -37,4 +38,15 @@ export function toolErrorText(
     return `${message} Report this to the user rather than retrying in a loop.`;
   }
   return message;
+}
+
+export function toolErrorText(
+  tool: McpTool,
+  response: InProcessResponse,
+): string {
+  return withOutcomeNote(
+    tool,
+    response.status,
+    describeFailure(tool, response),
+  );
 }

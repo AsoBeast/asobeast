@@ -2,10 +2,18 @@ import { IncomingMessage, ServerResponse } from 'node:http';
 import { Socket } from 'node:net';
 import { Injectable } from '@nestjs/common';
 import { HttpAdapterHost } from '@nestjs/core';
+import type { JsonBody, ResolvedRequest } from '@asobeast/mcp-tools';
 
 export interface InProcessResponse {
   status: number;
   body: unknown;
+}
+
+export interface GatewayRequest {
+  method: ResolvedRequest['method'];
+  url: string;
+  headers: Record<string, string | undefined>;
+  body?: JsonBody;
 }
 
 export type RequestListener = (
@@ -13,10 +21,11 @@ export type RequestListener = (
   res: ServerResponse,
 ) => void;
 
-export const DISPATCH_TIMEOUT_MS = 30_000;
+export const DISPATCH_TIMEOUT_MS = 25_000;
 
 const GATEWAY_TIMEOUT = 504;
 const INTERNAL_ERROR = 500;
+const JSON_CONTENT_TYPE = 'application/json';
 
 type Chunk = string | Buffer | Uint8Array | null | undefined;
 
@@ -51,6 +60,18 @@ function collect(res: ServerResponse, chunks: Buffer[]): void {
   }) as ServerResponse['end'];
 }
 
+function carry(req: IncomingMessage, body: JsonBody | undefined): void {
+  if (body === undefined) {
+    req.push(null);
+    return;
+  }
+  const payload = Buffer.from(JSON.stringify(body));
+  req.headers['content-type'] = JSON_CONTENT_TYPE;
+  req.headers['content-length'] = String(payload.length);
+  req.push(payload);
+  req.push(null);
+}
+
 function parse(chunks: Buffer[]): unknown {
   const text = Buffer.concat(chunks).toString('utf8');
   if (text.length === 0) return null;
@@ -61,20 +82,19 @@ function parse(chunks: Buffer[]): unknown {
   }
 }
 
-export function dispatchGet(
+export function dispatchRequest(
   listener: RequestListener,
-  url: string,
-  headers: Record<string, string | undefined>,
+  { method, url, headers, body }: GatewayRequest,
   timeoutMs = DISPATCH_TIMEOUT_MS,
 ): Promise<InProcessResponse> {
   return new Promise((resolve) => {
     const req = new IncomingMessage(new Socket());
-    req.method = 'GET';
+    req.method = method;
     req.url = url;
     for (const [name, value] of Object.entries(headers)) {
       if (value !== undefined) req.headers[name] = value;
     }
-    req.push(null);
+    carry(req, body);
 
     const res = new ServerResponse(req);
     const chunks: Buffer[] = [];
@@ -109,14 +129,10 @@ export function dispatchGet(
 export class InProcessGateway {
   constructor(private readonly adapterHost: HttpAdapterHost) {}
 
-  get(
-    url: string,
-    headers: Record<string, string | undefined>,
-  ): Promise<InProcessResponse> {
-    return dispatchGet(
+  send(request: GatewayRequest): Promise<InProcessResponse> {
+    return dispatchRequest(
       this.adapterHost.httpAdapter.getInstance<RequestListener>(),
-      url,
-      headers,
+      request,
     );
   }
 }

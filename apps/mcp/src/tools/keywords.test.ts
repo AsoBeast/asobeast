@@ -1,5 +1,6 @@
+import { KEYWORD_TOOLS } from "@asobeast/mcp-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerKeywordTools } from "./keywords.js";
+import { registerCatalogTools } from "./define.js";
 import { createHarness, stubFetch } from "./harness.js";
 
 const realFetch = globalThis.fetch;
@@ -13,7 +14,7 @@ describe("keyword tools", () => {
   it("passes sort and country as query params", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerKeywordTools(server, client);
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
 
     await tools.get("list_keywords")!.handler({
       appId: "app-1",
@@ -30,7 +31,7 @@ describe("keyword tools", () => {
   it("omits optional params when absent", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerKeywordTools(server, client);
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
 
     await tools.get("list_keywords")!.handler({ appId: "app-1" });
 
@@ -42,7 +43,7 @@ describe("keyword tools", () => {
   it("maps keyword_suggestions strategy and limit", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerKeywordTools(server, client);
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
 
     await tools.get("keyword_suggestions")!.handler({
       appId: "app-1",
@@ -59,7 +60,7 @@ describe("keyword tools", () => {
   it("describes an unranked position against the field the payload carries", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: [] }));
-    registerKeywordTools(server, client);
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
 
     const description = tools.get("list_keywords")?.config.description;
 

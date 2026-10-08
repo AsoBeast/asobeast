@@ -5,6 +5,7 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { KeywordTracker } from './keyword-tracker';
 import { KeywordsService } from './keywords.service';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -19,10 +20,13 @@ describe('KeywordsService.syncFromSnapshot', () => {
   const buildService = (prisma: unknown, queue: { add: jest.Mock }) =>
     new KeywordsService(
       prisma as PrismaService,
-      queue as unknown as Queue,
-      queue as unknown as Queue,
+      new KeywordTracker(
+        prisma as PrismaService,
+        queue as unknown as Queue,
+        queue as unknown as Queue,
+        new WorkspaceContext(),
+      ),
       quotaOff(prisma as PrismaService),
-      new WorkspaceContext(),
       { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
@@ -204,10 +208,13 @@ describe('KeywordsService.compare', () => {
   const buildService = (prisma: unknown) =>
     new KeywordsService(
       prisma as PrismaService,
-      { add: jest.fn() } as unknown as Queue,
-      { add: jest.fn() } as unknown as Queue,
+      new KeywordTracker(
+        prisma as PrismaService,
+        { add: jest.fn() } as unknown as Queue,
+        { add: jest.fn() } as unknown as Queue,
+        new WorkspaceContext(),
+      ),
       quotaOff(prisma as PrismaService),
-      new WorkspaceContext(),
       { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
@@ -273,10 +280,13 @@ describe('KeywordsService.listTracked serp volatility', () => {
   const buildService = (prisma: unknown) =>
     new KeywordsService(
       prisma as PrismaService,
-      { add: jest.fn() } as unknown as Queue,
-      { add: jest.fn() } as unknown as Queue,
+      new KeywordTracker(
+        prisma as PrismaService,
+        { add: jest.fn() } as unknown as Queue,
+        { add: jest.fn() } as unknown as Queue,
+        new WorkspaceContext(),
+      ),
       quotaOff(prisma as PrismaService),
-      new WorkspaceContext(),
       { request: jest.fn() } as unknown as MarketListingRequests,
     );
 
@@ -356,10 +366,13 @@ describe('KeywordsService country tracking', () => {
   const buildService = (prisma: unknown, queue: { add: jest.Mock }) =>
     new KeywordsService(
       prisma as PrismaService,
-      queue as unknown as Queue,
-      queue as unknown as Queue,
+      new KeywordTracker(
+        prisma as PrismaService,
+        queue as unknown as Queue,
+        queue as unknown as Queue,
+        new WorkspaceContext(),
+      ),
       quotaOff(prisma as PrismaService),
-      new WorkspaceContext(),
       { request: jest.fn() } as unknown as MarketListingRequests,
     );
 

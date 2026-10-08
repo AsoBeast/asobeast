@@ -93,6 +93,12 @@ describe('QuotaService', () => {
     throw new Error('expected the quota to reject');
   };
 
+  it('offers the next plan as an upgrade only when billing is on', () => {
+    expect(build(true).quota.upgradeFrom('indie')).toBe('ultimate');
+    expect(build(true).quota.upgradeFrom('ultimate')).toBeNull();
+    expect(build(false).quota.upgradeFrom('indie')).toBeNull();
+  });
+
   it('leaves a self hosted instance without app or keyword limits', async () => {
     const { quota, tx, appCount, scoped } = build(false, { apps: 500 });
 
