@@ -9,7 +9,10 @@ import { MetadataService } from './metadata.service';
 
 const gateway = (ai: ReturnType<typeof buildAi>) => ai as unknown as AiGateway;
 
-const appStoreService = (spend: jest.Mock) =>
+const appStoreService = (
+  spend: jest.Mock,
+  audit = jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
+) =>
   new MetadataAssistantService(
     gateway(buildAi(spend)),
     {
@@ -29,9 +32,7 @@ const appStoreService = (spend: jest.Mock) =>
         .mockResolvedValue([{ country: 'us', keywordCount: 1 }]),
       listTracked: jest.fn().mockResolvedValue([]),
     } as unknown as KeywordsService,
-    {
-      audit: jest.fn().mockResolvedValue({ fields: [], coverage: [] }),
-    } as unknown as MetadataService,
+    { audit } as unknown as MetadataService,
   );
 
 describe('MetadataAssistantService', () => {
@@ -110,5 +111,15 @@ describe('MetadataAssistantService', () => {
       { feature: 'metadataDrafts', appId: 'app-1', userId: 'usr_1' },
       expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
     );
+  });
+
+  it('drafts from the coverage of the home listing only', async () => {
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
+    const audit = jest.fn().mockResolvedValue({ fields: [], coverage: [] });
+
+    await expect(
+      appStoreService(spend, audit).generate('app-1', {}, 'usr_1'),
+    ).rejects.toThrow('stop');
+    expect(audit).toHaveBeenCalledWith('app-1', 'us');
   });
 });
