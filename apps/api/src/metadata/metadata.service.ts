@@ -106,26 +106,30 @@ export class MetadataService {
         own ? item.country : app.country,
       );
     });
-    const shots = await this.screenshots.forApp(appId);
-    const screenshotText = screenshotTextState(
-      shots.screenshots,
-      shots.reading,
-    );
+    const shots = await this.screenshots.byListing(app, [
+      market,
+      ...coverage.map((row) => row.listingCountry ?? app.country),
+    ]);
+    const textOf = (listing: string) =>
+      screenshotTextState(shots.screenshots.get(listing) ?? [], shots.reading);
+    const screenshotText = textOf(market);
 
     return {
       appId,
       store: app.store,
       fields,
-      coverage:
-        screenshotText?.status === 'ready'
-          ? coverage.map((row) => ({
+      coverage: coverage.map((row) => {
+        const listing = row.listingCountry ?? app.country;
+        return textOf(listing)?.status === 'ready'
+          ? {
               ...row,
               screenshotText: screenshotTextCoverage(
-                shots.screenshots,
+                shots.screenshots.get(listing) ?? [],
                 row.text,
               ),
-            }))
-          : coverage,
+            }
+          : row;
+      }),
       keywordFieldSuggestion:
         home && app.store === Store.APP_STORE
           ? this.suggestion(

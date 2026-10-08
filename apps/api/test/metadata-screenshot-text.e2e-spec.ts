@@ -185,4 +185,112 @@ describe('Screenshot text in the metadata audit (e2e)', () => {
       total: 0,
     });
   });
+
+  describe('per market listing', () => {
+    const MARKET_ROWS = [
+      { status: 'read', caption: 'Gewohnheiten verfolgen' },
+      { status: 'read', caption: 'Plane deine Woche' },
+    ];
+
+    const trackIn = async (appId: string, text: string, country: string) => {
+      const keyword = await prisma.keyword.create({
+        data: { text, store: Store.APP_STORE, country },
+      });
+      await prisma.trackedKeyword.create({
+        data: {
+          appId,
+          keywordId: keyword.id,
+          source: KeywordSource.MANUAL,
+          active: true,
+        },
+      });
+    };
+
+    const seedMarket = async (appId: string, country: string) => {
+      const snapshot = await prisma.appSnapshot.create({
+        data: {
+          appId,
+          country,
+          title: 'Fokus Timer',
+          subtitle: 'Pomodoro',
+          description: 'Eine Beschreibung',
+          raw: {},
+          capturedAt: new Date(D0.getTime() + 60_000),
+        },
+      });
+      await prisma.snapshotScreenshot.createMany({
+        data: MARKET_ROWS.map((row, index) => ({
+          snapshotId: snapshot.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          position: index + 1,
+          url: appleShot(index + 11),
+          assetKey: appleKey(index + 11),
+          ...row,
+        })),
+      });
+    };
+
+    const marketRow = (
+      result: MetadataAuditResult,
+      text: string,
+      country: string,
+    ) =>
+      result.coverage.find(
+        (item) => item.text === text && item.country === country,
+      );
+
+    it('reads each keyword against the captions of the listing that judged it', async () => {
+      const id = await seed();
+      await seedMarket(id, 'de');
+      await trackIn(id, 'gewohnheiten', 'de');
+      await trackIn(id, 'habit tracker', 'de');
+      await trackIn(id, 'habit tracker', 'fr');
+
+      const result = await audit(id);
+
+      expect(result.screenshotText).toEqual({
+        status: 'ready',
+        read: 2,
+        total: 3,
+      });
+      expect(marketRow(result, 'gewohnheiten', 'de')).toMatchObject({
+        listingCountry: 'de',
+        screenshotText: { covered: true, positions: [1] },
+      });
+      expect(marketRow(result, 'habit tracker', 'de')).toMatchObject({
+        listingCountry: 'de',
+        screenshotText: { covered: false, positions: [] },
+      });
+      expect(marketRow(result, 'habit tracker', 'fr')).toMatchObject({
+        listingCountry: 'us',
+        screenshotText: { covered: true, positions: [3] },
+      });
+      expect(marketRow(result, 'habit tracker', 'us')).toMatchObject({
+        screenshotText: { covered: true, positions: [3] },
+      });
+    });
+
+    it('reports the screenshot text of the market listing in a market view', async () => {
+      const id = await seed();
+      await seedMarket(id, 'de');
+      await trackIn(id, 'gewohnheiten', 'de');
+
+      const result = (
+        await api.get(`/apps/${id}/metadata/audit?country=de`).expect(200)
+      ).body as MetadataAuditResult;
+
+      expect(result.screenshotText).toEqual({
+        status: 'ready',
+        read: 2,
+        total: 2,
+      });
+      expect(result.coverage).toEqual([
+        expect.objectContaining({
+          text: 'gewohnheiten',
+          uncovered: true,
+          screenshotText: { covered: true, positions: [1] },
+        }),
+      ]);
+    });
+  });
 });

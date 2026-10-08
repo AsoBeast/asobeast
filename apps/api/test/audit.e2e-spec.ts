@@ -605,6 +605,40 @@ describe('AuditController (e2e)', () => {
       expect(captionCheck(result)?.status).toBe('unanswered');
       expect(captionCheck(result)?.unlock?.kind).toBe('ai-analysis');
     });
+
+    it('reads the captions of the home listing only', async () => {
+      const id = await seed();
+      await seedRows(id, 'pending');
+      const home = await prisma.appSnapshot.findFirstOrThrow({
+        where: { appId: id },
+        orderBy: { capturedAt: 'desc' },
+      });
+      await prisma.appSnapshot.create({
+        data: {
+          appId: id,
+          country: 'de',
+          title: home.title,
+          description: home.description,
+          raw: {},
+          capturedAt: new Date(home.capturedAt.getTime() + 60_000),
+          screenshots: {
+            create: {
+              workspaceId: DEFAULT_WORKSPACE_ID,
+              position: 1,
+              url: 'https://is1-ssl.mzstatic.com/image/thumb/p/9.jpg/392x696bb.jpg',
+              assetKey: 'https://is1-ssl.mzstatic.com/image/thumb/p/9.jpg',
+              status: 'read',
+              caption: 'Habit tracker streaks',
+            },
+          },
+        },
+      });
+
+      const result = (await api.get(`/apps/${id}/audit`).expect(200))
+        .body as AppAuditResult;
+
+      expect(captionCheck(result)?.status).toBe('unanswered');
+    });
   });
 });
 
