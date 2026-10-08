@@ -7,7 +7,6 @@ export const MAX_INPUT_PIXELS = 50_000_000;
 
 const OCR_FORMATS = new Set(['jpeg', 'png', 'webp']);
 const OCR_DENSITY = 72;
-const RGB_CHANNELS = 3;
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -30,11 +29,12 @@ const toPng = (image: Sharp): Promise<Buffer> =>
     .png({ compressionLevel: 1 })
     .toBuffer();
 
-function invertedMinimum(rgb: Buffer): Buffer {
-  const pixels = Buffer.allocUnsafe(rgb.length / RGB_CHANNELS);
-  for (let source = 0, target = 0; source < rgb.length; target++) {
+function invertedMinimum(rgb: Buffer, channels: number): Buffer {
+  const pixels = Buffer.allocUnsafe(rgb.length / channels);
+  for (let target = 0; target < pixels.length; target++) {
+    const source = target * channels;
     pixels[target] =
-      255 - Math.min(rgb[source++], rgb[source++], rgb[source++]);
+      255 - Math.min(rgb[source], rgb[source + 1], rgb[source + 2]);
   }
   return pixels;
 }
@@ -54,15 +54,17 @@ export async function prepareForOcr(bytes: Buffer): Promise<PreparedImage> {
     .toColourspace('srgb')
     .raw()
     .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
+  const { width, height, channels } = info;
   const [grey, inverted] = await Promise.all([
     toPng(
       sharp(data, {
-        raw: { width, height, channels: RGB_CHANNELS },
+        raw: { width, height, channels },
       }).greyscale(),
     ),
     toPng(
-      sharp(invertedMinimum(data), { raw: { width, height, channels: 1 } }),
+      sharp(invertedMinimum(data, channels), {
+        raw: { width, height, channels: 1 },
+      }),
     ),
   ]);
   return {

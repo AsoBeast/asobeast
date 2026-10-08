@@ -26,11 +26,11 @@ const recipeOf = (rows: SettledRow[]): string | null => {
   return recipes.size === 1 ? [...recipes][0] : null;
 };
 
-const comparable = (before: SettledRow[], after: SettledRow[]): boolean =>
-  isSettled(before) &&
-  isSettled(after) &&
-  recipeOf(before) !== null &&
-  recipeOf(before) === recipeOf(after);
+const comparable = (before: SettledRow[], after: SettledRow[]): boolean => {
+  if (!isSettled(before) || !isSettled(after)) return false;
+  const recipe = recipeOf(before);
+  return recipe !== null && recipe === recipeOf(after);
+};
 
 const captionsOf = (rows: SettledRow[]): string[] =>
   rows.flatMap((row) => (row.caption === null ? [] : [row.caption]));

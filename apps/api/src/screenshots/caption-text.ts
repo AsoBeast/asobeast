@@ -16,6 +16,8 @@ export const CAPTION_HEIGHT_RATIO = 0.45;
 export const MIN_CAPTION_HEIGHT_SHARE = 0.02;
 export const BLOCK_GAP_RATIO = 0.75;
 export const BLOCK_MIN_OVERLAP = 0.3;
+export const ROW_MIN_OVERLAP = 0.5;
+export const ROW_GAP_RATIO = 1;
 export const MOCKUP_BAND = [0.2, 0.8] as const;
 export const MOCKUP_WEIGHT = 0.35;
 export const MIN_SINGLE_LINE_SHARE = 0.03;
@@ -59,7 +61,21 @@ function isSolid(text: string): boolean {
   );
 }
 
-function joins(block: Block, line: OcrLine): boolean {
+function sameRow(a: OcrLine, b: OcrLine): boolean {
+  const overlap = Math.min(bottomOf(a), bottomOf(b)) - Math.max(a.top, b.top);
+  return overlap >= ROW_MIN_OVERLAP * Math.min(a.height, b.height);
+}
+
+function besideLast(block: Block, line: OcrLine): boolean {
+  const last = block.lines[block.lines.length - 1];
+  const gap = Math.max(line.left - rightOf(last), last.left - rightOf(line));
+  return (
+    sameRow(last, line) &&
+    gap <= ROW_GAP_RATIO * Math.max(line.height, last.height)
+  );
+}
+
+function below(block: Block, line: OcrLine): boolean {
   const last = block.lines[block.lines.length - 1];
   const gap = line.top - block.bottom;
   const overlap =
@@ -69,6 +85,19 @@ function joins(block: Block, line: OcrLine): boolean {
     gap <= BLOCK_GAP_RATIO * Math.max(line.height, last.height) &&
     overlap >= BLOCK_MIN_OVERLAP * narrower
   );
+}
+
+const joins = (block: Block, line: OcrLine): boolean =>
+  below(block, line) || besideLast(block, line);
+
+function readingOrder(lines: readonly OcrLine[]): OcrLine[] {
+  const rows: OcrLine[][] = [];
+  for (const line of [...lines].sort((a, b) => a.top - b.top)) {
+    const row = rows.find((candidate) => sameRow(candidate[0], line));
+    if (row) row.push(line);
+    else rows.push([line]);
+  }
+  return rows.flatMap((row) => row.sort((a, b) => a.left - b.left));
 }
 
 function groupBlocks(lines: readonly OcrLine[]): Block[] {
@@ -129,7 +158,11 @@ export function selectCaption(
     .sort((a, b) => b.weight - a.weight);
   if (!best || isLoneTitle(best.block, imageHeight)) return null;
 
-  const text = clean(best.block.lines.map((line) => line.text).join(' '));
+  const text = clean(
+    readingOrder(best.block.lines)
+      .map((line) => line.text)
+      .join(' '),
+  );
   const caption = Array.from(text).slice(0, MAX_CAPTION_CHARS).join('').trim();
   return caption.length > 0 ? caption : null;
 }

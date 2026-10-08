@@ -290,3 +290,56 @@ describe('selectCaption blocks', () => {
     );
   });
 });
+
+describe('selectCaption rows', () => {
+  it('reads the boxes of one row left to right even when the right one sits higher', () => {
+    const lines = [
+      at('Earn badges and become', {
+        left: 90,
+        top: 120,
+        width: 900,
+        height: 80,
+      }),
+      at('the King', { left: 150, top: 232, width: 300, height: 80 }),
+      at('of the World', { left: 470, top: 230, width: 420, height: 80 }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe(
+      'Earn badges and become the King of the World',
+    );
+  });
+
+  it('joins a caption the engine split into two boxes side by side', () => {
+    const lines = [
+      at('Collect monuments', { left: 80, top: 120, width: 520, height: 70 }),
+      at('from around the world', {
+        left: 640,
+        top: 122,
+        width: 380,
+        height: 70,
+      }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe(
+      'Collect monuments from around the world',
+    );
+  });
+
+  it('keeps two boxes of one row apart when the gap between them is wide', () => {
+    const lines = [
+      at('Plan your week', { left: 40, top: 100, width: 600, height: 80 }),
+      at('Sunday', { left: 900, top: 104, width: 160, height: 76 }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe('Plan your week');
+  });
+
+  it('reads a screenshot whose only large text has fewer than three letters as no caption', () => {
+    expect(
+      selectCaption(
+        [at('地図', { left: 400, top: 120, width: 280, height: 140 })],
+        FRAME,
+      ),
+    ).toBeNull();
+  });
+});
