@@ -948,6 +948,9 @@ const APP_1_COMPARISON: KeywordComparison = {
   ],
 };
 
+const e2eScreenshotUrl = (position: number): string =>
+  `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
+
 const APP_1_CHANGES: ChangeTimeline = {
   events: [
     {
@@ -969,6 +972,69 @@ const APP_1_CHANGES: ChangeTimeline = {
       before: "1840",
       after: "2210",
       capturedAt: utcTimestampDaysAgo(1),
+    },
+    {
+      id: "app-chg-sc-1",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "screenshotImages",
+      before: "3 screenshots",
+      after: "3 screenshots, 1 replaced",
+      capturedAt: utcTimestampDaysAgo(2),
+      detail: {
+        kind: "images",
+        before: [1, 2, 3].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        after: [1, 5, 3].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        added: [2],
+        removed: [2],
+        reordered: false,
+      },
+    },
+    {
+      id: "app-chg-sc-2",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshotCaptions",
+      before: "Focus timer for deep work | Plan your week",
+      after: "Focus timer for deep work | Plan your day",
+      capturedAt: utcTimestampDaysAgo(2),
+      detail: {
+        kind: "captions",
+        added: ["Plan your day"],
+        removed: ["Plan your week"],
+      },
+    },
+    {
+      id: "app-chg-sc-3",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshots",
+      before: "3",
+      after: "4",
+      capturedAt: utcTimestampDaysAgo(3),
+      detail: {
+        kind: "images",
+        before: [1, 2, 3].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        after: [1, 2, 3, 4].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        added: [4],
+        removed: [],
+        reordered: false,
+      },
     },
     {
       id: "app-chg-3",
@@ -3051,9 +3117,6 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   keywordFieldSuggestion: null,
   screenshotText: { status: "ready", read: 2, total: 4 },
 };
-
-const e2eScreenshotUrl = (position: number): string =>
-  `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 
 export const APP_1_SCREENSHOTS: AppScreenshots = {
   appId: "app-1",
