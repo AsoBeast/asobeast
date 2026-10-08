@@ -1,28 +1,20 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { AppSnapshot, Store } from '@prisma/client';
+import { Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import {
   AppDetail,
   AppListItem,
   assertStorefront,
+  ListingMarket,
   MarketAvailabilityResult,
   parseStoreUrl,
   SnapshotDiffResult,
   SUPPORTED_STORES,
 } from '@asobeast/shared';
-import { ChangesService } from '../changes/changes.service';
-import { DiffableChangeSnapshot } from '../changes/change-detector';
-import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ScreenshotQueue } from '../screenshots/screenshot-queue';
-import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { StoreNotSupportedError } from '../store-providers/errors';
-import {
-  releaseNotesFor,
-  screenshotsCount,
-} from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import {
   JOBS,
@@ -35,10 +27,11 @@ import { reviewSyncJobOptions } from '../jobs/job-options';
 import { QuotaService } from '../auth/quota.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
-import { toAppDetail, toAppListItem, toSnapshotData } from './apps.mapper';
+import { toAppDetail, toAppListItem } from './apps.mapper';
 import { FirstRunScheduler } from './first-run.scheduler';
-import { withKnownSubtitle } from './known-subtitle';
-import { diffSnapshots } from './snapshot-diff';
+import { ListingCaptureService } from './listing-capture.service';
+import { ListingReadService } from './listing-read.service';
+import { LATEST_HOME_LISTING } from './listing';
 
 const REVIEW_BACKFILL_PAGES = 3;
 
@@ -51,15 +44,14 @@ export class AppsService {
     private readonly registry: StoreProviderRegistry,
     private readonly capture: AppCaptureService,
     private readonly keywords: KeywordsService,
-    private readonly changes: ChangesService,
+    private readonly listingCapture: ListingCaptureService,
+    private readonly listingReads: ListingReadService,
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
     private readonly quota: QuotaService,
     private readonly egress: ProxyEgress,
     private readonly workspace: WorkspaceContext,
     private readonly firstRun: FirstRunScheduler,
-    private readonly screenshots: ScreenshotRecorder,
-    private readonly screenshotQueue: ScreenshotQueue,
   ) {}
 
   private queueFor(store: Store): Queue {
@@ -130,7 +122,7 @@ export class AppsService {
     const apps = await this.prisma.app.findMany({
       where: { isCompetitor: false },
       include: {
-        snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 },
+        snapshots: LATEST_HOME_LISTING,
         _count: { select: { tracked: true, competitors: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -146,13 +138,13 @@ export class AppsService {
     );
   }
 
-  async detail(id: string): Promise<AppDetail> {
+  async detail(id: string, country?: string): Promise<AppDetail> {
     const app = await this.prisma.app.findFirst({
       where: { id },
       include: {
-        snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 },
+        snapshots: LATEST_HOME_LISTING,
         competitors: {
-          include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+          include: { snapshots: LATEST_HOME_LISTING },
           orderBy: { createdAt: 'asc' },
         },
         group: { include: { apps: true } },
@@ -162,13 +154,20 @@ export class AppsService {
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
+    if (country === undefined || country === app.country) {
+      return toAppDetail(
+        app,
+        app.snapshots[0] ?? null,
+        app.competitors,
+        app.group,
+      );
+    }
+    assertStorefront(app.store, country);
+    return this.listingReads.marketDetail(app, country);
+  }
 
-    return toAppDetail(
-      app,
-      app.snapshots[0] ?? null,
-      app.competitors,
-      app.group,
-    );
+  listingMarkets(id: string): Promise<ListingMarket[]> {
+    return this.listingReads.markets(id);
   }
 
   async marketAvailability(
@@ -233,72 +232,19 @@ export class AppsService {
     });
   }
 
-  async refreshApp(id: string): Promise<SnapshotDiffResult> {
-    const app = await this.prisma.app.findFirst({
-      where: { id },
-    });
-
-    if (!app) {
-      throw new NotFoundException(`App ${id} not found`);
-    }
-
-    const normalized = await this.egress.through(app.store, app.country, () =>
-      this.registry.get(app.store).getApp(app.storeAppId, app.country),
-    );
-
-    const previous = await this.prisma.appSnapshot.findFirst({
-      where: { appId: app.id },
-      orderBy: { capturedAt: 'desc' },
-    });
-
-    let pending = 0;
-    const snapshot = await this.prisma.withTransaction(async (tx) => {
-      const created = await tx.appSnapshot.create({
-        data: toSnapshotData(
-          app.id,
-          withKnownSubtitle(normalized, previous?.subtitle ?? null),
-        ),
-      });
-      await tx.app.update({
-        where: { id: app.id },
-        data: { name: normalized.title, iconUrl: normalized.iconUrl },
-      });
-      pending = await this.screenshots.record(tx, app, created);
-      return created;
-    });
-    if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
-
-    await this.keywords.syncFromSnapshot(app.id);
-
-    await this.changes.recordRefresh(
-      app.id,
-      previous ? this.toChangeSnapshot(previous, app.iconUrl, app.store) : null,
-      this.toChangeSnapshot(snapshot, normalized.iconUrl ?? null, app.store),
-    );
-
-    return {
-      snapshotId: snapshot.id,
-      changes: diffSnapshots(previous, snapshot),
-    };
+  refreshApp(
+    id: string,
+    country?: string,
+    spend?: () => Promise<void>,
+  ): Promise<SnapshotDiffResult> {
+    return this.listingCapture.refresh(id, country, spend);
   }
 
-  private toChangeSnapshot(
-    snapshot: AppSnapshot,
-    iconUrl: string | null,
-    store: Store,
-  ): DiffableChangeSnapshot {
-    return {
-      title: snapshot.title,
-      subtitle: snapshot.subtitle,
-      summary: snapshot.summary,
-      description: snapshot.description,
-      version: snapshot.version,
-      price: snapshot.price,
-      screenshotsCount: screenshotsCount(snapshot.raw),
-      screenshots: screenshotKeys(store, snapshot.raw),
-      iconUrl,
-      releaseNotes: releaseNotesFor(store, snapshot.raw),
-    };
+  refreshListing(
+    id: string,
+    country: string,
+  ): Promise<SnapshotDiffResult | null> {
+    return this.listingCapture.refreshListing(id, country);
   }
 }
 

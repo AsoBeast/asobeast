@@ -39,6 +39,7 @@ import type {
   AuditTarget,
   KeywordCoverageRow,
   LintIssue,
+  ListingMarket,
   MetadataAuditResult,
   MetadataDraft,
   TrackedKeywordItem,
@@ -703,6 +704,39 @@ export const APP_1_DETAIL: AppDetail = {
   group: null,
 };
 
+export const APP_1_LISTING_MARKETS: ListingMarket[] = [
+  {
+    country: "us",
+    home: true,
+    capturedAt: utcTimestampDaysAgo(0),
+    tracked: true,
+  },
+  {
+    country: "pl",
+    home: false,
+    capturedAt: utcTimestampDaysAgo(0),
+    tracked: true,
+  },
+];
+
+export const APP_1_PL_DETAIL: AppDetail = {
+  ...APP_1_DETAIL,
+  latestSnapshot: {
+    id: "snap-1-pl",
+    title: "Minutnik Skupienia",
+    subtitle: "Pomodoro i praca głęboka",
+    summary: "Pracuj skupiony w odmierzonych sesjach.",
+    ratingAvg: 4.6,
+    ratingCount: 3100,
+    installs: null,
+    price: 0,
+    version: "3.4.1",
+    capturedAt: utcTimestampDaysAgo(0),
+    country: "pl",
+  },
+  competitors: [],
+};
+
 export const APP_1: AppListItem = {
   id: "app-1",
   store: "APP_STORE",
@@ -950,6 +984,21 @@ const APP_1_COMPARISON: KeywordComparison = {
 
 const e2eScreenshotUrl = (position: number): string =>
   `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
+export const APP_1_PL_CHANGES: ChangeTimeline = {
+  events: [
+    {
+      id: "chg-pl-1",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "title",
+      before: "Minutnik",
+      after: "Minutnik Skupienia",
+      capturedAt: utcTimestampDaysAgo(2),
+      country: "pl",
+    },
+  ],
+};
 
 const APP_1_CHANGES: ChangeTimeline = {
   events: [
@@ -2126,6 +2175,7 @@ export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
 
 export const BUDGET: DailyBudget = {
   apps: 3,
+  marketListings: 0,
   keywords: 12,
   categories: 4,
   reviews: 2,
@@ -2136,6 +2186,7 @@ export const BUDGET: DailyBudget = {
     {
       store: "APP_STORE",
       apps: 3,
+      marketListings: 0,
       keywords: 12,
       categories: 4,
       reviews: 2,
@@ -2146,6 +2197,7 @@ export const BUDGET: DailyBudget = {
     {
       store: "GOOGLE_PLAY",
       apps: 0,
+      marketListings: 0,
       keywords: 0,
       categories: 0,
       reviews: 0,
@@ -2172,6 +2224,8 @@ export const HOT_BUDGET: DailyBudget = {
   utilization: 0.92,
   stores: BUDGET.stores.map((store) => ({ ...store, utilization: 0.92 })),
 };
+
+export const MARKET_BUDGET: DailyBudget = { ...BUDGET, marketListings: 3 };
 
 export const LAPSED_BUDGET: DailyBudget = {
   ...BUDGET,
@@ -3120,6 +3174,8 @@ export const METADATA_AUDIT: MetadataAuditResult = {
       ],
       uncovered: true,
       screenshotText: { covered: true, positions: [2] },
+      country: "de",
+      listingCountry: "us",
     },
   ],
   keywordFieldSuggestion: null,
@@ -3540,6 +3596,53 @@ export const APP_LONG_METADATA_AUDIT: MetadataAuditResult = {
       ],
     },
   ],
+};
+
+export const METADATA_AUDIT_PL: MetadataAuditResult = {
+  appId: "app-1",
+  store: "APP_STORE",
+  country: "pl",
+  fields: [
+    {
+      field: "title",
+      value: "Minutnik Skupienia",
+      chars: 18,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "subtitle",
+      value: "Pomodoro i praca głęboka",
+      chars: 24,
+      limit: 30,
+      indexed: true,
+      issues: [],
+    },
+    {
+      field: "description",
+      value: "Pracuj skupiony.",
+      chars: 16,
+      limit: 4000,
+      indexed: false,
+      issues: [],
+    },
+  ],
+  coverage: [
+    {
+      keywordId: "kw-pl-1",
+      text: "minutnik",
+      bucket: null,
+      fields: [
+        { field: "title", covered: true },
+        { field: "subtitle", covered: false },
+      ],
+      uncovered: false,
+      country: "pl",
+      listingCountry: "pl",
+    },
+  ],
+  keywordFieldSuggestion: null,
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

@@ -10,6 +10,7 @@ import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { toSnapshotData } from './apps.mapper';
 import { SubtitleBackfill } from './subtitle-backfill.service';
+import { LATEST_HOME_LISTING } from './listing';
 
 type Tx = Prisma.TransactionClient | PrismaService;
 
@@ -110,7 +111,7 @@ export class AppCaptureService {
   ): Promise<{ app: App; snapshot: AppSnapshot } | null> {
     const existing = await tx.app.findUnique({
       where: { workspaceId_store_storeAppId_country: identity },
-      include: { snapshots: { orderBy: { capturedAt: 'desc' }, take: 1 } },
+      include: { snapshots: LATEST_HOME_LISTING },
     });
     if (!existing?.snapshots[0]) return null;
     const { snapshots, ...app } = existing;

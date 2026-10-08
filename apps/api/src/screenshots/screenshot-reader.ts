@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { SnapshotScreenshot } from '@prisma/client';
+import { EVERY_LISTING } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotFetchError } from '../store-providers/errors';
 import { ScreenshotImageSource } from '../store-providers/screenshot-image.source';
@@ -32,7 +33,7 @@ export class ScreenshotReader {
 
   async read(snapshotId: string): Promise<void> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { id: snapshotId },
+      where: { id: snapshotId, ...EVERY_LISTING },
       select: {
         id: true,
         appId: true,

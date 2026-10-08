@@ -7,12 +7,16 @@ import type {
   StoreHealthReport,
   WorkspaceRunStatus,
 } from "@asobeast/shared";
-import { apiFetch } from "./client";
+import { apiFetch, marketParams, withQuery } from "./client";
 
-export function refreshApp(id: string): Promise<SnapshotDiffResult> {
-  return apiFetch<SnapshotDiffResult>(`/apps/${id}/refresh`, {
-    method: "POST",
-  });
+export function refreshApp(
+  id: string,
+  country?: string,
+): Promise<SnapshotDiffResult> {
+  return apiFetch<SnapshotDiffResult>(
+    withQuery(`/apps/${id}/refresh`, marketParams(country)),
+    { method: "POST" },
+  );
 }
 
 export function runDaily(id: string): Promise<RunDailyResult> {

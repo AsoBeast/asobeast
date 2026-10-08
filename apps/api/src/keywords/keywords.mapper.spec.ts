@@ -50,6 +50,41 @@ describe('toTrackedKeywordItem', () => {
     expect(item.latestDepth).toBeNull();
   });
 
+  it('judges a market keyword against the text of its own market', () => {
+    const item = toTrackedKeywordItem(
+      row({
+        source: 'MANUAL',
+        keyword: {
+          ...row().keyword,
+          text: 'gewohnheits tracker',
+          country: 'de',
+        },
+      }),
+      {
+        snapshotText: 'daily habit tracker',
+        marketTexts: new Map([['de', 'gewohnheits tracker taegliche serie']]),
+      },
+    );
+
+    expect(item.relevance).toBe(90);
+  });
+
+  it('falls back to the home text for a market without a listing', () => {
+    const item = toTrackedKeywordItem(
+      row({
+        source: 'MANUAL',
+        keyword: {
+          ...row().keyword,
+          text: 'gewohnheits tracker',
+          country: 'de',
+        },
+      }),
+      { snapshotText: 'daily habit tracker', marketTexts: new Map() },
+    );
+
+    expect(item.relevance).toBe(80);
+  });
+
   it('reports a keyword field member as the keyword field whatever else tracks it', () => {
     const member = toTrackedKeywordItem(
       row({ source: 'MANUAL', fieldOrder: 0 }),

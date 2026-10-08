@@ -114,6 +114,7 @@
             "pages": [
               "install/requirements",
               "install/docker-compose",
+              "install/railway",
               "install/published-images",
               "install/local-development",
               "install/upgrade"

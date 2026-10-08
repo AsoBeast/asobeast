@@ -5,6 +5,8 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ChangeEventItem, ChangeField } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
+import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
+import { useMarket } from "@/components/app-detail/use-market";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -20,7 +22,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { changesOptions } from "@/lib/queries";
-import { formatDate, formatNumber, formatPrice } from "@/lib/format";
+import {
+  formatCountry,
+  formatDate,
+  formatNumber,
+  formatPrice,
+} from "@/lib/format";
+import { queryMarket } from "@/lib/market";
 import { CHANGE_WINDOWS } from "@/lib/ranges";
 import { changeDaysParser } from "@/lib/search-params";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -193,8 +201,16 @@ export function ChangeRow({
   );
 }
 
-function ChangeList({ id, days }: { id: string; days: number }) {
-  const { data } = useSuspenseQuery(changesOptions(id, days));
+function ChangeList({
+  id,
+  days,
+  market,
+}: {
+  id: string;
+  days: number;
+  market?: string;
+}) {
+  const { data } = useSuspenseQuery(changesOptions(id, days, market));
 
   if (data.events.length === 0) {
     return (
@@ -236,6 +252,16 @@ function ChangeList({ id, days }: { id: string; days: number }) {
   );
 }
 
+function MarketHeading({ id }: { id: string }) {
+  const { market, home } = useMarket(id);
+  return market === home ? "Changes" : `Changes · ${formatCountry(market)}`;
+}
+
+function MarketChangeList({ id, days }: { id: string; days: number }) {
+  const { market, home } = useMarket(id);
+  return <ChangeList id={id} days={days} market={queryMarket(market, home)} />;
+}
+
 export function ChangeTimeline({ id }: { id: string }) {
   const [days, setDays] = useQueryState("days", changeDaysParser);
 
@@ -243,25 +269,34 @@ export function ChangeTimeline({ id }: { id: string }) {
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
-          <CardDescription>Changes</CardDescription>
+          <CardDescription>
+            <Suspense fallback="Changes">
+              <MarketHeading id={id} />
+            </Suspense>
+          </CardDescription>
           <CardTitle>Metadata change timeline</CardTitle>
         </div>
-        <Tabs
-          value={String(days)}
-          onValueChange={(next) => void setDays(Number(next) as typeof days)}
-        >
-          <TabsList>
-            {CHANGE_WINDOWS.map((window) => (
-              <TabsTrigger key={window} value={String(window)}>
-                {window}d
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Suspense fallback={null}>
+            <MarketSwitcher id={id} />
+          </Suspense>
+          <Tabs
+            value={String(days)}
+            onValueChange={(next) => void setDays(Number(next) as typeof days)}
+          >
+            <TabsList>
+              {CHANGE_WINDOWS.map((window) => (
+                <TabsTrigger key={window} value={String(window)}>
+                  {window}d
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChangeTimelineSkeleton />}>
-          <ChangeList id={id} days={days} />
+          <MarketChangeList id={id} days={days} />
         </Suspense>
       </CardContent>
     </Card>

@@ -7,6 +7,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordsService } from './keywords.service';
+import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
@@ -177,6 +178,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
         get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>,
     ),
+    { request: jest.fn() } as unknown as MarketListingRequests,
   );
 }
 

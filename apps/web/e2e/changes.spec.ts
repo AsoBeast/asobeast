@@ -160,7 +160,7 @@ test("a second market can be picked and is kept in the url", async ({
 }) => {
   await page.goto("/apps/app-1/changes");
 
-  const market = page.getByRole("combobox", { name: "Market" });
+  const market = page.getByRole("combobox", { name: "Market", exact: true });
   await expect(market).toHaveText("US · United States");
   await market.click();
   await page.getByRole("option", { name: "PL · Poland" }).click();
@@ -176,7 +176,7 @@ test("a market deep link opens on it and the home market clears the key", async 
 }) => {
   await page.goto("/apps/app-1/changes?country=pl");
 
-  const market = page.getByRole("combobox", { name: "Market" });
+  const market = page.getByRole("combobox", { name: "Market", exact: true });
   await expect(market).toHaveText("PL · Poland");
   await expect(impactCard(page)).toContainText(
     "No keywords tracked in Poland yet",

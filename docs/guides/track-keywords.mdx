@@ -86,7 +86,7 @@ A phrase that another app of your workspace already tracks in the same market co
 
 ### What an import costs
 
-Every keyword market an import opens adds the same daily store requests as adding it by hand, one a day on the App Store and eight a day on Google Play, and each new keyword is scored once. The dialog states the requests a day the import adds. The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) also sees what share of the store's daily capacity that brings it to, and a warning from 85 percent. See [Watch your request budget](#watch-your-request-budget).
+Every keyword market an import opens adds the same daily store requests as adding it by hand, one a day on the App Store and eight a day on Google Play, and each new keyword is scored once. A market the app tracks no keywords in yet also adds the daily refresh of its listing, one request a day for the app and one for each competitor. See [What is a market listing?](/concepts/countries#what-is-a-market-listing) The dialog states the requests a day the import adds, listing refreshes included. The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) also sees what share of the store's daily capacity that brings it to, and a warning from 85 percent. See [Watch your request budget](#watch-your-request-budget).
 
 An import takes up to 500 rows. For a longer list, split the file and import the parts one after the other, previewing each. On a hosted plan, rows beyond your keyword limit are listed as over limit and skipped, so you can see what fits before you confirm.
 
@@ -109,7 +109,7 @@ The 100 byte iOS keyword field never appears on the public listing, so asobeast 
   </Step>
 </Steps>
 
-This is home market only in v1, and it is App Store only. Google Play has no keyword field. See [App Store and Google Play](/concepts/stores).
+The keyword field belongs to the home market, and it is App Store only. Google Play has no keyword field. See [App Store and Google Play](/concepts/stores).
 
 Leaving it empty makes coverage report the field as uncovered, because asobeast has no evidence about what is in it.
 
@@ -143,7 +143,7 @@ Combinations and coverage answer different questions. Coverage on the metadata w
 
 Tick phrases and choose **Track selected**, or choose **Track all shown** to track every phrase the filters keep that is not tracked yet. A confirmation states how many keywords that is. Each tracked keyword adds one store search a day in that storefront and counts against your plan's keyword limit, so read [Watch your request budget](#watch-your-request-budget) before tracking hundreds.
 
-The list comes from your home storefront, because asobeast keeps one listing per app, the home storefront's. In another market the card points you back to it. A listing forms at most 2,000 phrases in the list, shortest first; when it forms more, the card says how many and that the first 2,000 are listed.
+The list comes from your home listing. Coverage and relevance of a keyword read its own market's listing, but the combinations card stays on the home listing, and in another market it points you back to it. A listing forms at most 2,000 phrases in the list, shortest first; when it forms more, the card says how many and that the first 2,000 are listed.
 
 ## Bulk manage keywords
 

@@ -55,6 +55,14 @@ A guide for each of these lives in the [documentation](https://docs.asobeast.com
 
 ## Quick start
 
+### One-click deploy
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/asobeast?referralCode=GAJ6fQ&utm_medium=integration&utm_source=template&utm_campaign=asobeast-readme)
+
+Runs the published images on Railway with PostgreSQL and Redis, and generates every secret for you. See [deploy on Railway](https://docs.asobeast.com/install/railway).
+
+### Docker Compose
+
 You need [Docker](https://docs.docker.com/get-docker/) with Compose, roughly 2 GB of memory and 5 GB of disk.
 
 ```bash
@@ -165,7 +173,7 @@ The `1.x` line is current, and the [changelog](CHANGELOG.md) names the latest re
 
 - A per-user permission model finer than owner and member, and one account in several workspaces.
 - Better popularity calibration using licensed or first-party acquisition data.
-- A per-market app detail switcher, so snapshots, reviews and category ranks are not limited to the home storefront.
+- Per-market reviews, category ranks and ratings history. Listings are already captured and switched per market.
 - More MCP write tools behind the same opt-in, one reversible change at a time.
 
 Release policy and the `1.x` compatibility promise: [upgrade and roll back](https://docs.asobeast.com/install/upgrade).

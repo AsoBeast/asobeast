@@ -1376,6 +1376,17 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose listing to use instead of the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1413,6 +1424,40 @@
           }
         },
         "summary": "Delete an app",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
+    "/apps/{id}/listing-markets": {
+      "get": {
+        "operationId": "AppsController_listingMarkets",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the markets an app has a captured listing in",
         "tags": [
           "apps"
         ]
@@ -1468,6 +1513,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose listing to use instead of the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           }
@@ -2144,6 +2200,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "List the changes of the listings in this storefront. Omitted means the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           },
@@ -2959,6 +3026,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose listing to use instead of the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           }

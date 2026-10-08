@@ -1,6 +1,7 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
-import { QUERY_BOUNDS } from '@asobeast/shared';
+import { IsInt, IsOptional, Matches, Max, Min } from 'class-validator';
+import { COUNTRY_PATTERN, QUERY_BOUNDS } from '@asobeast/shared';
 
 export class ChangeTimelineQueryDto {
   @IsOptional()
@@ -9,4 +10,14 @@ export class ChangeTimelineQueryDto {
   @Min(QUERY_BOUNDS.changeTimelineDays.min)
   @Max(QUERY_BOUNDS.changeTimelineDays.max)
   days = QUERY_BOUNDS.changeTimelineDays.default;
+
+  @ApiPropertyOptional({
+    example: 'de',
+    pattern: COUNTRY_PATTERN.source,
+    description:
+      'List the changes of the listings in this storefront. Omitted means the home storefront.',
+  })
+  @IsOptional()
+  @Matches(COUNTRY_PATTERN)
+  country?: string;
 }

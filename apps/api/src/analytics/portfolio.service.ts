@@ -16,6 +16,7 @@ import {
   windowVisibility,
 } from './analytics.support';
 import { countChangeDays } from './change-days';
+import { HOME_EVENTS, LATEST_HOME_LISTING } from '../apps/listing';
 
 const CHANGES_WINDOW_DAYS = 7;
 
@@ -37,8 +38,7 @@ export class PortfolioService {
         group: { select: { name: true } },
         _count: { select: { competitors: true } },
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { capturedAt: true },
         },
       },
@@ -127,6 +127,7 @@ export class PortfolioService {
     const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: apps.map((app) => app.id) },
+        ...HOME_EVENTS,
         capturedAt: { gte: new Date(Date.now() - days * DAY_MS) },
       },
       select: { appId: true, capturedAt: true },

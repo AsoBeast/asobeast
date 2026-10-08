@@ -111,6 +111,7 @@ export function summarize(
 export function costOf(
   additions: readonly Addition[],
   store: Store,
+  marketListings = 0,
 ): KeywordImportCost {
   const keywordMarkets = additions.filter(
     (addition) => addition.opensMarket,
@@ -118,6 +119,8 @@ export function costOf(
   return {
     store,
     keywordMarkets,
-    dailyRequests: keywordMarkets * requestsPerJob(store, 'keywords'),
+    dailyRequests:
+      keywordMarkets * requestsPerJob(store, 'keywords') +
+      marketListings * requestsPerJob(store, 'apps'),
   };
 }

@@ -28,6 +28,8 @@ export interface KeywordCoverageRow {
   fields: CoverageFieldStatus[];
   uncovered: boolean;
   screenshotText?: ScreenshotTextCoverage | null;
+  country?: string;
+  listingCountry?: string;
 }
 
 export interface KeywordFieldSuggestion {
@@ -44,6 +46,7 @@ export interface MetadataAuditResult {
   coverage: KeywordCoverageRow[];
   keywordFieldSuggestion: KeywordFieldSuggestion | null;
   screenshotText?: ScreenshotTextState | null;
+  country?: string;
 }
 
 export interface MetadataDraft {

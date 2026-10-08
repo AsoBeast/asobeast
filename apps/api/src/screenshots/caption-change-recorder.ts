@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ChangesService } from '../changes/changes.service';
+import { HOME_LISTING } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { diffCaptions } from './caption-diff';
 
@@ -32,7 +33,11 @@ export class CaptionChangeRecorder {
     const current = await this.rows(snapshot.id);
     if (!isSettled(current)) return;
     const previous = await this.prisma.appSnapshot.findFirst({
-      where: { appId: snapshot.appId, capturedAt: { lt: snapshot.capturedAt } },
+      where: {
+        appId: snapshot.appId,
+        ...HOME_LISTING,
+        capturedAt: { lt: snapshot.capturedAt },
+      },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
@@ -40,7 +45,11 @@ export class CaptionChangeRecorder {
       await this.compare(snapshot, await this.rows(previous.id), current);
     }
     const next = await this.prisma.appSnapshot.findFirst({
-      where: { appId: snapshot.appId, capturedAt: { gt: snapshot.capturedAt } },
+      where: {
+        appId: snapshot.appId,
+        ...HOME_LISTING,
+        capturedAt: { gt: snapshot.capturedAt },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });

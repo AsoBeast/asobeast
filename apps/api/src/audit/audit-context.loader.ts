@@ -26,6 +26,11 @@ import {
   MAX_COMPETITOR_ICONS,
   readStoredCreative,
 } from './creative/creative-observations';
+import {
+  HOME_LISTING,
+  LATEST_HOME_LISTING,
+  NEWEST_FIRST,
+} from '../apps/listing';
 
 export interface AuditApp {
   id: string;
@@ -118,8 +123,8 @@ export class AuditContextLoader {
     const app = await this.app(appId);
     const [latest, competitors] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
-        where: { appId },
-        orderBy: { capturedAt: 'desc' },
+        where: { appId, ...HOME_LISTING },
+        orderBy: NEWEST_FIRST,
       }),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
@@ -128,8 +133,7 @@ export class AuditContextLoader {
           id: true,
           store: true,
           snapshots: {
-            orderBy: { capturedAt: 'desc' },
-            take: 1,
+            ...LATEST_HOME_LISTING,
             select: { raw: true },
           },
         },
@@ -195,8 +199,8 @@ export class AuditContextLoader {
       screenshotCaptions,
     ] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
-        where: { appId },
-        orderBy: { capturedAt: 'desc' },
+        where: { appId, ...HOME_LISTING },
+        orderBy: NEWEST_FIRST,
       }),
       this.keywords.listTracked(appId),
       this.keywords.compare(appId, false),
@@ -208,8 +212,7 @@ export class AuditContextLoader {
           name: true,
           store: true,
           snapshots: {
-            orderBy: { capturedAt: 'desc' },
-            take: 1,
+            ...LATEST_HOME_LISTING,
             select: {
               title: true,
               subtitle: true,

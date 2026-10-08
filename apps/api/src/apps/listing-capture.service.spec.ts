@@ -1,17 +1,12 @@
 import { Store } from '@prisma/client';
-import type { Queue } from 'bullmq';
-import type { QuotaService } from '../auth/quota.service';
 import type { ChangesService } from '../changes/changes.service';
-import type { WorkspaceContext } from '../common/tenancy/workspace-context';
 import type { KeywordsService } from '../keywords/keywords.service';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import type { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import type { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import type { StoreProviderRegistry } from '../store-providers/store-provider.registry';
-import type { AppCaptureService } from './app-capture.service';
-import { AppsService } from './apps.service';
-import type { FirstRunScheduler } from './first-run.scheduler';
+import { ListingCaptureService } from './listing-capture.service';
 
 const APP = {
   id: 'app_1',
@@ -75,29 +70,23 @@ const build = (overrides: {
     record: jest.fn().mockResolvedValue(2),
   } as unknown as ScreenshotRecorder;
   const request = jest.fn().mockResolvedValue(undefined);
-  const service = new AppsService(
+  const service = new ListingCaptureService(
     prisma,
     registry,
-    {} as AppCaptureService,
+    egress,
     keywords,
     changes,
-    {} as Queue,
-    {} as Queue,
-    {} as QuotaService,
-    egress,
-    {} as WorkspaceContext,
-    {} as FirstRunScheduler,
     screenshots,
     { request } as unknown as ScreenshotQueue,
   );
   return { service, request };
 };
 
-describe('AppsService.refreshApp', () => {
+describe('ListingCaptureService.refresh', () => {
   it('queues the screenshot read of the new snapshot', async () => {
     const { service, request } = build({});
 
-    await service.refreshApp(APP.id);
+    await service.refresh(APP.id);
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
   });
@@ -107,7 +96,7 @@ describe('AppsService.refreshApp', () => {
       syncFromSnapshot: jest.fn().mockRejectedValue(new Error('sync failed')),
     });
 
-    await expect(service.refreshApp(APP.id)).rejects.toThrow('sync failed');
+    await expect(service.refresh(APP.id)).rejects.toThrow('sync failed');
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
   });
@@ -117,7 +106,7 @@ describe('AppsService.refreshApp', () => {
       recordRefresh: jest.fn().mockRejectedValue(new Error('changes failed')),
     });
 
-    await expect(service.refreshApp(APP.id)).rejects.toThrow('changes failed');
+    await expect(service.refresh(APP.id)).rejects.toThrow('changes failed');
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
   });

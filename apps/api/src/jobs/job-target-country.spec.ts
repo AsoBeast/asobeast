@@ -35,6 +35,14 @@ describe('JobTargetCountry', () => {
     ).resolves.toBe('de');
   });
 
+  it('takes the market a listing refresh carries without reading the app', async () => {
+    await expect(
+      target.of(job(JOBS.REFRESH_APP, { appId: 'a1', country: 'pl' })),
+    ).resolves.toBe('pl');
+
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
   it('takes the home storefront of the app a subtitle backfill targets', async () => {
     await expect(
       target.of(job(JOBS.RESOLVE_SUBTITLE, { appId: 'a1', snapshotId: 's1' })),

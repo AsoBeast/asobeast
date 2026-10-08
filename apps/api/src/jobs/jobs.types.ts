@@ -84,6 +84,7 @@ export interface DailyCompletePayload extends FanOutSummary {
 
 export interface RefreshAppPayload extends WorkspaceJobPayload {
   appId: string;
+  country?: string;
 }
 
 export interface AuditCreativePayload extends WorkspaceJobPayload {
@@ -149,6 +150,16 @@ export interface SyncReviewsPayload extends WorkspaceJobPayload {
   appId: string;
   pages: number;
   backfill: boolean;
+}
+
+export function refreshJobId(
+  appId: string,
+  date: string,
+  country?: string,
+): string {
+  return country === undefined
+    ? `refresh~${appId}~${date}`
+    : `refresh~${appId}~${country}~${date}`;
 }
 
 export function utcDateKey(date = new Date()): string {

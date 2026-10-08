@@ -93,7 +93,7 @@ describe('ScreenshotsService.forApp', () => {
     await service.forApp('app_1');
 
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1' },
+      where: { appId: 'app_1', country: null },
       orderBy: { capturedAt: 'desc' },
       select: {
         id: true,

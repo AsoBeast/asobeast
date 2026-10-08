@@ -19,11 +19,13 @@ import {
 } from './keyword-import-plan';
 import { KeywordTracker } from './keyword-tracker';
 import { ensureApp, KeywordApp } from './keywords.support';
+import { MarketListingRequests } from './market-listing.requests';
 
 interface PlannedImport {
   app: KeywordApp;
   plan: ImportPlan;
   quota: KeywordImportQuota | null;
+  marketListings: number;
 }
 
 @Injectable()
@@ -32,6 +34,7 @@ export class KeywordImportService {
     private readonly prisma: PrismaService,
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
+    private readonly listings: MarketListingRequests,
   ) {}
 
   async preview(
@@ -72,11 +75,40 @@ export class KeywordImportService {
     const limit = usage.limits.keywordMarkets;
     const room =
       limit === null ? null : Math.max(0, limit - usage.keywordMarkets);
+    const plan = planImport(classified, tracking, room);
     return {
       app,
-      plan: planImport(classified, tracking, room),
+      plan,
       quota: this.quotaOf(usage),
+      marketListings: await this.listingsOpened(app, plan.additions),
     };
+  }
+
+  private async listingsOpened(
+    app: KeywordApp,
+    additions: readonly Addition[],
+  ): Promise<number> {
+    const markets = [
+      ...new Set(additions.map(({ candidate }) => candidate.country)),
+    ].filter((country) => country !== app.country);
+    if (markets.length === 0) {
+      return 0;
+    }
+    const [tracked, family] = await Promise.all([
+      this.prisma.keyword.findMany({
+        where: {
+          store: app.store,
+          country: { in: markets },
+          tracked: { some: { appId: app.id, active: true } },
+        },
+        select: { country: true },
+        distinct: ['country'],
+      }),
+      this.prisma.app.count({
+        where: { OR: [{ id: app.id }, { primaryAppId: app.id }] },
+      }),
+    ]);
+    return (markets.length - tracked.length) * family;
   }
 
   private async write(
@@ -135,11 +167,17 @@ export class KeywordImportService {
       located.map(({ keywordId }) => keywordId),
       app,
     );
+    const markets = new Set(
+      located.map(({ addition }) => addition.candidate.country),
+    );
+    for (const market of markets) {
+      await this.listings.request(app, market);
+    }
     return imported;
   }
 
   private result(
-    { app, plan, quota }: PlannedImport,
+    { app, plan, quota, marketListings }: PlannedImport,
     imported: number,
     dryRun: boolean,
   ): KeywordImportResult {
@@ -147,7 +185,7 @@ export class KeywordImportService {
       dryRun,
       imported,
       summary: summarize(plan.results),
-      cost: costOf(plan.additions, app.store),
+      cost: costOf(plan.additions, app.store, marketListings),
       quota,
       results: plan.results,
     };

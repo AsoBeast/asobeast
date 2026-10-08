@@ -27,6 +27,7 @@ import {
   homeKeywordIds,
   loadCompetitorRows,
 } from './action-competitors';
+import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
 
 export interface ActionAuditCheck {
   id: string;
@@ -296,7 +297,11 @@ export class ActionContextLoader {
           orderBy: { date: 'asc' },
         }),
         this.prisma.changeEvent.findMany({
-          where: { appId: { in: appIds }, capturedAt: { gte: from } },
+          where: {
+            appId: { in: appIds },
+            ...HOME_EVENTS,
+            capturedAt: { gte: from },
+          },
           select: { appId: true, field: true, capturedAt: true },
           orderBy: { capturedAt: 'asc' },
         }),
@@ -327,7 +332,11 @@ export class ActionContextLoader {
           distinct: ['appId'],
         }),
         this.prisma.appSnapshot.findMany({
-          where: { appId: { in: appIds }, capturedAt: { gte: from } },
+          where: {
+            appId: { in: appIds },
+            ...HOME_LISTING,
+            capturedAt: { gte: from },
+          },
           select: {
             appId: true,
             version: true,
@@ -344,7 +353,7 @@ export class ActionContextLoader {
     const auditByApp = new Map(auditScores.map((row) => [row.appId, row]));
     const versionsByApp = groupBy(snapshots, (row) => row.appId);
 
-    const derived = await Promise.all(apps.map((app) => this.derive(app.id)));
+    const derived = await Promise.all(apps.map((app) => this.derive(app)));
     const live = apps.flatMap((app, index) => {
       const rows = derived[index];
       return rows === null ? [] : [{ app, ...rows }];
@@ -400,19 +409,19 @@ export class ActionContextLoader {
     };
   }
 
-  private async derive(appId: string): Promise<{
+  private async derive(app: { id: string; country: string }): Promise<{
     tracked: TrackedKeywordItem[];
     metadata: { coverage: KeywordCoverageRow[]; fields: MetadataFieldAudit[] };
   } | null> {
     try {
       const [tracked, metadata] = await Promise.all([
-        this.keywords.listTracked(appId),
-        this.metadata.audit(appId),
+        this.keywords.listTracked(app.id),
+        this.metadata.audit(app.id, app.country),
       ]);
       return { tracked, metadata };
     } catch (error) {
       this.logger.warn(
-        `skipping app ${appId} in this action run: ${messageOf(error)}`,
+        `skipping app ${app.id} in this action run: ${messageOf(error)}`,
       );
       return null;
     }

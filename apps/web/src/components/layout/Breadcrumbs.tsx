@@ -1,9 +1,7 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/auth/use-auth";
 import {
   Breadcrumb,
@@ -17,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ADMIN_ROOT, adminSectionFrom } from "@/lib/admin-sections";
 import { APP_SECTIONS, appRouteFrom, sectionHref } from "@/lib/app-sections";
 import { appDetailOptions } from "@/lib/queries";
+import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 const WORKSPACE_LABELS: Record<string, string> = {
   "/": "Dashboard",
@@ -31,18 +30,8 @@ function sectionLabel(segment: string): string {
   );
 }
 
-function useCachedAppDetail(id: string) {
-  const queryClient = useQueryClient();
-  const { queryKey } = appDetailOptions(id);
-  return useSyncExternalStore(
-    (onChange) => queryClient.getQueryCache().subscribe(onChange),
-    () => queryClient.getQueryData(queryKey),
-    () => undefined,
-  );
-}
-
 function AppCrumbs({ id, segment }: { id: string; segment: string }) {
-  const data = useCachedAppDetail(id);
+  const data = useCachedQueryData(appDetailOptions(id).queryKey);
 
   const name = data?.name ?? "Untitled app";
 

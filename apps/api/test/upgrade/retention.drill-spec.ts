@@ -93,6 +93,18 @@ describe('Retention against an upgraded baseline database', () => {
       data: [...OPEN_STATUSES, ...CLOSED_STATUSES].map(actionFor),
     });
 
+    await prisma.appSnapshot.createMany({
+      data: ['snap_market_old', 'snap_market_new'].map((id, index) => ({
+        id,
+        appId: 'app_ios',
+        country: 'gb',
+        title: 'Drill Fitness',
+        description: 'Market description.',
+        raw: {},
+        capturedAt: new Date(`2026-06-0${index + 1}T00:00:00.000Z`),
+      })),
+    });
+
     jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
     jest.setSystemTime(NOW);
     deleted = await retention.prune();
@@ -120,14 +132,15 @@ describe('Retention against an upgraded baseline database', () => {
     );
   });
 
-  it('keeps the newest snapshot per app regardless of age', async () => {
-    expect(deleted.appSnapshot).toBe(3);
+  it('keeps the newest snapshot per app and market regardless of age', async () => {
+    expect(deleted.appSnapshot).toBe(4);
     const remaining = await prisma.appSnapshot.findMany({
       select: { id: true },
       orderBy: { id: 'asc' },
     });
     expect(remaining.map((row) => row.id)).toEqual([
       'snap_ios_new',
+      'snap_market_new',
       'snap_play_escaped',
     ]);
   });

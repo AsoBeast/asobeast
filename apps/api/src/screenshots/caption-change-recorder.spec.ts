@@ -73,7 +73,7 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', capturedAt: { lt: CAPTURED } },
+      where: { appId: 'app_1', country: null, capturedAt: { lt: CAPTURED } },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
@@ -159,7 +159,7 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', capturedAt: { gt: CAPTURED } },
+      where: { appId: 'app_1', country: null, capturedAt: { gt: CAPTURED } },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });

@@ -14,6 +14,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { nextDailyRun, nextWeeklyRun } from './daily-schedule';
 import { QUEUES, resolveSubtitleJobId } from './jobs.types';
+import { LATEST_HOME_LISTING } from '../apps/listing';
 
 const DAY_MS = 24 * 60 * 60_000;
 const REVIEW_BACKFILL_GRACE_MS = DAY_MS;
@@ -56,8 +57,7 @@ export class FirstRunStatusService {
         id: true,
         createdAt: true,
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { ratingCount: true },
         },
       },

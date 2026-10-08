@@ -8,7 +8,10 @@ import {
 } from '@asobeast/shared';
 import { FlowJobNode, FlowProducer, JobsOptions, Queue } from 'bullmq';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
-import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import {
+  WorkspaceContext,
+  WorkspaceScope,
+} from '../common/tenancy/workspace-context';
 import {
   WorkspaceFanOut,
   workspaceFailure,
@@ -26,6 +29,7 @@ import {
   JOBS,
   QUEUES,
   queueNameForStore,
+  refreshJobId,
   reviewsJobId,
   scoreJobId,
   utcDateKey,
@@ -35,11 +39,14 @@ import { ActiveWorkspaces } from './active-workspaces';
 import { enqueueReplacingFailed } from './enqueue-replacing-failed';
 import { DailyCapacity } from './daily-capacity.service';
 import {
+  appFamilyMarketListings,
   AppTarget,
   DailyTargets,
   DailyTargetsCollector,
   dedupeBuckets,
   dedupeKeywords,
+  KeywordTarget,
+  MarketListingTarget,
 } from './daily-targets.service';
 import { DailyStage, DegradationPlan, planDegradation } from './degradation';
 import { interleave } from './interleave';
@@ -123,7 +130,9 @@ export class PipelineService {
     date: string,
   ): Promise<{ children: FlowJobNode[] }> {
     const scope = this.workspace.scopeFor('the daily fan-out');
-    const targets = await this.withinKeywordLimit(await this.targets.collect());
+    const targets = await this.targets.collect((keywords) =>
+      this.withinKeywordLimit(keywords),
+    );
     const buckets = dedupeBuckets(
       await this.categoryRanks.buckets(targets.apps.map((app) => app.id)),
     );
@@ -137,8 +146,14 @@ export class PipelineService {
         name: JOBS.REFRESH_APP,
         queueName: queueNameForStore(app.store),
         data: { appId: app.id, ...scope },
-        opts: childOptions(`daily~refresh~${app.id}~${date}`),
+        opts: childOptions(`daily~${refreshJobId(app.id, date)}`),
       })),
+      ...this.marketRefreshChildren(
+        targets.marketListings,
+        scope,
+        date,
+        childOptions,
+      ),
       ...targets.keywords.map((keyword) => ({
         name: JOBS.CHECK_KEYWORD,
         queueName: queueNameForStore(keyword.store),
@@ -179,6 +194,20 @@ export class PipelineService {
       `fan out ${scope.workspaceId} ${JSON.stringify(countStages(children))}`,
     );
     return { children };
+  }
+
+  private marketRefreshChildren(
+    listings: readonly MarketListingTarget[],
+    scope: WorkspaceScope,
+    date: string,
+    options: (jobId: string) => JobsOptions & { jobId: string },
+  ): FlowJobNode[] {
+    return listings.map((listing) => ({
+      name: JOBS.REFRESH_APP,
+      queueName: queueNameForStore(listing.store),
+      data: { appId: listing.id, country: listing.country, ...scope },
+      opts: options(`daily~${refreshJobId(listing.id, date, listing.country)}`),
+    }));
   }
 
   private async shedUnderPressure(
@@ -241,30 +270,30 @@ export class PipelineService {
   }
 
   private async withinKeywordLimit(
-    targets: DailyTargets,
-  ): Promise<DailyTargets> {
+    keywords: KeywordTarget[],
+  ): Promise<KeywordTarget[]> {
     const limit = await this.quota.limitFor('keywordMarkets');
-    if (limit === null) return targets;
+    if (limit === null) return keywords;
 
     const state = await this.overLimit.state();
-    if (targets.keywords.length <= limit) {
+    if (keywords.length <= limit) {
       await this.overLimit.recordWithinLimit(state);
-      return targets;
+      return keywords;
     }
 
     const now = new Date();
     const decision = applyKeywordLimit({
-      keywords: targets.keywords,
+      keywords,
       limit,
       overLimitSince: state.since,
       now,
     });
     await this.overLimit.recordOverLimit(
       state,
-      { used: targets.keywords.length, limit, dropped: decision.dropped },
+      { used: keywords.length, limit, dropped: decision.dropped },
       now,
     );
-    return { ...targets, keywords: decision.covered };
+    return decision.covered;
   }
 
   async fanOutApp(appId: string): Promise<FanOutSummary> {
@@ -274,11 +303,15 @@ export class PipelineService {
         id: true,
         workspaceId: true,
         store: true,
+        country: true,
         isCompetitor: true,
         competitors: { select: { id: true, store: true } },
         tracked: {
           where: { active: true },
-          select: { keywordId: true, keyword: { select: { store: true } } },
+          select: {
+            keywordId: true,
+            keyword: { select: { store: true, country: true } },
+          },
         },
       },
     });
@@ -302,8 +335,12 @@ export class PipelineService {
     const reviewApps: AppTarget[] = app.isCompetitor
       ? []
       : [{ id: app.id, store: app.store }];
+    const marketListings = appFamilyMarketListings(app);
 
-    return this.enqueue({ apps, keywords, reviewApps }, app.workspaceId);
+    return this.enqueue(
+      { apps, keywords, reviewApps, marketListings },
+      app.workspaceId,
+    );
   }
 
   async fanOutWorkspaceDaily(workspaceId: string): Promise<FanOutSummary> {
@@ -311,7 +348,9 @@ export class PipelineService {
       [workspaceId],
       async () =>
         this.enqueue(
-          await this.withinKeywordLimit(await this.targets.collect()),
+          await this.targets.collect((keywords) =>
+            this.withinKeywordLimit(keywords),
+          ),
           workspaceId,
         ),
     );
@@ -433,7 +472,13 @@ export class PipelineService {
         store: app.store,
         name: JOBS.REFRESH_APP,
         data: { appId: app.id, ...scope },
-        opts: { jobId: `refresh~${app.id}~${date}` },
+        opts: { jobId: refreshJobId(app.id, date) },
+      })),
+      ...targets.marketListings.map((listing) => ({
+        store: listing.store,
+        name: JOBS.REFRESH_APP,
+        data: { appId: listing.id, country: listing.country, ...scope },
+        opts: { jobId: refreshJobId(listing.id, date, listing.country) },
       })),
       ...targets.keywords.map((keyword) => ({
         store: keyword.store,

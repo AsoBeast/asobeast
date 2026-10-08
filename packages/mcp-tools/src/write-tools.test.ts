@@ -415,6 +415,14 @@ describe("the write tools", () => {
     );
   });
 
+  it("tells an agent that a new market also starts a daily listing capture", () => {
+    const { description } = writeTool("track_keywords");
+
+    expect(description).toContain(
+      "A market other than the home storefront also starts a daily capture of that market's listing for the app and each competitor",
+    );
+  });
+
   it("tells an agent to change something only when asked to", () => {
     for (const name of [
       "untrack_keyword",

@@ -28,6 +28,7 @@ import {
   validateDrafts,
 } from './metadata-drafts';
 import { MetadataService } from './metadata.service';
+import { LATEST_HOME_LISTING } from '../apps/listing';
 
 const DEFAULT_FIELDS: Record<Store, MetadataField[]> = {
   APP_STORE: ['title', 'subtitle', 'keywordField'],
@@ -64,8 +65,7 @@ export class MetadataAssistantService {
         select: {
           name: true,
           snapshots: {
-            orderBy: { capturedAt: 'desc' },
-            take: 1,
+            ...LATEST_HOME_LISTING,
             select: { title: true },
           },
         },

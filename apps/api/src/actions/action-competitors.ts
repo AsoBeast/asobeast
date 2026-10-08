@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import type { ActionRankingDay } from './action-context';
 import { REGRESSION_INDEXED_FIELDS } from './rules/rank-investigate-drop';
+import { HOME_EVENTS, HOME_LISTING } from '../apps/listing';
 
 export const COMPETITOR_CHANGE_WINDOW_DAYS = 14;
 export const COMPETITOR_RANKING_WINDOW_DAYS = 21;
@@ -99,6 +100,7 @@ export async function loadCompetitorRows(
     prisma.changeEvent.findMany({
       where: {
         appId: { in: competitorIds },
+        ...HOME_EVENTS,
         field: { in: [...REGRESSION_INDEXED_FIELDS] },
         capturedAt: { gte: daysBefore(now, COMPETITOR_CHANGE_WINDOW_DAYS) },
       },
@@ -125,6 +127,7 @@ export async function loadCompetitorRows(
     prisma.appSnapshot.findMany({
       where: {
         appId: { in: competitorIds },
+        ...HOME_LISTING,
         capturedAt: { gte: daysBefore(now, COMPETITOR_SNAPSHOT_WINDOW_DAYS) },
       },
       orderBy: { capturedAt: 'desc' },

@@ -15,6 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { StoreRequestError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { FirstRunScheduler } from './first-run.scheduler';
+import { HOME_LISTING } from './listing';
 
 const RESOLVE_SUBTITLE_OPTIONS = {
   ...JOB_OPTIONS,
@@ -60,7 +61,7 @@ export class SubtitleBackfill {
       select: { store: true, storeAppId: true, country: true },
     });
     const imported = await this.prisma.appSnapshot.findFirst({
-      where: { id: snapshotId, appId },
+      where: { id: snapshotId, appId, ...HOME_LISTING },
       select: { capturedAt: true },
     });
     if (!app || !imported) return;
@@ -80,6 +81,7 @@ export class SubtitleBackfill {
     const { count } = await this.prisma.appSnapshot.updateMany({
       where: {
         appId,
+        ...HOME_LISTING,
         subtitle: null,
         capturedAt: { gte: imported.capturedAt },
       },

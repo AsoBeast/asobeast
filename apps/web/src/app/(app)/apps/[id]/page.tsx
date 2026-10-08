@@ -1,7 +1,9 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { ActionsSummaryCard } from "@/components/actions/ActionsSummaryCard";
+import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
 import { PrintReportButton } from "@/components/app-detail/PrintReportButton";
+import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { TOP_ACTION_LIMIT } from "@/lib/action-filters";
 import { ActionsSummaryCardSkeleton } from "@/components/actions/skeletons";
 import { FirstRunTimeline } from "@/components/onboarding/FirstRunTimeline";
@@ -24,26 +26,32 @@ import { getQueryClient } from "@/lib/get-query-client";
 import {
   actionsOptions,
   actionSummaryFor,
+  appDetailOptions,
+  appListingOptions,
   appSummaryOptions,
   categoryRanksOptions,
   firstRunOptions,
+  listingMarketsOptions,
   rankDistributionHistoryOptions,
   visibilityOptions,
 } from "@/lib/queries";
+import { queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
-import { rangeParser } from "@/lib/search-params";
+import { marketParser, rangeParser } from "@/lib/search-params";
 
 export default async function AppOverviewPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ categoryRange?: string | string[] }>;
+  searchParams: Promise<{
+    categoryRange?: string | string[];
+    market?: string | string[];
+  }>;
 }) {
   const { id } = await params;
-  const categoryRange = rangeParser.parseServerSide(
-    (await searchParams).categoryRange,
-  );
+  const sp = await searchParams;
+  const categoryRange = rangeParser.parseServerSide(sp.categoryRange);
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(appSummaryOptions(id));
@@ -58,7 +66,20 @@ export default async function AppOverviewPage({
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
-  await queryClient.prefetchQuery(firstRunOptions(id));
+  const firstRun = queryClient.prefetchQuery(firstRunOptions(id));
+  const [app, markets] = await Promise.all([
+    queryClient.fetchQuery(appDetailOptions(id)),
+    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+  ]);
+  const market = resolveMarket(
+    marketParser.parseServerSide(sp.market),
+    markets,
+    app.country,
+  );
+  await queryClient.prefetchQuery(
+    appListingOptions(id, queryMarket(market, app.country)),
+  );
+  await firstRun;
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
@@ -73,7 +94,12 @@ export default async function AppOverviewPage({
           <Suspense fallback={<Skeleton className="h-12 w-full max-w-md" />}>
             <SnapshotFacts id={id} />
           </Suspense>
-          <PrintReportButton />
+          <div className="flex flex-wrap items-center gap-3">
+            <Suspense fallback={<MarketSwitcherSkeleton />}>
+              <MarketSwitcher id={id} />
+            </Suspense>
+            <PrintReportButton />
+          </div>
         </div>
 
         <Suspense fallback={<StatCardsSkeleton />}>
