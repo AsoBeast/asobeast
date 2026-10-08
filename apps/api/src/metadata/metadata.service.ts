@@ -136,7 +136,7 @@ export class MetadataService {
           : row,
       ),
       keywordFieldSuggestion:
-        home && app.store === Store.APP_STORE
+        home && localization === null && app.store === Store.APP_STORE
           ? this.suggestion(
               active.filter((item) => item.country === app.country),
               coverage.filter((row) => row.country === app.country),
@@ -149,7 +149,7 @@ export class MetadataService {
   }
 
   private async readListings(
-    app: { id: string; country: string },
+    app: { id: string; store: Store; country: string },
     market: string,
     localization: AppStoreLocalization | null,
     active: TrackedKeywordItem[],
@@ -160,12 +160,12 @@ export class MetadataService {
       app.country,
       [app.country, market, ...active.map((item) => item.country)],
     );
-    const localized = await latestLocalizedTexts(
-      this.prisma,
-      app.id,
-      app.country,
-      [...listings.keys()],
-    );
+    const localized =
+      app.store === Store.APP_STORE
+        ? await latestLocalizedTexts(this.prisma, app.id, app.country, [
+            ...listings.keys(),
+          ])
+        : new Map<string, LocalizedTexts[]>();
     const view =
       localization === null
         ? listings.get(market)

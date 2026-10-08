@@ -49,19 +49,30 @@ export async function latestLocalizedTexts(
   markets: readonly string[],
 ): Promise<Map<string, LocalizedTexts[]>> {
   const entries = await Promise.all(
-    [...new Set(markets)].map(async (market) => {
-      const found = await Promise.all(
-        nativeLocalizations(market).map(async (localization) => {
-          const texts = await prisma.appSnapshot.findFirst({
-            where: { appId, ...listingIn(home, market, localization) },
-            orderBy: NEWEST_FIRST,
-            select: TEXT_SELECT,
-          });
-          return texts ? [{ localization, texts }] : [];
-        }),
-      );
-      return [market, found.flat()] as const;
-    }),
+    [...new Set(markets)].map(
+      async (market): Promise<[string, LocalizedTexts[]]> => {
+        const tags = nativeLocalizations(market);
+        if (tags.length === 0) return [market, []];
+        const rows = await prisma.appSnapshot.findMany({
+          where: {
+            appId,
+            ...listingIn(home, market),
+            localization: { in: [...tags] },
+          },
+          orderBy: NEWEST_FIRST,
+          distinct: ['localization'],
+          select: { ...TEXT_SELECT, localization: true },
+        });
+        return [
+          market,
+          tags.flatMap((localization) =>
+            rows
+              .filter((row) => row.localization === localization)
+              .map((texts) => ({ localization, texts })),
+          ),
+        ];
+      },
+    ),
   );
   return new Map(entries);
 }

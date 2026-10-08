@@ -53,6 +53,7 @@ const build = (
   options: {
     listings?: Record<string, ReturnType<typeof listing>>;
     tracked?: TrackedKeywordItem[];
+    country?: string;
   } = {},
 ) => {
   const listings = options.listings ?? {
@@ -60,6 +61,19 @@ const build = (
     de: listing('snap_de', 'Fokus Timer'),
   };
   const appSnapshot = {
+    findMany: jest.fn(
+      ({
+        where,
+      }: {
+        where: { country: string | null; localization: { in: string[] } };
+      }) =>
+        Promise.resolve(
+          where.localization.in.flatMap((tag) => {
+            const found = listings[`${where.country ?? 'home'}:${tag}`];
+            return found ? [{ ...found, localization: tag }] : [];
+          }),
+        ),
+    ),
     findFirst: jest.fn(
       ({
         where,
@@ -89,7 +103,7 @@ const build = (
         id: 'app_1',
         store,
         name: 'Focus Timer',
-        country: 'us',
+        country: options.country ?? 'us',
       }),
       findMany: jest.fn().mockResolvedValue([]),
     },
@@ -162,6 +176,23 @@ describe('MetadataService.audit', () => {
         { field: 'subtitle', covered: false },
       ],
     });
+  });
+
+  it('suggests no keyword field while a localization is read', async () => {
+    const { service } = build(Store.APP_STORE, {
+      listings: {
+        home: listing('snap_us', 'Where Am I? GeoGuess Map Quiz'),
+        'home:pl': listing('snap_us_pl', 'Where Am I? Quiz Geograficzny'),
+      },
+      tracked: [tracked('quiz geograficzny', 'pl')],
+      country: 'pl',
+    });
+
+    const result = await service.audit('app_1', undefined, 'pl');
+
+    expect(result.localization).toBe('pl');
+
+    expect(result.keywordFieldSuggestion).toBeNull();
   });
 
   it('never reads screenshots for a google play audit', async () => {
