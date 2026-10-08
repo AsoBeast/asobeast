@@ -11,6 +11,7 @@ import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
+import { ocrRecipe } from '../src/screenshots/ocr-languages';
 import { ScreenshotImageSource } from '../src/store-providers/screenshot-image.source';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -155,10 +156,10 @@ describe('Screenshots of localized listings (e2e)', () => {
     const dutch = rows.filter((row) => row.snapshot.localization === 'nl');
     const english = rows.filter((row) => row.snapshot.localization === null);
     expect(dutch.map((row) => [row.recipe, row.caption])).toEqual([
-      ['ocr1:eng', 'Volg je gewoontes'],
+      [ocrRecipe(['eng']), 'Volg je gewoontes'],
     ]);
     expect(new Set(english.map((row) => row.recipe))).toEqual(
-      new Set(['ocr1:eng+fra']),
+      new Set([ocrRecipe(['eng', 'fra'])]),
     );
     expect(ENGLISH.screenshots).toHaveLength(english.length);
   });

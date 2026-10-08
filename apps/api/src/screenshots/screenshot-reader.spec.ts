@@ -1,7 +1,7 @@
 import { Store } from '@prisma/client';
 import { ScreenshotFetchError } from '../store-providers/errors';
 import type { ScreenshotImageSource } from '../store-providers/screenshot-image.source';
-import { OCR_LANGUAGES, ocrLanguagesFor } from './ocr-languages';
+import { OCR_LANGUAGES, ocrLanguagesFor, ocrRecipe } from './ocr-languages';
 import { prepareForOcr } from './image-preprocess';
 import type { OcrEngine } from './ocr-engine';
 import type { CaptionChangeRecorder } from './caption-change-recorder';
@@ -266,7 +266,7 @@ describe('ScreenshotReader.read', () => {
 
     await reader.read('snap_1');
 
-    expect(find).toHaveBeenCalledWith(asset(1), 'ocr1:eng');
+    expect(find).toHaveBeenCalledWith(asset(1), ocrRecipe(['eng']));
     expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng']);
     expect(captionChanges.record).toHaveBeenCalledWith(
       expect.objectContaining({
