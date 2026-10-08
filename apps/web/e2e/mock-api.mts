@@ -2242,16 +2242,38 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/refresh$/,
-    handler: (_p, req, res) =>
-      new URL(req.url ?? "/", "http://localhost").searchParams.get(
-        "country",
-      ) === "pl"
-        ? json(res, 200, {
-            snapshotId: "snap-pl",
-            changes: [{ field: "title", before: 8, after: 18 }],
-            country: "pl",
-          })
-        : json(res, 200, { snapshotId: "snap-1", changes: [] }),
+    handler: (params, req, res) => {
+      const country = new URL(
+        req.url ?? "/",
+        "http://localhost",
+      ).searchParams.get("country");
+      if (country === "pl") {
+        return json(res, 200, {
+          snapshotId: "snap-pl",
+          changes: [{ field: "title", before: 8, after: 18 }],
+          country: "pl",
+        });
+      }
+      if (params[0] === "app-2") {
+        return json(res, 200, {
+          snapshotId: "snap-2",
+          changes: [
+            {
+              field: "icon",
+              before: "https://is1-ssl.mzstatic.com/image/thumb/a/icon.png",
+              after: "https://is1-ssl.mzstatic.com/image/thumb/b/icon.png",
+            },
+            {
+              field: "screenshotImages",
+              before: "8 screenshots",
+              after: "8 screenshots, reordered",
+            },
+          ],
+          country: "us",
+        });
+      }
+      return json(res, 200, { snapshotId: "snap-1", changes: [] });
+    },
   },
   {
     method: "POST",

@@ -117,7 +117,7 @@ test("refreshes the market being looked at", async ({ page }) => {
     name: "Snapshot refreshed in Poland",
   });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("cell", { name: "title" })).toBeVisible();
+  await expect(dialog.getByRole("cell", { name: "Title" })).toBeVisible();
   expect(refreshed).toEqual(["/api/backend/apps/app-1/refresh?country=pl"]);
   await dialog.getByRole("button", { name: "Close" }).click();
 
