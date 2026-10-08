@@ -213,6 +213,42 @@ describe('ListingCaptureService localized listings', () => {
 
     expect(order).toEqual(['localizations', 'sync']);
   });
+
+  it('records the changes of the default listing before it asks for a localization', async () => {
+    const order: string[] = [];
+    const { service, capture } = build({
+      recordRefresh: jest.fn(() => {
+        order.push('record');
+        return Promise.resolve([]);
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
+    });
+
+    await service.refresh(APP.id);
+
+    expect(order).toEqual(['record', 'localizations']);
+  });
+
+  it('records the changes of a market listing before it asks for a localization', async () => {
+    const order: string[] = [];
+    const { service, capture } = build({
+      recordMarketRefresh: jest.fn(() => {
+        order.push('record');
+        return Promise.resolve([]);
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
+    });
+
+    await service.refreshListing(APP.id, 'pl');
+
+    expect(order).toEqual(['record', 'localizations']);
+  });
 });
 
 describe('ListingCaptureService screenshots', () => {

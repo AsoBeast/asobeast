@@ -7,10 +7,6 @@ import {
 import { App } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
-import {
-  DetectedChange,
-  DiffableChangeSnapshot,
-} from '../changes/change-detector';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
@@ -143,15 +139,16 @@ export class ListingCaptureService {
       : null;
     const after = toChangeSnapshot(snapshot, icons.after, app.store);
 
-    const localized = await this.localizations.capture(app, market, snapshot);
     const recorded = home
-      ? await this.recordHomeRefresh(app.id, before, after)
+      ? await this.changes.recordRefresh(app.id, before, after)
       : await this.changes.recordMarketRefresh(
           app.id,
           { home: app.country, market },
           before,
           after,
         );
+    const localized = await this.localizations.capture(app, market, snapshot);
+    if (home) await this.keywords.syncFromSnapshot(app.id);
 
     return {
       snapshotId: snapshot.id,
@@ -161,14 +158,5 @@ export class ListingCaptureService {
       ],
       country: market,
     };
-  }
-
-  private async recordHomeRefresh(
-    appId: string,
-    before: DiffableChangeSnapshot | null,
-    after: DiffableChangeSnapshot,
-  ): Promise<DetectedChange[]> {
-    await this.keywords.syncFromSnapshot(appId);
-    return this.changes.recordRefresh(appId, before, after);
   }
 }
