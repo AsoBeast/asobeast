@@ -7,7 +7,10 @@ import {
 import { App, AppSnapshot, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
-import { DiffableChangeSnapshot } from '../changes/change-detector';
+import {
+  DetectedChange,
+  DiffableChangeSnapshot,
+} from '../changes/change-detector';
 import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,7 +26,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
-import { diffSnapshots } from './snapshot-diff';
+import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 @Injectable()
 export class ListingCaptureService {
@@ -142,23 +145,29 @@ export class ListingCaptureService {
       : null;
     const after = this.toChangeSnapshot(snapshot, icons.after, app.store);
 
-    if (home) {
-      await this.keywords.syncFromSnapshot(app.id);
-      await this.changes.recordRefresh(app.id, before, after);
-    } else {
-      await this.changes.recordMarketRefresh(
-        app.id,
-        { home: app.country, market },
-        before,
-        after,
-      );
-    }
+    const recorded = home
+      ? await this.recordHomeRefresh(app.id, before, after)
+      : await this.changes.recordMarketRefresh(
+          app.id,
+          { home: app.country, market },
+          before,
+          after,
+        );
 
     return {
       snapshotId: snapshot.id,
-      changes: diffSnapshots(previous, snapshot),
+      changes: withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
       country: market,
     };
+  }
+
+  private async recordHomeRefresh(
+    appId: string,
+    before: DiffableChangeSnapshot | null,
+    after: DiffableChangeSnapshot,
+  ): Promise<DetectedChange[]> {
+    await this.keywords.syncFromSnapshot(appId);
+    return this.changes.recordRefresh(appId, before, after);
   }
 
   private toChangeSnapshot(

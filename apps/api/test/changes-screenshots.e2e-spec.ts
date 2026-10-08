@@ -3,7 +3,12 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
-import { AppDetail, ChangeEventItem, ChangeTimeline } from '@asobeast/shared';
+import {
+  AppDetail,
+  ChangeEventItem,
+  ChangeTimeline,
+  SnapshotDiffResult,
+} from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { AppModule } from '../src/app.module';
@@ -77,11 +82,23 @@ describe('Screenshot change events (e2e)', () => {
     return events.filter((event) => event.field.startsWith('screenshot'));
   };
 
+  const refreshedChanges = async (appId: string) =>
+    (
+      (await api.post(`/apps/${appId}/refresh`).expect(200))
+        .body as SnapshotDiffResult
+    ).changes;
+
   it('reports a replaced screenshot as one screenshot images event', async () => {
     const appId = await importApp();
     registry.screenshots = [appleShot(1), appleShot(9), appleShot(3)];
 
-    await api.post(`/apps/${appId}/refresh`).expect(200);
+    await expect(refreshedChanges(appId)).resolves.toEqual([
+      {
+        field: 'screenshotImages',
+        before: '3 screenshots',
+        after: '3 screenshots, 1 replaced',
+      },
+    ]);
 
     const events = await screenshotEvents(appId);
     expect(events).toHaveLength(1);
@@ -97,7 +114,13 @@ describe('Screenshot change events (e2e)', () => {
     const appId = await importApp();
     registry.screenshots = [appleShot(3), appleShot(2), appleShot(1)];
 
-    await api.post(`/apps/${appId}/refresh`).expect(200);
+    await expect(refreshedChanges(appId)).resolves.toEqual([
+      {
+        field: 'screenshotImages',
+        before: '3 screenshots',
+        after: '3 screenshots, reordered',
+      },
+    ]);
 
     const events = await screenshotEvents(appId);
     expect(events).toHaveLength(1);
@@ -112,7 +135,9 @@ describe('Screenshot change events (e2e)', () => {
     const appId = await importApp();
     registry.screenshots = [1, 2, 3, 4].map(appleShot);
 
-    await api.post(`/apps/${appId}/refresh`).expect(200);
+    await expect(refreshedChanges(appId)).resolves.toEqual([
+      { field: 'screenshots', before: '3', after: '4' },
+    ]);
 
     const events = await screenshotEvents(appId);
     expect(events).toHaveLength(1);
@@ -127,7 +152,7 @@ describe('Screenshot change events (e2e)', () => {
   it('reports nothing when the list is identical', async () => {
     const appId = await importApp();
 
-    await api.post(`/apps/${appId}/refresh`).expect(200);
+    await expect(refreshedChanges(appId)).resolves.toEqual([]);
 
     await expect(screenshotEvents(appId)).resolves.toEqual([]);
   });

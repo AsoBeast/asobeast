@@ -11,8 +11,19 @@ export interface DiffableSnapshot {
   version: string | null;
 }
 
+interface RecordedChange {
+  field: string;
+  before: string | null;
+  after: string | null;
+}
+
 const TEXT_FIELDS = ['title', 'subtitle', 'summary', 'description'] as const;
 const VALUE_FIELDS = ['ratingAvg', 'ratingCount', 'version'] as const;
+const DIFFED_FIELDS: ReadonlySet<string> = new Set([
+  ...TEXT_FIELDS,
+  ...VALUE_FIELDS,
+  'installs',
+]);
 
 export function diffSnapshots(
   prev: DiffableSnapshot | null,
@@ -49,6 +60,18 @@ export function diffSnapshots(
   }
 
   return changes;
+}
+
+export function withRecordedChanges(
+  diff: SnapshotChange[],
+  recorded: readonly RecordedChange[],
+): SnapshotChange[] {
+  return [
+    ...diff,
+    ...recorded
+      .filter((change) => !DIFFED_FIELDS.has(change.field))
+      .map(({ field, before, after }) => ({ field, before, after })),
+  ];
 }
 
 function textLength(value: string | null): number | null {

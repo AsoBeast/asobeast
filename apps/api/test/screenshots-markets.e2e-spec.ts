@@ -232,6 +232,30 @@ describe('Screenshots of market listings (e2e)', () => {
     await expect(events(appId, 'screenshotImages')).resolves.toEqual([]);
   });
 
+  it('lists the screenshot reorder of a market in its refresh answer', async () => {
+    engineRead.mockResolvedValue(lines('Track habits'));
+    const appId = await importAndRead();
+    await trackIn(appId, 'de');
+    registry.markets.set('de', [appleShot(5), appleShot(6)]);
+    await refreshAndRead(appId, 'de');
+    registry.markets.set('de', [appleShot(6), appleShot(5)]);
+
+    const response = await api
+      .post(`/apps/${appId}/refresh?country=de`)
+      .expect(200);
+    const body = response.body as SnapshotDiffResult;
+    await readsFinished(app, prisma, body.snapshotId);
+
+    expect(body.country).toBe('de');
+    expect(body.changes).toEqual([
+      {
+        field: 'screenshotImages',
+        before: '2 screenshots',
+        after: '2 screenshots, reordered',
+      },
+    ]);
+  });
+
   it('reads the screenshots of a market listing with the language of that storefront', async () => {
     engineRead.mockResolvedValue(lines('Track habits'));
     const appId = await importAndRead();

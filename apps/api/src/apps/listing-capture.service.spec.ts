@@ -29,9 +29,24 @@ const SNAPSHOT = {
   capturedAt: new Date('2026-10-08T03:00:00.000Z'),
 };
 
+const REORDERED = {
+  field: 'screenshotImages',
+  before: '3 screenshots',
+  after: '3 screenshots, reordered',
+  detail: {
+    kind: 'images',
+    before: [],
+    after: [],
+    added: [],
+    removed: [],
+    reordered: true,
+  },
+};
+
 const build = (overrides: {
   syncFromSnapshot?: jest.Mock;
   recordRefresh?: jest.Mock;
+  recordMarketRefresh?: jest.Mock;
 }) => {
   const tx = {
     appSnapshot: { create: jest.fn().mockResolvedValue(SNAPSHOT) },
@@ -65,7 +80,8 @@ const build = (overrides: {
   } as unknown as KeywordsService;
   const changes = {
     recordRefresh: overrides.recordRefresh ?? jest.fn().mockResolvedValue([]),
-    recordMarketRefresh: jest.fn().mockResolvedValue([]),
+    recordMarketRefresh:
+      overrides.recordMarketRefresh ?? jest.fn().mockResolvedValue([]),
   } as unknown as ChangesService;
   const record = jest.fn().mockResolvedValue(2);
   const screenshots = { record } as unknown as ScreenshotRecorder;
@@ -109,6 +125,43 @@ describe('ListingCaptureService.refresh', () => {
     await expect(service.refresh(APP.id)).rejects.toThrow('changes failed');
 
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
+  });
+});
+
+describe('ListingCaptureService refresh answer', () => {
+  it('answers with the screenshot change the home refresh recorded', async () => {
+    const { service } = build({
+      recordRefresh: jest.fn().mockResolvedValue([REORDERED]),
+    });
+
+    await expect(service.refresh(APP.id)).resolves.toEqual({
+      snapshotId: SNAPSHOT.id,
+      changes: [
+        {
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, reordered',
+        },
+      ],
+      country: 'us',
+    });
+  });
+
+  it('answers with the screenshot change a market refresh recorded', async () => {
+    const { service } = build({
+      recordMarketRefresh: jest.fn().mockResolvedValue([REORDERED]),
+    });
+
+    await expect(service.refreshListing(APP.id, 'de')).resolves.toMatchObject({
+      changes: [
+        {
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, reordered',
+        },
+      ],
+      country: 'de',
+    });
   });
 });
 
