@@ -34,26 +34,19 @@ for (const theme of THEMES) {
       page,
     }) => {
       const signIn = page.getByRole("button", { name: "Sign in" });
+      const settlesOn = (expected: Rgb) =>
+        expect
+          .poll(async () =>
+            channelGap(await renderedRgb(signIn, "backgroundColor"), expected),
+          )
+          .toBeLessThanOrEqual(1);
+      const ink = await renderedTokenRgb(page, "--neutral-950");
 
-      expect(
-        channelGap(
-          await renderedRgb(signIn, "backgroundColor"),
-          LANDING_ORANGE,
-        ),
-      ).toBeLessThanOrEqual(1);
-      expect(await renderedRgb(signIn, "color")).toEqual(
-        await renderedTokenRgb(page, "--neutral-950"),
-      );
+      await settlesOn(LANDING_ORANGE);
+      await expect.poll(() => renderedRgb(signIn, "color")).toEqual(ink);
 
       await signIn.hover();
-      await expect
-        .poll(async () =>
-          channelGap(
-            await renderedRgb(signIn, "backgroundColor"),
-            LANDING_HOVER,
-          ),
-        )
-        .toBeLessThanOrEqual(1);
+      await settlesOn(LANDING_HOVER);
     });
 
     test("the primary button shows a solid ring offset from its fill", async ({
