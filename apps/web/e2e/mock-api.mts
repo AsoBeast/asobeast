@@ -26,6 +26,8 @@ import {
   METADATA_AUDIT_PL,
   MARKET_BUDGET,
   METADATA_AUDITS,
+  UNREAD_MARKET_COOKIE,
+  UNREAD_MARKET_COVERAGE_ROW,
   APP_1_LISTING_MARKETS,
   APP_1_PL_CHANGES,
   APP_1_PL_DETAIL,
@@ -1806,7 +1808,12 @@ const routes: Route[] = [
           store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
           coverage:
             market === null
-              ? audit.coverage
+              ? [
+                  ...audit.coverage,
+                  ...(hasCookie(req, UNREAD_MARKET_COOKIE, "1")
+                    ? [UNREAD_MARKET_COVERAGE_ROW]
+                    : []),
+                ]
               : audit.coverage.filter((row) => (row.country ?? home) === home),
         }),
       );

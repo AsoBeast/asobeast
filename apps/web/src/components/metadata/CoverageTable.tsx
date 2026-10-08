@@ -33,12 +33,31 @@ import {
   FIELD_ORDER,
   HIDDEN_COVERAGE_COLUMNS,
 } from "./coverage-columns";
+import {
+  screenshotTextMark,
+  showsScreenshotText,
+} from "./screenshot-text-marks";
 
 const COVERAGE_PARAMS = {
   ...coverageFilterParsers,
   sort: coverageSortParser,
   dir: sortDirectionParser,
 };
+
+function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
+  const withUnreadListing = rows.some(
+    (row) => screenshotTextMark(row) === "unread",
+  );
+  return (
+    <p className="text-body text-muted-foreground">
+      Screenshot text is a weak signal that Apple has not confirmed. It never
+      changes whether a keyword counts as covered.
+      {withUnreadListing
+        ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
+        : null}
+    </p>
+  );
+}
 
 export function CoverageTable({
   rows,
@@ -54,7 +73,7 @@ export function CoverageTable({
     );
     return FIELD_ORDER.filter((field) => present.has(field));
   }, [rows]);
-  const withScreenshotText = screenshotText?.status === "ready";
+  const withScreenshotText = showsScreenshotText(rows, screenshotText);
   const columns = useMemo(
     () => coverageColumns(fields, withScreenshotText),
     [fields, withScreenshotText],
@@ -187,12 +206,7 @@ export function CoverageTable({
           ))}
         </TableBody>
       </Table>
-      {withScreenshotText ? (
-        <p className="text-body text-muted-foreground">
-          Screenshot text is a weak signal that Apple has not confirmed. It
-          never changes whether a keyword counts as covered.
-        </p>
-      ) : null}
+      {withScreenshotText ? <ScreenshotTextNote rows={rows} /> : null}
     </div>
   );
 }

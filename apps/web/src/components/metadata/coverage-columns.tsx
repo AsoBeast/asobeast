@@ -1,7 +1,7 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { Check, Minus } from "lucide-react";
+import { Check, CircleDashed, Minus } from "lucide-react";
 import {
   KEYWORD_BUCKETS,
   type KeywordCoverageRow,
@@ -13,6 +13,7 @@ import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
+import { screenshotTextMark } from "./screenshot-text-marks";
 
 export const HIDDEN_COVERAGE_COLUMNS = { uncovered: false };
 
@@ -48,6 +49,24 @@ function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
         {covered ? "in" : "missing from"} {label}
       </span>
     </span>
+  );
+}
+
+function NotReadMark({ label }: { label: string }) {
+  return (
+    <span className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground">
+      <CircleDashed className="size-4" />
+      <span className="sr-only">{label} not read</span>
+    </span>
+  );
+}
+
+function ScreenshotTextCell({ row }: { row: KeywordCoverageRow }) {
+  const mark = screenshotTextMark(row);
+  return mark === "unread" ? (
+    <NotReadMark label="screenshot text" />
+  ) : (
+    <CoverageMark covered={mark === "covered"} label="screenshot text" />
   );
 }
 
@@ -108,12 +127,7 @@ export function coverageColumns(
           columnHelper.display({
             id: "screenshotText",
             header: "Screenshot text",
-            cell: ({ row }) => (
-              <CoverageMark
-                covered={row.original.screenshotText?.covered ?? false}
-                label="screenshot text"
-              />
-            ),
+            cell: ({ row }) => <ScreenshotTextCell row={row.original} />,
           }),
         ]
       : []),

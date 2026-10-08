@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
+import { UNREAD_MARKET_COOKIE } from "./fixtures.mts";
 import { seedCookies } from "./routes.mts";
 
 const strip = (page: Page) =>
@@ -46,6 +47,29 @@ test("adds a screenshot text column that does not count as coverage", async ({
   await expect(
     page.getByText(
       "Screenshot text is a weak signal that Apple has not confirmed. It never changes whether a keyword counts as covered.",
+    ),
+  ).toBeVisible();
+});
+
+test("marks a keyword whose market listing was never read as not read", async ({
+  page,
+  context,
+}) => {
+  await seedCookies(context, { [UNREAD_MARKET_COOKIE]: "1" });
+  await page.goto("/apps/app-1/metadata");
+
+  const table = coverageTable(page);
+  const unread = table.getByRole("row", { name: /minuteur focus/ });
+  await expect(unread.getByText("screenshot text not read")).toBeAttached();
+  await expect(unread.getByText("missing from screenshot text")).toHaveCount(0);
+  await expect(
+    table
+      .getByRole("row", { name: /pomodoro/ })
+      .getByText("missing from screenshot text"),
+  ).toBeAttached();
+  await expect(
+    page.getByText(
+      "A dashed circle means the screenshots of that keyword's listing have not been read yet.",
     ),
   ).toBeVisible();
 });

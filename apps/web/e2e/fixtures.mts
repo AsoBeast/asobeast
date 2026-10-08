@@ -3207,6 +3207,21 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   screenshotText: { status: "ready", read: 2, total: 4 },
 };
 
+export const UNREAD_MARKET_COOKIE = "e2e_unread_market_listing";
+
+export const UNREAD_MARKET_COVERAGE_ROW: KeywordCoverageRow = {
+  keywordId: "kw-fr-1",
+  text: "minuteur focus",
+  bucket: null,
+  fields: [
+    { field: "title", covered: false },
+    { field: "subtitle", covered: true },
+  ],
+  uncovered: false,
+  country: "fr",
+  listingCountry: "fr",
+};
+
 export const APP_1_SCREENSHOTS: AppScreenshots = {
   appId: "app-1",
   store: "APP_STORE",
