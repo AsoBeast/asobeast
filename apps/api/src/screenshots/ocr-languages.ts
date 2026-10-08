@@ -12,6 +12,7 @@ export const OCR_LANGUAGES = [
   'rus',
   'ara',
   'tha',
+  'pol',
 ] as const;
 
 export type OcrLanguage = (typeof OCR_LANGUAGES)[number];
@@ -72,6 +73,7 @@ const STOREFRONT_LANGUAGE: Readonly<Record<string, OcrLanguage>> = {
   br: 'por',
   pt: 'por',
   it: 'ita',
+  pl: 'pol',
 };
 
 export function ocrLanguagesFor(

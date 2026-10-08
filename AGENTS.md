@@ -343,7 +343,7 @@ OPENAI_API_KEY=                     # optional; enables the AI audit + metadata 
 AI_MODEL=gpt-5.6-luna               # OpenAI model with vision + structured outputs
 AI_CALLS_PER_MONTH=                 # optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true
 SCREENSHOT_OCR=true                 # read the caption text printed on app store screenshots on this machine; false records the screenshot list and detects image changes but downloads and reads nothing
-SCREENSHOT_OCR_LANGUAGES=eng,deu,fra,spa,por,ita,jpn,kor,chi_sim,chi_tra,rus,ara,tha  # bundled language packs the reader may use; a storefront reads English plus its own language; REFUSES TO BOOT on a name that is not bundled
+SCREENSHOT_OCR_LANGUAGES=eng,deu,fra,spa,por,ita,jpn,kor,chi_sim,chi_tra,rus,ara,tha,pol  # bundled language packs the reader may use; a storefront reads English plus its own language; REFUSES TO BOOT on a name that is not bundled
 BULL_BOARD_ENABLED=true             # queue dashboard at /admin/queues; platform-operator only, proxied through the web app
 API_DOCS=owner                      # openapi surface: owner (platform-operator session or asob_ token), public, or off. WARNS in production when public
 METRICS_CACHE_SECONDS=30            # how long one /metrics scrape is reused before the collectors run again; 0 collects on every scrape

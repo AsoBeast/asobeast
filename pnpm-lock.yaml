@@ -131,6 +131,9 @@ importers:
       '@tesseract.js-data/kor':
         specifier: ^1.0.0
         version: 1.0.0
+      '@tesseract.js-data/pol':
+        specifier: ^1.0.0
+        version: 1.0.0
       '@tesseract.js-data/por':
         specifier: ^1.0.0
         version: 1.0.0
@@ -3662,6 +3665,9 @@ packages:
 
   '@tesseract.js-data/kor@1.0.0':
     resolution: {integrity: sha512-tepYhsYiRJ8E44R27MHxVteEDDLfYQxuvM6u4JlEHcCYqwpefvI5TGzoMgB67kunOvtyEJYtT5zfJ/6R6FVU9w==}
+
+  '@tesseract.js-data/pol@1.0.0':
+    resolution: {integrity: sha512-e9naSi/5kIXIMsymriFMUXJ2XWxRY/09qU9pkmEN28nAeMyF70EYkn4G3iHoB2oF/HNhZpy8lCIe1/I2L/BqKA==}
 
   '@tesseract.js-data/por@1.0.0':
     resolution: {integrity: sha512-sQ7GqYUgKaMmV0vNujYoXLlXUp2e5RGGkJxQ3L59kUOaupIugLJeb1dqhrfgyb71XQw7ltdSuXdQIoaoS/rpsQ==}
@@ -12103,6 +12109,8 @@ snapshots:
   '@tesseract.js-data/jpn@1.0.0': {}
 
   '@tesseract.js-data/kor@1.0.0': {}
+
+  '@tesseract.js-data/pol@1.0.0': {}
 
   '@tesseract.js-data/por@1.0.0': {}
 
