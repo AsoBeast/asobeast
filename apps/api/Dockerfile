@@ -16,6 +16,7 @@ COPY --from=pruner /repo/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 RUN pnpm install --frozen-lockfile
 COPY --from=pruner /repo/out/full/ .
 RUN pnpm turbo run build --filter=api
+RUN find /repo/node_modules/.pnpm -path '*@tesseract.js-data*' -name 4.0.0 -type d -prune -exec rm -rf {} +
 
 FROM base AS runner
 ENV NODE_ENV=production
