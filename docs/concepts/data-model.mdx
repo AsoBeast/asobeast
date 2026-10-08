@@ -16,7 +16,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `ApiToken` | A revocable personal API token | Stored as a SHA-256 hash, never as plaintext |
 | `AppGroup` | A linked group of listings across stores | Unique on group and store, so a group holds one app per store |
 | `App` | One tracked listing | Unique on workspace, store, store app id and country |
-| `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing |
+| `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing. One stream per market: a snapshot with no market is the home listing |
 | `Keyword` | A phrase in one store and one storefront | Unique on `text`, `store`, `country` |
 | `TrackedKeyword` | The link between an app and a keyword | Keyed on app and keyword, carries `source` and `relevance` |
 | `KeywordMetric` | Persisted popularity and difficulty for a day | Keyed on keyword and date |
@@ -24,7 +24,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `SerpEntry` | One search result row for a keyword and day | Keyed on keyword, date and position |
 | `CategoryRank` | A free, paid or grossing chart position | Keyed on app, date, collection and genre |
 | `Review` | A synced store review | Unique on app and store review id |
-| `ChangeEvent` | A detected metadata change | Covers owned and competitor apps |
+| `ChangeEvent` | A detected metadata change | Covers owned and competitor apps, in the home market or any other market you track |
 | `AuditScore` | A daily audit score snapshot | Keyed on app and date |
 | `ActionItem` | One Action Center recommendation | Unique on workspace and fingerprint |
 | `ActionEvent` | One lifecycle transition of an action | Tenant owned, pruned with its action |

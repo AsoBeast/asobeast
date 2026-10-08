@@ -9,6 +9,7 @@ import {
   ImpactReadPlan,
   measureChangeImpact,
 } from './change-impact';
+import { HOME_EVENTS } from '../apps/listing';
 
 @Injectable()
 export class ChangeImpactService {
@@ -30,7 +31,11 @@ export class ChangeImpactService {
     const market = country ?? app.country;
     const today = utcToday();
     const events = await this.prisma.changeEvent.findMany({
-      where: { appId: app.id, capturedAt: { gte: addDays(today, -days) } },
+      where: {
+        appId: app.id,
+        ...HOME_EVENTS,
+        capturedAt: { gte: addDays(today, -days) },
+      },
       select: { field: true, capturedAt: true },
     });
     const changes = changeDays(

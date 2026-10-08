@@ -40,6 +40,7 @@ import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
 import { bucketPositions, rankDistributionAt } from './rank-distribution';
 import { collapseRatings } from './ratings-history';
+import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 const SUMMARY_WINDOW_DAYS = 31;
 const COVERAGE_LIMIT = 5;
@@ -107,8 +108,8 @@ export class AnalyticsService {
     const [rows, snapshot, competitors] = await Promise.all([
       trackedRows(this.prisma, appId, windowStart, reference),
       this.prisma.appSnapshot.findFirst({
-        where: { appId },
-        orderBy: { capturedAt: 'desc' },
+        where: { appId, ...HOME_LISTING },
+        orderBy: NEWEST_FIRST,
         select: {
           title: true,
           subtitle: true,
@@ -209,7 +210,11 @@ export class AnalyticsService {
     }
 
     const rows = await this.prisma.appSnapshot.findMany({
-      where: { appId, capturedAt: { gte: from, lt: addDays(to, 1) } },
+      where: {
+        appId,
+        ...HOME_LISTING,
+        capturedAt: { gte: from, lt: addDays(to, 1) },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { ratingAvg: true, ratingCount: true, capturedAt: true },
     });

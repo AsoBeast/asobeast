@@ -11,7 +11,7 @@ Reviews give asobeast two things a listing cannot: the words your users actually
 
 Reviews sync as part of the daily pipeline, which starts at `CRON_DAILY` and defaults to 03:00 UTC. Each review is stored once, keyed by the app and the store review id, so re running a sync does not duplicate rows.
 
-Review sync is home market only in v1, like snapshots and category ranks. See [Countries and markets](/concepts/countries).
+Review sync stays on the home market, like category ranks and the ratings history. See [Countries and markets](/concepts/countries).
 
 Stored reviews are listed on the app's reviews page, filtered by star and version, and export to CSV. The version filter lists the newest version first and compares the numbers in each version, so `3.123.0` ranks above `3.95.0` and `450.0.0.24.77` above `6.12.2`. See [Export reviews to CSV](/guides/export-data#export-reviews-to-csv).
 

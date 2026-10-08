@@ -17,7 +17,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { QUEUES } from '../src/jobs/jobs.types';
+import { JOBS, QUEUES } from '../src/jobs/jobs.types';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 import { seedApiToken } from './helpers/api-tokens';
@@ -85,13 +85,22 @@ describe('Keyword import (e2e)', () => {
         .expect(200)
     ).body as KeywordImportResult;
 
+  const appStoreQueue = () =>
+    app.get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false });
+
   const queuedJobs = async (): Promise<number> => {
-    const queue = app.get<Queue>(getQueueToken(QUEUES.APP_STORE), {
-      strict: false,
-    });
-    const counts = await queue.getJobCounts('waiting', 'paused', 'delayed');
+    const counts = await appStoreQueue().getJobCounts(
+      'waiting',
+      'paused',
+      'delayed',
+    );
     return Object.values(counts).reduce((total, count) => total + count, 0);
   };
+
+  const queuedScores = async (): Promise<number> =>
+    (await appStoreQueue().getJobs(['waiting', 'paused', 'delayed'])).filter(
+      (job) => job.name === JOBS.SCORE_KEYWORD,
+    ).length;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -189,7 +198,7 @@ describe('Keyword import (e2e)', () => {
     expect(result.cost).toEqual({
       store: 'APP_STORE',
       keywordMarkets: 2,
-      dailyRequests: 2,
+      dailyRequests: 3,
     });
   });
 
@@ -504,7 +513,7 @@ describe('Keyword import (e2e)', () => {
 
   it('E-IMP-22 queues one first score per new keyword and none for a skipped row', async () => {
     const id = await importApp();
-    const jobs = await queuedJobs();
+    const scores = await queuedScores();
 
     await commit(id, [
       { keyword: 'habit' },
@@ -513,7 +522,7 @@ describe('Keyword import (e2e)', () => {
       { keyword: '' },
     ]);
 
-    expect(await queuedJobs()).toBe(jobs + 2);
+    expect(await queuedScores()).toBe(scores + 2);
   });
 
   it('E-IMP-23 imports the largest request of realistic rows', async () => {

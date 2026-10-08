@@ -1,30 +1,44 @@
 import { Suspense } from "react";
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
-import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
-import { CoverageTable } from "@/components/metadata/CoverageTable";
-import { MetadataAssistantPanel } from "@/components/metadata/MetadataAssistantPanel";
-import { StorefrontLocalizationsSkeleton } from "@/components/metadata/skeletons";
-import { StorefrontLocalizationsCard } from "@/components/metadata/StorefrontLocalizationsCard";
-import { MetadataFieldCard } from "@/components/MetadataFieldCard";
-import {
-  ApiError,
-  getMetadataAssistantStatus,
-  getMetadataAudit,
-} from "@/lib/api";
+import { MarketSwitcher } from "@/components/app-detail/MarketSwitcher";
+import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
+import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
+import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
+import { ApiError, getMetadataAssistantStatus } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
-import { keywordCountriesOptions } from "@/lib/queries";
+import { queryMarket, resolveMarket } from "@/lib/market";
+import {
+  appDetailOptions,
+  keywordCountriesOptions,
+  listingMarketsOptions,
+  metadataAuditOptions,
+} from "@/lib/queries";
+import { marketParser } from "@/lib/search-params";
 
 export default async function MetadataPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ market?: string | string[] }>;
 }) {
   const { id } = await params;
-  const result = await getMetadataAudit(id).catch((err) => {
-    if (err instanceof ApiError && err.envelope.statusCode === 404) notFound();
-    return null;
-  });
+  const requested = marketParser.parseServerSide((await searchParams).market);
+  const queryClient = getQueryClient();
+  const app = await queryClient.fetchQuery(appDetailOptions(id));
+  const markets = await queryClient
+    .fetchQuery(listingMarketsOptions(id))
+    .catch(() => []);
+  const market = resolveMarket(requested, markets, app.country);
+
+  const result = await queryClient
+    .fetchQuery(metadataAuditOptions(id, queryMarket(market, app.country)))
+    .catch((err) => {
+      if (err instanceof ApiError && err.envelope.statusCode === 404)
+        notFound();
+      return null;
+    });
   if (!result) {
     return (
       <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
@@ -32,8 +46,7 @@ export default async function MetadataPage({
       </div>
     );
   }
-  const queryClient = getQueryClient();
-  const [markets, assistant] = await Promise.all([
+  const [keywordMarkets, assistant] = await Promise.all([
     result.store === "APP_STORE"
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
       : null,
@@ -43,55 +56,16 @@ export default async function MetadataPage({
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
       <div className="page-wide @container/metadata flex flex-col gap-8">
-        <section className="grid grid-cols-1 gap-4 @2xl/metadata:grid-cols-2">
-          {result.fields.map((field) => (
-            <MetadataFieldCard
-              key={field.field}
-              field={field.field}
-              value={field.value ?? ""}
-              limit={field.limit}
-              issues={field.issues}
-            />
-          ))}
-        </section>
-
-        {markets ? (
-          <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
-            <StorefrontLocalizationsCard
-              id={id}
-              canDraft={assistant?.configured === true}
-            />
-          </Suspense>
-        ) : null}
-
-        {assistant?.configured ? (
-          <MetadataAssistantPanel
-            appId={id}
-            store={result.store}
-            canLocalize={markets !== null}
+        <Suspense fallback={<MarketSwitcherSkeleton />}>
+          <MarketSwitcher id={id} />
+        </Suspense>
+        <Suspense fallback={<MetadataAuditSkeleton />}>
+          <MetadataAuditView
+            id={id}
+            canDraft={assistant?.configured === true}
+            hasLocalizations={keywordMarkets !== null}
           />
-        ) : null}
-
-        <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-medium">Keyword coverage</h2>
-          {result.coverage.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-              Track keywords to see how your metadata covers them.
-            </div>
-          ) : (
-            <CoverageTable rows={result.coverage} />
-          )}
-        </section>
-
-        {result.store === "APP_STORE" &&
-        result.keywordFieldSuggestion !== null ? (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-lg font-medium">Suggestion</h2>
-            <KeywordFieldSuggestionCard
-              suggestion={result.keywordFieldSuggestion}
-            />
-          </section>
-        ) : null}
+        </Suspense>
       </div>
     </HydrationBoundary>
   );

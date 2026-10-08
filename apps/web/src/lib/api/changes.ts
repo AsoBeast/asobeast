@@ -4,9 +4,12 @@ import { apiFetch, withQuery } from "./client";
 export function getChanges(
   appId: string,
   days?: number,
+  country?: string,
 ): Promise<ChangeTimeline> {
-  const query = days !== undefined ? `?days=${days}` : "";
-  return apiFetch<ChangeTimeline>(`/apps/${appId}/changes${query}`);
+  const params = new URLSearchParams();
+  if (days !== undefined) params.set("days", String(days));
+  if (country !== undefined) params.set("country", country);
+  return apiFetch<ChangeTimeline>(withQuery(`/apps/${appId}/changes`, params));
 }
 
 export function getChangeImpact(

@@ -21,6 +21,7 @@ import {
   PortfolioSignals,
 } from './portfolio-signals.service';
 import { reviewsWrittenInWindow } from './review-window';
+import { HOME_EVENTS } from '../apps/listing';
 
 const DIGEST_WINDOW_DAYS = 7;
 const DIGEST_MOVER_LIMIT = 3;
@@ -98,6 +99,7 @@ export class DigestService {
       this.prisma.changeEvent.count({
         where: {
           appId: { in: appIds },
+          ...HOME_EVENTS,
           capturedAt: { gte: from, lt: rangeEnd },
         },
       }),

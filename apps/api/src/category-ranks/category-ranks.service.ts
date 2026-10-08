@@ -15,6 +15,7 @@ import {
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { CheckCategoryPayload } from '../jobs/jobs.types';
 import { CategoryRankHistoryQueryDto } from './dto/category-rank-history-query.dto';
+import { LATEST_HOME_LISTING } from '../apps/listing';
 
 const CHART_DEPTH = 200;
 const DEFAULT_HISTORY_DAYS = 90;
@@ -154,8 +155,7 @@ export class CategoryRanksService {
         id: true,
         store: true,
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { raw: true },
         },
       },
@@ -212,8 +212,7 @@ export class CategoryRanksService {
         country: true,
         store: true,
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { raw: true },
         },
       },

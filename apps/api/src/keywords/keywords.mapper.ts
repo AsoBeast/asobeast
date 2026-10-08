@@ -141,6 +141,7 @@ function positionFacts(
 
 export interface AppFacts {
   snapshotText: string;
+  marketTexts?: ReadonlyMap<string, string>;
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -160,7 +161,7 @@ export function toTrackedKeywordItem(
   const { volume, relevance, opportunity } = appOpportunity({
     source,
     keywordText: row.keyword.text,
-    snapshotText: app.snapshotText,
+    snapshotText: app.marketTexts?.get(row.keyword.country) ?? app.snapshotText,
     relevanceOverride: row.relevance,
     traffic,
     difficulty,

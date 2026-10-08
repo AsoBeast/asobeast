@@ -40,6 +40,16 @@ describe("app tools", () => {
     expect(result.content[0]).toMatchObject({ type: "text" });
   });
 
+  it("sends the market a get_app call names", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, APP_TOOLS);
+
+    await tools.get("get_app")!.handler({ appId: "app-1", country: "de" });
+
+    expect(calls[0]?.url).toBe("http://localhost:4000/apps/app-1?country=de");
+  });
+
   it("encodes an app id so it cannot escape its path segment", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));

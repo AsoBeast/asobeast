@@ -11,6 +11,14 @@ export interface AppSnapshotSummary {
   price: number | null;
   version: string | null;
   capturedAt: string;
+  country?: string;
+}
+
+export interface ListingMarket {
+  country: string;
+  home: boolean;
+  capturedAt: string | null;
+  tracked?: boolean;
 }
 
 export interface CompetitorItem {
@@ -84,6 +92,7 @@ export interface SnapshotChange {
 export interface SnapshotDiffResult {
   snapshotId: string;
   changes: SnapshotChange[];
+  country?: string;
 }
 
 export interface AppImportRequest {

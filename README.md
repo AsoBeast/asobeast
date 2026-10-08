@@ -173,7 +173,7 @@ The `1.x` line is current, and the [changelog](CHANGELOG.md) names the latest re
 
 - A per-user permission model finer than owner and member, and one account in several workspaces.
 - Better popularity calibration using licensed or first-party acquisition data.
-- A per-market app detail switcher, so snapshots, reviews and category ranks are not limited to the home storefront.
+- Per-market reviews, category ranks and ratings history. Listings are already captured and switched per market.
 - More MCP write tools behind the same opt-in, one reversible change at a time.
 
 Release policy and the `1.x` compatibility promise: [upgrade and roll back](https://docs.asobeast.com/install/upgrade).

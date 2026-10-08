@@ -20,6 +20,7 @@ import { StoreProviderRegistry } from '../store-providers/store-provider.registr
 import { ReviewResult, StoreProvider } from '../store-providers/types';
 import { SyncReviewsPayload } from '../jobs/jobs.types';
 import { sortVersionsNewestFirst } from './version-order';
+import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 export interface ReviewListFilters {
   score?: number;
@@ -300,8 +301,8 @@ export class ReviewsService {
     }
 
     const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId },
-      orderBy: { capturedAt: 'desc' },
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
       select: { raw: true, capturedAt: true },
     });
     const counts = snapshot && ratingHistogram(app.store, snapshot.raw);

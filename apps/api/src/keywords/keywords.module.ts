@@ -7,6 +7,7 @@ import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordsController } from './keywords.controller';
 import { KeywordsService } from './keywords.service';
+import { MarketListingRequests } from './market-listing.requests';
 import { SpiderService } from './spider.service';
 import { TrackedKeywordAccess } from './tracked-keyword.access';
 
@@ -24,6 +25,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     KeywordImportService,
     KeywordSuggestionService,
     KeywordTracker,
+    MarketListingRequests,
     SpiderService,
     TrackedKeywordAccess,
   ],

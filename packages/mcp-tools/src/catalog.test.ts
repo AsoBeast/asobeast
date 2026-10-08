@@ -64,6 +64,52 @@ describe("the tool catalog", () => {
   });
 });
 
+describe("the market argument", () => {
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "sends %s to one market when asked",
+    (name) => {
+      const request = toolByName(name)?.request({
+        appId: "app-1",
+        country: "de",
+      });
+
+      expect(request?.params).toMatchObject({ country: "de" });
+    },
+  );
+
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "sends %s without a market when none is given",
+    (name) => {
+      const request = toolByName(name)?.request({ appId: "app-1" });
+
+      expect(request?.params?.country).toBeUndefined();
+    },
+  );
+
+  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+    "refuses a market that is not a lowercase two letter code for %s",
+    (name) => {
+      const schema = toolByName(name)?.inputSchema;
+
+      expect(schema?.safeParse({ appId: "app-1", country: "DE" }).success).toBe(
+        false,
+      );
+      expect(schema?.safeParse({ appId: "app-1", country: "de" }).success).toBe(
+        true,
+      );
+    },
+  );
+});
+
+describe("the get_app market", () => {
+  it("promises a market listing only once one was captured", () => {
+    const description = toolByName("get_app")?.description ?? "";
+
+    expect(description).toMatch(/not found until/);
+    expect(description).not.toMatch(/must be one the app tracks keywords in/);
+  });
+});
+
 describe("the competitor, comparison and chart tools", () => {
   it.each([
     "list_competitors",

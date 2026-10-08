@@ -205,4 +205,17 @@ describe('summarize and costOf', () => {
       dailyRequests: 8,
     });
   });
+
+  it('adds one app request a day for every market listing the import starts capturing', () => {
+    expect(costOf(plan.additions, Store.APP_STORE, 3)).toEqual({
+      store: Store.APP_STORE,
+      keywordMarkets: 1,
+      dailyRequests: 4,
+    });
+    expect(costOf(plan.additions, Store.GOOGLE_PLAY, 3)).toEqual({
+      store: Store.GOOGLE_PLAY,
+      keywordMarkets: 1,
+      dailyRequests: 11,
+    });
+  });
 });

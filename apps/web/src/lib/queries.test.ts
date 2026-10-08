@@ -8,6 +8,7 @@ import type {
   WebhookItem,
 } from "@asobeast/shared";
 import { APP_AUDIT_EXAMPLE } from "@/components/audit/audit-example";
+import { queryMarket } from "./market";
 import {
   adminKeys,
   actionActivityOptions,
@@ -53,7 +54,10 @@ import {
   seedWebhook,
   keywordCountriesOptions,
   keywordsOptions,
+  appListingOptions,
+  listingMarketsOptions,
   marketAvailabilityOptions,
+  metadataAuditOptions,
   portfolioInsightsKey,
   portfolioInsightsOptions,
   portfolioKey,
@@ -166,6 +170,13 @@ const APP_SCOPED_OPTIONS = [
     marketAvailabilityOptions(APP, "us"),
     appKeys.marketAvailability(APP, "us"),
   ],
+  ["listingMarkets", listingMarketsOptions(APP), appKeys.listingMarkets(APP)],
+  ["listing", appListingOptions(APP, "de"), appKeys.listing(APP, "de")],
+  [
+    "metadataAudit",
+    metadataAuditOptions(APP, "de"),
+    appKeys.metadataAudit(APP, "de"),
+  ],
 ] as const;
 
 const ROOT_TO_LEAF = [
@@ -250,6 +261,63 @@ describe("appKeys", () => {
     expect(appKeys.changeImpact(APP, 90, "us")).not.toEqual(
       appKeys.changeImpact(APP, 30, "us"),
     );
+  });
+
+  it("keeps the key of the home change timeline as it was", () => {
+    expect(appKeys.changes(APP, 90, undefined)).toEqual(
+      appKeys.changes(APP, 90),
+    );
+  });
+
+  it("keys the change timeline of each market apart", () => {
+    expect(appKeys.changes(APP, 90, "de")).not.toEqual(
+      appKeys.changes(APP, 90),
+    );
+    expect(appKeys.changes(APP, 90, "de")).not.toEqual(
+      appKeys.changes(APP, 90, "pl"),
+    );
+  });
+
+  it("audits the home listing without naming its country", async () => {
+    const requested: string[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
+      requested.push(String(input));
+      return Promise.resolve(
+        new Response("{}", {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+
+    const options = metadataAuditOptions(APP, queryMarket("us", "us"));
+    await new QueryClient().fetchQuery(options);
+    vi.unstubAllGlobals();
+
+    expect(options.queryKey).toEqual(appKeys.metadataAudit(APP));
+    expect(requested[0]).toMatch(/\/apps\/app-1\/metadata\/audit$/);
+  });
+
+  it("keys the metadata audit and the listing of each market apart", () => {
+    expect(appKeys.metadataAudit(APP, "de")).not.toEqual(
+      appKeys.metadataAudit(APP, "pl"),
+    );
+    expect(appKeys.listing(APP, "de")).not.toEqual(appKeys.listing(APP, "pl"));
+  });
+
+  it("refreshes every listing of an app when one is invalidated", () => {
+    const client = new QueryClient();
+    client.setQueryData(appKeys.listing(APP, "de"), {});
+    client.setQueryData(appKeys.metadataAudit(APP, "de"), {});
+
+    invalidateAppListing(client, APP);
+
+    expect(
+      client.getQueryState(appKeys.listing(APP, "de"))?.isInvalidated,
+    ).toBe(true);
+    expect(
+      client.getQueryState(appKeys.metadataAudit(APP, "de"))?.isInvalidated,
+    ).toBe(true);
   });
 
   it("keys a deep search by its storefront", () => {

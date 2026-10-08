@@ -83,7 +83,7 @@ describe('RetentionService', () => {
     jest.useRealTimers();
   });
 
-  it('always keeps the newest snapshot id per app', async () => {
+  it('always keeps the newest snapshot id per app and market', async () => {
     const prisma = buildPrisma();
     const service = new RetentionService(
       buildConfig({}),
@@ -94,7 +94,7 @@ describe('RetentionService', () => {
     await service.prune();
 
     expect(prisma.appSnapshot.findMany).toHaveBeenCalledWith({
-      distinct: ['appId'],
+      distinct: ['appId', 'country'],
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });

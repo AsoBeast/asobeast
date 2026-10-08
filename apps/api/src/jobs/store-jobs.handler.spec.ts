@@ -16,6 +16,7 @@ import { StoreJobsHandler } from './store-jobs.handler';
 
 describe('StoreJobsHandler', () => {
   const refreshApp = jest.fn();
+  const refreshListing = jest.fn();
   const resolveSubtitle = jest.fn();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -30,12 +31,13 @@ describe('StoreJobsHandler', () => {
     seen = undefined;
     through.mockClear();
     countryOf.mockReset().mockResolvedValue('us');
+    refreshListing.mockReset().mockResolvedValue(null);
     refreshApp.mockReset().mockImplementation(() => {
       seen = workspace.current;
       return Promise.resolve();
     });
     handler = new StoreJobsHandler(
-      { refreshApp } as unknown as AppsService,
+      { refreshApp, refreshListing } as unknown as AppsService,
       {} as RankingsService,
       {} as ScoringService,
       {} as CategoryRanksService,
@@ -57,6 +59,15 @@ describe('StoreJobsHandler', () => {
 
     expect(refreshApp).toHaveBeenCalledWith('a1');
     expect(seen).toBe('ws_a');
+  });
+
+  it('refreshes a market listing when the payload names a market', async () => {
+    await handler.handle(
+      job({ appId: 'a1', country: 'de', workspaceId: 'ws_a' }),
+    );
+
+    expect(refreshListing).toHaveBeenCalledWith('a1', 'de');
+    expect(refreshApp).not.toHaveBeenCalled();
   });
 
   it('fails the job instead of defaulting when the workspace is absent', async () => {

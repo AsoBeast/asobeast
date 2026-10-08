@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { formatCountry } from "@/lib/format";
 import {
   Table,
   TableBody,
@@ -25,10 +26,12 @@ function cell(value: SnapshotChange["before"]): string {
 
 export function SnapshotDiffDialog({
   diff,
+  market,
   open,
   onOpenChange,
 }: {
   diff: SnapshotDiffResult | null;
+  market: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -38,7 +41,11 @@ export function SnapshotDiffDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size={changes.length > 0 ? "lg" : "default"}>
         <DialogHeader>
-          <DialogTitle>Snapshot refreshed</DialogTitle>
+          <DialogTitle>
+            {market === null
+              ? "Snapshot refreshed"
+              : `Snapshot refreshed in ${formatCountry(market)}`}
+          </DialogTitle>
           <DialogDescription>
             {changes.length > 0
               ? `${changes.length} field${changes.length === 1 ? "" : "s"} changed since the last snapshot.`

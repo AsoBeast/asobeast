@@ -22,7 +22,12 @@ import {
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
+  METADATA_AUDIT_PL,
+  MARKET_BUDGET,
   METADATA_AUDITS,
+  APP_1_LISTING_MARKETS,
+  APP_1_PL_CHANGES,
+  APP_1_PL_DETAIL,
   METADATA_DRAFTS,
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
@@ -467,7 +472,11 @@ function sortKeywords(
 
 function appRoute(
   pattern: RegExp,
-  pick: (dataset: (typeof DATASETS)[string], query: URLSearchParams) => unknown,
+  pick: (
+    dataset: (typeof DATASETS)[string],
+    query: URLSearchParams,
+    req: IncomingMessage,
+  ) => unknown,
 ): Route {
   return {
     method: "GET",
@@ -483,10 +492,17 @@ function appRoute(
       json(
         res,
         200,
-        pick(dataset, new URL(path, "http://localhost").searchParams),
+        pick(dataset, new URL(path, "http://localhost").searchParams, req),
       );
     },
   };
+}
+
+function isPolishListingOf(
+  dataset: (typeof DATASETS)[string],
+  query: URLSearchParams,
+): boolean {
+  return dataset.detail.id === "app-1" && query.get("country") === "pl";
 }
 
 function gatedRoute(
@@ -975,10 +991,12 @@ function firstRunFor(appId: string): FirstRunStatus {
 const API_LATENCY_COOKIE = "e2e_api_latency";
 const BUDGET_HOLD_COOKIE = "e2e_budget_hold";
 const BUDGET_QUOTA_COOKIE = "e2e_budget_quota";
+const STALE_MARKET_COOKIE = "e2e_stale_market";
 const BUDGET_HOT_COOKIE = "e2e_budget_hot";
 const BUDGETS_BY_QUOTA = new Map<string | undefined, DailyBudget>([
   ["lapsed", LAPSED_BUDGET],
   ["over", OVER_LIMIT_BUDGET],
+  ["markets", MARKET_BUDGET],
 ]);
 const INSIGHTS_HOLD_COOKIE = "e2e_insights_hold";
 
@@ -1484,7 +1502,25 @@ const routes: Route[] = [
       json(res, 201, IMPORTED_APP_DETAIL);
     },
   },
-  appRoute(/^\/apps\/([^/]+)$/, (dataset) => dataset.detail),
+  appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
+    isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
+  ),
+  appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
+    dataset.detail.id === "app-1"
+      ? APP_1_LISTING_MARKETS.map((market) => ({
+          ...market,
+          tracked:
+            market.home || !hasCookie(req, STALE_MARKET_COOKIE, market.country),
+        }))
+      : [
+          {
+            country: dataset.detail.country,
+            home: true,
+            capturedAt: dataset.detail.latestSnapshot?.capturedAt ?? null,
+            tracked: true,
+          },
+        ],
+  ),
   {
     method: "DELETE",
     pattern: /^\/apps\/([^/]+)$/,
@@ -1704,14 +1740,39 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
-    handler: ([id], req, res) =>
-      apps.some((app) => app.id === id) || Object.hasOwn(METADATA_AUDITS, id)
-        ? json(res, 200, {
-            ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
-            appId: id,
-            store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
-          })
-        : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      if (
+        !apps.some((app) => app.id === id) &&
+        !Object.hasOwn(METADATA_AUDITS, id)
+      ) {
+        return json(res, 404, errorEnvelope(404, path, "App not found"));
+      }
+      const market = new URL(path, "http://localhost").searchParams.get(
+        "country",
+      );
+      if (id === "app-1" && market === "pl") {
+        return json(res, 200, METADATA_AUDIT_PL);
+      }
+      if (market !== null && market !== DATASETS[id]?.detail.country) {
+        return json(
+          res,
+          404,
+          errorEnvelope(404, path, `No listing captured for ${market}`),
+        );
+      }
+      const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+      const home = DATASETS[id]?.detail.country;
+      json(res, 200, {
+        ...audit,
+        appId: id,
+        store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
+        coverage:
+          market === null
+            ? audit.coverage
+            : audit.coverage.filter((row) => (row.country ?? home) === home),
+      });
+    },
   },
   {
     method: "GET",
@@ -1811,7 +1872,9 @@ const routes: Route[] = [
       ]);
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset) => dataset.changes),
+  appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>
+    isPolishListingOf(dataset, query) ? APP_1_PL_CHANGES : dataset.changes,
+  ),
   appRoute(
     /^\/apps\/([^/]+)\/changes\/impact$/,
     (dataset) => dataset.changeImpact,
@@ -2071,8 +2134,16 @@ const routes: Route[] = [
   {
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/refresh$/,
-    handler: (_p, _q, res) =>
-      json(res, 200, { snapshotId: "snap-1", changes: [] }),
+    handler: (_p, req, res) =>
+      new URL(req.url ?? "/", "http://localhost").searchParams.get(
+        "country",
+      ) === "pl"
+        ? json(res, 200, {
+            snapshotId: "snap-pl",
+            changes: [{ field: "title", before: 8, after: 18 }],
+            country: "pl",
+          })
+        : json(res, 200, { snapshotId: "snap-1", changes: [] }),
   },
   {
     method: "POST",

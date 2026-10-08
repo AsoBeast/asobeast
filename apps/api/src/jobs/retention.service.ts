@@ -227,7 +227,7 @@ export class RetentionService {
       return 0;
     }
     const latest = await this.prisma.appSnapshot.findMany({
-      distinct: ['appId'],
+      distinct: ['appId', 'country'],
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });

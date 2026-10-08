@@ -37,7 +37,7 @@ When you finish this guide you have one tracked app, its first metadata snapshot
   </Step>
 </Steps>
 
-The home storefront is not just a label. It decides where snapshots, category ranks and reviews are collected. See [Countries and markets](/concepts/countries).
+The home storefront is not just a label. It decides where the first snapshot, category ranks and reviews are collected; market listings are added for the markets you track keywords in. See [Countries and markets](/concepts/countries).
 
 ## What happens on import?
 
@@ -83,7 +83,7 @@ Refreshing fetches the listing again, writes a new snapshot and returns the diff
 
 A refresh that cannot read the App Store product page keeps the subtitle from the previous snapshot instead of storing an empty one, so a throttled page never shows up as a removed subtitle in the changes feed or fires a change alert.
 
-Refresh is the only way to ask for a listing on demand, and it is rate limited per plan. Importing a url you already track returns the app you have without reaching the store: a second import would otherwise write a snapshot that quietly became the new baseline, and the change it captured would never appear in the changes feed.
+Refresh is the only way to ask for a listing on demand, and it is rate limited per plan. Refresh while a market is selected on the metadata, overview or changes page refreshes that market's listing instead, and the API takes `?country=` for the same. Importing a url you already track returns the app you have without reaching the store: a second import would otherwise write a snapshot that quietly became the new baseline, and the change it captured would never appear in the changes feed.
 
 Field level changes also land in the changes feed, where they are kept alongside changes asobeast detected on its own schedule. See [Watch listing changes](/guides/listing-changes).
 

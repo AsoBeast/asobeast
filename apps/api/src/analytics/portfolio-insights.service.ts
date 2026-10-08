@@ -27,6 +27,11 @@ import {
   PortfolioSignals,
 } from './portfolio-signals.service';
 import { reviewsWrittenInWindow } from './review-window';
+import {
+  HOME_EVENTS,
+  HOME_LISTING,
+  LATEST_HOME_LISTING,
+} from '../apps/listing';
 
 const INSIGHT_WINDOW_DAYS = 7;
 const RATING_BASELINE_SEARCH_DAYS = 30;
@@ -59,8 +64,7 @@ export class PortfolioInsightsService {
         name: true,
         competitors: { select: { id: true } },
         snapshots: {
-          orderBy: { capturedAt: 'desc' },
-          take: 1,
+          ...LATEST_HOME_LISTING,
           select: { ratingAvg: true, ratingCount: true, capturedAt: true },
         },
       },
@@ -137,6 +141,7 @@ export class PortfolioInsightsService {
     const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: [...apps.map((app) => app.id), ...primaryOf.keys()] },
+        ...HOME_EVENTS,
         capturedAt: { gte: since },
       },
       select: { appId: true, capturedAt: true },
@@ -181,6 +186,7 @@ export class PortfolioInsightsService {
     const rows = await this.prisma.appSnapshot.findMany({
       where: {
         appId: { in: appIds },
+        ...HOME_LISTING,
         capturedAt: {
           lte: since,
           gte: addDays(since, -RATING_BASELINE_SEARCH_DAYS),

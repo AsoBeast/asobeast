@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { QuotaService } from '../auth/quota.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordTracker } from './keyword-tracker';
+import { MarketListingRequests } from './market-listing.requests';
 
 const app = {
   id: 'app1',
@@ -32,9 +33,17 @@ const build = (
     },
   };
   const prisma = {
-    app: { findFirst: jest.fn().mockResolvedValue(app) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue(app),
+      count: jest.fn().mockResolvedValue(1),
+    },
     trackedKeyword: { findMany: jest.fn().mockResolvedValue(tracked) },
-    keyword: { createMany: jest.fn() },
+    keyword: {
+      createMany: jest.fn(),
+      findMany: jest
+        .fn<Promise<{ country: string }[]>, [unknown]>()
+        .mockResolvedValue([]),
+    },
   };
   const quota = {
     upgradeFrom: jest.fn(() => 'ultimate'),
@@ -65,12 +74,16 @@ const build = (
       .fn<Promise<void>, [string[], unknown]>()
       .mockResolvedValue(undefined),
   };
+  const listings = {
+    request: jest.fn<Promise<number>, [unknown, string]>().mockResolvedValue(0),
+  };
   const service = new KeywordImportService(
     prisma as unknown as PrismaService,
     tracker as unknown as KeywordTracker,
     quota as unknown as QuotaService,
+    listings as unknown as MarketListingRequests,
   );
-  return { prisma, tx, quota, tracker, service };
+  return { prisma, tx, quota, tracker, listings, service };
 };
 
 describe('KeywordImportService.preview', () => {
@@ -99,6 +112,50 @@ describe('KeywordImportService.preview', () => {
       'new',
     ]);
     expect(result.cost.keywordMarkets).toBe(1);
+  });
+
+  it('prices the daily listing capture of every market the app starts tracking keywords in', async () => {
+    const { prisma, service } = build([], { limit: null, used: 0 });
+    prisma.app.count.mockResolvedValue(3);
+    prisma.keyword.findMany.mockResolvedValue([{ country: 'fr' }]);
+
+    const result = await service.preview('app1', {
+      rows: [
+        { keyword: 'a1', country: 'de' },
+        { keyword: 'a2', country: 'de' },
+        { keyword: 'a3', country: 'fr' },
+        { keyword: 'a4' },
+      ],
+    });
+
+    expect(prisma.app.count).toHaveBeenCalledWith({
+      where: { OR: [{ id: 'app1' }, { primaryAppId: 'app1' }] },
+    });
+    expect(prisma.keyword.findMany).toHaveBeenCalledWith({
+      where: {
+        store: Store.APP_STORE,
+        country: { in: ['de', 'fr'] },
+        tracked: { some: { appId: 'app1', active: true } },
+      },
+      select: { country: true },
+      distinct: ['country'],
+    });
+    expect(result.cost).toEqual({
+      store: Store.APP_STORE,
+      keywordMarkets: 4,
+      dailyRequests: 7,
+    });
+  });
+
+  it('prices no listing capture when every row is in the home market', async () => {
+    const { prisma, service } = build([], { limit: null, used: 0 });
+
+    const result = await service.preview('app1', {
+      rows: [{ keyword: 'a1' }],
+    });
+
+    expect(prisma.keyword.findMany).not.toHaveBeenCalled();
+    expect(result.cost.dailyRequests).toBe(1);
   });
 
   it('reads the room from the keyword market limit and the usage', async () => {
@@ -132,7 +189,7 @@ describe('KeywordImportService.preview', () => {
   });
 
   it('writes nothing', async () => {
-    const { prisma, service } = build([], { limit: null, used: 0 });
+    const { prisma, listings, service } = build([], { limit: null, used: 0 });
 
     const result = await service.preview('app1', {
       rows: [{ keyword: 'a1' }],
@@ -140,6 +197,7 @@ describe('KeywordImportService.preview', () => {
 
     expect(result).toMatchObject({ dryRun: true, imported: 0 });
     expect(prisma.keyword.createMany).not.toHaveBeenCalled();
+    expect(listings.request).not.toHaveBeenCalled();
   });
 });
 
@@ -190,8 +248,30 @@ describe('KeywordImportService.import', () => {
     expect(result.imported).toBe(1);
   });
 
+  it('asks once for the listing of every market the import tracks in', async () => {
+    const { listings, service } = build([trackedRow('app1', false, 'a4')], {
+      limit: null,
+      used: 0,
+    });
+
+    await service.import('app1', {
+      rows: [
+        { keyword: 'a1', country: 'pl' },
+        { keyword: 'a2', country: 'de' },
+        { keyword: 'a3', country: 'de' },
+        { keyword: 'a4' },
+      ],
+    });
+
+    expect(listings.request.mock.calls).toEqual([
+      [app, 'pl'],
+      [app, 'de'],
+      [app, 'us'],
+    ]);
+  });
+
   it('writes nothing, and skips the transaction, when no row is importable', async () => {
-    const { quota, tracker, service } = build(
+    const { quota, tracker, listings, service } = build(
       [trackedRow('app1', true, 'habit')],
       { limit: null, used: 0 },
     );
@@ -203,6 +283,7 @@ describe('KeywordImportService.import', () => {
     expect(result.imported).toBe(0);
     expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
     expect(tracker.enqueueFirstScores).not.toHaveBeenCalled();
+    expect(listings.request).not.toHaveBeenCalled();
   });
 
   it('writes only the rows that fit, looks every market up at once and queues the first scores in one batch', async () => {

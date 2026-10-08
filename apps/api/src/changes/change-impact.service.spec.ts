@@ -47,7 +47,11 @@ describe('ChangeImpactService', () => {
     await service.report('app_1', 30);
 
     expect(eventFindMany).toHaveBeenCalledWith({
-      where: { appId: 'app_1', capturedAt: { gte: addDays(today, -30) } },
+      where: {
+        appId: 'app_1',
+        country: null,
+        capturedAt: { gte: addDays(today, -30) },
+      },
       select: { field: true, capturedAt: true },
     });
   });
