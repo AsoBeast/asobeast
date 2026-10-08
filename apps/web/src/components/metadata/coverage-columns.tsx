@@ -76,7 +76,7 @@ function FieldMark({
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className="inline-flex">
+        <span tabIndex={0} className="inline-flex rounded-full">
           <CoverageMark covered label={label} />
         </span>
       </TooltipTrigger>
