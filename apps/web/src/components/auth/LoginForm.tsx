@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ApiError, login } from "@/lib/api";
+import { signedInDestination } from "@/lib/auth-routes";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,18 +21,6 @@ import { SessionNotKeptAlert } from "./SessionNotKeptAlert";
 import { useAuth } from "./use-auth";
 import { useSessionEntry } from "./use-session-entry";
 
-function destination(next: string | null): string {
-  if (!next) return "/";
-  try {
-    const resolved = new URL(next, window.location.origin);
-    return resolved.origin === window.location.origin
-      ? `${resolved.pathname}${resolved.search}${resolved.hash}`
-      : "/";
-  } catch {
-    return "/";
-  }
-}
-
 export function LoginForm() {
   const params = useSearchParams();
   const { status } = useAuth();
@@ -41,7 +30,7 @@ export function LoginForm() {
 
   const { mutation, sessionDropped } = useSessionEntry({
     establish: () => login(email, password),
-    destination: () => destination(params.get("next")),
+    destination: () => signedInDestination(params.get("next")),
     onFailure: (err) => {
       setError(
         err instanceof ApiError

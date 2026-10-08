@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { loginUrl } from "@/lib/api";
 import { isPublicRoute } from "@/lib/auth-routes";
 import { AccountNotice } from "./AccountNotice";
 import { SessionCheck } from "./SessionCheck";
@@ -10,16 +11,17 @@ import { useAuth } from "./use-auth";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { status, isFetching } = useAuth();
   const isPublic = isPublicRoute(pathname);
   const blocked = Boolean(status && !status.authenticated && !isPublic);
 
   useEffect(() => {
     if (blocked && !isFetching) {
-      router.replace("/login");
+      window.location.replace(
+        loginUrl(window.location.pathname, window.location.search),
+      );
     }
-  }, [blocked, isFetching, router]);
+  }, [blocked, isFetching]);
 
   if (blocked) {
     return (

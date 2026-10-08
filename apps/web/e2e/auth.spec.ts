@@ -62,6 +62,35 @@ test("guarded pages redirect to login when unauthenticated", async ({
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
 });
 
+test("a signed out answer the server contradicts settles on the requested page", async ({
+  page,
+}) => {
+  await seedSession(page);
+  let statusRequests = 0;
+  await page.route("**/api/backend/auth/status", (route) => {
+    statusRequests += 1;
+    if (statusRequests > 1) return route.continue();
+    return route.fulfill(
+      fulfillJson(200, {
+        billing: false,
+        registrationOpen: false,
+        setupRequired: false,
+        authenticated: false,
+      }),
+    );
+  });
+
+  await page.goto("/settings");
+
+  await expect.poll(() => statusRequests).toBe(2);
+  await expect(page).toHaveURL(/\/settings$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Settings" }),
+  ).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(statusRequests).toBe(2);
+});
+
 test("a throttled sign in says how long to wait", async ({ page }) => {
   await routeStatus(page, {
     billing: false,
