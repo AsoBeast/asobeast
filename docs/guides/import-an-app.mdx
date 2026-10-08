@@ -79,7 +79,7 @@ See [App Store and Google Play](/concepts/stores) for the full field comparison.
 
 ## Refresh a listing
 
-Refreshing fetches the listing again, writes a new snapshot and returns the difference against the previous one, so the response is meant to be read rather than discarded.
+Refreshing fetches the listing again, writes a new snapshot and returns the difference against the previous one, so the response is meant to be read rather than discarded. It lists every field the refresh recorded in the changes feed, replaced or reordered screenshots, the icon, the price and What's New included. Edited screenshot captions are not in it, because captions are read after the refresh answers; they appear in the changes feed once the new screenshots are read. See [Screenshot captions](/guides/screenshot-captions).
 
 A refresh that cannot read the App Store product page keeps the subtitle from the previous snapshot instead of storing an empty one, so a throttled page never shows up as a removed subtitle in the changes feed or fires a change alert.
 
