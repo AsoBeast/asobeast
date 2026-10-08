@@ -2,6 +2,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { latestListingTexts, relevanceText } from './listing-texts';
 
 const texts = (title: string) => ({
+  id: `snap_${title}`,
   title,
   subtitle: `${title} subtitle`,
   summary: null,

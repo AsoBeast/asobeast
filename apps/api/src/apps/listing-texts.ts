@@ -2,6 +2,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { listingIn, NEWEST_FIRST } from './listing';
 
 export interface ListingTexts {
+  id: string;
   title: string;
   subtitle: string | null;
   summary: string | null;
@@ -9,6 +10,7 @@ export interface ListingTexts {
 }
 
 const TEXT_SELECT = {
+  id: true,
   title: true,
   subtitle: true,
   summary: true,

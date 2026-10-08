@@ -17,6 +17,7 @@ import {
   MetadataAuditResult,
   MetadataField,
   MetadataFieldAudit,
+  ScreenshotItem,
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
@@ -108,12 +109,13 @@ export class MetadataService {
         own ? item.country : app.country,
       );
     });
-    const shots = await this.screenshots.byListing(app, [
+    const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
     ]);
+    const reading = this.screenshots.reading(app.store);
     const textOf = (listing: string) =>
-      screenshotTextState(shots.screenshots.get(listing) ?? [], shots.reading);
+      screenshotTextState(shots(listing), reading);
     const screenshotText = textOf(market);
 
     return {
@@ -125,7 +127,7 @@ export class MetadataService {
           ? {
               ...row,
               screenshotText: screenshotTextCoverage(
-                shots.screenshots.get(row.listingCountry) ?? [],
+                shots(row.listingCountry),
                 row.text,
               ),
             }
@@ -140,6 +142,28 @@ export class MetadataService {
           : null,
       ...(screenshotText ? { screenshotText } : {}),
       country: market,
+    };
+  }
+
+  private async screenshotsOf(
+    store: Store,
+    listings: Map<string, ListingTexts>,
+    markets: readonly string[],
+  ): Promise<(market: string) => ScreenshotItem[]> {
+    const snapshotIds = new Map(
+      markets.flatMap((market) => {
+        const listing = listings.get(market);
+        return listing ? [[market, listing.id] as const] : [];
+      }),
+    );
+    const screenshots = await this.screenshots.ofSnapshots(store, [
+      ...new Set(snapshotIds.values()),
+    ]);
+    return (market) => {
+      const snapshotId = snapshotIds.get(market);
+      return snapshotId === undefined
+        ? []
+        : (screenshots.get(snapshotId) ?? []);
     };
   }
 

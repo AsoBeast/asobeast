@@ -44,33 +44,35 @@ export class ScreenshotsService {
       store: app.store,
       snapshotId: latest?.id ?? null,
       capturedAt: latest?.capturedAt.toISOString() ?? null,
-      reading: this.policy.state(app.store),
+      reading: this.reading(app.store),
       screenshots: (latest?.screenshots ?? []).map(toItem),
       country: market,
     };
   }
 
-  async byListing(
-    app: { id: string; store: Store; country: string },
-    markets: readonly string[],
-  ): Promise<{
-    reading: ScreenshotReadingState;
-    screenshots: Map<string, ScreenshotItem[]>;
-  }> {
-    const found = await Promise.all(
-      [...new Set(markets)].map(async (market) => {
-        const latest = await this.prisma.appSnapshot.findFirst({
-          where: { appId: app.id, ...listingIn(app.country, market) },
-          orderBy: NEWEST_FIRST,
-          select: { screenshots: { orderBy: { position: 'asc' } } },
-        });
-        return [market, (latest?.screenshots ?? []).map(toItem)] as const;
-      }),
-    );
-    return {
-      reading: this.policy.state(app.store),
-      screenshots: new Map(found),
-    };
+  reading(store: Store): ScreenshotReadingState {
+    return this.policy.state(store);
+  }
+
+  async ofSnapshots(
+    store: Store,
+    snapshotIds: readonly string[],
+  ): Promise<Map<string, ScreenshotItem[]>> {
+    const screenshots = new Map<string, ScreenshotItem[]>();
+    if (this.reading(store) === 'unsupported' || snapshotIds.length === 0) {
+      return screenshots;
+    }
+    const rows = await this.prisma.snapshotScreenshot.findMany({
+      where: { snapshotId: { in: [...snapshotIds] } },
+      orderBy: { position: 'asc' },
+    });
+    for (const row of rows) {
+      screenshots.set(row.snapshotId, [
+        ...(screenshots.get(row.snapshotId) ?? []),
+        toItem(row),
+      ]);
+    }
+    return screenshots;
   }
 
   private latest(appId: string, home: string, market: string) {
