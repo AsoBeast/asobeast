@@ -33,9 +33,17 @@ const build = (
     },
   };
   const prisma = {
-    app: { findFirst: jest.fn().mockResolvedValue(app) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue(app),
+      count: jest.fn().mockResolvedValue(1),
+    },
     trackedKeyword: { findMany: jest.fn().mockResolvedValue(tracked) },
-    keyword: { createMany: jest.fn() },
+    keyword: {
+      createMany: jest.fn(),
+      findMany: jest
+        .fn<Promise<{ country: string }[]>, [unknown]>()
+        .mockResolvedValue([]),
+    },
   };
   const quota = {
     upgradeFrom: jest.fn(() => 'ultimate'),
@@ -104,6 +112,50 @@ describe('KeywordImportService.preview', () => {
       'new',
     ]);
     expect(result.cost.keywordMarkets).toBe(1);
+  });
+
+  it('prices the daily listing capture of every market the app starts tracking keywords in', async () => {
+    const { prisma, service } = build([], { limit: null, used: 0 });
+    prisma.app.count.mockResolvedValue(3);
+    prisma.keyword.findMany.mockResolvedValue([{ country: 'fr' }]);
+
+    const result = await service.preview('app1', {
+      rows: [
+        { keyword: 'a1', country: 'de' },
+        { keyword: 'a2', country: 'de' },
+        { keyword: 'a3', country: 'fr' },
+        { keyword: 'a4' },
+      ],
+    });
+
+    expect(prisma.app.count).toHaveBeenCalledWith({
+      where: { OR: [{ id: 'app1' }, { primaryAppId: 'app1' }] },
+    });
+    expect(prisma.keyword.findMany).toHaveBeenCalledWith({
+      where: {
+        store: Store.APP_STORE,
+        country: { in: ['de', 'fr'] },
+        tracked: { some: { appId: 'app1', active: true } },
+      },
+      select: { country: true },
+      distinct: ['country'],
+    });
+    expect(result.cost).toEqual({
+      store: Store.APP_STORE,
+      keywordMarkets: 4,
+      dailyRequests: 7,
+    });
+  });
+
+  it('prices no listing capture when every row is in the home market', async () => {
+    const { prisma, service } = build([], { limit: null, used: 0 });
+
+    const result = await service.preview('app1', {
+      rows: [{ keyword: 'a1' }],
+    });
+
+    expect(prisma.keyword.findMany).not.toHaveBeenCalled();
+    expect(result.cost.dailyRequests).toBe(1);
   });
 
   it('reads the room from the keyword market limit and the usage', async () => {

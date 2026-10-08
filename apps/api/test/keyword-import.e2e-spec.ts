@@ -198,7 +198,7 @@ describe('Keyword import (e2e)', () => {
     expect(result.cost).toEqual({
       store: 'APP_STORE',
       keywordMarkets: 2,
-      dailyRequests: 2,
+      dailyRequests: 3,
     });
   });
 
