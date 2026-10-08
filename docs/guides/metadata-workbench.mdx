@@ -51,6 +51,8 @@ Search the coverage table by keyword, sort it by keyword or bucket, and switch o
 
 When you track keywords in more than one market, a **Listing market** control sits above the fields. It lists your home storefront and every market whose listing asobeast has captured. Choose one to see the title, subtitle, description and screenshot captions that storefront serves, with the coverage of the keywords tracked there. The URL keeps the choice as `?market=`, so a link opens on the same market.
 
+When the market has a native localization, a **Localization** control next to it shows that localization's fields and captions, and the URL keeps it as `?localization=`. A keyword covered only by a native localization says which one, for example in Title (Polish). See [Countries and markets](/concepts/countries#what-about-storefronts-that-default-to-english).
+
 Each keyword is judged against the listing of its own market, and against the home listing until its market has one. The keyword field and the AI drafts stay on the home market, because the keyword field is private and you paste it once, for the home storefront. The API takes the same choice as the `country` parameter of `GET /apps/{id}/metadata/audit`. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
 
 ## Paste the iOS keyword field

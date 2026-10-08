@@ -56,13 +56,13 @@ A temporary problem, such as the image server being busy, is retried with growin
 
 ## Which languages does it read?
 
-A storefront reads English plus the language of the storefront: Japanese for `jp`, Korean for `kr`, Simplified Chinese for `cn`, Traditional Chinese for `tw`, `hk` and `mo`, Thai for `th`, Russian for `ru`, `by` and `kz`, Arabic for the Arabic speaking storefronts, and German, French, Spanish, Portuguese and Italian for the storefronts that speak them. Any other storefront reads English alone. The language packs ship inside the API image, so reading never downloads anything from the internet.
+A storefront reads English plus the language of the storefront: Japanese for `jp`, Korean for `kr`, Simplified Chinese for `cn`, Traditional Chinese for `tw`, `hk` and `mo`, Thai for `th`, Russian for `ru`, `by` and `kz`, Arabic for the Arabic speaking storefronts, and German, French, Spanish, Portuguese and Italian for the storefronts that speak them. Any other storefront reads English alone. A native localization is read with English plus its own language when a pack ships for it, so a French localization in Belgium reads French and a Dutch one reads English alone. The language packs ship inside the API image, so reading never downloads anything from the internet.
 
 Reading is most reliable on large, high contrast type on a plain or gradient background, which is what captions usually are. Decorative scripts, text on busy photographs and heavily rotated text may be missed or misread. Small differences between two reads of similar images do not create change events.
 
 ## Where do you see the result?
 
-- **Metadata page.** The Screenshot captions card shows the screenshots in store order with the caption under each. See [Optimize listing metadata](/guides/metadata-workbench).
+- **Metadata page.** The Screenshot captions card shows the screenshots in store order with the caption under each, and follows the **Localization** control when the market has a native localization. See [Optimize listing metadata](/guides/metadata-workbench).
 - **Keyword coverage.** A Screenshot text column marks the tracked keywords found in a caption and lists nothing else. A dashed circle marks a keyword whose listing has not been read yet, so it is never shown as missing from the captions. It does not change the Uncovered filter, the keyword field suggestion or the Action Center.
 - **Changes.** Replaced, added, removed and reordered screenshots, and edited captions, appear for your apps and your competitors. See [Watch listing changes](/guides/listing-changes).
 - **ASO audit.** The check Keywords in captions answers from the read text when no AI analysis exists. See [Score your listing](/guides/aso-audit).

@@ -59,6 +59,22 @@ A store serves a different listing in each storefront. The App Store returns the
 
 A keyword is then judged against the listing of its own market: its coverage on the metadata page and its relevance next to the opportunity score. Until a market has a listing, a keyword is judged against the home listing, as every keyword was before.
 
+### What about storefronts that default to English?
+
+Sixty five App Store storefronts show their listing in English by default although local users mostly read another language: Poland, Türkiye, Czechia, Greece, Saudi Arabia, Vietnam, India and Canada among them. Their search reads the English default and the native localization alike. For these storefronts asobeast asks for each native localization of the listing too, for your app and for each competitor, and keeps it as its own snapshot next to the default one when the store serves one.
+
+| Storefront default | What asobeast captures |
+| --- | --- |
+| English, with native localizations (for example `pl`, `tr`, `be`, `in`) | the English default and each native localization the app has |
+| Native, such as `de`, `fr`, `jp` | the native default |
+| English (U.S.) | the default only |
+
+A localization the app does not have is answered by the store with the default text, so asobeast stores nothing for it. Once stored, a localization is captured on every refresh, so removing it shows up as a change.
+
+The native localizations are captured with the listing they belong to: when you import an app, when you refresh a listing and in the daily run. Each one costs one more listing read, and `GET /jobs/budget` reports them as `localizations`, a part of `apps`. India reads eleven localizations, so a market there costs the most.
+
+Coverage judges a keyword within each localization, because the words of one localization combine into phrases only with each other: a keyword in the Polish title is covered even when the English title does not contain it, and the metadata page names the localization that covers it. Auto tracked keywords take phrases from every localization of the home storefront in turn, native first, up to the same limit. The iOS keyword field still belongs to the home default listing. Changes to a native localization are recorded in that localization only and send no alert.
+
 A market listing carries its own screenshots. On the App Store their captions are read with that storefront's language, and the Screenshot text column of a keyword reads the captions of the same listing that judged the keyword. See [Read screenshot captions](/guides/screenshot-captions#how-do-market-listings-read-their-screenshots).
 
 Some things are still read once, from the home storefront, because they need more than the listing: category ranks, reviews and the ratings history, the iOS keyword field, the ASO audit and the keywords asobeast tracks for you from your listing. The Action Center rules that judge coverage, lint and staleness also read the home listing. See [Action Center](/guides/action-center).
@@ -103,6 +119,6 @@ Many ASO guides still name only Spanish (Mexico) for the United States. asobeast
 
 Apple's page lists languages; it does not describe search. In practice, App Store search in a storefront reads the title, subtitle and keyword field of every localization on that storefront's list, and the words of one localization combine into phrases only with each other. Each additional language is therefore extra room: its own 30 character title, 30 character subtitle and 100 byte keyword field.
 
-asobeast cannot see which of those localizations your listing fills. App Store Connect is private and a store page shows one localization per request, so the metadata workbench lists what each storefront reads without guessing what you have. See [Optimize listing metadata](/guides/metadata-workbench#see-which-localizations-each-storefront-reads).
+asobeast reads the default listing of every storefront and the native localizations of the storefronts that default to English (see [What about storefronts that default to English?](#what-about-storefronts-that-default-to-english)). It does not ask for the other localizations, such as Spanish (Mexico) in the United States or English (U.K.) in Germany, so for those it cannot tell what your listing fills. App Store Connect is private and a store page shows one localization per request, so the metadata workbench lists what each storefront reads without guessing what you have. See [Optimize listing metadata](/guides/metadata-workbench#see-which-localizations-each-storefront-reads).
 
 Google Play has no such list. It shows the listing that matches the device language, so storefront localizations are App Store only.
