@@ -15,6 +15,7 @@
 - **packages/shared:** `@asobeast/shared`, compiled with tsup (cjs + esm + dts), tested with Vitest
 - **packages/typescript-config:** `@asobeast/typescript-config`, base tsconfigs
 - Scraping: `@perttu/app-store-scraper` (App Store) and `@mradex77/google-play-scraper` (Google Play), both isolated behind the `StoreProvider` interface.
+- Screenshot text: `tesseract.js` 7 (WASM) with bundled `@tesseract.js-data/*` integer models and `sharp` for preprocessing, behind the `OcrEngine` interface. Never a CDN, never OpenAI.
 - Docker + docker compose for dev services and self hosting
 
 ## Repository layout
@@ -42,6 +43,7 @@ apps/
       scoring/            pure formulas + stats collection
       analytics/          visibility, summary, portfolio, portfolio insights, weekly digest
       audit/              aso audit rubric engine, history + endpoints
+      screenshots/        OCR of app store screenshot captions: recorder, `screenshots` queue worker, reader, shared text cache, caption selection and diff, the read endpoint
       metadata/           metadata audit + keyword coverage
       actions/            aso action center: rules/, engine, lifecycle, events, detail and outcomes, endpoints
       alerts/             subscriptions, outbox, batching, webhook + smtp delivery
@@ -65,7 +67,7 @@ apps/
         data-table/       table kit: sortable header, search, facet, chips, column menu, filtered empty state
         layout/           SiteHeader, ThemeToggle, HealthBadge, ErrorState, command palette
         actions/ admin/ apps/ app-detail/ dashboard/ overview/ keywords/ rankings/ competitors/ audit/
-        metadata/ changes/ reviews/ settings/ onboarding/ auth/   feature + skeleton components
+        metadata/ changes/ reviews/ screenshots/ settings/ onboarding/ auth/   feature + skeleton components
       lib/                api/ (typed transport: client.ts + one module per domain behind a barrel),
                           queries.ts (query keys + options + invalidation),
                           get-query-client.ts, search-params.ts (nuqs parsers), ranges.ts,
@@ -200,7 +202,7 @@ The public documentation lives in `/docs` and is published at `docs.asobeast.com
 - Every page needs a `title` and a `description`. Headings use sentence case. Prose uses no dash punctuation, meaning no em dash, no en dash and no spaced hyphen standing in for a comma or colon. Hyphenated compound modifiers are correct and stay. `docs/styles/asobeast/Dashes.yml` enforces this in CI.
 - `docs/configuration/reference.mdx` is the single source of truth for environment variables on the site. A change to `apps/api/.env.example` or `apps/web/.env.example` updates it in the same commit.
 - `docs/api-reference/openapi.json` is captured from the running API with `pnpm docs:openapi`. A change to a controller, a DTO or a response shape re-runs it. Its `info.version` is the release version, so Release Please bumps it with every other versioned file and no recapture is needed for a release. `pnpm check:release-versions` reads the JSON files registered in `release-please-config.json` and every workspace manifest, and fails a registered file that has drifted off the version or a manifest that states it without being registered.
-- A fact lives on exactly one page. The concept pages under `docs/concepts/` own the domain rules and every other page links to them.
+- A fact lives on exactly one page. The concept pages under `docs/concepts/` own the domain rules and every other page links to them; the screenshot caption rules live in `docs/guides/screenshot-captions.mdx` and `docs/concepts/stores.mdx`.
 - Prettier does not format `docs/**/*.mdx`. Use `pnpm docs:format`, which runs Mintlify's canonical formatter.
 - Use the `docs` commit scope for the site and `repo` for repository-level documentation such as `README.md` and `CONTRIBUTING.md`.
 - **`README.md` follows the same dash rule as the site and is linted for it in CI** (`pnpm check:readme-prose`, and a step in `.github/workflows/docs.yml`). It is also deliberately short: it introduces the product, shows the install, answers the questions a search engine or an assistant gets asked, and links to `/docs` for everything else. A fact that belongs on a documentation page does not get a second copy in the README, so extend the page and link it.
@@ -265,6 +267,8 @@ Decompose by **responsibility**, not by syntactic kind. The target is fewer conc
 13. **A request never waits on Redis through a BullMQ connection.** BullMQ connections keep an offline queue and retry forever, so a command issued while Redis is down never settles and the request behind it hangs until the web proxy gives up with a 504. Every Redis read or counter on a request path goes through `FailFastRedis` (`apps/api/src/redis/`), a dedicated ioredis client with `enableOfflineQueue: false` and a 500 ms `commandTimeout`, and the caller chooses the policy at the call site: `run` fails closed with `RedisUnavailableError` (503 and `Retry-After`), `runOpen` fails open with a fallback value. Both policies cover only an unreachable or timed out Redis; an error Redis answers with, such as `WRONGTYPE`, is a bug rather than an outage and propagates unchanged. **Fail closed anything that could be abused or that queues work Redis must run**: the authentication throttler, the recovery limiter and the on demand limiter. **Fail open anything that only meters or decorates**: plan request counters, the rejected credential count, abuse counting, run keys and operator metrics. Never read `queue.getBackend().client` for a read or a counter a request reaches; `/health` and the first run status still do, and only because each races its own one second timer. Enqueueing a job still goes through the queue and still waits for Redis, which is a known gap and not a pattern to copy.
 
 14. **Every AI call goes through `AiGateway` and spends the monthly allowance.** `OPENAI_CLIENT` is private to `AiModule`; a feature calls `AiGateway.spend`, or `reserve` when the request is accepted and `charge` when queued work runs, and never the client. The allowance is `PLAN_LIMITS[plan].aiCallsPerMonth` per workspace per UTC calendar month (`aiPeriodOf`), counted from the tenant owned `AiCall` ledger, where `reserved` and `counted` rows count and `released` rows do not; the meter on `GET /auth/plan` reads the same rows, so it can never disagree with the limiter. A call is counted when the model answered, usable or not (`UnusableAnswerError`), and released when it never answered. Reserve only after every check that can refuse the request, so a 4xx never costs a call. A spent allowance answers **429** with `aiAllowance` and `Retry-After`, never 402, because the web redirects every 402 to `/upgrade`. Self hosted instances are unlimited unless `AI_CALLS_PER_MONTH` is set.
+
+15. **Screenshot captions are read on the host, per snapshot, and are a weak surface.** Every snapshot records its ordered screenshots in `SnapshotScreenshot` (tenant owned, RLS, cascades with the snapshot) inside the transaction that creates it, for both stores. Only App Store screenshots are read, in the `screenshots` queue at concurrency 1, by `ScreenshotReader` inside the job's workspace scope: it downloads through `ScreenshotImageSource` (the only module that knows an `mzstatic.com` address, Apple's image hosts only, `1080x0w.jpg` renditions, never the proxy pool and never a store request budget), prepares the image with `sharp`, reads it with the `OcrEngine`, keeps only the large confident lines (`selectCaption`) and caches the result in `ScreenshotText`, which is **shared across workspaces and carries no policy** because the pixels are public, exactly like `Keyword`. A cache row is keyed by the asset key (the address without its size segment) and the recipe (`ocr1:` plus the languages). The engine is always given a local `langPath` and `cacheMethod: 'none'`; a language pack is never fetched at runtime. Reading never calls OpenAI and never touches `AiGateway`. Caption text is **not** an indexed field: it never changes `uncovered`, the keyword field suggestion or an Action Center rule (`REGRESSION_INDEXED_FIELDS` is an explicit list), and it reaches the audit only through `screenshots-caption-keywords` when no AI analysis exists. `ChangeField` has two screenshot members beyond the legacy count: `screenshots` keeps its numeric before and after and fires exactly when the count changes, `screenshotImages` fires for a replacement or a reorder at an unchanged count, and `screenshotCaptions` is recorded by `CaptionChangeRecorder` once per snapshot and only when both snapshots are fully read. An optional `ChangeEvent.detail` carries the structure; alerts receive only the field and the two readable values. Google Play screenshots are recorded and diffed, never read. `SCREENSHOT_OCR=false` keeps all recording and image diffing and stops every download and read.
 
 ## Environment variables
 
@@ -390,4 +394,5 @@ Root `.env` (Compose only): `POSTGRES_PASSWORD` and `AUTH_SECRET`, both required
 - No store calls in tests; providers are mocked in unit and e2e tests.
 - No manual SQL migrations; always `prisma migrate dev`.
 - No scraper imports outside the `StoreProvider` interface; all scraping goes through the provider layer.
+- No OpenAI call and no CDN language download to read screenshot text; no screenshot caption in `uncovered`, in the keyword field suggestion or in an Action Center rule.
 - No comments inside code. DRY, KISS, CLEAN CODE.
