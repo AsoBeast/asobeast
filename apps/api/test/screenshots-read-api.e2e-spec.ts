@@ -11,6 +11,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
 import {
+  appleKey,
   appleShot,
   APP_STORE_URL,
   FakeScreenshotRegistry,
@@ -137,5 +138,97 @@ describe('GET /apps/:id/screenshots (e2e)', () => {
     });
 
     await api.get(`/apps/${other.id}/screenshots`).expect(404);
+  });
+
+  describe('of a market listing', () => {
+    const importWithMarket = async () => {
+      const imported = await api
+        .post('/apps')
+        .send({ url: APP_STORE_URL })
+        .expect(201);
+      const detail = imported.body as AppDetail;
+      const market = await prisma.appSnapshot.create({
+        data: {
+          appId: detail.id,
+          country: 'de',
+          title: 'Fixture',
+          description: 'Beschreibung',
+          raw: {},
+          screenshots: {
+            create: {
+              workspaceId: DEFAULT_WORKSPACE_ID,
+              position: 1,
+              url: appleShot(8),
+              assetKey: appleKey(8),
+              status: 'read',
+              caption: 'Gewohnheiten verfolgen',
+            },
+          },
+        },
+      });
+      return { detail, market };
+    };
+
+    it('lists the screenshots of the market listing', async () => {
+      const { detail, market } = await importWithMarket();
+
+      const response = await api
+        .get(`/apps/${detail.id}/screenshots?country=de`)
+        .expect(200);
+
+      const body = response.body as AppScreenshots;
+      expect(body).toMatchObject({
+        snapshotId: market.id,
+        country: 'de',
+        screenshots: [
+          {
+            position: 1,
+            url: appleShot(8),
+            caption: 'Gewohnheiten verfolgen',
+            status: 'read',
+          },
+        ],
+      });
+    });
+
+    it('answers the home listing when the home storefront is named or none is', async () => {
+      const { detail } = await importWithMarket();
+
+      const named = (
+        await api.get(`/apps/${detail.id}/screenshots?country=us`).expect(200)
+      ).body as AppScreenshots;
+      const omitted = (
+        await api.get(`/apps/${detail.id}/screenshots`).expect(200)
+      ).body as AppScreenshots;
+
+      expect(named).toEqual(omitted);
+      expect(omitted).toMatchObject({
+        snapshotId: detail.latestSnapshot?.id,
+        country: 'us',
+      });
+    });
+
+    it('answers 404 for a market without a captured listing', async () => {
+      const { detail } = await importWithMarket();
+
+      const response = await api
+        .get(`/apps/${detail.id}/screenshots?country=fr`)
+        .expect(404);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        'No listing captured for fr',
+      );
+    });
+
+    it.each(['zz', 'DE'])(
+      'refuses %s, which is not a storefront code of the store',
+      async (country) => {
+        const { detail } = await importWithMarket();
+
+        await api
+          .get(`/apps/${detail.id}/screenshots?country=${country}`)
+          .expect(400);
+      },
+    );
   });
 });

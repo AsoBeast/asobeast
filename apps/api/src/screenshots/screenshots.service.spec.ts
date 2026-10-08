@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
+import { UnknownStorefrontError } from '@asobeast/shared';
 import type { PrismaService } from '../prisma/prisma.service';
 import type { ScreenshotPolicy } from './screenshot-policy';
 import { ScreenshotsService } from './screenshots.service';
@@ -19,7 +20,7 @@ const row = (position: number, status: string, caption: string | null) => ({
 });
 
 const build = (options: {
-  app?: { id: string; store: Store } | null;
+  app?: { id: string; store: Store; country: string } | null;
   snapshot?: unknown;
   state?: 'on' | 'off' | 'unsupported';
 }) => {
@@ -30,7 +31,7 @@ const build = (options: {
         .mockResolvedValue(
           'app' in options
             ? options.app
-            : { id: 'app_1', store: Store.APP_STORE },
+            : { id: 'app_1', store: Store.APP_STORE, country: 'us' },
         ),
     },
     appSnapshot: {
@@ -70,6 +71,7 @@ describe('ScreenshotsService.forApp', () => {
       snapshotId: 'snap_1',
       capturedAt: '2026-10-07T03:00:00.000Z',
       reading: 'on',
+      country: 'us',
       screenshots: [
         {
           position: 1,
@@ -103,6 +105,48 @@ describe('ScreenshotsService.forApp', () => {
     });
   });
 
+  it('reads the newest snapshot of a market listing', async () => {
+    const { service, prisma } = build({
+      snapshot: { id: 'snap_de', capturedAt: captured, screenshots: [] },
+    });
+
+    await expect(service.forApp('app_1', 'de')).resolves.toMatchObject({
+      snapshotId: 'snap_de',
+      country: 'de',
+    });
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { appId: 'app_1', country: 'de' } }),
+    );
+  });
+
+  it('reads the home listing when the home storefront is named', async () => {
+    const { service, prisma } = build({ snapshot: null });
+
+    await expect(service.forApp('app_1', 'us')).resolves.toMatchObject({
+      snapshotId: null,
+      country: 'us',
+    });
+    expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { appId: 'app_1', country: null } }),
+    );
+  });
+
+  it('answers 404 for a market without a captured listing', async () => {
+    const { service } = build({ snapshot: null });
+
+    await expect(service.forApp('app_1', 'fr')).rejects.toThrow(
+      new NotFoundException('No listing captured for fr'),
+    );
+  });
+
+  it('refuses a market that is not a storefront of the store', async () => {
+    const { service } = build({ snapshot: null });
+
+    await expect(service.forApp('app_1', 'zz')).rejects.toBeInstanceOf(
+      UnknownStorefrontError,
+    );
+  });
+
   it('answers an app with no snapshot as an empty list', async () => {
     const { service } = build({ snapshot: null });
 
@@ -115,7 +159,7 @@ describe('ScreenshotsService.forApp', () => {
 
   it('reports the reading state of the store', async () => {
     const { service } = build({
-      app: { id: 'app_2', store: Store.GOOGLE_PLAY },
+      app: { id: 'app_2', store: Store.GOOGLE_PLAY, country: 'us' },
       state: 'unsupported',
     });
 

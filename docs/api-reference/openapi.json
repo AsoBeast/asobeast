@@ -2349,6 +2349,17 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose listing to use instead of the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2363,7 +2374,7 @@
             }
           }
         },
-        "summary": "Screenshots of the latest snapshot with the caption read from each",
+        "summary": "Screenshots of the latest snapshot of a listing with the caption read from each",
         "tags": [
           "screenshots"
         ]
