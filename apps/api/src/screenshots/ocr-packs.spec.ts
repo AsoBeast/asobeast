@@ -20,6 +20,7 @@ const PACKS = [
   'rus',
   'ara',
   'tha',
+  'pol',
 ];
 
 describe('the on host ocr dependencies', () => {

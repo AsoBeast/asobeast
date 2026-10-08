@@ -7,7 +7,7 @@ import {
 } from './ocr-languages';
 
 describe('OCR_LANGUAGES', () => {
-  it('lists the thirteen bundled packs', () => {
+  it('lists the fourteen bundled packs', () => {
     expect(OCR_LANGUAGES).toEqual([
       'eng',
       'deu',
@@ -22,11 +22,22 @@ describe('OCR_LANGUAGES', () => {
       'rus',
       'ara',
       'tha',
+      'pol',
     ]);
   });
 
   it('defaults to every bundled pack', () => {
     expect(DEFAULT_OCR_LANGUAGES).toEqual([...OCR_LANGUAGES]);
+  });
+});
+
+describe('ocrLanguagesFor polish', () => {
+  it('reads the polish storefront in english and polish', () => {
+    expect(ocrLanguagesFor('pl', [...OCR_LANGUAGES])).toEqual(['eng', 'pol']);
+  });
+
+  it('reads the polish storefront in english only when polish is not enabled', () => {
+    expect(ocrLanguagesFor('pl', ['eng'])).toEqual(['eng']);
   });
 });
 

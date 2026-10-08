@@ -5,10 +5,10 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotFetchError } from '../store-providers/errors';
 import { ScreenshotImageSource } from '../store-providers/screenshot-image.source';
 import { CaptionChangeRecorder } from './caption-change-recorder';
-import { selectCaption } from './caption-text';
 import { type PreparedImage, prepareForOcr } from './image-preprocess';
 import { OCR_ENGINE, type OcrEngine } from './ocr-engine';
 import { type OcrLanguage, ocrRecipe } from './ocr-languages';
+import { readCaption } from './read-caption';
 import { ScreenshotPolicy } from './screenshot-policy';
 import { type CachedText, ScreenshotTextCache } from './screenshot-text-cache';
 
@@ -116,8 +116,7 @@ export class ScreenshotReader {
   ): Promise<CachedText | null> {
     const prepared = await this.download(row);
     if (prepared === null) return null;
-    const lines = await this.engine.read(prepared.image, languages);
-    const caption = selectCaption(lines, prepared.height);
+    const caption = await readCaption(this.engine, prepared, languages);
     return this.cache.store({
       assetKey: row.assetKey,
       recipe,

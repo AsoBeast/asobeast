@@ -20,7 +20,12 @@ import {
   APP_STORE_URL,
   FakeScreenshotRegistry,
 } from './helpers/screenshot-store';
-import { lines, readsFinished, solidPng } from './helpers/screenshot-reading';
+import {
+  greyPassEngine,
+  lines,
+  readsFinished,
+  solidPng,
+} from './helpers/screenshot-reading';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
@@ -50,7 +55,7 @@ describe('Reading screenshots (e2e)', () => {
       .overrideProvider(ScreenshotImageSource)
       .useValue({ read })
       .overrideProvider(OCR_ENGINE)
-      .useValue({ name: 'fake-engine', read: engineRead })
+      .useValue(greyPassEngine(engineRead))
       .compile();
     app = moduleFixture.createNestApplication();
     useCookies(app);
@@ -100,9 +105,9 @@ describe('Reading screenshots (e2e)', () => {
       orderBy: { position: 'asc' },
     });
     expect(rows.map((row) => [row.status, row.caption, row.recipe])).toEqual([
-      ['read', 'Track every habit', 'ocr1:eng'],
-      ['read', 'Track every habit', 'ocr1:eng'],
-      ['read', 'Track every habit', 'ocr1:eng'],
+      ['read', 'Track every habit', 'ocr2:eng'],
+      ['read', 'Track every habit', 'ocr2:eng'],
+      ['read', 'Track every habit', 'ocr2:eng'],
     ]);
     await expect(prisma.screenshotText.count()).resolves.toBe(3);
     expect(engineRead).toHaveBeenCalledTimes(3);

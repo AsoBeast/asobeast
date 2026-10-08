@@ -32,9 +32,26 @@ const pendingRow = (position: number) => ({
 });
 
 const HEADLINE = [
-  { text: 'Track every habit', confidence: 96, top: 198, height: 102 },
-  { text: "Today's habits", confidence: 96, top: 720, height: 44 },
+  {
+    text: 'Track every habit',
+    confidence: 96,
+    left: 0,
+    top: 198,
+    width: 900,
+    height: 102,
+  },
+  {
+    text: "Today's habits",
+    confidence: 96,
+    left: 0,
+    top: 720,
+    width: 900,
+    height: 44,
+  },
 ];
+
+const GREY = Buffer.from('grey png');
+const INVERTED = Buffer.from('inverted png');
 
 interface RowUpdate {
   where: { snapshotId_position: { snapshotId: string; position: number } };
@@ -119,9 +136,13 @@ const build = (
 
 describe('ScreenshotReader.read', () => {
   beforeEach(() => {
-    prepare
-      .mockReset()
-      .mockResolvedValue({ image: Buffer.from('png'), height: 2341 });
+    prepare.mockReset().mockResolvedValue({
+      height: 2341,
+      passes: [
+        { image: GREY, thresholding: 'otsu' },
+        { image: INVERTED, thresholding: 'sauvola' },
+      ],
+    });
   });
 
   it('copies a cached read without downloading or reading the image', async () => {
@@ -147,18 +168,60 @@ describe('ScreenshotReader.read', () => {
     await reader.read('snap_1');
 
     expect(download).toHaveBeenCalledWith(pendingRow(1).url);
-    expect(recognize).toHaveBeenCalledWith(Buffer.from('png'), ['eng']);
+    expect(recognize.mock.calls).toEqual([
+      [GREY, ['eng'], 'otsu'],
+      [INVERTED, ['eng'], 'sauvola'],
+    ]);
     expect(store).toHaveBeenCalledWith({
       assetKey: asset(1),
-      recipe: 'ocr1:eng',
+      recipe: 'ocr2:eng',
       status: 'read',
       caption: 'Track every habit',
       engine: 'fake-engine',
     });
     expect(updated()).toEqual([[1, 'read', 'Track every habit']]);
     expect(update.mock.calls[0][0].data).toMatchObject({
-      recipe: 'ocr1:eng',
+      recipe: 'ocr2:eng',
     });
+  });
+
+  it('keeps a caption only the inverted pass found', async () => {
+    const { reader, updated, recognize } = build({ rows: [pendingRow(1)] });
+    recognize.mockImplementation(
+      (_image: Buffer, _languages: string[], thresholding: string) =>
+        Promise.resolve(
+          thresholding === 'sauvola'
+            ? [
+                {
+                  text: 'Explore',
+                  confidence: 96,
+                  left: 330,
+                  top: 240,
+                  width: 420,
+                  height: 160,
+                },
+              ]
+            : [],
+        ),
+    );
+
+    await reader.read('snap_1');
+
+    expect(updated()).toEqual([[1, 'read', 'Explore']]);
+  });
+
+  it('never serves a read of the previous recipe from the cache', async () => {
+    const { reader, find, updated } = build({ rows: [pendingRow(1)] });
+    find.mockImplementation((_assetKey: string, recipe: string) =>
+      Promise.resolve(
+        recipe === 'ocr1:eng' ? { status: 'read', caption: 'I' } : null,
+      ),
+    );
+
+    await reader.read('snap_1');
+
+    expect(find).toHaveBeenCalledWith(asset(1), 'ocr2:eng');
+    expect(updated()).toEqual([[1, 'read', 'Track every habit']]);
   });
 
   it('caches and records a blank when only interface text was read', async () => {
@@ -228,8 +291,12 @@ describe('ScreenshotReader.read', () => {
 
     await reader.read('snap_1');
 
-    expect(find).toHaveBeenCalledWith(asset(1), 'ocr1:eng+jpn');
-    expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng', 'jpn']);
+    expect(find).toHaveBeenCalledWith(asset(1), 'ocr2:eng+jpn');
+    expect(recognize).toHaveBeenCalledWith(
+      expect.anything(),
+      ['eng', 'jpn'],
+      expect.anything(),
+    );
   });
 
   it('reads a market snapshot with the language of its own storefront', async () => {
@@ -241,8 +308,12 @@ describe('ScreenshotReader.read', () => {
 
     await reader.read('snap_1');
 
-    expect(find).toHaveBeenCalledWith(asset(1), 'ocr1:eng+deu');
-    expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
+    expect(find).toHaveBeenCalledWith(asset(1), 'ocr2:eng+deu');
+    expect(recognize).toHaveBeenCalledWith(
+      expect.anything(),
+      ['eng', 'deu'],
+      expect.anything(),
+    );
   });
 
   it('marks every pending screenshot skipped when no language applies', async () => {
