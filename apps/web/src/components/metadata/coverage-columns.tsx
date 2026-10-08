@@ -29,13 +29,7 @@ const columnHelper = createColumnHelper<
   KeywordCoverageRow
 >();
 
-function CoverageMark({
-  covered,
-  field,
-}: {
-  covered: boolean;
-  field: MetadataField;
-}) {
+function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
   return (
     <span
       className={cn(
@@ -51,13 +45,16 @@ function CoverageMark({
         <Minus className="size-3.5" />
       )}
       <span className="sr-only">
-        {covered ? "in" : "missing from"} {METADATA_FIELD_LABELS[field]}
+        {covered ? "in" : "missing from"} {label}
       </span>
     </span>
   );
 }
 
-export function coverageColumns(fields: readonly MetadataField[]) {
+export function coverageColumns(
+  fields: readonly MetadataField[],
+  withScreenshotText: boolean,
+) {
   return columnHelper.columns([
     columnHelper.accessor("text", {
       id: "keyword",
@@ -101,11 +98,25 @@ export function coverageColumns(fields: readonly MetadataField[]) {
               row.original.fields.find((entry) => entry.field === field)
                 ?.covered ?? false
             }
-            field={field}
+            label={METADATA_FIELD_LABELS[field]}
           />
         ),
       }),
     ),
+    ...(withScreenshotText
+      ? [
+          columnHelper.display({
+            id: "screenshotText",
+            header: "Screenshot text",
+            cell: ({ row }) => (
+              <CoverageMark
+                covered={row.original.screenshotText?.covered ?? false}
+                label="screenshot text"
+              />
+            ),
+          }),
+        ]
+      : []),
     columnHelper.accessor("uncovered", {
       enableSorting: false,
       filterFn: (row, id, uncovered: boolean) =>

@@ -22,6 +22,7 @@ import {
   getActionSummary,
   getAlertDeliveryStatus,
   getAppActions,
+  getAppScreenshots,
   getAlertsConfig,
   getApiTokens,
   getApp,
@@ -73,6 +74,10 @@ import {
   type RankingParams,
   type ReviewFilters,
 } from "./api";
+import {
+  hasPendingScreenshots,
+  SCREENSHOT_POLL_MS,
+} from "./screenshot-captions";
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -131,6 +136,7 @@ export const appKeys = {
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
+  screenshots: (id: string) => [...appKeys.detail(id), "screenshots"] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
 
@@ -522,6 +528,14 @@ export const changesOptions = (id: string, days: number) =>
   queryOptions({
     queryKey: appKeys.changes(id, days),
     queryFn: () => getChanges(id, days),
+  });
+
+export const screenshotsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.screenshots(id),
+    queryFn: () => getAppScreenshots(id),
+    refetchInterval: (query) =>
+      hasPendingScreenshots(query.state.data) ? SCREENSHOT_POLL_MS : false,
   });
 
 export const changeImpactOptions = (

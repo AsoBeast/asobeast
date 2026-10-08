@@ -12,3 +12,12 @@ export function StorefrontLocalizationsSkeleton() {
 export function DraftLocalizationSkeleton() {
   return <Skeleton className="h-14 w-72 max-w-full" />;
 }
+
+export function ScreenshotCaptionsSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <Skeleton className="h-7 w-56" />
+      <Skeleton className="h-96 w-full rounded-xl" />
+    </div>
+  );
+}

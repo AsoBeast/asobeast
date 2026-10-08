@@ -4,7 +4,11 @@ import { notFound } from "next/navigation";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
 import { CoverageTable } from "@/components/metadata/CoverageTable";
 import { MetadataAssistantPanel } from "@/components/metadata/MetadataAssistantPanel";
-import { StorefrontLocalizationsSkeleton } from "@/components/metadata/skeletons";
+import { ScreenshotCaptionsCard } from "@/components/metadata/ScreenshotCaptionsCard";
+import {
+  ScreenshotCaptionsSkeleton,
+  StorefrontLocalizationsSkeleton,
+} from "@/components/metadata/skeletons";
 import { StorefrontLocalizationsCard } from "@/components/metadata/StorefrontLocalizationsCard";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
 import {
@@ -13,7 +17,7 @@ import {
   getMetadataAudit,
 } from "@/lib/api";
 import { getQueryClient } from "@/lib/get-query-client";
-import { keywordCountriesOptions } from "@/lib/queries";
+import { keywordCountriesOptions, screenshotsOptions } from "@/lib/queries";
 
 export default async function MetadataPage({
   params,
@@ -33,6 +37,9 @@ export default async function MetadataPage({
     );
   }
   const queryClient = getQueryClient();
+  if (result.store === "APP_STORE") {
+    void queryClient.prefetchQuery(screenshotsOptions(id));
+  }
   const [markets, assistant] = await Promise.all([
     result.store === "APP_STORE"
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
@@ -54,6 +61,12 @@ export default async function MetadataPage({
             />
           ))}
         </section>
+
+        {result.store === "APP_STORE" ? (
+          <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
+            <ScreenshotCaptionsCard id={id} />
+          </Suspense>
+        ) : null}
 
         {markets ? (
           <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
@@ -79,7 +92,10 @@ export default async function MetadataPage({
               Track keywords to see how your metadata covers them.
             </div>
           ) : (
-            <CoverageTable rows={result.coverage} />
+            <CoverageTable
+              rows={result.coverage}
+              screenshotText={result.screenshotText ?? null}
+            />
           )}
         </section>
 

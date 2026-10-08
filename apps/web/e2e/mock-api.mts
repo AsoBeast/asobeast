@@ -51,8 +51,10 @@ import {
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
+  SCREENSHOTS,
   SERP_SNAPSHOTS,
   WEBHOOKS,
+  emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
 } from "./fixtures.mts";
@@ -75,6 +77,7 @@ import type {
   ActionSummary,
   ActionUpdateStatus,
   AppAuditResult,
+  AppScreenshots,
   WorkspaceTeam,
   ActionStatus,
   AuthUser,
@@ -90,6 +93,7 @@ import type {
   KeywordFieldResult,
   MetadataAssistantRequest,
   MetadataAssistantResult,
+  MetadataAuditResult,
   KeywordSort,
   ParsedStoreUrl,
   StoreHealthReport,
@@ -133,6 +137,7 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
+const PENDING_SERVED = new Map<string, number>();
 const KEYWORD_QUOTA_COOKIE = "e2e_keyword_quota";
 const initialKeywords = new Map(
   Object.entries(DATASETS).map(([id, dataset]) => [
@@ -458,6 +463,30 @@ function sortKeywords(
     );
   }
   return list;
+}
+
+function metadataAuditFor(
+  id: string,
+  req: IncomingMessage,
+): MetadataAuditResult {
+  const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
+  const store = DATASETS[id]?.detail.store ?? METADATA_AUDIT.store;
+  const result = { ...audit, appId: id, store };
+  const withoutCaptions = result.coverage.map((row) => ({
+    ...row,
+    screenshotText: null,
+  }));
+  if (store === "GOOGLE_PLAY") {
+    return { ...result, coverage: withoutCaptions, screenshotText: null };
+  }
+  if (hasCookie(req, "e2e_screenshots_off", "1") && result.screenshotText) {
+    return {
+      ...result,
+      coverage: withoutCaptions,
+      screenshotText: { ...result.screenshotText, status: "off", read: 0 },
+    };
+  }
+  return result;
 }
 
 function appRoute(
@@ -1624,11 +1653,7 @@ const routes: Route[] = [
     pattern: /^\/apps\/([^/]+)\/metadata\/audit$/,
     handler: ([id], req, res) =>
       apps.some((app) => app.id === id) || Object.hasOwn(METADATA_AUDITS, id)
-        ? json(res, 200, {
-            ...(METADATA_AUDITS[id] ?? METADATA_AUDIT),
-            appId: id,
-            store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
-          })
+        ? json(res, 200, metadataAuditFor(id, req))
         : json(res, 404, errorEnvelope(404, req.url ?? "/", "App not found")),
   },
   {
@@ -1727,6 +1752,43 @@ const routes: Route[] = [
           keywordCount: dataset.keywords.length,
         },
       ]);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/screenshots$/,
+    handler: ([id], req, res) => {
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      const base: AppScreenshots =
+        SCREENSHOTS[id] ?? emptyScreenshots(id, dataset.detail.store);
+      if (hasCookie(req, "e2e_screenshots_off", "1")) {
+        return json(res, 200, {
+          ...base,
+          reading: "off",
+          screenshots: base.screenshots.map((item) => ({
+            ...item,
+            caption: null,
+            status: "skipped",
+          })),
+        });
+      }
+      const pending = cookieValue(req, "e2e_screenshots_pending");
+      if (pending !== undefined) {
+        const served = PENDING_SERVED.get(pending) ?? 0;
+        PENDING_SERVED.set(pending, served + 1);
+        if (served === 0) {
+          return json(res, 200, {
+            ...base,
+            screenshots: base.screenshots.map((item) =>
+              item.position > 1
+                ? { ...item, caption: null, status: "pending" }
+                : item,
+            ),
+          });
+        }
+      }
+      json(res, 200, base);
     },
   },
   appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset) => dataset.changes),

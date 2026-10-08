@@ -4,6 +4,7 @@ import type {
   AlertDeliveryItem,
   ApiErrorEnvelope,
   AppDetail,
+  AppScreenshots,
   AppListItem,
   AppSummary,
   CategoryCollection,
@@ -3050,6 +3051,49 @@ export const METADATA_AUDIT: MetadataAuditResult = {
   keywordFieldSuggestion: null,
   screenshotText: { status: "ready", read: 2, total: 4 },
 };
+
+const e2eScreenshotUrl = (position: number): string =>
+  `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
+
+export const APP_1_SCREENSHOTS: AppScreenshots = {
+  appId: "app-1",
+  store: "APP_STORE",
+  snapshotId: "snap-app-1",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "on",
+  screenshots: [
+    {
+      position: 1,
+      url: e2eScreenshotUrl(1),
+      caption: "Focus timer for deep work",
+      status: "read",
+    },
+    {
+      position: 2,
+      url: e2eScreenshotUrl(2),
+      caption: "The productivity app that sticks",
+      status: "read",
+    },
+    { position: 3, url: e2eScreenshotUrl(3), caption: null, status: "blank" },
+    { position: 4, url: e2eScreenshotUrl(4), caption: null, status: "failed" },
+  ],
+};
+
+export const SCREENSHOTS: Record<string, AppScreenshots> = {
+  "app-1": APP_1_SCREENSHOTS,
+};
+
+export const emptyScreenshots = (
+  appId: string,
+  store: "APP_STORE" | "GOOGLE_PLAY",
+): AppScreenshots => ({
+  appId,
+  store,
+  snapshotId: null,
+  capturedAt: null,
+  reading: store === "GOOGLE_PLAY" ? "unsupported" : "on",
+  screenshots: [],
+});
 
 export const APP_AR_ID = "app-ar";
 
