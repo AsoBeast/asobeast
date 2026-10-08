@@ -129,6 +129,8 @@ import {
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
   parseStoreUrl,
+  isStorefront,
+  UnknownStorefrontError,
 } from "@asobeast/shared";
 import { ALL_VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
 import {
@@ -476,21 +478,26 @@ function sortKeywords(
   return list;
 }
 
+function withoutScreenshotText<T extends { screenshotText?: unknown }>(
+  value: T,
+): T {
+  const copy = { ...value };
+  delete copy.screenshotText;
+  return copy;
+}
+
 function withScreenshotText(
   req: IncomingMessage,
   result: MetadataAuditResult,
 ): MetadataAuditResult {
-  const withoutCaptions = result.coverage.map((row) => ({
-    ...row,
-    screenshotText: null,
-  }));
+  const coverage = result.coverage.map(withoutScreenshotText);
   if (result.store === "GOOGLE_PLAY") {
-    return { ...result, coverage: withoutCaptions, screenshotText: null };
+    return withoutScreenshotText({ ...result, coverage });
   }
   if (hasCookie(req, "e2e_screenshots_off", "1") && result.screenshotText) {
     return {
       ...result,
-      coverage: withoutCaptions,
+      coverage,
       screenshotText: { ...result.screenshotText, status: "off", read: 0 },
     };
   }
@@ -1915,6 +1922,17 @@ const routes: Route[] = [
       if (isPolishListingOf(dataset, query)) {
         return json(res, 200, APP_1_PL_SCREENSHOTS);
       }
+      if (market !== null && !isStorefront(dataset.detail.store, market)) {
+        return json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            new UnknownStorefrontError(dataset.detail.store, market).message,
+          ),
+        );
+      }
       if (market !== null && market !== dataset.detail.country) {
         return json(
           res,
@@ -1922,8 +1940,10 @@ const routes: Route[] = [
           errorEnvelope(404, path, `No listing captured for ${market}`),
         );
       }
-      const base: AppScreenshots =
-        SCREENSHOTS[id] ?? emptyScreenshots(id, dataset.detail.store);
+      const base: AppScreenshots = {
+        ...(SCREENSHOTS[id] ?? emptyScreenshots(id, dataset.detail.store)),
+        country: dataset.detail.country,
+      };
       if (hasCookie(req, "e2e_screenshots_off", "1")) {
         return json(res, 200, {
           ...base,
