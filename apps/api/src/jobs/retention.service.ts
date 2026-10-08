@@ -6,6 +6,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 
 const SUGGEST_PROBE_DAYS = 7;
+const SCREENSHOT_TEXT_DAYS = 90;
 const ABANDONED_RESERVATION_MS = 60 * 60 * 1000;
 
 @Injectable()
@@ -41,6 +42,7 @@ export class RetentionService {
       ['billingEvent', () => this.pruneBillingEvents(now)],
       ['aiCall', () => this.pruneAiCalls(now)],
       ['aiCallReservation', () => this.releaseAbandonedAiCalls(now)],
+      ['screenshotText', () => this.pruneScreenshotText(now)],
     ];
 
     const settled = await Promise.allSettled(rules.map(([, run]) => run()));
@@ -237,6 +239,13 @@ export class RetentionService {
         capturedAt: { lt: this.cutoff(days, now) },
         id: { notIn: keepIds },
       },
+    });
+    return count;
+  }
+
+  private async pruneScreenshotText(now: Date): Promise<number> {
+    const { count } = await this.prisma.screenshotText.deleteMany({
+      where: { usedAt: { lt: this.cutoff(SCREENSHOT_TEXT_DAYS, now) } },
     });
     return count;
   }

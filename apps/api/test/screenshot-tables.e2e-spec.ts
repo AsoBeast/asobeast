@@ -5,6 +5,7 @@ import { Test } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { RetentionService } from '../src/jobs/retention.service';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues } from './obliterate-queues';
 
@@ -141,5 +142,53 @@ describe('Screenshot tables (e2e)', () => {
     await expect(
       prisma.changeEvent.findUnique({ where: { id: event.id } }),
     ).resolves.toMatchObject({ detail });
+  });
+  it('prunes a cached text unused for ninety days and keeps a recent one', async () => {
+    const old = new Date(Date.now() - 100 * 86_400_000);
+    await prisma.screenshotText.createMany({
+      data: [
+        {
+          assetKey: `${ASSET}/old`,
+          recipe: 'ocr1:eng',
+          status: 'read',
+          engine: 'e',
+          usedAt: old,
+        },
+        {
+          assetKey: `${ASSET}/new`,
+          recipe: 'ocr1:eng',
+          status: 'read',
+          engine: 'e',
+        },
+      ],
+    });
+
+    const deleted = await app.get(RetentionService).prune();
+
+    expect(deleted.screenshotText).toBe(1);
+    await expect(
+      prisma.screenshotText.findMany({ select: { assetKey: true } }),
+    ).resolves.toEqual([{ assetKey: `${ASSET}/new` }]);
+  });
+
+  it('removes the screenshot rows of a pruned snapshot and keeps the newest snapshot of the app', async () => {
+    const { owned, snapshot } = await seedSnapshot();
+    const newest = await prisma.appSnapshot.create({
+      data: { appId: owned.id, title: 'Mine', description: 'd', raw: {} },
+    });
+    await prisma.appSnapshot.update({
+      where: { id: snapshot.id },
+      data: { capturedAt: new Date(Date.now() - 400 * 86_400_000) },
+    });
+
+    await app.get(RetentionService).prune();
+
+    await expect(
+      prisma.appSnapshot.findUnique({ where: { id: snapshot.id } }),
+    ).resolves.toBeNull();
+    await expect(
+      prisma.appSnapshot.findUnique({ where: { id: newest.id } }),
+    ).resolves.not.toBeNull();
+    await expect(prisma.snapshotScreenshot.count()).resolves.toBe(0);
   });
 });
