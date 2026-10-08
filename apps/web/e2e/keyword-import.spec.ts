@@ -670,7 +670,9 @@ test("P-WEB-16 says so when the review cannot reach the server", async ({
 
   await choose(dialog, "keyword\r\nalpha one\r\n");
 
-  await expect(dialog.getByRole("alert")).toBeVisible();
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Could not reach the api to review this file",
+  );
   await expect(
     dialog.getByRole("button", { name: "Nothing to import" }),
   ).toBeDisabled();
