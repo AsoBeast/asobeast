@@ -49,9 +49,8 @@ export function selectCaption(
     .sort((a, b) => a.top - b.top);
   if (kept.length === 0) return null;
 
-  return kept
-    .map((line) => line.text)
-    .join(' ')
+  return Array.from(kept.map((line) => line.text).join(' '))
     .slice(0, MAX_CAPTION_CHARS)
+    .join('')
     .trim();
 }

@@ -42,6 +42,34 @@ describe('prepareForOcr', () => {
     await expect(prepareForOcr(Buffer.from('<html></html>'))).rejects.toThrow();
   });
 
+  it('accepts a webp image', async () => {
+    const webp = await sharp({
+      create: { width: 540, height: 100, channels: 3, background: '#7b8cff' },
+    })
+      .webp()
+      .toBuffer();
+
+    await expect(prepareForOcr(webp)).resolves.toMatchObject({ height: 200 });
+  });
+
+  it('refuses an svg even though it decodes', async () => {
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="540" height="100"><rect width="540" height="100"/></svg>',
+    );
+
+    await expect(prepareForOcr(svg)).rejects.toThrow(/jpeg, png or webp/);
+  });
+
+  it('refuses a gif even though it decodes', async () => {
+    const gif = await sharp({
+      create: { width: 540, height: 100, channels: 3, background: '#000' },
+    })
+      .gif()
+      .toBuffer();
+
+    await expect(prepareForOcr(gif)).rejects.toThrow(/jpeg, png or webp/);
+  });
+
   it('refuses an image past the pixel cap', async () => {
     const edge = Math.ceil(Math.sqrt(MAX_INPUT_PIXELS)) + 1;
     const huge = await sharp({

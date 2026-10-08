@@ -114,6 +114,16 @@ describe('selectCaption', () => {
     );
   });
 
+  it('never cuts an astral character in half at the maximum length', () => {
+    const long = `${'w'.repeat(MAX_CAPTION_CHARS - 1)}${'𝐀'.repeat(4)}`;
+
+    const caption = selectCaption([line(long, 100, 200)], IMAGE_HEIGHT) ?? '';
+
+    expect(() => encodeURIComponent(caption)).not.toThrow();
+    expect(Array.from(caption)).toHaveLength(MAX_CAPTION_CHARS);
+    expect(caption.endsWith('𝐀')).toBe(true);
+  });
+
   it('cleans stray punctuation the engine leaves at the edges', () => {
     expect(
       selectCaption([line('  | Plan your week ,', 100, 200)], IMAGE_HEIGHT),
