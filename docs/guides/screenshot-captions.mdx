@@ -22,11 +22,25 @@ Treat it as a weak, secondary signal. That is why asobeast shows it beside keywo
 | --- | --- |
 | The large marketing text of each iPhone screenshot on the App Store, in store order | The small interface text inside the device frame |
 | Up to the first 10 screenshots of each snapshot | iPad screenshots and app preview videos |
-| Your apps and your competitors, in every market you import | Google Play screenshots |
+| Your apps and your competitors, on the home listing and on every market listing asobeast captures | Google Play screenshots |
 
 The reader keeps the lines that are at least 55 percent as tall as the tallest confident line and at least 2 percent of the image height. A screenshot that shows only interface text reads as having no caption, which is correct.
 
 Every snapshot records its screenshots, so the caption belongs to the snapshot rather than to the app. When a screenshot has the same address as one already read, in your workspace or in anyone else's, the reader reuses the result instead of reading the image again. Screenshots are public store data, so the reads are shared the same way keyword searches are.
+
+## How do market listings read their screenshots?
+
+Every listing asobeast captures records its own screenshots: the home listing and each market listing, for your app and for every competitor. A market listing is captured when you track a keyword in a new market, in the daily run and when you refresh it, and each capture queues its screenshots for reading like the home one. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
+
+| What | Market listing |
+| --- | --- |
+| Language | English plus the language of that storefront, so the German listing of a US app reads English and German |
+| Screenshot captions card | Shows the screenshots of the market chosen in the **Listing market** control |
+| Screenshot text column | Reads the captions of the listing that judged the keyword: its own market listing, or the home listing until that market has one |
+| Changes | Compared with the previous snapshot of the same market listing only, and shown in that market's timeline. Like every market change, they are never sent as alerts |
+| ASO audit | Not used. The audit and its check Keywords in captions read the home listing |
+
+The extra reads cost CPU on the `screenshots` queue only. They spend no store request budget, because the images come from Apple's image server, and a screenshot shared between markets is read once per language set.
 
 ## What state can a screenshot be in?
 
@@ -53,7 +67,7 @@ Reading is most reliable on large, high contrast type on a plain or gradient bac
 - **Changes.** Replaced, added, removed and reordered screenshots, and edited captions, appear for your apps and your competitors. See [Watch listing changes](/guides/listing-changes).
 - **ASO audit.** The check Keywords in captions answers from the read text when no AI analysis exists. See [Score your listing](/guides/aso-audit).
 
-The same data is available as `GET /apps/{id}/screenshots` (see [asobeast API](/api-reference/introduction)), and the optional `screenshotText` fields of `metadata_audit` and the `detail` field of `changes_timeline` carry it to an agent (see [MCP tool reference](/mcp/tools)).
+The same data is available as `GET /apps/{id}/screenshots`, with `country` for a market listing that answers `404` until that listing was captured (see [asobeast API](/api-reference/introduction)), and the optional `screenshotText` fields of `metadata_audit` and the `detail` field of `changes_timeline` carry it to an agent (see [MCP tool reference](/mcp/tools)).
 
 ## What does it cost?
 

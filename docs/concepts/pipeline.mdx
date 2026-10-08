@@ -31,7 +31,7 @@ Batched alerts do not have their own schedule. They send once the daily pipeline
 
 The difference matters. The Apple limiter spaces requests, while the Google Play limiter spaces job starts, because one Google Play job fans out into many sequential requests of its own.
 
-Reading screenshot captions runs in a third queue, `screenshots`, with its own worker at concurrency 1. It spends no store request budget and no OpenAI call. See [Read screenshot captions](/guides/screenshot-captions).
+Reading screenshot captions runs in a third queue, `screenshots`, with its own worker at concurrency 1. Every snapshot that records App Store screenshots queues one read, a market listing refresh included. It spends no store request budget and no OpenAI call. See [Read screenshot captions](/guides/screenshot-captions).
 
 ## Why are the limits conservative?
 

@@ -61,7 +61,7 @@ Competitors belong to one primary app, so pass the primary app's id. `keyword_co
 
 `from` and `to` are inclusive UTC date strings in `YYYY-MM-DD` form. Omit `keywordIds` on `ranking_history` to get every tracked keyword, and omit `date` on `serp_snapshot` to get the most recent one. Omit `country` on `metadata_audit` and `changes_timeline` for the home storefront. `category_ranks` is the home storefront only and defaults to the last 90 days.
 
-On the App Store, `metadata_audit` returns an optional `screenshotText` summary and, per keyword, which screenshot positions contain it. `changes_timeline` events may carry a `detail` object for screenshot and caption changes. Both are optional and absent when there is nothing to report. See [Read screenshot captions](/guides/screenshot-captions).
+On the App Store, `metadata_audit` returns an optional `screenshotText` summary for the listing of the `country` you pass and, per keyword, which screenshot positions of the listing that judged it contain it. `changes_timeline` events may carry a `detail` object for screenshot and caption changes of the market you pass. Both are optional and absent when there is nothing to report. See [Read screenshot captions](/guides/screenshot-captions).
 
 ## Actions
 
