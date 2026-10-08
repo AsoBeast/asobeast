@@ -476,3 +476,64 @@ describe('AppStoreProvider', () => {
     ]);
   });
 });
+
+describe('AppStoreProvider localized listings', () => {
+  const listing = {
+    id: 1,
+    title: 'Where Am I? Quiz Geograficzny',
+    description: 'Odkrywaj świat',
+  };
+
+  it('asks the lookup and the page for the requested localization', async () => {
+    const app = jest.fn().mockResolvedValue(listing);
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>Where Am I?</h1><p class="subtitle">Mapa Świata: Zgadnij Kraj</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'pl', 'pl');
+
+    expect(app).toHaveBeenCalledWith({
+      id: 1,
+      country: 'pl',
+      ratings: true,
+      lang: 'pl',
+    });
+    expect(page).toHaveBeenCalledWith({ id: 1, country: 'pl', language: 'pl' });
+    expect(result.title).toBe('Where Am I? Quiz Geograficzny');
+    expect(result.subtitle).toBe('Mapa Świata: Zgadnij Kraj');
+  });
+
+  it('asks for norwegian and simplified chinese in the formats the store accepts', async () => {
+    const app = jest.fn().mockResolvedValue(listing);
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    await provider.getApp('1', 'no', 'no');
+    await provider.getApp('1', 'sg', 'zh-Hans');
+
+    expect(
+      app.mock.calls.map(([options]: [{ lang?: string }]) => options.lang),
+    ).toEqual(['nb', 'zh_cn']);
+    expect(
+      page.mock.calls.map(
+        ([options]: [{ language?: string }]) => options.language,
+      ),
+    ).toEqual(['nb', 'zh-Hans']);
+  });
+
+  it('asks for the default localization exactly as before', async () => {
+    const app = jest.fn().mockResolvedValue(listing);
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    await provider.getApp('1', 'pl');
+
+    expect(app.mock.calls[0]).toStrictEqual([
+      { id: 1, country: 'pl', ratings: true },
+    ]);
+    expect(page.mock.calls[0]).toStrictEqual([{ id: 1, country: 'pl' }]);
+  });
+});
