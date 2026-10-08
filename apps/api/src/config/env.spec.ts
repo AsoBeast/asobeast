@@ -110,7 +110,15 @@ describe('the screenshot ocr variables', () => {
     expect(env.SCREENSHOT_OCR_LANGUAGES).toEqual(['eng', 'jpn']);
   });
 
-  it.each(['klingon', 'eng,klingon', ','])(
+  it('reads polish by default and accepts it in a narrowed list', () => {
+    expect(validateEnv(secret).SCREENSHOT_OCR_LANGUAGES).toContain('pol');
+    expect(
+      validateEnv({ ...secret, SCREENSHOT_OCR_LANGUAGES: 'eng,pol' })
+        .SCREENSHOT_OCR_LANGUAGES,
+    ).toEqual(['eng', 'pol']);
+  });
+
+  it.each(['klingon', 'eng,klingon', ',', 'eng,xx'])(
     'refuses to boot on the languages %j',
     (value) => {
       expect(() =>

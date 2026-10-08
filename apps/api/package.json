@@ -72,6 +72,7 @@
     "@tesseract.js-data/ita": "^1.0.0",
     "@tesseract.js-data/jpn": "^1.0.0",
     "@tesseract.js-data/kor": "^1.0.0",
+    "@tesseract.js-data/pol": "^1.0.0",
     "@tesseract.js-data/por": "^1.0.0",
     "@tesseract.js-data/rus": "^1.0.0",
     "@tesseract.js-data/spa": "^1.0.0",

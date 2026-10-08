@@ -11,7 +11,11 @@ const snapshot = {
   listing: HOME,
 };
 
-const row = (status: string, caption: string | null) => ({ status, caption });
+const row = (status: string, caption: string | null, recipe = 'ocr2:eng') => ({
+  status,
+  caption,
+  recipe,
+});
 
 const NEXT_CAPTURED = new Date('2026-10-08T03:00:00.000Z');
 
@@ -162,6 +166,47 @@ describe('CaptionChangeRecorder.record', () => {
     );
   });
 
+  it('records nothing between reads of two recipes', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previous: [row('read', 'I', 'ocr1:eng')],
+      current: [row('read', 'Explore', 'ocr2:eng')],
+    });
+
+    await recorder.record(snapshot);
+
+    expect(recordCaptionChange).not.toHaveBeenCalled();
+  });
+
+  it('records a caption edit between two reads of one recipe', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previous: [row('read', 'Explore', 'ocr2:eng')],
+      current: [row('read', 'Discover', 'ocr2:eng')],
+    });
+
+    await recorder.record(snapshot);
+
+    expect(recordCaptionChange).toHaveBeenCalledWith(
+      expect.objectContaining({ added: ['Discover'], removed: ['Explore'] }),
+    );
+  });
+
+  it('records nothing when one snapshot mixes recipes', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previous: [
+        row('read', 'Explore', 'ocr2:eng'),
+        row('blank', null, 'ocr1:eng'),
+      ],
+      current: [
+        row('read', 'Discover', 'ocr2:eng'),
+        row('blank', null, 'ocr2:eng'),
+      ],
+    });
+
+    await recorder.record(snapshot);
+
+    expect(recordCaptionChange).not.toHaveBeenCalled();
+  });
+
   it('compares a market snapshot with the snapshots of that market only', async () => {
     const { recorder, findFirst, recordCaptionChange } = build({
       previous: [row('read', 'Plane deine Woche')],
@@ -267,6 +312,19 @@ describe('CaptionChangeRecorder.record', () => {
       added: ['Plan your day'],
       removed: ['Plan your week'],
     });
+  });
+
+  it('leaves the next snapshot alone when it was read with another recipe', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previousSnapshot: null,
+      current: [row('read', 'Explore', 'ocr1:eng')],
+      next: [row('read', 'Discover', 'ocr2:eng')],
+      nextSnapshot: { id: 'snap_3', capturedAt: NEXT_CAPTURED },
+    });
+
+    await recorder.record(snapshot);
+
+    expect(recordCaptionChange).not.toHaveBeenCalled();
   });
 
   it('records both changes when this snapshot settles between two others', async () => {
