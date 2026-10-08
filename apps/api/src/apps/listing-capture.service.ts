@@ -4,26 +4,22 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App, AppSnapshot, Store } from '@prisma/client';
+import { App } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import {
   DetectedChange,
   DiffableChangeSnapshot,
 } from '../changes/change-detector';
-import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
-import {
-  releaseNotesFor,
-  screenshotsCount,
-} from '../store-providers/raw-facts';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
+import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
@@ -141,9 +137,9 @@ export class ListingCaptureService {
           after: snapshotIcon(app.store, snapshot),
         };
     const before = previous
-      ? this.toChangeSnapshot(previous, icons.before, app.store)
+      ? toChangeSnapshot(previous, icons.before, app.store)
       : null;
-    const after = this.toChangeSnapshot(snapshot, icons.after, app.store);
+    const after = toChangeSnapshot(snapshot, icons.after, app.store);
 
     const recorded = home
       ? await this.recordHomeRefresh(app.id, before, after)
@@ -168,24 +164,5 @@ export class ListingCaptureService {
   ): Promise<DetectedChange[]> {
     await this.keywords.syncFromSnapshot(appId);
     return this.changes.recordRefresh(appId, before, after);
-  }
-
-  private toChangeSnapshot(
-    snapshot: AppSnapshot,
-    iconUrl: string | null,
-    store: Store,
-  ): DiffableChangeSnapshot {
-    return {
-      title: snapshot.title,
-      subtitle: snapshot.subtitle,
-      summary: snapshot.summary,
-      description: snapshot.description,
-      version: snapshot.version,
-      price: snapshot.price,
-      screenshotsCount: screenshotsCount(snapshot.raw),
-      screenshots: screenshotKeys(store, snapshot.raw),
-      iconUrl,
-      releaseNotes: releaseNotesFor(store, snapshot.raw),
-    };
   }
 }
