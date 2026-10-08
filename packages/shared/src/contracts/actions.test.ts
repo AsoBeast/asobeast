@@ -6,6 +6,7 @@ import {
   ACTION_EVENT_ACTORS,
   ACTION_EVENT_TYPES,
   ACTION_IMPACT_WEIGHTS,
+  ACTION_NOTE_MAX_LENGTH,
   ACTION_OUTCOME_VERDICTS,
   ACTION_TREND_METRICS,
   ACTION_PRIORITIES,
@@ -459,5 +460,20 @@ describe('action detail vocabularies', () => {
     expect(new Set(ACTION_OUTCOME_VERDICTS).size).toBe(
       ACTION_OUTCOME_VERDICTS.length,
     );
+  });
+});
+
+describe('the action update contract', () => {
+  it('limits a note to 500 characters', () => {
+    expect(ACTION_NOTE_MAX_LENGTH).toBe(500);
+  });
+
+  it('lists the four statuses an update may set', () => {
+    expect([...ACTION_UPDATE_STATUSES]).toEqual([
+      'OPEN',
+      'SNOOZED',
+      'DONE',
+      'DISMISSED',
+    ]);
   });
 });

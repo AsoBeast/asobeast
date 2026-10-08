@@ -57,6 +57,7 @@ describe("preflight", () => {
     await expect(preflight(client)).resolves.toEqual({
       ok: true,
       limits: `Indie plan, ${PLAN_LIMITS.indie.mcpRequestsPerMinute} requests/minute`,
+      tokenScope: "read",
     });
   });
 
@@ -70,6 +71,7 @@ describe("preflight", () => {
     await expect(preflight(client)).resolves.toEqual({
       ok: true,
       limits: "plan unknown",
+      tokenScope: "read",
     });
   });
 
@@ -149,5 +151,44 @@ describe("preflight", () => {
       "message",
       expect.stringContaining("Could not reach"),
     );
+  });
+
+  it("reports a write scoped token as write", async () => {
+    const { client } = stubFetch((url) =>
+      url.endsWith("/auth/plan")
+        ? { status: 200, body: accountPlan() }
+        : { status: 200, body: { ...user(true), tokenScope: "write" } },
+    );
+
+    await expect(preflight(client)).resolves.toMatchObject({
+      ok: true,
+      tokenScope: "write",
+    });
+  });
+
+  it("treats an api that reports no scope as read only", async () => {
+    const { client } = stubFetch((url) =>
+      url.endsWith("/auth/plan")
+        ? { status: 200, body: accountPlan() }
+        : { status: 200, body: user(true) },
+    );
+
+    await expect(preflight(client)).resolves.toMatchObject({
+      ok: true,
+      tokenScope: "read",
+    });
+  });
+
+  it("treats a scope it does not know as read only", async () => {
+    const { client } = stubFetch((url) =>
+      url.endsWith("/auth/plan")
+        ? { status: 200, body: accountPlan() }
+        : { status: 200, body: { ...user(true), tokenScope: "admin" } },
+    );
+
+    await expect(preflight(client)).resolves.toMatchObject({
+      ok: true,
+      tokenScope: "read",
+    });
   });
 });

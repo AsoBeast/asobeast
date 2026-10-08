@@ -1,16 +1,22 @@
 import { McpServer, type CallToolResult } from '@modelcontextprotocol/server';
 import {
-  MCP_TOOLS,
-  toolText,
-  type ReadTool,
+  annotationsOf,
+  requestOf,
+  toolOutput,
+  toolsFor,
+  type McpTool,
+  type ResolvedRequest,
   type ToolRequest,
 } from '@asobeast/mcp-tools';
+import type { ApiTokenScope } from '@asobeast/shared';
 import type { InProcessResponse } from './in-process.gateway';
 import { toolErrorText } from './tool-errors';
 
 export const MCP_SERVER_NAME = 'asobeast';
 
-export type ToolExecutor = (request: ToolRequest) => Promise<InProcessResponse>;
+export type ToolExecutor = (
+  request: ResolvedRequest,
+) => Promise<InProcessResponse>;
 
 export function urlOf({ path, params }: ToolRequest): string {
   const query = new URLSearchParams();
@@ -23,8 +29,9 @@ export function urlOf({ path, params }: ToolRequest): string {
 }
 
 export function toolResult(
-  tool: ReadTool,
+  tool: McpTool,
   response: InProcessResponse,
+  input: Record<string, unknown> = {},
 ): CallToolResult {
   if (response.status >= 400) {
     return {
@@ -32,25 +39,28 @@ export function toolResult(
       content: [{ type: 'text', text: toolErrorText(tool, response) }],
     };
   }
-  return { content: [{ type: 'text', text: toolText(response.body) }] };
+  return {
+    content: [{ type: 'text', text: toolOutput(tool, input, response.body) }],
+  };
 }
 
 export function createRemoteServer(
   version: string,
   execute: ToolExecutor,
+  scope: ApiTokenScope = 'read',
 ): McpServer {
   const server = new McpServer({ name: MCP_SERVER_NAME, version });
-  for (const tool of MCP_TOOLS) {
+  for (const tool of toolsFor(scope)) {
     server.registerTool(
       tool.name,
       {
         title: tool.title,
         description: tool.description,
         inputSchema: tool.inputSchema,
-        annotations: { readOnlyHint: true },
+        annotations: annotationsOf(tool),
       },
       async (input): Promise<CallToolResult> =>
-        toolResult(tool, await execute(tool.request(input))),
+        toolResult(tool, await execute(requestOf(tool, input)), input),
     );
   }
   return server;

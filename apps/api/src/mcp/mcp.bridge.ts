@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import {
   createMcpHandler,
+  type AuthInfo,
   type McpHttpHandler,
   type McpRequestContext,
 } from '@modelcontextprotocol/server';
@@ -23,6 +24,7 @@ import { scrubText } from '../common/logging/log-redaction';
 import { secretLiterals } from '../common/logging/logger-options';
 import type { Env } from '../config/env';
 import { InProcessGateway } from './in-process.gateway';
+import { authInfoFor, tokenScopeOf } from './mcp-auth-info';
 import { createRemoteServer, urlOf } from './remote-tools';
 
 function authorization(
@@ -45,9 +47,17 @@ export class McpBridge implements OnModuleDestroy {
   ) {
     this.secrets = secretLiterals(config);
     this.handler = createMcpHandler(
-      ({ requestInfo }) =>
-        createRemoteServer(apiVersion(), (request) =>
-          this.gateway.get(urlOf(request), authorization(requestInfo)),
+      ({ requestInfo, authInfo }) =>
+        createRemoteServer(
+          apiVersion(),
+          (request) =>
+            this.gateway.send({
+              method: request.method,
+              url: urlOf(request),
+              headers: authorization(requestInfo),
+              body: request.body,
+            }),
+          tokenScopeOf(authInfo),
         ),
       {
         legacy: 'stateless',
@@ -71,12 +81,16 @@ export class McpBridge implements OnModuleDestroy {
   }
 
   async admit(req: Request): Promise<void> {
-    const { user, credential } = req as Request & AuthenticatedRequest;
+    const { user, credential, tokenScope } = req as Request &
+      AuthenticatedRequest;
     if (credential !== 'token') {
       throw new UnauthorizedException(
         'The MCP endpoint accepts a personal API token only. Send it as an Authorization Bearer header.',
       );
     }
+    (req as Request & { auth?: AuthInfo }).auth = authInfoFor(
+      tokenScope ?? 'read',
+    );
     if (!user) return;
 
     const metered = this.config.get('BILLING_ENABLED', { infer: true });

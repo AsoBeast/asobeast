@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { MCP_TOOLS, toolByName } from "./index";
+import { MCP_TOOLS, requestOf, toolByName } from "./index";
 
 describe("the tool catalog", () => {
+  it("lists no write tool among the read tools", () => {
+    for (const tool of MCP_TOOLS) {
+      expect(tool.kind).toBe("read");
+      expect(requestOf(tool, {}).method).toBe("GET");
+    }
+  });
+
   it("names every tool once", () => {
     const names = MCP_TOOLS.map((tool) => tool.name);
 
@@ -54,5 +61,53 @@ describe("the tool catalog", () => {
 
     expect(summary).toContain("tags");
     expect(summary).toContain("note");
+  });
+});
+
+describe("the competitor, comparison and chart tools", () => {
+  it.each([
+    "list_competitors",
+    "competitor_analysis",
+    "keyword_comparison",
+    "category_ranks",
+  ])("lists %s", (name) => {
+    expect(toolByName(name)).toBeDefined();
+  });
+
+  it.each([
+    [
+      "list_competitors",
+      { appId: "app-1" },
+      "/apps/app-1/competitors",
+      undefined,
+    ],
+    [
+      "competitor_analysis",
+      { appId: "app-1" },
+      "/apps/app-1/competitors/analysis",
+      undefined,
+    ],
+    [
+      "keyword_comparison",
+      { appId: "app-1", onlyGaps: true },
+      "/apps/app-1/keywords/compare",
+      { onlyGaps: true },
+    ],
+    [
+      "category_ranks",
+      { appId: "app-1", from: "2026-09-01", to: "2026-09-30" },
+      "/apps/app-1/category-ranks",
+      { from: "2026-09-01", to: "2026-09-30" },
+    ],
+  ])("routes %s to its endpoint", (name, input, path, params) => {
+    expect(toolByName(name)?.request(input)).toEqual(
+      params === undefined ? { path } : { path, params },
+    );
+  });
+
+  it("encodes an app id so it cannot escape its path segment", () => {
+    expect(
+      toolByName("list_competitors")?.request({ appId: "../jobs/budget" }).path,
+    ).toBe("/apps/..%2Fjobs%2Fbudget/competitors");
   });
 });

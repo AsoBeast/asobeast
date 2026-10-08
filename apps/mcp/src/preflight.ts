@@ -1,11 +1,12 @@
-import type { AccountPlan, AuthUser } from "@asobeast/shared";
+import type { AccountPlan, ApiTokenScope, AuthUser } from "@asobeast/shared";
 import type { ApiClient } from "./client.js";
 
 const UNENTITLED =
   "This account is not entitled — the trial has expired or a plan is required. Renew access before connecting.";
 
 export type PreflightResult =
-  { ok: true; limits: string } | { ok: false; message: string };
+  | { ok: true; limits: string; tokenScope: ApiTokenScope }
+  | { ok: false; message: string };
 
 export async function preflight(client: ApiClient): Promise<PreflightResult> {
   const me = await client.get<AuthUser>("/auth/me");
@@ -24,7 +25,11 @@ export async function preflight(client: ApiClient): Promise<PreflightResult> {
   if (!me.data.entitled) return { ok: false, message: UNENTITLED };
 
   const plan = await client.get<AccountPlan>("/auth/plan");
-  return { ok: true, limits: plan.ok ? describe(plan.data) : "plan unknown" };
+  return {
+    ok: true,
+    limits: plan.ok ? describe(plan.data) : "plan unknown",
+    tokenScope: me.data.tokenScope === "write" ? "write" : "read",
+  };
 }
 
 function describe(plan: AccountPlan): string {

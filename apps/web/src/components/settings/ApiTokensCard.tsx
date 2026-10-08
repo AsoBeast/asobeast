@@ -213,7 +213,9 @@ function TokenForm({ onCreated }: { onCreated: (t: ApiTokenCreated) => void }) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            Read only is the safer default and is all the MCP server needs.
+            Read only is the safer default. Choose read and write for a script
+            that changes data, or for an agent you allow to track keywords,
+            manage competitors and update actions.
           </p>
         </div>
         <div className="flex flex-col gap-2">

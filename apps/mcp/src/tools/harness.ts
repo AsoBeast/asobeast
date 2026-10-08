@@ -9,7 +9,7 @@ export interface CapturedTool {
   config: {
     title?: string;
     description?: string;
-    annotations?: { readOnlyHint?: boolean };
+    annotations?: Record<string, unknown>;
   };
   handler: ToolHandler;
 }
@@ -35,7 +35,9 @@ export function createHarness(): Harness {
 
 export interface FetchCall {
   url: string;
+  method: string;
   headers: Record<string, string>;
+  body: string | undefined;
 }
 
 export type StubResponse = { status: number; body: unknown } | "throw";
@@ -54,7 +56,9 @@ export function stubFetch(
     const url = String(input);
     calls.push({
       url,
+      method: init?.method ?? "GET",
       headers: { ...(init?.headers as Record<string, string>) },
+      body: typeof init?.body === "string" ? init.body : undefined,
     });
     const result = responder(url);
     if (result === "throw") throw new Error("network down");

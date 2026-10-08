@@ -6,11 +6,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, Loader2, Plug } from "lucide-react";
 import { useQueryState } from "nuqs";
 import { toast } from "sonner";
-import {
-  DEFAULT_API_TOKEN_SCOPE,
-  type ApiTokenCreated,
-} from "@asobeast/shared";
+import type { ApiTokenCreated } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -52,6 +50,11 @@ import { mcpClientParser } from "@/lib/search-params";
 import { invalidateApiTokenMutation } from "@/lib/queries";
 import { useAuth } from "@/components/auth/use-auth";
 import { useSingleFlight } from "@/lib/single-flight";
+import {
+  MCP_CHANGES_HINT,
+  mcpTokenNotice,
+  mcpTokenScope,
+} from "@/lib/mcp-token-scope";
 
 const DOCS_URL = "https://docs.asobeast.com/mcp/setup";
 
@@ -165,10 +168,14 @@ function ConnectDialog() {
   const [name, setName] = useState("");
   const [created, setCreated] = useState<ApiTokenCreated | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [allowChanges, setAllowChanges] = useState(false);
 
   const mutation = useMutation({
     mutationFn: () =>
-      createApiToken({ name: name.trim(), scope: DEFAULT_API_TOKEN_SCOPE }),
+      createApiToken({
+        name: name.trim(),
+        scope: mcpTokenScope(allowChanges),
+      }),
     onSuccess: (result) => {
       invalidateApiTokenMutation(queryClient);
       setCreated(result);
@@ -187,6 +194,7 @@ function ConnectDialog() {
     setOpen(next);
     if (!next) {
       setName("");
+      setAllowChanges(false);
       setCreated(null);
       setError(null);
     }
@@ -216,8 +224,7 @@ function ConnectDialog() {
             <DialogHeader>
               <DialogTitle>Connect AsoBeast</DialogTitle>
               <DialogDescription>
-                The token is read-only and is shown once. Copy what you need
-                before closing.
+                {mcpTokenNotice(created.scope)}
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -234,8 +241,8 @@ function ConnectDialog() {
             <DialogHeader>
               <DialogTitle>Connect an agent</DialogTitle>
               <DialogDescription>
-                Name a token for this agent. We mint it read-only and show you
-                the ready-to-paste connect snippets.
+                Name a token for this agent. We mint it read-only unless you
+                allow changes, and show you the ready-to-paste connect snippets.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
@@ -248,6 +255,28 @@ function ConnectDialog() {
                   placeholder="Claude Desktop"
                   aria-invalid={error !== null}
                 />
+              </div>
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="mcp-allow-changes"
+                  checked={allowChanges}
+                  onCheckedChange={(checked) =>
+                    setAllowChanges(checked === true)
+                  }
+                  aria-describedby="mcp-allow-changes-hint"
+                  className="mt-0.5"
+                />
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="mcp-allow-changes">
+                    Allow this agent to make changes
+                  </Label>
+                  <p
+                    id="mcp-allow-changes-hint"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {MCP_CHANGES_HINT}
+                  </p>
+                </div>
               </div>
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
@@ -285,8 +314,9 @@ export function McpServerCard() {
       <CardContent className="flex flex-col gap-4">
         <p className="text-sm text-muted-foreground">
           Point any MCP client at this instance to ask about your apps,
-          keywords, rankings and audits in plain language. Every tool is
-          read-only and authenticated with a personal API token.{" "}
+          keywords, rankings and audits in plain language. Tools are read-only
+          unless you allow an agent to make changes when you connect it, and
+          every connection is authenticated with a personal API token.{" "}
           <a
             href={DOCS_URL}
             target="_blank"

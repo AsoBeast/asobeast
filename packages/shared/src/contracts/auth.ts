@@ -24,6 +24,7 @@ export interface AuthUser {
   planExpiresAt: string | null;
   entitled: boolean;
   trialAwaitsConfirmation?: boolean;
+  tokenScope?: ApiTokenScope;
   platformOperator: boolean;
   suspendedAt?: string | null;
   suspendedReason?: string | null;

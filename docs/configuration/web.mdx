@@ -41,6 +41,8 @@ See [How asobeast works](/concepts/architecture).
 
 When the API does not start answering within `API_PROXY_TIMEOUT_MS`, the proxy returns a `504` in the standard error envelope rather than leaving the request open. Once the API has started answering, the response streams until it ends, so a long download or an MCP event stream is never cut by this bound. Raise the value if you run a slow upstream, but a proxy timeout usually points at a saturated API rather than at a bound that is too tight.
 
+The MCP endpoint gives up on a tool call after 25 seconds and answers with a tool error that warns a change may or may not have been applied. Keep this value above `25000` so an agent connected through the web origin reads that error instead of the proxy's `504`.
+
 ## Related
 
 <CardGroup cols={2}>
