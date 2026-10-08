@@ -51,12 +51,14 @@ interface Loaded {
   file: KeywordFile;
 }
 
-function submitMessage(error: Error | null): string | null {
+function messageOf(error: Error | null): string | null {
   if (error === null) return null;
-  if (error instanceof ApiError) {
-    return error.envelope.quota ? RACE_LOST : error.envelope.message;
-  }
-  return error.message;
+  return error instanceof ApiError ? error.envelope.message : error.message;
+}
+
+function submitMessage(error: Error | null): string | null {
+  if (error instanceof ApiError && error.envelope.quota) return RACE_LOST;
+  return messageOf(error);
 }
 
 export function useKeywordImport(
@@ -148,7 +150,7 @@ export function useKeywordImport(
     readError ??
     (refusal ? refusalMessage(refusal) : null) ??
     unknownMarket ??
-    (preview.error instanceof ApiError ? preview.error.envelope.message : null);
+    messageOf(preview.error);
   const result = request === null ? null : (preview.data ?? null);
 
   return {
