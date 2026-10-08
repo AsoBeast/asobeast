@@ -131,6 +131,15 @@ describe('withRecordedChanges', () => {
     ).toEqual(['price', 'icon', 'whatsNew']);
   });
 
+  it('keeps a recorded change of a field the diff did not report', () => {
+    expect(
+      withRecordedChanges(
+        [],
+        [{ field: 'subtitle', before: 'Old', after: 'New' }],
+      ),
+    ).toEqual([{ field: 'subtitle', before: 'Old', after: 'New' }]);
+  });
+
   it('keeps the diff entry for a field both report and never reports it twice', () => {
     const diff = [
       titleDiff,

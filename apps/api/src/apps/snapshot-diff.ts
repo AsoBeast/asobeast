@@ -19,11 +19,6 @@ interface RecordedChange {
 
 const TEXT_FIELDS = ['title', 'subtitle', 'summary', 'description'] as const;
 const VALUE_FIELDS = ['ratingAvg', 'ratingCount', 'version'] as const;
-const DIFFED_FIELDS: ReadonlySet<string> = new Set([
-  ...TEXT_FIELDS,
-  ...VALUE_FIELDS,
-  'installs',
-]);
 
 export function diffSnapshots(
   prev: DiffableSnapshot | null,
@@ -63,13 +58,14 @@ export function diffSnapshots(
 }
 
 export function withRecordedChanges(
-  diff: SnapshotChange[],
+  diff: readonly SnapshotChange[],
   recorded: readonly RecordedChange[],
 ): SnapshotChange[] {
+  const reported = new Set(diff.map((change) => change.field));
   return [
     ...diff,
     ...recorded
-      .filter((change) => !DIFFED_FIELDS.has(change.field))
+      .filter((change) => !reported.has(change.field))
       .map(({ field, before, after }) => ({ field, before, after })),
   ];
 }
