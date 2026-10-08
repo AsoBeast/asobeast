@@ -40,9 +40,9 @@ for (const theme of THEMES) {
             channelGap(await renderedRgb(signIn, "backgroundColor"), expected),
           )
           .toBeLessThanOrEqual(1);
-      const ink = await renderedTokenRgb(page, "--neutral-950");
 
       await settlesOn(LANDING_ORANGE);
+      const ink = await renderedTokenRgb(page, "--neutral-950");
       await expect.poll(() => renderedRgb(signIn, "color")).toEqual(ink);
 
       await signIn.hover();
