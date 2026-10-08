@@ -3,7 +3,11 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { AppDetail, SnapshotDiffResult } from '@asobeast/shared';
+import {
+  AppDetail,
+  SnapshotDiffResult,
+  TrackedKeywordItem,
+} from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
 import { AppModule } from '../src/app.module';
@@ -91,6 +95,20 @@ describe('Native localizations of a listing (e2e)', () => {
       { country: 'pl' },
       { country: 'pl', localization: 'pl' },
     ]);
+  });
+
+  it('auto tracks polish and english phrases for an app imported from a polish url', async () => {
+    registry.listings.set('pl:pl', POLISH);
+
+    const appId = await importFrom(PL_APP_URL);
+
+    const keywords = (await api.get(`/apps/${appId}/keywords`).expect(200))
+      .body as TrackedKeywordItem[];
+    const texts = keywords.map((keyword) => keyword.text);
+    expect(texts).toEqual(expect.arrayContaining(['quiz geograficzny']));
+    expect(texts.some((text) => text.includes('geoguess'))).toBe(true);
+    expect(texts.length).toBeLessThanOrEqual(15);
+    expect(keywords.every((keyword) => keyword.country === 'pl')).toBe(true);
   });
 
   it('stores only the default listing of an app without a polish listing', async () => {

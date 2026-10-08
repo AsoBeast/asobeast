@@ -21,6 +21,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
+import { homeListingTexts } from './home-listings';
+import { interleave } from './interleave';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
@@ -40,7 +42,6 @@ import {
   trackedArgs,
   trackedOrder,
 } from './keywords.support';
-import { HOME_LISTING, NEWEST_FIRST } from '../apps/listing';
 
 const AUTO_TRACK_LIMIT = 15;
 const KEYWORD_FIELD_LOCK = 3_958_261;
@@ -370,12 +371,8 @@ export class KeywordsService {
       return;
     }
 
-    const snapshot = await this.prisma.appSnapshot.findFirst({
-      where: { appId, ...HOME_LISTING },
-      orderBy: NEWEST_FIRST,
-      select: { title: true, subtitle: true, summary: true },
-    });
-    if (!snapshot) {
+    const listings = await homeListingTexts(this.prisma, app);
+    if (listings.length === 0) {
       return;
     }
 
@@ -384,13 +381,17 @@ export class KeywordsService {
         ? ['TITLE', 'DESCRIPTION']
         : ['TITLE', 'SUBTITLE'];
 
-    const candidates = extractCandidates({
-      title: snapshot.title,
-      subtitle: snapshot.subtitle ?? undefined,
-      summary: snapshot.summary ?? undefined,
-    })
-      .filter((candidate) => autoTrackSources.includes(candidate.source))
-      .slice(0, AUTO_TRACK_LIMIT);
+    const candidates = interleave(
+      listings.map((listing) =>
+        extractCandidates({
+          title: listing.title,
+          subtitle: listing.subtitle ?? undefined,
+          summary: listing.summary ?? undefined,
+        }).filter((candidate) => autoTrackSources.includes(candidate.source)),
+      ),
+      AUTO_TRACK_LIMIT,
+      (candidate) => candidate.text,
+    );
 
     await this.prisma.keyword.createMany({
       data: keywordRows(
