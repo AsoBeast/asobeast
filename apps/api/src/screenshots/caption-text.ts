@@ -154,10 +154,14 @@ export function selectCaption(
     imageHeight * MIN_CAPTION_HEIGHT_SHARE,
   );
   const [best] = groupBlocks(readable.filter((line) => line.height >= floor))
-    .filter((block) => block.lines.some((line) => isSolid(line.text)))
+    .filter(
+      (block) =>
+        !isLoneTitle(block, imageHeight) &&
+        block.lines.some((line) => isSolid(line.text)),
+    )
     .map((block) => ({ block, weight: weightOf(block, imageHeight) }))
     .sort((a, b) => b.weight - a.weight);
-  if (!best || isLoneTitle(best.block, imageHeight)) return null;
+  if (!best) return null;
 
   const text = clean(
     readingOrder(best.block.lines)

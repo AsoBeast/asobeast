@@ -289,6 +289,16 @@ describe('selectCaption blocks', () => {
       'Trusted by millions. Recommended by experts.',
     );
   });
+
+  it('reads the caption when a heavier lone interface title sits apart from it', () => {
+    const lines = [
+      at('Plan your', { left: 40, top: 100, width: 300, height: 50 }),
+      at('week ahead', { left: 40, top: 160, width: 300, height: 50 }),
+      at('Weekly overview', { left: 60, top: 1700, width: 900, height: 55 }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe('Plan your week ahead');
+  });
 });
 
 describe('selectCaption rows', () => {
