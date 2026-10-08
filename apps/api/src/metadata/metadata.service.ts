@@ -32,6 +32,8 @@ import {
   screenshotTextState,
 } from './screenshot-coverage';
 
+type JudgedCoverageRow = KeywordCoverageRow & { listingCountry: string };
+
 const singularize = (text: string): string =>
   tokenize(text)
     .map((word) =>
@@ -108,7 +110,7 @@ export class MetadataService {
     });
     const shots = await this.screenshots.byListing(app, [
       market,
-      ...coverage.map((row) => row.listingCountry ?? app.country),
+      ...coverage.map((row) => row.listingCountry),
     ]);
     const textOf = (listing: string) =>
       screenshotTextState(shots.screenshots.get(listing) ?? [], shots.reading);
@@ -118,18 +120,17 @@ export class MetadataService {
       appId,
       store: app.store,
       fields,
-      coverage: coverage.map((row) => {
-        const listing = row.listingCountry ?? app.country;
-        return textOf(listing)?.status === 'ready'
+      coverage: coverage.map((row) =>
+        textOf(row.listingCountry)?.status === 'ready'
           ? {
               ...row,
               screenshotText: screenshotTextCoverage(
-                shots.screenshots.get(listing) ?? [],
+                shots.screenshots.get(row.listingCountry) ?? [],
                 row.text,
               ),
             }
-          : row;
-      }),
+          : row,
+      ),
       keywordFieldSuggestion:
         home && app.store === Store.APP_STORE
           ? this.suggestion(
@@ -258,7 +259,7 @@ export class MetadataService {
     item: TrackedKeywordItem,
     surfaces: Array<{ field: MetadataField; value: string }>,
     listingCountry: string,
-  ): KeywordCoverageRow {
+  ): JudgedCoverageRow {
     const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
       field: surface.field,
       covered: coversKeyword(surface.value, item.text),
