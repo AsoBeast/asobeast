@@ -24,7 +24,7 @@ Treat it as a weak, secondary signal. That is why asobeast shows it beside keywo
 | Up to the first 10 screenshots of each snapshot | iPad screenshots and app preview videos |
 | Your apps and your competitors, on the home listing and on every market listing asobeast captures | Google Play screenshots |
 
-The reader keeps the lines that are at least 55 percent as tall as the tallest confident line and at least 2 percent of the image height. A screenshot that shows only interface text reads as having no caption, which is correct.
+Each screenshot is read twice: once in grey, and once with its colours inverted so that white lettering on a coloured band turns dark. The two reads are merged, keeping the more confident one where they found the same line. The reader then groups the large, confident lines into blocks of neighbouring lines and keeps the heaviest block, giving less weight to the middle of the image where the device frame usually sits. A lone line smaller than 3 percent of the image height is treated as an interface title, so a screenshot without a caption reads as having none.
 
 Every snapshot records its screenshots, so the caption belongs to the snapshot rather than to the app. When a screenshot has the same address as one already read, in your workspace or in anyone else's, the reader reuses the result instead of reading the image again. Screenshots are public store data, so the reads are shared the same way keyword searches are.
 
@@ -73,7 +73,7 @@ The same data is available as `GET /apps/{id}/screenshots`, with `country` for a
 
 | Resource | Cost |
 | --- | --- |
-| Time | About 0.2 to 0.8 seconds per new screenshot. An app is read once per distinct image, and an unchanged listing is never read again |
+| Time | About 1 to 2 seconds per new screenshot, for the two reads together. An app is read once per distinct image, and an unchanged listing is never read again |
 | Memory | Up to about 190 MB while the reader works, returned after five idle minutes. The API container ceiling is 1024 MB for this reason |
 | Disk | About 95 MB more in the API image: the OCR engine, the language packs and the image library |
 | Network | One image download of about 300 KB per new screenshot from Apple's image server, from your own address. It does not use the proxy pool or the store request budget |
@@ -93,6 +93,7 @@ Screenshot records leave with their snapshot, so `RETENTION_SNAPSHOTS_DAYS` gove
 - **The card says Reading for a long time.** The reader runs one screenshot at a time. Open the queue dashboard at `/admin/queues` as the operator and look at the `screenshots` queue.
 - **A caption is wrong or missing.** Open the screenshot in the store at full size. Thin, decorative or low contrast lettering is the usual cause. The reader never changes your store listing, so nothing needs repair.
 - **No caption change appeared after you edited captions.** Changes are recorded after the snapshot is fully read, one snapshot later than the first import. They are skipped when a screenshot of either snapshot could not be read, because a missing read would otherwise look like a removed caption.
+- **Captions changed right after an upgrade.** A new version of the reader reads each listing again on its next refresh. The first read with the new version becomes the baseline and records no caption change, so improved readings never appear as edits.
 - **The API container restarts.** See [Capacity and limits](/operations/capacity) for the memory ceiling.
 
 ## Related
