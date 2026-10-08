@@ -1900,6 +1900,90 @@
         ]
       }
     },
+    "/apps/{id}/keywords/import/preview": {
+      "post": {
+        "description": "Validates up to 500 rows and answers, for every row, whether an import would track it, resume it, skip it or refuse it, with the daily store requests the import would add and the keyword limit of the plan. Writes nothing and queues nothing. Rows without a country use the request country, which is a lower case storefront code, else the home market of the app. imported is always 0 and quota.used counts the keyword markets in use now.",
+        "operationId": "KeywordsController_previewImport",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview a keyword import without writing",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keywords/import": {
+      "post": {
+        "description": "Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first. summary and results report the plan the import ran, row by row. imported counts the keywords this request actually tracked or resumed, which is lower than new plus resume when another request tracked some of them in between. quota.used counts the keyword markets in use after the import.",
+        "operationId": "KeywordsController_importKeywords",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordImportDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Import keywords with tags, notes and markets",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/{keywordId}": {
       "patch": {
         "operationId": "KeywordsController_update",
@@ -4476,6 +4560,59 @@
         },
         "required": [
           "keywords"
+        ]
+      },
+      "KeywordImportRowDto": {
+        "type": "object",
+        "properties": {
+          "keyword": {
+            "type": "string",
+            "example": "habit tracker"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "example": "pl"
+          },
+          "tags": {
+            "example": [
+              "core",
+              "brand"
+            ],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "example": "Q4 push"
+          }
+        },
+        "required": [
+          "keyword"
+        ]
+      },
+      "KeywordImportDto": {
+        "type": "object",
+        "properties": {
+          "rows": {
+            "minItems": 1,
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeywordImportRowDto"
+            }
+          },
+          "country": {
+            "type": "string",
+            "example": "us",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "rows"
         ]
       },
       "UpdateKeywordDto": {

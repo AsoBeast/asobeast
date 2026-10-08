@@ -20,8 +20,11 @@ The export writes one row per tracked keyword, named `keywords-<appId>-<date>.cs
 | Evidence | `suggestReach`, `serpFlags` separated by spaces, `officialPopularity`, `scoreOutdated` |
 | Caveat | `scoreComparability` |
 | Owner notes | `tags` separated by semicolons, `note` |
+| Market | `country`, the storefront of each keyword, as the last column |
 
 The provenance columns travel with the scores on purpose. A spreadsheet that carries `formulaVersion` and `confidence` can still be audited months later, while one that carries only a number cannot.
+
+The file can be imported again: the keyword, `country`, `tags` and `note` columns are read and the rest are ignored. See [Import keywords from a CSV file](/guides/track-keywords#import-keywords-from-a-csv-file).
 
 The `scoreComparability` column repeats, on every row, that App Store and Google Play scores use different public signals and are not directly comparable. That caveat is easy to lose once data leaves the product, so it is written into the file. See [App Store and Google Play](/concepts/stores).
 

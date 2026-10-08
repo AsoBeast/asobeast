@@ -31,6 +31,7 @@ const KEYWORD_CSV_HEADERS = [
   "scoreComparability",
   "tags",
   "note",
+  "country",
 ];
 
 function roundOrNull(value: number | null): number | null {
@@ -72,6 +73,7 @@ export function keywordCsv(rows: TrackedKeywordItem[]): string {
     SCORE_COMPARABILITY,
     (keyword.tags ?? []).join("; "),
     keyword.note ?? null,
+    keyword.country,
   ]);
   return toCsv(KEYWORD_CSV_HEADERS, csvRows);
 }

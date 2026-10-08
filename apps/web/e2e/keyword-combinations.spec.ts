@@ -13,9 +13,11 @@ const COMBOS_PAGE = `/apps/${APP_COMBOS_DETAIL.id}/keywords`;
 test.describe.configure({ mode: "serial" });
 
 test.beforeEach(async ({ request }) => {
-  await request.post(`${MOCK_API_URL}/__reset/keywords`, {
-    failOnStatusCode: true,
-  });
+  for (const id of [APP_COMBOS_DETAIL.id, APP_GP_DETAIL.id]) {
+    await request.post(`${MOCK_API_URL}/__reset/keywords/${id}`, {
+      failOnStatusCode: true,
+    });
+  }
   await request.put(
     `${MOCK_API_URL}/apps/${APP_COMBOS_DETAIL.id}/keyword-field`,
     { data: { text: APP_COMBOS_KEYWORD_FIELD }, failOnStatusCode: true },

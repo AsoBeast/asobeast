@@ -5,6 +5,7 @@ export const KEYWORD_TAGS_MAX = 8;
 export const KEYWORD_NOTE_MAX_LENGTH = 500;
 export const SUGGESTED_KEYWORD_TAGS = ['brand', 'core', 'testing'] as const;
 export const KEYWORD_TAG_PATTERN = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} _-]*$/u;
+export const KEYWORD_TAG_RULE = `at most ${KEYWORD_TAG_MAX_LENGTH} letters, numbers, spaces, hyphens or underscores and starts with a letter or number`;
 
 export function normalizeKeywordTag(raw: string): string {
   return lowerCase(raw.normalize('NFC')).trim().replace(/\s+/g, ' ');

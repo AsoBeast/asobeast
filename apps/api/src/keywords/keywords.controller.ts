@@ -15,6 +15,7 @@ import {
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
+  KeywordImportResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
   SpiderStatus,
@@ -22,13 +23,17 @@ import {
 } from '@asobeast/shared';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
+import { RateLimitClass } from '../auth/rate-limit/rate-class';
+import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AddKeywordsDto } from './dto/add-keywords.dto';
 import { CompareQueryDto } from './dto/compare-query.dto';
 import { KeywordFieldDto } from './dto/keyword-field.dto';
+import { KeywordImportDto } from './dto/keyword-import.dto';
 import { ListKeywordsQueryDto } from './dto/list-keywords-query.dto';
 import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
+import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsService } from './keywords.service';
 import { SpiderService } from './spider.service';
@@ -41,6 +46,7 @@ export class KeywordsController {
     private readonly keywordSuggestions: KeywordSuggestionService,
     private readonly spider: SpiderService,
     private readonly limiter: OnDemandLimiter,
+    private readonly keywordImport: KeywordImportService,
   ) {}
 
   @Get('keywords')
@@ -109,6 +115,36 @@ export class KeywordsController {
     @Body() dto: AddKeywordsDto,
   ): Promise<TrackedKeywordItem[]> {
     return this.keywords.addManual(id, dto.keywords, dto.country);
+  }
+
+  @Post('keywords/import/preview')
+  @HttpCode(200)
+  @ReadOnlyEndpoint()
+  @RateLimitClass('read')
+  @ApiOperation({
+    summary: 'Preview a keyword import without writing',
+    description:
+      'Validates up to 500 rows and answers, for every row, whether an import would track it, resume it, skip it or refuse it, with the daily store requests the import would add and the keyword limit of the plan. Writes nothing and queues nothing. Rows without a country use the request country, which is a lower case storefront code, else the home market of the app. imported is always 0 and quota.used counts the keyword markets in use now.',
+  })
+  previewImport(
+    @Param('id') id: string,
+    @Body() dto: KeywordImportDto,
+  ): Promise<KeywordImportResult> {
+    return this.keywordImport.preview(id, dto);
+  }
+
+  @Post('keywords/import')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Import keywords with tags, notes and markets',
+    description:
+      'Tracks every row that is new or paused, up to 500 rows, in one transaction, with its tags and note, as manual keywords, and queues each new keyword for its first score. Rows that are invalid, duplicated, already tracked or over the plan keyword limit are reported per row and skipped. Rows that are already tracked are never modified. Answers 403 and writes nothing when another request took the remaining keyword slots first. summary and results report the plan the import ran, row by row. imported counts the keywords this request actually tracked or resumed, which is lower than new plus resume when another request tracked some of them in between. quota.used counts the keyword markets in use after the import.',
+  })
+  importKeywords(
+    @Param('id') id: string,
+    @Body() dto: KeywordImportDto,
+  ): Promise<KeywordImportResult> {
+    return this.keywordImport.import(id, dto);
   }
 
   @Patch('keywords/:keywordId')

@@ -46,6 +46,8 @@ export const KEYWORD_FIELD_INPUT_LIMIT = 10 * KEYWORD_FIELD_CHAR_LIMIT;
 
 export const KEYWORD_BULK_ADD_LIMIT = 200;
 
+export const KEYWORD_IMPORT_LIMIT = 500;
+
 export function countChars(text: string): number {
   return text.length;
 }
