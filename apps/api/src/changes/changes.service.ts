@@ -126,30 +126,35 @@ export class ChangesService {
       where: {
         appId: change.appId,
         field: 'screenshotCaptions',
-        capturedAt: { gte: change.since },
+        capturedAt: change.since,
       },
       select: { id: true },
     });
     if (recorded) {
       return;
     }
-    await this.persist(change.appId, [
-      {
-        field: 'screenshotCaptions',
-        before: joined(change.before),
-        after: joined(change.after),
-        detail: {
-          kind: 'captions',
-          added: change.added,
-          removed: change.removed,
+    await this.persist(
+      change.appId,
+      [
+        {
+          field: 'screenshotCaptions',
+          before: joined(change.before),
+          after: joined(change.after),
+          detail: {
+            kind: 'captions',
+            added: change.added,
+            removed: change.removed,
+          },
         },
-      },
-    ]);
+      ],
+      change.since,
+    );
   }
 
   private async persist(
     appId: string,
     changes: DetectedChange[],
+    capturedAt?: Date,
   ): Promise<void> {
     await this.prisma.changeEvent.createMany({
       data: changes.map(({ detail, ...change }) => ({
@@ -158,6 +163,7 @@ export class ChangesService {
         ...(detail
           ? { detail: detail as unknown as Prisma.InputJsonValue }
           : {}),
+        ...(capturedAt ? { capturedAt } : {}),
       })),
     });
 

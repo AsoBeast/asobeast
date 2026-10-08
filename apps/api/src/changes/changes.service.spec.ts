@@ -326,6 +326,7 @@ describe('ChangesService', () => {
             before: 'A | B',
             after: 'A | C',
             detail: { kind: 'captions', added: ['C'], removed: ['B'] },
+            capturedAt: captionChange.since,
           },
         ],
       });
@@ -361,7 +362,7 @@ describe('ChangesService', () => {
         where: {
           appId: 'app_1',
           field: 'screenshotCaptions',
-          capturedAt: { gte: captionChange.since },
+          capturedAt: captionChange.since,
         },
         select: { id: true },
       });

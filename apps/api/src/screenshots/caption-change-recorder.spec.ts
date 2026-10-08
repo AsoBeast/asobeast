@@ -7,22 +7,33 @@ const snapshot = { id: 'snap_2', appId: 'app_1', capturedAt: CAPTURED };
 
 const row = (status: string, caption: string | null) => ({ status, caption });
 
+const NEXT_CAPTURED = new Date('2026-10-08T03:00:00.000Z');
+
 const build = (options: {
   current?: unknown[];
   previous?: unknown[];
   previousSnapshot?: { id: string } | null;
+  next?: unknown[];
+  nextSnapshot?: { id: string; capturedAt: Date } | null;
 }) => {
-  const findMany = jest
-    .fn()
-    .mockResolvedValueOnce(options.current ?? [])
-    .mockResolvedValueOnce(options.previous ?? []);
-  const findFirst = jest
-    .fn()
-    .mockResolvedValue(
-      'previousSnapshot' in options
-        ? options.previousSnapshot
-        : { id: 'snap_1' },
-    );
+  const rowsOf: Record<string, unknown[]> = {
+    snap_1: options.previous ?? [],
+    snap_2: options.current ?? [],
+    snap_3: options.next ?? [],
+  };
+  const findMany = jest.fn(({ where }: { where: { snapshotId: string } }) =>
+    Promise.resolve(rowsOf[where.snapshotId] ?? []),
+  );
+  const findFirst = jest.fn(
+    ({ where }: { where: { capturedAt: { lt?: Date; gt?: Date } } }) =>
+      Promise.resolve(
+        where.capturedAt.lt
+          ? 'previousSnapshot' in options
+            ? options.previousSnapshot
+            : { id: 'snap_1' }
+          : (options.nextSnapshot ?? null),
+      ),
+  );
   const recordCaptionChange = jest.fn().mockResolvedValue(undefined);
   const recorder = new CaptionChangeRecorder(
     {
@@ -137,5 +148,88 @@ describe('CaptionChangeRecorder.record', () => {
     expect(recordCaptionChange).toHaveBeenCalledWith(
       expect.objectContaining({ removed: ['Plan your week'], added: [] }),
     );
+  });
+
+  it('looks for the oldest snapshot captured after this one', async () => {
+    const { recorder, findFirst } = build({
+      previous: [row('read', 'a')],
+      current: [row('read', 'a')],
+    });
+
+    await recorder.record(snapshot);
+
+    expect(findFirst).toHaveBeenCalledWith({
+      where: { appId: 'app_1', capturedAt: { gt: CAPTURED } },
+      orderBy: { capturedAt: 'asc' },
+      select: { id: true, capturedAt: true },
+    });
+  });
+
+  it('compares the next snapshot when it settled before this one', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previous: [row('read', 'Plan your week')],
+      current: [row('read', 'Plan your week')],
+      next: [row('read', 'Plan your day')],
+      nextSnapshot: { id: 'snap_3', capturedAt: NEXT_CAPTURED },
+    });
+
+    await recorder.record(snapshot);
+
+    expect(recordCaptionChange).toHaveBeenCalledTimes(1);
+    expect(recordCaptionChange).toHaveBeenCalledWith({
+      appId: 'app_1',
+      since: NEXT_CAPTURED,
+      before: ['Plan your week'],
+      after: ['Plan your day'],
+      added: ['Plan your day'],
+      removed: ['Plan your week'],
+    });
+  });
+
+  it('records both changes when this snapshot settles between two others', async () => {
+    const { recorder, recordCaptionChange } = build({
+      previous: [row('read', 'Track habits')],
+      current: [row('read', 'Plan your week')],
+      next: [row('read', 'Plan your day')],
+      nextSnapshot: { id: 'snap_3', capturedAt: NEXT_CAPTURED },
+    });
+
+    await recorder.record(snapshot);
+
+    expect(
+      recordCaptionChange.mock.calls.map(
+        ([change]: [{ since: Date }]) => change.since,
+      ),
+    ).toEqual([CAPTURED, NEXT_CAPTURED]);
+  });
+
+  it.each(['pending', 'failed', 'skipped'])(
+    'leaves the next snapshot alone while one of its screenshots is %s',
+    async (status) => {
+      const { recorder, recordCaptionChange } = build({
+        previousSnapshot: null,
+        current: [row('read', 'a')],
+        next: [row('read', 'b'), row(status, null)],
+        nextSnapshot: { id: 'snap_3', capturedAt: NEXT_CAPTURED },
+      });
+
+      await recorder.record(snapshot);
+
+      expect(recordCaptionChange).not.toHaveBeenCalled();
+    },
+  );
+
+  it('compares nothing while this snapshot is still reading', async () => {
+    const { recorder, findFirst, recordCaptionChange } = build({
+      previous: [row('read', 'a')],
+      current: [row('pending', null)],
+      next: [row('read', 'b')],
+      nextSnapshot: { id: 'snap_3', capturedAt: NEXT_CAPTURED },
+    });
+
+    await recorder.record(snapshot);
+
+    expect(findFirst).not.toHaveBeenCalled();
+    expect(recordCaptionChange).not.toHaveBeenCalled();
   });
 });

@@ -8,12 +8,15 @@ import { AppDetail, ChangeEventItem, ChangeTimeline } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { CaptionChangeRecorder } from '../src/screenshots/caption-change-recorder';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
 import { ScreenshotFetchError } from '../src/store-providers/errors';
 import { ScreenshotImageSource } from '../src/store-providers/screenshot-image.source';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
+import { asWorkspace } from './helpers/tenancy';
 import {
+  appleKey,
   appleShot,
   APP_STORE_URL,
   FakeScreenshotRegistry,
@@ -169,5 +172,79 @@ describe('Caption changes (e2e)', () => {
       'read',
     ]);
     await expect(events(appId, 'screenshotCaptions')).resolves.toEqual([]);
+  });
+
+  it('records the change of a later snapshot when the earlier one settles last', async () => {
+    const DAY_MS = 24 * 60 * 60 * 1000;
+    engineRead
+      .mockResolvedValueOnce(lines('Track habits'))
+      .mockResolvedValueOnce(lines('Plan your week'));
+    const appId = await importAndRead();
+    const first = await prisma.appSnapshot.findFirstOrThrow({
+      where: { appId },
+    });
+    await prisma.appSnapshot.update({
+      where: { id: first.id },
+      data: { capturedAt: new Date(Date.now() - 3 * DAY_MS) },
+    });
+    const snapshotWith = async (
+      daysAgo: number,
+      rows: Array<[string, string | null]>,
+    ) => {
+      const created = await prisma.appSnapshot.create({
+        data: {
+          appId,
+          title: 'Fixture',
+          description: 'd',
+          raw: {},
+          capturedAt: new Date(Date.now() - daysAgo * DAY_MS),
+        },
+      });
+      await prisma.snapshotScreenshot.createMany({
+        data: rows.map(([status, caption], index) => ({
+          snapshotId: created.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          position: index + 1,
+          url: appleShot(index + 1),
+          assetKey: appleKey(index + 1),
+          status,
+          caption,
+        })),
+      });
+      return created;
+    };
+    const delayed = await snapshotWith(2, [
+      ['read', 'Track habits'],
+      ['pending', null],
+    ]);
+    const latest = await snapshotWith(1, [
+      ['read', 'Track habits'],
+      ['read', 'Sleep better'],
+    ]);
+    const recorder = app.get(CaptionChangeRecorder);
+
+    await asWorkspace(app, () => recorder.record(latest));
+    await prisma.snapshotScreenshot.update({
+      where: { snapshotId_position: { snapshotId: delayed.id, position: 2 } },
+      data: { status: 'read', caption: 'Plan your day' },
+    });
+    await asWorkspace(app, () => recorder.record(delayed));
+    await asWorkspace(app, () => recorder.record(delayed));
+
+    const captions = await events(appId, 'screenshotCaptions');
+    expect(
+      captions.map((event) => [event.capturedAt, event.before, event.after]),
+    ).toEqual([
+      [
+        latest.capturedAt.toISOString(),
+        'Track habits | Plan your day',
+        'Track habits | Sleep better',
+      ],
+      [
+        delayed.capturedAt.toISOString(),
+        'Track habits | Plan your week',
+        'Track habits | Plan your day',
+      ],
+    ]);
   });
 });
