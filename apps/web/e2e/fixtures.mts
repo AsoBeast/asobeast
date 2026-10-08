@@ -3020,6 +3020,7 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: true },
       ],
       uncovered: false,
+      screenshotText: { covered: true, positions: [1] },
     },
     {
       keywordId: "kw-2",
@@ -3031,6 +3032,7 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: false },
       ],
       uncovered: false,
+      screenshotText: { covered: false, positions: [] },
     },
     {
       keywordId: "kw-3",
@@ -3042,9 +3044,11 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: false },
       ],
       uncovered: true,
+      screenshotText: { covered: true, positions: [2] },
     },
   ],
   keywordFieldSuggestion: null,
+  screenshotText: { status: "ready", read: 2, total: 4 },
 };
 
 export const APP_AR_ID = "app-ar";

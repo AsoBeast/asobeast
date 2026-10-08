@@ -24,6 +24,11 @@ import {
 import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotsService } from '../screenshots/screenshots.service';
+import {
+  screenshotTextCoverage,
+  screenshotTextState,
+} from './screenshot-coverage';
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -39,6 +44,7 @@ export class MetadataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
+    private readonly screenshots: ScreenshotsService,
   ) {}
 
   async audit(appId: string): Promise<MetadataAuditResult> {
@@ -159,13 +165,28 @@ export class MetadataService {
         { field: 'keywordField', value: keywordFieldValue },
       ]),
     );
+    const shots = await this.screenshots.forApp(appId);
+    const screenshotText = screenshotTextState(
+      shots.screenshots,
+      shots.reading,
+    );
 
     return {
       appId,
       store: app.store,
       fields,
-      coverage,
+      coverage:
+        screenshotText?.status === 'ready'
+          ? coverage.map((row) => ({
+              ...row,
+              screenshotText: screenshotTextCoverage(
+                shots.screenshots,
+                row.text,
+              ),
+            }))
+          : coverage,
       keywordFieldSuggestion: this.suggestion(active, coverage),
+      screenshotText,
     };
   }
 
