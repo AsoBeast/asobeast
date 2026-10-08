@@ -4,6 +4,7 @@ import { AiModule } from '../ai/ai.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { KeywordsModule } from '../keywords/keywords.module';
 import { QUEUES } from '../jobs/jobs.types';
+import { ScreenshotsModule } from '../screenshots/screenshots.module';
 import { AuditAiRunsService } from './audit-ai-runs.service';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
@@ -16,6 +17,7 @@ import { AuditService } from './audit.service';
     AiModule,
     AnalyticsModule,
     KeywordsModule,
+    ScreenshotsModule,
     BullModule.registerQueue({ name: QUEUES.AI }),
   ],
   controllers: [AuditController],

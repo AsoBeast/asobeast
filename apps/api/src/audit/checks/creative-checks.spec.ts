@@ -348,3 +348,48 @@ describe('iconChecks', () => {
     ).toMatchObject({ score: null, unlock: { kind: 'competitors' } });
   });
 });
+
+describe('screenshots-caption-keywords from read text', () => {
+  const keywords = [keyword('geo quiz', 'primary', 90)];
+  const idOf = (context: AuditContext) =>
+    screenshotChecks(context).find(
+      (item) => item.id === 'screenshots-caption-keywords',
+    );
+
+  it('answers from the read captions when there is no analysis', () => {
+    const result = idOf(
+      appStoreContext({ keywords, screenshotCaptions: ['A geo quiz'] }),
+    );
+
+    expect(result?.score).toBe(4);
+    expect(result?.source).toBe('keywords');
+    expect(result?.unlock).toBeNull();
+  });
+
+  it('stays unanswered, asking for the analysis, when no caption was read', () => {
+    const result = idOf(
+      appStoreContext({ keywords, screenshotCaptions: null }),
+    );
+
+    expect(result?.score).toBeNull();
+    expect(result?.unlock?.kind).toBe('ai-analysis');
+  });
+
+  it('keeps answering from the analysis, unchanged, when one exists', () => {
+    const result = idOf(
+      appStoreContext({
+        keywords,
+        screenshotCaptions: ['A geo quiz'],
+        creative: analyzedCreative('APP_STORE'),
+      }),
+    );
+
+    expect(result?.source).toBe('ai');
+  });
+
+  it('adds nothing for google play', () => {
+    expect(
+      idOf(playContext({ keywords, screenshotCaptions: ['A geo quiz'] })),
+    ).toBeUndefined();
+  });
+});

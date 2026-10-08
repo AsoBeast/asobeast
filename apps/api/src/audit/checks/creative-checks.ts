@@ -9,11 +9,7 @@ import {
   aiUnlock,
   AuditContext,
   check,
-  coversPhrase,
   currentObservations,
-  KEYWORDS_UNLOCK,
-  priorityKeywords,
-  quoteList,
   RubricCheck,
   similarCompetitor,
   unansweredAiCheck,
@@ -22,6 +18,7 @@ import {
   CreativeObservations,
   ScreenshotObservation,
 } from '../creative/creative-observations';
+import { captionKeywordsCheck } from './caption-keyword-check';
 
 export const COMPETITOR_ICONS_UNLOCK: AuditUnlock = {
   kind: 'competitors',
@@ -125,12 +122,6 @@ const featureGraphicCheck = (context: AuditContext): RubricCheck | null => {
 };
 
 export const CAPTION_SAMPLE = 3;
-export const CAPTION_KEYWORD_BANDS = [
-  { min: 3, score: 10 },
-  { min: 2, score: 7 },
-  { min: 1, score: 4 },
-] as const;
-
 export const FIRST_MESSAGE_SCORES: Readonly<
   Record<AuditScreenshotMessage, number>
 > = Object.freeze({
@@ -227,39 +218,24 @@ const captionChecks = (
 const captionKeywordCheck = (
   context: AuditContext,
   observations: CreativeObservations,
-): RubricCheck | null => {
-  if (context.store !== Store.APP_STORE) {
-    return null;
-  }
-  const priority = priorityKeywords(context.keywords);
-  const captions = readableCaptions(observations);
-  const hits = priority.filter((keyword) =>
-    captions.some((caption) => coversPhrase(caption.captionText, keyword.text)),
-  );
-  return check({
-    id: 'screenshots-caption-keywords',
-    label: 'Keywords in captions',
-    source: 'ai',
-    weight: 2,
-    score:
-      priority.length === 0
-        ? null
-        : (CAPTION_KEYWORD_BANDS.find((band) => hits.length >= band.min)
-            ?.score ?? 0),
-    detail:
-      priority.length === 0
-        ? 'No priority keywords tracked to look for.'
-        : `${hits.length} priority keywords appear in your captions.`,
-    unlock: priority.length === 0 ? KEYWORDS_UNLOCK : aiUnlock(context),
-    advice: {
-      title: 'Use your keywords in screenshot captions',
-      fix: `Apple has read caption text for search since June 2025. No caption mentions ${quoteList(
-        priority.map((keyword) => keyword.text),
+): RubricCheck | null =>
+  context.store === Store.APP_STORE
+    ? captionKeywordsCheck(
+        context,
+        readableCaptions(observations).map((caption) => caption.captionText),
+        'ai',
+      )
+    : null;
+
+const unansweredCaptionKeywords = (context: AuditContext): RubricCheck =>
+  context.screenshotCaptions === null
+    ? unansweredAiCheck(
+        'screenshots-caption-keywords',
+        'Keywords in captions',
         2,
-      )}.`,
-    },
-  });
-};
+        context,
+      )
+    : captionKeywordsCheck(context, context.screenshotCaptions, 'keywords');
 
 const consistencyCheck = (
   context: AuditContext,
@@ -351,14 +327,7 @@ export const screenshotChecks = (context: AuditContext): RubricCheck[] => {
         context,
       ),
       ...(context.store === Store.APP_STORE
-        ? [
-            unansweredAiCheck(
-              'screenshots-caption-keywords',
-              'Keywords in captions',
-              2,
-              context,
-            ),
-          ]
+        ? [unansweredCaptionKeywords(context)]
         : []),
       unansweredAiCheck(
         'screenshots-consistency',

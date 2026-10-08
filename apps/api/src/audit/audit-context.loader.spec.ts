@@ -3,6 +3,7 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotsService } from '../screenshots/screenshots.service';
 import { AuditAiService } from './audit-ai.service';
 import { AuditContextLoader } from './audit-context.loader';
 import { creativeFingerprint } from './creative/creative-observations';
@@ -34,6 +35,9 @@ const trackedKeyword = (text: string, country: string, active: boolean) => ({
 interface LoaderOptions {
   model?: string | null;
   insight?: Record<string, unknown> | null;
+  store?: 'APP_STORE' | 'GOOGLE_PLAY';
+  screenshots?: Array<{ status: string; caption: string | null }>;
+  forApp?: jest.Mock;
 }
 
 const buildLoader = (options: LoaderOptions = {}) => {
@@ -41,7 +45,7 @@ const buildLoader = (options: LoaderOptions = {}) => {
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app-1',
-        store: 'APP_STORE',
+        store: options.store ?? 'APP_STORE',
         country: 'us',
         name: 'Habit Tracker',
       }),
@@ -117,7 +121,12 @@ const buildLoader = (options: LoaderOptions = {}) => {
     get: jest.fn().mockReturnValue(2),
   } as unknown as ConfigService<Env, true>;
 
-  return new AuditContextLoader(prisma, keywords, auditAi, analytics, config);
+  const forApp =
+    options.forApp ??
+    jest.fn().mockResolvedValue({ screenshots: options.screenshots ?? [] });
+  return new AuditContextLoader(prisma, keywords, auditAi, analytics, config, {
+    forApp,
+  } as unknown as ScreenshotsService);
 };
 
 describe('AuditContextLoader.load', () => {
@@ -218,5 +227,47 @@ describe('AuditContextLoader creative staleness', () => {
     const context = await loader.load('app-1');
 
     expect(context.creative.stale).toBe(false);
+  });
+});
+
+describe('AuditContextLoader screenshot captions', () => {
+  it('loads the captions read from the latest snapshot of an app store app', async () => {
+    const loader = buildLoader({
+      screenshots: [
+        { status: 'read', caption: 'Track habits' },
+        { status: 'blank', caption: null },
+        { status: 'read', caption: 'Build streaks' },
+      ],
+    });
+
+    const context = await loader.load('app-1');
+
+    expect(context.screenshotCaptions).toEqual([
+      'Track habits',
+      'Build streaks',
+    ]);
+  });
+
+  it('loads null while nothing has settled', async () => {
+    const loader = buildLoader({
+      screenshots: [
+        { status: 'pending', caption: null },
+        { status: 'failed', caption: null },
+      ],
+    });
+
+    const context = await loader.load('app-1');
+
+    expect(context.screenshotCaptions).toBeNull();
+  });
+
+  it('does not ask for captions on google play', async () => {
+    const forApp = jest.fn();
+    const loader = buildLoader({ store: 'GOOGLE_PLAY', forApp });
+
+    const context = await loader.load('app-1');
+
+    expect(forApp).not.toHaveBeenCalled();
+    expect(context.screenshotCaptions).toBeNull();
   });
 });
