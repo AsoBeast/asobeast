@@ -48,6 +48,7 @@ describe('latestListingTexts', () => {
     expect(findFirst.mock.calls[0][0].where).toEqual({
       appId: 'app_1',
       country: null,
+      localization: null,
     });
   });
 

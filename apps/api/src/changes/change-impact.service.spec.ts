@@ -50,6 +50,7 @@ describe('ChangeImpactService', () => {
       where: {
         appId: 'app_1',
         country: null,
+        localization: null,
         capturedAt: { gte: addDays(today, -30) },
       },
       select: { field: true, capturedAt: true },

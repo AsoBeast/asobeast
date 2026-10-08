@@ -526,6 +526,7 @@ describe('ChangesService', () => {
         where: {
           appId: 'app_1',
           country: null,
+          localization: null,
           field: 'screenshotCaptions',
           capturedAt: captionChange.since,
         },
@@ -545,6 +546,7 @@ describe('ChangesService', () => {
         where: {
           appId: 'app_1',
           country: 'de',
+          localization: null,
           field: 'screenshotCaptions',
           capturedAt: captionChange.since,
         },

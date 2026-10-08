@@ -59,7 +59,7 @@ function serviceWith(loaded: unknown) {
 describe('ListingReadService.marketDetail', () => {
   it('loads only the newest listing of each app in the market', async () => {
     const newest = {
-      where: { country: 'de' },
+      where: { country: 'de', localization: null },
       orderBy: { capturedAt: 'desc' },
       take: 1,
     };

@@ -80,7 +80,12 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: null, capturedAt: { lt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: null,
+        capturedAt: { lt: CAPTURED },
+      },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
@@ -167,12 +172,22 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record({ ...snapshot, listing });
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: 'de', capturedAt: { lt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: 'de',
+        localization: null,
+        capturedAt: { lt: CAPTURED },
+      },
       orderBy: { capturedAt: 'desc' },
       select: { id: true },
     });
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: 'de', capturedAt: { gt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: 'de',
+        localization: null,
+        capturedAt: { gt: CAPTURED },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });
@@ -190,7 +205,12 @@ describe('CaptionChangeRecorder.record', () => {
     await recorder.record(snapshot);
 
     expect(findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: null, capturedAt: { gt: CAPTURED } },
+      where: {
+        appId: 'app_1',
+        country: null,
+        localization: null,
+        capturedAt: { gt: CAPTURED },
+      },
       orderBy: { capturedAt: 'asc' },
       select: { id: true, capturedAt: true },
     });

@@ -222,6 +222,7 @@ describe('ActionContextLoader', () => {
         where: {
           appId: { in: ['comp_1'] },
           country: null,
+          localization: null,
           field: { in: ['title', 'subtitle', 'summary', 'description'] },
           capturedAt: {
             gte: new Date(
@@ -360,6 +361,7 @@ describe('ActionContextLoader', () => {
         where: {
           appId: { in: ['comp_1'] },
           country: null,
+          localization: null,
           capturedAt: {
             gte: new Date(
               NOW.getTime() - COMPETITOR_SNAPSHOT_WINDOW_DAYS * DAY_MS,

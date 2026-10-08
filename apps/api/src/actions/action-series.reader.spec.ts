@@ -138,6 +138,7 @@ describe('ActionSeriesReader', () => {
       where: {
         appId: 'app_1',
         country: null,
+        localization: null,
         capturedAt: { gte: new Date('2026-06-25T00:00:00.000Z') },
       },
       select: { capturedAt: true, storeUpdatedAt: true },

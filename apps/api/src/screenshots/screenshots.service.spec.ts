@@ -95,7 +95,7 @@ describe('ScreenshotsService.forApp', () => {
     await service.forApp('app_1');
 
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith({
-      where: { appId: 'app_1', country: null },
+      where: { appId: 'app_1', country: null, localization: null },
       orderBy: { capturedAt: 'desc' },
       select: {
         id: true,
@@ -115,7 +115,9 @@ describe('ScreenshotsService.forApp', () => {
       country: 'de',
     });
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { appId: 'app_1', country: 'de' } }),
+      expect.objectContaining({
+        where: { appId: 'app_1', country: 'de', localization: null },
+      }),
     );
   });
 
@@ -127,7 +129,9 @@ describe('ScreenshotsService.forApp', () => {
       country: 'us',
     });
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { appId: 'app_1', country: null } }),
+      expect.objectContaining({
+        where: { appId: 'app_1', country: null, localization: null },
+      }),
     );
   });
 
