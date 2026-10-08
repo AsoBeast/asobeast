@@ -154,17 +154,19 @@ export class ChangesService {
 
   async recordMarketRefresh(
     appId: string,
-    listing: { home: string; market: string },
+    listing: { home: string; market: string; localization?: string | null },
     prev: DiffableChangeSnapshot | null,
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
     const changes = detectChanges(prev, next);
     const country = storedMarket(listing.home, listing.market);
+    const localization = listing.localization ?? null;
     if (changes.length > 0) {
       await this.prisma.changeEvent.createMany({
         data: changes.map((change) => ({
           ...eventData(appId, change),
           country,
+          localization,
         })),
       });
     }

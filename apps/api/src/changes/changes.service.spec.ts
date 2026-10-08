@@ -126,6 +126,7 @@ describe('ChangesService', () => {
           {
             appId: 'app_1',
             country: 'de',
+            localization: null,
             field: 'title',
             before: 'Alt',
             after: 'Neu',
@@ -148,6 +149,7 @@ describe('ChangesService', () => {
           {
             appId: 'app_1',
             country: null,
+            localization: null,
             field: 'title',
             before: 'Alt',
             after: 'Neu',
@@ -589,6 +591,7 @@ describe('ChangesService', () => {
         {
           appId: 'app_1',
           country: 'de',
+          localization: null,
           field: 'screenshotImages',
           before: '3 screenshots',
           after: '3 screenshots, 1 replaced',

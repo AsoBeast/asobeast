@@ -87,6 +87,7 @@ export interface SnapshotChange {
   field: string;
   before: string | number | null;
   after: string | number | null;
+  localization?: string;
 }
 
 export interface SnapshotDiffResult {

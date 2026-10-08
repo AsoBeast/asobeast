@@ -157,10 +157,12 @@ export function toSnapshotData(
   appId: string,
   normalized: NormalizedApp,
   market: string | null = null,
+  localization: string | null = null,
 ): Prisma.AppSnapshotCreateInput {
   return {
     app: { connect: { id: appId } },
     country: market,
+    localization,
     title: normalized.title,
     subtitle: normalized.subtitle,
     summary: normalized.summary,

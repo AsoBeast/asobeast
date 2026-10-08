@@ -1,0 +1,27 @@
+import { Store } from '@prisma/client';
+import { screenshotKeys } from '../changes/screenshot-diff';
+import { releaseNotesFor } from '../store-providers/raw-facts';
+
+export interface ComparableListing {
+  title: string;
+  subtitle?: string | null;
+  description: string;
+  raw: unknown;
+}
+
+const signature = (store: Store, listing: ComparableListing): string =>
+  JSON.stringify([
+    listing.title,
+    listing.subtitle ?? null,
+    listing.description,
+    releaseNotesFor(store, listing.raw),
+    (screenshotKeys(store, listing.raw) ?? []).map((shot) => shot.key),
+  ]);
+
+export function servesLocalization(
+  store: Store,
+  fallback: ComparableListing,
+  localized: ComparableListing,
+): boolean {
+  return signature(store, fallback) !== signature(store, localized);
+}

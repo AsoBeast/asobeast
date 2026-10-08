@@ -22,6 +22,7 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 @Injectable()
@@ -36,6 +37,7 @@ export class ListingCaptureService {
     private readonly changes: ChangesService,
     private readonly screenshots: ScreenshotRecorder,
     private readonly screenshotQueue: ScreenshotQueue,
+    private readonly localizations: LocalizedListingCapture,
   ) {}
 
   async refresh(
@@ -150,9 +152,14 @@ export class ListingCaptureService {
           after,
         );
 
+    const localized = await this.localizations.capture(app, market, snapshot);
+
     return {
       snapshotId: snapshot.id,
-      changes: withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+      changes: [
+        ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+        ...localized,
+      ],
       country: market,
     };
   }
