@@ -1,5 +1,6 @@
 import {
   eventsIn,
+  eventsOfMarket,
   EVERY_LISTING,
   HOME_EVENTS,
   HOME_LISTING,
@@ -58,6 +59,11 @@ describe('listing market', () => {
       country: 'pl',
       localization: 'pl',
     });
+  });
+
+  it('filters change events of every localization of a market', () => {
+    expect(eventsOfMarket('us', 'pl')).toEqual({ country: 'pl' });
+    expect(eventsOfMarket('us', 'us')).toEqual({ country: null });
   });
 
   it('names a read of every market as a filter that restricts nothing', () => {

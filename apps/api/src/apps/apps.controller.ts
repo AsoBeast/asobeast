@@ -28,6 +28,7 @@ import { AppsService } from './apps.service';
 import { ImportAppDto } from './dto/import-app.dto';
 import { LinkAppDto } from './dto/link-app.dto';
 import { ListingMarketQueryDto } from './dto/listing-market-query.dto';
+import { ListingQueryDto } from './dto/listing-query.dto';
 import { MarketAvailabilityQueryDto } from './dto/market-availability-query.dto';
 
 @ApiTags('apps')
@@ -61,9 +62,9 @@ export class AppsController {
   })
   detail(
     @Param('id') id: string,
-    @Query() query: ListingMarketQueryDto,
+    @Query() query: ListingQueryDto,
   ): Promise<AppDetail> {
-    return this.apps.detail(id, query.country);
+    return this.apps.detail(id, query.country, query.localization);
   }
 
   @Get(':id/listing-markets')

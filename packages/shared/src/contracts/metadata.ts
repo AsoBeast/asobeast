@@ -48,6 +48,7 @@ export interface MetadataAuditResult {
   keywordFieldSuggestion: KeywordFieldSuggestion | null;
   screenshotText?: ScreenshotTextState | null;
   country?: string;
+  localization?: string;
 }
 
 export interface MetadataDraft {

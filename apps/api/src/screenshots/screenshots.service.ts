@@ -9,6 +9,7 @@ import type {
   ScreenshotReadingState,
 } from '@asobeast/shared';
 import { listingIn, NEWEST_FIRST } from '../apps/listing';
+import { missingListing } from '../apps/missing-listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotPolicy } from './screenshot-policy';
 
@@ -26,7 +27,11 @@ export class ScreenshotsService {
     private readonly policy: ScreenshotPolicy,
   ) {}
 
-  async forApp(appId: string, country?: string): Promise<AppScreenshots> {
+  async forApp(
+    appId: string,
+    country?: string,
+    localization: string | null = null,
+  ): Promise<AppScreenshots> {
     const app = await this.prisma.app.findFirst({
       where: { id: appId },
       select: { id: true, store: true, country: true },
@@ -35,9 +40,17 @@ export class ScreenshotsService {
     const market = country ?? app.country;
     const home = market === app.country;
     if (!home) assertStorefront(app.store, market);
-    const latest = await this.latest(appId, app.country, market);
-    if (!latest && !home) {
-      throw new NotFoundException(`No listing captured for ${market}`);
+    const latest = await this.prisma.appSnapshot.findFirst({
+      where: { appId, ...listingIn(app.country, market, localization) },
+      orderBy: NEWEST_FIRST,
+      select: {
+        id: true,
+        capturedAt: true,
+        screenshots: { orderBy: { position: 'asc' } },
+      },
+    });
+    if (!latest && (localization !== null || !home)) {
+      throw missingListing(market, localization);
     }
     return {
       appId,
@@ -47,6 +60,7 @@ export class ScreenshotsService {
       reading: this.reading(app.store),
       screenshots: (latest?.screenshots ?? []).map(toItem),
       country: market,
+      ...(localization === null ? {} : { localization }),
     };
   }
 
@@ -73,17 +87,5 @@ export class ScreenshotsService {
       ]);
     }
     return screenshots;
-  }
-
-  private latest(appId: string, home: string, market: string) {
-    return this.prisma.appSnapshot.findFirst({
-      where: { appId, ...listingIn(home, market) },
-      orderBy: NEWEST_FIRST,
-      select: {
-        id: true,
-        capturedAt: true,
-        screenshots: { orderBy: { position: 'asc' } },
-      },
-    });
   }
 }

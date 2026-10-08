@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
+  AppStoreLocalization,
   assertStorefront,
   fieldLength,
   KEYWORD_FIELD_BYTE_LIMIT,
@@ -29,7 +30,9 @@ import {
   latestListingTexts,
   latestLocalizedTexts,
   ListingTexts,
+  LocalizedTexts,
 } from '../apps/listing-texts';
+import { missingListing } from '../apps/missing-listing';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
 import {
   screenshotTextCoverage,
@@ -37,6 +40,12 @@ import {
 } from './screenshot-coverage';
 
 type JudgedCoverageRow = KeywordCoverageRow & { listingCountry: string };
+
+interface AuditListings {
+  listings: Map<string, ListingTexts>;
+  localized: Map<string, LocalizedTexts[]>;
+  view: ListingTexts | undefined;
+}
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -55,7 +64,11 @@ export class MetadataService {
     private readonly screenshots: ScreenshotsService,
   ) {}
 
-  async audit(appId: string, country?: string): Promise<MetadataAuditResult> {
+  async audit(
+    appId: string,
+    country?: string,
+    localization: AppStoreLocalization | null = null,
+  ): Promise<MetadataAuditResult> {
     const app = await this.ensureApp(appId);
     const market = country ?? app.country;
     const home = market === app.country;
@@ -70,15 +83,8 @@ export class MetadataService {
       }),
     ]);
     const active = tracked.filter((item) => item.active);
-    const listings = await latestListingTexts(this.prisma, appId, app.country, [
-      app.country,
-      market,
-      ...active.map((item) => item.country),
-    ]);
-    const view = listings.get(market);
-    if (!home && !view) {
-      throw new NotFoundException(`No listing captured for ${market}`);
-    }
+    const read = await this.readListings(app, market, localization, active);
+    const { listings, view } = read;
 
     const keywordFieldValue = home
       ? active
@@ -98,14 +104,13 @@ export class MetadataService {
     const fields =
       app.store === Store.GOOGLE_PLAY
         ? this.playFields(view, context)
-        : this.appStoreFields(view, context, keywordFieldValue);
+        : this.appStoreFields(
+            view,
+            context,
+            localization === null ? keywordFieldValue : '',
+          );
 
-    const coverage = await this.judgeCoverage(
-      app,
-      active,
-      listings,
-      keywordFieldValue,
-    );
+    const coverage = this.judgeCoverage(app, active, read, keywordFieldValue);
     const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
@@ -139,7 +144,41 @@ export class MetadataService {
           : null,
       ...(screenshotText ? { screenshotText } : {}),
       country: market,
+      ...(localization === null ? {} : { localization }),
     };
+  }
+
+  private async readListings(
+    app: { id: string; country: string },
+    market: string,
+    localization: AppStoreLocalization | null,
+    active: TrackedKeywordItem[],
+  ): Promise<AuditListings> {
+    const listings = await latestListingTexts(
+      this.prisma,
+      app.id,
+      app.country,
+      [app.country, market, ...active.map((item) => item.country)],
+    );
+    const localized = await latestLocalizedTexts(
+      this.prisma,
+      app.id,
+      app.country,
+      [...listings.keys()],
+    );
+    const view =
+      localization === null
+        ? listings.get(market)
+        : localized
+            .get(market)
+            ?.find((entry) => entry.localization === localization)?.texts;
+    if (localization !== null && !view) {
+      throw missingListing(market, localization);
+    }
+    if (market !== app.country && !view) {
+      throw missingListing(market);
+    }
+    return { listings, localized, view };
   }
 
   private async screenshotsOf(
@@ -237,18 +276,12 @@ export class MetadataService {
     ];
   }
 
-  private async judgeCoverage(
-    app: { id: string; store: Store; country: string },
+  private judgeCoverage(
+    app: { store: Store; country: string },
     active: TrackedKeywordItem[],
-    listings: Map<string, ListingTexts>,
+    { listings, localized }: AuditListings,
     keywordFieldValue: string,
-  ): Promise<JudgedCoverageRow[]> {
-    const localized = await latestLocalizedTexts(
-      this.prisma,
-      app.id,
-      app.country,
-      [...listings.keys()],
-    );
+  ): JudgedCoverageRow[] {
     return active.map((item) => {
       const own = listings.get(item.country);
       const judging = own ? item.country : app.country;

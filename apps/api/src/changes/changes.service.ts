@@ -17,6 +17,7 @@ import {
 } from './change-detector';
 import {
   eventsIn,
+  eventsOfMarket,
   HOME_EVENTS,
   listingMarket,
   storedMarket,
@@ -29,6 +30,7 @@ const EVENT_SELECT = {
   id: true,
   appId: true,
   country: true,
+  localization: true,
   field: true,
   before: true,
   after: true,
@@ -41,6 +43,7 @@ interface EventRow {
   id: string;
   appId: string;
   country: string | null;
+  localization: string | null;
   field: string;
   before: string | null;
   after: string | null;
@@ -84,6 +87,7 @@ const toChangeEventItem = (event: EventRow): ChangeEventItem => {
     capturedAt: event.capturedAt.toISOString(),
     country: listingMarket(event.app.country, event.country),
     ...(detail ? { detail } : {}),
+    ...(event.localization ? { localization: event.localization } : {}),
   };
 };
 
@@ -126,7 +130,7 @@ export class ChangesService {
     const events = await this.prisma.changeEvent.findMany({
       where: {
         appId: { in: appIds },
-        ...eventsIn(app.country, market),
+        ...eventsOfMarket(app.country, market),
         capturedAt: { gte: cutoff },
       },
       orderBy: { capturedAt: 'desc' },

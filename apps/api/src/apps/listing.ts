@@ -52,6 +52,12 @@ export function eventsIn(
   } satisfies Prisma.ChangeEventWhereInput;
 }
 
+export function eventsOfMarket(home: string, market: string) {
+  return {
+    country: storedMarket(home, market),
+  } satisfies Prisma.ChangeEventWhereInput;
+}
+
 export function latestListingIn(
   home: string,
   market: string,

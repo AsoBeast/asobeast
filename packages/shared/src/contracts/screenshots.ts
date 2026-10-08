@@ -36,6 +36,7 @@ export interface AppScreenshots {
   reading: ScreenshotReadingState;
   screenshots: ScreenshotItem[];
   country?: string;
+  localization?: string;
 }
 
 export interface ScreenshotTextState {

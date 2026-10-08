@@ -5,10 +5,11 @@ import { Queue } from 'bullmq';
 import {
   AppDetail,
   AppListItem,
+  AppStoreLocalization,
+  parseStoreUrl,
   assertStorefront,
   ListingMarket,
   MarketAvailabilityResult,
-  parseStoreUrl,
   SnapshotDiffResult,
   SUPPORTED_STORES,
 } from '@asobeast/shared';
@@ -141,7 +142,11 @@ export class AppsService {
     );
   }
 
-  async detail(id: string, country?: string): Promise<AppDetail> {
+  async detail(
+    id: string,
+    country?: string,
+    localization?: AppStoreLocalization,
+  ): Promise<AppDetail> {
     const app = await this.prisma.app.findFirst({
       where: { id },
       include: {
@@ -157,7 +162,8 @@ export class AppsService {
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
-    if (country === undefined || country === app.country) {
+    const market = country ?? app.country;
+    if (localization === undefined && market === app.country) {
       return toAppDetail(
         app,
         app.snapshots[0] ?? null,
@@ -165,8 +171,8 @@ export class AppsService {
         app.group,
       );
     }
-    assertStorefront(app.store, country);
-    return this.listingReads.marketDetail(app, country);
+    assertStorefront(app.store, market);
+    return this.listingReads.marketDetail(app, market, localization ?? null);
   }
 
   listingMarkets(id: string): Promise<ListingMarket[]> {

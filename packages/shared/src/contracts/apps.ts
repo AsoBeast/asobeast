@@ -19,6 +19,7 @@ export interface ListingMarket {
   home: boolean;
   capturedAt: string | null;
   tracked?: boolean;
+  localizations?: string[];
 }
 
 export interface CompetitorItem {
@@ -55,6 +56,7 @@ export interface AppDetail {
   latestSnapshot: AppSnapshotSummary | null;
   competitors: CompetitorItem[];
   group: AppGroupSummary | null;
+  localization?: string;
 }
 
 export interface AppListItem {

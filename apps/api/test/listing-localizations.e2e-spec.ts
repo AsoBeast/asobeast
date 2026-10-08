@@ -5,6 +5,9 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   AppDetail,
+  AppScreenshots,
+  ChangeTimeline,
+  ListingMarket,
   MetadataAuditResult,
   SnapshotDiffResult,
   TrackedKeywordItem,
@@ -202,5 +205,107 @@ describe('Native localizations of a listing (e2e)', () => {
     });
     expect(JSON.stringify(dispatch.mock.calls)).not.toContain(renamed);
     dispatch.mockRestore();
+  });
+
+  describe('reading a localized listing', () => {
+    it('reads the polish listing of a polish app and the default without the parameter', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+
+      const polish = (
+        await api.get(`/apps/${appId}?localization=pl`).expect(200)
+      ).body as AppDetail;
+      const english = (await api.get(`/apps/${appId}`).expect(200))
+        .body as AppDetail;
+
+      expect(polish.latestSnapshot?.title).toBe(POLISH.title);
+      expect(polish.localization).toBe('pl');
+      expect(english.latestSnapshot?.title).toBe(ENGLISH.title);
+      expect('localization' in english).toBe(false);
+    });
+
+    it('lists the captured localizations of a market', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: ['karte'], country: 'de' })
+        .expect(201);
+      await api.post(`/apps/${appId}/refresh?country=de`).expect(200);
+
+      const markets = (
+        await api.get(`/apps/${appId}/listing-markets`).expect(200)
+      ).body as ListingMarket[];
+
+      expect(markets.find((market) => market.home)).toMatchObject({
+        country: 'pl',
+        localizations: ['pl'],
+      });
+      const de = markets.find((market) => market.country === 'de');
+      expect(de).toBeDefined();
+      expect(de && 'localizations' in de).toBe(false);
+    });
+
+    it('refuses an unknown localization and answers 404 for one never captured', async () => {
+      const polishAppId = await importFrom(PL_APP_URL);
+      await api.get(`/apps/${polishAppId}?localization=xx`).expect(400);
+      registry.reset();
+      const usAppId = await importFrom(US_APP_URL);
+
+      await api.get(`/apps/${usAppId}?localization=pl`).expect(404);
+      await api.get(`/apps/${usAppId}/screenshots?localization=pl`).expect(404);
+      await api
+        .get(`/apps/${usAppId}/metadata/audit?localization=pl`)
+        .expect(404);
+    });
+
+    it('reads the screenshots and the fields of a localization', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+
+      const shots = (
+        await api.get(`/apps/${appId}/screenshots?localization=pl`).expect(200)
+      ).body as AppScreenshots;
+      const localized = (
+        await api
+          .get(`/apps/${appId}/metadata/audit?localization=pl`)
+          .expect(200)
+      ).body as MetadataAuditResult;
+      const plain = (await api.get(`/apps/${appId}/metadata/audit`).expect(200))
+        .body as MetadataAuditResult;
+
+      expect(shots.screenshots.map((item) => item.url)).toEqual(
+        POLISH.screenshots,
+      );
+      expect(shots.localization).toBe('pl');
+      expect(
+        localized.fields.find((field) => field.field === 'title')?.value,
+      ).toBe(POLISH.title);
+      expect(localized.localization).toBe('pl');
+      expect(localized.coverage).toEqual(plain.coverage);
+    });
+
+    it('shows localized events on the market timeline only', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+      registry.listings.set('pl:pl', { ...POLISH, title: 'Gdzie jestem?' });
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      const timeline = (await api.get(`/apps/${appId}/changes`).expect(200))
+        .body as ChangeTimeline;
+      const recent = (await api.get('/changes/recent').expect(200))
+        .body as ChangeTimeline;
+
+      expect(timeline.events).toContainEqual(
+        expect.objectContaining({
+          field: 'title',
+          after: 'Gdzie jestem?',
+          localization: 'pl',
+        }),
+      );
+      expect(
+        recent.events.some((event) => event.after === 'Gdzie jestem?'),
+      ).toBe(false);
+    });
   });
 });
