@@ -17,10 +17,10 @@ export function ScreenshotThumb({
   width?: number;
   className?: string;
 }) {
-  const [failed, setFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const height = Math.round(width * ASPECT);
 
-  if (failed) {
+  if (failedSrc === src) {
     return (
       <span
         role="img"
@@ -45,7 +45,7 @@ export function ScreenshotThumb({
       loading="lazy"
       style={{ width, height }}
       className={cn("shrink-0 rounded-lg border object-cover", className)}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }

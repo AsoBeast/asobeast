@@ -127,3 +127,26 @@ test("updates the card on its own when pending screenshots settle", async ({
     timeout: 15_000,
   });
 });
+
+test("shows a screenshot again after switching away from a market whose image failed", async ({
+  page,
+}) => {
+  await page.route(
+    (url) =>
+      url.pathname === "/_next/image" &&
+      (url.searchParams.get("url") ?? "").includes("/e2e-focus/1.jpg/"),
+    (route) => route.abort(),
+  );
+  await page.goto("/apps/app-1/metadata");
+  await expect(
+    strip(page).getByRole("img", { name: "Screenshot 1, image unavailable" }),
+  ).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Listing market" }).click();
+  await page.getByRole("option", { name: "PL · Poland" }).click();
+
+  await expect(page).toHaveURL(/market=pl/);
+  await expect(
+    strip(page).getByRole("img", { name: "Screenshot 1", exact: true }),
+  ).toBeVisible();
+});
