@@ -442,7 +442,7 @@ describe('ChangesService', () => {
 
     const captionChange = {
       appId: 'app_1',
-      listing: { home: 'us', market: 'us' },
+      listing: { home: 'us', market: 'us', localization: null },
       since: new Date('2026-10-07T03:00:00.000Z'),
       before: ['A', 'B'],
       after: ['A', 'C'],
@@ -541,7 +541,7 @@ describe('ChangesService', () => {
     it('records a market caption change in that market and sends no alert', async () => {
       await service.recordCaptionChange({
         ...captionChange,
-        listing: { home: 'us', market: 'de' },
+        listing: { home: 'us', market: 'de', localization: null },
       });
 
       expect(changeEventFindFirst).toHaveBeenCalledWith({

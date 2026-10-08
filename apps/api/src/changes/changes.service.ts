@@ -54,7 +54,7 @@ interface EventRow {
 
 export interface CaptionChange {
   appId: string;
-  listing: { home: string; market: string; localization?: string | null };
+  listing: { home: string; market: string; localization: string | null };
   since: Date;
   before: string[];
   after: string[];
@@ -196,7 +196,7 @@ export class ChangesService {
         ...eventsIn(
           change.listing.home,
           change.listing.market,
-          change.listing.localization ?? null,
+          change.listing.localization,
         ),
         field: 'screenshotCaptions',
         capturedAt: change.since,
@@ -217,7 +217,7 @@ export class ChangesService {
       },
     };
     const country = storedMarket(change.listing.home, change.listing.market);
-    const localization = change.listing.localization ?? null;
+    const localization = change.listing.localization;
     if (country === null && localization === null) {
       await this.persist(change.appId, [caption], change.since);
       return;

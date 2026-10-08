@@ -3,7 +3,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import { CaptionChangeRecorder } from './caption-change-recorder';
 
 const CAPTURED = new Date('2026-10-07T03:00:00.000Z');
-const HOME = { home: 'us', market: 'us' };
+const HOME = { home: 'us', market: 'us', localization: null };
 const snapshot = {
   id: 'snap_2',
   appId: 'app_1',
@@ -167,7 +167,7 @@ describe('CaptionChangeRecorder.record', () => {
       previous: [row('read', 'Plane deine Woche')],
       current: [row('read', 'Plane deinen Tag')],
     });
-    const listing = { home: 'us', market: 'de' };
+    const listing = { home: 'us', market: 'de', localization: null };
 
     await recorder.record({ ...snapshot, listing });
 

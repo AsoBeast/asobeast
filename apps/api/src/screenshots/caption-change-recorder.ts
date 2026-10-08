@@ -13,7 +13,7 @@ interface SnapshotRef {
   id: string;
   appId: string;
   capturedAt: Date;
-  listing: { home: string; market: string; localization?: string | null };
+  listing: { home: string; market: string; localization: string | null };
 }
 
 const isSettled = (rows: SettledRow[]): boolean =>
@@ -39,7 +39,7 @@ export class CaptionChangeRecorder {
         ...listingIn(
           snapshot.listing.home,
           snapshot.listing.market,
-          snapshot.listing.localization ?? null,
+          snapshot.listing.localization,
         ),
         capturedAt: { lt: snapshot.capturedAt },
       },
@@ -55,7 +55,7 @@ export class CaptionChangeRecorder {
         ...listingIn(
           snapshot.listing.home,
           snapshot.listing.market,
-          snapshot.listing.localization ?? null,
+          snapshot.listing.localization,
         ),
         capturedAt: { gt: snapshot.capturedAt },
       },
