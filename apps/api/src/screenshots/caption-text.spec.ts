@@ -342,4 +342,22 @@ describe('selectCaption rows', () => {
       ),
     ).toBeNull();
   });
+
+  it('keeps a short word the engine boxed apart inside a caption row', () => {
+    const lines = [
+      at('Go', { left: 80, top: 120, width: 120, height: 80 }),
+      at('further every day', { left: 230, top: 122, width: 700, height: 80 }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe('Go further every day');
+  });
+
+  it('never takes a block of short fragments over the caption', () => {
+    const lines = [
+      at('Plan your week', { left: 40, top: 100, width: 600, height: 80 }),
+      at('4.9', { left: 300, top: 1600, width: 500, height: 240 }),
+    ];
+
+    expect(selectCaption(lines, FRAME)).toBe('Plan your week');
+  });
 });
