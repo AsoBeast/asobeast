@@ -69,6 +69,7 @@ import {
   reviewsExportOptions,
   reviewsOptions,
   serpMoversOptions,
+  screenshotsOptions,
   serpOptions,
   spiderOptions,
   suggestionsOptions,
@@ -176,6 +177,11 @@ const APP_SCOPED_OPTIONS = [
     "metadataAudit",
     metadataAuditOptions(APP, "de"),
     appKeys.metadataAudit(APP, "de"),
+  ],
+  [
+    "screenshots",
+    screenshotsOptions(APP, "de"),
+    appKeys.screenshots(APP, "de"),
   ],
 ] as const;
 
@@ -302,6 +308,9 @@ describe("appKeys", () => {
     expect(appKeys.metadataAudit(APP, "de")).not.toEqual(
       appKeys.metadataAudit(APP, "pl"),
     );
+    expect(appKeys.screenshots(APP, "de")).not.toEqual(
+      appKeys.screenshots(APP),
+    );
     expect(appKeys.listing(APP, "de")).not.toEqual(appKeys.listing(APP, "pl"));
   });
 
@@ -309,8 +318,13 @@ describe("appKeys", () => {
     const client = new QueryClient();
     client.setQueryData(appKeys.listing(APP, "de"), {});
     client.setQueryData(appKeys.metadataAudit(APP, "de"), {});
+    client.setQueryData(appKeys.screenshots(APP, "de"), {});
 
     invalidateAppListing(client, APP);
+
+    expect(
+      client.getQueryState(appKeys.screenshots(APP, "de"))?.isInvalidated,
+    ).toBe(true);
 
     expect(
       client.getQueryState(appKeys.listing(APP, "de"))?.isInvalidated,

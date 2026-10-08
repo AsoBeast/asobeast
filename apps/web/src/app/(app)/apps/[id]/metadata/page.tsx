@@ -47,8 +47,10 @@ export default async function MetadataPage({
       </div>
     );
   }
-  if (result.store === "APP_STORE" && market === app.country) {
-    void queryClient.prefetchQuery(screenshotsOptions(id));
+  if (result.store === "APP_STORE") {
+    void queryClient.prefetchQuery(
+      screenshotsOptions(id, queryMarket(market, app.country)),
+    );
   }
   const [keywordMarkets, assistant] = await Promise.all([
     result.store === "APP_STORE"

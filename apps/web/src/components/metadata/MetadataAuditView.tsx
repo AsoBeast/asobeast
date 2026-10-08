@@ -44,9 +44,9 @@ export function MetadataAuditView({
         ))}
       </section>
 
-      {result.store === "APP_STORE" && market === home ? (
+      {result.store === "APP_STORE" ? (
         <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
-          <ScreenshotCaptionsCard id={id} />
+          <ScreenshotCaptionsCard id={id} market={queryMarket(market, home)} />
         </Suspense>
       ) : null}
 

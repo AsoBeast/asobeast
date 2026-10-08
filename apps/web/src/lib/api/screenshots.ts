@@ -1,6 +1,11 @@
 import type { AppScreenshots } from "@asobeast/shared";
-import { apiFetch } from "./client";
+import { apiFetch, marketParams, withQuery } from "./client";
 
-export function getAppScreenshots(appId: string): Promise<AppScreenshots> {
-  return apiFetch<AppScreenshots>(`/apps/${appId}/screenshots`);
+export function getAppScreenshots(
+  appId: string,
+  country?: string,
+): Promise<AppScreenshots> {
+  return apiFetch<AppScreenshots>(
+    withQuery(`/apps/${appId}/screenshots`, marketParams(country)),
+  );
 }

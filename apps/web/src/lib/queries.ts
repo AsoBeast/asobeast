@@ -148,7 +148,8 @@ export const appKeys = {
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
-  screenshots: (id: string) => [...appKeys.detail(id), "screenshots"] as const,
+  screenshots: (id: string, market?: string) =>
+    [...appKeys.detail(id), "screenshots", { market }] as const,
   listingMarkets: (id: string) =>
     [...appKeys.detail(id), "listing-markets"] as const,
   listing: (id: string, market: string) =>
@@ -579,10 +580,10 @@ export const changesOptions = (id: string, days: number, market?: string) =>
     queryFn: () => getChanges(id, days, market),
   });
 
-export const screenshotsOptions = (id: string) =>
+export const screenshotsOptions = (id: string, market?: string) =>
   queryOptions({
-    queryKey: appKeys.screenshots(id),
-    queryFn: () => getAppScreenshots(id),
+    queryKey: appKeys.screenshots(id, market),
+    queryFn: () => getAppScreenshots(id, market),
     refetchInterval: (query) =>
       hasPendingScreenshots(query.state.data) ? SCREENSHOT_POLL_MS : false,
   });

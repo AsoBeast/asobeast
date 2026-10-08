@@ -14,8 +14,14 @@ import {
 const HEADING_ID = "screenshot-captions-heading";
 const THUMB_WIDTH = 112;
 
-export function ScreenshotCaptionsCard({ id }: { id: string }) {
-  const { data } = useSuspenseQuery(screenshotsOptions(id));
+export function ScreenshotCaptionsCard({
+  id,
+  market,
+}: {
+  id: string;
+  market?: string;
+}) {
+  const { data } = useSuspenseQuery(screenshotsOptions(id, market));
 
   return (
     <section aria-labelledby={HEADING_ID} className="flex flex-col gap-3">

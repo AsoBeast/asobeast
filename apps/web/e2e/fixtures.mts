@@ -997,6 +997,31 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
       capturedAt: utcTimestampDaysAgo(2),
       country: "pl",
     },
+    {
+      id: "chg-pl-sc-1",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshotImages",
+      before: "2 screenshots",
+      after: "2 screenshots, 1 replaced",
+      capturedAt: utcTimestampDaysAgo(3),
+      country: "pl",
+      detail: {
+        kind: "images",
+        before: [11, 12].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        after: [11, 13].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        added: [2],
+        removed: [2],
+        reordered: false,
+      },
+    },
   ],
 };
 
@@ -3206,6 +3231,24 @@ export const APP_1_SCREENSHOTS: AppScreenshots = {
   ],
 };
 
+export const APP_1_PL_SCREENSHOTS: AppScreenshots = {
+  appId: "app-1",
+  store: "APP_STORE",
+  snapshotId: "snap-app-1-pl",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "on",
+  country: "pl",
+  screenshots: [
+    {
+      position: 1,
+      url: e2eScreenshotUrl(11),
+      caption: "Minutnik do głębokiej pracy",
+      status: "read",
+    },
+    { position: 2, url: e2eScreenshotUrl(13), caption: null, status: "blank" },
+  ],
+};
+
 export const SCREENSHOTS: Record<string, AppScreenshots> = {
   "app-1": APP_1_SCREENSHOTS,
 };
@@ -3640,9 +3683,11 @@ export const METADATA_AUDIT_PL: MetadataAuditResult = {
       uncovered: false,
       country: "pl",
       listingCountry: "pl",
+      screenshotText: { covered: true, positions: [1] },
     },
   ],
   keywordFieldSuggestion: null,
+  screenshotText: { status: "ready", read: 1, total: 2 },
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

@@ -190,3 +190,60 @@ test("the budget card says how many app requests are market listings", async ({
 
   await expect(page.getByText(note)).toBeVisible();
 });
+
+test("the screenshot captions follow the market", async ({ page }) => {
+  const requested: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/screenshots")) {
+      requested.push(url.pathname + url.search);
+    }
+  });
+  const strip = page.getByRole("list", { name: "Screenshots in store order" });
+
+  await page.goto("/apps/app-1/metadata?market=pl");
+
+  await expect(strip.getByRole("listitem")).toHaveCount(2);
+  await expect(strip.getByRole("listitem").first()).toContainText(
+    "Minutnik do głębokiej pracy",
+  );
+  await expect(
+    page
+      .getByRole("table", { name: /Keyword coverage across/ })
+      .getByRole("row", { name: /minutnik/ })
+      .getByText("in screenshot text"),
+  ).toBeAttached();
+
+  const switcher = page.getByRole("combobox", { name: SWITCHER });
+  await switcher.click();
+  await page.getByRole("option", { name: HOME }).click();
+
+  await expect(strip.getByRole("listitem")).toHaveCount(4);
+  await expect(strip.getByRole("listitem").first()).toContainText(
+    "Focus timer for deep work",
+  );
+  expect(requested).toContain("/api/backend/apps/app-1/screenshots");
+  expect(requested).not.toContain(
+    "/api/backend/apps/app-1/screenshots?country=us",
+  );
+});
+
+test("the change timeline shows the screenshot changes of a market", async ({
+  page,
+}) => {
+  const imageRows = page.locator('[data-change-field="screenshotImages"]');
+
+  await page.goto("/apps/app-1/changes?market=pl");
+
+  await expect(imageRows).toHaveCount(1);
+  await expect(imageRows).toContainText("Focus Timer");
+  await expect(imageRows).toContainText("Screenshot 2 replaced");
+  await expect(
+    imageRows.getByRole("img", { name: "After, screenshot 2" }),
+  ).toBeVisible();
+
+  await page.goto("/apps/app-1/changes");
+
+  await expect(imageRows).toHaveCount(1);
+  await expect(imageRows).toContainText("Rival Focus");
+});
