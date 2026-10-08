@@ -10,6 +10,7 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { CaptionChangeRecorder } from '../src/screenshots/caption-change-recorder';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
+import { ocrRecipe } from '../src/screenshots/ocr-languages';
 import { ScreenshotFetchError } from '../src/store-providers/errors';
 import { ScreenshotImageSource } from '../src/store-providers/screenshot-image.source';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
@@ -138,6 +139,33 @@ describe('Caption changes (e2e)', () => {
     expect(engineRead).toHaveBeenCalledTimes(3);
   });
 
+  it('records no caption change against captions read with an earlier recipe and one for a later edit', async () => {
+    engineRead.mockResolvedValue(lines('Track habits'));
+    const appId = await importAndRead();
+    const first = await prisma.appSnapshot.findFirstOrThrow({
+      where: { appId },
+    });
+    await prisma.snapshotScreenshot.updateMany({
+      where: { snapshotId: first.id },
+      data: { recipe: 'ocr1:eng', caption: 'I' },
+    });
+
+    await refreshAndRead(appId);
+
+    await expect(events(appId, 'screenshotCaptions')).resolves.toEqual([]);
+
+    registry.screenshots = [appleShot(1), appleShot(9)];
+    engineRead.mockResolvedValue(lines('Plan your day'));
+
+    await refreshAndRead(appId);
+
+    const captions = await events(appId, 'screenshotCaptions');
+    expect(captions).toHaveLength(1);
+    expect(captions[0]).toMatchObject({
+      detail: { added: ['Plan your day'], removed: ['Track habits'] },
+    });
+  });
+
   it('records no caption change when the new image reads the same up to punctuation', async () => {
     engineRead
       .mockResolvedValueOnce(lines('Track habits'))
@@ -214,6 +242,7 @@ describe('Caption changes (e2e)', () => {
           assetKey: appleKey(index + 1),
           status,
           caption,
+          recipe: status === 'read' ? ocrRecipe(['eng']) : null,
         })),
       });
       return created;
@@ -232,7 +261,11 @@ describe('Caption changes (e2e)', () => {
     await asWorkspace(app, () => recorder.record({ ...latest, listing: home }));
     await prisma.snapshotScreenshot.update({
       where: { snapshotId_position: { snapshotId: delayed.id, position: 2 } },
-      data: { status: 'read', caption: 'Plan your day' },
+      data: {
+        status: 'read',
+        caption: 'Plan your day',
+        recipe: ocrRecipe(['eng']),
+      },
     });
     await asWorkspace(app, () =>
       recorder.record({ ...delayed, listing: home }),

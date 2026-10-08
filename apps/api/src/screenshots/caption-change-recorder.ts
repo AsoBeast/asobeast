@@ -7,6 +7,7 @@ import { diffCaptions } from './caption-diff';
 interface SettledRow {
   status: string;
   caption: string | null;
+  recipe: string | null;
 }
 
 interface SnapshotRef {
@@ -19,6 +20,17 @@ interface SnapshotRef {
 const isSettled = (rows: SettledRow[]): boolean =>
   rows.length > 0 &&
   rows.every((row) => row.status === 'read' || row.status === 'blank');
+
+const recipeOf = (rows: SettledRow[]): string | null => {
+  const recipes = new Set(rows.map((row) => row.recipe));
+  return recipes.size === 1 ? [...recipes][0] : null;
+};
+
+const comparable = (before: SettledRow[], after: SettledRow[]): boolean =>
+  isSettled(before) &&
+  isSettled(after) &&
+  recipeOf(before) !== null &&
+  recipeOf(before) === recipeOf(after);
 
 const captionsOf = (rows: SettledRow[]): string[] =>
   rows.flatMap((row) => (row.caption === null ? [] : [row.caption]));
@@ -68,7 +80,7 @@ export class CaptionChangeRecorder {
     before: SettledRow[],
     after: SettledRow[],
   ): Promise<void> {
-    if (!isSettled(before) || !isSettled(after)) return;
+    if (!comparable(before, after)) return;
     const { added, removed } = diffCaptions(
       captionsOf(before),
       captionsOf(after),
@@ -89,7 +101,7 @@ export class CaptionChangeRecorder {
     return this.prisma.snapshotScreenshot.findMany({
       where: { snapshotId },
       orderBy: { position: 'asc' },
-      select: { status: true, caption: true },
+      select: { status: true, caption: true, recipe: true },
     });
   }
 }
