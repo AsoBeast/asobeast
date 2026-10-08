@@ -121,8 +121,12 @@ export class ListingCaptureService {
           where: { id: app.id },
           data: { name: normalized.title, iconUrl: normalized.iconUrl },
         });
-        pending = await this.screenshots.record(tx, app, created);
       }
+      pending = await this.screenshots.record(
+        tx,
+        { store: app.store, country: market },
+        created,
+      );
       return created;
     });
     if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { App, AppSnapshot, Prisma } from '@prisma/client';
+import { AppSnapshot, Prisma, Store } from '@prisma/client';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { ScreenshotPolicy } from './screenshot-policy';
 import { screenshotRows } from './screenshot-rows';
@@ -13,12 +13,12 @@ export class ScreenshotRecorder {
 
   async record(
     tx: Prisma.TransactionClient,
-    app: Pick<App, 'store' | 'country'>,
+    storefront: { store: Store; country: string },
     snapshot: Pick<AppSnapshot, 'id' | 'raw'>,
   ): Promise<number> {
-    const reads = this.policy.languagesFor(app).length > 0;
+    const reads = this.policy.languagesFor(storefront).length > 0;
     const rows = screenshotRows(
-      app.store,
+      storefront.store,
       snapshot.raw,
       reads ? 'pending' : 'skipped',
     );

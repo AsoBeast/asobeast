@@ -44,7 +44,14 @@ export class ScreenshotReader {
     });
     if (!snapshot) return;
 
-    const languages = this.policy.languagesFor(snapshot.app);
+    const listing = {
+      home: snapshot.app.country,
+      market: listingMarket(snapshot.app.country, snapshot.country),
+    };
+    const languages = this.policy.languagesFor({
+      store: snapshot.app.store,
+      country: listing.market,
+    });
     if (languages.length === 0) {
       await this.prisma.snapshotScreenshot.updateMany({
         where: { snapshotId, status: 'pending' },
@@ -64,10 +71,7 @@ export class ScreenshotReader {
       id: snapshot.id,
       appId: snapshot.appId,
       capturedAt: snapshot.capturedAt,
-      listing: {
-        home: snapshot.app.country,
-        market: listingMarket(snapshot.app.country, snapshot.country),
-      },
+      listing,
     });
   }
 

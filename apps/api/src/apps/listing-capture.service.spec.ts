@@ -65,10 +65,10 @@ const build = (overrides: {
   } as unknown as KeywordsService;
   const changes = {
     recordRefresh: overrides.recordRefresh ?? jest.fn().mockResolvedValue([]),
+    recordMarketRefresh: jest.fn().mockResolvedValue([]),
   } as unknown as ChangesService;
-  const screenshots = {
-    record: jest.fn().mockResolvedValue(2),
-  } as unknown as ScreenshotRecorder;
+  const record = jest.fn().mockResolvedValue(2);
+  const screenshots = { record } as unknown as ScreenshotRecorder;
   const request = jest.fn().mockResolvedValue(undefined);
   const service = new ListingCaptureService(
     prisma,
@@ -79,7 +79,7 @@ const build = (overrides: {
     screenshots,
     { request } as unknown as ScreenshotQueue,
   );
-  return { service, request };
+  return { service, request, record };
 };
 
 describe('ListingCaptureService.refresh', () => {
@@ -108,6 +108,33 @@ describe('ListingCaptureService.refresh', () => {
 
     await expect(service.refresh(APP.id)).rejects.toThrow('changes failed');
 
+    expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
+  });
+});
+
+describe('ListingCaptureService screenshots', () => {
+  it('records the home screenshots with the home storefront', async () => {
+    const { service, record } = build({});
+
+    await service.refresh(APP.id);
+
+    expect(record).toHaveBeenCalledWith(
+      expect.anything(),
+      { store: Store.APP_STORE, country: 'us' },
+      SNAPSHOT,
+    );
+  });
+
+  it('records the screenshots of a market listing with that storefront and queues their read', async () => {
+    const { service, record, request } = build({});
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(record).toHaveBeenCalledWith(
+      expect.anything(),
+      { store: Store.APP_STORE, country: 'de' },
+      SNAPSHOT,
+    );
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
   });
 });

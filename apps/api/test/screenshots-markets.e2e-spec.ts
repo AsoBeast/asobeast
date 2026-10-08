@@ -141,4 +141,51 @@ describe('Screenshots of market listings (e2e)', () => {
     });
     await expect(events(appId, 'screenshotImages')).resolves.toEqual([]);
   });
+
+  it('reads the screenshots of a market listing with the language of that storefront', async () => {
+    engineRead.mockResolvedValue(lines('Track habits'));
+    const appId = await importAndRead();
+    await trackIn(appId, 'de');
+    registry.markets.set('de', [appleShot(5), appleShot(6)]);
+    engineRead.mockReset().mockResolvedValue(lines('Gewohnheiten'));
+
+    const snapshotId = await refreshAndRead(appId, 'de');
+
+    const rows = await prisma.snapshotScreenshot.findMany({
+      where: { snapshotId },
+      orderBy: { position: 'asc' },
+    });
+    expect(rows.map((row) => [row.status, row.caption, row.recipe])).toEqual([
+      ['read', 'Gewohnheiten', 'ocr1:eng+deu'],
+      ['read', 'Gewohnheiten', 'ocr1:eng+deu'],
+    ]);
+    expect(engineRead).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
+  });
+
+  it('records a market caption change in that market only', async () => {
+    engineRead
+      .mockResolvedValueOnce(lines('Track habits'))
+      .mockResolvedValueOnce(lines('Plan your week'));
+    const appId = await importAndRead();
+    await trackIn(appId, 'de');
+    registry.markets.set('de', [appleShot(5), appleShot(6)]);
+    engineRead
+      .mockResolvedValueOnce(lines('Gewohnheiten'))
+      .mockResolvedValueOnce(lines('Plane deine Woche'));
+    await refreshAndRead(appId, 'de');
+    registry.markets.set('de', [appleShot(5), appleShot(7)]);
+    engineRead.mockResolvedValueOnce(lines('Plane deinen Tag'));
+
+    await refreshAndRead(appId, 'de');
+    await refreshAndRead(appId);
+
+    const market = await events(appId, 'screenshotCaptions', 'de');
+    expect(market).toHaveLength(1);
+    expect(market[0]).toMatchObject({
+      country: 'de',
+      before: 'Gewohnheiten | Plane deine Woche',
+      after: 'Gewohnheiten | Plane deinen Tag',
+    });
+    await expect(events(appId, 'screenshotCaptions')).resolves.toEqual([]);
+  });
 });

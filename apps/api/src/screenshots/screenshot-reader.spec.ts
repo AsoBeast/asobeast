@@ -232,6 +232,19 @@ describe('ScreenshotReader.read', () => {
     expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng', 'jpn']);
   });
 
+  it('reads a market snapshot with the language of its own storefront', async () => {
+    const { reader, find, recognize } = build({
+      rows: [pendingRow(1)],
+      country: 'us',
+      market: 'de',
+    });
+
+    await reader.read('snap_1');
+
+    expect(find).toHaveBeenCalledWith(asset(1), 'ocr1:eng+deu');
+    expect(recognize).toHaveBeenCalledWith(expect.anything(), ['eng', 'deu']);
+  });
+
   it('marks every pending screenshot skipped when no language applies', async () => {
     const { reader, updateMany, languagesFor, recognize } = build();
     languagesFor.mockReturnValue([]);
