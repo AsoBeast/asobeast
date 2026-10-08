@@ -96,6 +96,7 @@ const LOCALIZATION_LANGUAGE: Readonly<
   'zh-Hant': 'chi_tra',
   ru: 'rus',
   th: 'tha',
+  pl: 'pol',
 };
 
 const localizationLanguage = (localization: string): OcrLanguage | undefined =>

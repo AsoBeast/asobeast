@@ -101,6 +101,11 @@ describe('ocrLanguagesFor a localized listing', () => {
     expect(ocrLanguagesFor('ua', all, 'ru')).toEqual(['eng', 'rus']);
   });
 
+  it('reads the polish localization of a polish storefront in english and polish', () => {
+    expect(ocrLanguagesFor('pl', all, 'pl')).toEqual(['eng', 'pol']);
+    expect(ocrLanguagesFor('pl', ['eng'], 'pl')).toEqual(['eng']);
+  });
+
   it('reads a localization without a bundled pack in english only', () => {
     expect(ocrLanguagesFor('be', all, 'nl')).toEqual(['eng']);
     expect(ocrLanguagesFor('cz', all, 'cs')).toEqual(['eng']);
