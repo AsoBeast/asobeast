@@ -3,14 +3,14 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { ActionItem } from "@asobeast/shared";
+import { ACTION_NOTE_MAX_LENGTH, type ActionItem } from "@asobeast/shared";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, updateAction } from "@/lib/api";
 import { invalidateActionMutation } from "@/lib/queries";
 import { limitCounterText, textLimit } from "@/lib/text-limit";
 import { cn } from "@/lib/utils";
-import { ACTION_NOTE_MAX_LENGTH, noteRequest } from "./note-request";
+import { noteRequest } from "./note-request";
 
 export function ActionNote({ item }: { item: ActionItem }) {
   const queryClient = useQueryClient();

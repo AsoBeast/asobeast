@@ -1,12 +1,12 @@
 ---
 title: MCP recipes
 sidebarTitle: Recipes
-description: "Seven prompts that work well against the asobeast MCP server, each with the tools it exercises, from a weekly review to a metadata draft."
+description: "Nine prompts that work well against the asobeast MCP server, each with the tools it exercises, from a weekly review to tracking keywords and closing actions."
 icon: sparkles
 keywords: ["MCP prompts","examples","agent","weekly review","keyword triage"]
 ---
 
-Seven prompts that produce useful answers, each with the tools it exercises. Naming the app, the market and the window is what separates a good answer from a vague one.
+Nine prompts that produce useful answers, each with the tools it exercises. Naming the app, the market and the window is what separates a good answer from a vague one. The last two change things, so they need a token with the write scope.
 
 ## Run a weekly ASO review
 
@@ -70,6 +70,29 @@ the character limits and cover the highest opportunity uncovered keywords.
 Exercises `metadata_audit`, `app_audit` and `keyword_suggestions`.
 
 The server cannot apply a draft, and neither can asobeast. Every metadata change is published by you in App Store Connect or Google Play Console. See [Optimize listing metadata](/guides/metadata-workbench).
+
+## Track the best suggestions in one market
+
+```text
+For app <id>, pull keyword suggestions from the competitors strategy, drop the ones I
+already track in the de storefront, and show me the five with the best opportunity. Wait
+for my approval, then track them in de.
+```
+
+Exercises `keyword_suggestions`, `list_keywords` and, with a write token, `track_keywords`.
+
+Each phrase that is new to your instance queues a store scoring job and joins the daily ranking run, so add the few that matter. Tracking counts against your plan's keyword market limit. See [Countries and markets](/concepts/countries).
+
+## Close the actions you have already handled
+
+```text
+List the open actions for app <id>. For each one that my last release already covers, say
+why and wait for my yes. Then mark those done with a note naming the release.
+```
+
+Exercises `app_actions`, `get_action` and, with a write token, `set_action_status`.
+
+Marking an action done starts the measurement of its outcome, and the change appears in the history under the name of the person who minted the token. See [Work the Action Center](/guides/action-center#outcomes).
 
 ## Writing better prompts
 

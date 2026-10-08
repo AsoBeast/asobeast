@@ -5,6 +5,7 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { KeywordTracker } from './keyword-tracker';
 import { KeywordsService } from './keywords.service';
 
 interface TrackedRow {
@@ -163,8 +164,12 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
   const queue = { add: jest.fn() } as unknown as Queue;
   return new KeywordsService(
     prisma as unknown as PrismaService,
-    queue,
-    queue,
+    new KeywordTracker(
+      prisma as unknown as PrismaService,
+      queue,
+      queue,
+      new WorkspaceContext(),
+    ),
     new QuotaService(
       prisma as unknown as PrismaService,
       new WorkspaceContext(),
@@ -172,7 +177,6 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
         get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>,
     ),
-    new WorkspaceContext(),
   );
 }
 

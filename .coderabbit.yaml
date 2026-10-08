@@ -48,7 +48,7 @@ reviews:
     - path: "apps/mcp/**"
       instructions: |
         The MCP server is a consumer like the web app: HTTP only, typed by @asobeast/shared. No Prisma, Nest or scraper imports.
-        Every tool is a GET annotated readOnlyHint: true. Flag any mutation tool.
+        Every tool in MCP_TOOLS is a GET annotated readOnlyHint: true. A write tool lives only in MCP_WRITE_TOOLS, wraps an existing route, is listed only to a write scoped token and declares its destructive, idempotent and open world hints. Flag a mutation anywhere else.
         stdout belongs to the JSON-RPC stream. All diagnostics go to stderr and the API token is never logged.
     - path: "{apps/api/test/**,apps/web/e2e/**,**/*.spec.ts,**/*.test.ts,**/*.test.tsx}"
       instructions: |

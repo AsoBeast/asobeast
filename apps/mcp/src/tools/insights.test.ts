@@ -1,5 +1,6 @@
+import { INSIGHT_TOOLS } from "@asobeast/mcp-tools";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { registerInsightTools } from "./insights.js";
+import { registerCatalogTools } from "./define.js";
 import { createHarness, stubFetch } from "./harness.js";
 
 const realFetch = globalThis.fetch;
@@ -13,7 +14,7 @@ describe("insight tools", () => {
   it("joins keyword ids and passes the date window for ranking_history", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     await tools.get("ranking_history")!.handler({
       appId: "app-1",
@@ -32,7 +33,7 @@ describe("insight tools", () => {
   it("omits keywordIds when the list is empty", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     await tools.get("ranking_history")!.handler({
       appId: "app-1",
@@ -46,7 +47,7 @@ describe("insight tools", () => {
   it("routes serp_snapshot by keyword id with an optional date", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     await tools.get("serp_snapshot")!.handler({ keywordId: "k9" });
     await tools
@@ -61,7 +62,7 @@ describe("insight tools", () => {
   it("routes change_impact with its window and market", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     await tools.get("change_impact")!.handler({
       appId: "app-1",
@@ -87,7 +88,7 @@ describe("insight tools", () => {
         timestamp: "2026-07-24T00:00:00.000Z",
       },
     }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     const result = await tools
       .get("change_impact")!
@@ -111,7 +112,7 @@ describe("insight tools", () => {
         timestamp: "2026-07-24T00:00:00.000Z",
       },
     }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     const result = await tools
       .get("audit_history")!
@@ -126,7 +127,7 @@ describe("insight tools", () => {
   it("passes review score and version filters", async () => {
     const { server, tools } = createHarness();
     const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
-    registerInsightTools(server, client);
+    registerCatalogTools(server, client, INSIGHT_TOOLS);
 
     await tools.get("list_reviews")!.handler({
       appId: "app-1",

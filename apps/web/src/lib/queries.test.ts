@@ -44,6 +44,7 @@ import {
   invalidateCompetitorMutation,
   invalidateEmailAlertMutation,
   invalidateAudit,
+  invalidateKeywordImport,
   invalidateKeywordMutation,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -337,6 +338,21 @@ describe("invalidation sets", () => {
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
+    ]);
+  });
+
+  it("invalidates a keyword import with the preview it was planned from", () => {
+    expect(
+      invalidatedKeys((client) => invalidateKeywordImport(client, APP)),
+    ).toEqual([
+      appKeys.audit(APP),
+      appKeys.keywordsRoot(APP),
+      appKeys.keywordCountries(APP),
+      appKeys.keywordField(APP),
+      appKeys.summary(APP),
+      appKeys.compareRoot(APP),
+      portfolioInsightsKey,
+      appKeys.importPreviewRoot(APP),
     ]);
   });
 

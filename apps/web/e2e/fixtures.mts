@@ -2035,6 +2035,14 @@ DATASETS[APP_TAGS_ID] = {
   })),
 };
 
+export const APP_IMPORT_ID = "app-import";
+
+DATASETS[APP_IMPORT_ID] = {
+  ...DATASETS["app-1"],
+  detail: { ...APP_1_DETAIL, id: APP_IMPORT_ID, name: "Import Lab" },
+  keywords: structuredClone(APP_1_KEYWORDS),
+};
+
 DATASETS[APP_IPAD_ONLY_DETAIL.id] = {
   ...DATASETS["app-unchecked"],
   detail: APP_IPAD_ONLY_DETAIL,

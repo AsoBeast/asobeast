@@ -1,4 +1,4 @@
-import { MCP_TOOLS, type ReadTool } from '@asobeast/mcp-tools';
+import { MCP_TOOLS, MCP_WRITE_TOOLS, type ReadTool } from '@asobeast/mcp-tools';
 import { toolErrorText } from './tool-errors';
 
 const tool = { name: 'list_apps' } as ReadTool;
@@ -6,6 +6,7 @@ const optional = {
   name: 'audit_history',
   unavailableOn404: 'Audit history is not available on this instance.',
 } as ReadTool;
+const write = MCP_WRITE_TOOLS[0];
 
 describe('toolErrorText', () => {
   it('tells an agent a rejected token will never start working', () => {
@@ -103,5 +104,56 @@ describe.each(
         body: { message: 'Cannot GET /apps/nope/anything' },
       }),
     ).toBe(candidate.unavailableOn404);
+  });
+});
+
+describe('toolErrorText for a write tool', () => {
+  it('tells an agent a spent quota will not clear by retrying', () => {
+    const text = toolErrorText(write, {
+      status: 403,
+      body: { message: 'keywordMarkets limit reached: 1000 of 1000 used' },
+    });
+
+    expect(text).toContain('keywordMarkets limit reached');
+    expect(text).toContain('retrying will not help');
+  });
+
+  it('stops an agent looping on a spent write budget', () => {
+    const text = toolErrorText(write, {
+      status: 429,
+      body: { message: 'Write limit reached', rateLimit: { window: 'minute' } },
+    });
+
+    expect(text).toContain('rather than retrying in a loop');
+  });
+
+  it('keeps a not found as the api worded it', () => {
+    const text = toolErrorText(write, {
+      status: 404,
+      body: { message: 'App app-9 not found' },
+    });
+
+    expect(text).toBe('App app-9 not found');
+  });
+
+  it.each([500, 502, 504])(
+    'says a write that failed with %s may have been applied',
+    (status) => {
+      const text = toolErrorText(write, {
+        status,
+        body: { message: 'The asobeast API could not serve this tool.' },
+      });
+
+      expect(text).toContain('may or may not have been applied');
+    },
+  );
+
+  it('never says that about a read', () => {
+    const text = toolErrorText(tool, {
+      status: 504,
+      body: { message: 'slow' },
+    });
+
+    expect(text).toBe('slow');
   });
 });

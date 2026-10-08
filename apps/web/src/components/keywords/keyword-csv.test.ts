@@ -92,8 +92,8 @@ describe("keywordCsv", () => {
   it("appends the tags and the note after the existing columns", () => {
     const header = keywordCsv([keyword("focus timer")]).split("\r\n")[0];
 
-    expect(header.endsWith(",scoreComparability,tags,note")).toBe(true);
-    expect(header.split(",")).toHaveLength(24);
+    expect(header.endsWith(",scoreComparability,tags,note,country")).toBe(true);
+    expect(header.split(",")).toHaveLength(25);
   });
 
   it("joins the tags and leaves a missing tag list and note empty", () => {
@@ -102,8 +102,8 @@ describe("keywordCsv", () => {
       keyword("pomodoro"),
     ]).split("\r\n");
 
-    expect(tagged.endsWith(",core; exam season,May")).toBe(true);
-    expect(bare.endsWith(",,")).toBe(true);
+    expect(tagged.endsWith(",core; exam season,May,us")).toBe(true);
+    expect(bare.endsWith(",,us")).toBe(true);
   });
 
   it("neutralizes a formula-like note", () => {
@@ -111,6 +111,16 @@ describe("keywordCsv", () => {
       { ...keyword("focus timer"), note: "=HYPERLINK(1)" },
     ]).split("\r\n");
 
-    expect(row.endsWith(",'=HYPERLINK(1)")).toBe(true);
+    expect(row.endsWith(",'=HYPERLINK(1),us")).toBe(true);
+  });
+
+  it("exports the market of every row in lower case", () => {
+    const [, us, pl] = keywordCsv([
+      keyword("focus timer"),
+      { ...keyword("zegar"), country: "pl" },
+    ]).split("\r\n");
+
+    expect(us.endsWith(",us")).toBe(true);
+    expect(pl.endsWith(",pl")).toBe(true);
   });
 });

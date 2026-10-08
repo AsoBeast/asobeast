@@ -56,6 +56,17 @@ describe('Remote MCP transport (e2e)', () => {
       .set('Content-Type', 'application/json')
       .send({ jsonrpc: '2.0', id, method, params });
 
+  const callTool = async (name: string, args: Record<string, unknown>) => {
+    const response = await rpc('tools/call', { name, arguments: args }).expect(
+      200,
+    );
+    return sseEnvelope(response).result;
+  };
+
+  const fixtureAppId = async () =>
+    (await prisma.app.findFirstOrThrow({ where: { storeAppId: '555000111' } }))
+      .id;
+
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
       cwd: join(__dirname, '..'),
@@ -296,6 +307,92 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('lists the competitors of an app', async () => {
+    const primary = await fixtureAppId();
+    await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '555000222',
+        country: 'us',
+        name: 'Rival Fixture',
+        isCompetitor: true,
+        primaryAppId: primary,
+      },
+    });
+
+    const result = await callTool('list_competitors', { appId: primary });
+
+    expect(result?.isError).toBeUndefined();
+    const items = JSON.parse(result?.content?.[0].text ?? '[]') as {
+      name: string;
+    }[];
+    expect(items.map((item) => item.name)).toEqual(['Rival Fixture']);
+  });
+
+  it('matches the rest api for the competitor list', async () => {
+    const primary = await fixtureAppId();
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('list_competitors', { appId: primary }),
+      request(app.getHttpServer())
+        .get(`/apps/${primary}/competitors`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
+      viaRest.body,
+    );
+  });
+
+  it('analyses competitors and reports the three gap lists', async () => {
+    const result = await callTool('competitor_analysis', {
+      appId: await fixtureAppId(),
+    });
+
+    expect(result?.isError).toBeUndefined();
+    const analysis = JSON.parse(result?.content?.[0].text ?? '{}') as {
+      gaps: Record<string, unknown[]>;
+    };
+    expect(Object.keys(analysis.gaps).sort()).toEqual([
+      'outranked',
+      'theyRankYouDont',
+      'youRankTheyDont',
+    ]);
+  });
+
+  it('compares keyword positions and honours onlyGaps', async () => {
+    const appId = await fixtureAppId();
+
+    const all = await callTool('keyword_comparison', { appId });
+    const gaps = await callTool('keyword_comparison', {
+      appId,
+      onlyGaps: true,
+    });
+
+    const rows = (result: typeof all) =>
+      (JSON.parse(result?.content?.[0].text ?? '{}') as { rows: unknown[] })
+        .rows;
+    expect(rows(all).length).toBeGreaterThanOrEqual(rows(gaps).length);
+  });
+
+  it('reads category ranks and refuses a window that runs backwards', async () => {
+    const appId = await fixtureAppId();
+
+    const ok = await callTool('category_ranks', { appId });
+    const backwards = await callTool('category_ranks', {
+      appId,
+      from: '2026-09-15',
+      to: '2026-09-01',
+    });
+
+    expect(ok?.isError).toBeUndefined();
+    expect(JSON.parse(ok?.content?.[0].text ?? '{}')).toHaveProperty('series');
+    expect(backwards?.isError).toBe(true);
+    expect(backwards?.content?.[0].text).toContain('must not be before');
+  });
+
   it('names the missing action instead of blaming the api version', async () => {
     const response = await rpc('tools/call', {
       name: 'get_action',
@@ -382,7 +479,7 @@ describe('Remote MCP transport (e2e)', () => {
     expect(names).not.toContain('daily_budget');
   });
 
-  it('exposes no tool that changes anything', async () => {
+  it('lists no tool that changes anything to a read scoped token', async () => {
     const response = await rpc('tools/list').expect(200);
 
     for (const tool of sseEnvelope(response).result?.tools ?? []) {

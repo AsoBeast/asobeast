@@ -1,7 +1,5 @@
 import type { ActionItem, ActionUpdateRequest } from "@asobeast/shared";
 
-export const ACTION_NOTE_MAX_LENGTH = 500;
-
 export function noteRequest(
   item: ActionItem,
   note: string,

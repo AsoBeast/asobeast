@@ -32,11 +32,7 @@ async function routeStatus(page: Page, status: AuthStatus) {
   );
 }
 
-test("mcp card mints a token and shows both connect snippets", async ({
-  page,
-  context,
-}) => {
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+async function routeConnectCard(page: Page) {
   await routeStatus(page, {
     billing: false,
     registrationOpen: false,
@@ -47,14 +43,20 @@ test("mcp card mints a token and shows both connect snippets", async ({
     route.fulfill(fulfillJson(200, USER)),
   );
 
+  const posted: { name: string; scope?: string }[] = [];
   let tokens: ApiTokenItem[] = [];
   await page.route("**/api/backend/auth/tokens", (route) => {
     if (route.request().method() === "POST") {
+      const body = route.request().postDataJSON() as {
+        name: string;
+        scope?: ApiTokenItem["scope"];
+      };
+      posted.push(body);
       const item: ApiTokenItem = {
         id: "t1",
-        name: "Claude Desktop",
+        name: body.name,
         prefix: "asob_aaaaaaa",
-        scope: "read",
+        scope: body.scope ?? "read",
         expiresAt: null,
         expired: false,
         lastUsedAt: null,
@@ -66,6 +68,17 @@ test("mcp card mints a token and shows both connect snippets", async ({
     }
     return route.fulfill(fulfillJson(200, tokens));
   });
+  return posted;
+}
+
+const ALLOW_CHANGES = "Allow this agent to make changes";
+
+test("mcp card mints a token and shows both connect snippets", async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await routeConnectCard(page);
 
   await page.goto("/settings");
   await expect(page.getByText("MCP server", { exact: true })).toBeVisible();
@@ -150,4 +163,66 @@ test("mcp card mints a token and shows both connect snippets", async ({
   await expect(
     dialog.getByText(`"ASOBEAST_API_TOKEN": "${TOKEN}"`),
   ).toBeVisible();
+});
+
+test("the connect dialog mints a read-only token unless changes are allowed", async ({
+  page,
+}) => {
+  const posted = await routeConnectCard(page);
+  await page.goto("/settings");
+
+  await page.getByRole("button", { name: "Connect an agent" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(
+    dialog.getByRole("checkbox", { name: ALLOW_CHANGES }),
+  ).not.toBeChecked();
+  await dialog.getByLabel("Token name").fill("Claude Desktop");
+  await dialog.getByRole("button", { name: "Mint token" }).click();
+
+  await expect(dialog.getByRole("button", { name: "Done" })).toBeVisible();
+  expect(posted).toEqual([{ name: "Claude Desktop", scope: "read" }]);
+  await expect(dialog.getByText(/The token is read-only/)).toBeVisible();
+});
+
+test("the connect dialog mints a write token when changes are allowed", async ({
+  page,
+}) => {
+  const posted = await routeConnectCard(page);
+  await page.goto("/settings");
+
+  await page.getByRole("button", { name: "Connect an agent" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("checkbox", { name: ALLOW_CHANGES }).check();
+  await dialog.getByLabel("Token name").fill("Claude Code");
+  await dialog.getByRole("button", { name: "Mint token" }).click();
+
+  await expect(dialog.getByRole("button", { name: "Done" })).toBeVisible();
+  expect(posted).toEqual([{ name: "Claude Code", scope: "write" }]);
+  await expect(dialog.getByText(/The token can make changes/)).toBeVisible();
+  await expect(
+    dialog.getByText(`--header "Authorization: Bearer ${TOKEN}"`),
+  ).toBeVisible();
+
+  await dialog.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("button", { name: "Connect an agent" }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("checkbox", { name: ALLOW_CHANGES }),
+  ).not.toBeChecked();
+});
+
+test("the connect dialog says what allowing changes adds", async ({ page }) => {
+  await routeConnectCard(page);
+  await page.goto("/settings");
+
+  await page.getByRole("button", { name: "Connect an agent" }).click();
+  const checkbox = page
+    .getByRole("dialog")
+    .getByRole("checkbox", { name: ALLOW_CHANGES });
+
+  await expect(checkbox).toHaveAccessibleDescription(
+    /track and untrack keywords, add and remove competitors, and change the status of actions/,
+  );
+  await expect(checkbox).toHaveAccessibleDescription(
+    /change anything through the API/,
+  );
 });

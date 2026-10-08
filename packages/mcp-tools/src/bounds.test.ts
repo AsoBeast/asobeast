@@ -73,6 +73,8 @@ describe("mcp input bounds match the api", () => {
     ["serp_snapshot", "date"],
     ["visibility_history", "from"],
     ["audit_history", "to"],
+    ["category_ranks", "from"],
+    ["category_ranks", "to"],
   ];
 
   it.each(DATE_FIELDS)("%s.%s takes only a utc date", (tool, field) => {

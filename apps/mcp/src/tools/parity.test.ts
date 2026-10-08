@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MCP_TOOLS } from "@asobeast/mcp-tools";
+import {
+  MCP_TOOLS,
+  MCP_WRITE_TOOLS,
+  annotationsOf,
+  toolsFor,
+} from "@asobeast/mcp-tools";
 import { createHarness, stubFetch } from "./harness.js";
 import { registerTools } from "./index.js";
 
@@ -44,5 +49,44 @@ describe("stdio transport parity", () => {
     await tools.get("app_summary")!.handler({ appId: "app-1" });
 
     expect(new URL(calls[0]!.url).pathname).toBe("/apps/app-1/summary");
+  });
+});
+
+function registeredFor(scope: "read" | "write") {
+  const { server, tools } = createHarness();
+  const { client } = stubFetch(() => ({ status: 200, body: {} }));
+  registerTools(server, client, scope);
+  return tools;
+}
+
+describe("stdio transport parity by token scope", () => {
+  it.each(["read", "write"] as const)(
+    "registers the names toolsFor lists for a %s scope, in the same order",
+    (scope) => {
+      expect([...registeredFor(scope).keys()]).toEqual(
+        toolsFor(scope).map((tool) => tool.name),
+      );
+    },
+  );
+
+  it.each(["read", "write"] as const)(
+    "carries the annotations the catalog declares for a %s scope",
+    (scope) => {
+      const tools = registeredFor(scope);
+
+      for (const tool of toolsFor(scope)) {
+        expect(tools.get(tool.name)?.config.annotations).toEqual(
+          annotationsOf(tool),
+        );
+      }
+    },
+  );
+
+  it("registers no write tool unless the scope is write", () => {
+    const names = [...registeredFor("read").keys()];
+
+    for (const tool of MCP_WRITE_TOOLS) {
+      expect(names).not.toContain(tool.name);
+    }
   });
 });

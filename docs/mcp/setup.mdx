@@ -1,7 +1,7 @@
 ---
 title: Connect an agent
 sidebarTitle: Setup
-description: "Connect straight to the hosted endpoint, or run the stdio server yourself. Both transports expose the identical read only tool surface."
+description: "Connect straight to the hosted endpoint, or run the stdio server yourself. Both transports expose the same tools, and the scope of your token decides whether they include the tools that make changes."
 icon: cable
 keywords: ["MCP setup","Claude Code","Claude Desktop","Codex","Cursor","VS Code","Gemini CLI","Windsurf","remote MCP","ASOBEAST_API_TOKEN","ASOBEAST_API_URL","stdio"]
 ---
@@ -22,8 +22,8 @@ Either way the Settings card writes the configuration for you. The manual path i
 ## Connect to the hosted endpoint
 
 <Steps>
-  <Step title="Mint a read only token">
-    Open the MCP server card in Settings and click connect an agent. The token is read only, which is all any tool needs.
+  <Step title="Mint a token">
+    Open the MCP server card in Settings and click connect an agent. The token is read only, which is all any read tool needs. Tick Allow this agent to make changes only when you want the agent to track keywords, manage competitors and update actions, and mint a separate token for that agent.
   </Step>
   <Step title="Copy the hosted snippet">
     The card shows the endpoint and a ready to paste command, pre filled with the origin you are browsing.
@@ -213,7 +213,7 @@ The token is shown once. Copy it before you leave the page.
     This produces `apps/mcp/dist/index.js`.
   </Step>
   <Step title="Mint a personal API token">
-    Use the API tokens card in Settings. See [Personal API tokens](/security/api-tokens).
+    Use the API tokens card in Settings, and pick the read scope unless the agent has to make changes. See [Personal API tokens](/security/api-tokens).
   </Step>
   <Step title="Register the server with your client">
     Use the configuration below.
@@ -319,11 +319,35 @@ Diagnostics go to stderr, because on stdio the JSON-RPC stream owns stdout. The 
 
 When the preflight passes, the server logs the instance it connected to and the tools appear in your client.
 
+The log line also says whether the token is read only or write tools are enabled. The server asks `GET /auth/me` which scope the token has and registers the write tools only for `write`. An instance older than this release reports no scope, so the server treats it as read only.
+
+## Allow an agent to make changes
+
+Changes are opt in, and the token is the switch. Nothing else in this guide changes: the endpoint, the snippets and the stdio environment are the same.
+
+<Steps>
+  <Step title="Mint a token of its own for the agent">
+    In Settings, click connect an agent, name the token after the agent, and tick Allow this agent to make changes. You can also pick the read and write scope on the API tokens card.
+  </Step>
+  <Step title="Reconnect the client">
+    The tool list is decided on every request, but most clients read it once when they connect. Restart the client or reconnect the server, and the five tools that change things appear after the read tools.
+  </Step>
+  <Step title="Approve what matters">
+    Most clients ask before calling a tool that is not read only. Read the arguments before you approve, especially the two tools annotated as destructive.
+  </Step>
+</Steps>
+
+To take the power back, revoke the token or connect with a read token. A read token never lists the write tools, and the API refuses it on every route that changes data. See [MCP tool reference](/mcp/tools) for what each tool does and [Personal API tokens](/security/api-tokens) for scope and expiry.
+
 ## Troubleshooting
 
 <AccordionGroup>
   <Accordion title="MODULE_NOT_FOUND on startup">
     The entrypoint path is relative, or the server has not been built. Run `pnpm build` and register the absolute path to `apps/mcp/dist/index.js`.
+  </Accordion>
+
+  <Accordion title="I minted a write token and see no tools that change things">
+    The client keeps the tool list it read when it connected, so restart it or reconnect the server. Then check the token on the API tokens card: it must say Read and write. A stdio server connected to an instance older than this release reports read only, so upgrade the instance.
   </Accordion>
 
   <Accordion title="Invalid configuration: : Invalid input from claude mcp add-json">

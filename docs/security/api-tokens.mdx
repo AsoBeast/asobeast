@@ -18,7 +18,7 @@ A personal API token authenticates a script, a scheduled job or the MCP server e
     A name such as `backup-script` or `laptop-mcp` makes revoking the right one possible later.
   </Step>
   <Step title="Choose a scope and an expiry">
-    Read only is the default and is all the MCP server or a reporting script needs. Choose read and write only for something that has to change data. An expiry of 30, 90 or 365 days beats a permanent credential sitting in a continuous integration configuration.
+    Read only is the default and is all a reporting script or the MCP read tools need. Choose read and write only for something that has to change data, such as a script, or an agent you allow to track keywords, manage competitors and update actions. An expiry of 30, 90 or 365 days beats a permanent credential sitting in a continuous integration configuration.
   </Step>
   <Step title="Copy the value immediately">
     The plaintext value, which starts with `asob_`, is shown once. asobeast stores only a SHA-256 hash of it and can never show it again.
@@ -57,11 +57,11 @@ Revoke rather than rotate `AUTH_SECRET` when a single token leaks. Rotating the 
 | Use | Notes |
 | --- | --- |
 | Scripts and scheduled jobs | Anything that reads the API without a browser |
-| The MCP server | `ASOBEAST_API_TOKEN` is mandatory, and a boot preflight fails without a valid one. Every tool is read only, so a read scoped token is enough |
+| The MCP server | `ASOBEAST_API_TOKEN` is mandatory, and a boot preflight fails without a valid one. A read scoped token lists the read tools. A write scoped token also lists five tools that change keywords, competitors and actions, so give an agent a token of its own |
 | Continuous integration | Store it as a secret, never in the repository |
 
 <Warning>
-  A write scoped personal API token carries the same access as the account that created it, including owner access to the admin surfaces when the owner created it. Never commit one, never paste one into an issue, and give each consumer its own token so a single revocation is enough.
+  A write scoped personal API token carries the same access as the account that created it, including owner access to the admin surfaces when the owner created it. Never commit one, never paste one into an issue, and give each consumer its own token so a single revocation is enough. Do not reuse a script's write token for an agent: mint a new one named after the agent, so revoking it ends the agent's access and nothing else.
 </Warning>
 
 ## Related
