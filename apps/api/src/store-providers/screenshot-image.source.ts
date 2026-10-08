@@ -5,11 +5,19 @@ import { appleRenditionUrl } from './screenshot-urls';
 export const MAX_SCREENSHOT_BYTES = 6 * 1024 * 1024;
 export const SCREENSHOT_FETCH_TIMEOUT_MS = 20_000;
 
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
 const isRetryableStatus = (status: number): boolean =>
   status === 408 || status === 429 || status >= 500;
 
 const reason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
+
+const overCap = (bytes: number, verb: string): ScreenshotFetchError =>
+  new ScreenshotFetchError(
+    `the image ${verb} ${bytes} bytes, over the ${MAX_SCREENSHOT_BYTES} byte cap`,
+    false,
+  );
 
 @Injectable()
 export class ScreenshotImageSource {
@@ -23,14 +31,7 @@ export class ScreenshotImageSource {
     }
     const response = await this.request(rendition);
     this.assertImage(response);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.byteLength > MAX_SCREENSHOT_BYTES) {
-      throw new ScreenshotFetchError(
-        `the image is ${bytes.byteLength} bytes, over the ${MAX_SCREENSHOT_BYTES} byte cap`,
-        false,
-      );
-    }
-    return bytes;
+    return this.body(response);
   }
 
   private async request(rendition: string): Promise<Response> {
@@ -38,7 +39,8 @@ export class ScreenshotImageSource {
     try {
       response = await fetch(rendition, {
         signal: AbortSignal.timeout(SCREENSHOT_FETCH_TIMEOUT_MS),
-        headers: { accept: 'image/jpeg,image/*;q=0.8' },
+        redirect: 'manual',
+        headers: { accept: IMAGE_TYPES.join(',') },
       });
     } catch (error) {
       throw new ScreenshotFetchError(
@@ -57,7 +59,8 @@ export class ScreenshotImageSource {
 
   private assertImage(response: Response): void {
     const type = response.headers.get('content-type') ?? '';
-    if (!type.startsWith('image/')) {
+    const mediaType = type.split(';')[0].trim().toLowerCase();
+    if (!IMAGE_TYPES.includes(mediaType)) {
       throw new ScreenshotFetchError(
         `the answer is ${type || 'untyped'}`,
         false,
@@ -65,9 +68,35 @@ export class ScreenshotImageSource {
     }
     const declared = Number(response.headers.get('content-length') ?? 0);
     if (declared > MAX_SCREENSHOT_BYTES) {
+      throw overCap(declared, 'declares');
+    }
+  }
+
+  private async body(response: Response): Promise<Buffer> {
+    if (response.body === null) return Buffer.alloc(0);
+    const reader: ReadableStreamDefaultReader<Uint8Array> =
+      response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await this.nextChunk(() => reader.read());
+      if (done) return Buffer.concat(chunks, total);
+      total += value.byteLength;
+      if (total > MAX_SCREENSHOT_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        throw overCap(total, 'sent more than');
+      }
+      chunks.push(value);
+    }
+  }
+
+  private async nextChunk<T>(read: () => Promise<T>): Promise<T> {
+    try {
+      return await read();
+    } catch (error) {
       throw new ScreenshotFetchError(
-        `the image declares ${declared} bytes, over the ${MAX_SCREENSHOT_BYTES} byte cap`,
-        false,
+        `the image download failed: ${reason(error)}`,
+        true,
       );
     }
   }
