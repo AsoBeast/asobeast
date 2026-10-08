@@ -35,6 +35,18 @@ interface EventRow {
   app: { name: string | null; isCompetitor: boolean };
 }
 
+export interface CaptionChange {
+  appId: string;
+  since: Date;
+  before: string[];
+  after: string[];
+  added: string[];
+  removed: string[];
+}
+
+const joined = (captions: string[]): string | null =>
+  captions.length === 0 ? null : captions.join(' | ');
+
 const toChangeEventItem = (event: EventRow): ChangeEventItem => {
   const detail = readChangeDetail(event.detail);
   return {
@@ -107,6 +119,32 @@ export class ChangesService {
       await this.persist(appId, changes);
     }
     return changes;
+  }
+
+  async recordCaptionChange(change: CaptionChange): Promise<void> {
+    const recorded = await this.prisma.changeEvent.findFirst({
+      where: {
+        appId: change.appId,
+        field: 'screenshotCaptions',
+        capturedAt: { gte: change.since },
+      },
+      select: { id: true },
+    });
+    if (recorded) {
+      return;
+    }
+    await this.persist(change.appId, [
+      {
+        field: 'screenshotCaptions',
+        before: joined(change.before),
+        after: joined(change.after),
+        detail: {
+          kind: 'captions',
+          added: change.added,
+          removed: change.removed,
+        },
+      },
+    ]);
   }
 
   private async persist(

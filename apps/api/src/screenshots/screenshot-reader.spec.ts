@@ -4,6 +4,7 @@ import type { ScreenshotImageSource } from '../store-providers/screenshot-image.
 import { OCR_LANGUAGES, ocrLanguagesFor } from './ocr-languages';
 import { prepareForOcr } from './image-preprocess';
 import type { OcrEngine } from './ocr-engine';
+import type { CaptionChangeRecorder } from './caption-change-recorder';
 import { ScreenshotReader } from './screenshot-reader';
 import type { ScreenshotPolicy } from './screenshot-policy';
 import type { ScreenshotTextCache } from './screenshot-text-cache';
@@ -84,7 +85,15 @@ const build = (
     name: 'fake-engine',
     read: recognize,
   } as unknown as OcrEngine;
-  const reader = new ScreenshotReader(prisma, policy, cache, source, engine);
+  const captionChanges = { record: jest.fn().mockResolvedValue(undefined) };
+  const reader = new ScreenshotReader(
+    prisma,
+    policy,
+    cache,
+    source,
+    engine,
+    captionChanges as unknown as CaptionChangeRecorder,
+  );
   const updated = () =>
     update.mock.calls.map(([args]) => [
       args.where.snapshotId_position.position,
@@ -102,6 +111,7 @@ const build = (
     download,
     recognize,
     languagesFor,
+    captionChanges,
   };
 };
 
@@ -250,6 +260,28 @@ describe('ScreenshotReader.read', () => {
       where: { snapshotId: 'snap_1', status: 'pending' },
       orderBy: { position: 'asc' },
     });
+  });
+
+  it('records caption changes once every pending screenshot is settled', async () => {
+    const { reader, captionChanges } = build();
+
+    await reader.read('snap_1');
+
+    expect(captionChanges.record).toHaveBeenCalledTimes(1);
+    expect(captionChanges.record).toHaveBeenCalledWith({
+      id: 'snap_1',
+      appId: 'app_1',
+      capturedAt: new Date('2026-10-07T03:00:00.000Z'),
+    });
+  });
+
+  it('does not record a caption change when a read is interrupted', async () => {
+    const { reader, captionChanges, download } = build();
+    download.mockRejectedValueOnce(new ScreenshotFetchError('busy', true));
+
+    await expect(reader.read('snap_1')).rejects.toThrow('busy');
+
+    expect(captionChanges.record).not.toHaveBeenCalled();
   });
 });
 

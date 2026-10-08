@@ -1,7 +1,9 @@
 import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
+import { ChangesModule } from '../changes/changes.module';
 import { QUEUES } from '../jobs/jobs.types';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
+import { CaptionChangeRecorder } from './caption-change-recorder';
 import { OCR_ENGINE } from './ocr-engine';
 import { ScreenshotPolicy } from './screenshot-policy';
 import { ScreenshotQueue } from './screenshot-queue';
@@ -15,11 +17,13 @@ import { TesseractOcrEngine } from './tesseract.engine';
 
 @Module({
   imports: [
+    ChangesModule,
     StoreProvidersModule,
     BullModule.registerQueue({ name: QUEUES.SCREENSHOTS }),
   ],
   controllers: [ScreenshotsController],
   providers: [
+    CaptionChangeRecorder,
     ScreenshotPolicy,
     ScreenshotRecorder,
     ScreenshotQueue,

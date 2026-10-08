@@ -3,6 +3,7 @@ import type { SnapshotScreenshot } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotFetchError } from '../store-providers/errors';
 import { ScreenshotImageSource } from '../store-providers/screenshot-image.source';
+import { CaptionChangeRecorder } from './caption-change-recorder';
 import { selectCaption } from './caption-text';
 import { type PreparedImage, prepareForOcr } from './image-preprocess';
 import { OCR_ENGINE, type OcrEngine } from './ocr-engine';
@@ -26,12 +27,18 @@ export class ScreenshotReader {
     private readonly cache: ScreenshotTextCache,
     private readonly source: ScreenshotImageSource,
     @Inject(OCR_ENGINE) private readonly engine: OcrEngine,
+    private readonly captionChanges: CaptionChangeRecorder,
   ) {}
 
   async read(snapshotId: string): Promise<void> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { id: snapshotId },
-      select: { app: { select: { store: true, country: true } } },
+      select: {
+        id: true,
+        appId: true,
+        capturedAt: true,
+        app: { select: { store: true, country: true } },
+      },
     });
     if (!snapshot) return;
 
@@ -51,6 +58,11 @@ export class ScreenshotReader {
     for (const row of pending) {
       await this.readRow(row, languages, recipe);
     }
+    await this.captionChanges.record({
+      id: snapshot.id,
+      appId: snapshot.appId,
+      capturedAt: snapshot.capturedAt,
+    });
   }
 
   async abandon(snapshotId: string): Promise<void> {

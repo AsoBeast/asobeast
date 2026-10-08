@@ -28,6 +28,7 @@ const keyed = (...keys: string[]) =>
 describe('ChangesService', () => {
   let service: ChangesService;
   const createMany = jest.fn();
+  const changeEventFindFirst = jest.fn();
   const findMany = jest.fn<Promise<unknown>, [Record<string, unknown>]>();
   const findFirst = jest.fn();
   const findUnique = jest.fn();
@@ -36,6 +37,7 @@ describe('ChangesService', () => {
 
   beforeEach(async () => {
     createMany.mockReset();
+    changeEventFindFirst.mockReset().mockResolvedValue(null);
     findMany.mockReset();
     findFirst.mockReset();
     findUnique.mockReset();
@@ -48,7 +50,11 @@ describe('ChangesService', () => {
         {
           provide: PrismaService,
           useValue: {
-            changeEvent: { createMany, findMany },
+            changeEvent: {
+              createMany,
+              findMany,
+              findFirst: changeEventFindFirst,
+            },
             app: { findFirst, findUnique, findMany: appFindMany },
           },
         },
@@ -298,6 +304,69 @@ describe('ChangesService', () => {
 
       expect(events[0].detail).toEqual(detail);
       expect('detail' in events[1]).toBe(false);
+    });
+
+    const captionChange = {
+      appId: 'app_1',
+      since: new Date('2026-10-07T03:00:00.000Z'),
+      before: ['A', 'B'],
+      after: ['A', 'C'],
+      added: ['C'],
+      removed: ['B'],
+    };
+
+    it('records a caption change with the captions as readable text', async () => {
+      await service.recordCaptionChange(captionChange);
+
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            field: 'screenshotCaptions',
+            before: 'A | B',
+            after: 'A | C',
+            detail: { kind: 'captions', added: ['C'], removed: ['B'] },
+          },
+        ],
+      });
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<Record<string, unknown>> },
+      ];
+      expect(payload.changes).toEqual([
+        { field: 'screenshotCaptions', before: 'A | B', after: 'A | C' },
+      ]);
+    });
+
+    it('writes a null side when every caption is gone', async () => {
+      await service.recordCaptionChange({
+        ...captionChange,
+        before: ['A'],
+        after: [],
+        added: [],
+        removed: ['A'],
+      });
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<{ before: string | null; after: string | null }> },
+      ];
+      expect(data[0]).toMatchObject({ before: 'A', after: null });
+    });
+
+    it('records a caption change once per snapshot', async () => {
+      changeEventFindFirst.mockResolvedValue({ id: 'ev_1' });
+
+      await service.recordCaptionChange(captionChange);
+
+      expect(changeEventFindFirst).toHaveBeenCalledWith({
+        where: {
+          appId: 'app_1',
+          field: 'screenshotCaptions',
+          capturedAt: { gte: captionChange.since },
+        },
+        select: { id: true },
+      });
+      expect(createMany).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
     });
   });
 });
