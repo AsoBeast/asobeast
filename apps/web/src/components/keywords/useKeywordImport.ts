@@ -46,9 +46,18 @@ const FILE_UNREADABLE =
 const RACE_LOST =
   "Your plan's keyword limit was reached by another change. Nothing was imported. The review has been refreshed.";
 
+const REVIEW_UNREACHABLE = "Could not reach the api to review this file";
+
 interface Loaded {
   name: string;
   file: KeywordFile;
+}
+
+function previewMessage(error: Error | null): string | null {
+  if (error === null) return null;
+  return error instanceof ApiError
+    ? error.envelope.message
+    : REVIEW_UNREACHABLE;
 }
 
 function submitMessage(error: Error | null): string | null {
@@ -148,7 +157,7 @@ export function useKeywordImport(
     readError ??
     (refusal ? refusalMessage(refusal) : null) ??
     unknownMarket ??
-    (preview.error instanceof ApiError ? preview.error.envelope.message : null);
+    previewMessage(preview.error);
   const result = request === null ? null : (preview.data ?? null);
 
   return {

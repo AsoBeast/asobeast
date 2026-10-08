@@ -46,6 +46,7 @@ const buildPrisma = () => ({
     deleteMany: jest.fn().mockResolvedValue({ count: 12 }),
     updateMany: jest.fn().mockResolvedValue({ count: 13 }),
   },
+  screenshotText: { deleteMany: jest.fn().mockResolvedValue({ count: 14 }) },
 });
 
 const crossTenant = new CrossTenantAccess(new WorkspaceContext());
@@ -255,6 +256,7 @@ describe('RetentionService', () => {
     prisma.billingEvent.deleteMany.mockImplementation(boom);
     prisma.aiCall.deleteMany.mockImplementation(boom);
     prisma.aiCall.updateMany.mockImplementation(boom);
+    prisma.screenshotText.deleteMany.mockImplementation(boom);
     const service = new RetentionService(
       buildConfig({
         RETENTION_CHANGE_EVENTS_DAYS: 30,
@@ -353,12 +355,14 @@ describe('RetentionService action pruning', () => {
 
     const deleted = await service.prune();
 
-    const { suggestProbe, aiCallReservation, ...configurable } = deleted;
+    const { suggestProbe, aiCallReservation, screenshotText, ...configurable } =
+      deleted;
     expect(Object.values(configurable).every((count) => count === 0)).toBe(
       true,
     );
     expect(suggestProbe).toBeGreaterThanOrEqual(0);
     expect(aiCallReservation).toBeGreaterThanOrEqual(0);
+    expect(screenshotText).toBeGreaterThanOrEqual(0);
     for (const table of [
       prisma.keywordRanking,
       prisma.serpEntry,
@@ -373,6 +377,55 @@ describe('RetentionService action pruning', () => {
     ]) {
       expect(table.deleteMany).not.toHaveBeenCalled();
     }
+  });
+});
+
+describe('RetentionService screenshot text cache', () => {
+  it('prunes cached screenshot text not used for ninety days', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-07T09:30:00.000Z'));
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({}),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.screenshotText).toBe(14);
+    const [{ where }] = prisma.screenshotText.deleteMany.mock.calls[0] as [
+      { where: { usedAt: { lt: Date } } },
+    ];
+    expect(where.usedAt.lt).toEqual(new Date('2026-07-09T00:00:00.000Z'));
+    jest.useRealTimers();
+  });
+
+  it('keeps pruning the cache when the snapshot window is disabled', async () => {
+    const prisma = buildPrisma();
+    const service = new RetentionService(
+      buildConfig({ RETENTION_SNAPSHOTS_DAYS: 0 }),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    await service.prune();
+
+    expect(prisma.screenshotText.deleteMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('survives a failing cache prune and still reports the other tables', async () => {
+    const prisma = buildPrisma();
+    prisma.screenshotText.deleteMany.mockRejectedValue(new Error('locked'));
+    const service = new RetentionService(
+      buildConfig({}),
+      prisma as unknown as PrismaService,
+      crossTenant,
+    );
+
+    const deleted = await service.prune();
+
+    expect(deleted.screenshotText).toBeUndefined();
+    expect(deleted.keywordRanking).toBe(1);
   });
 });
 

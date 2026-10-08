@@ -118,6 +118,19 @@ describe('Workspace deletion (e2e)', () => {
         raw: {},
       },
     });
+    await prisma.snapshotScreenshot.create({
+      data: {
+        snapshotId: snapshot.id,
+        workspaceId,
+        position: 1,
+        url: `https://is1-ssl.mzstatic.com/image/thumb/${workspaceId}/1.jpg/392x696bb.jpg`,
+        assetKey: `https://is1-ssl.mzstatic.com/image/thumb/${workspaceId}/1.jpg`,
+        status: 'read',
+        caption: 'Track every habit',
+        recipe: 'ocr1:eng',
+        readAt: new Date(),
+      },
+    });
     const keyword = await prisma.keyword.upsert({
       where: {
         text_store_country: {
@@ -300,6 +313,7 @@ describe('Workspace deletion (e2e)', () => {
       appGroup,
       apps,
       appSnapshot,
+      snapshotScreenshot,
       trackedKeyword,
       keywordRanking,
       categoryRank,
@@ -325,6 +339,9 @@ describe('Workspace deletion (e2e)', () => {
         where: { id: { in: [target.appId, target.competitorId] } },
       }),
       prisma.appSnapshot.count({ where: { id: target.snapshotId } }),
+      prisma.snapshotScreenshot.count({
+        where: { snapshotId: target.snapshotId },
+      }),
       prisma.trackedKeyword.count({ where: { appId: target.appId } }),
       prisma.keywordRanking.count({ where: { workspaceId: WORKSPACE } }),
       prisma.categoryRank.count({ where: { appId: target.appId } }),
@@ -350,6 +367,7 @@ describe('Workspace deletion (e2e)', () => {
       AppGroup: appGroup,
       App: apps,
       AppSnapshot: appSnapshot,
+      SnapshotScreenshot: snapshotScreenshot,
       TrackedKeyword: trackedKeyword,
       KeywordRanking: keywordRanking,
       CategoryRank: categoryRank,

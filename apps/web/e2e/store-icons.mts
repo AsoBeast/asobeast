@@ -11,6 +11,15 @@ export function optimizedIcon(iconUrl: string) {
     url.pathname === "/_next/image" && url.searchParams.get("url") === iconUrl;
 }
 
+const E2E_SCREENSHOT = "https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/";
+
+function optimizedScreenshot(url: URL) {
+  return (
+    url.pathname === "/_next/image" &&
+    (url.searchParams.get("url") ?? "").startsWith(E2E_SCREENSHOT)
+  );
+}
+
 export const test = base.extend<{ storeIcons: void }>({
   storeIcons: [
     async ({ context }, use) => {
@@ -19,6 +28,9 @@ export const test = base.extend<{ storeIcons: void }>({
           route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),
         );
       }
+      await context.route(optimizedScreenshot, (route) =>
+        route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),
+      );
       await use();
     },
     { auto: true },

@@ -22,9 +22,12 @@ import {
   PLAY_AUDIT,
   PROVISIONAL_AUDIT,
   METADATA_AUDIT,
+  APP_1_PL_SCREENSHOTS,
   METADATA_AUDIT_PL,
   MARKET_BUDGET,
   METADATA_AUDITS,
+  UNREAD_MARKET_COOKIE,
+  UNREAD_MARKET_COVERAGE_ROW,
   APP_1_LISTING_MARKETS,
   APP_1_PL_CHANGES,
   APP_1_PL_DETAIL,
@@ -57,8 +60,10 @@ import {
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
+  SCREENSHOTS,
   SERP_SNAPSHOTS,
   WEBHOOKS,
+  emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
 } from "./fixtures.mts";
@@ -81,6 +86,7 @@ import type {
   ActionSummary,
   ActionUpdateStatus,
   AppAuditResult,
+  AppScreenshots,
   WorkspaceTeam,
   ActionStatus,
   AuthUser,
@@ -97,6 +103,7 @@ import type {
   KeywordImportRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
+  MetadataAuditResult,
   KeywordSort,
   ParsedStoreUrl,
   StoreHealthReport,
@@ -124,6 +131,8 @@ import {
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
   parseStoreUrl,
+  isStorefront,
+  UnknownStorefrontError,
 } from "@asobeast/shared";
 import { ALL_VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
 import {
@@ -141,6 +150,7 @@ const PORT = Number(process.env.MOCK_API_PORT ?? 4100);
 const ERROR_ID = "err-app";
 const MCP_STREAM_MS = 3_000;
 const apps = [...INITIAL_APPS];
+const PENDING_SERVED = new Map<string, number>();
 const KEYWORD_QUOTA_COOKIE = "e2e_keyword_quota";
 const initialKeywords = new Map(
   Object.entries(DATASETS).map(([id, dataset]) => [
@@ -468,6 +478,32 @@ function sortKeywords(
     );
   }
   return list;
+}
+
+function withoutScreenshotText<T extends { screenshotText?: unknown }>(
+  value: T,
+): T {
+  const copy = { ...value };
+  delete copy.screenshotText;
+  return copy;
+}
+
+function withScreenshotText(
+  req: IncomingMessage,
+  result: MetadataAuditResult,
+): MetadataAuditResult {
+  const coverage = result.coverage.map(withoutScreenshotText);
+  if (result.store === "GOOGLE_PLAY") {
+    return withoutScreenshotText({ ...result, coverage });
+  }
+  if (hasCookie(req, "e2e_screenshots_off", "1") && result.screenshotText) {
+    return {
+      ...result,
+      coverage,
+      screenshotText: { ...result.screenshotText, status: "off", read: 0 },
+    };
+  }
+  return result;
 }
 
 function appRoute(
@@ -1752,7 +1788,7 @@ const routes: Route[] = [
         "country",
       );
       if (id === "app-1" && market === "pl") {
-        return json(res, 200, METADATA_AUDIT_PL);
+        return json(res, 200, withScreenshotText(req, METADATA_AUDIT_PL));
       }
       if (market !== null && market !== DATASETS[id]?.detail.country) {
         return json(
@@ -1763,15 +1799,24 @@ const routes: Route[] = [
       }
       const audit = METADATA_AUDITS[id] ?? METADATA_AUDIT;
       const home = DATASETS[id]?.detail.country;
-      json(res, 200, {
-        ...audit,
-        appId: id,
-        store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
-        coverage:
-          market === null
-            ? audit.coverage
-            : audit.coverage.filter((row) => (row.country ?? home) === home),
-      });
+      json(
+        res,
+        200,
+        withScreenshotText(req, {
+          ...audit,
+          appId: id,
+          store: DATASETS[id]?.detail.store ?? METADATA_AUDIT.store,
+          coverage:
+            market === null
+              ? [
+                  ...audit.coverage,
+                  ...(hasCookie(req, UNREAD_MARKET_COOKIE, "1")
+                    ? [UNREAD_MARKET_COVERAGE_ROW]
+                    : []),
+                ]
+              : audit.coverage.filter((row) => (row.country ?? home) === home),
+        }),
+      );
     },
   },
   {
@@ -1870,6 +1915,69 @@ const routes: Route[] = [
           keywordCount: dataset.keywords.length,
         },
       ]);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/screenshots$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      const query = new URL(path, "http://localhost").searchParams;
+      const market = query.get("country");
+      if (isPolishListingOf(dataset, query)) {
+        return json(res, 200, APP_1_PL_SCREENSHOTS);
+      }
+      if (market !== null && !isStorefront(dataset.detail.store, market)) {
+        return json(
+          res,
+          400,
+          errorEnvelope(
+            400,
+            path,
+            new UnknownStorefrontError(dataset.detail.store, market).message,
+          ),
+        );
+      }
+      if (market !== null && market !== dataset.detail.country) {
+        return json(
+          res,
+          404,
+          errorEnvelope(404, path, `No listing captured for ${market}`),
+        );
+      }
+      const base: AppScreenshots = {
+        ...(SCREENSHOTS[id] ?? emptyScreenshots(id, dataset.detail.store)),
+        country: dataset.detail.country,
+      };
+      if (hasCookie(req, "e2e_screenshots_off", "1")) {
+        return json(res, 200, {
+          ...base,
+          reading: "off",
+          screenshots: base.screenshots.map((item) => ({
+            ...item,
+            caption: null,
+            status: "skipped",
+          })),
+        });
+      }
+      const pending = cookieValue(req, "e2e_screenshots_pending");
+      if (pending !== undefined) {
+        const served = PENDING_SERVED.get(pending) ?? 0;
+        PENDING_SERVED.set(pending, served + 1);
+        if (served === 0) {
+          return json(res, 200, {
+            ...base,
+            screenshots: base.screenshots.map((item) =>
+              item.position > 1
+                ? { ...item, caption: null, status: "pending" }
+                : item,
+            ),
+          });
+        }
+      }
+      json(res, 200, base);
     },
   },
   appRoute(/^\/apps\/([^/]+)\/changes$/, (dataset, query) =>

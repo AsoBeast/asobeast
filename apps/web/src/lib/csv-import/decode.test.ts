@@ -107,10 +107,40 @@ describe("decodeCsvBytes", () => {
     ).toMatchObject({ text, encoding: "utf-16le", fallback: false });
   });
 
+  it("recognises UTF-16LE without a byte order mark for a Thai list with no header", () => {
+    const text = "แอปติดตามนิสัยประจำวัน\nตัวจับเวลาโฟกัสสำหรับงาน\n";
+
+    expect(decodeCsvBytes(arrayBufferOf(Buffer.from(text, "utf16le")))).toEqual(
+      { text, encoding: "utf-16le", fallback: false },
+    );
+  });
+
+  it("recognises UTF-16LE without a byte order mark for long CJK lines with no header", () => {
+    const text = "习惯追踪器每日计划提醒专注计时工具番茄工作法\n".repeat(3);
+
+    expect(decodeCsvBytes(arrayBufferOf(Buffer.from(text, "utf16le")))).toEqual(
+      { text, encoding: "utf-16le", fallback: false },
+    );
+  });
+
   it("never hands a NUL character on", () => {
     const bytes = Buffer.from([0x00, 0x6b, 0x65, 0x00, 0x00, 0x79, 0x0a]);
 
     expect(decodeCsvBytes(arrayBufferOf(bytes)).text).not.toContain("\u0000");
+  });
+
+  it("keeps UTF-8 with one stray NUL byte as UTF-8", () => {
+    const bytes = Buffer.concat([
+      Buffer.from("k", "utf8"),
+      Buffer.from([0x00]),
+      Buffer.from(TEXT.slice(1), "utf8"),
+    ]);
+
+    expect(decodeCsvBytes(arrayBufferOf(bytes))).toEqual({
+      text: TEXT,
+      encoding: "utf-8",
+      fallback: false,
+    });
   });
 
   it("reads an empty file as empty text", () => {

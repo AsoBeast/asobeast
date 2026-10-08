@@ -32,11 +32,11 @@ export default async function ChangesPage({
   const days = changeDaysParser.parseServerSide(sp.days);
 
   const queryClient = getQueryClient();
-  const app = await queryClient.fetchQuery(appDetailOptions(id));
+  const [app, markets] = await Promise.all([
+    queryClient.fetchQuery(appDetailOptions(id)),
+    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+  ]);
   const market = countryParser.parseServerSide(sp.country) || app.country;
-  const markets = await queryClient
-    .fetchQuery(listingMarketsOptions(id))
-    .catch(() => []);
   const listing = resolveMarket(
     marketParser.parseServerSide(sp.market),
     markets,

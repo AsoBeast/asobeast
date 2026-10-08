@@ -15,6 +15,7 @@ export const TENANT_TABLES = [
   'EmailAlert',
   'KeywordRanking',
   'Review',
+  'SnapshotScreenshot',
   'SuggestProbe',
   'TrackedKeyword',
   'User',
@@ -26,6 +27,7 @@ export const TENANT_TABLES = [
 export const SHARED_STORE_TABLES = [
   'Keyword',
   'KeywordMetric',
+  'ScreenshotText',
   'SearchTermPopularity',
   'SerpEntry',
 ] as const;

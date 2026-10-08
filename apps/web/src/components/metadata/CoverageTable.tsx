@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
 import { useQueryStates } from "nuqs";
-import type { KeywordCoverageRow } from "@asobeast/shared";
+import type { KeywordCoverageRow, ScreenshotTextState } from "@asobeast/shared";
 import { FilterChips } from "@/components/data-table/FilterChips";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { RowCount } from "@/components/data-table/RowCount";
@@ -33,6 +33,10 @@ import {
   FIELD_ORDER,
   HIDDEN_COVERAGE_COLUMNS,
 } from "./coverage-columns";
+import {
+  screenshotTextMark,
+  showsScreenshotText,
+} from "./screenshot-text-marks";
 
 const COVERAGE_PARAMS = {
   ...coverageFilterParsers,
@@ -40,7 +44,28 @@ const COVERAGE_PARAMS = {
   dir: sortDirectionParser,
 };
 
-export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
+function ScreenshotTextNote({ rows }: { rows: KeywordCoverageRow[] }) {
+  const withUnreadListing = rows.some(
+    (row) => screenshotTextMark(row) === "unread",
+  );
+  return (
+    <p className="text-body text-muted-foreground">
+      Screenshot text is a weak signal that Apple has not confirmed. It never
+      changes whether a keyword counts as covered.
+      {withUnreadListing
+        ? " A dashed circle means the screenshots of that keyword's listing have not been read yet."
+        : null}
+    </p>
+  );
+}
+
+export function CoverageTable({
+  rows,
+  screenshotText,
+}: {
+  rows: KeywordCoverageRow[];
+  screenshotText: ScreenshotTextState | null;
+}) {
   const [params, setParams] = useQueryStates(COVERAGE_PARAMS);
   const fields = useMemo(() => {
     const present = new Set(
@@ -48,7 +73,11 @@ export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
     );
     return FIELD_ORDER.filter((field) => present.has(field));
   }, [rows]);
-  const columns = useMemo(() => coverageColumns(fields), [fields]);
+  const withScreenshotText = showsScreenshotText(rows, screenshotText);
+  const columns = useMemo(
+    () => coverageColumns(fields, withScreenshotText),
+    [fields, withScreenshotText],
+  );
   const { sorting, onSortingChange } = useUrlSorting(
     params,
     columns,
@@ -121,8 +150,9 @@ export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
       <Table containerClassName="rounded-xl border bg-card">
         <TableCaption className="sr-only">
           Keyword coverage across{" "}
-          {fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}, with
-          uncovered keywords highlighted.
+          {fields.map((field) => METADATA_FIELD_LABELS[field]).join(", ")}
+          {withScreenshotText ? ", screenshot text" : ""}, with uncovered
+          keywords highlighted.
         </TableCaption>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -176,6 +206,7 @@ export function CoverageTable({ rows }: { rows: KeywordCoverageRow[] }) {
           ))}
         </TableBody>
       </Table>
+      {withScreenshotText ? <ScreenshotTextNote rows={rows} /> : null}
     </div>
   );
 }

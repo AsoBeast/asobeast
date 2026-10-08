@@ -6,9 +6,11 @@ import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotsService } from '../screenshots/screenshots.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { effectiveRun } from './audit-run-state';
 import { AuditAiService } from './audit-ai.service';
+import { readCaptionTexts } from './screenshot-captions';
 import {
   AuditCompetitor,
   AuditContext,
@@ -59,6 +61,7 @@ export class AuditContextLoader {
     private readonly auditAi: AuditAiService,
     private readonly analytics: AnalyticsService,
     private readonly config: ConfigService<Env, true>,
+    private readonly screenshots: ScreenshotsService,
   ) {}
 
   async app(appId: string): Promise<AuditApp> {
@@ -84,6 +87,14 @@ export class AuditContextLoader {
     }
     const { tracked } = await this.keywords.getKeywordField(app.id);
     return tracked.map((item) => item.text).join(',') || null;
+  }
+
+  private async screenshotCaptions(app: AuditApp): Promise<string[] | null> {
+    if (app.store !== Store.APP_STORE) {
+      return null;
+    }
+    const { screenshots } = await this.screenshots.forApp(app.id);
+    return readCaptionTexts(screenshots);
   }
 
   private async visibility(appId: string): Promise<AuditVisibility> {
@@ -185,6 +196,7 @@ export class AuditContextLoader {
       insight,
       keywordField,
       visibility,
+      screenshotCaptions,
     ] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
@@ -227,6 +239,7 @@ export class AuditContextLoader {
       this.prisma.auditInsight.findUnique({ where: { appId } }),
       this.keywordField(app),
       this.visibility(appId),
+      this.screenshotCaptions(app),
     ]);
 
     const active = tracked.filter(
@@ -277,6 +290,7 @@ export class AuditContextLoader {
       }),
       brandTokens: tokenize(app.name ?? ''),
       creative,
+      screenshotCaptions,
       run: effectiveRun(insight, new Date()),
       aiStatus: {
         configured: this.auditAi.configured,

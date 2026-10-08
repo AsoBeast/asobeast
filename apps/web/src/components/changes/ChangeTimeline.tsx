@@ -34,6 +34,8 @@ import { changeDaysParser } from "@/lib/search-params";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import { releaseNotesInline } from "./release-notes";
+import { hasScreenshotDetail } from "./screenshot-change";
+import { ScreenshotChangeValue } from "./ScreenshotChangeValue";
 import { ChangeTimelineSkeleton } from "./skeletons";
 
 export const FIELD_LABELS: Record<ChangeField, string> = {
@@ -44,6 +46,8 @@ export const FIELD_LABELS: Record<ChangeField, string> = {
   version: "Version",
   price: "Price",
   screenshots: "Screenshots",
+  screenshotImages: "Screenshot images",
+  screenshotCaptions: "Screenshot captions",
   icon: "Icon",
   whatsNew: "What's New",
 };
@@ -80,6 +84,10 @@ function ChangeValue({
   dense: boolean;
 }) {
   const { field, before, after } = event;
+
+  if (hasScreenshotDetail(event)) {
+    return <ScreenshotChangeValue event={event} dense={dense} />;
+  }
 
   if (field === "icon") {
     return <span className="text-muted-foreground">Icon updated</span>;
@@ -163,6 +171,7 @@ export function ChangeRow({
 }) {
   return (
     <div
+      data-change-field={event.field}
       className={cn(
         "flex items-start gap-3 py-3",
         dense ? null : "border-l-2 pl-4",

@@ -554,6 +554,92 @@ describe('AuditController (e2e)', () => {
   it('returns 404 history for an unknown app', async () => {
     await api.get('/apps/missing/audit/history').expect(404);
   });
+
+  describe('caption keywords from read screenshot text', () => {
+    const seedRows = async (id: string, status: string) => {
+      const snapshot = await prisma.appSnapshot.findFirstOrThrow({
+        where: { appId: id },
+        orderBy: { capturedAt: 'desc' },
+      });
+      const asset = (position: number) =>
+        `https://is1-ssl.mzstatic.com/image/thumb/p/${position}.jpg`;
+      await prisma.snapshotScreenshot.createMany({
+        data: ['Habit tracker streaks', 'Build one habit'].map(
+          (caption, index) => ({
+            snapshotId: snapshot.id,
+            workspaceId: DEFAULT_WORKSPACE_ID,
+            position: index + 1,
+            url: `${asset(index + 1)}/392x696bb.jpg`,
+            assetKey: asset(index + 1),
+            status,
+            caption: status === 'read' ? caption : null,
+          }),
+        ),
+      });
+    };
+
+    const captionCheck = (result: AppAuditResult) =>
+      factor(result, 'screenshots')?.checks.find(
+        (item) => item.id === 'screenshots-caption-keywords',
+      );
+
+    it('answers from the read captions without an analysis', async () => {
+      const id = await seed();
+      await seedRows(id, 'read');
+
+      const result = (await api.get(`/apps/${id}/audit`).expect(200))
+        .body as AppAuditResult;
+
+      expect(captionCheck(result)?.score).not.toBeNull();
+      expect(captionCheck(result)?.status).not.toBe('unanswered');
+    });
+
+    it('stays unanswered, asking for the analysis, while the captions are pending', async () => {
+      const id = await seed();
+      await seedRows(id, 'pending');
+
+      const result = (await api.get(`/apps/${id}/audit`).expect(200))
+        .body as AppAuditResult;
+
+      expect(captionCheck(result)?.score).toBeNull();
+      expect(captionCheck(result)?.status).toBe('unanswered');
+      expect(captionCheck(result)?.unlock?.kind).toBe('ai-analysis');
+    });
+
+    it('reads the captions of the home listing only', async () => {
+      const id = await seed();
+      await seedRows(id, 'pending');
+      const home = await prisma.appSnapshot.findFirstOrThrow({
+        where: { appId: id },
+        orderBy: { capturedAt: 'desc' },
+      });
+      await prisma.appSnapshot.create({
+        data: {
+          appId: id,
+          country: 'de',
+          title: home.title,
+          description: home.description,
+          raw: {},
+          capturedAt: new Date(home.capturedAt.getTime() + 60_000),
+          screenshots: {
+            create: {
+              workspaceId: DEFAULT_WORKSPACE_ID,
+              position: 1,
+              url: 'https://is1-ssl.mzstatic.com/image/thumb/p/9.jpg/392x696bb.jpg',
+              assetKey: 'https://is1-ssl.mzstatic.com/image/thumb/p/9.jpg',
+              status: 'read',
+              caption: 'Habit tracker streaks',
+            },
+          },
+        },
+      });
+
+      const result = (await api.get(`/apps/${id}/audit`).expect(200))
+        .body as AppAuditResult;
+
+      expect(captionCheck(result)?.status).toBe('unanswered');
+    });
+  });
 });
 
 describe('AuditController without an AI key (e2e)', () => {

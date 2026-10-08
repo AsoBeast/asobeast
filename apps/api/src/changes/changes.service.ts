@@ -1,15 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import {
   assertStorefront,
+  ChangeEventItem,
   ChangeField,
   ChangeTimeline,
 } from '@asobeast/shared';
 import { AlertsDispatcher } from '../alerts/alerts.dispatcher';
 import { PrismaService } from '../prisma/prisma.service';
+import { readChangeDetail } from './change-detail';
 import {
   DetectedChange,
   DiffableChangeSnapshot,
   detectChanges,
+  truncateChangeText,
 } from './change-detector';
 import {
   eventsIn,
@@ -28,6 +32,7 @@ const EVENT_SELECT = {
   field: true,
   before: true,
   after: true,
+  detail: true,
   capturedAt: true,
   app: { select: { name: true, isCompetitor: true, country: true } },
 } as const;
@@ -39,21 +44,48 @@ interface EventRow {
   field: string;
   before: string | null;
   after: string | null;
+  detail: unknown;
   capturedAt: Date;
   app: { name: string | null; isCompetitor: boolean; country: string };
 }
 
-const toChangeEventItem = (event: EventRow) => ({
-  id: event.id,
-  appId: event.appId,
-  appName: event.app.name,
-  isCompetitor: event.app.isCompetitor,
-  field: event.field as ChangeField,
-  before: event.before,
-  after: event.after,
-  capturedAt: event.capturedAt.toISOString(),
-  country: listingMarket(event.app.country, event.country),
+export interface CaptionChange {
+  appId: string;
+  listing: { home: string; market: string };
+  since: Date;
+  before: string[];
+  after: string[];
+  added: string[];
+  removed: string[];
+}
+
+const joined = (captions: string[]): string | null =>
+  captions.length === 0 ? null : truncateChangeText(captions.join(' | '));
+
+const eventData = (
+  appId: string,
+  { detail, ...change }: DetectedChange,
+): Prisma.ChangeEventCreateManyInput => ({
+  appId,
+  ...change,
+  ...(detail ? { detail: detail as unknown as Prisma.InputJsonValue } : {}),
 });
+
+const toChangeEventItem = (event: EventRow): ChangeEventItem => {
+  const detail = readChangeDetail(event.detail);
+  return {
+    id: event.id,
+    appId: event.appId,
+    appName: event.app.name,
+    isCompetitor: event.app.isCompetitor,
+    field: event.field as ChangeField,
+    before: event.before,
+    after: event.after,
+    capturedAt: event.capturedAt.toISOString(),
+    country: listingMarket(event.app.country, event.country),
+    ...(detail ? { detail } : {}),
+  };
+};
 
 @Injectable()
 export class ChangesService {
@@ -130,7 +162,10 @@ export class ChangesService {
     const country = storedMarket(listing.home, listing.market);
     if (changes.length > 0) {
       await this.prisma.changeEvent.createMany({
-        data: changes.map((change) => ({ appId, country, ...change })),
+        data: changes.map((change) => ({
+          ...eventData(appId, change),
+          country,
+        })),
       });
     }
     return changes;
@@ -142,12 +177,61 @@ export class ChangesService {
     next: DiffableChangeSnapshot,
   ): Promise<DetectedChange[]> {
     const changes = detectChanges(prev, next);
-    if (changes.length === 0) {
-      return changes;
+    if (changes.length > 0) {
+      await this.persist(appId, changes);
     }
+    return changes;
+  }
 
+  async recordCaptionChange(change: CaptionChange): Promise<void> {
+    const recorded = await this.prisma.changeEvent.findFirst({
+      where: {
+        appId: change.appId,
+        ...eventsIn(change.listing.home, change.listing.market),
+        field: 'screenshotCaptions',
+        capturedAt: change.since,
+      },
+      select: { id: true },
+    });
+    if (recorded) {
+      return;
+    }
+    const caption: DetectedChange = {
+      field: 'screenshotCaptions',
+      before: joined(change.before),
+      after: joined(change.after),
+      detail: {
+        kind: 'captions',
+        added: change.added,
+        removed: change.removed,
+      },
+    };
+    const country = storedMarket(change.listing.home, change.listing.market);
+    if (country === null) {
+      await this.persist(change.appId, [caption], change.since);
+      return;
+    }
     await this.prisma.changeEvent.createMany({
-      data: changes.map((change) => ({ appId, ...change })),
+      data: [
+        {
+          ...eventData(change.appId, caption),
+          country,
+          capturedAt: change.since,
+        },
+      ],
+    });
+  }
+
+  private async persist(
+    appId: string,
+    changes: DetectedChange[],
+    capturedAt?: Date,
+  ): Promise<void> {
+    await this.prisma.changeEvent.createMany({
+      data: changes.map((change) => ({
+        ...eventData(appId, change),
+        ...(capturedAt ? { capturedAt } : {}),
+      })),
     });
 
     const app = await this.prisma.app.findUnique({
@@ -162,9 +246,11 @@ export class ChangesService {
         name: app?.name ?? null,
         isCompetitor: app?.isCompetitor ?? false,
       },
-      changes,
+      changes: changes.map(({ field, before, after }) => ({
+        field,
+        before,
+        after,
+      })),
     });
-
-    return changes;
   }
 }

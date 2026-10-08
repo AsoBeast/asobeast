@@ -1,7 +1,7 @@
 "use client";
 
 import { createColumnHelper } from "@tanstack/react-table";
-import { Check, Minus } from "lucide-react";
+import { Check, CircleDashed, Minus } from "lucide-react";
 import {
   KEYWORD_BUCKETS,
   type KeywordCoverageRow,
@@ -13,6 +13,7 @@ import type { DataTableFeatures } from "@/components/data-table/table-features";
 import { Badge } from "@/components/ui/badge";
 import { METADATA_FIELD_LABELS } from "@/lib/metadata-display";
 import { cn } from "@/lib/utils";
+import { screenshotTextMark } from "./screenshot-text-marks";
 
 export const HIDDEN_COVERAGE_COLUMNS = { uncovered: false };
 
@@ -29,13 +30,7 @@ const columnHelper = createColumnHelper<
   KeywordCoverageRow
 >();
 
-function CoverageMark({
-  covered,
-  field,
-}: {
-  covered: boolean;
-  field: MetadataField;
-}) {
+function CoverageMark({ covered, label }: { covered: boolean; label: string }) {
   return (
     <span
       className={cn(
@@ -51,13 +46,34 @@ function CoverageMark({
         <Minus className="size-3.5" />
       )}
       <span className="sr-only">
-        {covered ? "in" : "missing from"} {METADATA_FIELD_LABELS[field]}
+        {covered ? "in" : "missing from"} {label}
       </span>
     </span>
   );
 }
 
-export function coverageColumns(fields: readonly MetadataField[]) {
+function NotReadMark({ label }: { label: string }) {
+  return (
+    <span className="inline-flex size-6 items-center justify-center rounded-full text-muted-foreground">
+      <CircleDashed className="size-4" />
+      <span className="sr-only">{label} not read</span>
+    </span>
+  );
+}
+
+function ScreenshotTextCell({ row }: { row: KeywordCoverageRow }) {
+  const mark = screenshotTextMark(row);
+  return mark === "unread" ? (
+    <NotReadMark label="screenshot text" />
+  ) : (
+    <CoverageMark covered={mark === "covered"} label="screenshot text" />
+  );
+}
+
+export function coverageColumns(
+  fields: readonly MetadataField[],
+  withScreenshotText: boolean,
+) {
   return columnHelper.columns([
     columnHelper.accessor("text", {
       id: "keyword",
@@ -101,11 +117,20 @@ export function coverageColumns(fields: readonly MetadataField[]) {
               row.original.fields.find((entry) => entry.field === field)
                 ?.covered ?? false
             }
-            field={field}
+            label={METADATA_FIELD_LABELS[field]}
           />
         ),
       }),
     ),
+    ...(withScreenshotText
+      ? [
+          columnHelper.display({
+            id: "screenshotText",
+            header: "Screenshot text",
+            cell: ({ row }) => <ScreenshotTextCell row={row.original} />,
+          }),
+        ]
+      : []),
     columnHelper.accessor("uncovered", {
       enableSorting: false,
       filterFn: (row, id, uncovered: boolean) =>

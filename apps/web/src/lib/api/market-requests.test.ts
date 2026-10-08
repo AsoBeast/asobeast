@@ -3,6 +3,7 @@ import { getApp } from "./apps";
 import { getChanges } from "./changes";
 import { refreshApp } from "./jobs";
 import { getMetadataAudit } from "./metadata";
+import { getAppScreenshots } from "./screenshots";
 
 function stubFetch(): string[] {
   const requested: string[] = [];
@@ -39,6 +40,16 @@ describe("market aware calls", () => {
     await getMetadataAudit("app-1", "de");
 
     expect(requested[0]).toMatch(/\/apps\/app-1\/metadata\/audit\?country=de$/);
+  });
+
+  it("reads the screenshots of the market it is given", async () => {
+    const requested = stubFetch();
+
+    await getAppScreenshots("app-1", "de");
+    await getAppScreenshots("app-1");
+
+    expect(requested[0]).toMatch(/\/apps\/app-1\/screenshots\?country=de$/);
+    expect(requested[1]).toMatch(/\/apps\/app-1\/screenshots$/);
   });
 
   it("lists the changes of a market next to the window", async () => {

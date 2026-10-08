@@ -9,6 +9,7 @@ import {
   type FirstRunStatus,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
+import { withTimeout } from '../common/async/with-timeout';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { nextDailyRun, nextWeeklyRun } from './daily-schedule';
@@ -158,14 +159,6 @@ export class FirstRunStatusService {
       return false;
     }
   }
-}
-
-function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms);
-  });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
 }
 
 function stageStatus(

@@ -13,6 +13,7 @@ import {
   keywordCountriesOptions,
   listingMarketsOptions,
   metadataAuditOptions,
+  screenshotsOptions,
 } from "@/lib/queries";
 import { marketParser } from "@/lib/search-params";
 
@@ -26,10 +27,10 @@ export default async function MetadataPage({
   const { id } = await params;
   const requested = marketParser.parseServerSide((await searchParams).market);
   const queryClient = getQueryClient();
-  const app = await queryClient.fetchQuery(appDetailOptions(id));
-  const markets = await queryClient
-    .fetchQuery(listingMarketsOptions(id))
-    .catch(() => []);
+  const [app, markets] = await Promise.all([
+    queryClient.fetchQuery(appDetailOptions(id)),
+    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+  ]);
   const market = resolveMarket(requested, markets, app.country);
 
   const result = await queryClient
@@ -44,6 +45,11 @@ export default async function MetadataPage({
       <div className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
         Metadata audit is not available for this app yet.
       </div>
+    );
+  }
+  if (result.store === "APP_STORE") {
+    void queryClient.prefetchQuery(
+      screenshotsOptions(id, queryMarket(market, app.country)),
     );
   }
   const [keywordMarkets, assistant] = await Promise.all([

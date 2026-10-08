@@ -188,7 +188,7 @@ docker compose exec api node dist/auth/abuse/workspace-suspension.cli.js suspend
 
 Run it inside the `api` container, which already holds the database credentials. On a stack started from the published images, put `-f docker-compose.pull.yml` after `docker compose`.
 
-The command opens a database connection and nothing else. It starts no queue workers, schedules no jobs and needs no type checker, so it fits in the container's 768 MB memory limit beside the running API. It prints `restored` or `suspended` with the workspace id and exits `0`. A refusal or an unknown workspace id prints the reason and exits `1`.
+The command opens a database connection and nothing else. It starts no queue workers, schedules no jobs and needs no type checker, so it fits in the container's 1024 MB memory limit beside the running API. It prints `restored` or `suspended` with the workspace id and exits `0`. A refusal or an unknown workspace id prints the reason and exits `1`.
 
 The command writes to the workspace row directly, so it is not recorded in the support audit trail. Its reason reaches every member of the workspace the same way, so write it for the customer. The operator workspace is still refused for `suspend`.
 

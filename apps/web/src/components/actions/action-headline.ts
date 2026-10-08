@@ -22,6 +22,8 @@ export const CHANGE_FIELD_WORD: Record<ChangeField, string> = {
   version: "version",
   price: "price",
   screenshots: "screenshots",
+  screenshotImages: "screenshot images",
+  screenshotCaptions: "screenshot captions",
   icon: "icon",
   whatsNew: "what's new",
 };

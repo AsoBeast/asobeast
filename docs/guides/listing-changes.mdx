@@ -20,13 +20,25 @@ Each event names the app, the field, the previous value, the new value and the d
 
 Detection is snapshot based, so the date is when asobeast noticed rather than when the store published. A refresh you trigger yourself narrows that gap. See [Import an app](/guides/import-an-app).
 
+## Screenshot and caption changes
+
+Three kinds of event describe screenshots. All of them are recorded for your apps and for every competitor.
+
+| Field | When it appears | What it shows |
+| --- | --- | --- |
+| Screenshots | The number of screenshots changed | The two counts, exactly as before. When the images are known the event also shows which screenshots were added or removed |
+| Screenshot images | The count is the same but a screenshot was replaced or the order changed | Before and after thumbnails with the changed positions marked |
+| Screenshot captions | A caption was edited, added or removed | The captions that disappeared and the ones that appeared |
+
+Each listing is compared only with its own previous snapshot, so a market listing's screenshot and caption changes appear in that market's timeline and never against the home listing. A reordered or replaced screenshot used to leave no trace, because only the count was compared. Caption events need the screenshot text reader and appear after the snapshot has been read, so they trail the image events by a few minutes. They are skipped when a screenshot of either snapshot could not be read. See [Read screenshot captions](/guides/screenshot-captions).
+
 ## Measure the impact of a change
 
 A change to your own listing is only worth repeating if it worked. The card at the top of the changes page answers that for each change: how the positions of your tracked keywords and your visibility moved 7, 14 and 28 days later.
 
 ### What counts as one change
 
-Every edit asobeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, icon and What's New count too. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts the same way, once per app per UTC day, for your competitors as well.
+Every edit asobeast detects on your listing on one UTC day is one change, whatever the fields: a new title and a new subtitle found on the same day are measured together, and the card lists both. Version, price, screenshots, screenshot images, screenshot captions, icon and What's New count too. On the App Store a new keyword field only takes effect with a new version, so a version change is where a keyword field edit lands. The dashboard tile counts the same way, once per app per UTC day, for your competitors as well.
 
 Competitor changes are never measured here. They stay in the feed below the card.
 

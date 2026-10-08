@@ -17,6 +17,7 @@ import {
   MetadataAuditResult,
   MetadataField,
   MetadataFieldAudit,
+  ScreenshotItem,
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
@@ -26,6 +27,13 @@ import { coversKeyword } from '../keywords/keyword-coverage';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { latestListingTexts, ListingTexts } from '../apps/listing-texts';
+import { ScreenshotsService } from '../screenshots/screenshots.service';
+import {
+  screenshotTextCoverage,
+  screenshotTextState,
+} from './screenshot-coverage';
+
+type JudgedCoverageRow = KeywordCoverageRow & { listingCountry: string };
 
 const singularize = (text: string): string =>
   tokenize(text)
@@ -41,6 +49,7 @@ export class MetadataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
+    private readonly screenshots: ScreenshotsService,
   ) {}
 
   async audit(appId: string, country?: string): Promise<MetadataAuditResult> {
@@ -100,12 +109,30 @@ export class MetadataService {
         own ? item.country : app.country,
       );
     });
+    const shots = await this.screenshotsOf(app.store, listings, [
+      market,
+      ...coverage.map((row) => row.listingCountry),
+    ]);
+    const reading = this.screenshots.reading(app.store);
+    const textOf = (listing: string) =>
+      screenshotTextState(shots(listing), reading);
+    const screenshotText = textOf(market);
 
     return {
       appId,
       store: app.store,
       fields,
-      coverage,
+      coverage: coverage.map((row) =>
+        textOf(row.listingCountry)?.status === 'ready'
+          ? {
+              ...row,
+              screenshotText: screenshotTextCoverage(
+                shots(row.listingCountry),
+                row.text,
+              ),
+            }
+          : row,
+      ),
       keywordFieldSuggestion:
         home && app.store === Store.APP_STORE
           ? this.suggestion(
@@ -113,7 +140,30 @@ export class MetadataService {
               coverage.filter((row) => row.country === app.country),
             )
           : null,
+      ...(screenshotText ? { screenshotText } : {}),
       country: market,
+    };
+  }
+
+  private async screenshotsOf(
+    store: Store,
+    listings: Map<string, ListingTexts>,
+    markets: readonly string[],
+  ): Promise<(market: string) => ScreenshotItem[]> {
+    const snapshotIds = new Map(
+      markets.flatMap((market) => {
+        const listing = listings.get(market);
+        return listing ? [[market, listing.id] as const] : [];
+      }),
+    );
+    const screenshots = await this.screenshots.ofSnapshots(store, [
+      ...new Set(snapshotIds.values()),
+    ]);
+    return (market) => {
+      const snapshotId = snapshotIds.get(market);
+      return snapshotId === undefined
+        ? []
+        : (screenshots.get(snapshotId) ?? []);
     };
   }
 
@@ -233,7 +283,7 @@ export class MetadataService {
     item: TrackedKeywordItem,
     surfaces: Array<{ field: MetadataField; value: string }>,
     listingCountry: string,
-  ): KeywordCoverageRow {
+  ): JudgedCoverageRow {
     const fields: CoverageFieldStatus[] = surfaces.map((surface) => ({
       field: surface.field,
       covered: coversKeyword(surface.value, item.text),

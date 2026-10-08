@@ -661,3 +661,19 @@ test("P-WEB-15 tells a customer the requests added and not the instance capacity
   ).toBeVisible();
   await expect(dialog.getByText("daily capacity")).toHaveCount(0);
 });
+
+test("P-WEB-16 says so when the review cannot reach the server", async ({
+  page,
+}) => {
+  await page.route("**/keywords/import/preview", (route) => route.abort());
+  const dialog = await openDialog(page);
+
+  await choose(dialog, "keyword\r\nalpha one\r\n");
+
+  await expect(dialog.getByRole("alert")).toContainText(
+    "Could not reach the api to review this file",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "Nothing to import" }),
+  ).toBeDisabled();
+});

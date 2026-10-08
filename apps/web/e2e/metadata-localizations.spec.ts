@@ -27,6 +27,7 @@ test("the metadata page lists what the home storefront and each market read", as
       .filter({ has: page.getByRole("heading", { level: 3, name }) });
 
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
+    "Screenshot captions",
     "Storefront localizations",
     "Keyword coverage",
   ]);

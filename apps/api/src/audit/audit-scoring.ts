@@ -92,6 +92,7 @@ export interface AuditContext {
   reviewScoreMax: number;
   brandTokens: string[];
   creative: AuditCreativeState;
+  screenshotCaptions: string[] | null;
   aiStatus: AuditAiStatus;
   run: AuditAiRun | null;
 }

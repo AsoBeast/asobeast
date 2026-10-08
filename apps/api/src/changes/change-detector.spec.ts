@@ -117,6 +117,17 @@ describe('detectChanges', () => {
     expect(change.after).toBe(`${'x'.repeat(300)}…`);
   });
 
+  it('never cuts an astral character in half when it truncates', () => {
+    const prev = makeSnapshot({ releaseNotes: 'short' });
+    const next = makeSnapshot({
+      releaseNotes: `${'x'.repeat(299)}${'𝐀'.repeat(10)}`,
+    });
+
+    const [change] = detectChanges(prev, next);
+
+    expect(change.after).toBe(`${'x'.repeat(299)}𝐀…`);
+  });
+
   it('does not emit whats new for the first snapshot', () => {
     expect(
       detectChanges(null, makeSnapshot({ releaseNotes: 'First' })),
@@ -130,5 +141,118 @@ describe('detectChanges', () => {
     expect(detectChanges(prev, next)).toEqual([
       { field: 'subtitle', before: null, after: 'Now set' },
     ]);
+  });
+});
+
+const keyed = (...keys: string[]) =>
+  keys.map((key) => ({ key, url: `${key}/392x696bb.jpg` }));
+
+describe('detectChanges for screenshot images', () => {
+  it('reports nothing when the lists match', () => {
+    const prev = makeSnapshot({
+      screenshotsCount: 3,
+      screenshots: keyed('a', 'b', 'c'),
+    });
+
+    expect(detectChanges(prev, { ...prev })).toEqual([]);
+  });
+
+  it('reports a replacement with an unchanged count as screenshotImages', () => {
+    const prev = makeSnapshot({
+      screenshotsCount: 3,
+      screenshots: keyed('a', 'b', 'c'),
+    });
+    const next = makeSnapshot({
+      screenshotsCount: 3,
+      screenshots: keyed('a', 'x', 'c'),
+    });
+
+    const [change, ...rest] = detectChanges(prev, next);
+
+    expect(rest).toEqual([]);
+    expect(change).toMatchObject({
+      field: 'screenshotImages',
+      before: '3 screenshots',
+      after: '3 screenshots, 1 replaced',
+    });
+    expect(change.detail).toMatchObject({
+      kind: 'images',
+      added: [2],
+      removed: [2],
+    });
+  });
+
+  it('reports a reorder as screenshotImages', () => {
+    const prev = makeSnapshot({
+      screenshotsCount: 2,
+      screenshots: keyed('a', 'b'),
+    });
+    const next = makeSnapshot({
+      screenshotsCount: 2,
+      screenshots: keyed('b', 'a'),
+    });
+
+    expect(detectChanges(prev, next)[0]).toMatchObject({
+      field: 'screenshotImages',
+      after: '2 screenshots, reordered',
+    });
+  });
+
+  it('keeps the numeric count event and attaches the detail when the count changes', () => {
+    const prev = makeSnapshot({
+      screenshotsCount: 2,
+      screenshots: keyed('a', 'b'),
+    });
+    const next = makeSnapshot({
+      screenshotsCount: 3,
+      screenshots: keyed('a', 'b', 'c'),
+    });
+
+    const changes = detectChanges(prev, next);
+
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toMatchObject({
+      field: 'screenshots',
+      before: '2',
+      after: '3',
+    });
+    expect(changes[0].detail).toMatchObject({
+      kind: 'images',
+      added: [3],
+      removed: [],
+    });
+  });
+
+  it('never reports the same screenshot change twice', () => {
+    const prev = makeSnapshot({
+      screenshotsCount: 2,
+      screenshots: keyed('a', 'b'),
+    });
+    const next = makeSnapshot({ screenshotsCount: 1, screenshots: keyed('a') });
+
+    expect(
+      detectChanges(prev, next).filter((change) =>
+        change.field.startsWith('screenshot'),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it('leaves the count event exactly as before when a list is unknown', () => {
+    const prev = makeSnapshot({ screenshotsCount: 2 });
+    const next = makeSnapshot({ screenshotsCount: 3 });
+
+    expect(detectChanges(prev, next)).toEqual([
+      { field: 'screenshots', before: '2', after: '3' },
+    ]);
+  });
+
+  it('reports nothing for images when the previous snapshot has no list', () => {
+    const prev = makeSnapshot({ screenshotsCount: 3 });
+    const next = makeSnapshot({
+      screenshotsCount: 3,
+      screenshots: keyed('a', 'b', 'c'),
+    });
+
+    expect(detectChanges(prev, next)).toEqual([]);
   });
 });

@@ -2,6 +2,10 @@ import { KeywordBucket, Store } from '../index';
 import { LintIssue } from '../aso/lint';
 import { MetadataField } from '../aso/limits';
 import { AppStoreLocalization } from '../storefronts/app-store-localizations';
+import type {
+  ScreenshotTextCoverage,
+  ScreenshotTextState,
+} from './screenshots';
 
 export interface MetadataFieldAudit {
   field: MetadataField;
@@ -23,6 +27,7 @@ export interface KeywordCoverageRow {
   bucket: KeywordBucket | null;
   fields: CoverageFieldStatus[];
   uncovered: boolean;
+  screenshotText?: ScreenshotTextCoverage | null;
   country?: string;
   listingCountry?: string;
 }
@@ -40,6 +45,7 @@ export interface MetadataAuditResult {
   fields: MetadataFieldAudit[];
   coverage: KeywordCoverageRow[];
   keywordFieldSuggestion: KeywordFieldSuggestion | null;
+  screenshotText?: ScreenshotTextState | null;
   country?: string;
 }
 

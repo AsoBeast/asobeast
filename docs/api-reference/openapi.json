@@ -2338,6 +2338,48 @@
         ]
       }
     },
+    "/apps/{id}/screenshots": {
+      "get": {
+        "operationId": "ScreenshotsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose listing to use instead of the home storefront.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Screenshots of the latest snapshot of a listing with the caption read from each",
+        "tags": [
+          "screenshots"
+        ]
+      }
+    },
     "/apps/{id}/rankings": {
       "get": {
         "operationId": "RankingsController_history",

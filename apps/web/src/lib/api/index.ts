@@ -8,6 +8,7 @@ export * from "./analytics";
 export * from "./reviews";
 export * from "./audit";
 export * from "./metadata";
+export * from "./screenshots";
 export * from "./alerts";
 export * from "./changes";
 export * from "./jobs";

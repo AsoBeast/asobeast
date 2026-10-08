@@ -7,6 +7,7 @@ import { createIsolationFixture, IsolationFixture } from './fixture';
 const SCOPED_TABLES = [
   'app',
   'appSnapshot',
+  'snapshotScreenshot',
   'trackedKeyword',
   'keywordRanking',
   'categoryRank',

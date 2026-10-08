@@ -4,6 +4,7 @@ import type {
   AlertDeliveryItem,
   ApiErrorEnvelope,
   AppDetail,
+  AppScreenshots,
   AppListItem,
   AppSummary,
   CategoryCollection,
@@ -981,6 +982,8 @@ const APP_1_COMPARISON: KeywordComparison = {
   ],
 };
 
+const e2eScreenshotUrl = (position: number): string =>
+  `https://is1-ssl.mzstatic.com/image/thumb/e2e-focus/${position}.jpg/392x696bb.jpg`;
 export const APP_1_PL_CHANGES: ChangeTimeline = {
   events: [
     {
@@ -993,6 +996,31 @@ export const APP_1_PL_CHANGES: ChangeTimeline = {
       after: "Minutnik Skupienia",
       capturedAt: utcTimestampDaysAgo(2),
       country: "pl",
+    },
+    {
+      id: "chg-pl-sc-1",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshotImages",
+      before: "2 screenshots",
+      after: "2 screenshots, 1 replaced",
+      capturedAt: utcTimestampDaysAgo(3),
+      country: "pl",
+      detail: {
+        kind: "images",
+        before: [11, 12].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        after: [11, 13].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        added: [2],
+        removed: [2],
+        reordered: false,
+      },
     },
   ],
 };
@@ -1018,6 +1046,69 @@ const APP_1_CHANGES: ChangeTimeline = {
       before: "1840",
       after: "2210",
       capturedAt: utcTimestampDaysAgo(1),
+    },
+    {
+      id: "app-chg-sc-1",
+      appId: "comp-1",
+      appName: "Rival Focus",
+      isCompetitor: true,
+      field: "screenshotImages",
+      before: "3 screenshots",
+      after: "3 screenshots, 1 replaced",
+      capturedAt: utcTimestampDaysAgo(2),
+      detail: {
+        kind: "images",
+        before: [1, 2, 3].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        after: [1, 5, 3].map((asset, index) => ({
+          position: index + 1,
+          url: e2eScreenshotUrl(asset),
+        })),
+        added: [2],
+        removed: [2],
+        reordered: false,
+      },
+    },
+    {
+      id: "app-chg-sc-2",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshotCaptions",
+      before: "Focus timer for deep work | Plan your week",
+      after: "Focus timer for deep work | Plan your day",
+      capturedAt: utcTimestampDaysAgo(2),
+      detail: {
+        kind: "captions",
+        added: ["Plan your day"],
+        removed: ["Plan your week"],
+      },
+    },
+    {
+      id: "app-chg-sc-3",
+      appId: "app-1",
+      appName: "Focus Timer",
+      isCompetitor: false,
+      field: "screenshots",
+      before: "3",
+      after: "4",
+      capturedAt: utcTimestampDaysAgo(3),
+      detail: {
+        kind: "images",
+        before: [1, 2, 3].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        after: [1, 2, 3, 4].map((position) => ({
+          position,
+          url: e2eScreenshotUrl(position),
+        })),
+        added: [4],
+        removed: [],
+        reordered: false,
+      },
     },
     {
       id: "app-chg-3",
@@ -3083,6 +3174,7 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: true },
       ],
       uncovered: false,
+      screenshotText: { covered: true, positions: [1] },
     },
     {
       keywordId: "kw-2",
@@ -3094,6 +3186,7 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: false },
       ],
       uncovered: false,
+      screenshotText: { covered: false, positions: [] },
     },
     {
       keywordId: "kw-3",
@@ -3105,12 +3198,87 @@ export const METADATA_AUDIT: MetadataAuditResult = {
         { field: "keywordField", covered: false },
       ],
       uncovered: true,
+      screenshotText: { covered: true, positions: [2] },
       country: "de",
       listingCountry: "us",
     },
   ],
   keywordFieldSuggestion: null,
+  screenshotText: { status: "ready", read: 2, total: 4 },
 };
+
+export const UNREAD_MARKET_COOKIE = "e2e_unread_market_listing";
+
+export const UNREAD_MARKET_COVERAGE_ROW: KeywordCoverageRow = {
+  keywordId: "kw-fr-1",
+  text: "minuteur focus",
+  bucket: null,
+  fields: [
+    { field: "title", covered: false },
+    { field: "subtitle", covered: true },
+  ],
+  uncovered: false,
+  country: "fr",
+  listingCountry: "fr",
+};
+
+export const APP_1_SCREENSHOTS: AppScreenshots = {
+  appId: "app-1",
+  store: "APP_STORE",
+  snapshotId: "snap-app-1",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "on",
+  screenshots: [
+    {
+      position: 1,
+      url: e2eScreenshotUrl(1),
+      caption: "Focus timer for deep work",
+      status: "read",
+    },
+    {
+      position: 2,
+      url: e2eScreenshotUrl(2),
+      caption: "The productivity app that sticks",
+      status: "read",
+    },
+    { position: 3, url: e2eScreenshotUrl(3), caption: null, status: "blank" },
+    { position: 4, url: e2eScreenshotUrl(4), caption: null, status: "failed" },
+  ],
+};
+
+export const APP_1_PL_SCREENSHOTS: AppScreenshots = {
+  appId: "app-1",
+  store: "APP_STORE",
+  snapshotId: "snap-app-1-pl",
+  capturedAt: utcTimestampDaysAgo(0),
+  reading: "on",
+  country: "pl",
+  screenshots: [
+    {
+      position: 1,
+      url: e2eScreenshotUrl(11),
+      caption: "Minutnik do głębokiej pracy",
+      status: "read",
+    },
+    { position: 2, url: e2eScreenshotUrl(13), caption: null, status: "blank" },
+  ],
+};
+
+export const SCREENSHOTS: Record<string, AppScreenshots> = {
+  "app-1": APP_1_SCREENSHOTS,
+};
+
+export const emptyScreenshots = (
+  appId: string,
+  store: "APP_STORE" | "GOOGLE_PLAY",
+): AppScreenshots => ({
+  appId,
+  store,
+  snapshotId: null,
+  capturedAt: null,
+  reading: store === "GOOGLE_PLAY" ? "unsupported" : "on",
+  screenshots: [],
+});
 
 export const APP_AR_ID = "app-ar";
 
@@ -3530,9 +3698,11 @@ export const METADATA_AUDIT_PL: MetadataAuditResult = {
       uncovered: false,
       country: "pl",
       listingCountry: "pl",
+      screenshotText: { covered: true, positions: [1] },
     },
   ],
   keywordFieldSuggestion: null,
+  screenshotText: { status: "ready", read: 1, total: 2 },
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

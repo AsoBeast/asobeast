@@ -3,6 +3,8 @@ import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
 import { QuotaAdmission } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotQueue } from '../screenshots/screenshot-queue';
+import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { UnsearchableAppError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -27,6 +29,8 @@ export class AppCaptureService {
     private readonly workspace: WorkspaceContext,
     private readonly egress: ProxyEgress,
     private readonly subtitles: SubtitleBackfill,
+    private readonly screenshots: ScreenshotRecorder,
+    private readonly screenshotQueue: ScreenshotQueue,
   ) {}
 
   async capture(
@@ -47,6 +51,7 @@ export class AppCaptureService {
       throw new UnsearchableAppError(normalized.title);
     }
 
+    let pending = 0;
     const captured = await this.prisma.withTransaction(async (tx) => {
       const persist = async () => {
         await this.serializeIdentity(tx, identity);
@@ -82,12 +87,17 @@ export class AppCaptureService {
         const snapshot = await tx.appSnapshot.create({
           data: toSnapshotData(app.id, normalized),
         });
+        pending = await this.screenshots.record(tx, app, snapshot);
 
         return { app, snapshot };
       };
 
       return admit ? admit(tx, persist) : persist();
     });
+
+    if (pending > 0) {
+      await this.screenshotQueue.request(captured.app.id, captured.snapshot.id);
+    }
 
     if (normalized.subtitleUnavailable && captured.snapshot.subtitle === null) {
       await this.subtitles.request(captured.app, captured.snapshot);

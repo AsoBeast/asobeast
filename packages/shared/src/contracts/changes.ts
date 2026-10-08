@@ -14,6 +14,8 @@ export const CHANGE_FIELDS = [
   'version',
   'price',
   'screenshots',
+  'screenshotImages',
+  'screenshotCaptions',
   'icon',
   'whatsNew',
 ] as const;
@@ -22,6 +24,28 @@ export type ChangeField = (typeof CHANGE_FIELDS)[number];
 export function isChangeField(value: string): value is ChangeField {
   return CHANGE_FIELDS.some((field) => field === value);
 }
+
+export interface ScreenshotRef {
+  position: number;
+  url: string;
+}
+
+export interface ScreenshotImagesDetail {
+  kind: 'images';
+  before: ScreenshotRef[];
+  after: ScreenshotRef[];
+  added: number[];
+  removed: number[];
+  reordered: boolean;
+}
+
+export interface ScreenshotCaptionsDetail {
+  kind: 'captions';
+  added: string[];
+  removed: string[];
+}
+
+export type ChangeDetail = ScreenshotImagesDetail | ScreenshotCaptionsDetail;
 
 export interface ChangeEventItem {
   id: string;
@@ -32,6 +56,7 @@ export interface ChangeEventItem {
   before: string | null;
   after: string | null;
   capturedAt: string;
+  detail?: ChangeDetail | null;
   country?: string;
 }
 

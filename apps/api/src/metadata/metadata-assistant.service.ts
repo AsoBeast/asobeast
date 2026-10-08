@@ -58,7 +58,7 @@ export class MetadataAssistantService {
     const target = await this.localizationTarget(app, dto.localization);
     const fields = this.resolveFields(app.store, dto.fields);
     const [audit, tracked, competitors] = await Promise.all([
-      this.metadata.audit(appId),
+      this.metadata.audit(appId, app.country),
       this.keywords.listTracked(appId, undefined, app.country),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },

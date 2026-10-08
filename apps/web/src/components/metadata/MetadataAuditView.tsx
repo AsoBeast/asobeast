@@ -9,7 +9,11 @@ import { queryMarket } from "@/lib/market";
 import { metadataAuditOptions } from "@/lib/queries";
 import { CoverageTable } from "./CoverageTable";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
-import { StorefrontLocalizationsSkeleton } from "./skeletons";
+import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
+import {
+  ScreenshotCaptionsSkeleton,
+  StorefrontLocalizationsSkeleton,
+} from "./skeletons";
 import { StorefrontLocalizationsCard } from "./StorefrontLocalizationsCard";
 
 export function MetadataAuditView({
@@ -40,6 +44,12 @@ export function MetadataAuditView({
         ))}
       </section>
 
+      {result.store === "APP_STORE" ? (
+        <Suspense fallback={<ScreenshotCaptionsSkeleton />}>
+          <ScreenshotCaptionsCard id={id} market={queryMarket(market, home)} />
+        </Suspense>
+      ) : null}
+
       {hasLocalizations ? (
         <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
           <StorefrontLocalizationsCard id={id} canDraft={canDraft} />
@@ -61,7 +71,10 @@ export function MetadataAuditView({
             Track keywords to see how your metadata covers them.
           </div>
         ) : (
-          <CoverageTable rows={result.coverage} />
+          <CoverageTable
+            rows={result.coverage}
+            screenshotText={result.screenshotText ?? null}
+          />
         )}
       </section>
 

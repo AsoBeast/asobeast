@@ -8,8 +8,11 @@ import { App, AppSnapshot, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
+import { screenshotKeys } from '../changes/screenshot-diff';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ScreenshotQueue } from '../screenshots/screenshot-queue';
+import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
 import {
@@ -32,6 +35,8 @@ export class ListingCaptureService {
     private readonly egress: ProxyEgress,
     private readonly keywords: KeywordsService,
     private readonly changes: ChangesService,
+    private readonly screenshots: ScreenshotRecorder,
+    private readonly screenshotQueue: ScreenshotQueue,
   ) {}
 
   async refresh(
@@ -102,6 +107,7 @@ export class ListingCaptureService {
       orderBy: NEWEST_FIRST,
     });
 
+    let pending = 0;
     const snapshot = await this.prisma.withTransaction(async (tx) => {
       const created = await tx.appSnapshot.create({
         data: toSnapshotData(
@@ -116,8 +122,14 @@ export class ListingCaptureService {
           data: { name: normalized.title, iconUrl: normalized.iconUrl },
         });
       }
+      pending = await this.screenshots.record(
+        tx,
+        { store: app.store, country: market },
+        created,
+      );
       return created;
     });
+    if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);
 
     const icons = home
       ? { before: app.iconUrl, after: normalized.iconUrl ?? null }
@@ -162,6 +174,7 @@ export class ListingCaptureService {
       version: snapshot.version,
       price: snapshot.price,
       screenshotsCount: screenshotsCount(snapshot.raw),
+      screenshots: screenshotKeys(store, snapshot.raw),
       iconUrl,
       releaseNotes: releaseNotesFor(store, snapshot.raw),
     };

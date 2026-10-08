@@ -1,3 +1,4 @@
+import { DEFAULT_OCR_LANGUAGES } from '../screenshots/ocr-languages';
 import { validateEnv } from './env';
 
 describe('validateEnv', () => {
@@ -86,4 +87,35 @@ describe('AI_CALLS_PER_MONTH', () => {
   it.each(['-1', 'abc', '2.5'])('refuses an ai call cap of %s', (value) => {
     expect(() => withCap(value)).toThrow();
   });
+});
+
+describe('the screenshot ocr variables', () => {
+  const secret = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it('reads on by default with every bundled language', () => {
+    const env = validateEnv(secret);
+
+    expect(env.SCREENSHOT_OCR).toBe(true);
+    expect(env.SCREENSHOT_OCR_LANGUAGES).toEqual(DEFAULT_OCR_LANGUAGES);
+  });
+
+  it('switches off and narrows the languages', () => {
+    const env = validateEnv({
+      ...secret,
+      SCREENSHOT_OCR: 'false',
+      SCREENSHOT_OCR_LANGUAGES: ' eng , jpn ',
+    });
+
+    expect(env.SCREENSHOT_OCR).toBe(false);
+    expect(env.SCREENSHOT_OCR_LANGUAGES).toEqual(['eng', 'jpn']);
+  });
+
+  it.each(['klingon', 'eng,klingon', ','])(
+    'refuses to boot on the languages %j',
+    (value) => {
+      expect(() =>
+        validateEnv({ ...secret, SCREENSHOT_OCR_LANGUAGES: value }),
+      ).toThrow();
+    },
+  );
 });

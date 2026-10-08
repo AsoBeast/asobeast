@@ -4,6 +4,7 @@ import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { HealthStatus, PipelineHealth } from '@asobeast/shared';
 import { Queue } from 'bullmq';
 import { Public } from '../auth/decorators/public.decorator';
+import { withTimeout } from '../common/async/with-timeout';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { LAST_DAILY_RUN_KEY, QUEUES } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
@@ -77,7 +78,11 @@ export class HealthController {
 
   private async pipelineSignals(): Promise<PipelineSignals> {
     try {
-      return await this.withTimeout(this.readSignals(), REDIS_TIMEOUT_MS);
+      return await withTimeout(
+        this.readSignals(),
+        REDIS_TIMEOUT_MS,
+        'redis timeout',
+      );
     } catch {
       return { redis: 'down', pipeline: null };
     }
@@ -125,15 +130,6 @@ export class HealthController {
     } catch {
       return { generatedAt: null, open: 0 };
     }
-  }
-
-  private withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
-    return Promise.race([
-      work,
-      new Promise<T>((_, reject) => {
-        setTimeout(() => reject(new Error('redis timeout')), ms).unref();
-      }),
-    ]);
   }
 }
 

@@ -29,6 +29,8 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `ActionItem` | One Action Center recommendation | Unique on workspace and fingerprint |
 | `ActionEvent` | One lifecycle transition of an action | Tenant owned, pruned with its action |
 | `AiCall` | One AI call a workspace made, with its model and tokens | Tenant owned, counted against the monthly AI allowance, kept when its app is deleted |
+| `SnapshotScreenshot` | One screenshot of one snapshot: its position, address and the caption read from it | Tenant owned, deleted with its snapshot |
+| `ScreenshotText` | The text read from one public image under one reading recipe | Shared across workspaces like `Keyword`, no policy, pruned when unused for 90 days |
 | `Webhook`, `EmailAlert` | Alert subscriptions | Deliveries are logged per channel |
 
 ## How do they relate?
@@ -37,6 +39,7 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 erDiagram
   Workspace ||--o{ App : owns
   App ||--o{ AppSnapshot : captures
+  AppSnapshot ||--o{ SnapshotScreenshot : lists
   App ||--o{ TrackedKeyword : tracks
   Keyword ||--o{ TrackedKeyword : "is tracked by"
   Keyword ||--o{ KeywordMetric : scores
@@ -57,7 +60,7 @@ A workspace owns apps. Each app captures snapshots of its listing and tracks key
 - **Popularity and difficulty persist in `KeywordMetric`. Opportunity does not persist.** It is computed in the read layer from the stored popularity and difficulty. See [Popularity, difficulty and opportunity](/concepts/scoring).
 - **`installs` is a `BigInt`** and serializes as a JSON number.
 - **All dates are UTC.** Daily granularity uses a PostgreSQL `date` column, and today means the UTC date.
-- **Every tenant owned row carries `workspaceId`, and PostgreSQL enforces it.** Each of those tables has a `tenant_isolation` row level security policy, so a query with no workspace in scope returns nothing rather than everything. Service code does not filter by workspace in a `where` clause. `Keyword`, `KeywordMetric` and `SerpEntry` are deliberately global and carry no policy, because one search for a phrase serves every workspace tracking it. What is tenant owned is the tracking relation and the recorded position.
+- **Every tenant owned row carries `workspaceId`, and PostgreSQL enforces it.** Each of those tables has a `tenant_isolation` row level security policy, so a query with no workspace in scope returns nothing rather than everything. Service code does not filter by workspace in a `where` clause. `Keyword`, `KeywordMetric` and `SerpEntry` are deliberately global and carry no policy, because one search for a phrase serves every workspace tracking it. `ScreenshotText` is global for the same reason: a screenshot is public store data, so one read serves every workspace that tracks the app. What is tenant owned is the tracking relation and the recorded position.
 
 ## How does the schema change?
 

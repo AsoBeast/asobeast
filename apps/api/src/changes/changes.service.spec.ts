@@ -23,9 +23,13 @@ function makeSnapshot(
   };
 }
 
+const keyed = (...keys: string[]) =>
+  keys.map((key) => ({ key, url: `${key}/392x696bb.jpg` }));
+
 describe('ChangesService', () => {
   let service: ChangesService;
   const createMany = jest.fn();
+  const changeEventFindFirst = jest.fn();
   const findMany = jest.fn<Promise<unknown>, [Record<string, unknown>]>();
   const findFirst = jest.fn();
   const findUnique = jest.fn();
@@ -34,6 +38,7 @@ describe('ChangesService', () => {
 
   beforeEach(async () => {
     createMany.mockReset();
+    changeEventFindFirst.mockReset().mockResolvedValue(null);
     findMany.mockReset();
     findFirst.mockReset();
     findUnique.mockReset();
@@ -46,7 +51,11 @@ describe('ChangesService', () => {
         {
           provide: PrismaService,
           useValue: {
-            changeEvent: { createMany, findMany },
+            changeEvent: {
+              createMany,
+              findMany,
+              findFirst: changeEventFindFirst,
+            },
             app: { findFirst, findUnique, findMany: appFindMany },
           },
         },
@@ -337,6 +346,258 @@ describe('ChangesService', () => {
           capturedAt: '2026-07-11T00:00:00.000Z',
         },
       ]);
+    });
+  });
+
+  describe('screenshot changes', () => {
+    it('persists the detail of a change next to its field', async () => {
+      const prev = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'b', 'c'),
+      });
+      const next = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'x', 'c'),
+        title: 'New title',
+      });
+
+      await service.recordRefresh('app_1', prev, next);
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<Record<string, unknown>> },
+      ];
+      expect(data).toHaveLength(2);
+      const title = data.find((row) => row.field === 'title');
+      const images = data.find((row) => row.field === 'screenshotImages');
+      expect(title && 'detail' in title).toBe(false);
+      expect(images).toMatchObject({
+        appId: 'app_1',
+        before: '3 screenshots',
+        after: '3 screenshots, 1 replaced',
+        detail: {
+          kind: 'images',
+          added: [2],
+          removed: [2],
+        },
+      });
+    });
+
+    it('sends alerts the field and the two readable values only', async () => {
+      const prev = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'b', 'c'),
+      });
+      const next = makeSnapshot({
+        screenshotsCount: 3,
+        screenshots: keyed('a', 'x', 'c'),
+      });
+
+      await service.recordRefresh('app_1', prev, next);
+
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<Record<string, unknown>> },
+      ];
+      expect(payload.changes).toEqual([
+        {
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, 1 replaced',
+        },
+      ]);
+    });
+
+    it('returns the detail on a timeline item and leaves it out when there is none', async () => {
+      findFirst.mockResolvedValue({ id: 'app_1', competitors: [] });
+      const detail = { kind: 'captions', added: ['B'], removed: ['A'] };
+      findMany.mockResolvedValue([
+        {
+          id: 'ev_2',
+          appId: 'app_1',
+          field: 'screenshotCaptions',
+          before: 'A',
+          after: 'B',
+          detail,
+          capturedAt: new Date('2026-07-10T00:00:00Z'),
+          app: { name: 'Mine', isCompetitor: false },
+        },
+        {
+          id: 'ev_1',
+          appId: 'app_1',
+          field: 'title',
+          before: 'A',
+          after: 'B',
+          detail: null,
+          capturedAt: new Date('2026-07-09T00:00:00Z'),
+          app: { name: 'Mine', isCompetitor: false },
+        },
+      ]);
+
+      const { events } = await service.timeline('app_1', 90);
+
+      expect(events[0].detail).toEqual(detail);
+      expect('detail' in events[1]).toBe(false);
+    });
+
+    const captionChange = {
+      appId: 'app_1',
+      listing: { home: 'us', market: 'us' },
+      since: new Date('2026-10-07T03:00:00.000Z'),
+      before: ['A', 'B'],
+      after: ['A', 'C'],
+      added: ['C'],
+      removed: ['B'],
+    };
+
+    it('records a caption change with the captions as readable text', async () => {
+      await service.recordCaptionChange(captionChange);
+
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            field: 'screenshotCaptions',
+            before: 'A | B',
+            after: 'A | C',
+            detail: { kind: 'captions', added: ['C'], removed: ['B'] },
+            capturedAt: captionChange.since,
+          },
+        ],
+      });
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<Record<string, unknown>> },
+      ];
+      expect(payload.changes).toEqual([
+        { field: 'screenshotCaptions', before: 'A | B', after: 'A | C' },
+      ]);
+    });
+
+    it('truncates long caption text like every other long value and keeps the captions whole in the detail', async () => {
+      const long = (letter: string) => letter.repeat(200);
+      await service.recordCaptionChange({
+        ...captionChange,
+        before: [long('a'), long('b')],
+        after: [long('a'), long('c')],
+        added: [long('c')],
+        removed: [long('b')],
+      });
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        {
+          data: Array<{
+            before: string;
+            after: string;
+            detail: { added: string[]; removed: string[] };
+          }>;
+        },
+      ];
+      expect(data[0].before).toBe(`${long('a')} | ${'b'.repeat(97)}…`);
+      expect(data[0].after).toBe(`${long('a')} | ${'c'.repeat(97)}…`);
+      expect(data[0].detail).toMatchObject({
+        added: [long('c')],
+        removed: [long('b')],
+      });
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<{ before: string; after: string }> },
+      ];
+      expect(payload.changes[0].after).toBe(data[0].after);
+    });
+
+    it('writes a null side when every caption is gone', async () => {
+      await service.recordCaptionChange({
+        ...captionChange,
+        before: ['A'],
+        after: [],
+        added: [],
+        removed: ['A'],
+      });
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<{ before: string | null; after: string | null }> },
+      ];
+      expect(data[0]).toMatchObject({ before: 'A', after: null });
+    });
+
+    it('records a caption change once per snapshot', async () => {
+      changeEventFindFirst.mockResolvedValue({ id: 'ev_1' });
+
+      await service.recordCaptionChange(captionChange);
+
+      expect(changeEventFindFirst).toHaveBeenCalledWith({
+        where: {
+          appId: 'app_1',
+          country: null,
+          field: 'screenshotCaptions',
+          capturedAt: captionChange.since,
+        },
+        select: { id: true },
+      });
+      expect(createMany).not.toHaveBeenCalled();
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('records a market caption change in that market and sends no alert', async () => {
+      await service.recordCaptionChange({
+        ...captionChange,
+        listing: { home: 'us', market: 'de' },
+      });
+
+      expect(changeEventFindFirst).toHaveBeenCalledWith({
+        where: {
+          appId: 'app_1',
+          country: 'de',
+          field: 'screenshotCaptions',
+          capturedAt: captionChange.since,
+        },
+        select: { id: true },
+      });
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            country: 'de',
+            field: 'screenshotCaptions',
+            before: 'A | B',
+            after: 'A | C',
+            detail: { kind: 'captions', added: ['C'], removed: ['B'] },
+            capturedAt: captionChange.since,
+          },
+        ],
+      });
+      expect(dispatch).not.toHaveBeenCalled();
+    });
+
+    it('records a market screenshot change with its detail in that market', async () => {
+      await service.recordMarketRefresh(
+        'app_1',
+        { home: 'us', market: 'de' },
+        makeSnapshot({
+          screenshotsCount: 3,
+          screenshots: keyed('a', 'b', 'c'),
+        }),
+        makeSnapshot({
+          screenshotsCount: 3,
+          screenshots: keyed('a', 'x', 'c'),
+        }),
+      );
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        { data: Array<Record<string, unknown>> },
+      ];
+      expect(data).toEqual([
+        {
+          appId: 'app_1',
+          country: 'de',
+          field: 'screenshotImages',
+          before: '3 screenshots',
+          after: '3 screenshots, 1 replaced',
+          detail: expect.objectContaining({
+            kind: 'images',
+            added: [2],
+            removed: [2],
+          }) as unknown,
+        },
+      ]);
+      expect(dispatch).not.toHaveBeenCalled();
     });
   });
 });

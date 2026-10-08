@@ -63,6 +63,7 @@ const bullBoardModules: DynamicModule[] =
           { name: QUEUES.ALERTS, adapter: BullMQAdapter },
           { name: QUEUES.BILLING, adapter: BullMQAdapter },
           { name: QUEUES.AI, adapter: BullMQAdapter },
+          { name: QUEUES.SCREENSHOTS, adapter: BullMQAdapter },
         ),
       ];
 
@@ -80,6 +81,7 @@ const bullBoardModules: DynamicModule[] =
       { name: QUEUES.APP_STORE },
       { name: QUEUES.GPLAY },
       { name: QUEUES.AI },
+      { name: QUEUES.SCREENSHOTS },
     ),
     BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.DAILY_PIPELINE }),
     AccountModule,

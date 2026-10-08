@@ -177,6 +177,7 @@ const contextFor = (
     creative: emptyCreative(store, facts),
     aiStatus: { configured: false, model: null, generatedAt: null },
     run: null,
+    screenshotCaptions: null,
     ...rest,
   };
 };
