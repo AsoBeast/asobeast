@@ -32,8 +32,22 @@ const pendingRow = (position: number) => ({
 });
 
 const HEADLINE = [
-  { text: 'Track every habit', confidence: 96, top: 198, height: 102 },
-  { text: "Today's habits", confidence: 96, top: 720, height: 44 },
+  {
+    text: 'Track every habit',
+    confidence: 96,
+    left: 0,
+    top: 198,
+    width: 900,
+    height: 102,
+  },
+  {
+    text: "Today's habits",
+    confidence: 96,
+    left: 0,
+    top: 720,
+    width: 900,
+    height: 44,
+  },
 ];
 
 interface RowUpdate {

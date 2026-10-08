@@ -3,7 +3,9 @@ import { SPACELESS_CHARACTER } from '../common/text/scripts';
 export interface OcrLine {
   text: string;
   confidence: number;
+  left: number;
   top: number;
+  width: number;
   height: number;
 }
 

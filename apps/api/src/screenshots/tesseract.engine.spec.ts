@@ -86,11 +86,18 @@ describe('TesseractOcrEngine', () => {
     expect(engine.name).toBe('tesseract.js-7');
   });
 
-  it('maps lines to text, confidence, top and height', async () => {
+  it('maps lines to text, confidence and their box', async () => {
     const lines = await engine.read(Buffer.from('x'), ['eng']);
 
     expect(lines).toEqual([
-      { text: 'Track every habit', confidence: 96, top: 198, height: 102 },
+      {
+        text: 'Track every habit',
+        confidence: 96,
+        left: 0,
+        top: 198,
+        width: 900,
+        height: 102,
+      },
     ]);
   });
 

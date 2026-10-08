@@ -14,7 +14,7 @@ const line = (
   height: number,
   top: number,
   confidence = 96,
-): OcrLine => ({ text, height, top, confidence });
+): OcrLine => ({ text, height, top, confidence, left: 0, width: 900 });
 
 describe('joinSpacelessRuns', () => {
   it('removes the spaces the engine puts between japanese words', () => {

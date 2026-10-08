@@ -13,7 +13,7 @@ export const solidPng = () =>
     .toBuffer();
 
 export const lines = (text: string) => [
-  { text, confidence: 96, top: 198, height: 102 },
+  { text, confidence: 96, left: 0, top: 198, width: 900, height: 102 },
 ];
 
 export const until = async (

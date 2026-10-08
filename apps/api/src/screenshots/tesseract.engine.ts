@@ -53,7 +53,9 @@ export class TesseractOcrEngine implements OcrEngine, OnModuleDestroy {
         .map((line) => ({
           text: line.text,
           confidence: line.confidence,
+          left: line.bbox.x0,
           top: line.bbox.y0,
+          width: line.bbox.x1 - line.bbox.x0,
           height: line.bbox.y1 - line.bbox.y0,
         }));
     } catch (error) {
