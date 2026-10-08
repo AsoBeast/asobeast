@@ -91,6 +91,16 @@ describe('servesLocalization', () => {
     ).toBe(true);
   });
 
+  it('leaves the subtitle out when the stored default listing has none', () => {
+    expect(
+      servesLocalization(
+        Store.APP_STORE,
+        { ...english, subtitle: null },
+        { ...english, subtitle: 'World Geography Trivia Game' },
+      ),
+    ).toBe(false);
+  });
+
   it('ignores a change of rendition size of the same screenshots', () => {
     expect(
       servesLocalization(Store.APP_STORE, english, {

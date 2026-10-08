@@ -6,10 +6,10 @@ import {
   AppDetail,
   AppListItem,
   AppStoreLocalization,
-  parseStoreUrl,
   assertStorefront,
   ListingMarket,
   MarketAvailabilityResult,
+  parseStoreUrl,
   SnapshotDiffResult,
   SUPPORTED_STORES,
 } from '@asobeast/shared';

@@ -143,6 +143,7 @@ export class ListingCaptureService {
       : null;
     const after = toChangeSnapshot(snapshot, icons.after, app.store);
 
+    const localized = await this.localizations.capture(app, market, snapshot);
     const recorded = home
       ? await this.recordHomeRefresh(app.id, before, after)
       : await this.changes.recordMarketRefresh(
@@ -151,8 +152,6 @@ export class ListingCaptureService {
           before,
           after,
         );
-
-    const localized = await this.localizations.capture(app, market, snapshot);
 
     return {
       snapshotId: snapshot.id,

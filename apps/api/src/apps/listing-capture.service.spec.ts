@@ -196,14 +196,22 @@ describe('ListingCaptureService localized listings', () => {
     );
   });
 
-  it('captures no localization when the default listing could not be recorded', async () => {
+  it('captures the localizations before the keyword sync reads them', async () => {
+    const order: string[] = [];
     const { service, capture } = build({
-      recordRefresh: jest.fn().mockRejectedValue(new Error('changes failed')),
+      syncFromSnapshot: jest.fn(() => {
+        order.push('sync');
+        return Promise.resolve();
+      }),
+    });
+    capture.mockImplementation(() => {
+      order.push('localizations');
+      return Promise.resolve([]);
     });
 
-    await expect(service.refresh(APP.id)).rejects.toThrow('changes failed');
+    await service.refresh(APP.id);
 
-    expect(capture).not.toHaveBeenCalled();
+    expect(order).toEqual(['localizations', 'sync']);
   });
 });
 

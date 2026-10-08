@@ -76,6 +76,9 @@ export class LocalizedListingCapture {
       where: { appId: app.id, ...listingIn(app.country, market, localization) },
       orderBy: NEWEST_FIRST,
     });
+    if (!previous && normalized.subtitleUnavailable) {
+      throw new Error('its product page did not answer');
+    }
     if (!previous && !servesLocalization(app.store, fallback, normalized)) {
       return [];
     }

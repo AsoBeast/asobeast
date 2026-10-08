@@ -19,10 +19,14 @@ const ownSubtitle = (
     : subtitle;
 };
 
-const signature = (store: Store, listing: ComparableListing): string =>
+const signature = (
+  store: Store,
+  listing: ComparableListing,
+  withSubtitle: boolean,
+): string =>
   JSON.stringify([
     listing.title,
-    ownSubtitle(store, listing),
+    withSubtitle ? ownSubtitle(store, listing) : null,
     listing.description,
     releaseNotesFor(store, listing.raw),
     (screenshotKeys(store, listing.raw) ?? []).map((shot) => shot.key),
@@ -33,5 +37,9 @@ export function servesLocalization(
   fallback: ComparableListing,
   localized: ComparableListing,
 ): boolean {
-  return signature(store, fallback) !== signature(store, localized);
+  const withSubtitle = (fallback.subtitle ?? null) !== null;
+  return (
+    signature(store, fallback, withSubtitle) !==
+    signature(store, localized, withSubtitle)
+  );
 }
