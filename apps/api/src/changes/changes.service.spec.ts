@@ -338,6 +338,37 @@ describe('ChangesService', () => {
       ]);
     });
 
+    it('truncates long caption text like every other long value and keeps the captions whole in the detail', async () => {
+      const long = (letter: string) => letter.repeat(200);
+      await service.recordCaptionChange({
+        ...captionChange,
+        before: [long('a'), long('b')],
+        after: [long('a'), long('c')],
+        added: [long('c')],
+        removed: [long('b')],
+      });
+
+      const [{ data }] = createMany.mock.calls[0] as [
+        {
+          data: Array<{
+            before: string;
+            after: string;
+            detail: { added: string[]; removed: string[] };
+          }>;
+        },
+      ];
+      expect(data[0].before).toBe(`${long('a')} | ${'b'.repeat(97)}…`);
+      expect(data[0].after).toBe(`${long('a')} | ${'c'.repeat(97)}…`);
+      expect(data[0].detail).toMatchObject({
+        added: [long('c')],
+        removed: [long('b')],
+      });
+      const [payload] = dispatch.mock.calls[0] as [
+        { changes: Array<{ before: string; after: string }> },
+      ];
+      expect(payload.changes[0].after).toBe(data[0].after);
+    });
+
     it('writes a null side when every caption is gone', async () => {
       await service.recordCaptionChange({
         ...captionChange,

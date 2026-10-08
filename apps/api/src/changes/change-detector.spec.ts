@@ -117,6 +117,17 @@ describe('detectChanges', () => {
     expect(change.after).toBe(`${'x'.repeat(300)}…`);
   });
 
+  it('never cuts an astral character in half when it truncates', () => {
+    const prev = makeSnapshot({ releaseNotes: 'short' });
+    const next = makeSnapshot({
+      releaseNotes: `${'x'.repeat(299)}${'𝐀'.repeat(10)}`,
+    });
+
+    const [change] = detectChanges(prev, next);
+
+    expect(change.after).toBe(`${'x'.repeat(299)}𝐀…`);
+  });
+
   it('does not emit whats new for the first snapshot', () => {
     expect(
       detectChanges(null, makeSnapshot({ releaseNotes: 'First' })),

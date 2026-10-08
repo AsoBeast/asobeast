@@ -48,6 +48,13 @@ const FIELD_SPECS: FieldSpec[] = [
   { field: 'whatsNew', key: 'releaseNotes', strategy: 'truncate' },
 ];
 
+export function truncateChangeText(text: string): string {
+  const characters = Array.from(text);
+  return characters.length > TRUNCATE_LIMIT
+    ? `${characters.slice(0, TRUNCATE_LIMIT).join('')}…`
+    : text;
+}
+
 export function detectChanges(
   prev: DiffableChangeSnapshot | null,
   next: DiffableChangeSnapshot,
@@ -119,10 +126,7 @@ function render(
     return String(String(value).length);
   }
   if (strategy === 'truncate') {
-    const text = String(value);
-    return text.length > TRUNCATE_LIMIT
-      ? `${text.slice(0, TRUNCATE_LIMIT)}…`
-      : text;
+    return truncateChangeText(String(value));
   }
   return String(value);
 }

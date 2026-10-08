@@ -8,6 +8,7 @@ import {
   DetectedChange,
   DiffableChangeSnapshot,
   detectChanges,
+  truncateChangeText,
 } from './change-detector';
 
 const MAX_EVENTS = 200;
@@ -45,7 +46,7 @@ export interface CaptionChange {
 }
 
 const joined = (captions: string[]): string | null =>
-  captions.length === 0 ? null : captions.join(' | ');
+  captions.length === 0 ? null : truncateChangeText(captions.join(' | '));
 
 const toChangeEventItem = (event: EventRow): ChangeEventItem => {
   const detail = readChangeDetail(event.detail);
