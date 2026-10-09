@@ -43,12 +43,14 @@ export function rank(value: number | null, depth?: number): string {
 
 const NO_REVIEW_TEXT = 'no written review';
 
+const isWritten = (text: string): boolean => text.trim().length > 0;
+
 export function reviewBody(text: string): string {
-  return text.length > 0 ? text : NO_REVIEW_TEXT;
+  return isWritten(text) ? text : NO_REVIEW_TEXT;
 }
 
 export function reviewQuote(text: string): string {
-  return text.length > 0 ? `"${text}"` : NO_REVIEW_TEXT;
+  return isWritten(text) ? `"${text}"` : NO_REVIEW_TEXT;
 }
 
 export function stars(score: number): string {

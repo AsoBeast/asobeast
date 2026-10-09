@@ -212,4 +212,10 @@ describe('reviewLine', () => {
       reviewLine({ ...negative, review: { ...negative.review, text: '' } }),
     ).toBe('★☆☆☆☆ no written review — v2.0.0');
   });
+
+  it('names a review whose text is only white space', () => {
+    expect(
+      reviewLine({ ...negative, review: { ...negative.review, text: ' \n ' } }),
+    ).toBe('★☆☆☆☆ no written review — v2.0.0');
+  });
 });
