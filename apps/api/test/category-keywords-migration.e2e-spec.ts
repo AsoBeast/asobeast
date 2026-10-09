@@ -75,6 +75,9 @@ describe('the untrack category keywords migration', () => {
       source?: KeywordSource;
       tags?: string[];
       note?: string;
+      fieldOrder?: number;
+      relevance?: number;
+      active?: boolean;
     } = {},
   ) => {
     const keyword = await prisma.keyword.upsert({
@@ -171,6 +174,35 @@ describe('the untrack category keywords migration', () => {
 
     await expect(trackedTexts(hindi.id)).resolves.toEqual([]);
     await expect(trackedTexts(other.id)).resolves.toEqual(['education']);
+  });
+
+  it('keeps a keyword in the keyword field, one with a relevance and a paused one', async () => {
+    const app = await seedApp();
+    await snapshotOf(app.id, { genres: ['Education', 'Reference', 'Books'] });
+    await track(app.id, 'education', { fieldOrder: 0 });
+    await track(app.id, 'reference', { relevance: 80 });
+    await track(app.id, 'books', { active: false });
+
+    await runMigration();
+
+    await expect(trackedTexts(app.id)).resolves.toEqual([
+      'books',
+      'education',
+      'reference',
+    ]);
+  });
+
+  it('reads a snapshot whose genres are missing or not a list', async () => {
+    const app = await seedApp();
+    await snapshotOf(app.id, { genres: 'Education' });
+    await snapshotOf(app.id, {});
+    await snapshotOf(app.id, HINDI_DICTIONARY);
+    await track(app.id, 'education');
+    await track(app.id, 'offline');
+
+    await runMigration();
+
+    await expect(trackedTexts(app.id)).resolves.toEqual(['offline']);
   });
 
   it('leaves a google play app alone', async () => {

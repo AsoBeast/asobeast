@@ -5,11 +5,17 @@ WITH "stored" AS (
     "snapshot"."localization",
     EXISTS (
       SELECT 1
-      FROM "AppSnapshot" AS "fallback"
-      WHERE "fallback"."appId" = "snapshot"."appId"
-        AND "fallback"."country" IS NOT DISTINCT FROM "snapshot"."country"
-        AND "fallback"."localization" IS NULL
-        AND "fallback"."title" = "snapshot"."title"
+      FROM (
+        SELECT "title", "subtitle", "description", "raw"
+        FROM "AppSnapshot" AS "default"
+        WHERE "default"."appId" = "snapshot"."appId"
+          AND "default"."country" IS NOT DISTINCT FROM "snapshot"."country"
+          AND "default"."localization" IS NULL
+          AND "default"."capturedAt" <= "snapshot"."capturedAt"
+        ORDER BY "default"."capturedAt" DESC
+        LIMIT 1
+      ) AS "fallback"
+      WHERE "fallback"."title" = "snapshot"."title"
         AND "fallback"."description" = "snapshot"."description"
         AND "fallback"."raw" -> 'screenshots' IS NOT DISTINCT FROM "snapshot"."raw" -> 'screenshots'
         AND NULLIF(btrim("fallback"."raw" ->> 'releaseNotes'), '') IS NOT DISTINCT FROM NULLIF(btrim("snapshot"."raw" ->> 'releaseNotes'), '')

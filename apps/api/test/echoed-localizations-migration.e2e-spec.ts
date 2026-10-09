@@ -2,7 +2,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { PrismaClient, Store } from '@prisma/client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { migrationSql } from './helpers/migration-sql';
+import { migrationFolders, migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
 
 const shot = (n: number) =>
@@ -18,6 +18,7 @@ const BENGALI_RAW = { ...DEFAULT_RAW, genres: ['শিক্ষা', 'রেফ�
 interface Listing {
   localization?: string;
   country?: string;
+  capturedAt?: Date;
   title?: string;
   subtitle?: string | null;
   description?: string;
@@ -240,6 +241,49 @@ describe('the delete echoed localizations migration', () => {
         select: { keyword: { select: { text: true } } },
       }),
     ).resolves.toEqual([{ keyword: { text: 'offline' } }]);
+  });
+
+  it('deletes a localization that repeats the real subtitle of the default', async () => {
+    const app = await seedApp();
+    await snapshotOf(app.id);
+    await snapshotOf(
+      app.id,
+      echoOf('bn', { subtitle: 'Hindi-English, smart offline' }),
+    );
+
+    await runMigration();
+
+    await expect(localizationsOf(app.id)).resolves.toEqual([]);
+  });
+
+  it('compares a localization with the default captured before it, not with an older one', async () => {
+    const app = await seedApp();
+    await snapshotOf(app.id, { capturedAt: new Date('2026-09-01') });
+    await snapshotOf(app.id, {
+      description: 'Offline dictionary with quizzes',
+      capturedAt: new Date('2026-09-10'),
+    });
+    await snapshotOf(
+      app.id,
+      echoOf('pl', { capturedAt: new Date('2026-09-11') }),
+    );
+
+    await runMigration();
+
+    await expect(localizationsOf(app.id)).resolves.toEqual(['pl']);
+  });
+
+  it('runs after the two repairs it depends on', () => {
+    const folders = migrationFolders();
+    const position = (suffix: string) =>
+      folders.findIndex((folder) => folder.endsWith(`_${suffix}`));
+
+    expect(position('clear_every_genre_subtitle')).toBeLessThan(
+      position('untrack_category_keywords'),
+    );
+    expect(position('untrack_category_keywords')).toBeLessThan(
+      position('delete_echoed_localizations'),
+    );
   });
 
   it('leaves a google play app alone', async () => {

@@ -6,6 +6,9 @@ WHERE "keyword"."id" = "tracked"."keywordId"
   AND "tracked"."source" = 'SUBTITLE'
   AND cardinality("tracked"."tags") = 0
   AND "tracked"."note" IS NULL
+  AND "tracked"."fieldOrder" IS NULL
+  AND "tracked"."relevance" IS NULL
+  AND "tracked"."active"
   AND EXISTS (
     SELECT 1
     FROM "AppSnapshot" AS "snapshot"
