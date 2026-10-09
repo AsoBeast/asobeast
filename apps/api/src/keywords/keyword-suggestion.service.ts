@@ -12,9 +12,9 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { extractCandidates } from './extraction';
-import { listingLanguages } from './listing-languages';
 import { reportedSource } from './keyword-field-membership';
 import { ensureApp, trackedTexts } from './keywords.support';
+import { listingLanguages } from './listing-languages';
 import { mineReviewPhrases } from './review-mining';
 import { seasonalSuggestions } from './seasonal-suggestions';
 import {
