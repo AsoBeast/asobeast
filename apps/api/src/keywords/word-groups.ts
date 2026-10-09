@@ -19,6 +19,7 @@ export interface WordGroup {
 }
 
 const SPACELESS_UNIT_MAX_CHARS = 5;
+const KATAKANA_FRAGMENT_MAX_CHARS = 2;
 
 const HIRAGANA_ONLY = /^\p{scx=Hiragana}+$/u;
 const KATAKANA_ONLY = /^\p{scx=Katakana}+$/u;
@@ -54,12 +55,11 @@ function trimNoise(words: Word[]): Word[] {
 const KATAKANA_CONTINUATION = /^[ァィゥェォッャュョヮヵヶンー]/u;
 
 const attachesLeft = (word: string): boolean =>
-  countChars(word) <= 2 || KATAKANA_CONTINUATION.test(word);
+  countChars(word) <= KATAKANA_FRAGMENT_MAX_CHARS ||
+  KATAKANA_CONTINUATION.test(word);
 
-const opensRight = (word: string, startsRun: boolean): boolean =>
-  word.endsWith('ッ') ||
-  (countChars(word) === 2 && word.endsWith('ー')) ||
-  (startsRun && countChars(word) === 1);
+const opensRight = (token: string): boolean =>
+  token.endsWith('ッ') || countChars(token) <= KATAKANA_FRAGMENT_MAX_CHARS;
 
 function joinKatakanaFragments(words: string[]): string[] {
   const joined: string[] = [];
@@ -74,7 +74,7 @@ function joinKatakanaFragments(words: string[]): string[] {
     } else {
       joined.push(word);
     }
-    open = katakana && opensRight(word, !continues);
+    open = katakana && opensRight(joined[joined.length - 1]);
   }
   return joined;
 }

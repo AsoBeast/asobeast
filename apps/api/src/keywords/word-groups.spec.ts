@@ -97,6 +97,25 @@ describe('wordGroups', () => {
     ]);
   });
 
+  it('joins a piece of two characters or fewer to the katakana after it', () => {
+    expect(wordGroups('プリティーダービー')).toEqual([
+      { tokens: ['プリティー', 'ダービー'], joiner: '', startsChunk: true },
+    ]);
+    expect(wordGroups('ワルキューレ')).toEqual([
+      { tokens: ['ワルキューレ'], joiner: '', startsChunk: true },
+    ]);
+    expect(wordGroups('ダンジョン')).toEqual([
+      { tokens: ['ダンジョン'], joiner: '', startsChunk: true },
+    ]);
+    expect(wordGroups('ノノグラムロジックパズル')).toEqual([
+      {
+        tokens: ['ノノグラム', 'ロジック', 'パズル'],
+        joiner: '',
+        startsChunk: true,
+      },
+    ]);
+  });
+
   it('puts latin and spaceless words in separate groups', () => {
     expect(wordGroups('Photo Editor 写真加工')).toEqual([
       { tokens: ['photo', 'editor'], joiner: ' ', startsChunk: false },

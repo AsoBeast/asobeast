@@ -278,6 +278,32 @@ describe('AppsController (e2e)', () => {
     );
   });
 
+  it('auto tracks a katakana title without its pieces', async () => {
+    registry.title = 'ウマ娘 プリティーダービー';
+    registry.summary = 'ダービー';
+
+    const response = await api
+      .post('/apps')
+      .send({ url: `${GOOGLE_PLAY_URL}&gl=jp` })
+      .expect(201);
+
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: (response.body as AppDetail).id },
+      select: { source: true, keyword: { select: { text: true } } },
+    });
+    expect(
+      tracked.map(({ source, keyword }) => `${source} ${keyword.text}`).sort(),
+    ).toEqual(
+      [
+        'TITLE ウマ娘',
+        'TITLE プリティーダービー',
+        'TITLE ウマ',
+        'TITLE プリティー',
+        'TITLE ダービー',
+      ].sort(),
+    );
+  });
+
   it('lets two workspaces track the same store app independently', async () => {
     await api.post('/apps').send({ url: APP_STORE_URL }).expect(201);
     await prisma.workspace.upsert({

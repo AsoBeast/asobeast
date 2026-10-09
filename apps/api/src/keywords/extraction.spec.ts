@@ -151,6 +151,21 @@ describe('extractCandidates', () => {
       ]);
     });
 
+    it('keeps the pieces of an unknown katakana word together', () => {
+      expect(texts({ title: 'ウマ娘 プリティーダービー' })).toEqual([
+        'ウマ娘',
+        'プリティーダービー',
+        'ウマ',
+        'プリティー',
+        'ダービー',
+      ]);
+      expect(texts({ title: 'ワルキューレ' })).toEqual(['ワルキューレ']);
+      expect(texts({ title: 'ダンジョン' })).toEqual(['ダンジョン']);
+      expect(texts({ title: 'メダロットサバイバー' })).toEqual([
+        'メダロットサバイバー',
+      ]);
+    });
+
     it('keeps a brand together when the segmenter splits it into characters', () => {
       expect(texts({ title: '微信' })).toEqual(['微信']);
       expect(texts({ title: '淘宝 - 小红书' })).toEqual([
