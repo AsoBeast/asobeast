@@ -171,6 +171,56 @@ describe('LocalizedListingCapture', () => {
     expect(recordMarketRefresh).not.toHaveBeenCalled();
   });
 
+  it('stores nothing when the localized page only drops the default subtitle', async () => {
+    const getApp = jest.fn().mockResolvedValue({
+      ...normalized(ENGLISH),
+      subtitle: undefined,
+      subtitleUnavailable: false,
+    });
+    const { capture, create, recordMarketRefresh } = build({ getApp });
+
+    await expect(capture.capture(APP, 'pl', fallback)).resolves.toEqual([]);
+
+    expect(create).not.toHaveBeenCalled();
+    expect(recordMarketRefresh).not.toHaveBeenCalled();
+  });
+
+  it('stores a served localization without a subtitle of its own', async () => {
+    const getApp = jest.fn().mockResolvedValue({
+      ...normalized(POLISH),
+      subtitle: undefined,
+      subtitleUnavailable: false,
+    });
+    const { capture, create } = build({ getApp });
+
+    await capture.capture(APP, 'pl', fallback);
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        localization: 'pl',
+        title: POLISH.title,
+        subtitle: undefined,
+      }) as unknown,
+    });
+  });
+
+  it('keeps capturing a stored localization whose page now drops the default subtitle', async () => {
+    const getApp = jest.fn().mockResolvedValue({
+      ...normalized(ENGLISH),
+      subtitle: undefined,
+      subtitleUnavailable: false,
+    });
+    const { capture, create } = build({
+      getApp,
+      previous: row(POLISH, 'pl', 'snap_pl_old'),
+      created: row(ENGLISH, 'pl'),
+    });
+
+    await capture.capture(APP, 'pl', fallback);
+
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps capturing a localization it captured before even when it now echoes the default', async () => {
     const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
     const { capture, create, recordMarketRefresh } = build({

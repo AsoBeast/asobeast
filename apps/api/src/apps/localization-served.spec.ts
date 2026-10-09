@@ -111,6 +111,56 @@ describe('servesLocalization', () => {
     ).toBe(true);
   });
 
+  it('does not serve a localization that only shows its category where the default has a subtitle', () => {
+    const hindi = {
+      title: 'Hindi Dictionary | हिंदी कोश',
+      subtitle: 'Hindi-English, smart offline',
+      subtitleUnavailable: false,
+      description: 'Offline dictionary',
+      raw: {
+        screenshots: [shot(1), shot(2)],
+        genres: ['Education', 'Reference'],
+      },
+    };
+
+    expect(
+      servesLocalization(Store.APP_STORE, hindi, {
+        ...hindi,
+        subtitle: 'শিক্ষা',
+        raw: { ...hindi.raw, genres: ['শিক্ষা', 'রেফারেন্স'] },
+      }),
+    ).toBe(false);
+  });
+
+  it('does not serve a localization that has no subtitle where the default has one', () => {
+    expect(
+      servesLocalization(Store.APP_STORE, english, {
+        ...english,
+        subtitle: null,
+      }),
+    ).toBe(false);
+  });
+
+  it('serves a localization whose own subtitle differs while its text matches the default', () => {
+    expect(
+      servesLocalization(
+        Store.APP_STORE,
+        { ...english, subtitleUnavailable: false },
+        { ...english, subtitle: 'ऑफ़लाइन शब्दकोश + क्विज़' },
+      ),
+    ).toBe(true);
+  });
+
+  it('serves a localization that drops its subtitle but translates the title', () => {
+    expect(
+      servesLocalization(Store.APP_STORE, english, {
+        ...english,
+        subtitle: null,
+        title: 'Where Am I? Quiz Geograficzny',
+      }),
+    ).toBe(true);
+  });
+
   it('ignores a change of rendition size of the same screenshots', () => {
     expect(
       servesLocalization(Store.APP_STORE, english, {

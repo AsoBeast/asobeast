@@ -11,29 +11,35 @@ export interface ComparableListing {
   raw: unknown;
 }
 
-const signature = (
-  store: Store,
-  listing: ComparableListing,
-  withSubtitle: boolean,
-): string =>
+const textSignature = (store: Store, listing: ComparableListing): string =>
   JSON.stringify([
     listing.title,
-    withSubtitle ? ownSubtitle(store, listing) : null,
     listing.description,
     releaseNotesFor(store, listing.raw),
     (screenshotKeys(store, listing.raw) ?? []).map((shot) => shot.key),
   ]);
+
+const localizedSubtitleDiffers = (
+  store: Store,
+  fallback: ComparableListing,
+  localized: ComparableListing,
+): boolean => {
+  const subtitle = ownSubtitle(store, localized);
+  return subtitle !== null && subtitle !== ownSubtitle(store, fallback);
+};
+
+const subtitleWasRead = (fallback: ComparableListing): boolean =>
+  (fallback.subtitle ?? null) !== null ||
+  fallback.subtitleUnavailable === false;
 
 export function servesLocalization(
   store: Store,
   fallback: ComparableListing,
   localized: ComparableListing,
 ): boolean {
-  const withSubtitle =
-    (fallback.subtitle ?? null) !== null ||
-    fallback.subtitleUnavailable === false;
   return (
-    signature(store, fallback, withSubtitle) !==
-    signature(store, localized, withSubtitle)
+    textSignature(store, fallback) !== textSignature(store, localized) ||
+    (subtitleWasRead(fallback) &&
+      localizedSubtitleDiffers(store, fallback, localized))
   );
 }

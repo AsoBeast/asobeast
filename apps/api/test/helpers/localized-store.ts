@@ -10,7 +10,7 @@ const shot = (n: number) =>
 
 export interface Listing {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   description: string;
   screenshots: string[];
 }

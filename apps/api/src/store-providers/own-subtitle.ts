@@ -11,7 +11,8 @@ export function ownSubtitle(
   listing: SubtitledListing,
 ): string | null {
   const subtitle = listing.subtitle ?? null;
-  return subtitle === extractRawFacts(store, listing.raw).genres[0]
+  return subtitle !== null &&
+    extractRawFacts(store, listing.raw).genres.includes(subtitle)
     ? null
     : subtitle;
 }
