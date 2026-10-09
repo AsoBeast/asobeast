@@ -69,7 +69,7 @@ Sixty five App Store storefronts show their listing in English by default althou
 | Native, such as `de`, `fr`, `jp` | the native default |
 | English (U.S.) | the default only |
 
-A localization the app does not have is answered by the store with the default text, so asobeast stores nothing for it. Once stored, a localization is captured on every refresh, so removing it shows up as a change.
+A localization the app does not have is answered by the store with the default text, so asobeast stores nothing for it. That includes a page that repeats the default title, description, screenshots and release notes and only shows its translated category where the default has a subtitle. asobeast still reads such a page every run to learn whether the app gained a localization, so it stays in the `localizations` count of `GET /jobs/budget`. Once stored, a localization is captured on every refresh, so removing it shows up as a change. An upgrade deletes the localizations that earlier versions stored from pages that only echoed the default.
 
 The native localizations are captured with the listing they belong to: when you import an app, when you refresh a listing and in the daily run. Each one costs one more listing read, and `GET /jobs/budget` reports them as `localizations`, a part of `apps`. India reads eleven localizations, so a market there costs the most.
 
