@@ -125,6 +125,25 @@ Suggestions come from three places.
 
 A suggestion lookup is the one user initiated exception to the rule that store requests only happen in the queue. It is bounded by a person clicking, so it stays small, but it does consume request budget.
 
+### Seasonal suggestions
+
+The API and the MCP `keyword_suggestions` tool also offer a `seasonal` strategy. The web app does not show it. It reads a fixed calendar and suggests the keywords of every event that is running or starts within 14 days, in UTC. The keywords are English, so an event is offered only in the English language storefronts (Australia, Canada, India, Ireland, New Zealand, the Philippines, Singapore, South Africa, the United Kingdom and the United States) that observe it. Any other storefront gets an empty list, as does an English one between events. The storefront is the app's home market, or the `country` you pass.
+
+| Event | Runs | Offered in |
+| --- | --- | --- |
+| New Year | 26 December to 7 January | every English storefront |
+| Valentine's Day | 1 to 14 February | every English storefront |
+| Spring and Easter | 1 March to 30 April | Canada, Ireland, the United Kingdom, the United States |
+| Mother's Day | 1 to 14 May | Australia, Canada, India, New Zealand, the Philippines, Singapore, South Africa, the United States |
+| Summer | 1 June to 31 August | Canada, Ireland, the United Kingdom, the United States |
+| Back to School | 15 July to 10 September | Canada, Ireland, the United Kingdom, the United States |
+| Halloween | 1 to 31 October | Australia, Canada, Ireland, New Zealand, the United Kingdom, the United States |
+| Black Friday | 20 to 30 November | every English storefront |
+| Christmas | 1 to 26 December | every English storefront |
+| End of Year | 27 to 31 December | every English storefront |
+
+Mother's Day is the second Sunday of May where it is offered. The United Kingdom and Ireland keep Mothering Sunday in March, which the calendar does not cover. The End of Year event suggests `goals` with the coming year, so `goals 2027` while 2026 ends.
+
 Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
 
 ## Track combinations from your listing
