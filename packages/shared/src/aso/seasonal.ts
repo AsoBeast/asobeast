@@ -40,7 +40,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     id: 'mothers-day',
     name: "Mother's Day",
     start: { month: 5, day: 1 },
-    end: { month: 5, day: 12 },
+    end: { month: 5, day: 14 },
     keywords: ['mom', 'mother', 'family', 'gift for mom'],
   },
   {

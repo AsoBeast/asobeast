@@ -108,3 +108,59 @@ describe('lead time across February', () => {
     );
   });
 });
+
+describe('moveable dates', () => {
+  const years = Array.from({ length: 75 }, (_, index) => 2026 + index);
+
+  const secondSundayOfMay = (year: number): Date => {
+    const firstOfMay = new Date(Date.UTC(year, 4, 1, 12));
+    const daysToFirstSunday = (7 - firstOfMay.getUTCDay()) % 7;
+    return new Date(Date.UTC(year, 4, 1 + daysToFirstSunday + 7, 12));
+  };
+
+  const fridayAfterThanksgiving = (year: number): Date => {
+    const firstOfNovember = new Date(Date.UTC(year, 10, 1, 12));
+    const daysToFirstThursday = (4 - firstOfNovember.getUTCDay() + 7) % 7;
+    return new Date(Date.UTC(year, 10, 1 + daysToFirstThursday + 22, 12));
+  };
+
+  const easterSunday = (year: number): Date => {
+    const golden = year % 19;
+    const century = Math.floor(year / 100);
+    const yearOfCentury = year % 100;
+    const shift =
+      (19 * golden +
+        century -
+        Math.floor(century / 4) -
+        Math.floor((century - Math.floor((century + 8) / 25) + 1) / 3) +
+        15) %
+      30;
+    const weekday =
+      (32 +
+        2 * (century % 4) +
+        2 * Math.floor(yearOfCentury / 4) -
+        shift -
+        (yearOfCentury % 4)) %
+      7;
+    const correction = Math.floor((golden + 11 * shift + 22 * weekday) / 451);
+    const monthDay = shift + weekday - 7 * correction + 114;
+    return new Date(
+      Date.UTC(year, Math.floor(monthDay / 31) - 1, (monthDay % 31) + 1, 12),
+    );
+  };
+
+  const yearsMissing = (eventId: string, dateIn: (year: number) => Date) =>
+    years.filter((year) => !ids(dateIn(year)).includes(eventId));
+
+  it("keeps Mother's Day inside its window in every year", () => {
+    expect(yearsMissing('mothers-day', secondSundayOfMay)).toEqual([]);
+  });
+
+  it('keeps Black Friday inside its window in every year', () => {
+    expect(yearsMissing('black-friday', fridayAfterThanksgiving)).toEqual([]);
+  });
+
+  it('keeps Easter inside its window in every year', () => {
+    expect(yearsMissing('spring-easter', easterSunday)).toEqual([]);
+  });
+});
