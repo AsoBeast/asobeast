@@ -126,6 +126,26 @@ describe('AppStoreProvider', () => {
     expect(page).toHaveBeenCalledWith({ id: 1, country: 'us' });
   });
 
+  it('reads no subtitle when the product page renders the primary category in its place', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 984380185,
+      title: 'Vipps',
+      description: 'desc',
+      genres: ['Finance', 'Utilities'],
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>Vipps</h1><p class="subtitle svelte-kps97o">Finance</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('984380185', 'no');
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(false);
+  });
+
   it('leaves subtitle undefined when the product page has none', async () => {
     const app = jest.fn().mockResolvedValue({
       id: 1,
@@ -522,6 +542,22 @@ describe('AppStoreProvider localized listings', () => {
         ([options]: [{ language?: string }]) => options.language,
       ),
     ).toEqual(['nb', 'zh-Hans']);
+  });
+
+  it('reads no subtitle when a localized page renders the localized primary category', async () => {
+    const app = jest.fn().mockResolvedValue({
+      ...listing,
+      genres: ['Finans', 'Verktøy'],
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue('<h1>Vipps</h1><p class="subtitle">Finans</p>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'no', 'no');
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(false);
   });
 
   it('asks for the default localization exactly as before', async () => {

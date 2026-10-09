@@ -70,6 +70,7 @@ const build = (overrides: {
         description: 'An app',
         raw: {},
         searchable: true,
+        subtitleUnavailable: false,
       }),
     }),
   } as unknown as StoreProviderRegistry;
@@ -192,7 +193,7 @@ describe('ListingCaptureService localized listings', () => {
     expect(capture).toHaveBeenCalledWith(
       expect.objectContaining({ id: APP.id }),
       'us',
-      SNAPSHOT,
+      { ...SNAPSHOT, subtitleUnavailable: false },
     );
   });
 
