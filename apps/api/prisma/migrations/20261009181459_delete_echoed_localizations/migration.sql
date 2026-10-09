@@ -12,7 +12,7 @@ WITH "stored" AS (
           AND "default"."country" IS NOT DISTINCT FROM "snapshot"."country"
           AND "default"."localization" IS NULL
           AND "default"."capturedAt" <= "snapshot"."capturedAt"
-        ORDER BY "default"."capturedAt" DESC
+        ORDER BY "default"."capturedAt" DESC, "default"."id" DESC
         LIMIT 1
       ) AS "fallback"
       WHERE "fallback"."title" = "snapshot"."title"
