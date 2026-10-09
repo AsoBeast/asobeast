@@ -51,7 +51,11 @@ describe('the clear every genre subtitle migration', () => {
     appId: string,
     subtitle: string,
     raw: object,
-    listing: { country?: string; localization?: string } = {},
+    listing: {
+      country?: string;
+      localization?: string;
+      capturedAt?: Date;
+    } = {},
   ) =>
     prisma.appSnapshot.create({
       data: {
@@ -63,6 +67,19 @@ describe('the clear every genre subtitle migration', () => {
         ...listing,
       },
       select: { id: true },
+    });
+
+  const at = (minute: number) => new Date(Date.UTC(2026, 9, 1, 0, minute));
+
+  const recordedEvents = () =>
+    prisma.changeEvent.findMany({
+      select: { country: true, field: true, before: true, after: true },
+      orderBy: [
+        { country: 'asc' },
+        { field: 'asc' },
+        { before: 'asc' },
+        { after: 'asc' },
+      ],
     });
 
   const subtitles = async (ids: string[]) => {
@@ -134,46 +151,96 @@ describe('the clear every genre subtitle migration', () => {
     ).resolves.toBe(2);
   });
 
-  it('reads a recorded subtitle change through every genre of the same listing', async () => {
+  it('clears a recorded subtitle side that is a genre of the snapshot it came from', async () => {
     const app = await seedApp();
-    await snapshotOf(app.id, 'Action', GAME);
-    await snapshotOf(app.id, 'Aksiyon', OYUNLAR, { country: 'tr' });
+    const history: [number, string][] = [
+      [0, 'Action'],
+      [1, 'Hex'],
+      [2, 'Casual'],
+      [3, 'Action'],
+      [4, 'Aksiyon'],
+    ];
+    for (const [minute, subtitle] of history) {
+      await snapshotOf(app.id, subtitle, GAME, { capturedAt: at(minute) });
+    }
+    await snapshotOf(app.id, 'Aksiyon', OYUNLAR, {
+      country: 'tr',
+      capturedAt: at(0),
+    });
+    await snapshotOf(app.id, 'Hex', OYUNLAR, {
+      country: 'tr',
+      capturedAt: at(1),
+    });
     await prisma.changeEvent.createMany({
       data: [
-        { appId: app.id, field: 'subtitle', before: 'Action', after: 'Hex' },
-        { appId: app.id, field: 'subtitle', before: 'Hex', after: 'Casual' },
-        { appId: app.id, field: 'subtitle', before: 'Action', after: null },
-        { appId: app.id, field: 'subtitle', before: 'Hex', after: 'Spin' },
-        { appId: app.id, field: 'title', before: 'Action', after: 'Hex' },
-        { appId: app.id, field: 'subtitle', before: 'Aksiyon', after: 'Hex' },
-        {
-          appId: app.id,
-          country: 'tr',
-          field: 'subtitle',
-          before: 'Aksiyon',
-          after: 'Hex',
-        },
-      ],
+        { before: 'Action', after: 'Hex', capturedAt: at(1) },
+        { before: 'Hex', after: 'Casual', capturedAt: at(2) },
+        { before: 'Casual', after: 'Action', capturedAt: at(3) },
+        { before: 'Action', after: 'Aksiyon', capturedAt: at(4) },
+        { field: 'title', before: 'Action', after: 'Hex', capturedAt: at(1) },
+        { country: 'tr', before: 'Aksiyon', after: 'Hex', capturedAt: at(1) },
+      ].map((event) => ({ appId: app.id, field: 'subtitle', ...event })),
     });
 
     await runMigration();
 
-    const events = await prisma.changeEvent.findMany({
-      select: { country: true, field: true, before: true, after: true },
-      orderBy: [
-        { country: 'asc' },
-        { field: 'asc' },
-        { before: 'asc' },
-        { after: 'asc' },
-      ],
-    });
-    expect(events).toEqual([
+    await expect(recordedEvents()).resolves.toEqual([
       { country: 'tr', field: 'subtitle', before: null, after: 'Hex' },
-      { country: null, field: 'subtitle', before: 'Aksiyon', after: 'Hex' },
-      { country: null, field: 'subtitle', before: 'Hex', after: 'Spin' },
       { country: null, field: 'subtitle', before: 'Hex', after: null },
+      { country: null, field: 'subtitle', before: null, after: 'Aksiyon' },
       { country: null, field: 'subtitle', before: null, after: 'Hex' },
       { country: null, field: 'title', before: 'Action', after: 'Hex' },
+    ]);
+  });
+
+  it('keeps a recorded subtitle that is a genre only of another snapshot of the listing', async () => {
+    const app = await seedApp();
+    await snapshotOf(
+      app.id,
+      'Puzzle',
+      { genres: ['Games', 'Strategy'] },
+      { capturedAt: at(0) },
+    );
+    await snapshotOf(
+      app.id,
+      'Strategy',
+      { genres: ['Games', 'Puzzle'] },
+      { capturedAt: at(1) },
+    );
+    await prisma.changeEvent.create({
+      data: {
+        appId: app.id,
+        field: 'subtitle',
+        before: 'Puzzle',
+        after: 'Strategy',
+        capturedAt: at(1),
+      },
+    });
+
+    await runMigration();
+
+    await expect(recordedEvents()).resolves.toEqual([
+      { country: null, field: 'subtitle', before: 'Puzzle', after: 'Strategy' },
+    ]);
+  });
+
+  it('keeps a recorded subtitle whose source snapshot is no longer stored', async () => {
+    const app = await seedApp();
+    await snapshotOf(app.id, 'Hex', GAME, { capturedAt: at(1) });
+    await prisma.changeEvent.create({
+      data: {
+        appId: app.id,
+        field: 'subtitle',
+        before: 'Action',
+        after: 'Hex',
+        capturedAt: at(1),
+      },
+    });
+
+    await runMigration();
+
+    await expect(recordedEvents()).resolves.toEqual([
+      { country: null, field: 'subtitle', before: 'Action', after: 'Hex' },
     ]);
   });
 });
