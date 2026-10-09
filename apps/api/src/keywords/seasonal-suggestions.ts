@@ -3,6 +3,7 @@ import {
   KeywordSuggestion,
   normalizeText,
   SEASONAL_LEAD_DAYS,
+  seasonalKeywords,
 } from '@asobeast/shared';
 
 export function seasonalSuggestions(
@@ -13,7 +14,7 @@ export function seasonalSuggestions(
   const suggestions: KeywordSuggestion[] = [];
   const seen = new Set<string>();
   for (const event of activeSeasonalEvents(now, SEASONAL_LEAD_DAYS)) {
-    for (const keyword of event.keywords) {
+    for (const keyword of seasonalKeywords(event, now)) {
       const text = normalizeText(keyword);
       if (!text || trackedTexts.has(text) || seen.has(text)) {
         continue;

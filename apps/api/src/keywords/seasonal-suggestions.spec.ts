@@ -1,7 +1,7 @@
 import { seasonalSuggestions } from './seasonal-suggestions';
 
-const utc = (month: number, day: number): Date =>
-  new Date(Date.UTC(2026, month - 1, day, 12));
+const utc = (month: number, day: number, year = 2026): Date =>
+  new Date(Date.UTC(year, month - 1, day, 12));
 
 const empty = new Set<string>();
 
@@ -34,5 +34,22 @@ describe('seasonalSuggestions', () => {
 
   it('respects the limit', () => {
     expect(seasonalSuggestions(utc(2, 5), empty, 2)).toHaveLength(2);
+  });
+
+  it('names the coming year in the end of year goals keyword', () => {
+    const texts = seasonalSuggestions(utc(12, 20, 2027), empty, 30).map(
+      (item) => item.text,
+    );
+    expect(texts).toContain('goals 2028');
+    expect(texts).not.toContain('goals 2026');
+  });
+
+  it('does not suggest a year keyword the app already tracks', () => {
+    const texts = seasonalSuggestions(
+      utc(12, 20),
+      new Set(['goals 2027']),
+      30,
+    ).map((item) => item.text);
+    expect(texts).not.toContain('goals 2027');
   });
 });

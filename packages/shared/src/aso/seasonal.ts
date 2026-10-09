@@ -9,6 +9,7 @@ export interface SeasonalEvent {
   start: SeasonalDate;
   end: SeasonalDate;
   keywords: string[];
+  nextYearKeywords?: string[];
 }
 
 export const SEASONAL_LEAD_DAYS = 14;
@@ -82,7 +83,8 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'End of Year',
     start: { month: 12, day: 27 },
     end: { month: 12, day: 31 },
-    keywords: ['year review', 'recap', 'goals 2026', 'new year'],
+    keywords: ['year review', 'recap', 'new year'],
+    nextYearKeywords: ['goals'],
   },
 ];
 
@@ -118,4 +120,14 @@ export function activeSeasonalEvents(
   leadDays = 0,
 ): SeasonalEvent[] {
   return SEASONAL_CALENDAR.filter((event) => inWindow(date, event, leadDays));
+}
+
+export function seasonalKeywords(event: SeasonalEvent, date: Date): string[] {
+  const nextYear = date.getUTCFullYear() + 1;
+  return [
+    ...event.keywords,
+    ...(event.nextYearKeywords ?? []).map(
+      (keyword) => `${keyword} ${nextYear}`,
+    ),
+  ];
 }
