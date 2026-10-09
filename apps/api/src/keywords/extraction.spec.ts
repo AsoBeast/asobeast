@@ -666,6 +666,8 @@ describe('extractCandidates', () => {
       ['iOS 17.2 tips', ['ios', 'tips']],
       ['Alarm 10:30 Clock', ['alarm', 'clock']],
       ['3.5mm Jack Tester', ['jack tester', 'jack', 'tester']],
+      ['2.4GHz WiFi Analyzer', ['wifi analyzer', 'wifi', 'analyzer']],
+      ['10,000Songs Player', ['songs player', 'songs', 'player']],
     ])('drops the number in %s', (title, expected) => {
       expect(texts({ title })).toEqual(expected);
     });
@@ -676,6 +678,7 @@ describe('extractCandidates', () => {
       ['3.5インチ液晶', '液晶'],
       ['ダウンロード数1,000万突破 家計簿', '家計簿'],
       ['累计1,000万用户的记账软件', '记账'],
+      ['日本1,000recipes', 'recipes'],
     ])(
       'drops the number in %s and keeps the words around it',
       (title, word) => {

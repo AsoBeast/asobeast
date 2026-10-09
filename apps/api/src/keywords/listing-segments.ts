@@ -11,8 +11,10 @@ const CONTRACTION_SUFFIX = new RegExp(
   String.raw`(?<=\p{L})${APOSTROPHE}(?:ll|re|ve|[sdm])${WORD_END}`,
   'giu',
 );
+const UNIT = String.raw`(?:${LATIN_OR_DIGIT}{1,3}(?!${LATIN_OR_DIGIT}))?`;
+
 const SEGMENT_SEPARATORS = new RegExp(
-  String.raw`[:.,|&]|(?<!${LATIN_OR_DIGIT})\p{Nd}+(?:${NUMBER_JOINER}\p{Nd}+)+${LATIN_OR_DIGIT}*`,
+  String.raw`[:.,|&]|(?<!${LATIN_OR_DIGIT})\p{Nd}+(?:${NUMBER_JOINER}\p{Nd}+)+${UNIT}`,
   'u',
 );
 
