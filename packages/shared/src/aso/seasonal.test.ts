@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { STOREFRONT_LANGUAGES } from '../storefronts/languages';
+
 import {
   activeSeasonalEvents,
   SEASONAL_CALENDAR,
@@ -7,14 +9,14 @@ import {
   seasonalKeywords,
 } from './seasonal';
 
-const ids = (date: Date, leadDays = 0): string[] =>
-  activeSeasonalEvents(date, leadDays).map((event) => event.id);
+const ids = (date: Date, leadDays = 0, country?: string): string[] =>
+  activeSeasonalEvents(date, leadDays, country).map((event) => event.id);
 
 const utc = (month: number, day: number, year = 2026): Date =>
   new Date(Date.UTC(year, month - 1, day, 12));
 
-const keywordsOn = (date: Date): string[] =>
-  activeSeasonalEvents(date, SEASONAL_LEAD_DAYS).flatMap((event) =>
+const keywordsOn = (date: Date, country: string): string[] =>
+  activeSeasonalEvents(date, SEASONAL_LEAD_DAYS, country).flatMap((event) =>
     seasonalKeywords(event, date),
   );
 
@@ -52,24 +54,24 @@ describe('activeSeasonalEvents', () => {
 
 describe('seasonalKeywords', () => {
   it('names the coming year in the end of year goals keyword', () => {
-    expect(keywordsOn(utc(12, 20, 2027))).toContain('goals 2028');
-    expect(keywordsOn(utc(12, 20, 2027))).not.toContain('goals 2026');
+    expect(keywordsOn(utc(12, 20, 2027), 'us')).toContain('goals 2028');
+    expect(keywordsOn(utc(12, 20, 2027), 'us')).not.toContain('goals 2026');
   });
 
   it('starts naming the coming year on the first day of the lead time', () => {
-    expect(keywordsOn(utc(12, 13))).toContain('goals 2027');
-    expect(keywordsOn(utc(12, 12))).not.toContain('goals 2027');
+    expect(keywordsOn(utc(12, 13), 'us')).toContain('goals 2027');
+    expect(keywordsOn(utc(12, 12), 'us')).not.toContain('goals 2027');
   });
 
   it('names the coming year until the last second of the year', () => {
     const lastSecond = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
-    expect(keywordsOn(lastSecond)).toContain('goals 2027');
+    expect(keywordsOn(lastSecond, 'us')).toContain('goals 2027');
   });
 
   it('drops the year keyword once the new year has begun', () => {
     const newYear = new Date(Date.UTC(2027, 0, 1, 0, 0, 0));
-    expect(ids(newYear, SEASONAL_LEAD_DAYS)).not.toContain('end-of-year');
-    expect(keywordsOn(newYear)).not.toContain('goals 2027');
+    expect(ids(newYear, SEASONAL_LEAD_DAYS, 'us')).not.toContain('end-of-year');
+    expect(keywordsOn(newYear, 'us')).not.toContain('goals 2027');
   });
 
   it('keeps a year keyword only on events that sit inside December', () => {
@@ -94,16 +96,16 @@ describe('seasonalKeywords', () => {
 
 describe('lead time across February', () => {
   it('starts the lead time of March events a day later in a leap year', () => {
-    expect(ids(utc(2, 16, 2028), SEASONAL_LEAD_DAYS)).toContain(
+    expect(ids(utc(2, 16, 2028), SEASONAL_LEAD_DAYS, 'us')).toContain(
       'spring-easter',
     );
-    expect(ids(utc(2, 15, 2028), SEASONAL_LEAD_DAYS)).not.toContain(
+    expect(ids(utc(2, 15, 2028), SEASONAL_LEAD_DAYS, 'us')).not.toContain(
       'spring-easter',
     );
-    expect(ids(utc(2, 15, 2027), SEASONAL_LEAD_DAYS)).toContain(
+    expect(ids(utc(2, 15, 2027), SEASONAL_LEAD_DAYS, 'us')).toContain(
       'spring-easter',
     );
-    expect(ids(utc(2, 14, 2027), SEASONAL_LEAD_DAYS)).not.toContain(
+    expect(ids(utc(2, 14, 2027), SEASONAL_LEAD_DAYS, 'us')).not.toContain(
       'spring-easter',
     );
   });
@@ -162,5 +164,70 @@ describe('moveable dates', () => {
 
   it('keeps Easter inside its window in every year', () => {
     expect(yearsMissing('spring-easter', easterSunday)).toEqual([]);
+  });
+});
+
+describe('storefront scope', () => {
+  it('offers Halloween where it is observed', () => {
+    for (const country of ['us', 'ca', 'gb', 'ie', 'au', 'nz']) {
+      expect(ids(utc(10, 9), SEASONAL_LEAD_DAYS, country)).toContain(
+        'halloween',
+      );
+    }
+  });
+
+  it('offers no Halloween in an English storefront that does not observe it', () => {
+    for (const country of ['in', 'sg', 'za', 'ph']) {
+      expect(ids(utc(10, 9), SEASONAL_LEAD_DAYS, country)).not.toContain(
+        'halloween',
+      );
+    }
+  });
+
+  it('offers nothing in a storefront whose language the keywords are not written in', () => {
+    for (const country of ['kr', 'jp', 'de', 'fr', 'sa', 'tw']) {
+      for (let day = 0; day < 365; day += 1) {
+        const date = new Date(Date.UTC(2026, 0, 1 + day, 12));
+        expect(ids(date, SEASONAL_LEAD_DAYS, country)).toEqual([]);
+      }
+    }
+  });
+
+  it('offers nothing for a country that is not a known storefront', () => {
+    expect(ids(utc(12, 20), SEASONAL_LEAD_DAYS, 'zz')).toEqual([]);
+  });
+
+  it("keeps Mother's Day in May out of the United Kingdom and Ireland", () => {
+    for (const country of ['gb', 'ie']) {
+      expect(ids(utc(5, 5), SEASONAL_LEAD_DAYS, country)).not.toContain(
+        'mothers-day',
+      );
+    }
+    expect(ids(utc(5, 5), SEASONAL_LEAD_DAYS, 'us')).toContain('mothers-day');
+  });
+
+  it('keeps the northern seasons out of the southern hemisphere', () => {
+    for (const country of ['au', 'nz', 'za']) {
+      expect(ids(utc(7, 20), SEASONAL_LEAD_DAYS, country)).not.toContain(
+        'summer',
+      );
+      expect(ids(utc(8, 1), SEASONAL_LEAD_DAYS, country)).not.toContain(
+        'back-to-school',
+      );
+    }
+  });
+
+  it('applies every event to all storefronts when no country is given', () => {
+    expect(ids(utc(10, 9))).toContain('halloween');
+    expect(ids(utc(12, 20), SEASONAL_LEAD_DAYS)).toContain('end-of-year');
+  });
+
+  it('lists only English storefronts, because every keyword is English', () => {
+    for (const event of SEASONAL_CALENDAR) {
+      expect(event.storefronts.length).toBeGreaterThan(0);
+      for (const country of event.storefronts) {
+        expect(STOREFRONT_LANGUAGES[country]).toBe('en');
+      }
+    }
   });
 });

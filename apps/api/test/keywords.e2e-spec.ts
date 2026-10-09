@@ -828,6 +828,17 @@ describe('KeywordsController (e2e)', () => {
     expect(timer?.usedByCount).toBe(2);
   });
 
+  it('answers an empty seasonal list for a storefront that observes none of the events', async () => {
+    const id = await importApp();
+
+    const response = await api
+      .get(`/apps/${id}/keywords/suggestions`)
+      .query({ strategy: 'seasonal', country: 'kr' })
+      .expect(200);
+
+    expect(response.body).toEqual([]);
+  });
+
   it('mines ranked untracked phrases from stored reviews', async () => {
     const id = await importApp();
     await prisma.review.createMany({

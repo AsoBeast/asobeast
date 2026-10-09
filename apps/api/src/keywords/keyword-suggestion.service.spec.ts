@@ -353,4 +353,25 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
     expect(texts).toContain('goals 2028');
     expect(texts).not.toContain('goals 2026');
   });
+
+  it('offers no Halloween keywords to a Google Play app in South Korea', async () => {
+    await expect(
+      textsOn('2026-10-09', { country: 'kr', store: Store.GOOGLE_PLAY }),
+    ).resolves.toEqual([]);
+  });
+
+  it('judges the storefront of the country query, not the home storefront', async () => {
+    await expect(
+      textsOn('2026-10-09', { country: 'kr' }, 'us'),
+    ).resolves.toContain('halloween');
+    await expect(
+      textsOn('2026-10-09', { country: 'us' }, 'kr'),
+    ).resolves.toEqual([]);
+  });
+
+  it('offers Halloween keywords in an English storefront that observes it', async () => {
+    await expect(textsOn('2026-10-09', { country: 'gb' })).resolves.toEqual(
+      expect.arrayContaining(['halloween', 'scary']),
+    );
+  });
 });
