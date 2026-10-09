@@ -607,7 +607,7 @@ export const APP_1_CATEGORY_RANKS: CategoryRankSeries = {
 };
 
 export const APP_1_REVIEWS: ReviewList = {
-  total: 4,
+  total: 5,
   versions: ["3.4.1", "3.4.0"],
   reviews: [
     {
@@ -649,6 +649,16 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "",
       version: "3.4.1",
       reviewedAt: utcTimestampDaysAgo(6),
+    },
+    {
+      id: "rev-5",
+      reviewId: "store-rev-5",
+      userName: "Robin",
+      score: 4,
+      title: "Fine",
+      text: " \n ",
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(7),
     },
   ],
 };

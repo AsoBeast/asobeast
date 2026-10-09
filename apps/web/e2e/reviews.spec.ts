@@ -29,15 +29,15 @@ test("a star filter writes to the url and narrows the list", async ({
   await expect(page.getByText("Love the focus timer")).toBeHidden();
 });
 
-test("a rating without text says it has no written review", async ({
+test("a rating without written text says it has no written review", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/reviews?score=4");
 
-  await expect(page.getByRole("article")).toHaveCount(1);
+  await expect(page.getByRole("article")).toHaveCount(2);
   await expect(
     page.getByRole("article").getByText("No written review"),
-  ).toBeVisible();
+  ).toHaveCount(2);
 });
 
 test("a filtered review list says no match, not no data", async ({ page }) => {
