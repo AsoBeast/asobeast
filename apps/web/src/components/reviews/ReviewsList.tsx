@@ -114,7 +114,11 @@ function ReviewCard({ review }: { review: ReviewItem }) {
           <Badge variant="outline">v{review.version}</Badge>
         ) : null}
       </div>
-      <ReviewText text={review.text} />
+      {review.text.length > 0 ? (
+        <ReviewText text={review.text} />
+      ) : (
+        <p className="text-body text-muted-foreground">No written review</p>
+      )}
       <p className="text-xs text-muted-foreground">
         {review.userName ?? "Anonymous"} · {formatDate(review.reviewedAt)}
       </p>
