@@ -6,19 +6,19 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     de del la las el los lo al un una unos unas le les se su sus tu tus te nos
     que qué como cómo cuando cuándo donde dónde para por con sin sobre entre
     desde hasta hacia tras según durante mediante es son ser soy eres somos
-    fue fueron era eran está están estar estoy han hay has muy más menos pero
+    fue fueron eran está están estar estoy han hay has muy más menos pero
     sino aunque porque ni ya también tan este esta estos estas ese esa esos
     esas eso esto aquel aquella cada otro otra otros otras algo algún alguna
     algunos algunas todos toda todas cual cuál cuales quien quién quienes él
     ella ellos ellas tú usted ustedes nosotros vosotros en ha tiene había
-    antes nada sea estaba ti
+    antes nada estaba ti
   `),
   pt: words(`
     de da do das dos em no na nos nas num numa ao aos às um uma uns umas os ou
     mas que se por para pra com sem sobre entre até desde após perante como
     quando onde ele ela eles elas você vocês nós seu sua seus suas teu tua
     nosso nossa nossos nossas este esta estes estas esse essa esses essas isto
-    isso aquilo aquele aquela são foi era ser estar está estão tem têm ter há
+    isso aquilo aquele aquela são foi ser estar está estão tem têm ter há
     já também muito mais menos mesmo cada todos toda todas outro outra outros
     outras pelo pela pelos pelas não só depois quem nem foram tinha havia seja
     qual será fosse dele dela deles delas lhe lhes aqueles aquelas te vos
