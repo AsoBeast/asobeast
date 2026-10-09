@@ -671,6 +671,21 @@ describe('extractCandidates', () => {
     });
 
     it.each([
+      ['1,000万ダウンロード突破の家計簿アプリ', '家計簿'],
+      ['100,000人が使う家計簿', '家計簿'],
+      ['3.5インチ液晶', '液晶'],
+      ['ダウンロード数1,000万突破 家計簿', '家計簿'],
+      ['累计1,000万用户的记账软件', '记账'],
+    ])(
+      'drops the number in %s and keeps the words around it',
+      (title, word) => {
+        const found = texts({ title });
+        expect(found).toContain(word);
+        expect(found.filter((text) => /\d/.test(text))).toEqual([]);
+      },
+    );
+
+    it.each([
       ['2048 Puzzle', ['2048 puzzle', '2048', 'puzzle']],
       [
         '3D Maze 2K25',
