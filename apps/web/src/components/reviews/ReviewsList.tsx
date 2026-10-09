@@ -114,7 +114,7 @@ function ReviewCard({ review }: { review: ReviewItem }) {
           <Badge variant="outline">v{review.version}</Badge>
         ) : null}
       </div>
-      {review.text.length > 0 ? (
+      {review.text.trim() ? (
         <ReviewText text={review.text} />
       ) : (
         <p className="text-body text-muted-foreground">No written review</p>
