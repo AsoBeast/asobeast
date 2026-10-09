@@ -18,6 +18,10 @@ describe('marketLanguages', () => {
     ['it', ['it']],
     ['ca', ['fr']],
     ['jp', ['ja']],
+    ['tr', ['tr']],
+    ['id', ['id']],
+    ['ro', ['ro']],
+    ['cz', ['cs']],
   ])('reads %s as %j', (country, languages) => {
     expect(marketLanguages(country)).toEqual(languages);
   });

@@ -17,12 +17,32 @@ const LEFT_TO_THE_LISTING: Readonly<Record<string, readonly string[]>> = {
   da: ['min', 'os', 'alt', 'dog', 'end', 'go'],
   fi: ['go'],
   pl: ['mój', 'pod', 'one', 'go', 'pro'],
+  tr: ['mi', 'ben', 'go'],
+  id: ['ada', 'saya', 'go'],
+  ro: ['tu', 'meu', 'go'],
+  cs: ['pro', 'ten', 'go'],
 };
 
 describe('FUNCTION_WORDS', () => {
-  it('has a list for each of the eleven languages the store listings are read in', () => {
+  it('has a list for each of the fifteen languages the store listings are read in', () => {
     expect(Object.keys(FUNCTION_WORDS).sort()).toEqual(
-      ['da', 'de', 'es', 'fi', 'fr', 'it', 'nl', 'no', 'pl', 'pt', 'sv'].sort(),
+      [
+        'cs',
+        'da',
+        'de',
+        'es',
+        'fi',
+        'fr',
+        'id',
+        'it',
+        'nl',
+        'no',
+        'pl',
+        'pt',
+        'ro',
+        'sv',
+        'tr',
+      ].sort(),
     );
   });
 
@@ -63,6 +83,10 @@ describe('functionWordTest', () => {
     ['da', ['og', 'det', 'til', 'af', 'på', 'ikke']],
     ['fi', ['ja', 'että', 'tai', 'mutta', 'ei', 'kanssa']],
     ['pl', ['dla', 'na', 'do', 'się', 'nie', 'jest', 'oraz']],
+    ['tr', ['ve', 'ile', 'için', 'bir', 'bu']],
+    ['id', ['yang', 'dan', 'di', 'untuk', 'dengan']],
+    ['ro', ['și', 'şi', 'sau', 'pentru', 'cu']],
+    ['cs', ['se', 'je', 'ale', 'nebo', 'při']],
   ])('knows the function words of %s', (language, words) => {
     const isFunctionWord = functionWordTest([language]);
 

@@ -115,6 +115,28 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     niego niej niemu nigdy nim nimi niż około ponieważ sobie tak taka taki
     takie także tam temu teraz wam was wiele więc wtedy właśnie żeby
   `),
+  tr: words(`
+    ve ile için bir bu şu da de ki mı mu mü ne ama fakat çok daha en gibi
+    kadar veya ya hem her bütün tüm bazı olarak olan ise değil var yok biz siz
+    onlar nasıl neden hangi
+  `),
+  id: words(`
+    yang dan di ke dari untuk dengan pada dalam ini itu atau juga akan adalah
+    oleh sebagai karena agar kami kita mereka dia anda kamu sudah telah belum
+    tidak bukan lebih sangat semua setiap dapat bisa harus
+  `),
+  ro: words(`
+    și şi sau de la în pe cu din pentru prin spre către un niște cel cea cei
+    cele acest această acești aceste acel acea ce care cum când unde că dacă
+    dar însă nu mai foarte tot toate toți fi este sunt fost va vor au avea noi
+    voi lui lor
+  `),
+  cs: words(`
+    se si je jsou byl byla bylo být bude ale nebo či že jak když protože který
+    která které kteří tento toto tyto on ona vy oni jeho její náš váš jejich
+    při před přes mezi bez podle také jen již ještě velmi více všechno všichni
+    každý na do od po za ze ve
+  `),
 };
 
 export function functionWordTest(

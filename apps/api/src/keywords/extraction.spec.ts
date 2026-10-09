@@ -266,6 +266,46 @@ describe('extractCandidates', () => {
         gone: ['dell', 'sull'],
         kept: ['meteo', 'previsioni italia europa'],
       },
+      {
+        name: 'Trendyol, turkish storefront',
+        languages: ['tr'],
+        input: {
+          title: 'Trendyol',
+          summary: 'Alışverişin en kolay ve güvenli yolu',
+        },
+        gone: ['en', 've'],
+        kept: ['trendyol', 'kolay güvenli yolu', 'alışverişin'],
+      },
+      {
+        name: 'Tokopedia, indonesian storefront',
+        languages: ['id'],
+        input: {
+          title: 'Tokopedia',
+          summary: 'Belanja online untuk semua kebutuhan dan promo',
+        },
+        gone: ['untuk', 'semua', 'dan'],
+        kept: ['tokopedia', 'belanja online', 'kebutuhan promo'],
+      },
+      {
+        name: 'eMAG, romanian storefront',
+        languages: ['ro'],
+        input: {
+          title: 'eMAG',
+          summary: 'Cumpărături online pentru toată familia și casa',
+        },
+        gone: ['pentru', 'și'],
+        kept: ['emag', 'cumpărături online', 'toată familia casa'],
+      },
+      {
+        name: 'Mapy, czech storefront',
+        languages: ['cs'],
+        input: {
+          title: 'Mapy.cz',
+          summary: 'Plánování cesty při jízdě na kole',
+        },
+        gone: ['při', 'na'],
+        kept: ['mapy', 'plánování cesty', 'jízdě kole'],
+      },
     ])('$name', ({ input, languages, gone, kept }) => {
       const found = texts(input, languages);
 
