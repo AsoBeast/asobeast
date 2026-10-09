@@ -97,6 +97,21 @@ describe('wordGroups', () => {
     ]);
   });
 
+  it('joins a piece of two characters or fewer to the katakana after it', () => {
+    expect(wordGroups('プリティーダービー')).toEqual([
+      { tokens: ['プリティー', 'ダービー'], joiner: '', startsChunk: true },
+    ]);
+  });
+
+  it('keeps a two character katakana word apart from the word after it', () => {
+    expect(wordGroups('ヨガレッスン')).toEqual([
+      { tokens: ['ヨガ', 'レッスン'], joiner: '', startsChunk: true },
+    ]);
+    expect(wordGroups('ピザデリバリー')).toEqual([
+      { tokens: ['ピザ', 'デリバリー'], joiner: '', startsChunk: true },
+    ]);
+  });
+
   it('puts latin and spaceless words in separate groups', () => {
     expect(wordGroups('Photo Editor 写真加工')).toEqual([
       { tokens: ['photo', 'editor'], joiner: ' ', startsChunk: false },

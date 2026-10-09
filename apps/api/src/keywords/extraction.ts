@@ -1,6 +1,7 @@
 import { countChars } from '@asobeast/shared';
 import { WIDE_CHARACTER } from '../common/text/scripts';
 import { isExtractionStopword } from './extraction-stopwords';
+import { listingSegments } from './listing-segments';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
 
@@ -31,7 +32,6 @@ interface RankedCandidate extends Candidate {
 const MIN_TOKEN_LENGTH = 2;
 const MAX_NGRAM = 3;
 const MAX_CANDIDATES = 60;
-const SEGMENT_SEPARATORS = /[:.,|&]/;
 const SPACELESS_PHRASE_MAX_WIDTH = 20;
 
 const graphemes = new Intl.Segmenter('en', { granularity: 'grapheme' });
@@ -89,7 +89,7 @@ function* ngrams(
 }
 
 function* fieldGrams(text: string): Generator<Gram> {
-  for (const segment of text.split(SEGMENT_SEPARATORS)) {
+  for (const segment of listingSegments(text)) {
     for (const group of wordGroups(segment)) {
       for (const [index, tokens] of usableRuns(group).entries()) {
         yield* ngrams(tokens, group.joiner, group.startsChunk && index === 0);
