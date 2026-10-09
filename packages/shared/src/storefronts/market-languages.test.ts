@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { marketLanguages } from './market-languages';
+import { localizationLanguage, marketLanguages } from './market-languages';
 
 describe('marketLanguages', () => {
   it.each([
@@ -53,5 +53,15 @@ describe('marketLanguages', () => {
 
   it('reads a country outside both tables as english', () => {
     expect(marketLanguages('zz')).toEqual([]);
+  });
+});
+
+describe('localizationLanguage', () => {
+  it.each([
+    ['fr-CA', 'fr'],
+    ['zh-Hant', 'zh'],
+    ['de', 'de'],
+  ])('reads %s as %s', (localization, language) => {
+    expect(localizationLanguage(localization)).toBe(language);
   });
 });

@@ -7,17 +7,21 @@ import { storefrontLanguage } from './languages';
 
 const ENGLISH = 'en';
 
-const languageOf = (localization: string): string => localization.split('-')[0];
+export const localizationLanguage = (localization: string): string =>
+  localization.split('-')[0];
 
 function localizationsRead(country: string): readonly AppStoreLocalization[] {
   const localizations = storefrontLocalizations(country);
-  if (localizations === null || languageOf(localizations.primary) === ENGLISH) {
+  if (
+    localizations === null ||
+    localizationLanguage(localizations.primary) === ENGLISH
+  ) {
     return nativeLocalizations(country);
   }
   return [
     localizations.primary,
     ...localizations.additional.filter(
-      (localization) => languageOf(localization) !== ENGLISH,
+      (localization) => localizationLanguage(localization) !== ENGLISH,
     ),
   ];
 }
@@ -26,7 +30,7 @@ export function marketLanguages(country: string): readonly string[] {
   const own = storefrontLanguage(country);
   return [
     ...new Set([
-      ...localizationsRead(country).map(languageOf),
+      ...localizationsRead(country).map(localizationLanguage),
       ...(own === null || own === ENGLISH ? [] : [own]),
     ]),
   ];

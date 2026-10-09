@@ -4,7 +4,7 @@ import { GOOGLE_PLAY_STOREFRONTS } from './google-play';
 import { STOREFRONT_LANGUAGES, storefrontLanguage } from './languages';
 
 export * from './app-store-localizations';
-export { marketLanguages } from './market-languages';
+export { localizationLanguage, marketLanguages } from './market-languages';
 
 export {
   APP_STORE_STOREFRONTS,
