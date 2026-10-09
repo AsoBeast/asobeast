@@ -146,6 +146,45 @@ describe('AppStoreProvider', () => {
     expect(result.subtitleUnavailable).toBe(false);
   });
 
+  it('reads no subtitle when a game page prints its subgenre in the subtitle slot', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 549027629,
+      title: 'Super Hexagon',
+      description: 'desc',
+      genres: ['Games', 'Action', 'Casual'],
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>Super Hexagon</h1><p class="subtitle svelte-kps97o">Action</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('549027629', 'us');
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(false);
+  });
+
+  it('keeps the real subtitle of a game', async () => {
+    const app = jest.fn().mockResolvedValue({
+      id: 728293409,
+      title: 'Monument Valley',
+      description: 'desc',
+      genres: ['Games', 'Puzzle', 'Entertainment', 'Adventure'],
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>Monument Valley</h1><p class="subtitle svelte-kps97o">A Quest for Forgiveness</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('728293409', 'us');
+
+    expect(result.subtitle).toBe('A Quest for Forgiveness');
+  });
+
   it('leaves subtitle undefined when the product page has none', async () => {
     const app = jest.fn().mockResolvedValue({
       id: 1,
@@ -555,6 +594,24 @@ describe('AppStoreProvider localized listings', () => {
     const provider = new AppStoreProvider(makeLib({ app, page }));
 
     const result = await provider.getApp('1', 'no', 'no');
+
+    expect(result.subtitle).toBeUndefined();
+    expect(result.subtitleUnavailable).toBe(false);
+  });
+
+  it('reads no subtitle when a localized game page prints a localized subgenre', async () => {
+    const app = jest.fn().mockResolvedValue({
+      ...listing,
+      genres: ['Oyunlar', 'Aksiyon', 'Gündelik'],
+    });
+    const page = jest
+      .fn()
+      .mockResolvedValue(
+        '<h1>Super Hexagon</h1><p class="subtitle">Aksiyon</p>',
+      );
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const result = await provider.getApp('1', 'tr', 'tr');
 
     expect(result.subtitle).toBeUndefined();
     expect(result.subtitleUnavailable).toBe(false);
