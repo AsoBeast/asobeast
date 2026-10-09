@@ -58,6 +58,10 @@ describe('ReviewsController (e2e)', () => {
     );
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await prisma.$disconnect();
     await obliterateQueues(app);
@@ -151,7 +155,6 @@ describe('ReviewsController (e2e)', () => {
     expect(rows[0]).toMatchObject({ reviewId: 'g1', repliedAt: replied });
     expect(rows[0].replyCheckedAt).not.toBeNull();
     expect(rows[1]).toMatchObject({ reviewId: 'g2', repliedAt: null });
-    jest.restoreAllMocks();
   });
 
   it('stores a Google Play review that has a rating and no text next to the others', async () => {
