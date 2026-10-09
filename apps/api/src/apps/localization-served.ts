@@ -19,7 +19,7 @@ const textSignature = (store: Store, listing: ComparableListing): string =>
     (screenshotKeys(store, listing.raw) ?? []).map((shot) => shot.key),
   ]);
 
-const hasOwnSubtitleOf = (
+const localizedSubtitleDiffers = (
   store: Store,
   fallback: ComparableListing,
   localized: ComparableListing,
@@ -39,6 +39,7 @@ export function servesLocalization(
 ): boolean {
   return (
     textSignature(store, fallback) !== textSignature(store, localized) ||
-    (subtitleWasRead(fallback) && hasOwnSubtitleOf(store, fallback, localized))
+    (subtitleWasRead(fallback) &&
+      localizedSubtitleDiffers(store, fallback, localized))
   );
 }
