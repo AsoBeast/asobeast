@@ -172,7 +172,7 @@ export class GooglePlayProvider implements StoreProvider {
       userName: review.userName,
       score: review.score,
       title: review.title ?? undefined,
-      text: review.text,
+      text: review.text ?? '',
       version: review.version ?? undefined,
       updatedAt: new Date(review.date),
       repliedAt: replyDate(review.replyDate),

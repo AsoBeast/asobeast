@@ -20,6 +20,19 @@ describe('mineReviewPhrases', () => {
     expect(counts).toEqual([...counts].sort((a, b) => b - a));
   });
 
+  it('mines nothing from a rating only review and still counts the others', () => {
+    const suggestions = mineReviewPhrases(
+      [
+        { title: null, text: '' },
+        { title: null, text: 'dark mode please' },
+      ],
+      new Set(),
+    );
+
+    expect(suggestions.map((item) => item.text)).toContain('dark mode');
+    expect(suggestions.every((item) => item.usedByCount === 1)).toBe(true);
+  });
+
   it('counts a phrase once per review even if it repeats', () => {
     const suggestions = mineReviewPhrases(
       [{ title: 'widget widget', text: 'widget everywhere' }],

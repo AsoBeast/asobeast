@@ -11,6 +11,7 @@ import {
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { ReviewsService } from '../src/reviews/reviews.service';
+import { GOOGLE_PLAY_LIB } from '../src/store-providers/google-play.lib';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
@@ -22,6 +23,7 @@ describe('ReviewsController (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let api: Awaited<ReturnType<typeof ownerAgent>>;
+  const playReviews = jest.fn();
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -32,7 +34,10 @@ describe('ReviewsController (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(GOOGLE_PLAY_LIB)
+      .useValue({ reviews: playReviews })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     useCookies(app);
@@ -147,6 +152,56 @@ describe('ReviewsController (e2e)', () => {
     expect(rows[0].replyCheckedAt).not.toBeNull();
     expect(rows[1]).toMatchObject({ reviewId: 'g2', repliedAt: null });
     jest.restoreAllMocks();
+  });
+
+  it('stores a Google Play review that has a rating and no text next to the others', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.GOOGLE_PLAY,
+        storeAppId: 'com.maxmpz.audioplayer.unlock',
+        country: 'nl',
+        name: 'Poweramp Full Version Unlocker',
+      },
+    });
+    playReviews.mockResolvedValue({
+      data: [
+        {
+          id: 'with-text',
+          userName: 'Een Google-gebruiker',
+          date: '2026-09-01T10:00:00.000Z',
+          score: 4,
+          title: null,
+          text: 'Works well',
+          version: '3.1',
+        },
+        {
+          id: 'rating-only',
+          userName: 'Een Google-gebruiker',
+          date: '2014-02-12T09:59:24.595Z',
+          score: 5,
+          title: null,
+          version: '2-build-26',
+        },
+      ],
+      nextPaginationToken: null,
+    });
+
+    await asWorkspace(app, () =>
+      app
+        .get(ReviewsService)
+        .syncReviews({ appId: created.id, pages: 1, backfill: true }),
+    );
+
+    const response = await api.get(`/apps/${created.id}/reviews`).expect(200);
+    const body = response.body as ReviewList;
+    expect(body.total).toBe(2);
+    expect(
+      body.reviews.map(({ reviewId, text }) => ({ reviewId, text })),
+    ).toEqual([
+      { reviewId: 'with-text', text: 'Works well' },
+      { reviewId: 'rating-only', text: '' },
+    ]);
   });
 
   it('returns a 404 envelope for an unknown app id', async () => {

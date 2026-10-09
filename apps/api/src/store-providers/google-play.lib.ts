@@ -50,8 +50,8 @@ export interface GooglePlayReviewResult {
   userName: string;
   date: string;
   score: number;
-  title: string | null;
-  text: string;
+  title?: string | null;
+  text?: string;
   version?: string | null;
   replyDate?: string | null;
 }
@@ -136,8 +136,7 @@ export const googlePlayLib: GooglePlayLib = {
   suggest: (options) => suggest(overEgress(options)),
   similar: (options) => similar(overEgress(options)),
   list: (options) => list(overEgress(options) as Parameters<typeof list>[0]),
-  reviews: (options) =>
-    reviews(overEgress(options)) as Promise<GooglePlayReviewsPage>,
+  reviews: (options) => reviews(overEgress(options)),
   availability: (options) => availability(overEgress(options)),
   developer: (options) => developer(overEgress(options)),
 };
