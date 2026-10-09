@@ -11,7 +11,7 @@ Reviews give asobeast two things a listing cannot: the words your users actually
 
 Reviews sync as part of the daily pipeline, which starts at `CRON_DAILY` and defaults to 03:00 UTC. Each review is stored once, keyed by the app and the store review id, so re running a sync does not duplicate rows.
 
-A Google Play review can carry a star rating and no text. It is stored like any other review, shows as "No written review" on the reviews page, counts in the star filters and the negative review totals, and sends a `review.negative` alert when its rating is at or below `ALERT_REVIEW_SCORE_MAX`. It contributes nothing to the keyword ideas mined from review text.
+A Google Play review can carry a star rating and no text. It is stored like any other review, shows as "No written review" on the reviews page, counts in the star filters and the negative review totals, and sends a `review.negative` alert that reads "no written review" when its rating is at or below `ALERT_REVIEW_SCORE_MAX`. A review whose text is only white space is shown the same way. It contributes nothing to the keyword ideas mined from review text.
 
 Review sync stays on the home market, like category ranks and the ratings history. See [Countries and markets](/concepts/countries).
 
