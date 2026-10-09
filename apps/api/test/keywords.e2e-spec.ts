@@ -849,11 +849,15 @@ describe('KeywordsController (e2e)', () => {
       .query({ strategy: 'seasonal', country: 'us' })
       .expect(200);
 
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: id },
+      select: { keyword: { select: { text: true } } },
+    });
     expect(response.body).toEqual(
       seasonalSuggestions(
         new Date(),
         'us',
-        new Set(),
+        new Set(tracked.map((row) => row.keyword.text)),
         QUERY_BOUNDS.suggestionsLimit.default,
       ),
     );
