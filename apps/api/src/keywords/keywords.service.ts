@@ -13,7 +13,6 @@ import {
   KeywordSort,
   KeywordUpdateRequest,
   KEYWORD_FIELD_BYTE_LIMIT,
-  marketLanguages,
   parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -22,6 +21,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
+import { listingLanguages } from './listing-languages';
 import { homeListingTexts } from './home-listings';
 import { interleaveDistinct } from './interleave';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
@@ -382,7 +382,7 @@ export class KeywordsService {
         ? ['TITLE', 'DESCRIPTION']
         : ['TITLE', 'SUBTITLE'];
 
-    const languages = marketLanguages(app.country);
+    const languages = listingLanguages(app.store, app.country);
     const candidates = interleaveDistinct(
       listings.map((listing) =>
         extractCandidates(

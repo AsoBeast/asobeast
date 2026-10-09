@@ -11,7 +11,7 @@ const LEFT_TO_THE_LISTING: Readonly<Record<string, readonly string[]>> = {
   fr: ['mon', 'ma', 'mes', 'sans', 'plus', 'été', 'go'],
   de: ['mein', 'man', 'war', 'hat', 'go'],
   it: ['uno', 'io', 'mi', 'vi', 'pro', 'go'],
-  nl: ['mijn', 'ben', 'go'],
+  nl: ['mijn', 'ben', 'nu', 'go'],
   sv: ['min', 'man', 'ur', 'go'],
   no: ['min', 'inn', 'alt', 'go'],
   da: ['min', 'os', 'alt', 'dog', 'end', 'go'],
@@ -22,6 +22,21 @@ const LEFT_TO_THE_LISTING: Readonly<Record<string, readonly string[]>> = {
   ro: ['tu', 'meu', 'go'],
   cs: ['pro', 'ten', 'go'],
 };
+
+const NEVER_A_FUNCTION_WORD: readonly string[] = [
+  'agar',
+  'care',
+  'dig',
+  'elle',
+  'ham',
+  'ho',
+  'io',
+  'men',
+  'mod',
+  'nyt',
+  'ten',
+  'uno',
+];
 
 describe('FUNCTION_WORDS', () => {
   it('has a list for each of the fifteen languages the store listings are read in', () => {
@@ -62,6 +77,15 @@ describe('FUNCTION_WORDS', () => {
     (language, words) => {
       expect(
         words.filter((word) => LEFT_TO_THE_LISTING[language].includes(word)),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(LISTS)(
+    'leaves the english words and brands every storefront searches out of %s',
+    (_, words) => {
+      expect(
+        words.filter((word) => NEVER_A_FUNCTION_WORD.includes(word)),
       ).toEqual([]);
     },
   );

@@ -24,7 +24,7 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     qual será fosse dele dela deles delas lhe lhes aqueles aquelas te vos
   `),
   fr: words(`
-    au aux avec ce ces cette cet dans de des du elle elles en et il ils je la
+    au aux avec ce ces cette cet dans de des du elles en et il ils je la
     le les leur leurs lui mais me moi ne nos notre nous ou par pas pour qu que
     qui sa se ses sur ta te tes toi ton tu un une vos votre vous est sont être
     ont avoir sous chez vers très aussi comme dont où si tout tous toute
@@ -51,7 +51,7 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     sullo sulla sulle sui sugli di da con su per tra fra ed ma se che chi cui
     non più come anche già lui lei noi voi loro ti ci ne tuo tua tuoi tue suo
     sua suoi sue nostro nostra vostro vostra questo questa questi queste
-    quello quella quelli quelle sono sei siamo siete hanno hai ho abbiamo
+    quello quella quelli quelle sono sei siamo siete hanno hai abbiamo
     essere avere molto tutto tutti tutta tutte ogni altro altra altri altre
     perché dove quale quanto quanti quanta quante si ha avete li nostri nostre
     vostri vostre dell nell sull dall quell
@@ -61,36 +61,36 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     ook tot uit door over naar niet nog wel zo dan toch al ik je jij hij ze
     zij we wij jullie ons jouw zijn haar hun uw onze is was waren bent heeft
     hebben had wordt worden kan kunnen moet zal zou wil meer veel alle alles
-    geen niets iets elke andere als hem wat men zich mij daar hoe want nu
+    geen niets iets elke andere als hem wat zich mij daar hoe want
     omdat doen toen zonder dus onder eens hier wie werd altijd doch zelf tegen
     reeds kon iemand geweest
   `),
   sv: words(`
     och det att en ett den denna detta dessa som på med för till av från om
     vid mot under över efter utan genom hos bland mellan inom åt är var vara
-    har hade ha kan ska skulle vill blir blev varit inte ej men eller så då
+    har hade ha kan ska skulle vill blir blev varit inte ej eller så då
     när där här ut upp nu bara även också mycket alla allt någon något några
-    varje jag du han hon vi ni de dem mig dig honom henne oss er din ditt dina
+    varje jag du han hon vi ni de dem mig honom henne oss er din ditt dina
     sin sitt sina vår vårt våra deras hennes hans sig icke kunde vad än sedan
     ju själv hur ingen bli samma vilken sådan blivit dess sådant varför vilka
     vem vilket
   `),
   no: words(`
     og det den dette denne disse et en ett jeg du han hun vi dere de dem meg
-    deg ham henne oss seg din ditt dine sin sitt sine vår vårt våre deres hans
+    deg henne oss seg din ditt dine sin sitt sine vår vårt våre deres hans
     hennes til fra av på med for om ved under over etter før uten mot mellom
     hos gjennom er var vært være har hadde ha kan kunne skal skulle vil ville
-    blir ble bli at som men eller så da når hvor hva hvem hvordan hvorfor hvis
+    blir ble bli at som eller så da når hvor hva hvem hvordan hvorfor hvis
     hvilken ikke ingen noen noe alle mange mer mest også bare kun nå her der
     ut ned selv blitt kom meget samme hvilke hver både enn fordi slik sånn
     blei
   `),
   da: words(`
-    og det den dette denne disse et en jeg du han hun vi de dem mig dig ham
+    og det den dette denne disse et en jeg du han hun vi de dem mig
     hende jer din dit dine sin sit sine vores hans hendes deres til fra af på
-    med for om ved under over efter uden mod mellem hos gennem er var været
+    med for om ved under over efter uden mellem hos gennem er var været
     være har havde have kan kunne skal skulle vil ville bliver blev blive at
-    som men eller så da når hvor hvad hvem hvordan hvorfor hvis ikke ingen
+    som eller så da når hvor hvad hvem hvordan hvorfor hvis ikke ingen
     nogen noget alle mange mere mest også kun nu her der ind ud ned sig jo
     anden meget nogle sådan selv
   `),
@@ -98,7 +98,7 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     ja että tai mutta kun jos niin kuin sekä myös vain jo vielä ei en ole on
     oli ovat olla se sen tämä tuo nämä nuo he hän minä sinä mikä joka jotka
     kuka mitä missä miten kuinka kanssa ilman kautta yli alla päälle jälkeen
-    ennen mukaan koska vaikka sitten nyt tässä siinä sinun minun meidän kaikki
+    ennen mukaan koska vaikka sitten tässä siinä sinun minun meidän kaikki
     jokainen olen olet olemme olette olisi et emme ette eivät hänen te teidän
     heidän ne joten sillä vaan vai itse
   `),
@@ -106,7 +106,7 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
     na do od po za ze przy dla bez nad przed przez między jak to że się nie
     jest są był była było być będzie oraz lub albo ale lecz czy który która
     które którzy jego jej ich twój twoja twoje nasz nasza nasze wasz wasza
-    wasze swój swoja swoje ten ta te tego tej tym tych tylko też już jeszcze
+    wasze swój swoja swoje ta te tego tej tym tych tylko też już jeszcze
     bardzo więcej wszystko wszyscy każdy każda każde ja ty ona my wy oni aby
     ani aż bardziej bo bowiem byli były będą choć cię czyli dlaczego gdy gdyby
     gdzie im inna inne inny innych iż jaki jakie jako jeden jedna jednak jedno
@@ -122,12 +122,12 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   `),
   id: words(`
     yang dan di ke dari untuk dengan pada dalam ini itu atau juga akan adalah
-    oleh sebagai karena agar kami kita mereka dia anda kamu sudah telah belum
+    oleh sebagai karena kami kita mereka dia anda kamu sudah telah belum
     tidak bukan lebih sangat semua setiap dapat bisa harus
   `),
   ro: words(`
     și şi sau de la în pe cu din pentru prin spre către un niște cel cea cei
-    cele acest această acești aceste acel acea ce care cum când unde că dacă
+    cele acest această acești aceste acel acea ce cum când unde că dacă
     dar însă nu mai foarte tot toate toți fi este sunt fost va vor au avea noi
     voi lui lor
   `),
@@ -139,9 +139,9 @@ export const FUNCTION_WORDS: Readonly<Record<string, ReadonlySet<string>>> = {
   `),
 };
 
-export function functionWordTest(
-  languages: readonly string[],
-): (token: string) => boolean {
+export type TokenTest = (token: string) => boolean;
+
+export function functionWordTest(languages: readonly string[]): TokenTest {
   const lists = languages.flatMap((language) =>
     Object.hasOwn(FUNCTION_WORDS, language) ? [FUNCTION_WORDS[language]] : [],
   );

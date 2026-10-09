@@ -1,7 +1,7 @@
 import { countChars } from '@asobeast/shared';
 import { WIDE_CHARACTER } from '../common/text/scripts';
 import { isExtractionStopword } from './extraction-stopwords';
-import { functionWordTest } from './function-words';
+import { functionWordTest, TokenTest } from './function-words';
 import { listingSegments } from './listing-segments';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
@@ -42,8 +42,6 @@ const phraseWidth = (text: string): number =>
     (width, { segment }) => width + (WIDE_CHARACTER.test(segment) ? 2 : 1),
     0,
   );
-
-type TokenTest = (token: string) => boolean;
 
 const usableIn =
   (isFunctionWord: TokenTest): TokenTest =>

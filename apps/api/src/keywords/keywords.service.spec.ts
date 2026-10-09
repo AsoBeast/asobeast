@@ -151,6 +151,27 @@ describe('KeywordsService.syncFromSnapshot', () => {
     );
   });
 
+  it('reads a google play listing in canada as english', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.GOOGLE_PLAY,
+      country: 'ca',
+      isCompetitor: false,
+    });
+    prisma.appSnapshot.findFirst.mockResolvedValue({
+      title: 'LA Fitness Mobile',
+      subtitle: null,
+      summary: null,
+    });
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    expect(data.map((row) => row.text)).toContain('la fitness');
+  });
+
   it('skips the function words of the french localization of a canadian listing', async () => {
     const prisma = buildPrisma();
     prisma.app.findUnique.mockResolvedValue({

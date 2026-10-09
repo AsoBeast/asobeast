@@ -4,7 +4,6 @@ import {
   assertStorefront,
   KeywordSuggestion,
   KeywordSuggestionStrategy,
-  marketLanguages,
   normalizeText,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -13,6 +12,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { extractCandidates } from './extraction';
+import { listingLanguages } from './listing-languages';
 import { reportedSource } from './keyword-field-membership';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { mineReviewPhrases } from './review-mining';
@@ -71,8 +71,8 @@ export class KeywordSuggestionService {
     const tracked = await trackedTexts(this.prisma, appId, market.country);
 
     const languages = {
-      home: marketLanguages(app.country),
-      market: marketLanguages(market.country),
+      home: listingLanguages(app.store, app.country),
+      market: listingLanguages(market.store, market.country),
     };
     const work = () =>
       this.dispatch(appId, strategy, limit, market, tracked, languages);

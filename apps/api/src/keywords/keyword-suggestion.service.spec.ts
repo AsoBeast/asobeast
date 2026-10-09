@@ -291,4 +291,23 @@ describe('KeywordSuggestionService.suggest in a spanish market', () => {
       'quiz',
     ]);
   });
+
+  it('excludes the home title in its own language and reads developer titles in the market asked for', async () => {
+    const developerApps = jest.fn().mockResolvedValue([
+      { storeAppId: '2', title: 'Die Hard Quiz' },
+      { storeAppId: '3', title: 'Juegos Trivia' },
+    ]);
+    const service = buildService(buildPrisma(Store.APP_STORE), {
+      get: jest.fn().mockReturnValue({ developerApps }),
+    });
+
+    const suggestions = await service.suggest('app1', 'developer', 30, 'de');
+
+    expect(developerApps).toHaveBeenCalledWith('1', 'de');
+    expect(suggestions.map(({ text }) => text).sort()).toEqual([
+      'hard',
+      'hard quiz',
+      'quiz',
+    ]);
+  });
 });
