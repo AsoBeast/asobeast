@@ -149,6 +149,24 @@ describe('Native localizations of a listing (e2e)', () => {
     ]);
   });
 
+  it('stores no localization whose page only drops the subtitle', async () => {
+    registry.listings.set('pl:pl', { ...ENGLISH, subtitle: undefined });
+
+    const appId = await importFrom(PL_APP_URL);
+
+    await expect(snapshotsOf(appId)).resolves.toEqual([
+      { country: null, localization: null, title: ENGLISH.title },
+    ]);
+  });
+
+  it('stores the localization whose own subtitle differs from the default', async () => {
+    registry.listings.set('pl:pl', { ...ENGLISH, subtitle: POLISH.subtitle });
+
+    const appId = await importFrom(PL_APP_URL);
+
+    await expect(snapshotsOf(appId)).resolves.toHaveLength(2);
+  });
+
   it('keeps capturing a removed localization and records the change', async () => {
     registry.listings.set('pl:pl', POLISH);
     const appId = await importFrom(PL_APP_URL);
