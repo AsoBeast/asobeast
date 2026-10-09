@@ -42,8 +42,15 @@ const COLLECTION_CONSTANTS: Record<CategoryCollection, string> = {
   grossing: GPLAY_COLLECTIONS.GROSSING,
 };
 
+const REGIONAL_LANGUAGES: ReadonlyMap<string, string> = new Map([
+  ['tw', 'zh-TW'],
+  ['hk', 'zh-HK'],
+]);
+
 export const googlePlayLanguage = (country: string): string =>
-  storefrontLanguage(country) ?? 'en';
+  REGIONAL_LANGUAGES.get(country.toLowerCase()) ??
+  storefrontLanguage(country) ??
+  'en';
 
 const replyDate = (value: string | null | undefined): Date | undefined => {
   const date = value ? new Date(value) : null;

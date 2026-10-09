@@ -11,6 +11,13 @@ describe('storefrontLanguage', () => {
     expect(storefrontLanguage(country)).toBe(language);
   });
 
+  it.each(['tw', 'hk'])(
+    'keeps the bare language zh for %s, which every consumer reads',
+    (country) => {
+      expect(storefrontLanguage(country)).toBe('zh');
+    },
+  );
+
   it('returns null for a country outside the table', () => {
     expect(storefrontLanguage('zz')).toBeNull();
   });
