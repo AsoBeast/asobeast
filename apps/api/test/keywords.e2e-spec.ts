@@ -12,6 +12,7 @@ import {
   KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
   KeywordSuggestion,
+  QUERY_BOUNDS,
   SpiderEnqueueResult,
   SUGGEST_REACH_STATUSES,
   SpiderStatus,
@@ -27,6 +28,7 @@ import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { seasonalSuggestions } from '../src/keywords/seasonal-suggestions';
 import { SpiderService } from '../src/keywords/spider.service';
 import { RankingsService } from '../src/rankings/rankings.service';
 import { ScoringService } from '../src/scoring/scoring.service';
@@ -837,6 +839,24 @@ describe('KeywordsController (e2e)', () => {
       .expect(200);
 
     expect(response.body).toEqual([]);
+  });
+
+  it('answers the seasonal list of the storefront the country query names', async () => {
+    const id = await importApp();
+
+    const response = await api
+      .get(`/apps/${id}/keywords/suggestions`)
+      .query({ strategy: 'seasonal', country: 'us' })
+      .expect(200);
+
+    expect(response.body).toEqual(
+      seasonalSuggestions(
+        new Date(),
+        'us',
+        new Set(),
+        QUERY_BOUNDS.suggestionsLimit.default,
+      ),
+    );
   });
 
   it('mines ranked untracked phrases from stored reviews', async () => {

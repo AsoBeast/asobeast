@@ -1,5 +1,3 @@
-import { STOREFRONT_LANGUAGES } from '../storefronts/languages';
-
 export interface SeasonalDate {
   month: number;
   day: number;
@@ -17,13 +15,30 @@ export interface SeasonalEvent {
 
 export const SEASONAL_LEAD_DAYS = 14;
 
-const ENGLISH_STOREFRONTS: readonly string[] = Object.keys(
-  STOREFRONT_LANGUAGES,
-).filter((country) => STOREFRONT_LANGUAGES[country] === 'en');
-
-const NORTHERN_ENGLISH_STOREFRONTS = ['us', 'ca', 'gb', 'ie'];
-const HALLOWEEN_STOREFRONTS = [...NORTHERN_ENGLISH_STOREFRONTS, 'au', 'nz'];
-const MOTHERS_DAY_STOREFRONTS = [
+const ENGLISH_STOREFRONTS: readonly string[] = [
+  'us',
+  'gb',
+  'au',
+  'ca',
+  'ie',
+  'nz',
+  'in',
+  'ph',
+  'sg',
+  'za',
+];
+const FOUR_SEASON_ENGLISH_STOREFRONTS: readonly string[] = [
+  'us',
+  'ca',
+  'gb',
+  'ie',
+];
+const HALLOWEEN_STOREFRONTS: readonly string[] = [
+  ...FOUR_SEASON_ENGLISH_STOREFRONTS,
+  'au',
+  'nz',
+];
+const MOTHERS_DAY_STOREFRONTS: readonly string[] = [
   'us',
   'ca',
   'au',
@@ -56,7 +71,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Spring / Easter',
     start: { month: 3, day: 1 },
     end: { month: 4, day: 30 },
-    storefronts: NORTHERN_ENGLISH_STOREFRONTS,
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['spring', 'easter', 'refresh', 'clean', 'declutter'],
   },
   {
@@ -72,7 +87,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Summer',
     start: { month: 6, day: 1 },
     end: { month: 8, day: 31 },
-    storefronts: NORTHERN_ENGLISH_STOREFRONTS,
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['summer', 'vacation', 'travel', 'outdoor', 'beach'],
   },
   {
@@ -80,7 +95,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Back to School',
     start: { month: 7, day: 15 },
     end: { month: 9, day: 10 },
-    storefronts: NORTHERN_ENGLISH_STOREFRONTS,
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['school', 'study', 'student', 'homework', 'planner'],
   },
   {
@@ -152,7 +167,8 @@ export function activeSeasonalEvents(
 ): SeasonalEvent[] {
   return SEASONAL_CALENDAR.filter(
     (event) =>
-      (country === undefined || event.storefronts.includes(country)) &&
+      (country === undefined ||
+        event.storefronts.includes(country.toLowerCase())) &&
       inWindow(date, event, leadDays),
   );
 }

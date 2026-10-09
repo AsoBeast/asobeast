@@ -64,7 +64,7 @@ describe('seasonalKeywords', () => {
   });
 
   it('names the coming year until the last second of the year', () => {
-    const lastSecond = new Date(Date.UTC(2026, 11, 31, 23, 59, 59));
+    const lastSecond = new Date(Date.UTC(2026, 11, 31, 23, 59, 59, 999));
     expect(keywordsOn(lastSecond, 'us')).toContain('goals 2027');
   });
 
@@ -191,6 +191,10 @@ describe('storefront scope', () => {
         expect(ids(date, SEASONAL_LEAD_DAYS, country)).toEqual([]);
       }
     }
+  });
+
+  it('reads a country code in any case', () => {
+    expect(ids(utc(10, 9), SEASONAL_LEAD_DAYS, 'GB')).toContain('halloween');
   });
 
   it('offers nothing for a country that is not a known storefront', () => {
