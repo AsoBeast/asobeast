@@ -63,6 +63,311 @@ describe('extractCandidates', () => {
     ]);
   });
 
+  describe('function words of the listing language', () => {
+    const texts = (
+      input: Parameters<typeof extractCandidates>[0],
+      languages: readonly string[],
+    ): string[] =>
+      extractCandidates(input, languages).map((candidate) => candidate.text);
+
+    const wordsOf = (found: string[]): string[] =>
+      found.flatMap((text) => text.split(' '));
+
+    it('keeps the words of a spanish google play title and short description', () => {
+      expect(
+        extractCandidates(
+          {
+            title: 'Preguntados: Juegos de Trivia',
+            summary:
+              'Juegos para aumentar tu iq: quiz de preguntas gratis para amigos y familia',
+          },
+          ['es'],
+        ),
+      ).toEqual([
+        { text: 'juegos trivia', source: 'TITLE', weight: 3 },
+        { text: 'preguntados', source: 'TITLE', weight: 3 },
+        { text: 'juegos', source: 'TITLE', weight: 3 },
+        { text: 'trivia', source: 'TITLE', weight: 3 },
+        { text: 'juegos aumentar iq', source: 'DESCRIPTION', weight: 1 },
+        { text: 'quiz preguntas gratis', source: 'DESCRIPTION', weight: 1 },
+        { text: 'preguntas gratis amigos', source: 'DESCRIPTION', weight: 1 },
+        { text: 'gratis amigos familia', source: 'DESCRIPTION', weight: 1 },
+        { text: 'juegos aumentar', source: 'DESCRIPTION', weight: 1 },
+        { text: 'aumentar iq', source: 'DESCRIPTION', weight: 1 },
+        { text: 'quiz preguntas', source: 'DESCRIPTION', weight: 1 },
+        { text: 'preguntas gratis', source: 'DESCRIPTION', weight: 1 },
+        { text: 'gratis amigos', source: 'DESCRIPTION', weight: 1 },
+        { text: 'amigos familia', source: 'DESCRIPTION', weight: 1 },
+        { text: 'aumentar', source: 'DESCRIPTION', weight: 1 },
+        { text: 'iq', source: 'DESCRIPTION', weight: 1 },
+        { text: 'quiz', source: 'DESCRIPTION', weight: 1 },
+        { text: 'preguntas', source: 'DESCRIPTION', weight: 1 },
+        { text: 'gratis', source: 'DESCRIPTION', weight: 1 },
+        { text: 'amigos', source: 'DESCRIPTION', weight: 1 },
+        { text: 'familia', source: 'DESCRIPTION', weight: 1 },
+      ]);
+    });
+
+    it.each([
+      {
+        name: 'Pokémon GO, google play mx',
+        languages: ['es'],
+        input: {
+          title: 'Pokémon GO',
+          summary: 'Participa en la GO Battle League en esta aventura',
+        },
+        gone: ['en', 'la', 'esta'],
+        kept: ['pokémon go', 'participa', 'battle league', 'aventura'],
+      },
+      {
+        name: 'Free Fire, google play br',
+        languages: ['pt'],
+        input: {
+          title: 'Free Fire x NARUTO SHIPPUDEN',
+          summary: 'Em 10 minutos pra sobreviver',
+        },
+        gone: ['em', 'pra'],
+        kept: ['minutos', 'sobreviver', 'fire naruto shippuden'],
+      },
+      {
+        name: 'Candy Crush Saga, google play se',
+        languages: ['sv'],
+        input: {
+          title: 'Candy Crush Saga',
+          summary: 'Det läckraste spelet just nu!',
+        },
+        gone: ['det', 'nu'],
+        kept: ['candy crush saga', 'läckraste spelet', 'spelet'],
+      },
+      {
+        name: 'Hill Climb Racing, google play no',
+        languages: ['no'],
+        input: {
+          title: 'Hill Climb Racing',
+          summary:
+            'Kjør motbakke og ta seieren i dette fysikkbaserte bilspillet',
+        },
+        gone: ['og', 'i', 'dette'],
+        kept: ['motbakke', 'seieren', 'fysikkbaserte bilspillet'],
+      },
+      {
+        name: 'Clash of Clans, google play fi',
+        languages: ['fi'],
+        input: { title: 'Clash of Clans', summary: 'Luo klaani ja kilpaile' },
+        gone: ['ja'],
+        kept: ['luo klaani', 'klaani', 'kilpaile'],
+      },
+      {
+        name: 'Poweramp, google play nl',
+        languages: ['nl'],
+        input: {
+          title: 'Poweramp Full Version Unlocker',
+          summary: 'Music player voor Android',
+        },
+        gone: ['voor'],
+        kept: ['music player', 'android', 'poweramp full version'],
+      },
+      {
+        name: 'Pinterest, google play fr',
+        languages: ['fr'],
+        input: { title: 'Pinterest', summary: 'La destination de vos idées' },
+        gone: ['la', 'de', 'vos'],
+        kept: ['destination idées', 'destination', 'idées'],
+      },
+      {
+        name: 'Wikipedia, google play at',
+        languages: ['de'],
+        input: { title: 'Wikipedia', summary: 'Wikipedia für Android' },
+        gone: ['für'],
+        kept: ['wikipedia', 'wikipedia android'],
+      },
+      {
+        name: 'SBB Mobile, google play ch',
+        languages: ['de', 'fr', 'it'],
+        input: {
+          title: 'SBB Mobile',
+          summary: 'Ihr Fahrplan für den ganzen Tag',
+        },
+        gone: ['ihr', 'für', 'den'],
+        kept: ['sbb mobile', 'fahrplan', 'ganzen tag'],
+      },
+      {
+        name: 'Booksy, google play pl',
+        languages: ['pl'],
+        input: { title: 'Booksy dla Klientów' },
+        gone: ['dla'],
+        kept: ['booksy klientów', 'booksy', 'klientów'],
+      },
+      {
+        name: 'Nequi, google play co',
+        languages: ['es'],
+        input: {
+          title: 'Nequi Colombia',
+          summary: 'Te damos la bienvenida a un nuevo banco',
+        },
+        gone: ['te', 'la', 'un'],
+        kept: ['damos bienvenida', 'nuevo', 'banco'],
+      },
+      {
+        name: 'BBVA México, app store mx',
+        languages: ['es'],
+        input: {
+          title: 'BBVA México',
+          subtitle: 'Tus finanzas desde el móvil',
+        },
+        gone: ['tus', 'desde', 'el'],
+        kept: ['bbva méxico', 'finanzas móvil', 'finanzas', 'móvil'],
+      },
+      {
+        name: 'Crave, app store ca',
+        languages: ['fr'],
+        input: { title: 'Crave', subtitle: 'Séries, films et plus encore' },
+        gone: ['et'],
+        kept: ['crave', 'séries', 'films'],
+      },
+      {
+        name: 'DRTV, app store dk',
+        languages: ['da'],
+        input: { title: 'DRTV', subtitle: 'Programmer og kanaler' },
+        gone: ['og'],
+        kept: ['drtv', 'programmer kanaler', 'programmer', 'kanaler'],
+      },
+      {
+        name: 'Mi Argentina, app store ar',
+        languages: ['es'],
+        input: {
+          title: 'Mi Argentina',
+          subtitle: 'Documentos digital del ciudadano',
+        },
+        gone: ['del'],
+        kept: ['mi argentina', 'documentos digital ciudadano', 'ciudadano'],
+      },
+      {
+        name: 'IO, app store it',
+        languages: ['it'],
+        input: { title: 'IO', subtitle: "L'app dei servizi pubblici" },
+        gone: ['dei', 'app'],
+        kept: ['io', 'servizi pubblici', 'servizi', 'pubblici'],
+      },
+      {
+        name: "French elision qu'il, app store ca",
+        languages: ['fr'],
+        input: { title: 'Ma Banque', subtitle: "Tout ce qu'il vous faut" },
+        gone: ['qu', 'il', 'vous', 'ce', 'tout'],
+        kept: ['banque', 'faut'],
+      },
+      {
+        name: "Italian elision dell'Italia, app store it",
+        languages: ['it'],
+        input: {
+          title: 'Meteo',
+          subtitle: "Previsioni dell'Italia e sull'Europa",
+        },
+        gone: ['dell', 'sull'],
+        kept: ['meteo', 'previsioni italia europa'],
+      },
+    ])('$name', ({ input, languages, gone, kept }) => {
+      const found = texts(input, languages);
+
+      expect(wordsOf(found).filter((word) => gone.includes(word))).toEqual([]);
+      expect(found).toEqual(expect.arrayContaining(kept));
+    });
+
+    it('removes an english contraction and the function words of the market together', () => {
+      expect(
+        texts(
+          {
+            title: "Don't Starve",
+            summary: "Juegos de supervivencia, it's fun",
+          },
+          ['es'],
+        ),
+      ).toEqual([
+        'starve',
+        'juegos supervivencia',
+        'juegos',
+        'supervivencia',
+        'fun',
+      ]);
+    });
+
+    it('applies the function words of a language only to the markets that read it', () => {
+      expect(texts({ title: 'Die Hard Quiz' }, [])).toContain('die hard quiz');
+      expect(texts({ title: 'Die Hard Quiz' }, ['es'])).toContain(
+        'die hard quiz',
+      );
+      expect(texts({ title: 'Die Hard Quiz' }, ['de'])).toEqual([
+        'hard quiz',
+        'hard',
+        'quiz',
+      ]);
+      expect(texts({ title: 'Con la man' }, [])).toContain('con la man');
+    });
+
+    it('reads every language of a market that has several', () => {
+      expect(
+        texts({ title: 'Billets pour Zürich', summary: 'Per il treno' }, [
+          'de',
+          'fr',
+          'it',
+        ]),
+      ).toEqual(['billets zürich', 'billets', 'zürich', 'treno']);
+    });
+
+    it('keeps english stopwords in every market', () => {
+      expect(texts({ title: 'Habit Tracker for Kids' }, ['es'])).toEqual(
+        texts({ title: 'Habit Tracker for Kids' }, []),
+      );
+      expect(texts({ title: 'Juegos for Kids' }, ['es'])).toEqual([
+        'juegos kids',
+        'juegos',
+        'kids',
+      ]);
+    });
+
+    it('ignores a language without a list', () => {
+      expect(texts({ title: 'Mapa de Praha' }, ['xx'])).toEqual(
+        texts({ title: 'Mapa de Praha' }, []),
+      );
+    });
+
+    it('returns nothing for a title made only of function words', () => {
+      expect(texts({ title: 'De La' }, ['es'])).toEqual([]);
+    });
+
+    it('keeps a title that is a brand even when it spells a function word elsewhere', () => {
+      expect(texts({ title: 'IO' }, ['it'])).toEqual(['io']);
+      expect(texts({ title: 'UNO!' }, ['es', 'it'])).toEqual(['uno']);
+      expect(texts({ title: 'Contra' }, ['es', 'pt'])).toEqual(['contra']);
+      expect(texts({ title: 'Mi Claro' }, ['es'])).toContain('mi claro');
+      expect(texts({ title: 'Mein O2' }, ['de'])).toContain('mein o2');
+      expect(texts({ title: 'Mijn KPN' }, ['nl'])).toContain('mijn kpn');
+      expect(texts({ title: 'Mon Orange' }, ['fr'])).toContain('mon orange');
+      expect(texts({ title: 'Pro Camera' }, ['pt', 'pl'])).toContain(
+        'pro camera',
+      );
+    });
+
+    it('tells an accented word from the function word it resembles', () => {
+      expect(texts({ title: 'Té verde' }, ['es'])).toEqual([
+        'té verde',
+        'té',
+        'verde',
+      ]);
+      expect(texts({ title: 'Te verde' }, ['es'])).toEqual(['verde']);
+    });
+
+    it('does not change the words of scripts that keep their own lists', () => {
+      const japanese = {
+        title: 'メルカリ - フリマアプリ',
+        summary: 'かんたんスマホ決済のメルペイでお得にショッピングも',
+      };
+      expect(texts(japanese, ['ja'])).toEqual(texts(japanese, []));
+      const arabic = { title: 'كريم توصيل طعام وأكثر' };
+      expect(texts(arabic, ['ar'])).toEqual(texts(arabic, []));
+    });
+  });
+
   describe('listings written without spaces', () => {
     const texts = (input: Parameters<typeof extractCandidates>[0]): string[] =>
       extractCandidates(input).map((candidate) => candidate.text);

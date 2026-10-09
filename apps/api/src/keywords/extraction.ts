@@ -1,6 +1,7 @@
 import { countChars } from '@asobeast/shared';
 import { WIDE_CHARACTER } from '../common/text/scripts';
 import { isExtractionStopword } from './extraction-stopwords';
+import { functionWordTest } from './function-words';
 import { listingSegments } from './listing-segments';
 import { isBoundWord, wordGroups } from './word-groups';
 import type { WordGroup } from './word-groups';
@@ -42,10 +43,19 @@ const phraseWidth = (text: string): number =>
     0,
   );
 
-const isUsable = (token: string): boolean =>
-  countChars(token) >= MIN_TOKEN_LENGTH && !isExtractionStopword(token);
+type TokenTest = (token: string) => boolean;
 
-function usableRuns({ tokens, joiner }: WordGroup): string[][] {
+const usableIn =
+  (isFunctionWord: TokenTest): TokenTest =>
+  (token) =>
+    countChars(token) >= MIN_TOKEN_LENGTH &&
+    !isExtractionStopword(token) &&
+    !isFunctionWord(token);
+
+function usableRuns(
+  { tokens, joiner }: WordGroup,
+  isUsable: TokenTest,
+): string[][] {
   if (joiner === ' ') {
     return [tokens.filter(isUsable)];
   }
@@ -88,17 +98,21 @@ function* ngrams(
   }
 }
 
-function* fieldGrams(text: string): Generator<Gram> {
+function* fieldGrams(text: string, isUsable: TokenTest): Generator<Gram> {
   for (const segment of listingSegments(text)) {
     for (const group of wordGroups(segment)) {
-      for (const [index, tokens] of usableRuns(group).entries()) {
+      for (const [index, tokens] of usableRuns(group, isUsable).entries()) {
         yield* ngrams(tokens, group.joiner, group.startsChunk && index === 0);
       }
     }
   }
 }
 
-export function extractCandidates(input: ExtractionInput): Candidate[] {
+export function extractCandidates(
+  input: ExtractionInput,
+  languages: readonly string[] = [],
+): Candidate[] {
+  const isUsable = usableIn(functionWordTest(languages));
   const fields: Field[] = [
     { text: input.title, source: 'TITLE', weight: 3 },
     { text: input.subtitle, source: 'SUBTITLE', weight: 2 },
@@ -111,7 +125,7 @@ export function extractCandidates(input: ExtractionInput): Candidate[] {
     if (!field.text) {
       continue;
     }
-    for (const { text, size } of fieldGrams(field.text)) {
+    for (const { text, size } of fieldGrams(field.text, isUsable)) {
       const existing = byText.get(text);
       if (!existing || field.weight > existing.weight) {
         byText.set(text, {

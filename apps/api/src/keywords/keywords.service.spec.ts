@@ -118,6 +118,73 @@ describe('KeywordsService.syncFromSnapshot', () => {
     expect(prisma.appSnapshot.findFirst).toHaveBeenCalledTimes(2);
   });
 
+  it('skips the function words of a spanish google play listing', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.GOOGLE_PLAY,
+      country: 'ar',
+      isCompetitor: false,
+    });
+    prisma.appSnapshot.findFirst.mockResolvedValue({
+      title: 'Preguntados: Juegos de Trivia',
+      subtitle: null,
+      summary:
+        'Juegos para aumentar tu iq: quiz de preguntas gratis para amigos y familia',
+    });
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    const texts = data.map((row) => row.text);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'preguntados',
+        'juegos',
+        'trivia',
+        'juegos trivia',
+      ]),
+    );
+    expect(texts.filter((text) => /(^| )(de|para|tu)( |$)/.test(text))).toEqual(
+      [],
+    );
+  });
+
+  it('skips the function words of the french localization of a canadian listing', async () => {
+    const prisma = buildPrisma();
+    prisma.app.findUnique.mockResolvedValue({
+      id: 'app1',
+      store: Store.APP_STORE,
+      country: 'ca',
+      isCompetitor: false,
+    });
+    prisma.appSnapshot.findFirst.mockImplementation(
+      ({ where }: { where: { localization: string | null } }) =>
+        Promise.resolve(
+          where.localization === 'fr-CA'
+            ? {
+                title: 'Crave',
+                subtitle: 'Séries, films et plus encore',
+                summary: null,
+              }
+            : {
+                title: 'Crave',
+                subtitle: 'Shows, movies and more',
+                summary: null,
+              },
+        ),
+    );
+    const service = buildService(prisma, buildQueue());
+
+    await service.syncFromSnapshot('app1');
+
+    const [{ data }] = prisma.keyword.createMany.mock.calls[0];
+    const texts = data.map((row) => row.text);
+    expect(texts).toEqual(expect.arrayContaining(['séries', 'films']));
+    expect(texts.filter((text) => /(^| )et( |$)/.test(text))).toEqual([]);
+  });
+
   it('reads only the default listing of a storefront without a native localization', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma, buildQueue());

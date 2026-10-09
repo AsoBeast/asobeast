@@ -4,6 +4,7 @@ import {
   assertStorefront,
   KeywordSuggestion,
   KeywordSuggestionStrategy,
+  marketLanguages,
   normalizeText,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
@@ -35,6 +36,11 @@ const REACHES_THE_STORE: Record<KeywordSuggestionStrategy, boolean> = {
   reviews: false,
 };
 
+interface ListingLanguages {
+  home: readonly string[];
+  market: readonly string[];
+}
+
 const SOURCE_WEIGHT: Record<KeywordSource, number> = {
   KEYWORD_FIELD: 4,
   TITLE: 3,
@@ -64,7 +70,12 @@ export class KeywordSuggestionService {
     assertStorefront(market.store, market.country);
     const tracked = await trackedTexts(this.prisma, appId, market.country);
 
-    const work = () => this.dispatch(appId, strategy, limit, market, tracked);
+    const languages = {
+      home: marketLanguages(app.country),
+      market: marketLanguages(market.country),
+    };
+    const work = () =>
+      this.dispatch(appId, strategy, limit, market, tracked, languages);
     if (!REACHES_THE_STORE[strategy]) return work();
     return this.egress.through(market.store, market.country, work);
   }
@@ -75,18 +86,25 @@ export class KeywordSuggestionService {
     limit: number,
     market: { store: Store; country: string; storeAppId: string },
     tracked: Set<string>,
+    languages: ListingLanguages,
   ): Promise<KeywordSuggestion[]> {
     if (strategy === 'search') {
       return this.suggestFromSearch(appId, market, tracked, limit);
     }
     if (strategy === 'similar') {
-      return this.suggestFromSimilar(market, tracked, limit);
+      return this.suggestFromSimilar(market, tracked, limit, languages.market);
     }
     if (strategy === 'developer') {
-      return this.suggestFromDeveloper(appId, market, tracked, limit);
+      return this.suggestFromDeveloper(
+        appId,
+        market,
+        tracked,
+        limit,
+        languages,
+      );
     }
     if (strategy === 'competitors') {
-      return this.suggestFromCompetitors(appId, tracked, limit);
+      return this.suggestFromCompetitors(appId, tracked, limit, languages.home);
     }
     if (strategy === 'seasonal') {
       return Promise.resolve(seasonalSuggestions(new Date(), tracked, limit));
@@ -94,7 +112,7 @@ export class KeywordSuggestionService {
     if (strategy === 'reviews') {
       return this.suggestFromReviews(appId, tracked, limit);
     }
-    return this.suggestFromMetadata(appId, tracked, limit);
+    return this.suggestFromMetadata(appId, tracked, limit, languages.home);
   }
 
   private async suggestFromReviews(
@@ -115,6 +133,7 @@ export class KeywordSuggestionService {
     appId: string,
     excluded: Set<string>,
     limit: number,
+    languages: readonly string[],
   ): Promise<KeywordSuggestion[]> {
     const competitors = await this.prisma.app.findMany({
       where: { primaryAppId: appId },
@@ -133,10 +152,13 @@ export class KeywordSuggestionService {
         continue;
       }
       const texts = new Set(
-        extractCandidates({
-          title: snapshot.title,
-          subtitle: snapshot.subtitle ?? undefined,
-        }).map((candidate) => candidate.text),
+        extractCandidates(
+          {
+            title: snapshot.title,
+            subtitle: snapshot.subtitle ?? undefined,
+          },
+          languages,
+        ).map((candidate) => candidate.text),
       );
       for (const text of texts) {
         if (excluded.has(text)) {
@@ -160,8 +182,9 @@ export class KeywordSuggestionService {
     appId: string,
     excluded: Set<string>,
     limit: number,
+    languages: readonly string[],
   ): Promise<KeywordSuggestion[]> {
-    const candidates = await this.latestCandidates(appId);
+    const candidates = await this.latestCandidates(appId, languages);
     return candidates
       .filter((candidate) => !excluded.has(candidate.text))
       .slice(0, limit)
@@ -211,10 +234,11 @@ export class KeywordSuggestionService {
     app: { store: Store; country: string; storeAppId: string },
     excluded: Set<string>,
     limit: number,
+    languages: readonly string[],
   ): Promise<KeywordSuggestion[]> {
     const provider = this.registry.get(app.store);
     const similar = await provider.similar(app.storeAppId, app.country);
-    return countTitleCandidates(similar, excluded, limit, 'similar');
+    return countTitleCandidates(similar, excluded, limit, 'similar', languages);
   }
 
   private async suggestFromDeveloper(
@@ -222,6 +246,7 @@ export class KeywordSuggestionService {
     app: { store: Store; country: string },
     tracked: Set<string>,
     limit: number,
+    languages: ListingLanguages,
   ): Promise<KeywordSuggestion[]> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...HOME_LISTING },
@@ -234,13 +259,22 @@ export class KeywordSuggestionService {
     }
 
     const excluded = new Set(tracked);
-    for (const candidate of extractCandidates({ title: snapshot.title })) {
+    for (const candidate of extractCandidates(
+      { title: snapshot.title },
+      languages.home,
+    )) {
       excluded.add(candidate.text);
     }
 
     const provider = this.registry.get(app.store);
     const apps = await provider.developerApps(devId, app.country);
-    return countTitleCandidates(apps, excluded, limit, 'developer');
+    return countTitleCandidates(
+      apps,
+      excluded,
+      limit,
+      'developer',
+      languages.market,
+    );
   }
 
   private async searchSeeds(appId: string): Promise<string[]> {
@@ -261,7 +295,7 @@ export class KeywordSuggestionService {
       .map((row) => row.keyword.text);
   }
 
-  private async latestCandidates(appId: string) {
+  private async latestCandidates(appId: string, languages: readonly string[]) {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...HOME_LISTING },
       orderBy: NEWEST_FIRST,
@@ -270,11 +304,14 @@ export class KeywordSuggestionService {
     if (!snapshot) {
       return [];
     }
-    return extractCandidates({
-      title: snapshot.title,
-      subtitle: snapshot.subtitle ?? undefined,
-      summary: snapshot.summary ?? undefined,
-    });
+    return extractCandidates(
+      {
+        title: snapshot.title,
+        subtitle: snapshot.subtitle ?? undefined,
+        summary: snapshot.summary ?? undefined,
+      },
+      languages,
+    );
   }
 }
 
@@ -283,12 +320,13 @@ function countTitleCandidates(
   excluded: Set<string>,
   limit: number,
   strategy: 'similar' | 'developer',
+  languages: readonly string[],
 ): KeywordSuggestion[] {
   const counts = new Map<string, number>();
 
   for (const item of items) {
     const texts = new Set(
-      extractCandidates({ title: item.title }).map(
+      extractCandidates({ title: item.title }, languages).map(
         (candidate) => candidate.text,
       ),
     );

@@ -13,6 +13,7 @@ import {
   KeywordSort,
   KeywordUpdateRequest,
   KEYWORD_FIELD_BYTE_LIMIT,
+  marketLanguages,
   parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -381,13 +382,17 @@ export class KeywordsService {
         ? ['TITLE', 'DESCRIPTION']
         : ['TITLE', 'SUBTITLE'];
 
+    const languages = marketLanguages(app.country);
     const candidates = interleaveDistinct(
       listings.map((listing) =>
-        extractCandidates({
-          title: listing.title,
-          subtitle: listing.subtitle ?? undefined,
-          summary: listing.summary ?? undefined,
-        }).filter((candidate) => autoTrackSources.includes(candidate.source)),
+        extractCandidates(
+          {
+            title: listing.title,
+            subtitle: listing.subtitle ?? undefined,
+            summary: listing.summary ?? undefined,
+          },
+          languages,
+        ).filter((candidate) => autoTrackSources.includes(candidate.source)),
       ),
       AUTO_TRACK_LIMIT,
       (candidate) => candidate.text,
