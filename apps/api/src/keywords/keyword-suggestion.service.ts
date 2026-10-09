@@ -36,9 +36,18 @@ const REACHES_THE_STORE: Record<KeywordSuggestionStrategy, boolean> = {
   reviews: false,
 };
 
-interface ListingLanguages {
-  home: readonly string[];
-  market: readonly string[];
+interface SuggestionRequest {
+  appId: string;
+  limit: number;
+  tracked: Set<string>;
+  market: { store: Store; country: string; storeAppId: string };
+  languages: { home: readonly string[]; market: readonly string[] };
+}
+
+interface TitleCount {
+  limit: number;
+  strategy: 'similar' | 'developer';
+  languages: readonly string[];
 }
 
 const SOURCE_WEIGHT: Record<KeywordSource, number> = {
@@ -68,40 +77,34 @@ export class KeywordSuggestionService {
     const app = await ensureApp(this.prisma, appId);
     const market = { ...app, country: country ?? app.country };
     assertStorefront(market.store, market.country);
-    const tracked = await trackedTexts(this.prisma, appId, market.country);
-
-    const languages = {
-      home: listingLanguages(app.store, app.country),
-      market: listingLanguages(market.store, market.country),
+    const request: SuggestionRequest = {
+      appId,
+      limit,
+      market,
+      tracked: await trackedTexts(this.prisma, appId, market.country),
+      languages: {
+        home: listingLanguages(app.store, app.country),
+        market: listingLanguages(market.store, market.country),
+      },
     };
-    const work = () =>
-      this.dispatch(appId, strategy, limit, market, tracked, languages);
+    const work = () => this.dispatch(strategy, request);
     if (!REACHES_THE_STORE[strategy]) return work();
     return this.egress.through(market.store, market.country, work);
   }
 
   private dispatch(
-    appId: string,
     strategy: KeywordSuggestionStrategy,
-    limit: number,
-    market: { store: Store; country: string; storeAppId: string },
-    tracked: Set<string>,
-    languages: ListingLanguages,
+    request: SuggestionRequest,
   ): Promise<KeywordSuggestion[]> {
+    const { appId, limit, tracked, market, languages } = request;
     if (strategy === 'search') {
       return this.suggestFromSearch(appId, market, tracked, limit);
     }
     if (strategy === 'similar') {
-      return this.suggestFromSimilar(market, tracked, limit, languages.market);
+      return this.suggestFromSimilar(request);
     }
     if (strategy === 'developer') {
-      return this.suggestFromDeveloper(
-        appId,
-        market,
-        tracked,
-        limit,
-        languages,
-      );
+      return this.suggestFromDeveloper(request);
     }
     if (strategy === 'competitors') {
       return this.suggestFromCompetitors(appId, tracked, limit, languages.home);
@@ -230,30 +233,34 @@ export class KeywordSuggestionService {
       }));
   }
 
-  private async suggestFromSimilar(
-    app: { store: Store; country: string; storeAppId: string },
-    excluded: Set<string>,
-    limit: number,
-    languages: readonly string[],
-  ): Promise<KeywordSuggestion[]> {
-    const provider = this.registry.get(app.store);
-    const similar = await provider.similar(app.storeAppId, app.country);
-    return countTitleCandidates(similar, excluded, limit, 'similar', languages);
+  private async suggestFromSimilar({
+    market,
+    tracked,
+    limit,
+    languages,
+  }: SuggestionRequest): Promise<KeywordSuggestion[]> {
+    const provider = this.registry.get(market.store);
+    const similar = await provider.similar(market.storeAppId, market.country);
+    return countTitleCandidates(similar, tracked, {
+      limit,
+      strategy: 'similar',
+      languages: languages.market,
+    });
   }
 
-  private async suggestFromDeveloper(
-    appId: string,
-    app: { store: Store; country: string },
-    tracked: Set<string>,
-    limit: number,
-    languages: ListingLanguages,
-  ): Promise<KeywordSuggestion[]> {
+  private async suggestFromDeveloper({
+    appId,
+    market,
+    tracked,
+    limit,
+    languages,
+  }: SuggestionRequest): Promise<KeywordSuggestion[]> {
     const snapshot = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...HOME_LISTING },
       orderBy: NEWEST_FIRST,
       select: { raw: true, title: true },
     });
-    const devId = snapshot && developerId(app.store, snapshot.raw);
+    const devId = snapshot && developerId(market.store, snapshot.raw);
     if (!devId) {
       return [];
     }
@@ -266,15 +273,13 @@ export class KeywordSuggestionService {
       excluded.add(candidate.text);
     }
 
-    const provider = this.registry.get(app.store);
-    const apps = await provider.developerApps(devId, app.country);
-    return countTitleCandidates(
-      apps,
-      excluded,
+    const provider = this.registry.get(market.store);
+    const apps = await provider.developerApps(devId, market.country);
+    return countTitleCandidates(apps, excluded, {
       limit,
-      'developer',
-      languages.market,
-    );
+      strategy: 'developer',
+      languages: languages.market,
+    });
   }
 
   private async searchSeeds(appId: string): Promise<string[]> {
@@ -318,9 +323,7 @@ export class KeywordSuggestionService {
 function countTitleCandidates(
   items: SearchItem[],
   excluded: Set<string>,
-  limit: number,
-  strategy: 'similar' | 'developer',
-  languages: readonly string[],
+  { limit, strategy, languages }: TitleCount,
 ): KeywordSuggestion[] {
   const counts = new Map<string, number>();
 
