@@ -583,4 +583,94 @@ describe('extractCandidates', () => {
       ]);
     });
   });
+
+  describe('word fragments', () => {
+    const texts = (input: Parameters<typeof extractCandidates>[0]): string[] =>
+      extractCandidates(input).map((candidate) => candidate.text);
+
+    it("drops the ending of you've instead of tracking ve", () => {
+      expect(
+        extractCandidates({
+          title: 'MAke Drama : MAD',
+          subtitle: "RPG you've been waiting for!",
+        }),
+      ).toEqual([
+        { text: 'make drama', source: 'TITLE', weight: 3 },
+        { text: 'make', source: 'TITLE', weight: 3 },
+        { text: 'drama', source: 'TITLE', weight: 3 },
+        { text: 'mad', source: 'TITLE', weight: 3 },
+        { text: 'rpg waiting', source: 'SUBTITLE', weight: 2 },
+        { text: 'rpg', source: 'SUBTITLE', weight: 2 },
+        { text: 'waiting', source: 'SUBTITLE', weight: 2 },
+      ]);
+    });
+
+    it.each([
+      ['RPG you\u2019ve been waiting for!', ['rpg waiting', 'rpg', 'waiting']],
+      ["It's Time", ['time']],
+      ["WE'RE HIRING", ['hiring']],
+      ["we'll see, I'm in, she'd know", ['see', 'know']],
+      ["Don't Starve", ['starve']],
+      ['Can\u2019t Stop', ['stop']],
+      ["Kid's Games", ['kid games', 'kid', 'games']],
+      ["Auto's Dutch", ['auto dutch', 'auto', 'dutch']],
+      ["Rock 'n' Roll", ['rock roll', 'rock', 'roll']],
+      ["Dunkin' Donuts", ['dunkin donuts', 'dunkin', 'donuts']],
+      ["L'Atelier Café", ['atelier café', 'atelier', 'café']],
+    ])(
+      'reads the contraction in %s as the word it contracts',
+      (title, expected) => {
+        expect(texts({ title })).toEqual(expected);
+      },
+    );
+
+    it('drops a number written with a separator and ends the phrase at it', () => {
+      expect(
+        extractCandidates({
+          title: 'ZINIO - Magazine Newsstand',
+          subtitle: '10,000+ magazines in one app',
+        }),
+      ).toEqual([
+        { text: 'zinio magazine newsstand', source: 'TITLE', weight: 3 },
+        { text: 'zinio magazine', source: 'TITLE', weight: 3 },
+        { text: 'magazine newsstand', source: 'TITLE', weight: 3 },
+        { text: 'zinio', source: 'TITLE', weight: 3 },
+        { text: 'magazine', source: 'TITLE', weight: 3 },
+        { text: 'newsstand', source: 'TITLE', weight: 3 },
+        { text: 'magazines one', source: 'SUBTITLE', weight: 2 },
+        { text: 'magazines', source: 'SUBTITLE', weight: 2 },
+        { text: 'one', source: 'SUBTITLE', weight: 2 },
+      ]);
+    });
+
+    it.each([
+      ['1.000 songs', ['songs']],
+      ['10\u202f000 songs', ['songs']],
+      ['10\u00a0000 songs', ['songs']],
+      ["10'000 songs", ['songs']],
+      ['10\u2019000 songs', ['songs']],
+      ['1,000,000 songs', ['songs']],
+      ['\uFF11\uFF10\uFF0C\uFF10\uFF10\uFF10 songs', ['songs']],
+      ['Chess 2.0 Pro', ['chess', 'pro']],
+      ['24/7 support', ['support']],
+      ['iOS 17.2 tips', ['ios', 'tips']],
+    ])('drops the number in %s', (title, expected) => {
+      expect(texts({ title })).toEqual(expected);
+    });
+
+    it.each([
+      ['2048 Puzzle', ['2048 puzzle', '2048', 'puzzle']],
+      [
+        '3D Maze 2K25',
+        ['3d maze 2k25', '3d maze', 'maze 2k25', '3d', 'maze', '2k25'],
+      ],
+      ['100+ levels', ['100 levels', '100', 'levels']],
+      [
+        'Top 10, best 20 games',
+        ['top 10', '20 games', 'top', '10', '20', 'games'],
+      ],
+    ])('keeps the numbers of %s', (title, expected) => {
+      expect(texts({ title })).toEqual(expected);
+    });
+  });
 });

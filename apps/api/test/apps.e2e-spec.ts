@@ -278,6 +278,35 @@ describe('AppsController (e2e)', () => {
     );
   });
 
+  it('auto tracks whole words of a listing with a contraction and a number', async () => {
+    registry.title = 'MAke Drama : MAD';
+    registry.summary = "RPG you've been waiting for! 10,000+ magazines";
+
+    const response = await api
+      .post('/apps')
+      .send({ url: `${GOOGLE_PLAY_URL}&gl=us` })
+      .expect(201);
+
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: (response.body as AppDetail).id },
+      select: { source: true, keyword: { select: { text: true } } },
+    });
+    expect(
+      tracked.map(({ source, keyword }) => `${source} ${keyword.text}`).sort(),
+    ).toEqual(
+      [
+        'TITLE make drama',
+        'TITLE make',
+        'TITLE drama',
+        'TITLE mad',
+        'DESCRIPTION rpg waiting',
+        'DESCRIPTION rpg',
+        'DESCRIPTION waiting',
+        'DESCRIPTION magazines',
+      ].sort(),
+    );
+  });
+
   it('auto tracks a katakana title without its pieces', async () => {
     registry.title = 'ウマ娘 プリティーダービー';
     registry.summary = 'ダービー';
