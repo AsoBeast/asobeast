@@ -2,9 +2,16 @@ import {
   RANK_DEPTH,
   RankImprovedPayload,
   RankMilestonePayload,
+  ReviewNegativePayload,
   SerpEntrantPayload,
 } from '@asobeast/shared';
-import { position, rank, sectionBlocks, summarize } from './alert-summary';
+import {
+  position,
+  rank,
+  reviewLine,
+  sectionBlocks,
+  summarize,
+} from './alert-summary';
 import {
   firstRanking,
   milestone,
@@ -179,5 +186,30 @@ describe('sectionBlocks for the new rank events', () => {
     expect(sectionBlocks(queued).map((block) => block.title)).toEqual([
       'Rank improvements',
     ]);
+  });
+});
+
+describe('reviewLine', () => {
+  const negative: ReviewNegativePayload = {
+    event: 'review.negative',
+    occurredAt: '2026-07-22T10:00:00.000Z',
+    app: { id: 'a', name: 'My App' },
+    review: {
+      score: 1,
+      title: null,
+      text: 'Crashes on launch',
+      version: '2.0.0',
+      reviewedAt: null,
+    },
+  };
+
+  it('quotes the review text', () => {
+    expect(reviewLine(negative)).toBe('★☆☆☆☆ "Crashes on launch" — v2.0.0');
+  });
+
+  it('names a rating only review instead of quoting nothing', () => {
+    expect(
+      reviewLine({ ...negative, review: { ...negative.review, text: '' } }),
+    ).toBe('★☆☆☆☆ no written review — v2.0.0');
   });
 });

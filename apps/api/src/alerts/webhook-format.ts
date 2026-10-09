@@ -17,6 +17,7 @@ import {
   position,
   RankEventPayload,
   rankEventSentence,
+  reviewQuote,
   sectionBlocks,
   stars,
   storeLabel,
@@ -67,7 +68,7 @@ export function renderMessage(payload: AlertPayload): string {
     const version = payload.review.version
       ? ` (v${payload.review.version})`
       : '';
-    return `⚠️ ${who} got a ${stars(payload.review.score)} review${version}: "${payload.review.text}"`;
+    return `⚠️ ${who} got a ${stars(payload.review.score)} review${version}: ${reviewQuote(payload.review.text)}`;
   }
 
   if (payload.event === 'digest.weekly') {

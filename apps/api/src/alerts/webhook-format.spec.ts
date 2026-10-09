@@ -144,6 +144,12 @@ describe('renderMessage', () => {
       '⚠️ My App got a ★☆☆☆☆ review (v2.0.0): "Crashes on launch"',
     );
   });
+
+  it('names a rating only review instead of quoting nothing', () => {
+    expect(
+      renderMessage({ ...negative, review: { ...negative.review, text: '' } }),
+    ).toBe('⚠️ My App got a ★☆☆☆☆ review (v2.0.0): no written review');
+  });
 });
 
 const digest: DigestWeeklyPayload = {

@@ -15,6 +15,7 @@ import {
   milestonePhrase,
   rank,
   RankEventPayload,
+  reviewBody,
   sectionBlocks,
   stars,
   storeLabel,
@@ -107,7 +108,7 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
       ['Rating', stars(payload.review.score)],
       ['Version', value(payload.review.version)],
       ['Title', value(payload.review.title)],
-      ['Review', payload.review.text],
+      ['Review', reviewBody(payload.review.text)],
     ];
   }
 
