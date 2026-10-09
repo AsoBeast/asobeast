@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { screenshotKeys } from '../changes/screenshot-diff';
-import { extractRawFacts, releaseNotesFor } from '../store-providers/raw-facts';
+import { ownSubtitle } from '../store-providers/own-subtitle';
+import { releaseNotesFor } from '../store-providers/raw-facts';
 
 export interface ComparableListing {
   title: string;
@@ -8,16 +9,6 @@ export interface ComparableListing {
   description: string;
   raw: unknown;
 }
-
-const ownSubtitle = (
-  store: Store,
-  listing: ComparableListing,
-): string | null => {
-  const subtitle = listing.subtitle ?? null;
-  return subtitle === extractRawFacts(store, listing.raw).genres[0]
-    ? null
-    : subtitle;
-};
 
 const signature = (
   store: Store,

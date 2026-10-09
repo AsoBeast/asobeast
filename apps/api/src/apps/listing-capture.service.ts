@@ -13,6 +13,7 @@ import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreAppNotFoundError } from '../store-providers/errors';
+import { ownSubtitle, withOwnSubtitle } from '../store-providers/own-subtitle';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
@@ -109,7 +110,10 @@ export class ListingCaptureService {
       const created = await tx.appSnapshot.create({
         data: toSnapshotData(
           app.id,
-          withKnownSubtitle(normalized, previous?.subtitle ?? null),
+          withKnownSubtitle(
+            normalized,
+            previous && ownSubtitle(app.store, previous),
+          ),
           storedMarket(app.country, market),
         ),
       });
@@ -153,7 +157,13 @@ export class ListingCaptureService {
     return {
       snapshotId: snapshot.id,
       changes: [
-        ...withRecordedChanges(diffSnapshots(previous, snapshot), recorded),
+        ...withRecordedChanges(
+          diffSnapshots(
+            previous && withOwnSubtitle(app.store, previous),
+            snapshot,
+          ),
+          recorded,
+        ),
         ...localized,
       ],
       country: market,

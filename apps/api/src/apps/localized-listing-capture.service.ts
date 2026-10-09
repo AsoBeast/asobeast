@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
+import { ownSubtitle, withOwnSubtitle } from '../store-providers/own-subtitle';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { NormalizedApp } from '../store-providers/types';
 import { snapshotIcon, toSnapshotData } from './apps.mapper';
@@ -100,9 +101,10 @@ export class LocalizedListingCapture {
         : null,
       toChangeSnapshot(snapshot, snapshotIcon(app.store, snapshot), app.store),
     );
-    return withRecordedChanges(diffSnapshots(previous, snapshot), recorded).map(
-      (change) => ({ ...change, localization }),
-    );
+    return withRecordedChanges(
+      diffSnapshots(previous && withOwnSubtitle(app.store, previous), snapshot),
+      recorded,
+    ).map((change) => ({ ...change, localization }));
   }
 
   private async store(
@@ -116,7 +118,10 @@ export class LocalizedListingCapture {
       const created = await tx.appSnapshot.create({
         data: toSnapshotData(
           app.id,
-          withKnownSubtitle(normalized, previous?.subtitle ?? null),
+          withKnownSubtitle(
+            normalized,
+            previous && ownSubtitle(app.store, previous),
+          ),
           storedMarket(app.country, market),
           localization,
         ),

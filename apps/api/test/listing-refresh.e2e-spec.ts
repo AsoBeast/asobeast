@@ -40,6 +40,7 @@ class ListingRegistry {
   getAppCalls: Array<{ storeAppId: string; country: string }> = [];
   titles = new Map<string, string>();
   subtitleUnavailable = false;
+  listing: Partial<NormalizedApp> = {};
   failWith: Error | null = null;
 
   get(store: Store): StoreProvider {
@@ -56,6 +57,7 @@ class ListingRegistry {
           ...(this.subtitleUnavailable
             ? { subtitle: undefined, subtitleUnavailable: true }
             : {}),
+          ...this.listing,
         });
       },
       search: () => Promise.resolve([]),
@@ -104,6 +106,7 @@ describe('market listing refresh (e2e)', () => {
     registry.getAppCalls = [];
     registry.titles.clear();
     registry.subtitleUnavailable = false;
+    registry.listing = {};
     registry.failWith = null;
     jest.restoreAllMocks();
     await prisma.$executeRawUnsafe(
@@ -268,6 +271,40 @@ describe('market listing refresh (e2e)', () => {
 
     const [market] = await listings(appId, 'de');
     expect(market.subtitle).toBeNull();
+  });
+
+  const storeCategorySubtitle = (appId: string) =>
+    prisma.appSnapshot.updateMany({
+      where: { appId },
+      data: { subtitle: 'Finance', raw: { genres: ['Finance'] } },
+    });
+
+  it('records no subtitle change for a stored subtitle that was the primary category', async () => {
+    const appId = await importApp();
+    await storeCategorySubtitle(appId);
+    registry.listing = { subtitle: undefined, raw: { genres: ['Finance'] } };
+    const dispatch = jest.spyOn(app.get(AlertsDispatcher), 'dispatch');
+
+    const response = await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    expect((response.body as SnapshotDiffResult).changes).toEqual([]);
+    await expect(prisma.changeEvent.count()).resolves.toBe(0);
+    expect(dispatch).not.toHaveBeenCalled();
+    const [, refreshed] = await listings(appId, null);
+    expect(refreshed.subtitle).toBeNull();
+  });
+
+  it('keeps no stored primary category as the subtitle when the page could not be read', async () => {
+    const appId = await importApp();
+    await storeCategorySubtitle(appId);
+    registry.subtitleUnavailable = true;
+    registry.listing = { raw: { genres: ['Finance'] } };
+
+    await api.post(`/apps/${appId}/refresh`).expect(200);
+
+    const [, refreshed] = await listings(appId, null);
+    expect(refreshed.subtitle).toBeNull();
+    await expect(prisma.changeEvent.count()).resolves.toBe(0);
   });
 
   it('answers 404 when the store no longer lists the app in that market', async () => {

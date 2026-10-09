@@ -42,6 +42,16 @@ describe('toChangeSnapshot', () => {
     );
   });
 
+  it('reads a stored subtitle that was the primary category as no subtitle', () => {
+    expect(
+      toChangeSnapshot(
+        { ...snapshot, subtitle: 'Finance', raw: { genres: ['Finance'] } },
+        null,
+        Store.APP_STORE,
+      ).subtitle,
+    ).toBeNull();
+  });
+
   it('has no screenshot list for a snapshot stored without one', () => {
     expect(
       toChangeSnapshot({ ...snapshot, raw: {} }, null, Store.APP_STORE)

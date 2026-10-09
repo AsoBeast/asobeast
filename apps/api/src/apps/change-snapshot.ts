@@ -1,6 +1,7 @@
 import { AppSnapshot, Store } from '@prisma/client';
 import { DiffableChangeSnapshot } from '../changes/change-detector';
 import { screenshotKeys } from '../changes/screenshot-diff';
+import { ownSubtitle } from '../store-providers/own-subtitle';
 import {
   releaseNotesFor,
   screenshotsCount,
@@ -13,7 +14,7 @@ export function toChangeSnapshot(
 ): DiffableChangeSnapshot {
   return {
     title: snapshot.title,
-    subtitle: snapshot.subtitle,
+    subtitle: ownSubtitle(store, snapshot),
     summary: snapshot.summary,
     description: snapshot.description,
     version: snapshot.version,
