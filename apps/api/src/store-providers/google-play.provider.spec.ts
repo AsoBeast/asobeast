@@ -61,60 +61,51 @@ describe('googlePlayLanguage', () => {
 });
 
 interface LanguageCall {
-  lib: keyof GooglePlayLib;
   result: unknown;
   invoke: (provider: GooglePlayProvider, country: string) => Promise<unknown>;
 }
 
-const LANGUAGE_CALLS: Record<string, LanguageCall> = {
-  getApp: {
-    lib: 'app',
+const LANGUAGE_CALLS = {
+  app: {
     result: appPayload,
     invoke: (provider, country) => provider.getApp('com.example.app', country),
   },
   search: {
-    lib: 'search',
     result: [],
     invoke: (provider, country) => provider.search('note', country, 10),
   },
   suggest: {
-    lib: 'suggest',
     result: [],
     invoke: (provider, country) => provider.suggest('note', country),
   },
   similar: {
-    lib: 'similar',
     result: [],
     invoke: (provider, country) => provider.similar('com.example.app', country),
   },
-  topCharts: {
-    lib: 'list',
+  list: {
     result: [],
     invoke: (provider, country) =>
       provider.topCharts('free', 'OVERALL', 100, country),
   },
   reviews: {
-    lib: 'reviews',
     result: { data: [], nextPaginationToken: null },
     invoke: (provider, country) =>
       provider.reviews('com.example.app', country, 1),
   },
   availability: {
-    lib: 'availability',
     result: { appId: 'com.example.app', countries: {} },
     invoke: (provider, country) =>
       provider.availability('com.example.app', [country]),
   },
-  developerApps: {
-    lib: 'developer',
+  developer: {
     result: [],
     invoke: (provider, country) => provider.developerApps('Dev', country),
   },
-};
+} satisfies Record<keyof GooglePlayLib, LanguageCall>;
 
 describe.each(Object.entries(LANGUAGE_CALLS))(
-  'GooglePlayProvider.%s language',
-  (_method, { lib, result, invoke }) => {
+  'GooglePlayLib.%s language',
+  (lib, { result, invoke }) => {
     it.each([
       ['tw', 'zh-TW'],
       ['TW', 'zh-TW'],
