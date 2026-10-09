@@ -58,8 +58,11 @@ const attachesLeft = (word: string): boolean =>
   countChars(word) <= KATAKANA_FRAGMENT_MAX_CHARS ||
   KATAKANA_CONTINUATION.test(word);
 
-const opensRight = (token: string): boolean =>
-  token.endsWith('ッ') || countChars(token) <= KATAKANA_FRAGMENT_MAX_CHARS;
+const opensRight = (word: string, token: string, startsRun: boolean): boolean =>
+  word.endsWith('ッ') ||
+  (countChars(word) === KATAKANA_FRAGMENT_MAX_CHARS && word.endsWith('ー')) ||
+  (startsRun && countChars(word) === 1) ||
+  (token !== word && countChars(token) <= KATAKANA_FRAGMENT_MAX_CHARS);
 
 function joinKatakanaFragments(words: string[]): string[] {
   const joined: string[] = [];
@@ -74,7 +77,7 @@ function joinKatakanaFragments(words: string[]): string[] {
     } else {
       joined.push(word);
     }
-    open = katakana && opensRight(joined[joined.length - 1]);
+    open = katakana && opensRight(word, joined[joined.length - 1], !continues);
   }
   return joined;
 }

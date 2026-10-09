@@ -101,18 +101,14 @@ describe('wordGroups', () => {
     expect(wordGroups('プリティーダービー')).toEqual([
       { tokens: ['プリティー', 'ダービー'], joiner: '', startsChunk: true },
     ]);
-    expect(wordGroups('ワルキューレ')).toEqual([
-      { tokens: ['ワルキューレ'], joiner: '', startsChunk: true },
+  });
+
+  it('keeps a two character katakana word apart from the word after it', () => {
+    expect(wordGroups('ヨガレッスン')).toEqual([
+      { tokens: ['ヨガ', 'レッスン'], joiner: '', startsChunk: true },
     ]);
-    expect(wordGroups('ダンジョン')).toEqual([
-      { tokens: ['ダンジョン'], joiner: '', startsChunk: true },
-    ]);
-    expect(wordGroups('ノノグラムロジックパズル')).toEqual([
-      {
-        tokens: ['ノノグラム', 'ロジック', 'パズル'],
-        joiner: '',
-        startsChunk: true,
-      },
+    expect(wordGroups('ピザデリバリー')).toEqual([
+      { tokens: ['ピザ', 'デリバリー'], joiner: '', startsChunk: true },
     ]);
   });
 

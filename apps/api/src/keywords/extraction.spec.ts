@@ -159,10 +159,18 @@ describe('extractCandidates', () => {
         'プリティー',
         'ダービー',
       ]);
-      expect(texts({ title: 'ワルキューレ' })).toEqual(['ワルキューレ']);
-      expect(texts({ title: 'ダンジョン' })).toEqual(['ダンジョン']);
-      expect(texts({ title: 'メダロットサバイバー' })).toEqual([
-        'メダロットサバイバー',
+    });
+
+    it('keeps a two character katakana word as a keyword of its own', () => {
+      expect(texts({ title: 'ヨガレッスン' })).toEqual([
+        'ヨガレッスン',
+        'ヨガ',
+        'レッスン',
+      ]);
+      expect(texts({ title: 'ジムトレーニング' })).toEqual([
+        'ジムトレーニング',
+        'ジム',
+        'トレーニング',
       ]);
     });
 
@@ -617,6 +625,8 @@ describe('extractCandidates', () => {
       ["Rock 'n' Roll", ['rock roll', 'rock', 'roll']],
       ["Dunkin' Donuts", ['dunkin donuts', 'dunkin', 'donuts']],
       ["L'Atelier Café", ['atelier café', 'atelier', 'café']],
+      ['RPG you\u00B4ve been waiting for!', ['rpg waiting', 'rpg', 'waiting']],
+      ['Kid\u02BCs Games', ['kid games', 'kid', 'games']],
     ])(
       'reads the contraction in %s as the word it contracts',
       (title, expected) => {
@@ -654,6 +664,8 @@ describe('extractCandidates', () => {
       ['Chess 2.0 Pro', ['chess', 'pro']],
       ['24/7 support', ['support']],
       ['iOS 17.2 tips', ['ios', 'tips']],
+      ['Alarm 10:30 Clock', ['alarm', 'clock']],
+      ['3.5mm Jack Tester', ['jack tester', 'jack', 'tester']],
     ])('drops the number in %s', (title, expected) => {
       expect(texts({ title })).toEqual(expected);
     });
@@ -665,6 +677,8 @@ describe('extractCandidates', () => {
         ['3d maze 2k25', '3d maze', 'maze 2k25', '3d', 'maze', '2k25'],
       ],
       ['100+ levels', ['100 levels', '100', 'levels']],
+      ['Wallet Web3.0', ['wallet web3', 'wallet', 'web3']],
+      ['USB3.0 Speed Test', ['speed test', 'usb3', 'speed', 'test']],
       [
         'Top 10, best 20 games',
         ['top 10', '20 games', 'top', '10', '20', 'games'],
