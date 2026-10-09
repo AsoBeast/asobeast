@@ -19,6 +19,7 @@ import {
 import { lookupLanguage, pageLanguage } from './app-store-languages';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
+import { ownSubtitle } from './own-subtitle';
 import {
   ChartItem,
   NormalizedApp,
@@ -212,7 +213,8 @@ export class AppStoreProvider implements StoreProvider {
       store: this.store,
       storeAppId: String(raw.trackId ?? raw.id),
       title: raw.title,
-      subtitle: read.subtitle,
+      subtitle:
+        ownSubtitle(this.store, { subtitle: read.subtitle, raw }) ?? undefined,
       subtitleUnavailable: read.unavailable,
       description: raw.description,
       iconUrl: raw.icon,

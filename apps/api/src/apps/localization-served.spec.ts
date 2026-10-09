@@ -101,6 +101,16 @@ describe('servesLocalization', () => {
     ).toBe(false);
   });
 
+  it('compares the subtitle when the default listing was read without one', () => {
+    expect(
+      servesLocalization(
+        Store.APP_STORE,
+        { ...english, subtitle: null, subtitleUnavailable: false },
+        { ...english, subtitle: 'Mapa Świata' },
+      ),
+    ).toBe(true);
+  });
+
   it('ignores a change of rendition size of the same screenshots', () => {
     expect(
       servesLocalization(Store.APP_STORE, english, {

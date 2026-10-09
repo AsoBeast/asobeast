@@ -147,7 +147,10 @@ export class ListingCaptureService {
           before,
           after,
         );
-    const localized = await this.localizations.capture(app, market, snapshot);
+    const localized = await this.localizations.capture(app, market, {
+      ...snapshot,
+      subtitleUnavailable: normalized.subtitleUnavailable,
+    });
     if (home) await this.keywords.syncFromSnapshot(app.id);
 
     return {
