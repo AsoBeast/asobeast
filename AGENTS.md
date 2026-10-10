@@ -48,6 +48,7 @@ apps/
       actions/            aso action center: rules/, engine, lifecycle, events, detail and outcomes, endpoints
       alerts/             subscriptions, outbox, batching, webhook + smtp delivery
       ai/                 AiGateway: the only holder of the optional openai client; meters every call against the monthly allowance
+      mail/               branded email layout, components and renderEmail (React Email); templates live with the feature that sends them, previews in mail/previews
       jobs/               BullMQ queues, workers (appstore + gplay), pipeline, retention, the queue error reporter
       mcp/                remote streamable http endpoint (POST /mcp) + in-process gateway
     prisma/               schema.prisma, migrations, seed.ts
@@ -192,6 +193,7 @@ by itself.
 - Controllers thin, services own logic, scoring functions pure and unit tested.
 - All scraping goes through the `StoreProvider` interface in `apps/api/src/store-providers/`. No other module may import a scraper library. This isolation contains parser breakage and lets a future cloud version swap in proxies or a data API.
 - Store raw scraper payloads in `raw` Json columns; parsers change, raw data allows reprocessing.
+- Every email is a React Email template rendered with `renderEmail` inside `EmailLayout` (`apps/api/src/mail/`). Never build email HTML by string concatenation. A template is a pure component whose props carry everything it shows, including the web origin; colours come from `email-theme.ts`.
 - A migration never assumes `_prisma_migrations` exists. `prisma migrate dev` replays every migration into a shadow database that has no such table, so a migration that reads it guards the read with `to_regclass('_prisma_migrations')` inside PL/pgSQL. `apps/api/test/migration-replay.e2e-spec.ts` replays the whole history that way. A released migration is edited only to make it replayable, and the edit ships with a forward migration that rewrites the stored checksum from the released value to the edited one, as `20261008092139_record_plain_play_whats_new_checksum` does. `migrate dev` stops at a changed checksum before it applies anything, so a database that holds the released checksum runs `pnpm --filter api db:deploy` once first.
 - All dates UTC; daily granularity uses Postgres `date` (`@db.Date`); "today" is the UTC date.
 - `installs` is `BigInt` (kept for future Google Play); JSON serialization patched in `apps/api/src/main.ts`.
