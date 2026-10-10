@@ -1,15 +1,19 @@
-import type { ActionOpenedPayload } from '@asobeast/shared';
 import {
   AlertBatchAppSection,
   AlertBatchPayload,
-  DigestWeeklyPayload,
-  MetadataChangedPayload,
   RANK_DEPTH,
-  RankDroppedPayload,
-  RankImprovedPayload,
-  ReviewNegativePayload,
 } from '@asobeast/shared';
 import { formatBatchEmail, formatEmail } from './email-format';
+import {
+  actionOpened,
+  digest,
+  digestWithGroups,
+  dropped,
+  droppedOut,
+  improved,
+  metadata,
+  negative,
+} from './email-fixtures.fixture';
 import {
   firstRanking,
   milestone,
@@ -17,129 +21,6 @@ import {
   rankEventSection,
   withoutRankEvents,
 } from './rank-events.fixture';
-
-const metadata: MetadataChangedPayload = {
-  event: 'metadata.changed',
-  occurredAt: '2026-07-11T00:00:00.000Z',
-  app: { id: 'app_1', name: 'My App', isCompetitor: false },
-  changes: [
-    { field: 'title', before: 'A', after: 'B' },
-    { field: 'icon', before: null, after: 'y' },
-  ],
-};
-
-const dropped: RankDroppedPayload = {
-  event: 'rank.dropped',
-  occurredAt: '2026-07-11T00:00:00.000Z',
-  app: { id: 'app_1', name: 'My App' },
-  keyword: {
-    id: 'kw_1',
-    text: 'fitness app',
-    store: 'APP_STORE',
-    country: 'us',
-  },
-  from: 4,
-  to: 12,
-  fromDepth: RANK_DEPTH,
-  toDepth: RANK_DEPTH,
-  threshold: 5,
-};
-
-const droppedOut: RankDroppedPayload = {
-  ...dropped,
-  from: 3,
-  to: null,
-  fromDepth: 100,
-  toDepth: 100,
-};
-
-const improved: RankImprovedPayload = {
-  event: 'rank.improved',
-  occurredAt: '2026-07-11T00:00:00.000Z',
-  app: { id: 'app_1', name: 'My App' },
-  keyword: {
-    id: 'kw_1',
-    text: 'habit tracker',
-    store: 'APP_STORE',
-    country: 'de',
-  },
-  from: 20,
-  to: 7,
-  fromDepth: RANK_DEPTH,
-  toDepth: RANK_DEPTH,
-  threshold: 5,
-};
-
-const negative: ReviewNegativePayload = {
-  event: 'review.negative',
-  occurredAt: '2026-07-11T00:00:00.000Z',
-  app: { id: 'app_1', name: 'My App' },
-  review: {
-    score: 1,
-    title: 'Bad',
-    text: 'Crashes on <launch>',
-    version: '2.0.0',
-    reviewedAt: '2026-07-10T00:00:00.000Z',
-  },
-};
-
-const digest: DigestWeeklyPayload = {
-  event: 'digest.weekly',
-  occurredAt: '2026-07-13T08:00:00.000Z',
-  window: { from: '2026-07-06', to: '2026-07-13' },
-  apps: Array.from({ length: 12 }, (_, i) => ({
-    id: `app_${i}`,
-    name: `App ${i}`,
-    visibility: { current: 40 + i, delta7d: i % 2 === 0 ? 2.5 : null },
-    moversUp: [],
-    moversDown: [],
-    changes: i,
-    negativeReviews: null,
-    audit: i === 0 ? { current: 78, delta7d: 3 } : null,
-  })),
-  groups: [],
-};
-
-const digestWithGroups: DigestWeeklyPayload = {
-  ...digest,
-  groups: [
-    {
-      id: 'grp_1',
-      name: 'Habit',
-      visibility: { current: 61.4, delta7d: -2.5 },
-    },
-  ],
-};
-
-const actionOpened: ActionOpenedPayload = {
-  event: 'action.opened',
-  occurredAt: '2026-07-22T10:00:00.000Z',
-  app: { id: 'a', name: 'Alpha', store: 'APP_STORE', country: 'us' },
-  action: {
-    id: 'act_1',
-    rule: 'keyword.add_uncovered',
-    category: 'metadata',
-    priority: 'high',
-    impact: 71,
-    firstSeenAt: '2026-07-22T10:00:00.000Z',
-    reopened: false,
-  },
-  keyword: { id: 'k1', text: 'budget planner' },
-  evidence: {
-    rule: 'keyword.add_uncovered',
-    opportunity: 66.5,
-    traffic: null,
-    difficulty: null,
-    volume: 62,
-    relevance: 80,
-    latestPosition: null,
-    indexedFields: ['title', 'subtitle', 'keywordField'],
-    uncoveredFields: ['title', 'subtitle', 'keywordField'],
-    keywordFieldCharsFree: 18,
-    scoreProvenance: null,
-  },
-  link: 'https://aso.example.com/actions?action=act_1',
-};
 
 describe('the same phrase in two markets', () => {
   const inMarket = (country: string) => ({
@@ -720,5 +601,67 @@ describe('formatBatchEmail for the new rank events', () => {
     expect(email.text).toContain(
       '0 milestones · 0 first rankings · 0 overtakes',
     );
+  });
+});
+
+describe('formatEmail in the branded layout', () => {
+  const linked = { origin: 'https://aso.example.com' };
+
+  it('links an app event back to its app and to the alert settings', async () => {
+    const { html } = await formatEmail(dropped, linked);
+    expect(html).toContain('href="https://aso.example.com/apps/app_1"');
+    expect(html).toContain('Open in AsoBeast');
+    expect(html).toContain(
+      'href="https://aso.example.com/settings#email-alerts"',
+    );
+    expect(html).toContain('Manage email alerts');
+  });
+
+  it('never links relatively without a web origin', async () => {
+    const { html } = await formatEmail(dropped);
+    expect(html).not.toMatch(/href="\//);
+    expect(html).not.toContain('Manage email alerts');
+  });
+
+  it('turns the action link into the button and keeps it in the text', async () => {
+    const { html, text } = await formatEmail(actionOpened, linked);
+    expect(html).toContain(
+      'href="https://aso.example.com/actions?action=act_1"',
+    );
+    expect(html).toContain('Open the action');
+    expect(html).not.toMatch(/>Open<\/td>/);
+    expect(text).toContain(
+      'Open: https://aso.example.com/actions?action=act_1',
+    );
+  });
+
+  it('renders no button for an event that names no app', async () => {
+    const { html } = await formatEmail(
+      {
+        event: 'serp.entrant',
+        occurredAt: '2026-07-22T10:00:00.000Z',
+        keyword: { id: 'k2', text: 'planner' },
+        date: '2026-07-22',
+        entrants: [],
+      },
+      linked,
+    );
+    expect(html).not.toContain('Button not working?');
+  });
+
+  it('opens the portfolio from the weekly digest', async () => {
+    const { html } = await formatEmail(digestWithGroups, linked);
+    expect(html).toContain('href="https://aso.example.com/"');
+    expect(html).toContain('Open the portfolio');
+    expect(html.indexOf('Linked apps')).toBeLessThan(html.indexOf('App 0'));
+  });
+
+  it('escapes quotes in review text in html only', async () => {
+    const { html, text } = await formatEmail({
+      ...negative,
+      review: { ...negative.review, text: `It's "broken"` },
+    });
+    expect(html).toContain('It&#x27;s &quot;broken&quot;');
+    expect(text).toContain(`It's "broken"`);
   });
 });

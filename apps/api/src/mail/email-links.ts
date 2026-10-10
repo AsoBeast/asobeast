@@ -1,4 +1,4 @@
-import { EMAIL_MARK_PATH } from '@asobeast/shared';
+import { EMAIL_MARK_PATH, SETTINGS_PATH } from '@asobeast/shared';
 
 export function webLink(origin: string | null, path: string): string | null {
   return origin ? `${origin}${path}` : null;
@@ -15,4 +15,12 @@ export function hostOf(origin: string | null): string | null {
 export function atHost(origin: string | null): string {
   const host = hostOf(origin);
   return host ? ` at ${host}` : '';
+}
+
+export function appLink(origin: string | null, appId: string): string | null {
+  return webLink(origin, `/apps/${appId}`);
+}
+
+export function alertSettingsLink(origin: string | null): string | null {
+  return webLink(origin, `${SETTINGS_PATH}#email-alerts`);
 }

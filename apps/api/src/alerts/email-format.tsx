@@ -4,6 +4,7 @@ import {
   AlertPayload,
   keywordLabel,
 } from '@asobeast/shared';
+import type { ReactElement } from 'react';
 import { summarizeActionEvidence } from './action-lines';
 import {
   AlertBatchBlock,
@@ -21,14 +22,18 @@ import {
   storeLabel,
   summarize,
 } from './alert-summary';
-import type { EmailContent } from '../mail/render-email';
+import { appLink, webLink } from '../mail/email-links';
+import type { Fact } from '../mail/fact-table';
+import { renderEmail, type EmailContent } from '../mail/render-email';
+import { AlertEmail, type AlertAction } from './emails/alert-email';
+import type { AlertEmailContext } from './emails/alert-footer';
 
 const DIGEST_APP_CAP = 10;
 const BATCH_GROUP_CAP = 10;
 const COMPETITOR_CAP = 10;
 const DETAIL_LINE_CAP = 20;
 
-type Row = [string, string];
+const WITHOUT_LINKS: AlertEmailContext = { origin: null };
 
 function value(raw: string | null): string {
   return raw ?? '—';
@@ -42,8 +47,8 @@ function signedDelta(delta: number | null): string {
   return rounded >= 0 ? `+${rounded}` : `${rounded}`;
 }
 
-function rankEventRows(payload: RankEventPayload): Row[] {
-  const rows: Row[] = [
+function rankEventRows(payload: RankEventPayload): Fact[] {
+  const rows: Fact[] = [
     ['App', appLabel(payload.app.name)],
     ['Keyword', keywordLabel(payload.keyword)],
   ];
@@ -72,9 +77,9 @@ function rankEventRows(payload: RankEventPayload): Row[] {
   ];
 }
 
-function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
+function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Fact[] {
   if (payload.event === 'metadata.changed') {
-    const rows: Row[] = [
+    const rows: Fact[] = [
       ['App', appLabel(payload.app.name)],
       ['Type', payload.app.isCompetitor ? 'Competitor' : 'Primary'],
     ];
@@ -111,7 +116,7 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
     return [
       ['Keyword', keywordLabel(payload.keyword)],
       ['Date', payload.date],
-      ...payload.entrants.map((entrant): Row => [
+      ...payload.entrants.map((entrant): Fact => [
         `#${entrant.position}`,
         entrant.isCompetitor ? `${entrant.title} (competitor)` : entrant.title,
       ]),
@@ -119,7 +124,7 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
   }
 
   if (payload.event === 'action.opened') {
-    const rows: Row[] = [
+    const rows: Fact[] = [
       ['App', appLabel(payload.app.name)],
       ['Rule', payload.action.rule],
       ['Priority', payload.action.priority],
@@ -145,7 +150,7 @@ function detailRows(payload: Exclude<AlertPayload, AlertBatchPayload>): Row[] {
     return rankEventRows(payload);
   }
 
-  const rows: Row[] = [
+  const rows: Fact[] = [
     ['Window', `${payload.window.from} → ${payload.window.to}`],
   ];
   if (payload.groups.length > 0) {
@@ -187,36 +192,61 @@ function escapeHtml(raw: string): string {
     .replace(/"/g, '&quot;');
 }
 
-function htmlRow([label, cell]: Row): string {
-  return `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top">${escapeHtml(label)}</td><td style="padding:4px 0">${escapeHtml(cell)}</td></tr>`;
+function alertAction(
+  payload: Exclude<AlertPayload, AlertBatchPayload>,
+  origin: string | null,
+): AlertAction | null {
+  if (payload.event === 'action.opened') {
+    return payload.link
+      ? { href: payload.link, label: 'Open the action' }
+      : null;
+  }
+  if (payload.event === 'digest.weekly') {
+    const portfolio = webLink(origin, '/');
+    return portfolio ? { href: portfolio, label: 'Open the portfolio' } : null;
+  }
+  const href = 'app' in payload ? appLink(origin, payload.app.id) : null;
+  return href ? { href, label: 'Open in AsoBeast' } : null;
+}
+
+export function alertEmailElement(
+  payload: Exclude<AlertPayload, AlertBatchPayload>,
+  context: AlertEmailContext,
+): ReactElement {
+  return (
+    <AlertEmail
+      summary={summarize(payload)}
+      facts={detailRows(payload).filter(([label]) => label !== 'Open')}
+      action={alertAction(payload, context.origin)}
+      occurredAt={payload.occurredAt}
+      context={context}
+    />
+  );
 }
 
 export async function formatEmail(
   payload: AlertPayload,
+  context: AlertEmailContext = WITHOUT_LINKS,
 ): Promise<EmailContent> {
   if (payload.event === 'alerts.batch') {
     return formatBatchEmail(payload);
   }
   const summary = summarize(payload);
-  const rows = detailRows(payload);
-
   const text = [
     summary,
     '',
-    ...rows.map(([label, cell]) => (label ? `${label}: ${cell}` : cell)),
+    ...detailRows(payload).map(([label, cell]) =>
+      label ? `${label}: ${cell}` : cell,
+    ),
     '',
     `Occurred at ${payload.occurredAt}`,
   ].join('\n');
 
-  const html = [
-    `<div style="font-family:system-ui,-apple-system,sans-serif;color:#0f172a">`,
-    `<p style="font-size:16px;font-weight:600;margin:0 0 12px">${escapeHtml(summary)}</p>`,
-    `<table style="border-collapse:collapse;font-size:14px">${rows.map(htmlRow).join('')}</table>`,
-    `<p style="font-size:12px;color:#94a3b8;margin:16px 0 0">Occurred at ${escapeHtml(payload.occurredAt)}</p>`,
-    `</div>`,
-  ].join('');
-
-  return { subject: `[asobeast] ${summary}`, text, html };
+  return renderEmail(
+    `[asobeast] ${summary}`,
+    alertEmailElement(payload, context),
+    text,
+  );
 }
 
 function plural(count: number, singular: string): string {
