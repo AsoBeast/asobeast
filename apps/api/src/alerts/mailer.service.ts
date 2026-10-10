@@ -8,6 +8,7 @@ import { createTransport, Transporter } from 'nodemailer';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { REDACTED, scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
+import type { OutgoingMail } from '../mail/outgoing-message';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const ACCOUNT_MAIL_CHANNEL = 'account';
@@ -20,12 +21,8 @@ export const ACCOUNT_MAIL_KINDS = [
 
 export type AccountMailKind = (typeof ACCOUNT_MAIL_KINDS)[number];
 
-export interface AccountMail {
+export interface AccountMail extends OutgoingMail {
   kind: AccountMailKind;
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
   secrets?: readonly string[];
 }
 
@@ -59,12 +56,7 @@ export class MailerService {
     return this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? null;
   }
 
-  async send(
-    to: string,
-    subject: string,
-    text: string,
-    html: string,
-  ): Promise<void> {
+  async send(mail: OutgoingMail): Promise<void> {
     if (!this.enabled) {
       throw new Error(NO_TRANSPORT);
     }
@@ -72,10 +64,10 @@ export class MailerService {
     try {
       await this.transporter().sendMail({
         from: this.config.get('SMTP_FROM', { infer: true }),
-        to,
-        subject,
-        text,
-        html,
+        to: mail.to,
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html,
       });
     } catch (error) {
       throw new Error(this.scrub(reason(error)));
@@ -89,7 +81,7 @@ export class MailerService {
     }
 
     try {
-      await this.send(mail.to, mail.subject, mail.text, mail.html);
+      await this.send(mail);
     } catch (error) {
       const detail = this.scrub(reason(error), mail.secrets);
       await this.record(mail, 'failed', detail);

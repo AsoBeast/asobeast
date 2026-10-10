@@ -158,7 +158,9 @@ describe('AlertsWorker', () => {
     await worker.process(emailJob('ea_1'));
 
     expect(send).toHaveBeenCalledTimes(1);
-    const [to, subject] = send.mock.calls[0] as [string, string];
+    const [{ to, subject }] = send.mock.calls[0] as [
+      { to: string; subject: string },
+    ];
     expect(to).toBe('ops@example.com');
     expect(subject).toContain('[asobeast]');
     expect(deliveryCreate).toHaveBeenCalledWith({

@@ -50,7 +50,7 @@ export class AccountNotifier {
 
     const email = await billingNoticeEmail(mail, this.mailer.origin);
     try {
-      await this.mailer.send(recipient, email.subject, email.text, email.html);
+      await this.mailer.send({ to: recipient, ...email });
       await this.record(event, 'delivered', null);
       return 'delivered';
     } catch (error) {

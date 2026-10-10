@@ -74,11 +74,11 @@ export class AlertsWorker extends WorkerHost {
     if (!alert) {
       return;
     }
-    const { subject, text, html } = await formatEmail(payload, {
+    const email = await formatEmail(payload, {
       origin: this.mailer.origin,
     });
     try {
-      await this.mailer.send(alert.email, subject, text, html);
+      await this.mailer.send({ to: alert.email, ...email });
       await this.record('email', { emailAlertId }, payload.event, job, null);
       this.logger.debug(`delivered ${payload.event} to email ${emailAlertId}`);
     } catch (error) {

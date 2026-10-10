@@ -81,11 +81,11 @@ export class EmailAlertsService {
     if (!alert) {
       throw new NotFoundException(`Email alert ${id} not found`);
     }
-    const { subject, text, html } = await formatEmail(samplePayload(), {
+    const email = await formatEmail(samplePayload(), {
       origin: this.mailer.origin,
     });
     try {
-      await this.mailer.send(alert.email, subject, text, html);
+      await this.mailer.send({ to: alert.email, ...email });
       return { delivered: true, status: null };
     } catch {
       return { delivered: false, status: null };
