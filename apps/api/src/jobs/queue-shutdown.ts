@@ -41,9 +41,11 @@ export class QueueShutdown implements BeforeApplicationShutdown {
   }
 
   private pinged(): Promise<boolean> {
-    return this.redis.runOpen(async (client) => {
-      await client.ping();
-      return true;
-    }, false);
+    return this.redis
+      .runOpen(async (client) => {
+        await client.ping();
+        return true;
+      }, false)
+      .catch(() => true);
   }
 }

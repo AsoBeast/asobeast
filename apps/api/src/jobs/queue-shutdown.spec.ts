@@ -113,4 +113,22 @@ describe('QueueShutdown', () => {
     expect(closeWorker.mock.calls).toEqual([[true]]);
     expect(closeFlow.mock.calls).toEqual([[true]]);
   });
+
+  it('drains as usual when redis answers the ping with an error', async () => {
+    const answered = {
+      runOpen: jest
+        .fn()
+        .mockRejectedValue(new Error('NOAUTH Authentication required.')),
+    } as unknown as FailFastRedis;
+    const discovery = {
+      getProviders: () =>
+        [withBackend(Queue, closeQueue)].map((instance) => ({ instance })),
+    } as unknown as DiscoveryService;
+
+    await expect(
+      new QueueShutdown(discovery, answered).beforeApplicationShutdown(),
+    ).resolves.toBeUndefined();
+
+    expect(closeQueue).not.toHaveBeenCalled();
+  });
 });
