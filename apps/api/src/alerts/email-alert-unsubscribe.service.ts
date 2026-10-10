@@ -67,16 +67,17 @@ export class EmailAlertUnsubscribe {
       where: { id: alertId },
       select: { email: true },
     });
-    const valid =
-      alert !== null &&
-      isUnsubscribeToken(this.secret, { alertId, email: alert.email }, token);
-    if (valid) {
-      await this.prisma.emailAlert.updateMany({
-        where: { id: alertId },
-        data: { active: false },
-      });
+    if (
+      !alert ||
+      !isUnsubscribeToken(this.secret, { alertId, email: alert.email }, token)
+    ) {
+      return false;
     }
-    return valid;
+    const { count } = await this.prisma.emailAlert.updateMany({
+      where: { id: alertId, email: alert.email },
+      data: { active: false },
+    });
+    return count > 0;
   }
 
   private get secret(): string {

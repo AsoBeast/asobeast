@@ -76,11 +76,11 @@ describe('EmailAlertUnsubscribe', () => {
     expect(updateMany).not.toHaveBeenCalled();
   });
 
-  it('pauses only the alert the token names', async () => {
+  it('pauses only the alert the token names, at the address it was checked against', async () => {
     const { service, updateMany } = build('https://aso.example.com');
     await service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS));
     expect(updateMany).toHaveBeenCalledWith({
-      where: { id: 'ea_1' },
+      where: { id: 'ea_1', email: OPS.email },
       data: { active: false },
     });
   });
