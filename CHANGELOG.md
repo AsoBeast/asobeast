@@ -3,6 +3,37 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.9.0](https://github.com/AsoBeast/asobeast/compare/v1.8.0...v1.9.0) (2026-10-10)
+
+
+### Features
+
+* **apps:** capture metadata snapshots per market and switch markets on app detail ([#272](https://github.com/AsoBeast/asobeast/issues/272)) ([b0333f2](https://github.com/AsoBeast/asobeast/commit/b0333f2febac7ebda6b85d2316e9a59cabc41249))
+* **keywords:** import tracked keywords from a csv file ([#271](https://github.com/AsoBeast/asobeast/issues/271)) ([2e0715c](https://github.com/AsoBeast/asobeast/commit/2e0715c59cfa2225e6f1d50cda819c7c12a34cca))
+* **mcp:** add opt-in write tools and the missing read tools ([#270](https://github.com/AsoBeast/asobeast/issues/270)) ([625a6ae](https://github.com/AsoBeast/asobeast/commit/625a6aec3191b945e12e003c771f6ae8a0b1cf2d))
+* **metadata:** read screenshot captions into keyword coverage and change tracking ([#273](https://github.com/AsoBeast/asobeast/issues/273)) ([c2a1fdd](https://github.com/AsoBeast/asobeast/commit/c2a1fdd2f1be60f9fdc59413749bbcd95b08b7aa))
+* **web:** adopt the AsoBeast orange and name across the app ([#263](https://github.com/AsoBeast/asobeast/issues/263)) ([85bcd33](https://github.com/AsoBeast/asobeast/commit/85bcd33e8473be105bd6654526747375d268d363))
+
+
+### Bug Fixes
+
+* **apps:** list every recorded change in the refresh answer ([#280](https://github.com/AsoBeast/asobeast/issues/280)) ([23a4d24](https://github.com/AsoBeast/asobeast/commit/23a4d2499d5e1e29c0a6ed333e3266dd1d343bb5))
+* **db:** let the whats new migration replay without the migrations table ([#274](https://github.com/AsoBeast/asobeast/issues/274)) ([15f9f09](https://github.com/AsoBeast/asobeast/commit/15f9f091ef0cd8ff907eee79f64d034b6e37aefa))
+* **keywords:** keep word fragments out of auto tracked keywords ([#292](https://github.com/AsoBeast/asobeast/issues/292)) ([5c363f3](https://github.com/AsoBeast/asobeast/commit/5c363f36d5e67e586a61eb34ed6e177030ed0a68))
+* **keywords:** scope seasonal suggestions by year and storefront ([#295](https://github.com/AsoBeast/asobeast/issues/295)) ([3a1ba06](https://github.com/AsoBeast/asobeast/commit/3a1ba0679f868c804eca9fa4974e238dd8035720))
+* **keywords:** skip the function words of the listing language ([#293](https://github.com/AsoBeast/asobeast/issues/293)) ([2f36bf4](https://github.com/AsoBeast/asobeast/commit/2f36bf46e31a40ea4211cd1cecc50f3cac76eb22))
+* **keywords:** split thai listings with a word list before extracting ([#261](https://github.com/AsoBeast/asobeast/issues/261)) ([9444d6c](https://github.com/AsoBeast/asobeast/commit/9444d6ce73189106e81b35f856887efea73a9e1a))
+* **keywords:** treat a script change as a word boundary in coverage ([#260](https://github.com/AsoBeast/asobeast/issues/260)) ([c6d2a6f](https://github.com/AsoBeast/asobeast/commit/c6d2a6f09f4d3f6438759818a40b52364f541108))
+* **metadata:** read screenshot captions reliably on real listings ([#281](https://github.com/AsoBeast/asobeast/issues/281)) ([4451f81](https://github.com/AsoBeast/asobeast/commit/4451f81a89caf0e1aec285693ab8cb9dc2afb139))
+* **providers:** capture the native localization of english default storefronts ([#282](https://github.com/AsoBeast/asobeast/issues/282)) ([87fa483](https://github.com/AsoBeast/asobeast/commit/87fa4835ca939c3db06236bb3cd732d14ce6055b))
+* **providers:** read a play review without text as empty text ([#296](https://github.com/AsoBeast/asobeast/issues/296)) ([1fc0824](https://github.com/AsoBeast/asobeast/commit/1fc08244cf34f9f4a4a3ef9fd54e763f49e075e6))
+* **providers:** read a primary category subtitle as no subtitle ([#284](https://github.com/AsoBeast/asobeast/issues/284)) ([9b2d9db](https://github.com/AsoBeast/asobeast/commit/9b2d9dbabefac8f1b08d7eb8853fd7aa92794ec4))
+* **providers:** read any genre of a listing as no subtitle ([#291](https://github.com/AsoBeast/asobeast/issues/291)) ([9042f16](https://github.com/AsoBeast/asobeast/commit/9042f16cd34218967e915e213938626e47e1d91f))
+* **providers:** read the traditional play listing in tw and hk ([#294](https://github.com/AsoBeast/asobeast/issues/294)) ([27fc807](https://github.com/AsoBeast/asobeast/commit/27fc8075cd435322dcdc999cab3897275d91868d))
+* **web:** bring text on every route to wcag aa contrast ([#264](https://github.com/AsoBeast/asobeast/issues/264)) ([60a5c80](https://github.com/AsoBeast/asobeast/commit/60a5c80344cad1bdbe6a526634eb874c8e5d975c))
+* **web:** self host the ibm plex fonts so builds stop fetching google fonts ([#256](https://github.com/AsoBeast/asobeast/issues/256)) ([c145c66](https://github.com/AsoBeast/asobeast/commit/c145c66f46fbfb63c311322a77adb7c9d6dff68d))
+* **web:** stop the sign in redirect loop on a stale session answer ([#276](https://github.com/AsoBeast/asobeast/issues/276)) ([431fceb](https://github.com/AsoBeast/asobeast/commit/431fceb1bc7a9c31ab48426d22f919503ee07224))
+
 ## [1.8.0](https://github.com/AsoBeast/asobeast/compare/v1.7.0...v1.8.0) (2026-10-06)
 
 
