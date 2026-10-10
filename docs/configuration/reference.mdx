@@ -36,7 +36,7 @@ Every variable below is read by the API from `apps/api/.env`, or from the enviro
 
 ## Scheduling
 
-Every cron expression is evaluated in UTC. See [The daily pipeline and rate limits](/concepts/pipeline).
+Every cron expression is evaluated in UTC. A `CRON_` value anywhere on this page that is not a cron expression refuses to boot, rather than leaving that schedule and every one registered after it silently unscheduled. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 | Variable | Default | Required | Effect |
 | --- | --- | --- | --- |

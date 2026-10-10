@@ -127,3 +127,34 @@ describe('the screenshot ocr variables', () => {
     },
   );
 });
+
+describe('the cron variables', () => {
+  const safe = { AUTH_SECRET: 'a'.repeat(32) };
+
+  it.each([
+    'CRON_DAILY',
+    'CRON_SCORING',
+    'CRON_PROXY_SYNC',
+    'CRON_STORE_CANARY',
+    'CRON_STORE_STATUS',
+    'CRON_RETENTION',
+    'CRON_DIGEST',
+    'CRON_AUDIT',
+    'CRON_BILLING_RECONCILE',
+    'CRON_TRIAL_NOTICES',
+    'CRON_APPLE_POPULARITY',
+  ])('refuses to boot on a malformed %s', (name) => {
+    expect(() => validateEnv({ ...safe, [name]: '61 * * * *' })).toThrow(name);
+  });
+
+  it('accepts every default schedule', () => {
+    expect(validateEnv(safe).CRON_DAILY).toBe('0 3 * * *');
+  });
+
+  it.each(['CRON_STORE_CANARY', 'CRON_STORE_STATUS'])(
+    'still accepts an empty %s, which removes its schedule',
+    (name) => {
+      expect(validateEnv({ ...safe, [name]: '' })[name]).toBe('');
+    },
+  );
+});

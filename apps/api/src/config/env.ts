@@ -1,3 +1,4 @@
+import { CronExpressionParser } from 'cron-parser';
 import { z } from 'zod';
 import {
   DEFAULT_OCR_LANGUAGES,
@@ -23,6 +24,31 @@ const optionalText = z.preprocess(
   z.string().optional(),
 );
 
+const isCronPattern = (value: string): boolean => {
+  try {
+    CronExpressionParser.parse(value, { tz: 'UTC' });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const cronPattern = (fallback: string) =>
+  z
+    .string()
+    .min(1)
+    .refine(isCronPattern, 'is not a cron pattern')
+    .default(fallback);
+
+const optionalCronPattern = (fallback: string) =>
+  z
+    .string()
+    .refine(
+      (value) => value === '' || isCronPattern(value),
+      'is not a cron pattern',
+    )
+    .default(fallback);
+
 export const EnvSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -36,8 +62,8 @@ export const EnvSchema = z.object({
   REDIS_DB: z.coerce.number().int().min(0).default(0),
   PORT: z.coerce.number().int().positive().default(4000),
   DEFAULT_COUNTRY: z.string().min(1).default('us'),
-  CRON_DAILY: z.string().min(1).default('0 3 * * *'),
-  CRON_SCORING: z.string().min(1).default('0 4 * * 0'),
+  CRON_DAILY: cronPattern('0 3 * * *'),
+  CRON_SCORING: cronPattern('0 4 * * 0'),
   SCRAPE_ITUNES_RPM: z.coerce.number().int().positive().default(15),
   SCRAPE_GPLAY_RPM: z.coerce.number().int().positive().default(10),
   PROXY_PROVIDER: z.enum(['none', 'webshare']).default('none'),
@@ -54,10 +80,10 @@ export const EnvSchema = z.object({
   PROXY_RESIDENTIAL_MONTHLY_CAP_USD: z.coerce.number().min(0).default(0),
   PROXY_RESIDENTIAL_COST_PER_GB: z.coerce.number().min(0).default(3),
   PROXY_RESIDENTIAL_MB_PER_REQUEST: z.coerce.number().min(0).default(1.2),
-  CRON_PROXY_SYNC: z.string().min(1).default('0 2 * * *'),
-  CRON_STORE_CANARY: z.string().default('0 2,8,14,20 * * *'),
+  CRON_PROXY_SYNC: cronPattern('0 2 * * *'),
+  CRON_STORE_CANARY: optionalCronPattern('0 2,8,14,20 * * *'),
   STORE_STATUS_URL: optionalText,
-  CRON_STORE_STATUS: z.string().default('17 * * * *'),
+  CRON_STORE_STATUS: optionalCronPattern('17 * * * *'),
   SIGNUP_CAPACITY_MAX_UTILIZATION: z.coerce.number().min(0).max(1).default(0),
   ALERT_RANK_DROP_THRESHOLD: z.coerce.number().int().positive().default(5),
   ALERT_REVIEW_SCORE_MAX: z.coerce.number().int().min(1).max(4).default(2),
@@ -95,9 +121,9 @@ export const EnvSchema = z.object({
       })
       .optional(),
   ),
-  CRON_RETENTION: z.string().min(1).default('0 5 * * *'),
-  CRON_DIGEST: z.string().min(1).default('0 8 * * 1'),
-  CRON_AUDIT: z.string().min(1).default('0 6 * * *'),
+  CRON_RETENTION: cronPattern('0 5 * * *'),
+  CRON_DIGEST: cronPattern('0 8 * * 1'),
+  CRON_AUDIT: cronPattern('0 6 * * *'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z
@@ -177,8 +203,8 @@ export const EnvSchema = z.object({
   STRIPE_PRICE_INDIE_YEARLY: optionalText,
   STRIPE_PRICE_ULTIMATE_MONTHLY: optionalText,
   STRIPE_PRICE_ULTIMATE_YEARLY: optionalText,
-  CRON_BILLING_RECONCILE: z.string().min(1).default('0 7 * * *'),
-  CRON_TRIAL_NOTICES: z.string().min(1).default('0 9 * * *'),
+  CRON_BILLING_RECONCILE: cronPattern('0 7 * * *'),
+  CRON_TRIAL_NOTICES: cronPattern('0 9 * * *'),
   BILLING_ENABLED: z
     .enum(['true', 'false'])
     .default('false')
@@ -192,7 +218,7 @@ export const EnvSchema = z.object({
   APPLE_ADS_KEY_ID: optionalText,
   APPLE_ADS_PRIVATE_KEY_PATH: optionalText,
   APPLE_ADS_AD_ACCOUNT_ID: optionalText,
-  CRON_APPLE_POPULARITY: z.string().min(1).default('0 9 * * 1'),
+  CRON_APPLE_POPULARITY: cronPattern('0 9 * * 1'),
   LOG_LEVEL: z
     .enum(['error', 'warn', 'log', 'debug', 'verbose'])
     .default('debug'),
