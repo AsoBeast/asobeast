@@ -10,6 +10,7 @@ import { Job, Queue } from 'bullmq';
 import { Env } from '../config/env';
 import { JOBS, QUEUES, type BillingEventPayload } from '../jobs/jobs.types';
 import { reportQueueError } from '../jobs/queue-error-reporter';
+import { registerInBackground } from '../jobs/schedule-registration';
 import { RedisOutageLog } from '../redis/redis-outage-log';
 import { BillingReconciler } from './billing-reconciler.service';
 import { BillingWebhookService } from './billing-webhook.service';
@@ -35,8 +36,10 @@ export class BillingWorker extends WorkerHost implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    this.registerSchedules().catch((error: Error) =>
-      reportQueueError(error, this.outage, this.logger),
+    registerInBackground(
+      this.queue,
+      () => this.registerSchedules(),
+      (error) => reportQueueError(error, this.outage, this.logger),
     );
   }
 

@@ -43,6 +43,7 @@ import {
 } from './jobs.types';
 import { PipelineService } from './pipeline.service';
 import { reportQueueError } from './queue-error-reporter';
+import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
 
@@ -76,8 +77,10 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    this.registerSchedules().catch((error: Error) =>
-      reportQueueError(error, this.outage, this.logger),
+    registerInBackground(
+      this.pipelineQueue,
+      () => this.registerSchedules(),
+      (error) => reportQueueError(error, this.outage, this.logger),
     );
   }
 

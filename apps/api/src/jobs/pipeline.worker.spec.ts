@@ -181,9 +181,10 @@ describe('PipelineWorker', () => {
     const { worker, pipelineQueue } = build();
     const warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();
     const failed = jest.spyOn(Logger.prototype, 'error').mockReturnValue();
-    pipelineQueue.upsertJobScheduler.mockRejectedValue(
-      new Error('Connection is closed.'),
-    );
+    pipelineQueue.upsertJobScheduler.mockImplementation(() => {
+      Object.assign(pipelineQueue, { closing: Promise.resolve() });
+      return Promise.reject(new Error('Connection is closed.'));
+    });
 
     worker.onModuleInit();
     await new Promise((resolve) => setImmediate(resolve));
