@@ -226,6 +226,34 @@ describe('AnalyticsController (e2e)', () => {
     return { id, group: group.id, play: play.id };
   };
 
+  const seedGermanMarket = async (appId: string): Promise<void> => {
+    const keyword = await prisma.keyword.create({
+      data: { text: 'gewohnheiten', store: Store.APP_STORE, country: 'de' },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId, keywordId: keyword.id, source: 'MANUAL', active: true },
+    });
+    await prisma.keywordMetric.create({
+      data: {
+        keywordId: keyword.id,
+        date: D7,
+        traffic: 10,
+        difficulty: 3,
+        formulaVersion: CURRENT_FORMULA_VERSIONS.APP_STORE,
+      },
+    });
+    await prisma.keywordRanking.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        keywordId: keyword.id,
+        date: D7,
+        position: 3,
+        depth: 100,
+      },
+    });
+  };
+
   it('computes every summary block from seeded rows', async () => {
     const id = await seed();
 
@@ -267,6 +295,95 @@ describe('AnalyticsController (e2e)', () => {
     expect(summary.competitors).toBe(0);
     expect(summary.lastRefreshAt).toBe(D0.toISOString());
   });
+
+  it('narrows the summary to the keywords of one market', async () => {
+    const id = await seed();
+    await seedGermanMarket(id);
+
+    const all = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const home = (
+      await api.get(`/apps/${id}/summary`).query({ country: 'us' }).expect(200)
+    ).body as AppSummary;
+    const german = (
+      await api.get(`/apps/${id}/summary`).query({ country: 'de' }).expect(200)
+    ).body as AppSummary;
+
+    expect(all.trackedKeywords).toBe(5);
+    expect(all.visibility.current).toBeLessThan(home.visibility.current);
+
+    expect(home.trackedKeywords).toBe(4);
+    expect(home.visibility.current).toBeCloseTo(41.7, 1);
+    expect(home.rankDistribution.unranked).toBe(1);
+
+    expect(german.trackedKeywords).toBe(1);
+    expect(german.visibility.current).toBe(50);
+    expect(german.rankDistribution).toEqual({
+      top1: 0,
+      top3: 1,
+      top10: 1,
+      top50: 1,
+      beyond: 0,
+      unranked: 0,
+    });
+    expect(german.movers).toEqual({ up: [], down: [] });
+  });
+
+  it('reports an empty summary for a market the app tracks nothing in', async () => {
+    const id = await seed();
+
+    const summary = (
+      await api.get(`/apps/${id}/summary`).query({ country: 'fr' }).expect(200)
+    ).body as AppSummary;
+
+    expect(summary.trackedKeywords).toBe(0);
+    expect(summary.visibility).toEqual({
+      current: 0,
+      delta7d: null,
+      delta30d: null,
+    });
+  });
+
+  it('narrows both keyword histories to one market', async () => {
+    const id = await seed();
+    await seedGermanMarket(id);
+    const window = { from: '2026-06-20', to: '2026-07-01', country: 'de' };
+
+    const visibility = (
+      await api.get(`/apps/${id}/visibility-history`).query(window).expect(200)
+    ).body as VisibilityHistory;
+    const distribution = (
+      await api
+        .get(`/apps/${id}/rank-distribution-history`)
+        .query(window)
+        .expect(200)
+    ).body as RankDistributionHistory;
+
+    expect(visibility.points).toEqual([{ date: '2026-06-23', visibility: 50 }]);
+    expect(distribution.points).toEqual([
+      {
+        date: '2026-06-23',
+        rank1: 0,
+        rank2to3: 1,
+        rank4to10: 0,
+        rank11to50: 0,
+        rank51plus: 0,
+        unranked: 0,
+      },
+    ]);
+  });
+
+  it.each(['summary', 'visibility-history', 'rank-distribution-history'])(
+    'refuses a country that is not a storefront code on %s',
+    async (route) => {
+      const id = await seed();
+
+      await api
+        .get(`/apps/${id}/${route}`)
+        .query({ country: 'germany' })
+        .expect(400);
+    },
+  );
 
   it('leaves an uncovered keyword below the relevance bar out', async () => {
     const id = await seed();
