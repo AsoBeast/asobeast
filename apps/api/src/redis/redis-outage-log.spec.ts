@@ -54,4 +54,14 @@ describe('RedisOutageLog', () => {
       'redis is unreachable, so queued work waits and request path reads and rate limits fail fast: ECONNREFUSED',
     );
   });
+
+  it('names the error class when the error code is not a string', () => {
+    new RedisOutageLog().report(
+      Object.assign(new AggregateError([], ''), { code: 61 }),
+    );
+
+    expect(warn).toHaveBeenCalledWith(
+      'redis is unreachable, so queued work waits and request path reads and rate limits fail fast: AggregateError',
+    );
+  });
 });

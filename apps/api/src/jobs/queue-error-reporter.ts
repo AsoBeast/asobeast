@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { Queue, QueueBase, Worker } from 'bullmq';
-import { reasonOf, RedisOutageLog } from '../redis/redis-outage-log';
+import { codeOf, reasonOf, RedisOutageLog } from '../redis/redis-outage-log';
 
 const UNREACHABLE_CODES = new Set([
   'EADDRNOTAVAIL',
@@ -25,7 +25,7 @@ const CONNECTION_CLOSED = 'Connection is closed.';
 const RETRIES_EXHAUSTED = 'MaxRetriesPerRequestError';
 
 export function isRedisUnreachable(error: Error): boolean {
-  const { code } = error as NodeJS.ErrnoException;
+  const code = codeOf(error);
   return (
     (code !== undefined && UNREACHABLE_CODES.has(code)) ||
     error.message === CONNECTION_CLOSED ||
