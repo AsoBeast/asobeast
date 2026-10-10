@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   Injectable,
   Logger,
@@ -8,7 +10,11 @@ import { createTransport, Transporter } from 'nodemailer';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { REDACTED, scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
-import { outgoingMessage, type OutgoingMail } from '../mail/outgoing-message';
+import {
+  DKIM_SIGNED_HEADERS,
+  outgoingMessage,
+  type OutgoingMail,
+} from '../mail/outgoing-message';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const ACCOUNT_MAIL_CHANNEL = 'account';
@@ -133,6 +139,23 @@ export class MailerService {
     return this.verified;
   }
 
+  private dkim() {
+    const domainName = this.config.get('SMTP_DKIM_DOMAIN', { infer: true });
+    const keySelector = this.config.get('SMTP_DKIM_SELECTOR', { infer: true });
+    const keyPath = this.config.get('SMTP_DKIM_PRIVATE_KEY_PATH', {
+      infer: true,
+    });
+    if (!domainName || !keySelector || !keyPath) return {};
+    return {
+      dkim: {
+        domainName,
+        keySelector,
+        privateKey: readFileSync(resolve(keyPath), 'utf8'),
+        headerFieldNames: DKIM_SIGNED_HEADERS,
+      },
+    };
+  }
+
   private transporter(): Transporter {
     if (!this.transport) {
       const user = this.config.get('SMTP_USER', { infer: true });
@@ -142,6 +165,7 @@ export class MailerService {
         port: this.config.get('SMTP_PORT', { infer: true }),
         secure: this.config.get('SMTP_SECURE', { infer: true }),
         auth: user ? { user, pass } : undefined,
+        ...this.dkim(),
       });
     }
     return this.transport;

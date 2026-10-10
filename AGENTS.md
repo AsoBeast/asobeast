@@ -343,6 +343,9 @@ SMTP_SECURE=false                   # true wraps the connection in TLS (port 465
 SMTP_USER=                          # optional; empty for unauthenticated relays
 SMTP_PASSWORD=                      # optional
 SMTP_FROM=                          # e.g. asobeast <alerts@example.com>
+SMTP_DKIM_DOMAIN=                   # optional. Sign every email with DKIM for this domain, the SMTP_FROM domain or its parent. The three SMTP_DKIM_ variables are all set or all unset. REFUSES TO BOOT when only some are set
+SMTP_DKIM_SELECTOR=                 # DKIM selector; publish the public key at <selector>._domainkey.<domain>
+SMTP_DKIM_PRIVATE_KEY_PATH=         # PEM private key, e.g. keys/dkim-private.pem. Relative paths resolve against apps/api, which the Compose stacks mount read only at apps/api/keys. REFUSES TO BOOT when the three are set and the path is not a readable file. Its contents are never logged
 OPENAI_API_KEY=                     # optional; enables the AI audit + metadata drafts + action explanations. Empty = AI actions disabled (endpoints 409), drafts card hidden, audit shows a setup hint
 AI_MODEL=gpt-5.6-luna               # OpenAI model with vision + structured outputs
 AI_CALLS_PER_MONTH=                 # optional; AI calls each workspace may make per UTC month when BILLING_ENABLED=false. Empty = unlimited, 0 turns AI calls off. Ignored with billing on, where each plan sets its own allowance. WARNS in production when empty with OPENAI_API_KEY set and AUTH_ALLOW_REGISTRATION=true

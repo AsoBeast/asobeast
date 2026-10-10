@@ -1,6 +1,6 @@
-import { accessSync, constants, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Env } from './env';
+import { readable } from './readable-file';
 
 export const APPLE_ADS_CREDENTIALS = [
   'APPLE_ADS_CLIENT_ID',
@@ -27,14 +27,5 @@ export function assertAppleAdsConfiguration(env: AppleAdsCredentials): void {
     throw new Error(
       `Apple Ads is configured but APPLE_ADS_PRIVATE_KEY_PATH cannot be read at ${resolve(keyPath)}. Put the key in apps/api/keys, where the Compose stacks mount it, or remove every APPLE_ADS_ variable.`,
     );
-  }
-}
-
-function readable(path: string): boolean {
-  try {
-    accessSync(path, constants.R_OK);
-    return statSync(path).isFile();
-  } catch {
-    return false;
   }
 }

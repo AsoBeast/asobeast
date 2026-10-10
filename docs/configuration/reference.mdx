@@ -117,6 +117,9 @@ Email is optional on a self hosted instance and mandatory on a metered one. With
 | `SMTP_USER` | Empty | No | Leave empty for an unauthenticated relay |
 | `SMTP_PASSWORD` | Empty | No | Paired with `SMTP_USER` |
 | `SMTP_FROM` | Empty | No | From address such as `asobeast <alerts@example.com>`. Required to enable email |
+| `SMTP_DKIM_DOMAIN` | Empty | No | Signs every email with DKIM for this domain, which should be the `SMTP_FROM` domain or its parent so DMARC aligns. The three `SMTP_DKIM_` variables are set together or not at all, and the API refuses to boot when only some are set |
+| `SMTP_DKIM_SELECTOR` | Empty | No | DKIM selector. Publish the public key at `<selector>._domainkey.<domain>` |
+| `SMTP_DKIM_PRIVATE_KEY_PATH` | Empty | No | RSA private key in PEM, for example `keys/dkim-private.pem`. A relative path resolves against `apps/api`, which both Compose stacks mount read only at `apps/api/keys`. The API refuses to boot when the three are set and the file cannot be read. Its contents are never logged |
 
 ## Action Center
 

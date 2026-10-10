@@ -1,8 +1,12 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { DKIM_SIGNED_HEADERS } from '../mail/outgoing-message';
 import { MailerService } from './mailer.service';
 
 const sendMail = jest.fn();
@@ -46,6 +50,40 @@ describe('MailerService', () => {
         buildConfig({ WEB_PUBLIC_URL: 'https://aso.example.com' }),
       ).origin,
     ).toBe('https://aso.example.com');
+  });
+
+  it('signs every message with dkim when the key is configured', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'mailer-dkim-'));
+    const keyPath = join(directory, 'dkim-private.pem');
+    writeFileSync(keyPath, 'private key');
+    const mailer = new MailerService(
+      buildConfig({
+        SMTP_HOST: 'localhost',
+        SMTP_FROM: 'alerts@mail.example.com',
+        SMTP_DKIM_DOMAIN: 'mail.example.com',
+        SMTP_DKIM_SELECTOR: 'asobeast',
+        SMTP_DKIM_PRIVATE_KEY_PATH: keyPath,
+      }),
+    );
+
+    await mailer.send({
+      to: 'to@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
+    rmSync(directory, { recursive: true, force: true });
+
+    expect(createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dkim: {
+          domainName: 'mail.example.com',
+          keySelector: 'asobeast',
+          privateKey: 'private key',
+          headerFieldNames: DKIM_SIGNED_HEADERS,
+        },
+      }),
+    );
   });
 
   it('throws a descriptive error when disabled', async () => {

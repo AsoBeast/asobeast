@@ -6,6 +6,9 @@ export interface OutgoingMail extends EmailContent {
   headers?: Readonly<Record<string, string>>;
 }
 
+export const DKIM_SIGNED_HEADERS =
+  'from:to:subject:date:message-id:mime-version:content-type:list-unsubscribe:list-unsubscribe-post:auto-submitted';
+
 const AUTOMATED_MAIL_HEADERS: Readonly<Record<string, string>> = {
   'Auto-Submitted': 'auto-generated',
   'X-Auto-Response-Suppress': 'All',
