@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { SETTINGS_PATH } from "@asobeast/shared";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/card";
 import { ApiError, unsubscribeEmailAlert } from "@/lib/api";
 
-const ALERT_SETTINGS = "/settings#email-alerts";
+const ALERT_SETTINGS = `${SETTINGS_PATH}#email-alerts`;
 const INVALID_STATUSES = [400, 404];
 
 interface UnsubscribeCardProps {
@@ -91,7 +92,7 @@ export function UnsubscribeContent() {
     return (
       <UnsubscribeCard
         title="This unsubscribe link is not valid"
-        description="It may have been replaced by a newer email. Manage alerts in Settings instead."
+        description="The alert may have been deleted or moved to another address. Manage alerts in Settings instead."
       >
         <SettingsLink>Manage alerts in Settings</SettingsLink>
       </UnsubscribeCard>
@@ -104,7 +105,7 @@ export function UnsubscribeContent() {
       description={
         mutation.isError
           ? "Try again in a moment."
-          : "This address will no longer receive AsoBeast alerts. You can turn them back on in Settings at any time."
+          : "This address will stop receiving this AsoBeast email alert. You can turn it back on in Settings at any time."
       }
     >
       <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>

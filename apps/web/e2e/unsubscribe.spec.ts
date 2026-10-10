@@ -26,6 +26,12 @@ test("asks before unsubscribing and never acts on load", async ({
   await openLink(page, "ea_load", VALID_UNSUBSCRIBE_TOKEN);
   await page.waitForLoadState("networkidle");
 
+  await expect(
+    page.getByText(
+      "This address will stop receiving this AsoBeast email alert. You can turn it back on in Settings at any time.",
+    ),
+  ).toBeVisible();
+
   await expect(page).toHaveURL(/\/unsubscribe\?/);
   expect(await callsFor(request, "ea_load")).toBe(0);
 });
@@ -54,6 +60,11 @@ test("explains a link that is no longer valid", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", { name: "This unsubscribe link is not valid" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "The alert may have been deleted or moved to another address. Manage alerts in Settings instead.",
+    ),
   ).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Manage alerts in Settings" }),
