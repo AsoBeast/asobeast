@@ -11,9 +11,12 @@ import { MailerService } from './mailer.service';
 import { unsubscribeToken } from './unsubscribe-token';
 
 const SECRET = 's'.repeat(32);
+const findUnique = jest.fn();
+const OPS = { alertId: 'ea_1', email: 'ops@example.com' };
 
-const build = (origin: string | null, count = 1) => {
-  const updateMany = jest.fn().mockResolvedValue({ count });
+const build = (origin: string | null) => {
+  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+  findUnique.mockReset().mockResolvedValue({ email: OPS.email });
   const config = {
     get: jest.fn(() => SECRET),
   } as unknown as ConfigService<Env, true>;
@@ -25,7 +28,7 @@ const build = (origin: string | null, count = 1) => {
   const service = new EmailAlertUnsubscribe(
     config,
     { origin } as MailerService,
-    { emailAlert: { updateMany } } as unknown as PrismaService,
+    { emailAlert: { updateMany, findUnique } } as unknown as PrismaService,
     crossTenant,
   );
   return { service, updateMany };
@@ -33,35 +36,49 @@ const build = (origin: string | null, count = 1) => {
 
 describe('EmailAlertUnsubscribe', () => {
   it('mints no links without a web origin', () => {
-    expect(build(null).service.links('ea_1')).toBeNull();
+    expect(build(null).service.links(OPS)).toBeNull();
   });
 
   it('links the confirmation page and the one click endpoint with one token', () => {
-    const token = unsubscribeToken(SECRET, 'ea_1');
-    expect(build('https://aso.example.com').service.links('ea_1')).toEqual({
+    const token = unsubscribeToken(SECRET, OPS);
+    expect(build('https://aso.example.com').service.links(OPS)).toEqual({
       page: `https://aso.example.com/unsubscribe?alert=ea_1&token=${token}`,
       oneClick: `https://aso.example.com/api/backend/email-alerts/ea_1/unsubscribe?token=${token}`,
     });
   });
 
-  it('refuses a wrong token before touching the database', async () => {
+  it('refuses another alert token without pausing anything', async () => {
     const { service, updateMany } = build('https://aso.example.com');
     await expect(
-      service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_2')),
+      service.unsubscribe(
+        'ea_1',
+        unsubscribeToken(SECRET, { ...OPS, alertId: 'ea_2' }),
+      ),
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('answers not found for an alert that does not exist', async () => {
-    const { service } = build('https://aso.example.com', 0);
+    const { service, updateMany } = build('https://aso.example.com');
+    findUnique.mockResolvedValue(null);
     await expect(
-      service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_1')),
+      service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS)),
     ).rejects.toBeInstanceOf(NotFoundException);
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses a link sent to an address the alert no longer uses', async () => {
+    const { service, updateMany } = build('https://aso.example.com');
+    findUnique.mockResolvedValue({ email: 'new@example.com' });
+    await expect(
+      service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS)),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(updateMany).not.toHaveBeenCalled();
   });
 
   it('pauses only the alert the token names', async () => {
     const { service, updateMany } = build('https://aso.example.com');
-    await service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_1'));
+    await service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS));
     expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'ea_1' },
       data: { active: false },

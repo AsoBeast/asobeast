@@ -1,33 +1,45 @@
 import { isUnsubscribeToken, unsubscribeToken } from './unsubscribe-token';
 
 const SECRET = 'a'.repeat(32);
+const OPS = { alertId: 'ea_1', email: 'ops@example.com' };
 
 describe('unsubscribe token', () => {
-  it('is the same for the same alert and secret', () => {
-    expect(unsubscribeToken(SECRET, 'ea_1')).toBe(
-      unsubscribeToken(SECRET, 'ea_1'),
+  it('is the same for the same recipient and secret', () => {
+    expect(unsubscribeToken(SECRET, OPS)).toBe(unsubscribeToken(SECRET, OPS));
+  });
+
+  it('ignores the case of the address', () => {
+    expect(unsubscribeToken(SECRET, { ...OPS, email: 'Ops@Example.com' })).toBe(
+      unsubscribeToken(SECRET, OPS),
     );
   });
 
-  it('differs per alert and per secret', () => {
-    expect(unsubscribeToken(SECRET, 'ea_1')).not.toBe(
-      unsubscribeToken(SECRET, 'ea_2'),
+  it('differs per alert, per address and per secret', () => {
+    const token = unsubscribeToken(SECRET, OPS);
+    expect(unsubscribeToken(SECRET, { ...OPS, alertId: 'ea_2' })).not.toBe(
+      token,
     );
-    expect(unsubscribeToken(SECRET, 'ea_1')).not.toBe(
-      unsubscribeToken('b'.repeat(32), 'ea_1'),
-    );
+    expect(
+      unsubscribeToken(SECRET, { ...OPS, email: 'team@example.com' }),
+    ).not.toBe(token);
+    expect(unsubscribeToken('b'.repeat(32), OPS)).not.toBe(token);
   });
 
   it('is 43 characters of base64url', () => {
-    expect(unsubscribeToken(SECRET, 'ea_1')).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(unsubscribeToken(SECRET, OPS)).toMatch(/^[A-Za-z0-9_-]{43}$/);
   });
 
-  it('accepts only the token minted for that alert', () => {
-    const token = unsubscribeToken(SECRET, 'ea_1');
-    expect(isUnsubscribeToken(SECRET, 'ea_1', token)).toBe(true);
-    expect(isUnsubscribeToken(SECRET, 'ea_2', token)).toBe(false);
-    expect(isUnsubscribeToken(SECRET, 'ea_1', token.slice(0, 42))).toBe(false);
-    expect(isUnsubscribeToken(SECRET, 'ea_1', `${token}a`)).toBe(false);
-    expect(isUnsubscribeToken(SECRET, 'ea_1', '')).toBe(false);
+  it('accepts only the token minted for that recipient', () => {
+    const token = unsubscribeToken(SECRET, OPS);
+    expect(isUnsubscribeToken(SECRET, OPS, token)).toBe(true);
+    expect(isUnsubscribeToken(SECRET, { ...OPS, alertId: 'ea_2' }, token)).toBe(
+      false,
+    );
+    expect(
+      isUnsubscribeToken(SECRET, { ...OPS, email: 'team@example.com' }, token),
+    ).toBe(false);
+    expect(isUnsubscribeToken(SECRET, OPS, token.slice(0, 42))).toBe(false);
+    expect(isUnsubscribeToken(SECRET, OPS, `${token}a`)).toBe(false);
+    expect(isUnsubscribeToken(SECRET, OPS, '')).toBe(false);
   });
 });

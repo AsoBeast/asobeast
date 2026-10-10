@@ -5,7 +5,11 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailerService } from './mailer.service';
-import { isUnsubscribeToken, unsubscribeToken } from './unsubscribe-token';
+import {
+  isUnsubscribeToken,
+  unsubscribeToken,
+  type UnsubscribeRecipient,
+} from './unsubscribe-token';
 
 const NOT_FOUND = 'Email alert not found';
 
@@ -36,11 +40,11 @@ export class EmailAlertUnsubscribe {
     private readonly crossTenant: CrossTenantAccess,
   ) {}
 
-  links(alertId: string): UnsubscribeLinks | null {
+  links(recipient: UnsubscribeRecipient): UnsubscribeLinks | null {
     const origin = this.mailer.origin;
     if (!origin) return null;
-    const token = unsubscribeToken(this.secret, alertId);
-    const id = encodeURIComponent(alertId);
+    const token = unsubscribeToken(this.secret, recipient);
+    const id = encodeURIComponent(recipient.alertId);
     return {
       page: `${origin}${UNSUBSCRIBE_PATH}?alert=${id}&token=${token}`,
       oneClick: `${origin}${BACKEND_PROXY_PATH}/email-alerts/${id}/unsubscribe?token=${token}`,
@@ -48,21 +52,31 @@ export class EmailAlertUnsubscribe {
   }
 
   async unsubscribe(alertId: string, token: string): Promise<void> {
-    if (!isUnsubscribeToken(this.secret, alertId, token)) {
-      throw new NotFoundException(NOT_FOUND);
-    }
-    const { count } =
+    const paused =
       await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
         UNSUBSCRIBE_JUSTIFICATION,
-        () =>
-          this.prisma.emailAlert.updateMany({
-            where: { id: alertId },
-            data: { active: false },
-          }),
+        () => this.pauseFor(alertId, token),
       );
-    if (count === 0) {
+    if (!paused) {
       throw new NotFoundException(NOT_FOUND);
     }
+  }
+
+  private async pauseFor(alertId: string, token: string): Promise<boolean> {
+    const alert = await this.prisma.emailAlert.findUnique({
+      where: { id: alertId },
+      select: { email: true },
+    });
+    const valid =
+      alert !== null &&
+      isUnsubscribeToken(this.secret, { alertId, email: alert.email }, token);
+    if (valid) {
+      await this.prisma.emailAlert.updateMany({
+        where: { id: alertId },
+        data: { active: false },
+      });
+    }
+    return valid;
   }
 
   private get secret(): string {

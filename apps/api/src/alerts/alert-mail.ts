@@ -20,7 +20,7 @@ export class AlertMail {
     to: string,
     payload: AlertPayload,
   ): Promise<OutgoingMail> {
-    const links = this.unsubscribes.links(emailAlertId);
+    const links = this.unsubscribes.links({ alertId: emailAlertId, email: to });
     const email = await formatEmail(payload, {
       origin: this.mailer.origin,
       unsubscribe: links?.page ?? null,

@@ -26,8 +26,8 @@ describe('Email alert one click unsubscribe (e2e)', () => {
       .type('form')
       .send('List-Unsubscribe=One-Click');
 
-  const tokenFor = (id: string) =>
-    `token=${unsubscribeToken(TEST_AUTH_SECRET, id)}`;
+  const tokenFor = ({ id, email }: Pick<EmailAlertItem, 'id' | 'email'>) =>
+    `token=${unsubscribeToken(TEST_AUTH_SECRET, { alertId: id, email })}`;
 
   const create = async (email: string): Promise<EmailAlertItem> =>
     (
@@ -83,7 +83,7 @@ describe('Email alert one click unsubscribe (e2e)', () => {
     const first = await create('ops@example.com');
     const second = await create('team@example.com');
 
-    const response = await oneClick(first.id, tokenFor(first.id)).expect(204);
+    const response = await oneClick(first.id, tokenFor(first)).expect(204);
 
     expect(response.headers.location).toBeUndefined();
     expect(response.headers['set-cookie']).toBeUndefined();
@@ -95,8 +95,8 @@ describe('Email alert one click unsubscribe (e2e)', () => {
 
   it('answers the same when a mailbox provider retries', async () => {
     const alert = await create('ops@example.com');
-    await oneClick(alert.id, tokenFor(alert.id)).expect(204);
-    await oneClick(alert.id, tokenFor(alert.id)).expect(204);
+    await oneClick(alert.id, tokenFor(alert)).expect(204);
+    await oneClick(alert.id, tokenFor(alert)).expect(204);
     expect(await activeById()).toEqual({ [alert.id]: false });
   });
 
@@ -104,27 +104,42 @@ describe('Email alert one click unsubscribe (e2e)', () => {
     const first = await create('ops@example.com');
     const second = await create('team@example.com');
 
-    await oneClick(second.id, tokenFor(first.id)).expect(404);
-    await oneClick('cm_missing_alert', tokenFor('cm_missing_alert')).expect(
-      404,
-    );
+    await oneClick(second.id, tokenFor(first)).expect(404);
+    await oneClick(
+      'cm_missing_alert',
+      tokenFor({ id: 'cm_missing_alert', email: 'ops@example.com' }),
+    ).expect(404);
     expect(await activeById()).toEqual({
       [first.id]: true,
       [second.id]: true,
     });
   });
 
+  it('retires the links sent to an address the alert no longer uses', async () => {
+    const alert = await create('ops@example.com');
+    await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ email: 'team@example.com' })
+      .expect(200);
+
+    await oneClick(alert.id, tokenFor(alert)).expect(404);
+    await oneClick(
+      alert.id,
+      tokenFor({ id: alert.id, email: 'team@example.com' }),
+    ).expect(204);
+  });
+
   it('refuses a malformed token and an extra query parameter', async () => {
     const alert = await create('ops@example.com');
     await oneClick(alert.id, 'token=short').expect(400);
-    await oneClick(alert.id, `${tokenFor(alert.id)}&extra=1`).expect(400);
+    await oneClick(alert.id, `${tokenFor(alert)}&extra=1`).expect(400);
     expect(await activeById()).toEqual({ [alert.id]: true });
   });
 
   it('never unsubscribes on a GET, which link scanners send', async () => {
     const alert = await create('ops@example.com');
     await request(app.getHttpServer())
-      .get(`/email-alerts/${alert.id}/unsubscribe?${tokenFor(alert.id)}`)
+      .get(`/email-alerts/${alert.id}/unsubscribe?${tokenFor(alert)}`)
       .expect(404);
     expect(await activeById()).toEqual({ [alert.id]: true });
   });
