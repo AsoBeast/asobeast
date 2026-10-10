@@ -20,7 +20,7 @@ import { lookupLanguage, pageLanguage } from './app-store-languages';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
-import { Abortable, storeDeadline } from './store-deadline';
+import { Abortable, pause, storeDeadline } from './store-deadline';
 import {
   ChartItem,
   NormalizedApp,
@@ -301,18 +301,4 @@ function toDate(value?: string): Date | undefined {
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-function pause(ms: number, signal?: AbortSignal): Promise<boolean> {
-  if (signal?.aborted) return Promise.resolve(false);
-  return new Promise((resolve) => {
-    const settle = (elapsed: boolean) => {
-      clearTimeout(timer);
-      signal?.removeEventListener('abort', abandon);
-      resolve(elapsed);
-    };
-    const abandon = () => settle(false);
-    const timer = setTimeout(() => settle(true), ms);
-    signal?.addEventListener('abort', abandon, { once: true });
-  });
 }

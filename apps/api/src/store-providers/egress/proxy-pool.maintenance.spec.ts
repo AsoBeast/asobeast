@@ -1,3 +1,4 @@
+import { storeDeadline, withinStoreDeadline } from '../store-deadline';
 import { ProxyPoolHealthReport } from './proxy-pool-health.service';
 import { ProxyPoolMaintenance } from './proxy-pool.maintenance';
 import { ProxyPoolSync } from './proxy-pool.sync';
@@ -80,5 +81,18 @@ describe('ProxyPoolMaintenance', () => {
     await maintenance.ensureInitialized();
 
     expect(reconcile).toHaveBeenCalledTimes(1);
+  });
+
+  it('probes the pool outside the deadline of the request that first needs it', async () => {
+    const seen: unknown[] = [];
+    admitPending.mockImplementation(() => {
+      seen.push(storeDeadline());
+      return Promise.resolve({ probed: 0 });
+    });
+    const maintenance = maintenanceWith(true);
+
+    await withinStoreDeadline(() => maintenance.ensureInitialized());
+
+    expect(seen).toEqual([{}]);
   });
 });

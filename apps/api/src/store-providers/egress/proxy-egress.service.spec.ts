@@ -1,6 +1,7 @@
 import { ProxyOutcome, ProxyTier, Store } from '@prisma/client';
 import { Dispatcher } from 'undici';
 import { ImplausibleResultError, StoreRequestError } from '../errors';
+import { storeDeadline, withinStoreDeadline } from '../store-deadline';
 import { currentMeter } from './egress';
 import { ProxyEgress } from './proxy-egress.service';
 import { HealthObservation, ProxyHealthTracker } from './proxy-health.service';
@@ -255,6 +256,30 @@ describe('ProxyEgress', () => {
       egress.through(Store.APP_STORE, 'us', () => Promise.reject(domain)),
     ).rejects.toBe(domain);
 
+    expect(record).not.toHaveBeenCalled();
+    expect(charge).toHaveBeenCalledWith(ProxyTier.DATACENTER, 1);
+  });
+
+  it('never holds a passed on demand deadline against the endpoint', async () => {
+    const failure = await withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 40));
+      return egress
+        .through(Store.APP_STORE, 'us', () => {
+          const meter = currentMeter();
+          meter?.observe();
+          meter?.refuse(storeDeadline().signal?.reason);
+          return Promise.reject(
+            new StoreRequestError(
+              Store.APP_STORE,
+              'getApp',
+              'The operation was aborted due to timeout',
+            ),
+          );
+        })
+        .catch((error: unknown) => error);
+    }, 20);
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
     expect(record).not.toHaveBeenCalled();
     expect(charge).toHaveBeenCalledWith(ProxyTier.DATACENTER, 1);
   });

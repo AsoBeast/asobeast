@@ -3,6 +3,8 @@ import { Store } from '@prisma/client';
 import { Dispatcher } from 'undici';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StoreRequestError } from '../errors';
+import { pause, storeDeadline } from '../store-deadline';
 import { proxyDispatcher } from './egress';
 import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
@@ -73,7 +75,11 @@ export class ProxyPool {
     if (!this.config.enabled) return null;
 
     const deadline = Date.now() + this.config.acquireTimeoutMs;
+    const { signal } = storeDeadline();
     for (;;) {
+      if (signal?.aborted) {
+        throw new StoreRequestError(store, 'acquire', String(signal.reason));
+      }
       const lease =
         await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
           POOL_JUSTIFICATION,
@@ -90,7 +96,7 @@ export class ProxyPool {
           this.config.acquireTimeoutMs,
         );
       }
-      await sleep(Math.min(lease.waitMs, remaining));
+      await pause(Math.min(lease.waitMs, remaining), signal);
     }
   }
 
@@ -236,8 +242,4 @@ function toCandidate(row: EndpointRow): PoolCandidate {
     pacedUntil: health?.pacedUntil ?? null,
     lastUsedAt: health?.lastUsedAt ?? null,
   };
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

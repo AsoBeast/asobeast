@@ -1,6 +1,8 @@
 import { ProxyProtocol, Store } from '@prisma/client';
 import { CrossTenantAccess } from '../../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../../prisma/prisma.service';
+import { StoreRequestError } from '../errors';
+import { withinStoreDeadline } from '../store-deadline';
 import { PoolShutdown } from './pool-shutdown';
 import { ProxyPoolConfig } from './proxy-pool.config';
 import {
@@ -254,5 +256,24 @@ describe('ProxyPool', () => {
 
     expect(play?.endpointId).toBe('de');
     expect(apple?.endpointId).toBe('us');
+  });
+
+  it('stops waiting for an endpoint once the on demand deadline passes', async () => {
+    findMany.mockResolvedValue([]);
+    const started = Date.now();
+
+    const failure = await withinStoreDeadline(
+      () =>
+        poolWith({ acquireTimeoutMs: 120_000, emptyPollMs: 5_000 })
+          .acquire(Store.APP_STORE)
+          .catch((error: unknown) => error),
+      30,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'The App Store did not answer. Try again in a few minutes.',
+    );
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 });
