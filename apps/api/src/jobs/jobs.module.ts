@@ -5,6 +5,7 @@ import { BullModule } from '@nestjs/bullmq';
 import type { QueueOptions } from 'bullmq';
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { DiscoveryModule } from '@nestjs/core';
 import { ActionsEngineModule } from '../actions/actions-engine.module';
 import { AlertsModule } from '../alerts/alerts.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
@@ -40,6 +41,7 @@ import { FirstRunStatusService } from './first-run-status.service';
 import { FLOW_PRODUCERS, QUEUES } from './jobs.types';
 import { PipelineService } from './pipeline.service';
 import { PipelineWorker } from './pipeline.worker';
+import { QueueErrorReporter } from './queue-error-reporter';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
 import { ScoringController } from './scoring.controller';
@@ -84,6 +86,7 @@ const bullBoardModules: DynamicModule[] =
       { name: QUEUES.SCREENSHOTS },
     ),
     BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.DAILY_PIPELINE }),
+    DiscoveryModule,
     AccountModule,
     AppsModule,
     RankingsModule,
@@ -119,6 +122,7 @@ const bullBoardModules: DynamicModule[] =
     GplayWorker,
     PipelineWorker,
     PipelineService,
+    QueueErrorReporter,
     RetentionService,
     RunStatusService,
     StoreHealthService,
