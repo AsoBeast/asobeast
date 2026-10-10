@@ -256,8 +256,12 @@ export class GooglePlayProvider implements StoreProvider {
     fn: (deadline: Abortable) => Promise<T>,
     missingAppId?: string,
   ): Promise<T> {
+    const deadline = storeDeadline();
     try {
-      return await fn(storeDeadline());
+      deadline.signal?.throwIfAborted();
+      const result = await fn(deadline);
+      deadline.signal?.throwIfAborted();
+      return result;
     } catch (error) {
       if (missingAppId !== undefined && isMissingApp(error)) {
         throw new StoreAppNotFoundError(this.store, missingAppId);

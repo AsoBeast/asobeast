@@ -267,7 +267,10 @@ export class AppStoreProvider implements StoreProvider {
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
       try {
-        return await call(deadline);
+        deadline.signal?.throwIfAborted();
+        const result = await call(deadline);
+        deadline.signal?.throwIfAborted();
+        return result;
       } catch (error) {
         lastError = error;
         const delay = RETRY_DELAYS_MS[attempt];

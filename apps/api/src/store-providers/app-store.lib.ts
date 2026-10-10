@@ -156,21 +156,33 @@ const pageUrl = (id: number, country: string, language?: string): string => {
   return url.toString();
 };
 
-const withSignal = <T extends Abortable>({ signal, ...options }: T) => ({
-  ...options,
-  requestOptions: { signal: attemptSignal(signal) },
-});
+async function scrape<O extends Abortable, T>(
+  { signal, ...options }: O,
+  call: (
+    options: Omit<O, 'signal'> & { requestOptions: { signal: AbortSignal } },
+  ) => Promise<T>,
+): Promise<T> {
+  const attempt = attemptSignal(signal);
+  const result = await call({
+    ...options,
+    requestOptions: { signal: attempt },
+  });
+  attempt.throwIfAborted();
+  return result;
+}
 
 export const appStoreLib: AppStoreLib = {
-  app: (options) => appStore.app(withSignal(options)),
+  app: (options) => scrape(options, appStore.app),
   page: ({ id, country, language, signal }) =>
     fetchText(pageUrl(id, country, language), PAGE_USER_AGENT, signal),
   search: (options) =>
-    appStore.search(withSignal(options)) as Promise<AppStoreSearchResult[]>,
-  suggest: (options) => appStore.suggest(withSignal(options)),
-  similar: (options) => appStore.similar(withSignal(options)),
+    scrape(options, appStore.search) as Promise<AppStoreSearchResult[]>,
+  suggest: (options) => scrape(options, appStore.suggest),
+  similar: (options) => scrape(options, appStore.similar),
   list: (options) =>
-    appStore.list(withSignal(options) as Parameters<typeof appStore.list>[0]),
+    scrape(options, (listOptions) =>
+      appStore.list(listOptions as Parameters<typeof appStore.list>[0]),
+    ),
   reviews: async ({ id, country, page, signal }) =>
     parseReviewsFeed(
       JSON.parse(
@@ -181,5 +193,5 @@ export const appStoreLib: AppStoreLib = {
         ),
       ),
     ),
-  developer: (options) => appStore.developer(withSignal(options)),
+  developer: (options) => scrape(options, appStore.developer),
 };

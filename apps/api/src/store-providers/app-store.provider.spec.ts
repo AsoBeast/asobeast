@@ -1,5 +1,5 @@
 import { Store } from '@prisma/client';
-import { AppStoreLib } from './app-store.lib';
+import { AppStoreAppResult, AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
 import { StoreRequestError } from './errors';
 import { storeDeadline, withinStoreDeadline } from './store-deadline';
@@ -705,5 +705,42 @@ describe('AppStoreProvider on demand deadline', () => {
     );
 
     expect(result).toEqual([{ country: 'de', status: 'unknown' }]);
+  });
+
+  it('never keeps a listing that arrived after the deadline', async () => {
+    const app = jest.fn(
+      () =>
+        new Promise<AppStoreAppResult>((resolve) =>
+          setTimeout(
+            () => resolve({ id: 1, title: 'App', description: 'desc' }),
+            DEADLINE_MS + 30,
+          ),
+        ),
+    );
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const failure = await withinStoreDeadline(
+      () => provider.getApp('1', 'us').catch((error: unknown) => error),
+      DEADLINE_MS,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it('starts no store call once the deadline has passed', async () => {
+    const search = jest.fn().mockResolvedValue([]);
+    const provider = new AppStoreProvider(makeLib({ search }));
+
+    const failure = await withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, DEADLINE_MS + 20));
+      return provider
+        .search('habit', 'us', 10)
+        .catch((error: unknown) => error);
+    }, DEADLINE_MS);
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(search).not.toHaveBeenCalled();
   });
 });

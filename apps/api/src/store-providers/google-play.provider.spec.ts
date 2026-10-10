@@ -3,7 +3,11 @@ import { ProxyOutcome, Store } from '@prisma/client';
 import { outcomeOf } from './egress/proxy-health.service';
 import { StoreRequestError } from './errors';
 import { storeDeadline, withinStoreDeadline } from './store-deadline';
-import { GooglePlayLib, GPLAY_COLLECTIONS } from './google-play.lib';
+import {
+  GooglePlayAppResult,
+  GooglePlayLib,
+  GPLAY_COLLECTIONS,
+} from './google-play.lib';
 import { GooglePlayProvider, googlePlayLanguage } from './google-play.provider';
 
 const makeLib = (overrides: Partial<GooglePlayLib> = {}): GooglePlayLib => ({
@@ -622,5 +626,38 @@ describe('GooglePlayProvider on demand deadline', () => {
     expect(suggest.mock.calls[0]).toStrictEqual([
       { term: 'habit', country: 'us', lang: 'en' },
     ]);
+  });
+
+  it('never keeps a listing that arrived after the deadline', async () => {
+    const app = jest.fn(
+      () =>
+        new Promise<GooglePlayAppResult>((resolve) =>
+          setTimeout(() => resolve(appPayload), 80),
+        ),
+    );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider
+          .getApp('com.example.app', 'us')
+          .catch((error: unknown) => error),
+      50,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+  });
+
+  it('starts no store call once the deadline has passed', async () => {
+    const suggest = jest.fn().mockResolvedValue([]);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    const failure = await withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 70));
+      return provider.suggest('habit', 'us').catch((error: unknown) => error);
+    }, 50);
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(suggest).not.toHaveBeenCalled();
   });
 });

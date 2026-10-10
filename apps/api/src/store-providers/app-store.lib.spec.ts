@@ -3,7 +3,10 @@ import { egressFetch } from './egress/egress';
 import { appStoreLib } from './app-store.lib';
 
 jest.mock('./egress/egress', () => ({ egressFetch: jest.fn() }));
-jest.mock('@perttu/app-store-scraper', () => ({ app: jest.fn() }));
+jest.mock('@perttu/app-store-scraper', () => ({
+  app: jest.fn(),
+  similar: jest.fn(),
+}));
 
 const fetchMock = jest.mocked(egressFetch);
 
@@ -160,5 +163,38 @@ describe('appStoreLib attempt timeout', () => {
 
     const [options] = jest.mocked(appStore.app).mock.calls[0];
     expect(options.requestOptions?.signal?.aborted).toBe(true);
+  });
+
+  it('never trusts a lookup the scraper finished after its requests were cut short', async () => {
+    const stalled = new AbortController();
+    jest.spyOn(AbortSignal, 'timeout').mockReturnValue(stalled.signal);
+    jest.mocked(appStore.app).mockImplementation(() => {
+      stalled.abort();
+      return Promise.resolve({
+        id: 922103212,
+        title: "McDonald's",
+        screenshots: [],
+      } as unknown as Awaited<ReturnType<typeof appStore.app>>);
+    });
+
+    await expect(
+      appStoreLib.app({ id: 922103212, country: 'us', ratings: true }),
+    ).rejects.toThrow('This operation was aborted');
+  });
+
+  it('never trusts similar apps the scraper finished after the deadline passed', async () => {
+    const deadline = new AbortController();
+    jest.mocked(appStore.similar).mockImplementation(() => {
+      deadline.abort();
+      return Promise.resolve([]);
+    });
+
+    await expect(
+      appStoreLib.similar({
+        id: 922103212,
+        country: 'us',
+        signal: deadline.signal,
+      }),
+    ).rejects.toThrow('This operation was aborted');
   });
 });
