@@ -60,13 +60,13 @@ function isInvalidLink(error: unknown): boolean {
 
 export function UnsubscribeContent() {
   const params = useSearchParams();
-  const alert = params.get("alert") ?? "";
+  const alertId = params.get("alert") ?? "";
   const token = params.get("token") ?? "";
   const mutation = useMutation({
-    mutationFn: () => unsubscribeEmailAlert(alert, token),
+    mutationFn: () => unsubscribeEmailAlert(alertId, token),
   });
 
-  if (alert === "" || token === "") {
+  if (alertId === "" || token === "") {
     return (
       <UnsubscribeCard
         title="Unsubscribe link incomplete"
