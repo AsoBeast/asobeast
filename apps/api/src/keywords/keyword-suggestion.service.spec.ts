@@ -184,3 +184,130 @@ describe('KeywordSuggestionService.suggest egress', () => {
     },
   );
 });
+
+describe('KeywordSuggestionService.suggest in a spanish market', () => {
+  const buildPrisma = (store: Store) => ({
+    app: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'app1',
+        store,
+        country: 'mx',
+        storeAppId: 'store1',
+      }),
+      findMany: jest.fn().mockResolvedValue([
+        {
+          snapshots: [
+            { title: 'Mi Banco', subtitle: 'Tus finanzas en el móvil' },
+          ],
+        },
+        {
+          snapshots: [
+            { title: 'Otro Banco', subtitle: 'Finanzas en tu móvil' },
+          ],
+        },
+      ]),
+    },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue({
+        title: 'Preguntados: Juegos de Trivia',
+        subtitle: null,
+        summary: 'Quiz de preguntas para amigos',
+        raw: { artistId: 1 },
+      }),
+    },
+    trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+  });
+
+  const buildService = (prisma: unknown, registry: unknown = undefined) =>
+    new KeywordSuggestionService(
+      prisma as PrismaService,
+      registry as StoreProviderRegistry,
+      passThroughEgress,
+    );
+
+  const wordsOf = (suggestions: { text: string }[]): string[] =>
+    suggestions.flatMap(({ text }) => text.split(' '));
+
+  it('suggests the words of the listing without its function words', async () => {
+    const service = buildService(buildPrisma(Store.GOOGLE_PLAY));
+
+    const suggestions = await service.suggest('app1', 'metadata', 30);
+
+    expect(suggestions.map(({ text }) => text)).toEqual(
+      expect.arrayContaining(['juegos trivia', 'quiz preguntas amigos']),
+    );
+    expect(
+      wordsOf(suggestions).filter((word) => ['de', 'para'].includes(word)),
+    ).toEqual([]);
+  });
+
+  it('counts competitor terms without their function words', async () => {
+    const service = buildService(buildPrisma(Store.APP_STORE));
+
+    const suggestions = await service.suggest('app1', 'competitors', 30);
+
+    expect(suggestions.find(({ text }) => text === 'finanzas móvil')).toEqual(
+      expect.objectContaining({ usedByCount: 2 }),
+    );
+    expect(
+      wordsOf(suggestions).filter((word) =>
+        ['en', 'el', 'tu', 'tus'].includes(word),
+      ),
+    ).toEqual([]);
+  });
+
+  it('counts the title terms of similar apps without their function words', async () => {
+    const similar = jest.fn().mockResolvedValue([
+      { storeAppId: '2', title: 'Juegos de Trivia' },
+      { storeAppId: '3', title: 'Trivia para Todos' },
+    ]);
+    const service = buildService(buildPrisma(Store.APP_STORE), {
+      get: jest.fn().mockReturnValue({ similar }),
+    });
+
+    const suggestions = await service.suggest('app1', 'similar', 30);
+
+    expect(similar).toHaveBeenCalledWith('store1', 'mx');
+    expect(suggestions.find(({ text }) => text === 'trivia')).toEqual(
+      expect.objectContaining({ usedByCount: 2 }),
+    );
+    expect(wordsOf(suggestions)).not.toContain('de');
+    expect(wordsOf(suggestions)).not.toContain('para');
+  });
+
+  it('reads the market asked for, not the home market, in a similar search', async () => {
+    const similar = jest
+      .fn()
+      .mockResolvedValue([{ storeAppId: '2', title: 'Die Hard Quiz' }]);
+    const service = buildService(buildPrisma(Store.APP_STORE), {
+      get: jest.fn().mockReturnValue({ similar }),
+    });
+
+    const suggestions = await service.suggest('app1', 'similar', 30, 'de');
+
+    expect(suggestions.map(({ text }) => text).sort()).toEqual([
+      'hard',
+      'hard quiz',
+      'quiz',
+    ]);
+  });
+
+  it('excludes the home title in its own language and reads developer titles in the market asked for', async () => {
+    const developerApps = jest.fn().mockResolvedValue([
+      { storeAppId: '2', title: 'Die Hard Quiz' },
+      { storeAppId: '3', title: 'Juegos Trivia' },
+    ]);
+    const service = buildService(buildPrisma(Store.APP_STORE), {
+      get: jest.fn().mockReturnValue({ developerApps }),
+    });
+
+    const suggestions = await service.suggest('app1', 'developer', 30, 'de');
+
+    expect(developerApps).toHaveBeenCalledWith('1', 'de');
+    expect(suggestions.map(({ text }) => text).sort()).toEqual([
+      'hard',
+      'hard quiz',
+      'quiz',
+    ]);
+  });
+});

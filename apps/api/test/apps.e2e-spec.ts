@@ -245,6 +245,37 @@ describe('AppsController (e2e)', () => {
     );
   });
 
+  it('auto tracks the words of a spanish google play listing without its function words', async () => {
+    registry.title = 'Preguntados: Juegos de Trivia';
+    registry.summary =
+      'Juegos para aumentar tu iq: quiz de preguntas gratis para amigos y familia';
+
+    const response = await api
+      .post('/apps')
+      .send({ url: `${GOOGLE_PLAY_URL}&gl=ar` })
+      .expect(201);
+
+    const tracked = await prisma.trackedKeyword.findMany({
+      where: { appId: (response.body as AppDetail).id },
+      select: { source: true, keyword: { select: { text: true } } },
+    });
+    const texts = tracked.map(({ keyword }) => keyword.text);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'preguntados',
+        'juegos',
+        'trivia',
+        'juegos trivia',
+      ]),
+    );
+    expect(texts.filter((text) => /(^| )(de|para|tu)( |$)/.test(text))).toEqual(
+      [],
+    );
+    expect(tracked.map(({ source }) => source)).toEqual(
+      expect.arrayContaining(['TITLE', 'DESCRIPTION']),
+    );
+  });
+
   it('auto tracks the words of a thai google play listing', async () => {
     registry.title = 'Grab: แท็กซี่ และ แอปสั่งอาหาร';
     registry.summary =

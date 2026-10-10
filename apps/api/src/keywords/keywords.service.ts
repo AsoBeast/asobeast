@@ -383,11 +383,14 @@ export class KeywordsService {
 
     const candidates = interleaveDistinct(
       listings.map((listing) =>
-        extractCandidates({
-          title: listing.title,
-          subtitle: listing.subtitle ?? undefined,
-          summary: listing.summary ?? undefined,
-        }).filter((candidate) => autoTrackSources.includes(candidate.source)),
+        extractCandidates(
+          {
+            title: listing.title,
+            subtitle: listing.subtitle ?? undefined,
+            summary: listing.summary ?? undefined,
+          },
+          listing.languages,
+        ).filter((candidate) => autoTrackSources.includes(candidate.source)),
       ),
       AUTO_TRACK_LIMIT,
       (candidate) => candidate.text,
