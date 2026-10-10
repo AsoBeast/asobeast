@@ -58,6 +58,7 @@ import {
   LAPSED_BUDGET,
   METRICS_SCRAPE,
   OPERATOR_TOKEN,
+  VALID_UNSUBSCRIBE_TOKEN,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -1056,7 +1057,36 @@ const insightsHold = (token: string) => holdFor(insightsHolds, token);
 const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
+const unsubscribeCalls = new Map<string, number>();
+
 const routes: Route[] = [
+  {
+    method: "GET",
+    pattern: /^\/__unsubscribes\/([^/]+)$/,
+    handler: ([id], _req, res) =>
+      json(res, 200, { calls: unsubscribeCalls.get(id) ?? 0 }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts\/([^/]+)\/unsubscribe$/,
+    handler: ([id], req, res) => {
+      unsubscribeCalls.set(id, (unsubscribeCalls.get(id) ?? 0) + 1);
+      const token = new URL(
+        req.url ?? "/",
+        "http://localhost",
+      ).searchParams.get("token");
+      if (token !== VALID_UNSUBSCRIBE_TOKEN) {
+        json(
+          res,
+          404,
+          errorEnvelope(404, req.url ?? "/", "Email alert not found"),
+        );
+        return;
+      }
+      res.writeHead(204);
+      res.end();
+    },
+  },
   supportRoute(/^\/admin\/support\/overview$/, (req) =>
     hasCookie(req, "e2e_admin_self_hosted", "1")
       ? ADMIN_OVERVIEW_SELF_HOSTED

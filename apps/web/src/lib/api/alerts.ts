@@ -11,7 +11,7 @@ import type {
   WebhookTestResult,
   WebhookUpdateRequest,
 } from "@asobeast/shared";
-import { apiFetch } from "./client";
+import { apiFetch, withQuery } from "./client";
 
 export function getWebhooks(): Promise<WebhookItem[]> {
   return apiFetch<WebhookItem[]>("/webhooks");
@@ -83,6 +83,19 @@ export function updateEmailAlert(
 
 export function deleteEmailAlert(id: string): Promise<void> {
   return apiFetch<void>(`/email-alerts/${id}`, { method: "DELETE" });
+}
+
+export function unsubscribeEmailAlert(
+  id: string,
+  token: string,
+): Promise<void> {
+  return apiFetch<void>(
+    withQuery(
+      `/email-alerts/${encodeURIComponent(id)}/unsubscribe`,
+      new URLSearchParams({ token }),
+    ),
+    { method: "POST" },
+  );
 }
 
 export function testEmailAlert(id: string): Promise<WebhookTestResult> {

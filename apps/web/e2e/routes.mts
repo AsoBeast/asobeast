@@ -55,6 +55,7 @@ export const SIGNED_OUT_ROUTES = [
   ["reset-password", "/reset-password", {}],
   ["invite", "/invite", {}],
   ["verify", "/verify", {}],
+  ["unsubscribe", "/unsubscribe", {}],
 ] as const satisfies ReadonlyArray<
   readonly [string, string, Readonly<Record<string, string>>]
 >;
