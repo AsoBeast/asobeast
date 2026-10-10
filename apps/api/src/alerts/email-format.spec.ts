@@ -510,7 +510,7 @@ describe('formatBatchEmail for the new rank events', () => {
 });
 
 describe('formatEmail in the branded layout', () => {
-  const linked = { origin: 'https://aso.example.com' };
+  const linked = { origin: 'https://aso.example.com', unsubscribe: null };
 
   it('links an app event back to its app and to the alert settings', async () => {
     const { html } = await formatEmail(dropped, linked);
@@ -572,7 +572,7 @@ describe('formatEmail in the branded layout', () => {
 });
 
 describe('formatBatchEmail in the branded layout', () => {
-  const linked = { origin: 'https://aso.example.com' };
+  const linked = { origin: 'https://aso.example.com', unsubscribe: null };
 
   it.each([['owned_apps'], ['competitors'], [null]] as const)(
     'keeps the largest %s report and its footer under the clipping threshold',
@@ -627,5 +627,16 @@ describe('formatBatchEmail in the branded layout', () => {
       expect(html).not.toMatch(/href="\//);
       expect(html).not.toContain('Open app');
     }
+  });
+
+  it('puts the unsubscribe link next to the settings link', async () => {
+    const page = 'https://aso.example.com/unsubscribe?alert=ea_1&token=t';
+    const { html } = await formatBatchEmail(batch, {
+      origin: 'https://aso.example.com',
+      unsubscribe: page,
+    });
+    expect(html).toMatch(
+      /Manage email alerts<\/a> · <a href="https:\/\/aso\.example\.com\/unsubscribe\?alert=ea_1&amp;token=t"[^>]*>Unsubscribe<\/a>/,
+    );
   });
 });

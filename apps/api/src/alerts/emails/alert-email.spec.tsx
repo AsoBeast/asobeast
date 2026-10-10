@@ -20,6 +20,7 @@ describe('AlertEmail', () => {
   it('keeps the largest instant alert far below the clipping threshold', async () => {
     const { html } = await formatEmail(everyFieldChanged, {
       origin: 'https://aso.example.com',
+      unsubscribe: null,
     });
     expect(Buffer.byteLength(html)).toBeLessThan(25_000);
   });

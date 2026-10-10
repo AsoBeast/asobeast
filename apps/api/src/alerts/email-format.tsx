@@ -35,7 +35,7 @@ import {
   windowLine,
 } from './email-text-parts';
 
-const WITHOUT_LINKS: AlertEmailContext = { origin: null };
+const WITHOUT_LINKS: AlertEmailContext = { origin: null, unsubscribe: null };
 
 export const HTML_BUDGET_BYTES = 90_000;
 

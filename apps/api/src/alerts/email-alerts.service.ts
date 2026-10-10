@@ -15,7 +15,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
 import { toEmailAlertItem } from './email-alerts.mapper';
-import { formatEmail } from './email-format';
+import { AlertMail } from './alert-mail';
 import { MailerService } from './mailer.service';
 
 const DISABLED_MESSAGE = 'Email alerts require SMTP configuration';
@@ -26,6 +26,7 @@ export class EmailAlertsService {
     private readonly prisma: PrismaService,
     private readonly mailer: MailerService,
     private readonly workspace: WorkspaceContext,
+    private readonly alertMail: AlertMail,
   ) {}
 
   async list(): Promise<EmailAlertItem[]> {
@@ -81,11 +82,9 @@ export class EmailAlertsService {
     if (!alert) {
       throw new NotFoundException(`Email alert ${id} not found`);
     }
-    const email = await formatEmail(samplePayload(), {
-      origin: this.mailer.origin,
-    });
+    const mail = await this.alertMail.compose(id, alert.email, samplePayload());
     try {
-      await this.mailer.send({ to: alert.email, ...email });
+      await this.mailer.send(mail);
       return { delivered: true, status: null };
     } catch {
       return { delivered: false, status: null };

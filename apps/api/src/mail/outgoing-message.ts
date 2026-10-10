@@ -3,6 +3,7 @@ import type { EmailContent } from './render-email';
 
 export interface OutgoingMail extends EmailContent {
   to: string;
+  headers?: Readonly<Record<string, string>>;
 }
 
 const AUTOMATED_MAIL_HEADERS: Readonly<Record<string, string>> = {
@@ -20,6 +21,6 @@ export function outgoingMessage(
     subject: mail.subject,
     text: mail.text,
     html: mail.html,
-    headers: { ...AUTOMATED_MAIL_HEADERS },
+    headers: { ...mail.headers, ...AUTOMATED_MAIL_HEADERS },
   };
 }

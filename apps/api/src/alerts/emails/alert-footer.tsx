@@ -3,6 +3,7 @@ import { alertSettingsLink, atHost } from '../../mail/email-links';
 
 export interface AlertEmailContext {
   origin: string | null;
+  unsubscribe: string | null;
 }
 
 export function AlertFooter({ context }: { context: AlertEmailContext }) {
@@ -15,6 +16,12 @@ export function AlertFooter({ context }: { context: AlertEmailContext }) {
       {settings && (
         <FooterLine>
           <FooterLink href={settings}>Manage email alerts</FooterLink>
+          {context.unsubscribe && (
+            <>
+              {' · '}
+              <FooterLink href={context.unsubscribe}>Unsubscribe</FooterLink>
+            </>
+          )}
         </FooterLine>
       )}
     </>

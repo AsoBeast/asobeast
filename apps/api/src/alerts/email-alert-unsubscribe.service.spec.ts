@@ -1,0 +1,90 @@
+import { NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
+import { Env } from '../config/env';
+import { PrismaService } from '../prisma/prisma.service';
+import {
+  EmailAlertUnsubscribe,
+  oneClickHeaders,
+} from './email-alert-unsubscribe.service';
+import { MailerService } from './mailer.service';
+import { unsubscribeToken } from './unsubscribe-token';
+
+const SECRET = 's'.repeat(32);
+
+const build = (origin: string | null, count = 1) => {
+  const updateMany = jest.fn().mockResolvedValue({ count });
+  const config = {
+    get: jest.fn(() => SECRET),
+  } as unknown as ConfigService<Env, true>;
+  const crossTenant = {
+    becauseThisWorkIsNotOwnedByOneWorkspace: jest.fn(
+      (_why: string, work: () => unknown) => work(),
+    ),
+  } as unknown as CrossTenantAccess;
+  const service = new EmailAlertUnsubscribe(
+    config,
+    { origin } as MailerService,
+    { emailAlert: { updateMany } } as unknown as PrismaService,
+    crossTenant,
+  );
+  return { service, updateMany };
+};
+
+describe('EmailAlertUnsubscribe', () => {
+  it('mints no links without a web origin', () => {
+    expect(build(null).service.links('ea_1')).toBeNull();
+  });
+
+  it('links the confirmation page and the one click endpoint with one token', () => {
+    const token = unsubscribeToken(SECRET, 'ea_1');
+    expect(build('https://aso.example.com').service.links('ea_1')).toEqual({
+      page: `https://aso.example.com/unsubscribe?alert=ea_1&token=${token}`,
+      oneClick: `https://aso.example.com/api/backend/email-alerts/ea_1/unsubscribe?token=${token}`,
+    });
+  });
+
+  it('refuses a wrong token before touching the database', async () => {
+    const { service, updateMany } = build('https://aso.example.com');
+    await expect(
+      service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_2')),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('answers not found for an alert that does not exist', async () => {
+    const { service } = build('https://aso.example.com', 0);
+    await expect(
+      service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_1')),
+    ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('pauses only the alert the token names', async () => {
+    const { service, updateMany } = build('https://aso.example.com');
+    await service.unsubscribe('ea_1', unsubscribeToken(SECRET, 'ea_1'));
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: 'ea_1' },
+      data: { active: false },
+    });
+  });
+});
+
+describe('oneClickHeaders', () => {
+  const links = (origin: string) => ({
+    page: `${origin}/unsubscribe?alert=ea_1&token=t`,
+    oneClick: `${origin}/api/backend/email-alerts/ea_1/unsubscribe?token=t`,
+  });
+
+  it('offers one click unsubscribe over https', () => {
+    expect(oneClickHeaders(links('https://aso.example.com'))).toEqual({
+      'List-Unsubscribe':
+        '<https://aso.example.com/api/backend/email-alerts/ea_1/unsubscribe?token=t>',
+      'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+    });
+  });
+
+  it('offers nothing over plain http or without links', () => {
+    expect(oneClickHeaders(links('http://localhost:3000'))).toEqual({});
+    expect(oneClickHeaders(null)).toEqual({});
+  });
+});
