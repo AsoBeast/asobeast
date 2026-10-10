@@ -48,8 +48,8 @@ export class AccountNotifier {
       return 'skipped';
     }
 
-    const email = await billingNoticeEmail(mail, this.mailer.origin);
     try {
+      const email = await billingNoticeEmail(mail, this.mailer.origin);
       await this.mailer.send({ to: recipient, ...email });
       await this.record(event, 'delivered', null);
       return 'delivered';

@@ -73,15 +73,15 @@ export class AlertsWorker extends WorkerHost {
       select: { email: true, active: true },
     });
     if (!alert?.active) {
+      this.logger.debug(
+        `skipped ${payload.event} for missing or paused email alert ${emailAlertId}`,
+      );
       return;
     }
-    const mail = await this.alertMail.compose(
-      emailAlertId,
-      alert.email,
-      payload,
-    );
     try {
-      await this.mailer.send(mail);
+      await this.mailer.send(
+        await this.alertMail.compose(emailAlertId, alert.email, payload),
+      );
       await this.record('email', { emailAlertId }, payload.event, job, null);
       this.logger.debug(`delivered ${payload.event} to email ${emailAlertId}`);
     } catch (error) {

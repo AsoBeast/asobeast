@@ -255,4 +255,21 @@ describe('AlertsWorker', () => {
     expect(headers).toEqual({});
     expect(html).toContain('/unsubscribe?alert=ea_1');
   });
+
+  it('logs a failed row and throws so bullmq retries when the email cannot be composed', async () => {
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    jest
+      .spyOn(AlertMail.prototype, 'compose')
+      .mockRejectedValueOnce(new Error('template broke'));
+
+    await expect(worker.process(emailJob('ea_1'))).rejects.toThrow(
+      'template broke',
+    );
+    expect(send).not.toHaveBeenCalled();
+    const [{ data }] = deliveryCreate.mock.calls[0] as [
+      { data: { status: string; detail: string } },
+    ];
+    expect(data.status).toBe('failed');
+    expect(data.detail).toBe('template broke');
+  });
 });
