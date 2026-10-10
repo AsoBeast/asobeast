@@ -6,6 +6,7 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import {
   assertStorefront,
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   keywordFieldBytes,
@@ -17,8 +18,15 @@ import {
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
+import { HOME_LISTING, listingIn, NEWEST_FIRST } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
+import {
+  breakdownApp,
+  BreakdownListing,
+  breakdownTerms,
+  sortBreakdown,
+} from './keyword-breakdown';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
 import { homeListingTexts } from './home-listings';
@@ -167,6 +175,87 @@ export class KeywordsService {
 
     const filtered = onlyGaps ? rows.filter((row) => row.gap) : rows;
     return { competitors, rows: sortComparison(filtered) };
+  }
+
+  async breakdown(appId: string, keywordId: string): Promise<KeywordBreakdown> {
+    const app = await ensureApp(this.prisma, appId);
+    const tracked = await this.prisma.trackedKeyword.findFirst({
+      where: { appId, keywordId },
+      select: { keyword: { select: { text: true, country: true } } },
+    });
+    if (!tracked) {
+      throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
+    }
+    const { text, country } = tracked.keyword;
+
+    const subjects = await this.prisma.app.findMany({
+      where: { OR: [{ id: appId }, { primaryAppId: appId }] },
+      select: { id: true, name: true, iconUrl: true, country: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const [latest, listings] = await Promise.all([
+      latestPositions(
+        this.prisma,
+        subjects.map((subject) => subject.id),
+        [keywordId],
+      ),
+      Promise.all(
+        subjects.map((subject) =>
+          this.breakdownListing(subject.id, subject.country, country),
+        ),
+      ),
+    ]);
+
+    return {
+      keywordId,
+      text,
+      country,
+      terms: breakdownTerms(text),
+      apps: sortBreakdown(
+        subjects.map((subject, index) =>
+          breakdownApp(
+            {
+              appId: subject.id,
+              name: subject.name,
+              iconUrl: subject.iconUrl,
+              isYou: subject.id === appId,
+              position: latest.get(positionKey(subject.id, keywordId)) ?? null,
+              listing: listings[index],
+            },
+            app.store,
+            text,
+          ),
+        ),
+      ),
+    };
+  }
+
+  private async breakdownListing(
+    appId: string,
+    home: string,
+    market: string,
+  ): Promise<BreakdownListing | null> {
+    const select = {
+      title: true,
+      subtitle: true,
+      summary: true,
+      ratingAvg: true,
+      ratingCount: true,
+    } as const;
+    const inMarket = await this.prisma.appSnapshot.findFirst({
+      where: { appId, ...listingIn(home, market) },
+      orderBy: NEWEST_FIRST,
+      select,
+    });
+    if (inMarket) {
+      return { ...inMarket, country: market };
+    }
+    const atHome = await this.prisma.appSnapshot.findFirst({
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
+      select,
+    });
+    return atHome ? { ...atHome, country: home } : null;
   }
 
   async addManual(

@@ -56,7 +56,7 @@ export function bestPosition(
   return found.length > 0 ? Math.min(...found) : null;
 }
 
-function PositionCell({
+export function PositionCell({
   value,
   best,
 }: {
@@ -117,16 +117,24 @@ const SCORE_ABBR: Record<ComparisonScore, string> = {
 function KeywordCell({
   row,
   scores,
+  onOpen,
 }: {
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
+  onOpen: (keywordId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="inline-flex items-center gap-2 font-medium">
-        <span title={row.text} className="max-w-32 truncate md:max-w-64">
+        <button
+          type="button"
+          title={row.text}
+          aria-label={`Why apps rank for ${row.text}`}
+          onClick={() => onOpen(row.keywordId)}
+          className="max-w-32 truncate rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring md:max-w-64"
+        >
           {row.text}
-        </span>
+        </button>
         {row.gap ? (
           <Badge variant="outline" className="border-warning/40 text-warning">
             Gap
@@ -163,7 +171,10 @@ function CountryCell({ country }: { country: string }) {
   );
 }
 
-export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
+export function comparisonColumns(
+  competitors: readonly MatrixCompetitor[],
+  onOpenKeyword: (keywordId: string) => void,
+) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
     value !== null && value === bestPosition(row, competitorIds);
@@ -190,6 +201,7 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
       cell: ({ row, table }) => (
         <KeywordCell
           row={row.original}
+          onOpen={onOpenKeyword}
           scores={SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}

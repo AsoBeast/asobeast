@@ -14,6 +14,7 @@ import type {
   DailyBudget,
   EmailAlertItem,
   FirstRunStatus,
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordSource,
@@ -914,6 +915,62 @@ const EMPTY_SERP_MOVERS: SerpMovers = { windowDays: 7, items: [] };
 const EMPTY_CHANGES: ChangeTimeline = { events: [] };
 const EMPTY_DISCOVERY: CompetitorDiscovery = { windowDays: 30, items: [] };
 const EMPTY_COMPARISON: KeywordComparison = { competitors: [], rows: [] };
+
+export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
+  "kw-1": {
+    keywordId: "kw-1",
+    text: "focus timer",
+    country: "us",
+    terms: ["focus", "timer"],
+    apps: [
+      {
+        appId: "app-1",
+        name: "Focus Timer",
+        iconUrl: null,
+        isYou: true,
+        position: 3,
+        listingCountry: "us",
+        fields: [
+          {
+            field: "title",
+            value: "Focus Timer: Pomodoro",
+            phrase: true,
+            terms: ["focus", "timer"],
+          },
+          {
+            field: "subtitle",
+            value: "Study and deep work",
+            phrase: false,
+            terms: [],
+          },
+        ],
+        matchedTerms: 2,
+        ratingAvg: 4.6,
+        ratingCount: 1200,
+      },
+      {
+        appId: "comp-1",
+        name: "Rival Focus",
+        iconUrl: null,
+        isYou: false,
+        position: 9,
+        listingCountry: "us",
+        fields: [
+          {
+            field: "title",
+            value: "Rival Focus",
+            phrase: false,
+            terms: ["focus"],
+          },
+          { field: "subtitle", value: null, phrase: false, terms: [] },
+        ],
+        matchedTerms: 1,
+        ratingAvg: 4.2,
+        ratingCount: 310,
+      },
+    ],
+  },
+};
 
 export const APP_1_DE_DISCOVERY: CompetitorDiscovery = {
   windowDays: 30,

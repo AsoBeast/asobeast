@@ -1883,6 +1883,45 @@
         ]
       }
     },
+    "/apps/{id}/keywords/{keywordId}/breakdown": {
+      "get": {
+        "operationId": "KeywordsController_breakdown",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Show how the listing of an app and of each competitor matches a keyword",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/suggestions": {
       "get": {
         "operationId": "KeywordsController_suggestions",

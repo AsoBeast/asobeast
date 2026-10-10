@@ -120,6 +120,35 @@ test("the comparison matrix shows each keyword's market and filters by it", asyn
   await expect(rows).toHaveCount(5);
 });
 
+test("clicking a keyword opens why each app ranks for it", async ({ page }) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const keyword = matrix(page).getByRole("button", {
+    name: "Why apps rank for focus timer",
+  });
+  await (await hydrated(keyword)).click();
+
+  await expect(page).toHaveURL(/keyword=kw-1/);
+  const sheet = page.getByRole("dialog", {
+    name: "Why apps rank for this keyword",
+  });
+  const you = sheet.getByRole("listitem", { name: "Focus Timer" });
+  await expect(you).toContainText("You");
+  await expect(you).toContainText("Exact phrase");
+  await expect(you.locator("mark")).toHaveText(["Focus", "Timer"]);
+  await expect(you).toContainText("2 of 2 keyword words in the listing");
+
+  const rival = sheet.getByRole("listitem", { name: "Rival Focus" });
+  await expect(rival).toContainText("1 of 2 words");
+  await expect(rival.locator("mark")).toHaveText(["Focus"]);
+  await expect(rival).toContainText("Empty");
+  await expect(rival).toContainText("4.2 rating from 310");
+
+  await page.keyboard.press("Escape");
+  await expect(page).not.toHaveURL(/keyword=/);
+});
+
 test("a matrix filter that matches nothing offers to clear it", async ({
   page,
 }) => {

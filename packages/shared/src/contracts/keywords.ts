@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { MetadataField } from '../aso/limits';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
 export interface ScoreSignals {
@@ -94,6 +95,34 @@ export interface KeywordComparisonRow {
 export interface KeywordComparison {
   competitors: KeywordComparisonCompetitor[];
   rows: KeywordComparisonRow[];
+}
+
+export interface KeywordBreakdownField {
+  field: MetadataField;
+  value: string | null;
+  phrase: boolean;
+  terms: string[];
+}
+
+export interface KeywordBreakdownApp {
+  appId: string;
+  name: string | null;
+  iconUrl: string | null;
+  isYou: boolean;
+  position: number | null;
+  listingCountry: string | null;
+  fields: KeywordBreakdownField[];
+  matchedTerms: number;
+  ratingAvg: number | null;
+  ratingCount: number | null;
+}
+
+export interface KeywordBreakdown {
+  keywordId: string;
+  text: string;
+  country: string;
+  terms: string[];
+  apps: KeywordBreakdownApp[];
 }
 
 export interface KeywordUpdateRequest {
