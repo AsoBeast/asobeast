@@ -88,9 +88,8 @@ describe('seasonalKeywords', () => {
     const halloween = SEASONAL_CALENDAR.find(
       (event) => event.id === 'halloween',
     );
-    expect(seasonalKeywords(halloween!, utc(10, 9))).toEqual(
-      halloween!.keywords,
-    );
+    if (!halloween) throw new Error('halloween is not in the calendar');
+    expect(seasonalKeywords(halloween, utc(10, 9))).toEqual(halloween.keywords);
   });
 });
 
