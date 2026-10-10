@@ -8,6 +8,7 @@ import {
 } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
+import { Abortable, storeDeadline } from './store-deadline';
 import {
   isMissingApp,
   GOOGLE_PLAY_LIB,
@@ -68,7 +69,8 @@ export class GooglePlayProvider implements StoreProvider {
     const lang = googlePlayLanguage(country);
     const raw = await this.call(
       'getApp',
-      () => this.lib.app({ appId: storeAppId, country, lang }),
+      (deadline) =>
+        this.lib.app({ appId: storeAppId, country, lang, ...deadline }),
       storeAppId,
     );
     return {
@@ -98,24 +100,30 @@ export class GooglePlayProvider implements StoreProvider {
     num: number,
   ): Promise<SearchItem[]> {
     const lang = googlePlayLanguage(country);
-    const results = await this.call('search', () =>
-      this.lib.search({ term, country, lang, num: Math.min(num, SEARCH_MAX) }),
+    const results = await this.call('search', (deadline) =>
+      this.lib.search({
+        term,
+        country,
+        lang,
+        num: Math.min(num, SEARCH_MAX),
+        ...deadline,
+      }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
 
   async suggest(term: string, country: string): Promise<SuggestItem[]> {
     const lang = googlePlayLanguage(country);
-    const results = await this.call('suggest', () =>
-      this.lib.suggest({ term, country, lang }),
+    const results = await this.call('suggest', (deadline) =>
+      this.lib.suggest({ term, country, lang, ...deadline }),
     );
     return results.map((suggestion) => ({ term: suggestion }));
   }
 
   async similar(storeAppId: string, country: string): Promise<SearchItem[]> {
     const lang = googlePlayLanguage(country);
-    const results = await this.call('similar', () =>
-      this.lib.similar({ appId: storeAppId, country, lang }),
+    const results = await this.call('similar', (deadline) =>
+      this.lib.similar({ appId: storeAppId, country, lang, ...deadline }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
@@ -128,13 +136,14 @@ export class GooglePlayProvider implements StoreProvider {
   ): Promise<ChartItem[]> {
     const lang = googlePlayLanguage(country);
     const category = genre === OVERALL_GENRE ? 'APPLICATION' : genre;
-    const results = await this.call('topCharts', () =>
+    const results = await this.call('topCharts', (deadline) =>
       this.lib.list({
         collection: COLLECTION_CONSTANTS[collection],
         category,
         num: Math.min(num, CHART_MAX),
         country,
         lang,
+        ...deadline,
       }),
     );
     return results.map((item) => ({
@@ -153,7 +162,7 @@ export class GooglePlayProvider implements StoreProvider {
     let token: string | undefined;
     let current: GooglePlayReviewsPage | null = null;
     for (let n = 1; n <= clampedPage; n++) {
-      current = await this.call('reviews', () =>
+      current = await this.call('reviews', (deadline) =>
         this.lib.reviews({
           appId: storeAppId,
           country,
@@ -161,6 +170,7 @@ export class GooglePlayProvider implements StoreProvider {
           num: REVIEWS_PER_PAGE,
           paginate: true,
           nextPaginationToken: token,
+          ...deadline,
         }),
       );
       if (n === clampedPage) {
@@ -196,6 +206,7 @@ export class GooglePlayProvider implements StoreProvider {
         appId: storeAppId,
         countries,
         lang,
+        ...storeDeadline(),
       });
       return countries.map((country) => ({
         country,
@@ -214,8 +225,14 @@ export class GooglePlayProvider implements StoreProvider {
 
   async developerApps(devId: string, country: string): Promise<SearchItem[]> {
     const lang = googlePlayLanguage(country);
-    const results = await this.call('developerApps', () =>
-      this.lib.developer({ devId, country, lang, num: DEVELOPER_APPS_MAX }),
+    const results = await this.call('developerApps', (deadline) =>
+      this.lib.developer({
+        devId,
+        country,
+        lang,
+        num: DEVELOPER_APPS_MAX,
+        ...deadline,
+      }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
@@ -236,11 +253,15 @@ export class GooglePlayProvider implements StoreProvider {
 
   private async call<T>(
     method: string,
-    fn: () => Promise<T>,
+    fn: (deadline: Abortable) => Promise<T>,
     missingAppId?: string,
   ): Promise<T> {
+    const deadline = storeDeadline();
     try {
-      return await fn();
+      deadline.signal?.throwIfAborted();
+      const result = await fn(deadline);
+      deadline.signal?.throwIfAborted();
+      return result;
     } catch (error) {
       if (missingAppId !== undefined && isMissingApp(error)) {
         throw new StoreAppNotFoundError(this.store, missingAppId);

@@ -1,7 +1,12 @@
+import * as appStore from '@perttu/app-store-scraper';
 import { egressFetch } from './egress/egress';
 import { appStoreLib } from './app-store.lib';
 
 jest.mock('./egress/egress', () => ({ egressFetch: jest.fn() }));
+jest.mock('@perttu/app-store-scraper', () => ({
+  app: jest.fn(),
+  similar: jest.fn(),
+}));
 
 const fetchMock = jest.mocked(egressFetch);
 
@@ -26,9 +31,10 @@ describe('appStoreLib.reviews', () => {
       /^https:\/\/itunes\.apple\.com\/us\/rss\/customerreviews\/page=1\/id=288429040\/sortby=mostrecent\/json\?nonce=[0-9a-f-]{36}$/,
     );
     expect(second).not.toBe(first);
-    expect(fetchMock.mock.calls[0][1]).toEqual({
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({
       headers: { 'User-Agent': 'iTunes/12.11 (Macintosh; OS X 10.15.7)' },
     });
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
 
   it('refuses a refused request', async () => {
@@ -72,5 +78,123 @@ describe('appStoreLib.page', () => {
       'https://apps.apple.com/pl/app/id1?l=pl',
       'https://apps.apple.com/sg/app/id1?l=zh-Hans',
     ]);
+  });
+});
+
+describe('appStoreLib deadline', () => {
+  beforeEach(() => {
+    fetchMock.mockReset();
+    jest.mocked(appStore.app).mockReset();
+  });
+
+  it('ends the lookup at the on demand deadline', async () => {
+    const deadline = new AbortController();
+
+    await appStoreLib.app({
+      id: 1475326567,
+      country: 'us',
+      ratings: true,
+      signal: deadline.signal,
+    });
+    deadline.abort();
+
+    const [options] = jest.mocked(appStore.app).mock.calls[0];
+    expect(options).toMatchObject({ id: 1475326567, country: 'us' });
+    expect(options.requestOptions?.signal?.aborted).toBe(true);
+  });
+
+  it('ends the product page and the reviews feed at the on demand deadline', async () => {
+    const deadline = new AbortController();
+    answer(200, '<h1>App</h1>');
+    answer(200, EMPTY_FEED);
+
+    await appStoreLib.page({ id: 1, country: 'us', signal: deadline.signal });
+    await appStoreLib.reviews({
+      id: 1,
+      country: 'us',
+      page: 1,
+      signal: deadline.signal,
+    });
+    deadline.abort();
+
+    expect(
+      fetchMock.mock.calls.map(([, init]) => init?.signal?.aborted),
+    ).toEqual([true, true]);
+  });
+});
+
+describe('appStoreLib attempt timeout', () => {
+  const ATTEMPT_TIMEOUT_MS = 15_000;
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    jest.mocked(appStore.app).mockReset();
+  });
+
+  afterEach(() => jest.restoreAllMocks());
+
+  it('gives up on a product page that stops answering', async () => {
+    const stalled = new AbortController();
+    const timeout = jest
+      .spyOn(AbortSignal, 'timeout')
+      .mockReturnValue(stalled.signal);
+    fetchMock.mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(new Error('The operation timed out.')),
+          );
+        }),
+    );
+
+    const page = appStoreLib.page({ id: 922103212, country: 'us' });
+    stalled.abort();
+
+    await expect(page).rejects.toThrow('The operation timed out.');
+    expect(timeout).toHaveBeenCalledWith(ATTEMPT_TIMEOUT_MS);
+  });
+
+  it('gives up on a lookup that stops answering', async () => {
+    const stalled = new AbortController();
+    jest.spyOn(AbortSignal, 'timeout').mockReturnValue(stalled.signal);
+
+    await appStoreLib.app({ id: 922103212, country: 'us', ratings: true });
+    stalled.abort();
+
+    const [options] = jest.mocked(appStore.app).mock.calls[0];
+    expect(options.requestOptions?.signal?.aborted).toBe(true);
+  });
+
+  it('never trusts a lookup the scraper finished after its requests were cut short', async () => {
+    const stalled = new AbortController();
+    jest.spyOn(AbortSignal, 'timeout').mockReturnValue(stalled.signal);
+    jest.mocked(appStore.app).mockImplementation(() => {
+      stalled.abort();
+      return Promise.resolve({
+        id: 922103212,
+        title: "McDonald's",
+        screenshots: [],
+      } as unknown as Awaited<ReturnType<typeof appStore.app>>);
+    });
+
+    await expect(
+      appStoreLib.app({ id: 922103212, country: 'us', ratings: true }),
+    ).rejects.toThrow('This operation was aborted');
+  });
+
+  it('never trusts similar apps the scraper finished after the deadline passed', async () => {
+    const deadline = new AbortController();
+    jest.mocked(appStore.similar).mockImplementation(() => {
+      deadline.abort();
+      return Promise.resolve([]);
+    });
+
+    await expect(
+      appStoreLib.similar({
+        id: 922103212,
+        country: 'us',
+        signal: deadline.signal,
+      }),
+    ).rejects.toThrow('This operation was aborted');
   });
 });

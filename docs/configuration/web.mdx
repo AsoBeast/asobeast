@@ -43,6 +43,8 @@ When the API does not start answering within `API_PROXY_TIMEOUT_MS`, the proxy r
 
 The MCP endpoint gives up on a tool call after 25 seconds and answers with a tool error that warns a change may or may not have been applied. Keep this value above `25000` so an agent connected through the web origin reads that error instead of the proxy's `504`.
 
+Actions that wait on a store while you wait (importing an app, refreshing a listing, adding a competitor and keyword suggestions) stop after 20 seconds and answer `502` with a sentence naming the store. A market check stops at the same moment and reports the market as unknown. The store request is cancelled then, so nothing is saved afterwards. Keeping this value above `25000` keeps that answer inside the proxy's budget too.
+
 ## Related
 
 <CardGroup cols={2}>

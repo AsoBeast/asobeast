@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { outsideStoreDeadline } from '../store-deadline';
 import { ProxyPoolHealthReport } from './proxy-pool-health.service';
 import { ProxyPoolSync } from './proxy-pool.sync';
 import { ProxyProbe } from './proxy-probe.service';
@@ -28,7 +29,7 @@ export class ProxyPoolMaintenance implements OnApplicationBootstrap {
 
   ensureInitialized(): Promise<void> {
     if (!this.enabled) return Promise.resolve();
-    this.initialized ??= this.firstRun();
+    this.initialized ??= outsideStoreDeadline(() => this.firstRun());
     return this.initialized;
   }
 

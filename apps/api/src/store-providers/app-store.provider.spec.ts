@@ -1,7 +1,8 @@
 import { Store } from '@prisma/client';
-import { AppStoreLib } from './app-store.lib';
+import { AppStoreAppResult, AppStoreLib } from './app-store.lib';
 import { AppStoreProvider } from './app-store.provider';
 import { StoreRequestError } from './errors';
+import { storeDeadline, withinStoreDeadline } from './store-deadline';
 
 const makeLib = (overrides: Partial<AppStoreLib> = {}): AppStoreLib => ({
   app: jest.fn(),
@@ -628,5 +629,118 @@ describe('AppStoreProvider localized listings', () => {
       { id: 1, country: 'pl', ratings: true },
     ]);
     expect(page.mock.calls[0]).toStrictEqual([{ id: 1, country: 'pl' }]);
+  });
+});
+
+describe('AppStoreProvider on demand deadline', () => {
+  const DEADLINE_MS = 50;
+
+  const hangsUntilAborted = () =>
+    jest.fn(
+      (options: { signal?: AbortSignal }) =>
+        new Promise<never>((_, reject) => {
+          options.signal?.addEventListener('abort', () =>
+            reject(new Error('This operation was aborted')),
+          );
+        }),
+    );
+
+  it('answers a store error at the deadline instead of retrying a store that does not answer', async () => {
+    const app = hangsUntilAborted();
+    const provider = new AppStoreProvider(makeLib({ app }));
+    const started = Date.now();
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider.getApp('1475326567', 'us').catch((error: unknown) => error),
+      DEADLINE_MS,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'The App Store did not answer. Try again in a few minutes.',
+    );
+    expect(app).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it('cuts a retry pause short when the deadline passes during it', async () => {
+    const search = jest.fn().mockRejectedValue(new Error('fetch failed'));
+    const provider = new AppStoreProvider(makeLib({ search }));
+    const started = Date.now();
+
+    const failure = await withinStoreDeadline(
+      () => provider.search('habit', 'us', 10).catch((error: unknown) => error),
+      DEADLINE_MS,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+
+  it('hands the deadline to the lookup and the product page', async () => {
+    const app = jest
+      .fn()
+      .mockResolvedValue({ id: 1, title: 'App', description: 'desc' });
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const signal = await withinStoreDeadline(async () => {
+      await provider.getApp('1', 'us');
+      return storeDeadline().signal;
+    });
+
+    expect(app).toHaveBeenCalledWith(expect.objectContaining({ signal }));
+    expect(page).toHaveBeenCalledWith(expect.objectContaining({ signal }));
+  });
+
+  it('reports an availability probe cut by the deadline as unknown', async () => {
+    const app = hangsUntilAborted();
+    const provider = new AppStoreProvider(makeLib({ app }));
+
+    const result = await withinStoreDeadline(
+      () => provider.availability('1', ['de']),
+      DEADLINE_MS,
+    );
+
+    expect(result).toEqual([{ country: 'de', status: 'unknown' }]);
+  });
+
+  it('never keeps a listing that arrived after the deadline', async () => {
+    const app = jest.fn(
+      () =>
+        new Promise<AppStoreAppResult>((resolve) =>
+          setTimeout(
+            () => resolve({ id: 1, title: 'App', description: 'desc' }),
+            DEADLINE_MS + 30,
+          ),
+        ),
+    );
+    const page = jest.fn().mockResolvedValue('<h1>App</h1>');
+    const provider = new AppStoreProvider(makeLib({ app, page }));
+
+    const failure = await withinStoreDeadline(
+      () => provider.getApp('1', 'us').catch((error: unknown) => error),
+      DEADLINE_MS,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it('starts no store call once the deadline has passed', async () => {
+    const search = jest.fn().mockResolvedValue([]);
+    const provider = new AppStoreProvider(makeLib({ search }));
+
+    const failure = await withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, DEADLINE_MS + 20));
+      return provider
+        .search('habit', 'us', 10)
+        .catch((error: unknown) => error);
+    }, DEADLINE_MS);
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(search).not.toHaveBeenCalled();
   });
 });

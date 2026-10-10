@@ -12,6 +12,7 @@ import {
   collection,
 } from '@mradex77/google-play-scraper';
 import { egressFetch } from './egress/egress';
+import { Abortable } from './store-deadline';
 
 export function isMissingApp(error: unknown): boolean {
   return error instanceof NotFoundError;
@@ -72,62 +73,78 @@ export interface GooglePlayAvailabilityResult {
 }
 
 export interface GooglePlayLib {
-  app(options: {
-    appId: string;
-    country: string;
-    lang: string;
-  }): Promise<GooglePlayAppResult>;
-  search(options: {
-    term: string;
-    country: string;
-    lang: string;
-    num: number;
-  }): Promise<GooglePlaySearchResult[]>;
-  suggest(options: {
-    term: string;
-    country: string;
-    lang: string;
-  }): Promise<string[]>;
-  similar(options: {
-    appId: string;
-    country: string;
-    lang: string;
-  }): Promise<GooglePlaySearchResult[]>;
-  list(options: {
-    collection: string;
-    category: string;
-    num: number;
-    country: string;
-    lang: string;
-  }): Promise<GooglePlaySearchResult[]>;
-  reviews(options: {
-    appId: string;
-    country: string;
-    lang: string;
-    num: number;
-    paginate: true;
-    nextPaginationToken?: string;
-  }): Promise<GooglePlayReviewsPage>;
-  availability(options: {
-    appId: string;
-    countries: string[];
-    lang: string;
-  }): Promise<GooglePlayAvailabilityResult>;
-  developer(options: {
-    devId: string;
-    country: string;
-    lang: string;
-    num: number;
-  }): Promise<GooglePlaySearchResult[]>;
+  app(
+    options: {
+      appId: string;
+      country: string;
+      lang: string;
+    } & Abortable,
+  ): Promise<GooglePlayAppResult>;
+  search(
+    options: {
+      term: string;
+      country: string;
+      lang: string;
+      num: number;
+    } & Abortable,
+  ): Promise<GooglePlaySearchResult[]>;
+  suggest(
+    options: {
+      term: string;
+      country: string;
+      lang: string;
+    } & Abortable,
+  ): Promise<string[]>;
+  similar(
+    options: {
+      appId: string;
+      country: string;
+      lang: string;
+    } & Abortable,
+  ): Promise<GooglePlaySearchResult[]>;
+  list(
+    options: {
+      collection: string;
+      category: string;
+      num: number;
+      country: string;
+      lang: string;
+    } & Abortable,
+  ): Promise<GooglePlaySearchResult[]>;
+  reviews(
+    options: {
+      appId: string;
+      country: string;
+      lang: string;
+      num: number;
+      paginate: true;
+      nextPaginationToken?: string;
+    } & Abortable,
+  ): Promise<GooglePlayReviewsPage>;
+  availability(
+    options: {
+      appId: string;
+      countries: string[];
+      lang: string;
+    } & Abortable,
+  ): Promise<GooglePlayAvailabilityResult>;
+  developer(
+    options: {
+      devId: string;
+      country: string;
+      lang: string;
+      num: number;
+    } & Abortable,
+  ): Promise<GooglePlaySearchResult[]>;
 }
 
 export const GOOGLE_PLAY_LIB = Symbol('GOOGLE_PLAY_LIB');
 export const GPLAY_COLLECTIONS = collection;
 export const GPLAY_SORT = sort;
 
-const overEgress = <T extends object>(options: T) => ({
+const overEgress = <T extends Abortable>({ signal, ...options }: T) => ({
   ...options,
-  requestOptions: { fetchImpl: egressFetch },
+  requestOptions: { fetchImpl: egressFetch, signal },
 });
 
 export const googlePlayLib: GooglePlayLib = {

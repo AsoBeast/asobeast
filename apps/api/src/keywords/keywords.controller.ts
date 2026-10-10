@@ -9,6 +9,7 @@ import {
   Post,
   Put,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -37,6 +38,7 @@ import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsService } from './keywords.service';
 import { SpiderService } from './spider.service';
+import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
@@ -75,6 +77,7 @@ export class KeywordsController {
 
   @Get('keywords/suggestions')
   @SpendsStoreCapacity()
+  @UseInterceptors(StoreDeadlineInterceptor)
   @ApiOperation({ summary: 'Suggest keywords via metadata, search or similar' })
   async suggestions(
     @Param('id') id: string,

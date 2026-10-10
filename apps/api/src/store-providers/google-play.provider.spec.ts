@@ -2,7 +2,12 @@ import { BlockedError } from '@mradex77/google-play-scraper';
 import { ProxyOutcome, Store } from '@prisma/client';
 import { outcomeOf } from './egress/proxy-health.service';
 import { StoreRequestError } from './errors';
-import { GooglePlayLib, GPLAY_COLLECTIONS } from './google-play.lib';
+import { storeDeadline, withinStoreDeadline } from './store-deadline';
+import {
+  GooglePlayAppResult,
+  GooglePlayLib,
+  GPLAY_COLLECTIONS,
+} from './google-play.lib';
 import { GooglePlayProvider, googlePlayLanguage } from './google-play.provider';
 
 const makeLib = (overrides: Partial<GooglePlayLib> = {}): GooglePlayLib => ({
@@ -568,5 +573,91 @@ describe('GooglePlayProvider', () => {
         ratingAvg: 4.4,
       },
     ]);
+  });
+});
+
+describe('GooglePlayProvider on demand deadline', () => {
+  it('answers a store error at the deadline instead of waiting for the scraper retries', async () => {
+    const app = jest.fn(
+      (options: { signal?: AbortSignal }) =>
+        new Promise<never>((_, reject) => {
+          options.signal?.addEventListener('abort', () =>
+            reject(options.signal?.reason as Error),
+          );
+        }),
+    );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider
+          .getApp('com.cyberlink.youcammakeup', 'tw')
+          .catch((error: unknown) => error),
+      50,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'Google Play did not answer. Try again in a few minutes.',
+    );
+    expect((failure as StoreRequestError).causeMessage).toContain(
+      'TimeoutError',
+    );
+  });
+
+  it('hands the deadline to the scraper', async () => {
+    const suggest = jest.fn().mockResolvedValue(['habit tracker']);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    const signal = await withinStoreDeadline(async () => {
+      await provider.suggest('habit', 'us');
+      return storeDeadline().signal;
+    });
+
+    expect(suggest).toHaveBeenCalledWith(expect.objectContaining({ signal }));
+  });
+
+  it('sends no signal outside an on demand request', async () => {
+    const suggest = jest.fn().mockResolvedValue([]);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    await provider.suggest('habit', 'us');
+
+    expect(suggest.mock.calls[0]).toStrictEqual([
+      { term: 'habit', country: 'us', lang: 'en' },
+    ]);
+  });
+
+  it('never keeps a listing that arrived after the deadline', async () => {
+    const app = jest.fn(
+      () =>
+        new Promise<GooglePlayAppResult>((resolve) =>
+          setTimeout(() => resolve(appPayload), 80),
+        ),
+    );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider
+          .getApp('com.example.app', 'us')
+          .catch((error: unknown) => error),
+      50,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+  });
+
+  it('starts no store call once the deadline has passed', async () => {
+    const suggest = jest.fn().mockResolvedValue([]);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    const failure = await withinStoreDeadline(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 70));
+      return provider.suggest('habit', 'us').catch((error: unknown) => error);
+    }, 50);
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect(suggest).not.toHaveBeenCalled();
   });
 });

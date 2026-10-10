@@ -1,5 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ProxyOutcome, ProxyTier, Store } from '@prisma/client';
+import { storeDeadlinePassed } from '../store-deadline';
 import {
   currentEgress,
   EgressMeter,
@@ -70,7 +71,12 @@ export class ProxyEgress implements OnModuleInit {
   ): Promise<ProxyOutcome | null> {
     const observation = observe(meter, thrown);
     await this.ledger.record(ProxyTier.DATACENTER, observation.requests);
-    if (thrown !== null && observation.outcome === null) return null;
+    if (
+      thrown !== null &&
+      (observation.outcome === null || storeDeadlinePassed())
+    ) {
+      return null;
+    }
 
     await this.health.record(endpointId, store, {
       successes: observation.successes,
