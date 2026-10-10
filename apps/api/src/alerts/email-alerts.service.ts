@@ -81,7 +81,7 @@ export class EmailAlertsService {
     if (!alert) {
       throw new NotFoundException(`Email alert ${id} not found`);
     }
-    const { subject, text, html } = formatEmail(samplePayload());
+    const { subject, text, html } = await formatEmail(samplePayload());
     try {
       await this.mailer.send(alert.email, subject, text, html);
       return { delivered: true, status: null };

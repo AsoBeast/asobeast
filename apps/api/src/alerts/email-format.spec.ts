@@ -147,29 +147,31 @@ describe('the same phrase in two markets', () => {
     keyword: { ...dropped.keyword, country },
   });
 
-  it('subjects each market distinguishably', () => {
-    expect(formatEmail(inMarket('us')).subject).not.toBe(
-      formatEmail(inMarket('de')).subject,
+  it('subjects each market distinguishably', async () => {
+    expect((await formatEmail(inMarket('us'))).subject).not.toBe(
+      (await formatEmail(inMarket('de'))).subject,
     );
   });
 
-  it('names the market in the body', () => {
-    expect(formatEmail(inMarket('de')).text).toContain('fitness app (DE)');
+  it('names the market in the body', async () => {
+    expect((await formatEmail(inMarket('de'))).text).toContain(
+      'fitness app (DE)',
+    );
   });
 
-  it('renders a queued payload that predates the market scope', () => {
+  it('renders a queued payload that predates the market scope', async () => {
     const legacy = {
       ...dropped,
       keyword: { id: 'kw_1', text: 'fitness app' },
     } as unknown as typeof dropped;
 
-    expect(formatEmail(legacy).subject).toContain('"fitness app"');
+    expect((await formatEmail(legacy)).subject).toContain('"fitness app"');
   });
 });
 
 describe('formatEmail', () => {
-  it('subjects a rank drop with bare positions', () => {
-    const email = formatEmail(dropped);
+  it('subjects a rank drop with bare positions', async () => {
+    const email = await formatEmail(dropped);
     expect(email.subject).toBe(
       '[asobeast] Rank drop: "fitness app (US)" 4 → 12',
     );
@@ -178,33 +180,33 @@ describe('formatEmail', () => {
     expect(email.html).toContain('<table');
   });
 
-  it('renders a drop out using its captured depth', () => {
-    expect(formatEmail(droppedOut).subject).toBe(
+  it('renders a drop out using its captured depth', async () => {
+    expect((await formatEmail(droppedOut)).subject).toBe(
       '[asobeast] Rank drop: "fitness app (US)" 3 → >100',
     );
   });
 
-  it('subjects a rank improvement', () => {
-    expect(formatEmail(improved).subject).toBe(
+  it('subjects a rank improvement', async () => {
+    expect((await formatEmail(improved)).subject).toBe(
       '[asobeast] Rank up: "habit tracker (DE)" 20 → 7',
     );
   });
 
-  it('lists the changed fields for a metadata change', () => {
-    const email = formatEmail(metadata);
+  it('lists the changed fields for a metadata change', async () => {
+    const email = await formatEmail(metadata);
     expect(email.subject).toBe('[asobeast] My App changed title, icon');
     expect(email.text).toContain('title: A → B');
     expect(email.text).toContain('icon: — → y');
   });
 
-  it('renders stars and version for a negative review', () => {
-    const email = formatEmail(negative);
+  it('renders stars and version for a negative review', async () => {
+    const email = await formatEmail(negative);
     expect(email.subject).toBe('[asobeast] ★☆☆☆☆ review (v2.0.0) for My App');
     expect(email.text).toContain('Crashes on <launch>');
   });
 
-  it('names a rating only review instead of printing an empty row', () => {
-    const email = formatEmail({
+  it('names a rating only review instead of printing an empty row', async () => {
+    const email = await formatEmail({
       ...negative,
       review: { ...negative.review, text: '' },
     });
@@ -212,27 +214,29 @@ describe('formatEmail', () => {
     expect(email.html).toContain('no written review');
   });
 
-  it('escapes html in review content', () => {
-    expect(formatEmail(negative).html).toContain('Crashes on &lt;launch&gt;');
+  it('escapes html in review content', async () => {
+    expect((await formatEmail(negative)).html).toContain(
+      'Crashes on &lt;launch&gt;',
+    );
   });
 
-  it('caps the weekly digest at ten apps with a more line', () => {
-    const email = formatEmail(digest);
+  it('caps the weekly digest at ten apps with a more line', async () => {
+    const email = await formatEmail(digest);
     expect(email.subject).toBe('[asobeast] Weekly digest: 12 apps');
     expect(email.text).toContain('+2 more');
     expect(email.text).toContain('Window: 2026-07-06 → 2026-07-13');
   });
 
-  it('omits the linked apps section when the digest has no groups', () => {
-    expect(formatEmail(digest).text).not.toContain('Linked apps');
+  it('omits the linked apps section when the digest has no groups', async () => {
+    expect((await formatEmail(digest)).text).not.toContain('Linked apps');
   });
 
-  it('appends the audit score and delta to the app line', () => {
-    expect(formatEmail(digest).text).toContain('Audit 78 (+3)');
+  it('appends the audit score and delta to the app line', async () => {
+    expect((await formatEmail(digest)).text).toContain('Audit 78 (+3)');
   });
 
-  it('renders linked apps before the per-app lines', () => {
-    const { text } = formatEmail(digestWithGroups);
+  it('renders linked apps before the per-app lines', async () => {
+    const { text } = await formatEmail(digestWithGroups);
     expect(text).toContain('Linked apps');
     expect(text).toContain('Habit: vis 61 (-2.5)');
     expect(text.indexOf('Linked apps')).toBeLessThan(text.indexOf('App 0:'));
@@ -346,8 +350,8 @@ const competitorBatch: AlertBatchPayload = {
 };
 
 describe('formatBatchEmail', () => {
-  it('counts each category in the subject with plurals', () => {
-    const email = formatBatchEmail(batch);
+  it('counts each category in the subject with plurals', async () => {
+    const email = await formatBatchEmail(batch);
     expect(email.subject).toBe(
       '[asobeast] Daily app update — 3 changes across 2 apps',
     );
@@ -356,8 +360,8 @@ describe('formatBatchEmail', () => {
     );
   });
 
-  it('uses plural app wording for multiple apps and singular otherwise', () => {
-    const single = formatBatchEmail({
+  it('uses plural app wording for multiple apps and singular otherwise', async () => {
+    const single = await formatBatchEmail({
       ...batch,
       apps: [bravo],
       totals: { events: 1, apps: 1 },
@@ -367,15 +371,15 @@ describe('formatBatchEmail', () => {
     );
   });
 
-  it('omits empty sections from the rendered card', () => {
-    const email = formatBatchEmail(batch);
+  it('omits empty sections from the rendered card', async () => {
+    const email = await formatBatchEmail(batch);
     expect(email.text).toContain('Rank drops');
     expect(email.text).not.toContain('Rank improvements');
     expect(email.text).toContain('New entrants');
   });
 
-  it('nests competitor activity under the primary app', () => {
-    const email = formatBatchEmail(competitorBatch);
+  it('nests competitor activity under the primary app', async () => {
+    const email = await formatBatchEmail(competitorBatch);
     expect(email.subject).toBe(
       '[asobeast] Competitor watch — 1 change across 1 competitor',
     );
@@ -384,7 +388,7 @@ describe('formatBatchEmail', () => {
     expect(email.html).toContain('Competitor · Charlie · App Store · US');
   });
 
-  it('renders queued legacy mixed batches without a scope', () => {
+  it('renders queued legacy mixed batches without a scope', async () => {
     const legacy = {
       ...batch,
       totals: { events: 4, apps: 2 },
@@ -392,7 +396,7 @@ describe('formatBatchEmail', () => {
     };
     Reflect.deleteProperty(legacy, 'scope');
 
-    const email = formatBatchEmail(legacy);
+    const email = await formatBatchEmail(legacy);
 
     expect(email.subject).toBe(
       '[asobeast] Daily alert update — 4 changes across 2 apps',
@@ -402,20 +406,20 @@ describe('formatBatchEmail', () => {
     expect(email.html).toContain('Metadata changes');
   });
 
-  it('truncates long metadata values', () => {
-    const email = formatBatchEmail(batch);
+  it('truncates long metadata values', async () => {
+    const email = await formatBatchEmail(batch);
     expect(email.text).toContain('…');
     expect(email.text).not.toContain('x'.repeat(200));
   });
 
-  it('labels each app with its store and country', () => {
-    const email = formatBatchEmail(batch);
+  it('labels each app with its store and country', async () => {
+    const email = await formatBatchEmail(batch);
     expect(email.text).toContain('Alpha · App Store · US');
     expect(email.text).toContain('Bravo · Google Play · GB');
   });
 
-  it('renders zero totals and every owned section in severity order', () => {
-    const empty = formatBatchEmail({
+  it('renders zero totals and every owned section in severity order', async () => {
+    const empty = await formatBatchEmail({
       ...batch,
       totals: { events: 0, apps: 0 },
       apps: [],
@@ -455,7 +459,7 @@ describe('formatBatchEmail', () => {
         },
       ],
     };
-    const email = formatBatchEmail({
+    const email = await formatBatchEmail({
       ...batch,
       totals: { events: 5, apps: 1 },
       apps: [completeSection],
@@ -482,7 +486,7 @@ describe('formatBatchEmail', () => {
     expect(email.html).not.toContain('<script>');
   });
 
-  it('renders multiple competitor groups with null values and escaped HTML', () => {
+  it('renders multiple competitor groups with null values and escaped HTML', async () => {
     const unsafeSection: AlertBatchAppSection = {
       ...emptySection({
         id: 'unsafe',
@@ -515,7 +519,7 @@ describe('formatBatchEmail', () => {
         },
       ],
     };
-    const email = formatBatchEmail({
+    const email = await formatBatchEmail({
       ...competitorBatch,
       totals: { events: 2, apps: 2 },
       apps: [competitorAlpha, unsafeSection],
@@ -530,12 +534,12 @@ describe('formatBatchEmail', () => {
     expect(email.html).toContain('&lt;b&gt;新しい 🚀&lt;/b&gt;');
   });
 
-  it('reports exact group, competitor and detail omissions', () => {
+  it('reports exact group, competitor and detail omissions', async () => {
     const sections = Array.from({ length: 11 }, (_, index) => ({
       ...alpha,
       app: { ...alpha.app, id: `app-${index}`, name: `App ${index}` },
     }));
-    const groupLimited = formatBatchEmail({
+    const groupLimited = await formatBatchEmail({
       ...batch,
       totals: { events: 11, apps: 11 },
       apps: sections,
@@ -565,7 +569,7 @@ describe('formatBatchEmail', () => {
         },
       ],
     };
-    const limited = formatBatchEmail({
+    const limited = await formatBatchEmail({
       ...competitorBatch,
       totals: { events: 31, apps: 11 },
       apps: [{ ...competitorAlpha, competitors: manyCompetitors }],
@@ -575,7 +579,7 @@ describe('formatBatchEmail', () => {
     expect(limited.text).not.toContain('Competitor 10 ·');
   });
 
-  it('is deterministic and bounds a 1,000-event report', () => {
+  it('is deterministic and bounds a 1,000-event report', async () => {
     const rankDrops = Array.from({ length: 1_000 }, (_, index) => ({
       ...alpha.rankDrops[0],
       keyword: { id: `keyword-${index}`, text: `keyword ${index}` },
@@ -585,8 +589,8 @@ describe('formatBatchEmail', () => {
       totals: { events: 1_000, apps: 1 },
       apps: [{ ...alpha, rankDrops }],
     } satisfies AlertBatchPayload;
-    const first = formatBatchEmail(large);
-    const second = formatBatchEmail(large);
+    const first = await formatBatchEmail(large);
+    const second = await formatBatchEmail(large);
 
     expect(second).toEqual(first);
     expect(first.text).toContain('+980 more detail lines');
@@ -598,8 +602,8 @@ describe('formatBatchEmail', () => {
 });
 
 describe('formatEmail for action.opened', () => {
-  it('renders the rule, priority, estimated impact, evidence and link', () => {
-    const email = formatEmail(actionOpened);
+  it('renders the rule, priority, estimated impact, evidence and link', async () => {
+    const email = await formatEmail(actionOpened);
 
     expect(email.subject).toContain('keyword.add_uncovered');
     expect(email.text).toContain('Priority: high');
@@ -611,15 +615,15 @@ describe('formatEmail for action.opened', () => {
     );
   });
 
-  it('omits the link row entirely when no public url is configured', () => {
-    const email = formatEmail({ ...actionOpened, link: null });
+  it('omits the link row entirely when no public url is configured', async () => {
+    const email = await formatEmail({ ...actionOpened, link: null });
 
     expect(email.text).not.toContain('Open:');
     expect(email.text).not.toContain('localhost');
   });
 
-  it('never leaks a review body into an email', () => {
-    const email = formatEmail({
+  it('never leaks a review body into an email', async () => {
+    const email = await formatEmail({
       ...actionOpened,
       evidence: {
         rule: 'reviews.investigate_theme',
@@ -639,8 +643,8 @@ describe('formatEmail for action.opened', () => {
     expect(email.text).not.toContain('r1');
   });
 
-  it('counts new actions in the batched owned summary', () => {
-    const email = formatBatchEmail({
+  it('counts new actions in the batched owned summary', async () => {
+    const email = await formatBatchEmail({
       ...batch,
       totals: { events: 1, apps: 1 },
       apps: [{ ...emptySection(alpha.app), actions: [actionOpened] }],
@@ -653,8 +657,8 @@ describe('formatEmail for action.opened', () => {
 });
 
 describe('formatEmail for the new rank events', () => {
-  it('subjects a milestone and lists its move', () => {
-    const email = formatEmail(milestone());
+  it('subjects a milestone and lists its move', async () => {
+    const email = await formatEmail(milestone());
 
     expect(email.subject).toBe(
       '[asobeast] My App entered the top 10 for "habit tracker (US)": #14 → #8',
@@ -664,9 +668,9 @@ describe('formatEmail for the new rank events', () => {
     expect(email.text).toContain('To: 8');
   });
 
-  it('lists the position of a first ranking and both moves of an overtake', () => {
-    expect(formatEmail(firstRanking()).text).toContain('Position: 37');
-    const email = formatEmail(overtake());
+  it('lists the position of a first ranking and both moves of an overtake', async () => {
+    expect((await formatEmail(firstRanking())).text).toContain('Position: 37');
+    const email = await formatEmail(overtake());
     expect(email.text).toContain('Competitor: Rival Focus');
     expect(email.text).toContain('Competitor position: 9 → 4');
     expect(email.text).toContain('App position: 5 → 6');
@@ -680,9 +684,9 @@ describe('formatBatchEmail for the new rank events', () => {
     apps: [section],
   });
 
-  it('counts and lists the new blocks and escapes a competitor name', () => {
+  it('counts and lists the new blocks and escapes a competitor name', async () => {
     const section = rankEventSection();
-    const email = formatBatchEmail(
+    const email = await formatBatchEmail(
       rankBatch({
         ...section,
         overtakes: [
@@ -708,8 +712,8 @@ describe('formatBatchEmail for the new rank events', () => {
     expect(email.html).not.toContain('<Rival & Co>');
   });
 
-  it('counts zero for a section queued before the new arrays existed', () => {
-    const email = formatBatchEmail(
+  it('counts zero for a section queued before the new arrays existed', async () => {
+    const email = await formatBatchEmail(
       rankBatch(withoutRankEvents(rankEventSection())),
     );
 

@@ -21,17 +21,12 @@ import {
   storeLabel,
   summarize,
 } from './alert-summary';
+import type { EmailContent } from '../mail/render-email';
 
 const DIGEST_APP_CAP = 10;
 const BATCH_GROUP_CAP = 10;
 const COMPETITOR_CAP = 10;
 const DETAIL_LINE_CAP = 20;
-
-export interface EmailContent {
-  subject: string;
-  text: string;
-  html: string;
-}
 
 type Row = [string, string];
 
@@ -196,7 +191,9 @@ function htmlRow([label, cell]: Row): string {
   return `<tr><td style="padding:4px 12px 4px 0;color:#64748b;vertical-align:top">${escapeHtml(label)}</td><td style="padding:4px 0">${escapeHtml(cell)}</td></tr>`;
 }
 
-export function formatEmail(payload: AlertPayload): EmailContent {
+export async function formatEmail(
+  payload: AlertPayload,
+): Promise<EmailContent> {
   if (payload.event === 'alerts.batch') {
     return formatBatchEmail(payload);
   }
@@ -502,7 +499,13 @@ function formatLegacyBatch(payload: AlertBatchPayload): EmailContent {
   };
 }
 
-export function formatBatchEmail(payload: AlertBatchPayload): EmailContent {
+export function formatBatchEmail(
+  payload: AlertBatchPayload,
+): Promise<EmailContent> {
+  return Promise.resolve(batchEmail(payload));
+}
+
+function batchEmail(payload: AlertBatchPayload): EmailContent {
   if (payload.scope === 'owned_apps') return formatOwnedBatch(payload);
   if (payload.scope === 'competitors') return formatCompetitorBatch(payload);
   return formatLegacyBatch(payload);
