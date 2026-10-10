@@ -117,6 +117,22 @@ describe('ReviewsService.syncReviews', () => {
     expect(data.map((row) => row.reviewId)).toEqual(['b']);
   });
 
+  it('stores a rating only review with its empty text', async () => {
+    const ratingOnly = { ...makeReview('a', 5), text: '' };
+    const { service, createMany } = buildDeps({
+      pages: [[ratingOnly, makeReview('b')]],
+      existing: [],
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
+
+    const data = createMany.mock.calls[0][0].data;
+    expect(data.map((row) => [row.reviewId, row.text])).toEqual([
+      ['a', ''],
+      ['b', 'Body'],
+    ]);
+  });
+
   it('deduplicates the same review across pages', async () => {
     const { service, createMany } = buildDeps({
       pages: [[makeReview('a')], [makeReview('a'), makeReview('c')]],
@@ -382,6 +398,19 @@ describe('ReviewsService negative review alerts', () => {
     await service.syncReviews({ appId: 'app1', pages: 1, backfill: true });
 
     expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('dispatches a one star rating without text with an empty text', async () => {
+    const { service, dispatch } = buildDeps({
+      pages: [[{ ...makeReview('a', 1), text: '' }]],
+      existing: [],
+      scoreMax: 2,
+    });
+
+    await service.syncReviews({ appId: 'app1', pages: 1, backfill: false });
+
+    const payload = dispatch.mock.calls[0][0] as ReviewNegativePayload;
+    expect(payload.review).toMatchObject({ score: 1, text: '' });
   });
 
   it('truncates the dispatched review text to 500 characters', async () => {

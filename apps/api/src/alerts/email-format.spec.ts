@@ -203,6 +203,15 @@ describe('formatEmail', () => {
     expect(email.text).toContain('Crashes on <launch>');
   });
 
+  it('names a rating only review instead of printing an empty row', () => {
+    const email = formatEmail({
+      ...negative,
+      review: { ...negative.review, text: '' },
+    });
+    expect(email.text).toContain('Review: no written review');
+    expect(email.html).toContain('no written review');
+  });
+
   it('escapes html in review content', () => {
     expect(formatEmail(negative).html).toContain('Crashes on &lt;launch&gt;');
   });

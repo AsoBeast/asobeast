@@ -607,7 +607,7 @@ export const APP_1_CATEGORY_RANKS: CategoryRankSeries = {
 };
 
 export const APP_1_REVIEWS: ReviewList = {
-  total: 3,
+  total: 5,
   versions: ["3.4.1", "3.4.0"],
   reviews: [
     {
@@ -639,6 +639,26 @@ export const APP_1_REVIEWS: ReviewList = {
       text: "Please add dark mode.",
       version: "3.4.0",
       reviewedAt: utcTimestampDaysAgo(5),
+    },
+    {
+      id: "rev-4",
+      reviewId: "store-rev-4",
+      userName: "Sam",
+      score: 4,
+      title: null,
+      text: "",
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(6),
+    },
+    {
+      id: "rev-5",
+      reviewId: "store-rev-5",
+      userName: "Robin",
+      score: 4,
+      title: "Fine",
+      text: " \n ",
+      version: "3.4.1",
+      reviewedAt: utcTimestampDaysAgo(7),
     },
   ],
 };

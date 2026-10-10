@@ -406,6 +406,54 @@ describe('GooglePlayProvider', () => {
     ]);
   });
 
+  it('maps a rating only review to empty text and no optional fields', async () => {
+    const reviews = jest.fn().mockResolvedValue({
+      data: [
+        {
+          id: '7ed572cd-bfb0-4c48-9345-3ef21e6b603d',
+          userName: 'Een Google-gebruiker',
+          date: '2014-02-12T09:59:24.595Z',
+          score: 5,
+          title: null,
+          version: '2-build-26',
+        },
+        {
+          id: 'bare',
+          userName: 'Een Google-gebruiker',
+          date: '2014-02-13T09:59:24.595Z',
+          score: 1,
+        },
+      ],
+      nextPaginationToken: null,
+    });
+    const provider = new GooglePlayProvider(makeLib({ reviews }));
+
+    const results = await provider.reviews('com.example.app', 'nl', 1);
+
+    expect(results).toEqual([
+      {
+        reviewId: '7ed572cd-bfb0-4c48-9345-3ef21e6b603d',
+        userName: 'Een Google-gebruiker',
+        score: 5,
+        title: undefined,
+        text: '',
+        version: '2-build-26',
+        updatedAt: new Date('2014-02-12T09:59:24.595Z'),
+        repliedAt: undefined,
+      },
+      {
+        reviewId: 'bare',
+        userName: 'Een Google-gebruiker',
+        score: 1,
+        title: undefined,
+        text: '',
+        version: undefined,
+        updatedAt: new Date('2014-02-13T09:59:24.595Z'),
+        repliedAt: undefined,
+      },
+    ]);
+  });
+
   it('short-circuits to an empty page when the token runs out early', async () => {
     const reviews = jest.fn().mockResolvedValue({
       data: [{ id: 'r1', userName: 'One', score: 5, text: 'first' }],

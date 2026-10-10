@@ -41,6 +41,18 @@ export function rank(value: number | null, depth?: number): string {
   return formatRankPosition(value, depth);
 }
 
+const NO_REVIEW_TEXT = 'no written review';
+
+const isWritten = (text: string): boolean => text.trim().length > 0;
+
+export function reviewBody(text: string): string {
+  return isWritten(text) ? text : NO_REVIEW_TEXT;
+}
+
+export function reviewQuote(text: string): string {
+  return isWritten(text) ? `"${text}"` : NO_REVIEW_TEXT;
+}
+
 export function stars(score: number): string {
   return '★'.repeat(score) + '☆'.repeat(Math.max(0, 5 - score));
 }
@@ -188,7 +200,7 @@ export function changeLines(change: MetadataChangedPayload): string[] {
 
 export function reviewLine(review: ReviewNegativePayload): string {
   const version = review.review.version ? ` — v${review.review.version}` : '';
-  return `${stars(review.review.score)} "${truncateValue(review.review.text)}"${version}`;
+  return `${stars(review.review.score)} ${reviewQuote(truncateValue(review.review.text))}${version}`;
 }
 
 export function appHeader(section: AlertBatchAppSection): string {
