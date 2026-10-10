@@ -174,7 +174,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
   }
 
   private async schedulePublishedStatus(): Promise<void> {
-    if (!this.publishedStatus.enabled) {
+    if (!this.publishedStatus.enabled || !this.publishedStatus.cron) {
       await this.pipelineQueue.removeJobScheduler('store-status');
       return;
     }

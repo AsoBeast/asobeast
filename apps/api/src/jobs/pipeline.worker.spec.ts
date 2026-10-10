@@ -57,6 +57,7 @@ describe('PipelineWorker', () => {
     canaryCron = '0 2,8,14,20 * * *',
     statusEnabled = false,
     popularityEnabled = false,
+    statusCron = '17 * * * *',
   ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
@@ -110,7 +111,7 @@ describe('PipelineWorker', () => {
     const tracking = { capture: jest.fn() };
     const publishedStatus = {
       enabled: statusEnabled,
-      cron: '17 * * * *',
+      cron: statusCron,
       run: jest.fn().mockResolvedValue(undefined),
     };
     const popularity = {
@@ -358,6 +359,25 @@ describe('PipelineWorker', () => {
       'store-status',
       { pattern: '17 * * * *', tz: 'UTC' },
       { name: JOBS.STORE_STATUS },
+    );
+  });
+
+  it('removes the status poll when its pattern is emptied although a status url is configured', async () => {
+    const { worker, pipelineQueue } = build(
+      false,
+      '0 2 * * *',
+      true,
+      false,
+      '',
+    );
+
+    await worker.registerSchedules();
+
+    expect(
+      pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+    ).not.toContain('store-status');
+    expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+      'store-status',
     );
   });
 
