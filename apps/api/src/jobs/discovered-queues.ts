@@ -1,6 +1,6 @@
 import { WorkerHost } from '@nestjs/bullmq';
 import { DiscoveryService } from '@nestjs/core';
-import { Queue, Worker } from 'bullmq';
+import { FlowProducer, Queue, Worker } from 'bullmq';
 
 const instancesOf = (discovery: DiscoveryService): unknown[] =>
   discovery.getProviders().map((wrapper): unknown => wrapper.instance);
@@ -26,4 +26,12 @@ export function discoveredWorkers(discovery: DiscoveryService): Worker[] {
         instance instanceof WorkerHost,
     )
     .flatMap(createdWorker);
+}
+
+export function discoveredFlowProducers(
+  discovery: DiscoveryService,
+): FlowProducer[] {
+  return instancesOf(discovery).filter(
+    (instance): instance is FlowProducer => instance instanceof FlowProducer,
+  );
 }

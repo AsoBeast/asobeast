@@ -44,7 +44,7 @@ import { PipelineWorker } from './pipeline.worker';
 import { QueueErrorReporter } from './queue-error-reporter';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
-import { WorkerShutdown } from './worker-shutdown';
+import { QueueShutdown } from './queue-shutdown';
 import { ScoringController } from './scoring.controller';
 import { StoreHealthService } from './store-health.service';
 import { StoreJobsHandler } from './store-jobs.handler';
@@ -128,7 +128,7 @@ const bullBoardModules: DynamicModule[] =
     PipelineWorker,
     PipelineService,
     QueueErrorReporter,
-    WorkerShutdown,
+    QueueShutdown,
     RetentionService,
     RunStatusService,
     StoreHealthService,

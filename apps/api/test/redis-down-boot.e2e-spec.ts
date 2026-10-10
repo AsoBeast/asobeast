@@ -77,7 +77,7 @@ describe('Boot while redis is down (e2e)', () => {
     BOOT_DEADLINE_MS + ANSWER_DEADLINE_MS + 5_000,
   );
 
-  it('names the outage in the json log once it has booted', async () => {
+  it('prints no raw stack trace once it has booted', async () => {
     const printed = jest.spyOn(console, 'error').mockReturnValue();
 
     await elapse(RECONNECT_CYCLES_MS);
@@ -106,10 +106,14 @@ describe('Boot while redis is down (e2e)', () => {
   );
 
   it(
-    'stops promptly when redis goes away again before shutdown',
+    'stops promptly when redis goes away again with work waiting for it',
     async () => {
       await obliterateQueues(app);
       await outage.sever();
+      await request(app.getHttpServer())
+        .get('/health')
+        .timeout({ response: ANSWER_DEADLINE_MS, deadline: ANSWER_DEADLINE_MS })
+        .expect(200);
 
       const stopped = await Promise.race([
         app.close().then(() => true),
