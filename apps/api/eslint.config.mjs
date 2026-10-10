@@ -44,9 +44,9 @@ export default tseslint.config(
     },
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.{ts,tsx}'],
     ignores: [
-      'src/**/*.spec.ts',
+      'src/**/*.spec.{ts,tsx}',
       'src/auth/auth.service.ts',
       'src/auth/platform-operator.ts',
     ],
@@ -66,7 +66,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.spec.ts', 'test/**/*.ts'],
+    files: ['**/*.spec.{ts,tsx}', 'test/**/*.ts'],
     rules: { 'max-lines': 'off', 'max-lines-per-function': 'off' },
   },
   {

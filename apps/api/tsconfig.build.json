@@ -8,6 +8,8 @@
     "prisma.config.ts",
     "prisma/seed.ts",
     "**/*spec.ts",
-    "**/*.fixture.ts"
+    "**/*spec.tsx",
+    "**/*.fixture.ts",
+    "src/mail/previews"
   ]
 }

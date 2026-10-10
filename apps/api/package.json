@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "db:generate": "prisma generate",
-    "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" \"test/**/*.ts\"",
     "dev": "nest start --watch",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
@@ -24,8 +24,8 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
-    "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
+    "lint": "eslint \"{src,apps,libs,test}/**/*.{ts,tsx}\"",
+    "lint:fix": "eslint \"{src,apps,libs,test}/**/*.{ts,tsx}\" --fix",
     "jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test": "pnpm run jest",
     "test:watch": "pnpm run jest --watch",
@@ -39,7 +39,8 @@
     "bench": "pnpm -w run build:packages && pnpm run jest --config ./test/load/jest-load.json",
     "bench:small": "BENCH_SCALE=small pnpm run bench",
     "bench:target": "BENCH_SCALE=target pnpm run bench",
-    "bench:stress": "BENCH_SCALE=stress pnpm run bench"
+    "bench:stress": "BENCH_SCALE=stress pnpm run bench",
+    "email:dev": "email dev --dir src/mail/previews --port 3030"
   },
   "dependencies": {
     "@apple/apple-ads-platform": "1.109.0",
@@ -92,6 +93,9 @@
     "pino": "10.4.0",
     "pino-http": "11.0.0",
     "pino-pretty": "13.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-email": "^6.11.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "0.35.5",
@@ -108,11 +112,14 @@
     "@nestjs/cli": "^11.0.24",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^12.1.2",
+    "@react-email/ui": "^6.11.1",
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^26.6.4",
     "@types/pg": "^8.20.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/supertest": "^7.2.1",
     "dotenv": "^17.4.2",
     "eslint": "^9.39.5",
@@ -135,22 +142,24 @@
     "moduleFileExtensions": [
       "js",
       "json",
-      "ts"
+      "ts",
+      "tsx"
     ],
     "rootDir": "src",
-    "testRegex": ".*\\.spec\\.ts$",
+    "testRegex": ".*\\.spec\\.tsx?$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)sx?$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.ts",
-      "!**/*.spec.ts",
+      "**/*.{ts,tsx}",
+      "!**/*.spec.{ts,tsx}",
       "!**/*.module.ts",
       "!main.ts",
       "!**/*.cli.ts",
       "!**/dto/**",
       "!**/*.types.ts",
-      "!**/decorators/**"
+      "!**/decorators/**",
+      "!mail/previews/**"
     ],
     "coverageReporters": [
       "text-summary",

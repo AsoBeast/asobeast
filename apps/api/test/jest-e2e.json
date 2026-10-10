@@ -1,5 +1,5 @@
 {
-  "moduleFileExtensions": ["js", "json", "ts"],
+  "moduleFileExtensions": ["js", "json", "ts", "tsx"],
   "rootDir": ".",
   "maxWorkers": 1,
   "workerIdleMemoryLimit": "1GB",
@@ -8,6 +8,6 @@
   "setupFiles": ["<rootDir>/setup-e2e.ts"],
   "setupFilesAfterEnv": ["<rootDir>/helpers/reset-tracked-data.ts"],
   "transform": {
-    "^.+\\.(t|j)s$": "ts-jest"
+    "^.+\\.(t|j)sx?$": "ts-jest"
   }
 }
