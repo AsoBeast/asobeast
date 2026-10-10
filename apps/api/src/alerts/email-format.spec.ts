@@ -640,3 +640,32 @@ describe('formatBatchEmail in the branded layout', () => {
     );
   });
 });
+
+describe('the plain text part of an alert email', () => {
+  const page = 'https://aso.example.com/unsubscribe?alert=ea_1&token=t';
+  const context = { origin: 'https://aso.example.com', unsubscribe: page };
+
+  it.each([
+    ['an instant alert', () => formatEmail(dropped, context)],
+    ['a daily update', () => formatBatchEmail(batch, context)],
+    ['a competitor watch', () => formatBatchEmail(competitorBatch, context)],
+  ])('says why %s was sent and how to stop it', async (_kind, render) => {
+    const { text } = await render();
+    expect(text).toContain(
+      'You received this because this address subscribes to AsoBeast email alerts at aso.example.com.',
+    );
+    expect(text).toContain(
+      'Manage email alerts: https://aso.example.com/settings#email-alerts',
+    );
+    expect(text.split(`Unsubscribe: ${page}`).length - 1).toBe(1);
+  });
+
+  it('names no link without a web origin', async () => {
+    const { text } = await formatEmail(dropped);
+    expect(text).toContain(
+      'You received this because this address subscribes to AsoBeast email alerts.',
+    );
+    expect(text).not.toContain('Unsubscribe:');
+    expect(text).not.toContain('Manage email alerts:');
+  });
+});

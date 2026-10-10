@@ -15,7 +15,7 @@ import {
   summarize,
 } from './alert-summary';
 import { AlertEmail, type AlertAction } from './emails/alert-email';
-import type { AlertEmailContext } from './emails/alert-footer';
+import { alertFooterText, type AlertEmailContext } from './emails/alert-footer';
 import type { ReportCardModel } from './emails/report-card';
 import { ReportEmail } from './emails/report-email';
 import type { Stat } from './emails/stat-grid';
@@ -89,6 +89,8 @@ export async function formatEmail(
     ),
     '',
     `Occurred at ${payload.occurredAt}`,
+    '',
+    alertFooterText(context),
   ].join('\n');
 
   return renderEmail(
@@ -289,7 +291,7 @@ async function fittingReport(
   const email = await renderEmail(
     `[asobeast] ${report.headline}`,
     reportElement(payload, report, HTML_DETAIL_CAPS[tier], context),
-    report.text,
+    `${report.text.trimEnd()}\n\n${alertFooterText(context)}`,
   );
   const smallerTier = tier + 1 < HTML_DETAIL_CAPS.length;
   return smallerTier && Buffer.byteLength(email.html) > HTML_BUDGET_BYTES
