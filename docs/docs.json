@@ -177,6 +177,7 @@
               "operations/backups",
               "operations/restore",
               "operations/rotate-secrets",
+              "operations/email-deliverability",
               "operations/release-recovery",
               "operations/capacity",
               "operations/billing",

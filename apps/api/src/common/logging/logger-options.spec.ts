@@ -1,10 +1,13 @@
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { Writable } from 'node:stream';
 import type { ConfigService } from '@nestjs/config';
 import { pino, type Logger } from 'pino';
 import type { Env } from '../../config/env';
 import { WorkspaceContext } from '../tenancy/workspace-context';
 import { REDACTED } from './log-redaction';
-import { pinoOptions, secretLiterals } from './logger-options';
+import { pinoHttp } from 'pino-http';
+import { loggerParams, pinoOptions, secretLiterals } from './logger-options';
 
 const AUTH_SECRET = '0123456789abcdef0123456789abcdef';
 
@@ -117,5 +120,34 @@ describe('secretLiterals', () => {
       AUTH_SECRET,
       'correct-horse-battery-staple',
     ]);
+  });
+});
+
+describe('loggerParams', () => {
+  it('logs a request without the token in its address or query', async () => {
+    const token = 'hUvkXqhz7DN47i7KZ5KzkF-cXu_Sh49XWB2Dyapx-r0';
+    const workspace = new WorkspaceContext();
+    const sink = collect();
+    const { pinoHttp: options } = loggerParams(configOf(), workspace);
+    const logging = pinoHttp({
+      ...(options as object),
+      logger: pino(pinoOptions(configOf(), workspace), sink.stream),
+    });
+    const server = createServer((req, res) => {
+      logging(req, res);
+      res.end();
+    });
+    await new Promise<void>((resolve) => server.listen(0, resolve));
+    const { port } = server.address() as AddressInfo;
+
+    await fetch(
+      `http://127.0.0.1:${port}/email-alerts/ea_1/unsubscribe?token=${token}`,
+      { method: 'POST' },
+    );
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+
+    const logged = JSON.stringify(sink.lines);
+    expect(logged).toContain('/email-alerts/ea_1/unsubscribe');
+    expect(logged).not.toContain(token);
   });
 });

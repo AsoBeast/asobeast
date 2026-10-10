@@ -31,8 +31,6 @@ import {
 } from './webhook-events';
 import { WORKSPACE_METADATA_KEY, workspaceNamedBy } from './workspace-link';
 
-const SETTINGS_PATH = '/settings';
-
 const RECEIPT_JUSTIFICATION =
   'a stripe delivery names its workspace in metadata, not in the request scope';
 
@@ -318,7 +316,7 @@ export class BillingWebhookService {
     const outcome = await this.notifier.notify(
       workspace.id,
       'billing.payment_failed',
-      paymentFailed(`${this.notifier.appUrl}${SETTINGS_PATH}`),
+      paymentFailed(),
     );
     if (!noticeSettled(outcome)) return {};
     return { dunningNotifiedAt: new Date() };

@@ -75,15 +75,15 @@ The portfolio level is what separates a market wide shift from a problem with on
 
 ## Receive the weekly digest
 
-The digest is sent by webhook on `CRON_DIGEST`, which defaults to `0 8 * * 1`, meaning 08:00 UTC on Monday.
+The digest is sent to webhooks and email alerts on `CRON_DIGEST`, which defaults to `0 8 * * 1`, meaning 08:00 UTC on Monday.
 
-It has its own schedule and bypasses the batched alert outbox entirely, so it arrives on time regardless of how long the daily pipeline ran. Subscribe a webhook channel to `digest.weekly`. See [Send alerts](/guides/alerts). Its negative review count follows the same rule as the dashboard, over the digest window.
+It has its own schedule and bypasses the batched alert outbox entirely, so it arrives on time regardless of how long the daily pipeline ran. Subscribe a webhook or an email alert to `digest.weekly`. See [Send alerts](/guides/alerts). Its negative review count follows the same rule as the dashboard, over the digest window.
 
 ## Troubleshooting
 
 - **A group refuses a second app.** A group holds one app per store. Two App Store listings cannot share a group.
 - **Visibility is missing for a market.** Visibility needs observed days. A market added this week does not have them yet.
-- **The digest never arrives.** It is webhook only. An email channel does not receive it.
+- **The digest never arrives.** The channel is not subscribed to `digest.weekly`. Subscribe a webhook or an email alert to it.
 
 ## Related
 

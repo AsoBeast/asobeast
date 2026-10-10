@@ -11,7 +11,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
-import { formatEmail } from './email-format';
+import { AlertMail } from './alert-mail';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery } from './webhook-delivery';
 
@@ -28,6 +28,7 @@ export class AlertsWorker extends WorkerHost {
     private readonly delivery: WebhookDelivery,
     private readonly mailer: MailerService,
     private readonly workspace: WorkspaceContext,
+    private readonly alertMail: AlertMail,
   ) {
     super();
   }
@@ -69,14 +70,18 @@ export class AlertsWorker extends WorkerHost {
     const { emailAlertId, payload } = job.data;
     const alert = await this.prisma.emailAlert.findUnique({
       where: { id: emailAlertId },
-      select: { email: true },
+      select: { email: true, active: true },
     });
-    if (!alert) {
+    if (!alert?.active) {
+      this.logger.debug(
+        `skipped ${payload.event} for missing or paused email alert ${emailAlertId}`,
+      );
       return;
     }
-    const { subject, text, html } = formatEmail(payload);
     try {
-      await this.mailer.send(alert.email, subject, text, html);
+      await this.mailer.send(
+        await this.alertMail.compose(emailAlertId, alert.email, payload),
+      );
       await this.record('email', { emailAlertId }, payload.event, job, null);
       this.logger.debug(`delivered ${payload.event} to email ${emailAlertId}`);
     } catch (error) {

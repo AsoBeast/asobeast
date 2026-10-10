@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   Injectable,
   Logger,
@@ -8,6 +10,11 @@ import { createTransport, Transporter } from 'nodemailer';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { REDACTED, scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
+import {
+  DKIM_SIGNED_HEADERS,
+  outgoingMessage,
+  type OutgoingMail,
+} from '../mail/outgoing-message';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const ACCOUNT_MAIL_CHANNEL = 'account';
@@ -20,12 +27,8 @@ export const ACCOUNT_MAIL_KINDS = [
 
 export type AccountMailKind = (typeof ACCOUNT_MAIL_KINDS)[number];
 
-export interface AccountMail {
+export interface AccountMail extends OutgoingMail {
   kind: AccountMailKind;
-  to: string;
-  subject: string;
-  text: string;
-  html: string;
   secrets?: readonly string[];
 }
 
@@ -55,24 +58,19 @@ export class MailerService {
     );
   }
 
-  async send(
-    to: string,
-    subject: string,
-    text: string,
-    html: string,
-  ): Promise<void> {
+  get origin(): string | null {
+    return this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? null;
+  }
+
+  async send(mail: OutgoingMail): Promise<void> {
     if (!this.enabled) {
       throw new Error(NO_TRANSPORT);
     }
     await this.ready();
     try {
-      await this.transporter().sendMail({
-        from: this.config.get('SMTP_FROM', { infer: true }),
-        to,
-        subject,
-        text,
-        html,
-      });
+      await this.transporter().sendMail(
+        outgoingMessage(this.config.get('SMTP_FROM', { infer: true }), mail),
+      );
     } catch (error) {
       throw new Error(this.scrub(reason(error)));
     }
@@ -85,7 +83,7 @@ export class MailerService {
     }
 
     try {
-      await this.send(mail.to, mail.subject, mail.text, mail.html);
+      await this.send(mail);
     } catch (error) {
       const detail = this.scrub(reason(error), mail.secrets);
       await this.record(mail, 'failed', detail);
@@ -141,6 +139,23 @@ export class MailerService {
     return this.verified;
   }
 
+  private dkim() {
+    const domainName = this.config.get('SMTP_DKIM_DOMAIN', { infer: true });
+    const keySelector = this.config.get('SMTP_DKIM_SELECTOR', { infer: true });
+    const keyPath = this.config.get('SMTP_DKIM_PRIVATE_KEY_PATH', {
+      infer: true,
+    });
+    if (!domainName || !keySelector || !keyPath) return {};
+    return {
+      dkim: {
+        domainName,
+        keySelector,
+        privateKey: readFileSync(resolve(keyPath), 'utf8'),
+        headerFieldNames: DKIM_SIGNED_HEADERS,
+      },
+    };
+  }
+
   private transporter(): Transporter {
     if (!this.transport) {
       const user = this.config.get('SMTP_USER', { infer: true });
@@ -150,6 +165,7 @@ export class MailerService {
         port: this.config.get('SMTP_PORT', { infer: true }),
         secure: this.config.get('SMTP_SECURE', { infer: true }),
         auth: user ? { user, pass } : undefined,
+        ...this.dkim(),
       });
     }
     return this.transport;

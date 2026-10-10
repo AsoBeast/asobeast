@@ -148,6 +148,38 @@ describe("proxyToApi", () => {
     );
   });
 
+  it("keeps a decoded segment inside the path it was sent in", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    await proxyToApi(request("/api/backend/email-alerts", { method: "POST" }), [
+      "email-alerts",
+      "../../auth/logout#",
+      "unsubscribe",
+    ]);
+
+    expect(fetchMock()).toHaveBeenCalledWith(
+      `${API_BASE}/email-alerts/..%2F..%2Fauth%2Flogout%23/unsubscribe`,
+      expect.anything(),
+    );
+  });
+
+  it.each([["."], [".."]])(
+    "refuses a %s segment instead of letting it climb the path",
+    async (segment) => {
+      stubFetch(async () => Response.json({}));
+      const { proxyToApi } = await loadProxy();
+
+      const response = await proxyToApi(
+        request("/api/backend/email-alerts", { method: "POST" }),
+        ["email-alerts", segment, "auth", "logout"],
+      );
+
+      expect(response.status).toBe(404);
+      expect(fetchMock()).not.toHaveBeenCalled();
+    },
+  );
+
   it("forwards the credential headers the api authenticates with", async () => {
     stubFetch(async () => Response.json({}));
     const { proxyToApi } = await loadProxy();

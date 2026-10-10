@@ -1,11 +1,11 @@
-import type { ApiErrorEnvelope } from "@asobeast/shared";
+import { BACKEND_PROXY_PATH, type ApiErrorEnvelope } from "@asobeast/shared";
 import { isPublicRoute } from "@/lib/auth-routes";
 import { writeApiErrorDigest } from "./error-digest";
 
 const INTERNAL_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 
 function apiBase(): string {
-  return typeof window === "undefined" ? INTERNAL_BASE : "/api/backend";
+  return typeof window === "undefined" ? INTERNAL_BASE : BACKEND_PROXY_PATH;
 }
 
 async function serverForwardHeaders(): Promise<Record<string, string>> {

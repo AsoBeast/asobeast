@@ -6,6 +6,7 @@ import {
 } from '../screenshots/ocr-languages';
 import { assertAppleAdsConfiguration } from './apple-ads-config';
 import { assertProductionSafety } from './production-safety';
+import { assertSmtpDkimConfiguration } from './smtp-dkim-config';
 import { TrustedProxyHops } from './trusted-proxy';
 
 /**
@@ -133,6 +134,9 @@ export const EnvSchema = z.object({
   SMTP_USER: z.string().optional(),
   SMTP_PASSWORD: z.string().optional(),
   SMTP_FROM: z.string().optional(),
+  SMTP_DKIM_DOMAIN: optionalText,
+  SMTP_DKIM_SELECTOR: optionalText,
+  SMTP_DKIM_PRIVATE_KEY_PATH: optionalText,
   OPENAI_API_KEY: z.preprocess(
     (value) =>
       typeof value === 'string' && value.trim().length > 0
@@ -236,5 +240,6 @@ export function validateEnv(config: Record<string, unknown>): Env {
   const env = EnvSchema.parse(config);
   assertProductionSafety(env);
   assertAppleAdsConfiguration(env);
+  assertSmtpDkimConfiguration(env);
   return env;
 }

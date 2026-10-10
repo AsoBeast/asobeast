@@ -54,10 +54,14 @@ export function loggerParams(
   config: ConfigService<Env, true>,
   workspace: WorkspaceContext,
 ): Params {
+  const literals = secretLiterals(config);
   return {
     pinoHttp: {
       logger: pino(pinoOptions(config, workspace)),
       genReqId: () => workspace.correlationId ?? randomUUID(),
+      serializers: {
+        req: (request: unknown) => scrubSecrets(request, literals),
+      },
       autoLogging: {
         ignore: (request) => QUIET_ROUTES.includes(request.url ?? ''),
       },

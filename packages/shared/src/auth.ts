@@ -4,6 +4,12 @@ export const API_TOKEN_PREFIX = 'asob_';
 
 export const UPGRADE_PATH = '/upgrade';
 
+export const SETTINGS_PATH = '/settings';
+
+export const UNSUBSCRIBE_PATH = '/unsubscribe';
+
+export const BACKEND_PROXY_PATH = '/api/backend';
+
 export const INVITE_PATH = '/invite';
 
 export const VERIFY_PATH = '/verify';

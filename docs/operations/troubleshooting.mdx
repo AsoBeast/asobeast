@@ -154,7 +154,7 @@ Each entry below names the symptom the way you would describe it, then gives the
   </Accordion>
 
   <Accordion title="Email alerts never arrive">
-    Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. One without the other leaves it off. Check the delivery log for a relay rejection, which usually means the envelope sender is not on a domain the relay accepts.
+    Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. One without the other leaves it off. Check the delivery log for a relay rejection, which usually means the envelope sender is not on a domain the relay accepts. Mail that arrives but lands in spam needs the sending domain authenticated. See [Email deliverability](/operations/email-deliverability).
   </Accordion>
 
   <Accordion title="A confirmation, recovery or invitation email never arrives">

@@ -6,7 +6,6 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { type User, type WorkspaceInvite } from '@prisma/client';
 import {
@@ -18,9 +17,10 @@ import {
 } from '@asobeast/shared';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { MailerService } from '../alerts/mailer.service';
-import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { invitationEmail } from './emails/invitation-email';
 import { sha256 } from './password-hash';
+import { PublicWebUrl } from './public-web-url';
 import type { AccountUser } from './auth.types';
 import { refuseSessionSwap } from './session-swap';
 import { MEMBER_ROLE, OWNER_ROLE, workspaceRoleOf } from './workspace-roles';
@@ -38,7 +38,7 @@ export class WorkspaceTeamService {
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
     private readonly mailer: MailerService,
-    private readonly config: ConfigService<Env, true>,
+    private readonly web: PublicWebUrl,
   ) {}
 
   async team(): Promise<WorkspaceTeam> {
@@ -159,18 +159,20 @@ export class WorkspaceTeamService {
     token: string,
     owner: AccountUser,
   ): Promise<boolean> {
-    const base = this.config.get('WEB_PUBLIC_URL', { infer: true });
-    if (!this.mailer.enabled || !base) return false;
+    if (!this.mailer.enabled || !this.web.configured) return false;
 
-    const link = `${base}${INVITE_PATH}?token=${token}`;
-    const subject = `${owner.email} invited you to asobeast`;
+    const link = this.web.tokenLink(INVITE_PATH, token, 'invitation link');
     try {
+      const invitation = await invitationEmail({
+        origin: this.mailer.origin,
+        inviter: owner.email,
+        link,
+        days: INVITE_DAYS,
+      });
       await this.mailer.sendAccountMail({
         kind: 'invitation',
         to: email,
-        subject,
-        text: `${subject}\n\nAccept the invitation: ${link}\n\nThe link expires in ${INVITE_DAYS} days.`,
-        html: `<p>${subject}</p><p><a href="${link}">Accept the invitation</a></p><p>The link expires in ${INVITE_DAYS} days.</p>`,
+        ...invitation,
         secrets: [token],
       });
       return true;

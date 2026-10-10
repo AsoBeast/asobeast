@@ -32,7 +32,6 @@ describe('TrialNotifier', () => {
       } as unknown as CrossTenantAccess,
       {
         notify,
-        appUrl: 'https://app.example.com',
       } as unknown as AccountNotifier,
       { get: () => billing } as unknown as ConfigService<Env, true>,
     );

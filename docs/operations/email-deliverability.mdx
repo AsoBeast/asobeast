@@ -1,0 +1,98 @@
+---
+title: Email deliverability
+sidebarTitle: Email deliverability
+description: "Make account and alert emails reach the inbox: authenticate the sending domain with SPF, DKIM and DMARC, and keep one click unsubscribe working."
+icon: mail-check
+keywords: ["email","deliverability","SPF","DKIM","DMARC","List-Unsubscribe","RFC 8058","Gmail","Outlook","spam"]
+---
+
+Mailbox providers decide where a message lands from two things: whether the sending domain proves the message is its own, and whether the message itself looks like careful automated mail. AsoBeast takes care of the message. The domain is yours to set up.
+
+## What AsoBeast does for you
+
+Every email AsoBeast sends carries the following.
+
+| Property | Why it matters |
+| --- | --- |
+| A plain text part next to the HTML | Filters penalise HTML only mail, and screen readers and text clients need it |
+| `Auto-Submitted: auto-generated` and `X-Auto-Response-Suppress: All` | Vacation responders and out of office replies stay silent, so no reply loop reaches the sender mailbox |
+| A `Message-ID` on the `SMTP_FROM` domain | The identifier aligns with the sender |
+| No tracking pixels, click redirects or link shorteners | Every link shows the address it opens, which is what anti phishing checks compare |
+| One small logo image and live text everywhere else | The message reads correctly with images turned off |
+| HTML under 90 KB, even for the largest daily update | Gmail clips a message above about 102 KB and hides its footer |
+
+Alert emails are subscription mail. When `WEB_PUBLIC_URL` is `https`, each one also carries `List-Unsubscribe` and `List-Unsubscribe-Post: List-Unsubscribe=One-Click` (RFC 8058), so Gmail, Yahoo, Apple Mail and Outlook.com show their own unsubscribe button. Pressing it pauses that one email alert. The footer of every alert email links to the same choice on a confirmation page.
+
+Account emails (confirmation, password reset, invitation) and billing notices are transactional, so they carry no unsubscribe.
+
+## What your domain needs
+
+Publish three DNS records for the domain in `SMTP_FROM`. The examples use `mail.example.com`.
+
+SPF lists the servers allowed to send for the domain:
+
+```text
+mail.example.com.  TXT  "v=spf1 include:<your relay's SPF domain> -all"
+```
+
+DKIM publishes the public key that verifies each message signature:
+
+```text
+asobeast._domainkey.mail.example.com.  TXT  "v=DKIM1; k=rsa; p=<public key>"
+```
+
+DMARC tells receivers what to do when neither check aligns with the visible sender, and where to send reports:
+
+```text
+_dmarc.mail.example.com.  TXT  "v=DMARC1; p=none; rua=mailto:dmarc@example.com"
+```
+
+Gmail, Yahoo and Outlook.com require SPF, DKIM and an aligned DMARC record from anyone sending about 5,000 or more messages a day to their users, together with a working one click unsubscribe on subscription mail. Smaller senders should publish them anyway, because unauthenticated mail is the first to be filtered. Start DMARC at `p=none`, read the reports, and move to `p=quarantine` once they show only your own sources.
+
+## Choose a relay
+
+A managed relay such as Amazon SES, Postmark, Resend, Mailgun or SendGrid signs every message with DKIM for you, keeps reverse DNS correct and handles TLS. Point `SMTP_HOST` at it and publish the records it gives you.
+
+Running your own Postfix means you sign the mail, keep the reverse DNS of the sending address matching its hostname, and watch the reputation of that address yourself.
+
+## Sign in AsoBeast instead
+
+When the relay does not sign, AsoBeast can. Generate a key in the folder both Compose stacks mount:
+
+```bash
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out apps/api/keys/dkim-private.pem
+```
+
+Print the public half in the form the DNS record expects:
+
+```bash
+openssl pkey -in apps/api/keys/dkim-private.pem -pubout -outform DER | openssl base64 -A
+```
+
+Publish that value as `p=` in the DKIM record above, then set `SMTP_DKIM_DOMAIN`, `SMTP_DKIM_SELECTOR` and `SMTP_DKIM_PRIVATE_KEY_PATH` and restart the API. The rules for the three variables are on the [configuration reference](/configuration/reference#email-delivery). The signature covers both unsubscribe headers, which RFC 8058 requires.
+
+## Set the sender name
+
+Use a display name with an address on the authenticated domain, for example `SMTP_FROM="AsoBeast <alerts@mail.example.com>"`. Providers judge the display name too, and an address on another domain breaks alignment.
+
+## Check a message
+
+Send a test from **Settings**, **Email alerts**, then open the original message in the receiving client ("Show original" in Gmail). Look for `spf=pass`, `dkim=pass` with `d=` set to your domain, and `dmarc=pass`. An alert email should also show the `List-Unsubscribe` pair.
+
+Watch the spam complaint rate in Google Postmaster Tools. Keep it under 0.1% and never let it reach 0.3%.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Send alerts" icon="bell" href="/guides/alerts">
+    Email and webhook delivery, and how unsubscribe works.
+  </Card>
+
+  <Card title="Configuration reference" icon="sliders" href="/configuration/reference">
+    Every SMTP variable and its rules.
+  </Card>
+
+  <Card title="Rotate secrets" icon="refresh-cw" href="/operations/rotate-secrets">
+    What a new `AUTH_SECRET` does to unsubscribe links.
+  </Card>
+</CardGroup>

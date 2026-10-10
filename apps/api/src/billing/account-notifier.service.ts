@@ -1,10 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { ACCOUNT_MAIL_CHANNEL, MailerService } from '../alerts/mailer.service';
-import { Env } from '../config/env';
-import { asHtml, asText, type AccountMail } from './account-mail';
+import type { AccountMail } from './account-mail';
+import { billingNoticeEmail } from './billing-notice-email';
 
 export const ACCOUNT_CHANNEL = ACCOUNT_MAIL_CHANNEL;
 
@@ -22,12 +21,7 @@ export class AccountNotifier {
     private readonly mailer: MailerService,
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
-    private readonly config: ConfigService<Env, true>,
   ) {}
-
-  get appUrl(): string {
-    return this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? '';
-  }
 
   notify(
     workspaceId: string,
@@ -55,12 +49,8 @@ export class AccountNotifier {
     }
 
     try {
-      await this.mailer.send(
-        recipient,
-        mail.subject,
-        asText(mail),
-        asHtml(mail),
-      );
+      const email = await billingNoticeEmail(mail, this.mailer.origin);
+      await this.mailer.send({ to: recipient, ...email });
       await this.record(event, 'delivered', null);
       return 'delivered';
     } catch (error) {

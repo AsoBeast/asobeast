@@ -8,8 +8,11 @@ import {
 } from '../jobs/jobs.types';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
+import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
+import { AlertMail } from './alert-mail';
 import { AlertsWorker } from './alerts.worker';
+import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery } from './webhook-delivery';
 
@@ -49,6 +52,7 @@ describe('AlertsWorker', () => {
   const send = jest.fn();
   let worker: AlertsWorker;
   let delivery: WebhookDelivery;
+  let workerAt: (origin: string | null) => AlertsWorker;
 
   beforeEach(() => {
     webhookFind.mockReset();
@@ -61,11 +65,28 @@ describe('AlertsWorker', () => {
       emailAlert: { findUnique: emailFind },
       alertDelivery: { create: deliveryCreate },
     } as unknown as PrismaService;
-    const mailer = { send } as unknown as MailerService;
+    const mailer = { send, origin: null } as unknown as MailerService;
     delivery = new WebhookDelivery({
       get: () => false,
     } as unknown as ConfigService<Env, true>);
-    worker = new AlertsWorker(prisma, delivery, mailer, new WorkspaceContext());
+    const buildWorker = (origin: string | null) => {
+      const linked = { send, origin } as unknown as MailerService;
+      const unsubscribes = new EmailAlertUnsubscribe(
+        { get: () => 's'.repeat(32) } as unknown as ConfigService<Env, true>,
+        linked,
+        prisma,
+        {} as CrossTenantAccess,
+      );
+      return new AlertsWorker(
+        prisma,
+        delivery,
+        linked,
+        new WorkspaceContext(),
+        new AlertMail(linked, unsubscribes),
+      );
+    };
+    worker = buildWorker(mailer.origin);
+    workerAt = buildWorker;
   });
 
   afterEach(() => delivery.onModuleDestroy());
@@ -152,13 +173,15 @@ describe('AlertsWorker', () => {
   });
 
   it('sends a formatted email for an email job', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com' });
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
     send.mockResolvedValue(undefined);
 
     await worker.process(emailJob('ea_1'));
 
     expect(send).toHaveBeenCalledTimes(1);
-    const [to, subject] = send.mock.calls[0] as [string, string];
+    const [{ to, subject }] = send.mock.calls[0] as [
+      { to: string; subject: string },
+    ];
     expect(to).toBe('ops@example.com');
     expect(subject).toContain('[asobeast]');
     expect(deliveryCreate).toHaveBeenCalledWith({
@@ -174,7 +197,7 @@ describe('AlertsWorker', () => {
   });
 
   it('logs a failed row and throws so bullmq retries when the mailer fails', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com' });
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
     send.mockRejectedValue(new Error('smtp down'));
 
     await expect(worker.process(emailJob('ea_1'))).rejects.toThrow('smtp down');
@@ -192,5 +215,61 @@ describe('AlertsWorker', () => {
     await expect(worker.process(emailJob('ea_1'))).resolves.toBeUndefined();
     expect(send).not.toHaveBeenCalled();
     expect(deliveryCreate).not.toHaveBeenCalled();
+  });
+
+  it('skips an alert that was unsubscribed after the job was queued', async () => {
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: false });
+
+    await expect(worker.process(emailJob('ea_1'))).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+    expect(deliveryCreate).not.toHaveBeenCalled();
+  });
+
+  it('offers one click unsubscribe and a footer link over https', async () => {
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    send.mockResolvedValue(undefined);
+
+    await workerAt('https://aso.example.com').process(emailJob('ea_1'));
+
+    const [{ headers, html }] = send.mock.calls[0] as [
+      { headers: Record<string, string>; html: string },
+    ];
+    expect(headers['List-Unsubscribe']).toMatch(
+      /^<https:\/\/aso\.example\.com\/api\/backend\/email-alerts\/ea_1\/unsubscribe\?token=[\w-]{43}>$/,
+    );
+    expect(headers['List-Unsubscribe-Post']).toBe('List-Unsubscribe=One-Click');
+    expect(html).toContain(
+      'https://aso.example.com/unsubscribe?alert=ea_1&amp;token=',
+    );
+  });
+
+  it('keeps the footer link but no one click headers over plain http', async () => {
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    send.mockResolvedValue(undefined);
+
+    await workerAt('http://localhost:3000').process(emailJob('ea_1'));
+
+    const [{ headers, html }] = send.mock.calls[0] as [
+      { headers: Record<string, string>; html: string },
+    ];
+    expect(headers).toEqual({});
+    expect(html).toContain('/unsubscribe?alert=ea_1');
+  });
+
+  it('logs a failed row and throws so bullmq retries when the email cannot be composed', async () => {
+    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    jest
+      .spyOn(AlertMail.prototype, 'compose')
+      .mockRejectedValueOnce(new Error('template broke'));
+
+    await expect(worker.process(emailJob('ea_1'))).rejects.toThrow(
+      'template broke',
+    );
+    expect(send).not.toHaveBeenCalled();
+    const [{ data }] = deliveryCreate.mock.calls[0] as [
+      { data: { status: string; detail: string } },
+    ];
+    expect(data.status).toBe('failed');
+    expect(data.detail).toBe('template broke');
   });
 });

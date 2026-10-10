@@ -50,11 +50,7 @@ export class TrialNotifier {
       const outcome = await this.notifier.notify(
         workspace.id,
         `trial.day${day}`,
-        trialNotice(
-          day,
-          formatDay(workspace.trialEndsAt),
-          this.notifier.appUrl,
-        ),
+        trialNotice(day, formatDay(workspace.trialEndsAt)),
       );
       if (!noticeSettled(outcome)) continue;
 

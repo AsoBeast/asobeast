@@ -786,6 +786,39 @@
         ]
       }
     },
+    "/email-alerts/{id}/unsubscribe": {
+      "post": {
+        "operationId": "EmailAlertsController_unsubscribe",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{43}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Stop one email alert from the link in its own message (RFC 8058 one click)",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
     "/alerts/config": {
       "get": {
         "operationId": "AlertsController_config",

@@ -59,18 +59,39 @@ function responseHeaders(upstream: Response): Headers {
   return headers;
 }
 
-function unreachable(request: NextRequest, error: unknown): Response {
-  const timedOut = error instanceof Error && error.name === "TimeoutError";
+function errorResponse(
+  request: NextRequest,
+  statusCode: number,
+  error: string,
+  message: string,
+): Response {
   const envelope: ApiErrorEnvelope = {
-    statusCode: timedOut ? 504 : 502,
-    error: timedOut ? "Gateway Timeout" : "Bad Gateway",
-    message: timedOut
-      ? "The API did not respond in time."
-      : "The API is unreachable.",
+    statusCode,
+    error,
+    message,
     path: request.nextUrl.pathname,
     timestamp: new Date().toISOString(),
   };
-  return Response.json(envelope, { status: envelope.statusCode });
+  return Response.json(envelope, { status: statusCode });
+}
+
+function unreachable(request: NextRequest, error: unknown): Response {
+  return error instanceof Error && error.name === "TimeoutError"
+    ? errorResponse(
+        request,
+        504,
+        "Gateway Timeout",
+        "The API did not respond in time.",
+      )
+    : errorResponse(request, 502, "Bad Gateway", "The API is unreachable.");
+}
+
+const DOT_SEGMENTS = new Set([".", ".."]);
+
+function upstreamPath(segments: string[]): string | null {
+  return segments.some((segment) => DOT_SEGMENTS.has(segment))
+    ? null
+    : segments.map(encodeURIComponent).join("/");
 }
 
 async function fetchUpstream(
@@ -106,6 +127,10 @@ export async function proxyToApi(
   request: NextRequest,
   segments: string[],
 ): Promise<Response> {
+  const path = upstreamPath(segments);
+  if (path === null) {
+    return errorResponse(request, 404, "Not Found", "Cannot resolve path.");
+  }
   const body =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
@@ -114,7 +139,7 @@ export async function proxyToApi(
   try {
     const upstream = await fetchUpstream(
       request,
-      `${API_BASE}/${segments.join("/")}${request.nextUrl.search}`,
+      `${API_BASE}/${path}${request.nextUrl.search}`,
       {
         method: request.method,
         headers: requestHeaders(request),

@@ -63,7 +63,6 @@ export class DowngradeWarner {
           PLANS[next].displayName,
           effectiveOn(workspace.planExpiresAt),
           over,
-          this.notifier.appUrl,
         ),
       );
       if (!noticeSettled(outcome)) continue;

@@ -1,8 +1,12 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { DKIM_SIGNED_HEADERS } from '../mail/outgoing-message';
 import { MailerService } from './mailer.service';
 
 const sendMail = jest.fn();
@@ -39,10 +43,58 @@ describe('MailerService', () => {
     expect(mailer.enabled).toBe(true);
   });
 
+  it('hands templates the web origin only when it is configured', () => {
+    expect(new MailerService(buildConfig({})).origin).toBeNull();
+    expect(
+      new MailerService(
+        buildConfig({ WEB_PUBLIC_URL: 'https://aso.example.com' }),
+      ).origin,
+    ).toBe('https://aso.example.com');
+  });
+
+  it('signs every message with dkim when the key is configured', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'mailer-dkim-'));
+    const keyPath = join(directory, 'dkim-private.pem');
+    writeFileSync(keyPath, 'private key');
+    const mailer = new MailerService(
+      buildConfig({
+        SMTP_HOST: 'localhost',
+        SMTP_FROM: 'alerts@mail.example.com',
+        SMTP_DKIM_DOMAIN: 'mail.example.com',
+        SMTP_DKIM_SELECTOR: 'asobeast',
+        SMTP_DKIM_PRIVATE_KEY_PATH: keyPath,
+      }),
+    );
+
+    await mailer.send({
+      to: 'to@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
+    rmSync(directory, { recursive: true, force: true });
+
+    expect(createTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dkim: {
+          domainName: 'mail.example.com',
+          keySelector: 'asobeast',
+          privateKey: 'private key',
+          headerFieldNames: DKIM_SIGNED_HEADERS,
+        },
+      }),
+    );
+  });
+
   it('throws a descriptive error when disabled', async () => {
     const mailer = new MailerService(buildConfig({ SMTP_HOST: 'localhost' }));
     await expect(
-      mailer.send('to@x.c', 'Hi', 'body', '<p>body</p>'),
+      mailer.send({
+        to: 'to@x.c',
+        subject: 'Hi',
+        text: 'body',
+        html: '<p>body</p>',
+      }),
     ).rejects.toThrow('Email alerts require SMTP configuration');
     expect(createTransport).not.toHaveBeenCalled();
   });
@@ -59,8 +111,18 @@ describe('MailerService', () => {
       }),
     );
 
-    await mailer.send('to@x.c', 'Subject', 'text', '<p>text</p>');
-    await mailer.send('to2@x.c', 'Subject2', 'text2', '<p>text2</p>');
+    await mailer.send({
+      to: 'to@x.c',
+      subject: 'Subject',
+      text: 'text',
+      html: '<p>text</p>',
+    });
+    await mailer.send({
+      to: 'to2@x.c',
+      subject: 'Subject2',
+      text: 'text2',
+      html: '<p>text2</p>',
+    });
 
     expect(createTransport).toHaveBeenCalledTimes(1);
     expect(createTransport).toHaveBeenCalledWith({
@@ -75,6 +137,10 @@ describe('MailerService', () => {
       subject: 'Subject',
       text: 'text',
       html: '<p>text</p>',
+      headers: {
+        'Auto-Submitted': 'auto-generated',
+        'X-Auto-Response-Suppress': 'All',
+      },
     });
   });
 
@@ -83,9 +149,9 @@ describe('MailerService', () => {
     const mailer = new MailerService(
       buildConfig({ SMTP_HOST: 'localhost', SMTP_FROM: 'alerts@x.c' }),
     );
-    await expect(mailer.send('to@x.c', 's', 't', '<p>t</p>')).rejects.toThrow(
-      'smtp down',
-    );
+    await expect(
+      mailer.send({ to: 'to@x.c', subject: 's', text: 't', html: '<p>t</p>' }),
+    ).rejects.toThrow('smtp down');
   });
 });
 
@@ -271,7 +337,12 @@ describe('MailerService verifying the transport', () => {
   });
 
   it('verifies the relay before the first message leaves', async () => {
-    await build().send('to@x.c', 's', 't', '<p>t</p>');
+    await build().send({
+      to: 'to@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
 
     expect(verify).toHaveBeenCalledTimes(1);
     expect(verify.mock.invocationCallOrder[0]).toBeLessThan(
@@ -282,8 +353,18 @@ describe('MailerService verifying the transport', () => {
   it('verifies once and reuses the answer for later messages', async () => {
     const mailer = build();
 
-    await mailer.send('to@x.c', 's', 't', '<p>t</p>');
-    await mailer.send('to2@x.c', 's', 't', '<p>t</p>');
+    await mailer.send({
+      to: 'to@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
+    await mailer.send({
+      to: 'to2@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
 
     expect(verify).toHaveBeenCalledTimes(1);
     expect(sendMail).toHaveBeenCalledTimes(2);
@@ -292,9 +373,9 @@ describe('MailerService verifying the transport', () => {
   it('refuses to send and names the relay response when verification fails', async () => {
     verify.mockRejectedValue(new Error('connect ECONNREFUSED 10.0.0.1:587'));
 
-    await expect(build().send('to@x.c', 's', 't', '<p>t</p>')).rejects.toThrow(
-      /relay.example.com:587.*ECONNREFUSED/s,
-    );
+    await expect(
+      build().send({ to: 'to@x.c', subject: 's', text: 't', html: '<p>t</p>' }),
+    ).rejects.toThrow(/relay\.example\.com:587.*ECONNREFUSED/s);
     expect(sendMail).not.toHaveBeenCalled();
   });
 
@@ -302,8 +383,15 @@ describe('MailerService verifying the transport', () => {
     const mailer = build();
     verify.mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
 
-    await expect(mailer.send('to@x.c', 's', 't', '<p>t</p>')).rejects.toThrow();
-    await mailer.send('to@x.c', 's', 't', '<p>t</p>');
+    await expect(
+      mailer.send({ to: 'to@x.c', subject: 's', text: 't', html: '<p>t</p>' }),
+    ).rejects.toThrow();
+    await mailer.send({
+      to: 'to@x.c',
+      subject: 's',
+      text: 't',
+      html: '<p>t</p>',
+    });
 
     expect(verify).toHaveBeenCalledTimes(2);
     expect(sendMail).toHaveBeenCalledTimes(1);
@@ -321,9 +409,9 @@ describe('MailerService verifying the transport', () => {
       } as unknown as CrossTenantAccess,
     );
 
-    await expect(mailer.send('to@x.c', 's', 't', '<p>t</p>')).rejects.toThrow(
-      'Email alerts require SMTP configuration',
-    );
+    await expect(
+      mailer.send({ to: 'to@x.c', subject: 's', text: 't', html: '<p>t</p>' }),
+    ).rejects.toThrow('Email alerts require SMTP configuration');
     expect(createTransport).not.toHaveBeenCalled();
     expect(verify).not.toHaveBeenCalled();
   });
