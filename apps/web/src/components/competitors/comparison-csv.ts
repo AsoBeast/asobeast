@@ -7,7 +7,13 @@ import { csvFilename, downloadCsv, toCsv } from "@/lib/csv";
 import { versusOf } from "@/lib/table/facets";
 import { comparisonScoreValue, UNNAMED_COMPETITOR } from "./comparison-scores";
 
-const LEADING_HEADERS = ["keyword", "popularity", "difficulty", "you"];
+const LEADING_HEADERS = [
+  "keyword",
+  "country",
+  "popularity",
+  "difficulty",
+  "you",
+];
 const TRAILING_HEADERS = ["result", "gap"];
 
 function competitorHeaders(
@@ -39,6 +45,7 @@ export function comparisonCsv(
       const positions = competitors.map(({ id }) => row.positions[id] ?? null);
       return [
         row.text,
+        row.country,
         comparisonScoreValue(row, "traffic"),
         comparisonScoreValue(row, "difficulty"),
         formatRankPosition(row.you),

@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ALL_MATRIX_COUNTRIES,
   matrixFilterParsers,
   matrixSortParser,
   sortDirectionParser,
@@ -68,6 +69,18 @@ export function ComparisonTable({
     );
   }, [competitors, data.competitors]);
 
+  const countries = useMemo(
+    () => [...new Set(data.rows.map((row) => row.country))].sort(),
+    [data.rows],
+  );
+
+  const columnFilters = [
+    ...(filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }]),
+    ...(filters.country === ALL_MATRIX_COUNTRIES
+      ? []
+      : [{ id: "country", value: filters.country }]),
+  ];
+
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",
     columns,
@@ -88,8 +101,7 @@ export function ComparisonTable({
     state: {
       sorting,
       globalFilter: filters.q,
-      columnFilters:
-        filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }],
+      columnFilters,
       columnVisibility: { ...visibility, ...HIDDEN_COMPARISON_COLUMNS },
     },
     onSortingChange,
@@ -106,6 +118,7 @@ export function ComparisonTable({
       <ComparisonFilterBar
         filters={filters}
         setFilters={setFilters}
+        countries={countries}
         shown={rows.length}
         total={data.rows.length}
         columns={table.getAllLeafColumns()}

@@ -26,7 +26,7 @@ Start with `list_apps`. Nothing else works without an app id. Pass `country` to 
 | --- | --- | --- | --- |
 | `list_keywords` | List tracked keywords | Tracked keywords for one app with popularity (the traffic field) and difficulty on the stored 0 to 10 scale, volume and opportunity on a 0 to 100 scale, and the latest checked position, with the owner's tags and note | `appId` (required), `sort`, `country` |
 | `keyword_suggestions` | Keyword suggestions | Suggested keywords for one app from a chosen strategy (metadata, search, similar, developer, competitors, seasonal or reviews) | `appId` (required), `strategy` (required), `limit`, `country` |
-| `keyword_comparison` | Keyword comparison | One row per active tracked keyword of one app with its popularity (traffic) and difficulty, the app's latest position and the latest position of each competitor, keyed by competitor id | `appId` (required), `onlyGaps` |
+| `keyword_comparison` | Keyword comparison | One row per active tracked keyword of one app with the country (storefront) it is tracked in, its popularity (traffic) and difficulty, the app's latest position and the latest position of each competitor, keyed by competitor id | `appId` (required), `onlyGaps` |
 
 Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews. The `seasonal` strategy offers English holiday keywords only in the English language storefronts that observe the event, so it is empty for any other storefront. See [Seasonal suggestions](/guides/track-keywords#seasonal-suggestions).
 

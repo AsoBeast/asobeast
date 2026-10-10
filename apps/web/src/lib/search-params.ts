@@ -124,9 +124,15 @@ export const VERSUS_FILTERS = ["all", ...VERSUS] as const;
 export const versusParser =
   parseAsStringLiteral(VERSUS_FILTERS).withDefault("all");
 
+export const ALL_MATRIX_COUNTRIES = "all";
+
+export const matrixCountryParser =
+  parseAsString.withDefault(ALL_MATRIX_COUNTRIES);
+
 export const matrixFilterParsers = {
   q: searchParser,
   vs: versusParser,
+  country: matrixCountryParser,
 };
 
 export const DISCOVERY_SORTS = [

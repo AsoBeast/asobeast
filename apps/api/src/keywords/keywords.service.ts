@@ -127,6 +127,7 @@ export class KeywordsService {
         keyword: {
           select: {
             text: true,
+            country: true,
             metrics: {
               orderBy: { date: 'desc' },
               take: 1,
@@ -155,6 +156,7 @@ export class KeywordsService {
       return {
         keywordId: row.keywordId,
         text: row.keyword.text,
+        country: row.keyword.country,
         traffic: metric?.traffic ?? null,
         difficulty: metric?.difficulty ?? null,
         you,

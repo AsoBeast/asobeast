@@ -6,6 +6,7 @@ import type { KeywordComparisonRow } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { GradedNumber, gradeWash } from "@/components/ui/graded";
+import { countryFlag, formatCountry } from "@/lib/format";
 import { grade } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { versusOf, type Versus } from "@/lib/table/facets";
@@ -148,12 +149,36 @@ function KeywordCell({
   );
 }
 
+function CountryCell({ country }: { country: string }) {
+  const name = formatCountry(country);
+  const flag = countryFlag(country);
+  if (!flag) {
+    return <span className="font-mono">{country.toUpperCase()}</span>;
+  }
+  return (
+    <span title={name} className="text-base leading-none">
+      <span aria-hidden>{flag}</span>
+      <span className="sr-only">{name}</span>
+    </span>
+  );
+}
+
 export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
     value !== null && value === bestPosition(row, competitorIds);
 
   return columnHelper.columns([
+    columnHelper.accessor("country", {
+      id: "country",
+      sortFn: "text",
+      sortDescFirst: false,
+      meta: { label: "Market" },
+      filterFn: (row, id, country: string) =>
+        row.getValue<string>(id) === country,
+      header: ({ column }) => <SortableHeader column={column} label="Market" />,
+      cell: ({ row }) => <CountryCell country={row.original.country} />,
+    }),
     columnHelper.accessor("text", {
       id: "keyword",
       sortFn: "text",

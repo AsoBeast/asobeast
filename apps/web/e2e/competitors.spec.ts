@@ -87,6 +87,39 @@ test("the comparison matrix filters to losing rows and searches", async ({
   await expect(rows).toHaveCount(5);
 });
 
+test("the comparison matrix shows each keyword's market and filters by it", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+  const rows = matrixRows(page);
+
+  await expect(matrix(page).getByRole("columnheader").first()).toContainText(
+    "Market",
+  );
+  await expect(
+    matrix(page)
+      .getByRole("row", { name: /time blocking/ })
+      .getByRole("cell")
+      .first(),
+  ).toContainText("Germany");
+
+  const market = page.getByRole("combobox", { name: "Filter by market" });
+  await (await hydrated(market)).click();
+  await page.getByRole("option", { name: /Germany/ }).click();
+
+  await expect(page).toHaveURL(/country=de/);
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("time blocking");
+  await expect(page.getByText("1 of 4 keywords")).toBeVisible();
+  await expect(page.getByText(/Market: .*Germany/)).toBeVisible();
+
+  await page.getByRole("button", { name: /Remove Market/ }).click();
+
+  await expect(page).not.toHaveURL(/country=/);
+  await expect(rows).toHaveCount(5);
+});
+
 test("a matrix filter that matches nothing offers to clear it", async ({
   page,
 }) => {
@@ -132,7 +165,7 @@ test("matrix positions and scores carry their grade", async ({ page }) => {
   });
   await expect(difficulty).toHaveCount(1);
   await expect(difficulty).toHaveAttribute("data-grade", "fair");
-  await expect(focus.getByRole("cell").first()).not.toContainText("Popularity");
+  await expect(focus.getByRole("cell").nth(1)).not.toContainText("Popularity");
 });
 
 test("on a phone the matrix names competitors by icon and hides the scores", async ({
@@ -226,9 +259,9 @@ test("the comparison export writes the rows the matrix shows, in its order", asy
     /^keyword-comparison-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
   );
   expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
-    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
-    "time blocking,,,45,>200,winning,false",
-    "focus timer,100,40,3,9,winning,false",
+    "\uFEFFkeyword,country,popularity,difficulty,you,Rival Focus,result,gap",
+    "time blocking,de,,,45,>200,winning,false",
+    "focus timer,us,100,40,3,9,winning,false",
   ]);
 });
 
@@ -247,7 +280,7 @@ test("with only gaps on, the export is named for the gaps and holds them alone",
     /^keyword-gaps-app-1-\d{4}-\d{2}-\d{2}\.csv$/,
   );
   expect(readFileSync(await download.path(), "utf8").split("\r\n")).toEqual([
-    "\uFEFFkeyword,popularity,difficulty,you,Rival Focus,result,gap",
-    "productivity app,100,60,>200,8,losing,true",
+    "\uFEFFkeyword,country,popularity,difficulty,you,Rival Focus,result,gap",
+    "productivity app,us,100,60,>200,8,losing,true",
   ]);
 });
