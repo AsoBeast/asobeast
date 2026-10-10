@@ -375,7 +375,7 @@ describe('MailerService verifying the transport', () => {
 
     await expect(
       build().send({ to: 'to@x.c', subject: 's', text: 't', html: '<p>t</p>' }),
-    ).rejects.toThrow(/relay.example.com:587.*ECONNREFUSED/s);
+    ).rejects.toThrow(/relay\.example\.com:587.*ECONNREFUSED/s);
     expect(sendMail).not.toHaveBeenCalled();
   });
 
