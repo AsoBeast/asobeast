@@ -129,6 +129,15 @@ describe('Email alert one click unsubscribe (e2e)', () => {
     ).expect(204);
   });
 
+  it('takes a burst of one click unsubscribes from one mailbox provider address', async () => {
+    const alert = await create('ops@example.com');
+    const statuses = new Set<number>();
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      statuses.add((await oneClick(alert.id, tokenFor(alert))).status);
+    }
+    expect([...statuses]).toEqual([204]);
+  });
+
   it('refuses a malformed token and an extra query parameter', async () => {
     const alert = await create('ops@example.com');
     await oneClick(alert.id, 'token=short').expect(400);

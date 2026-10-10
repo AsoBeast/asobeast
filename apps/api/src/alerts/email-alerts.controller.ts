@@ -67,7 +67,7 @@ export class EmailAlertsController {
   @Public()
   @HttpCode(204)
   @UseGuards(RetryAfterThrottlerGuard)
-  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @Throttle({ default: { limit: 600, ttl: 60_000 } })
   @ApiOperation({
     summary:
       'Stop one email alert from the link in its own message (RFC 8058 one click)',
