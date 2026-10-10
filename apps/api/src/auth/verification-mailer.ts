@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { VERIFY_PATH } from '@asobeast/shared';
 import { MailerService } from '../alerts/mailer.service';
+import { verificationEmail } from './emails/verification-email';
 import { PublicWebUrl } from './public-web-url';
+
+export const VERIFICATION_HOURS = 24;
 
 @Injectable()
 export class VerificationMailer {
@@ -15,21 +18,22 @@ export class VerificationMailer {
   }
 
   async send(
-    email: string,
+    address: string,
     token: string,
     startsTrial: boolean,
   ): Promise<void> {
     const link = this.web.tokenLink(VERIFY_PATH, token, 'confirmation link');
-    const subject = 'Confirm your asobeast email';
-    const invitation = startsTrial
-      ? 'Confirm your address to start your trial'
-      : 'Confirm your address';
+    const email = await verificationEmail({
+      origin: this.mailer.origin,
+      address,
+      link,
+      startsTrial,
+      hours: VERIFICATION_HOURS,
+    });
     await this.mailer.sendAccountMail({
       kind: 'verification',
-      to: email,
-      subject,
-      text: `${subject}\n\n${invitation}: ${link}`,
-      html: `<p>${invitation}.</p><p><a href="${link}">Confirm ${email}</a></p>`,
+      to: address,
+      ...email,
       secrets: [token],
     });
   }

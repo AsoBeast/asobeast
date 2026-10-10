@@ -1,4 +1,4 @@
-import { hostOf, logoUrl, webLink } from './email-links';
+import { atHost, hostOf, logoUrl, webLink } from './email-links';
 
 describe('email links', () => {
   it('builds an absolute link only when the web origin is known', () => {
@@ -18,5 +18,10 @@ describe('email links', () => {
   it('names the host with its port', () => {
     expect(hostOf('https://aso.example.com:8443')).toBe('aso.example.com:8443');
     expect(hostOf(null)).toBeNull();
+  });
+
+  it('names the instance a sentence came from only when it is known', () => {
+    expect(atHost('https://aso.example.com')).toBe(' at aso.example.com');
+    expect(atHost(null)).toBe('');
   });
 });

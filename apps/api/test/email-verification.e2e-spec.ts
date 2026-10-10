@@ -69,7 +69,7 @@ describe('Email verification before the trial starts', () => {
     });
 
   const tokenFrom = (mail: SentMail): string =>
-    new URLSearchParams(mail.text.split('?')[1]).get('token') ?? '';
+    /token=([0-9a-f]+)/.exec(mail.text)?.[1] ?? '';
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {

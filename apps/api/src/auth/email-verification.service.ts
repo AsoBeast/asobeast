@@ -20,9 +20,7 @@ import {
   trialStillOpen,
   type TrialGrant,
 } from './trial-grant';
-import { VerificationMailer } from './verification-mailer';
-
-const VERIFICATION_HOURS = 24;
+import { VERIFICATION_HOURS, VerificationMailer } from './verification-mailer';
 
 const CLAIM_JUSTIFICATION =
   'a confirmation link is claimed before the account has a workspace in scope';

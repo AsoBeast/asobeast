@@ -39,6 +39,15 @@ describe('MailerService', () => {
     expect(mailer.enabled).toBe(true);
   });
 
+  it('hands templates the web origin only when it is configured', () => {
+    expect(new MailerService(buildConfig({})).origin).toBeNull();
+    expect(
+      new MailerService(
+        buildConfig({ WEB_PUBLIC_URL: 'https://aso.example.com' }),
+      ).origin,
+    ).toBe('https://aso.example.com');
+  });
+
   it('throws a descriptive error when disabled', async () => {
     const mailer = new MailerService(buildConfig({ SMTP_HOST: 'localhost' }));
     await expect(

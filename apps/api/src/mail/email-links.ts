@@ -11,3 +11,8 @@ export function logoUrl(origin: string | null): string | null {
 export function hostOf(origin: string | null): string | null {
   return origin ? new URL(origin).host : null;
 }
+
+export function atHost(origin: string | null): string {
+  const host = hostOf(origin);
+  return host ? ` at ${host}` : '';
+}

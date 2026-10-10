@@ -55,6 +55,10 @@ export class MailerService {
     );
   }
 
+  get origin(): string | null {
+    return this.config.get('WEB_PUBLIC_URL', { infer: true }) ?? null;
+  }
+
   async send(
     to: string,
     subject: string,
