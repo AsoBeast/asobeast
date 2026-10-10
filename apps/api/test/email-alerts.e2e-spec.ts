@@ -16,7 +16,7 @@ import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ownerAgent, useCookies } from './helpers/session';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 function migrate(): void {
   execSync('pnpm prisma migrate deploy', {
@@ -52,6 +52,7 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await seedWorkspace(prisma);
     api = await ownerAgent(app);
@@ -261,6 +262,7 @@ describe('EmailAlertsController (e2e, smtp disabled)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await seedWorkspace(prisma);
     api = await ownerAgent(app);

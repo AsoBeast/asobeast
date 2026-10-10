@@ -19,6 +19,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
@@ -29,6 +30,8 @@ import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
 
 describe('PipelineWorker', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   const payload = {
     date: '2026-07-27',
     apps: 2,
@@ -56,6 +59,7 @@ describe('PipelineWorker', () => {
     canaryCron = '0 2,8,14,20 * * *',
     statusEnabled = false,
     popularityEnabled = false,
+    statusCron = '17 * * * *',
   ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
@@ -109,7 +113,7 @@ describe('PipelineWorker', () => {
     const tracking = { capture: jest.fn() };
     const publishedStatus = {
       enabled: statusEnabled,
-      cron: '17 * * * *',
+      cron: statusCron,
       run: jest.fn().mockResolvedValue(undefined),
     };
     const popularity = {
@@ -138,6 +142,7 @@ describe('PipelineWorker', () => {
       publishedStatus as unknown as PublishedStatusService,
       tracking as unknown as ErrorTracking,
       popularity as unknown as ApplePopularitySync,
+      new RedisOutageLog(),
     );
     return {
       worker,
@@ -167,10 +172,55 @@ describe('PipelineWorker', () => {
       ([key]) => key === LAST_DAILY_RUN_KEY,
     ).length;
 
+  it('boots without waiting for redis to register the schedulers', () => {
+    const { worker, pipelineQueue } = build();
+    pipelineQueue.upsertJobScheduler.mockReturnValue(new Promise(() => {}));
+
+    expect(worker.onModuleInit()).toBeUndefined();
+    expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledTimes(1);
+  });
+
+  it('settles the boot registration only after the outdated score check', async () => {
+    const { worker, pipeline } = build();
+    let checked!: (count: number) => void;
+    pipeline.fanOutOutdatedScores.mockReturnValue(
+      new Promise<number>((resolve) => (checked = resolve)),
+    );
+    const settled = jest.fn();
+
+    worker.onModuleInit();
+    void worker.schedulesRegistered().then(settled);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
+    expect(settled).not.toHaveBeenCalled();
+
+    checked(0);
+    await worker.schedulesRegistered();
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a registration cut short by a redis outage in the outage log', async () => {
+    const { worker, pipelineQueue } = build();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();
+    const failed = jest.spyOn(Logger.prototype, 'error').mockReturnValue();
+    pipelineQueue.upsertJobScheduler.mockImplementation(() => {
+      Object.assign(pipelineQueue, { closing: Promise.resolve() });
+      return Promise.reject(new Error('Connection is closed.'));
+    });
+
+    worker.onModuleInit();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/^redis is unreachable.*Connection is closed\.$/),
+    );
+    expect(failed).not.toHaveBeenCalled();
+  });
+
   it('registers the pipeline schedulers without an independent alert flush', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -200,7 +250,7 @@ describe('PipelineWorker', () => {
     it('schedules the weekly sync only when apple ads is configured', async () => {
       const { worker, pipelineQueue } = build(false, '', false, true);
 
-      await worker.onModuleInit();
+      await worker.registerSchedules();
 
       expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
         'apple-popularity',
@@ -215,7 +265,7 @@ describe('PipelineWorker', () => {
     it('removes a leftover scheduler when apple ads is not configured', async () => {
       const { worker, pipelineQueue } = build();
 
-      await worker.onModuleInit();
+      await worker.registerSchedules();
 
       expect(
         pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -238,7 +288,7 @@ describe('PipelineWorker', () => {
   it('checks for outdated scores once, after the schedulers', async () => {
     const { worker, pipelineQueue, pipeline } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
     expect(
@@ -252,13 +302,13 @@ describe('PipelineWorker', () => {
     const { worker, pipeline } = build();
     pipeline.fanOutOutdatedScores.mockRejectedValue(new Error('redis down'));
 
-    await expect(worker.onModuleInit()).resolves.toBeUndefined();
+    await expect(worker.registerSchedules()).resolves.toBeUndefined();
   });
 
   it('schedules the store canary an hour before the daily run', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'store-canary',
@@ -270,7 +320,7 @@ describe('PipelineWorker', () => {
   it('removes the canary scheduler when its pattern is emptied', async () => {
     const { worker, pipelineQueue } = build(false, '');
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -291,7 +341,7 @@ describe('PipelineWorker', () => {
   it('schedules no status poll while no status url is configured', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -304,12 +354,31 @@ describe('PipelineWorker', () => {
   it('schedules the status poll once a status url is configured', async () => {
     const { worker, pipelineQueue } = build(false, '0 2 * * *', true);
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'store-status',
       { pattern: '17 * * * *', tz: 'UTC' },
       { name: JOBS.STORE_STATUS },
+    );
+  });
+
+  it('removes the status poll when its pattern is emptied although a status url is configured', async () => {
+    const { worker, pipelineQueue } = build(
+      false,
+      '0 2 * * *',
+      true,
+      false,
+      '',
+    );
+
+    await worker.registerSchedules();
+
+    expect(
+      pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+    ).not.toContain('store-status');
+    expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+      'store-status',
     );
   });
 
@@ -335,7 +404,7 @@ describe('PipelineWorker', () => {
   it('schedules no pool sync while no proxy provider is configured', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -346,7 +415,7 @@ describe('PipelineWorker', () => {
   it('schedules the pool sync once a proxy provider is configured', async () => {
     const { worker, pipelineQueue } = build(true);
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'proxy-sync',
@@ -584,7 +653,6 @@ describe('PipelineWorker', () => {
     expect(log).toHaveBeenCalledWith(
       expect.stringContaining('"actionsOpened":null'),
     );
-    jest.restoreAllMocks();
   });
 
   it('notifies on newly opened actions before the flush', async () => {

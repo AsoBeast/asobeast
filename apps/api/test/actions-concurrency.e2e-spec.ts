@@ -17,7 +17,7 @@ import { StoreProviderRegistry } from '../src/store-providers/store-provider.reg
 import { generateActionsAt } from './helpers/action-seed';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 const LOCK_WAIT_MS = 300;
 const CONCURRENT_REQUESTS = 5;
@@ -57,6 +57,7 @@ describe('Action transitions under concurrency (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },

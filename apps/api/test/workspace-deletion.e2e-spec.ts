@@ -11,7 +11,7 @@ import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { TENANT_TABLES } from '../src/common/tenancy/tenant-tables';
 import { restoreAuthEnv } from './helpers/auth-env';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { testDb } from './helpers/test-db';
 
 const WORKSPACE = 'ws_deletion_target';
@@ -396,6 +396,7 @@ describe('Workspace deletion (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    await settleBootRegistration(app);
     deletion = app.get(AccountDeletionService);
     prisma = testDb();
 

@@ -11,7 +11,7 @@ import { ownerAgent, useCookies } from './helpers/session';
 import { AiClient, OPENAI_CLIENT } from '../src/ai/openai.client';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
 
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { asWorkspace } from './helpers/tenancy';
 import { AuditService } from '../src/audit/audit.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -72,6 +72,7 @@ describe('AuditController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -658,6 +659,7 @@ describe('AuditController without an AI key (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

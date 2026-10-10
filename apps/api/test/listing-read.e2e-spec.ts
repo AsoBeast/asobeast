@@ -7,7 +7,7 @@ import { ApiErrorEnvelope, AppDetail, ListingMarket } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
 
@@ -28,6 +28,7 @@ describe('listing reads per market (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },

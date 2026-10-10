@@ -1,7 +1,7 @@
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
 import { BullBoardModule } from '@bull-board/nestjs';
-import { BullModule } from '@nestjs/bullmq';
+import { BullModule, type RegisterFlowProducerOptions } from '@nestjs/bullmq';
 import type { QueueOptions } from 'bullmq';
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -44,6 +44,7 @@ import { PipelineWorker } from './pipeline.worker';
 import { QueueErrorReporter } from './queue-error-reporter';
 import { RetentionService } from './retention.service';
 import { RunStatusService } from './run-status.service';
+import { QueueShutdown } from './queue-shutdown';
 import { ScoringController } from './scoring.controller';
 import { StoreHealthService } from './store-health.service';
 import { StoreJobsHandler } from './store-jobs.handler';
@@ -73,9 +74,13 @@ const bullBoardModules: DynamicModule[] =
   imports: [
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService<Env, true>): QueueOptions => ({
+      useFactory: (
+        config: ConfigService<Env, true>,
+      ): QueueOptions &
+        Pick<RegisterFlowProducerOptions, 'forceDisconnectOnShutdown'> => ({
         connection: redisConnection(config),
         defaultJobOptions: JOB_OPTIONS,
+        forceDisconnectOnShutdown: false,
       }),
     }),
     BullModule.registerQueue(
@@ -123,6 +128,7 @@ const bullBoardModules: DynamicModule[] =
     PipelineWorker,
     PipelineService,
     QueueErrorReporter,
+    QueueShutdown,
     RetentionService,
     RunStatusService,
     StoreHealthService,

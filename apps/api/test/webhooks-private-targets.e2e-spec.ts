@@ -13,7 +13,11 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
-import { clearRateLimitCounters, obliterateQueues } from './obliterate-queues';
+import {
+  clearRateLimitCounters,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ownerAgent, useCookies } from './helpers/session';
 
@@ -42,6 +46,7 @@ describe('Webhooks on an instance that allows private targets (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

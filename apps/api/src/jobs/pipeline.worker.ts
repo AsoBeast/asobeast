@@ -26,6 +26,7 @@ import { Env } from '../config/env';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
@@ -41,12 +42,15 @@ import {
   QUEUES,
 } from './jobs.types';
 import { PipelineService } from './pipeline.service';
+import { reportQueueError } from './queue-error-reporter';
+import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
 
 @Processor(QUEUES.PIPELINE)
 export class PipelineWorker extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(PipelineWorker.name);
+  private registration: Promise<void> = Promise.resolve();
 
   constructor(
     @InjectQueue(QUEUES.PIPELINE) private readonly pipelineQueue: Queue,
@@ -68,11 +72,24 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly publishedStatus: PublishedStatusService,
     private readonly tracking: ErrorTracking,
     private readonly popularity: ApplePopularitySync,
+    private readonly outage: RedisOutageLog,
   ) {
     super();
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
+    this.registration = registerInBackground(
+      this.pipelineQueue,
+      () => this.registerSchedules(),
+      (error) => reportQueueError(error, this.outage, this.logger),
+    );
+  }
+
+  schedulesRegistered(): Promise<void> {
+    return this.registration;
+  }
+
+  async registerSchedules(): Promise<void> {
     await this.pipelineQueue.upsertJobScheduler(
       'daily',
       { pattern: this.config.get('CRON_DAILY', { infer: true }), tz: 'UTC' },
@@ -157,7 +174,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
   }
 
   private async schedulePublishedStatus(): Promise<void> {
-    if (!this.publishedStatus.enabled) {
+    if (!this.publishedStatus.enabled || !this.publishedStatus.cron) {
       await this.pipelineQueue.removeJobScheduler('store-status');
       return;
     }

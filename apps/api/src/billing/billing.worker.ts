@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import { Job, Queue } from 'bullmq';
 import { Env } from '../config/env';
 import { JOBS, QUEUES, type BillingEventPayload } from '../jobs/jobs.types';
+import { reportQueueError } from '../jobs/queue-error-reporter';
+import { registerInBackground } from '../jobs/schedule-registration';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { BillingReconciler } from './billing-reconciler.service';
 import { BillingWebhookService } from './billing-webhook.service';
 import { DowngradeWarner } from './downgrade-warner.service';
@@ -27,11 +30,20 @@ export class BillingWorker extends WorkerHost implements OnModuleInit {
     private readonly downgrades: DowngradeWarner,
     private readonly prices: PriceCatalog,
     private readonly config: ConfigService<Env, true>,
+    private readonly outage: RedisOutageLog,
   ) {
     super();
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
+    void registerInBackground(
+      this.queue,
+      () => this.registerSchedules(),
+      (error) => reportQueueError(error, this.outage, this.logger),
+    );
+  }
+
+  async registerSchedules(): Promise<void> {
     await this.queue.upsertJobScheduler(
       'billing-reconcile',
       {

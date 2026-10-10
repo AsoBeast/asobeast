@@ -3,6 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { Queue } from 'bullmq';
 import { QUEUES } from '../src/jobs/jobs.types';
+import { PipelineWorker } from '../src/jobs/pipeline.worker';
 
 export async function obliterateQueues(app: INestApplication): Promise<void> {
   for (const name of Object.values(QUEUES)) {
@@ -25,11 +26,18 @@ export async function closeWorkers(app: INestApplication): Promise<void> {
   await Promise.all(hosts.map((host) => host.worker.close()));
 }
 
+export async function settleBootRegistration(
+  app: INestApplication,
+): Promise<void> {
+  await app.get(PipelineWorker, { strict: false }).schedulesRegistered();
+}
+
 export async function pauseQueues(app: INestApplication): Promise<void> {
   for (const name of Object.values(QUEUES)) {
     const queue = app.get<Queue>(getQueueToken(name), { strict: false });
     await queue.pause();
   }
+  await settleBootRegistration(app);
 }
 
 export async function waitForIdleQueues(
