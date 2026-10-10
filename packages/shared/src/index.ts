@@ -116,5 +116,6 @@ export * from './release-notes';
 export * from './aso';
 export * from './rank';
 export * from './auth';
+export * from './brand';
 export * from './trusted-proxy';
 export * from './loopback';
