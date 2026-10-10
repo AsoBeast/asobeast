@@ -34,16 +34,19 @@ describe('registerInBackground', () => {
     expect(report).toHaveBeenCalledTimes(1);
   });
 
-  it('reports a fault once and does not retry it', async () => {
+  it('keeps reporting and retrying a fault that is not an outage', async () => {
+    const fault = new Error('ERR Error running script');
     const register = jest
       .fn<Promise<void>, []>()
-      .mockRejectedValue(new Error('Invalid cron pattern'));
+      .mockRejectedValueOnce(fault)
+      .mockRejectedValueOnce(fault)
+      .mockResolvedValue(undefined);
 
     registerInBackground(queue, register, report);
     await jest.advanceTimersByTimeAsync(REGISTRATION_RETRY_MS * 3);
 
-    expect(register).toHaveBeenCalledTimes(1);
-    expect(report).toHaveBeenCalledWith(new Error('Invalid cron pattern'));
+    expect(register).toHaveBeenCalledTimes(3);
+    expect(report.mock.calls).toEqual([[fault], [fault]]);
   });
 
   it('stops retrying once the queue is closing', async () => {
