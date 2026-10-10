@@ -110,7 +110,9 @@ export class KeywordSuggestionService {
       return this.suggestFromCompetitors(appId, tracked, limit, languages.home);
     }
     if (strategy === 'seasonal') {
-      return Promise.resolve(seasonalSuggestions(new Date(), tracked, limit));
+      return Promise.resolve(
+        seasonalSuggestions(new Date(), market.country, tracked, limit),
+      );
     }
     if (strategy === 'reviews') {
       return this.suggestFromReviews(appId, tracked, limit);

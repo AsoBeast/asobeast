@@ -311,3 +311,67 @@ describe('KeywordSuggestionService.suggest in a spanish market', () => {
     ]);
   });
 });
+
+describe('KeywordSuggestionService.suggest seasonal', () => {
+  const buildService = (country: string, store: Store) =>
+    new KeywordSuggestionService(
+      {
+        app: {
+          findFirst: jest.fn().mockResolvedValue({
+            id: 'app1',
+            store,
+            country,
+            storeAppId: 'store1',
+          }),
+        },
+        trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+      } as unknown as PrismaService,
+      undefined as unknown as StoreProviderRegistry,
+      passThroughEgress,
+    );
+
+  const textsOn = async (
+    isoDate: string,
+    home: { country: string; store?: Store },
+    queryCountry?: string,
+  ): Promise<string[]> => {
+    jest.useFakeTimers().setSystemTime(new Date(`${isoDate}T12:00:00.000Z`));
+    const suggestions = await buildService(
+      home.country,
+      home.store ?? Store.APP_STORE,
+    ).suggest('app1', 'seasonal', 30, queryCountry);
+    return suggestions.map((suggestion) => suggestion.text);
+  };
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('names the coming year in the end of year goals keyword', async () => {
+    const texts = await textsOn('2027-12-20', { country: 'us' });
+
+    expect(texts).toContain('goals 2028');
+    expect(texts).not.toContain('goals 2026');
+  });
+
+  it('offers no Halloween keywords to a Google Play app in South Korea', async () => {
+    await expect(
+      textsOn('2026-10-09', { country: 'kr', store: Store.GOOGLE_PLAY }),
+    ).resolves.toEqual([]);
+  });
+
+  it('judges the storefront of the country query, not the home storefront', async () => {
+    await expect(
+      textsOn('2026-10-09', { country: 'kr' }, 'us'),
+    ).resolves.toContain('halloween');
+    await expect(
+      textsOn('2026-10-09', { country: 'us' }, 'kr'),
+    ).resolves.toEqual([]);
+  });
+
+  it('offers Halloween keywords in an English storefront that observes it', async () => {
+    await expect(textsOn('2026-10-09', { country: 'gb' })).resolves.toEqual(
+      expect.arrayContaining(['halloween', 'scary']),
+    );
+  });
+});

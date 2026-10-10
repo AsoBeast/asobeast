@@ -8,10 +8,46 @@ export interface SeasonalEvent {
   name: string;
   start: SeasonalDate;
   end: SeasonalDate;
+  storefronts: readonly string[];
   keywords: string[];
+  nextYearKeywords?: string[];
 }
 
 export const SEASONAL_LEAD_DAYS = 14;
+
+const ENGLISH_STOREFRONTS: readonly string[] = [
+  'us',
+  'gb',
+  'au',
+  'ca',
+  'ie',
+  'nz',
+  'in',
+  'ph',
+  'sg',
+  'za',
+];
+const FOUR_SEASON_ENGLISH_STOREFRONTS: readonly string[] = [
+  'us',
+  'ca',
+  'gb',
+  'ie',
+];
+const HALLOWEEN_STOREFRONTS: readonly string[] = [
+  ...FOUR_SEASON_ENGLISH_STOREFRONTS,
+  'au',
+  'nz',
+];
+const MOTHERS_DAY_STOREFRONTS: readonly string[] = [
+  'us',
+  'ca',
+  'au',
+  'nz',
+  'in',
+  'ph',
+  'sg',
+  'za',
+];
 
 export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
   {
@@ -19,6 +55,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'New Year',
     start: { month: 12, day: 26 },
     end: { month: 1, day: 7 },
+    storefronts: ENGLISH_STOREFRONTS,
     keywords: ['new year', 'resolution', 'goals', 'habit', 'fresh start'],
   },
   {
@@ -26,6 +63,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: "Valentine's Day",
     start: { month: 2, day: 1 },
     end: { month: 2, day: 14 },
+    storefronts: ENGLISH_STOREFRONTS,
     keywords: ['valentine', 'love', 'couples', 'romantic', 'gift'],
   },
   {
@@ -33,13 +71,15 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Spring / Easter',
     start: { month: 3, day: 1 },
     end: { month: 4, day: 30 },
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['spring', 'easter', 'refresh', 'clean', 'declutter'],
   },
   {
     id: 'mothers-day',
     name: "Mother's Day",
     start: { month: 5, day: 1 },
-    end: { month: 5, day: 12 },
+    end: { month: 5, day: 14 },
+    storefronts: MOTHERS_DAY_STOREFRONTS,
     keywords: ['mom', 'mother', 'family', 'gift for mom'],
   },
   {
@@ -47,6 +87,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Summer',
     start: { month: 6, day: 1 },
     end: { month: 8, day: 31 },
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['summer', 'vacation', 'travel', 'outdoor', 'beach'],
   },
   {
@@ -54,6 +95,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Back to School',
     start: { month: 7, day: 15 },
     end: { month: 9, day: 10 },
+    storefronts: FOUR_SEASON_ENGLISH_STOREFRONTS,
     keywords: ['school', 'study', 'student', 'homework', 'planner'],
   },
   {
@@ -61,6 +103,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Halloween',
     start: { month: 10, day: 1 },
     end: { month: 10, day: 31 },
+    storefronts: HALLOWEEN_STOREFRONTS,
     keywords: ['halloween', 'scary', 'spooky', 'costume', 'trick'],
   },
   {
@@ -68,6 +111,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Black Friday',
     start: { month: 11, day: 20 },
     end: { month: 11, day: 30 },
+    storefronts: ENGLISH_STOREFRONTS,
     keywords: ['deal', 'sale', 'discount', 'shopping', 'gift'],
   },
   {
@@ -75,6 +119,7 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'Christmas',
     start: { month: 12, day: 1 },
     end: { month: 12, day: 26 },
+    storefronts: ENGLISH_STOREFRONTS,
     keywords: ['christmas', 'gift', 'holiday', 'santa', 'family'],
   },
   {
@@ -82,7 +127,9 @@ export const SEASONAL_CALENDAR: readonly SeasonalEvent[] = [
     name: 'End of Year',
     start: { month: 12, day: 27 },
     end: { month: 12, day: 31 },
-    keywords: ['year review', 'recap', 'goals 2026', 'new year'],
+    storefronts: ENGLISH_STOREFRONTS,
+    keywords: ['year review', 'recap', 'new year'],
+    nextYearKeywords: ['goals'],
   },
 ];
 
@@ -116,6 +163,22 @@ function inWindow(date: Date, event: SeasonalEvent, leadDays: number): boolean {
 export function activeSeasonalEvents(
   date: Date,
   leadDays = 0,
+  country?: string,
 ): SeasonalEvent[] {
-  return SEASONAL_CALENDAR.filter((event) => inWindow(date, event, leadDays));
+  return SEASONAL_CALENDAR.filter(
+    (event) =>
+      (country === undefined ||
+        event.storefronts.includes(country.toLowerCase())) &&
+      inWindow(date, event, leadDays),
+  );
+}
+
+export function seasonalKeywords(event: SeasonalEvent, date: Date): string[] {
+  const nextYear = date.getUTCFullYear() + 1;
+  return [
+    ...event.keywords,
+    ...(event.nextYearKeywords ?? []).map(
+      (keyword) => `${keyword} ${nextYear}`,
+    ),
+  ];
 }

@@ -38,7 +38,7 @@ const GROUPS = [
   {
     title: "Keywords",
     tools: KEYWORD_TOOLS,
-    note: "Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews.\n\nEvery parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.",
+    note: "Keywords are per market, so pass `country` to scope to one storefront. `strategy` chooses the suggestion source: metadata, search, similar, developer, competitors, seasonal or reviews. The `seasonal` strategy offers English holiday keywords only in the English language storefronts that observe the event, so it is empty for any other storefront. See [Seasonal suggestions](/guides/track-keywords#seasonal-suggestions).\n\nEvery parameter is validated by the tool before a request leaves, against the same bounds the API enforces. A `country` is a lowercase two letter storefront code, a date is `YYYY-MM-DD`, and a `limit` or `days` window is refused rather than sent when it sits outside the range the endpoint accepts.",
   },
   {
     title: "Competitors",
