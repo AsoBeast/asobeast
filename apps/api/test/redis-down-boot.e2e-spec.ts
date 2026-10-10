@@ -2,12 +2,13 @@ import './helpers/enable-auth';
 import { execSync } from 'child_process';
 import { join } from 'path';
 import { getQueueToken } from '@nestjs/bullmq';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { Queue } from 'bullmq';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { QUEUES } from '../src/jobs/jobs.types';
+import { REGISTRATION_RETRY_MS } from '../src/jobs/schedule-registration';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { startRedisOutage, type RedisOutage } from './helpers/redis-outage';
 import { obliterateQueues } from './obliterate-queues';
@@ -15,7 +16,7 @@ import { obliterateQueues } from './obliterate-queues';
 const BOOT_DEADLINE_MS = 10_000;
 const ANSWER_DEADLINE_MS = 3_000;
 const RECONNECT_CYCLES_MS = 2_500;
-const RECOVERY_DEADLINE_MS = 30_000;
+const RECOVERY_DEADLINE_MS = REGISTRATION_RETRY_MS + 15_000;
 const POLL_MS = 250;
 const SHUTDOWN_DEADLINE_MS = 5_000;
 
@@ -49,14 +50,17 @@ describe('Boot while redis is down (e2e)', () => {
   });
 
   afterAll(async () => {
-    await outage.restore().catch(() => undefined);
-    if (!closed) {
-      await obliterateQueues(app);
-      await app.close();
+    try {
+      await outage.restore().catch(() => undefined);
+      if (!closed) {
+        await obliterateQueues(app);
+        await app.close();
+      }
+    } finally {
+      await outage.stop();
+      process.env.REDIS_PORT = String(upstreamPort);
+      restoreAuthEnv();
     }
-    await outage.stop();
-    process.env.REDIS_PORT = String(upstreamPort);
-    restoreAuthEnv();
   });
 
   it(
@@ -79,10 +83,12 @@ describe('Boot while redis is down (e2e)', () => {
 
   it('prints no raw stack trace once it has booted', async () => {
     const printed = jest.spyOn(console, 'error').mockReturnValue();
+    const failed = jest.spyOn(Logger.prototype, 'error');
 
     await elapse(RECONNECT_CYCLES_MS);
 
     expect(printed).not.toHaveBeenCalled();
+    expect(failed).not.toHaveBeenCalled();
   });
 
   it(
