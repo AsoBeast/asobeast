@@ -128,6 +128,13 @@ const PAGE_USER_AGENT =
 
 const REVIEWS_USER_AGENT = 'iTunes/12.11 (Macintosh; OS X 10.15.7)';
 
+const ATTEMPT_TIMEOUT_MS = 15_000;
+
+const attemptSignal = (deadline?: AbortSignal): AbortSignal => {
+  const timeout = AbortSignal.timeout(ATTEMPT_TIMEOUT_MS);
+  return deadline ? AbortSignal.any([deadline, timeout]) : timeout;
+};
+
 async function fetchText(
   url: string,
   userAgent: string,
@@ -135,7 +142,7 @@ async function fetchText(
 ): Promise<string> {
   const response = await egressFetch(url, {
     headers: { 'User-Agent': userAgent },
-    signal,
+    signal: attemptSignal(signal),
   });
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}`);
@@ -151,7 +158,7 @@ const pageUrl = (id: number, country: string, language?: string): string => {
 
 const withSignal = <T extends Abortable>({ signal, ...options }: T) => ({
   ...options,
-  requestOptions: { signal },
+  requestOptions: { signal: attemptSignal(signal) },
 });
 
 export const appStoreLib: AppStoreLib = {
