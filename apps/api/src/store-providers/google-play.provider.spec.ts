@@ -42,7 +42,88 @@ describe('googlePlayLanguage', () => {
     expect(googlePlayLanguage('BR')).toBe('pt');
     expect(googlePlayLanguage('zz')).toBe('en');
   });
+
+  it.each([
+    ['tw', 'zh-TW'],
+    ['TW', 'zh-TW'],
+    ['hk', 'zh-HK'],
+    ['HK', 'zh-HK'],
+  ])('asks for the traditional listing in %s as %s', (country, language) => {
+    expect(googlePlayLanguage(country)).toBe(language);
+  });
+
+  it.each(['constructor', '__proto__', 'toString'])(
+    'falls back to en for the inherited object key %s',
+    (country) => {
+      expect(googlePlayLanguage(country)).toBe('en');
+    },
+  );
 });
+
+interface LanguageCall {
+  result: unknown;
+  invoke: (provider: GooglePlayProvider, country: string) => Promise<unknown>;
+}
+
+const LANGUAGE_CALLS = {
+  app: {
+    result: appPayload,
+    invoke: (provider, country) => provider.getApp('com.example.app', country),
+  },
+  search: {
+    result: [],
+    invoke: (provider, country) => provider.search('note', country, 10),
+  },
+  suggest: {
+    result: [],
+    invoke: (provider, country) => provider.suggest('note', country),
+  },
+  similar: {
+    result: [],
+    invoke: (provider, country) => provider.similar('com.example.app', country),
+  },
+  list: {
+    result: [],
+    invoke: (provider, country) =>
+      provider.topCharts('free', 'OVERALL', 100, country),
+  },
+  reviews: {
+    result: { data: [], nextPaginationToken: null },
+    invoke: (provider, country) =>
+      provider.reviews('com.example.app', country, 1),
+  },
+  availability: {
+    result: { appId: 'com.example.app', countries: {} },
+    invoke: (provider, country) =>
+      provider.availability('com.example.app', [country]),
+  },
+  developer: {
+    result: [],
+    invoke: (provider, country) => provider.developerApps('Dev', country),
+  },
+} satisfies Record<keyof GooglePlayLib, LanguageCall>;
+
+describe.each(Object.entries(LANGUAGE_CALLS))(
+  'GooglePlayLib.%s language',
+  (lib, { result, invoke }) => {
+    it.each([
+      ['tw', 'zh-TW'],
+      ['TW', 'zh-TW'],
+      ['hk', 'zh-HK'],
+      ['us', 'en'],
+      ['jp', 'ja'],
+    ])('asks the store for %s in %s', async (country, language) => {
+      const call = jest.fn().mockResolvedValue(result);
+      const provider = new GooglePlayProvider(makeLib({ [lib]: call }));
+
+      await invoke(provider, country);
+
+      expect(call).toHaveBeenCalledWith(
+        expect.objectContaining({ lang: language }),
+      );
+    });
+  },
+);
 
 describe('GooglePlayProvider', () => {
   it('reports the Google Play store', () => {
