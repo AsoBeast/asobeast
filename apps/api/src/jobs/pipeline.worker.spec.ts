@@ -30,6 +30,8 @@ import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
 
 describe('PipelineWorker', () => {
+  afterEach(() => jest.restoreAllMocks());
+
   const payload = {
     date: '2026-07-27',
     apps: 2,
@@ -213,7 +215,6 @@ describe('PipelineWorker', () => {
       expect.stringMatching(/^redis is unreachable.*Connection is closed\.$/),
     );
     expect(failed).not.toHaveBeenCalled();
-    jest.restoreAllMocks();
   });
 
   it('registers the pipeline schedulers without an independent alert flush', async () => {
@@ -652,7 +653,6 @@ describe('PipelineWorker', () => {
     expect(log).toHaveBeenCalledWith(
       expect.stringContaining('"actionsOpened":null'),
     );
-    jest.restoreAllMocks();
   });
 
   it('notifies on newly opened actions before the flush', async () => {

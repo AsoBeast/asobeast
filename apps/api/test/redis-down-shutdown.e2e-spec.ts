@@ -15,6 +15,7 @@ const elapse = (ms: number) =>
 describe('Shutdown while redis has been down since boot (e2e)', () => {
   let app: INestApplication<App>;
   let outage: RedisOutage;
+  let closed = false;
   const upstreamPort = Number(process.env.REDIS_PORT);
 
   beforeAll(async () => {
@@ -35,9 +36,14 @@ describe('Shutdown while redis has been down since boot (e2e)', () => {
   });
 
   afterAll(async () => {
-    await outage.stop();
-    process.env.REDIS_PORT = String(upstreamPort);
-    restoreAuthEnv();
+    try {
+      await outage.restore().catch(() => undefined);
+      if (!closed) await app.close();
+    } finally {
+      await outage.stop();
+      process.env.REDIS_PORT = String(upstreamPort);
+      restoreAuthEnv();
+    }
   });
 
   it(
@@ -47,6 +53,7 @@ describe('Shutdown while redis has been down since boot (e2e)', () => {
         app.close().then(() => true),
         elapse(SHUTDOWN_DEADLINE_MS).then(() => false),
       ]);
+      closed = stopped;
 
       expect(stopped).toBe(true);
     },
