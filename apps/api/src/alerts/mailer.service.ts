@@ -8,7 +8,7 @@ import { createTransport, Transporter } from 'nodemailer';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { REDACTED, scrubText } from '../common/logging/log-redaction';
 import { Env } from '../config/env';
-import type { OutgoingMail } from '../mail/outgoing-message';
+import { outgoingMessage, type OutgoingMail } from '../mail/outgoing-message';
 import { PrismaService } from '../prisma/prisma.service';
 
 export const ACCOUNT_MAIL_CHANNEL = 'account';
@@ -62,13 +62,9 @@ export class MailerService {
     }
     await this.ready();
     try {
-      await this.transporter().sendMail({
-        from: this.config.get('SMTP_FROM', { infer: true }),
-        to: mail.to,
-        subject: mail.subject,
-        text: mail.text,
-        html: mail.html,
-      });
+      await this.transporter().sendMail(
+        outgoingMessage(this.config.get('SMTP_FROM', { infer: true }), mail),
+      );
     } catch (error) {
       throw new Error(this.scrub(reason(error)));
     }

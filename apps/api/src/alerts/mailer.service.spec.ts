@@ -99,6 +99,10 @@ describe('MailerService', () => {
       subject: 'Subject',
       text: 'text',
       html: '<p>text</p>',
+      headers: {
+        'Auto-Submitted': 'auto-generated',
+        'X-Auto-Response-Suppress': 'All',
+      },
     });
   });
 
