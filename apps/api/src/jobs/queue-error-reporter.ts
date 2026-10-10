@@ -1,12 +1,12 @@
-import { WorkerHost } from '@nestjs/bullmq';
 import {
   Injectable,
   Logger,
   type OnApplicationBootstrap,
 } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
-import { Queue, QueueBase, Worker } from 'bullmq';
+import { QueueBase } from 'bullmq';
 import { codeOf, reasonOf, RedisOutageLog } from '../redis/redis-outage-log';
+import { discoveredQueues, discoveredWorkers } from './discovered-queues';
 
 const UNREACHABLE_CODES = new Set([
   'EADDRNOTAVAIL',
@@ -31,14 +31,6 @@ export function isRedisUnreachable(error: Error): boolean {
     error.message === CONNECTION_CLOSED ||
     error.name === RETRIES_EXHAUSTED
   );
-}
-
-function createdWorker(host: WorkerHost<Worker>): Worker[] {
-  try {
-    return [host.worker];
-  } catch {
-    return [];
-  }
 }
 
 export function reportQueueError(
@@ -71,18 +63,9 @@ export class QueueErrorReporter implements OnApplicationBootstrap {
   }
 
   private emitters(): Set<QueueBase> {
-    const instances = this.discovery
-      .getProviders()
-      .map((wrapper): unknown => wrapper.instance);
-    const queues = instances.filter(
-      (instance): instance is Queue => instance instanceof Queue,
-    );
-    const workers = instances
-      .filter(
-        (instance): instance is WorkerHost<Worker> =>
-          instance instanceof WorkerHost,
-      )
-      .flatMap(createdWorker);
-    return new Set<QueueBase>([...queues, ...workers]);
+    return new Set<QueueBase>([
+      ...discoveredQueues(this.discovery),
+      ...discoveredWorkers(this.discovery),
+    ]);
   }
 }

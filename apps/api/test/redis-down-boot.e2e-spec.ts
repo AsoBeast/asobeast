@@ -17,6 +17,7 @@ const ANSWER_DEADLINE_MS = 3_000;
 const RECONNECT_CYCLES_MS = 2_500;
 const RECOVERY_DEADLINE_MS = 30_000;
 const POLL_MS = 250;
+const SHUTDOWN_DEADLINE_MS = 5_000;
 
 const elapse = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -24,6 +25,7 @@ const elapse = (ms: number) =>
 describe('Boot while redis is down (e2e)', () => {
   let app: INestApplication<App>;
   let outage: RedisOutage;
+  let closed = false;
   const upstreamPort = Number(process.env.REDIS_PORT);
 
   beforeAll(async () => {
@@ -48,8 +50,10 @@ describe('Boot while redis is down (e2e)', () => {
 
   afterAll(async () => {
     await outage.restore().catch(() => undefined);
-    await obliterateQueues(app);
-    await app.close();
+    if (!closed) {
+      await obliterateQueues(app);
+      await app.close();
+    }
     await outage.stop();
     process.env.REDIS_PORT = String(upstreamPort);
     restoreAuthEnv();
@@ -99,5 +103,22 @@ describe('Boot while redis is down (e2e)', () => {
       expect(keys).toContain('daily');
     },
     RECOVERY_DEADLINE_MS + 5_000,
+  );
+
+  it(
+    'stops promptly when redis goes away again before shutdown',
+    async () => {
+      await obliterateQueues(app);
+      await outage.sever();
+
+      const stopped = await Promise.race([
+        app.close().then(() => true),
+        elapse(SHUTDOWN_DEADLINE_MS).then(() => false),
+      ]);
+      closed = stopped;
+
+      expect(stopped).toBe(true);
+    },
+    SHUTDOWN_DEADLINE_MS + 5_000,
   );
 });
