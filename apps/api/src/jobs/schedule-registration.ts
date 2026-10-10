@@ -16,7 +16,7 @@ async function registerUntilRedisAnswers(
       await register();
       return;
     } catch (error) {
-      const failure = error as Error;
+      const failure = error instanceof Error ? error : new Error(String(error));
       report(failure);
       if (!isRedisUnreachable(failure)) return;
       await elapse(REGISTRATION_RETRY_MS);

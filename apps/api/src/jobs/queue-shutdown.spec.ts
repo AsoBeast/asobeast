@@ -101,4 +101,16 @@ describe('QueueShutdown', () => {
     expect(closeQueue.mock.calls).toEqual([[true]]);
     expect(closeFlow.mock.calls).toEqual([[true]]);
   });
+
+  it('finishes closing the rest when one connection refuses to close', async () => {
+    const ping = jest.fn<Promise<string>, []>().mockImplementation(refused);
+    closeQueue.mockRejectedValue(new Error('ERR unknown command'));
+
+    await expect(
+      shutdownWith(ping).beforeApplicationShutdown(),
+    ).resolves.toBeUndefined();
+
+    expect(closeWorker.mock.calls).toEqual([[true]]);
+    expect(closeFlow.mock.calls).toEqual([[true]]);
+  });
 });

@@ -58,4 +58,13 @@ describe('registerInBackground', () => {
 
     expect(register).toHaveBeenCalledTimes(1);
   });
+
+  it('reports a rejection that carries no error instead of losing it', async () => {
+    const register = jest.fn<Promise<void>, []>().mockRejectedValue(undefined);
+
+    registerInBackground(queue, register, report);
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(report).toHaveBeenCalledWith(new Error('undefined'));
+  });
 });

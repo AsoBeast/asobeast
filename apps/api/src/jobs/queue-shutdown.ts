@@ -26,7 +26,7 @@ export class QueueShutdown implements BeforeApplicationShutdown {
       ...discoveredQueues(this.discovery),
       ...discoveredFlowProducers(this.discovery),
     ].map((client) => client.getBackend());
-    await Promise.all([
+    await Promise.allSettled([
       ...discoveredWorkers(this.discovery).map((worker) => worker.close(true)),
       ...backends.map((backend) => backend.close(true)),
     ]);
