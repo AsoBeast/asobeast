@@ -112,7 +112,7 @@ describe('Boot while redis is down (e2e)', () => {
   );
 
   it(
-    'stops promptly when redis goes away again with work waiting for it',
+    'stops promptly when redis goes away again with a command waiting for it',
     async () => {
       await obliterateQueues(app);
       await outage.sever();
