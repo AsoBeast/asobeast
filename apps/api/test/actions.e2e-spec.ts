@@ -24,7 +24,7 @@ import { testDb } from './helpers/test-db';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { QUEUES } from '../src/jobs/jobs.types';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { ownerAgent, useCookies } from './helpers/session';
 
 const DAY_MS = 86_400_000;
@@ -81,6 +81,7 @@ describe('ActionsController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

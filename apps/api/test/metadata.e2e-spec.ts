@@ -23,7 +23,7 @@ import {
   OPENAI_CLIENT,
 } from '../src/ai/openai.client';
 import { aiCompletion } from '../src/ai/ai-completion.fixture';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
 const D0 = new Date('2026-07-01T00:00:00.000Z');
@@ -81,6 +81,7 @@ describe('MetadataController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

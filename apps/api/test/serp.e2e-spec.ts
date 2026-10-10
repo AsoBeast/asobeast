@@ -8,7 +8,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 
 const DATE = new Date('2026-07-01T00:00:00.000Z');
@@ -32,6 +32,7 @@ describe('SerpController (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

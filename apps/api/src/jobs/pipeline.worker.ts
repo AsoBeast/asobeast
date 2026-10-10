@@ -50,6 +50,7 @@ import { RetentionService } from './retention.service';
 @Processor(QUEUES.PIPELINE)
 export class PipelineWorker extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(PipelineWorker.name);
+  private registration: Promise<void> = Promise.resolve();
 
   constructor(
     @InjectQueue(QUEUES.PIPELINE) private readonly pipelineQueue: Queue,
@@ -77,11 +78,15 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    registerInBackground(
+    this.registration = registerInBackground(
       this.pipelineQueue,
       () => this.registerSchedules(),
       (error) => reportQueueError(error, this.outage, this.logger),
     );
+  }
+
+  schedulesRegistered(): Promise<void> {
+    return this.registration;
   }
 
   async registerSchedules(): Promise<void> {

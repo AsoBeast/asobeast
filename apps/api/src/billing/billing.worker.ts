@@ -36,7 +36,7 @@ export class BillingWorker extends WorkerHost implements OnModuleInit {
   }
 
   onModuleInit(): void {
-    registerInBackground(
+    void registerInBackground(
       this.queue,
       () => this.registerSchedules(),
       (error) => reportQueueError(error, this.outage, this.logger),

@@ -8,7 +8,7 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 describe('AI call ledger (e2e)', () => {
   let app: INestApplication<App>;
@@ -27,6 +27,7 @@ describe('AI call ledger (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },

@@ -177,6 +177,25 @@ describe('PipelineWorker', () => {
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledTimes(1);
   });
 
+  it('settles the boot registration only after the outdated score check', async () => {
+    const { worker, pipeline } = build();
+    let checked!: (count: number) => void;
+    pipeline.fanOutOutdatedScores.mockReturnValue(
+      new Promise<number>((resolve) => (checked = resolve)),
+    );
+    const settled = jest.fn();
+
+    worker.onModuleInit();
+    void worker.schedulesRegistered().then(settled);
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
+    expect(settled).not.toHaveBeenCalled();
+
+    checked(0);
+    await worker.schedulesRegistered();
+    expect(settled).toHaveBeenCalledTimes(1);
+  });
+
   it('names a registration cut short by a redis outage in the outage log', async () => {
     const { worker, pipelineQueue } = build();
     const warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();

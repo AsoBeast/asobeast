@@ -25,6 +25,6 @@ export function registerInBackground(
   queue: QueueBase,
   register: () => Promise<void>,
   report: (error: Error) => void,
-): void {
-  void registerUntilDone(queue, register, report);
+): Promise<void> {
+  return registerUntilDone(queue, register, report);
 }

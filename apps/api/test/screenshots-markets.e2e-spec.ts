@@ -35,7 +35,7 @@ import {
   until,
 } from './helpers/screenshot-reading';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 describe('Screenshots of market listings (e2e)', () => {
   jest.setTimeout(30_000);
@@ -65,6 +65,7 @@ describe('Screenshots of market listings (e2e)', () => {
     app = moduleFixture.createNestApplication();
     useCookies(app);
     await app.init();
+    await settleBootRegistration(app);
 
     prisma = testDb();
     await prisma.workspace.upsert({

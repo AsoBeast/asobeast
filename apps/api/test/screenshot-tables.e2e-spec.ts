@@ -7,7 +7,7 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { RetentionService } from '../src/jobs/retention.service';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 const ASSET =
   'https://is1-ssl.mzstatic.com/image/thumb/PurpleSource/v4/aa/bb/cc/1.jpg';
@@ -27,6 +27,7 @@ describe('Screenshot tables (e2e)', () => {
     }).compile();
     app = moduleFixture.createNestApplication();
     await app.init();
+    await settleBootRegistration(app);
     prisma = testDb();
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },

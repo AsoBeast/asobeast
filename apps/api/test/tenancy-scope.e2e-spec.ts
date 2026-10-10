@@ -9,7 +9,7 @@ import { CrossTenantAccess } from '../src/common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../src/common/tenancy/workspace-context';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues } from './obliterate-queues';
+import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
 
 const WORKSPACE_A = 'ws_scope_a';
 const WORKSPACE_B = 'ws_scope_b';
@@ -34,6 +34,7 @@ describe('Workspace-scoped database access (e2e)', () => {
 
     app = moduleFixture.createNestApplication();
     await app.init();
+    await settleBootRegistration(app);
     prisma = app.get(PrismaService);
     workspace = app.get(WorkspaceContext);
     crossTenant = app.get(CrossTenantAccess);
