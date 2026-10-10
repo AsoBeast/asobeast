@@ -51,7 +51,7 @@ The shape is `ApiErrorEnvelope` in `@asobeast/shared`, so a TypeScript client ca
 | `415` | The body names a charset the API cannot read, or a `Content-Encoding` other than `gzip`, `deflate` or `br` |
 | `500` | An unhandled exception. The message is generic and the stack is logged server side |
 | `501` | A store that asobeast does not support. Both live stores are supported, so this path stays wired for a future store |
-| `502` | A store request failed upstream, or the web proxy could not reach the API. A store failure answers with a fixed sentence naming the store, and the underlying error is in the API log at warn level. An import, a refresh, a market check, a new competitor or keyword suggestions that wait more than 20 seconds for a store answer this too, so the sentence arrives before the web proxy gives up |
+| `502` | A store request failed upstream, or the web proxy could not reach the API. A store failure answers with a fixed sentence naming the store, and the underlying error is in the API log at warn level. An import, a refresh, a new competitor or keyword suggestions that wait more than 20 seconds for a store answer this too, so the sentence arrives before the web proxy gives up. A market check that waits that long reports the market as unknown instead |
 | `503` | The health endpoint could not reach the database, or Redis could not be reached for a sign in or a store action that must be counted first. `Retry-After` says when to try again. See [When Redis is unreachable](/api-reference/rate-limits#when-redis-is-unreachable) |
 | `504` | The web proxy timed out waiting for the API to start answering, bounded by `API_PROXY_TIMEOUT_MS` |
 
