@@ -41,6 +41,18 @@ function createdWorker(host: WorkerHost<Worker>): Worker[] {
   }
 }
 
+export function reportQueueError(
+  error: Error,
+  outage: RedisOutageLog,
+  logger: Logger,
+): void {
+  if (isRedisUnreachable(error)) {
+    outage.report(error);
+    return;
+  }
+  logger.error(reasonOf(error), error.stack);
+}
+
 @Injectable()
 export class QueueErrorReporter implements OnApplicationBootstrap {
   private readonly logger = new Logger(QueueErrorReporter.name);
@@ -52,7 +64,9 @@ export class QueueErrorReporter implements OnApplicationBootstrap {
 
   onApplicationBootstrap(): void {
     for (const emitter of this.emitters()) {
-      emitter.on('error', (error: Error) => this.report(error));
+      emitter.on('error', (error: Error) =>
+        reportQueueError(error, this.outage, this.logger),
+      );
     }
   }
 
@@ -70,13 +84,5 @@ export class QueueErrorReporter implements OnApplicationBootstrap {
       )
       .flatMap(createdWorker);
     return new Set<QueueBase>([...queues, ...workers]);
-  }
-
-  private report(error: Error): void {
-    if (isRedisUnreachable(error)) {
-      this.outage.report(error);
-      return;
-    }
-    this.logger.error(reasonOf(error), error.stack);
   }
 }

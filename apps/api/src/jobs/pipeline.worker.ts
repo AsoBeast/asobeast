@@ -26,6 +26,7 @@ import { Env } from '../config/env';
 import { ErrorTracking } from '../observability/error-tracking.service';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { ApplePopularitySync } from '../scoring/apple-popularity.sync';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { DailyBudgetService } from './daily-budget.service';
@@ -41,6 +42,7 @@ import {
   QUEUES,
 } from './jobs.types';
 import { PipelineService } from './pipeline.service';
+import { reportQueueError } from './queue-error-reporter';
 import { AccountDeletionService } from '../account/account-deletion.service';
 import { RetentionService } from './retention.service';
 
@@ -68,11 +70,18 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly publishedStatus: PublishedStatusService,
     private readonly tracking: ErrorTracking,
     private readonly popularity: ApplePopularitySync,
+    private readonly outage: RedisOutageLog,
   ) {
     super();
   }
 
-  async onModuleInit(): Promise<void> {
+  onModuleInit(): void {
+    this.registerSchedules().catch((error: Error) =>
+      reportQueueError(error, this.outage, this.logger),
+    );
+  }
+
+  async registerSchedules(): Promise<void> {
     await this.pipelineQueue.upsertJobScheduler(
       'daily',
       { pattern: this.config.get('CRON_DAILY', { infer: true }), tz: 'UTC' },

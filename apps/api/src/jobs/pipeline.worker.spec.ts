@@ -19,6 +19,7 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
+import { RedisOutageLog } from '../redis/redis-outage-log';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
@@ -138,6 +139,7 @@ describe('PipelineWorker', () => {
       publishedStatus as unknown as PublishedStatusService,
       tracking as unknown as ErrorTracking,
       popularity as unknown as ApplePopularitySync,
+      new RedisOutageLog(),
     );
     return {
       worker,
@@ -167,10 +169,36 @@ describe('PipelineWorker', () => {
       ([key]) => key === LAST_DAILY_RUN_KEY,
     ).length;
 
+  it('boots without waiting for redis to register the schedulers', () => {
+    const { worker, pipelineQueue } = build();
+    pipelineQueue.upsertJobScheduler.mockReturnValue(new Promise(() => {}));
+
+    expect(worker.onModuleInit()).toBeUndefined();
+    expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledTimes(1);
+  });
+
+  it('names a registration cut short by a redis outage in the outage log', async () => {
+    const { worker, pipelineQueue } = build();
+    const warn = jest.spyOn(Logger.prototype, 'warn').mockReturnValue();
+    const failed = jest.spyOn(Logger.prototype, 'error').mockReturnValue();
+    pipelineQueue.upsertJobScheduler.mockRejectedValue(
+      new Error('Connection is closed.'),
+    );
+
+    worker.onModuleInit();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/^redis is unreachable.*Connection is closed\.$/),
+    );
+    expect(failed).not.toHaveBeenCalled();
+    jest.restoreAllMocks();
+  });
+
   it('registers the pipeline schedulers without an independent alert flush', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -200,7 +228,7 @@ describe('PipelineWorker', () => {
     it('schedules the weekly sync only when apple ads is configured', async () => {
       const { worker, pipelineQueue } = build(false, '', false, true);
 
-      await worker.onModuleInit();
+      await worker.registerSchedules();
 
       expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
         'apple-popularity',
@@ -215,7 +243,7 @@ describe('PipelineWorker', () => {
     it('removes a leftover scheduler when apple ads is not configured', async () => {
       const { worker, pipelineQueue } = build();
 
-      await worker.onModuleInit();
+      await worker.registerSchedules();
 
       expect(
         pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -238,7 +266,7 @@ describe('PipelineWorker', () => {
   it('checks for outdated scores once, after the schedulers', async () => {
     const { worker, pipelineQueue, pipeline } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipeline.fanOutOutdatedScores).toHaveBeenCalledTimes(1);
     expect(
@@ -252,13 +280,13 @@ describe('PipelineWorker', () => {
     const { worker, pipeline } = build();
     pipeline.fanOutOutdatedScores.mockRejectedValue(new Error('redis down'));
 
-    await expect(worker.onModuleInit()).resolves.toBeUndefined();
+    await expect(worker.registerSchedules()).resolves.toBeUndefined();
   });
 
   it('schedules the store canary an hour before the daily run', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'store-canary',
@@ -270,7 +298,7 @@ describe('PipelineWorker', () => {
   it('removes the canary scheduler when its pattern is emptied', async () => {
     const { worker, pipelineQueue } = build(false, '');
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -291,7 +319,7 @@ describe('PipelineWorker', () => {
   it('schedules no status poll while no status url is configured', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -304,7 +332,7 @@ describe('PipelineWorker', () => {
   it('schedules the status poll once a status url is configured', async () => {
     const { worker, pipelineQueue } = build(false, '0 2 * * *', true);
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'store-status',
@@ -335,7 +363,7 @@ describe('PipelineWorker', () => {
   it('schedules no pool sync while no proxy provider is configured', async () => {
     const { worker, pipelineQueue } = build();
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
@@ -346,7 +374,7 @@ describe('PipelineWorker', () => {
   it('schedules the pool sync once a proxy provider is configured', async () => {
     const { worker, pipelineQueue } = build(true);
 
-    await worker.onModuleInit();
+    await worker.registerSchedules();
 
     expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
       'proxy-sync',

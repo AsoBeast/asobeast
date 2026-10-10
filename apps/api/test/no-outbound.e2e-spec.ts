@@ -84,7 +84,7 @@ describe('A self hosted deployment reaches nothing outside itself', () => {
     const queue = app.get<Queue>(getQueueToken(QUEUES.PIPELINE), {
       strict: false,
     });
-    await app.get(PipelineWorker).onModuleInit();
+    await app.get(PipelineWorker).registerSchedules();
 
     const keys = (await queue.getJobSchedulers()).map(
       (scheduler) => scheduler.key,
