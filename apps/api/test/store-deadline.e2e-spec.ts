@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { APP_STORE_LIB } from '../src/store-providers/app-store.lib';
 import { GOOGLE_PLAY_LIB } from '../src/store-providers/google-play.lib';
+import { Abortable } from '../src/store-providers/store-deadline';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
@@ -17,13 +18,13 @@ const MCP_DISPATCH_MS = 25_000;
 const APPLE_ID = '1475326567';
 const PLAY_ID = 'com.cyberlink.youcammakeup';
 
-interface Bounded {
-  signal?: AbortSignal;
-}
-
 const aborted: string[] = [];
 
-function answerLate<T>(label: string, value: T, options: Bounded): Promise<T> {
+function answerLate<T>(
+  label: string,
+  value: T,
+  options: Abortable,
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => resolve(value), SLOW_STORE_MS);
     options.signal?.addEventListener(
@@ -39,7 +40,7 @@ function answerLate<T>(label: string, value: T, options: Bounded): Promise<T> {
 }
 
 const slowAppStore = {
-  app: (options: Bounded) =>
+  app: (options: Abortable) =>
     answerLate(
       'apple app',
       {
@@ -52,12 +53,12 @@ const slowAppStore = {
       },
       options,
     ),
-  page: (options: Bounded) =>
+  page: (options: Abortable) =>
     answerLate('apple page', '<h1>2048</h1>', options),
 };
 
 const slowGooglePlay = {
-  app: (options: Bounded) =>
+  app: (options: Abortable) =>
     answerLate(
       'play app',
       {
