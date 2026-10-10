@@ -1,5 +1,6 @@
-import { Logger, type OnApplicationShutdown } from '@nestjs/common';
+import { type OnApplicationShutdown } from '@nestjs/common';
 import { Redis, ReplyError, type RedisOptions } from 'ioredis';
+import { RedisOutageLog } from './redis-outage-log';
 import { RedisUnavailableError } from './redis.errors';
 
 export const FAIL_FAST_COMMAND_TIMEOUT_MS = 500;
@@ -9,15 +10,16 @@ export const FAIL_FAST_MAX_RECONNECT_DELAY_MS = 2_000;
 
 const RECONNECT_STEP_MS = 50;
 
-const WARN_INTERVAL_MS = 30_000;
-
 export class FailFastRedis implements OnApplicationShutdown {
-  private readonly logger = new Logger(FailFastRedis.name);
-  private lastWarnedAt = 0;
+  constructor(
+    readonly client: Redis,
+    private readonly outage = new RedisOutageLog(),
+  ) {}
 
-  constructor(readonly client: Redis) {}
-
-  static connect(connection: RedisOptions): FailFastRedis {
+  static connect(
+    connection: RedisOptions,
+    outage = new RedisOutageLog(),
+  ): FailFastRedis {
     const redis = new FailFastRedis(
       new Redis({
         ...connection,
@@ -31,8 +33,9 @@ export class FailFastRedis implements OnApplicationShutdown {
             FAIL_FAST_MAX_RECONNECT_DELAY_MS,
           ),
       }),
+      outage,
     );
-    redis.client.on('error', (error: Error) => redis.warn(error));
+    redis.client.on('error', (error: Error) => outage.report(error));
     return redis;
   }
 
@@ -41,7 +44,7 @@ export class FailFastRedis implements OnApplicationShutdown {
       return await work(this.client);
     } catch (error) {
       if (error instanceof ReplyError) throw error;
-      this.warn(error);
+      this.outage.report(error);
       throw new RedisUnavailableError(FAIL_FAST_RETRY_AFTER_SECONDS);
     }
   }
@@ -60,15 +63,5 @@ export class FailFastRedis implements OnApplicationShutdown {
 
   onApplicationShutdown(): void {
     this.client.disconnect();
-  }
-
-  private warn(error: unknown): void {
-    const now = Date.now();
-    if (now - this.lastWarnedAt < WARN_INTERVAL_MS) return;
-    this.lastWarnedAt = now;
-    const reason = error instanceof Error ? error.message : String(error);
-    this.logger.warn(
-      `redis is unreachable, so request path reads and rate limits fail fast: ${reason}`,
-    );
   }
 }

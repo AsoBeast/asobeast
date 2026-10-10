@@ -1,7 +1,7 @@
 import './helpers/enable-auth';
 import { execSync } from 'child_process';
 import { join } from 'path';
-import { INestApplication } from '@nestjs/common';
+import { INestApplication, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
@@ -18,6 +18,8 @@ import { obliterateQueues, pauseQueues } from './obliterate-queues';
 const ANSWER_DEADLINE_MS = 3_000;
 const REJECTED_TOKEN = `${API_TOKEN_PREFIX}${'3'.repeat(48)}`;
 const RECOVERY_DEADLINE_MS = 15_000;
+const RECONNECT_CYCLES_MS = 2_500;
+const OUTAGE_WARNING = 'redis is unreachable';
 
 function within(test: request.Test): request.Test {
   return test.timeout({
@@ -85,6 +87,10 @@ describe('Redis outage (e2e)', () => {
       await outage.restore();
     });
 
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
     it('answers a signed in request from postgres', async () => {
       await within(agent.get('/auth/me')).expect(200);
     });
@@ -137,6 +143,22 @@ describe('Redis outage (e2e)', () => {
       ).expect(200);
 
       expect(response.body).toMatchObject({ status: 'ok', redis: 'down' });
+    });
+
+    it('names the outage in the json log instead of printing raw stack traces', async () => {
+      const printed = jest.spyOn(console, 'error').mockReturnValue();
+      const warned = jest.spyOn(Logger.prototype, 'warn');
+      const failed = jest.spyOn(Logger.prototype, 'error');
+
+      await new Promise((resolve) => setTimeout(resolve, RECONNECT_CYCLES_MS));
+
+      expect(printed).not.toHaveBeenCalled();
+      expect(failed).not.toHaveBeenCalled();
+      expect(
+        warned.mock.calls.filter(([message]) =>
+          String(message).startsWith(OUTAGE_WARNING),
+        ).length,
+      ).toBeLessThanOrEqual(1);
     });
   });
 
