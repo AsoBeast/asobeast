@@ -35,6 +35,7 @@ import {
   TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
+import { useMarket } from "@/components/app-detail/use-market";
 import { rankDistributionHistoryOptions } from "@/lib/queries";
 import {
   presetToRange,
@@ -57,8 +58,9 @@ function RankDistributionHistoryBody({
   id: string;
   range: VisibilityRange;
 }) {
+  const { scope } = useMarket(id);
   const { data } = useSuspenseQuery(
-    rankDistributionHistoryOptions(id, presetToRange(range)),
+    rankDistributionHistoryOptions(id, presetToRange(range), scope),
   );
 
   const state = trendState(data.points.length);

@@ -11,6 +11,15 @@ export function resolveMarket(
     : home;
 }
 
+export const ALL_MARKETS = "all";
+
+export function keywordScope(
+  requested: string,
+  market: string,
+): string | undefined {
+  return requested === ALL_MARKETS ? undefined : market;
+}
+
 export function queryMarket(market: string, home: string): string | undefined {
   return market === home ? undefined : market;
 }

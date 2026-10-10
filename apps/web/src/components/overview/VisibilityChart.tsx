@@ -34,6 +34,7 @@ import {
   TIME_TOOLTIP_PROPS,
   VALUE_AXIS_PROPS,
 } from "@/components/charts/theme";
+import { useMarket } from "@/components/app-detail/use-market";
 import { visibilityOptions } from "@/lib/queries";
 import {
   presetToRange,
@@ -53,8 +54,9 @@ function VisibilityChartBody({
   id: string;
   range: VisibilityRange;
 }) {
+  const { scope } = useMarket(id);
   const { data } = useSuspenseQuery(
-    visibilityOptions(id, presetToRange(range)),
+    visibilityOptions(id, presetToRange(range), scope),
   );
 
   const state = trendState(data.points.length);
