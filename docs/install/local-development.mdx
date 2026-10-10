@@ -95,7 +95,17 @@ Run a throwaway SMTP sink and point the API at it.
 docker run -p 1025:1025 -p 8025:8025 axllent/mailpit
 ```
 
-Then set `SMTP_HOST=localhost`, `SMTP_PORT=1025` and `SMTP_FROM=asobeast <alerts@localhost>` in `apps/api/.env`, add an email alert on the settings page, and read the messages at `http://localhost:8025`.
+Then set `SMTP_HOST=localhost`, `SMTP_PORT=1025`, `SMTP_FROM="AsoBeast <alerts@localhost>"` and `WEB_PUBLIC_URL=http://localhost:3000` in `apps/api/.env`, so the logo and buttons appear, add an email alert on the settings page, and read the messages at `http://localhost:8025`. Mailpit's HTML check tab reports client support for a delivered message.
+
+## Preview email templates
+
+Every email is a React Email template. Start the preview server and open `http://localhost:3030`.
+
+```bash
+pnpm --filter api email:dev
+```
+
+Previews live in `apps/api/src/mail/previews` and render the same fixtures the specs use. The logo loads from the web app, so run `pnpm --filter web dev` alongside to see it.
 
 ## Repository layout
 

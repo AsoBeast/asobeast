@@ -2,7 +2,7 @@
 title: Send alerts
 description: "asobeast delivers rank, SERP, metadata, review and action events by signed webhook or SMTP email. Batched delivery is resumable and deduplicated."
 icon: bell
-keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake"]
+keywords: ["alerts","webhook","SMTP","email","batched delivery","signature","ALERT_DELIVERY","milestone","first ranking","overtake","unsubscribe","List-Unsubscribe","DKIM"]
 ---
 
 Alerts fan out to two channel types, webhooks and email, and both carry the same events. Every attempt is recorded in a delivery log so a failing endpoint is visible instead of retrying silently.
@@ -158,7 +158,7 @@ Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankI
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
-`link` is present only when `WEB_PUBLIC_URL` is set. That variable is used for nothing else. When it is unset the link is `null` rather than a broken `localhost` guess.
+`link` is present only when `WEB_PUBLIC_URL` is set. When it is unset the link is `null` rather than a broken `localhost` guess.
 
 Slack, Discord and ntfy all accept a plain webhook endpoint, and asobeast formats for the first two.
 
@@ -175,7 +175,23 @@ Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one
 | `SMTP_USER` | Empty | Leave empty for an unauthenticated relay |
 | `SMTP_PASSWORD` | Empty | Paired with `SMTP_USER` |
 
-To try it locally, run a throwaway SMTP sink. See [Set up a development environment](/install/local-development).
+### What an alert email looks like
+
+Every alert email uses the AsoBeast layout: a header with the logo, the details of what happened, a button back into the app and a footer saying why the recipient gets it. The button opens the app page, the action for `action.opened`, or the portfolio for the weekly digest. Instant delivery sends one email per event, and batched delivery sends the daily app update and the competitor watch. Subjects start with `[asobeast]` and never change, so mail filters keep working. Every email also has a plain text part.
+
+The button, the logo, the settings link and the unsubscribe link are built from `WEB_PUBLIC_URL`. Without it the email shows text only and no link.
+
+A daily update lists up to 20 lines per section. When the report would grow past what Gmail shows before clipping, the HTML part shows fewer lines per section and fewer competitors per app, each with a note of how many more there are, while the plain text part keeps the full lists. Open the app from the card for everything.
+
+### Unsubscribe from an email
+
+Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. Turn it back on under **Settings**, **Email alerts**.
+
+The one click headers need `WEB_PUBLIC_URL` on `https`. On plain `http` only the footer link is offered. See [Email deliverability](/operations/email-deliverability) for the sender side.
+
+### Try it locally
+
+Run a throwaway SMTP sink, and preview every template without sending anything. See [Set up a development environment](/install/local-development#preview-email-templates).
 
 ## Read the delivery history
 
@@ -190,6 +206,9 @@ Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by def
 - **Email never sends.** Check that both `SMTP_HOST` and `SMTP_FROM` are set. One without the other leaves email disabled.
 - **The relay rejects the sender.** Many relays require the envelope sender to match an authorized domain. Set `SMTP_FROM` to an address on the domain the relay accepts.
 - **Deep links are missing.** `WEB_PUBLIC_URL` is unset, so `link` is `null` by design.
+- **The email shows no buttons or logo.** `WEB_PUBLIC_URL` is unset. Set it to the public web origin.
+- **Mail apps show no unsubscribe button.** The instance is not on `https`, or the relay does not sign with DKIM. See [Email deliverability](/operations/email-deliverability).
+- **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows as paused in Settings.
 - **Reports arrive at an unpredictable hour.** In batched mode the flush waits for every child job to settle, including retries. `CRON_DAILY` sets the start, not the delivery time.
 
 ## Related
