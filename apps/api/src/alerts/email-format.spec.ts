@@ -3,9 +3,19 @@ import {
   AlertBatchPayload,
   RANK_DEPTH,
 } from '@asobeast/shared';
-import { formatBatchEmail, formatEmail } from './email-format';
+import {
+  formatBatchEmail,
+  formatEmail,
+  HTML_BUDGET_BYTES,
+} from './email-format';
 import {
   actionOpened,
+  alpha,
+  batch,
+  bravo,
+  competitorAlpha,
+  competitorBatch,
+  emptySection,
   digest,
   digestWithGroups,
   dropped,
@@ -13,6 +23,7 @@ import {
   improved,
   metadata,
   negative,
+  worstCaseBatch,
 } from './email-fixtures.fixture';
 import {
   firstRanking,
@@ -123,112 +134,6 @@ describe('formatEmail', () => {
     expect(text.indexOf('Linked apps')).toBeLessThan(text.indexOf('App 0:'));
   });
 });
-
-const emptySection = (
-  app: AlertBatchAppSection['app'],
-): AlertBatchAppSection => ({
-  app,
-  rankDrops: [],
-  rankImprovements: [],
-  rankMilestones: [],
-  firstRankings: [],
-  overtakes: [],
-  serpEntrants: [],
-  changes: [],
-  negativeReviews: [],
-  actions: [],
-  competitors: [],
-});
-
-const alpha: AlertBatchAppSection = {
-  ...emptySection({
-    id: 'a',
-    name: 'Alpha',
-    store: 'APP_STORE',
-    country: 'us',
-  }),
-  rankDrops: [
-    {
-      event: 'rank.dropped',
-      occurredAt: '2026-07-22T10:00:00.000Z',
-      app: { id: 'a', name: 'Alpha' },
-      keyword: { id: 'k1', text: 'game' },
-      from: 3,
-      to: 12,
-      fromDepth: RANK_DEPTH,
-      toDepth: RANK_DEPTH,
-      threshold: 5,
-    },
-  ],
-  changes: [
-    {
-      event: 'metadata.changed',
-      occurredAt: '2026-07-22T10:00:00.000Z',
-      app: { id: 'a', name: 'Alpha', isCompetitor: false },
-      changes: [{ field: 'title', before: 'x'.repeat(200), after: 'short' }],
-    },
-  ],
-};
-
-const competitorAlpha: AlertBatchAppSection = {
-  ...emptySection(alpha.app),
-  competitors: [
-    {
-      app: { id: 'c', name: 'Charlie', store: 'APP_STORE', country: 'us' },
-      changes: [
-        {
-          event: 'metadata.changed',
-          occurredAt: '2026-07-22T10:00:00.000Z',
-          app: { id: 'c', name: 'Charlie', isCompetitor: true },
-          changes: [{ field: 'subtitle', before: 'a', after: 'b' }],
-        },
-      ],
-    },
-  ],
-};
-
-const bravo: AlertBatchAppSection = {
-  ...emptySection({
-    id: 'b',
-    name: 'Bravo',
-    store: 'GOOGLE_PLAY',
-    country: 'gb',
-  }),
-  serpEntrants: [
-    {
-      event: 'serp.entrant',
-      occurredAt: '2026-07-22T10:00:00.000Z',
-      keyword: { id: 'k2', text: 'planner' },
-      date: '2026-07-22',
-      entrants: [
-        {
-          position: 4,
-          storeAppId: 'x',
-          title: 'Newcomer',
-          appId: null,
-          isCompetitor: false,
-        },
-      ],
-    },
-  ],
-};
-
-const batch: AlertBatchPayload = {
-  event: 'alerts.batch',
-  scope: 'owned_apps',
-  occurredAt: '2026-07-22T11:00:00.000Z',
-  window: { from: '2026-07-22T09:00:00.000Z', to: '2026-07-22T11:00:00.000Z' },
-  totals: { events: 3, apps: 2 },
-  apps: [alpha, bravo],
-  events: [],
-};
-
-const competitorBatch: AlertBatchPayload = {
-  ...batch,
-  scope: 'competitors',
-  totals: { events: 1, apps: 1 },
-  apps: [competitorAlpha],
-};
 
 describe('formatBatchEmail', () => {
   it('counts each category in the subject with plurals', async () => {
@@ -663,5 +568,64 @@ describe('formatEmail in the branded layout', () => {
     });
     expect(html).toContain('It&#x27;s &quot;broken&quot;');
     expect(text).toContain(`It's "broken"`);
+  });
+});
+
+describe('formatBatchEmail in the branded layout', () => {
+  const linked = { origin: 'https://aso.example.com' };
+
+  it.each([['owned_apps'], ['competitors'], [null]] as const)(
+    'keeps the largest %s report and its footer under the clipping threshold',
+    async (scope) => {
+      const { html } = await formatBatchEmail(worstCaseBatch(scope), linked);
+      expect(Buffer.byteLength(html)).toBeLessThan(HTML_BUDGET_BYTES);
+      expect(html).toContain('subscribes to AsoBeast email alerts');
+    },
+  );
+
+  it('shows fewer lines in html than in text only when the report would not fit', async () => {
+    const worst = await formatBatchEmail(worstCaseBatch('owned_apps'), linked);
+    expect(worst.text).toContain('+5 more detail lines');
+    expect(worst.html).not.toContain('+5 more detail lines');
+    expect(worst.html).toMatch(/\+\d+ more detail lines/);
+
+    const usual = await formatBatchEmail(batch, linked);
+    const rankDrops = Array.from({ length: 25 }, (_, index) => ({
+      ...alpha.rankDrops[0],
+      keyword: { ...dropped.keyword, id: `k${index}`, text: `game ${index}` },
+    }));
+    const full = await formatBatchEmail(
+      { ...batch, apps: [{ ...alpha, rankDrops }] },
+      linked,
+    );
+    expect(usual.html).not.toContain('more detail lines');
+    expect(full.html).toContain('+5 more detail lines');
+  });
+
+  it('links every owned card to its app and the button to the web app', async () => {
+    const { html } = await formatBatchEmail(batch, linked);
+    for (const id of ['a', 'b']) {
+      expect(html).toMatch(
+        new RegExp(
+          `· <a href="https://aso\\.example\\.com/apps/${id}"[^>]*>Open app</a>`,
+        ),
+      );
+    }
+    expect(html).toContain('href="https://aso.example.com/"');
+    expect(html).toContain('Open AsoBeast');
+  });
+
+  it('counts only the categories the report holds', async () => {
+    const { html } = await formatBatchEmail(batch, linked);
+    expect(html).toMatch(/>1<\/p><p[^>]*>Rank drops<\/p>/);
+    expect(html).not.toMatch(/>Rank improvements</);
+  });
+
+  it('never links relatively without a web origin', async () => {
+    for (const payload of [batch, competitorBatch]) {
+      const { html } = await formatBatchEmail(payload);
+      expect(html).not.toMatch(/href="\//);
+      expect(html).not.toContain('Open app');
+    }
   });
 });
