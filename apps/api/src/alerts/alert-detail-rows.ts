@@ -124,9 +124,6 @@ export function detailRows(
         }),
       ]);
     }
-    if (payload.link) {
-      rows.push(['Open', payload.link]);
-    }
     return rows;
   }
 

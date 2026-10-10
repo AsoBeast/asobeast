@@ -1,6 +1,7 @@
 import { Matches } from 'class-validator';
+import { UNSUBSCRIBE_TOKEN_PATTERN } from '../unsubscribe-token';
 
 export class UnsubscribeEmailAlertDto {
-  @Matches(/^[A-Za-z0-9_-]{43}$/)
+  @Matches(UNSUBSCRIBE_TOKEN_PATTERN)
   token!: string;
 }

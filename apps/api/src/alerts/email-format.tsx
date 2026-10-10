@@ -65,7 +65,7 @@ export function alertEmailElement(
   return (
     <AlertEmail
       summary={summarize(payload)}
-      facts={detailRows(payload).filter(([label]) => label !== 'Open')}
+      facts={detailRows(payload)}
       action={alertAction(payload, context.origin)}
       occurredAt={payload.occurredAt}
       context={context}
@@ -87,6 +87,9 @@ export async function formatEmail(
     ...detailRows(payload).map(([label, cell]) =>
       label ? `${label}: ${cell}` : cell,
     ),
+    ...(payload.event === 'action.opened' && payload.link
+      ? [`Open: ${payload.link}`]
+      : []),
     '',
     `Occurred at ${payload.occurredAt}`,
     '',

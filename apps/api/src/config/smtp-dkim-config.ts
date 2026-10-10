@@ -10,10 +10,6 @@ export const SMTP_DKIM_SETTINGS = [
 
 type SmtpDkimSettings = Pick<Env, (typeof SMTP_DKIM_SETTINGS)[number]>;
 
-export function smtpDkimEnabled(env: SmtpDkimSettings): boolean {
-  return SMTP_DKIM_SETTINGS.every((name) => Boolean(env[name]));
-}
-
 export function assertSmtpDkimConfiguration(env: SmtpDkimSettings): void {
   const missing = SMTP_DKIM_SETTINGS.filter((name) => !env[name]);
   if (missing.length > 0 && missing.length < SMTP_DKIM_SETTINGS.length) {

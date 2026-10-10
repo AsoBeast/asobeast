@@ -1,3 +1,4 @@
+import { RESET_PASSWORD_PATH } from '@asobeast/shared';
 import { RecoveryEmail } from '../../auth/emails/recovery-email';
 import { PREVIEW_ORIGIN } from './preview-origin';
 
@@ -6,7 +7,7 @@ export default function RecoveryPreview() {
     <RecoveryEmail
       origin={PREVIEW_ORIGIN}
       address="ada@example.com"
-      link={`${PREVIEW_ORIGIN}/reset-password?token=0123456789abcdef`}
+      link={`${PREVIEW_ORIGIN}${RESET_PASSWORD_PATH}?token=0123456789abcdef`}
     />
   );
 }

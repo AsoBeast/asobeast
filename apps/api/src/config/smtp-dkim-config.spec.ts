@@ -4,7 +4,6 @@ import { join } from 'node:path';
 import {
   assertSmtpDkimConfiguration,
   SMTP_DKIM_SETTINGS,
-  smtpDkimEnabled,
 } from './smtp-dkim-config';
 
 const keyDirectory = mkdtempSync(join(tmpdir(), 'smtp-dkim-'));
@@ -26,13 +25,11 @@ const unset = {
 describe('smtp dkim configuration', () => {
   afterAll(() => rmSync(keyDirectory, { recursive: true, force: true }));
 
-  it('is off when nothing is set', () => {
-    expect(smtpDkimEnabled(unset)).toBe(false);
+  it('accepts nothing set', () => {
     expect(() => assertSmtpDkimConfiguration(unset)).not.toThrow();
   });
 
-  it('is on when every setting is set and the key is readable', () => {
-    expect(smtpDkimEnabled(complete)).toBe(true);
+  it('accepts every setting with a readable key', () => {
     expect(() => assertSmtpDkimConfiguration(complete)).not.toThrow();
   });
 

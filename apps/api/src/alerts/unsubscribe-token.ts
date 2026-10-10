@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 
 const PURPOSE = 'email-alert-unsubscribe';
 
+export const UNSUBSCRIBE_TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+
 export interface UnsubscribeRecipient {
   alertId: string;
   email: string;
