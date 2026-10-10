@@ -3,6 +3,20 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.0](https://github.com/AsoBeast/asobeast/compare/v1.9.0...v1.10.0) (2026-10-10)
+
+
+### Features
+
+* **api:** send every email in a branded responsive layout ([#303](https://github.com/AsoBeast/asobeast/issues/303)) ([eca538d](https://github.com/AsoBeast/asobeast/commit/eca538d587541b92b9a390dde6dd43f001968b1f))
+
+
+### Bug Fixes
+
+* **jobs:** boot, serve and stop while redis is down ([#302](https://github.com/AsoBeast/asobeast/issues/302)) ([85ca64d](https://github.com/AsoBeast/asobeast/commit/85ca64d65cb4ce44c2d1fad09cc0611dd37f4977))
+* **jobs:** report queue connection errors in the json log ([#300](https://github.com/AsoBeast/asobeast/issues/300)) ([d0e3e6e](https://github.com/AsoBeast/asobeast/commit/d0e3e6ed47a14ab9a72d76ae399d5e68934fabd4))
+* **providers:** answer an on demand store call before the proxy gives up ([#299](https://github.com/AsoBeast/asobeast/issues/299)) ([b33eeac](https://github.com/AsoBeast/asobeast/commit/b33eeac3491214a7278205789b2513bfa7f957e0))
+
 ## [1.9.0](https://github.com/AsoBeast/asobeast/compare/v1.8.0...v1.9.0) (2026-10-10)
 
 
