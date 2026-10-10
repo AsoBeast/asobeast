@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ListingMarket } from "@asobeast/shared";
 import {
+  ALL_MARKETS,
   isRefreshable,
+  keywordScope,
   marketLabel,
   queryMarket,
   resolveLocalization,
@@ -95,5 +97,19 @@ describe("resolveLocalization", () => {
 
   it("reads the default listing when none is requested", () => {
     expect(resolveLocalization(null, markets, "pl")).toBeNull();
+  });
+});
+
+describe("keywordScope", () => {
+  it("narrows the numbers to the selected market", () => {
+    expect(keywordScope("de", "de")).toBe("de");
+  });
+
+  it("narrows to the home market when none is requested", () => {
+    expect(keywordScope("", "us")).toBe("us");
+  });
+
+  it("covers every market when all markets are requested", () => {
+    expect(keywordScope(ALL_MARKETS, "us")).toBeUndefined();
   });
 });

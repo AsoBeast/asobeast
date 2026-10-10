@@ -35,7 +35,7 @@ import {
   rankDistributionHistoryOptions,
   visibilityOptions,
 } from "@/lib/queries";
-import { queryMarket, resolveMarket } from "@/lib/market";
+import { keywordScope, queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
 import { marketParser, rangeParser } from "@/lib/search-params";
 
@@ -55,12 +55,8 @@ export default async function AppOverviewPage({
 
   const queryClient = getQueryClient();
   void queryClient.prefetchQuery(appSummaryOptions(id));
-  void queryClient.prefetchQuery(visibilityOptions(id, presetToRange("30d")));
   void queryClient.prefetchQuery(
     categoryRanksOptions(id, presetToRange(categoryRange)),
-  );
-  void queryClient.prefetchQuery(
-    rankDistributionHistoryOptions(id, presetToRange("30d")),
   );
   void queryClient.prefetchQuery(actionSummaryFor(id));
   void queryClient.prefetchQuery(
@@ -71,10 +67,15 @@ export default async function AppOverviewPage({
     queryClient.fetchQuery(appDetailOptions(id)),
     queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
   ]);
-  const market = resolveMarket(
-    marketParser.parseServerSide(sp.market),
-    markets,
-    app.country,
+  const requested = marketParser.parseServerSide(sp.market);
+  const market = resolveMarket(requested, markets, app.country);
+  const scope = keywordScope(requested, market);
+  void queryClient.prefetchQuery(appSummaryOptions(id, scope));
+  void queryClient.prefetchQuery(
+    visibilityOptions(id, presetToRange("30d"), scope),
+  );
+  void queryClient.prefetchQuery(
+    rankDistributionHistoryOptions(id, presetToRange("30d"), scope),
   );
   await queryClient.prefetchQuery(
     appListingOptions(id, queryMarket(market, app.country)),
@@ -96,7 +97,7 @@ export default async function AppOverviewPage({
           </Suspense>
           <div className="flex flex-wrap items-center gap-3">
             <Suspense fallback={<MarketSwitcherSkeleton />}>
-              <MarketSwitcher id={id} />
+              <MarketSwitcher id={id} allowAll />
             </Suspense>
             <PrintReportButton />
           </div>

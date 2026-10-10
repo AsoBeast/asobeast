@@ -7,6 +7,8 @@ import {
   VisibilityHistory,
 } from '@asobeast/shared';
 import { AnalyticsService } from './analytics.service';
+import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
+import { SummaryQueryDto } from './dto/summary-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 
 @ApiTags('analytics')
@@ -16,15 +18,18 @@ export class AnalyticsController {
 
   @Get(':id/summary')
   @ApiOperation({ summary: 'Dashboard summary for an app' })
-  getSummary(@Param('id') id: string): Promise<AppSummary> {
-    return this.analytics.summary(id);
+  getSummary(
+    @Param('id') id: string,
+    @Query() query: SummaryQueryDto,
+  ): Promise<AppSummary> {
+    return this.analytics.summary(id, query.country);
   }
 
   @Get(':id/visibility-history')
   @ApiOperation({ summary: 'Visibility score history series for an app' })
   getVisibilityHistory(
     @Param('id') id: string,
-    @Query() query: VisibilityHistoryQueryDto,
+    @Query() query: MarketHistoryQueryDto,
   ): Promise<VisibilityHistory> {
     return this.analytics.history(id, query);
   }
@@ -33,7 +38,7 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Rank distribution history bands for an app' })
   getRankDistributionHistory(
     @Param('id') id: string,
-    @Query() query: VisibilityHistoryQueryDto,
+    @Query() query: MarketHistoryQueryDto,
   ): Promise<RankDistributionHistory> {
     return this.analytics.rankDistributionHistory(id, query);
   }

@@ -4,10 +4,12 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import type { KeywordMover } from "@asobeast/shared";
 import { MoverList } from "@/components/rankings/MoverRow";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useMarket } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 
 export function MoversCard({ id }: { id: string }) {
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id));
+  const { scope } = useMarket(id);
+  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, scope));
   const rankingsHref = (mover: KeywordMover) =>
     `/apps/${id}/rankings?keywords=${mover.keywordId}`;
 

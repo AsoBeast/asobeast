@@ -235,23 +235,33 @@ export function groupAggregates(members: GroupMember[]): GroupAggregate[] {
 export async function referenceDate(
   prisma: PrismaService,
   appId: string,
+  country?: string,
 ): Promise<Date | null> {
   const latest = await prisma.keywordRanking.findFirst({
-    where: { appId },
+    where: { appId, ...(country ? { keyword: { country } } : {}) },
     orderBy: { date: 'desc' },
     select: { date: true },
   });
   return latest?.date ?? null;
 }
 
+export interface TrackedScope {
+  appId: string;
+  country?: string;
+}
+
 export async function trackedRows(
   prisma: PrismaService,
-  appId: string,
+  { appId, country }: TrackedScope,
   windowStart: Date | null,
   window: Date | null,
 ): Promise<TrackedRow[]> {
   return prisma.trackedKeyword.findMany({
-    where: { appId, active: true },
+    where: {
+      appId,
+      active: true,
+      ...(country ? { keyword: { country } } : {}),
+    },
     orderBy: { createdAt: 'asc' },
     select: {
       keywordId: true,
@@ -297,7 +307,7 @@ export async function sparklineRows(
     ? addDays(reference, -SPARKLINE_WINDOW_DAYS)
     : null;
   return {
-    rows: await trackedRows(prisma, appId, windowStart, reference),
+    rows: await trackedRows(prisma, { appId }, windowStart, reference),
     referenceDate: reference,
   };
 }

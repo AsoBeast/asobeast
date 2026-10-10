@@ -89,7 +89,12 @@ export class ActionSeriesReader {
     item: ActionItem,
     { from, to }: TrendWindow,
   ): Promise<SeriesBody> {
-    const rows = await trackedRows(this.prisma, item.scope.appId, from, to);
+    const rows = await trackedRows(
+      this.prisma,
+      { appId: item.scope.appId },
+      from,
+      to,
+    );
     const market = rows.filter(
       (row) => row.keyword.country === item.scope.country,
     );

@@ -2737,6 +2737,17 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2766,6 +2777,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           },
@@ -2813,6 +2835,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           },
