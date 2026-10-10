@@ -288,7 +288,7 @@ REDIS_PORT=6379
 REDIS_DB=0                   # bull queue db index; e2e tests use a separate index
 PORT=4000
 DEFAULT_COUNTRY=us
-CRON_DAILY=0 3 * * *        # daily pipeline start, UTC; batched alerts send after processing completes. Every CRON_ value REFUSES TO BOOT when it is not a cron pattern
+CRON_DAILY=0 3 * * *        # daily pipeline start, UTC; batched alerts send after processing completes. Every CRON_ value REFUSES TO BOOT when it is not a cron pattern, except an empty CRON_STORE_CANARY or CRON_STORE_STATUS, which removes that schedule
 CRON_SCORING=0 4 * * 0      # weekly scoring, UTC (Sunday)
 SCRAPE_ITUNES_RPM=15
 SCRAPE_GPLAY_RPM=10         # google play job-starts/minute; each Play score job fans out to 12-20 requests
@@ -303,7 +303,7 @@ PROXY_WORKER_MAX_CONCURRENCY=8      # ceiling for store worker concurrency once 
 CRON_PROXY_SYNC=0 2 * * *           # pool reconciliation against the provider, UTC. Never scheduled while PROXY_PROVIDER=none
 CRON_STORE_CANARY=0 2,8,14,20 * * * # parser canary, UTC, one hour before the daily run. Empty removes the schedule and switches the canary off
 STORE_STATUS_URL=                   # optional, opt-in outbound. Url of a published store status document polled for store breakage announcements. Empty means no request is ever made
-CRON_STORE_STATUS=17 * * * *        # published status poll, UTC, on an odd minute so installations do not all arrive together. Never scheduled while STORE_STATUS_URL is empty
+CRON_STORE_STATUS=17 * * * *        # published status poll, UTC, on an odd minute so installations do not all arrive together. Never scheduled while STORE_STATUS_URL is empty. Empty removes the schedule
 PROXY_RESIDENTIAL_URL=              # emergency gateway used only after a datacenter endpoint is blocked. Empty disables the fallback
 PROXY_RESIDENTIAL_USERNAME=         # gateway credentials
 PROXY_RESIDENTIAL_PASSWORD=         # password for PROXY_RESIDENTIAL_USERNAME
