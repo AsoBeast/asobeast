@@ -20,6 +20,7 @@ import { lookupLanguage, pageLanguage } from './app-store-languages';
 import { StoreAppNotFoundError, StoreRequestError } from './errors';
 import { listedInIphoneSearch } from './iphone-search';
 import { ownSubtitle } from './own-subtitle';
+import { Abortable, storeDeadline } from './store-deadline';
 import {
   ChartItem,
   NormalizedApp,
@@ -57,11 +58,12 @@ export class AppStoreProvider implements StoreProvider {
   ): Promise<NormalizedApp> {
     const raw = await this.withRetry(
       'getApp',
-      () =>
+      (deadline) =>
         this.lib.app({
           id: Number(storeAppId),
           country,
           ratings: true,
+          ...deadline,
           ...(localization ? { lang: lookupLanguage(localization) } : {}),
         }),
       storeAppId,
@@ -78,22 +80,22 @@ export class AppStoreProvider implements StoreProvider {
     country: string,
     num: number,
   ): Promise<SearchItem[]> {
-    const results = await this.withRetry('search', () =>
-      this.lib.search({ term, country, num }),
+    const results = await this.withRetry('search', (deadline) =>
+      this.lib.search({ term, country, num, ...deadline }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
 
   async suggest(term: string, country: string): Promise<SuggestItem[]> {
-    const results = await this.withRetry('suggest', () =>
-      this.lib.suggest({ term, country }),
+    const results = await this.withRetry('suggest', (deadline) =>
+      this.lib.suggest({ term, country, ...deadline }),
     );
     return results.map(({ term, priority }) => ({ term, priority }));
   }
 
   async similar(storeAppId: string, country: string): Promise<SearchItem[]> {
-    const results = await this.withRetry('similar', () =>
-      this.lib.similar({ id: Number(storeAppId), country }),
+    const results = await this.withRetry('similar', (deadline) =>
+      this.lib.similar({ id: Number(storeAppId), country, ...deadline }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
@@ -104,12 +106,13 @@ export class AppStoreProvider implements StoreProvider {
     num: number,
     country: string,
   ): Promise<ChartItem[]> {
-    const results = await this.withRetry('topCharts', () =>
+    const results = await this.withRetry('topCharts', (deadline) =>
       this.lib.list({
         collection: COLLECTION_CONSTANTS[collection],
         ...(genre === OVERALL_GENRE ? {} : { category: Number(genre) }),
         num: Math.min(num, CHART_MAX),
         country,
+        ...deadline,
       }),
     );
     return results.map((item) => ({
@@ -124,8 +127,13 @@ export class AppStoreProvider implements StoreProvider {
     page: number,
   ): Promise<ReviewResult[]> {
     const clampedPage = Math.min(Math.max(page, 1), 10);
-    const results = await this.withRetry('reviews', () =>
-      this.lib.reviews({ id: Number(storeAppId), country, page: clampedPage }),
+    const results = await this.withRetry('reviews', (deadline) =>
+      this.lib.reviews({
+        id: Number(storeAppId),
+        country,
+        page: clampedPage,
+        ...deadline,
+      }),
     );
     return results.map((item) => this.toReviewResult(item));
   }
@@ -145,8 +153,8 @@ export class AppStoreProvider implements StoreProvider {
   }
 
   async developerApps(devId: string, country: string): Promise<SearchItem[]> {
-    const results = await this.withRetry('developerApps', () =>
-      this.lib.developer({ devId: Number(devId), country }),
+    const results = await this.withRetry('developerApps', (deadline) =>
+      this.lib.developer({ devId: Number(devId), country, ...deadline }),
     );
     return results.map((item) => this.toSearchItem(item));
   }
@@ -156,7 +164,12 @@ export class AppStoreProvider implements StoreProvider {
     country: string,
   ): Promise<MarketAvailability> {
     try {
-      await this.lib.app({ id: Number(storeAppId), country, ratings: false });
+      await this.lib.app({
+        id: Number(storeAppId),
+        country,
+        ratings: false,
+        ...storeDeadline(),
+      });
       return 'available';
     } catch (error) {
       if (isMissingApp(error)) {
@@ -187,11 +200,12 @@ export class AppStoreProvider implements StoreProvider {
     localization?: AppStoreLocalization,
   ): Promise<SubtitleRead> {
     try {
-      const subtitle = await this.withRetry('page', async () =>
+      const subtitle = await this.withRetry('page', async (deadline) =>
         listingSubtitle(
           await this.lib.page({
             id: Number(storeAppId),
             country,
+            ...deadline,
             ...(localization ? { language: pageLanguage(localization) } : {}),
           }),
         ),
@@ -246,18 +260,20 @@ export class AppStoreProvider implements StoreProvider {
 
   private async withRetry<T>(
     method: string,
-    call: () => Promise<T>,
+    call: (deadline: Abortable) => Promise<T>,
     missingAppId?: string,
   ): Promise<T> {
+    const deadline = storeDeadline();
     let lastError: unknown;
     for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
       try {
-        return await call();
+        return await call(deadline);
       } catch (error) {
         lastError = error;
         const delay = RETRY_DELAYS_MS[attempt];
-        if (delay === undefined) break;
-        await sleep(delay);
+        if (delay === undefined || !(await pause(delay, deadline.signal))) {
+          break;
+        }
       }
     }
     if (missingAppId !== undefined && isMissingApp(lastError)) {
@@ -284,6 +300,16 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function pause(ms: number, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const settle = (elapsed: boolean) => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', abandon);
+      resolve(elapsed);
+    };
+    const abandon = () => settle(false);
+    const timer = setTimeout(() => settle(true), ms);
+    signal?.addEventListener('abort', abandon, { once: true });
+  });
 }

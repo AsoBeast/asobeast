@@ -2,6 +2,7 @@ import { BlockedError } from '@mradex77/google-play-scraper';
 import { ProxyOutcome, Store } from '@prisma/client';
 import { outcomeOf } from './egress/proxy-health.service';
 import { StoreRequestError } from './errors';
+import { storeDeadline, withinStoreDeadline } from './store-deadline';
 import { GooglePlayLib, GPLAY_COLLECTIONS } from './google-play.lib';
 import { GooglePlayProvider, googlePlayLanguage } from './google-play.provider';
 
@@ -567,6 +568,59 @@ describe('GooglePlayProvider', () => {
         developer: 'Acme',
         ratingAvg: 4.4,
       },
+    ]);
+  });
+});
+
+describe('GooglePlayProvider on demand deadline', () => {
+  it('answers a store error at the deadline instead of waiting for the scraper retries', async () => {
+    const app = jest.fn(
+      (options: { signal?: AbortSignal }) =>
+        new Promise<never>((_, reject) => {
+          options.signal?.addEventListener('abort', () =>
+            reject(options.signal?.reason as Error),
+          );
+        }),
+    );
+    const provider = new GooglePlayProvider(makeLib({ app }));
+
+    const failure = await withinStoreDeadline(
+      () =>
+        provider
+          .getApp('com.cyberlink.youcammakeup', 'tw')
+          .catch((error: unknown) => error),
+      50,
+    );
+
+    expect(failure).toBeInstanceOf(StoreRequestError);
+    expect((failure as StoreRequestError).userMessage).toBe(
+      'Google Play did not answer. Try again in a few minutes.',
+    );
+    expect((failure as StoreRequestError).causeMessage).toContain(
+      'TimeoutError',
+    );
+  });
+
+  it('hands the deadline to the scraper', async () => {
+    const suggest = jest.fn().mockResolvedValue(['habit tracker']);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    const signal = await withinStoreDeadline(async () => {
+      await provider.suggest('habit', 'us');
+      return storeDeadline().signal;
+    });
+
+    expect(suggest).toHaveBeenCalledWith(expect.objectContaining({ signal }));
+  });
+
+  it('sends no signal outside an on demand request', async () => {
+    const suggest = jest.fn().mockResolvedValue([]);
+    const provider = new GooglePlayProvider(makeLib({ suggest }));
+
+    await provider.suggest('habit', 'us');
+
+    expect(suggest.mock.calls[0]).toStrictEqual([
+      { term: 'habit', country: 'us', lang: 'en' },
     ]);
   });
 });

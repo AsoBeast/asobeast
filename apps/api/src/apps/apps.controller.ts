@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -30,6 +31,7 @@ import { LinkAppDto } from './dto/link-app.dto';
 import { ListingMarketQueryDto } from './dto/listing-market-query.dto';
 import { ListingQueryDto } from './dto/listing-query.dto';
 import { MarketAvailabilityQueryDto } from './dto/market-availability-query.dto';
+import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
 
 @ApiTags('apps')
 @Controller('apps')
@@ -42,6 +44,7 @@ export class AppsController {
 
   @Post()
   @ApiOperation({ summary: 'Import an app from a store URL' })
+  @UseInterceptors(StoreDeadlineInterceptor)
   @ApiUnprocessableEntityResponse({
     description:
       'The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads',
@@ -77,6 +80,7 @@ export class AppsController {
 
   @Get(':id/market-availability')
   @SpendsStoreCapacity()
+  @UseInterceptors(StoreDeadlineInterceptor)
   @ApiOperation({
     summary: 'Probe whether an app is published in a storefront',
   })
@@ -90,6 +94,7 @@ export class AppsController {
 
   @Post(':id/refresh')
   @SpendsStoreCapacity()
+  @UseInterceptors(StoreDeadlineInterceptor)
   @HttpCode(200)
   @ApiOperation({ summary: 'Refresh an app and return the snapshot diff' })
   refresh(

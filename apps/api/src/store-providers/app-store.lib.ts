@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import * as appStore from '@perttu/app-store-scraper';
 import { parseReviewsFeed, reviewsFeedUrl } from './app-store-reviews-feed';
 import { egressFetch } from './egress/egress';
+import { Abortable } from './store-deadline';
 
 const MISSING_APP_PATTERN = /^app not found/i;
 
@@ -52,7 +53,7 @@ export interface AppStoreListResult {
   title: string;
 }
 
-export interface AppStoreListOptions {
+export interface AppStoreListOptions extends Abortable {
   collection: string;
   category?: number;
   num: number;
@@ -70,40 +71,54 @@ export interface AppStoreReviewResult {
 }
 
 export interface AppStoreLib {
-  app(options: {
-    id: number;
-    country: string;
-    ratings: boolean;
-    lang?: string;
-  }): Promise<AppStoreAppResult>;
-  page(options: {
-    id: number;
-    country: string;
-    language?: string;
-  }): Promise<string>;
-  search(options: {
-    term: string;
-    country: string;
-    num: number;
-  }): Promise<AppStoreSearchResult[]>;
-  suggest(options: {
-    term: string;
-    country: string;
-  }): Promise<AppStoreSuggestResult[]>;
-  similar(options: {
-    id: number;
-    country: string;
-  }): Promise<AppStoreSearchResult[]>;
+  app(
+    options: {
+      id: number;
+      country: string;
+      ratings: boolean;
+      lang?: string;
+    } & Abortable,
+  ): Promise<AppStoreAppResult>;
+  page(
+    options: {
+      id: number;
+      country: string;
+      language?: string;
+    } & Abortable,
+  ): Promise<string>;
+  search(
+    options: {
+      term: string;
+      country: string;
+      num: number;
+    } & Abortable,
+  ): Promise<AppStoreSearchResult[]>;
+  suggest(
+    options: {
+      term: string;
+      country: string;
+    } & Abortable,
+  ): Promise<AppStoreSuggestResult[]>;
+  similar(
+    options: {
+      id: number;
+      country: string;
+    } & Abortable,
+  ): Promise<AppStoreSearchResult[]>;
   list(options: AppStoreListOptions): Promise<AppStoreListResult[]>;
-  reviews(options: {
-    id: number;
-    country: string;
-    page: number;
-  }): Promise<AppStoreReviewResult[]>;
-  developer(options: {
-    devId: number;
-    country: string;
-  }): Promise<AppStoreSearchResult[]>;
+  reviews(
+    options: {
+      id: number;
+      country: string;
+      page: number;
+    } & Abortable,
+  ): Promise<AppStoreReviewResult[]>;
+  developer(
+    options: {
+      devId: number;
+      country: string;
+    } & Abortable,
+  ): Promise<AppStoreSearchResult[]>;
 }
 
 export const APP_STORE_LIB = Symbol('APP_STORE_LIB');
@@ -113,9 +128,14 @@ const PAGE_USER_AGENT =
 
 const REVIEWS_USER_AGENT = 'iTunes/12.11 (Macintosh; OS X 10.15.7)';
 
-async function fetchText(url: string, userAgent: string): Promise<string> {
+async function fetchText(
+  url: string,
+  userAgent: string,
+  signal?: AbortSignal,
+): Promise<string> {
   const response = await egressFetch(url, {
     headers: { 'User-Agent': userAgent },
+    signal,
   });
   if (!response.ok) {
     throw new Error(`Request failed with status ${response.status}`);
@@ -129,24 +149,30 @@ const pageUrl = (id: number, country: string, language?: string): string => {
   return url.toString();
 };
 
+const withSignal = <T extends Abortable>({ signal, ...options }: T) => ({
+  ...options,
+  requestOptions: { signal },
+});
+
 export const appStoreLib: AppStoreLib = {
-  app: (options) => appStore.app(options),
-  page: ({ id, country, language }) =>
-    fetchText(pageUrl(id, country, language), PAGE_USER_AGENT),
+  app: (options) => appStore.app(withSignal(options)),
+  page: ({ id, country, language, signal }) =>
+    fetchText(pageUrl(id, country, language), PAGE_USER_AGENT, signal),
   search: (options) =>
-    appStore.search(options) as Promise<AppStoreSearchResult[]>,
-  suggest: (options) => appStore.suggest(options),
-  similar: (options) => appStore.similar(options),
+    appStore.search(withSignal(options)) as Promise<AppStoreSearchResult[]>,
+  suggest: (options) => appStore.suggest(withSignal(options)),
+  similar: (options) => appStore.similar(withSignal(options)),
   list: (options) =>
-    appStore.list(options as Parameters<typeof appStore.list>[0]),
-  reviews: async ({ id, country, page }) =>
+    appStore.list(withSignal(options) as Parameters<typeof appStore.list>[0]),
+  reviews: async ({ id, country, page, signal }) =>
     parseReviewsFeed(
       JSON.parse(
         await fetchText(
           reviewsFeedUrl(id, country, page, randomUUID()),
           REVIEWS_USER_AGENT,
+          signal,
         ),
       ),
     ),
-  developer: (options) => appStore.developer(options),
+  developer: (options) => appStore.developer(withSignal(options)),
 };

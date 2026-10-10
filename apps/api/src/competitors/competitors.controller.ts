@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -21,6 +22,7 @@ import {
 import { CompetitorsService } from './competitors.service';
 import { AddCompetitorDto } from './dto/add-competitor.dto';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
+import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
 
 @ApiTags('competitors')
 @Controller('apps/:id/competitors')
@@ -44,6 +46,7 @@ export class CompetitorsController {
 
   @Post()
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
+  @UseInterceptors(StoreDeadlineInterceptor)
   @ApiUnprocessableEntityResponse({
     description:
       'The listing is not available on iPhone, so it cannot rank in the iPhone App Store search that asobeast reads',
