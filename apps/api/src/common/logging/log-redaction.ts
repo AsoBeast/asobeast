@@ -27,6 +27,7 @@ const SECRET_SHAPES: [RegExp, string][] = [
     `${SESSION_COOKIE}=${REDACTED}`,
   ],
   [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${REDACTED}@`],
+  [/([?&]token=)[^&#\s"']+/g, `$1${REDACTED}`],
 ];
 
 const MAX_DEPTH = 8;
