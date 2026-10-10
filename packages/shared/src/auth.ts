@@ -4,6 +4,8 @@ export const API_TOKEN_PREFIX = 'asob_';
 
 export const UPGRADE_PATH = '/upgrade';
 
+export const SETTINGS_PATH = '/settings';
+
 export const INVITE_PATH = '/invite';
 
 export const VERIFY_PATH = '/verify';

@@ -47,7 +47,6 @@ describe('DowngradeWarner', () => {
       } as unknown as QuotaService,
       {
         notify,
-        appUrl: 'https://app.example.com',
       } as unknown as AccountNotifier,
       { get: () => billing } as unknown as ConfigService<Env, true>,
     );

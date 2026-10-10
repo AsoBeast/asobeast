@@ -92,7 +92,6 @@ describe('BillingWebhookService', () => {
     const enqueue = jest.fn().mockResolvedValue(undefined);
     const notifier = {
       notify,
-      appUrl: 'https://app.example.com',
     } as unknown as AccountNotifier;
 
     const prisma = {
