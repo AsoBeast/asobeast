@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 
 export const OUTAGE_WARN_INTERVAL_MS = 30_000;
 
-const reasonOf = (error: unknown): string => {
+export const reasonOf = (error: unknown): string => {
   if (!(error instanceof Error)) return String(error);
   const { code } = error as NodeJS.ErrnoException;
   return error.message || code || error.name;

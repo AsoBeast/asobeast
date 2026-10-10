@@ -6,26 +6,39 @@ import {
 } from '@nestjs/common';
 import { DiscoveryService } from '@nestjs/core';
 import { Queue, QueueBase, Worker } from 'bullmq';
-import { RedisOutageLog } from '../redis/redis-outage-log';
+import { reasonOf, RedisOutageLog } from '../redis/redis-outage-log';
 
 const UNREACHABLE_CODES = new Set([
+  'EADDRNOTAVAIL',
   'EAI_AGAIN',
+  'ECONNABORTED',
   'ECONNREFUSED',
   'ECONNRESET',
   'EHOSTUNREACH',
+  'ENETDOWN',
   'ENETUNREACH',
   'ENOTFOUND',
   'EPIPE',
   'ETIMEDOUT',
 ]);
 const CONNECTION_CLOSED = 'Connection is closed.';
+const RETRIES_EXHAUSTED = 'MaxRetriesPerRequestError';
 
 export function isRedisUnreachable(error: Error): boolean {
   const { code } = error as NodeJS.ErrnoException;
   return (
     (code !== undefined && UNREACHABLE_CODES.has(code)) ||
-    error.message === CONNECTION_CLOSED
+    error.message === CONNECTION_CLOSED ||
+    error.name === RETRIES_EXHAUSTED
   );
+}
+
+function createdWorker(host: WorkerHost<Worker>): Worker[] {
+  try {
+    return [host.worker];
+  } catch {
+    return [];
+  }
 }
 
 @Injectable()
@@ -55,7 +68,7 @@ export class QueueErrorReporter implements OnApplicationBootstrap {
         (instance): instance is WorkerHost<Worker> =>
           instance instanceof WorkerHost,
       )
-      .map((host) => host.worker);
+      .flatMap(createdWorker);
     return new Set<QueueBase>([...queues, ...workers]);
   }
 
@@ -64,6 +77,6 @@ export class QueueErrorReporter implements OnApplicationBootstrap {
       this.outage.report(error);
       return;
     }
-    this.logger.error(error.message, error.stack);
+    this.logger.error(reasonOf(error), error.stack);
   }
 }

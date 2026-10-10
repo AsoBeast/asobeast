@@ -148,10 +148,12 @@ describe('Redis outage (e2e)', () => {
     it('names the outage in the json log instead of printing raw stack traces', async () => {
       const printed = jest.spyOn(console, 'error').mockReturnValue();
       const warned = jest.spyOn(Logger.prototype, 'warn');
+      const failed = jest.spyOn(Logger.prototype, 'error');
 
       await new Promise((resolve) => setTimeout(resolve, RECONNECT_CYCLES_MS));
 
       expect(printed).not.toHaveBeenCalled();
+      expect(failed).not.toHaveBeenCalled();
       expect(
         warned.mock.calls.filter(([message]) =>
           String(message).startsWith(OUTAGE_WARNING),

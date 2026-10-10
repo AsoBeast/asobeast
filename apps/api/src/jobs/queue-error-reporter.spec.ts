@@ -26,6 +26,12 @@ class ProbeWorker extends WorkerHost {
   }
 }
 
+class UnstartedWorker extends WorkerHost {
+  process(): Promise<void> {
+    return Promise.resolve();
+  }
+}
+
 const coded = (code: string, message = '') =>
   Object.assign(new Error(message), { code });
 
@@ -37,6 +43,18 @@ describe('isRedisUnreachable', () => {
     ['a timed out connection', coded('ETIMEDOUT')],
     ['a reset connection', coded('ECONNRESET')],
     ['an unreachable host', coded('EHOSTUNREACH')],
+    ['a network that is down', coded('ENETDOWN')],
+    ['an aborted connection', coded('ECONNABORTED')],
+    ['an address that is not available', coded('EADDRNOTAVAIL')],
+    [
+      'an exhausted retry budget',
+      Object.assign(
+        new Error(
+          'Reached the max retries per request limit (which is 20). Refer to "maxRetriesPerRequest" option for details.',
+        ),
+        { name: 'MaxRetriesPerRequestError' },
+      ),
+    ],
     ['a closed connection', new Error('Connection is closed.')],
     [
       'a refusal on every address',
@@ -68,7 +86,13 @@ describe('QueueErrorReporter', () => {
   beforeEach(() => {
     queue = unconnected<Queue>(Queue);
     worker = unconnected<Worker>(Worker);
-    const instances = [queue, queue, new ProbeWorker(worker), new Date()];
+    const instances = [
+      queue,
+      queue,
+      new ProbeWorker(worker),
+      new UnstartedWorker(),
+      new Date(),
+    ];
     const discovery = {
       getProviders: () => instances.map((instance) => ({ instance })),
     } as unknown as DiscoveryService;
@@ -102,7 +126,7 @@ describe('QueueErrorReporter', () => {
     );
   });
 
-  it('listens once to a queue that several modules registered', () => {
+  it('listens once to a queue listed twice', () => {
     reporter.onApplicationBootstrap();
 
     expect(queue.listenerCount('error')).toBe(1);
@@ -118,5 +142,19 @@ describe('QueueErrorReporter', () => {
     expect(failed).toHaveBeenCalledWith(fault.message, fault.stack);
     expect(warned).not.toHaveBeenCalled();
     expect(printed).not.toHaveBeenCalled();
+  });
+
+  it('boots past a worker host whose worker was never created', () => {
+    expect(() => reporter.onApplicationBootstrap()).not.toThrow();
+    expect(worker.listenerCount('error')).toBe(1);
+  });
+
+  it('names a fault that carries no message by its code', () => {
+    reporter.onApplicationBootstrap();
+    const fault = coded('EPROTO');
+
+    worker.emit('error', fault);
+
+    expect(failed).toHaveBeenCalledWith('EPROTO', fault.stack);
   });
 });
