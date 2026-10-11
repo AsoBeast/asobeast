@@ -74,13 +74,13 @@ Both days are calculated over the keywords tracked today, each with the populari
 | --- | --- |
 | [Portfolio](/guides/portfolio) | Each app shows its visibility with the 7 day change and a 30 day sparkline. A group shows one blended number over the keywords of all its listings |
 | [Change impact](/guides/listing-changes#measure-the-impact-of-a-change) | Covers one market and only the keywords checked on both days, and weights both numbers by the popularity on the last check before the change, so only positions move it |
-| [Action Center](/guides/action-center) | `rank.investigate_drop`, `rank.investigate_unexplained_drop` and `market.improve_country` start from a fall in visibility |
+| [Action Center](/guides/action-center) | Calculated per market from the keywords checked each day, weighted by today's popularity. `rank.investigate_drop` and `rank.investigate_unexplained_drop` read a fall in it, after a listing change or without one, and `market.improve_country` reads the gap between a market and the home market |
 
 ## How should I read it?
 
 As a trend. Visibility depends on which keywords you track, so the useful comparison is the same app against itself over time.
 
-- **Adding keywords moves it.** A keyword you do not rank for yet lowers the number on the day you add it. Read the change after the next few checks rather than the step on the first day.
+- **Adding keywords moves it.** A keyword you do not rank for yet lowers the number on the day you add it and on every past day. One you already rank for lifts the 7 day change for a week and the 30 day change for a month, because the days before its first check count it as not found. Read each change once its earlier day comes after the keyword's first check.
 - **A rescore moves it.** The weekly scoring job can change popularity, which changes how much each position counts, without any position moving.
 - **Stores are not comparable.** App Store and Google Play popularity come from different evidence, so the same number means different things on each. See [App Store and Google Play](/concepts/stores).
 - **Apps are only comparable on the same keywords.** Two apps tracking different keywords measure different things.
