@@ -182,7 +182,7 @@ export function ChangeImpactCard({
           <h2 id={titleId}>How rankings moved after each change</h2>
         </CardTitle>
         <CardAction>
-          <VisibilityHelp note="Here both numbers weight each keyword by its popularity on the last check before the change, so only positions move them." />
+          <VisibilityHelp note="Here visibility covers only this market's keywords checked on both days, each weighted by its popularity on the last check before the change, so only positions move it." />
         </CardAction>
       </CardHeader>
       <CardContent>

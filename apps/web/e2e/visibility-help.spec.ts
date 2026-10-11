@@ -117,7 +117,7 @@ for (const view of ["cards", "table"]) {
   });
 }
 
-test("the change impact card says which popularity its visibility uses", async ({
+test("the change impact card says which keywords and popularity its visibility uses", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/changes");
@@ -128,6 +128,6 @@ test("the change impact card says which popularity its visibility uses", async (
   const help = await openHelp(page, card);
 
   await expect(help).toContainText(
-    "popularity on the last check before the change",
+    "Here visibility covers only this market's keywords checked on both days, each weighted by its popularity on the last check before the change, so only positions move it.",
   );
 });
