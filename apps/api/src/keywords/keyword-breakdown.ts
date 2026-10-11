@@ -25,6 +25,7 @@ export interface BreakdownSubject {
   isYou: boolean;
   position: number | null;
   listing: BreakdownListing | null;
+  keywordField?: readonly string[];
 }
 
 const SEARCHED_FIELDS: Record<
@@ -73,11 +74,19 @@ export function breakdownApp(
 ): KeywordBreakdownApp {
   const terms = breakdownTerms(keyword);
   const { listing } = subject;
-  const fields = listing
+  const listed = listing
     ? SEARCHED_FIELDS[store].map(({ field, read }) =>
         judgeField(field, read(listing), keyword, terms),
       )
     : [];
+  const entered = subject.keywordField ?? [];
+  const fields =
+    entered.length > 0
+      ? [
+          ...listed,
+          judgeField('keywordField', entered.join(','), keyword, terms),
+        ]
+      : listed;
   return {
     appId: subject.appId,
     name: subject.name,

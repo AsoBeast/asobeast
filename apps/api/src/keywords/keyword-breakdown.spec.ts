@@ -114,6 +114,40 @@ describe('breakdownApp', () => {
     expect(app.ratingCount).toBe(1200);
   });
 
+  it('reads the keyword field you entered after the listing fields', () => {
+    const app = breakdownApp(
+      subject({ keywordField: ['study', 'deep work', 'planner app'] }),
+      Store.APP_STORE,
+      'planner app',
+    );
+
+    expect(app.fields.map((field) => field.field)).toEqual([
+      'title',
+      'subtitle',
+      'keywordField',
+    ]);
+    expect(app.fields[2]).toEqual({
+      field: 'keywordField',
+      value: 'study,deep work,planner app',
+      phrase: true,
+      terms: ['planner', 'app'],
+    });
+    expect(app.matchedTerms).toBe(2);
+  });
+
+  it('leaves the keyword field out when none was entered', () => {
+    const app = breakdownApp(
+      subject({ keywordField: [] }),
+      Store.APP_STORE,
+      'focus',
+    );
+
+    expect(app.fields.map((field) => field.field)).toEqual([
+      'title',
+      'subtitle',
+    ]);
+  });
+
   it('reports an app with no captured listing as unread', () => {
     const app = breakdownApp(
       subject({ listing: null }),

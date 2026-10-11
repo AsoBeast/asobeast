@@ -39,7 +39,11 @@ const FIELD_LABELS: Partial<Record<MetadataField, string>> = {
   title: "Title",
   subtitle: "Subtitle",
   shortDescription: "Short description",
+  keywordField: "Keyword field",
 };
+
+const displayValue = (field: KeywordBreakdownField, value: string): string =>
+  field.field === "keywordField" ? value.replaceAll(",", ", ") : value;
 
 const STRENGTH_VARIANT: Record<
   MatchStrength,
@@ -73,17 +77,18 @@ function FieldRow({
         <span className="text-muted-foreground">Empty</span>
       ) : (
         <span>
-          {highlightTerms(field.value, field.terms).map((part, index) =>
-            part.match ? (
-              <mark
-                key={index}
-                className="rounded-sm bg-success-subtle font-medium text-foreground"
-              >
-                {part.text}
-              </mark>
-            ) : (
-              <span key={index}>{part.text}</span>
-            ),
+          {highlightTerms(displayValue(field, field.value), field.terms).map(
+            (part, index) =>
+              part.match ? (
+                <mark
+                  key={index}
+                  className="rounded-sm bg-success-subtle font-medium text-foreground"
+                >
+                  {part.text}
+                </mark>
+              ) : (
+                <span key={index}>{part.text}</span>
+              ),
           )}
         </span>
       )}
@@ -174,8 +179,8 @@ function BreakdownRows({
       </ul>
       <p className="text-xs text-muted-foreground">
         Search also reads fields no one outside the developer can see, such as
-        the App Store keyword field, so an app can rank without the words
-        showing here.
+        the App Store keyword field, so a competitor can rank without the words
+        showing here. Yours is shown when you have entered it.
       </p>
     </div>
   );

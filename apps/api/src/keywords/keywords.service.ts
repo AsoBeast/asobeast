@@ -193,7 +193,7 @@ export class KeywordsService {
       select: { id: true, name: true, iconUrl: true, country: true },
       orderBy: { createdAt: 'asc' },
     });
-    const [latest, listings] = await Promise.all([
+    const [latest, listings, keywordField] = await Promise.all([
       latestPositions(
         this.prisma,
         subjects.map((subject) => subject.id),
@@ -204,6 +204,7 @@ export class KeywordsService {
           this.breakdownListing(subject.id, subject.country, country),
         ),
       ),
+      this.enteredKeywordField(app, country),
     ]);
 
     return {
@@ -221,6 +222,7 @@ export class KeywordsService {
               isYou: subject.id === appId,
               position: latest.get(positionKey(subject.id, keywordId)) ?? null,
               listing: listings[index],
+              keywordField: subject.id === appId ? keywordField : [],
             },
             app.store,
             text,
@@ -228,6 +230,26 @@ export class KeywordsService {
         ),
       ),
     };
+  }
+
+  private async enteredKeywordField(
+    app: KeywordApp,
+    market: string,
+  ): Promise<string[]> {
+    if (app.store !== Store.APP_STORE || market !== app.country) {
+      return [];
+    }
+    const rows = await this.prisma.trackedKeyword.findMany({
+      where: {
+        appId: app.id,
+        ...inKeywordField,
+        active: true,
+        keyword: { is: { country: app.country } },
+      },
+      orderBy: { fieldOrder: 'asc' },
+      select: { keyword: { select: { text: true } } },
+    });
+    return rows.map((row) => row.keyword.text);
   }
 
   private async breakdownListing(

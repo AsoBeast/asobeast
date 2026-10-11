@@ -136,13 +136,16 @@ test("clicking a keyword opens why each app ranks for it", async ({ page }) => {
   const you = sheet.getByRole("listitem", { name: "Focus Timer" });
   await expect(you).toContainText("You");
   await expect(you).toContainText("Exact phrase");
-  await expect(you.locator("mark")).toHaveText(["Focus", "Timer"]);
+  await expect(you.locator("mark")).toHaveText(["Focus", "Timer", "timer"]);
+  await expect(you).toContainText("Keyword field");
+  await expect(you).toContainText("pomodoro, timer, planner");
   await expect(you).toContainText("2 of 2 keyword words in the listing");
 
   const rival = sheet.getByRole("listitem", { name: "Rival Focus" });
   await expect(rival).toContainText("1 of 2 words");
   await expect(rival.locator("mark")).toHaveText(["Focus"]);
   await expect(rival).toContainText("Empty");
+  await expect(rival).not.toContainText("Keyword field");
   await expect(rival).toContainText("4.2 rating from 310");
 
   await page.keyboard.press("Escape");

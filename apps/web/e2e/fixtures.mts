@@ -943,6 +943,12 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
             phrase: false,
             terms: [],
           },
+          {
+            field: "keywordField",
+            value: "pomodoro,timer,planner",
+            phrase: false,
+            terms: ["timer"],
+          },
         ],
         matchedTerms: 2,
         ratingAvg: 4.6,
