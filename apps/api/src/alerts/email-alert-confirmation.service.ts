@@ -14,6 +14,12 @@ import { MailerService } from './mailer.service';
 
 const NO_ORIGIN = 'WEB_PUBLIC_URL is not set, so the link has no host';
 
+interface PendingRecipient {
+  id: string;
+  email: string;
+  confirmationSentAt: Date | null;
+}
+
 function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -47,26 +53,71 @@ export class EmailAlertConfirmation {
   }
 
   async issue(
-    alert: { id: string; email: string },
+    alert: PendingRecipient,
     requestedBy: string,
     refund: ConfirmationRefund | null,
   ): Promise<boolean> {
     if (!refund) return false;
     const sentAt = new Date();
+    if (!(await this.reserve(alert, sentAt))) {
+      await refund();
+      return false;
+    }
     try {
       await this.send(alert, requestedBy, sentAt);
+      return true;
     } catch (error) {
+      await this.restore(alert, sentAt);
       await refund();
       this.logger.error(
         `confirmation email for alert ${alert.id} failed: ${reasonOf(error)}`,
       );
       return false;
     }
-    return this.record(alert, sentAt);
+  }
+
+  private async reserve(
+    alert: PendingRecipient,
+    sentAt: Date,
+  ): Promise<boolean> {
+    try {
+      const { count } = await this.prisma.emailAlert.updateMany({
+        where: {
+          id: alert.id,
+          email: alert.email,
+          confirmedAt: null,
+          unsubscribedAt: null,
+          confirmationSentAt: alert.confirmationSentAt,
+        },
+        data: { confirmationSentAt: sentAt },
+      });
+      if (count > 0) return true;
+      this.logger.error(
+        `confirmation email for alert ${alert.id} not sent: the alert changed before it went out`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `confirmation email for alert ${alert.id} not sent: ${reasonOf(error)}`,
+      );
+    }
+    return false;
+  }
+
+  private async restore(alert: PendingRecipient, sentAt: Date): Promise<void> {
+    try {
+      await this.prisma.emailAlert.updateMany({
+        where: { id: alert.id, confirmationSentAt: sentAt },
+        data: { confirmationSentAt: alert.confirmationSentAt },
+      });
+    } catch (error) {
+      this.logger.error(
+        `confirmation email for alert ${alert.id} kept a send time it never used: ${reasonOf(error)}`,
+      );
+    }
   }
 
   private async send(
-    alert: { id: string; email: string },
+    alert: PendingRecipient,
     requestedBy: string,
     sentAt: Date,
   ): Promise<void> {
@@ -90,24 +141,6 @@ export class EmailAlertConfirmation {
       ...email,
       secrets: [token],
     });
-  }
-
-  private async record(
-    alert: { id: string; email: string },
-    sentAt: Date,
-  ): Promise<boolean> {
-    try {
-      const { count } = await this.prisma.emailAlert.updateMany({
-        where: { id: alert.id, email: alert.email },
-        data: { confirmationSentAt: sentAt },
-      });
-      return count > 0;
-    } catch (error) {
-      this.logger.error(
-        `confirmation email for alert ${alert.id} was sent but not recorded: ${reasonOf(error)}`,
-      );
-      return false;
-    }
   }
 
   private async isVerifiedMember(address: string): Promise<boolean> {
