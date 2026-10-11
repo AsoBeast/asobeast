@@ -123,6 +123,7 @@ export interface EmailAlertItem {
   events: WebhookEvent[];
   active: boolean;
   confirmed?: boolean;
+  confirmationSent?: boolean;
   createdAt: string;
 }
 

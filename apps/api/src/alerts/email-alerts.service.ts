@@ -73,10 +73,8 @@ export class EmailAlertsService {
         confirmedAt,
       },
     });
-    if (!alert.confirmedAt) {
-      await this.confirmation.issue(alert, requestedBy, refund);
-    }
-    return toEmailAlertItem(alert);
+    if (alert.confirmedAt) return toEmailAlertItem(alert);
+    return this.askToConfirm(alert, requestedBy, refund);
   }
 
   async update(
@@ -108,10 +106,8 @@ export class EmailAlertsService {
       where: { id },
       data,
     });
-    if (data.confirmedAt === null) {
-      await this.confirmation.issue(alert, requestedBy, refund);
-    }
-    return toEmailAlertItem(alert);
+    if (data.confirmedAt !== null) return toEmailAlertItem(alert);
+    return this.askToConfirm(alert, requestedBy, refund);
   }
 
   async remove(id: string): Promise<void> {
@@ -148,6 +144,21 @@ export class EmailAlertsService {
     } catch {
       return { delivered: false, status: null };
     }
+  }
+
+  private async askToConfirm(
+    alert: EmailAlert,
+    requestedBy: string,
+    refund: ConfirmationRefund | null,
+  ): Promise<EmailAlertItem> {
+    return {
+      ...toEmailAlertItem(alert),
+      confirmationSent: await this.confirmation.issue(
+        alert,
+        requestedBy,
+        refund,
+      ),
+    };
   }
 
   private async find(id: string): Promise<EmailAlert> {

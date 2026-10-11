@@ -182,6 +182,7 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .expect(201);
 
     expect(alert.confirmed).toBe(false);
+    expect(alert.confirmationSent).toBe(false);
     expect(response.body as WebhookTestResult).toEqual({
       delivered: false,
       status: null,

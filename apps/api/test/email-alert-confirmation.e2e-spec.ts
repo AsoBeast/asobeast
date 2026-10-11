@@ -132,6 +132,33 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(alert.confirmed).toBe(false);
   });
 
+  it('says the confirmation email went out', async () => {
+    const alert = await addAlert(STRANGER);
+
+    expect(alert.confirmationSent).toBe(true);
+  });
+
+  it('says when the confirmation email could not be sent', async () => {
+    sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
+
+    const alert = await addAlert(STRANGER);
+
+    expect(alert.confirmed).toBe(false);
+    expect(alert.confirmationSent).toBe(false);
+  });
+
+  it('says whether the new address was asked to confirm', async () => {
+    const alert = await addAlert(STRANGER);
+    sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ email: 'new@example.net' })
+      .expect(200);
+
+    expect((patched.body as EmailAlertItem).confirmationSent).toBe(false);
+  });
+
   it('delivers to the recipient once they follow the link', async () => {
     const alert = await addAlert(STRANGER);
 
