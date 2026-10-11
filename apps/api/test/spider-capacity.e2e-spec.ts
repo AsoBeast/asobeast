@@ -98,7 +98,7 @@ describe('Keyword deep search capacity (e2e)', () => {
     expect(await queuedProbes()).toBe(queuedBefore);
   });
 
-  it('queues every probe behind the jobs of the daily run', async () => {
+  it('queues every probe as a prioritized job', async () => {
     await startSpider('seed').expect(202);
 
     const queue = appStoreQueue();
