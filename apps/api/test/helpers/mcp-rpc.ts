@@ -28,13 +28,13 @@ export function sseEnvelope(response: Response): Envelope {
 }
 
 export function mcpAs(app: INestApplication<App>, token: string) {
-  const send = (body: unknown) =>
+  const send = (body: object) =>
     request(app.getHttpServer())
       .post('/mcp')
       .set('Authorization', `Bearer ${token}`)
       .set('Accept', 'application/json, text/event-stream')
       .set('Content-Type', 'application/json')
-      .send(body as object);
+      .send(body);
 
   const rpc = (method: string, params: unknown = {}) =>
     send({ jsonrpc: '2.0', id: 1, method, params });
