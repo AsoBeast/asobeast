@@ -74,12 +74,12 @@ export class EmailVerificationService {
 
   private async refusalOf(
     email: string,
-    mailboxHadTrial: () => Promise<boolean>,
+    mailboxTaken: () => Promise<boolean>,
   ): Promise<TrialDecline | undefined> {
     if (isDisposableEmail(email)) {
       return this.decline(`an address on a disposable email domain: ${email}`);
     }
-    if (await mailboxHadTrial()) {
+    if (await mailboxTaken()) {
       return this.decline(`an address whose mailbox already had one: ${email}`);
     }
     return undefined;
