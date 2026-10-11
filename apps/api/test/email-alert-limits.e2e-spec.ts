@@ -193,6 +193,25 @@ describe('Email alert limits (e2e)', () => {
     ).toBeNull();
   });
 
+  it('gives the allowances back when the confirmation cannot be sent', async () => {
+    sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
+
+    await api
+      .post('/email-alerts')
+      .send({ email: 'victim@example.net', events: EVENTS })
+      .expect(201);
+
+    const redis = app.get(FailFastRedis).client;
+    const recipient = await redis.get(
+      allowanceKey(sha256('victim@example.net'), 'recipient'),
+    );
+    const workspace = await redis.get(
+      allowanceKey(DEFAULT_WORKSPACE_ID, 'workspace'),
+    );
+    expect(Number(recipient)).toBe(0);
+    expect(Number(workspace)).toBe(0);
+  });
+
   it('does not count a recipient the workspace already trusts', async () => {
     await prisma.user.updateMany({
       where: { email: OWNER.email },

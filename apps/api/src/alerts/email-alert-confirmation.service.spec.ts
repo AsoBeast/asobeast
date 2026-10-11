@@ -11,7 +11,7 @@ const SECRET = 's'.repeat(32);
 const ORIGIN = 'https://aso.example.com';
 
 const build = (mailer: Partial<MailerService>) => {
-  const update = jest.fn().mockResolvedValue({});
+  const updateMany = jest.fn().mockResolvedValue({ count: 1 });
   const findFirst = jest.fn().mockResolvedValue(null);
   const send = jest.fn().mockResolvedValue(undefined);
   const claim = jest.fn().mockResolvedValue(undefined);
@@ -19,13 +19,13 @@ const build = (mailer: Partial<MailerService>) => {
     { get: jest.fn(() => SECRET) } as unknown as ConfigService<Env, true>,
     { sendAccountMail: send, ...mailer } as MailerService,
     {
-      emailAlert: { update },
+      emailAlert: { updateMany },
       user: { findFirst },
     } as unknown as PrismaService,
     { claim } as unknown as ConfirmationMailLimiter,
     { require: jest.fn(() => 'ws_1') } as unknown as WorkspaceContext,
   );
-  return { service, update, findFirst, send, claim };
+  return { service, updateMany, findFirst, send, claim };
 };
 
 describe('EmailAlertConfirmation', () => {
@@ -95,8 +95,12 @@ describe('EmailAlertConfirmation', () => {
   });
 
   describe('issue', () => {
-    it('stamps the send, mails the link and keeps the token out of the log', async () => {
-      const { service, update, send } = build({
+    const refund = jest.fn().mockResolvedValue(undefined);
+
+    beforeEach(() => refund.mockClear());
+
+    it('mails the link, then stamps the send and keeps the token out of the log', async () => {
+      const { service, updateMany, send } = build({
         enabled: true,
         origin: ORIGIN,
       });
@@ -104,12 +108,14 @@ describe('EmailAlertConfirmation', () => {
       const delivered = await service.issue(
         { id: 'ea_1', email: 'ops@example.com' },
         'owner@example.com',
+        refund,
       );
 
       expect(delivered).toBe(true);
-      const [{ data }] = update.mock.calls[0] as [
-        { data: { confirmationSentAt: Date } },
+      const [{ where, data }] = updateMany.mock.calls[0] as [
+        { where: unknown; data: { confirmationSentAt: Date } },
       ];
+      expect(where).toEqual({ id: 'ea_1', email: 'ops@example.com' });
       const token = confirmationToken(SECRET, {
         alertId: 'ea_1',
         email: 'ops@example.com',
@@ -124,18 +130,45 @@ describe('EmailAlertConfirmation', () => {
         `${ORIGIN}/confirm-alert?alert=ea_1&token=${token}`,
       );
       expect(mail.secrets).toEqual([token]);
+      expect(send.mock.invocationCallOrder[0]).toBeLessThan(
+        updateMany.mock.invocationCallOrder[0],
+      );
+      expect(refund).not.toHaveBeenCalled();
     });
 
-    it('reports a mail that could not be sent instead of throwing', async () => {
-      const { service, send } = build({ enabled: true, origin: ORIGIN });
+    it('keeps the earlier link and gives the allowance back when the mail is not sent', async () => {
+      const { service, send, updateMany } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
       send.mockRejectedValue(new Error('smtp down'));
 
       expect(
         await service.issue(
           { id: 'ea_1', email: 'ops@example.com' },
           'owner@example.com',
+          refund,
         ),
       ).toBe(false);
+      expect(updateMany).not.toHaveBeenCalled();
+      expect(refund).toHaveBeenCalledTimes(1);
+    });
+
+    it('reports a send it could not record instead of throwing', async () => {
+      const { service, updateMany } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+      updateMany.mockRejectedValue(new Error('connection reset'));
+
+      expect(
+        await service.issue(
+          { id: 'ea_1', email: 'ops@example.com' },
+          'owner@example.com',
+          refund,
+        ),
+      ).toBe(false);
+      expect(refund).not.toHaveBeenCalled();
     });
   });
 });

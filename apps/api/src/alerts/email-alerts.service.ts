@@ -19,6 +19,7 @@ import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
 import { toEmailAlertItem } from './email-alerts.mapper';
 import { AlertMail } from './alert-mail';
+import type { ConfirmationRefund } from './confirmation-mail.limiter';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { MailerService } from './mailer.service';
 
@@ -56,9 +57,10 @@ export class EmailAlertsService {
     this.assertEnabled();
     await this.assertRoomForAnother();
     const confirmedAt = await this.confirmation.confirmationFor(dto.email);
+    let refund: ConfirmationRefund | null = null;
     if (!confirmedAt) {
       await this.assertRoomToWait();
-      await this.confirmation.allowMailTo(dto.email);
+      refund = await this.confirmation.allowMailTo(dto.email);
     }
     const alert = await this.prisma.emailAlert.create({
       data: {
@@ -68,8 +70,8 @@ export class EmailAlertsService {
         confirmedAt,
       },
     });
-    if (!alert.confirmedAt) {
-      await this.confirmation.issue(alert, requestedBy);
+    if (refund) {
+      await this.confirmation.issue(alert, requestedBy, refund);
     }
     return toEmailAlertItem(alert);
   }
@@ -80,6 +82,7 @@ export class EmailAlertsService {
     requestedBy: string,
   ): Promise<EmailAlertItem> {
     const data: Prisma.EmailAlertUpdateInput = {};
+    let refund: ConfirmationRefund | null = null;
     if (dto.email !== undefined) {
       data.email = dto.email;
       if (await this.changesAddress(id, dto.email)) {
@@ -87,7 +90,7 @@ export class EmailAlertsService {
         data.confirmationSentAt = null;
         if (!data.confirmedAt) {
           await this.assertRoomToWait(id);
-          await this.confirmation.allowMailTo(dto.email);
+          refund = await this.confirmation.allowMailTo(dto.email);
         }
       }
     }
@@ -102,8 +105,8 @@ export class EmailAlertsService {
       where: { id },
       data,
     });
-    if (data.confirmedAt === null) {
-      await this.confirmation.issue(alert, requestedBy);
+    if (refund) {
+      await this.confirmation.issue(alert, requestedBy, refund);
     }
     return toEmailAlertItem(alert);
   }
@@ -120,8 +123,8 @@ export class EmailAlertsService {
     if (alert.confirmedAt) {
       throw new ConflictException(ALREADY_CONFIRMED_MESSAGE);
     }
-    await this.confirmation.allowMailTo(alert.email);
-    if (!(await this.confirmation.issue(alert, requestedBy))) {
+    const refund = await this.confirmation.allowMailTo(alert.email);
+    if (!(await this.confirmation.issue(alert, requestedBy, refund))) {
       throw new ServiceUnavailableException(NOT_SENT_MESSAGE);
     }
   }

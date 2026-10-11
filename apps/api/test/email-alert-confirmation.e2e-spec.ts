@@ -226,6 +226,27 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(sentConfirmation().to).toBe(STRANGER);
   });
 
+  it('keeps the earlier link working when a resend cannot be sent', async () => {
+    const alert = await addAlert(STRANGER);
+    const sentAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    await prisma.emailAlert.update({
+      where: { id: alert.id },
+      data: { confirmationSentAt: sentAt },
+    });
+    sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
+
+    await api.post(`/email-alerts/${alert.id}/resend-confirmation`).expect(503);
+
+    await confirm(
+      alert,
+      confirmationToken(TEST_AUTH_SECRET, {
+        alertId: alert.id,
+        email: STRANGER,
+        sentAt,
+      }),
+    ).expect(204);
+  });
+
   it('does not resend to a recipient who already confirmed', async () => {
     const alert = await addAlert(STRANGER);
     await confirm(alert, tokenOf(sentConfirmation())).expect(204);

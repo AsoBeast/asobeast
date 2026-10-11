@@ -23,6 +23,17 @@ end
 return 0
 `;
 
+const REFUND_EVERY_ALLOWANCE = `
+for _, key in ipairs(KEYS) do
+  if redis.call('EXISTS', key) == 1 then
+    redis.call('DECR', key)
+  end
+end
+return 0
+`;
+
+export type ConfirmationRefund = () => Promise<void>;
+
 interface Allowance {
   label: string;
   scope: string;
@@ -38,7 +49,7 @@ export class ConfirmationMailLimiter {
     workspaceId: string,
     address: string,
     now = new Date(),
-  ): Promise<void> {
+  ): Promise<ConfirmationRefund> {
     const allowances: Allowance[] = [
       {
         label: 'workspace',
@@ -72,5 +83,13 @@ export class ConfirmationMailLimiter {
     if (spent) {
       throw new RequestThrottledError(resetSeconds, spent.reason);
     }
+    return () => this.refund(keys);
+  }
+
+  private async refund(keys: string[]): Promise<void> {
+    await this.redis.runOpen(
+      (client) => client.eval(REFUND_EVERY_ALLOWANCE, keys.length, ...keys),
+      null,
+    );
   }
 }

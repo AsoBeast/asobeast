@@ -6,8 +6,17 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { alertConfirmationEmail } from './emails/alert-confirmation-email';
 import { CONFIRMATION_DAYS, confirmationToken } from './confirmation-token';
-import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
+import {
+  ConfirmationMailLimiter,
+  type ConfirmationRefund,
+} from './confirmation-mail.limiter';
 import { MailerService } from './mailer.service';
+
+const NO_ORIGIN = 'WEB_PUBLIC_URL is not set, so the link has no host';
+
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 @Injectable()
 export class EmailAlertConfirmation {
@@ -32,7 +41,7 @@ export class EmailAlertConfirmation {
     return null;
   }
 
-  allowMailTo(address: string): Promise<void> {
+  allowMailTo(address: string): Promise<ConfirmationRefund> {
     return this.limiter.claim(
       this.workspace.require('a confirmation email'),
       address,
@@ -42,37 +51,61 @@ export class EmailAlertConfirmation {
   async issue(
     alert: { id: string; email: string },
     requestedBy: string,
+    refund: ConfirmationRefund,
   ): Promise<boolean> {
-    const origin = this.mailer.origin;
-    if (!origin) return false;
     const sentAt = new Date();
-    await this.prisma.emailAlert.update({
-      where: { id: alert.id },
-      data: { confirmationSentAt: sentAt },
-    });
+    try {
+      await this.send(alert, requestedBy, sentAt);
+    } catch (error) {
+      await refund();
+      this.logger.error(
+        `confirmation email to ${alert.email} failed: ${reasonOf(error)}`,
+      );
+      return false;
+    }
+    return this.record(alert, sentAt);
+  }
+
+  private async send(
+    alert: { id: string; email: string },
+    requestedBy: string,
+    sentAt: Date,
+  ): Promise<void> {
+    const origin = this.mailer.origin;
+    if (!origin) throw new Error(NO_ORIGIN);
     const token = confirmationToken(this.secret, {
       alertId: alert.id,
       email: alert.email,
       sentAt,
     });
+    const email = await alertConfirmationEmail({
+      origin,
+      address: alert.email,
+      requestedBy,
+      link: `${origin}${CONFIRM_ALERT_PATH}?alert=${encodeURIComponent(alert.id)}&token=${token}`,
+      days: CONFIRMATION_DAYS,
+    });
+    await this.mailer.sendAccountMail({
+      kind: 'alert-confirmation',
+      to: alert.email,
+      ...email,
+      secrets: [token],
+    });
+  }
+
+  private async record(
+    alert: { id: string; email: string },
+    sentAt: Date,
+  ): Promise<boolean> {
     try {
-      const email = await alertConfirmationEmail({
-        origin,
-        address: alert.email,
-        requestedBy,
-        link: `${origin}${CONFIRM_ALERT_PATH}?alert=${encodeURIComponent(alert.id)}&token=${token}`,
-        days: CONFIRMATION_DAYS,
+      const { count } = await this.prisma.emailAlert.updateMany({
+        where: { id: alert.id, email: alert.email },
+        data: { confirmationSentAt: sentAt },
       });
-      await this.mailer.sendAccountMail({
-        kind: 'alert-confirmation',
-        to: alert.email,
-        ...email,
-        secrets: [token],
-      });
-      return true;
+      return count > 0;
     } catch (error) {
       this.logger.error(
-        `confirmation email to ${alert.email} failed: ${error instanceof Error ? error.message : String(error)}`,
+        `confirmation email for alert ${alert.id} was sent but not recorded: ${reasonOf(error)}`,
       );
       return false;
     }

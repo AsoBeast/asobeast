@@ -28,9 +28,27 @@ describe('ConfirmationMailLimiter', () => {
   });
 
   it('lets the first confirmation of the day through', async () => {
-    await expect(
-      limiter.claim('ws_1', 'a@example.net', NOW),
-    ).resolves.toBeUndefined();
+    await expect(limiter.claim('ws_1', 'a@example.net', NOW)).resolves.toEqual(
+      expect.any(Function),
+    );
+  });
+
+  it('gives back exactly the allowances it counted', async () => {
+    const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
+    const { keys } = claimed();
+
+    await refund();
+
+    const [, count, ...refunded] = evaluate.mock.calls[1];
+    expect(count).toBe(2);
+    expect(refunded).toEqual(keys);
+  });
+
+  it('keeps a refund from failing while redis is unreachable', async () => {
+    const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
+    evaluate.mockRejectedValue(new Error('connect ECONNREFUSED'));
+
+    await expect(refund()).resolves.toBeUndefined();
   });
 
   it('checks the workspace allowance before the recipient in one atomic step', async () => {
