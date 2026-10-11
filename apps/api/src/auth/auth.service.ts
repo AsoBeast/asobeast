@@ -21,6 +21,7 @@ import {
   type AuthUser,
 } from '@asobeast/shared';
 import { Prisma, type ApiToken, type User } from '@prisma/client';
+import { revokeApiTokens } from './api-token-revocation';
 import type { AccountUser, ResolvedToken, SessionClaims } from './auth.types';
 import { isPlatformOperator } from './platform-operator';
 import type { CreateTokenDto } from './dto/create-token.dto';
@@ -179,13 +180,15 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid current password');
     }
-    const updated = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash: await argon2.hash(dto.next),
-        sessionVersion: { increment: 1 },
-      },
-      include: { workspace: true },
+    const passwordHash = await argon2.hash(dto.next);
+    const updated = await this.prisma.withTransaction(async (tx) => {
+      const row = await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, sessionVersion: { increment: 1 } },
+        include: { workspace: true },
+      });
+      await revokeApiTokens(tx, user.id);
+      return row;
     });
     return { user: updated, token: await this.sign(updated) };
   }

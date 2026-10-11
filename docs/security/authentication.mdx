@@ -68,7 +68,7 @@ Rotating `AUTH_SECRET` invalidates every existing session, so everyone is signed
 
 ## Rotate a password
 
-Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost.
+Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost. The same write deletes every personal API token the account holds, because a token minted during a session somebody else briefly held would otherwise keep working. Mint the tokens you still need again from **Settings** afterwards.
 
 ## How are sign in attempts throttled?
 
@@ -88,7 +88,7 @@ Behind a reverse proxy, `TRUST_PROXY` decides what the client address is. Left a
 
 ## Recover a forgotten password
 
-Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open. See [Account recovery](/security/account-recovery).
+Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open and revokes every personal API token it held. See [Account recovery](/security/account-recovery).
 
 ## How is a request authorized?
 

@@ -6,7 +6,11 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { ApiErrorEnvelope, PASSWORD_RULE } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  ApiTokenCreated,
+  PASSWORD_RULE,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -27,6 +31,7 @@ interface SentMail {
   text: string;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
 const PASSWORD = 'supersecret1';
 const NEW_PASSWORD = 'brandnewsecret2';
 const KNOWN = 'owner@example.com';
@@ -72,6 +77,19 @@ describe('Account recovery for a customer who forgot their password', () => {
     request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: KNOWN, password });
+
+  const mintToken = async (password: string): Promise<string> => {
+    const signedIn = await signIn(password).expect(200);
+    const cookie = (
+      signedIn.headers['set-cookie'] as unknown as string[]
+    )[0].split(';')[0];
+    const minted = await request(app.getHttpServer())
+      .post('/auth/tokens')
+      .set('Cookie', cookie)
+      .send({ name: 'agent', scope: 'write' })
+      .expect(201);
+    return (minted.body as ApiTokenCreated).token;
+  };
 
   const issuedToken = async (): Promise<string> => {
     const before = sent.length;
@@ -128,6 +146,10 @@ describe('Account recovery for a customer who forgot their password', () => {
     );
     await prisma.workspace.deleteMany({
       where: { id: { not: DEFAULT_WORKSPACE_ID } },
+    });
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { plan: 'free', planExpiresAt: null },
     });
     await register(KNOWN).expect(201);
     sent.length = 0;
@@ -330,6 +352,41 @@ describe('Account recovery for a customer who forgot their password', () => {
       .get('/auth/me')
       .set('Cookie', cookie)
       .expect(401);
+  });
+
+  it('revokes every personal api token the account held', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { plan: 'indie', planExpiresAt: new Date(Date.now() + DAY_MS) },
+    });
+    const heldByAttacker = await mintToken(PASSWORD);
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${heldByAttacker}`)
+      .expect(200);
+
+    await reset(await issuedToken()).expect(204);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${heldByAttacker}`)
+      .expect(401);
+    await expect(prisma.apiToken.count()).resolves.toBe(0);
+  });
+
+  it('lets the recovered account mint a token that works', async () => {
+    await prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { plan: 'indie', planExpiresAt: new Date(Date.now() + DAY_MS) },
+    });
+    await reset(await issuedToken()).expect(204);
+
+    const fresh = await mintToken(NEW_PASSWORD);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${fresh}`)
+      .expect(200);
   });
 
   it('refuses a new password shorter than the account rules allow', async () => {

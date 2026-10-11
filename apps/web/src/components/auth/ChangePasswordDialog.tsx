@@ -50,7 +50,9 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
     mutationFn: () => changePassword(current, next),
     onSuccess: () => {
       invalidateAuth(queryClient);
-      toast.success("Password changed. Other sessions were signed out.");
+      toast.success(
+        "Password changed. Other sessions were signed out and API tokens revoked.",
+      );
       reset(false);
     },
     onError: (err) =>
@@ -77,7 +79,8 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
           <DialogHeader>
             <DialogTitle>Change password</DialogTitle>
             <DialogDescription>
-              Changing your password signs out every other session.
+              Changing your password signs out every other session and revokes
+              every API token.
             </DialogDescription>
           </DialogHeader>
           <DialogBody>

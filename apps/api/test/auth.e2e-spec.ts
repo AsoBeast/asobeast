@@ -400,6 +400,40 @@ describe('Auth (enabled, self-hosted)', () => {
       .expect(200);
   });
 
+  it('revokes every personal api token when the password is changed', async () => {
+    const register = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'rotate@example.com', password: 'supersecret1' })
+      .expect(201);
+    const cookie = sessionCookie(register);
+    const minted = await request(app.getHttpServer())
+      .post('/auth/tokens')
+      .set('Cookie', cookie)
+      .send({ name: 'agent', scope: 'write' })
+      .expect(201);
+    const { token } = minted.body as ApiTokenCreated;
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const changed = await request(app.getHttpServer())
+      .post('/auth/password')
+      .set('Cookie', cookie)
+      .send({ current: 'supersecret1', next: 'brandnewsecret1' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(401);
+    const remaining = await request(app.getHttpServer())
+      .get('/auth/tokens')
+      .set('Cookie', sessionCookie(changed))
+      .expect(200);
+    expect(remaining.body).toEqual([]);
+  });
+
   it('refuses to register with a whitespace-only password', async () => {
     const refused = await request(app.getHttpServer())
       .post('/auth/register')

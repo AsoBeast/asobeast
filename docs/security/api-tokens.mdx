@@ -48,6 +48,8 @@ The path matters. `/api/backend/*` on the web origin is the same proxy the brows
 
 Delete it from the same card. Revocation is immediate: the next request carrying that token fails authentication.
 
+Changing your password, or recovering a forgotten one, revokes every token the account holds at once. Mint the tokens you still need again afterwards.
+
 Rate limits count per workspace rather than per token, so a second token adds no capacity and revoking one does not free any. See [Rate limits and quotas](/api-reference/rate-limits).
 
 Revoke rather than rotate `AUTH_SECRET` when a single token leaks. Rotating the secret signs out every browser session and does not affect tokens at all, because tokens are hashes rather than signed values.

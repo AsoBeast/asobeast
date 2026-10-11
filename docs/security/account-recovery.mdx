@@ -15,7 +15,7 @@ Recovery needs a mail transport and a public web address, because the message ca
 1. The sign in card links to **Forgot password?**, which asks for an email address.
 2. asobeast emails a single use link to that address when it belongs to an account.
 3. Opening the link asks for a new password and sets it.
-4. Every session that account had open is signed out, including the attacker's if the password was the reason for the recovery.
+4. Every session that account had open is signed out, including the attacker's if the password was the reason for the recovery. Every personal API token the account held is revoked in the same write, so a token minted during that session stops working too. Mint the ones you still need again from **Settings**.
 
 The link expires one hour after it is minted. Asking for another link retires the previous one.
 
