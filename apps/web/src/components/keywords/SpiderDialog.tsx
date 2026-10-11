@@ -26,6 +26,7 @@ import {
   spiderOptions,
 } from "@/lib/queries";
 import { spiderTermParser } from "@/lib/search-params";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const PROBES_TOTAL = 27;
 
@@ -70,6 +71,8 @@ export function SpiderDialog({
       ),
   });
 
+  const startOnce = useSingleFlight(start);
+
   const track = useMutation({
     mutationFn: (text: string) => addKeywords(appId, [text], country),
     onSuccess: (_data, text) => {
@@ -89,7 +92,7 @@ export function SpiderDialog({
     if (value.length < 2) {
       return;
     }
-    start.mutate(value);
+    startOnce(value);
   }
 
   const probesDone = status.data?.probesDone ?? 0;
