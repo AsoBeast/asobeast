@@ -221,4 +221,38 @@ describe('CollectionEligibility', () => {
       expect(trackedFindMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('for a single workspace', () => {
+    it('admits an entitled workspace', async () => {
+      expect(await build([workspace()]).forWorkspace('ws_a', NOW)).toBe(true);
+    });
+
+    it('admits a workspace over its keyword limit, which only judges keywords', async () => {
+      const service = build([workspace({ overLimitSince: PAST_GRACE })]);
+
+      expect(await service.forWorkspace('ws_a', NOW)).toBe(true);
+    });
+
+    it('refuses a suspended workspace', async () => {
+      const service = build([workspace({ suspendedAt: new Date() })]);
+
+      expect(await service.forWorkspace('ws_a', NOW)).toBe(false);
+    });
+
+    it('refuses a workspace whose plan has lapsed while billing is on', async () => {
+      const service = build([workspace({ plan: 'free' })]);
+
+      expect(await service.forWorkspace('ws_a', NOW)).toBe(false);
+    });
+
+    it('admits a workspace without a plan on a self-hosted instance', async () => {
+      const service = build([workspace({ plan: 'free' })], false);
+
+      expect(await service.forWorkspace('ws_a', NOW)).toBe(true);
+    });
+
+    it('refuses a workspace that no longer exists', async () => {
+      expect(await build([]).forWorkspace('ws_gone', NOW)).toBe(false);
+    });
+  });
 });

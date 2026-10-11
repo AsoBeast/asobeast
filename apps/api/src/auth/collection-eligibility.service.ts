@@ -5,11 +5,14 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { applyKeywordLimit } from '../jobs/over-limit';
 import { PrismaService } from '../prisma/prisma.service';
-import { isEntitled } from './entitlement';
+import { isEntitled, type WorkspaceEntitlement } from './entitlement';
 import { QuotaService } from './quota.service';
 
 const ROSTER_JUSTIFICATION =
   'one shared search serves many workspaces, and each must be judged before its own rows are written';
+
+const QUEUED_WORK_JUSTIFICATION =
+  'queued work is judged against the plan in force when it runs, not when it was queued';
 
 const COVERAGE_CONCURRENCY = 4;
 
@@ -42,13 +45,11 @@ export class CollectionEligibility {
       ROSTER_JUSTIFICATION,
       () => this.rosterOf(ids),
     );
-    const metered = this.config.get('BILLING_ENABLED', { infer: true });
 
     const eligible = new Set<string>();
     const metering: MeteredWorkspace[] = [];
     for (const row of rows) {
-      if (row.suspendedAt !== null) continue;
-      if (metered && !isEntitled(row, now)) continue;
+      if (!this.mayCollect(row, now)) continue;
       if (row.overLimitSince === null) {
         eligible.add(row.id);
         continue;
@@ -73,6 +74,26 @@ export class CollectionEligibility {
       );
     }
     return eligible;
+  }
+
+  async forWorkspace(workspaceId: string, now = new Date()): Promise<boolean> {
+    const [row] =
+      await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
+        QUEUED_WORK_JUSTIFICATION,
+        () => this.rosterOf([workspaceId]),
+      );
+    return row !== undefined && this.mayCollect(row, now);
+  }
+
+  private mayCollect(
+    row: WorkspaceEntitlement & { suspendedAt: Date | null },
+    now: Date,
+  ): boolean {
+    if (row.suspendedAt !== null) return false;
+    return (
+      !this.config.get('BILLING_ENABLED', { infer: true }) ||
+      isEntitled(row, now)
+    );
   }
 
   private covers(

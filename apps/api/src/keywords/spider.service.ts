@@ -15,6 +15,7 @@ import {
   spiderJobId,
   utcDateKey,
 } from '../jobs/jobs.types';
+import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
@@ -30,6 +31,7 @@ export class SpiderService {
     @InjectQueue(QUEUES.APP_STORE) private readonly appStoreQueue: Queue,
     @InjectQueue(QUEUES.GPLAY) private readonly gplayQueue: Queue,
     private readonly workspace: WorkspaceContext,
+    private readonly eligibility: CollectionEligibility,
   ) {}
 
   async startSpider(
@@ -103,6 +105,9 @@ export class SpiderService {
 
   async runSpiderProbe(payload: SpiderProbePayload): Promise<void> {
     const { appId, term, probe } = payload;
+    if (!(await this.eligibility.forWorkspace(payload.workspaceId))) {
+      return;
+    }
     const app = await ensureApp(this.prisma, appId);
     const country = payload.country ?? app.country;
     if (!isStorefront(app.store, country)) {

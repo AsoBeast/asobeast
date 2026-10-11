@@ -1,12 +1,13 @@
 import './helpers/enable-billing';
 import { getQueueToken } from '@nestjs/bullmq';
-import { Store } from '@prisma/client';
+import { Prisma, Store } from '@prisma/client';
 import { Queue } from 'bullmq';
 import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
 import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES, utcDateKey } from '../src/jobs/jobs.types';
 import { SPIDER_PROBES } from '../src/keywords/spider';
+import { SpiderService } from '../src/keywords/spider.service';
 import {
   CapacityHarness,
   OwnerAgent,
@@ -14,6 +15,7 @@ import {
   startCapacityHarness,
   stopCapacityHarness,
 } from './helpers/capacity-harness';
+import { asWorkspace } from './helpers/tenancy';
 
 const SPIDER_LIMIT = PLAN_LIMITS.indie.onDemand?.spider.limit ?? 0;
 
@@ -121,5 +123,50 @@ describe('Keyword deep search capacity (e2e)', () => {
     consume.mockRestore();
 
     expect(calls).toBe(0);
+  });
+
+  describe('a probe that runs after the plan lapsed', () => {
+    const lapse = (data: Prisma.WorkspaceUpdateInput) =>
+      harness.prisma.workspace.update({
+        where: { id: DEFAULT_WORKSPACE_ID },
+        data,
+      });
+
+    const runProbe = () =>
+      asWorkspace(harness.app, () =>
+        harness.app.get(SpiderService).runSpiderProbe({
+          appId,
+          term: 'lapsing',
+          country: 'us',
+          probe: 'a',
+          workspaceId: DEFAULT_WORKSPACE_ID,
+        }),
+      );
+
+    it('stores nothing once the plan has expired', async () => {
+      await startSpider('lapsing').expect(202);
+      await lapse({ plan: 'free', planExpiresAt: null, trialEndsAt: null });
+
+      await runProbe();
+
+      expect(await harness.prisma.suggestProbe.count()).toBe(0);
+    });
+
+    it('stores nothing once the workspace is suspended', async () => {
+      await startSpider('lapsing').expect(202);
+      await lapse({ suspendedAt: new Date() });
+
+      await runProbe();
+
+      expect(await harness.prisma.suggestProbe.count()).toBe(0);
+    });
+
+    it('stores the probe while the plan is in force', async () => {
+      await startSpider('lapsing').expect(202);
+
+      await runProbe();
+
+      expect(await harness.prisma.suggestProbe.count()).toBe(1);
+    });
   });
 });
