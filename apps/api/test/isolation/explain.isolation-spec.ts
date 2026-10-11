@@ -9,6 +9,8 @@ const DEFEND_EVIDENCE = {
   observedDays: 3,
 };
 
+const STRANGER_ANSWER_MS = 2_000;
+
 describe('Action explanation isolation', () => {
   let fixture: IsolationFixture;
   let finish: (completion: AiCompletion) => void;
@@ -43,13 +45,23 @@ describe('Action explanation isolation', () => {
     const stranger = fixture.b.agent
       .post(`/actions/${fixture.a.actionId}/explain`)
       .then((response) => response);
-    await new Promise((resolve) => setTimeout(resolve, 200));
-    finish(aiCompletion({ explanation: 'Private to ws_iso_a.' }));
+    try {
+      const strangerResult = await Promise.race([
+        stranger,
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error('The other workspace was kept waiting')),
+            STRANGER_ANSWER_MS,
+          ),
+        ),
+      ]);
+      expect(strangerResult.status).toBe(404);
+      expect(JSON.stringify(strangerResult.body)).not.toContain('Private');
+    } finally {
+      finish(aiCompletion({ explanation: 'Private to ws_iso_a.' }));
+    }
 
-    const [ownerResult, strangerResult] = await Promise.all([owner, stranger]);
-
-    expect(strangerResult.status).toBe(404);
-    expect(JSON.stringify(strangerResult.body)).not.toContain('Private');
+    const ownerResult = await owner;
     expect(ownerResult.status).toBe(200);
     expect(ownerResult.body).toMatchObject({
       explanation: 'Private to ws_iso_a.',
