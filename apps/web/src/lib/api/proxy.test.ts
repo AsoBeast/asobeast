@@ -1,5 +1,7 @@
-import { REQUEST_BODY_LIMIT_BYTES } from "@asobeast/shared";
-import type { ApiErrorEnvelope } from "@asobeast/shared";
+import {
+  REQUEST_BODY_LIMIT_BYTES,
+  type ApiErrorEnvelope,
+} from "@asobeast/shared";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -549,6 +551,22 @@ describe("proxyToApi webhook delivery", () => {
 
     expect(sentBody()).toEqual(new TextEncoder().encode(payload));
   });
+
+  it("forwards bytes that are not valid text unchanged", async () => {
+    stubFetch(async () => Response.json({ received: true }));
+    const { proxyToApi } = await loadProxy();
+    const payload = new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0xff, 0x7d]);
+
+    await proxyToApi(
+      request("/api/backend/billing/webhook", {
+        method: "POST",
+        body: payload,
+      }),
+      ["billing", "webhook"],
+    );
+
+    expect(sentBody()).toEqual(payload);
+  });
 });
 
 describe("proxyToApi request body limit", () => {
@@ -653,6 +671,49 @@ describe("proxyToApi request body limit", () => {
 
     expect(response.status).toBe(200);
     expect(sentBody().byteLength).toBe(REQUEST_BODY_LIMIT_BYTES);
+  });
+
+  it("forwards a chunked body of exactly the limit", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const remaining = [
+      ...Array.from(
+        { length: Math.floor(REQUEST_BODY_LIMIT_BYTES / CHUNK_BYTES) },
+        () => CHUNK_BYTES,
+      ),
+      REQUEST_BODY_LIMIT_BYTES % CHUNK_BYTES,
+    ].filter((size) => size > 0);
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        const size = remaining.shift();
+        if (size === undefined) controller.close();
+        else controller.enqueue(new Uint8Array(size));
+      },
+    });
+
+    const response = await proxyToApi(streamedRequest(stream), ["apps"]);
+
+    expect(response.status).toBe(200);
+    expect(sentBody().byteLength).toBe(REQUEST_BODY_LIMIT_BYTES);
+  });
+
+  it("forwards nothing when the body fails mid stream", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const failure = new Error("client hung up");
+    let pulled = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled > 1) controller.error(failure);
+        else controller.enqueue(new Uint8Array(CHUNK_BYTES));
+      },
+    });
+
+    await expect(proxyToApi(streamedRequest(stream), ["apps"])).rejects.toBe(
+      failure,
+    );
+    expect(fetchMock()).not.toHaveBeenCalled();
   });
 
   it("refuses a body one byte over the limit", async () => {
