@@ -13,7 +13,6 @@ import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
   CardContent,
   CardDescription,
   CardHeader,
@@ -41,6 +40,11 @@ import {
 } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
+import {
+  CollapseToggle,
+  CollapsibleCard,
+  CollapsibleContent,
+} from "./CollapsibleSection";
 import { discoveryColumns } from "./discovery-columns";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 
@@ -176,7 +180,7 @@ export function DiscoveryPanel({ id }: { id: string }) {
   const storeName = storeLabel(detail.store);
 
   return (
-    <Card>
+    <CollapsibleCard section="discovery">
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <CardDescription>Discovery</CardDescription>
@@ -185,24 +189,29 @@ export function DiscoveryPanel({ id }: { id: string }) {
             <Badge variant="secondary">{storeName}</Badge>
           </div>
         </div>
-        <Tabs
-          value={String(days)}
-          onValueChange={(next) => void setDays(Number(next) as typeof days)}
-        >
-          <TabsList>
-            {DISCOVERY_WINDOWS.map((window) => (
-              <TabsTrigger key={window} value={String(window)}>
-                {window}d
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex items-center gap-2">
+          <Tabs
+            value={String(days)}
+            onValueChange={(next) => void setDays(Number(next) as typeof days)}
+          >
+            <TabsList>
+              {DISCOVERY_WINDOWS.map((window) => (
+                <TabsTrigger key={window} value={String(window)}>
+                  {window}d
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <CollapseToggle label="discovery" />
+        </div>
       </CardHeader>
-      <CardContent>
-        <Suspense fallback={<DiscoveryPanelSkeleton />}>
-          <DiscoveryTable id={id} days={days} storeName={storeName} />
-        </Suspense>
-      </CardContent>
-    </Card>
+      <CollapsibleContent>
+        <CardContent>
+          <Suspense fallback={<DiscoveryPanelSkeleton />}>
+            <DiscoveryTable id={id} days={days} storeName={storeName} />
+          </Suspense>
+        </CardContent>
+      </CollapsibleContent>
+    </CollapsibleCard>
   );
 }

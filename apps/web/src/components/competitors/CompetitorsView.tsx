@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import {
-  Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -12,6 +12,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { competitorsOptions } from "@/lib/queries";
 import { AddCompetitorForm } from "./AddCompetitorForm";
+import {
+  CollapseToggle,
+  CollapsibleCard,
+  CollapsibleContent,
+} from "./CollapsibleSection";
 import { ComparisonMatrix } from "./ComparisonMatrix";
 import { CompetitorList } from "./CompetitorList";
 import { DiscoveryPanel } from "./DiscoveryPanel";
@@ -31,17 +36,22 @@ function CompetitorListSection({ id }: { id: string }) {
 export function CompetitorsView({ id }: { id: string }) {
   return (
     <div className="flex flex-col gap-6">
-      <Card>
+      <CollapsibleCard section="add">
         <CardHeader>
           <CardDescription>Competitors</CardDescription>
           <CardTitle>Track the apps you rank against</CardTitle>
+          <CardAction>
+            <CollapseToggle label="adding a competitor" />
+          </CardAction>
         </CardHeader>
-        <CardContent>
-          <Suspense fallback={<Skeleton className="h-9 w-full" />}>
-            <AddCompetitorForm id={id} />
-          </Suspense>
-        </CardContent>
-      </Card>
+        <CollapsibleContent>
+          <CardContent>
+            <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+              <AddCompetitorForm id={id} />
+            </Suspense>
+          </CardContent>
+        </CollapsibleContent>
+      </CollapsibleCard>
 
       <Suspense fallback={<CompetitorListSkeleton />}>
         <CompetitorListSection id={id} />

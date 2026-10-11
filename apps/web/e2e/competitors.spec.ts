@@ -157,6 +157,37 @@ test("keyword ideas are fetched on demand and can be tracked", async ({
   });
 });
 
+test("a section collapses behind its chevron and stays collapsed on reload", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const toggle = page.getByRole("button", {
+    name: "Show or hide the comparison matrix",
+  });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await (await hydrated(toggle)).click();
+
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(matrix(page)).toBeHidden();
+  await expect(
+    page.getByText("Your position against every competitor"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Show or hide discovery" }),
+  ).toHaveAttribute("aria-expanded", "true");
+
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(matrix(page)).toBeHidden();
+
+  await (await hydrated(toggle)).click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(matrix(page)).toBeVisible();
+});
+
 test("a matrix filter that matches nothing offers to clear it", async ({
   page,
 }) => {

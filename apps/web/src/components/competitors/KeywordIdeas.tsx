@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { SelectFilter } from "@/components/data-table/SelectFilter";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -29,6 +29,11 @@ import {
   keywordIdeasOptions,
 } from "@/lib/queries";
 import { ideasCountryParser } from "@/lib/search-params";
+import {
+  CollapseToggle,
+  CollapsibleCard,
+  CollapsibleContent,
+} from "./CollapsibleSection";
 import { UNNAMED_COMPETITOR } from "./comparison-scores";
 import { groupIdeasBySeed, ideaSignal, ideaUsers } from "./keyword-idea-groups";
 
@@ -162,9 +167,12 @@ export function KeywordIdeas({ id }: { id: string }) {
   }));
 
   return (
-    <Card>
+    <CollapsibleCard section="ideas">
       <CardHeader>
         <CardDescription>Keyword ideas</CardDescription>
+        <CardAction>
+          <CollapseToggle label="keyword ideas" />
+        </CardAction>
         <CardTitle>
           Searches people make around your competitors&apos; phrases
         </CardTitle>
@@ -190,18 +198,20 @@ export function KeywordIdeas({ id }: { id: string }) {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        {searched === country ? (
-          <IdeaList id={id} country={country} />
-        ) : (
-          <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            Takes the phrases your competitors share in their titles and
-            subtitles and asks the store which searches people really make
-            around them in {formatCountry(country)}. Phrases you already track
-            are left out.
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      <CollapsibleContent>
+        <CardContent>
+          {searched === country ? (
+            <IdeaList id={id} country={country} />
+          ) : (
+            <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
+              Takes the phrases your competitors share in their titles and
+              subtitles and asks the store which searches people really make
+              around them in {formatCountry(country)}. Phrases you already track
+              are left out.
+            </p>
+          )}
+        </CardContent>
+      </CollapsibleContent>
+    </CollapsibleCard>
   );
 }
