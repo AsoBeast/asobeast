@@ -5,7 +5,7 @@ import {
 
 const LINK = 'https://aso.example.com/confirm-alert?alert=ea_1&token=abc';
 
-const LINK_IN_HTML = LINK.replace('&', '&amp;');
+const LINK_IN_HTML = LINK.replaceAll('&', '&amp;');
 
 const render = (requestedBy = 'owner@example.com') =>
   alertConfirmationEmail({
