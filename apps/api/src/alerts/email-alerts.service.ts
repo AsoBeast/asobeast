@@ -167,18 +167,24 @@ export class EmailAlertsService {
     }
   }
 
-  private underLock(
+  private async underLock(
     workspaceId: string,
     write: (tx: Prisma.TransactionClient) => Promise<EmailAlert>,
   ): Promise<Saved> {
-    return this.prisma.withTransaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EMAIL_ALERT_LOCK}, hashtext(${workspaceId}))`;
-      const alert = await write(tx);
-      const refund = alert.confirmedAt
-        ? null
-        : await this.confirmation.allowMailTo(alert.email);
-      return { alert, refund };
-    });
+    const claimed: { refund: ConfirmationRefund | null } = { refund: null };
+    try {
+      return await this.prisma.withTransaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EMAIL_ALERT_LOCK}, hashtext(${workspaceId}))`;
+        const alert = await write(tx);
+        if (!alert.confirmedAt) {
+          claimed.refund = await this.confirmation.allowMailTo(alert.email);
+        }
+        return { alert, refund: claimed.refund };
+      });
+    } catch (error) {
+      await claimed.refund?.();
+      throw error;
+    }
   }
 
   private async answer(
