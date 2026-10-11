@@ -1,4 +1,4 @@
-import type { Redis } from 'ioredis';
+import { ReplyError, type Redis } from 'ioredis';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { RedisUnavailableError } from '../redis/redis.errors';
 import { FailFastRedis } from '../redis/fail-fast-redis';
@@ -11,6 +11,8 @@ import {
 const NOW = new Date('2026-10-11T22:00:00Z');
 
 const SECONDS_TO_MIDNIGHT = 7_200;
+
+const AnsweredError = ReplyError as unknown as new (message: string) => Error;
 
 describe('ConfirmationMailLimiter', () => {
   const evaluate = jest.fn<Promise<unknown>, [string, number, ...unknown[]]>();
@@ -42,6 +44,24 @@ describe('ConfirmationMailLimiter', () => {
     const [, count, ...refunded] = evaluate.mock.calls[1];
     expect(count).toBe(2);
     expect(refunded).toEqual(keys);
+  });
+
+  it('gives the allowances back only once however often it is called', async () => {
+    const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
+
+    await refund();
+    await refund();
+
+    expect(evaluate).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a refund from failing when redis answers with an error', async () => {
+    const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
+    evaluate.mockRejectedValue(
+      new AnsweredError('NOSCRIPT No matching script'),
+    );
+
+    await expect(refund()).resolves.toBeUndefined();
   });
 
   it('keeps a refund from failing while redis is unreachable', async () => {

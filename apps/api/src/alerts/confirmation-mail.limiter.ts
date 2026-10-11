@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { sha256 } from '../auth/password-hash';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { secondsUntilReset, windowKey } from '../auth/rate-limit/window';
@@ -43,6 +43,8 @@ interface Allowance {
 
 @Injectable()
 export class ConfirmationMailLimiter {
+  private readonly logger = new Logger(ConfirmationMailLimiter.name);
+
   constructor(private readonly redis: FailFastRedis) {}
 
   async claim(
@@ -83,13 +85,24 @@ export class ConfirmationMailLimiter {
     if (spent) {
       throw new RequestThrottledError(resetSeconds, spent.reason);
     }
-    return () => this.refund(keys);
+    let refunded = false;
+    return async () => {
+      if (refunded) return;
+      refunded = true;
+      await this.refund(keys);
+    };
   }
 
   private async refund(keys: string[]): Promise<void> {
-    await this.redis.runOpen(
-      (client) => client.eval(REFUND_EVERY_ALLOWANCE, keys.length, ...keys),
-      null,
-    );
+    try {
+      await this.redis.runOpen(
+        (client) => client.eval(REFUND_EVERY_ALLOWANCE, keys.length, ...keys),
+        null,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `confirmation allowance refund failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 }
