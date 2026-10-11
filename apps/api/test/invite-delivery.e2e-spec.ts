@@ -10,6 +10,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
+import { AuthService } from '../src/auth/auth.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
@@ -29,6 +30,7 @@ const PASSWORD = 'supersecret1';
 const OWNER = 'owner@example.com';
 const VICTIM = 'ceo@victim.example';
 const TOKEN_SHAPE = /[0-9a-f]{48}/g;
+const INVITE_LINK = new RegExp(`^${INVITE_PATH}\\?token=[0-9a-f]{48}$`);
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -59,8 +61,19 @@ describe('Who receives an invitation link', () => {
   const tokensIn = (body: unknown): string[] =>
     JSON.stringify(body).match(TOKEN_SHAPE) ?? [];
 
-  const tokenFrom = (mail: SentMail): string =>
-    /token=([0-9a-f]+)/.exec(mail.text)?.[1] ?? '';
+  const tokenFrom = (mail: SentMail): string => {
+    const token = /token=([0-9a-f]+)/.exec(mail.text)?.[1];
+    if (!token) {
+      throw new Error(`no invitation token in the mail to ${mail.to}`);
+    }
+    return token;
+  };
+
+  const linkOf = (invited: request.Response): string =>
+    (invited.body as WorkspaceInviteCreated).acceptPath;
+
+  const tokenOf = (acceptPath: string): string =>
+    new URLSearchParams(acceptPath.split('?')[1]).get('token') ?? '';
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -129,6 +142,10 @@ describe('Who receives an invitation link', () => {
     sent.length = 0;
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
@@ -152,11 +169,12 @@ describe('Who receives an invitation link', () => {
   it('leaves the invited address free for its real owner when the mail went out', async () => {
     const invited = await invite(VICTIM).expect(201);
 
-    for (const token of tokensIn(invited.body)) await accept(token);
+    await accept(tokenOf(linkOf(invited))).expect(400);
 
     await expect(prisma.user.count({ where: { email: VICTIM } })).resolves.toBe(
       0,
     );
+    expect(JSON.stringify(invited.body)).not.toContain(tokenFrom(sent[0]));
     await request(app.getHttpServer())
       .post('/auth/register')
       .send({ email: VICTIM, password: PASSWORD })
@@ -167,9 +185,7 @@ describe('Who receives an invitation link', () => {
     const invited = await invite(VICTIM).expect(201);
 
     expect(invited.body).toMatchObject({ email: VICTIM, delivered: true });
-    expect((invited.body as WorkspaceInviteCreated).acceptPath).toBe(
-      INVITE_PATH,
-    );
+    expect(linkOf(invited)).toBe(INVITE_PATH);
     expect(tokensIn(invited.body)).toEqual([]);
   });
 
@@ -181,13 +197,29 @@ describe('Who receives an invitation link', () => {
     await accept(tokenFrom(sent[0])).expect(201);
   });
 
-  it('keeps the link from an inviter when the mail could not be sent and anyone may register', async () => {
+  it('withholds the link from the inviter when the mail could not be sent and anyone may register', async () => {
     refuseDelivery = true;
 
     const invited = await invite(VICTIM).expect(201);
 
     expect(invited.body).toMatchObject({ delivered: false });
+    expect(linkOf(invited)).toBe(INVITE_PATH);
     expect(tokensIn(invited.body)).toEqual([]);
+  });
+
+  it('hands the link to the inviter when the mail could not be sent and registration is closed', async () => {
+    jest.spyOn(app.get(AuthService), 'billing', 'get').mockReturnValue(false);
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'stranger@example.com', password: PASSWORD })
+      .expect(403);
+    refuseDelivery = true;
+
+    const invited = await invite(VICTIM).expect(201);
+
+    expect(invited.body).toMatchObject({ delivered: false });
+    expect(linkOf(invited)).toMatch(INVITE_LINK);
+    await accept(tokenOf(linkOf(invited))).expect(201);
   });
 
   it('lets the inviter send a new mail after a failure', async () => {
@@ -207,7 +239,7 @@ describe('Who receives an invitation link', () => {
     const invited = await invite(VICTIM).expect(201);
 
     expect(invited.body).toMatchObject({ delivered: false });
-    const [token] = tokensIn(invited.body);
-    await accept(token).expect(201);
+    expect(linkOf(invited)).toMatch(INVITE_LINK);
+    await accept(tokenOf(linkOf(invited))).expect(201);
   });
 });
