@@ -1,7 +1,10 @@
 import { KeywordSource } from '@prisma/client';
-import { VisibilityPoint } from '@asobeast/shared';
+import {
+  visibility,
+  VisibilityKeyword,
+  VisibilityPoint,
+} from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
-import { visibility, VisibilityKeyword } from './visibility';
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 const SPARKLINE_WINDOW_DAYS = 30;

@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 import { portfolioOptions } from "@/lib/queries";
 import {
   appListParsers,
@@ -38,6 +39,7 @@ export function AppsToolbar() {
 
   return (
     <>
+      <VisibilityHelp />
       {data.apps.length > SEARCH_MIN_APPS || q !== "" ? (
         <SearchInput
           label="Search apps"
