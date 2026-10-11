@@ -8,7 +8,10 @@ import { ApiErrorEnvelope, EmailAlertItem } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { CONFIRMATIONS_PER_WORKSPACE_PER_DAY } from '../src/alerts/confirmation-mail.limiter';
-import { MAX_UNCONFIRMED_EMAIL_ALERTS } from '../src/alerts/email-alerts.service';
+import {
+  MAX_EMAIL_ALERTS,
+  MAX_UNCONFIRMED_EMAIL_ALERTS,
+} from '../src/alerts/email-alerts.service';
 import { MailerService } from '../src/alerts/mailer.service';
 import { unsubscribeToken } from '../src/alerts/unsubscribe-token';
 import { sha256 } from '../src/auth/password-hash';
@@ -134,6 +137,40 @@ describe('Email alert limits (e2e)', () => {
 
     expect((refused.body as ApiErrorEnvelope).message).toContain('25');
     expect(await prisma.emailAlert.count()).toBe(25);
+  });
+
+  it('holds the cap when creates race each other', async () => {
+    await seed(MAX_EMAIL_ALERTS - 1, true);
+
+    const answers = await Promise.all(
+      Array.from({ length: 6 }, (_, index) =>
+        api
+          .post('/email-alerts')
+          .send({ email: `race-${index}@example.net`, events: EVENTS }),
+      ),
+    );
+
+    expect(answers.map(({ status }) => status).sort()).toEqual([
+      201, 403, 403, 403, 403, 403,
+    ]);
+    expect(await prisma.emailAlert.count()).toBe(MAX_EMAIL_ALERTS);
+  });
+
+  it('holds the waiting limit when creates race each other', async () => {
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS - 1, false);
+
+    const answers = await Promise.all(
+      Array.from({ length: 6 }, (_, index) =>
+        api
+          .post('/email-alerts')
+          .send({ email: `race-${index}@example.net`, events: EVENTS }),
+      ),
+    );
+
+    expect(answers.map(({ status }) => status).sort()).toEqual([
+      201, 403, 403, 403, 403, 403,
+    ]);
+    expect(sendAccountMail).toHaveBeenCalledTimes(1);
   });
 
   it('refuses a sixth recipient who has not confirmed yet', async () => {

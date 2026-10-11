@@ -32,6 +32,13 @@ export const MAX_UNCONFIRMED_EMAIL_ALERTS = 5;
 
 export const CONFIRMATION_RESEND_COOLDOWN_SECONDS = 60 * 60;
 
+const EMAIL_ALERT_LOCK = 7_340_219;
+
+interface Saved {
+  alert: EmailAlert;
+  refund: ConfirmationRefund | null;
+}
+
 const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
 
 const NO_LINK_MESSAGE =
@@ -67,23 +74,21 @@ export class EmailAlertsService {
     requestedBy: string,
   ): Promise<EmailAlertItem> {
     this.assertEnabled();
-    await this.assertRoomForAnother();
+    const workspaceId = this.workspace.require('an email alert');
     const confirmedAt = await this.confirmation.confirmationFor(dto.email);
-    let refund: ConfirmationRefund | null = null;
-    if (!confirmedAt) {
-      await this.assertRoomToWait();
-      refund = await this.confirmation.allowMailTo(dto.email);
-    }
-    const alert = await this.prisma.emailAlert.create({
-      data: {
-        workspaceId: this.workspace.require('an email alert'),
-        email: dto.email,
-        events: dto.events,
-        confirmedAt,
-      },
+    const saved = await this.underLock(workspaceId, async (tx) => {
+      await assertRoomForAnother(tx);
+      if (!confirmedAt) await assertRoomToWait(tx);
+      return tx.emailAlert.create({
+        data: {
+          workspaceId,
+          email: dto.email,
+          events: dto.events,
+          confirmedAt,
+        },
+      });
     });
-    if (alert.confirmedAt) return toEmailAlertItem(alert);
-    return this.askToConfirm(alert, requestedBy, refund);
+    return this.answer(saved, requestedBy);
   }
 
   async update(
@@ -91,33 +96,34 @@ export class EmailAlertsService {
     dto: UpdateEmailAlertDto,
     requestedBy: string,
   ): Promise<EmailAlertItem> {
-    const data: Prisma.EmailAlertUpdateInput = {};
-    let refund: ConfirmationRefund | null = null;
-    if (dto.email !== undefined) {
-      data.email = dto.email;
-      if (await this.changesAddress(id, dto.email)) {
-        data.confirmedAt = await this.confirmation.confirmationFor(dto.email);
-        data.confirmationSentAt = null;
-        data.unsubscribedAt = null;
-        if (!data.confirmedAt) {
-          await this.assertRoomToWait(id);
-          refund = await this.confirmation.allowMailTo(dto.email);
-        }
-      }
+    const data: Prisma.EmailAlertUpdateInput = {
+      email: dto.email,
+      events: dto.events,
+      active: dto.active,
+    };
+    if (
+      dto.email === undefined ||
+      !(await this.changesAddress(id, dto.email))
+    ) {
+      return toEmailAlertItem(
+        await this.prisma.emailAlert.update({ where: { id }, data }),
+      );
     }
-    if (dto.events !== undefined) {
-      data.events = dto.events;
-    }
-    if (dto.active !== undefined) {
-      data.active = dto.active;
-    }
-
-    const alert = await this.prisma.emailAlert.update({
-      where: { id },
-      data,
+    const confirmedAt = await this.confirmation.confirmationFor(dto.email);
+    const workspaceId = this.workspace.require('an email alert');
+    const saved = await this.underLock(workspaceId, async (tx) => {
+      if (!confirmedAt) await assertRoomToWait(tx, id);
+      return tx.emailAlert.update({
+        where: { id },
+        data: {
+          ...data,
+          confirmedAt,
+          confirmationSentAt: null,
+          unsubscribedAt: null,
+        },
+      });
     });
-    if (data.confirmedAt !== null) return toEmailAlertItem(alert);
-    return this.askToConfirm(alert, requestedBy, refund);
+    return this.answer(saved, requestedBy);
   }
 
   async remove(id: string): Promise<void> {
@@ -160,11 +166,25 @@ export class EmailAlertsService {
     }
   }
 
-  private async askToConfirm(
-    alert: EmailAlert,
+  private underLock(
+    workspaceId: string,
+    write: (tx: Prisma.TransactionClient) => Promise<EmailAlert>,
+  ): Promise<Saved> {
+    return this.prisma.withTransaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EMAIL_ALERT_LOCK}, hashtext(${workspaceId}))`;
+      const alert = await write(tx);
+      const refund = alert.confirmedAt
+        ? null
+        : await this.confirmation.allowMailTo(alert.email);
+      return { alert, refund };
+    });
+  }
+
+  private async answer(
+    { alert, refund }: Saved,
     requestedBy: string,
-    refund: ConfirmationRefund | null,
   ): Promise<EmailAlertItem> {
+    if (alert.confirmedAt) return toEmailAlertItem(alert);
     return {
       ...toEmailAlertItem(alert),
       confirmationSent: await this.confirmation.issue(
@@ -183,29 +203,6 @@ export class EmailAlertsService {
     return alert;
   }
 
-  private async assertRoomForAnother(): Promise<void> {
-    if ((await this.prisma.emailAlert.count()) >= MAX_EMAIL_ALERTS) {
-      throw new ForbiddenException(
-        `A workspace can have at most ${MAX_EMAIL_ALERTS} email alerts`,
-      );
-    }
-  }
-
-  private async assertRoomToWait(excluding?: string): Promise<void> {
-    const waiting = await this.prisma.emailAlert.count({
-      where: {
-        confirmedAt: null,
-        unsubscribedAt: null,
-        NOT: { id: excluding },
-      },
-    });
-    if (waiting >= MAX_UNCONFIRMED_EMAIL_ALERTS) {
-      throw new ForbiddenException(
-        `A workspace can wait for at most ${MAX_UNCONFIRMED_EMAIL_ALERTS} recipients to confirm`,
-      );
-    }
-  }
-
   private async changesAddress(id: string, email: string): Promise<boolean> {
     const current = await this.find(id);
     return current.email.toLowerCase() !== email.toLowerCase();
@@ -215,6 +212,30 @@ export class EmailAlertsService {
     if (!this.mailer.enabled) {
       throw new BadRequestException(DISABLED_MESSAGE);
     }
+  }
+}
+
+async function assertRoomForAnother(
+  tx: Prisma.TransactionClient,
+): Promise<void> {
+  if ((await tx.emailAlert.count()) >= MAX_EMAIL_ALERTS) {
+    throw new ForbiddenException(
+      `A workspace can have at most ${MAX_EMAIL_ALERTS} email alerts`,
+    );
+  }
+}
+
+async function assertRoomToWait(
+  tx: Prisma.TransactionClient,
+  excluding?: string,
+): Promise<void> {
+  const waiting = await tx.emailAlert.count({
+    where: { confirmedAt: null, unsubscribedAt: null, NOT: { id: excluding } },
+  });
+  if (waiting >= MAX_UNCONFIRMED_EMAIL_ALERTS) {
+    throw new ForbiddenException(
+      `A workspace can wait for at most ${MAX_UNCONFIRMED_EMAIL_ALERTS} recipients to confirm`,
+    );
   }
 }
 
