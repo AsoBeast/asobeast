@@ -3,6 +3,10 @@
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
+import {
+  APP_STORE_LOCALIZATIONS,
+  isAppStoreLocalization,
+} from "@asobeast/shared";
 import type {
   KeywordBreakdownApp,
   KeywordBreakdownField,
@@ -21,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   countryFlag,
   formatCountry,
+  formatList,
   formatNumber,
   formatRating,
 } from "@/lib/format";
@@ -96,6 +101,55 @@ function FieldRow({
   );
 }
 
+function localizationName(id: string): string {
+  return isAppStoreLocalization(id) ? APP_STORE_LOCALIZATIONS[id] : id;
+}
+
+function LocalizedListings({
+  app,
+  total,
+}: {
+  app: KeywordBreakdownApp;
+  total: number;
+}) {
+  const matching = app.localizations.filter((entry) => entry.matchedTerms > 0);
+  const silent = app.localizations.filter((entry) => entry.matchedTerms === 0);
+  return (
+    <>
+      {matching.map((entry) => (
+        <div
+          key={entry.localization}
+          role="group"
+          aria-label={`${localizationName(entry.localization)} listing`}
+          className="flex flex-col gap-2 border-t pt-3"
+        >
+          <span className="text-xs font-medium">
+            {localizationName(entry.localization)} listing
+          </span>
+          {entry.fields.map((field) => (
+            <FieldRow key={field.field} field={field} total={total} />
+          ))}
+        </div>
+      ))}
+      {silent.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          No match in its{" "}
+          {formatList(
+            silent.map((entry) => localizationName(entry.localization)),
+          )}{" "}
+          {silent.length === 1 ? "listing" : "listings"}.
+        </p>
+      ) : null}
+      {app.unreadLocalizations.length > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          Not captured, so not checked:{" "}
+          {formatList(app.unreadLocalizations.map(localizationName))}.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 function AppRow({
   app,
   total,
@@ -125,6 +179,7 @@ function AppRow({
           {app.fields.map((field) => (
             <FieldRow key={field.field} field={field} total={total} />
           ))}
+          <LocalizedListings app={app} total={total} />
           <p className="text-xs text-muted-foreground">
             {total > 1
               ? `${app.matchedTerms} of ${total} keyword words in the listing`
@@ -178,9 +233,10 @@ function BreakdownRows({
         ))}
       </ul>
       <p className="text-xs text-muted-foreground">
-        Search also reads fields no one outside the developer can see, such as
-        the App Store keyword field, so a competitor can rank without the words
-        showing here. Yours is shown when you have entered it.
+        A market searches every language version of a listing it offers, so
+        those are read too where they were captured. Search also reads fields
+        only the developer sees, such as the App Store keyword field, so a
+        competitor can rank without the words showing here.
       </p>
     </div>
   );

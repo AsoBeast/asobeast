@@ -27,6 +27,7 @@ import {
   breakdownTerms,
   sortBreakdown,
 } from './keyword-breakdown';
+import { localizedCopies } from './keyword-breakdown.listings';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
 import { homeListingTexts } from './home-listings';
@@ -193,7 +194,7 @@ export class KeywordsService {
       select: { id: true, name: true, iconUrl: true, country: true },
       orderBy: { createdAt: 'asc' },
     });
-    const [latest, listings, keywordField] = await Promise.all([
+    const [latest, listings, keywordField, localized] = await Promise.all([
       latestPositions(
         this.prisma,
         subjects.map((subject) => subject.id),
@@ -205,6 +206,11 @@ export class KeywordsService {
         ),
       ),
       this.enteredKeywordField(app, country),
+      Promise.all(
+        subjects.map((subject) =>
+          localizedCopies(this.prisma, app.store, subject, country),
+        ),
+      ),
     ]);
 
     return {
@@ -223,6 +229,7 @@ export class KeywordsService {
               position: latest.get(positionKey(subject.id, keywordId)) ?? null,
               listing: listings[index],
               keywordField: subject.id === appId ? keywordField : [],
+              localized: localized[index],
             },
             app.store,
             text,

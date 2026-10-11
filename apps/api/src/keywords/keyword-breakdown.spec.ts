@@ -148,6 +148,96 @@ describe('breakdownApp', () => {
     ]);
   });
 
+  it('reads the other localizations a storefront indexes', () => {
+    const app = breakdownApp(
+      subject({
+        localized: {
+          listings: [
+            {
+              localization: 'es-MX',
+              sourceCountry: 'mx',
+              title: 'Temporizador de enfoque',
+              subtitle: 'Planner app para estudiar',
+            },
+          ],
+          unread: ['ko'],
+        },
+      }),
+      Store.APP_STORE,
+      'planner app',
+    );
+
+    expect(app.localizations).toEqual([
+      {
+        localization: 'es-MX',
+        sourceCountry: 'mx',
+        fields: [
+          {
+            field: 'title',
+            value: 'Temporizador de enfoque',
+            phrase: false,
+            terms: [],
+          },
+          {
+            field: 'subtitle',
+            value: 'Planner app para estudiar',
+            phrase: true,
+            terms: ['planner', 'app'],
+          },
+        ],
+        matchedTerms: 2,
+      },
+    ]);
+    expect(app.unreadLocalizations).toEqual(['ko']);
+    expect(app.matchedTerms).toBe(2);
+  });
+
+  it('does not add up words that sit in different localizations', () => {
+    const app = breakdownApp(
+      subject({
+        localized: {
+          listings: [
+            {
+              localization: 'es-MX',
+              sourceCountry: 'mx',
+              title: 'Planner',
+              subtitle: null,
+            },
+          ],
+          unread: [],
+        },
+      }),
+      Store.APP_STORE,
+      'focus planner',
+    );
+
+    expect(app.fields[0].terms).toEqual(['focus']);
+    expect(app.localizations[0].matchedTerms).toBe(1);
+    expect(app.matchedTerms).toBe(1);
+  });
+
+  it('leaves out a localization that repeats the default listing', () => {
+    const app = breakdownApp(
+      subject({
+        localized: {
+          listings: [
+            {
+              localization: 'es-MX',
+              sourceCountry: 'mx',
+              title: 'Focus Timer: Pomodoro',
+              subtitle: 'Study and deep work',
+            },
+          ],
+          unread: [],
+        },
+      }),
+      Store.APP_STORE,
+      'focus',
+    );
+
+    expect(app.localizations).toEqual([]);
+  });
+
   it('reports an app with no captured listing as unread', () => {
     const app = breakdownApp(
       subject({ listing: null }),

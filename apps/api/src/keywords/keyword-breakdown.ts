@@ -2,11 +2,13 @@ import { Store } from '@prisma/client';
 import {
   KeywordBreakdownApp,
   KeywordBreakdownField,
+  KeywordBreakdownLocalization,
   MetadataField,
   normalizeText,
   tokenize,
 } from '@asobeast/shared';
 import { containsTerm } from '../common/text/scripts';
+import { LocalizedRead } from './keyword-breakdown.listings';
 import { coversKeyword } from './keyword-coverage';
 
 export interface BreakdownListing {
@@ -26,6 +28,7 @@ export interface BreakdownSubject {
   position: number | null;
   listing: BreakdownListing | null;
   keywordField?: readonly string[];
+  localized?: LocalizedRead;
 }
 
 const SEARCHED_FIELDS: Record<
@@ -67,6 +70,43 @@ function judgeField(
   };
 }
 
+const termsIn = (fields: readonly KeywordBreakdownField[]): number =>
+  new Set(fields.flatMap((entry) => entry.terms)).size;
+
+const copyKey = (title: string | null, subtitle: string | null): string =>
+  `${normalizeText(title ?? '')}|${normalizeText(subtitle ?? '')}`;
+
+function localizations(
+  subject: BreakdownSubject,
+  keyword: string,
+  terms: readonly string[],
+): KeywordBreakdownLocalization[] {
+  const seen = new Set(
+    subject.listing
+      ? [copyKey(subject.listing.title, subject.listing.subtitle)]
+      : [],
+  );
+  const read: KeywordBreakdownLocalization[] = [];
+  for (const copy of subject.localized?.listings ?? []) {
+    const key = copyKey(copy.title, copy.subtitle);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const fields = [
+      judgeField('title', copy.title, keyword, terms),
+      judgeField('subtitle', copy.subtitle, keyword, terms),
+    ];
+    read.push({
+      localization: copy.localization,
+      sourceCountry: copy.sourceCountry,
+      fields,
+      matchedTerms: termsIn(fields),
+    });
+  }
+  return read;
+}
+
 export function breakdownApp(
   subject: BreakdownSubject,
   store: Store,
@@ -79,6 +119,7 @@ export function breakdownApp(
         judgeField(field, read(listing), keyword, terms),
       )
     : [];
+  const localized = localizations(subject, keyword, terms);
   const entered = subject.keywordField ?? [];
   const fields =
     entered.length > 0
@@ -95,7 +136,12 @@ export function breakdownApp(
     position: subject.position,
     listingCountry: listing?.country ?? null,
     fields,
-    matchedTerms: new Set(fields.flatMap((entry) => entry.terms)).size,
+    matchedTerms: Math.max(
+      termsIn(fields),
+      ...localized.map((entry) => entry.matchedTerms),
+    ),
+    localizations: localized,
+    unreadLocalizations: [...(subject.localized?.unread ?? [])],
     ratingAvg: listing?.ratingAvg ?? null,
     ratingCount: listing?.ratingCount ?? null,
   };

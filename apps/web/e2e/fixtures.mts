@@ -951,6 +951,8 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
           },
         ],
         matchedTerms: 2,
+        localizations: [],
+        unreadLocalizations: [],
         ratingAvg: 4.6,
         ratingCount: 1200,
       },
@@ -970,7 +972,43 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
           },
           { field: "subtitle", value: null, phrase: false, terms: [] },
         ],
-        matchedTerms: 1,
+        matchedTerms: 2,
+        localizations: [
+          {
+            localization: "es-MX",
+            sourceCountry: "mx",
+            fields: [
+              {
+                field: "title",
+                value: "Rival Focus",
+                phrase: false,
+                terms: ["focus"],
+              },
+              {
+                field: "subtitle",
+                value: "Focus timer para estudiar",
+                phrase: true,
+                terms: ["focus", "timer"],
+              },
+            ],
+            matchedTerms: 2,
+          },
+          {
+            localization: "fr",
+            sourceCountry: "fr",
+            fields: [
+              {
+                field: "title",
+                value: "Rival Concentration",
+                phrase: false,
+                terms: [],
+              },
+              { field: "subtitle", value: null, phrase: false, terms: [] },
+            ],
+            matchedTerms: 0,
+          },
+        ],
+        unreadLocalizations: ["ko", "vi"],
         ratingAvg: 4.2,
         ratingCount: 310,
       },

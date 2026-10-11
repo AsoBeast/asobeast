@@ -143,7 +143,16 @@ test("clicking a keyword opens why each app ranks for it", async ({ page }) => {
 
   const rival = sheet.getByRole("listitem", { name: "Rival Focus" });
   await expect(rival).toContainText("1 of 2 words");
-  await expect(rival.locator("mark")).toHaveText(["Focus"]);
+  await expect(rival.locator("mark").first()).toHaveText("Focus");
+  const spanish = rival.getByRole("group", {
+    name: "Spanish (Mexico) listing",
+  });
+  await expect(spanish).toContainText("Focus timer para estudiar");
+  await expect(spanish).toContainText("Exact phrase");
+  await expect(rival).toContainText("No match in its French listing.");
+  await expect(rival).toContainText(
+    "Not captured, so not checked: Korean and Vietnamese.",
+  );
   await expect(rival).toContainText("Empty");
   await expect(rival).not.toContainText("Keyword field");
   await expect(rival).toContainText("4.2 rating from 310");

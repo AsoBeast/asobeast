@@ -104,6 +104,13 @@ export interface KeywordBreakdownField {
   terms: string[];
 }
 
+export interface KeywordBreakdownLocalization {
+  localization: string;
+  sourceCountry: string;
+  fields: KeywordBreakdownField[];
+  matchedTerms: number;
+}
+
 export interface KeywordBreakdownApp {
   appId: string;
   name: string | null;
@@ -113,6 +120,8 @@ export interface KeywordBreakdownApp {
   listingCountry: string | null;
   fields: KeywordBreakdownField[];
   matchedTerms: number;
+  localizations: KeywordBreakdownLocalization[];
+  unreadLocalizations: string[];
   ratingAvg: number | null;
   ratingCount: number | null;
 }
