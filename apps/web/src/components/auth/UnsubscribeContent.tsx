@@ -59,7 +59,7 @@ export function UnsubscribeContent() {
       description={
         mutation.isError
           ? "Try again in a moment."
-          : "This address will stop receiving this AsoBeast email alert. You can turn it back on in Settings at any time."
+          : "This address will stop receiving this AsoBeast email alert and will not be asked to confirm it again."
       }
     >
       <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
