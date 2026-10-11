@@ -32,7 +32,7 @@ test("the overview explains how visibility is calculated", async ({ page }) => {
   const help = await openHelp(page, statCard(page));
 
   await expect(help).toHaveAccessibleDescription(
-    "How close the app is to ranking first for every keyword it tracks. 100 means position 1 for all of them, 0 means none was found.",
+    "How close the app is to ranking first for every keyword it tracks, weighted by popularity. 100 means position 1 for all of them, 0 means none was found.",
   );
   await expect(help.getByRole("row")).toHaveText([
     "PositionCounts",
@@ -41,9 +41,11 @@ test("the overview explains how visibility is calculated", async ({ page }) => {
     "1029%",
     "5018%",
     "10015%",
-    ">2000%",
+    "Not found0%",
   ]);
-  await expect(help).toContainText("counts as popularity 10");
+  await expect(help).toContainText(
+    "A keyword without a popularity score yet counts as popularity 10, and one with popularity 0 does not count.",
+  );
   await expect(
     help.getByRole("link", { name: "Read the full calculation" }),
   ).toHaveAttribute("href", VISIBILITY_GUIDE);
@@ -99,9 +101,13 @@ test("the explanation fits a phone screen", async ({ page }) => {
   await settled(help);
   const box = await help.boundingBox();
 
-  expect(box).not.toBeNull();
-  expect(box!.x).toBeGreaterThanOrEqual(16);
-  expect(box!.x + box!.width).toBeLessThanOrEqual(375 - 16);
+  if (box === null) {
+    throw new Error(
+      "Expected the visibility explanation to have a bounding box",
+    );
+  }
+  expect(box.x).toBeGreaterThanOrEqual(16);
+  expect(box.x + box.width).toBeLessThanOrEqual(375 - 16);
 });
 
 for (const view of ["cards", "table"]) {

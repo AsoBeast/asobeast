@@ -19,7 +19,7 @@ export function VisibilityHelp({ note }: { note?: string }) {
     <InfoTip
       label="About visibility"
       title="How visibility is calculated"
-      summary="How close the app is to ranking first for every keyword it tracks. 100 means position 1 for all of them, 0 means none was found."
+      summary="How close the app is to ranking first for every keyword it tracks, weighted by popularity. 100 means position 1 for all of them, 0 means none was found."
     >
       <p className="text-muted-foreground">
         Each keyword counts in proportion to its popularity, and less the lower
@@ -50,7 +50,8 @@ export function VisibilityHelp({ note }: { note?: string }) {
       </Table>
       <p className="text-muted-foreground">
         A keyword without a popularity score yet counts as popularity{" "}
-        {UNSCORED_POPULARITY}. Changes are in points.
+        {UNSCORED_POPULARITY}, and one with popularity 0 does not count. Changes
+        are in points.
       </p>
       {note ? <p className="text-muted-foreground">{note}</p> : null}
       <a

@@ -13,7 +13,7 @@ describe("visibility help", () => {
       { position: "10", share: "29%" },
       { position: "50", share: "18%" },
       { position: "100", share: "15%" },
-      { position: ">200", share: "0%" },
+      { position: "Not found", share: "0%" },
     ]);
   });
 
