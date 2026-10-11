@@ -127,6 +127,8 @@ A suggestion lookup is the one user initiated exception to the rule that store r
 
 Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
 
+Starting a deep search spends one of the plan's daily deep searches, and a term whose 27 lookups are all stored for today costs nothing. See [Rate limits and quotas](/api-reference/rate-limits).
+
 ### Seasonal suggestions
 
 The API and the MCP `keyword_suggestions` tool also offer a `seasonal` strategy. The web app does not show it. It reads a fixed calendar and suggests the keywords of every event that is running or starts within 14 days, in UTC. The keywords are English, so an event is offered only in the English language storefronts (Australia, Canada, India, Ireland, New Zealand, the Philippines, Singapore, South Africa, the United Kingdom and the United States) that observe it. Any other storefront gets an empty list, as does an English one between events. The storefront is the app's home market, or the `country` you pass.

@@ -36,6 +36,7 @@ export class SpiderService {
     appId: string,
     term: string,
     country?: string,
+    spend?: () => Promise<void>,
   ): Promise<SpiderEnqueueResult> {
     const app = await ensureApp(this.prisma, appId);
     const market = country ?? app.country;
@@ -48,13 +49,15 @@ export class SpiderService {
       select: { probe: true },
     });
     const done = new Set(existing.map((row) => row.probe));
+    const remaining = SPIDER_PROBES.filter((probe) => !done.has(probe));
+    if (remaining.length === 0) {
+      return { enqueued: 0 };
+    }
 
-    let enqueued = 0;
-    for (const probe of SPIDER_PROBES) {
-      if (done.has(probe)) {
-        continue;
-      }
-      await queueFor(app.store, this.appStoreQueue, this.gplayQueue).add(
+    await spend?.();
+    const queue = queueFor(app.store, this.appStoreQueue, this.gplayQueue);
+    for (const probe of remaining) {
+      await queue.add(
         JOBS.SPIDER_PROBE,
         {
           appId,
@@ -66,10 +69,9 @@ export class SpiderService {
         } satisfies SpiderProbePayload,
         { jobId: spiderJobId(appId, term, market, probe, date) },
       );
-      enqueued += 1;
     }
 
-    return { enqueued };
+    return { enqueued: remaining.length };
   }
 
   async spiderStatus(

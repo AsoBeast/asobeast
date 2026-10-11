@@ -21,7 +21,13 @@ const workspace: WorkspaceMetrics = {
   runIncomplete: true,
   storedRankings: 4_200,
   storedReviews: 310,
-  onDemandUsed: { refresh: 3, runDaily: 1, score: 0, suggestions: 12 },
+  onDemandUsed: {
+    refresh: 3,
+    runDaily: 1,
+    score: 0,
+    suggestions: 12,
+    spider: 2,
+  },
   aiCallsMonth: 12,
   aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },
 };
