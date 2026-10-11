@@ -6,7 +6,10 @@ import {
 import { AiGateway } from '../ai/ai-gateway.service';
 import { buildAi } from '../ai/ai-gateway.fixture';
 import { aiCompletion } from '../ai/ai-completion.fixture';
-import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import {
+  WorkspaceContext,
+  WorkspaceContextMissingError,
+} from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsAiService } from './actions-ai.service';
 
@@ -158,6 +161,20 @@ describe('ActionsAiService.explain', () => {
     });
     await strangerRefused;
     expect(spend).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses to explain outside a workspace scope', async () => {
+    const spend = jest.fn();
+    const prisma = buildPrisma();
+
+    await expect(
+      serviceFor(prisma, buildAi(spend), new WorkspaceContext()).explain(
+        'act_1',
+        'usr_1',
+      ),
+    ).rejects.toBeInstanceOf(WorkspaceContextMissingError);
+    expect(prisma.actionItem.findFirst).not.toHaveBeenCalled();
+    expect(spend).not.toHaveBeenCalled();
   });
 
   it('allows a fresh call after the in-flight one settles', async () => {

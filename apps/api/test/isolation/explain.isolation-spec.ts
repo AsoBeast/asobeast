@@ -4,7 +4,7 @@ import { createIsolationFixture, IsolationFixture } from './fixture';
 
 const DEFEND_EVIDENCE = {
   rule: 'keyword.defend',
-  entrants: 3,
+  entrants: [],
   entrantsAtOrAbove: 1,
   observedDays: 3,
 };
@@ -12,10 +12,15 @@ const DEFEND_EVIDENCE = {
 describe('Action explanation isolation', () => {
   let fixture: IsolationFixture;
   let finish: (completion: AiCompletion) => void;
+  let markWriting: () => void;
+  const writing = new Promise<void>((resolve) => {
+    markWriting = resolve;
+  });
   const structured = jest.fn(
     () =>
       new Promise<AiCompletion>((resolve) => {
         finish = resolve;
+        markWriting();
       }),
   );
   const aiClient: AiClient = { model: 'gpt-test', structured };
@@ -34,7 +39,7 @@ describe('Action explanation isolation', () => {
     const owner = fixture.a.agent
       .post(`/actions/${fixture.a.actionId}/explain`)
       .then((response) => response);
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    await writing;
     const stranger = fixture.b.agent
       .post(`/actions/${fixture.a.actionId}/explain`)
       .then((response) => response);
