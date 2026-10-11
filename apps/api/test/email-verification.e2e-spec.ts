@@ -112,7 +112,7 @@ describe('Email verification before the trial starts', () => {
     sent.length = 0;
     refuseDelivery = false;
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
     await prisma.workspace.deleteMany({
       where: { id: { not: DEFAULT_WORKSPACE_ID } },
@@ -122,6 +122,7 @@ describe('Email verification before the trial starts', () => {
       data: {
         plan: 'free',
         trialStartedAt: null,
+        trialDeclinedAt: null,
         trialEndsAt: null,
         planExpiresAt: null,
         subscriptionId: null,
@@ -133,7 +134,7 @@ describe('Email verification before the trial starts', () => {
 
   afterAll(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
     await obliterateQueues(app);
     await app.close();

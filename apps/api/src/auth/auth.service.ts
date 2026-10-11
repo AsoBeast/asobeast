@@ -105,7 +105,7 @@ export class AuthService {
         data: {
           workspaceId: ownWorkspace
             ? await this.newWorkspace(tx, email)
-            : await this.defaultWorkspace(tx),
+            : await this.defaultWorkspace(tx, email),
           email,
           passwordHash,
           name: dto.name ?? null,
@@ -123,7 +123,10 @@ export class AuthService {
     email: string,
   ): Promise<string> {
     const workspace = await tx.workspace.create({
-      data: { name: email, ...this.verification.openingGrant() },
+      data: {
+        name: email,
+        ...(await this.verification.openingTerms(tx, email)),
+      },
       select: { id: true },
     });
     return workspace.id;
@@ -131,6 +134,7 @@ export class AuthService {
 
   private async defaultWorkspace(
     tx: Prisma.TransactionClient,
+    email: string,
   ): Promise<string> {
     const existing = await tx.workspace.findUnique({
       where: { id: DEFAULT_WORKSPACE_ID },
@@ -140,13 +144,14 @@ export class AuthService {
         data: {
           id: DEFAULT_WORKSPACE_ID,
           name: 'Default',
-          ...this.verification.openingGrant(),
+          ...(await this.verification.openingTerms(tx, email)),
         },
       });
       return DEFAULT_WORKSPACE_ID;
     }
-    const opening = this.verification.openingGrant();
-    if (opening && canStartTrial(existing, new Date())) {
+    if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
+    const opening = await this.verification.openingTerms(tx, email);
+    if (opening) {
       await tx.workspace.updateMany({
         where: trialStillOpen(existing),
         data: opening,

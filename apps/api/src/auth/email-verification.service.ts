@@ -16,10 +16,12 @@ import type { AccountUser } from './auth.types';
 import {
   canStartTrial,
   grantTrial,
+  declineTrial,
   trialAwaitsConfirmation,
   trialStillOpen,
-  type TrialGrant,
+  type TrialTerms,
 } from './trial-grant';
+import { TrialClaims, type TrialClaimStore } from './trial-claims';
 import { VERIFICATION_HOURS, VerificationMailer } from './verification-mailer';
 
 const CLAIM_JUSTIFICATION =
@@ -33,6 +35,7 @@ export class EmailVerificationService {
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
     private readonly verification: VerificationMailer,
+    private readonly claims: TrialClaims,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -44,9 +47,24 @@ export class EmailVerificationService {
     return this.billing && this.verification.configured;
   }
 
-  openingGrant(): TrialGrant | undefined {
-    if (!this.billing || this.required) return undefined;
-    return grantTrial(this.config.get('TRIAL_DAYS', { infer: true }));
+  async openingTerms(
+    db: TrialClaimStore,
+    email: string,
+  ): Promise<TrialTerms | undefined> {
+    if (!this.billing) return undefined;
+    if (!this.required) return this.termsFor(db, email);
+    return (await this.claims.isClaimed(db, email))
+      ? declineTrial()
+      : undefined;
+  }
+
+  private async termsFor(
+    db: TrialClaimStore,
+    email: string,
+  ): Promise<TrialTerms> {
+    return (await this.claims.claim(db, email))
+      ? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
+      : declineTrial();
   }
 
   awaitsConfirmation(user: AccountUser, now = new Date()): boolean {
@@ -125,21 +143,23 @@ export class EmailVerificationService {
       emailVerifiedAt,
       verificationHash: null,
       verificationExpiresAt: null,
-      workspace: await this.startTrial(user.workspaceId),
+      workspace: await this.startTrial(user),
     };
   }
 
-  private async startTrial(workspaceId: string): Promise<Workspace> {
-    const workspace = await this.workspaceOf(workspaceId);
+  private async startTrial(user: User): Promise<Workspace> {
+    const workspace = await this.workspaceOf(user.workspaceId);
     if (!this.billing || !canStartTrial(workspace, new Date())) {
       return workspace;
     }
 
-    await this.prisma.workspace.updateMany({
-      where: trialStillOpen(workspace),
-      data: grantTrial(this.config.get('TRIAL_DAYS', { infer: true })),
-    });
-    return this.workspaceOf(workspaceId);
+    await this.prisma.withTransaction(async (tx) =>
+      tx.workspace.updateMany({
+        where: trialStillOpen(workspace),
+        data: await this.termsFor(tx, user.email),
+      }),
+    );
+    return this.workspaceOf(user.workspaceId);
   }
 
   private workspaceOf(workspaceId: string): Promise<Workspace> {

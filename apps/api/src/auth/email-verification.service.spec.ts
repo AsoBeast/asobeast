@@ -5,6 +5,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
+import type { TrialClaims } from './trial-claims';
 import { VerificationMailer } from './verification-mailer';
 
 const TOKEN = 'a'.repeat(48);
@@ -14,6 +15,7 @@ const workspaceOf = (over: Partial<Workspace> = {}) =>
     id: 'ws_1',
     plan: 'free',
     trialStartedAt: null,
+    trialDeclinedAt: null,
     trialEndsAt: null,
     planExpiresAt: null,
     subscriptionId: null,
@@ -36,11 +38,15 @@ describe('EmailVerificationService confirming an address', () => {
     [{ where: Record<string, unknown>; data: Record<string, unknown> }]
   >();
   const userUpdate = jest.fn();
+  const claim = jest.fn<Promise<boolean>, [unknown, string]>();
 
   const prisma = {
     user: { findUnique, update: userUpdate },
     workspace: { findUniqueOrThrow, updateMany },
+    withTransaction: (run: (tx: unknown) => Promise<unknown>) =>
+      run({ workspace: { updateMany } }),
   } as unknown as PrismaService;
+  const claims = { claim } as unknown as TrialClaims;
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: (
       _justification: string,
@@ -53,6 +59,7 @@ describe('EmailVerificationService confirming an address', () => {
       prisma,
       crossTenant,
       { configured: true } as unknown as VerificationMailer,
+      claims,
       {
         get: (key: string) => (key === 'BILLING_ENABLED' ? billing : 7),
       } as unknown as ConfigService<Env, true>,
@@ -65,6 +72,7 @@ describe('EmailVerificationService confirming an address', () => {
     userUpdate.mockReset().mockResolvedValue(undefined);
     findUniqueOrThrow.mockReset().mockResolvedValue(workspaceOf());
     updateMany.mockReset().mockResolvedValue({ count: 1 });
+    claim.mockReset().mockResolvedValue(true);
   });
 
   it('looks the link up by its hash', async () => {
@@ -84,9 +92,27 @@ describe('EmailVerificationService confirming an address', () => {
       id: 'ws_1',
       plan: 'free',
       trialStartedAt: null,
+      trialDeclinedAt: null,
       subscriptionId: null,
     });
     expect(updateMany.mock.calls[0][0].data).toMatchObject({ plan: 'trial' });
+  });
+
+  it('claims the mailbox of the address that was confirmed', async () => {
+    await confirm();
+
+    expect(claim).toHaveBeenCalledWith(expect.anything(), 'owner@example.com');
+  });
+
+  it('records a refusal instead of a trial when the mailbox already had one', async () => {
+    claim.mockResolvedValue(false);
+
+    await confirm();
+
+    const { data } = updateMany.mock.calls[0][0];
+    expect(data).toHaveProperty('trialDeclinedAt');
+    expect(data).not.toHaveProperty('plan');
+    expect(data).not.toHaveProperty('trialEndsAt');
   });
 
   it('answers with the row the database holds after the write', async () => {
@@ -116,12 +142,14 @@ describe('EmailVerificationService confirming an address', () => {
     ['holds a paid plan', { plan: 'indie', planExpiresAt: null }],
     ['ever held a subscription', { subscriptionId: 'sub_ended' }],
     ['already had its trial', { trialStartedAt: new Date('2026-01-01') }],
+    ['was refused a trial', { trialDeclinedAt: new Date('2026-01-01') }],
   ])('writes nothing to a workspace that %s', async (_label, over) => {
     findUniqueOrThrow.mockResolvedValue(workspaceOf(over));
 
     await confirm();
 
     expect(updateMany).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
   });
 
   it('writes nothing when billing is off', async () => {
