@@ -21,6 +21,7 @@ import {
   isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
+  type TrialDecline,
   type TrialTerms,
 } from './trial-grant';
 import { TrialClaims, type TrialClaimStore } from './trial-claims';
@@ -55,25 +56,38 @@ export class EmailVerificationService {
   ): Promise<TrialTerms | undefined> {
     if (!this.billing) return undefined;
     if (!this.required) return this.termsFor(db, email);
-    return (await this.isRefused(db, email)) ? declineTrial() : undefined;
-  }
-
-  private async isRefused(
-    db: TrialClaimStore,
-    email: string,
-  ): Promise<boolean> {
-    return isDisposableEmail(email) || this.claims.isClaimed(db, email);
+    return this.refusalOf(email, () => this.claims.isClaimed(db, email));
   }
 
   private async termsFor(
     db: TrialClaimStore,
     email: string,
   ): Promise<TrialTerms> {
-    const granted =
-      !isDisposableEmail(email) && (await this.claims.claim(db, email));
-    return granted
-      ? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
-      : declineTrial();
+    const refusal = await this.refusalOf(
+      email,
+      async () => !(await this.claims.claim(db, email)),
+    );
+    return (
+      refusal ?? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
+    );
+  }
+
+  private async refusalOf(
+    email: string,
+    mailboxHadTrial: () => Promise<boolean>,
+  ): Promise<TrialDecline | undefined> {
+    if (isDisposableEmail(email)) {
+      return this.decline(`an address on a disposable email domain: ${email}`);
+    }
+    if (await mailboxHadTrial()) {
+      return this.decline(`an address whose mailbox already had one: ${email}`);
+    }
+    return undefined;
+  }
+
+  private decline(reason: string): TrialDecline {
+    this.logger.warn(`no trial for ${reason}`);
+    return declineTrial();
   }
 
   async writeTerms(

@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { User, Workspace } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
@@ -40,6 +41,8 @@ describe('EmailVerificationService confirming an address', () => {
   const userUpdate = jest.fn();
   const claim = jest.fn<Promise<boolean>, [unknown, string]>();
   const release = jest.fn<Promise<void>, [unknown, string]>();
+  const isClaimed = jest.fn<Promise<boolean>, [unknown, string]>();
+  const warn = jest.spyOn(Logger.prototype, 'warn');
 
   const prisma = {
     user: { findUnique, update: userUpdate },
@@ -47,7 +50,7 @@ describe('EmailVerificationService confirming an address', () => {
     withTransaction: (run: (tx: unknown) => Promise<unknown>) =>
       run({ workspace: { updateMany } }),
   } as unknown as PrismaService;
-  const claims = { claim, release } as unknown as TrialClaims;
+  const claims = { claim, release, isClaimed } as unknown as TrialClaims;
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: (
       _justification: string,
@@ -75,6 +78,8 @@ describe('EmailVerificationService confirming an address', () => {
     updateMany.mockReset().mockResolvedValue({ count: 1 });
     claim.mockReset().mockResolvedValue(true);
     release.mockReset().mockResolvedValue(undefined);
+    isClaimed.mockReset().mockResolvedValue(false);
+    warn.mockReset().mockImplementation(() => undefined);
   });
 
   it('looks the link up by its hash', async () => {
@@ -191,6 +196,54 @@ describe('EmailVerificationService confirming an address', () => {
 
     expect(updateMany).not.toHaveBeenCalled();
     expect(claim).not.toHaveBeenCalled();
+  });
+
+  it('warns the operator when a mailbox that already had a trial confirms', async () => {
+    claim.mockResolvedValue(false);
+
+    await confirm();
+
+    expect(warn).toHaveBeenCalledWith(
+      'no trial for an address whose mailbox already had one: owner@example.com',
+    );
+  });
+
+  it('warns the operator when a throwaway address confirms', async () => {
+    findUnique.mockResolvedValue({
+      ...userOf(),
+      email: 'fresh@mailinator.com',
+      workspace: {},
+    });
+
+    await confirm();
+
+    expect(warn).toHaveBeenCalledWith(
+      'no trial for an address on a disposable email domain: fresh@mailinator.com',
+    );
+  });
+
+  it('warns nothing when the trial starts', async () => {
+    await confirm();
+
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('warns the operator when a registration is refused before it confirms', async () => {
+    isClaimed.mockResolvedValue(true);
+
+    await build().openingTerms({} as never, 'owner+again@example.com');
+
+    expect(warn).toHaveBeenCalledWith(
+      'no trial for an address whose mailbox already had one: owner+again@example.com',
+    );
+  });
+
+  it('warns the operator when a throwaway address registers', async () => {
+    await build().openingTerms({} as never, 'fresh@mailinator.com');
+
+    expect(warn).toHaveBeenCalledWith(
+      'no trial for an address on a disposable email domain: fresh@mailinator.com',
+    );
   });
 
   it('writes nothing when billing is off', async () => {
