@@ -13,6 +13,7 @@ import { TrialClaimBackfill } from '../src/auth/trial-claim-backfill';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
+import { trialClaimKey } from './helpers/trial-claim-key';
 import {
   clearRateLimitCounters,
   obliterateQueues,
@@ -93,10 +94,31 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
+    await prisma.workspace.deleteMany({
+      where: { id: { not: DEFAULT_WORKSPACE_ID } },
+    });
+    await prisma.workspace.upsert({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      update: {
+        plan: 'free',
+        trialStartedAt: null,
+        trialDeclinedAt: null,
+        trialEndsAt: null,
+        planExpiresAt: null,
+        subscriptionId: null,
+      },
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
+    });
     await obliterateQueues(app);
     await app.close();
     restoreAuthEnv();
     await prisma.$disconnect();
+  });
+
+  it('claims the owner of the trialed workspace and nobody else', async () => {
+    const keys = (await prisma.trialClaim.findMany()).map(({ key }) => key);
+
+    expect(keys).toEqual([trialClaimKey('grownup@gmail.com')]);
   });
 
   it('refuses a second trial to a variant of the owner of a trialed workspace', async () => {

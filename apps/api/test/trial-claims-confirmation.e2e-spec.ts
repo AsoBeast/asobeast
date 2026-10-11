@@ -40,7 +40,9 @@ describe('One trial per mailbox when the address must be confirmed', () => {
 
   const confirm = async (email: string): Promise<AuthUser> => {
     const mail = sent.filter(({ to }) => to === email).at(-1);
+    expect(mail).toBeDefined();
     const token = /token=([0-9a-f]+)/.exec(mail?.text ?? '')?.[1];
+    expect(token).toBeDefined();
     const res = await request(app.getHttpServer())
       .post('/auth/verify')
       .send({ token })
@@ -157,6 +159,22 @@ describe('One trial per mailbox when the address must be confirmed', () => {
     expect(winner.entitled).toBe(true);
     expect(loser.entitled).toBe(false);
     expect(loser.trialAwaitsConfirmation).toBe(false);
+  });
+
+  it('starts one trial when two copies of a mailbox confirm at the same time', async () => {
+    await register('farmer+1@example.com');
+    await register('farmer+2@example.com');
+
+    const confirmed = await Promise.all([
+      confirm('farmer+1@example.com'),
+      confirm('farmer+2@example.com'),
+    ]);
+
+    expect(confirmed.filter((account) => account.entitled)).toHaveLength(1);
+    await expect(
+      prisma.workspace.count({ where: { plan: 'trial' } }),
+    ).resolves.toBe(1);
+    await expect(prisma.trialClaim.count()).resolves.toBe(1);
   });
 
   it('does not let an unconfirmed registration use up the mailbox', async () => {

@@ -14,6 +14,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { subscribeDuring } from './helpers/subscribe-during';
 import { testDb } from './helpers/test-db';
+import { trialClaimKey } from './helpers/trial-claim-key';
 import {
   clearRateLimitCounters,
   obliterateQueues,
@@ -183,7 +184,12 @@ describe('One trial per mailbox', () => {
     const keys = (await prisma.trialClaim.findMany()).map(({ key }) => key);
     const plain = createHash('sha256').update('returning@example.com');
 
-    expect(keys).toHaveLength(2);
+    expect(keys.sort()).toEqual(
+      [
+        trialClaimKey('operator@example.com'),
+        trialClaimKey('returning@example.com'),
+      ].sort(),
+    );
     expect(keys.join()).not.toContain('returning');
     expect(keys).not.toContain(plain.copy().digest('hex'));
     expect(keys).not.toContain(plain.copy().digest('base64url'));
