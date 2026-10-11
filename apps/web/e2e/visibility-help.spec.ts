@@ -93,3 +93,16 @@ test("the explanation fits a phone screen", async ({ page }) => {
   expect(box!.x).toBeGreaterThanOrEqual(16);
   expect(box!.x + box!.width).toBeLessThanOrEqual(375 - 16);
 });
+
+for (const view of ["cards", "table"]) {
+  test(`the dashboard explains visibility in the ${view} view`, async ({
+    page,
+  }) => {
+    await page.goto(`/?view=${view}`);
+    const apps = page.getByRole("region", { name: "Apps" });
+
+    await openHelp(page, apps);
+
+    await expect(page).toHaveURL(new RegExp(`view=${view}`));
+  });
+}
