@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { trustedClientAddress } from "./client-address";
+import { RequestBodyTooLargeError, readBoundedBody } from "./request-body";
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 const UPSTREAM_TIMEOUT_MS = Number(process.env.API_PROXY_TIMEOUT_MS ?? 30_000);
@@ -75,6 +76,17 @@ function errorResponse(
   return Response.json(envelope, { status: statusCode });
 }
 
+function payloadTooLarge(request: NextRequest, error: Error): Response {
+  const response = errorResponse(
+    request,
+    413,
+    "Payload Too Large",
+    error.message,
+  );
+  response.headers.set("connection", "close");
+  return response;
+}
+
 function unreachable(request: NextRequest, error: unknown): Response {
   return error instanceof Error && error.name === "TimeoutError"
     ? errorResponse(
@@ -131,10 +143,17 @@ export async function proxyToApi(
   if (path === null) {
     return errorResponse(request, 404, "Not Found", "Cannot resolve path.");
   }
-  const body =
-    request.method === "GET" || request.method === "HEAD"
-      ? undefined
-      : await request.text();
+  let body: Uint8Array<ArrayBuffer> | undefined;
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    try {
+      body = await readBoundedBody(request);
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return payloadTooLarge(request, error);
+      }
+      throw error;
+    }
+  }
 
   try {
     const upstream = await fetchUpstream(

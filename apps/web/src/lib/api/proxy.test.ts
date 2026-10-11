@@ -1,3 +1,4 @@
+import { REQUEST_BODY_LIMIT_BYTES } from "@asobeast/shared";
 import type { ApiErrorEnvelope } from "@asobeast/shared";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,6 +24,45 @@ async function loadProxy(env: Record<string, string> = {}) {
     vi.stubEnv(name, value);
   }
   return import("./proxy");
+}
+
+const CHUNK_BYTES = 16 * 1024;
+const CHUNK_COUNT = 1000;
+const STREAM_PREFETCH_PULLS = 1;
+
+function countedStream(): {
+  stream: ReadableStream<Uint8Array>;
+  pulls: () => number;
+} {
+  let pulled = 0;
+  const chunk = new Uint8Array(CHUNK_BYTES).fill(0x78);
+  const stream = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      pulled += 1;
+      if (pulled > CHUNK_COUNT) {
+        controller.close();
+        return;
+      }
+      controller.enqueue(chunk);
+    },
+  });
+  return { stream, pulls: () => pulled };
+}
+
+function streamedRequest(
+  stream: ReadableStream<Uint8Array>,
+  headers: Record<string, string> = {},
+): NextRequest {
+  return request("/api/backend/apps", {
+    method: "POST",
+    headers,
+    body: stream,
+    duplex: "half",
+  } as NextRequestInit);
+}
+
+function sentBody(): Uint8Array {
+  return fetchMock().mock.calls[0][1].body as Uint8Array;
 }
 
 function stubFetch(implementation: typeof fetch): void {
@@ -324,7 +364,7 @@ describe("proxyToApi", () => {
       ["apps"],
     );
 
-    expect(fetchMock().mock.calls[0][1].body).toBe(
+    expect(new TextDecoder().decode(sentBody())).toBe(
       '{"url":"https://apps.apple.com/us/app/id1"}',
     );
   });
@@ -502,9 +542,111 @@ describe("proxyToApi webhook delivery", () => {
       ["billing", "webhook"],
     );
 
-    const body = fetchMock().mock.calls[0][1].body as string;
-    const encoder = new TextEncoder();
-    expect(encoder.encode(body)).toEqual(encoder.encode(payload));
+    expect(sentBody()).toEqual(new TextEncoder().encode(payload));
+  });
+});
+
+describe("proxyToApi request body limit", () => {
+  beforeEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("refuses a declared body over the limit without reading any of it", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const { stream, pulls } = countedStream();
+
+    const response = await proxyToApi(
+      streamedRequest(stream, {
+        "content-length": String(REQUEST_BODY_LIMIT_BYTES + 1),
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(413);
+    const envelope = (await response.json()) as ApiErrorEnvelope;
+    expect(envelope).toMatchObject({
+      statusCode: 413,
+      error: "Payload Too Large",
+      path: "/api/backend/apps",
+    });
+    expect(pulls()).toBeLessThanOrEqual(STREAM_PREFETCH_PULLS);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("stops reading a chunked body once it passes the limit", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const { stream, pulls } = countedStream();
+
+    const response = await proxyToApi(streamedRequest(stream), ["apps"]);
+
+    expect(response.status).toBe(413);
+    expect(pulls()).toBeLessThan(
+      Math.ceil(REQUEST_BODY_LIMIT_BYTES / CHUNK_BYTES) + 4,
+    );
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("closes the connection after refusing a body it did not read", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(streamedRequest(countedStream().stream), [
+      "apps",
+    ]);
+
+    expect(response.headers.get("connection")).toBe("close");
+  });
+
+  it("forwards a body of exactly the limit", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(
+      request("/api/backend/apps", {
+        method: "POST",
+        body: "x".repeat(REQUEST_BODY_LIMIT_BYTES),
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(200);
+    expect(sentBody().byteLength).toBe(REQUEST_BODY_LIMIT_BYTES);
+  });
+
+  it("refuses a body one byte over the limit", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(
+      request("/api/backend/apps", {
+        method: "POST",
+        body: "x".repeat(REQUEST_BODY_LIMIT_BYTES + 1),
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(413);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("sends an empty body for a mutating request that carries none", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    await proxyToApi(request("/api/backend/apps", { method: "POST" }), [
+      "apps",
+    ]);
+
+    expect(sentBody().byteLength).toBe(0);
   });
 });
 
