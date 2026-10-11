@@ -44,7 +44,7 @@ const build = () => {
     canSend: true,
     confirmationFor: jest.fn().mockResolvedValue(null),
     allowMailTo: jest.fn().mockResolvedValue(refund),
-    issue: jest.fn().mockResolvedValue(true),
+    issue: jest.fn().mockResolvedValue('sent'),
   };
   const service = new EmailAlertsService(
     {
@@ -107,14 +107,15 @@ describe('EmailAlertsService', () => {
   describe('resendConfirmation', () => {
     it('answers a resend that lost to a concurrent one as cooling down', async () => {
       const { service, findFirst, confirmation } = build();
-      findFirst
-        .mockResolvedValueOnce(waiting(new Date(Date.now() - 2 * HOUR_MS)))
-        .mockResolvedValueOnce(waiting(new Date()));
-      confirmation.issue.mockResolvedValue(false);
+      findFirst.mockResolvedValueOnce(
+        waiting(new Date(Date.now() - 2 * HOUR_MS)),
+      );
+      confirmation.issue.mockResolvedValue('lost');
 
       await expect(
         service.resendConfirmation('ea_1', 'owner@example.com'),
       ).rejects.toBeInstanceOf(RequestThrottledError);
+      expect(findFirst).toHaveBeenCalledTimes(1);
     });
 
     it('names the cooldown it waits for', async () => {
@@ -128,10 +129,12 @@ describe('EmailAlertsService', () => {
       );
     });
 
-    it('answers a resend whose mail could not be sent as unavailable', async () => {
+    it('answers a resend whose mail could not be sent as unavailable, whatever the row says now', async () => {
       const { service, findFirst, confirmation } = build();
-      findFirst.mockResolvedValue(waiting(new Date(Date.now() - 2 * HOUR_MS)));
-      confirmation.issue.mockResolvedValue(false);
+      findFirst
+        .mockResolvedValueOnce(waiting(new Date(Date.now() - 2 * HOUR_MS)))
+        .mockResolvedValueOnce(waiting(new Date()));
+      confirmation.issue.mockResolvedValue('failed');
 
       await expect(
         service.resendConfirmation('ea_1', 'owner@example.com'),

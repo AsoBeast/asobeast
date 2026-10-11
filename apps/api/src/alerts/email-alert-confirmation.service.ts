@@ -14,6 +14,8 @@ import { MailerService } from './mailer.service';
 
 const NO_ORIGIN = 'WEB_PUBLIC_URL is not set, so the link has no host';
 
+export type ConfirmationOutcome = 'sent' | 'lost' | 'failed';
+
 interface PendingRecipient {
   id: string;
   email: string;
@@ -56,30 +58,31 @@ export class EmailAlertConfirmation {
     alert: PendingRecipient,
     requestedBy: string,
     refund: ConfirmationRefund | null,
-  ): Promise<boolean> {
-    if (!refund) return false;
+  ): Promise<ConfirmationOutcome> {
+    if (!refund) return 'failed';
     const sentAt = new Date();
-    if (!(await this.reserve(alert, sentAt))) {
+    const reserved = await this.reserve(alert, sentAt);
+    if (reserved !== 'reserved') {
       await refund();
-      return false;
+      return reserved;
     }
     try {
       await this.send(alert, requestedBy, sentAt);
-      return true;
+      return 'sent';
     } catch (error) {
       await this.restore(alert, sentAt);
       await refund();
       this.logger.error(
         `confirmation email for alert ${alert.id} failed: ${reasonOf(error)}`,
       );
-      return false;
+      return 'failed';
     }
   }
 
   private async reserve(
     alert: PendingRecipient,
     sentAt: Date,
-  ): Promise<boolean> {
+  ): Promise<'reserved' | 'lost' | 'failed'> {
     try {
       const { count } = await this.prisma.emailAlert.updateMany({
         where: {
@@ -91,16 +94,17 @@ export class EmailAlertConfirmation {
         },
         data: { confirmationSentAt: sentAt },
       });
-      if (count > 0) return true;
+      if (count > 0) return 'reserved';
       this.logger.error(
         `confirmation email for alert ${alert.id} not sent: the alert changed before it went out`,
       );
+      return 'lost';
     } catch (error) {
       this.logger.error(
         `confirmation email for alert ${alert.id} not sent: ${reasonOf(error)}`,
       );
+      return 'failed';
     }
-    return false;
   }
 
   private async restore(alert: PendingRecipient, sentAt: Date): Promise<void> {

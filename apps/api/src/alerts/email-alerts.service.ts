@@ -153,8 +153,14 @@ export class EmailAlertsService {
     }
     assertCooledDown(alert.confirmationSentAt);
     const refund = await this.confirmation.allowMailTo(alert.email);
-    if (!(await this.confirmation.issue(alert, requestedBy, refund))) {
-      assertCooledDown((await this.find(id)).confirmationSentAt);
+    const outcome = await this.confirmation.issue(alert, requestedBy, refund);
+    if (outcome === 'lost') {
+      throw new RequestThrottledError(
+        CONFIRMATION_RESEND_COOLDOWN_SECONDS,
+        COOLING_DOWN_MESSAGE,
+      );
+    }
+    if (outcome === 'failed') {
       throw new ServiceUnavailableException(NOT_SENT_MESSAGE);
     }
   }
@@ -203,11 +209,8 @@ export class EmailAlertsService {
     if (!ask) return toEmailAlertItem(alert);
     return {
       ...toEmailAlertItem(alert),
-      confirmationSent: await this.confirmation.issue(
-        alert,
-        requestedBy,
-        refund,
-      ),
+      confirmationSent:
+        (await this.confirmation.issue(alert, requestedBy, refund)) === 'sent',
     };
   }
 

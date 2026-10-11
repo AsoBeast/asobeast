@@ -121,7 +121,7 @@ describe('EmailAlertConfirmation', () => {
 
       const delivered = await service.issue(ALERT, 'owner@example.com', refund);
 
-      expect(delivered).toBe(true);
+      expect(delivered).toBe('sent');
       const [{ where, data }] = updateMany.mock.calls[0] as [
         { where: unknown; data: { confirmationSentAt: Date } },
       ];
@@ -161,7 +161,7 @@ describe('EmailAlertConfirmation', () => {
       updateMany.mockResolvedValue({ count: 0 });
 
       expect(await service.issue(ALERT, 'owner@example.com', refund)).toBe(
-        false,
+        'lost',
       );
       expect(send).not.toHaveBeenCalled();
       expect(refund).toHaveBeenCalledTimes(1);
@@ -178,7 +178,7 @@ describe('EmailAlertConfirmation', () => {
       updateMany.mockRejectedValue(new Error('connection reset'));
 
       expect(await service.issue(ALERT, 'owner@example.com', refund)).toBe(
-        false,
+        'failed',
       );
       expect(send).not.toHaveBeenCalled();
       expect(refund).toHaveBeenCalledTimes(1);
@@ -194,7 +194,7 @@ describe('EmailAlertConfirmation', () => {
       send.mockRejectedValue(new Error('smtp down'));
 
       expect(await service.issue(ALERT, 'owner@example.com', refund)).toBe(
-        false,
+        'failed',
       );
       const [reserved] = updateMany.mock.calls[0] as [
         { data: { confirmationSentAt: Date } },
@@ -230,7 +230,9 @@ describe('EmailAlertConfirmation', () => {
         origin: null,
       });
 
-      expect(await service.issue(ALERT, 'owner@example.com', null)).toBe(false);
+      expect(await service.issue(ALERT, 'owner@example.com', null)).toBe(
+        'failed',
+      );
       expect(send).not.toHaveBeenCalled();
       expect(updateMany).not.toHaveBeenCalled();
     });
