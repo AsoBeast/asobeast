@@ -3,6 +3,7 @@ import type { APIRequestContext, Page } from "@playwright/test";
 import {
   EXPIRED_CONFIRM_TOKEN,
   TRUSTED_RECIPIENT,
+  UNSENT_RECIPIENT_PREFIX,
   VALID_CONFIRM_TOKEN,
 } from "./fixtures.mts";
 import { openSettledDialog } from "./dialog.mts";
@@ -121,6 +122,38 @@ test("a new recipient waits for confirmation and can be asked again", async ({
   await expect(
     page.getByText(`Confirmation email sent to ${address}`),
   ).toBeVisible();
+});
+
+test("says when the confirmation email to a new recipient did not go out", async ({
+  page,
+}) => {
+  const address = `${UNSENT_RECIPIENT_PREFIX}${randomUUID()}@example.net`;
+
+  const row = await addRecipient(page, address);
+
+  await expect(row.getByText(AWAITING)).toBeVisible();
+  await expect(
+    page.getByText(`The confirmation email to ${address} could not be sent`, {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(`Confirmation email sent to ${address}`),
+  ).toHaveCount(0);
+});
+
+test("refreshes the recipient list after a resend", async ({ page }) => {
+  const row = await addRecipient(page, `stranger-${randomUUID()}@example.net`);
+  await expect(row.getByText(AWAITING)).toBeVisible();
+  const refetch = page.waitForRequest(
+    (request) =>
+      request.method() === "GET" &&
+      new URL(request.url()).pathname.endsWith("/email-alerts"),
+  );
+
+  await row.getByRole("button", { name: "Resend confirmation" }).click();
+
+  await refetch;
 });
 
 test("a recipient the workspace already trusts can be tested at once", async ({

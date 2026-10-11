@@ -90,6 +90,8 @@ export const EXPIRED_CONFIRM_TOKEN = "expired-token-".padEnd(43, "x");
 
 export const TRUSTED_RECIPIENT = "owner@example.com";
 
+export const UNSENT_RECIPIENT_PREFIX = "unsent-";
+
 export const METRICS_SCRAPE =
   'asobeast_store_canary{store="APP_STORE",outcome="ok"} 1\n';
 

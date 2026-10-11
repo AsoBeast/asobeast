@@ -62,6 +62,7 @@ import {
   VALID_CONFIRM_TOKEN,
   EXPIRED_CONFIRM_TOKEN,
   TRUSTED_RECIPIENT,
+  UNSENT_RECIPIENT_PREFIX,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -1546,16 +1547,28 @@ const routes: Route[] = [
     pattern: /^\/email-alerts$/,
     handler: (_p, req, res) => {
       withBody<EmailAlertCreateRequest>(req, res, (body) => {
+        const trusted = body.email === TRUSTED_RECIPIENT;
         const alert: EmailAlertItem = {
           id: `email-${emailAlerts.length + 1}`,
           email: body.email,
           events: body.events,
           active: true,
-          confirmed: body.email === TRUSTED_RECIPIENT,
+          confirmed: trusted,
           createdAt: new Date().toISOString(),
         };
         emailAlerts.unshift(alert);
-        json(res, 201, alert);
+        json(
+          res,
+          201,
+          trusted
+            ? alert
+            : {
+                ...alert,
+                confirmationSent: !body.email.startsWith(
+                  UNSENT_RECIPIENT_PREFIX,
+                ),
+              },
+        );
       });
     },
   },
