@@ -101,3 +101,22 @@ test("two activations of Start in one task send one deep search", async ({
   await expect(toast(page, /^Queued ·/)).toHaveCount(1);
   expect(starts).toHaveLength(1);
 });
+
+test("a started deep search warns that the daily run can slow it down", async ({
+  page,
+}) => {
+  const queued: SpiderEnqueueResult = { enqueued: 27 };
+  await routeSpider(page, { status: 202, body: queued });
+  const start = await openDeepSearch(page);
+  const dialog = page.getByRole("dialog", { name: "Deep search" });
+
+  await expect(
+    dialog.getByText(/longer while the daily run is collecting/),
+  ).toBeVisible();
+
+  await start.click();
+
+  await expect(
+    toast(page, /longer while the daily run is collecting/),
+  ).toBeVisible();
+});
