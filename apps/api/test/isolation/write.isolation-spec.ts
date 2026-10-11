@@ -3,6 +3,7 @@ import { Queue } from 'bullmq';
 import type { EmailAlertItem } from '@asobeast/shared';
 import { MailerService } from '../../src/alerts/mailer.service';
 import { QUEUES } from '../../src/jobs/jobs.types';
+import { clearRateLimitCounters } from '../obliterate-queues';
 import { createIsolationFixture, IsolationFixture } from './fixture';
 
 describe('Write isolation', () => {
@@ -251,10 +252,12 @@ describe('Write isolation', () => {
 
   it('asks the verified owner of another workspace to confirm like any stranger', async () => {
     const mailer = fixture.app.get(MailerService);
-    jest.spyOn(mailer, 'enabled', 'get').mockReturnValue(true);
-    jest
-      .spyOn(mailer, 'origin', 'get')
-      .mockReturnValue('https://app.example.test');
+    const spies = [
+      jest.spyOn(mailer, 'enabled', 'get').mockReturnValue(true),
+      jest
+        .spyOn(mailer, 'origin', 'get')
+        .mockReturnValue('https://app.example.test'),
+    ];
     const sendAccountMail = jest
       .spyOn(mailer, 'sendAccountMail')
       .mockResolvedValue(undefined);
@@ -263,16 +266,27 @@ describe('Write isolation', () => {
       data: { emailVerifiedAt: new Date() },
     });
 
-    const created = await fixture.b.agent
-      .post('/email-alerts')
-      .send({ email: fixture.a.email, events: ['rank.dropped'] })
-      .expect(201);
+    try {
+      const created = await fixture.b.agent
+        .post('/email-alerts')
+        .send({ email: fixture.a.email, events: ['rank.dropped'] })
+        .expect(201);
+      const alert = created.body as EmailAlertItem;
 
-    expect((created.body as EmailAlertItem).confirmed).toBe(false);
-    expect(sendAccountMail).toHaveBeenCalledTimes(1);
-    expect(sendAccountMail).toHaveBeenCalledWith(
-      expect.objectContaining({ to: fixture.a.email }),
-    );
-    jest.restoreAllMocks();
+      expect(alert.confirmed).toBe(false);
+      expect(sendAccountMail).toHaveBeenCalledTimes(1);
+      expect(sendAccountMail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: fixture.a.email }),
+      );
+      await fixture.db.emailAlert.delete({ where: { id: alert.id } });
+    } finally {
+      for (const spy of spies) spy.mockRestore();
+      sendAccountMail.mockRestore();
+      await fixture.db.user.update({
+        where: { id: fixture.a.userId },
+        data: { emailVerifiedAt: null },
+      });
+      await clearRateLimitCounters(fixture.app);
+    }
   });
 });
