@@ -13,7 +13,10 @@ import {
   CredentialRateLimiter,
 } from '../src/auth/rate-limit/credential-rate.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { InProcessGateway } from '../src/mcp/in-process.gateway';
+import {
+  InProcessGateway,
+  InProcessResponse,
+} from '../src/mcp/in-process.gateway';
 import {
   seedApiToken,
   seedWorkspace,
@@ -29,18 +32,18 @@ import {
 } from './obliterate-queues';
 
 const NEIGHBOUR = 'ws_mcp_neighbour';
-const REVOKED = `${API_TOKEN_PREFIX}${'9'.repeat(48)}`;
+const UNKNOWN_TOKEN = `${API_TOKEN_PREFIX}${'9'.repeat(48)}`;
 
 describe('Remote MCP credential isolation (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let neighbourToken: string;
 
-  const dispatchRevoked = (): Promise<unknown> =>
+  const dispatchUnknown = (): Promise<InProcessResponse> =>
     app.get(InProcessGateway).send({
       method: 'GET',
       url: '/apps',
-      headers: { authorization: `Bearer ${REVOKED}` },
+      headers: { authorization: `Bearer ${UNKNOWN_TOKEN}` },
     });
 
   beforeAll(async () => {
@@ -83,13 +86,15 @@ describe('Remote MCP credential isolation (e2e)', () => {
 
   it('keeps one workspace rejected tool calls from refusing another workspace', async () => {
     for (let call = 0; call <= CREDENTIAL_FAILURES_PER_MINUTE + 10; call += 1) {
-      await dispatchRevoked();
+      await dispatchUnknown();
     }
 
     const answer = await mcpAs(app, neighbourToken).callTool('list_apps', {});
 
-    expect(textOf(answer)).not.toContain('rejected credentials');
+    expect(answer.error).toBeUndefined();
+    expect(answer.result).toBeDefined();
     expect(answer.result?.isError).toBeFalsy();
+    expect(textOf(answer)).not.toContain('rejected credentials');
   });
 
   it('never counts a rejected tool call against an address', async () => {
@@ -98,7 +103,7 @@ describe('Remote MCP credential isolation (e2e)', () => {
       'recordRejection',
     );
     try {
-      await dispatchRevoked();
+      expect(await dispatchUnknown()).toMatchObject({ status: 401 });
       expect(recorded).not.toHaveBeenCalled();
     } finally {
       recorded.mockRestore();
