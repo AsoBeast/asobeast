@@ -5,9 +5,9 @@ import {
   CompetitorItem,
   PLAN_LIMITS,
 } from '@asobeast/shared';
-import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
+  allowanceSpendsDuring,
   CapacityHarness,
   OwnerAgent,
   resetCapacity,
@@ -89,11 +89,9 @@ describe('Competitor capacity (e2e)', () => {
 
   it('spends nothing on a competitor the app already has', async () => {
     await addCompetitor().expect(201);
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    await addCompetitor().expect(201);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      addCompetitor().expect(201),
+    );
 
     expect(calls).toBe(0);
   });
@@ -109,11 +107,9 @@ describe('Competitor capacity (e2e)', () => {
         primaryAppId: primaryId,
       })),
     });
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    await addCompetitor().expect(403);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      addCompetitor().expect(403),
+    );
 
     expect(calls).toBe(0);
   });

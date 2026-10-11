@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { OnDemandLimiter } from '../../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../../src/store-providers/store-provider.registry';
 import {
@@ -90,4 +91,17 @@ export async function stopCapacityHarness({
   await app.close();
   restoreAuthEnv();
   await prisma.$disconnect();
+}
+
+export async function allowanceSpendsDuring<T>(
+  { app }: CapacityHarness,
+  act: () => PromiseLike<T>,
+): Promise<[T, number]> {
+  const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
+  try {
+    const result = await act();
+    return [result, consume.mock.calls.length];
+  } finally {
+    consume.mockRestore();
+  }
 }

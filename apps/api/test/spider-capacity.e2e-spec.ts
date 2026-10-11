@@ -3,7 +3,6 @@ import { getQueueToken } from '@nestjs/bullmq';
 import { Prisma, Store } from '@prisma/client';
 import { Job, Queue } from 'bullmq';
 import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
-import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
   JOBS,
@@ -15,6 +14,7 @@ import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { SPIDER_PROBES } from '../src/keywords/spider';
 import { ProxyEgress } from '../src/store-providers/egress/proxy-egress.service';
 import {
+  allowanceSpendsDuring,
   CapacityHarness,
   OwnerAgent,
   resetCapacity,
@@ -121,11 +121,9 @@ describe('Keyword deep search capacity (e2e)', () => {
         results: [],
       })),
     });
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    const answer = await startSpider('stored term').expect(202);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [answer, calls] = await allowanceSpendsDuring(harness, () =>
+      startSpider('stored term').expect(202),
+    );
 
     expect(answer.body).toEqual({ enqueued: 0 });
     expect(calls).toBe(0);
@@ -134,11 +132,9 @@ describe('Keyword deep search capacity (e2e)', () => {
   it('spends nothing on a term whose probes are all still queued', async () => {
     await startSpider('queued term').expect(202);
     const queuedBefore = await queuedProbes();
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    const answer = await startSpider('queued term').expect(202);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [answer, calls] = await allowanceSpendsDuring(harness, () =>
+      startSpider('queued term').expect(202),
+    );
 
     expect(calls).toBe(0);
     expect(answer.body).toEqual({ enqueued: 0 });
@@ -146,11 +142,9 @@ describe('Keyword deep search capacity (e2e)', () => {
   });
 
   it('spends nothing on an app the workspace does not have', async () => {
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    await startSpider('missing app', 'no-such-app').expect(404);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      startSpider('missing app', 'no-such-app').expect(404),
+    );
 
     expect(calls).toBe(0);
   });
@@ -178,10 +172,12 @@ describe('Keyword deep search capacity (e2e)', () => {
 
     const egressCallsOf = async (run: () => Promise<void>) => {
       const through = jest.spyOn(harness.app.get(ProxyEgress), 'through');
-      await run();
-      const calls = through.mock.calls.length;
-      through.mockRestore();
-      return calls;
+      try {
+        await run();
+        return through.mock.calls.length;
+      } finally {
+        through.mockRestore();
+      }
     };
 
     it('stores nothing once the plan has expired', async () => {

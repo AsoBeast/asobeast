@@ -1,9 +1,9 @@
 import './helpers/enable-billing';
 import { ApiErrorEnvelope, AppDetail, PLAN_LIMITS } from '@asobeast/shared';
 import { Store } from '@prisma/client';
-import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
+  allowanceSpendsDuring,
   CapacityHarness,
   OwnerAgent,
   resetCapacity,
@@ -63,11 +63,9 @@ describe('App import capacity (e2e)', () => {
 
   it('spends nothing on an app the workspace already tracks', async () => {
     await importApp().expect(201);
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    await importApp().expect(201);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      importApp().expect(201),
+    );
 
     expect(calls).toBe(0);
   });
@@ -81,11 +79,9 @@ describe('App import capacity (e2e)', () => {
         country: 'us',
       })),
     });
-    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
-
-    await importApp().expect(403);
-    const calls = consume.mock.calls.length;
-    consume.mockRestore();
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      importApp().expect(403),
+    );
 
     expect(calls).toBe(0);
   });
