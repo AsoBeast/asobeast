@@ -20,4 +20,13 @@ describe('Email alert confirmation against an upgraded baseline database', () =>
     expect(alert.confirmedAt).toEqual(alert.createdAt);
     expect(alert.confirmationSentAt).toBeNull();
   });
+
+  it('leaves a paused alert waiting for its recipient to confirm again', async () => {
+    const alert = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: 'mail_paused' },
+    });
+
+    expect(alert.active).toBe(false);
+    expect(alert.confirmedAt).toBeNull();
+  });
 });
