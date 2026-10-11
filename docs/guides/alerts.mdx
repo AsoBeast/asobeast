@@ -179,19 +179,18 @@ Email stays disabled until both `SMTP_HOST` and `SMTP_FROM` are set. Neither one
 
 Adding an email alert sends one confirmation email to the recipient, naming the account that added the address. The alert shows **Awaiting confirmation** in **Settings**, **Email alerts** and receives nothing, not even a test email, until the recipient presses **Confirm email address** on the page the link opens. That page asks before it acts, so a mail scanner that opens the link confirms nothing.
 
-A recipient is confirmed at once in two cases:
+A recipient is confirmed at once only when the address is the verified account email of a member of the workspace. Account emails are verified only where billing and SMTP are both on, so on a self hosted instance every recipient, the owner included, confirms through the mailbox.
 
-- The address is the verified account email of a member of the workspace.
-- The instance cannot send a link, because `WEB_PUBLIC_URL` is unset.
+The confirmation link points at the web app, so it needs `WEB_PUBLIC_URL`. Without it no confirmation email can be sent, the recipient stays **Awaiting confirmation** and receives nothing, and the API logs a warning at startup in production. When a confirmation email cannot be sent, for that reason or because the SMTP relay refused it, **Settings** says so when you add the recipient, and **Resend confirmation** tries again.
 
 | Action | Effect on confirmation |
 | --- | --- |
 | Change the address of an alert | The new address must confirm, and links sent to the old one stop working |
 | Change the events or pause and resume | None |
-| Unsubscribe from an alert email | The alert pauses and its confirmation is withdrawn, so turning it back on needs **Resend confirmation** |
-| Press **Resend confirmation** | A new email goes out and the previous link stops working |
+| Unsubscribe from an alert email | The alert pauses and its confirmation is withdrawn. This alert never asks that address again, so **Resend confirmation** is refused until the address changes |
+| Press **Resend confirmation** | A new email goes out and the previous link stops working. One alert can be resent once an hour |
 
-A confirmation link works for 7 days, for the address it was sent to and for the latest email sent for that alert. Alerts that existed before this rule counted as confirmed when you upgraded.
+A confirmation link works for 7 days, for the address it was sent to and for the latest email sent for that alert. When you upgraded, alerts that were active counted as confirmed. Paused alerts did not, because a pause may have been an unsubscribe, so each needs **Resend confirmation** before it delivers again.
 
 Three limits keep confirmation emails from being used to mail strangers:
 
@@ -203,6 +202,8 @@ Three limits keep confirmation emails from being used to mail strangers:
 
 Adding an alert, changing its address, resending a confirmation and sending a test are each limited to 10 requests a minute per workspace. A refused request answers `429` with a `Retry-After` header, or `403` for the two alert counts.
 
+The recipient limit counts every workspace together on purpose: it protects the person receiving the email, however many workspaces ask. A workspace that spends it delays confirmations to that address from other workspaces until the next UTC day. A workspace past its own limit spends none of a recipient's.
+
 ### What an alert email looks like
 
 Every alert email uses the AsoBeast layout: a header with the logo, the details of what happened, a button back into the app and a footer saying why the recipient gets it. The button opens the app page, the action for `action.opened`, or the portfolio for the weekly digest. Instant delivery sends one email per event, and batched delivery sends the daily app update and the competitor watch. Subjects start with `[asobeast]` and never change, so mail filters keep working. Every email also has a plain text part.
@@ -213,7 +214,7 @@ A daily update lists up to 20 lines per section. When the report would grow past
 
 ### Unsubscribe from an email
 
-Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. Turn it back on under **Settings**, **Email alerts**. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
+Every alert email carries a one click unsubscribe that mail apps show as their own button, and an **Unsubscribe** link in its footer. Either one pauses that email alert only, while webhooks and other email alerts keep running. It also withdraws the recipient's confirmation, so switching the alert back on under **Settings**, **Email alerts** sends nothing to that address until the address changes and the new one confirms. A link works for the address it was sent to, so changing an alert's address retires the links in earlier emails.
 
 The one click headers need `WEB_PUBLIC_URL` on `https`. On plain `http` only the footer link is offered. See [Email deliverability](/operations/email-deliverability) for the sender side.
 
@@ -236,9 +237,10 @@ Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by def
 - **Deep links are missing.** `WEB_PUBLIC_URL` is unset, so `link` is `null` by design.
 - **The email shows no buttons or logo.** `WEB_PUBLIC_URL` is unset. Set it to the public web origin.
 - **Mail apps show no unsubscribe button.** The instance is not on `https`, or the relay does not sign with DKIM. See [Email deliverability](/operations/email-deliverability).
-- **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows as paused in Settings. Turning it back on needs **Resend confirmation**, because unsubscribing withdraws the confirmation.
-- **A new recipient receives nothing.** The alert shows **Awaiting confirmation**. Ask them to open the confirmation email, check the spam folder, or press **Resend confirmation**. Without `WEB_PUBLIC_URL` no confirmation can be sent, so none is asked for.
+- **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows as paused in Settings. That alert does not ask the address to confirm again, so a recipient who wants alerts back is added as a new email alert and confirms it.
+- **A new recipient receives nothing.** The alert shows **Awaiting confirmation**. Ask them to open the confirmation email, check the spam folder, or press **Resend confirmation**. Without `WEB_PUBLIC_URL` no confirmation email can be sent at all.
 - **Adding a recipient answers 429.** The recipient already had 5 confirmation emails today, or the workspace had 20. The message says which, and the limit resets at midnight UTC.
+- **Resend confirmation answers 429.** A confirmation email went to that alert less than an hour ago. The message says how long to wait.
 - **Reports arrive at an unpredictable hour.** In batched mode the flush waits for every child job to settle, including retries. `CRON_DAILY` sets the start, not the delivery time.
 
 ## Related
