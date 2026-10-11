@@ -17,7 +17,7 @@ describe('Email alert confirmation against an upgraded baseline database', () =>
       where: { id: 'mail_ops' },
     });
 
-    expect(alert.confirmedAt).not.toBeNull();
+    expect(alert.confirmedAt).toEqual(alert.createdAt);
     expect(alert.confirmationSentAt).toBeNull();
   });
 });
