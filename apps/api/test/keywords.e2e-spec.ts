@@ -948,6 +948,13 @@ describe('KeywordsController (e2e)', () => {
         ?.probes,
     ).toBe(2);
 
+    const stillQueued = await api
+      .post(`/apps/${id}/keywords/spider`)
+      .send({ term: 'habit tracker' })
+      .expect(202);
+    expect((stillQueued.body as SpiderEnqueueResult).enqueued).toBe(0);
+
+    await obliterateQueues(app);
     const reStarted = await api
       .post(`/apps/${id}/keywords/spider`)
       .send({ term: 'habit tracker' })

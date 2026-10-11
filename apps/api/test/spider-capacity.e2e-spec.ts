@@ -126,6 +126,20 @@ describe('Keyword deep search capacity (e2e)', () => {
     expect(calls).toBe(0);
   });
 
+  it('spends nothing on a term whose probes are all still queued', async () => {
+    await startSpider('queued term').expect(202);
+    const queuedBefore = await queuedProbes();
+    const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
+
+    const answer = await startSpider('queued term').expect(202);
+    const calls = consume.mock.calls.length;
+    consume.mockRestore();
+
+    expect(calls).toBe(0);
+    expect(answer.body).toEqual({ enqueued: 0 });
+    expect(await queuedProbes()).toBe(queuedBefore);
+  });
+
   it('spends nothing on an app the workspace does not have', async () => {
     const consume = jest.spyOn(harness.app.get(OnDemandLimiter), 'consume');
 

@@ -52,14 +52,20 @@ export class SpiderService {
       select: { probe: true },
     });
     const done = new Set(existing.map((row) => row.probe));
+    const queue = queueFor(app.store, this.appStoreQueue, this.gplayQueue);
+    const jobIdOf = (probe: string) =>
+      spiderJobId(appId, term, market, probe, date);
     const remaining = SPIDER_PROBES.filter((probe) => !done.has(probe));
-    if (remaining.length === 0) {
+    const queued = await Promise.all(
+      remaining.map((probe) => queue.getJob(jobIdOf(probe))),
+    );
+    const fresh = remaining.filter((_, index) => queued[index] === undefined);
+    if (fresh.length === 0) {
       return { enqueued: 0 };
     }
 
     await spend?.();
-    const queue = queueFor(app.store, this.appStoreQueue, this.gplayQueue);
-    for (const probe of remaining) {
+    for (const probe of fresh) {
       await queue.add(
         JOBS.SPIDER_PROBE,
         {
@@ -72,12 +78,12 @@ export class SpiderService {
         } satisfies SpiderProbePayload,
         {
           ...DEFERRED_JOB_OPTIONS,
-          jobId: spiderJobId(appId, term, market, probe, date),
+          jobId: jobIdOf(probe),
         },
       );
     }
 
-    return { enqueued: remaining.length };
+    return { enqueued: fresh.length };
   }
 
   async spiderStatus(
