@@ -159,6 +159,29 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(stored.confirmedAt).toBeNull();
   });
 
+  it('keeps the confirmation and unsubscribe links to their own purpose', async () => {
+    const alert = await addAlert(STRANGER);
+    const confirmationLink = tokenOf(sentConfirmation());
+
+    await confirm(
+      alert,
+      unsubscribeToken(TEST_AUTH_SECRET, {
+        alertId: alert.id,
+        email: STRANGER,
+      }),
+    ).expect(404);
+    await request(app.getHttpServer())
+      .post(`/email-alerts/${alert.id}/unsubscribe`)
+      .query({ token: confirmationLink })
+      .expect(404);
+
+    const stored = await prisma.emailAlert.findUniqueOrThrow({
+      where: { id: alert.id },
+    });
+    expect(stored.confirmedAt).toBeNull();
+    expect(stored.active).toBe(true);
+  });
+
   it('asks the new address to confirm when the address changes', async () => {
     const alert = await addAlert(STRANGER);
     const staleToken = tokenOf(sentConfirmation());

@@ -432,6 +432,13 @@ describe('Alert flush (e2e)', () => {
         confirmedAt: new Date(),
       },
     });
+    const waiting = await prisma.emailAlert.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        email: 'stranger@example.net',
+        events: ['rank.dropped', 'metadata.changed'],
+      },
+    });
 
     const response = await api.post('/alerts/flush').expect(201);
     const result = response.body as AlertFlushResult;
@@ -444,6 +451,9 @@ describe('Alert flush (e2e)', () => {
     const emailJobs = jobs.filter((job) => job.name === JOBS.DELIVER_EMAIL);
     expect(webhookJobs).toHaveLength(4);
     expect(emailJobs).toHaveLength(2);
+    expect(
+      emailJobs.map((job) => (job.data as DeliverEmailPayload).emailAlertId),
+    ).not.toContain(waiting.id);
 
     const targets = webhookJobs.map(
       (job) => (job.data as DeliverAlertPayload).webhookId,
