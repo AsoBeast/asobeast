@@ -1,10 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CONFIRM_ALERT_PATH } from '@asobeast/shared';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { alertConfirmationEmail } from './emails/alert-confirmation-email';
 import { CONFIRMATION_DAYS, confirmationToken } from './confirmation-token';
+import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
 import { MailerService } from './mailer.service';
 
 @Injectable()
@@ -15,6 +17,8 @@ export class EmailAlertConfirmation {
     private readonly config: ConfigService<Env, true>,
     private readonly mailer: MailerService,
     private readonly prisma: PrismaService,
+    private readonly limiter: ConfirmationMailLimiter,
+    private readonly workspace: WorkspaceContext,
   ) {}
 
   get required(): boolean {
@@ -26,6 +30,13 @@ export class EmailAlertConfirmation {
       return new Date();
     }
     return null;
+  }
+
+  allowMailTo(address: string): Promise<void> {
+    return this.limiter.claim(
+      this.workspace.require('a confirmation email'),
+      address,
+    );
   }
 
   async issue(

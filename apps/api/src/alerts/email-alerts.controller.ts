@@ -40,6 +40,8 @@ export class EmailAlertsController {
   }
 
   @Post()
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Register an email alert' })
   create(
     @CurrentUser() user: AccountUser,
@@ -49,6 +51,8 @@ export class EmailAlertsController {
   }
 
   @Patch(':id')
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Update an email alert' })
   update(
     @CurrentUser() user: AccountUser,
@@ -66,6 +70,8 @@ export class EmailAlertsController {
   }
 
   @Post(':id/test')
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({
     summary: 'Send a sample email to a confirmed alert recipient',
   })
@@ -75,6 +81,8 @@ export class EmailAlertsController {
 
   @Post(':id/resend-confirmation')
   @HttpCode(204)
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Send the recipient a new confirmation email' })
   resendConfirmation(
     @CurrentUser() user: AccountUser,

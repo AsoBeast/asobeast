@@ -42,10 +42,11 @@ export class CredentialRateLimitError extends Error {
 }
 
 export class RequestThrottledError extends Error {
-  constructor(readonly retryAfterSeconds: number) {
-    super(
-      `Too many attempts from this address. Try again in ${retryAfterSeconds} seconds.`,
-    );
+  constructor(
+    readonly retryAfterSeconds: number,
+    reason = 'Too many attempts from this address.',
+  ) {
+    super(`${reason} Try again in ${retryAfterSeconds} seconds.`);
     this.name = 'RequestThrottledError';
   }
 }

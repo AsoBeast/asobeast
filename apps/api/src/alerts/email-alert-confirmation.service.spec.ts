@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
 import { confirmationToken } from './confirmation-token';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { MailerService } from './mailer.service';
@@ -12,6 +14,7 @@ const build = (mailer: Partial<MailerService>) => {
   const update = jest.fn().mockResolvedValue({});
   const findFirst = jest.fn().mockResolvedValue(null);
   const send = jest.fn().mockResolvedValue(undefined);
+  const claim = jest.fn().mockResolvedValue(undefined);
   const service = new EmailAlertConfirmation(
     { get: jest.fn(() => SECRET) } as unknown as ConfigService<Env, true>,
     { sendAccountMail: send, ...mailer } as MailerService,
@@ -19,8 +22,10 @@ const build = (mailer: Partial<MailerService>) => {
       emailAlert: { update },
       user: { findFirst },
     } as unknown as PrismaService,
+    { claim } as unknown as ConfirmationMailLimiter,
+    { require: jest.fn(() => 'ws_1') } as unknown as WorkspaceContext,
   );
-  return { service, update, findFirst, send };
+  return { service, update, findFirst, send, claim };
 };
 
 describe('EmailAlertConfirmation', () => {
@@ -67,6 +72,25 @@ describe('EmailAlertConfirmation', () => {
       const { service } = build({ enabled: true, origin: ORIGIN });
 
       expect(await service.confirmationFor('a@example.net')).toBeNull();
+    });
+  });
+
+  describe('allowMailTo', () => {
+    it('claims the allowance of the workspace in scope for the address', async () => {
+      const { service, claim } = build({ enabled: true, origin: ORIGIN });
+
+      await service.allowMailTo('a@example.net');
+
+      expect(claim).toHaveBeenCalledWith('ws_1', 'a@example.net');
+    });
+
+    it('lets the refusal of the limiter through', async () => {
+      const { service, claim } = build({ enabled: true, origin: ORIGIN });
+      claim.mockRejectedValue(new Error('too many'));
+
+      await expect(service.allowMailTo('a@example.net')).rejects.toThrow(
+        'too many',
+      );
     });
   });
 

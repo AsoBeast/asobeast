@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -22,6 +23,10 @@ import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { MailerService } from './mailer.service';
 
 const DISABLED_MESSAGE = 'Email alerts require SMTP configuration';
+
+export const MAX_EMAIL_ALERTS = 25;
+
+export const MAX_UNCONFIRMED_EMAIL_ALERTS = 5;
 
 const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
 
@@ -49,12 +54,18 @@ export class EmailAlertsService {
     requestedBy: string,
   ): Promise<EmailAlertItem> {
     this.assertEnabled();
+    await this.assertRoomForAnother();
+    const confirmedAt = await this.confirmation.confirmationFor(dto.email);
+    if (!confirmedAt) {
+      await this.assertRoomToWait();
+      await this.confirmation.allowMailTo(dto.email);
+    }
     const alert = await this.prisma.emailAlert.create({
       data: {
         workspaceId: this.workspace.require('an email alert'),
         email: dto.email,
         events: dto.events,
-        confirmedAt: await this.confirmation.confirmationFor(dto.email),
+        confirmedAt,
       },
     });
     if (!alert.confirmedAt) {
@@ -74,6 +85,10 @@ export class EmailAlertsService {
       if (await this.changesAddress(id, dto.email)) {
         data.confirmedAt = await this.confirmation.confirmationFor(dto.email);
         data.confirmationSentAt = null;
+        if (!data.confirmedAt) {
+          await this.assertRoomToWait(id);
+          await this.confirmation.allowMailTo(dto.email);
+        }
       }
     }
     if (dto.events !== undefined) {
@@ -105,6 +120,7 @@ export class EmailAlertsService {
     if (alert.confirmedAt) {
       throw new ConflictException(ALREADY_CONFIRMED_MESSAGE);
     }
+    await this.confirmation.allowMailTo(alert.email);
     if (!(await this.confirmation.issue(alert, requestedBy))) {
       throw new ServiceUnavailableException(NOT_SENT_MESSAGE);
     }
@@ -131,6 +147,25 @@ export class EmailAlertsService {
       throw new NotFoundException(`Email alert ${id} not found`);
     }
     return alert;
+  }
+
+  private async assertRoomForAnother(): Promise<void> {
+    if ((await this.prisma.emailAlert.count()) >= MAX_EMAIL_ALERTS) {
+      throw new ForbiddenException(
+        `A workspace can have at most ${MAX_EMAIL_ALERTS} email alerts`,
+      );
+    }
+  }
+
+  private async assertRoomToWait(excluding?: string): Promise<void> {
+    const waiting = await this.prisma.emailAlert.count({
+      where: { confirmedAt: null, NOT: { id: excluding } },
+    });
+    if (waiting >= MAX_UNCONFIRMED_EMAIL_ALERTS) {
+      throw new ForbiddenException(
+        `A workspace can wait for at most ${MAX_UNCONFIRMED_EMAIL_ALERTS} recipients to confirm`,
+      );
+    }
   }
 
   private async changesAddress(id: string, email: string): Promise<boolean> {
