@@ -6,17 +6,14 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import {
-  ApiErrorEnvelope,
-  ApiTokenCreated,
-  PASSWORD_RULE,
-} from '@asobeast/shared';
+import { ApiErrorEnvelope, PASSWORD_RULE } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { RECOVERY_REQUESTS_PER_HOUR } from '../src/auth/rate-limit/recovery-rate.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { mintApiToken, seedApiToken } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
 import {
@@ -78,18 +75,19 @@ describe('Account recovery for a customer who forgot their password', () => {
       .post('/auth/login')
       .send({ email: KNOWN, password });
 
-  const mintToken = async (password: string): Promise<string> => {
-    const signedIn = await signIn(password).expect(200);
-    const cookie = (
-      signedIn.headers['set-cookie'] as unknown as string[]
-    )[0].split(';')[0];
-    const minted = await request(app.getHttpServer())
-      .post('/auth/tokens')
-      .set('Cookie', cookie)
-      .send({ name: 'agent', scope: 'write' })
-      .expect(201);
-    return (minted.body as ApiTokenCreated).token;
-  };
+  const mintToken = async (password: string): Promise<string> =>
+    mintApiToken(app, await signIn(password).expect(200), 'write');
+
+  const me = (token: string) =>
+    request(app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+  const entitled = () =>
+    prisma.workspace.update({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      data: { plan: 'indie', planExpiresAt: new Date(Date.now() + DAY_MS) },
+    });
 
   const issuedToken = async (): Promise<string> => {
     const before = sent.length;
@@ -354,39 +352,47 @@ describe('Account recovery for a customer who forgot their password', () => {
       .expect(401);
   });
 
-  it('revokes every personal api token the account held', async () => {
-    await prisma.workspace.update({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      data: { plan: 'indie', planExpiresAt: new Date(Date.now() + DAY_MS) },
-    });
+  it('revokes every personal api token the account held and no one else', async () => {
+    await entitled();
     const heldByAttacker = await mintToken(PASSWORD);
-    await request(app.getHttpServer())
-      .get('/auth/me')
-      .set('Authorization', `Bearer ${heldByAttacker}`)
-      .expect(200);
+    const heldByTeammate = await seedApiToken(prisma, {
+      seed: 'teammate',
+      email: 'teammate@example.com',
+      workspaceId: DEFAULT_WORKSPACE_ID,
+      role: 'member',
+    });
+    await me(heldByAttacker).expect(200);
 
     await reset(await issuedToken()).expect(204);
 
-    await request(app.getHttpServer())
-      .get('/auth/me')
-      .set('Authorization', `Bearer ${heldByAttacker}`)
-      .expect(401);
-    await expect(prisma.apiToken.count()).resolves.toBe(0);
+    await me(heldByAttacker).expect(401);
+    await me(heldByTeammate).expect(200);
+    await expect(
+      prisma.apiToken.count({ where: { user: { email: KNOWN } } }),
+    ).resolves.toBe(0);
+  });
+
+  it('leaves every personal api token in place when the link is refused', async () => {
+    await entitled();
+    const held = await mintToken(PASSWORD);
+    const token = await issuedToken();
+    await prisma.user.update({
+      where: { email: KNOWN },
+      data: { resetExpiresAt: new Date(Date.now() - 1000) },
+    });
+
+    await reset(token).expect(410);
+    await reset('a'.repeat(48)).expect(404);
+
+    await me(held).expect(200);
+    await expect(prisma.apiToken.count()).resolves.toBe(1);
   });
 
   it('lets the recovered account mint a token that works', async () => {
-    await prisma.workspace.update({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      data: { plan: 'indie', planExpiresAt: new Date(Date.now() + DAY_MS) },
-    });
+    await entitled();
     await reset(await issuedToken()).expect(204);
 
-    const fresh = await mintToken(NEW_PASSWORD);
-
-    await request(app.getHttpServer())
-      .get('/auth/me')
-      .set('Authorization', `Bearer ${fresh}`)
-      .expect(200);
+    await me(await mintToken(NEW_PASSWORD)).expect(200);
   });
 
   it('refuses a new password shorter than the account rules allow', async () => {

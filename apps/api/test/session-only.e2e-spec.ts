@@ -9,6 +9,7 @@ import {
   ApiErrorEnvelope,
   ApiTokenCreated,
   DELETION_CONFIRMATION,
+  WorkspaceInviteCreated,
   WorkspaceTeam,
 } from '@asobeast/shared';
 import request from 'supertest';
@@ -16,7 +17,11 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
-import { mintApiToken } from './helpers/api-tokens';
+import {
+  mintApiToken,
+  seedWorkspace,
+  truncateUsers,
+} from './helpers/api-tokens';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -25,6 +30,8 @@ import {
 } from './obliterate-queues';
 
 const PASSWORD = 'supersecret1';
+const SESSION_ONLY_REFUSAL =
+  'This needs a signed in session. A personal API token cannot do it.';
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -49,9 +56,20 @@ describe('Routes that manage credentials, the team and the workspace', () => {
     return call.set('Authorization', bearer).send(body);
   };
 
-  const refused = (response: request.Response): string => {
+  const withSession = (
+    method: 'post' | 'delete',
+    path: string,
+    body?: object,
+  ): request.Test => {
+    const call = request(app.getHttpServer())[method](path);
+    return call.set('Cookie', cookie).send(body);
+  };
+
+  const refused = (response: request.Response): void => {
     expect(response.status).toBe(403);
-    return (response.body as ApiErrorEnvelope).message;
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      SESSION_ONLY_REFUSAL,
+    );
   };
 
   beforeAll(async () => {
@@ -70,11 +88,7 @@ describe('Routes that manage credentials, the team and the workspace', () => {
     await pauseQueues(app);
 
     prisma = testDb();
-    await prisma.workspace.upsert({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      update: { deletionRequestedAt: null, deletionDueAt: null },
-      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
-    });
+    await seedWorkspace(prisma, DEFAULT_WORKSPACE_ID, 'Default');
   }, 60_000);
 
   beforeEach(async () => {
@@ -82,9 +96,7 @@ describe('Routes that manage credentials, the team and the workspace', () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "WorkspaceInvite" RESTART IDENTITY CASCADE',
     );
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
-    );
+    await truncateUsers(prisma);
     await prisma.workspace.update({
       where: { id: DEFAULT_WORKSPACE_ID },
       data: {
@@ -111,9 +123,7 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   });
 
   afterAll(async () => {
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
-    );
+    await truncateUsers(prisma);
     await obliterateQueues(app);
     await app.close();
     restoreAuthEnv();
@@ -121,11 +131,8 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   });
 
   it('refuses a write-scoped token that tries to mint another token', async () => {
-    const message = refused(
-      await withToken('post', '/auth/tokens', { name: 'successor' }),
-    );
+    refused(await withToken('post', '/auth/tokens', { name: 'successor' }));
 
-    expect(message).toContain('signed in session');
     await expect(prisma.apiToken.count()).resolves.toBe(1);
   });
 
@@ -151,11 +158,9 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   });
 
   it('refuses a write-scoped token that tries to cancel a scheduled deletion', async () => {
-    await request(app.getHttpServer())
-      .post('/account/deletion')
-      .set('Cookie', cookie)
-      .send({ confirm: DELETION_CONFIRMATION })
-      .expect(201);
+    await withSession('post', '/account/deletion', {
+      confirm: DELETION_CONFIRMATION,
+    }).expect(201);
 
     refused(await withToken('delete', '/account/deletion'));
 
@@ -176,16 +181,14 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   });
 
   it('refuses a write-scoped token that tries to revoke an invitation', async () => {
-    const invited = await request(app.getHttpServer())
-      .post('/workspace/invites')
-      .set('Cookie', cookie)
-      .send({ email: 'pending@example.com' })
-      .expect(201);
+    const invited = await withSession('post', '/workspace/invites', {
+      email: 'pending@example.com',
+    }).expect(201);
 
     refused(
       await withToken(
         'delete',
-        `/workspace/invites/${(invited.body as { id: string }).id}`,
+        `/workspace/invites/${(invited.body as WorkspaceInviteCreated).id}`,
       ),
     );
 
@@ -215,19 +218,37 @@ describe('Routes that manage credentials, the team and the workspace', () => {
   });
 
   it('still lets the signed in owner do every one of those things', async () => {
-    const minted = await request(app.getHttpServer())
-      .post('/auth/tokens')
-      .set('Cookie', cookie)
-      .send({ name: 'second' })
-      .expect(201);
-    await request(app.getHttpServer())
-      .delete(`/auth/tokens/${(minted.body as ApiTokenCreated).id}`)
-      .set('Cookie', cookie)
-      .expect(204);
-    await request(app.getHttpServer())
-      .delete(`/workspace/members/${memberId}`)
-      .set('Cookie', cookie)
-      .expect(204);
+    const minted = await withSession('post', '/auth/tokens', {
+      name: 'second',
+    }).expect(201);
+    await withSession(
+      'delete',
+      `/auth/tokens/${(minted.body as ApiTokenCreated).id}`,
+    ).expect(204);
+    const invited = await withSession('post', '/workspace/invites', {
+      email: 'pending@example.com',
+    }).expect(201);
+    await withSession(
+      'delete',
+      `/workspace/invites/${(invited.body as WorkspaceInviteCreated).id}`,
+    ).expect(204);
+    await withSession('delete', `/workspace/members/${memberId}`).expect(204);
+    await withSession('post', '/account/deletion', {
+      confirm: DELETION_CONFIRMATION,
+    }).expect(201);
+    await withSession('delete', '/account/deletion').expect(200);
+    await withSession('post', '/auth/password', {
+      current: PASSWORD,
+      next: 'brandnewsecret1',
+    }).expect(200);
+
+    await expect(prisma.apiToken.count()).resolves.toBe(0);
+    await expect(prisma.workspaceInvite.count()).resolves.toBe(0);
+    await expect(prisma.user.count()).resolves.toBe(1);
+    const workspace = await prisma.workspace.findUniqueOrThrow({
+      where: { id: DEFAULT_WORKSPACE_ID },
+    });
+    expect(workspace.deletionDueAt).toBeNull();
   });
 
   it('still lets a write-scoped token read the team and the token list', async () => {
