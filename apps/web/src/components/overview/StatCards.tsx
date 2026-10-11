@@ -12,6 +12,7 @@ import {
 import { formatDate } from "@/lib/format";
 import { appSummaryOptions } from "@/lib/queries";
 import { TrendChip } from "@/components/ui/delta-chip";
+import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
 export function StatCards({ id }: { id: string }) {
   const { data: summary } = useSuspenseQuery(appSummaryOptions(id));
@@ -20,7 +21,10 @@ export function StatCards({ id }: { id: string }) {
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader>
-          <CardDescription>Visibility</CardDescription>
+          <CardDescription className="flex items-center gap-1">
+            Visibility
+            <VisibilityHelp />
+          </CardDescription>
           <CardTitle className="numeric font-mono text-3xl">
             {Math.round(summary.visibility.current)}
           </CardTitle>
