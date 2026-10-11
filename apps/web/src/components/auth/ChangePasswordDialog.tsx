@@ -8,7 +8,7 @@ import { PASSWORD_RULE } from "@asobeast/shared";
 import { toast } from "sonner";
 import { changePassword } from "@/lib/api";
 import { passwordError } from "@/lib/password";
-import { invalidateAuth } from "@/lib/queries";
+import { invalidatePasswordChange } from "@/lib/queries";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,7 +49,7 @@ export function ChangePasswordDialog({ trigger }: { trigger: ReactNode }) {
   const mutation = useMutation({
     mutationFn: () => changePassword(current, next),
     onSuccess: () => {
-      invalidateAuth(queryClient);
+      invalidatePasswordChange(queryClient);
       toast.success(
         "Password changed. Other sessions were signed out and API tokens revoked.",
       );
