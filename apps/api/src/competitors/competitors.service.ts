@@ -14,8 +14,8 @@ import {
   parseStoreUrl,
   PositionMapPoint,
   TrackedKeywordItem,
+  visibility,
 } from '@asobeast/shared';
-import { visibility } from '../analytics/visibility';
 import { QuotaService } from '../auth/quota.service';
 import { AppCaptureService } from '../apps/app-capture.service';
 import { toCompetitorItem } from '../apps/apps.mapper';

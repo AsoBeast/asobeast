@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { positionWeight, visibility } from './visibility';
 
 describe('positionWeight', () => {

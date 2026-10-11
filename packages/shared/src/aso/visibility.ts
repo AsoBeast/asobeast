@@ -3,6 +3,8 @@ export interface VisibilityKeyword {
   position: number | null;
 }
 
+export const UNSCORED_TRAFFIC = 1;
+
 export const positionWeight = (position: number | null): number =>
   position === null ? 0 : 1 / Math.log2(position + 1);
 
@@ -10,7 +12,7 @@ export const visibility = (keywords: VisibilityKeyword[]): number => {
   let weighted = 0;
   let total = 0;
   for (const keyword of keywords) {
-    const traffic = keyword.traffic ?? 1;
+    const traffic = keyword.traffic ?? UNSCORED_TRAFFIC;
     weighted += traffic * positionWeight(keyword.position);
     total += traffic;
   }
