@@ -29,10 +29,15 @@ function yourPlacement(placement: KeywordPlacement): string {
     : "your listing does not have it";
 }
 
+const quoted = (terms: readonly string[]): string =>
+  formatList(terms.map((term) => `“${term}”`));
+
 export function insightText(insight: KeywordBreakdownInsight): string {
   switch (insight.rule) {
     case "placement":
       return `${theirPlacement(insight.theirs)}; ${yourPlacement(insight.yours)}.`;
+    case "accent":
+      return `Spells ${quoted(insight.terms)} with the accents your listing drops. Stores usually match both spellings, but the exact one could still help.`;
     case "ratings":
       return `No stronger placement than yours, but ${formatNumber(insight.theirs)} ratings to your ${formatNumber(insight.yours)}.`;
     case "unchecked":
@@ -48,9 +53,12 @@ export function standingLines(standing: KeywordBreakdownStanding): string[] {
   const lines: string[] = [];
   if (standing.missingTerms.length > 0) {
     lines.push(
-      `No single listing of yours has ${formatList(
-        standing.missingTerms.map((term) => `“${term}”`),
-      )}, so you are not fully eligible for this search.`,
+      `No single listing of yours has ${quoted(standing.missingTerms)}, so you are not fully eligible for this search.`,
+    );
+  }
+  if (standing.accentTerms.length > 0) {
+    lines.push(
+      `Your listing has ${quoted(standing.accentTerms)} without the accents. Stores usually match both spellings, but the accented one could still help.`,
     );
   }
   if (standing.above > 0) {

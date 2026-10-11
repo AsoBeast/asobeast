@@ -29,6 +29,7 @@ const PLACEMENT_STRENGTH: Record<KeywordPlacement, number> = {
 interface Version {
   placement: KeywordPlacement;
   terms: ReadonlySet<string>;
+  accentTerms: readonly string[];
 }
 
 function versionOf(
@@ -36,16 +37,26 @@ function versionOf(
   total: number,
 ): Version {
   const terms = new Set(fields.flatMap((field) => field.terms));
+  const exact = new Set(
+    fields.flatMap((field) =>
+      field.terms.filter((term) => !field.looseTerms.includes(term)),
+    ),
+  );
+  const accentTerms = [...terms].filter((term) => !exact.has(term));
   const phrase = PHRASE_FIELDS.find((name) =>
     fields.some((field) => field.field === name && field.phrase),
   );
   if (phrase) {
-    return { placement: phrase, terms };
+    return { placement: phrase, terms, accentTerms };
   }
   if (terms.size === 0) {
-    return { placement: 'none', terms };
+    return { placement: 'none', terms, accentTerms };
   }
-  return { placement: terms.size >= total ? 'split' : 'partial', terms };
+  return {
+    placement: terms.size >= total ? 'split' : 'partial',
+    terms,
+    accentTerms,
+  };
 }
 
 function bestVersion(
@@ -71,6 +82,13 @@ export function placementOf(
   return bestVersion(app, total).placement;
 }
 
+export function accentTermsOf(
+  app: Pick<KeywordBreakdownApp, 'fields' | 'localizations'>,
+  total: number,
+): string[] {
+  return [...bestVersion(app, total).accentTerms];
+}
+
 const ranksAbove = (
   app: KeywordBreakdownApp,
   you: KeywordBreakdownApp,
@@ -84,6 +102,15 @@ function insightFor(
 ): KeywordBreakdownInsight {
   if (PLACEMENT_STRENGTH[app.placement] > PLACEMENT_STRENGTH[you.placement]) {
     return { rule: 'placement', theirs: app.placement, yours: you.placement };
+  }
+  const exactOnlyTheirs = you.accentTerms.filter(
+    (term) => !app.accentTerms.includes(term),
+  );
+  if (
+    exactOnlyTheirs.length > 0 &&
+    PLACEMENT_STRENGTH[app.placement] >= PLACEMENT_STRENGTH.split
+  ) {
+    return { rule: 'accent', terms: exactOnlyTheirs };
   }
   if (PLACEMENT_STRENGTH[app.placement] < PLACEMENT_STRENGTH.split) {
     return app.unreadLocalizations.length > 0
@@ -129,6 +156,7 @@ export function withInsights(
         (app) => app.insight?.rule === 'placement',
       ).length,
       missingTerms: terms.filter((term) => !covered.has(term)),
+      accentTerms: [...you.accentTerms],
       changedDaysAgo:
         changedDaysAgo !== null && changedDaysAgo <= SETTLING_DAYS
           ? changedDaysAgo

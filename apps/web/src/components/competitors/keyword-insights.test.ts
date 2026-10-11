@@ -9,6 +9,7 @@ const standing = (
   competitors: 0,
   aboveWithStrongerPlacement: 0,
   missingTerms: [],
+  accentTerms: [],
   changedDaysAgo: null,
   ...over,
 });
@@ -31,6 +32,12 @@ describe("insightText", () => {
     expect(
       insightText({ rule: "placement", theirs: "partial", yours: "none" }),
     ).toBe("Has some of the words; your listing does not have it.");
+  });
+
+  it("points at the accents a competitor keeps", () => {
+    expect(insightText({ rule: "accent", terms: ["visités"] })).toBe(
+      "Spells “visités” with the accents your listing drops. Stores usually match both spellings, but the exact one could still help.",
+    );
   });
 
   it("names the ratings gap", () => {
@@ -57,6 +64,12 @@ describe("standingLines", () => {
     expect(standingLines(standing({ missingTerms: ["map", "pin"] }))[0]).toBe(
       "No single listing of yours has “map” and “pin”, so you are not fully eligible for this search.",
     );
+  });
+
+  it("says which words you spell without their accents", () => {
+    expect(standingLines(standing({ accentTerms: ["visités"] }))).toEqual([
+      "Your listing has “visités” without the accents. Stores usually match both spellings, but the accented one could still help.",
+    ]);
   });
 
   it("counts the competitors above you and those placed stronger", () => {

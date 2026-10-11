@@ -102,6 +102,7 @@ export interface KeywordBreakdownField {
   value: string | null;
   phrase: boolean;
   terms: string[];
+  looseTerms: string[];
 }
 
 export interface KeywordBreakdownLocalization {
@@ -122,6 +123,7 @@ export type KeywordPlacement =
 
 export type KeywordBreakdownInsight =
   | { rule: 'placement'; theirs: KeywordPlacement; yours: KeywordPlacement }
+  | { rule: 'accent'; terms: string[] }
   | { rule: 'ratings'; theirs: number; yours: number }
   | { rule: 'unchecked'; localizations: number }
   | { rule: 'hidden' }
@@ -132,6 +134,7 @@ export interface KeywordBreakdownStanding {
   competitors: number;
   aboveWithStrongerPlacement: number;
   missingTerms: string[];
+  accentTerms: string[];
   changedDaysAgo: number | null;
 }
 
@@ -147,6 +150,7 @@ export interface KeywordBreakdownApp {
   localizations: KeywordBreakdownLocalization[];
   unreadLocalizations: string[];
   placement: KeywordPlacement;
+  accentTerms: string[];
   insight: KeywordBreakdownInsight | null;
   ratingAvg: number | null;
   ratingCount: number | null;

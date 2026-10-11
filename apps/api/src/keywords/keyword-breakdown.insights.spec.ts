@@ -3,7 +3,11 @@ import {
   KeywordBreakdownField,
   MetadataField,
 } from '@asobeast/shared';
-import { placementOf, withInsights } from './keyword-breakdown.insights';
+import {
+  accentTermsOf,
+  placementOf,
+  withInsights,
+} from './keyword-breakdown.insights';
 
 const TERMS = ['travel', 'map'];
 
@@ -16,6 +20,7 @@ const field = (
   value: terms.join(' ') || 'other',
   phrase,
   terms,
+  looseTerms: [],
 });
 
 const app = (over: Partial<KeywordBreakdownApp> = {}): KeywordBreakdownApp => {
@@ -31,12 +36,17 @@ const app = (over: Partial<KeywordBreakdownApp> = {}): KeywordBreakdownApp => {
     localizations: [],
     unreadLocalizations: [],
     placement: 'none',
+    accentTerms: [],
     insight: null,
     ratingAvg: 4.5,
     ratingCount: 1000,
     ...over,
   };
-  return { ...base, placement: placementOf(base, TERMS.length) };
+  return {
+    ...base,
+    placement: placementOf(base, TERMS.length),
+    accentTerms: accentTermsOf(base, TERMS.length),
+  };
 };
 
 const you = (over: Partial<KeywordBreakdownApp> = {}) =>
@@ -95,6 +105,36 @@ describe('withInsights', () => {
         you({ fields: [field('subtitle', TERMS, true)] }),
       ),
     ).toEqual({ rule: 'placement', theirs: 'title', yours: 'subtitle' });
+  });
+
+  it('counts a word spelled without its accent as placed, and lists it', () => {
+    const loose = { ...field('title', TERMS, true), looseTerms: ['map'] };
+    const mine = you({ fields: [loose] });
+
+    expect(mine.placement).toBe('title');
+    expect(mine.accentTerms).toEqual(['map']);
+    expect(withInsights([mine], TERMS, null).standing?.accentTerms).toEqual([
+      'map',
+    ]);
+  });
+
+  it('does not list a word another field of the same listing spells exactly', () => {
+    const loose = { ...field('title', TERMS, true), looseTerms: ['map'] };
+
+    expect(
+      you({ fields: [loose, field('subtitle', ['map'])] }).accentTerms,
+    ).toEqual([]);
+  });
+
+  it('points out a competitor that spells the accents you drop', () => {
+    const loose = { ...field('title', TERMS, true), looseTerms: ['map'] };
+
+    expect(
+      insightOf(
+        app({ fields: [field('title', TERMS, true)] }),
+        you({ fields: [loose] }),
+      ),
+    ).toEqual({ rule: 'accent', terms: ['map'] });
   });
 
   it('falls back to the ratings gap when placement does not explain it', () => {
@@ -187,6 +227,7 @@ describe('withInsights', () => {
       competitors: 2,
       aboveWithStrongerPlacement: 1,
       missingTerms: ['map'],
+      accentTerms: [],
       changedDaysAgo: 9,
     });
   });

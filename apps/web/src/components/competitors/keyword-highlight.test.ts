@@ -30,6 +30,16 @@ describe("highlightTerms", () => {
   });
 });
 
+describe("highlightTerms with accents", () => {
+  it("marks a word that differs from the term only by its accents", () => {
+    expect(
+      highlightTerms("Mes Pays Visites", ["pays", "visités"])
+        .filter((part) => part.match)
+        .map((part) => part.text),
+    ).toEqual(["Pays", "Visites"]);
+  });
+});
+
 describe("matchStrength", () => {
   it("ranks a phrase over single words over nothing", () => {
     expect(matchStrength({ phrase: true, terms: ["a", "b"] })).toBe("phrase");
@@ -45,6 +55,18 @@ describe("matchLabel", () => {
     );
     expect(matchLabel({ phrase: false, terms: ["a"] }, 3)).toBe("1 of 3 words");
     expect(matchLabel({ phrase: false, terms: [] }, 3)).toBe("No match");
+  });
+
+  it("says when the phrase only matches without its accents", () => {
+    expect(
+      matchLabel(
+        { phrase: true, terms: ["pays", "visités"], looseTerms: ["visités"] },
+        2,
+      ),
+    ).toBe("Phrase, accents differ");
+    expect(
+      matchLabel({ phrase: true, terms: ["café"], looseTerms: ["café"] }, 1),
+    ).toBe("Match, accents differ");
   });
 
   it("calls a single word keyword a match", () => {

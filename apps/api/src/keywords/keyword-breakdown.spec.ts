@@ -43,12 +43,14 @@ describe('breakdownApp', () => {
         value: 'Focus Timer: Pomodoro',
         phrase: true,
         terms: ['focus', 'timer'],
+        looseTerms: [],
       },
       {
         field: 'subtitle',
         value: 'Study and deep work',
         phrase: false,
         terms: [],
+        looseTerms: [],
       },
     ]);
     expect(app.matchedTerms).toBe(2);
@@ -99,6 +101,7 @@ describe('breakdownApp', () => {
       value: null,
       phrase: false,
       terms: [],
+      looseTerms: [],
     });
   });
 
@@ -131,6 +134,7 @@ describe('breakdownApp', () => {
       value: 'study,deep work,planner app',
       phrase: true,
       terms: ['planner', 'app'],
+      looseTerms: [],
     });
     expect(app.matchedTerms).toBe(2);
   });
@@ -177,12 +181,14 @@ describe('breakdownApp', () => {
             value: 'Temporizador de enfoque',
             phrase: false,
             terms: [],
+            looseTerms: [],
           },
           {
             field: 'subtitle',
             value: 'Planner app para estudiar',
             phrase: true,
             terms: ['planner', 'app'],
+            looseTerms: [],
           },
         ],
         matchedTerms: 2,
@@ -236,6 +242,47 @@ describe('breakdownApp', () => {
     );
 
     expect(app.localizations).toEqual([]);
+  });
+
+  it('matches a word whose accents differ and marks it as loose', () => {
+    const app = breakdownApp(
+      subject({
+        listing: listing({
+          title: 'Pin Traveler: Mes Pays Visites',
+          subtitle: 'Carte des pays visités',
+        }),
+      }),
+      Store.APP_STORE,
+      'pays visités',
+    );
+
+    expect(app.fields[0]).toMatchObject({
+      phrase: true,
+      terms: ['pays', 'visités'],
+      looseTerms: ['visités'],
+    });
+    expect(app.fields[1]).toMatchObject({
+      phrase: true,
+      terms: ['pays', 'visités'],
+    });
+    expect(app.fields[1].looseTerms).toEqual([]);
+    expect(app.accentTerms).toEqual([]);
+  });
+
+  it('lists the words a listing only has without their accents', () => {
+    const app = breakdownApp(
+      subject({
+        listing: listing({
+          title: 'Pin Traveler: Mes Pays Visites',
+          subtitle: null,
+        }),
+      }),
+      Store.APP_STORE,
+      'pays visités',
+    );
+
+    expect(app.placement).toBe('title');
+    expect(app.accentTerms).toEqual(['visités']);
   });
 
   it('reports an app with no captured listing as unread', () => {

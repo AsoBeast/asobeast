@@ -5,10 +5,11 @@ import {
   KeywordBreakdownLocalization,
   MetadataField,
   normalizeText,
+  searchKey,
   tokenize,
 } from '@asobeast/shared';
 import { containsTerm } from '../common/text/scripts';
-import { placementOf } from './keyword-breakdown.insights';
+import { accentTermsOf, placementOf } from './keyword-breakdown.insights';
 import { LocalizedRead } from './keyword-breakdown.listings';
 import { coversKeyword } from './keyword-coverage';
 
@@ -60,14 +61,17 @@ function judgeField(
   terms: readonly string[],
 ): KeywordBreakdownField {
   if (!value) {
-    return { field, value: null, phrase: false, terms: [] };
+    return { field, value: null, phrase: false, terms: [], looseTerms: [] };
   }
   const text = normalizeText(value);
+  const folded = searchKey(value);
+  const matched = terms.filter((term) => containsTerm(folded, searchKey(term)));
   return {
     field,
     value,
-    phrase: coversKeyword(value, keyword),
-    terms: terms.filter((term) => containsTerm(text, term)),
+    phrase: coversKeyword(folded, searchKey(keyword)),
+    terms: matched,
+    looseTerms: matched.filter((term) => !containsTerm(text, term)),
   };
 }
 
@@ -144,6 +148,10 @@ export function breakdownApp(
     localizations: localized,
     unreadLocalizations: [...(subject.localized?.unread ?? [])],
     placement: placementOf({ fields, localizations: localized }, terms.length),
+    accentTerms: accentTermsOf(
+      { fields, localizations: localized },
+      terms.length,
+    ),
     insight: null,
     ratingAvg: listing?.ratingAvg ?? null,
     ratingCount: listing?.ratingCount ?? null,
