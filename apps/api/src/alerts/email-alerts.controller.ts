@@ -15,8 +15,8 @@ import { Throttle } from '@nestjs/throttler';
 import { EmailAlertItem, WebhookTestResult } from '@asobeast/shared';
 import { Public } from '../auth/decorators/public.decorator';
 import { RetryAfterThrottlerGuard } from '../auth/rate-limit/retry-after-throttler.guard';
+import { AlertLinkTokenDto } from './dto/alert-link-token.dto';
 import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
-import { UnsubscribeEmailAlertDto } from './dto/unsubscribe-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { EmailAlertsService } from './email-alerts.service';
@@ -74,7 +74,7 @@ export class EmailAlertsController {
   })
   unsubscribe(
     @Param('id') id: string,
-    @Query() query: UnsubscribeEmailAlertDto,
+    @Query() query: AlertLinkTokenDto,
   ): Promise<void> {
     return this.unsubscribes.unsubscribe(id, query.token);
   }
