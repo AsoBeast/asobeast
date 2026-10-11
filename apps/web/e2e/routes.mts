@@ -56,6 +56,7 @@ export const SIGNED_OUT_ROUTES = [
   ["invite", "/invite", {}],
   ["verify", "/verify", {}],
   ["unsubscribe", "/unsubscribe", {}],
+  ["confirm-alert", "/confirm-alert", {}],
 ] as const satisfies ReadonlyArray<
   readonly [string, string, Readonly<Record<string, string>>]
 >;

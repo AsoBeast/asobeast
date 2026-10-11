@@ -98,6 +98,23 @@ export function unsubscribeEmailAlert(
   );
 }
 
+export function confirmEmailAlert(id: string, token: string): Promise<void> {
+  return apiFetch<void>(
+    withQuery(
+      `/email-alerts/${encodeURIComponent(id)}/confirm`,
+      new URLSearchParams({ token }),
+    ),
+    { method: "POST" },
+  );
+}
+
+export function resendEmailAlertConfirmation(id: string): Promise<void> {
+  return apiFetch<void>(
+    `/email-alerts/${encodeURIComponent(id)}/resend-confirmation`,
+    { method: "POST" },
+  );
+}
+
 export function testEmailAlert(id: string): Promise<WebhookTestResult> {
   return apiFetch<WebhookTestResult>(`/email-alerts/${id}/test`, {
     method: "POST",

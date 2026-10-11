@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Loader2, Send, Trash2 } from "lucide-react";
+import { Clock, Loader2, MailCheck, Send, Trash2 } from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
 import {
   AlertDialog,
@@ -21,12 +21,18 @@ import { EVENT_LABELS } from "../alert-events";
 import { DeliveriesSection } from "../DeliveriesSection";
 import { EditEventsDialog } from "./EditEventsDialog";
 
+export interface AwaitingConfirmation {
+  pending: boolean;
+  onResend: () => void;
+}
+
 export function AlertChannelRow({
   label,
   channel,
   id,
   events,
   tag,
+  awaiting,
   active,
   activePending,
   onActiveChange,
@@ -44,6 +50,7 @@ export function AlertChannelRow({
   id: string;
   events: WebhookEvent[];
   tag?: ReactNode;
+  awaiting?: AwaitingConfirmation;
   active: boolean;
   activePending: boolean;
   onActiveChange: (active: boolean) => void;
@@ -71,15 +78,31 @@ export function AlertChannelRow({
             aria-label={`Toggle ${label}`}
             onCheckedChange={onActiveChange}
           />
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={testPending}
-            onClick={onTest}
-          >
-            {testPending ? <Loader2 className="animate-spin" /> : <Send />}
-            Send test
-          </Button>
+          {awaiting ? (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={awaiting.pending}
+              onClick={awaiting.onResend}
+            >
+              {awaiting.pending ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                <MailCheck />
+              )}
+              Resend confirmation
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={testPending}
+              onClick={onTest}
+            >
+              {testPending ? <Loader2 className="animate-spin" /> : <Send />}
+              Send test
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
@@ -90,6 +113,19 @@ export function AlertChannelRow({
           </Button>
         </div>
       </div>
+
+      {awaiting ? (
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <Clock className="size-4 shrink-0" aria-hidden />
+          <span>
+            <strong className="font-medium text-foreground">
+              Awaiting confirmation.
+            </strong>{" "}
+            No alerts are sent until the recipient follows the link in the
+            email.
+          </span>
+        </p>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-1">
         {tag}

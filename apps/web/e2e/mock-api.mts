@@ -59,6 +59,9 @@ import {
   METRICS_SCRAPE,
   OPERATOR_TOKEN,
   VALID_UNSUBSCRIBE_TOKEN,
+  VALID_CONFIRM_TOKEN,
+  EXPIRED_CONFIRM_TOKEN,
+  TRUSTED_RECIPIENT,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -1058,6 +1061,8 @@ const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const unsubscribeCalls = new Map<string, number>();
+const confirmCalls = new Map<string, number>();
+const resendCalls = new Map<string, number>();
 
 const routes: Route[] = [
   {
@@ -1065,6 +1070,61 @@ const routes: Route[] = [
     pattern: /^\/__unsubscribes\/([^/]+)$/,
     handler: ([id], _req, res) =>
       json(res, 200, { calls: unsubscribeCalls.get(id) ?? 0 }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/__confirmations\/([^/]+)$/,
+    handler: ([id], _req, res) =>
+      json(res, 200, {
+        confirms: confirmCalls.get(id) ?? 0,
+        resends: resendCalls.get(id) ?? 0,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts\/([^/]+)\/confirm$/,
+    handler: ([id], req, res) => {
+      confirmCalls.set(id, (confirmCalls.get(id) ?? 0) + 1);
+      const token = new URL(
+        req.url ?? "/",
+        "http://localhost",
+      ).searchParams.get("token");
+      if (token === EXPIRED_CONFIRM_TOKEN) {
+        json(
+          res,
+          410,
+          errorEnvelope(
+            410,
+            req.url ?? "/",
+            "That confirmation link has expired",
+          ),
+        );
+        return;
+      }
+      if (token !== VALID_CONFIRM_TOKEN) {
+        json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            req.url ?? "/",
+            "That confirmation link is not valid",
+          ),
+        );
+        return;
+      }
+      res.writeHead(204);
+      res.end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts\/([^/]+)\/resend-confirmation$/,
+    handler: ([id], _req, res) => {
+      resendCalls.set(id, (resendCalls.get(id) ?? 0) + 1);
+      res.writeHead(204);
+      res.end();
+    },
   },
   {
     method: "POST",
@@ -1491,6 +1551,7 @@ const routes: Route[] = [
           email: body.email,
           events: body.events,
           active: true,
+          confirmed: body.email === TRUSTED_RECIPIENT,
           createdAt: new Date().toISOString(),
         };
         emailAlerts.unshift(alert);
