@@ -98,7 +98,7 @@ describe('Remote MCP request allowance with billing (e2e)', () => {
     await prisma.$disconnect();
   });
 
-  it('refuses one request that batches more tool calls than the allowance', async () => {
+  it('refuses a batch larger than the allowance without spending it', async () => {
     const dispatch = jest.spyOn(app.get(InProcessGateway), 'send');
     await awaitBurnHeadroom();
 
@@ -113,6 +113,7 @@ describe('Remote MCP request allowance with billing (e2e)', () => {
     const envelope = refused.body as ApiErrorEnvelope;
     const dispatched = dispatch.mock.calls.length;
     dispatch.mockRestore();
+    await mcp.rpc('ping').expect(200);
 
     expect(envelope.rateLimit).toMatchObject({
       window: 'minute',
@@ -124,6 +125,7 @@ describe('Remote MCP request allowance with billing (e2e)', () => {
     expect(refused.headers['retry-after']).toBe(
       String(envelope.rateLimit?.resetSeconds),
     );
+    expect(envelope.message).toContain('Split it into requests');
     expect(dispatched).toBe(0);
   });
 

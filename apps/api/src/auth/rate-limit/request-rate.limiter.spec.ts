@@ -231,13 +231,23 @@ describe('RequestRateLimiter', () => {
   });
 
   it('refuses a batch the remaining allowance cannot cover', async () => {
-    incrby.mockResolvedValue(
-      (PLAN_LIMITS.indie.mcpRequestsPerMinute as number) + 1,
-    );
+    incrby.mockResolvedValue(70);
 
-    await expect(limiter.consumeMcp(metered, 61, NOW)).rejects.toMatchObject({
+    await expect(limiter.consumeMcp(metered, 20, NOW)).rejects.toMatchObject({
       detail: { window: 'minute', limit: 60 },
     });
+    expect(incrby).toHaveBeenCalledWith(expect.any(String), 20);
+    expect(expire).not.toHaveBeenCalled();
+  });
+
+  it('refuses a batch larger than the whole allowance without charging it', async () => {
+    await expect(limiter.consumeMcp(metered, 61, NOW)).rejects.toMatchObject({
+      detail: { window: 'minute', limit: 60, upgradeTo: 'ultimate' },
+      message: expect.stringContaining(
+        'Split it into requests of at most 60 messages',
+      ) as string,
+    });
+    expect(incrby).not.toHaveBeenCalled();
   });
 
   it('refuses an agent that loops past the mcp cap', async () => {
