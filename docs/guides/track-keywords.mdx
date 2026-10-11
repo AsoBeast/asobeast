@@ -127,7 +127,7 @@ A suggestion lookup is the one user initiated exception to the rule that store r
 
 Deep search runs the store suggestion endpoint against a seed phrase and every one letter extension of it, queued as separate probes. It belongs to the market selected on the keyword monitor, so the same seed in two storefronts is two independent deep searches with their own results and their own budget. See [Countries and markets](/concepts/countries).
 
-Starting a deep search spends one of the plan's daily deep searches, and a term whose 27 lookups are all stored for today costs nothing. See [Rate limits and quotas](/api-reference/rate-limits).
+Starting a deep search spends one of the plan's daily deep searches, and a term whose 27 lookups are all stored for today costs nothing. The lookups queue behind the daily run's own jobs, so during the daily run a deep search can take longer than its usual two minutes. See [Rate limits and quotas](/api-reference/rate-limits).
 
 ### Seasonal suggestions
 

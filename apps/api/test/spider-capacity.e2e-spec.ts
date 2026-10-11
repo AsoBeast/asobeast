@@ -93,6 +93,17 @@ describe('Keyword deep search capacity (e2e)', () => {
     expect(await queuedProbes()).toBe(queuedBefore);
   });
 
+  it('queues every probe behind the jobs of the daily run', async () => {
+    await startSpider('seed').expect(202);
+
+    const queue = appStoreQueue();
+    const prioritized = await queue.getJobs(['prioritized']);
+    const unprioritized = await queue.getJobs(['paused', 'wait']);
+
+    expect(prioritized).toHaveLength(SPIDER_PROBES.length);
+    expect(unprioritized).toHaveLength(0);
+  });
+
   it('spends nothing on a term whose probes are all stored', async () => {
     const day = new Date(`${utcDateKey()}T00:00:00.000Z`);
     await harness.prisma.suggestProbe.createMany({

@@ -8,6 +8,7 @@ import {
   SpiderEnqueueResult,
   SpiderStatus,
 } from '@asobeast/shared';
+import { DEFERRED_JOB_OPTIONS } from '../jobs/job-options';
 import {
   JOBS,
   QUEUES,
@@ -69,7 +70,10 @@ export class SpiderService {
           workspaceId: app.workspaceId,
           correlationId: this.workspace.correlationId,
         } satisfies SpiderProbePayload,
-        { jobId: spiderJobId(appId, term, market, probe, date) },
+        {
+          ...DEFERRED_JOB_OPTIONS,
+          jobId: spiderJobId(appId, term, market, probe, date),
+        },
       );
     }
 
