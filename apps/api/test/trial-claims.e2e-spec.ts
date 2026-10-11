@@ -12,6 +12,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
+import { subscribeDuring } from './helpers/subscribe-during';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -49,8 +50,7 @@ describe('One trial per mailbox', () => {
     prisma = testDb();
   }, 60_000);
 
-  beforeEach(async () => {
-    await clearRateLimitCounters(app);
+  const resetAccounts = async () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
@@ -69,6 +69,11 @@ describe('One trial per mailbox', () => {
       },
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
+  };
+
+  beforeEach(async () => {
+    await clearRateLimitCounters(app);
+    await resetAccounts();
     await register('operator@example.com');
   });
 
@@ -212,5 +217,19 @@ describe('One trial per mailbox', () => {
     const account = await register('fresh@gmail.com');
 
     expect(account.entitled).toBe(true);
+  });
+
+  it('gives the mailbox back when a subscription lands before the first account gets its trial', async () => {
+    await resetAccounts();
+
+    const operator = await subscribeDuring(prisma, DEFAULT_WORKSPACE_ID, () =>
+      register('operator@example.com'),
+    );
+
+    expect(operator.plan).toBe('indie');
+    await expect(prisma.trialClaim.count()).resolves.toBe(0);
+    const again = await register('operator+again@example.com');
+    expect(again.entitled).toBe(true);
+    expect(again.plan).toBe('trial');
   });
 });

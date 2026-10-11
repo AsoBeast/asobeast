@@ -27,6 +27,10 @@ export function grantTrial(days: number, now = new Date()): TrialGrant {
   };
 }
 
+export function isGrant(terms: TrialTerms): terms is TrialGrant {
+  return 'trialStartedAt' in terms;
+}
+
 export function declineTrial(now = new Date()): TrialDecline {
   return { trialDeclinedAt: now };
 }

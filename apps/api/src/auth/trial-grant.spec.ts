@@ -3,6 +3,7 @@ import {
   canStartTrial,
   declineTrial,
   grantTrial,
+  isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
   type TrialWorkspace,
@@ -29,6 +30,13 @@ describe('grantTrial', () => {
 describe('declineTrial', () => {
   it('records the refusal now and grants nothing', () => {
     expect(declineTrial(NOW)).toEqual({ trialDeclinedAt: NOW });
+  });
+});
+
+describe('isGrant', () => {
+  it('tells a granted trial from a refusal', () => {
+    expect(isGrant(grantTrial(7, NOW))).toBe(true);
+    expect(isGrant(declineTrial(NOW))).toBe(false);
   });
 });
 

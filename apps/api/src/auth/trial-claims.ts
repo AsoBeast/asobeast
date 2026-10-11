@@ -13,6 +13,7 @@ export interface TrialClaimStore {
       data: { key: string }[];
       skipDuplicates: true;
     }): Promise<{ count: number }>;
+    deleteMany(args: { where: { key: string } }): Promise<{ count: number }>;
   };
 }
 
@@ -43,5 +44,9 @@ export class TrialClaims {
       skipDuplicates: true,
     });
     return count;
+  }
+
+  async release(db: TrialClaimStore, email: string): Promise<void> {
+    await db.trialClaim.deleteMany({ where: { key: this.keyOf(email) } });
   }
 }

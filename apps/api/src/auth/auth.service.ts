@@ -26,7 +26,7 @@ import type { CreateTokenDto } from './dto/create-token.dto';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
-import { canStartTrial, trialStillOpen } from './trial-grant';
+import { canStartTrial } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -146,10 +146,7 @@ export class AuthService {
     if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
     const opening = await this.verification.openingTerms(tx, email);
     if (opening) {
-      await tx.workspace.updateMany({
-        where: trialStillOpen(existing),
-        data: opening,
-      });
+      await this.verification.writeTerms(tx, existing, email, opening);
     }
     return DEFAULT_WORKSPACE_ID;
   }

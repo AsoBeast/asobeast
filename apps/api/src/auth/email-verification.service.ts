@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { User, Workspace } from '@prisma/client';
+import type { Prisma, User, Workspace } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,6 +18,7 @@ import {
   canStartTrial,
   grantTrial,
   declineTrial,
+  isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
   type TrialTerms,
@@ -73,6 +74,19 @@ export class EmailVerificationService {
     return granted
       ? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
       : declineTrial();
+  }
+
+  async writeTerms(
+    db: Prisma.TransactionClient,
+    workspace: { id: string; plan: string },
+    email: string,
+    terms: TrialTerms,
+  ): Promise<void> {
+    const { count } = await db.workspace.updateMany({
+      where: trialStillOpen(workspace),
+      data: terms,
+    });
+    if (count === 0 && isGrant(terms)) await this.claims.release(db, email);
   }
 
   awaitsConfirmation(user: AccountUser, now = new Date()): boolean {
@@ -162,10 +176,12 @@ export class EmailVerificationService {
     }
 
     await this.prisma.withTransaction(async (tx) =>
-      tx.workspace.updateMany({
-        where: trialStillOpen(workspace),
-        data: await this.termsFor(tx, user.email),
-      }),
+      this.writeTerms(
+        tx,
+        workspace,
+        user.email,
+        await this.termsFor(tx, user.email),
+      ),
     );
     return this.workspaceOf(user.workspaceId);
   }

@@ -39,6 +39,7 @@ describe('EmailVerificationService confirming an address', () => {
   >();
   const userUpdate = jest.fn();
   const claim = jest.fn<Promise<boolean>, [unknown, string]>();
+  const release = jest.fn<Promise<void>, [unknown, string]>();
 
   const prisma = {
     user: { findUnique, update: userUpdate },
@@ -46,7 +47,7 @@ describe('EmailVerificationService confirming an address', () => {
     withTransaction: (run: (tx: unknown) => Promise<unknown>) =>
       run({ workspace: { updateMany } }),
   } as unknown as PrismaService;
-  const claims = { claim } as unknown as TrialClaims;
+  const claims = { claim, release } as unknown as TrialClaims;
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: (
       _justification: string,
@@ -73,6 +74,7 @@ describe('EmailVerificationService confirming an address', () => {
     findUniqueOrThrow.mockReset().mockResolvedValue(workspaceOf());
     updateMany.mockReset().mockResolvedValue({ count: 1 });
     claim.mockReset().mockResolvedValue(true);
+    release.mockReset().mockResolvedValue(undefined);
   });
 
   it('looks the link up by its hash', async () => {
@@ -136,6 +138,32 @@ describe('EmailVerificationService confirming an address', () => {
     const account = await confirm();
 
     expect(account.workspace).toBe(paid);
+  });
+
+  it('gives the mailbox back when a subscription landed after the read', async () => {
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await confirm();
+
+    expect(release).toHaveBeenCalledWith(
+      expect.anything(),
+      'owner@example.com',
+    );
+  });
+
+  it('keeps the claim of a trial it did start', async () => {
+    await confirm();
+
+    expect(release).not.toHaveBeenCalled();
+  });
+
+  it('never gives back a claim it did not win', async () => {
+    claim.mockResolvedValue(false);
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await confirm();
+
+    expect(release).not.toHaveBeenCalled();
   });
 
   it('refuses a throwaway address its trial without claiming its mailbox', async () => {

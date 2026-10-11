@@ -12,11 +12,15 @@ const SECRET = 'a'.repeat(40);
 describe('TrialClaims', () => {
   const findUnique = jest.fn();
   const createMany = jest.fn();
-  const db = { trialClaim: { findUnique, createMany } } as TrialClaimStore;
+  const deleteMany = jest.fn();
+  const db = {
+    trialClaim: { findUnique, createMany, deleteMany },
+  } as TrialClaimStore;
 
   beforeEach(() => {
     findUnique.mockReset().mockResolvedValue(null);
     createMany.mockReset().mockResolvedValue({ count: 1 });
+    deleteMany.mockReset().mockResolvedValue({ count: 1 });
   });
 
   describe('keyOf', () => {
@@ -105,6 +109,18 @@ describe('TrialClaims', () => {
       await expect(
         claimsWith(SECRET).claimAll(db, ['a@example.com', 'b@example.com']),
       ).resolves.toBe(2);
+    });
+  });
+
+  describe('release', () => {
+    it('deletes the row of the mailbox by its key', async () => {
+      const claims = claimsWith(SECRET);
+
+      await claims.release(db, 'one+x@example.com');
+
+      expect(deleteMany).toHaveBeenCalledWith({
+        where: { key: claims.keyOf('one@example.com') },
+      });
     });
   });
 });

@@ -12,6 +12,7 @@ import { MailerService } from '../src/alerts/mailer.service';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
+import { subscribeDuring } from './helpers/subscribe-during';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -181,5 +182,22 @@ describe('One trial per mailbox when the address must be confirmed', () => {
 
     expect(confirmed.emailVerified).toBe(true);
     expect(confirmed.entitled).toBe(false);
+  });
+
+  it('gives the mailbox back when a subscription lands while the address is confirmed', async () => {
+    await register('farmer+1@example.com');
+    const { workspaceId } = await prisma.user.findUniqueOrThrow({
+      where: { email: 'farmer+1@example.com' },
+    });
+
+    const confirmed = await subscribeDuring(prisma, workspaceId, () =>
+      confirm('farmer+1@example.com'),
+    );
+
+    expect(confirmed.plan).toBe('indie');
+    await expect(prisma.trialClaim.count()).resolves.toBe(0);
+    await register('farmer+2@example.com');
+    const copy = await confirm('farmer+2@example.com');
+    expect(copy.plan).toBe('trial');
   });
 });
