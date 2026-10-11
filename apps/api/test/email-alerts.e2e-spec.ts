@@ -190,7 +190,7 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it('says why no confirmation can be resent without a web origin', async () => {
+  it('answers a missing web origin with 503 before the resend cooldown', async () => {
     const created = await api
       .post('/email-alerts')
       .send({ email: 'stranger@example.net', events: ['metadata.changed'] })

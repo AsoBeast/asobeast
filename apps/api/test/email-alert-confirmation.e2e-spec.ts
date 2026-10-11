@@ -265,7 +265,7 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(sendAccountMail).not.toHaveBeenCalled();
   });
 
-  it('sends one confirmation when two resends race each other', async () => {
+  it('sends one confirmation when five resends race and holds the rest to the cooldown', async () => {
     const alert = await addAlert(STRANGER);
     await sentHoursAgo(alert, 2);
     sendAccountMail.mockClear();
@@ -279,6 +279,11 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(answers.map(({ status }) => status).sort()).toEqual([
       204, 429, 429, 429, 429,
     ]);
+    for (const refused of answers.filter(({ status }) => status === 429)) {
+      expect((refused.body as ApiErrorEnvelope).message).toContain(
+        'A confirmation email was sent to this recipient less than',
+      );
+    }
     expect(sendAccountMail).toHaveBeenCalledTimes(1);
   });
 
