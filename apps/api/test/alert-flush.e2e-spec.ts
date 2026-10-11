@@ -429,6 +429,7 @@ describe('Alert flush (e2e)', () => {
         workspaceId: DEFAULT_WORKSPACE_ID,
         email: 'ops@example.com',
         events: ['rank.dropped', 'metadata.changed'],
+        confirmedAt: new Date(),
       },
     });
 

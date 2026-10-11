@@ -1,0 +1,117 @@
+import { ConfigService } from '@nestjs/config';
+import { Env } from '../config/env';
+import { PrismaService } from '../prisma/prisma.service';
+import { confirmationToken } from './confirmation-token';
+import { EmailAlertConfirmation } from './email-alert-confirmation.service';
+import { MailerService } from './mailer.service';
+
+const SECRET = 's'.repeat(32);
+const ORIGIN = 'https://aso.example.com';
+
+const build = (mailer: Partial<MailerService>) => {
+  const update = jest.fn().mockResolvedValue({});
+  const findFirst = jest.fn().mockResolvedValue(null);
+  const send = jest.fn().mockResolvedValue(undefined);
+  const service = new EmailAlertConfirmation(
+    { get: jest.fn(() => SECRET) } as unknown as ConfigService<Env, true>,
+    { sendAccountMail: send, ...mailer } as MailerService,
+    {
+      emailAlert: { update },
+      user: { findFirst },
+    } as unknown as PrismaService,
+  );
+  return { service, update, findFirst, send };
+};
+
+describe('EmailAlertConfirmation', () => {
+  describe('required', () => {
+    it.each([
+      [true, ORIGIN, true],
+      [true, null, false],
+      [false, ORIGIN, false],
+    ])(
+      'with email enabled %s and origin %s it is %s',
+      (enabled, origin, required) => {
+        expect(build({ enabled, origin }).service.required).toBe(required);
+      },
+    );
+  });
+
+  describe('confirmationFor', () => {
+    it('confirms at once when the instance cannot send a link', async () => {
+      const { service, findFirst } = build({ enabled: true, origin: null });
+
+      expect(await service.confirmationFor('a@example.net')).toBeInstanceOf(
+        Date,
+      );
+      expect(findFirst).not.toHaveBeenCalled();
+    });
+
+    it('confirms at once the verified address of a member', async () => {
+      const { service, findFirst } = build({ enabled: true, origin: ORIGIN });
+      findFirst.mockResolvedValue({ id: 'u_1' });
+
+      expect(await service.confirmationFor('Ops@Example.com')).toBeInstanceOf(
+        Date,
+      );
+      expect(findFirst).toHaveBeenCalledWith({
+        where: {
+          email: { equals: 'Ops@Example.com', mode: 'insensitive' },
+          emailVerifiedAt: { not: null },
+        },
+        select: { id: true },
+      });
+    });
+
+    it('waits for the recipient otherwise', async () => {
+      const { service } = build({ enabled: true, origin: ORIGIN });
+
+      expect(await service.confirmationFor('a@example.net')).toBeNull();
+    });
+  });
+
+  describe('issue', () => {
+    it('stamps the send, mails the link and keeps the token out of the log', async () => {
+      const { service, update, send } = build({
+        enabled: true,
+        origin: ORIGIN,
+      });
+
+      const delivered = await service.issue(
+        { id: 'ea_1', email: 'ops@example.com' },
+        'owner@example.com',
+      );
+
+      expect(delivered).toBe(true);
+      const [{ data }] = update.mock.calls[0] as [
+        { data: { confirmationSentAt: Date } },
+      ];
+      const token = confirmationToken(SECRET, {
+        alertId: 'ea_1',
+        email: 'ops@example.com',
+        sentAt: data.confirmationSentAt,
+      });
+      const [mail] = send.mock.calls[0] as [
+        { kind: string; to: string; text: string; secrets: string[] },
+      ];
+      expect(mail.kind).toBe('alert-confirmation');
+      expect(mail.to).toBe('ops@example.com');
+      expect(mail.text).toContain(
+        `${ORIGIN}/confirm-alert?alert=ea_1&token=${token}`,
+      );
+      expect(mail.secrets).toEqual([token]);
+    });
+
+    it('reports a mail that could not be sent instead of throwing', async () => {
+      const { service, send } = build({ enabled: true, origin: ORIGIN });
+      send.mockRejectedValue(new Error('smtp down'));
+
+      expect(
+        await service.issue(
+          { id: 'ea_1', email: 'ops@example.com' },
+          'owner@example.com',
+        ),
+      ).toBe(false);
+    });
+  });
+});

@@ -1,9 +1,11 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { EmailAlert, Prisma } from '@prisma/client';
 import {
   AlertBatchPayload,
   EmailAlertItem,
@@ -16,9 +18,14 @@ import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
 import { toEmailAlertItem } from './email-alerts.mapper';
 import { AlertMail } from './alert-mail';
+import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { MailerService } from './mailer.service';
 
 const DISABLED_MESSAGE = 'Email alerts require SMTP configuration';
+
+const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
+
+const ALREADY_CONFIRMED_MESSAGE = 'This recipient is already confirmed';
 
 @Injectable()
 export class EmailAlertsService {
@@ -27,6 +34,7 @@ export class EmailAlertsService {
     private readonly mailer: MailerService,
     private readonly workspace: WorkspaceContext,
     private readonly alertMail: AlertMail,
+    private readonly confirmation: EmailAlertConfirmation,
   ) {}
 
   async list(): Promise<EmailAlertItem[]> {
@@ -36,22 +44,37 @@ export class EmailAlertsService {
     return alerts.map(toEmailAlertItem);
   }
 
-  async create(dto: CreateEmailAlertDto): Promise<EmailAlertItem> {
+  async create(
+    dto: CreateEmailAlertDto,
+    requestedBy: string,
+  ): Promise<EmailAlertItem> {
     this.assertEnabled();
     const alert = await this.prisma.emailAlert.create({
       data: {
         workspaceId: this.workspace.require('an email alert'),
         email: dto.email,
         events: dto.events,
+        confirmedAt: await this.confirmation.confirmationFor(dto.email),
       },
     });
+    if (!alert.confirmedAt) {
+      await this.confirmation.issue(alert, requestedBy);
+    }
     return toEmailAlertItem(alert);
   }
 
-  async update(id: string, dto: UpdateEmailAlertDto): Promise<EmailAlertItem> {
+  async update(
+    id: string,
+    dto: UpdateEmailAlertDto,
+    requestedBy: string,
+  ): Promise<EmailAlertItem> {
     const data: Prisma.EmailAlertUpdateInput = {};
     if (dto.email !== undefined) {
       data.email = dto.email;
+      if (await this.changesAddress(id, dto.email)) {
+        data.confirmedAt = await this.confirmation.confirmationFor(dto.email);
+        data.confirmationSentAt = null;
+      }
     }
     if (dto.events !== undefined) {
       data.events = dto.events;
@@ -64,6 +87,9 @@ export class EmailAlertsService {
       where: { id },
       data,
     });
+    if (data.confirmedAt === null) {
+      await this.confirmation.issue(alert, requestedBy);
+    }
     return toEmailAlertItem(alert);
   }
 
@@ -73,14 +99,22 @@ export class EmailAlertsService {
     });
   }
 
+  async resendConfirmation(id: string, requestedBy: string): Promise<void> {
+    this.assertEnabled();
+    const alert = await this.find(id);
+    if (alert.confirmedAt) {
+      throw new ConflictException(ALREADY_CONFIRMED_MESSAGE);
+    }
+    if (!(await this.confirmation.issue(alert, requestedBy))) {
+      throw new ServiceUnavailableException(NOT_SENT_MESSAGE);
+    }
+  }
+
   async test(id: string): Promise<WebhookTestResult> {
     this.assertEnabled();
-    const alert = await this.prisma.emailAlert.findFirst({
-      where: { id },
-      select: { email: true },
-    });
-    if (!alert) {
-      throw new NotFoundException(`Email alert ${id} not found`);
+    const alert = await this.find(id);
+    if (!alert.confirmedAt) {
+      return { delivered: false, status: null };
     }
     const mail = await this.alertMail.compose(id, alert.email, samplePayload());
     try {
@@ -89,6 +123,19 @@ export class EmailAlertsService {
     } catch {
       return { delivered: false, status: null };
     }
+  }
+
+  private async find(id: string): Promise<EmailAlert> {
+    const alert = await this.prisma.emailAlert.findFirst({ where: { id } });
+    if (!alert) {
+      throw new NotFoundException(`Email alert ${id} not found`);
+    }
+    return alert;
+  }
+
+  private async changesAddress(id: string, email: string): Promise<boolean> {
+    const current = await this.find(id);
+    return current.email.toLowerCase() !== email.toLowerCase();
   }
 
   private assertEnabled(): void {

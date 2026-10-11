@@ -81,7 +81,7 @@ describe('EmailAlertUnsubscribe', () => {
     await service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS));
     expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'ea_1', email: OPS.email },
-      data: { active: false },
+      data: { active: false, confirmedAt: null, confirmationSentAt: null },
     });
   });
 });
