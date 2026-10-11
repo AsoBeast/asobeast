@@ -1,13 +1,19 @@
 import './helpers/enable-billing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Prisma, Store } from '@prisma/client';
-import { Queue } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
 import { OnDemandLimiter } from '../src/auth/on-demand.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { QUEUES, utcDateKey } from '../src/jobs/jobs.types';
+import {
+  JOBS,
+  QUEUES,
+  SpiderProbePayload,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
+import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { SPIDER_PROBES } from '../src/keywords/spider';
-import { SpiderService } from '../src/keywords/spider.service';
+import { ProxyEgress } from '../src/store-providers/egress/proxy-egress.service';
 import {
   CapacityHarness,
   OwnerAgent,
@@ -15,7 +21,6 @@ import {
   startCapacityHarness,
   stopCapacityHarness,
 } from './helpers/capacity-harness';
-import { asWorkspace } from './helpers/tenancy';
 
 const SPIDER_LIMIT = PLAN_LIMITS.indie.onDemand?.spider.limit ?? 0;
 
@@ -158,15 +163,26 @@ describe('Keyword deep search capacity (e2e)', () => {
       });
 
     const runProbe = () =>
-      asWorkspace(harness.app, () =>
-        harness.app.get(SpiderService).runSpiderProbe({
+      harness.app.get(StoreJobsHandler).handle({
+        name: JOBS.SPIDER_PROBE,
+        id: 'lapsing-probe',
+        queueName: QUEUES.APP_STORE,
+        data: {
           appId,
           term: 'lapsing',
           country: 'us',
           probe: 'a',
           workspaceId: DEFAULT_WORKSPACE_ID,
-        }),
-      );
+        } satisfies SpiderProbePayload,
+      } as Job);
+
+    const egressCallsOf = async (run: () => Promise<void>) => {
+      const through = jest.spyOn(harness.app.get(ProxyEgress), 'through');
+      await run();
+      const calls = through.mock.calls.length;
+      through.mockRestore();
+      return calls;
+    };
 
     it('stores nothing once the plan has expired', async () => {
       await startSpider('lapsing').expect(202);
@@ -175,6 +191,13 @@ describe('Keyword deep search capacity (e2e)', () => {
       await runProbe();
 
       expect(await harness.prisma.suggestProbe.count()).toBe(0);
+    });
+
+    it('holds no egress endpoint once the plan has expired', async () => {
+      await startSpider('lapsing').expect(202);
+      await lapse({ plan: 'free', planExpiresAt: null, trialEndsAt: null });
+
+      expect(await egressCallsOf(runProbe)).toBe(0);
     });
 
     it('stores nothing once the workspace is suspended', async () => {
