@@ -140,9 +140,17 @@ test("clicking a keyword opens why each app ranks for it", async ({ page }) => {
   await expect(you).toContainText("Keyword field");
   await expect(you).toContainText("pomodoro, timer, planner");
   await expect(you).toContainText("2 of 2 keyword words in the listing");
+  await expect(
+    you.getByRole("note", { name: "Where you stand" }),
+  ).toContainText("Your listing text changed 9 days ago.");
 
   const rival = sheet.getByRole("listitem", { name: "Rival Focus" });
   await expect(rival).toContainText("1 of 2 words");
+  await expect(
+    rival.getByRole("note", { name: "Why it may rank above you" }),
+  ).toContainText(
+    "No stronger placement than yours, but 48,000 ratings to your 1,200.",
+  );
   await expect(rival.locator("mark").first()).toHaveText("Focus");
   const spanish = rival.getByRole("group", {
     name: "Spanish (Mexico) listing",

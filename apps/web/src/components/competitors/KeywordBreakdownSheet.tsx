@@ -10,6 +10,7 @@ import {
 import type {
   KeywordBreakdownApp,
   KeywordBreakdownField,
+  KeywordBreakdownStanding,
   MetadataField,
 } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
@@ -32,6 +33,7 @@ import {
 import { keywordBreakdownOptions } from "@/lib/queries";
 import { breakdownParser } from "@/lib/search-params";
 import { PositionCell } from "./comparison-columns";
+import { insightText, standingLines } from "./keyword-insights";
 import { UNNAMED_COMPETITOR } from "./comparison-scores";
 import {
   highlightTerms,
@@ -150,14 +152,47 @@ function LocalizedListings({
   );
 }
 
+function Explanation({
+  app,
+  standing,
+}: {
+  app: KeywordBreakdownApp;
+  standing: KeywordBreakdownStanding | null;
+}) {
+  const lines = app.isYou
+    ? standing
+      ? standingLines(standing)
+      : []
+    : app.insight
+      ? [insightText(app.insight)]
+      : [];
+  if (lines.length === 0) return null;
+  return (
+    <div
+      role="note"
+      aria-label={app.isYou ? "Where you stand" : "Why it may rank above you"}
+      className="flex flex-col gap-1 rounded-md bg-muted p-2 text-xs"
+    >
+      <span className="font-medium">
+        {app.isYou ? "Where you stand" : "Why it may rank above you"}
+      </span>
+      {lines.map((line) => (
+        <span key={line}>{line}</span>
+      ))}
+    </div>
+  );
+}
+
 function AppRow({
   app,
   total,
   country,
+  standing,
 }: {
   app: KeywordBreakdownApp;
   total: number;
   country: string;
+  standing: KeywordBreakdownStanding | null;
 }) {
   const name = app.name ?? UNNAMED_COMPETITOR;
   return (
@@ -170,6 +205,7 @@ function AppRow({
         {app.isYou ? <Badge>You</Badge> : null}
         <PositionCell value={app.position} best={false} />
       </div>
+      <Explanation app={app} standing={standing} />
       {app.listingCountry === null ? (
         <p className="text-muted-foreground">
           No listing captured for this app yet.
@@ -229,6 +265,7 @@ function BreakdownRows({
             app={app}
             total={data.terms.length}
             country={data.country}
+            standing={data.standing}
           />
         ))}
       </ul>
@@ -236,7 +273,8 @@ function BreakdownRows({
         A market searches every language version of a listing it offers, so
         those are read too where they were captured. Search also reads fields
         only the developer sees, such as the App Store keyword field, so a
-        competitor can rank without the words showing here.
+        competitor can rank without the words showing here. The explanations are
+        rules of thumb from what is visible, not measurements.
       </p>
     </div>
   );

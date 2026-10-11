@@ -922,6 +922,13 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
     text: "focus timer",
     country: "us",
     terms: ["focus", "timer"],
+    standing: {
+      above: 1,
+      competitors: 1,
+      aboveWithStrongerPlacement: 0,
+      missingTerms: [],
+      changedDaysAgo: 9,
+    },
     apps: [
       {
         appId: "app-1",
@@ -953,6 +960,8 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
         matchedTerms: 2,
         localizations: [],
         unreadLocalizations: [],
+        placement: "title",
+        insight: null,
         ratingAvg: 4.6,
         ratingCount: 1200,
       },
@@ -1009,6 +1018,8 @@ export const KEYWORD_BREAKDOWNS: Record<string, KeywordBreakdown> = {
           },
         ],
         unreadLocalizations: ["ko", "vi"],
+        placement: "subtitle",
+        insight: { rule: "ratings", theirs: 48000, yours: 1200 },
         ratingAvg: 4.2,
         ratingCount: 310,
       },

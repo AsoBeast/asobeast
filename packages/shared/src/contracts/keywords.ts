@@ -111,6 +111,30 @@ export interface KeywordBreakdownLocalization {
   matchedTerms: number;
 }
 
+export type KeywordPlacement =
+  | 'title'
+  | 'subtitle'
+  | 'shortDescription'
+  | 'keywordField'
+  | 'split'
+  | 'partial'
+  | 'none';
+
+export type KeywordBreakdownInsight =
+  | { rule: 'placement'; theirs: KeywordPlacement; yours: KeywordPlacement }
+  | { rule: 'ratings'; theirs: number; yours: number }
+  | { rule: 'unchecked'; localizations: number }
+  | { rule: 'hidden' }
+  | { rule: 'similar' };
+
+export interface KeywordBreakdownStanding {
+  above: number;
+  competitors: number;
+  aboveWithStrongerPlacement: number;
+  missingTerms: string[];
+  changedDaysAgo: number | null;
+}
+
 export interface KeywordBreakdownApp {
   appId: string;
   name: string | null;
@@ -122,6 +146,8 @@ export interface KeywordBreakdownApp {
   matchedTerms: number;
   localizations: KeywordBreakdownLocalization[];
   unreadLocalizations: string[];
+  placement: KeywordPlacement;
+  insight: KeywordBreakdownInsight | null;
   ratingAvg: number | null;
   ratingCount: number | null;
 }
@@ -131,6 +157,7 @@ export interface KeywordBreakdown {
   text: string;
   country: string;
   terms: string[];
+  standing: KeywordBreakdownStanding | null;
   apps: KeywordBreakdownApp[];
 }
 

@@ -18,7 +18,12 @@ import {
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
-import { HOME_LISTING, listingIn, NEWEST_FIRST } from '../apps/listing';
+import {
+  eventsOfMarket,
+  HOME_LISTING,
+  listingIn,
+  NEWEST_FIRST,
+} from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
 import {
@@ -27,6 +32,7 @@ import {
   breakdownTerms,
   sortBreakdown,
 } from './keyword-breakdown';
+import { withInsights } from './keyword-breakdown.insights';
 import { localizedCopies } from './keyword-breakdown.listings';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
@@ -53,6 +59,8 @@ import {
 } from './keywords.support';
 
 const AUTO_TRACK_LIMIT = 15;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const RANKING_TEXT_FIELDS = ['title', 'subtitle', 'summary'] as const;
 const KEYWORD_FIELD_LOCK = 3_958_261;
 
 @Injectable()
@@ -194,31 +202,30 @@ export class KeywordsService {
       select: { id: true, name: true, iconUrl: true, country: true },
       orderBy: { createdAt: 'asc' },
     });
-    const [latest, listings, keywordField, localized] = await Promise.all([
-      latestPositions(
-        this.prisma,
-        subjects.map((subject) => subject.id),
-        [keywordId],
-      ),
-      Promise.all(
-        subjects.map((subject) =>
-          this.breakdownListing(subject.id, subject.country, country),
+    const [latest, listings, keywordField, localized, changedDaysAgo] =
+      await Promise.all([
+        latestPositions(
+          this.prisma,
+          subjects.map((subject) => subject.id),
+          [keywordId],
         ),
-      ),
-      this.enteredKeywordField(app, country),
-      Promise.all(
-        subjects.map((subject) =>
-          localizedCopies(this.prisma, app.store, subject, country),
+        Promise.all(
+          subjects.map((subject) =>
+            this.breakdownListing(subject.id, subject.country, country),
+          ),
         ),
-      ),
-    ]);
+        this.enteredKeywordField(app, country),
+        Promise.all(
+          subjects.map((subject) =>
+            localizedCopies(this.prisma, app.store, subject, country),
+          ),
+        ),
+        this.listingChangedDaysAgo(app, country),
+      ]);
+    const terms = breakdownTerms(text);
 
-    return {
-      keywordId,
-      text,
-      country,
-      terms: breakdownTerms(text),
-      apps: sortBreakdown(
+    const explained = withInsights(
+      sortBreakdown(
         subjects.map((subject, index) =>
           breakdownApp(
             {
@@ -236,7 +243,28 @@ export class KeywordsService {
           ),
         ),
       ),
-    };
+      terms,
+      changedDaysAgo,
+    );
+    return { keywordId, text, country, terms, ...explained };
+  }
+
+  private async listingChangedDaysAgo(
+    app: KeywordApp,
+    market: string,
+  ): Promise<number | null> {
+    const latest = await this.prisma.changeEvent.findFirst({
+      where: {
+        appId: app.id,
+        ...eventsOfMarket(app.country, market),
+        field: { in: [...RANKING_TEXT_FIELDS] },
+      },
+      orderBy: { capturedAt: 'desc' },
+      select: { capturedAt: true },
+    });
+    return latest
+      ? Math.floor((Date.now() - latest.capturedAt.getTime()) / DAY_MS)
+      : null;
   }
 
   private async enteredKeywordField(

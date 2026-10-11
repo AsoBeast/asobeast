@@ -8,6 +8,7 @@ import {
   tokenize,
 } from '@asobeast/shared';
 import { containsTerm } from '../common/text/scripts';
+import { placementOf } from './keyword-breakdown.insights';
 import { LocalizedRead } from './keyword-breakdown.listings';
 import { coversKeyword } from './keyword-coverage';
 
@@ -142,6 +143,8 @@ export function breakdownApp(
     ),
     localizations: localized,
     unreadLocalizations: [...(subject.localized?.unread ?? [])],
+    placement: placementOf({ fields, localizations: localized }, terms.length),
+    insight: null,
     ratingAvg: listing?.ratingAvg ?? null,
     ratingCount: listing?.ratingCount ?? null,
   };
