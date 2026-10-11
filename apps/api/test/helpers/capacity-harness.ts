@@ -70,6 +70,7 @@ export async function resetCapacity({
     },
   });
   await obliterateQueues(app);
+  await pauseQueues(app);
   await clearOnDemandCounters(app);
   const owner = await ownerAgent(app);
   await clearRateLimitCounters(app);
