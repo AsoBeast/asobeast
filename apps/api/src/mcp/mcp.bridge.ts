@@ -33,6 +33,10 @@ function authorization(
   return { authorization: request?.headers.get('authorization') ?? undefined };
 }
 
+export function messageCountOf(body: unknown): number {
+  return Array.isArray(body) ? Math.max(body.length, 1) : 1;
+}
+
 @Injectable()
 export class McpBridge implements OnModuleDestroy {
   private readonly logger = new Logger(McpBridge.name);
@@ -95,11 +99,10 @@ export class McpBridge implements OnModuleDestroy {
 
     const metered = this.config.get('BILLING_ENABLED', { infer: true });
     const { plan, limits } = planScopeOf(metered, user.workspace, new Date());
-    await this.limiter.consumeMcp({
-      workspaceId: user.workspaceId,
-      plan,
-      limits,
-    });
+    await this.limiter.consumeMcp(
+      { workspaceId: user.workspaceId, plan, limits },
+      messageCountOf(req.body),
+    );
   }
 
   private sanitized(error: Error): string {

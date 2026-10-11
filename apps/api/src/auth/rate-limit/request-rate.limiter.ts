@@ -68,9 +68,13 @@ export class RequestRateLimiter {
     return usage;
   }
 
-  async consumeMcp(scope: RateScope, now = new Date()): Promise<void> {
+  async consumeMcp(
+    scope: RateScope,
+    cost: number,
+    now = new Date(),
+  ): Promise<void> {
     const rule = mcpRateRule(scope.limits);
-    if (rule) await this.count(scope, 'read', rule, now);
+    if (rule) await this.count(scope, 'read', rule, now, cost);
   }
 
   private async count(
@@ -78,6 +82,7 @@ export class RequestRateLimiter {
     rateClass: RateClass,
     rule: RateRule,
     now: Date,
+    cost = 1,
   ): Promise<RateUsage | null> {
     const key = windowKey(
       'rate',
@@ -87,8 +92,8 @@ export class RequestRateLimiter {
       now,
     );
     const used = await this.redis.runOpen(async (client) => {
-      const hits = await client.incr(key);
-      if (hits === 1) await client.expire(key, rule.windowSeconds);
+      const hits = await client.incrby(key, cost);
+      if (hits === cost) await client.expire(key, rule.windowSeconds);
       return hits;
     }, null);
     if (used === null) return null;

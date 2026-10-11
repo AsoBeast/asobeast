@@ -28,15 +28,19 @@ export function sseEnvelope(response: Response): Envelope {
 }
 
 export function mcpAs(app: INestApplication<App>, token: string) {
-  const rpc = (method: string, params: unknown = {}) =>
+  const send = (body: unknown) =>
     request(app.getHttpServer())
       .post('/mcp')
       .set('Authorization', `Bearer ${token}`)
       .set('Accept', 'application/json, text/event-stream')
       .set('Content-Type', 'application/json')
-      .send({ jsonrpc: '2.0', id: 1, method, params });
+      .send(body as object);
+
+  const rpc = (method: string, params: unknown = {}) =>
+    send({ jsonrpc: '2.0', id: 1, method, params });
 
   return {
+    send,
     rpc,
     listTools: async (): Promise<ListedTool[]> =>
       sseEnvelope(await rpc('tools/list').expect(200)).result?.tools ?? [],
