@@ -13,6 +13,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AccountMail, MailerService } from '../src/alerts/mailer.service';
 import { confirmationToken } from '../src/alerts/confirmation-token';
+import { CONFIRMATION_RESEND_COOLDOWN_SECONDS } from '../src/alerts/email-alerts.service';
 import { unsubscribeToken } from '../src/alerts/unsubscribe-token';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -27,6 +28,7 @@ import {
 import { testDb } from './helpers/test-db';
 
 const STRANGER = 'stranger@example.net';
+const HOUR_MS = 60 * 60 * 1000;
 const TOKEN_IN_LINK =
   /\/confirm-alert\?alert=([^&\s]+)&token=([A-Za-z0-9_-]{43})/;
 
@@ -256,8 +258,15 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(sendAccountMail).toHaveBeenCalledTimes(1);
   });
 
+  const sentHoursAgo = (alert: EmailAlertItem, hours: number) =>
+    prisma.emailAlert.update({
+      where: { id: alert.id },
+      data: { confirmationSentAt: new Date(Date.now() - hours * HOUR_MS) },
+    });
+
   it('sends the confirmation again on request, once the first one is not enough', async () => {
     const alert = await addAlert(STRANGER);
+    await sentHoursAgo(alert, 2);
     sendAccountMail.mockClear();
 
     await api.post(`/email-alerts/${alert.id}/resend-confirmation`).expect(204);
@@ -265,9 +274,32 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(sentConfirmation().to).toBe(STRANGER);
   });
 
+  it('waits an hour before sending the confirmation again', async () => {
+    const alert = await addAlert(STRANGER);
+    sendAccountMail.mockClear();
+
+    const refused = await api
+      .post(`/email-alerts/${alert.id}/resend-confirmation`)
+      .expect(429);
+
+    const retryAfter = Number(refused.headers['retry-after']);
+    expect(retryAfter).toBeGreaterThan(0);
+    expect(retryAfter).toBeLessThanOrEqual(
+      CONFIRMATION_RESEND_COOLDOWN_SECONDS,
+    );
+    expect(sendAccountMail).not.toHaveBeenCalled();
+  });
+
+  it('resends at once when the first confirmation never left', async () => {
+    sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
+    const alert = await addAlert(STRANGER);
+
+    await api.post(`/email-alerts/${alert.id}/resend-confirmation`).expect(204);
+  });
+
   it('keeps the earlier link working when a resend cannot be sent', async () => {
     const alert = await addAlert(STRANGER);
-    const sentAt = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const sentAt = new Date(Date.now() - 2 * HOUR_MS);
     await prisma.emailAlert.update({
       where: { id: alert.id },
       data: { confirmationSentAt: sentAt },

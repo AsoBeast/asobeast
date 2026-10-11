@@ -13,6 +13,7 @@ import {
   RANK_DEPTH,
   WebhookTestResult,
 } from '@asobeast/shared';
+import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
@@ -29,12 +30,17 @@ export const MAX_EMAIL_ALERTS = 25;
 
 export const MAX_UNCONFIRMED_EMAIL_ALERTS = 5;
 
+export const CONFIRMATION_RESEND_COOLDOWN_SECONDS = 60 * 60;
+
 const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
 
 const NO_LINK_MESSAGE =
   'The confirmation email cannot be sent until WEB_PUBLIC_URL is set on the API, because the link would have no host';
 
 const ALREADY_CONFIRMED_MESSAGE = 'This recipient is already confirmed';
+
+const COOLING_DOWN_MESSAGE =
+  'A confirmation email was sent to this recipient less than an hour ago.';
 
 const UNSUBSCRIBED_MESSAGE =
   'This recipient unsubscribed from the alert, so it is not asked again. Change the address to ask someone else to confirm';
@@ -129,6 +135,7 @@ export class EmailAlertsService {
     if (alert.unsubscribedAt) {
       throw new ConflictException(UNSUBSCRIBED_MESSAGE);
     }
+    assertCooledDown(alert.confirmationSentAt);
     if (!this.confirmation.canSend) {
       throw new ServiceUnavailableException(NO_LINK_MESSAGE);
     }
@@ -208,6 +215,17 @@ export class EmailAlertsService {
     if (!this.mailer.enabled) {
       throw new BadRequestException(DISABLED_MESSAGE);
     }
+  }
+}
+
+function assertCooledDown(sentAt: Date | null, now = Date.now()): void {
+  if (!sentAt) return;
+  const waitSeconds = Math.ceil(
+    (sentAt.getTime() + CONFIRMATION_RESEND_COOLDOWN_SECONDS * 1000 - now) /
+      1000,
+  );
+  if (waitSeconds > 0) {
+    throw new RequestThrottledError(waitSeconds, COOLING_DOWN_MESSAGE);
   }
 }
 
