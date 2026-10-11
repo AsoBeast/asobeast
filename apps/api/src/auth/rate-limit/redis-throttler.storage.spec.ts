@@ -2,7 +2,7 @@ import type { Redis } from 'ioredis';
 import { RedisUnavailableError } from '../../redis/redis.errors';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { RedisThrottlerStorage, throttlerKey } from './redis-throttler.storage';
-import { trackerOf } from './request-tracker';
+import { addressTrackerOf, trackerOf } from './request-tracker';
 import type { AccountUser } from '../auth.types';
 
 const TTL_MS = 60_000;
@@ -142,6 +142,19 @@ describe('trackerOf', () => {
   it('keeps the ipv6 loopback a single address', () => {
     expect(trackerOf({ ip: '::1' })).toBe('ip:::1');
   });
+});
+
+describe('addressTrackerOf', () => {
+  it('keys a request by the client address express named', () => {
+    expect(addressTrackerOf({ ip: '203.0.113.7' })).toBe('ip:203.0.113.7');
+  });
+
+  it.each([{}, { ip: null }, { ip: undefined }, { ip: '' }])(
+    'names no one when express has no client address (%j)',
+    (req) => {
+      expect(addressTrackerOf(req)).toBeNull();
+    },
+  );
 });
 
 describe('RedisThrottlerStorage while redis is unreachable', () => {

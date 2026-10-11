@@ -496,6 +496,29 @@ describe('Rate limits (billing mode)', () => {
     );
   });
 
+  it('keeps admitting accepted credentials from an address that spent its rejection budget', async () => {
+    const cookie = await register('shared@example.com');
+    const token = await mintToken('shared@example.com', 'a'.repeat(48));
+    const rejected = `${API_TOKEN_PREFIX}${'2'.repeat(48)}`;
+    const presentRejected = () =>
+      request(app.getHttpServer())
+        .get('/apps')
+        .set('Authorization', `Bearer ${rejected}`);
+
+    await presentRejected().expect(401);
+    await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE);
+
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Cookie', cookie)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    await presentRejected().expect(429);
+  });
+
   it('counts a rejected token that arrives beside an empty session cookie', async () => {
     const rejected = `${API_TOKEN_PREFIX}${'1'.repeat(48)}`;
     const present = () =>
