@@ -1,33 +1,24 @@
-import './helpers/enable-public-url';
-import { execSync } from 'child_process';
-import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { ApiErrorEnvelope, EmailAlertItem } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { CONFIRMATIONS_PER_WORKSPACE_PER_DAY } from '../src/alerts/confirmation-mail.limiter';
+import {
+  CONFIRMATIONS_PER_RECIPIENT_PER_DAY,
+  CONFIRMATIONS_PER_WORKSPACE_PER_DAY,
+} from '../src/alerts/confirmation-mail.limiter';
 import {
   MAX_EMAIL_ALERTS,
   MAX_UNCONFIRMED_EMAIL_ALERTS,
 } from '../src/alerts/email-alerts.service';
-import { MailerService } from '../src/alerts/mailer.service';
 import { unsubscribeToken } from '../src/alerts/unsubscribe-token';
 import { sha256 } from '../src/auth/password-hash';
 import { windowKey } from '../src/auth/rate-limit/window';
-import { FailFastRedis } from '../src/redis/fail-fast-redis';
-import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { FailFastRedis } from '../src/redis/fail-fast-redis';
 import { TEST_AUTH_SECRET } from './helpers/auth-env';
-import { TEST_WEB_PUBLIC_URL } from './helpers/enable-public-url';
-import { OWNER, ownerAgent, useCookies } from './helpers/session';
-import {
-  clearRateLimitCounters,
-  obliterateQueues,
-  settleBootRegistration,
-} from './obliterate-queues';
-import { testDb } from './helpers/test-db';
+import { EmailAlertApp, startEmailAlertApp } from './helpers/email-alert-app';
+import { OWNER } from './helpers/session';
 
 const EVENTS = ['metadata.changed'];
 
@@ -36,62 +27,22 @@ const DAY_SECONDS = 24 * 60 * 60;
 const allowanceKey = (scope: string, label: string): string =>
   windowKey('confirmation', scope, label, DAY_SECONDS, new Date());
 
-function migrate(): void {
-  execSync('pnpm prisma migrate deploy', {
-    cwd: join(__dirname, '..'),
-    env: process.env,
-    stdio: 'ignore',
-  });
-}
-
 describe('Email alert limits (e2e)', () => {
+  let fixture: EmailAlertApp;
   let app: INestApplication<App>;
   let prisma: PrismaClient;
-  let api: Awaited<ReturnType<typeof ownerAgent>>;
-  const send = jest.fn().mockResolvedValue(undefined);
-  const sendAccountMail = jest.fn().mockResolvedValue(undefined);
+  let api: EmailAlertApp['api'];
+  let send: jest.Mock;
+  let sendAccountMail: jest.Mock;
 
   beforeAll(async () => {
-    migrate();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(MailerService)
-      .useValue({
-        enabled: true,
-        origin: TEST_WEB_PUBLIC_URL,
-        send,
-        sendAccountMail,
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    useCookies(app);
-    await app.init();
-    await settleBootRegistration(app);
-    prisma = testDb();
-    await prisma.workspace.upsert({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      update: {},
-      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
-    });
-    api = await ownerAgent(app);
+    fixture = await startEmailAlertApp();
+    ({ app, prisma, api, send, sendAccountMail } = fixture);
   });
 
-  beforeEach(async () => {
-    send.mockClear();
-    sendAccountMail.mockClear();
-    await clearRateLimitCounters(app);
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "EmailAlert", "AlertDelivery" RESTART IDENTITY CASCADE',
-    );
-  });
+  beforeEach(() => fixture.reset());
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await obliterateQueues(app);
-    await app.close();
-  });
+  afterAll(() => fixture.close());
 
   const seed = (count: number, confirmed: boolean) =>
     prisma.emailAlert.createMany({
@@ -127,16 +78,18 @@ describe('Email alert limits (e2e)', () => {
     expect(send).toHaveBeenCalledTimes(10);
   });
 
-  it('refuses a workspace more than 25 email alerts', async () => {
-    await seed(25, true);
+  it('refuses a workspace more email alerts than its cap', async () => {
+    await seed(MAX_EMAIL_ALERTS, true);
 
     const refused = await api
       .post('/email-alerts')
       .send({ email: 'one-more@example.net', events: EVENTS })
       .expect(403);
 
-    expect((refused.body as ApiErrorEnvelope).message).toContain('25');
-    expect(await prisma.emailAlert.count()).toBe(25);
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      String(MAX_EMAIL_ALERTS),
+    );
+    expect(await prisma.emailAlert.count()).toBe(MAX_EMAIL_ALERTS);
   });
 
   it('holds the cap when creates race each other', async () => {
@@ -173,8 +126,8 @@ describe('Email alert limits (e2e)', () => {
     expect(sendAccountMail).toHaveBeenCalledTimes(1);
   });
 
-  it('refuses a sixth recipient who has not confirmed yet', async () => {
-    await seed(5, false);
+  it('refuses a recipient past the waiting limit', async () => {
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS, false);
 
     await api
       .post('/email-alerts')
@@ -205,7 +158,7 @@ describe('Email alert limits (e2e)', () => {
   });
 
   it('keeps counting only unconfirmed alerts against that limit', async () => {
-    await seed(5, true);
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS, true);
 
     await api
       .post('/email-alerts')
@@ -213,8 +166,12 @@ describe('Email alert limits (e2e)', () => {
       .expect(201);
   });
 
-  it('sends one recipient at most five confirmation emails a day', async () => {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
+  it('sends one recipient a bounded number of confirmation emails a day', async () => {
+    for (
+      let attempt = 0;
+      attempt < CONFIRMATIONS_PER_RECIPIENT_PER_DAY;
+      attempt += 1
+    ) {
       const created = await api
         .post('/email-alerts')
         .send({ email: 'victim@example.net', events: EVENTS })
@@ -279,7 +236,11 @@ describe('Email alert limits (e2e)', () => {
       data: { emailVerifiedAt: new Date() },
     });
 
-    for (let attempt = 0; attempt < 6; attempt += 1) {
+    for (
+      let attempt = 0;
+      attempt <= CONFIRMATIONS_PER_RECIPIENT_PER_DAY;
+      attempt += 1
+    ) {
       const created = await api
         .post('/email-alerts')
         .send({ email: OWNER.email, events: EVENTS })
@@ -288,10 +249,12 @@ describe('Email alert limits (e2e)', () => {
         .delete(`/email-alerts/${(created.body as EmailAlertItem).id}`)
         .expect(204);
     }
+
+    expect(sendAccountMail).not.toHaveBeenCalled();
   });
 
-  it('refuses to send an address change to a sixth waiting recipient', async () => {
-    await seed(5, false);
+  it('refuses an address change past the waiting limit', async () => {
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS, false);
     const [confirmed] = await prisma.emailAlert.createManyAndReturn({
       data: [
         {
@@ -316,7 +279,7 @@ describe('Email alert limits (e2e)', () => {
   });
 
   it('lets a waiting recipient change address inside the waiting limit', async () => {
-    await seed(5, false);
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS, false);
     const waiting = await prisma.emailAlert.findFirstOrThrow();
 
     await api

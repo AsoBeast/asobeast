@@ -1,8 +1,4 @@
-import './helpers/enable-public-url';
-import { execSync } from 'child_process';
-import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   ApiErrorEnvelope,
@@ -11,84 +7,40 @@ import {
 } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AccountMail, MailerService } from '../src/alerts/mailer.service';
-import { confirmationToken } from '../src/alerts/confirmation-token';
+import { AccountMail } from '../src/alerts/mailer.service';
+import {
+  CONFIRMATION_DAYS,
+  confirmationToken,
+} from '../src/alerts/confirmation-token';
 import { CONFIRMATION_RESEND_COOLDOWN_SECONDS } from '../src/alerts/email-alerts.service';
 import { unsubscribeToken } from '../src/alerts/unsubscribe-token';
-import { AppModule } from '../src/app.module';
-import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { TEST_AUTH_SECRET } from './helpers/auth-env';
+import { EmailAlertApp, startEmailAlertApp } from './helpers/email-alert-app';
 import { TEST_WEB_PUBLIC_URL } from './helpers/enable-public-url';
-import { OWNER, ownerAgent, useCookies } from './helpers/session';
-import {
-  clearRateLimitCounters,
-  obliterateQueues,
-  settleBootRegistration,
-} from './obliterate-queues';
-import { testDb } from './helpers/test-db';
+import { OWNER } from './helpers/session';
 
 const STRANGER = 'stranger@example.net';
 const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
 const TOKEN_IN_LINK =
   /\/confirm-alert\?alert=([^&\s]+)&token=([A-Za-z0-9_-]{43})/;
 
-function migrate(): void {
-  execSync('pnpm prisma migrate deploy', {
-    cwd: join(__dirname, '..'),
-    env: process.env,
-    stdio: 'ignore',
-  });
-}
-
 describe('Email alert recipient confirmation (e2e)', () => {
+  let fixture: EmailAlertApp;
   let app: INestApplication<App>;
   let prisma: PrismaClient;
-  let api: Awaited<ReturnType<typeof ownerAgent>>;
-  const send = jest.fn().mockResolvedValue(undefined);
-  const sendAccountMail = jest.fn().mockResolvedValue(undefined);
+  let api: EmailAlertApp['api'];
+  let send: jest.Mock;
+  let sendAccountMail: jest.Mock;
 
   beforeAll(async () => {
-    migrate();
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    })
-      .overrideProvider(MailerService)
-      .useValue({
-        enabled: true,
-        origin: TEST_WEB_PUBLIC_URL,
-        send,
-        sendAccountMail,
-      })
-      .compile();
-
-    app = moduleFixture.createNestApplication();
-    useCookies(app);
-    await app.init();
-    await settleBootRegistration(app);
-    prisma = testDb();
-    await prisma.workspace.upsert({
-      where: { id: DEFAULT_WORKSPACE_ID },
-      update: {},
-      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
-    });
-    api = await ownerAgent(app);
+    fixture = await startEmailAlertApp();
+    ({ app, prisma, api, send, sendAccountMail } = fixture);
   });
 
-  beforeEach(async () => {
-    send.mockClear();
-    sendAccountMail.mockClear();
-    await clearRateLimitCounters(app);
-    await prisma.user.updateMany({ data: { emailVerifiedAt: null } });
-    await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "EmailAlert", "AlertDelivery" RESTART IDENTITY CASCADE',
-    );
-  });
+  beforeEach(() => fixture.reset());
 
-  afterAll(async () => {
-    await prisma.$disconnect();
-    await obliterateQueues(app);
-    await app.close();
-  });
+  afterAll(() => fixture.close());
 
   const addAlert = async (email: string): Promise<EmailAlertItem> => {
     const created = await api
@@ -264,7 +216,7 @@ describe('Email alert recipient confirmation (e2e)', () => {
       data: { confirmationSentAt: new Date(Date.now() - hours * HOUR_MS) },
     });
 
-  it('sends the confirmation again on request, once the first one is not enough', async () => {
+  it('sends the confirmation again on request', async () => {
     const alert = await addAlert(STRANGER);
     await sentHoursAgo(alert, 2);
     sendAccountMail.mockClear();
@@ -374,7 +326,7 @@ describe('Email alert recipient confirmation (e2e)', () => {
 
   it('answers gone for a link older than a week', async () => {
     const alert = await addAlert(STRANGER);
-    const sentAt = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const sentAt = new Date(Date.now() - (CONFIRMATION_DAYS + 1) * DAY_MS);
     await prisma.emailAlert.update({
       where: { id: alert.id },
       data: { confirmationSentAt: sentAt },
