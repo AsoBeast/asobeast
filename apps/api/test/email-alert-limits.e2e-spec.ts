@@ -6,7 +6,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { ApiErrorEnvelope, EmailAlertItem } from '@asobeast/shared';
 import { App } from 'supertest/types';
+import { CONFIRMATIONS_PER_WORKSPACE_PER_DAY } from '../src/alerts/confirmation-mail.limiter';
 import { MailerService } from '../src/alerts/mailer.service';
+import { sha256 } from '../src/auth/password-hash';
+import { windowKey } from '../src/auth/rate-limit/window';
+import { FailFastRedis } from '../src/redis/fail-fast-redis';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { TEST_WEB_PUBLIC_URL } from './helpers/enable-public-url';
@@ -19,6 +23,11 @@ import {
 import { testDb } from './helpers/test-db';
 
 const EVENTS = ['metadata.changed'];
+
+const DAY_SECONDS = 24 * 60 * 60;
+
+const allowanceKey = (scope: string, label: string): string =>
+  windowKey('confirmation', scope, label, DAY_SECONDS, new Date());
 
 function migrate(): void {
   execSync('pnpm prisma migrate deploy', {
@@ -164,6 +173,24 @@ describe('Email alert limits (e2e)', () => {
     expect(Number(refused.headers['retry-after'])).toBeGreaterThan(0);
     expect(sendAccountMail).not.toHaveBeenCalled();
     expect(await prisma.emailAlert.count()).toBe(0);
+  });
+
+  it('leaves the recipient allowance alone once the workspace allowance is spent', async () => {
+    const redis = app.get(FailFastRedis).client;
+    await redis.set(
+      allowanceKey(DEFAULT_WORKSPACE_ID, 'workspace'),
+      String(CONFIRMATIONS_PER_WORKSPACE_PER_DAY),
+    );
+
+    const refused = await api
+      .post('/email-alerts')
+      .send({ email: 'victim@example.net', events: EVENTS })
+      .expect(429);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain('workspace');
+    expect(
+      await redis.get(allowanceKey(sha256('victim@example.net'), 'recipient')),
+    ).toBeNull();
   });
 
   it('does not count a recipient the workspace already trusts', async () => {
