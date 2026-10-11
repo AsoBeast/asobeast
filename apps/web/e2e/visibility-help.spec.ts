@@ -106,3 +106,18 @@ for (const view of ["cards", "table"]) {
     await expect(page).toHaveURL(new RegExp(`view=${view}`));
   });
 }
+
+test("the change impact card says which popularity its visibility uses", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/changes");
+  const card = page.getByRole("region", {
+    name: "How rankings moved after each change",
+  });
+
+  const help = await openHelp(page, card);
+
+  await expect(help).toContainText(
+    "popularity on the last check before the change",
+  );
+});
