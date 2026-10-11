@@ -18,6 +18,22 @@ describe('isDisposableEmail', () => {
     expect(isDisposableEmail('')).toBe(false);
   });
 
+  it.each([
+    ['someone@mailinator.com.'],
+    ['"someone"@mailinator.com'],
+    ['someone@ｍailinator.com'],
+    ['  someone@MAILINATOR.COM.  '],
+  ])('flags %s however the domain is written', (address) => {
+    expect(isDisposableEmail(address)).toBe(true);
+  });
+
+  it('flags a throwaway domain the list holds in ascii when it is written in unicode', () => {
+    expect(isDisposableEmail('someone@xn--aufsteckbrsten-kaufen-hic.de')).toBe(
+      true,
+    );
+    expect(isDisposableEmail('someone@aufsteckbürsten-kaufen.de')).toBe(true);
+  });
+
   it('flags a subdomain of a throwaway domain', () => {
     expect(isDisposableEmail('someone@inbox.mailinator.com')).toBe(true);
   });

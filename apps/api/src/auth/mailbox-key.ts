@@ -1,3 +1,5 @@
+import { canonicalAddress, canonicalText } from './canonical-address';
+
 const ADDRESS_ALIASES: Record<string, string> = {
   'googlemail.com': 'gmail.com',
 };
@@ -5,13 +7,11 @@ const ADDRESS_ALIASES: Record<string, string> = {
 const DOTLESS_DOMAINS: ReadonlySet<string> = new Set(['gmail.com']);
 
 export function mailboxOf(email: string): string {
-  const address = email.normalize('NFKC').trim().toLowerCase();
-  const at = address.lastIndexOf('@');
-  if (at < 1) return address;
+  const address = canonicalAddress(email);
+  if (!address) return canonicalText(email);
 
-  const rawDomain = address.slice(at + 1).replace(/\.$/, '');
-  const domain = ADDRESS_ALIASES[rawDomain] ?? rawDomain;
-  const withoutTag = withoutPlusTag(address.slice(0, at));
+  const domain = ADDRESS_ALIASES[address.domain] ?? address.domain;
+  const withoutTag = withoutPlusTag(address.local);
   const local = DOTLESS_DOMAINS.has(domain)
     ? withoutTag.replaceAll('.', '')
     : withoutTag;

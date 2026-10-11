@@ -61,6 +61,23 @@ describe('mailboxOf', () => {
     expect(mailboxOf('@example.com')).toBe('@example.com');
   });
 
+  it.each([
+    ['"person"@example.com', 'person@example.com'],
+    ['"person+tag"@example.com', 'person@example.com'],
+    ['"first.last"@gmail.com', 'firstlast@gmail.com'],
+  ])('reads the quoted local part of %s as %s', (given, expected) => {
+    expect(mailboxOf(given)).toBe(expected);
+  });
+
+  it.each([
+    ['person@bücher.de', 'person@xn--bcher-kva.de'],
+    ['person@BÜCHER.de', 'person@xn--bcher-kva.de'],
+    ['person@xn--bcher-kva.de', 'person@xn--bcher-kva.de'],
+    ['person@bücher.de.', 'person@xn--bcher-kva.de'],
+  ])('reads the unicode domain of %s in its ascii form', (given, expected) => {
+    expect(mailboxOf(given)).toBe(expected);
+  });
+
   it('splits at the last at sign', () => {
     expect(mailboxOf('"a@b"+x@example.com')).toBe('"a@b"@example.com');
   });

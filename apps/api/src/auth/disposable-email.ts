@@ -1,9 +1,10 @@
 import { blacklist } from 'mailchecker';
+import { canonicalAddress } from './canonical-address';
 
 const DISPOSABLE_EMAIL_DOMAINS = blacklist();
 
 export function isDisposableEmail(email: string): boolean {
-  let domain = email.split('@').at(-1)?.trim().toLowerCase();
+  let domain = canonicalAddress(email)?.domain;
   while (domain) {
     if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) return true;
     const dot = domain.indexOf('.');
