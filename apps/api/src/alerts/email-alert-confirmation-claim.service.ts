@@ -3,9 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { CONFIRMATION_DAYS, isConfirmationToken } from './confirmation-token';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
+import {
+  isConfirmationExpired,
+  isConfirmationToken,
+} from './confirmation-token';
 
 const NOT_FOUND = 'That confirmation link is not valid';
 
@@ -47,7 +48,7 @@ export class EmailAlertConfirmationClaim {
       throw new NotFoundException(NOT_FOUND);
     }
     if (alert.confirmedAt) return;
-    if (sentAt.getTime() + CONFIRMATION_DAYS * DAY_MS <= Date.now()) {
+    if (isConfirmationExpired(sentAt)) {
       throw new GoneException(EXPIRED);
     }
     const link = {

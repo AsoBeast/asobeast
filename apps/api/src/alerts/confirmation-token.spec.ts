@@ -1,4 +1,9 @@
-import { confirmationToken, isConfirmationToken } from './confirmation-token';
+import {
+  CONFIRMATION_DAYS,
+  confirmationToken,
+  isConfirmationExpired,
+  isConfirmationToken,
+} from './confirmation-token';
 import { unsubscribeToken } from './unsubscribe-token';
 
 const SECRET = 'a'.repeat(32);
@@ -43,5 +48,19 @@ describe('confirmation token', () => {
         unsubscribeToken(SECRET, { alertId, email }),
       ),
     ).toBe(false);
+  });
+});
+
+describe('confirmation expiry', () => {
+  const DAY_MS = 24 * 60 * 60 * 1000;
+
+  it('keeps a link alive until its last moment', () => {
+    const lastMoment = SENT_AT.getTime() + CONFIRMATION_DAYS * DAY_MS - 1;
+    expect(isConfirmationExpired(SENT_AT, lastMoment)).toBe(false);
+  });
+
+  it('expires a link once its lifetime has passed', () => {
+    const lifetime = SENT_AT.getTime() + CONFIRMATION_DAYS * DAY_MS;
+    expect(isConfirmationExpired(SENT_AT, lifetime)).toBe(true);
   });
 });

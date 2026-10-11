@@ -2,6 +2,8 @@ import { isLinkToken, linkToken } from './link-token';
 
 export const CONFIRMATION_DAYS = 7;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const PURPOSE = 'email-alert-confirmation';
 
 export interface ConfirmationRecipient {
@@ -33,4 +35,8 @@ export function isConfirmationToken(
   token: string,
 ): boolean {
   return isLinkToken(secret, PURPOSE, partsOf(recipient), token);
+}
+
+export function isConfirmationExpired(sentAt: Date, now = Date.now()): boolean {
+  return sentAt.getTime() + CONFIRMATION_DAYS * DAY_MS <= now;
 }
