@@ -13,6 +13,9 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   runDaily: 'Run daily',
   score: 'Score',
   suggestions: 'Keyword suggestions',
+  spider: 'Deep search',
+  importApp: 'Import app',
+  addCompetitor: 'Add competitor',
 };
 
 function onDemandMessage(

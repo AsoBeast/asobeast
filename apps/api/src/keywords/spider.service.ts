@@ -8,6 +8,7 @@ import {
   SpiderEnqueueResult,
   SpiderStatus,
 } from '@asobeast/shared';
+import { DEFERRED_JOB_OPTIONS } from '../jobs/job-options';
 import {
   JOBS,
   QUEUES,
@@ -36,6 +37,7 @@ export class SpiderService {
     appId: string,
     term: string,
     country?: string,
+    spend?: () => Promise<void>,
   ): Promise<SpiderEnqueueResult> {
     const app = await ensureApp(this.prisma, appId);
     const market = country ?? app.country;
@@ -48,13 +50,21 @@ export class SpiderService {
       select: { probe: true },
     });
     const done = new Set(existing.map((row) => row.probe));
+    const queue = queueFor(app.store, this.appStoreQueue, this.gplayQueue);
+    const jobIdOf = (probe: string) =>
+      spiderJobId(appId, term, market, probe, date);
+    const remaining = SPIDER_PROBES.filter((probe) => !done.has(probe));
+    const queued = await Promise.all(
+      remaining.map((probe) => queue.getJob(jobIdOf(probe))),
+    );
+    const fresh = remaining.filter((_, index) => queued[index] === undefined);
+    if (fresh.length === 0) {
+      return { enqueued: 0 };
+    }
 
-    let enqueued = 0;
-    for (const probe of SPIDER_PROBES) {
-      if (done.has(probe)) {
-        continue;
-      }
-      await queueFor(app.store, this.appStoreQueue, this.gplayQueue).add(
+    await spend?.();
+    for (const probe of fresh) {
+      await queue.add(
         JOBS.SPIDER_PROBE,
         {
           appId,
@@ -64,12 +74,14 @@ export class SpiderService {
           workspaceId: app.workspaceId,
           correlationId: this.workspace.correlationId,
         } satisfies SpiderProbePayload,
-        { jobId: spiderJobId(appId, term, market, probe, date) },
+        {
+          ...DEFERRED_JOB_OPTIONS,
+          jobId: jobIdOf(probe),
+        },
       );
-      enqueued += 1;
     }
 
-    return { enqueued };
+    return { enqueued: fresh.length };
   }
 
   async spiderStatus(
