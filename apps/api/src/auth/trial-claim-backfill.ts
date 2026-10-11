@@ -1,7 +1,13 @@
-import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnApplicationBootstrap,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
+import { registerInBackground } from '../jobs/schedule-registration';
 import { PrismaService } from '../prisma/prisma.service';
 import { TrialClaims } from './trial-claims';
 
@@ -11,8 +17,14 @@ const JUSTIFICATION =
   'mailboxes that already had a trial are found across every workspace';
 
 @Injectable()
-export class TrialClaimBackfill implements OnApplicationBootstrap {
+export class TrialClaimBackfill
+  implements OnApplicationBootstrap, OnModuleDestroy
+{
   private readonly logger = new Logger(TrialClaimBackfill.name);
+  private readonly lifecycle: { closing: Promise<void> | undefined } = {
+    closing: undefined,
+  };
+  private backfill: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -21,20 +33,24 @@ export class TrialClaimBackfill implements OnApplicationBootstrap {
     private readonly config: ConfigService<Env, true>,
   ) {}
 
-  async onApplicationBootstrap(): Promise<void> {
+  onApplicationBootstrap(): void {
     if (!this.config.get('BILLING_ENABLED', { infer: true })) return;
-    try {
-      const claimed = await this.run();
-      if (claimed > 0) {
-        this.logger.log(
-          `claimed ${claimed} mailboxes that already had a trial`,
-        );
-      }
-    } catch (error) {
-      this.logger.error(
-        `could not claim the mailboxes that already had a trial: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    this.backfill = registerInBackground(
+      this.lifecycle,
+      () => this.claimAndReport(),
+      (error) =>
+        this.logger.error(
+          `could not claim the mailboxes that already had a trial, trying again: ${error.message}`,
+        ),
+    );
+  }
+
+  onModuleDestroy(): void {
+    this.lifecycle.closing = Promise.resolve();
+  }
+
+  completed(): Promise<void> {
+    return this.backfill;
   }
 
   run(): Promise<number> {
@@ -42,6 +58,13 @@ export class TrialClaimBackfill implements OnApplicationBootstrap {
       JUSTIFICATION,
       () => this.claimEveryTrialOwner(),
     );
+  }
+
+  private async claimAndReport(): Promise<void> {
+    const claimed = await this.run();
+    if (claimed > 0) {
+      this.logger.log(`claimed ${claimed} mailboxes that already had a trial`);
+    }
   }
 
   private async claimEveryTrialOwner(): Promise<number> {

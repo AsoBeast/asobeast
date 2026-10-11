@@ -9,6 +9,7 @@ import { AuthUser } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { TrialClaimBackfill } from '../src/auth/trial-claim-backfill';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { testDb } from './helpers/test-db';
@@ -81,6 +82,7 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     app.use(cookieParser());
     await app.init();
     await pauseQueues(app);
+    await app.get(TrialClaimBackfill).completed();
   }, 60_000);
 
   beforeEach(async () => {

@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import type { Env } from '../config/env';
+import { REGISTRATION_RETRY_MS } from '../jobs/schedule-registration';
 import { PrismaService } from '../prisma/prisma.service';
 import { BACKFILL_PAGE_SIZE, TrialClaimBackfill } from './trial-claim-backfill';
 import { TrialClaims } from './trial-claims';
@@ -63,15 +64,53 @@ describe('TrialClaimBackfill', () => {
     expect(claimAll).toHaveBeenCalledTimes(2);
   });
 
-  it('does nothing when billing is off', async () => {
-    await build(false).onApplicationBootstrap();
+  it('does nothing when billing is off', () => {
+    build(false).onApplicationBootstrap();
 
     expect(findMany).not.toHaveBeenCalled();
   });
 
-  it('lets the application boot when the claim fails', async () => {
-    findMany.mockRejectedValue(new Error('database is down'));
+  it('lets the application boot while the claim is still running', async () => {
+    findMany.mockReturnValue(new Promise(() => undefined));
 
-    await expect(build().onApplicationBootstrap()).resolves.toBeUndefined();
+    const boot = Promise.resolve(build().onApplicationBootstrap()).then(
+      () => 'booted',
+    );
+    const waiting = new Promise((resolve) =>
+      setImmediate(() => resolve('still waiting')),
+    );
+
+    await expect(Promise.race([boot, waiting])).resolves.toBe('booted');
+  });
+
+  describe('when a claim fails', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('tries again later instead of giving up until the next boot', async () => {
+      findMany
+        .mockRejectedValueOnce(new Error('database is down'))
+        .mockResolvedValue([]);
+      const backfill = build();
+
+      backfill.onApplicationBootstrap();
+      await jest.advanceTimersByTimeAsync(REGISTRATION_RETRY_MS);
+
+      expect(findMany).toHaveBeenCalledTimes(2);
+      await expect(backfill.completed()).resolves.toBeUndefined();
+    });
+
+    it('stops trying once the application shuts down', async () => {
+      findMany.mockRejectedValue(new Error('database is down'));
+      const backfill = build();
+
+      backfill.onApplicationBootstrap();
+      await jest.advanceTimersByTimeAsync(0);
+      backfill.onModuleDestroy();
+      await jest.advanceTimersByTimeAsync(REGISTRATION_RETRY_MS * 3);
+
+      expect(findMany).toHaveBeenCalledTimes(1);
+      await expect(backfill.completed()).resolves.toBeUndefined();
+    });
   });
 });
