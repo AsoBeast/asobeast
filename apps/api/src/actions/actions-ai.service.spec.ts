@@ -6,6 +6,7 @@ import {
 import { AiGateway } from '../ai/ai-gateway.service';
 import { buildAi } from '../ai/ai-gateway.fixture';
 import { aiCompletion } from '../ai/ai-completion.fixture';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActionsAiService } from './actions-ai.service';
 
@@ -16,17 +17,17 @@ const EVIDENCE = {
   uncoveredFields: ['title'],
 };
 
-const buildPrisma = (
-  row: Record<string, unknown> | null = {
-    id: 'act_1',
-    rule: 'keyword.add_uncovered',
-    priority: 'high',
-    impact: 71,
-    evidence: EVIDENCE,
-    appId: 'app_1',
-    app: { name: 'Budget', store: 'APP_STORE', country: 'us' },
-  },
-) => ({
+const ACTION_ROW = {
+  id: 'act_1',
+  rule: 'keyword.add_uncovered',
+  priority: 'high',
+  impact: 71,
+  evidence: EVIDENCE,
+  appId: 'app_1',
+  app: { name: 'Budget', store: 'APP_STORE', country: 'us' },
+};
+
+const buildPrisma = (row: Record<string, unknown> | null = ACTION_ROW) => ({
   actionItem: {
     findFirst: jest.fn(() => Promise.resolve(row)),
     update: jest.fn((args: { data: Record<string, unknown> }) =>
@@ -35,13 +36,18 @@ const buildPrisma = (
   },
 });
 
+const inWorkspace = (workspaceId: string): WorkspaceContext =>
+  ({ require: () => workspaceId }) as unknown as WorkspaceContext;
+
 const serviceFor = (
   prisma: ReturnType<typeof buildPrisma>,
   ai: ReturnType<typeof buildAi> = buildAi(),
+  workspace: WorkspaceContext = inWorkspace('ws_a'),
 ): ActionsAiService =>
   new ActionsAiService(
     ai as unknown as AiGateway,
     prisma as unknown as PrismaService,
+    workspace,
   );
 
 describe('ActionsAiService.status', () => {
@@ -121,6 +127,37 @@ describe('ActionsAiService.explain', () => {
 
     expect(spend).toHaveBeenCalledTimes(1);
     expect(first).toEqual(second);
+  });
+
+  it('does not hand another workspace the explanation in flight for the same action id', async () => {
+    const workspace = new WorkspaceContext();
+    let finish: (value: unknown) => void = () => undefined;
+    const spend = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const prisma = buildPrisma();
+    prisma.actionItem.findFirst.mockImplementation(() =>
+      Promise.resolve(workspace.current === 'ws_a' ? ACTION_ROW : null),
+    );
+    const service = serviceFor(prisma, buildAi(spend), workspace);
+
+    const owner = workspace.run('ws_a', () =>
+      service.explain('act_1', 'usr_a'),
+    );
+    const strangerRefused = expect(
+      workspace.run('ws_b', () => service.explain('act_1', 'usr_b')),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await new Promise((resolve) => setImmediate(resolve));
+    finish(aiCompletion({ explanation: 'Private to ws_a.' }));
+
+    await expect(owner).resolves.toMatchObject({
+      explanation: 'Private to ws_a.',
+    });
+    await strangerRefused;
+    expect(spend).toHaveBeenCalledTimes(1);
   });
 
   it('allows a fresh call after the in-flight one settles', async () => {
