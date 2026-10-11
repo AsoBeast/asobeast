@@ -34,8 +34,12 @@ export const CONFIRMATION_RESEND_COOLDOWN_SECONDS = 60 * 60;
 
 const EMAIL_ALERT_LOCK = 7_340_219;
 
-interface Saved {
+interface Written {
   alert: EmailAlert;
+  ask: boolean;
+}
+
+interface Saved extends Written {
   refund: ConfirmationRefund | null;
 }
 
@@ -79,7 +83,7 @@ export class EmailAlertsService {
     const saved = await this.underLock(workspaceId, async (tx) => {
       await assertRoomForAnother(tx);
       if (!confirmedAt) await assertRoomToWait(tx);
-      return tx.emailAlert.create({
+      const alert = await tx.emailAlert.create({
         data: {
           workspaceId,
           email: dto.email,
@@ -87,6 +91,7 @@ export class EmailAlertsService {
           confirmedAt,
         },
       });
+      return { alert, ask: !confirmedAt };
     });
     return this.answer(saved, requestedBy);
   }
@@ -96,24 +101,25 @@ export class EmailAlertsService {
     dto: UpdateEmailAlertDto,
     requestedBy: string,
   ): Promise<EmailAlertItem> {
+    const workspaceId = this.workspace.require('an email alert');
+    const confirmedAt =
+      dto.email === undefined
+        ? null
+        : await this.confirmation.confirmationFor(dto.email);
     const data: Prisma.EmailAlertUpdateInput = {
       email: dto.email,
       events: dto.events,
       active: dto.active,
     };
-    if (
-      dto.email === undefined ||
-      !(await this.changesAddress(id, dto.email))
-    ) {
-      return toEmailAlertItem(
-        await this.prisma.emailAlert.update({ where: { id }, data }),
-      );
-    }
-    const confirmedAt = await this.confirmation.confirmationFor(dto.email);
-    const workspaceId = this.workspace.require('an email alert');
     const saved = await this.underLock(workspaceId, async (tx) => {
+      const current = await tx.emailAlert.findFirst({ where: { id } });
+      if (!current) throw missing(id);
+      if (dto.email === undefined || sameAddress(current.email, dto.email)) {
+        const alert = await tx.emailAlert.update({ where: { id }, data });
+        return { alert, ask: false };
+      }
       if (!confirmedAt) await assertRoomToWait(tx, id);
-      return tx.emailAlert.update({
+      const alert = await tx.emailAlert.update({
         where: { id },
         data: {
           ...data,
@@ -122,6 +128,7 @@ export class EmailAlertsService {
           unsubscribedAt: null,
         },
       });
+      return { alert, ask: !confirmedAt };
     });
     return this.answer(saved, requestedBy);
   }
@@ -169,17 +176,19 @@ export class EmailAlertsService {
 
   private async underLock(
     workspaceId: string,
-    write: (tx: Prisma.TransactionClient) => Promise<EmailAlert>,
+    write: (tx: Prisma.TransactionClient) => Promise<Written>,
   ): Promise<Saved> {
     const claimed: { refund: ConfirmationRefund | null } = { refund: null };
     try {
       return await this.prisma.withTransaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${EMAIL_ALERT_LOCK}, hashtext(${workspaceId}))`;
-        const alert = await write(tx);
-        if (!alert.confirmedAt) {
-          claimed.refund = await this.confirmation.allowMailTo(alert.email);
+        const written = await write(tx);
+        if (written.ask) {
+          claimed.refund = await this.confirmation.allowMailTo(
+            written.alert.email,
+          );
         }
-        return { alert, refund: claimed.refund };
+        return { ...written, refund: claimed.refund };
       });
     } catch (error) {
       await claimed.refund?.();
@@ -188,10 +197,10 @@ export class EmailAlertsService {
   }
 
   private async answer(
-    { alert, refund }: Saved,
+    { alert, ask, refund }: Saved,
     requestedBy: string,
   ): Promise<EmailAlertItem> {
-    if (alert.confirmedAt) return toEmailAlertItem(alert);
+    if (!ask) return toEmailAlertItem(alert);
     return {
       ...toEmailAlertItem(alert),
       confirmationSent: await this.confirmation.issue(
@@ -204,15 +213,8 @@ export class EmailAlertsService {
 
   private async find(id: string): Promise<EmailAlert> {
     const alert = await this.prisma.emailAlert.findFirst({ where: { id } });
-    if (!alert) {
-      throw new NotFoundException(`Email alert ${id} not found`);
-    }
+    if (!alert) throw missing(id);
     return alert;
-  }
-
-  private async changesAddress(id: string, email: string): Promise<boolean> {
-    const current = await this.find(id);
-    return current.email.toLowerCase() !== email.toLowerCase();
   }
 
   private assertEnabled(): void {
@@ -220,6 +222,14 @@ export class EmailAlertsService {
       throw new BadRequestException(DISABLED_MESSAGE);
     }
   }
+}
+
+function missing(id: string): NotFoundException {
+  return new NotFoundException(`Email alert ${id} not found`);
+}
+
+function sameAddress(current: string, next: string): boolean {
+  return current.toLowerCase() === next.toLowerCase();
 }
 
 async function assertRoomForAnother(

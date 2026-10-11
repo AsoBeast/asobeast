@@ -29,6 +29,8 @@ const build = () => {
     emailAlert: {
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockResolvedValue(waiting(null)),
+      findFirst: jest.fn().mockResolvedValue(waiting(null)),
+      update: jest.fn().mockResolvedValue(waiting(null)),
     },
   };
   const withTransaction = jest.fn(
@@ -50,7 +52,7 @@ const build = () => {
     {} as AlertMail,
     confirmation as unknown as EmailAlertConfirmation,
   );
-  return { service, findFirst, confirmation, refund, withTransaction };
+  return { service, findFirst, confirmation, refund, withTransaction, tx };
 };
 
 describe('EmailAlertsService', () => {
@@ -77,6 +79,24 @@ describe('EmailAlertsService', () => {
       expect(confirmation.allowMailTo).toHaveBeenCalledTimes(1);
       expect(refund).toHaveBeenCalledTimes(1);
       expect(confirmation.issue).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update', () => {
+    it('decides whether the address changed under the workspace lock', async () => {
+      const { service, findFirst, confirmation, tx } = build();
+
+      await service.update(
+        'ea_1',
+        { email: 'OPS@example.com' },
+        'owner@example.com',
+      );
+
+      expect(findFirst).not.toHaveBeenCalled();
+      expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+        tx.emailAlert.findFirst.mock.invocationCallOrder[0],
+      );
+      expect(confirmation.allowMailTo).not.toHaveBeenCalled();
     });
   });
 
