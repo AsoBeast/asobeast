@@ -18,6 +18,7 @@ export const ON_DEMAND_ACTIONS = [
   'score',
   'suggestions',
   'spider',
+  'importApp',
 ] as const;
 
 export type OnDemandAction = (typeof ON_DEMAND_ACTIONS)[number];
@@ -98,6 +99,7 @@ const NO_CAPACITY: PlanLimits = {
     score: { limit: 0, windowSeconds: DAY_SECONDS },
     suggestions: { limit: 0, windowSeconds: HOUR_SECONDS },
     spider: { limit: 0, windowSeconds: DAY_SECONDS },
+    importApp: { limit: 0, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -113,6 +115,7 @@ const INDIE: PlanLimits = {
     score: { limit: 100, windowSeconds: DAY_SECONDS },
     suggestions: { limit: 60, windowSeconds: HOUR_SECONDS },
     spider: { limit: 12, windowSeconds: DAY_SECONDS },
+    importApp: { limit: 10, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -130,6 +133,7 @@ const ULTIMATE: PlanLimits = {
     score: { limit: 1_000, windowSeconds: DAY_SECONDS },
     suggestions: { limit: 300, windowSeconds: HOUR_SECONDS },
     spider: { limit: 50, windowSeconds: DAY_SECONDS },
+    importApp: { limit: 100, windowSeconds: DAY_SECONDS },
   },
 };
 

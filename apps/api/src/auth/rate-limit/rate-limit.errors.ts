@@ -14,6 +14,7 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   score: 'Score',
   suggestions: 'Keyword suggestions',
   spider: 'Deep search',
+  importApp: 'Import app',
 };
 
 function onDemandMessage(
