@@ -115,7 +115,7 @@ export class SpiderService {
 
   async runSpiderProbe(payload: SpiderProbePayload): Promise<void> {
     const { appId, term, probe } = payload;
-    if (!(await this.eligibility.forWorkspace(payload.workspaceId))) {
+    if (!(await this.eligibility.forWorkspace())) {
       return;
     }
     const app = await ensureApp(this.prisma, appId);

@@ -11,9 +11,6 @@ import { QuotaService } from './quota.service';
 const ROSTER_JUSTIFICATION =
   'one shared search serves many workspaces, and each must be judged before its own rows are written';
 
-const QUEUED_WORK_JUSTIFICATION =
-  'queued work is judged against the plan in force when it runs, not when it was queued';
-
 const COVERAGE_CONCURRENCY = 4;
 
 interface MeteredWorkspace {
@@ -76,13 +73,16 @@ export class CollectionEligibility {
     return eligible;
   }
 
-  async forWorkspace(workspaceId: string, now = new Date()): Promise<boolean> {
-    const [row] =
-      await this.crossTenant.becauseThisWorkIsNotOwnedByOneWorkspace(
-        QUEUED_WORK_JUSTIFICATION,
-        () => this.rosterOf([workspaceId]),
-      );
-    return row !== undefined && this.mayCollect(row, now);
+  async forWorkspace(now = new Date()): Promise<boolean> {
+    const row = await this.prisma.workspace.findFirst({
+      select: {
+        plan: true,
+        trialEndsAt: true,
+        planExpiresAt: true,
+        suspendedAt: true,
+      },
+    });
+    return row !== null && this.mayCollect(row, now);
   }
 
   private mayCollect(
