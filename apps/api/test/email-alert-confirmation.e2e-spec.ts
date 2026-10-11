@@ -4,7 +4,11 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { EmailAlertItem, WebhookTestResult } from '@asobeast/shared';
+import {
+  ApiErrorEnvelope,
+  EmailAlertItem,
+  WebhookTestResult,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AccountMail, MailerService } from '../src/alerts/mailer.service';
@@ -107,6 +111,14 @@ describe('Email alert recipient confirmation (e2e)', () => {
     request(app.getHttpServer())
       .post(`/email-alerts/${alert.id}/confirm`)
       .query({ token });
+
+  const unsubscribe = (alert: EmailAlertItem, email = STRANGER) =>
+    request(app.getHttpServer())
+      .post(`/email-alerts/${alert.id}/unsubscribe`)
+      .query({
+        token: unsubscribeToken(TEST_AUTH_SECRET, { alertId: alert.id, email }),
+      })
+      .expect(204);
 
   const sendTest = async (alert: EmailAlertItem): Promise<WebhookTestResult> =>
     (await api.post(`/email-alerts/${alert.id}/test`).expect(201))
@@ -288,15 +300,7 @@ describe('Email alert recipient confirmation (e2e)', () => {
     const alert = await addAlert(STRANGER);
     await confirm(alert, tokenOf(sentConfirmation())).expect(204);
 
-    await request(app.getHttpServer())
-      .post(`/email-alerts/${alert.id}/unsubscribe`)
-      .query({
-        token: unsubscribeToken(TEST_AUTH_SECRET, {
-          alertId: alert.id,
-          email: STRANGER,
-        }),
-      })
-      .expect(204);
+    await unsubscribe(alert);
     await api
       .patch(`/email-alerts/${alert.id}`)
       .send({ active: true })
@@ -304,6 +308,36 @@ describe('Email alert recipient confirmation (e2e)', () => {
 
     expect(await sendTest(alert)).toEqual({ delivered: false, status: null });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('does not resend a confirmation to a recipient who unsubscribed', async () => {
+    const alert = await addAlert(STRANGER);
+    await confirm(alert, tokenOf(sentConfirmation())).expect(204);
+    await unsubscribe(alert);
+    sendAccountMail.mockClear();
+
+    const refused = await api
+      .post(`/email-alerts/${alert.id}/resend-confirmation`)
+      .expect(409);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'unsubscribed',
+    );
+    expect(sendAccountMail).not.toHaveBeenCalled();
+  });
+
+  it('asks a new address to confirm after the old one unsubscribed', async () => {
+    const alert = await addAlert(STRANGER);
+    await unsubscribe(alert);
+    sendAccountMail.mockClear();
+
+    const patched = await api
+      .patch(`/email-alerts/${alert.id}`)
+      .send({ email: 'new@example.net' })
+      .expect(200);
+
+    expect((patched.body as EmailAlertItem).confirmationSent).toBe(true);
+    expect(sentConfirmation().to).toBe('new@example.net');
   });
 
   it('answers gone for a link older than a week', async () => {

@@ -36,6 +36,9 @@ const NO_LINK_MESSAGE =
 
 const ALREADY_CONFIRMED_MESSAGE = 'This recipient is already confirmed';
 
+const UNSUBSCRIBED_MESSAGE =
+  'This recipient unsubscribed from the alert, so it is not asked again. Change the address to ask someone else to confirm';
+
 @Injectable()
 export class EmailAlertsService {
   constructor(
@@ -89,6 +92,7 @@ export class EmailAlertsService {
       if (await this.changesAddress(id, dto.email)) {
         data.confirmedAt = await this.confirmation.confirmationFor(dto.email);
         data.confirmationSentAt = null;
+        data.unsubscribedAt = null;
         if (!data.confirmedAt) {
           await this.assertRoomToWait(id);
           refund = await this.confirmation.allowMailTo(dto.email);
@@ -121,6 +125,9 @@ export class EmailAlertsService {
     const alert = await this.find(id);
     if (alert.confirmedAt) {
       throw new ConflictException(ALREADY_CONFIRMED_MESSAGE);
+    }
+    if (alert.unsubscribedAt) {
+      throw new ConflictException(UNSUBSCRIBED_MESSAGE);
     }
     if (!this.confirmation.canSend) {
       throw new ServiceUnavailableException(NO_LINK_MESSAGE);
@@ -179,7 +186,11 @@ export class EmailAlertsService {
 
   private async assertRoomToWait(excluding?: string): Promise<void> {
     const waiting = await this.prisma.emailAlert.count({
-      where: { confirmedAt: null, NOT: { id: excluding } },
+      where: {
+        confirmedAt: null,
+        unsubscribedAt: null,
+        NOT: { id: excluding },
+      },
     });
     if (waiting >= MAX_UNCONFIRMED_EMAIL_ALERTS) {
       throw new ForbiddenException(

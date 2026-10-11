@@ -438,6 +438,7 @@ model EmailAlert {
   active             Boolean         @default(true)
   confirmedAt        DateTime?
   confirmationSentAt DateTime?
+  unsubscribedAt     DateTime?
   deliveries         AlertDelivery[]
   createdAt          DateTime        @default(now())
 

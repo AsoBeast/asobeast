@@ -5,14 +5,18 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { ApiErrorEnvelope, EmailAlertItem } from '@asobeast/shared';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { CONFIRMATIONS_PER_WORKSPACE_PER_DAY } from '../src/alerts/confirmation-mail.limiter';
+import { MAX_UNCONFIRMED_EMAIL_ALERTS } from '../src/alerts/email-alerts.service';
 import { MailerService } from '../src/alerts/mailer.service';
+import { unsubscribeToken } from '../src/alerts/unsubscribe-token';
 import { sha256 } from '../src/auth/password-hash';
 import { windowKey } from '../src/auth/rate-limit/window';
 import { FailFastRedis } from '../src/redis/fail-fast-redis';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { TEST_AUTH_SECRET } from './helpers/auth-env';
 import { TEST_WEB_PUBLIC_URL } from './helpers/enable-public-url';
 import { OWNER, ownerAgent, useCookies } from './helpers/session';
 import {
@@ -141,6 +145,26 @@ describe('Email alert limits (e2e)', () => {
       .expect(403);
 
     expect(sendAccountMail).not.toHaveBeenCalled();
+  });
+
+  it('does not count a recipient who unsubscribed as waiting', async () => {
+    await seed(MAX_UNCONFIRMED_EMAIL_ALERTS, false);
+    for (const alert of await prisma.emailAlert.findMany()) {
+      await request(app.getHttpServer())
+        .post(`/email-alerts/${alert.id}/unsubscribe`)
+        .query({
+          token: unsubscribeToken(TEST_AUTH_SECRET, {
+            alertId: alert.id,
+            email: alert.email,
+          }),
+        })
+        .expect(204);
+    }
+
+    await api
+      .post('/email-alerts')
+      .send({ email: 'sixth@example.net', events: EVENTS })
+      .expect(201);
   });
 
   it('keeps counting only unconfirmed alerts against that limit', async () => {
