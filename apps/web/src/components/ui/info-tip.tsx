@@ -11,19 +11,16 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 
 function InfoTip({
   label,
   title,
   summary,
-  className,
   children,
 }: {
   label: string;
   title: string;
   summary: string;
-  className?: string;
   children?: ReactNode;
 }) {
   const titleId = useId();
@@ -35,11 +32,7 @@ function InfoTip({
           variant="ghost"
           size="icon-xs"
           aria-label={label}
-          data-slot="info-tip-trigger"
-          className={cn(
-            "-my-1 text-muted-foreground hover:text-foreground print:hidden",
-            className,
-          )}
+          className="-my-1 text-muted-foreground hover:text-foreground print:hidden"
         >
           <InfoIcon aria-hidden />
         </Button>
