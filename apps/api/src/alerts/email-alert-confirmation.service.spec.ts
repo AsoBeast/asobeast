@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
@@ -156,6 +157,26 @@ describe('EmailAlertConfirmation', () => {
       ).toBe(false);
       expect(updateMany).not.toHaveBeenCalled();
       expect(refund).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs a failed send by alert id, never by recipient address', async () => {
+      const error = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation(() => undefined);
+      const { service, send } = build({ enabled: true, origin: ORIGIN });
+      send.mockRejectedValue(new Error('smtp down'));
+
+      await service.issue(
+        { id: 'ea_1', email: 'ops@example.com' },
+        'owner@example.com',
+        refund,
+      );
+
+      const [line] = error.mock.calls[0] as [string];
+      expect(line).toContain('ea_1');
+      expect(line).toContain('smtp down');
+      expect(line).not.toContain('ops@example.com');
+      error.mockRestore();
     });
 
     it('sends nothing without an allowance', async () => {

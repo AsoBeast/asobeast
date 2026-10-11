@@ -58,7 +58,7 @@ export class EmailAlertConfirmation {
     } catch (error) {
       await refund();
       this.logger.error(
-        `confirmation email to ${alert.email} failed: ${reasonOf(error)}`,
+        `confirmation email for alert ${alert.id} failed: ${reasonOf(error)}`,
       );
       return false;
     }
