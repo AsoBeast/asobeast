@@ -32,7 +32,7 @@ end
 return 0
 `;
 
-export type ConfirmationRefund = () => Promise<void>;
+export type ConfirmationRefund = () => Promise<boolean>;
 
 interface Allowance {
   label: string;
@@ -85,24 +85,29 @@ export class ConfirmationMailLimiter {
     if (spent) {
       throw new RequestThrottledError(resetSeconds, spent.reason);
     }
-    let refunded = false;
+    let given = false;
+    let attempt: Promise<boolean> | null = null;
     return async () => {
-      if (refunded) return;
-      refunded = true;
-      await this.refund(keys);
+      if (given) return true;
+      attempt ??= this.refund(keys);
+      const running = attempt;
+      given = await running;
+      if (attempt === running) attempt = null;
+      return given;
     };
   }
 
-  private async refund(keys: string[]): Promise<void> {
+  private async refund(keys: string[]): Promise<boolean> {
     try {
-      await this.redis.runOpen(
-        (client) => client.eval(REFUND_EVERY_ALLOWANCE, keys.length, ...keys),
-        null,
-      );
+      return await this.redis.runOpen(async (client) => {
+        await client.eval(REFUND_EVERY_ALLOWANCE, keys.length, ...keys);
+        return true;
+      }, false);
     } catch (error) {
       this.logger.warn(
         `confirmation allowance refund failed: ${error instanceof Error ? error.message : String(error)}`,
       );
+      return false;
     }
   }
 }

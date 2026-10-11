@@ -55,20 +55,36 @@ describe('ConfirmationMailLimiter', () => {
     expect(evaluate).toHaveBeenCalledTimes(2);
   });
 
-  it('keeps a refund from failing when redis answers with an error', async () => {
+  it('runs one refund for calls made at the same time', async () => {
     const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
-    evaluate.mockRejectedValue(
+
+    await expect(Promise.all([refund(), refund()])).resolves.toEqual([
+      true,
+      true,
+    ]);
+
+    expect(evaluate).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports a refund redis answered with an error and lets a later call retry it', async () => {
+    const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
+    evaluate.mockRejectedValueOnce(
       new AnsweredError('NOSCRIPT No matching script'),
     );
 
-    await expect(refund()).resolves.toBeUndefined();
+    await expect(refund()).resolves.toBe(false);
+    await expect(refund()).resolves.toBe(true);
+    await expect(refund()).resolves.toBe(true);
+
+    expect(evaluate).toHaveBeenCalledTimes(3);
   });
 
-  it('keeps a refund from failing while redis is unreachable', async () => {
+  it('reports a refund redis was not there to take and lets a later call retry it', async () => {
     const refund = await limiter.claim('ws_1', 'a@example.net', NOW);
-    evaluate.mockRejectedValue(new Error('connect ECONNREFUSED'));
+    evaluate.mockRejectedValueOnce(new Error('connect ECONNREFUSED'));
 
-    await expect(refund()).resolves.toBeUndefined();
+    await expect(refund()).resolves.toBe(false);
+    await expect(refund()).resolves.toBe(true);
   });
 
   it('checks the workspace allowance before the recipient in one atomic step', async () => {
