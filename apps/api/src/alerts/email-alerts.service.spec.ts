@@ -1,10 +1,14 @@
 import { ServiceUnavailableException } from '@nestjs/common';
+import { describeWait } from '../auth/rate-limit/describe-wait';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
-import { EmailAlertsService } from './email-alerts.service';
+import {
+  CONFIRMATION_RESEND_COOLDOWN_SECONDS,
+  EmailAlertsService,
+} from './email-alerts.service';
 import { MailerService } from './mailer.service';
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -111,6 +115,17 @@ describe('EmailAlertsService', () => {
       await expect(
         service.resendConfirmation('ea_1', 'owner@example.com'),
       ).rejects.toBeInstanceOf(RequestThrottledError);
+    });
+
+    it('names the cooldown it waits for', async () => {
+      const { service, findFirst } = build();
+      findFirst.mockResolvedValue(waiting(new Date()));
+
+      await expect(
+        service.resendConfirmation('ea_1', 'owner@example.com'),
+      ).rejects.toThrow(
+        `less than ${describeWait(CONFIRMATION_RESEND_COOLDOWN_SECONDS)} ago`,
+      );
     });
 
     it('answers a resend whose mail could not be sent as unavailable', async () => {

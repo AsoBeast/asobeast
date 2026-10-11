@@ -13,6 +13,7 @@ import {
   RANK_DEPTH,
   WebhookTestResult,
 } from '@asobeast/shared';
+import { describeWait } from '../auth/rate-limit/describe-wait';
 import { RequestThrottledError } from '../auth/rate-limit/rate-limit.errors';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
@@ -50,8 +51,7 @@ const NO_LINK_MESSAGE =
 
 const ALREADY_CONFIRMED_MESSAGE = 'This recipient is already confirmed';
 
-const COOLING_DOWN_MESSAGE =
-  'A confirmation email was sent to this recipient less than an hour ago.';
+const COOLING_DOWN_MESSAGE = `A confirmation email was sent to this recipient less than ${describeWait(CONFIRMATION_RESEND_COOLDOWN_SECONDS)} ago.`;
 
 const UNSUBSCRIBED_MESSAGE =
   'This recipient unsubscribed from the alert, so it is not asked again. Change the address to ask someone else to confirm';
