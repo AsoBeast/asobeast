@@ -325,7 +325,7 @@ export class AuthService {
     };
   }
 
-  private registrationAllowed(): boolean {
+  registrationAllowed(): boolean {
     return (
       this.billing ||
       this.config.get('AUTH_ALLOW_REGISTRATION', { infer: true })
