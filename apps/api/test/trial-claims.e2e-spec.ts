@@ -189,4 +189,28 @@ describe('One trial per mailbox', () => {
 
     expect(operator.entitled).toBe(false);
   });
+
+  it('starts no trial for an address on a throwaway domain', async () => {
+    const throwaway = await register('fresh@mailinator.com');
+
+    expect(throwaway.entitled).toBe(false);
+    expect(throwaway.trialEndsAt).toBeNull();
+    const workspace = await prisma.workspace.findFirstOrThrow({
+      where: { name: 'fresh@mailinator.com' },
+    });
+    expect(workspace.trialStartedAt).toBeNull();
+    expect(workspace.trialDeclinedAt).not.toBeNull();
+  });
+
+  it('keeps a throwaway domain from using up any mailbox', async () => {
+    await register('fresh@mailinator.com');
+
+    await expect(prisma.trialClaim.count()).resolves.toBe(1);
+  });
+
+  it('still starts a trial on a provider that is not throwaway', async () => {
+    const account = await register('fresh@gmail.com');
+
+    expect(account.entitled).toBe(true);
+  });
 });

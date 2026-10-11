@@ -167,4 +167,19 @@ describe('One trial per mailbox when the address must be confirmed', () => {
     expect(copy.trialAwaitsConfirmation).toBe(true);
     expect(confirmed.entitled).toBe(true);
   });
+
+  it('tells a throwaway address that no trial is waiting for it', async () => {
+    const throwaway = await register('fresh@mailinator.com');
+
+    expect(throwaway.trialAwaitsConfirmation).toBe(false);
+  });
+
+  it('starts no trial when a throwaway address confirms', async () => {
+    await register('fresh@mailinator.com');
+
+    const confirmed = await confirm('fresh@mailinator.com');
+
+    expect(confirmed.emailVerified).toBe(true);
+    expect(confirmed.entitled).toBe(false);
+  });
 });

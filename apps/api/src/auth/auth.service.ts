@@ -3,7 +3,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -25,7 +24,6 @@ import type { AccountUser, ResolvedToken, SessionClaims } from './auth.types';
 import { isPlatformOperator } from './platform-operator';
 import type { CreateTokenDto } from './dto/create-token.dto';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
-import { isDisposableEmail } from './disposable-email';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
 import { canStartTrial, trialStillOpen } from './trial-grant';
@@ -44,7 +42,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
   private dummyHash: Promise<string> | null = null;
 
   constructor(
@@ -87,9 +84,6 @@ export class AuthService {
     token: string;
   }> {
     const email = normalizeEmail(dto.email);
-    if (isDisposableEmail(email)) {
-      this.logger.warn(`registration from a disposable email domain: ${email}`);
-    }
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.prisma.withTransaction(async (tx) => {
       await lockRegistration(tx);

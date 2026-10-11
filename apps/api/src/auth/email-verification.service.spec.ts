@@ -138,6 +138,19 @@ describe('EmailVerificationService confirming an address', () => {
     expect(account.workspace).toBe(paid);
   });
 
+  it('refuses a throwaway address its trial without claiming its mailbox', async () => {
+    findUnique.mockResolvedValue({
+      ...userOf(),
+      email: 'fresh@mailinator.com',
+      workspace: {},
+    });
+
+    await confirm();
+
+    expect(claim).not.toHaveBeenCalled();
+    expect(updateMany.mock.calls[0][0].data).toHaveProperty('trialDeclinedAt');
+  });
+
   it.each([
     ['holds a paid plan', { plan: 'indie', planExpiresAt: null }],
     ['ever held a subscription', { subscriptionId: 'sub_ended' }],

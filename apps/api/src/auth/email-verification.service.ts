@@ -10,6 +10,7 @@ import type { User, Workspace } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { isDisposableEmail } from './disposable-email';
 import { sha256 } from './password-hash';
 import { refuseSessionSwap } from './session-swap';
 import type { AccountUser } from './auth.types';
@@ -53,16 +54,23 @@ export class EmailVerificationService {
   ): Promise<TrialTerms | undefined> {
     if (!this.billing) return undefined;
     if (!this.required) return this.termsFor(db, email);
-    return (await this.claims.isClaimed(db, email))
-      ? declineTrial()
-      : undefined;
+    return (await this.isRefused(db, email)) ? declineTrial() : undefined;
+  }
+
+  private async isRefused(
+    db: TrialClaimStore,
+    email: string,
+  ): Promise<boolean> {
+    return isDisposableEmail(email) || this.claims.isClaimed(db, email);
   }
 
   private async termsFor(
     db: TrialClaimStore,
     email: string,
   ): Promise<TrialTerms> {
-    return (await this.claims.claim(db, email))
+    const granted =
+      !isDisposableEmail(email) && (await this.claims.claim(db, email));
+    return granted
       ? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
       : declineTrial();
   }
