@@ -33,6 +33,15 @@ describe('visibility', () => {
     ).toBeCloseTo(50, 1);
   });
 
+  it('counts an unscored keyword as traffic 1 next to a scored one', () => {
+    expect(
+      visibility([
+        { traffic: 3, position: 1 },
+        { traffic: null, position: null },
+      ]),
+    ).toBe(75);
+  });
+
   it('is zero when total traffic is zero or there are no keywords', () => {
     expect(visibility([])).toBe(0);
     expect(visibility([{ traffic: 0, position: 1 }])).toBe(0);
