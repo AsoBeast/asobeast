@@ -102,10 +102,6 @@ export class EmailAlertsService {
     requestedBy: string,
   ): Promise<EmailAlertItem> {
     const workspaceId = this.workspace.require('an email alert');
-    const confirmedAt =
-      dto.email === undefined
-        ? null
-        : await this.confirmation.confirmationFor(dto.email);
     const data: Prisma.EmailAlertUpdateInput = {
       email: dto.email,
       events: dto.events,
@@ -118,6 +114,7 @@ export class EmailAlertsService {
         const alert = await tx.emailAlert.update({ where: { id }, data });
         return { alert, ask: false };
       }
+      const confirmedAt = await this.confirmation.confirmationFor(dto.email);
       if (!confirmedAt) await assertRoomToWait(tx, id);
       const alert = await tx.emailAlert.update({
         where: { id },

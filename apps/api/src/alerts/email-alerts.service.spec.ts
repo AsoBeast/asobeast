@@ -101,6 +101,24 @@ describe('EmailAlertsService', () => {
         tx.emailAlert.findFirst.mock.invocationCallOrder[0],
       );
       expect(confirmation.allowMailTo).not.toHaveBeenCalled();
+      expect(confirmation.confirmationFor).not.toHaveBeenCalled();
+    });
+
+    it('asks whether a new address is trusted only once it is known to change', async () => {
+      const { service, confirmation, tx } = build();
+
+      await service.update(
+        'ea_1',
+        { email: 'new@example.com' },
+        'owner@example.com',
+      );
+
+      expect(confirmation.confirmationFor).toHaveBeenCalledWith(
+        'new@example.com',
+      );
+      expect(tx.emailAlert.findFirst.mock.invocationCallOrder[0]).toBeLessThan(
+        confirmation.confirmationFor.mock.invocationCallOrder[0],
+      );
     });
   });
 
