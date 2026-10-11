@@ -15,6 +15,7 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   suggestions: 'Keyword suggestions',
   spider: 'Deep search',
   importApp: 'Import app',
+  addCompetitor: 'Add competitor',
 };
 
 function onDemandMessage(

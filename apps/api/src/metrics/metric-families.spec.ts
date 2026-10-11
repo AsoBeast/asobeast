@@ -28,6 +28,7 @@ const workspace: WorkspaceMetrics = {
     suggestions: 12,
     spider: 2,
     importApp: 1,
+    addCompetitor: 4,
   },
   aiCallsMonth: 12,
   aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },

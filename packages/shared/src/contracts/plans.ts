@@ -19,6 +19,7 @@ export const ON_DEMAND_ACTIONS = [
   'suggestions',
   'spider',
   'importApp',
+  'addCompetitor',
 ] as const;
 
 export type OnDemandAction = (typeof ON_DEMAND_ACTIONS)[number];
@@ -100,6 +101,7 @@ const NO_CAPACITY: PlanLimits = {
     suggestions: { limit: 0, windowSeconds: HOUR_SECONDS },
     spider: { limit: 0, windowSeconds: DAY_SECONDS },
     importApp: { limit: 0, windowSeconds: DAY_SECONDS },
+    addCompetitor: { limit: 0, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -116,6 +118,7 @@ const INDIE: PlanLimits = {
     suggestions: { limit: 60, windowSeconds: HOUR_SECONDS },
     spider: { limit: 12, windowSeconds: DAY_SECONDS },
     importApp: { limit: 10, windowSeconds: DAY_SECONDS },
+    addCompetitor: { limit: 60, windowSeconds: DAY_SECONDS },
   },
 };
 
@@ -134,6 +137,7 @@ const ULTIMATE: PlanLimits = {
     suggestions: { limit: 300, windowSeconds: HOUR_SECONDS },
     spider: { limit: 50, windowSeconds: DAY_SECONDS },
     importApp: { limit: 100, windowSeconds: DAY_SECONDS },
+    addCompetitor: { limit: 300, windowSeconds: DAY_SECONDS },
   },
 };
 

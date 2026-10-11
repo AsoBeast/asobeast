@@ -51,7 +51,7 @@ The keyword field text may run to 1,000 characters, so spacing and duplicates in
 | --- | --- | --- |
 | Read | Anything that returns stored data, including exports and the keyword import preview, which validates rows and writes nothing | The generous per minute budget |
 | Write | Configuration changes such as adding a keyword or a competitor | The tighter write budget |
-| Store | Refresh, run daily, score, keyword suggestions, deep search and importing an app | The write budget, plus its own on demand allowance |
+| Store | Refresh, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor | The write budget, plus its own on demand allowance |
 
 Reading a year of stored rankings is cheap. Triggering a refresh is not, which is why store endpoints carry a separate on demand allowance on top of the request rate.
 
@@ -73,6 +73,7 @@ A class is also not a permission. A read only token may call any endpoint that d
 | Keyword suggestions per hour | 60 | 300 |
 | Deep searches per day | 12 | 50 |
 | App imports per day | 10 | 100 |
+| Competitors added per day | 60 | 300 |
 
 A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
 
@@ -114,7 +115,7 @@ A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs 
 
 ## A spent on demand allowance names its action
 
-Refresh, run daily, score, keyword suggestions, deep search and importing an app each carry an allowance of their own, counted per day, or per hour for keyword suggestions. When one is spent the `429` carries the same `rateLimit` object with `rateClass` set to `store`, and `action` names which allowance closed: `refresh`, `runDaily`, `score`, `suggestions`, `spider` or `importApp`.
+Refresh, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor each carry an allowance of their own, counted per day, or per hour for keyword suggestions. When one is spent the `429` carries the same `rateLimit` object with `rateClass` set to `store`, and `action` names which allowance closed: `refresh`, `runDaily`, `score`, `suggestions`, `spider`, `importApp` or `addCompetitor`.
 
 ```json
 {
@@ -138,7 +139,7 @@ Refresh, run daily, score, keyword suggestions, deep search and importing an app
 
 The allowance resets at 00:00 UTC for a daily window and at the top of the hour for an hourly one, so `Retry-After` is the exact wait.
 
-A deep search spends one allowance for the 27 lookups it queues, and only when it queues something. Starting a term whose lookups are all stored for today costs nothing. Importing an app the workspace already tracks, and an import the plan has no room for, cost nothing either, because they make no store request.
+A deep search spends one allowance for the 27 lookups it queues, and only when it queues something. Starting a term whose lookups are all stored for today costs nothing. Importing an app the workspace already tracks, adding a competitor it already has, and a request the plan has no room for cost nothing either, because they make no store request.
 
 ## A rate limit is not a quota
 
@@ -166,7 +167,7 @@ Counters live in Redis, and a counter that cannot be read must never make the re
 | Plan request limits and the parallel request cap | The request is served and not counted |
 | Rejected credential count per address | The credential is checked and not counted |
 | Sign in, register, confirm, recovery and the other authentication endpoints | Answered `503` with `Retry-After`, because an attempt that cannot be counted could be a password guess |
-| Refresh, run daily, score, keyword suggestions, deep search and importing an app | Answered `503` with `Retry-After`, because the work they queue needs Redis too |
+| Refresh, run daily, score, keyword suggestions, deep search, importing an app and adding a competitor | Answered `503` with `Retry-After`, because the work they queue needs Redis too |
 
 Everything that only reads PostgreSQL keeps working, so a signed in browser session keeps its dashboards and exports through a Redis restart. A client that gets the `503` should wait the seconds in `Retry-After`. The first attempt after Redis returns succeeds within a couple of seconds, with no restart of the API. The API log names the outage in one JSON warning every thirty seconds, for the request path and the queues together, and prints no stack trace for each reconnect attempt. Queued work waits and resumes on its own once Redis is back. The same holds for an API that starts while Redis is already down: it serves requests at once, registers its scheduled jobs when Redis returns, and stops promptly on a shutdown signal either way.
 

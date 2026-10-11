@@ -99,7 +99,7 @@ Operators get the cross-tenant view at `GET /api/backend/admin/capacity`, which 
 
 When the previous run's backlog plus today's demand passes the daily capacity, the run sheds work in a stated order rather than overlapping itself. Category ranks and review sync go first, app refreshes next, and rank checks are never dropped because they are the product. The decision is logged at error level with the pressure figure and what was shed.
 
-On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search and app imports are capped per day; suggestion lookups are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
+On demand actions are limited per workspace so one frustrated customer cannot spend the pool. Manual refresh, run daily, keyword scoring, deep search, app imports and competitor adds are capped per day; suggestion lookups are capped per hour. Over the limit the API answers `429` with `retryAfterSeconds` in the error envelope. Nothing is limited while `BILLING_ENABLED` is `false`, so a self hosted instance behaves as before.
 
 ## What each container is allowed on the host
 

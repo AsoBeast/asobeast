@@ -28,6 +28,7 @@ export function workspaceMetricsOf(
       suggestions: 0,
       spider: 0,
       importApp: 0,
+      addCompetitor: 0,
     },
     aiCallsMonth: 12,
     aiTokensMonth: { input: 9_000, cachedInput: 1_024, output: 1_400 },
