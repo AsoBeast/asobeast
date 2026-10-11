@@ -154,6 +154,9 @@ describe('EmailAlertConfirmation', () => {
 
     it('sends nothing and gives the allowance back when another change got there first', async () => {
       const error = quietly();
+      const warn = jest
+        .spyOn(Logger.prototype, 'warn')
+        .mockImplementation(() => undefined);
       const { service, updateMany, send } = build({
         enabled: true,
         origin: ORIGIN,
@@ -165,7 +168,9 @@ describe('EmailAlertConfirmation', () => {
       );
       expect(send).not.toHaveBeenCalled();
       expect(refund).toHaveBeenCalledTimes(1);
-      expect(error.mock.calls[0][0]).toContain('ea_1');
+      expect(warn.mock.calls[0][0]).toContain('ea_1');
+      expect(error).not.toHaveBeenCalled();
+      warn.mockRestore();
       error.mockRestore();
     });
 

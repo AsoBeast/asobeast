@@ -95,7 +95,7 @@ export class EmailAlertConfirmation {
         data: { confirmationSentAt: sentAt },
       });
       if (count > 0) return 'reserved';
-      this.logger.error(
+      this.logger.warn(
         `confirmation email for alert ${alert.id} not sent: the alert changed before it went out`,
       );
       return 'lost';
