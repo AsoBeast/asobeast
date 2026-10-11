@@ -37,6 +37,7 @@ export async function readBoundedBody(
       if (done) return joined(chunks, length);
       length += value.byteLength;
       if (length > REQUEST_BODY_LIMIT_BYTES) {
+        await reader.cancel().catch(() => undefined);
         throw new RequestBodyTooLargeError();
       }
       chunks.push(value);

@@ -33,8 +33,10 @@ const STREAM_PREFETCH_PULLS = 1;
 function countedStream(): {
   stream: ReadableStream<Uint8Array>;
   pulls: () => number;
+  cancelled: () => boolean;
 } {
   let pulled = 0;
+  let wasCancelled = false;
   const chunk = new Uint8Array(CHUNK_BYTES).fill(0x78);
   const stream = new ReadableStream<Uint8Array>({
     pull(controller) {
@@ -45,8 +47,11 @@ function countedStream(): {
       }
       controller.enqueue(chunk);
     },
+    cancel() {
+      wasCancelled = true;
+    },
   });
-  return { stream, pulls: () => pulled };
+  return { stream, pulls: () => pulled, cancelled: () => wasCancelled };
 }
 
 function streamedRequest(
@@ -593,6 +598,34 @@ describe("proxyToApi request body limit", () => {
       Math.ceil(REQUEST_BODY_LIMIT_BYTES / CHUNK_BYTES) + 4,
     );
     expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("cancels the rest of a chunked body it refuses", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const { stream, cancelled } = countedStream();
+
+    await proxyToApi(streamedRequest(stream), ["apps"]);
+
+    expect(cancelled()).toBe(true);
+  });
+
+  it("still refuses a chunked body whose source fails to cancel", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const chunk = new Uint8Array(REQUEST_BODY_LIMIT_BYTES + 1);
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(chunk);
+      },
+      cancel() {
+        throw new Error("source refused to cancel");
+      },
+    });
+
+    const response = await proxyToApi(streamedRequest(stream), ["apps"]);
+
+    expect(response.status).toBe(413);
   });
 
   it("closes the connection after refusing a body it did not read", async () => {
