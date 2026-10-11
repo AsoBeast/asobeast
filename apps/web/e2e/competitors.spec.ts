@@ -120,6 +120,43 @@ test("the comparison matrix shows each keyword's market and filters by it", asyn
   await expect(rows).toHaveCount(5);
 });
 
+test("keyword ideas are fetched on demand and can be tracked", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  await expect(page.getByText("focus timer for studying")).toHaveCount(0);
+  const find = page.getByRole("button", { name: "Find ideas" });
+  await (await hydrated(find)).click();
+
+  const group = page.getByRole("region", { name: "Ideas from focus timer" });
+  await expect(group).toContainText("focus timer for studying");
+  await expect(group).toContainText(
+    "Apple popularity 52 · #2 in search suggestions · Covered by Rival Focus",
+  );
+  await expect(
+    page.getByRole("region", { name: "Ideas from study timer" }),
+  ).toContainText("#1 in search suggestions");
+
+  let tracked: unknown;
+  await page.route("**/api/backend/apps/app-1/keywords", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    tracked = route.request().postDataJSON();
+    await route.fulfill({ status: 201, json: [] });
+  });
+  await page
+    .getByRole("button", { name: "Track focus timer for studying" })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "focus timer for studying is tracked" }),
+  ).toBeDisabled();
+  expect(tracked).toEqual({
+    keywords: ["focus timer for studying"],
+    country: "us",
+  });
+});
+
 test("a matrix filter that matches nothing offers to clear it", async ({
   page,
 }) => {

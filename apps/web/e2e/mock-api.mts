@@ -64,6 +64,7 @@ import {
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
   SCREENSHOTS,
+  KEYWORD_IDEAS,
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
@@ -2032,6 +2033,13 @@ const routes: Route[] = [
   appRoute(
     /^\/apps\/([^/]+)\/changes\/impact$/,
     (dataset) => dataset.changeImpact,
+  ),
+  appRoute(
+    /^\/apps\/([^/]+)\/competitors\/keyword-ideas$/,
+    (_dataset, query) => ({
+      ...KEYWORD_IDEAS,
+      country: query.get("country") ?? KEYWORD_IDEAS.country,
+    }),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,

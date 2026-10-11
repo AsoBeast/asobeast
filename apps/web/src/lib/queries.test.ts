@@ -34,6 +34,7 @@ import {
   changesOptions,
   competitorsOptions,
   comparisonOptions,
+  keywordIdeasOptions,
   discoveryOptions,
   emailAlertKeys,
   healthKey,
@@ -121,6 +122,11 @@ const APP_SCOPED_OPTIONS = [
   ["comparison", comparisonOptions(APP, true), appKeys.compare(APP, true)],
   ["rankings", rankingsOptions(APP, RANGE), appKeys.rankings(APP, RANGE)],
   ["serpMovers", serpMoversOptions(APP, 7), appKeys.serpMovers(APP, 7)],
+  [
+    "keywordIdeas",
+    keywordIdeasOptions(APP, "de"),
+    appKeys.keywordIdeas(APP, "de"),
+  ],
   ["visibility", visibilityOptions(APP, RANGE), appKeys.visibility(APP, RANGE)],
   [
     "categoryRanks",

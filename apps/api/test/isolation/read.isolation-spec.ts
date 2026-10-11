@@ -161,6 +161,11 @@ const BY_ID = [
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/keywords/compare`,
   },
   {
+    name: 'GET /apps/:id/competitors/keyword-ideas',
+    path: (w: IsolationWorkspace) =>
+      `/apps/${w.appleAppId}/competitors/keyword-ideas`,
+  },
+  {
     name: 'GET /apps/:id/competitors/analysis',
     path: (w: IsolationWorkspace) =>
       `/apps/${w.appleAppId}/competitors/analysis`,

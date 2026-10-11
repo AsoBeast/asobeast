@@ -15,6 +15,7 @@ import { AddCompetitorForm } from "./AddCompetitorForm";
 import { ComparisonMatrix } from "./ComparisonMatrix";
 import { CompetitorList } from "./CompetitorList";
 import { DiscoveryPanel } from "./DiscoveryPanel";
+import { KeywordIdeas } from "./KeywordIdeas";
 import {
   ComparisonMatrixSkeleton,
   CompetitorListSkeleton,
@@ -48,6 +49,10 @@ export function CompetitorsView({ id }: { id: string }) {
 
       <Suspense fallback={<DiscoveryCardSkeleton />}>
         <DiscoveryPanel id={id} />
+      </Suspense>
+
+      <Suspense fallback={<DiscoveryCardSkeleton />}>
+        <KeywordIdeas id={id} />
       </Suspense>
 
       <Suspense fallback={<ComparisonMatrixSkeleton />}>

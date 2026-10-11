@@ -43,3 +43,18 @@ export interface CompetitorAnalysis {
 export interface CompetitorAddRequest {
   url: string;
 }
+
+export interface CompetitorKeywordIdea {
+  text: string;
+  popularity: number | null;
+  suggestRank: number;
+  seed: string;
+  usedBy: Array<{ appId: string; name: string | null }>;
+}
+
+export interface CompetitorKeywordIdeas {
+  country: string;
+  seeds: string[];
+  popularityWeek: string | null;
+  ideas: CompetitorKeywordIdea[];
+}

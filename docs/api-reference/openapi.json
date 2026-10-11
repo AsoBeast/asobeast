@@ -3947,6 +3947,63 @@
         ]
       }
     },
+    "/apps/{id}/competitors/keyword-ideas": {
+      "get": {
+        "operationId": "CompetitorsController_keywordIdeas",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Storefront to read competitor listings and search suggestions in. Omitted means the home market of the app.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search suggestions the store returns for the phrases competitors share",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
     "/apps/{id}/competitors/discovery": {
       "get": {
         "operationId": "CompetitorsController_discovery",
