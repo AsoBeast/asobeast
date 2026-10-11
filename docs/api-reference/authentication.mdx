@@ -41,7 +41,7 @@ health = response.json()
 | Session cookie | The dashboard in a browser | Signing in. The proxy forwards it for you |
 | Personal API token | Scripts, the MCP server, continuous integration | The API tokens card in Settings |
 
-Both carry the same entitlement checks. A token can be narrower than a session: it carries a scope and an optional expiry, and a read only token is refused with `403` the moment it tries to change anything. Give each consumer its own token and revoke individually. See [Personal API tokens](/security/api-tokens).
+Both carry the same entitlement checks. A token can be narrower than a session: it carries a scope and an optional expiry, and a read only token is refused with `403` the moment it tries to change anything. Give each consumer its own token and revoke individually. A token cannot create or revoke tokens, change the password, schedule workspace deletion or manage the team; those routes need a session. See [Personal API tokens](/security/api-tokens).
 
 ## Scope and expiry
 
@@ -62,7 +62,7 @@ Rate limits count per workspace rather than per token, so minting a second token
 | --- | --- |
 | `401` | The credential is missing, malformed, revoked or signed with a rotated secret |
 | `402` | The account is not entitled, which only happens when `BILLING_ENABLED` is `true` |
-| `403` | The token is read only and the request would change something, or the workspace is suspended |
+| `403` | The token is read only and the request would change something, the route needs a signed in session and not a token, or the workspace is suspended |
 | `429` | A plan rate limit is spent. `Retry-After` says when it reopens |
 | `404` on `/docs` or `/admin/queues` | You are not the platform operator. These surfaces answer `404` rather than confirming they exist |
 

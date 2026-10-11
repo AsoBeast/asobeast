@@ -15,6 +15,7 @@ import type { WorkspaceDeletionStatus } from '@asobeast/shared';
 import { AllowUnentitled } from '../auth/decorators/allow-unentitled.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { ExportsWorkspaceData } from '../auth/decorators/exports-workspace-data.decorator';
+import { SessionOnly } from '../auth/decorators/session-only.decorator';
 import { OWNER_ROLE } from '../auth/workspace-roles';
 import { AccountDeletionService } from './account-deletion.service';
 import { AccountExportService } from './account-export.service';
@@ -63,6 +64,7 @@ export class AccountController {
 
   @Post('deletion')
   @AllowUnentitled()
+  @SessionOnly()
   @ApiOperation({
     summary: 'Schedule this workspace for deletion after a grace period',
   })
@@ -76,6 +78,7 @@ export class AccountController {
 
   @Delete('deletion')
   @AllowUnentitled()
+  @SessionOnly()
   @ApiOperation({
     summary: 'Cancel a scheduled deletion during its grace period',
   })

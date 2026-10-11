@@ -54,6 +54,19 @@ Rate limits count per workspace rather than per token, so a second token adds no
 
 Revoke rather than rotate `AUTH_SECRET` when a single token leaks. Rotating the secret signs out every browser session and does not affect tokens at all, because tokens are hashes rather than signed values.
 
+## What a token cannot do
+
+A token, whatever its scope, cannot manage credentials or the workspace itself. These routes need a signed in browser session and answer a token with `403` and the message `This needs a signed in session. A personal API token cannot do it.`
+
+| Cannot be done with a token | Route |
+| --- | --- |
+| Create or revoke a token | `POST /auth/tokens`, `DELETE /auth/tokens/{id}` |
+| Change the password | `POST /auth/password` |
+| Schedule or cancel the deletion of the workspace | `POST /account/deletion`, `DELETE /account/deletion` |
+| Invite a member, revoke an invitation or remove a member | `POST /workspace/invites`, `DELETE /workspace/invites/{id}`, `DELETE /workspace/members/{id}` |
+
+This is what makes revoking a leaked token enough. A token that could mint another token would survive its own revocation and its own expiry. To rotate a token, create the new one in Settings and then revoke the old one. Listing tokens and reading the team stay open to a token.
+
 ## Where tokens are used
 
 | Use | Notes |
@@ -63,7 +76,7 @@ Revoke rather than rotate `AUTH_SECRET` when a single token leaks. Rotating the 
 | Continuous integration | Store it as a secret, never in the repository |
 
 <Warning>
-  A write scoped personal API token carries the same access as the account that created it, including owner access to the admin surfaces when the owner created it. Never commit one, never paste one into an issue, and give each consumer its own token so a single revocation is enough. Do not reuse a script's write token for an agent: mint a new one named after the agent, so revoking it ends the agent's access and nothing else.
+  A write scoped personal API token carries the access of the account that created it, including owner access to the admin surfaces when the owner created it, except for the routes that need a signed in session. Never commit one, never paste one into an issue, and give each consumer its own token so a single revocation is enough. Do not reuse a script's write token for an agent: mint a new one named after the agent, so revoking it ends the agent's access and nothing else.
 </Warning>
 
 ## Related
