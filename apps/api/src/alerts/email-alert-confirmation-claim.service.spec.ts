@@ -12,6 +12,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const build = () => {
   const findUnique = jest.fn();
   const updateMany = jest.fn().mockResolvedValue({ count: 1 });
+  const findFirst = jest.fn().mockResolvedValue(null);
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: jest.fn(
       (_why: string, work: () => unknown) => work(),
@@ -19,10 +20,12 @@ const build = () => {
   } as unknown as CrossTenantAccess;
   const service = new EmailAlertConfirmationClaim(
     { get: jest.fn(() => SECRET) } as unknown as ConfigService<Env, true>,
-    { emailAlert: { findUnique, updateMany } } as unknown as PrismaService,
+    {
+      emailAlert: { findUnique, findFirst, updateMany },
+    } as unknown as PrismaService,
     crossTenant,
   );
-  return { service, findUnique, updateMany };
+  return { service, findUnique, findFirst, updateMany };
 };
 
 const sentAt = (ageDays: number) => new Date(Date.now() - ageDays * DAY_MS);
@@ -79,6 +82,38 @@ describe('EmailAlertConfirmationClaim', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
 
     expect(updateMany).not.toHaveBeenCalled();
+  });
+
+  it('refuses a link that a concurrent change retired before it was claimed', async () => {
+    const { service, findUnique, updateMany } = build();
+    const at = sentAt(1);
+    findUnique.mockResolvedValue(stored({ confirmationSentAt: at }));
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(service.confirm('ea_1', tokenFor(at))).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('accepts a link that a concurrent click on it claimed first', async () => {
+    const { service, findUnique, findFirst, updateMany } = build();
+    const at = sentAt(1);
+    findUnique.mockResolvedValue(stored({ confirmationSentAt: at }));
+    updateMany.mockResolvedValue({ count: 0 });
+    findFirst.mockResolvedValue({ id: 'ea_1' });
+
+    await expect(
+      service.confirm('ea_1', tokenFor(at)),
+    ).resolves.toBeUndefined();
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 'ea_1',
+        email: 'ops@example.com',
+        confirmationSentAt: at,
+        confirmedAt: { not: null },
+      },
+      select: { id: true },
+    });
   });
 
   it('answers gone once the link is older than its lifetime', async () => {

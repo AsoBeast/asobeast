@@ -50,15 +50,23 @@ export class EmailAlertConfirmationClaim {
     if (sentAt.getTime() + CONFIRMATION_DAYS * DAY_MS <= Date.now()) {
       throw new GoneException(EXPIRED);
     }
-    await this.prisma.emailAlert.updateMany({
-      where: {
-        id: alertId,
-        email: alert.email,
-        confirmationSentAt: sentAt,
-        confirmedAt: null,
-      },
+    const link = {
+      id: alertId,
+      email: alert.email,
+      confirmationSentAt: sentAt,
+    };
+    const { count } = await this.prisma.emailAlert.updateMany({
+      where: { ...link, confirmedAt: null },
       data: { confirmedAt: new Date() },
     });
+    if (count > 0) return;
+    const claimed = await this.prisma.emailAlert.findFirst({
+      where: { ...link, confirmedAt: { not: null } },
+      select: { id: true },
+    });
+    if (!claimed) {
+      throw new NotFoundException(NOT_FOUND);
+    }
   }
 
   private get secret(): string {
