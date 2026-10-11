@@ -84,7 +84,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "visibility_history",
     title: "Visibility history",
     description:
-      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords.",
+      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords: each active tracked keyword counts in proportion to its popularity, discounted by position as 1 / log2(position + 1), and 0 when not found, so 100 means position 1 for every keyword. History is calculated over the keywords tracked today, so compare the score with itself over time rather than across apps or stores.",
     inputSchema: z.object({ appId, from, to }),
     request: ({ appId, from, to }) => ({
       path: `/apps/${seg(appId)}/visibility-history`,
