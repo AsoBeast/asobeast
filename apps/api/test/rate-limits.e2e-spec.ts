@@ -466,7 +466,7 @@ describe('Rate limits (billing mode)', () => {
     await held?.();
   });
 
-  it('stops looking up rejected credentials from one address', async () => {
+  it('refuses rejected credentials from one address once the budget is spent', async () => {
     const cookie = await register('accepted@example.com');
     const rejected = `${API_TOKEN_PREFIX}${'0'.repeat(48)}`;
     const present = () =>

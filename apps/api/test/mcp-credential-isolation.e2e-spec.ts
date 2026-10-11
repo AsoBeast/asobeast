@@ -8,7 +8,10 @@ import cookieParser from 'cookie-parser';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
+import {
+  CREDENTIAL_FAILURES_PER_MINUTE,
+  CredentialRateLimiter,
+} from '../src/auth/rate-limit/credential-rate.limiter';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { InProcessGateway } from '../src/mcp/in-process.gateway';
 import {
@@ -87,5 +90,18 @@ describe('Remote MCP credential isolation (e2e)', () => {
 
     expect(textOf(answer)).not.toContain('rejected credentials');
     expect(answer.result?.isError).toBeFalsy();
+  });
+
+  it('never counts a rejected tool call against an address', async () => {
+    const recorded = jest.spyOn(
+      app.get(CredentialRateLimiter),
+      'recordRejection',
+    );
+    try {
+      await dispatchRevoked();
+      expect(recorded).not.toHaveBeenCalled();
+    } finally {
+      recorded.mockRestore();
+    }
   });
 });
