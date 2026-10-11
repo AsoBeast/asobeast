@@ -29,27 +29,24 @@ const build = (mailer: Partial<MailerService>) => {
 };
 
 describe('EmailAlertConfirmation', () => {
-  describe('required', () => {
+  describe('canSend', () => {
     it.each([
       [true, ORIGIN, true],
       [true, null, false],
       [false, ORIGIN, false],
     ])(
       'with email enabled %s and origin %s it is %s',
-      (enabled, origin, required) => {
-        expect(build({ enabled, origin }).service.required).toBe(required);
+      (enabled, origin, canSend) => {
+        expect(build({ enabled, origin }).service.canSend).toBe(canSend);
       },
     );
   });
 
   describe('confirmationFor', () => {
-    it('confirms at once when the instance cannot send a link', async () => {
-      const { service, findFirst } = build({ enabled: true, origin: null });
+    it('still waits for the recipient when the instance cannot send a link', async () => {
+      const { service } = build({ enabled: true, origin: null });
 
-      expect(await service.confirmationFor('a@example.net')).toBeInstanceOf(
-        Date,
-      );
-      expect(findFirst).not.toHaveBeenCalled();
+      expect(await service.confirmationFor('a@example.net')).toBeNull();
     });
 
     it('confirms at once the verified address of a member', async () => {
@@ -82,6 +79,13 @@ describe('EmailAlertConfirmation', () => {
       await service.allowMailTo('a@example.net');
 
       expect(claim).toHaveBeenCalledWith('ws_1', 'a@example.net');
+    });
+
+    it('claims nothing when no link can be built', async () => {
+      const { service, claim } = build({ enabled: true, origin: null });
+
+      expect(await service.allowMailTo('a@example.net')).toBeNull();
+      expect(claim).not.toHaveBeenCalled();
     });
 
     it('lets the refusal of the limiter through', async () => {
@@ -152,6 +156,19 @@ describe('EmailAlertConfirmation', () => {
       ).toBe(false);
       expect(updateMany).not.toHaveBeenCalled();
       expect(refund).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends nothing without an allowance', async () => {
+      const { service, send } = build({ enabled: true, origin: null });
+
+      expect(
+        await service.issue(
+          { id: 'ea_1', email: 'ops@example.com' },
+          'owner@example.com',
+          null,
+        ),
+      ).toBe(false);
+      expect(send).not.toHaveBeenCalled();
     });
 
     it('reports a send it could not record instead of throwing', async () => {

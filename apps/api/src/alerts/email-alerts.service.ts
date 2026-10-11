@@ -31,6 +31,9 @@ export const MAX_UNCONFIRMED_EMAIL_ALERTS = 5;
 
 const NOT_SENT_MESSAGE = 'The confirmation email could not be sent';
 
+const NO_LINK_MESSAGE =
+  'The confirmation email cannot be sent until WEB_PUBLIC_URL is set on the API, because the link would have no host';
+
 const ALREADY_CONFIRMED_MESSAGE = 'This recipient is already confirmed';
 
 @Injectable()
@@ -70,7 +73,7 @@ export class EmailAlertsService {
         confirmedAt,
       },
     });
-    if (refund) {
+    if (!alert.confirmedAt) {
       await this.confirmation.issue(alert, requestedBy, refund);
     }
     return toEmailAlertItem(alert);
@@ -105,7 +108,7 @@ export class EmailAlertsService {
       where: { id },
       data,
     });
-    if (refund) {
+    if (data.confirmedAt === null) {
       await this.confirmation.issue(alert, requestedBy, refund);
     }
     return toEmailAlertItem(alert);
@@ -122,6 +125,9 @@ export class EmailAlertsService {
     const alert = await this.find(id);
     if (alert.confirmedAt) {
       throw new ConflictException(ALREADY_CONFIRMED_MESSAGE);
+    }
+    if (!this.confirmation.canSend) {
+      throw new ServiceUnavailableException(NO_LINK_MESSAGE);
     }
     const refund = await this.confirmation.allowMailTo(alert.email);
     if (!(await this.confirmation.issue(alert, requestedBy, refund))) {

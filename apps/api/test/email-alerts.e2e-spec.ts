@@ -170,12 +170,51 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
     },
   );
 
-  it('sends a sample through the test endpoint', async () => {
+  it('mails nobody an address cannot confirm without a web origin to link to', async () => {
     const created = await api
       .post('/email-alerts')
-      .send({ email: 'ops@example.com', events: ['metadata.changed'] })
+      .send({ email: 'stranger@example.net', events: ['metadata.changed'] })
       .expect(201);
     const alert = created.body as EmailAlertItem;
+
+    const response = await api
+      .post(`/email-alerts/${alert.id}/test`)
+      .expect(201);
+
+    expect(alert.confirmed).toBe(false);
+    expect(response.body as WebhookTestResult).toEqual({
+      delivered: false,
+      status: null,
+    });
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it('says why no confirmation can be resent without a web origin', async () => {
+    const created = await api
+      .post('/email-alerts')
+      .send({ email: 'stranger@example.net', events: ['metadata.changed'] })
+      .expect(201);
+
+    const refused = await api
+      .post(
+        `/email-alerts/${(created.body as EmailAlertItem).id}/resend-confirmation`,
+      )
+      .expect(503);
+
+    expect((refused.body as ApiErrorEnvelope).message).toContain(
+      'WEB_PUBLIC_URL',
+    );
+  });
+
+  it('sends a sample through the test endpoint', async () => {
+    const alert = await prisma.emailAlert.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        email: 'ops@example.com',
+        events: ['metadata.changed'],
+        confirmedAt: new Date(),
+      },
+    });
 
     const response = await api
       .post(`/email-alerts/${alert.id}/test`)

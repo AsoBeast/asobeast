@@ -30,18 +30,16 @@ export class EmailAlertConfirmation {
     private readonly workspace: WorkspaceContext,
   ) {}
 
-  get required(): boolean {
+  get canSend(): boolean {
     return this.mailer.enabled && Boolean(this.mailer.origin);
   }
 
   async confirmationFor(address: string): Promise<Date | null> {
-    if (!this.required || (await this.isVerifiedMember(address))) {
-      return new Date();
-    }
-    return null;
+    return (await this.isVerifiedMember(address)) ? new Date() : null;
   }
 
-  allowMailTo(address: string): Promise<ConfirmationRefund> {
+  async allowMailTo(address: string): Promise<ConfirmationRefund | null> {
+    if (!this.canSend) return null;
     return this.limiter.claim(
       this.workspace.require('a confirmation email'),
       address,
@@ -51,8 +49,9 @@ export class EmailAlertConfirmation {
   async issue(
     alert: { id: string; email: string },
     requestedBy: string,
-    refund: ConfirmationRefund,
+    refund: ConfirmationRefund | null,
   ): Promise<boolean> {
+    if (!refund) return false;
     const sentAt = new Date();
     try {
       await this.send(alert, requestedBy, sentAt);
