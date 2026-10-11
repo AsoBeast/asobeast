@@ -44,6 +44,10 @@ const SMTP_VARS = [
   "SMTP_FROM",
 ];
 
+function awaitsConfirmation(alert: EmailAlertItem): boolean {
+  return alert.confirmed === false;
+}
+
 function AddEmailAlertDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -61,7 +65,7 @@ function AddEmailAlertDialog() {
         );
       } else {
         toast.success(
-          saved.confirmed === false
+          awaitsConfirmation(saved)
             ? `Confirmation email sent to ${saved.email}`
             : "Email alert added",
         );
@@ -185,7 +189,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       id={alert.id}
       events={alert.events}
       awaiting={
-        alert.confirmed === false
+        awaitsConfirmation(alert)
           ? { pending: resend.isPending, onResend: () => resend.mutate() }
           : undefined
       }

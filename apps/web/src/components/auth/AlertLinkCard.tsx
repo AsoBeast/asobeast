@@ -13,6 +13,8 @@ import { ApiError } from "@/lib/api";
 
 const ALERT_SETTINGS = `${SETTINGS_PATH}#email-alerts`;
 
+export const INVALID_LINK_STATUSES = [400, 404];
+
 interface AlertLinkCardProps {
   title: string;
   description: string;

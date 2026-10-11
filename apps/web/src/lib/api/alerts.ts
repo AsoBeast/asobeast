@@ -85,27 +85,29 @@ export function deleteEmailAlert(id: string): Promise<void> {
   return apiFetch<void>(`/email-alerts/${id}`, { method: "DELETE" });
 }
 
-export function unsubscribeEmailAlert(
+function followAlertLink(
   id: string,
+  action: "unsubscribe" | "confirm",
   token: string,
 ): Promise<void> {
   return apiFetch<void>(
     withQuery(
-      `/email-alerts/${encodeURIComponent(id)}/unsubscribe`,
+      `/email-alerts/${encodeURIComponent(id)}/${action}`,
       new URLSearchParams({ token }),
     ),
     { method: "POST" },
   );
 }
 
+export function unsubscribeEmailAlert(
+  id: string,
+  token: string,
+): Promise<void> {
+  return followAlertLink(id, "unsubscribe", token);
+}
+
 export function confirmEmailAlert(id: string, token: string): Promise<void> {
-  return apiFetch<void>(
-    withQuery(
-      `/email-alerts/${encodeURIComponent(id)}/confirm`,
-      new URLSearchParams({ token }),
-    ),
-    { method: "POST" },
-  );
+  return followAlertLink(id, "confirm", token);
 }
 
 export function resendEmailAlertConfirmation(id: string): Promise<void> {

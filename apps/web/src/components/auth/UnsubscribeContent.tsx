@@ -5,9 +5,12 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { unsubscribeEmailAlert } from "@/lib/api";
-import { AlertLinkCard, AlertSettingsLink, hasStatus } from "./AlertLinkCard";
-
-const INVALID_STATUSES = [400, 404];
+import {
+  AlertLinkCard,
+  AlertSettingsLink,
+  hasStatus,
+  INVALID_LINK_STATUSES,
+} from "./AlertLinkCard";
 
 export function UnsubscribeContent() {
   const params = useSearchParams();
@@ -39,7 +42,7 @@ export function UnsubscribeContent() {
     );
   }
 
-  if (mutation.isError && hasStatus(mutation.error, INVALID_STATUSES)) {
+  if (mutation.isError && hasStatus(mutation.error, INVALID_LINK_STATUSES)) {
     return (
       <AlertLinkCard
         title="This unsubscribe link is not valid"

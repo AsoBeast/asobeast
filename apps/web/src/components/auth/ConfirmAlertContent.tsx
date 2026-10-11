@@ -5,9 +5,13 @@ import { useMutation } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { confirmEmailAlert } from "@/lib/api";
-import { AlertLinkCard, AlertSettingsLink, hasStatus } from "./AlertLinkCard";
+import {
+  AlertLinkCard,
+  AlertSettingsLink,
+  hasStatus,
+  INVALID_LINK_STATUSES,
+} from "./AlertLinkCard";
 
-const INVALID_STATUSES = [400, 404];
 const EXPIRED_STATUS = 410;
 
 export function ConfirmAlertContent() {
@@ -40,7 +44,7 @@ export function ConfirmAlertContent() {
     );
   }
 
-  if (mutation.isError && hasStatus(mutation.error, INVALID_STATUSES)) {
+  if (mutation.isError && hasStatus(mutation.error, INVALID_LINK_STATUSES)) {
     return (
       <AlertLinkCard
         title="This confirmation link is not valid"
