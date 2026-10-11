@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import type { Locator, Page } from "@playwright/test";
+import { THEMES } from "./contrast-check.mts";
 import { expect, test } from "./session.mts";
 
 const VISIBILITY_GUIDE = "https://docs.asobeast.com/concepts/visibility";
@@ -64,22 +65,31 @@ test("escape closes the explanation and returns focus to its button", async ({
   await expect(trigger).toHaveAttribute("aria-expanded", "false");
 });
 
-test("the explanation has no accessibility violation", async ({ page }) => {
-  await page.goto("/apps/app-1");
-  const help = await openHelp(page, statCard(page));
-  await settled(help);
+for (const theme of THEMES) {
+  test(`the explanation has no accessibility violation in the ${theme} theme`, async ({
+    page,
+  }) => {
+    await page.addInitScript(
+      (value) => window.localStorage.setItem("theme", value),
+      theme,
+    );
+    await page.emulateMedia({ colorScheme: theme });
+    await page.goto("/apps/app-1");
+    const help = await openHelp(page, statCard(page));
+    await settled(help);
 
-  const { violations } = await new AxeBuilder({ page })
-    .include('[role="dialog"]')
-    .analyze();
+    const { violations } = await new AxeBuilder({ page })
+      .include('[role="dialog"]')
+      .analyze();
 
-  expect(
-    violations.map(({ id, nodes }) => ({
-      id,
-      targets: nodes.map((node) => node.target.join(" ")),
-    })),
-  ).toEqual([]);
-});
+    expect(
+      violations.map(({ id, nodes }) => ({
+        id,
+        targets: nodes.map((node) => node.target.join(" ")),
+      })),
+    ).toEqual([]);
+  });
+}
 
 test("the explanation fits a phone screen", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
