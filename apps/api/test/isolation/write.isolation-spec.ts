@@ -1,5 +1,7 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import type { EmailAlertItem } from '@asobeast/shared';
+import { MailerService } from '../../src/alerts/mailer.service';
 import { QUEUES } from '../../src/jobs/jobs.types';
 import { createIsolationFixture, IsolationFixture } from './fixture';
 
@@ -245,5 +247,32 @@ describe('Write isolation', () => {
       select: { workspaceId: true },
     });
     expect(user.workspaceId).toBe(fixture.a.id);
+  });
+
+  it('asks the verified owner of another workspace to confirm like any stranger', async () => {
+    const mailer = fixture.app.get(MailerService);
+    jest.spyOn(mailer, 'enabled', 'get').mockReturnValue(true);
+    jest
+      .spyOn(mailer, 'origin', 'get')
+      .mockReturnValue('https://app.example.test');
+    const sendAccountMail = jest
+      .spyOn(mailer, 'sendAccountMail')
+      .mockResolvedValue(undefined);
+    await fixture.db.user.update({
+      where: { id: fixture.a.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
+
+    const created = await fixture.b.agent
+      .post('/email-alerts')
+      .send({ email: fixture.a.email, events: ['rank.dropped'] })
+      .expect(201);
+
+    expect((created.body as EmailAlertItem).confirmed).toBe(false);
+    expect(sendAccountMail).toHaveBeenCalledTimes(1);
+    expect(sendAccountMail).toHaveBeenCalledWith(
+      expect.objectContaining({ to: fixture.a.email }),
+    );
+    jest.restoreAllMocks();
   });
 });
