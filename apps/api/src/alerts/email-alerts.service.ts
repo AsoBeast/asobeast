@@ -141,12 +141,13 @@ export class EmailAlertsService {
     if (alert.unsubscribedAt) {
       throw new ConflictException(UNSUBSCRIBED_MESSAGE);
     }
-    assertCooledDown(alert.confirmationSentAt);
     if (!this.confirmation.canSend) {
       throw new ServiceUnavailableException(NO_LINK_MESSAGE);
     }
+    assertCooledDown(alert.confirmationSentAt);
     const refund = await this.confirmation.allowMailTo(alert.email);
     if (!(await this.confirmation.issue(alert, requestedBy, refund))) {
+      assertCooledDown((await this.find(id)).confirmationSentAt);
       throw new ServiceUnavailableException(NOT_SENT_MESSAGE);
     }
   }

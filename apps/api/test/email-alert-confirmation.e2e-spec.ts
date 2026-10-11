@@ -265,6 +265,23 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(sendAccountMail).not.toHaveBeenCalled();
   });
 
+  it('sends one confirmation when two resends race each other', async () => {
+    const alert = await addAlert(STRANGER);
+    await sentHoursAgo(alert, 2);
+    sendAccountMail.mockClear();
+
+    const answers = await Promise.all(
+      [0, 1, 2, 3, 4].map(() =>
+        api.post(`/email-alerts/${alert.id}/resend-confirmation`),
+      ),
+    );
+
+    expect(answers.map(({ status }) => status).sort()).toEqual([
+      204, 429, 429, 429, 429,
+    ]);
+    expect(sendAccountMail).toHaveBeenCalledTimes(1);
+  });
+
   it('resends at once when the first confirmation never left', async () => {
     sendAccountMail.mockRejectedValueOnce(new Error('relay refused'));
     const alert = await addAlert(STRANGER);

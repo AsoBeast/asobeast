@@ -195,6 +195,10 @@ describe('EmailAlertsController (e2e, smtp enabled)', () => {
       .post('/email-alerts')
       .send({ email: 'stranger@example.net', events: ['metadata.changed'] })
       .expect(201);
+    await prisma.emailAlert.update({
+      where: { id: (created.body as EmailAlertItem).id },
+      data: { confirmationSentAt: new Date() },
+    });
 
     const refused = await api
       .post(
