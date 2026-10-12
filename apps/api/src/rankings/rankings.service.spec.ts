@@ -8,7 +8,10 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
-import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
+import {
+  EMPTY_ANSWER_RETRIES,
+  IMPLAUSIBLE_LOOKBACK_DAYS,
+} from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { RankingAlertsService } from './ranking-alerts.service';
@@ -192,6 +195,9 @@ describe('RankingsService.checkKeyword', () => {
       },
     ];
     const trackedFindMany = jest.fn().mockResolvedValue(tracked);
+    const serpFindFirst = jest
+      .fn()
+      .mockResolvedValue(options?.previousSerp ? { date: PREVIOUS_DAY } : null);
     const keywordFindUnique = jest.fn().mockResolvedValue({
       id: 'kw1',
       text: 'habit tracker',
@@ -214,11 +220,7 @@ describe('RankingsService.checkKeyword', () => {
       serpEntry: {
         deleteMany,
         createMany,
-        findFirst: jest
-          .fn()
-          .mockResolvedValue(
-            options?.previousSerp ? { date: PREVIOUS_DAY } : null,
-          ),
+        findFirst: serpFindFirst,
         findMany: jest
           .fn<Promise<SerpRow[]>, [{ where: { date: Date } }]>()
           .mockImplementation(({ where }) =>
@@ -278,6 +280,7 @@ describe('RankingsService.checkKeyword', () => {
       dispatch,
       trackedFindMany,
       keywordFindUnique,
+      serpFindFirst,
       rankingFindFirst,
       rankingFindMany,
     };
@@ -788,6 +791,20 @@ describe('RankingsService.checkKeyword', () => {
 
       expect(search).toHaveBeenCalledTimes(1);
       expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('accepts it at once for a phrase that stopped ranking anything over a week ago', async () => {
+      const { service, search, upsert, serpFindFirst } = setup({
+        searchResults: [],
+      });
+      serpFindFirst.mockResolvedValue({
+        date: utcDayStart(FROZEN_NOW, -(IMPLAUSIBLE_LOOKBACK_DAYS + 1)),
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalled();
     });
 
     it('accepts it at once for a phrase that has never ranked anything', async () => {
