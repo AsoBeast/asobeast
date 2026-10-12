@@ -63,6 +63,7 @@ import {
   EXPIRED_CONFIRM_TOKEN,
   TRUSTED_RECIPIENT,
   UNSENT_RECIPIENT_PREFIX,
+  UNSUBSCRIBED_RECIPIENT,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -220,6 +221,15 @@ const actionEvents: Record<string, ActionEventItem[]> =
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
+const UNSUBSCRIBED_ALERT: EmailAlertItem = {
+  id: "email-unsubscribed",
+  email: UNSUBSCRIBED_RECIPIENT,
+  events: ["metadata.changed"],
+  active: false,
+  confirmed: false,
+  unsubscribed: true,
+  createdAt: "2026-07-01T00:00:00.000Z",
+};
 const keywordFields = new Map<string, string>();
 const AUTH_USER: AuthUser = {
   id: "u1",
@@ -1539,7 +1549,11 @@ const routes: Route[] = [
       json(
         res,
         200,
-        hasCookie(req, "e2e-empty-alerts", "1") ? [] : emailAlerts,
+        hasCookie(req, "e2e-empty-alerts", "1")
+          ? []
+          : hasCookie(req, "e2e-unsubscribed-alert", "1")
+            ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
+            : emailAlerts,
       ),
   },
   {

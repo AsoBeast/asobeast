@@ -190,7 +190,11 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       events={alert.events}
       awaiting={
         awaitsConfirmation(alert)
-          ? { pending: resend.isPending, onResend: () => resend.mutate() }
+          ? {
+              pending: resend.isPending,
+              onResend: () => resend.mutate(),
+              unsubscribed: alert.unsubscribed === true,
+            }
           : undefined
       }
       active={alert.active}

@@ -4,6 +4,7 @@ import {
   EXPIRED_CONFIRM_TOKEN,
   TRUSTED_RECIPIENT,
   UNSENT_RECIPIENT_PREFIX,
+  UNSUBSCRIBED_RECIPIENT,
   VALID_CONFIRM_TOKEN,
 } from "./fixtures.mts";
 import { openSettledDialog } from "./dialog.mts";
@@ -172,4 +173,29 @@ test("a confirmed recipient shows no waiting notice", async ({ page }) => {
 
   await expect(row.getByRole("button", { name: "Send test" })).toBeVisible();
   await expect(row.getByText(AWAITING)).toHaveCount(0);
+});
+
+test("an unsubscribed recipient offers no resend that would be refused", async ({
+  page,
+}) => {
+  await page.context().addCookies([
+    {
+      name: "e2e-unsubscribed-alert",
+      value: "1",
+      domain: "localhost",
+      path: "/",
+    },
+  ]);
+  await page.goto("/settings");
+
+  const row = page
+    .getByRole("listitem")
+    .filter({ hasText: UNSUBSCRIBED_RECIPIENT });
+
+  await expect(row.getByText("Unsubscribed.")).toBeVisible();
+  await expect(row.getByText(AWAITING)).toHaveCount(0);
+  await expect(
+    row.getByRole("button", { name: "Resend confirmation" }),
+  ).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Send test" })).toHaveCount(0);
 });

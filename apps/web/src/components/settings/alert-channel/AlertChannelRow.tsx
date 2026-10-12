@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { Clock, Loader2, MailCheck, Send, Trash2 } from "lucide-react";
+import { Clock, Loader2, MailCheck, MailX, Send, Trash2 } from "lucide-react";
 import type { WebhookEvent } from "@asobeast/shared";
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ import { EditEventsDialog } from "./EditEventsDialog";
 export interface AwaitingConfirmation {
   pending: boolean;
   onResend: () => void;
+  unsubscribed: boolean;
 }
 
 export function AlertChannelRow({
@@ -78,7 +79,7 @@ export function AlertChannelRow({
             aria-label={`Toggle ${label}`}
             onCheckedChange={onActiveChange}
           />
-          {awaiting ? (
+          {awaiting?.unsubscribed ? null : awaiting ? (
             <Button
               variant="outline"
               size="sm"
@@ -114,7 +115,18 @@ export function AlertChannelRow({
         </div>
       </div>
 
-      {awaiting ? (
+      {awaiting?.unsubscribed ? (
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <MailX className="size-4 shrink-0" aria-hidden />
+          <span>
+            <strong className="font-medium text-foreground">
+              Unsubscribed.
+            </strong>{" "}
+            The recipient asked not to receive these alerts, so they are not
+            asked to confirm again.
+          </span>
+        </p>
+      ) : awaiting ? (
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Clock className="size-4 shrink-0" aria-hidden />
           <span>
