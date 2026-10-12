@@ -9,6 +9,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
 import { AppModule } from '../../src/app.module';
+import { AiClient, OPENAI_CLIENT } from '../../src/ai/openai.client';
 import { StoreProviderRegistry } from '../../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../../src/store-providers/types';
 import { useCookies } from '../helpers/session';
@@ -95,7 +96,9 @@ function utcDay(daysAgo = 0): Date {
   );
 }
 
-export async function createIsolationFixture(): Promise<IsolationFixture> {
+export async function createIsolationFixture(
+  aiClient: AiClient | null = null,
+): Promise<IsolationFixture> {
   execSync('pnpm prisma migrate deploy', {
     cwd: join(__dirname, '..', '..'),
     env: process.env,
@@ -111,6 +114,8 @@ export async function createIsolationFixture(): Promise<IsolationFixture> {
   })
     .overrideProvider(StoreProviderRegistry)
     .useValue(registry)
+    .overrideProvider(OPENAI_CLIENT)
+    .useValue(aiClient)
     .compile();
 
   const app: INestApplication<App> = moduleFixture.createNestApplication();
