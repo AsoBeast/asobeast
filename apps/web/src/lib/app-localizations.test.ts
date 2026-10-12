@@ -12,6 +12,7 @@ import {
   type LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
 import {
+  addableGroups,
   addedSentence,
   droppedSentence,
   editLocalizationHref,
@@ -19,6 +20,7 @@ import {
   localizationMatrix,
   openLocalization,
   readingStorefrontNames,
+  removeDescription,
   saveCostText,
   savedDescription,
   saveQuotaNotice,
@@ -26,6 +28,7 @@ import {
   shouldConfirmSave,
   tracksNewPhrases,
   upsertLocalization,
+  withoutLocalization,
 } from "./app-localizations";
 
 const reader = (
@@ -412,5 +415,85 @@ describe("the save review", () => {
       "1 phrase leaves the field and stops being tracked as a keyword field phrase in United States and Mexico",
     );
     expect(droppedSentence(preview({ markets: [US, MX] }))).toBeNull();
+  });
+});
+
+describe("adding and removing", () => {
+  const home = [item("en-US", "home", [reader("us", "default", true)])];
+  const tagsOf = (entries: { localization: string }[]) =>
+    entries.map((entry) => entry.localization);
+
+  it("W-ADD-01 groups the languages your markets read apart from the rest", () => {
+    const groups = addableGroups(home, ["us", "mx"]);
+
+    expect(groups.read).toContainEqual({
+      localization: "es-MX",
+      readIn: ["us", "mx"],
+    });
+    expect(groups.read).toContainEqual({
+      localization: "en-GB",
+      readIn: ["mx"],
+    });
+    expect(groups.read).toContainEqual({ localization: "ar", readIn: ["us"] });
+    expect(groups.other).toContainEqual({ localization: "ja", readIn: [] });
+    expect(groups.other.every((entry) => entry.readIn.length === 0)).toBe(true);
+  });
+
+  it("W-ADD-02 leaves out every shipped localization", () => {
+    const groups = addableGroups(home, ["us", "mx"]);
+    expect(tagsOf([...groups.read, ...groups.other])).not.toContain("en-US");
+
+    const withSpanish = addableGroups(
+      [...home, item("es-MX", "manual", [])],
+      ["us", "mx"],
+    );
+    expect(tagsOf([...withSpanish.read, ...withSpanish.other])).not.toContain(
+      "es-MX",
+    );
+  });
+
+  it("W-ADD-03 keeps the alphabetical order of the localization list inside each group", () => {
+    expect(tagsOf(addableGroups(home, ["us", "mx"]).read)).toEqual([
+      "ar",
+      "zh-Hans",
+      "zh-Hant",
+      "en-GB",
+      "fr",
+      "ko",
+      "pt-BR",
+      "ru",
+      "es-MX",
+      "vi",
+    ]);
+  });
+
+  it("W-ADD-04 offers everything but the shipped ones when no market reads them", () => {
+    const groups = addableGroups(home, []);
+
+    expect(groups.read).toEqual([]);
+    expect(groups.other).toHaveLength(49);
+  });
+
+  it("W-ADD-05 removes an item and keeps the order of the rest", () => {
+    expect(tagsOf(withoutLocalization(RESULT, "es-MX").localizations)).toEqual([
+      "en-US",
+    ]);
+    expect(withoutLocalization(RESULT, "fr")).toEqual(RESULT);
+  });
+
+  it("W-ADD-06 says who stops tracking a removed field", () => {
+    expect(
+      removeDescription(
+        item("es-MX", "manual", [
+          reader("us", "additional", true),
+          reader("mx", "default"),
+        ]),
+      ),
+    ).toBe(
+      "Its keyword field is deleted. Its phrases stop being tracked as keyword field phrases in United States and Mexico; phrases you track for another reason stay.",
+    );
+    expect(removeDescription(item("es-MX", "manual", []))).toBe(
+      "Its keyword field is deleted. Phrases you track for another reason stay.",
+    );
   });
 });

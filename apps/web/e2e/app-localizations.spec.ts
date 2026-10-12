@@ -2,7 +2,7 @@ import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import type { LocalizationSeed } from "./fixtures.mts";
-import { expectFitsViewport } from "./dialog.mts";
+import { expectContains, expectFitsViewport } from "./dialog.mts";
 import {
   fieldRequests,
   LOCALES_APP,
@@ -888,6 +888,228 @@ test.describe("on the locale lab", () => {
         await expect(
           modal.getByRole("button", { name: "Save and track" }),
         ).toBeInViewport();
+      });
+    }
+  });
+
+  test.describe("adding and removing", () => {
+    const dialog = (page: Page) => page.getByRole("dialog");
+
+    const openAdd = async (page: Page) => {
+      await page.getByRole("button", { name: "Add localization" }).click();
+      await expect(
+        page.getByRole("dialog", { name: "Add a localization" }),
+      ).toBeVisible();
+    };
+
+    const option = (page: Page, name: string) =>
+      dialog(page).getByRole("option", {
+        name: new RegExp(`^${name}( Read in .*)?$`),
+      });
+
+    test("offers the languages grouped by whether your markets read them", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, { markets: ["mx"] });
+      await page.goto(LOCALES_METADATA);
+      await openAdd(page);
+
+      await expect(dialog(page)).toHaveAccessibleDescription(
+        "Pick a language you ship in App Store Connect. Its keyword field is read in every storefront on its list.",
+      );
+      const read = dialog(page).getByRole("group", {
+        name: "Read in your markets",
+      });
+      await expect(
+        read.getByRole("option", { name: /^Spanish \(Mexico\)/ }),
+      ).toContainText("Read in US, MX");
+      await expect(
+        read.getByRole("option", { name: /^English \(U\.K\.\)/ }),
+      ).toContainText("Read in MX");
+      await expect(read.getByRole("option", { name: /^Arabic/ })).toContainText(
+        "Read in US",
+      );
+      await expect(
+        dialog(page)
+          .getByRole("group", { name: "Other languages" })
+          .getByRole("option", { name: /^Japanese/ }),
+      ).toBeVisible();
+      await expect(option(page, "English \\(U\\.S\\.\\)")).toHaveCount(0);
+    });
+
+    test("searches by name and by tag", async ({ page }) => {
+      await page.goto(LOCALES_METADATA);
+      await openAdd(page);
+      const search = dialog(page).getByPlaceholder("Search languages");
+
+      await search.fill("mex");
+      await expect(dialog(page).getByRole("option")).toHaveText([
+        /^Spanish \(Mexico\)/,
+      ]);
+      await search.fill("pt-BR");
+      await expect(dialog(page).getByRole("option")).toHaveText([
+        /^Portuguese \(Brazil\)/,
+      ]);
+      await search.fill("zzz");
+      await expect(dialog(page).getByText("No language found.")).toBeVisible();
+    });
+
+    test("adds the picked language, opens its item and says so", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, { markets: ["mx"] });
+      await page.goto(LOCALES_METADATA);
+      await openAdd(page);
+
+      const post = page.waitForRequest(
+        (request) =>
+          request.method() === "POST" &&
+          request.url().endsWith(`/apps/${LOCALES_APP}/localizations`),
+      );
+      await option(page, "French").click();
+
+      expect((await post).postDataJSON()).toEqual({ localization: "fr" });
+      await expect(dialog(page)).toHaveCount(0);
+      await expect(page).toHaveURL(/fieldLocale=fr/);
+      await expect(localizationItem(page, "French").trigger).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      await expect(editor(page, "French")).toHaveValue("");
+      await expect(page.getByText("Added French")).toBeVisible();
+      const row = page
+        .getByRole("table", {
+          name: "Which of your markets read each localization",
+        })
+        .getByRole("row")
+        .filter({ has: page.getByRole("rowheader", { name: /^French/ }) });
+      await expect(row.getByRole("cell").first()).toContainText("Also");
+    });
+
+    test("shows the refusal inside the dialog when the language was added meanwhile", async ({
+      page,
+    }) => {
+      await page.goto(LOCALES_METADATA);
+      await openAdd(page);
+      await page.request.post(
+        `${MOCK_API_URL}/apps/${LOCALES_APP}/localizations`,
+        { data: { localization: "fr" } },
+      );
+
+      await option(page, "French").click();
+
+      await expect(dialog(page)).toBeVisible();
+      await expect(
+        dialog(page).getByText(
+          "French is already one of this app's localizations",
+        ),
+      ).toBeVisible();
+    });
+
+    test("hides Remove for the home localization", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=en-US`);
+      await expect(editor(page, "English (U.S.)")).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Remove localization" }),
+      ).toHaveCount(0);
+
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      await expect(
+        localizationItem(page, "Spanish (Mexico)").panel.getByRole("button", {
+          name: "Remove localization",
+        }),
+      ).toBeVisible();
+    });
+
+    test("removes a localization after asking", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, {
+        ...MX_SEED,
+        fields: { "es-MX": ["a", "b"] },
+        tracked: { us: ["a", "b"], mx: ["a", "b"] },
+      });
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      const remove = page.getByRole("button", { name: "Remove localization" });
+
+      await remove.click();
+      const confirm = page.getByRole("alertdialog", {
+        name: "Remove Spanish (Mexico)?",
+      });
+      await expect(confirm).toHaveAccessibleDescription(
+        "Its keyword field is deleted. Its phrases stop being tracked as keyword field phrases in United States and Mexico; phrases you track for another reason stay.",
+      );
+      await confirm.getByRole("button", { name: "Cancel" }).click();
+      await expect(
+        localizationItem(page, "Spanish (Mexico)").trigger,
+      ).toBeVisible();
+
+      let deletes = 0;
+      page.on("request", (request) => {
+        if (request.method() === "DELETE") deletes += 1;
+      });
+      await remove.click();
+      await confirm
+        .getByRole("button", { name: "Remove", exact: true })
+        .click();
+
+      await expect(page.getByText("Removed Spanish (Mexico)")).toBeVisible();
+      await expect(
+        localizationItem(page, "Spanish (Mexico)").trigger,
+      ).toHaveCount(0);
+      await expect(page).not.toHaveURL(/fieldLocale/);
+      expect(deletes).toBe(1);
+      const listed = (await (
+        await page.request.get(
+          `${MOCK_API_URL}/apps/${LOCALES_APP}/localizations`,
+        )
+      ).json()) as AppLocalizationsResult;
+      expect(
+        listed.localizations.map((item) => item.localization),
+      ).not.toContain("es-MX");
+    });
+
+    test("sends one delete for a double click", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      let deletes = 0;
+      page.on("request", (request) => {
+        if (request.method() === "DELETE") deletes += 1;
+      });
+
+      await page.getByRole("button", { name: "Remove localization" }).click();
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Remove", exact: true })
+        .dblclick();
+
+      await expect(page.getByText("Removed Spanish (Mexico)")).toBeVisible();
+      expect(deletes).toBe(1);
+    });
+
+    for (const viewport of [
+      { width: 1280, height: 560 },
+      { width: 375, height: 480 },
+    ]) {
+      test(`keeps the add dialog inside a short viewport at ${viewport.width}x${viewport.height}`, async ({
+        page,
+      }) => {
+        await page.setViewportSize(viewport);
+        await page.goto(LOCALES_METADATA);
+        await openAdd(page);
+
+        const modal = dialog(page);
+        await modal.evaluate((node) =>
+          Promise.all(
+            node.getAnimations().map((animation) => animation.finished),
+          ),
+        );
+        await expectFitsViewport(page, modal);
+        await expect(
+          modal.getByPlaceholder("Search languages"),
+        ).toBeInViewport();
+        const last = modal.getByRole("option").last();
+        await last.scrollIntoViewIfNeeded();
+        await expectContains(modal, last);
       });
     }
   });

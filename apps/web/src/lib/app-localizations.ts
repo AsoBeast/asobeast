@@ -1,8 +1,10 @@
 import {
+  APP_STORE_LOCALIZATION_IDS,
   APP_STORE_LOCALIZATIONS,
   APP_STORE_STOREFRONT_LOCALIZATIONS,
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
+  keywordFieldLocalizations,
   parseKeywordField,
   storefrontsReading,
   type AppLocalizationItem,
@@ -226,4 +228,55 @@ export function droppedSentence(
   return count === 1
     ? `1 phrase leaves the field and stops being tracked as a keyword field phrase in ${where}`
     : `${formatNumber(count)} phrases leave the field and stop being tracked as keyword field phrases in ${where}`;
+}
+
+export interface AddableLocalization {
+  localization: AppStoreLocalization;
+  readIn: string[];
+}
+
+export interface AddableGroups {
+  read: AddableLocalization[];
+  other: AddableLocalization[];
+}
+
+export function addableGroups(
+  items: readonly AppLocalizationItem[],
+  markets: readonly string[],
+): AddableGroups {
+  const shipped = new Set(items.map((item) => item.localization));
+  const candidates = APP_STORE_LOCALIZATION_IDS.filter(
+    (localization) => !shipped.has(localization),
+  ).map((localization) => ({
+    localization,
+    readIn: markets.filter((market) =>
+      keywordFieldLocalizations(market).includes(localization),
+    ),
+  }));
+  return {
+    read: candidates.filter((candidate) => candidate.readIn.length > 0),
+    other: candidates.filter((candidate) => candidate.readIn.length === 0),
+  };
+}
+
+export function withoutLocalization(
+  result: AppLocalizationsResult,
+  localization: AppStoreLocalization,
+): AppLocalizationsResult {
+  return {
+    ...result,
+    localizations: result.localizations.filter(
+      (item) => item.localization !== localization,
+    ),
+  };
+}
+
+export function removeDescription(item: AppLocalizationItem): string {
+  if (item.readBy.length === 0) {
+    return "Its keyword field is deleted. Phrases you track for another reason stay.";
+  }
+  const where = formatList(
+    item.readBy.map((reader) => formatCountry(reader.country)),
+  );
+  return `Its keyword field is deleted. Its phrases stop being tracked as keyword field phrases in ${where}; phrases you track for another reason stay.`;
 }

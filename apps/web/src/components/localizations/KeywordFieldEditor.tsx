@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
@@ -65,9 +65,11 @@ function KeywordFieldUsage({
 export function KeywordFieldEditor({
   id,
   item,
+  leading,
 }: {
   id: string;
   item: AppLocalizationItem;
+  leading?: ReactNode;
 }) {
   const countId = useId();
   const name = localizationName(item.localization);
@@ -115,7 +117,8 @@ export function KeywordFieldEditor({
           {error}
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>{leading}</div>
         <Button
           disabled={
             busy || over || (!field.changed && field.phrases.length === 0)

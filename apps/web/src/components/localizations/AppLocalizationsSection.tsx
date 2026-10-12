@@ -15,6 +15,7 @@ import {
   LOCALIZED_FIELDS_NOTE,
 } from "@/lib/localizations";
 import { appLocalizationsOptions } from "@/lib/queries";
+import { AddLocalizationDialog } from "./AddLocalizationDialog";
 import { LocalizationList } from "./LocalizationList";
 import { LocalizationMatrix } from "./LocalizationMatrix";
 
@@ -79,6 +80,11 @@ export function AppLocalizationsSection({
         <h2 id={HEADING_ID} className="text-lg font-medium">
           App Store localizations
         </h2>
+        {data ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <AddLocalizationDialog id={id} result={data} />
+          </div>
+        ) : null}
       </div>
       {data ? (
         <LocalizationsPanel id={id} result={data} canDraft={canDraft} />

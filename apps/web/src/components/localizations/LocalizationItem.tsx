@@ -17,6 +17,7 @@ import { localizationName } from "@/lib/localizations";
 import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { OriginBadge } from "./OriginBadge";
 import { ReadRoleBadge } from "./ReadRoleBadge";
+import { RemoveLocalizationDialog } from "./RemoveLocalizationDialog";
 
 function ReaderChips({ readers }: { readers: readonly LocalizationReader[] }) {
   if (readers.length === 0) {
@@ -77,7 +78,15 @@ export function LocalizationItem({
               </Button>
             </div>
           ) : null}
-          <KeywordFieldEditor id={id} item={item} />
+          <KeywordFieldEditor
+            id={id}
+            item={item}
+            leading={
+              item.origin === "home" ? null : (
+                <RemoveLocalizationDialog id={id} item={item} />
+              )
+            }
+          />
         </div>
       </AccordionContent>
     </AccordionItem>

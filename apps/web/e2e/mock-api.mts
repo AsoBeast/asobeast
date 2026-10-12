@@ -88,6 +88,7 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  AddAppLocalizationRequest,
   AppLocalizationItem,
   AppLocalizationOrigin,
   AppLocalizationsResult,
@@ -2648,6 +2649,87 @@ const routes: Route[] = [
         return json(res, 500, errorEnvelope(500, req.url ?? "/"));
       }
       json(res, 200, localizationsOf(id, app.dataset.detail.country));
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/localizations$/,
+    handler: ([id], req, res) => {
+      withBody<AddAppLocalizationRequest>(req, res, (body) => {
+        const app = fieldAppFor(id, undefined, req, res);
+        if (!app) return;
+        const path = req.url ?? "/";
+        const home = app.dataset.detail.country;
+        const { localization } = body;
+        if (!isAppStoreLocalization(localization)) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "localization must be one of the App Store localizations",
+            ),
+          );
+        }
+        if (shippedTags(id, home).includes(localization)) {
+          return json(
+            res,
+            409,
+            errorEnvelope(
+              409,
+              path,
+              `${APP_STORE_LOCALIZATIONS[localization]} is already one of this app's localizations`,
+            ),
+          );
+        }
+        const shipped =
+          shippedLocalizations.get(id) ??
+          new Map<AppStoreLocalization, ShippedOrigin>();
+        shipped.set(localization, "manual");
+        shippedLocalizations.set(id, shipped);
+        json(
+          res,
+          201,
+          localizationItemOf(id, home, localization, appMarketsOf(id, home)),
+        );
+      });
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)$/,
+    handler: ([id, localization], req, res) => {
+      const app = fieldAppFor(id, localization, req, res);
+      if (!app?.tag) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const name = APP_STORE_LOCALIZATIONS[app.tag];
+      if (app.tag === keywordFieldLocalizations(home)[0]) {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            `${name} is the default localization of the ${home.toUpperCase()} storefront and cannot be removed`,
+          ),
+        );
+      }
+      if (!shippedTags(id, home).includes(app.tag)) {
+        return json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            path,
+            `${name} is not one of this app's localizations`,
+          ),
+        );
+      }
+      storeKeywordField(id, app.tag, [], []);
+      shippedLocalizations.get(id)?.delete(app.tag);
+      res.writeHead(204).end();
     },
   },
   {
