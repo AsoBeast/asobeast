@@ -67,6 +67,7 @@ A class is also not a permission. A read only token may call any endpoint that d
 | Write requests per minute | 60 | 200 |
 | Requests per day | 40,000 | 400,000 |
 | Requests in parallel | 16 | 48 |
+| MCP requests per minute | 60 | 300 |
 | Refresh per day | 50 | 500 |
 | Run daily per day | 5 | 20 |
 | Score per day | 100 | 1,000 |
@@ -76,6 +77,12 @@ A class is also not a permission. A read only token may call any endpoint that d
 | Competitors added per day | 60 | 300 |
 
 A trial runs at Indie limits. A workspace whose plan has lapsed keeps the same read allowance, because its data stays readable and exportable while its capacity does not.
+
+## The hosted MCP endpoint has its own budget
+
+`POST /mcp` draws from a per minute budget of its own, the MCP requests per minute in the table above. Every JSON-RPC message in the body costs one unit. An ordinary request carries one message and costs one, and a batch of ten messages costs ten, exactly what the same ten requests would cost sent one at a time.
+
+A request the remaining budget cannot cover is refused whole with the `429` described below, and none of its messages runs. A refused request still counts against the window, so waiting for `Retry-After` is the fix. A request that carries more messages than the whole per minute budget can never be served: it is refused without being counted, and the fix is to split it into smaller requests. `POST /mcp` reports this budget only on a `429`, so its successful responses carry no `RateLimit` headers for it. The tool calls inside a request also spend the read or write budget of the route they use, so this budget comes on top of the limits above rather than replacing them.
 
 ## Read the headers
 
