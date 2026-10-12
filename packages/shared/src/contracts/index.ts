@@ -2,6 +2,7 @@ export * from './common';
 export * from './apps';
 export * from './jobs';
 export * from './keywords';
+export * from './localizations';
 export * from './rankings';
 export * from './category-ranks';
 export * from './analytics';
