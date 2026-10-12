@@ -673,6 +673,51 @@ describe("proxyToApi request body limit", () => {
     expect(sentBody().byteLength).toBe(REQUEST_BODY_LIMIT_BYTES);
   });
 
+  it("forwards a body that declares exactly the limit", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(
+      request("/api/backend/apps", {
+        method: "POST",
+        headers: { "content-length": String(REQUEST_BODY_LIMIT_BYTES) },
+        body: "x".repeat(REQUEST_BODY_LIMIT_BYTES),
+      }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(200);
+    expect(sentBody().byteLength).toBe(REQUEST_BODY_LIMIT_BYTES);
+  });
+
+  it("stops reading a body that declares less than it sends", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+    const { stream, cancelled } = countedStream();
+
+    const response = await proxyToApi(
+      streamedRequest(stream, { "content-length": "10" }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(413);
+    expect(cancelled()).toBe(true);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("reads a body whose declared length is not a number by its bytes", async () => {
+    stubFetch(async () => Response.json({}));
+    const { proxyToApi } = await loadProxy();
+
+    const response = await proxyToApi(
+      streamedRequest(countedStream().stream, { "content-length": "many" }),
+      ["apps"],
+    );
+
+    expect(response.status).toBe(413);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
   it("forwards a chunked body of exactly the limit", async () => {
     stubFetch(async () => Response.json({}));
     const { proxyToApi } = await loadProxy();
