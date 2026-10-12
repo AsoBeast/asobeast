@@ -11,6 +11,7 @@ import {
   MetadataAssistantResult,
   MetadataAssistantStatus,
   MetadataField,
+  storefrontsReading,
   tokenize,
 } from '@asobeast/shared';
 import { AiGateway } from '../ai/ai-gateway.service';
@@ -23,7 +24,6 @@ import {
   DRAFT_MAX_OUTPUT_TOKENS,
   draftSchema,
   LocalizationTarget,
-  storefrontsReading,
   SYSTEM_PROMPT,
   validateDrafts,
 } from './metadata-drafts';

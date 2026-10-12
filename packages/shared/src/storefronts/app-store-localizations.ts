@@ -283,6 +283,27 @@ export function storefrontLocalizations(
     : null;
 }
 
+export function readLocalizations(
+  country: string,
+): readonly AppStoreLocalization[] {
+  const localizations = storefrontLocalizations(country);
+  return localizations === null
+    ? []
+    : [localizations.primary, ...localizations.additional];
+}
+
+export const readsLocalization = (
+  country: string,
+  localization: string,
+): boolean =>
+  readLocalizations(country).some((candidate) => candidate === localization);
+
+export const storefrontsReading = (
+  localization: string,
+  countries: readonly string[],
+): string[] =>
+  countries.filter((country) => readsLocalization(country, localization));
+
 const ENGLISH_DEFAULTS: ReadonlySet<AppStoreLocalization> = new Set([
   'en-GB',
   'en-CA',

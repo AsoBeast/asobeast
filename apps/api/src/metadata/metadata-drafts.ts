@@ -17,7 +17,6 @@ import {
   TrackedKeywordItem,
   APP_STORE_LOCALIZATIONS,
   AppStoreLocalization,
-  storefrontLocalizations,
 } from '@asobeast/shared';
 
 const MAX_KEYWORDS = 25;
@@ -90,18 +89,6 @@ export interface LocalizationTarget {
   localization: AppStoreLocalization;
   storefronts: string[];
 }
-
-export const storefrontsReading = (
-  localization: AppStoreLocalization,
-  countries: readonly string[],
-): string[] =>
-  countries.filter((country) => {
-    const row = storefrontLocalizations(country);
-    return (
-      row !== null &&
-      (row.primary === localization || row.additional.includes(localization))
-    );
-  });
 
 const targetLines = (target: LocalizationTarget): string[] => {
   const label = APP_STORE_LOCALIZATIONS[target.localization];

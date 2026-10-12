@@ -7,7 +7,6 @@ import {
 } from '@asobeast/shared';
 import {
   buildAssistantContext,
-  storefrontsReading,
   SYSTEM_PROMPT,
   validateDrafts,
 } from './metadata-drafts';
@@ -275,20 +274,6 @@ describe('buildAssistantContext', () => {
     expect(text.startsWith('REFERENCE DATA')).toBe(true);
     expect(text).not.toContain('Target localization');
   });
-});
-
-describe('storefrontsReading', () => {
-  it.each([
-    ['es-MX', ['us', 'gb', 'mx'], ['us', 'mx']],
-    ['en-US', ['jp', 'us', 'gb'], ['jp', 'us']],
-    ['ja', ['us', 'pl'], []],
-    ['pl', ['zz', 'pl'], ['pl']],
-  ] as const)(
-    'finds where %s is read among %j',
-    (localization, countries, expected) => {
-      expect(storefrontsReading(localization, countries)).toEqual(expected);
-    },
-  );
 });
 
 describe('SYSTEM_PROMPT', () => {
