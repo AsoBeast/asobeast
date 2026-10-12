@@ -3,7 +3,11 @@ import { INestApplication } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { CapacityReport, ProxyPoolHealth } from '@asobeast/shared';
+import {
+  API_TOKEN_PREFIX,
+  CapacityReport,
+  ProxyPoolHealth,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
@@ -17,13 +21,24 @@ import {
 } from './helpers/api-tokens';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES as QUEUE_NAMES } from '../src/jobs/jobs.types';
+import {
+  awaitBurnHeadroom,
+  SHORT_BURN_HEADROOM_SECONDS,
+} from './helpers/burn-headroom';
 import { ownerAgent, useCookies } from './helpers/session';
-import { obliterateQueues } from './obliterate-queues';
+import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
+import {
+  clearRateLimitCounters,
+  obliterateQueues,
+  spendCredentialBudget,
+} from './obliterate-queues';
 
 const TENANT_WORKSPACE = 'ws_tenant_owner';
+const REFUSED_TOKEN = `${API_TOKEN_PREFIX}${'7'.repeat(48)}`;
 const QUEUES = '/admin/queues';
 const DOCS = '/docs';
 const METRICS = '/metrics';
+const SUPPORT = '/admin/support';
 const SURFACES = [QUEUES, DOCS, '/docs-json', '/docs-yaml', METRICS];
 
 interface OpenApiSurface {
@@ -214,6 +229,50 @@ describe('Admin surfaces (e2e)', () => {
 
   it('hides the queue dashboard assets without credentials', async () => {
     await request(app.getHttpServer()).get(`${QUEUES}/api/queues`).expect(404);
+  });
+
+  describe('rejected credentials', () => {
+    const present = (path: string, authorization: string) =>
+      request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', authorization);
+
+    beforeEach(async () => {
+      await clearRateLimitCounters(app);
+      await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
+    });
+    afterAll(() => clearRateLimitCounters(app));
+
+    it.each([...SURFACES, `${SUPPORT}/workspaces`])(
+      'counts a refused token presented to %s against its address',
+      async (surface) => {
+        await present(surface, `Bearer ${REFUSED_TOKEN}`).expect(404);
+
+        expect(
+          await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+        ).toBe(1);
+        await present('/apps', `Bearer ${REFUSED_TOKEN}`).expect(429);
+      },
+    );
+
+    it('answers a spent budget with the same not found', async () => {
+      await present(DOCS, `Bearer ${REFUSED_TOKEN}`).expect(404);
+      expect(
+        await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+      ).toBe(1);
+
+      await present(DOCS, `Bearer ${REFUSED_TOKEN}`).expect(404);
+      await owner.get(DOCS).expect(200);
+    });
+
+    it('never counts an accepted credential that is not the operator', async () => {
+      await present(DOCS, `Bearer ${await tokenFor('member')}`).expect(404);
+      await present(DOCS, `Bearer ${await tenantOwnerToken()}`).expect(404);
+
+      expect(
+        await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+      ).toBe(0);
+    });
   });
 
   describe(METRICS, () => {
