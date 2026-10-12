@@ -5,7 +5,6 @@ import { useQueryState } from "nuqs";
 import {
   type AppStoreLocalization,
   isAppStoreLocalization,
-  readLocalizations,
 } from "@asobeast/shared";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,16 +14,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { fieldLocalization } from "@/lib/keyword-field";
+import { fieldLocalization, fieldLocalizations } from "@/lib/keyword-field";
 import { localizationName } from "@/lib/localizations";
 import { keywordFieldsOptions } from "@/lib/queries";
 import { fieldLocaleParser } from "@/lib/search-params";
 
 export function KeywordFieldLocalizationSelect({
   id,
+  home,
   market,
 }: {
   id: string;
+  home: string;
   market: string;
 }) {
   const [requested, setRequested] = useQueryState(
@@ -32,9 +33,9 @@ export function KeywordFieldLocalizationSelect({
     fieldLocaleParser,
   );
   const { data: saved } = useSuspenseQuery(keywordFieldsOptions(id));
-  const read = readLocalizations(market);
+  const read = fieldLocalizations(home, market);
   if (read.length < 2) return null;
-  const chosen = fieldLocalization(market, requested);
+  const chosen = fieldLocalization(home, market, requested);
   const savedTags = new Set(saved.map((field) => field.localization));
   const label = (tag: AppStoreLocalization) =>
     [

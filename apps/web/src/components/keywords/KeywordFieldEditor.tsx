@@ -154,10 +154,12 @@ function untrackedPhrases(result: KeywordFieldResult): string[] {
 
 function KeywordFieldForm({
   id,
+  home,
   market,
   query,
 }: {
   id: string;
+  home: string;
   market: string;
   query: KeywordFieldQuery;
 }) {
@@ -202,7 +204,7 @@ function KeywordFieldForm({
 
   return (
     <CardContent className="flex flex-col gap-3">
-      <KeywordFieldLocalizationSelect id={id} market={market} />
+      <KeywordFieldLocalizationSelect id={id} home={home} market={market} />
       <Textarea
         value={text}
         onChange={(event) => {
@@ -253,7 +255,7 @@ export function KeywordFieldEditor({
   activeMarket: string;
 }) {
   const [requested] = useQueryState("fieldLocale", fieldLocaleParser);
-  const localization = fieldLocalization(activeMarket, requested);
+  const localization = fieldLocalization(homeCountry, activeMarket, requested);
   const query = keywordFieldQuery(homeCountry, activeMarket, requested);
 
   return (
@@ -294,6 +296,7 @@ export function KeywordFieldEditor({
           <KeywordFieldForm
             key={`${activeMarket}:${localization}`}
             id={id}
+            home={homeCountry}
             market={activeMarket}
             query={query}
           />

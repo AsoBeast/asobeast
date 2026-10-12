@@ -380,6 +380,44 @@ describe('MetadataController (e2e)', () => {
     );
   });
 
+  it('shows the keyword field of an app whose home country is no storefront', async () => {
+    const created = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '5550002222',
+        country: 'uk',
+        name: 'Imported Before Storefronts',
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: created.id,
+        title: 'Habit Tracker',
+        description: 'Build better habits.',
+        raw: {},
+        capturedAt: D0,
+      },
+    });
+    await prisma.keywordField.create({
+      data: {
+        appId: created.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-GB',
+        phrases: ['water reminder'],
+      },
+    });
+
+    const response = await api
+      .get(`/apps/${created.id}/metadata/audit`)
+      .expect(200);
+    const card = (response.body as MetadataAuditResult).fields.find(
+      (field) => field.field === 'keywordField',
+    );
+
+    expect(card?.value).toBe('water reminder');
+  });
+
   it('includes the keyword field when it has been pasted', async () => {
     const id = await seed(true);
 

@@ -26,8 +26,19 @@ describe("keywordFieldQuery", () => {
   });
 
   it("falls back to the default when the market does not read the request", () => {
-    expect(fieldLocalization("de", "es-MX")).toBe("de");
+    expect(fieldLocalization("us", "de", "es-MX")).toBe("de");
     expect(keywordFieldQuery("us", "de", "es-MX")).toEqual({ country: "de" });
+  });
+});
+
+describe("fieldLocalization", () => {
+  it("keeps an english (u.k.) field for a home country that is no storefront", () => {
+    expect(fieldLocalization("uk", "uk", null)).toBe("en-GB");
+    expect(keywordFieldQuery("uk", "uk", null)).toEqual({});
+  });
+
+  it("offers no field in a market that is no storefront", () => {
+    expect(fieldLocalization("us", "zz", null)).toBeUndefined();
   });
 });
 

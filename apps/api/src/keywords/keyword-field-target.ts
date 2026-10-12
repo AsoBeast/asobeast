@@ -5,7 +5,7 @@ import {
   type AppStoreLocalization,
   assertStorefront,
   KeywordFieldQuery,
-  readLocalizations,
+  keywordFieldLocalizations,
 } from '@asobeast/shared';
 
 export interface KeywordFieldTarget {
@@ -25,8 +25,10 @@ export function keywordFieldTarget(
   query: KeywordFieldQuery,
 ): KeywordFieldTarget {
   const country = query.country ?? app.country;
-  assertStorefront(app.store, country);
-  const read = readLocalizations(country);
+  if (country !== app.country) {
+    assertStorefront(app.store, country);
+  }
+  const read = keywordFieldLocalizations(country);
   const localization = query.localization ?? read[0];
   if (localization === undefined || !read.includes(localization)) {
     throw new BadRequestException(

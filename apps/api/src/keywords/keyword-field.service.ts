@@ -9,9 +9,7 @@ import {
   KeywordFieldSummary,
   KEYWORD_FIELD_CHAR_LIMIT,
   parseKeywordField,
-  readLocalizations,
-  readsLocalization,
-  storefrontsReading,
+  keywordFieldLocalizations,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
@@ -31,6 +29,9 @@ import {
 } from './keywords.support';
 
 const KEYWORD_FIELD_LOCK = 3_958_261;
+
+const readsField = (country: string, localization: string): boolean =>
+  keywordFieldLocalizations(country).some((tag) => tag === localization);
 
 @Injectable()
 export class KeywordFieldService {
@@ -121,7 +122,7 @@ export class KeywordFieldService {
     const held = indexKeywordFields(fields);
     const untracked = rows.filter(
       ({ keyword }) =>
-        readsLocalization(keyword.country, localization) &&
+        readsField(keyword.country, localization) &&
         !held(keyword.country, keyword.text),
     );
     if (untracked.length === 0) return;
@@ -199,7 +200,7 @@ export class KeywordFieldService {
     const markets = [
       ...new Set([app.country, ...tracked.map((row) => row.country)]),
     ];
-    const home = readLocalizations(app.country)[0];
+    const home = keywordFieldLocalizations(app.country)[0];
     const homeFirst = (localization: AppStoreLocalization) =>
       Number(localization !== home);
     return fields
@@ -218,7 +219,9 @@ export class KeywordFieldService {
         phrases: field.phrases,
         charactersUsed: keywordFieldChars(field.phrases),
         charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-        markets: storefrontsReading(field.localization, markets),
+        markets: markets.filter((market) =>
+          readsField(market, field.localization),
+        ),
         updatedAt: field.updatedAt.toISOString(),
       }));
   }

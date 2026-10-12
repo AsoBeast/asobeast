@@ -1,5 +1,5 @@
 import { Store } from '@prisma/client';
-import { readLocalizations } from '@asobeast/shared';
+import { keywordFieldLocalizations } from '@asobeast/shared';
 import { ListingTexts, LocalizedTexts } from '../apps/listing-texts';
 import { StoredKeywordField } from '../keywords/keyword-field-index';
 import { LocalizedSurfaces, Surface } from './localized-coverage';
@@ -59,7 +59,7 @@ export function judgingSurfaces(
   if (store === Store.GOOGLE_PLAY) {
     return { surfaces: listingSurfaces(store, listing, null), localized: [] };
   }
-  const read = readLocalizations(country);
+  const read = keywordFieldLocalizations(country);
   const [primary, ...others] = read;
   const judgesField = home || read.some((tag) => fields.has(tag));
   const texts = new Map(

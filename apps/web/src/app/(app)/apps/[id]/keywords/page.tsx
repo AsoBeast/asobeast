@@ -33,7 +33,7 @@ export default async function KeywordsPage({
     queryClient.prefetchQuery(keywordCountriesOptions(id)),
     queryClient.prefetchQuery(keywordsOptions(id, market)),
     ...(app.store === "APP_STORE" &&
-    fieldLocalization(market, fieldLocale) !== undefined
+    fieldLocalization(app.country, market, fieldLocale) !== undefined
       ? [
           queryClient.prefetchQuery(
             keywordFieldOptions(

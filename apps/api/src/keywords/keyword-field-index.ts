@@ -1,5 +1,5 @@
 import { KeywordSource } from '@prisma/client';
-import { readLocalizations } from '@asobeast/shared';
+import { keywordFieldLocalizations } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface StoredKeywordField {
@@ -16,7 +16,7 @@ export function indexKeywordFields(
     fields.map((field) => [field.localization, new Set(field.phrases)]),
   );
   return (country, text) =>
-    readLocalizations(country).some(
+    keywordFieldLocalizations(country).some(
       (localization) => phrases.get(localization)?.has(text) ?? false,
     );
 }

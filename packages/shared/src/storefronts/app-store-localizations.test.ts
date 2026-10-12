@@ -7,6 +7,7 @@ import {
   APP_STORE_STOREFRONTS,
   isAppStoreLocalization,
   nativeLocalizations,
+  keywordFieldLocalizations,
   readLocalizations,
   readsLocalization,
   storefrontLocalizations,
@@ -185,6 +186,16 @@ describe('readLocalizations', () => {
     for (const country of APP_STORE_STOREFRONTS) {
       expect(readLocalizations(country).length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe('keywordFieldLocalizations', () => {
+  it('reads the localizations of a storefront', () => {
+    expect(keywordFieldLocalizations('de')).toEqual(readLocalizations('de'));
+  });
+
+  it('keeps an english (u.k.) field for a code that is no storefront', () => {
+    expect(keywordFieldLocalizations('uk')).toEqual(['en-GB']);
   });
 });
 

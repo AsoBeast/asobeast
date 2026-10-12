@@ -686,6 +686,41 @@ describe('KeywordsController (e2e)', () => {
     });
   });
 
+  it('keeps the keyword field of an app whose home country is no storefront', async () => {
+    const legacy = await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '5550001111',
+        country: 'uk',
+        name: 'Imported Before Storefronts',
+      },
+    });
+    await prisma.keywordField.create({
+      data: {
+        appId: legacy.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-GB',
+        phrases: ['habit'],
+      },
+    });
+
+    const read = await api.get(`/apps/${legacy.id}/keyword-field`).expect(200);
+    expect(read.body).toMatchObject({
+      country: 'uk',
+      localization: 'en-GB',
+      phrases: ['habit'],
+    });
+
+    const saved = await api
+      .put(`/apps/${legacy.id}/keyword-field`)
+      .send({ text: 'habit,goals' })
+      .expect(200);
+    expect(
+      (saved.body as KeywordFieldResult).tracked.map((item) => item.text),
+    ).toEqual(['habit', 'goals']);
+  });
+
   it('refuses to read the keyword field of a google play app', async () => {
     const play = await prisma.app.create({
       data: {

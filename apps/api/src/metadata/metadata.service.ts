@@ -15,7 +15,7 @@ import {
   MetadataAuditResult,
   MetadataField,
   MetadataFieldAudit,
-  readLocalizations,
+  keywordFieldLocalizations,
   ScreenshotItem,
   STORE_FIELD_LIMITS,
   tokenize,
@@ -83,7 +83,8 @@ export class MetadataService {
     const read = await this.readListings(app, market, localization, active);
     const { listings, view } = read;
     const keywordFields = fieldPhrases(stored);
-    const viewLocalization = localization ?? readLocalizations(market)[0];
+    const viewLocalization =
+      localization ?? keywordFieldLocalizations(market)[0];
 
     const keywordFieldValue =
       app.store === Store.APP_STORE

@@ -292,6 +292,15 @@ export function readLocalizations(
     : [localizations.primary, ...localizations.additional];
 }
 
+const UNLISTED_STOREFRONT_LOCALIZATION: AppStoreLocalization = 'en-GB';
+
+export function keywordFieldLocalizations(
+  country: string,
+): readonly AppStoreLocalization[] {
+  const read = readLocalizations(country);
+  return read.length > 0 ? read : [UNLISTED_STOREFRONT_LOCALIZATION];
+}
+
 export const readsLocalization = (
   country: string,
   localization: string,

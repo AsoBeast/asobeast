@@ -1,14 +1,25 @@
 import {
   type AppStoreLocalization,
   type KeywordFieldQuery,
+  keywordFieldLocalizations,
   readLocalizations,
 } from "@asobeast/shared";
 
+export function fieldLocalizations(
+  home: string,
+  market: string,
+): readonly AppStoreLocalization[] {
+  return market === home
+    ? keywordFieldLocalizations(market)
+    : readLocalizations(market);
+}
+
 export function fieldLocalization(
+  home: string,
   market: string,
   requested: AppStoreLocalization | null,
 ): AppStoreLocalization | undefined {
-  const read = readLocalizations(market);
+  const read = fieldLocalizations(home, market);
   return requested !== null && read.includes(requested) ? requested : read[0];
 }
 
@@ -17,11 +28,11 @@ export function keywordFieldQuery(
   market: string,
   requested: AppStoreLocalization | null,
 ): KeywordFieldQuery {
-  const localization = fieldLocalization(market, requested);
+  const localization = fieldLocalization(home, market, requested);
   return {
     ...(market === home ? {} : { country: market }),
     ...(localization === undefined ||
-    localization === readLocalizations(market)[0]
+    localization === fieldLocalizations(home, market)[0]
       ? {}
       : { localization }),
   };
