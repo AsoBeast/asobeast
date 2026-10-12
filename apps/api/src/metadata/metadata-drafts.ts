@@ -88,6 +88,7 @@ const keywordScore = (item: TrackedKeywordItem): number =>
 export interface LocalizationTarget {
   localization: AppStoreLocalization;
   storefronts: string[];
+  keywordField: string;
 }
 
 const targetLines = (target: LocalizationTarget): string[] => {
@@ -99,6 +100,7 @@ const targetLines = (target: LocalizationTarget): string[] => {
   return [
     `Target localization: ${label} (${target.localization}).`,
     `Storefronts among this app's markets that read it: ${storefronts || 'none'}.`,
+    `Keyword field already saved for ${label}: ${target.keywordField || '(none saved)'}.`,
     `Write every drafted field in ${label} for people${readers} whose device language matches, unless the owner instructions ask for another language.`,
     'Prefer words the current title, subtitle and keyword field do not already use: in a storefront that reads both listings, a repeated word adds no reach.',
     `The tracked keywords and competitor titles below may be in another language: draft from their meaning in ${label} instead of copying them, and keep a word unchanged only when it is a brand or a name.`,

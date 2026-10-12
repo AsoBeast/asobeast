@@ -227,19 +227,24 @@ describe('buildAssistantContext', () => {
       [makeKw('daily goals', 10, 5)],
       [],
       undefined,
-      { localization: 'es-MX', storefronts: ['us', 'mx'] },
+      {
+        localization: 'es-MX',
+        storefronts: ['us', 'mx'],
+        keywordField: 'habito,metas',
+      },
     );
 
-    expect(text.split('\n').slice(0, 7)).toEqual([
+    expect(text.split('\n').slice(0, 8)).toEqual([
       'Target localization: Spanish (Mexico) (es-MX).',
       "Storefronts among this app's markets that read it: US, MX.",
+      'Keyword field already saved for Spanish (Mexico): habito,metas.',
       'Write every drafted field in Spanish (Mexico) for people in US, MX whose device language matches, unless the owner instructions ask for another language.',
       'Prefer words the current title, subtitle and keyword field do not already use: in a storefront that reads both listings, a repeated word adds no reach.',
       'The tracked keywords and competitor titles below may be in another language: draft from their meaning in Spanish (Mexico) instead of copying them, and keep a word unchanged only when it is a brand or a name.',
       'Keyword field: separate every word with a comma and never join the words of a phrase into one token (street,view, not streetview), because search matches whole words.',
       '',
     ]);
-    expect(text.split('\n')[7]).toMatch(/^REFERENCE DATA/);
+    expect(text.split('\n')[8]).toMatch(/^REFERENCE DATA/);
   });
 
   it('says so when none of the markets reads the localization', () => {
@@ -250,11 +255,14 @@ describe('buildAssistantContext', () => {
       [],
       [],
       undefined,
-      { localization: 'ja', storefronts: [] },
+      { localization: 'ja', storefronts: [], keywordField: '' },
     );
 
     expect(text).toContain(
       "Storefronts among this app's markets that read it: none.",
+    );
+    expect(text).toContain(
+      'Keyword field already saved for Japanese: (none saved).',
     );
     expect(text).toContain(
       'Write every drafted field in Japanese for people whose device language matches, unless the owner instructions ask for another language.',

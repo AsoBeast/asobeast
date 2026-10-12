@@ -25,6 +25,11 @@ const appStoreService = (
         }),
         findMany: jest.fn().mockResolvedValue([]),
       },
+      keywordField: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ localization: 'es-MX', phrases: ['habito'] }]),
+      },
     } as unknown as PrismaService,
     {
       keywordCountries: jest
@@ -98,6 +103,21 @@ describe('MetadataAssistantService', () => {
       expect.objectContaining({ maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS }),
     );
     expect(DRAFT_MAX_OUTPUT_TOKENS).toBeGreaterThanOrEqual(4096);
+  });
+
+  it('tells a localized draft the keyword field saved for its localization', async () => {
+    const spend = jest.fn().mockRejectedValue(new Error('stop'));
+
+    await expect(
+      appStoreService(spend).generate(
+        'app-1',
+        { localization: 'es-MX' },
+        'usr_1',
+      ),
+    ).rejects.toThrow('stop');
+    expect(JSON.stringify(spend.mock.calls[0])).toContain(
+      'Keyword field already saved for Spanish (Mexico): habito.',
+    );
   });
 
   it('drafts through the gateway on behalf of the requesting user', async () => {
