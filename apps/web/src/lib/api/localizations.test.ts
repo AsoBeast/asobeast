@@ -4,8 +4,10 @@ import type {
 } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  addAppLocalization,
   getAppLocalizations,
   previewLocalizedKeywordField,
+  removeAppLocalization,
   saveLocalizedKeywordField,
 } from "./localizations";
 
@@ -30,6 +32,15 @@ function stubFetch(answer: unknown): Sent[] {
         headers: { "content-type": "application/json" },
       }),
     );
+  });
+  return sent;
+}
+
+function stubNoContent(): Sent[] {
+  const sent: Sent[] = [];
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    sent.push({ url: String(input), method: init?.method, body: undefined });
+    return Promise.resolve(new Response(null, { status: 204 }));
   });
   return sent;
 }
@@ -88,5 +99,28 @@ describe("localization calls", () => {
       method: "POST",
       body: { text: "temporizador" },
     });
+  });
+
+  it("W-ADD-07 posts the localization to add", async () => {
+    const sent = stubFetch({ localization: "fr" });
+
+    await addAppLocalization("app-1", { localization: "fr" });
+
+    expect(sent[0].url).toMatch(/\/apps\/app-1\/localizations$/);
+    expect(sent[0]).toMatchObject({
+      method: "POST",
+      body: { localization: "fr" },
+    });
+  });
+
+  it("W-ADD-08 deletes one localization and reads no body back", async () => {
+    const sent = stubNoContent();
+
+    await expect(
+      removeAppLocalization("app-1", "es-MX"),
+    ).resolves.toBeUndefined();
+
+    expect(sent[0].url).toMatch(/\/apps\/app-1\/localizations\/es-MX$/);
+    expect(sent[0].method).toBe("DELETE");
   });
 });

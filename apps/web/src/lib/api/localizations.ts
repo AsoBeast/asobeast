@@ -1,4 +1,6 @@
 import type {
+  AddAppLocalizationRequest,
+  AppLocalizationItem,
   AppLocalizationsResult,
   AppStoreLocalization,
   KeywordFieldPreviewRequest,
@@ -40,4 +42,23 @@ export function previewLocalizedKeywordField(
       body: JSON.stringify(body satisfies KeywordFieldPreviewRequest),
     },
   );
+}
+
+export function addAppLocalization(
+  appId: string,
+  body: AddAppLocalizationRequest,
+): Promise<AppLocalizationItem> {
+  return apiFetch<AppLocalizationItem>(`/apps/${appId}/localizations`, {
+    method: "POST",
+    body: JSON.stringify(body satisfies AddAppLocalizationRequest),
+  });
+}
+
+export function removeAppLocalization(
+  appId: string,
+  localization: AppStoreLocalization,
+): Promise<void> {
+  return apiFetch<void>(`/apps/${appId}/localizations/${localization}`, {
+    method: "DELETE",
+  });
 }
