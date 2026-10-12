@@ -37,6 +37,13 @@ describe('mailboxOf', () => {
     expect(mailboxOf('First.Last@googlemail.com')).toBe('firstlast@gmail.com');
   });
 
+  it.each(['constructor', 'tostring', '__proto__'])(
+    'keeps a domain named %s, which no alias names, as it is',
+    (domain) => {
+      expect(mailboxOf(`person@${domain}`)).toBe(`person@${domain}`);
+    },
+  );
+
   it.each(['first.last@outlook.com', 'first.last@example.com'])(
     'keeps the dots of a domain that counts them: %s',
     (address) => {
