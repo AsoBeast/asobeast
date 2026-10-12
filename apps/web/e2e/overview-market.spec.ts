@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { settled } from "./page-errors.mts";
 import { expect, test } from "./session.mts";
 
 const SWITCHER = "Market";
@@ -64,14 +65,30 @@ test("returns to every market", async ({ page }) => {
   await expect(card(page, "Visibility · All markets")).toContainText("62");
 });
 
-test("renders the selected market in the server response", async ({ page }) => {
-  await page.goto("/apps/app-1?market=pl");
+for (const [market, label, scope, visibility] of [
+  ["pl", POLAND, "PL", "19"],
+  ["us", HOME, "US", "71"],
+]) {
+  test(`renders ${market} in the server response and hydrates it`, async ({
+    page,
+  }) => {
+    const refetched: string[] = [];
+    page.on("request", (request) => {
+      if (/\/apps\/app-1\/summary/.test(request.url())) {
+        refetched.push(request.url());
+      }
+    });
 
-  await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
-    POLAND,
-  );
-  await expect(card(page, "Visibility · PL")).toContainText("19");
-});
+    const errors = await settled(page, `/apps/app-1?market=${market}`);
+
+    await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
+      label,
+    );
+    await expect(card(page, `Visibility · ${scope}`)).toContainText(visibility);
+    expect(refetched).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}
 
 test("keeps the numbers on screen while the next market loads", async ({
   page,
