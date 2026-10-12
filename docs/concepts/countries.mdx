@@ -85,7 +85,13 @@ A market whose keywords you all removed keeps its last listing readable in the s
 
 If an app is not published in a market, asobeast tries again the next day and stores nothing, so a market with keywords and no listing simply shows no switcher entry.
 
-On the app overview the switcher also scopes the keyword numbers. Visibility, the tracked keyword count, the rank distribution, the movers and both history charts count only the keywords tracked in the selected market, and the 7 and 30 day changes are measured from that market's own latest check. **All markets** at the top of the switcher counts every market together, which is also what the portfolio dashboard shows. The coverage card always counts every market, because it judges keywords against the home listing. The API takes the same choice as `?country=` on `GET /apps/{id}/summary`, `GET /apps/{id}/visibility-history` and `GET /apps/{id}/rank-distribution-history`, and counts every market when it is omitted.
+## What does the overview count?
+
+The market switcher on the app overview, labelled **Market**, also scopes the keyword numbers. Until you choose a market it shows **All markets**: visibility, the tracked keyword count, the rank distribution, the movers and both history charts count every market the app tracks keywords in, as the portfolio dashboard does. An app with a single listing has no switcher and always counts every market.
+
+Choosing a market counts only the keywords tracked in it, and the 7 and 30 day changes are measured from that market's own latest check. The metadata coverage card counts every market whichever you choose, because it judges keywords against the home listing.
+
+The API takes the same choice as an optional `country` on `GET /apps/{id}/summary`, `GET /apps/{id}/visibility-history` and `GET /apps/{id}/rank-distribution-history`, and counts every market when it is omitted. The summary's `coverage` block counts every market either way.
 
 ## How do you add a market?
 
