@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { contrastViolations, THEMES } from "./contrast-check.mts";
 import { APP_READS_ID, type LocalizationSeed } from "./fixtures.mts";
 import {
   fieldRequests,
@@ -248,4 +249,83 @@ test("reads another market of an app that tracks it", async ({ page }) => {
   const gb = card(page, "GB");
   await expect(gb.getByRole("listitem")).toHaveCount(1);
   await expect(gb.getByRole("listitem")).toContainText("English (U.K.)");
+});
+
+test.describe("wasted keyword field words", () => {
+  const note = (page: Page, title: string) =>
+    page.getByRole("note").filter({ hasText: title });
+
+  test("warns about a word the market reads twice", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    await expect(note(page, "Words read twice")).toContainText(
+      '"tracker" is in English (U.S.) and Spanish (Mexico).',
+    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Words read twice" }),
+    ).toHaveCount(0);
+  });
+
+  test("warns about a phrase split across localizations", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    await expect(
+      note(page, "Phrases split across localizations"),
+    ).toContainText(
+      '"habit planner": habit in English (U.S.), planner in Spanish (Mexico).',
+    );
+  });
+
+  test("lists five words and counts the rest", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?country=mx");
+
+    const words = note(page, "Words read twice");
+    await expect(words.getByRole("listitem")).toHaveCount(5);
+    await expect(words).toContainText("and 2 more");
+  });
+
+  test("shows no warning for a market without repeats", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords?country=de");
+
+    await expect(card(page, "DE")).toBeVisible();
+    await expect(note(page, "Words read twice")).toHaveCount(0);
+    await expect(note(page, "Phrases split across localizations")).toHaveCount(
+      0,
+    );
+  });
+
+  test("keeps the warnings below the localization rows", async ({ page }) => {
+    await page.goto("/apps/app-1/keywords");
+
+    const lastRow = card(page, "US")
+      .getByRole("list")
+      .first()
+      .getByRole("listitem")
+      .last();
+    const firstNote = note(page, "Words read twice");
+    await expect(firstNote).toBeVisible();
+    const follows = await lastRow.evaluate(
+      (row, other) =>
+        Boolean(
+          row.compareDocumentPosition(other as Node) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+        ),
+      await firstNote.elementHandle(),
+    );
+    expect(follows).toBe(true);
+  });
+
+  for (const theme of THEMES) {
+    test(`keeps the warnings readable in the ${theme} theme`, async ({
+      page,
+    }) => {
+      expect(
+        await contrastViolations(page, theme, "/apps/app-1/keywords"),
+      ).toEqual([]);
+      await expect(note(page, "Words read twice")).toBeVisible();
+      await expect(
+        note(page, "Phrases split across localizations"),
+      ).toBeVisible();
+    });
+  }
 });

@@ -38,6 +38,7 @@ import {
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
   INITIAL_LOCALIZATION_SEEDS,
+  marketWasteOf,
   type LocalizationSeed,
   BUDGET,
   DATASETS,
@@ -1006,8 +1007,7 @@ function marketReadsOf(
         };
       },
     ),
-    wastedWords: [],
-    splitPhrases: [],
+    ...marketWasteOf(id, country),
   };
 }
 
