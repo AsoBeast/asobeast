@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import {
   type AppStoreLocalization,
   isAppStoreLocalization,
@@ -7,11 +7,11 @@ import {
   KeywordFieldResult,
   KeywordFieldSummary,
   KEYWORD_FIELD_CHAR_LIMIT,
-  parseKeywordField,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { loadAppMarkets } from './app-markets';
 import { storedPhrases } from './keyword-field-index';
+import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldTarget, keywordFieldTarget } from './keyword-field-target';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { serpVolatilities } from './keyword-volatility';
@@ -19,7 +19,6 @@ import { toTrackedKeywordItem } from './keywords.mapper';
 import {
   ensureKeywordFieldApp,
   KeywordApp,
-  normalizeKeyword,
   trackedArgs,
 } from './keywords.support';
 import { listingFacts } from './listing-facts';
@@ -129,18 +128,12 @@ export class KeywordFieldService {
     const app = await ensureKeywordFieldApp(this.prisma, appId);
     const target = keywordFieldTarget(app, query);
 
-    const { phrases, duplicatesRemoved } = parseKeywordField(text);
-    const unique = phrases.map(normalizeKeyword);
-    if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
-      throw new BadRequestException(
-        `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
-      );
-    }
+    const { phrases, duplicatesRemoved } = parseFieldText(text);
 
     await this.writer.save({
       app,
       localization: target.localization,
-      phrases: unique,
+      phrases,
       markets: [target.country],
     });
     return this.keywordFieldResult(app, target, duplicatesRemoved);

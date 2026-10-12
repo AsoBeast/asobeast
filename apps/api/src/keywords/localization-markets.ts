@@ -1,4 +1,5 @@
 import {
+  APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
   keywordFieldLocalizations,
   type LocalizationReader,
@@ -41,3 +42,31 @@ export const appMarkets = (
   home,
   ...[...new Set(countries)].filter((country) => country !== home).sort(),
 ];
+
+const refusalFor = (
+  localization: AppStoreLocalization,
+  country: string,
+  markets: readonly string[],
+): string | null => {
+  const code = country.toUpperCase();
+  if (!markets.includes(country)) {
+    return `${code} is not one of this app's markets`;
+  }
+  return readsKeywordField(country, localization)
+    ? null
+    : `The ${code} storefront does not read ${APP_STORE_LOCALIZATIONS[localization]}`;
+};
+
+export function trackInError(
+  localization: AppStoreLocalization,
+  trackIn: readonly string[],
+  markets: readonly string[],
+): string | null {
+  for (const country of trackIn) {
+    const refusal = refusalFor(localization, country, markets);
+    if (refusal !== null) {
+      return refusal;
+    }
+  }
+  return null;
+}

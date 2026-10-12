@@ -6,21 +6,28 @@ import {
   HttpCode,
   Param,
   Post,
+  Put,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
   AppLocalizationItem,
   AppLocalizationsResult,
   AppStoreLocalization,
+  LocalizedKeywordFieldResult,
 } from '@asobeast/shared';
 import { AppLocalizationsService } from './app-localizations.service';
 import { AddAppLocalizationDto } from './dto/app-localization.dto';
+import { LocalizedKeywordFieldDto } from './dto/localized-keyword-field.dto';
 import { LocalizationPipe } from './localization.pipe';
+import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
 export class LocalizationsController {
-  constructor(private readonly localizations: AppLocalizationsService) {}
+  constructor(
+    private readonly localizations: AppLocalizationsService,
+    private readonly fieldSaves: LocalizedKeywordFieldService,
+  ) {}
 
   @Get('localizations')
   @ApiOperation({
@@ -57,5 +64,19 @@ export class LocalizationsController {
     @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
   ): Promise<void> {
     return this.localizations.remove(id, localization);
+  }
+
+  @Put('keyword-fields/:localization')
+  @ApiOperation({
+    summary: 'Save the keyword field of one localization',
+    description:
+      'Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, ships the localization when it is not shipped yet, and tracks every phrase in each market of trackIn. trackIn may be empty and must name only markets of the app whose storefront reads the localization. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field read there holds it. Answers 400 when the text runs past 100 characters, when trackIn names a country that is not a market of the app or a storefront that does not read the localization, and for a Google Play app. Answers 403 with quota and writes nothing when the keyword markets would pass the plan limit. Answers 404 for a missing app, and for an empty save of a localization the app does not ship. Saves to one app are written one at a time, so the last save wins.',
+  })
+  saveKeywordField(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+    @Body() dto: LocalizedKeywordFieldDto,
+  ): Promise<LocalizedKeywordFieldResult> {
+    return this.fieldSaves.save(id, localization, dto);
   }
 }

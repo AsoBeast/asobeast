@@ -9,6 +9,7 @@ import { QuotaService } from '../src/auth/quota.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { KeywordFieldService } from '../src/keywords/keyword-field.service';
 import { KeywordsService } from '../src/keywords/keywords.service';
+import { LocalizedKeywordFieldService } from '../src/keywords/localized-keyword-field.service';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
@@ -34,6 +35,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
   let prisma: PrismaClient;
   let keywords: KeywordsService;
   let fields: KeywordFieldService;
+  let localized: LocalizedKeywordFieldService;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -51,6 +53,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     await pauseQueues(app);
     keywords = app.get(KeywordsService);
     fields = app.get(KeywordFieldService);
+    localized = app.get(LocalizedKeywordFieldService);
 
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -92,6 +95,30 @@ describe('Keyword writes under concurrency (e2e)', () => {
     });
     return row.id;
   };
+
+  const seedMarket = async (appId: string, country: string) => {
+    const keyword = await prisma.keyword.create({
+      data: { text: `seed ${country}`, store: Store.APP_STORE, country },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId, keywordId: keyword.id, source: 'MANUAL' },
+    });
+  };
+
+  const fieldTexts = async (appId: string, country: string) =>
+    (
+      await prisma.trackedKeyword.findMany({
+        where: {
+          appId,
+          active: true,
+          source: 'KEYWORD_FIELD',
+          keyword: { is: { country } },
+        },
+        select: { keyword: { select: { text: true } } },
+      })
+    )
+      .map((row) => row.keyword.text)
+      .sort();
 
   const holdNextKeywordWrite = () => {
     const quota = app.get(QuotaService);
@@ -357,5 +384,55 @@ describe('Keyword writes under concurrency (e2e)', () => {
     expect(await trackedRows(appId)).toEqual([
       expect.objectContaining({ active: true, source: 'MANUAL' }),
     ]);
+  });
+
+  it('E-CON-01 saves the old route and the new route together without a deadlock', async () => {
+    const appId = await seedApp();
+    await seedMarket(appId, 'mx');
+
+    const settled = await asWorkspace(app, () =>
+      Promise.allSettled([
+        fields.setKeywordField(appId, ALPHA_SET.join(','), {
+          country: 'us',
+          localization: 'es-MX',
+        }),
+        localized.save(appId, 'es-MX', {
+          text: DELTA_SET.join(','),
+          trackIn: ['us', 'mx'],
+        }),
+      ]),
+    );
+
+    expect(settled.filter((entry) => entry.status === 'rejected')).toEqual([]);
+    const stored = (
+      await prisma.keywordField.findUniqueOrThrow({
+        where: { appId_localization: { appId, localization: 'es-MX' } },
+      })
+    ).phrases;
+    expect([ALPHA_SET, DELTA_SET]).toContainEqual(stored);
+    expect(await fieldTexts(appId, 'us')).toEqual([...stored].sort());
+    expect(
+      (await fieldTexts(appId, 'mx')).every((text) => stored.includes(text)),
+    ).toBe(true);
+  });
+
+  it('E-CON-02 makes the new save wait until an old save to the same app commits', async () => {
+    const appId = await seedApp();
+    const hold = holdNextKeywordWrite();
+
+    await asWorkspace(app, async () => {
+      const first = fields.setKeywordField(appId, ALPHA_SET.join(','));
+      await hold.inside;
+      const second = localized.save(appId, 'en-US', {
+        text: DELTA_SET.join(','),
+        trackIn: ['us'],
+      });
+
+      expect(await settlesWithin(second, 300)).toBe(false);
+      hold.release();
+      await Promise.all([first, second]);
+    });
+
+    expect(await fieldTexts(appId, 'us')).toEqual(DELTA_SET);
   });
 });
