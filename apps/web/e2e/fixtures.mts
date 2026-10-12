@@ -85,6 +85,16 @@ export const OPERATOR_TOKEN = "asob_operator";
 
 export const VALID_UNSUBSCRIBE_TOKEN = "valid-token-".padEnd(43, "x");
 
+export const VALID_CONFIRM_TOKEN = "confirm-token-".padEnd(43, "x");
+
+export const EXPIRED_CONFIRM_TOKEN = "expired-token-".padEnd(43, "x");
+
+export const TRUSTED_RECIPIENT = "owner@example.com";
+
+export const UNSENT_RECIPIENT_PREFIX = "unsent-";
+
+export const UNSUBSCRIBED_RECIPIENT = "left@example.net";
+
 export const METRICS_SCRAPE =
   'asobeast_store_canary{store="APP_STORE",outcome="ok"} 1\n';
 
@@ -573,6 +583,28 @@ export const APP_1_SUMMARY: AppSummary = {
   lastRefreshAt: utcTimestampDaysAgo(0),
   trackedKeywords: 5,
   competitors: 1,
+};
+
+export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
+  us: {
+    ...APP_1_SUMMARY,
+    visibility: { current: 71.2, delta7d: 4, delta30d: -1 },
+    trackedKeywords: 3,
+  },
+  pl: {
+    ...APP_1_SUMMARY,
+    visibility: { current: 18.6, delta7d: -2, delta30d: null },
+    rankDistribution: {
+      top1: 0,
+      top3: 0,
+      top10: 1,
+      top50: 2,
+      beyond: 0,
+      unranked: 0,
+    },
+    movers: { up: [], down: [] },
+    trackedKeywords: 2,
+  },
 };
 
 export const APP_1_VISIBILITY: VisibilityHistory = {
@@ -2578,6 +2610,7 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
     email: "ops@example.com",
     events: ["metadata.changed", "rank.dropped"],
     active: true,
+    confirmed: true,
     createdAt: utcTimestampDaysAgo(3),
   },
 ];

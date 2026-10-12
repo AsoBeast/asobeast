@@ -154,6 +154,11 @@ describe('ActionSeriesReader', () => {
     const { prisma, trend } = await read(item('market.improve_country'));
 
     expect(prisma.trackedKeyword.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.trackedKeyword.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { appId: 'app_1', active: true, keyword: { country: 'de' } },
+      }),
+    );
     expect(trend?.metric).toBe('visibility');
     expect(calls(prisma)).toBe(1);
   });

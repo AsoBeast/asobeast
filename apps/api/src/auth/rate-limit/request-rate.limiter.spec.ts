@@ -23,14 +23,14 @@ const selfHosted: RateScope = {
 };
 
 describe('RequestRateLimiter', () => {
-  const incr = jest.fn<Promise<number>, [string]>();
+  const incrby = jest.fn<Promise<number>, [string, number]>();
   const expire = jest.fn<Promise<number>, [string, number]>();
   const evaluate = jest.fn<Promise<unknown>, [string, number, ...unknown[]]>();
   const zrem = jest.fn<Promise<number>, [string, string]>();
 
   const limiter = new RequestRateLimiter(
     new FailFastRedis({
-      incr,
+      incrby,
       expire,
       eval: evaluate,
       zrem,
@@ -38,10 +38,10 @@ describe('RequestRateLimiter', () => {
   );
 
   const keysOf = (label: string): string[] =>
-    incr.mock.calls.map(([key]) => key).filter((key) => key.includes(label));
+    incrby.mock.calls.map(([key]) => key).filter((key) => key.includes(label));
 
   beforeEach(() => {
-    incr.mockReset().mockResolvedValue(1);
+    incrby.mockReset().mockResolvedValue(1);
     expire.mockReset().mockResolvedValue(1);
     evaluate.mockReset().mockResolvedValue(1);
     zrem.mockReset().mockResolvedValue(1);
@@ -51,7 +51,7 @@ describe('RequestRateLimiter', () => {
     await expect(limiter.consume(selfHosted, 'read', NOW)).resolves.toEqual([]);
     await expect(limiter.acquire(selfHosted, NOW)).resolves.toBeNull();
 
-    expect(incr).not.toHaveBeenCalled();
+    expect(incrby).not.toHaveBeenCalled();
     expect(evaluate).not.toHaveBeenCalled();
   });
 
@@ -63,7 +63,7 @@ describe('RequestRateLimiter', () => {
   });
 
   it('opens each window on its first hit only', async () => {
-    incr.mockResolvedValue(2);
+    incrby.mockResolvedValue(2);
 
     await limiter.consume(metered, 'read', NOW);
 
@@ -71,7 +71,7 @@ describe('RequestRateLimiter', () => {
   });
 
   it('refuses a request past the per-minute allowance', async () => {
-    incr.mockResolvedValue(INDIE_READS + 1);
+    incrby.mockResolvedValue(INDIE_READS + 1);
 
     const rejection = limiter.consume(metered, 'read', NOW);
 
@@ -89,7 +89,7 @@ describe('RequestRateLimiter', () => {
   });
 
   it('holds writes to the tighter budget the same reads pass', async () => {
-    incr.mockResolvedValue(INDIE_WRITES + 1);
+    incrby.mockResolvedValue(INDIE_WRITES + 1);
 
     await expect(limiter.consume(metered, 'read', NOW)).resolves.toBeDefined();
     await expect(limiter.consume(metered, 'write', NOW)).rejects.toMatchObject({
@@ -98,7 +98,7 @@ describe('RequestRateLimiter', () => {
   });
 
   it('draws a store-touching request from the write budget', async () => {
-    incr.mockResolvedValue(INDIE_WRITES + 1);
+    incrby.mockResolvedValue(INDIE_WRITES + 1);
 
     await expect(limiter.consume(metered, 'store', NOW)).rejects.toMatchObject({
       detail: { rateClass: 'store', limit: INDIE_WRITES },
@@ -133,7 +133,7 @@ describe('RequestRateLimiter', () => {
     await limiter.consume(metered, 'read', NOW);
     await limiter.consume({ ...metered, workspaceId: 'ws_other' }, 'read', NOW);
 
-    expect(new Set(incr.mock.calls.map(([key]) => key)).size).toBe(4);
+    expect(new Set(incrby.mock.calls.map(([key]) => key)).size).toBe(4);
   });
 
   it('admits a request while the workspace is under its parallel cap', async () => {
@@ -201,17 +201,61 @@ describe('RequestRateLimiter', () => {
   });
 
   it('caps mcp traffic on its own per-minute window', async () => {
-    await limiter.consumeMcp(metered, NOW);
+    await limiter.consumeMcp(metered, 1, NOW);
 
-    expect(incr).toHaveBeenCalledWith(expect.stringContaining('mcp:minute'));
+    expect(incrby).toHaveBeenCalledWith(
+      expect.stringContaining('mcp:minute'),
+      1,
+    );
+  });
+
+  it('charges a batch its whole cost in one step', async () => {
+    incrby.mockResolvedValue(7);
+
+    await limiter.consumeMcp(metered, 7, NOW);
+
+    expect(incrby).toHaveBeenCalledTimes(1);
+    expect(incrby).toHaveBeenCalledWith(
+      expect.stringContaining('mcp:minute'),
+      7,
+    );
+    expect(expire).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens the mcp window only when a batch is its first charge', async () => {
+    incrby.mockResolvedValue(9);
+
+    await limiter.consumeMcp(metered, 7, NOW);
+
+    expect(expire).not.toHaveBeenCalled();
+  });
+
+  it('refuses a batch the remaining allowance cannot cover', async () => {
+    incrby.mockResolvedValue(70);
+
+    await expect(limiter.consumeMcp(metered, 20, NOW)).rejects.toMatchObject({
+      detail: { window: 'minute', limit: 60 },
+    });
+    expect(incrby).toHaveBeenCalledWith(expect.any(String), 20);
+    expect(expire).not.toHaveBeenCalled();
+  });
+
+  it('refuses a batch larger than the whole allowance without charging it', async () => {
+    await expect(limiter.consumeMcp(metered, 61, NOW)).rejects.toMatchObject({
+      detail: { window: 'minute', limit: 60, upgradeTo: 'ultimate' },
+      message: expect.stringContaining(
+        'Split it into requests of at most 60 messages',
+      ) as string,
+    });
+    expect(incrby).not.toHaveBeenCalled();
   });
 
   it('refuses an agent that loops past the mcp cap', async () => {
-    incr.mockResolvedValue(
+    incrby.mockResolvedValue(
       (PLAN_LIMITS.indie.mcpRequestsPerMinute as number) + 1,
     );
 
-    await expect(limiter.consumeMcp(metered, NOW)).rejects.toMatchObject({
+    await expect(limiter.consumeMcp(metered, 1, NOW)).rejects.toMatchObject({
       detail: { window: 'minute' },
       message: expect.stringContaining(
         'retrying before then will fail',
@@ -220,9 +264,11 @@ describe('RequestRateLimiter', () => {
   });
 
   it('never caps mcp on a self hosted instance', async () => {
-    await expect(limiter.consumeMcp(selfHosted, NOW)).resolves.toBeUndefined();
+    await expect(
+      limiter.consumeMcp(selfHosted, 7, NOW),
+    ).resolves.toBeUndefined();
 
-    expect(incr).not.toHaveBeenCalled();
+    expect(incrby).not.toHaveBeenCalled();
   });
 });
 
@@ -232,7 +278,7 @@ describe('RequestRateLimiter while redis is unreachable', () => {
   const zrem = jest.fn().mockRejectedValue(unreachable);
   const limiter = new RequestRateLimiter(
     new FailFastRedis({
-      incr: jest.fn().mockRejectedValue(unreachable),
+      incrby: jest.fn().mockRejectedValue(unreachable),
       expire: jest.fn(),
       eval: evaluate,
       zrem,
@@ -244,7 +290,7 @@ describe('RequestRateLimiter while redis is unreachable', () => {
   });
 
   it('serves an mcp request uncounted', async () => {
-    await expect(limiter.consumeMcp(metered, NOW)).resolves.toBeUndefined();
+    await expect(limiter.consumeMcp(metered, 1, NOW)).resolves.toBeUndefined();
   });
 
   it('admits the request without a parallel slot to give back', async () => {

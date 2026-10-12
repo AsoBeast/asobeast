@@ -13,6 +13,7 @@ import {
   QUEUES,
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
+import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { OutboxRow, outboxRows } from './outbox-rows';
 
@@ -110,7 +111,7 @@ export class AlertsDispatcher {
       return;
     }
     const alerts = await this.prisma.emailAlert.findMany({
-      where: { active: true, events: { has: payload.event } },
+      where: { ...DELIVERABLE_EMAIL_ALERTS, events: { has: payload.event } },
       select: { id: true },
     });
     const scope = this.workspace.scopeFor('instant alert delivery');

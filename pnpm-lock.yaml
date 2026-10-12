@@ -173,6 +173,9 @@ importers:
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0(supports-color@8.1.1)
+      mailchecker:
+        specifier: ^6.0.21
+        version: 6.0.21
       nestjs-pino:
         specifier: 5.3.1
         version: 5.3.1(@nestjs/common@12.1.2(class-transformer@0.5.1)(class-validator@0.15.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@8.1.1))(@nestjs/core@12.1.2)(pino-http@11.0.0)(pino@10.4.0)(rxjs@7.8.2)
@@ -7084,6 +7087,10 @@ packages:
     resolution: {integrity: sha512-IJKBJgdxVT5pgahdVSWxum3yLlI25SSlIbEXiJAVYICc7rNuTQ9ZklZkArNvx/8bcc5N3cKcQz+AAKrcRNj7kw==}
     engines: {node: '>=22.19.0'}
     hasBin: true
+
+  mailchecker@6.0.21:
+    resolution: {integrity: sha512-Zd2Lgj4RMnC0IBbbSjnF76Wbd+kkgKMRONgV9yOMKJhj6hcKIAQtj9MrmiGnT2Db+Dy6MsMQoG2HEhPk2YPuGA==}
+    engines: {node: '>=0.10'}
 
   make-dir@4.0.0:
     resolution: {integrity: sha512-hXdUTZYIVOt1Ex//jAQi+wTZZpUpwBj/0QsOzqegb3rGMMeJiSEu5xLHnYfBrRV4RH2+OCSOO95Is/7x1WJ4bw==}
@@ -16293,6 +16300,8 @@ snapshots:
       punycode.js: 2.3.1
       tldts: 7.4.16
       undici: 8.11.2
+
+  mailchecker@6.0.21: {}
 
   make-dir@4.0.0:
     dependencies:

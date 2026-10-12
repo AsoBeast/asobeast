@@ -10,17 +10,26 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 import { TrendChip } from "@/components/ui/delta-chip";
+import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
 export function StatCards({ id }: { id: string }) {
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id));
+  const { country, switchable } = useKeywordScope(id);
+  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
+  const label = switchable
+    ? ` · ${country?.toUpperCase() ?? "All markets"}`
+    : "";
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader>
-          <CardDescription>Visibility</CardDescription>
+          <CardDescription className="flex items-center gap-1">
+            Visibility{label}
+            <VisibilityHelp />
+          </CardDescription>
           <CardTitle className="numeric font-mono text-3xl">
             {Math.round(summary.visibility.current)}
           </CardTitle>
@@ -33,7 +42,7 @@ export function StatCards({ id }: { id: string }) {
 
       <Card>
         <CardHeader>
-          <CardDescription>Tracked keywords</CardDescription>
+          <CardDescription>Tracked keywords{label}</CardDescription>
           <CardTitle className="numeric font-mono text-3xl">
             {summary.trackedKeywords}
           </CardTitle>

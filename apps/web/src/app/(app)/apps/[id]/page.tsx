@@ -35,7 +35,7 @@ import {
   rankDistributionHistoryOptions,
   visibilityOptions,
 } from "@/lib/queries";
-import { queryMarket, resolveMarket } from "@/lib/market";
+import { keywordScope, queryMarket, resolveMarket } from "@/lib/market";
 import { presetToRange } from "@/lib/ranges";
 import { marketParser, rangeParser } from "@/lib/search-params";
 
@@ -54,28 +54,35 @@ export default async function AppOverviewPage({
   const categoryRange = rangeParser.parseServerSide(sp.categoryRange);
 
   const queryClient = getQueryClient();
-  void queryClient.prefetchQuery(appSummaryOptions(id));
-  void queryClient.prefetchQuery(visibilityOptions(id, presetToRange("30d")));
   void queryClient.prefetchQuery(
     categoryRanksOptions(id, presetToRange(categoryRange)),
-  );
-  void queryClient.prefetchQuery(
-    rankDistributionHistoryOptions(id, presetToRange("30d")),
   );
   void queryClient.prefetchQuery(actionSummaryFor(id));
   void queryClient.prefetchQuery(
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
   const firstRun = queryClient.prefetchQuery(firstRunOptions(id));
+  const requested = marketParser.parseServerSide(sp.market);
+  const listingMarkets = queryClient
+    .fetchQuery(listingMarketsOptions(id))
+    .catch(() => []);
+  const scope = requested
+    ? listingMarkets.then((markets) => keywordScope(requested, markets))
+    : Promise.resolve(undefined);
+  void scope.then((country) => {
+    void queryClient.prefetchQuery(appSummaryOptions(id, country));
+    void queryClient.prefetchQuery(
+      visibilityOptions(id, presetToRange("30d"), country),
+    );
+    void queryClient.prefetchQuery(
+      rankDistributionHistoryOptions(id, presetToRange("30d"), country),
+    );
+  });
   const [app, markets] = await Promise.all([
     queryClient.fetchQuery(appDetailOptions(id)),
-    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+    listingMarkets,
   ]);
-  const market = resolveMarket(
-    marketParser.parseServerSide(sp.market),
-    markets,
-    app.country,
-  );
+  const market = resolveMarket(requested, markets, app.country);
   await queryClient.prefetchQuery(
     appListingOptions(id, queryMarket(market, app.country)),
   );
@@ -96,7 +103,7 @@ export default async function AppOverviewPage({
           </Suspense>
           <div className="flex flex-wrap items-center gap-3">
             <Suspense fallback={<MarketSwitcherSkeleton />}>
-              <MarketSwitcher id={id} />
+              <MarketSwitcher id={id} allowAll />
             </Suspense>
             <PrintReportButton />
           </div>

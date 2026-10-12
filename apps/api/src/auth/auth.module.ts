@@ -5,6 +5,7 @@ import type { Env } from '../config/env';
 import { AccountPlanService } from './account-plan.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { CredentialResolver } from './credential-resolver';
 import { WorkspaceTeamController } from './workspace-team.controller';
 import { WorkspaceTeamService } from './workspace-team.service';
 import { EmailVerificationService } from './email-verification.service';
@@ -17,6 +18,8 @@ import { AlertsModule } from '../alerts/alerts.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { DailyCapacity } from '../jobs/daily-capacity.service';
 import { SignupCapacityGate } from './signup-capacity.gate';
+import { TrialClaimBackfill } from './trial-claim-backfill';
+import { TrialClaims } from './trial-claims';
 
 @Module({
   imports: [
@@ -36,9 +39,12 @@ import { SignupCapacityGate } from './signup-capacity.gate';
   controllers: [AuthController, WorkspaceTeamController],
   providers: [
     AuthService,
+    CredentialResolver,
     AccountPlanService,
     WorkspaceTeamService,
     EmailVerificationService,
+    TrialClaims,
+    TrialClaimBackfill,
     PasswordResetService,
     PublicWebUrl,
     VerificationMailer,
@@ -46,6 +52,6 @@ import { SignupCapacityGate } from './signup-capacity.gate';
     SignupCapacityGate,
     DailyCapacity,
   ],
-  exports: [AuthService, SignupCapacityGate],
+  exports: [AuthService, CredentialResolver, SignupCapacityGate],
 })
 export class AuthModule {}

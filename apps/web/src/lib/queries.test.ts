@@ -43,6 +43,7 @@ import {
   invalidateAiUsage,
   invalidateAppListing,
   invalidateAuth,
+  invalidatePasswordChange,
   invalidateCompetitorMutation,
   invalidateEmailAlertMutation,
   invalidateAudit,
@@ -103,6 +104,7 @@ function isPrefixOf(prefix: QueryKey, key: QueryKey): boolean {
 const APP_SCOPED_OPTIONS = [
   ["detail", appDetailOptions(APP), appKeys.detail(APP)],
   ["summary", appSummaryOptions(APP), appKeys.summary(APP)],
+  ["market summary", appSummaryOptions(APP, "de"), appKeys.summary(APP, "de")],
   ["keywords", keywordsOptions(APP, "us"), appKeys.keywords(APP, "us")],
   [
     "keywordCountries",
@@ -129,6 +131,11 @@ const APP_SCOPED_OPTIONS = [
   ["serpMovers", serpMoversOptions(APP, 7), appKeys.serpMovers(APP, 7)],
   ["visibility", visibilityOptions(APP, RANGE), appKeys.visibility(APP, RANGE)],
   [
+    "market visibility",
+    visibilityOptions(APP, RANGE, "de"),
+    appKeys.visibility(APP, RANGE, "de"),
+  ],
+  [
     "categoryRanks",
     categoryRanksOptions(APP, RANGE),
     appKeys.categoryRanks(APP, RANGE),
@@ -143,6 +150,11 @@ const APP_SCOPED_OPTIONS = [
     "rankDistribution",
     rankDistributionHistoryOptions(APP, RANGE),
     appKeys.rankDistribution(APP, RANGE),
+  ],
+  [
+    "market rankDistribution",
+    rankDistributionHistoryOptions(APP, RANGE, "de"),
+    appKeys.rankDistribution(APP, RANGE, "de"),
   ],
   ["competitors", competitorsOptions(APP), appKeys.competitors(APP)],
   ["discovery", discoveryOptions(APP, 30), appKeys.discovery(APP, 30)],
@@ -194,6 +206,17 @@ const APP_SCOPED_OPTIONS = [
 const ROOT_TO_LEAF = [
   ["all", appKeys.all, appKeys.detail(APP)],
   ["detail", appKeys.detail(APP), appKeys.summary(APP)],
+  ["summary", appKeys.summary(APP), appKeys.summary(APP, "de")],
+  [
+    "visibility",
+    appKeys.visibility(APP, RANGE),
+    appKeys.visibility(APP, RANGE, "de"),
+  ],
+  [
+    "rankDistribution",
+    appKeys.rankDistribution(APP, RANGE),
+    appKeys.rankDistribution(APP, RANGE, "de"),
+  ],
   ["keywordsRoot", appKeys.keywordsRoot(APP), appKeys.keywords(APP, "us")],
   ["compareRoot", appKeys.compareRoot(APP), appKeys.compare(APP, true)],
   [
@@ -256,6 +279,16 @@ describe("appKeys", () => {
       expect(isPrefixOf(root, leaf)).toBe(true);
     },
   );
+
+  it("keys every market apart from one market and from another", () => {
+    const keys = [
+      appKeys.summary(APP),
+      appKeys.summary(APP, "de"),
+      appKeys.summary(APP, "pl"),
+    ].map((key) => JSON.stringify(key));
+
+    expect(new Set(keys).size).toBe(keys.length);
+  });
 
   it("keys a reviews export apart from the list it was filtered from", () => {
     expect(reviewsExportOptions(APP, { score: 1 }).queryKey).not.toEqual(
@@ -520,6 +553,15 @@ describe("invalidation sets", () => {
       authStatusKey,
       authMeKey,
       accountPlanKey,
+    ]);
+  });
+
+  it("also invalidates the api token list when the password changes", () => {
+    expect(invalidatedKeys(invalidatePasswordChange)).toEqual([
+      authStatusKey,
+      authMeKey,
+      accountPlanKey,
+      apiTokenKeys.all,
     ]);
   });
 

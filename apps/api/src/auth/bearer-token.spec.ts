@@ -1,4 +1,4 @@
-import { bearerToken } from './bearer-token';
+import { apiToken, bearerToken } from './bearer-token';
 
 describe('bearerToken', () => {
   it.each([
@@ -19,4 +19,17 @@ describe('bearerToken', () => {
   ])('finds no token in %j', (authorization) => {
     expect(bearerToken(authorization)).toBeNull();
   });
+});
+
+describe('apiToken', () => {
+  it('reads a bearer token that carries the api token prefix', () => {
+    expect(apiToken('Bearer asob_abc')).toBe('asob_abc');
+  });
+
+  it.each([['Bearer not-an-api-token'], ['Basic asob_abc'], [undefined]])(
+    'finds no api token in %j',
+    (authorization) => {
+      expect(apiToken(authorization)).toBeNull();
+    },
+  );
 });

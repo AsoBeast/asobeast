@@ -129,6 +129,7 @@
               "concepts/stores",
               "concepts/countries",
               "concepts/positions",
+              "concepts/visibility",
               "concepts/scoring",
               "concepts/pipeline"
             ]

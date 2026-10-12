@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { ChartNotice } from "@/components/charts/ChartStates";
 import { CHART_HEIGHT, seriesColor } from "@/components/charts/theme";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 
 const BUCKETS = [
@@ -33,7 +34,8 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function RankDistributionChart({ id }: { id: string }) {
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id));
+  const { country } = useKeywordScope(id);
+  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
   const data = BUCKETS.map((bucket) => ({
     bucket: bucket.label,
     count: summary.rankDistribution[bucket.key],

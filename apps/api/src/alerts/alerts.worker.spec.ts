@@ -45,6 +45,12 @@ function emailJob(emailAlertId: string): Job<DeliverEmailPayload> {
   } as unknown as Job<DeliverEmailPayload>;
 }
 
+const confirmedAlert = {
+  email: 'ops@example.com',
+  active: true,
+  confirmedAt: new Date('2026-10-01T00:00:00.000Z'),
+};
+
 describe('AlertsWorker', () => {
   const webhookFind = jest.fn();
   const emailFind = jest.fn();
@@ -173,7 +179,7 @@ describe('AlertsWorker', () => {
   });
 
   it('sends a formatted email for an email job', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    emailFind.mockResolvedValue(confirmedAlert);
     send.mockResolvedValue(undefined);
 
     await worker.process(emailJob('ea_1'));
@@ -197,7 +203,7 @@ describe('AlertsWorker', () => {
   });
 
   it('logs a failed row and throws so bullmq retries when the mailer fails', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    emailFind.mockResolvedValue(confirmedAlert);
     send.mockRejectedValue(new Error('smtp down'));
 
     await expect(worker.process(emailJob('ea_1'))).rejects.toThrow('smtp down');
@@ -218,7 +224,15 @@ describe('AlertsWorker', () => {
   });
 
   it('skips an alert that was unsubscribed after the job was queued', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: false });
+    emailFind.mockResolvedValue({ ...confirmedAlert, active: false });
+
+    await expect(worker.process(emailJob('ea_1'))).resolves.toBeUndefined();
+    expect(send).not.toHaveBeenCalled();
+    expect(deliveryCreate).not.toHaveBeenCalled();
+  });
+
+  it('skips an alert whose recipient never confirmed', async () => {
+    emailFind.mockResolvedValue({ ...confirmedAlert, confirmedAt: null });
 
     await expect(worker.process(emailJob('ea_1'))).resolves.toBeUndefined();
     expect(send).not.toHaveBeenCalled();
@@ -226,7 +240,7 @@ describe('AlertsWorker', () => {
   });
 
   it('offers one click unsubscribe and a footer link over https', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    emailFind.mockResolvedValue(confirmedAlert);
     send.mockResolvedValue(undefined);
 
     await workerAt('https://aso.example.com').process(emailJob('ea_1'));
@@ -244,7 +258,7 @@ describe('AlertsWorker', () => {
   });
 
   it('keeps the footer link but no one click headers over plain http', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    emailFind.mockResolvedValue(confirmedAlert);
     send.mockResolvedValue(undefined);
 
     await workerAt('http://localhost:3000').process(emailJob('ea_1'));
@@ -257,7 +271,7 @@ describe('AlertsWorker', () => {
   });
 
   it('logs a failed row and throws so bullmq retries when the email cannot be composed', async () => {
-    emailFind.mockResolvedValue({ email: 'ops@example.com', active: true });
+    emailFind.mockResolvedValue(confirmedAlert);
     jest
       .spyOn(AlertMail.prototype, 'compose')
       .mockRejectedValueOnce(new Error('template broke'));

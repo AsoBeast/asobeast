@@ -26,6 +26,7 @@ import {
   spiderOptions,
 } from "@/lib/queries";
 import { spiderTermParser } from "@/lib/search-params";
+import { useSingleFlight } from "@/lib/single-flight";
 
 const PROBES_TOTAL = 27;
 
@@ -58,8 +59,8 @@ export function SpiderDialog({
     onSuccess: (_result, value) => {
       void setTerm(value);
       queuedToast(
-        "27 lookups — about 2 minutes",
-        "Results fill in as probes complete.",
+        "27 lookups — usually about two minutes",
+        "Results fill in as probes complete. It takes longer while the daily run is collecting.",
       );
     },
     onError: (error) =>
@@ -69,6 +70,8 @@ export function SpiderDialog({
           : "Could not start deep search",
       ),
   });
+
+  const startOnce = useSingleFlight(start);
 
   const track = useMutation({
     mutationFn: (text: string) => addKeywords(appId, [text], country),
@@ -89,7 +92,7 @@ export function SpiderDialog({
     if (value.length < 2) {
       return;
     }
-    start.mutate(value);
+    startOnce(value);
   }
 
   const probesDone = status.data?.probesDone ?? 0;
@@ -105,7 +108,8 @@ export function SpiderDialog({
           <DialogTitle>Deep search</DialogTitle>
           <DialogDescription>
             Probes App Store autocomplete for your term plus every a–z prefix —
-            27 rate-limited lookups, about two minutes.
+            27 rate-limited lookups, usually about two minutes and longer while
+            the daily run is collecting.
           </DialogDescription>
         </DialogHeader>
 

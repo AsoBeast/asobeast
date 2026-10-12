@@ -10,6 +10,7 @@ import {
   ActionRule,
 } from '@asobeast/shared';
 import { AiGateway } from '../ai/ai-gateway.service';
+import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseActionEvidence } from './actions.mapper';
 
@@ -89,6 +90,7 @@ export class ActionsAiService {
   constructor(
     private readonly ai: AiGateway,
     private readonly prisma: PrismaService,
+    private readonly workspace: WorkspaceContext,
   ) {}
 
   status(): ActionAiStatus {
@@ -97,13 +99,14 @@ export class ActionsAiService {
 
   async explain(actionId: string, userId: string): Promise<ActionExplanation> {
     this.ai.requireModel();
-    const existing = this.inFlight.get(actionId);
+    const key = `${this.workspace.require('explaining an action')}:${actionId}`;
+    const existing = this.inFlight.get(key);
     if (existing) return existing;
 
     const run = this.generate(actionId, userId).finally(() =>
-      this.inFlight.delete(actionId),
+      this.inFlight.delete(key),
     );
-    this.inFlight.set(actionId, run);
+    this.inFlight.set(key, run);
     return run;
   }
 

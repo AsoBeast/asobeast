@@ -26,6 +26,7 @@ import {
   ResolvedApp,
 } from './alert-batch';
 import { createDeliveryFlows } from './alert-delivery-flow';
+import { DELIVERABLE_EMAIL_ALERTS } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 
 const APP_SELECT = {
@@ -383,7 +384,7 @@ export class AlertFlushService {
       }),
       this.mailer.enabled
         ? this.prisma.emailAlert.findMany({
-            where: { active: true },
+            where: DELIVERABLE_EMAIL_ALERTS,
             select: { id: true, events: true },
           })
         : Promise.resolve([]),

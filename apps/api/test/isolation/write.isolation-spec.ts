@@ -1,6 +1,9 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import type { EmailAlertItem } from '@asobeast/shared';
+import { MailerService } from '../../src/alerts/mailer.service';
 import { QUEUES } from '../../src/jobs/jobs.types';
+import { clearRateLimitCounters } from '../obliterate-queues';
 import { createIsolationFixture, IsolationFixture } from './fixture';
 
 describe('Write isolation', () => {
@@ -245,5 +248,47 @@ describe('Write isolation', () => {
       select: { workspaceId: true },
     });
     expect(user.workspaceId).toBe(fixture.a.id);
+  });
+
+  it('asks the verified owner of another workspace to confirm like any stranger', async () => {
+    const mailer = fixture.app.get(MailerService);
+    const spies = [
+      jest.spyOn(mailer, 'enabled', 'get').mockReturnValue(true),
+      jest
+        .spyOn(mailer, 'origin', 'get')
+        .mockReturnValue('https://app.example.test'),
+    ];
+    const sendAccountMail = jest
+      .spyOn(mailer, 'sendAccountMail')
+      .mockResolvedValue(undefined);
+    await fixture.db.user.update({
+      where: { id: fixture.a.userId },
+      data: { emailVerifiedAt: new Date() },
+    });
+
+    try {
+      const created = await fixture.b.agent
+        .post('/email-alerts')
+        .send({ email: fixture.a.email, events: ['rank.dropped'] })
+        .expect(201);
+      const alert = created.body as EmailAlertItem;
+
+      expect(alert.confirmed).toBe(false);
+      expect(sendAccountMail).toHaveBeenCalledTimes(1);
+      expect(sendAccountMail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: fixture.a.email }),
+      );
+    } finally {
+      await fixture.db.emailAlert.deleteMany({
+        where: { workspaceId: fixture.b.id, email: fixture.a.email },
+      });
+      for (const spy of spies) spy.mockRestore();
+      sendAccountMail.mockRestore();
+      await fixture.db.user.update({
+        where: { id: fixture.a.userId },
+        data: { emailVerifiedAt: null },
+      });
+      await clearRateLimitCounters(fixture.app);
+    }
   });
 });

@@ -57,6 +57,19 @@ export async function waitForIdleQueues(
   throw new Error('Queues still held active jobs when the drain timed out.');
 }
 
+export async function isolateQueues(
+  app: INestApplication,
+  ...running: (typeof QUEUES)[keyof typeof QUEUES][]
+): Promise<void> {
+  await pauseQueues(app);
+  await waitForIdleQueues(app);
+  await obliterateQueues(app);
+  await pauseQueues(app);
+  for (const name of running) {
+    await app.get<Queue>(getQueueToken(name), { strict: false }).resume();
+  }
+}
+
 interface RedisKeyspace {
   keys(pattern: string): Promise<string[]>;
   del(...keys: string[]): Promise<number>;
@@ -100,6 +113,7 @@ const RATE_LIMIT_NAMESPACES = [
   'asobeast:credentials:*',
   'asobeast:abuse:*',
   'asobeast:recovery:*',
+  'asobeast:confirmation:*',
 ];
 
 export async function clearRateLimitCounters(

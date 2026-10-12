@@ -7,6 +7,7 @@ import type { ChangeImpactItem, KeywordCountrySummary } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -28,6 +29,7 @@ import { ChangeImpactWindowTile } from "./ChangeImpactWindowTile";
 import { CHANGE_FIELD_LABELS } from "@/lib/change-fields";
 import { impactScopeLine } from "./change-impact-copy";
 import { ChangeImpactSkeleton } from "./skeletons";
+import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
 interface ImpactScope {
   id: string;
@@ -179,6 +181,9 @@ export function ChangeImpactCard({
         <CardTitle asChild>
           <h2 id={titleId}>How rankings moved after each change</h2>
         </CardTitle>
+        <CardAction>
+          <VisibilityHelp note="Here visibility covers only this market's keywords checked on both days, each weighted by its popularity on the last check before the change, so only positions move it." />
+        </CardAction>
       </CardHeader>
       <CardContent>
         <Suspense fallback={<ChangeImpactSkeleton />}>

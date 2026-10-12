@@ -8,6 +8,10 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
+import {
+  EMPTY_ANSWER_RETRIES,
+  IMPLAUSIBLE_LOOKBACK_DAYS,
+} from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { RankingAlertsService } from './ranking-alerts.service';
@@ -191,14 +195,18 @@ describe('RankingsService.checkKeyword', () => {
       },
     ];
     const trackedFindMany = jest.fn().mockResolvedValue(tracked);
+    const serpFindFirst = jest
+      .fn()
+      .mockResolvedValue(options?.previousSerp ? { date: PREVIOUS_DAY } : null);
+    const keywordFindUnique = jest.fn().mockResolvedValue({
+      id: 'kw1',
+      text: 'habit tracker',
+      store: Store.APP_STORE,
+      country: options?.country ?? 'us',
+    });
     const prisma = {
       keyword: {
-        findUnique: jest.fn().mockResolvedValue({
-          id: 'kw1',
-          text: 'habit tracker',
-          store: Store.APP_STORE,
-          country: options?.country ?? 'us',
-        }),
+        findUnique: keywordFindUnique,
       },
       trackedKeyword: {
         findMany: trackedFindMany,
@@ -212,11 +220,7 @@ describe('RankingsService.checkKeyword', () => {
       serpEntry: {
         deleteMany,
         createMany,
-        findFirst: jest
-          .fn()
-          .mockResolvedValue(
-            options?.previousSerp ? { date: PREVIOUS_DAY } : null,
-          ),
+        findFirst: serpFindFirst,
         findMany: jest
           .fn<Promise<SerpRow[]>, [{ where: { date: Date } }]>()
           .mockImplementation(({ where }) =>
@@ -275,6 +279,8 @@ describe('RankingsService.checkKeyword', () => {
       withTransaction,
       dispatch,
       trackedFindMany,
+      keywordFindUnique,
+      serpFindFirst,
       rankingFindFirst,
       rankingFindMany,
     };
@@ -721,29 +727,112 @@ describe('RankingsService.checkKeyword', () => {
     ]);
   });
 
-  it('refuses to record a not-ranking history from a search that suddenly returned nothing', async () => {
-    const { service, upsert, withTransaction } = setup({
-      searchResults: [],
-      previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+  describe('a search that suddenly returns nothing', () => {
+    const settled = async (work: Promise<void>): Promise<unknown> => {
+      const outcome = work.then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+      await jest.runAllTimersAsync();
+      return outcome;
+    };
+
+    it('reads no ranking history before a search that answers with results', async () => {
+      const { service, search, serpFindFirst } = setup({
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+
+      await service.checkKeyword('kw1');
+
+      const searched = search.mock.invocationCallOrder[0];
+      expect(
+        serpFindFirst.mock.invocationCallOrder.filter(
+          (order) => order < searched,
+        ),
+      ).toEqual([]);
     });
 
-    await expect(service.checkKeyword('kw1')).rejects.toThrow(
-      ImplausibleResultError,
-    );
+    it('asks the app store again and records the answer that has results', async () => {
+      const { service, search, upsert } = setup({
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+      search.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
 
-    expect(upsert).not.toHaveBeenCalled();
-    expect(withTransaction).not.toHaveBeenCalled();
-  });
+      expect(await settled(service.checkKeyword('kw1'))).toBeUndefined();
 
-  it('accepts an empty result for a phrase that has never ranked anything', async () => {
-    const { service, upsert } = setup({
-      searchResults: [],
-      previousSerp: null,
+      expect(search).toHaveBeenCalledTimes(3);
+      expect(
+        upsert.mock.calls.map(([{ create }]) => [
+          create.appId,
+          create.position,
+        ]),
+      ).toContainEqual(['primary', 7]);
     });
 
-    await service.checkKeyword('kw1');
+    it('leaves an app store search that stays empty to the queue to retry', async () => {
+      const { service, search, upsert, withTransaction } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
 
-    expect(upsert).toHaveBeenCalled();
+      expect(await settled(service.checkKeyword('kw1'))).toMatchObject({
+        constructor: ImplausibleResultError,
+        retryable: true,
+        message:
+          'APP_STORE returned an implausible result: "habit tracker" returned no results in us but ranked apps on 2026-07-17',
+      });
+
+      expect(search).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
+      expect(upsert).not.toHaveBeenCalled();
+      expect(withTransaction).not.toHaveBeenCalled();
+    });
+
+    it('refuses an empty google play search at once, as a soft block', async () => {
+      const { service, search, upsert, keywordFindUnique } = setup({
+        searchResults: [],
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+      keywordFindUnique.mockResolvedValue({
+        id: 'kw1',
+        text: 'habit tracker',
+        store: Store.GOOGLE_PLAY,
+        country: 'us',
+      });
+
+      expect(await settled(service.checkKeyword('kw1'))).toMatchObject({
+        constructor: ImplausibleResultError,
+        retryable: false,
+      });
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).not.toHaveBeenCalled();
+    });
+
+    it('accepts it at once for a phrase that stopped ranking anything over a week ago', async () => {
+      const { service, search, upsert, serpFindFirst } = setup({
+        searchResults: [],
+      });
+      serpFindFirst.mockResolvedValue({
+        date: utcDayStart(FROZEN_NOW, -(IMPLAUSIBLE_LOOKBACK_DAYS + 1)),
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalled();
+    });
+
+    it('accepts it at once for a phrase that has never ranked anything', async () => {
+      const { service, search, upsert } = setup({
+        searchResults: [],
+        previousSerp: null,
+      });
+
+      await service.checkKeyword('kw1');
+
+      expect(search).toHaveBeenCalledTimes(1);
+      expect(upsert).toHaveBeenCalled();
+    });
   });
 
   describe('milestone, first rank and overtake alerts', () => {

@@ -19,6 +19,7 @@ const UNSUBSCRIBE_JUSTIFICATION =
 export interface UnsubscribeLinks {
   page: string;
   oneClick: string;
+  token: string;
 }
 
 export function oneClickHeaders(
@@ -48,6 +49,7 @@ export class EmailAlertUnsubscribe {
     return {
       page: `${origin}${UNSUBSCRIBE_PATH}?alert=${id}&token=${token}`,
       oneClick: `${origin}${BACKEND_PROXY_PATH}/email-alerts/${id}/unsubscribe?token=${token}`,
+      token,
     };
   }
 
@@ -75,7 +77,12 @@ export class EmailAlertUnsubscribe {
     }
     const { count } = await this.prisma.emailAlert.updateMany({
       where: { id: alertId, email: alert.email },
-      data: { active: false },
+      data: {
+        active: false,
+        confirmedAt: null,
+        confirmationSentAt: null,
+        unsubscribedAt: new Date(),
+      },
     });
     return count > 0;
   }
