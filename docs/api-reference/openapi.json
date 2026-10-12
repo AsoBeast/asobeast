@@ -2783,6 +2783,108 @@
         ]
       }
     },
+    "/apps/{id}/keyword-fields/{localization}/preview": {
+      "post": {
+        "description": "Answers, for every market of the app whose storefront reads the localization, the phrases the field would add to the tracked keywords, how many of them would open a new keyword market and the daily store requests that costs, plus the phrases the save would add to and drop from the stored field and the keyword limit of the plan. Writes nothing and queues nothing. Answers 400 for text over 100 characters and for a Google Play app, and 404 for a missing app.",
+        "operationId": "LocalizationsController_previewKeywordField",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordFieldPreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview saving the keyword field of one localization",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/changes": {
       "get": {
         "operationId": "ChangesController_timeline",
@@ -5619,6 +5721,19 @@
         "required": [
           "text",
           "trackIn"
+        ]
+      },
+      "KeywordFieldPreviewDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "habit,tracker,streak"
+          }
+        },
+        "required": [
+          "text"
         ]
       },
       "MetadataAssistantDto": {

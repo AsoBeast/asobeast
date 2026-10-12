@@ -5,6 +5,7 @@ import {
   ApiErrorEnvelope,
   AppLocalizationsResult,
   KEYWORD_FIELD_CHAR_LIMIT,
+  KeywordFieldSavePreview,
   LocalizedKeywordFieldResult,
   PLAN_LIMITS,
 } from '@asobeast/shared';
@@ -442,6 +443,208 @@ describe('Localized keyword fields (e2e)', () => {
       );
       expect(keywordIds).toHaveLength(4);
       expect(scores).toHaveLength(4);
+    });
+  });
+
+  describe('preview', () => {
+    const preview = (appId: string, localization: string, body: object) =>
+      harness.owner
+        .post(`/apps/${appId}/keyword-fields/${localization}/preview`)
+        .send(body);
+
+    const previewed = async (
+      appId: string,
+      localization: string,
+      text: string,
+    ) =>
+      (await preview(appId, localization, { text }).expect(200))
+        .body as KeywordFieldSavePreview;
+
+    const counts = async () => ({
+      keywords: await harness.prisma.keyword.count(),
+      tracked: await harness.prisma.trackedKeyword.count(),
+      fields: await harness.prisma.keywordField.count(),
+      localizations: await harness.prisma.appLocalization.count(),
+    });
+
+    it('E-PRV-01 writes nothing, not even a keyword row', async () => {
+      const appId = await seedApp();
+      await withMarkets(appId, 'mx');
+      const before = await counts();
+
+      await previewed(appId, 'es-MX', 'nunca,visto,antes');
+
+      expect(await counts()).toEqual(before);
+    });
+
+    it('E-PRV-02 reports new phrases, keyword markets and daily requests per market', async () => {
+      const appId = await seedApp();
+      await withMarkets(appId, 'mx');
+      await trackActive(appId, 'us', ['uno']);
+      const other = await seedApp('other');
+      await trackActive(other, 'mx', ['dos']);
+
+      const result = await previewed(appId, 'es-MX', 'uno,dos,tres');
+
+      expect(result.markets).toEqual([
+        {
+          country: 'us',
+          role: 'additional',
+          home: true,
+          newPhrases: ['dos', 'tres'],
+          keywordMarkets: 2,
+          dailyRequests: 2,
+        },
+        {
+          country: 'mx',
+          role: 'default',
+          home: false,
+          newPhrases: ['uno', 'dos', 'tres'],
+          keywordMarkets: 2,
+          dailyRequests: 2,
+        },
+      ]);
+    });
+
+    it('E-PRV-03 reports what the field adds and drops against the stored field', async () => {
+      const appId = await seedApp();
+      await harness.prisma.keywordField.create({
+        data: {
+          appId,
+          workspaceId: WORKSPACE,
+          localization: 'es-MX',
+          phrases: ['uno', 'viejo'],
+        },
+      });
+      await harness.prisma.appLocalization.create({
+        data: {
+          appId,
+          workspaceId: WORKSPACE,
+          localization: 'es-MX',
+          origin: 'manual',
+        },
+      });
+
+      await expect(previewed(appId, 'es-MX', 'uno,dos')).resolves.toMatchObject(
+        {
+          localization: 'es-MX',
+          phrases: ['uno', 'dos'],
+          added: ['dos'],
+          dropped: ['viejo'],
+        },
+      );
+    });
+
+    it('E-PRV-04 reports the characters used and the duplicates removed', async () => {
+      const appId = await seedApp();
+
+      await expect(
+        previewed(appId, 'en-US', 'uno, uno,dos'),
+      ).resolves.toMatchObject({
+        duplicatesRemoved: 1,
+        charactersUsed: 7,
+        charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+      });
+    });
+
+    it('E-PRV-05 reports the keyword limit of the plan like the import preview', async () => {
+      await resetBillingState(harness, { plan: 'indie', trialEndsAt: null });
+      const limit = PLAN_LIMITS.indie.keywordMarkets as number;
+      const appId = await seedApp();
+      await trackActive(
+        appId,
+        'us',
+        Array.from({ length: limit - 2 }, (_, index) => `filler ${index}`),
+      );
+
+      await expect(previewed(appId, 'en-US', 'uno')).resolves.toMatchObject({
+        quota: { used: limit - 2, limit, upgradeTo: 'ultimate' },
+      });
+
+      await resetBillingState(harness, { plan: 'ultimate', trialEndsAt: null });
+      const ultimate = await previewed(appId, 'en-US', 'uno');
+      expect(ultimate.quota?.upgradeTo).toBeNull();
+    });
+
+    it('E-PRV-06 lets a read only token preview', async () => {
+      const appId = await seedApp();
+
+      await request(harness.app.getHttpServer())
+        .post(`/apps/${appId}/keyword-fields/en-US/preview`)
+        .set('Authorization', `Bearer ${harness.memberToken}`)
+        .send({ text: 'uno' })
+        .expect(200);
+    });
+
+    it('E-PRV-07 answers 402 for a workspace without a plan in force', async () => {
+      await resetBillingState(harness, {
+        plan: 'free',
+        trialEndsAt: new Date(Date.now() - 1_000),
+      });
+      const appId = await seedApp();
+
+      await preview(appId, 'en-US', { text: 'uno' }).expect(402);
+    });
+
+    it('E-PRV-08 refuses a field over 100 characters and a bad body', async () => {
+      const appId = await seedApp();
+
+      const oversized = await preview(appId, 'en-US', {
+        text: OVERSIZED,
+      }).expect(400);
+      await preview(appId, 'en-US', {}).expect(400);
+      await preview(appId, 'en-US', { text: 5 }).expect(400);
+      const unknown = await preview(appId, 'xx', { text: 'uno' }).expect(400);
+
+      expect(messageOf(oversized)).toBe('Keyword field exceeds 100 characters');
+      expect(messageOf(unknown)).toBe('Unknown App Store localization: xx');
+    });
+
+    it('E-PRV-09 refuses a Google Play app and a missing app', async () => {
+      const appId = await seedApp('play', Store.GOOGLE_PLAY);
+
+      const response = await preview(appId, 'en-US', { text: 'uno' }).expect(
+        400,
+      );
+
+      expect(messageOf(response)).toBe(
+        'The keyword field is only available for App Store apps',
+      );
+      await preview('missing-app', 'en-US', { text: 'uno' }).expect(404);
+    });
+
+    it('E-PRV-10 counts a paused phrase as new', async () => {
+      const appId = await seedApp();
+      await trackActive(appId, 'us', ['uno']);
+      await harness.prisma.trackedKeyword.updateMany({
+        where: { appId },
+        data: { active: false },
+      });
+
+      const [us] = (await previewed(appId, 'en-US', 'uno')).markets;
+
+      expect(us.newPhrases).toContain('uno');
+      expect(us.keywordMarkets).toBe(1);
+    });
+
+    it('E-PRV-11 answers no market for a localization no market of the app reads', async () => {
+      const appId = await seedApp();
+
+      await expect(previewed(appId, 'pl', 'raz,dwa')).resolves.toMatchObject({
+        markets: [],
+        added: ['raz', 'dwa'],
+        dropped: [],
+      });
+    });
+
+    it('E-PRV-12 refuses a NUL character in the text', async () => {
+      const appId = await seedApp();
+
+      const response = await preview(appId, 'en-US', {
+        text: `a${NUL}`,
+      }).expect(400);
+
+      expect(messageOf(response)).toBe('text must not contain a NUL character');
     });
   });
 });
