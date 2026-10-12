@@ -128,6 +128,8 @@ export class KeywordFieldService {
     await tx.trackedKeyword.updateMany({
       where: {
         appId,
+        active: true,
+        source: 'KEYWORD_FIELD',
         keywordId: { in: untracked.map((row) => row.keywordId) },
       },
       data: { active: false },

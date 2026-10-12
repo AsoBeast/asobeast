@@ -249,6 +249,26 @@ describe('KeywordFieldService.setKeywordField deactivation', () => {
 });
 
 describe('KeywordFieldService.setKeywordField writes', () => {
+  it('leaves a dropped phrase another write claimed while the save ran', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+    await service.setKeywordField(APP.id, 'a,b');
+    const findMany = prisma.trackedKeyword.findMany;
+    jest
+      .spyOn(prisma.trackedKeyword, 'findMany')
+      .mockImplementation(async (args: FindManyArgs) => {
+        const rows = await findMany(args);
+        if (args.where.source === 'KEYWORD_FIELD') {
+          for (const row of prisma.rows) row.source = 'MANUAL';
+        }
+        return rows;
+      });
+
+    await service.setKeywordField(APP.id, 'a');
+
+    expect(deactivatedTexts(prisma)).toEqual([]);
+  });
+
   it('locks the app inside the transaction before it writes a tracked keyword', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma);
