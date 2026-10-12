@@ -305,7 +305,14 @@ describe('MetadataController (e2e)', () => {
         keywordId: keyword.id,
         source: 'KEYWORD_FIELD',
         active: true,
-        fieldOrder: 0,
+      },
+    });
+    await prisma.keywordField.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-US',
+        phrases: ['zażółć'],
       },
     });
 

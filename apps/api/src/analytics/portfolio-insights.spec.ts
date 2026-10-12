@@ -15,7 +15,6 @@ const TWO_DAYS_AGO = new Date('2026-07-11T00:00:00.000Z');
 const row = (keywordId: string, rankings: Ranking[]): TrackedRow => ({
   keywordId,
   source: 'TITLE',
-  fieldOrder: null,
   relevance: null,
   keyword: { text: keywordId, country: 'us', metrics: [], rankings },
 });

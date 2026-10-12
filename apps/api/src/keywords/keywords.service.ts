@@ -14,6 +14,7 @@ import { classifyBuckets } from './buckets';
 import { extractCandidates } from './extraction';
 import { homeListingTexts } from './home-listings';
 import { interleaveDistinct } from './interleave';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
@@ -37,6 +38,7 @@ export class KeywordsService {
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
     private readonly listings: MarketListingRequests,
+    private readonly fields: KeywordFieldService,
   ) {}
 
   async listTracked(
@@ -221,11 +223,12 @@ export class KeywordsService {
   }
 
   async remove(appId: string, keywordId: string): Promise<void> {
-    await ensureApp(this.prisma, appId);
-    await this.ensureTracked(appId, keywordId);
+    const app = await ensureApp(this.prisma, appId);
+    const keyword = await this.ensureTracked(appId, keywordId);
     await this.prisma.trackedKeyword.delete({
       where: { appId_keywordId: { appId, keywordId } },
     });
+    await this.fields.forget(app, keyword);
   }
 
   async syncFromSnapshot(appId: string): Promise<void> {
@@ -337,10 +340,12 @@ export class KeywordsService {
   private async ensureTracked(
     appId: string,
     keywordId: string,
-  ): Promise<{ store: Store; country: string }> {
+  ): Promise<{ store: Store; country: string; text: string }> {
     const tracked = await this.prisma.trackedKeyword.findUnique({
       where: { appId_keywordId: { appId, keywordId } },
-      select: { keyword: { select: { store: true, country: true } } },
+      select: {
+        keyword: { select: { store: true, country: true, text: true } },
+      },
     });
     if (!tracked) {
       throw new NotFoundException(`Keyword ${keywordId} is not tracked`);

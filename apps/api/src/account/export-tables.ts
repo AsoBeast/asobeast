@@ -88,6 +88,16 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         }),
     ),
     table(
+      'keywordField',
+      () => prisma.keywordField.count(),
+      (skip, take) =>
+        prisma.keywordField.findMany({
+          skip,
+          take,
+          orderBy: [{ appId: 'asc' }, { localization: 'asc' }],
+        }),
+    ),
+    table(
       'keywordRanking',
       () => prisma.keywordRanking.count(),
       (skip, take) =>

@@ -53,6 +53,7 @@ model Workspace {
   actionEvents ActionEvent[]
   aiCalls     AiCall[]
   snapshotScreenshots SnapshotScreenshot[]
+  keywordFields KeywordField[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -187,6 +188,7 @@ model App {
   group        AppGroup?        @relation(fields: [groupId, workspaceId], references: [id, workspaceId], onDelete: NoAction)
   snapshots    AppSnapshot[]
   tracked      TrackedKeyword[]
+  keywordFields KeywordField[]
   rankings     KeywordRanking[]
   categoryRanks CategoryRank[]
   changeEvents ChangeEvent[]
@@ -290,6 +292,19 @@ model TrackedKeyword {
 
   @@id([appId, keywordId])
   @@index([keywordId])
+}
+
+model KeywordField {
+  appId        String
+  workspaceId  String
+  app          App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  localization String
+  phrases      String[]
+  updatedAt    DateTime  @updatedAt
+
+  @@id([appId, localization])
+  @@index([workspaceId])
 }
 
 model AuditInsight {

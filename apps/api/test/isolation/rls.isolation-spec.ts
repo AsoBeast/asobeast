@@ -9,6 +9,7 @@ const SCOPED_TABLES = [
   'appSnapshot',
   'snapshotScreenshot',
   'trackedKeyword',
+  'keywordField',
   'keywordRanking',
   'categoryRank',
   'changeEvent',

@@ -13,6 +13,7 @@ export const TENANT_TABLES = [
   'CategoryRank',
   'ChangeEvent',
   'EmailAlert',
+  'KeywordField',
   'KeywordRanking',
   'Review',
   'SnapshotScreenshot',

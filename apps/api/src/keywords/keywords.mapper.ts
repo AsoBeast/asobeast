@@ -9,14 +9,13 @@ import {
 } from '@asobeast/shared';
 import { appOpportunity } from '../scoring/keyword-opportunity';
 import { readScoreSignals } from '../scoring/score-signals';
-import { reportedSource } from './keyword-field-membership';
+import { KeywordFieldIndex, reportedSource } from './keyword-field-index';
 
 const DELTA_WINDOW_DAYS = 7;
 
 export interface TrackedKeywordRow {
   keywordId: string;
   source: TrackedKeywordItem['source'];
-  fieldOrder: number | null;
   active: boolean;
   relevance: number | null;
   tags: string[];
@@ -142,6 +141,7 @@ function positionFacts(
 export interface AppFacts {
   snapshotText: string;
   marketTexts?: ReadonlyMap<string, string>;
+  inKeywordField?: KeywordFieldIndex;
 }
 
 const NO_APP_FACTS: AppFacts = { snapshotText: '' };
@@ -156,7 +156,10 @@ export function toTrackedKeywordItem(
   const { latestPosition, latestDepth } = positions;
   const traffic = metric?.traffic ?? null;
   const difficulty = metric?.difficulty ?? null;
-  const source = reportedSource(row);
+  const source = reportedSource(
+    row.source,
+    app.inKeywordField?.(row.keyword.country, row.keyword.text) ?? false,
+  );
   const signals = readScoreSignals(metric?.stats);
   const { volume, relevance, opportunity } = appOpportunity({
     source,

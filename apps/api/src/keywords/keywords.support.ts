@@ -109,7 +109,6 @@ export function trackedArgs(appId: string) {
     select: {
       keywordId: true,
       source: true,
-      fieldOrder: true,
       active: true,
       relevance: true,
       tags: true,

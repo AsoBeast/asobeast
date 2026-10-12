@@ -25,7 +25,6 @@ export interface Ranking {
 export interface TrackedRow {
   keywordId: string;
   source: KeywordSource;
-  fieldOrder: number | null;
   relevance: number | null;
   keyword: {
     text: string;
@@ -267,7 +266,6 @@ export async function trackedRows(
     select: {
       keywordId: true,
       source: true,
-      fieldOrder: true,
       relevance: true,
       keyword: {
         select: {

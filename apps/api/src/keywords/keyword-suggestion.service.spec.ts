@@ -25,6 +25,7 @@ describe('KeywordSuggestionService.suggest competitors', () => {
           store: Store.APP_STORE,
           country: 'us',
           storeAppId: 'store1',
+          keywordFields: [],
         }),
         findMany: jest.fn().mockResolvedValue([
           {
@@ -71,6 +72,7 @@ describe('KeywordSuggestionService.suggest developer', () => {
         store: Store.APP_STORE,
         country: 'us',
         storeAppId: 'store1',
+        keywordFields: [],
       }),
     },
     appSnapshot: {
@@ -123,6 +125,7 @@ describe('KeywordSuggestionService.suggest egress', () => {
         store: Store.APP_STORE,
         country: 'us',
         storeAppId: 'store1',
+        keywordFields: [],
         raw: {},
         title: 'Habit Tracker',
       }),
@@ -193,6 +196,7 @@ describe('KeywordSuggestionService.suggest in a spanish market', () => {
         store,
         country: 'mx',
         storeAppId: 'store1',
+        keywordFields: [],
       }),
       findMany: jest.fn().mockResolvedValue([
         {
@@ -322,6 +326,7 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
             store,
             country,
             storeAppId: 'store1',
+            keywordFields: [],
           }),
         },
         trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },

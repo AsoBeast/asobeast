@@ -12,7 +12,7 @@ import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { SearchItem } from '../store-providers/types';
 import { extractCandidates } from './extraction';
-import { reportedSource } from './keyword-field-membership';
+import { loadKeywordFieldIndex, reportedSource } from './keyword-field-index';
 import { ensureApp, trackedTexts } from './keywords.support';
 import { listingLanguages } from './listing-languages';
 import { mineReviewPhrases } from './review-mining';
@@ -285,19 +285,23 @@ export class KeywordSuggestionService {
   }
 
   private async searchSeeds(appId: string): Promise<string[]> {
+    const inField = await loadKeywordFieldIndex(this.prisma, appId);
     const tracked = await this.prisma.trackedKeyword.findMany({
       where: { appId, active: true },
       select: {
         source: true,
-        fieldOrder: true,
-        keyword: { select: { text: true } },
+        keyword: { select: { text: true, country: true } },
       },
     });
+    const weight = (row: (typeof tracked)[number]) =>
+      SOURCE_WEIGHT[
+        reportedSource(
+          row.source,
+          inField(row.keyword.country, row.keyword.text),
+        )
+      ];
     return tracked
-      .sort(
-        (a, b) =>
-          SOURCE_WEIGHT[reportedSource(b)] - SOURCE_WEIGHT[reportedSource(a)],
-      )
+      .sort((a, b) => weight(b) - weight(a))
       .slice(0, SEARCH_SEED_LIMIT)
       .map((row) => row.keyword.text);
   }
