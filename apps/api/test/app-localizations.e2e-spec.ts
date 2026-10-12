@@ -8,12 +8,16 @@ import {
   AppLocalizationsResult,
   KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
+  TrackedKeywordItem,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { AppLocalizationsService } from '../src/keywords/app-localizations.service';
+import { KeywordFieldService } from '../src/keywords/keyword-field.service';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { ownerAgent, useCookies } from './helpers/session';
+import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
@@ -62,6 +66,43 @@ describe('App localizations (e2e)', () => {
       .post(`/apps/${id}/keywords`)
       .send({ keywords: [keyword], country })
       .expect(201);
+
+  const sources = async (id: string, country: string) =>
+    Object.fromEntries(
+      (
+        (await api.get(`/apps/${id}/keywords`).query({ country }).expect(200))
+          .body as TrackedKeywordItem[]
+      ).map((item) => [item.text, `${item.source}:${item.active}`]),
+    );
+
+  const add = (id: string, body: object) =>
+    api.post(`/apps/${id}/localizations`).send(body);
+
+  const remove = (id: string, localization: string) =>
+    api.delete(`/apps/${id}/localizations/${localization}`);
+
+  const messageOf = (response: { body: unknown }) =>
+    (response.body as ApiErrorEnvelope).message;
+
+  const seedRow = (appId: string, localization: string, origin = 'manual') =>
+    prisma.appLocalization.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization,
+        origin,
+      },
+    });
+
+  const seedField = (appId: string, localization: string, phrases: string[]) =>
+    prisma.keywordField.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization,
+        phrases,
+      },
+    });
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -393,6 +434,240 @@ describe('App localizations (e2e)', () => {
           workspaceId: DEFAULT_WORKSPACE_ID,
         },
       ]);
+    });
+  });
+
+  describe('adding a localization', () => {
+    it('adds a localization and answers 201 with the item', async () => {
+      const id = await seedApp();
+
+      const response = await add(id, { localization: 'es-MX' }).expect(201);
+
+      expect(response.body).toEqual({
+        localization: 'es-MX',
+        origin: 'manual',
+        phrases: [],
+        charactersUsed: 0,
+        charactersLimit: 100,
+        readBy: [{ country: 'us', role: 'additional', home: true }],
+        updatedAt: null,
+      });
+      await expect(
+        prisma.appLocalization.findMany({
+          where: { appId: id },
+          select: { localization: true, origin: true },
+        }),
+      ).resolves.toEqual([{ localization: 'es-MX', origin: 'manual' }]);
+      await expect(tagsOf(id)).resolves.toEqual(['en-US', 'es-MX']);
+    });
+
+    it.each([
+      ['en-US', 'English (U.S.)', 'home'],
+      ['es-MX', 'Spanish (Mexico)', 'row'],
+      ['fr', 'French', 'field'],
+    ] as const)(
+      'answers 409 for a localization the app already ships (%s)',
+      async (localization, name, shipped) => {
+        const id = await seedApp();
+        if (shipped === 'row') await seedRow(id, localization);
+        if (shipped === 'field') await seedField(id, localization, ['a']);
+        const before = await prisma.appLocalization.count();
+
+        const response = await add(id, { localization }).expect(409);
+
+        expect(messageOf(response)).toBe(
+          `${name} is already one of this app's localizations`,
+        );
+        await expect(prisma.appLocalization.count()).resolves.toBe(before);
+      },
+    );
+
+    it.each([
+      { localization: 'xx' },
+      { localization: 'en-us' },
+      { localization: 'es' },
+      { localization: '' },
+      {},
+      { localization: 5 },
+    ])('answers 400 for a tag outside the 50 (%j)', async (body) => {
+      const id = await seedApp();
+
+      await add(id, body).expect(400);
+
+      await expect(prisma.appLocalization.count()).resolves.toBe(0);
+    });
+
+    it('answers 400 for a property it does not know', async () => {
+      const id = await seedApp();
+
+      await add(id, { localization: 'es-MX', origin: 'detected' }).expect(400);
+
+      await expect(prisma.appLocalization.count()).resolves.toBe(0);
+    });
+
+    it('adds a localization no market reads', async () => {
+      const id = await seedApp();
+
+      const response = await add(id, { localization: 'de' }).expect(201);
+
+      expect((response.body as { readBy: unknown[] }).readBy).toEqual([]);
+    });
+
+    it('answers 400 for a Google Play app and 404 for a missing app', async () => {
+      const play = await seedApp('us', Store.GOOGLE_PLAY);
+
+      const response = await add(play, { localization: 'es-MX' }).expect(400);
+
+      expect(messageOf(response)).toBe(
+        'The keyword field is only available for App Store apps',
+      );
+      await add('missing-app', { localization: 'es-MX' }).expect(404);
+    });
+
+    it('lets exactly one of two racing adds win', async () => {
+      const id = await seedApp();
+      const body = { localization: 'es-MX' };
+
+      const responses = await Promise.all([add(id, body), add(id, body)]);
+
+      expect(responses.map((response) => response.status).sort()).toEqual([
+        201, 409,
+      ]);
+      await expect(prisma.appLocalization.count()).resolves.toBe(1);
+    });
+  });
+
+  describe('removing a localization', () => {
+    it('removes the row and the field and answers 204', async () => {
+      const id = await seedApp();
+      await saveField(id, { localization: 'es-MX' }, 'habito,metas').expect(
+        200,
+      );
+
+      await remove(id, 'es-MX').expect(204);
+
+      await expect(tagsOf(id)).resolves.toEqual(['en-US']);
+      await expect(
+        prisma.keywordField.count({ where: { appId: id } }),
+      ).resolves.toBe(0);
+      await expect(
+        prisma.appLocalization.count({ where: { appId: id } }),
+      ).resolves.toBe(0);
+    });
+
+    it('untracks the field phrases in every market that reads it and keeps a manual keyword', async () => {
+      const id = await seedApp();
+      await track(id, 'us', 'metas');
+      await saveField(id, { localization: 'es-MX' }, 'habito,metas').expect(
+        200,
+      );
+      await saveField(id, { country: 'mx' }, 'habito,metas').expect(200);
+
+      await remove(id, 'es-MX').expect(204);
+
+      await expect(sources(id, 'us')).resolves.toEqual({
+        habito: 'KEYWORD_FIELD:false',
+        metas: 'MANUAL:true',
+      });
+      await expect(sources(id, 'mx')).resolves.toEqual({
+        habito: 'KEYWORD_FIELD:false',
+        metas: 'KEYWORD_FIELD:false',
+      });
+    });
+
+    it('keeps a phrase another saved field of the market still holds', async () => {
+      const id = await seedApp();
+      await saveField(id, {}, 'habit').expect(200);
+      await saveField(id, { localization: 'es-MX' }, 'habit,metas').expect(200);
+
+      await remove(id, 'es-MX').expect(204);
+
+      await expect(sources(id, 'us')).resolves.toEqual({
+        habit: 'KEYWORD_FIELD:true',
+        metas: 'KEYWORD_FIELD:false',
+      });
+    });
+
+    it('answers 409 for the home localization and changes nothing', async () => {
+      const id = await seedApp();
+      await saveField(id, {}, 'habit').expect(200);
+
+      const response = await remove(id, 'en-US').expect(409);
+
+      expect(messageOf(response)).toBe(
+        'English (U.S.) is the default localization of the US storefront and cannot be removed',
+      );
+      await expect(itemOf(id, 'en-US')).resolves.toMatchObject({
+        phrases: ['habit'],
+      });
+    });
+
+    it('answers 404 for a localization the app does not ship', async () => {
+      const id = await seedApp();
+
+      const response = await remove(id, 'es-MX').expect(404);
+
+      expect(messageOf(response)).toBe(
+        "Spanish (Mexico) is not one of this app's localizations",
+      );
+    });
+
+    it('answers 400 for a tag outside the 50', async () => {
+      const id = await seedApp();
+
+      const response = await remove(id, 'xx-YY').expect(400);
+
+      expect(messageOf(response)).toBe('Unknown App Store localization: xx-YY');
+      await remove(id, 'en-us').expect(400);
+    });
+
+    it('removes a localization that has a field and no row', async () => {
+      const id = await seedApp();
+      await seedField(id, 'fr', ['habitude']);
+
+      await remove(id, 'fr').expect(204);
+
+      await expect(
+        prisma.keywordField.count({ where: { appId: id } }),
+      ).resolves.toBe(0);
+    });
+
+    it('removes a detected localization that has no field', async () => {
+      const id = await seedApp();
+      await seedRow(id, 'es-MX', 'detected');
+
+      await remove(id, 'es-MX').expect(204);
+
+      await expect(prisma.appLocalization.count()).resolves.toBe(0);
+    });
+
+    it('answers 400 for a Google Play app and 404 for a missing app', async () => {
+      const play = await seedApp('us', Store.GOOGLE_PLAY);
+
+      await remove(play, 'es-MX').expect(400);
+      await remove('missing-app', 'es-MX').expect(404);
+    });
+
+    it('leaves a field and its row together when a remove races a save', async () => {
+      const id = await seedApp();
+      await saveField(id, { localization: 'es-MX' }, 'habito').expect(200);
+
+      await Promise.allSettled([
+        asWorkspace(app, () =>
+          app
+            .get(KeywordFieldService)
+            .setKeywordField(id, 'habito,metas', { localization: 'es-MX' }),
+        ),
+        asWorkspace(app, () =>
+          app.get(AppLocalizationsService).remove(id, 'es-MX'),
+        ),
+      ]);
+
+      const [fields, rows] = await Promise.all([
+        prisma.keywordField.count({ where: { appId: id } }),
+        prisma.appLocalization.count({ where: { appId: id } }),
+      ]);
+      expect(fields).toBe(rows);
     });
   });
 });

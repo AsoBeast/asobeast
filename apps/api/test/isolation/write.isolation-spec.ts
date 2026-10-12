@@ -185,6 +185,40 @@ describe('Write isolation', () => {
       .expect(404);
   });
 
+  it('refuses to add a localization to another workspace app', async () => {
+    await fixture.a.agent
+      .post(`/apps/${fixture.a.appleAppId}/localizations`)
+      .send({ localization: 'fr' })
+      .expect(201);
+
+    await fixture.a.agent
+      .post(`/apps/${fixture.b.appleAppId}/localizations`)
+      .send({ localization: 'fr' })
+      .expect(404);
+
+    await expect(
+      fixture.db.appLocalization.count({
+        where: { appId: fixture.b.appleAppId, localization: 'fr' },
+      }),
+    ).resolves.toBe(0);
+  });
+
+  it('refuses to remove a localization of another workspace app', async () => {
+    await fixture.a.agent
+      .delete(`/apps/${fixture.b.appleAppId}/localizations/es-MX`)
+      .expect(404);
+
+    await expect(
+      fixture.db.appLocalization.count({
+        where: { appId: fixture.b.appleAppId, localization: 'es-MX' },
+      }),
+    ).resolves.toBe(1);
+
+    await fixture.a.agent
+      .delete(`/apps/${fixture.a.appleAppId}/localizations/es-MX`)
+      .expect(204);
+  });
+
   it('flushes only the caller outbox and reports only its own counts', async () => {
     for (const workspace of [fixture.a, fixture.b]) {
       await fixture.db.alertEvent.create({

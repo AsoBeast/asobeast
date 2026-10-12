@@ -69,6 +69,21 @@ export class KeywordFieldWriter {
     return this.announce(app, resolved);
   }
 
+  async remove(
+    app: KeywordApp,
+    localization: AppStoreLocalization,
+  ): Promise<void> {
+    await this.quota.admitKeywordMarkets(async (tx) => {
+      await this.serialize(tx, app.id);
+      const before = await storedPhrases(tx, app.id, localization);
+      await this.storePhrases(tx, app.id, localization, []);
+      await tx.appLocalization.deleteMany({
+        where: { appId: app.id, localization },
+      });
+      await this.untrackDropped(tx, app.id, localization, before);
+    });
+  }
+
   private async resolveKeywords(
     app: KeywordApp,
     phrases: string[],
