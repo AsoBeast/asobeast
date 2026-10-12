@@ -10,6 +10,7 @@ import {
   DailyBudget,
   KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
+  KeywordFieldSummary,
   KeywordSuggestion,
   QUERY_BOUNDS,
   SpiderEnqueueResult,
@@ -504,6 +505,7 @@ describe('KeywordsController (e2e)', () => {
     expect(firstBody.charactersLimit).toBe(100);
     expect(firstBody.duplicatesRemoved).toBe(1);
     expect(firstBody.charactersUsed).toBe('habit,tracker,streak'.length);
+    expect(firstBody.phrases).toEqual(['habit', 'tracker', 'streak']);
     expect(firstBody.tracked.map((item) => item.text).sort()).toEqual([
       'habit',
       'streak',
@@ -678,6 +680,9 @@ describe('KeywordsController (e2e)', () => {
       charactersUsed: 0,
       charactersLimit: 100,
       duplicatesRemoved: 0,
+      country: 'us',
+      localization: 'en-US',
+      phrases: [],
     });
   });
 
@@ -708,6 +713,184 @@ describe('KeywordsController (e2e)', () => {
 
   it('answers 404 for the keyword field of a missing app', async () => {
     await api.get('/apps/missing-app/keyword-field').expect(404);
+  });
+
+  describe('keyword fields per localization', () => {
+    const put = (id: string, query: Record<string, string>, text: string) =>
+      api.put(`/apps/${id}/keyword-field`).query(query).send({ text });
+
+    const sources = async (id: string, country: string) =>
+      Object.fromEntries(
+        (
+          (await api.get(`/apps/${id}/keywords`).query({ country }).expect(200))
+            .body as TrackedKeywordItem[]
+        ).map((item) => [item.text, `${item.source}:${item.active}`]),
+      );
+
+    it('saves the spanish (mexico) field of the united states beside the english one', async () => {
+      const id = await importApp();
+      await putKeywordField(id, 'habit,goals');
+      const spanish = await put(
+        id,
+        { localization: 'es-MX' },
+        'habito,metas',
+      ).expect(200);
+
+      expect(spanish.body).toMatchObject({
+        country: 'us',
+        localization: 'es-MX',
+        phrases: ['habito', 'metas'],
+      });
+      const english = await api.get(`/apps/${id}/keyword-field`).expect(200);
+      expect(english.body).toMatchObject({
+        country: 'us',
+        localization: 'en-US',
+        phrases: ['habit', 'goals'],
+      });
+      const spanishRead = await api
+        .get(`/apps/${id}/keyword-field`)
+        .query({ localization: 'es-MX' })
+        .expect(200);
+      expect(spanishRead.body).toMatchObject({
+        country: 'us',
+        localization: 'es-MX',
+        phrases: ['habito', 'metas'],
+      });
+      expect(await sources(id, 'us')).toMatchObject({
+        habit: 'KEYWORD_FIELD:true',
+        goals: 'KEYWORD_FIELD:true',
+        habito: 'KEYWORD_FIELD:true',
+        metas: 'KEYWORD_FIELD:true',
+      });
+    });
+
+    it('refuses a localization the storefront does not read', async () => {
+      const id = await importApp();
+      const response = await put(
+        id,
+        { localization: 'de' },
+        'gewohnheit',
+      ).expect(400);
+      const { message } = response.body as ApiErrorEnvelope;
+
+      expect(message).toContain('English (U.S.)');
+      expect(message).toContain('not German');
+    });
+
+    it('refuses a value that is not an app store localization', async () => {
+      const id = await importApp();
+      await put(id, { localization: 'xx-YY' }, 'habit').expect(400);
+      await api
+        .get(`/apps/${id}/keyword-field`)
+        .query({ localization: 'de-DE' })
+        .expect(400);
+    });
+
+    it('refuses a country that is not an app store storefront', async () => {
+      const id = await importApp();
+      await put(id, { country: 'zz' }, 'habit').expect(400);
+    });
+
+    it("reads a market's default localization when none is named", async () => {
+      const id = await importApp();
+      const response = await api
+        .get(`/apps/${id}/keyword-field`)
+        .query({ country: 'de' })
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        country: 'de',
+        localization: 'de',
+        phrases: [],
+      });
+    });
+
+    it('tracks the phrases in the market it was saved from only', async () => {
+      const id = await importApp();
+      await put(id, { country: 'de' }, 'gewohnheit').expect(200);
+
+      expect(await sources(id, 'de')).toEqual({
+        gewohnheit: 'KEYWORD_FIELD:true',
+      });
+      expect(await sources(id, 'at')).toEqual({});
+    });
+
+    it('reports a keyword of another market that reads the field as the keyword field', async () => {
+      const id = await importApp();
+      await put(id, { country: 'de' }, 'gewohnheit').expect(200);
+      await api
+        .post(`/apps/${id}/keywords`)
+        .send({ keywords: ['gewohnheit'], country: 'at' })
+        .expect(201);
+
+      expect(await sources(id, 'at')).toEqual({
+        gewohnheit: 'KEYWORD_FIELD:true',
+      });
+    });
+
+    it('stops tracking a removed phrase in every market that reads the localization', async () => {
+      const id = await importApp();
+      await put(id, { country: 'de' }, 'gewohnheit,ziel').expect(200);
+      await put(
+        id,
+        { country: 'at', localization: 'de' },
+        'gewohnheit,ziel',
+      ).expect(200);
+      await put(id, { country: 'de' }, 'gewohnheit').expect(200);
+
+      expect(await sources(id, 'de')).toEqual({
+        gewohnheit: 'KEYWORD_FIELD:true',
+        ziel: 'KEYWORD_FIELD:false',
+      });
+      expect(await sources(id, 'at')).toEqual({
+        gewohnheit: 'KEYWORD_FIELD:true',
+        ziel: 'KEYWORD_FIELD:false',
+      });
+    });
+
+    it('keeps a removed phrase another field of the market still holds', async () => {
+      const id = await importApp();
+      await putKeywordField(id, 'habit');
+      await put(id, { localization: 'es-MX' }, 'habit,metas').expect(200);
+      await put(id, { localization: 'es-MX' }, 'metas').expect(200);
+
+      expect((await sources(id, 'us')).habit).toBe('KEYWORD_FIELD:true');
+    });
+
+    it('keeps a phrase in the field when its keyword is untracked', async () => {
+      const id = await importApp();
+      await putKeywordField(id, 'habit,goals');
+      const habit = await trackedItem(id, 'habit');
+      await api.delete(`/apps/${id}/keywords/${habit?.keywordId}`).expect(204);
+
+      const field = (await api.get(`/apps/${id}/keyword-field`).expect(200))
+        .body as KeywordFieldResult;
+      expect(field.phrases).toEqual(['habit', 'goals']);
+      expect(field.tracked.map((item) => item.text)).toEqual(['goals']);
+      expect(field.charactersUsed).toBe('habit,goals'.length);
+    });
+
+    it('lists every saved field with the markets of the app that read it', async () => {
+      const id = await importApp();
+      await putKeywordField(id, 'habit');
+      await put(id, { localization: 'es-MX' }, 'habito').expect(200);
+      await put(id, { country: 'mx' }, 'metas').expect(200);
+
+      const response = await api.get(`/apps/${id}/keyword-fields`).expect(200);
+      expect(
+        (response.body as KeywordFieldSummary[]).map(
+          ({ localization, phrases, markets }) => ({
+            localization,
+            phrases,
+            markets,
+          }),
+        ),
+      ).toEqual([
+        { localization: 'en-US', phrases: ['habit'], markets: ['us'] },
+        { localization: 'es-MX', phrases: ['metas'], markets: ['us', 'mx'] },
+      ]);
+      expect((await sources(id, 'us')).habito).toBe('KEYWORD_FIELD:false');
+    });
   });
 
   it('sorts tracked keywords by serp volatility with nulls last', async () => {

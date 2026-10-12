@@ -7,6 +7,7 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordFieldService } from './keyword-field.service';
 import { KeywordTracker } from './keyword-tracker';
+import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
@@ -23,7 +24,7 @@ interface KeywordFilter {
 }
 
 interface FindManyArgs {
-  where: KeywordFilter & { active?: boolean };
+  where: KeywordFilter & { active?: boolean; source?: string };
 }
 
 interface UpdateManyArgs {
@@ -70,7 +71,7 @@ function buildPrisma() {
     insertedTexts,
     $executeRaw: jest.fn<Promise<number>, unknown[]>(() => Promise.resolve(1)),
     app: {
-      findFirst: () => Promise.resolve({ ...APP, keywordFields: [] }),
+      findFirst: () => Promise.resolve(APP),
     },
     appSnapshot: { findFirst: () => Promise.resolve(null) },
     keywordMetric: { findFirst: () => Promise.resolve(null) },
@@ -79,6 +80,12 @@ function buildPrisma() {
       findMany: () => Promise.resolve([]),
     },
     keywordField: {
+      findMany: () =>
+        Promise.resolve(
+          field.phrases
+            ? [{ localization: 'en-US', phrases: field.phrases }]
+            : [],
+        ),
       findUnique: () =>
         Promise.resolve(field.phrases ? { phrases: field.phrases } : null),
       upsert: ({ update }: { update: { phrases: string[] } }) => {
@@ -126,6 +133,7 @@ function buildPrisma() {
         const matching = rows.filter(
           (row) =>
             matchesText(row.keywordId, where) &&
+            (where.source === undefined || row.source === where.source) &&
             (where.active === undefined || row.active === where.active),
         );
         return Promise.resolve(
@@ -190,6 +198,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
       } as unknown as ConfigService<Env, true>,
     ),
     { require: () => APP.workspaceId } as unknown as WorkspaceContext,
+    { request: jest.fn() } as unknown as MarketListingRequests,
   );
 }
 

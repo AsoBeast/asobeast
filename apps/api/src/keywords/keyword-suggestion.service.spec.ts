@@ -19,13 +19,13 @@ describe('KeywordSuggestionService.suggest competitors', () => {
 
   it('counts overlapping competitor terms and drops tracked ones', async () => {
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',
           store: Store.APP_STORE,
           country: 'us',
           storeAppId: 'store1',
-          keywordFields: [],
         }),
         findMany: jest.fn().mockResolvedValue([
           {
@@ -66,13 +66,13 @@ describe('KeywordSuggestionService.suggest developer', () => {
     );
 
   const buildPrisma = (raw: unknown) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
         store: Store.APP_STORE,
         country: 'us',
         storeAppId: 'store1',
-        keywordFields: [],
       }),
     },
     appSnapshot: {
@@ -119,13 +119,13 @@ describe('KeywordSuggestionService.suggest developer', () => {
 
 describe('KeywordSuggestionService.suggest egress', () => {
   const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
         store: Store.APP_STORE,
         country: 'us',
         storeAppId: 'store1',
-        keywordFields: [],
         raw: {},
         title: 'Habit Tracker',
       }),
@@ -190,13 +190,13 @@ describe('KeywordSuggestionService.suggest egress', () => {
 
 describe('KeywordSuggestionService.suggest in a spanish market', () => {
   const buildPrisma = (store: Store) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
         store,
         country: 'mx',
         storeAppId: 'store1',
-        keywordFields: [],
       }),
       findMany: jest.fn().mockResolvedValue([
         {
@@ -320,13 +320,13 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
   const buildService = (country: string, store: Store) =>
     new KeywordSuggestionService(
       {
+        keywordField: { findMany: jest.fn().mockResolvedValue([]) },
         app: {
           findFirst: jest.fn().mockResolvedValue({
             id: 'app1',
             store,
             country,
             storeAppId: 'store1',
-            keywordFields: [],
           }),
         },
         trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },

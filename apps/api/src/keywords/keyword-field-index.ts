@@ -9,36 +9,28 @@ export interface StoredKeywordField {
 
 export type KeywordFieldIndex = (country: string, text: string) => boolean;
 
-export const NO_KEYWORD_FIELD: KeywordFieldIndex = () => false;
-
-export const defaultLocalizationOf = (country: string): string | undefined =>
-  readLocalizations(country)[0];
-
 export function indexKeywordFields(
-  home: string,
   fields: readonly StoredKeywordField[],
 ): KeywordFieldIndex {
-  const localization = defaultLocalizationOf(home);
-  const phrases = new Set(
-    fields.find((field) => field.localization === localization)?.phrases,
+  const phrases = new Map(
+    fields.map((field) => [field.localization, new Set(field.phrases)]),
   );
-  return (country, text) => country === home && phrases.has(text);
+  return (country, text) =>
+    readLocalizations(country).some(
+      (localization) => phrases.get(localization)?.has(text) ?? false,
+    );
 }
 
 export async function loadKeywordFieldIndex(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordFieldIndex> {
-  const app = await prisma.app.findFirst({
-    where: { id: appId },
-    select: {
-      country: true,
-      keywordFields: { select: { localization: true, phrases: true } },
-    },
-  });
-  return app
-    ? indexKeywordFields(app.country, app.keywordFields)
-    : NO_KEYWORD_FIELD;
+  return indexKeywordFields(
+    await prisma.keywordField.findMany({
+      where: { appId },
+      select: { localization: true, phrases: true },
+    }),
+  );
 }
 
 export const reportedSource = (

@@ -5,7 +5,6 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { KeywordFieldService } from './keyword-field.service';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordsService } from './keywords.service';
 import { MarketListingRequests } from './market-listing.requests';
@@ -29,7 +28,6 @@ describe('KeywordsService.syncFromSnapshot', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
-      { forget: jest.fn() } as unknown as KeywordFieldService,
     );
 
   const buildPrisma = () => {
@@ -416,7 +414,6 @@ describe('KeywordsService.compare', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
-      { forget: jest.fn() } as unknown as KeywordFieldService,
     );
 
   const buildPrisma = () => ({
@@ -489,7 +486,6 @@ describe('KeywordsService.listTracked serp volatility', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
-      { forget: jest.fn() } as unknown as KeywordFieldService,
     );
 
   const trackedRow = (keywordId: string, text: string) => ({
@@ -497,17 +493,17 @@ describe('KeywordsService.listTracked serp volatility', () => {
     source: 'MANUAL',
     active: true,
     relevance: null,
-    keyword: { text, rankings: [], metrics: [] },
+    keyword: { text, country: 'us', rankings: [], metrics: [] },
   });
 
   const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
         store: Store.APP_STORE,
         country: 'us',
         storeAppId: 'store1',
-        keywordFields: [],
       }),
     },
     appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
@@ -529,25 +525,21 @@ describe('KeywordsService.listTracked serp volatility', () => {
           keywordId: 'kwStable',
           date: new Date('2026-07-07'),
           storeAppId: 'a',
-          keywordFields: [],
         },
         {
           keywordId: 'kwStable',
           date: new Date('2026-07-07'),
           storeAppId: 'b',
-          keywordFields: [],
         },
         {
           keywordId: 'kwStable',
           date: new Date('2026-07-08'),
           storeAppId: 'b',
-          keywordFields: [],
         },
         {
           keywordId: 'kwStable',
           date: new Date('2026-07-08'),
           storeAppId: 'a',
-          keywordFields: [],
         },
         { keywordId: 'kwChurn', date: new Date('2026-07-07'), storeAppId: 'a' },
         { keywordId: 'kwChurn', date: new Date('2026-07-07'), storeAppId: 'b' },
@@ -581,20 +573,19 @@ describe('KeywordsService country tracking', () => {
       ),
       quotaOff(prisma as PrismaService),
       { request: jest.fn() } as unknown as MarketListingRequests,
-      { forget: jest.fn() } as unknown as KeywordFieldService,
     );
 
   it('adds a keyword into the requested market, not the app home country', async () => {
     const queue = { add: jest.fn() };
     const keywordCreateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',
           store: Store.APP_STORE,
           country: 'us',
           storeAppId: 's',
-          keywordFields: [],
         }),
       },
       keyword: {
@@ -627,13 +618,13 @@ describe('KeywordsService country tracking', () => {
 
   it('summarizes tracked markets home-first with counts including an empty home', async () => {
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',
           store: Store.APP_STORE,
           country: 'us',
           storeAppId: 's',
-          keywordFields: [],
         }),
       },
       trackedKeyword: {

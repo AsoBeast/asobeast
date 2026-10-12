@@ -2,27 +2,28 @@ import { KeywordSource } from '@prisma/client';
 import { indexKeywordFields, reportedSource } from './keyword-field-index';
 
 describe('indexKeywordFields', () => {
-  const fields = [{ localization: 'en-US', phrases: ['habit', 'streak'] }];
+  const fields = [
+    { localization: 'en-US', phrases: ['habit'] },
+    { localization: 'es-MX', phrases: ['habito'] },
+    { localization: 'de', phrases: ['gewohnheit'] },
+  ];
+  const index = indexKeywordFields(fields);
 
-  it('holds the phrases of the home default localization in the home market', () => {
-    const index = indexKeywordFields('us', fields);
-
-    expect(index('us', 'habit')).toBe(true);
-    expect(index('us', 'goals')).toBe(false);
-  });
-
-  it('holds nothing outside the home market', () => {
-    expect(indexKeywordFields('us', fields)('jp', 'habit')).toBe(false);
-  });
-
-  it('ignores a field of another localization', () => {
-    expect(
-      indexKeywordFields('us', [{ localization: 'es-MX', phrases: ['habit'] }])(
-        'us',
-        'habit',
-      ),
-    ).toBe(false);
-  });
+  it.each([
+    ['us', 'habit', true],
+    ['us', 'habito', true],
+    ['mx', 'habito', true],
+    ['jp', 'habit', true],
+    ['at', 'gewohnheit', true],
+    ['ch', 'gewohnheit', true],
+    ['gb', 'habit', false],
+    ['us', 'gewohnheit', false],
+  ] as const)(
+    'a %s keyword %s is in a field: %s',
+    (country, text, expected) => {
+      expect(index(country, text)).toBe(expected);
+    },
+  );
 });
 
 describe('reportedSource', () => {

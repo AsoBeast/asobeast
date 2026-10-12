@@ -1,19 +1,28 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma, Store } from '@prisma/client';
 import {
+  type AppStoreLocalization,
+  isAppStoreLocalization,
   keywordFieldChars,
+  KeywordFieldQuery,
   KeywordFieldResult,
+  KeywordFieldSummary,
   KEYWORD_FIELD_CHAR_LIMIT,
   parseKeywordField,
+  readLocalizations,
+  readsLocalization,
+  storefrontsReading,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
-import { defaultLocalizationOf } from './keyword-field-index';
+import { indexKeywordFields } from './keyword-field-index';
+import { KeywordFieldTarget, keywordFieldTarget } from './keyword-field-target';
 import { KeywordTracker } from './keyword-tracker';
 import { serpVolatilities } from './keyword-volatility';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
+import { MarketListingRequests } from './market-listing.requests';
 import {
   ensureApp,
   KeywordApp,
@@ -30,24 +39,17 @@ export class KeywordFieldService {
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
     private readonly workspace: WorkspaceContext,
+    private readonly listings: MarketListingRequests,
   ) {}
 
-  private ensureKeywordFieldStore(app: KeywordApp): void {
+  private async keywordFieldApp(appId: string): Promise<KeywordApp> {
+    const app = await ensureApp(this.prisma, appId);
     if (app.store !== Store.APP_STORE) {
       throw new BadRequestException(
         'The keyword field is only available for App Store apps',
       );
     }
-  }
-
-  private homeLocalization(app: KeywordApp): string {
-    const localization = defaultLocalizationOf(app.country);
-    if (!localization) {
-      throw new BadRequestException(
-        `The ${app.country.toUpperCase()} storefront has no App Store localization`,
-      );
-    }
-    return localization;
+    return app;
   }
 
   private serializeKeywordField(
@@ -91,16 +93,58 @@ export class KeywordFieldService {
     });
   }
 
+  private async untrackDropped(
+    tx: Prisma.TransactionClient,
+    appId: string,
+    localization: string,
+    dropped: string[],
+  ): Promise<void> {
+    if (dropped.length === 0) return;
+    const [rows, fields] = await Promise.all([
+      tx.trackedKeyword.findMany({
+        where: {
+          appId,
+          active: true,
+          source: 'KEYWORD_FIELD',
+          keyword: { is: { text: { in: dropped } } },
+        },
+        select: {
+          keywordId: true,
+          keyword: { select: { text: true, country: true } },
+        },
+      }),
+      tx.keywordField.findMany({
+        where: { appId },
+        select: { localization: true, phrases: true },
+      }),
+    ]);
+    const held = indexKeywordFields(fields);
+    const untracked = rows.filter(
+      ({ keyword }) =>
+        readsLocalization(keyword.country, localization) &&
+        !held(keyword.country, keyword.text),
+    );
+    if (untracked.length === 0) return;
+    await tx.trackedKeyword.updateMany({
+      where: {
+        appId,
+        keywordId: { in: untracked.map((row) => row.keywordId) },
+      },
+      data: { active: false },
+    });
+  }
+
   private async keywordFieldResult(
     app: KeywordApp,
+    target: KeywordFieldTarget,
     duplicatesRemoved: number,
   ): Promise<KeywordFieldResult> {
-    const phrases = await this.phrasesOf(app.id, this.homeLocalization(app));
+    const phrases = await this.phrasesOf(app.id, target.localization);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: {
         appId: app.id,
         active: true,
-        keyword: { is: { country: app.country, text: { in: phrases } } },
+        keyword: { is: { country: target.country, text: { in: phrases } } },
       },
       ...trackedArgs(app.id),
     });
@@ -111,7 +155,7 @@ export class KeywordFieldService {
         (order.get(right.keyword.text) ?? 0),
     );
     const [facts, volatility] = await Promise.all([
-      listingFacts(this.prisma, app),
+      listingFacts(this.prisma, app, [target.country]),
       serpVolatilities(
         this.prisma,
         rows.map((row) => row.keywordId),
@@ -123,24 +167,67 @@ export class KeywordFieldService {
 
     return {
       tracked,
-      charactersUsed: keywordFieldChars(tracked.map((item) => item.text)),
+      charactersUsed: keywordFieldChars(phrases),
       charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
       duplicatesRemoved,
+      country: target.country,
+      localization: target.localization,
+      phrases,
     };
   }
 
-  async getKeywordField(appId: string): Promise<KeywordFieldResult> {
-    const app = await ensureApp(this.prisma, appId);
-    this.ensureKeywordFieldStore(app);
-    return this.keywordFieldResult(app, 0);
+  async getKeywordField(
+    appId: string,
+    query: KeywordFieldQuery = {},
+  ): Promise<KeywordFieldResult> {
+    const app = await this.keywordFieldApp(appId);
+    return this.keywordFieldResult(app, keywordFieldTarget(app, query), 0);
+  }
+
+  async list(appId: string): Promise<KeywordFieldSummary[]> {
+    const app = await this.keywordFieldApp(appId);
+    const [fields, tracked] = await Promise.all([
+      this.prisma.keywordField.findMany({ where: { appId } }),
+      this.prisma.keyword.findMany({
+        where: { tracked: { some: { appId } } },
+        distinct: ['country'],
+        select: { country: true },
+      }),
+    ]);
+    const markets = [
+      ...new Set([app.country, ...tracked.map((row) => row.country)]),
+    ];
+    const home = readLocalizations(app.country)[0];
+    const homeFirst = (localization: AppStoreLocalization) =>
+      Number(localization !== home);
+    return fields
+      .flatMap(({ localization, ...field }) =>
+        isAppStoreLocalization(localization)
+          ? [{ ...field, localization }]
+          : [],
+      )
+      .sort(
+        (left, right) =>
+          homeFirst(left.localization) - homeFirst(right.localization) ||
+          left.localization.localeCompare(right.localization),
+      )
+      .map((field) => ({
+        localization: field.localization,
+        phrases: field.phrases,
+        charactersUsed: keywordFieldChars(field.phrases),
+        charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+        markets: storefrontsReading(field.localization, markets),
+        updatedAt: field.updatedAt.toISOString(),
+      }));
   }
 
   async setKeywordField(
     appId: string,
     text: string,
+    query: KeywordFieldQuery = {},
   ): Promise<KeywordFieldResult> {
-    const app = await ensureApp(this.prisma, appId);
-    this.ensureKeywordFieldStore(app);
+    const app = await this.keywordFieldApp(appId);
+    const target = keywordFieldTarget(app, query);
 
     const { phrases, duplicatesRemoved } = parseKeywordField(text);
     const unique = phrases.map(normalizeKeyword);
@@ -153,14 +240,13 @@ export class KeywordFieldService {
     const keywordIds = await this.tracker.keywordIdsFor(
       unique,
       app.store,
-      app.country,
+      target.country,
     );
 
-    const localization = this.homeLocalization(app);
     await this.quota.admitKeywordMarkets(async (tx) => {
       await this.serializeKeywordField(tx, appId);
-      const before = await this.phrasesOf(appId, localization, tx);
-      await this.storePhrases(tx, appId, localization, unique);
+      const before = await this.phrasesOf(appId, target.localization, tx);
+      await this.storePhrases(tx, appId, target.localization, unique);
       for (const keywordId of keywordIds) {
         await this.tracker.track(
           tx,
@@ -168,43 +254,19 @@ export class KeywordFieldService {
           { active: true },
         );
       }
-      const dropped = before.filter((phrase) => !unique.includes(phrase));
-      await tx.trackedKeyword.updateMany({
-        where: {
-          appId,
-          source: 'KEYWORD_FIELD',
-          keyword: { is: { country: app.country, text: { in: dropped } } },
-        },
-        data: { active: false },
-      });
+      await this.untrackDropped(
+        tx,
+        appId,
+        target.localization,
+        before.filter((phrase) => !unique.includes(phrase)),
+      );
     });
 
     for (const keywordId of keywordIds) {
       await this.tracker.enqueueFirstScore(keywordId, app);
     }
+    await this.listings.request(app, target.country);
 
-    return this.keywordFieldResult(app, duplicatesRemoved);
-  }
-
-  async forget(
-    app: KeywordApp,
-    keyword: { country: string; text: string },
-  ): Promise<void> {
-    if (app.store !== Store.APP_STORE || keyword.country !== app.country) {
-      return;
-    }
-    const localization = this.homeLocalization(app);
-    await this.prisma.withTransaction(async (tx) => {
-      await this.serializeKeywordField(tx, app.id);
-      const phrases = await this.phrasesOf(app.id, localization, tx);
-      if (phrases.includes(keyword.text)) {
-        await this.storePhrases(
-          tx,
-          app.id,
-          localization,
-          phrases.filter((phrase) => phrase !== keyword.text),
-        );
-      }
-    });
+    return this.keywordFieldResult(app, target, duplicatesRemoved);
   }
 }
