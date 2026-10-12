@@ -102,8 +102,11 @@ export class AnalyticsService {
   async summary(appId: string, country?: string): Promise<AppSummary> {
     await this.ensureApp(appId);
 
-    const [market, snapshot, competitors] = await Promise.all([
+    const [market, everyMarket, snapshot, competitors] = await Promise.all([
       keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
+      country
+        ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
+        : null,
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
         orderBy: NEWEST_FIRST,
@@ -116,12 +119,13 @@ export class AnalyticsService {
       }),
       this.prisma.app.count({ where: { primaryAppId: appId } }),
     ]);
+    const covered = everyMarket ?? market;
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
       rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
       movers: movers(market.rows, market.referenceDate),
-      coverage: this.coverage(market.rows, market.referenceDate, snapshot),
+      coverage: this.coverage(covered.rows, covered.referenceDate, snapshot),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: market.rows.length,
       competitors,

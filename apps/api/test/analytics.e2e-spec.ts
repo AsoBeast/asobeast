@@ -329,6 +329,20 @@ describe('AnalyticsController (e2e)', () => {
     expect(german.movers).toEqual({ up: [], down: [] });
   });
 
+  it('judges coverage over every market whichever market it counts', async () => {
+    const id = await seed();
+    await seedGermanMarket(id);
+
+    const all = (await api.get(`/apps/${id}/summary`).expect(200))
+      .body as AppSummary;
+    const german = (
+      await api.get(`/apps/${id}/summary`).query({ country: 'de' }).expect(200)
+    ).body as AppSummary;
+
+    expect(german.coverage).toEqual(all.coverage);
+    expect(german.coverage.inTitle).toBe(2);
+  });
+
   it('reports an empty summary for a market the app tracks nothing in', async () => {
     const id = await seed();
 
