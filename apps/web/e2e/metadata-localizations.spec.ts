@@ -109,7 +109,7 @@ test("without ai drafts there is no draft button in a localization", async ({
   await expect(page.getByRole("heading", { name: "AI drafts" })).toHaveCount(0);
 });
 
-test("suggests and links the keyword field of the viewed localization", async ({
+test("links the suggestion to the keyword field of the viewed localization", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
@@ -119,11 +119,15 @@ test("suggests and links the keyword field of the viewed localization", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: "Edit this keyword field" }).click();
   await expect(page).toHaveURL(
-    /\/apps\/app-1\/keywords\?country=pl&fieldLocale=pl$/,
+    /\/apps\/app-1\/metadata\?fieldLocale=pl#app-localizations$/,
+  );
+  await expect(page.getByRole("button", { name: /^Polish/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
   );
   await expect(
-    page.getByText("App Store keyword field · Polish"),
-  ).toBeVisible();
+    page.getByRole("textbox", { name: "Polish keyword field" }),
+  ).toHaveValue("nawyki,cel");
 });
 
 test("shows the keyword field card of the viewed localization", async ({

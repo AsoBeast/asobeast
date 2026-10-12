@@ -5,6 +5,8 @@ import {
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
   keywordFieldLocalizations,
+  isStorefront,
+  tokenize,
   parseKeywordField,
   storefrontsReading,
   type AppLocalizationItem,
@@ -15,6 +17,7 @@ import {
   type KeywordImportQuota,
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
+  type MarketLocalizationRead,
 } from "@asobeast/shared";
 import {
   formatCountry,
@@ -68,6 +71,25 @@ export const editLocalizationHref = (
   localization: AppStoreLocalization,
 ): string =>
   `/apps/${id}/metadata?fieldLocale=${localization}#${LOCALIZATIONS_SECTION_ID}`;
+
+export const localizationsSectionHref = (id: string): string =>
+  `/apps/${id}/metadata#${LOCALIZATIONS_SECTION_ID}`;
+
+export function uniqueWordCount(
+  reads: readonly MarketLocalizationRead[],
+): number {
+  return new Set(reads.flatMap((read) => read.phrases.flatMap(tokenize))).size;
+}
+
+export function unshippedReads(
+  reads: readonly MarketLocalizationRead[],
+): MarketLocalizationRead[] {
+  return reads.filter((read) => !read.shipped);
+}
+
+export function hasMarketReads(home: string, market: string): boolean {
+  return market === home || isStorefront("APP_STORE", market);
+}
 
 export function openLocalization(
   items: readonly AppLocalizationItem[],

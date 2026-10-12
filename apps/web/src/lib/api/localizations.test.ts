@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   addAppLocalization,
   getAppLocalizations,
+  getMarketKeywordFields,
   previewLocalizedKeywordField,
   removeAppLocalization,
   saveLocalizedKeywordField,
@@ -122,5 +123,17 @@ describe("localization calls", () => {
 
     expect(sent[0].url).toMatch(/\/apps\/app-1\/localizations\/es-MX$/);
     expect(sent[0].method).toBe("DELETE");
+  });
+
+  it("W-MKT-05 asks for the home market, or for the one named", async () => {
+    const sent = stubFetch({ country: "us", home: true, localizations: [] });
+
+    await getMarketKeywordFields("app-1");
+    await getMarketKeywordFields("app-1", "pl");
+
+    expect(sent[0].url).toMatch(/\/apps\/app-1\/keyword-fields\/market$/);
+    expect(sent[1].url).toMatch(
+      /\/apps\/app-1\/keyword-fields\/market\?country=pl$/,
+    );
   });
 });

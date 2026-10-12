@@ -3,9 +3,7 @@ import type {
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldQuery,
-  KeywordFieldRequest,
   KeywordFieldResult,
-  KeywordFieldSummary,
   KeywordImportRequest,
   KeywordImportResult,
   KeywordSort,
@@ -149,23 +147,6 @@ export function getKeywordField(
   query: KeywordFieldQuery = {},
 ): Promise<KeywordFieldResult> {
   return apiFetch<KeywordFieldResult>(keywordFieldPath(appId, query));
-}
-
-export function setKeywordField(
-  appId: string,
-  text: string,
-  query: KeywordFieldQuery = {},
-): Promise<KeywordFieldResult> {
-  return apiFetch<KeywordFieldResult>(keywordFieldPath(appId, query), {
-    method: "PUT",
-    body: JSON.stringify({ text } satisfies KeywordFieldRequest),
-  });
-}
-
-export function listKeywordFields(
-  appId: string,
-): Promise<KeywordFieldSummary[]> {
-  return apiFetch<KeywordFieldSummary[]>(`/apps/${appId}/keyword-fields`);
 }
 
 export function scoreKeyword(keywordId: string): Promise<ScoreEnqueueResult> {

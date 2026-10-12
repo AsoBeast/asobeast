@@ -113,11 +113,19 @@ test("links an unanswered check to what would answer it", async ({ page }) => {
   await page.goto("/apps/app-1/audit");
 
   const field = page.getByRole("article", { name: "Keyword field" });
+  const link = field.getByRole("link", {
+    name: "Paste your keyword field from App Store Connect",
+  });
+  await expect(link).toHaveAttribute(
+    "href",
+    "/apps/app-1/metadata#app-localizations",
+  );
+
+  await link.click();
+  await expect(page).toHaveURL(/\/apps\/app-1\/metadata#app-localizations$/);
   await expect(
-    field.getByRole("link", {
-      name: "Paste your keyword field from App Store Connect",
-    }),
-  ).toHaveAttribute("href", "/apps/app-1/keywords");
+    page.getByRole("region", { name: "App Store localizations" }),
+  ).toBeInViewport();
 });
 
 test("speaks plainly", async ({ page }) => {

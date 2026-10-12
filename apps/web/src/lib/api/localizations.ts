@@ -7,8 +7,9 @@ import type {
   KeywordFieldSavePreview,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
+  MarketKeywordFields,
 } from "@asobeast/shared";
-import { apiFetch } from "./client";
+import { apiFetch, withQuery } from "./client";
 
 export function getAppLocalizations(
   appId: string,
@@ -61,4 +62,15 @@ export function removeAppLocalization(
   return apiFetch<void>(`/apps/${appId}/localizations/${localization}`, {
     method: "DELETE",
   });
+}
+
+export function getMarketKeywordFields(
+  appId: string,
+  country?: string,
+): Promise<MarketKeywordFields> {
+  const params = new URLSearchParams();
+  if (country) params.set("country", country);
+  return apiFetch<MarketKeywordFields>(
+    withQuery(`/apps/${appId}/keyword-fields/market`, params),
+  );
 }

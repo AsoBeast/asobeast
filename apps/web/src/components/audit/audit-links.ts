@@ -1,4 +1,5 @@
 import type { AuditTarget, AuditUnlockKind } from "@asobeast/shared";
+import { LOCALIZATIONS_SECTION_ID } from "@/lib/app-localizations";
 
 const TARGET_PATH: Record<AuditTarget, string | null> = {
   metadata: "metadata",
@@ -12,7 +13,7 @@ const TARGET_PATH: Record<AuditTarget, string | null> = {
 
 const UNLOCK_PATH: Record<AuditUnlockKind, string> = {
   "ai-analysis": "#ai-analysis",
-  "keyword-field": "keywords",
+  "keyword-field": `metadata#${LOCALIZATIONS_SECTION_ID}`,
   keywords: "keywords",
   competitors: "competitors",
   history: "rankings",

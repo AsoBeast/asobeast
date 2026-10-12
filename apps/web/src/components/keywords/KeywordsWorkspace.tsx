@@ -9,8 +9,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { countryParser } from "@/lib/search-params";
 import { AddKeywordsDialog } from "./AddKeywordsDialog";
 import { ImportKeywordsDialog } from "./ImportKeywordsDialog";
-import { KeywordFieldEditor } from "./KeywordFieldEditor";
 import { KeywordsToolbar } from "./KeywordsToolbar";
+import { MarketSearchReadsCard } from "./MarketSearchReadsCard";
 import { KeywordsTable } from "./KeywordsTable";
 import { KeywordsTableSkeleton } from "./skeletons";
 import { KeywordCombinations } from "./KeywordCombinations";
@@ -80,10 +80,10 @@ export function KeywordsWorkspace({
         market={market}
       />
       {store === "APP_STORE" ? (
-        <KeywordFieldEditor
+        <MarketSearchReadsCard
           id={id}
           homeCountry={homeCountry}
-          activeMarket={market}
+          market={market}
         />
       ) : null}
     </div>
