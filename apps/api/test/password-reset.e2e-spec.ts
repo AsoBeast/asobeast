@@ -159,6 +159,7 @@ describe('Account recovery for a customer who forgot their password', () => {
       data: {
         plan: 'free',
         trialStartedAt: null,
+        trialDeclinedAt: null,
         trialEndsAt: null,
         planExpiresAt: null,
       },

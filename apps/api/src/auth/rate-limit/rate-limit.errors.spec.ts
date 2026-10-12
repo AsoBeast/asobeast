@@ -1,5 +1,9 @@
 import type { RateLimitDetail } from '@asobeast/shared';
-import { RateLimitExceededError, rateLimitMessage } from './rate-limit.errors';
+import {
+  RateLimitExceededError,
+  rateLimitMessage,
+  RequestThrottledError,
+} from './rate-limit.errors';
 
 const DETAIL: RateLimitDetail = {
   window: 'minute',
@@ -55,5 +59,19 @@ describe('rateLimitMessage', () => {
 
   it('carries the detail on the error', () => {
     expect(new RateLimitExceededError(DETAIL).detail).toBe(DETAIL);
+  });
+});
+
+describe('RequestThrottledError', () => {
+  it('blames the address by default', () => {
+    expect(new RequestThrottledError(12).message).toBe(
+      'Too many attempts from this address. Try again in 12 seconds.',
+    );
+  });
+
+  it('says why when the caller gives a reason', () => {
+    expect(new RequestThrottledError(12, 'Too many mails today.').message).toBe(
+      'Too many mails today. Try again in 12 seconds.',
+    );
   });
 });

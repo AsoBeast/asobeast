@@ -59,6 +59,11 @@ import {
   METRICS_SCRAPE,
   OPERATOR_TOKEN,
   VALID_UNSUBSCRIBE_TOKEN,
+  VALID_CONFIRM_TOKEN,
+  EXPIRED_CONFIRM_TOKEN,
+  TRUSTED_RECIPIENT,
+  UNSENT_RECIPIENT_PREFIX,
+  UNSUBSCRIBED_RECIPIENT,
   OVER_LIMIT_BUDGET,
   PORTFOLIO,
   RATE_LIMIT_RESET_SECONDS,
@@ -216,6 +221,15 @@ const actionEvents: Record<string, ActionEventItem[]> =
 const portfolioApps = [...PORTFOLIO.apps, PENDING_PORTFOLIO_APP];
 const webhooks = [...WEBHOOKS];
 const emailAlerts = [...EMAIL_ALERTS];
+const UNSUBSCRIBED_ALERT: EmailAlertItem = {
+  id: "email-unsubscribed",
+  email: UNSUBSCRIBED_RECIPIENT,
+  events: ["metadata.changed"],
+  active: false,
+  confirmed: false,
+  unsubscribed: true,
+  createdAt: "2026-07-01T00:00:00.000Z",
+};
 const keywordFields = new Map<string, string>();
 const AUTH_USER: AuthUser = {
   id: "u1",
@@ -1058,6 +1072,8 @@ const activityHolds: Holds = new Map();
 const activityHold = (token: string) => holdFor(activityHolds, token);
 
 const unsubscribeCalls = new Map<string, number>();
+const confirmCalls = new Map<string, number>();
+const resendCalls = new Map<string, number>();
 
 const routes: Route[] = [
   {
@@ -1065,6 +1081,61 @@ const routes: Route[] = [
     pattern: /^\/__unsubscribes\/([^/]+)$/,
     handler: ([id], _req, res) =>
       json(res, 200, { calls: unsubscribeCalls.get(id) ?? 0 }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/__confirmations\/([^/]+)$/,
+    handler: ([id], _req, res) =>
+      json(res, 200, {
+        confirms: confirmCalls.get(id) ?? 0,
+        resends: resendCalls.get(id) ?? 0,
+      }),
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts\/([^/]+)\/confirm$/,
+    handler: ([id], req, res) => {
+      confirmCalls.set(id, (confirmCalls.get(id) ?? 0) + 1);
+      const token = new URL(
+        req.url ?? "/",
+        "http://localhost",
+      ).searchParams.get("token");
+      if (token === EXPIRED_CONFIRM_TOKEN) {
+        json(
+          res,
+          410,
+          errorEnvelope(
+            410,
+            req.url ?? "/",
+            "That confirmation link has expired",
+          ),
+        );
+        return;
+      }
+      if (token !== VALID_CONFIRM_TOKEN) {
+        json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            req.url ?? "/",
+            "That confirmation link is not valid",
+          ),
+        );
+        return;
+      }
+      res.writeHead(204);
+      res.end();
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/email-alerts\/([^/]+)\/resend-confirmation$/,
+    handler: ([id], _req, res) => {
+      resendCalls.set(id, (resendCalls.get(id) ?? 0) + 1);
+      res.writeHead(204);
+      res.end();
+    },
   },
   {
     method: "POST",
@@ -1478,7 +1549,11 @@ const routes: Route[] = [
       json(
         res,
         200,
-        hasCookie(req, "e2e-empty-alerts", "1") ? [] : emailAlerts,
+        hasCookie(req, "e2e-empty-alerts", "1")
+          ? []
+          : hasCookie(req, "e2e-unsubscribed-alert", "1")
+            ? [UNSUBSCRIBED_ALERT, ...emailAlerts]
+            : emailAlerts,
       ),
   },
   {
@@ -1486,15 +1561,28 @@ const routes: Route[] = [
     pattern: /^\/email-alerts$/,
     handler: (_p, req, res) => {
       withBody<EmailAlertCreateRequest>(req, res, (body) => {
+        const trusted = body.email === TRUSTED_RECIPIENT;
         const alert: EmailAlertItem = {
           id: `email-${emailAlerts.length + 1}`,
           email: body.email,
           events: body.events,
           active: true,
+          confirmed: trusted,
           createdAt: new Date().toISOString(),
         };
         emailAlerts.unshift(alert);
-        json(res, 201, alert);
+        json(
+          res,
+          201,
+          trusted
+            ? alert
+            : {
+                ...alert,
+                confirmationSent: !body.email.startsWith(
+                  UNSENT_RECIPIENT_PREFIX,
+                ),
+              },
+        );
       });
     },
   },
