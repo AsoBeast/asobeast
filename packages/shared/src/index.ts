@@ -119,3 +119,4 @@ export * from './auth';
 export * from './brand';
 export * from './trusted-proxy';
 export * from './loopback';
+export * from './request-body';
