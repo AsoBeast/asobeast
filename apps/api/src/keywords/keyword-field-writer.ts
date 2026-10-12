@@ -3,10 +3,11 @@ import { Prisma } from '@prisma/client';
 import type { AppStoreLocalization } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
+import { recordAppLocalizations } from './app-localization-records';
 import { indexKeywordFields, storedPhrases } from './keyword-field-index';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordApp } from './keywords.support';
-import { readsKeywordField } from './localization-markets';
+import { homeLocalization, readsKeywordField } from './localization-markets';
 import { MarketListingRequests } from './market-listing.requests';
 
 const KEYWORD_FIELD_LOCK = 3_958_261;
@@ -48,6 +49,7 @@ export class KeywordFieldWriter {
       await this.serialize(tx, app.id);
       const before = await storedPhrases(tx, app.id, localization);
       await this.storePhrases(tx, app.id, localization, phrases);
+      await this.recordShipped(tx, app, localization, phrases);
       for (const { keywordIds } of resolved) {
         for (const keywordId of keywordIds) {
           await this.tracker.track(
@@ -130,6 +132,28 @@ export class KeywordFieldWriter {
       },
       update: { phrases },
     });
+  }
+
+  private async recordShipped(
+    tx: Prisma.TransactionClient,
+    app: KeywordApp,
+    localization: AppStoreLocalization,
+    phrases: string[],
+  ): Promise<void> {
+    if (
+      phrases.length === 0 ||
+      localization === homeLocalization(app.country)
+    ) {
+      return;
+    }
+    await recordAppLocalizations(tx, [
+      {
+        appId: app.id,
+        workspaceId: this.workspace.require('an app localization'),
+        localization,
+        origin: 'manual',
+      },
+    ]);
   }
 
   private async untrackDropped(
