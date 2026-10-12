@@ -5,6 +5,7 @@ import type {
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getAppLocalizations,
+  previewLocalizedKeywordField,
   saveLocalizedKeywordField,
 } from "./localizations";
 
@@ -70,6 +71,22 @@ describe("localization calls", () => {
     expect(sent[0]).toMatchObject({
       method: "PUT",
       body: { text: "temporizador", trackIn: ["us", "mx"] },
+    });
+  });
+
+  it("W-SAV-11 posts only the text to the preview of one localization", async () => {
+    const sent = stubFetch({ markets: [] });
+
+    await previewLocalizedKeywordField("app-1", "es-MX", {
+      text: "temporizador",
+    });
+
+    expect(sent[0].url).toMatch(
+      /\/apps\/app-1\/keyword-fields\/es-MX\/preview$/,
+    );
+    expect(sent[0]).toMatchObject({
+      method: "POST",
+      body: { text: "temporizador" },
     });
   });
 });

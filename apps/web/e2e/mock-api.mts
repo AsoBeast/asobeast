@@ -91,6 +91,8 @@ import type {
   AppLocalizationItem,
   AppLocalizationOrigin,
   AppLocalizationsResult,
+  KeywordFieldPreviewRequest,
+  KeywordFieldSavePreview,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
   ActionBulkUpdateResult,
@@ -250,6 +252,7 @@ const keywordFieldTracked = new Map<string, Set<string>>();
 const fieldKey = (id: string, localization: string) => `${id}:${localization}`;
 const trackedKey = (id: string, country: string) => `${id}:${country}`;
 const KEYWORD_FIELD_UPDATED_AT = "2026-10-12T00:00:00.000Z";
+const DAILY_REQUESTS_PER_KEYWORD_MARKET = 1;
 const AUTH_USER: AuthUser = {
   id: "u1",
   email: "owner@example.com",
@@ -2703,6 +2706,64 @@ const routes: Route[] = [
           ),
           duplicatesRemoved,
           trackedIn: phrases.length > 0 ? [...trackIn] : [],
+        };
+        json(res, 200, result);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/([^/]+)\/preview$/,
+    handler: ([id, localization], req, res) => {
+      withBody<KeywordFieldPreviewRequest>(req, res, (body) => {
+        const app = fieldAppFor(id, localization, req, res);
+        if (!app?.tag) return;
+        const home = app.dataset.detail.country;
+        const { phrases, duplicatesRemoved } = parseKeywordField(
+          body.text ?? "",
+        );
+        if (keywordFieldChars(phrases) > KEYWORD_FIELD_CHAR_LIMIT) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/",
+              `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+            ),
+          );
+        }
+        const stored = keywordFields.get(fieldKey(id, app.tag)) ?? [];
+        const limit = Number(cookieValue(req, KEYWORD_QUOTA_COOKIE)) || null;
+        const result: KeywordFieldSavePreview = {
+          localization: app.tag,
+          phrases,
+          added: phrases.filter((phrase) => !stored.includes(phrase)),
+          dropped: stored.filter((phrase) => !phrases.includes(phrase)),
+          duplicatesRemoved,
+          charactersUsed: keywordFieldChars(phrases),
+          charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+          markets: localizationItemOf(
+            id,
+            home,
+            app.tag,
+            appMarketsOf(id, home),
+          ).readBy.map((reader) => {
+            const newPhrases = phrases.filter(
+              (phrase) => !isTrackedIn(id, reader.country, phrase),
+            );
+            return {
+              ...reader,
+              newPhrases,
+              keywordMarkets: newPhrases.length,
+              dailyRequests:
+                newPhrases.length * DAILY_REQUESTS_PER_KEYWORD_MARKET,
+            };
+          }),
+          quota:
+            limit === null
+              ? null
+              : { used: trackedKeywordCount(id), limit, upgradeTo: "ultimate" },
         };
         json(res, 200, result);
       });

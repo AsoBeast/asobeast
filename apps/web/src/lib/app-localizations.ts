@@ -9,10 +9,18 @@ import {
   type AppLocalizationOrigin,
   type AppLocalizationsResult,
   type AppStoreLocalization,
+  type KeywordFieldSavePreview,
+  type KeywordImportQuota,
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
-import { formatCountry, formatList, pluralize } from "@/lib/format";
+import {
+  formatCountry,
+  formatList,
+  formatNumber,
+  pluralize,
+} from "@/lib/format";
+import { hasNoCapacity } from "@/lib/quota-usage";
 
 export const LOCALIZATIONS_SECTION_ID = "app-localizations";
 
@@ -134,4 +142,88 @@ export function readingStorefrontNames(
   )
     .slice(0, STOREFRONT_SUGGESTIONS)
     .map(formatCountry);
+}
+
+export interface SaveCost {
+  keywordMarkets: number;
+  dailyRequests: number;
+}
+
+export interface SaveQuotaNotice {
+  text: string;
+  over: boolean;
+  upgrade: boolean;
+}
+
+export function shouldConfirmSave(preview: KeywordFieldSavePreview): boolean {
+  return (
+    preview.added.length > 0 ||
+    preview.dropped.length > 0 ||
+    preview.markets.some((market) => market.newPhrases.length > 0)
+  );
+}
+
+export function selectedCost(
+  preview: KeywordFieldSavePreview,
+  trackIn: readonly string[],
+): SaveCost {
+  return preview.markets
+    .filter((market) => trackIn.includes(market.country))
+    .reduce<SaveCost>(
+      (sum, market) => ({
+        keywordMarkets: sum.keywordMarkets + market.keywordMarkets,
+        dailyRequests: sum.dailyRequests + market.dailyRequests,
+      }),
+      { keywordMarkets: 0, dailyRequests: 0 },
+    );
+}
+
+export function tracksNewPhrases(
+  preview: KeywordFieldSavePreview,
+  trackIn: readonly string[],
+): boolean {
+  return preview.markets.some(
+    (market) =>
+      trackIn.includes(market.country) && market.newPhrases.length > 0,
+  );
+}
+
+export function saveCostText(cost: SaveCost): string {
+  if (cost.keywordMarkets === 0) return "Tracks nothing new.";
+  return `Adds ${pluralize(cost.keywordMarkets, "keyword market")} and about ${pluralize(cost.dailyRequests, "store request")} a day.`;
+}
+
+export function saveQuotaNotice(
+  quota: KeywordImportQuota | null,
+  cost: SaveCost,
+): SaveQuotaNotice | null {
+  if (quota === null || quota.limit === null) return null;
+  const after = quota.used + cost.keywordMarkets;
+  const empty = hasNoCapacity(quota);
+  const over = empty ? cost.keywordMarkets > 0 : after > quota.limit;
+  return {
+    text: empty
+      ? "Your plan includes no keyword markets."
+      : `${formatNumber(after)} of ${formatNumber(quota.limit)} keyword markets after saving.`,
+    over,
+    upgrade: over && quota.upgradeTo !== null,
+  };
+}
+
+export function addedSentence(preview: KeywordFieldSavePreview): string | null {
+  if (preview.added.length === 0) return null;
+  return `${pluralize(preview.added.length, "new phrase")}: ${preview.added.join(", ")}`;
+}
+
+export function droppedSentence(
+  preview: KeywordFieldSavePreview,
+): string | null {
+  const count = preview.dropped.length;
+  if (count === 0) return null;
+  const where = formatList(
+    preview.markets.map((market) => formatCountry(market.country)),
+  );
+  return count === 1
+    ? `1 phrase leaves the field and stops being tracked as a keyword field phrase in ${where}`
+    : `${formatNumber(count)} phrases leave the field and stop being tracked as keyword field phrases in ${where}`;
 }

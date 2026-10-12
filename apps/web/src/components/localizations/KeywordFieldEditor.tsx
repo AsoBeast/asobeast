@@ -12,46 +12,24 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   keywordFieldDraft,
   readingStorefrontNames,
+  type KeywordFieldDraft,
 } from "@/lib/app-localizations";
 import { formatList } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { cn } from "@/lib/utils";
+import { SaveKeywordFieldDialog } from "./SaveKeywordFieldDialog";
 import { useKeywordFieldSave } from "./useKeywordFieldSave";
 
-export function KeywordFieldEditor({
-  id,
-  item,
+function KeywordFieldUsage({
+  field,
+  countId,
 }: {
-  id: string;
-  item: AppLocalizationItem;
+  field: KeywordFieldDraft;
+  countId: string;
 }) {
-  const countId = useId();
-  const name = localizationName(item.localization);
-  const [draft, setDraft] = useState<string | null>(null);
-  const text = draft ?? item.phrases.join(",");
-  const field = keywordFieldDraft(text, item.phrases);
   const over = field.over > 0;
-  const { pending, error, clearError, save } = useKeywordFieldSave(
-    id,
-    item,
-    () => setDraft(null),
-  );
-
   return (
-    <div className="flex flex-col gap-3">
-      <Textarea
-        value={text}
-        onChange={(event) => {
-          setDraft(event.target.value);
-          clearError();
-        }}
-        rows={3}
-        spellCheck={false}
-        aria-label={`${name} keyword field`}
-        aria-describedby={countId}
-        aria-invalid={over}
-        placeholder="fitness,workout,running,cardio"
-      />
+    <>
       <Meter
         value={Math.min(field.used, KEYWORD_FIELD_CHAR_LIMIT)}
         max={KEYWORD_FIELD_CHAR_LIMIT}
@@ -80,6 +58,51 @@ export function KeywordFieldEditor({
           <span className="font-mono break-all">{field.storedAs}</span>
         </p>
       )}
+    </>
+  );
+}
+
+export function KeywordFieldEditor({
+  id,
+  item,
+}: {
+  id: string;
+  item: AppLocalizationItem;
+}) {
+  const countId = useId();
+  const name = localizationName(item.localization);
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? item.phrases.join(",");
+  const field = keywordFieldDraft(text, item.phrases);
+  const over = field.over > 0;
+  const {
+    checking,
+    saving,
+    review,
+    error,
+    clearError,
+    request,
+    confirm,
+    dismiss,
+  } = useKeywordFieldSave(id, item, () => setDraft(null));
+  const busy = checking || saving;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Textarea
+        value={text}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          clearError();
+        }}
+        rows={3}
+        spellCheck={false}
+        aria-label={`${name} keyword field`}
+        aria-describedby={countId}
+        aria-invalid={over}
+        placeholder="fitness,workout,running,cardio"
+      />
+      <KeywordFieldUsage field={field} countId={countId} />
       {item.readBy.length === 0 ? (
         <p className="text-caption text-muted-foreground">
           None of your markets reads {name}. Storefronts that read it:{" "}
@@ -87,7 +110,7 @@ export function KeywordFieldEditor({
           them as a keyword market to track these phrases there.
         </p>
       ) : null}
-      {error ? (
+      {error && review === null ? (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
@@ -95,14 +118,23 @@ export function KeywordFieldEditor({
       <div className="flex flex-wrap items-center justify-end gap-2">
         <Button
           disabled={
-            pending || over || (!field.changed && field.phrases.length === 0)
+            busy || over || (!field.changed && field.phrases.length === 0)
           }
-          onClick={() => save(text)}
+          onClick={() => request(text)}
         >
-          {pending ? <Loader2 className="animate-spin" /> : null}
-          {pending ? "Saving…" : "Save keyword field"}
+          {busy ? <Loader2 className="animate-spin" /> : null}
+          {busy ? "Saving…" : "Save keyword field"}
         </Button>
       </div>
+      {review ? (
+        <SaveKeywordFieldDialog
+          preview={review}
+          pending={saving}
+          error={error}
+          onConfirm={confirm}
+          onClose={dismiss}
+        />
+      ) : null}
     </div>
   );
 }
