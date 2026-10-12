@@ -25,11 +25,18 @@ describe('PasswordResetService', () => {
     Promise<{ count: number }>,
     [{ where: Record<string, unknown>; data: Record<string, unknown> }]
   >();
+  const deleteMany = jest.fn<
+    Promise<{ count: number }>,
+    [{ where: Record<string, unknown> }]
+  >();
   const send = jest.fn<Promise<void>, [string, string]>();
   const claim = jest.fn<Promise<boolean>, [string, Date]>();
 
+  const transaction = { user: { updateMany }, apiToken: { deleteMany } };
   const prisma = {
-    user: { findUnique, update, updateMany },
+    user: { findUnique, update },
+    withTransaction: (run: (tx: typeof transaction) => Promise<unknown>) =>
+      run(transaction),
   } as unknown as PrismaService;
   const crossTenant = {
     becauseThisWorkIsNotOwnedByOneWorkspace: (
@@ -56,6 +63,7 @@ describe('PasswordResetService', () => {
     findUnique.mockReset().mockResolvedValue(ACCOUNT);
     update.mockReset().mockResolvedValue(ACCOUNT);
     updateMany.mockReset().mockResolvedValue({ count: 1 });
+    deleteMany.mockReset().mockResolvedValue({ count: 0 });
     send.mockReset().mockResolvedValue(undefined);
     claim.mockReset().mockResolvedValue(true);
   });
@@ -179,6 +187,30 @@ describe('PasswordResetService', () => {
     await expect(
       argon2.verify(data.passwordHash, 'newpassword1'),
     ).resolves.toBe(true);
+  });
+
+  it('revokes every api token the account held once the token is spent', async () => {
+    findUnique.mockResolvedValue({
+      id: ACCOUNT.id,
+      resetExpiresAt: new Date(NOW.getTime() + 1),
+    });
+
+    await build().redeem('a'.repeat(48), 'newpassword1', NOW);
+
+    expect(deleteMany).toHaveBeenCalledWith({ where: { userId: ACCOUNT.id } });
+  });
+
+  it('keeps the api tokens when another request spent the token first', async () => {
+    findUnique.mockResolvedValue({
+      id: ACCOUNT.id,
+      resetExpiresAt: new Date(NOW.getTime() + 1),
+    });
+    updateMany.mockResolvedValue({ count: 0 });
+
+    await expect(
+      build().redeem('a'.repeat(48), 'newpassword1', NOW),
+    ).rejects.toThrow(NotFoundException);
+    expect(deleteMany).not.toHaveBeenCalled();
   });
 
   it('claims the token by hash and expiry in the write that spends it', async () => {
