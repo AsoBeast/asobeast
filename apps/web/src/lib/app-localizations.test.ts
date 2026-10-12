@@ -8,6 +8,7 @@ import {
   type KeywordFieldMarketPreview,
   type KeywordFieldSavePreview,
   type LocalizationReader,
+  type MarketLocalizationRead,
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
@@ -16,8 +17,10 @@ import {
   addedSentence,
   droppedSentence,
   editLocalizationHref,
+  hasMarketReads,
   keywordFieldDraft,
   localizationMatrix,
+  localizationsSectionHref,
   openLocalization,
   readingStorefrontNames,
   removeDescription,
@@ -27,6 +30,8 @@ import {
   selectedCost,
   shouldConfirmSave,
   tracksNewPhrases,
+  uniqueWordCount,
+  unshippedReads,
   upsertLocalization,
   withoutLocalization,
 } from "./app-localizations";
@@ -494,6 +499,74 @@ describe("adding and removing", () => {
     );
     expect(removeDescription(item("es-MX", "manual", []))).toBe(
       "Its keyword field is deleted. Phrases you track for another reason stay.",
+    );
+  });
+});
+
+const read = (
+  localization: AppStoreLocalization,
+  role: LocalizationReadRole,
+  shipped: boolean,
+  phrases: string[] = [],
+): MarketLocalizationRead => ({
+  localization,
+  role,
+  shipped,
+  origin: shipped ? "manual" : null,
+  phrases,
+  charactersUsed: keywordFieldChars(phrases),
+  charactersLimit: 100,
+});
+
+describe("what a market reads", () => {
+  it("W-MKT-01 counts a word once across the localizations a market reads", () => {
+    const english = read("en-US", "default", true, ["habit tracker", "streak"]);
+
+    expect(
+      uniqueWordCount([
+        english,
+        read("es-MX", "additional", true, ["hábito", "racha"]),
+      ]),
+    ).toBe(5);
+    expect(
+      uniqueWordCount([
+        english,
+        read("es-MX", "additional", true, ["streak", "racha"]),
+      ]),
+    ).toBe(4);
+  });
+
+  it("W-MKT-02 counts nothing for a market that reads no phrases", () => {
+    expect(uniqueWordCount([])).toBe(0);
+    expect(
+      uniqueWordCount([
+        read("ar", "additional", false),
+        read("vi", "additional", false),
+      ]),
+    ).toBe(0);
+  });
+
+  it("W-MKT-03 picks the localizations the app does not ship, in read order", () => {
+    expect(
+      unshippedReads([
+        read("en-US", "default", true),
+        read("ar", "additional", false),
+        read("es-MX", "additional", true),
+        read("vi", "additional", false),
+      ]).map((entry) => entry.localization),
+    ).toEqual(["ar", "vi"]);
+  });
+
+  it("W-MKT-04 asks the api about the home market and about storefronts only", () => {
+    expect(hasMarketReads("us", "us")).toBe(true);
+    expect(hasMarketReads("us", "pl")).toBe(true);
+    expect(hasMarketReads("us", "zz")).toBe(false);
+    expect(hasMarketReads("uk", "uk")).toBe(true);
+  });
+
+  it("W-LNK-02 links to the localizations section of the metadata page", () => {
+    expect(localizationsSectionHref("app-1")).toBe(
+      "/apps/app-1/metadata#app-localizations",
     );
   });
 });

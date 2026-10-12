@@ -96,6 +96,8 @@ import type {
   KeywordFieldSavePreview,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
+  MarketKeywordFields,
+  MarketLocalizationRead,
   ActionBulkUpdateResult,
   ActionDetail,
   ActionDismissReason,
@@ -119,7 +121,6 @@ import type {
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
-  KeywordFieldSummary,
   KeywordImportRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
@@ -149,7 +150,6 @@ import {
   parseKeywordField,
   keywordFieldLocalizations,
   readLocalizations,
-  storefrontsReading,
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
   isAppStoreLocalization,
@@ -826,36 +826,6 @@ function storeKeywordField(
   }
 }
 
-function keywordFieldSummaries(
-  id: string,
-  home: string,
-): KeywordFieldSummary[] {
-  const markets = [...new Set([home, ...trackedMarketsOf(id)])];
-  const homeDefault = readLocalizations(home)[0];
-  return [...keywordFields.entries()]
-    .filter(([key]) => key.startsWith(`${id}:`))
-    .flatMap(([key, phrases]) => {
-      const localization = key.slice(id.length + 1);
-      return isAppStoreLocalization(localization)
-        ? [{ localization, phrases }]
-        : [];
-    })
-    .sort(
-      (left, right) =>
-        Number(left.localization !== homeDefault) -
-          Number(right.localization !== homeDefault) ||
-        left.localization.localeCompare(right.localization),
-    )
-    .map(({ localization, phrases }) => ({
-      localization,
-      phrases,
-      charactersUsed: keywordFieldChars(phrases),
-      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-      markets: storefrontsReading(localization, markets),
-      updatedAt: KEYWORD_FIELD_UPDATED_AT,
-    }));
-}
-
 function keywordFieldDataset(
   id: string,
   req: IncomingMessage,
@@ -1004,6 +974,37 @@ function localizationsOf(id: string, home: string): AppLocalizationsResult {
           APP_STORE_LOCALIZATIONS[right.localization],
           "en",
         ),
+    ),
+  };
+}
+
+function marketReadsOf(
+  id: string,
+  home: string,
+  country: string,
+): MarketKeywordFields {
+  const shipped = new Map(
+    localizationsOf(id, home).localizations.map((item) => [
+      item.localization,
+      item,
+    ]),
+  );
+  return {
+    country,
+    home: country === home,
+    localizations: keywordFieldLocalizations(country).map(
+      (localization, index): MarketLocalizationRead => {
+        const item = shipped.get(localization);
+        return {
+          localization,
+          role: index === 0 ? "default" : "additional",
+          shipped: item !== undefined,
+          origin: item?.origin ?? null,
+          phrases: item?.phrases ?? [],
+          charactersUsed: item?.charactersUsed ?? 0,
+          charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+        };
+      },
     ),
   };
 }
@@ -2612,16 +2613,6 @@ const routes: Route[] = [
     },
   },
   {
-    method: "GET",
-    pattern: /^\/apps\/([^/]+)\/keyword-fields$/,
-    handler: ([id], req, res) => {
-      logFieldRequest(id, req);
-      const dataset = keywordFieldDataset(id, req, res);
-      if (!dataset) return;
-      json(res, 200, keywordFieldSummaries(id, dataset.detail.country));
-    },
-  },
-  {
     method: "PUT",
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
@@ -2730,6 +2721,26 @@ const routes: Route[] = [
       storeKeywordField(id, app.tag, [], []);
       shippedLocalizations.get(id)?.delete(app.tag);
       res.writeHead(204).end();
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/market$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const country =
+        new URL(path, "http://localhost").searchParams.get("country") ?? home;
+      if (country !== home && !isStorefront("APP_STORE", country)) {
+        return json(
+          res,
+          400,
+          errorEnvelope(400, path, `${country} is not an App Store storefront`),
+        );
+      }
+      json(res, 200, marketReadsOf(id, home, country));
     },
   },
   {

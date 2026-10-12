@@ -3901,6 +3901,11 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 
+export const APP_READS_ID = "app-reads";
+
+DATASETS[APP_READS_ID] = localesDataset(APP_READS_ID, "Read Lab");
+METADATA_AUDITS[APP_READS_ID] = METADATA_AUDIT;
+
 export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
   (draft) => ({
     ...withLongKeywordField(draft),

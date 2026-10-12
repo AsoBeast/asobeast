@@ -19,7 +19,7 @@ describe("targetHref", () => {
 describe("unlockHref", () => {
   it.each([
     ["ai-analysis", "#ai-analysis"],
-    ["keyword-field", "/apps/app-1/keywords"],
+    ["keyword-field", "/apps/app-1/metadata#app-localizations"],
     ["keywords", "/apps/app-1/keywords"],
     ["competitors", "/apps/app-1/competitors"],
     ["history", "/apps/app-1/rankings"],

@@ -21,17 +21,20 @@ export function KeywordsTableSkeleton() {
   );
 }
 
-export function KeywordFieldSkeleton() {
+export function MarketSearchReadsSkeleton() {
   return (
-    <div className="flex flex-col gap-3">
-      <Skeleton className="h-9 w-[260px]" />
-      <Skeleton className="h-20 w-full rounded-lg" />
-      <Skeleton className="h-1 w-full rounded-full" />
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-4 w-48" />
-        <Skeleton className="h-4 w-16" />
+    <div className="flex flex-col gap-4 rounded-xl border p-4">
+      <div className="flex items-center justify-between gap-4">
+        <Skeleton className="h-5 w-48" />
+        <Skeleton className="h-4 w-44" />
       </div>
-      <Skeleton className="h-9 w-40 rounded-lg" />
+      {Array.from({ length: 2 }).map((_, index) => (
+        <div key={index} className="flex items-center gap-4">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-1 flex-1" />
+          <Skeleton className="h-4 w-12" />
+        </div>
+      ))}
     </div>
   );
 }
