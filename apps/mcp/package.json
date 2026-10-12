@@ -17,7 +17,7 @@
   "dependencies": {
     "@asobeast/mcp-tools": "workspace:*",
     "@asobeast/shared": "workspace:*",
-    "@modelcontextprotocol/server": "2.3.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {
