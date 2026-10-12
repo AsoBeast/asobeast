@@ -281,7 +281,7 @@ export function KeywordFieldEditor({
       {localization === undefined ? (
         <CardContent>
           <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            {activeMarket.toUpperCase()} is not an App Store storefront, so it
+            {formatCountry(activeMarket)} is not an App Store storefront, so it
             has no keyword field.
           </p>
         </CardContent>
