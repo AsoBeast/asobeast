@@ -1,14 +1,11 @@
 import { HttpStatus, type INestApplication } from '@nestjs/common';
 import type { Request, RequestHandler, Response } from 'express';
-import {
-  ApiErrorEnvelope,
-  SESSION_COOKIE,
-  type RateClass,
-} from '@asobeast/shared';
+import { ApiErrorEnvelope, type RateClass } from '@asobeast/shared';
 import { refusesWhileSuspended } from './abuse/suspension';
 import { isPlatformOperator } from './platform-operator';
 import { READ_METHODS } from './read-access';
 import { AuthService } from './auth.service';
+import { CredentialResolver } from './credential-resolver';
 
 export const ADMIN_QUEUES_ROUTE = '/admin/queues';
 export const METRICS_ROUTE = '/metrics';
@@ -80,24 +77,24 @@ function grantAdminAccess(
   return (req, res, next) => {
     harden(res);
     const auth = app.get(AuthService, { strict: false });
-    const cookies = req.cookies as Record<string, string> | undefined;
+    const credentials = app.get(CredentialResolver, { strict: false });
     void (async () => {
-      const session = await auth.resolveSessionUser(cookies?.[SESSION_COOKIE]);
-      const token = session
-        ? null
-        : await auth.resolveToken(req.headers.authorization);
-      const user = session ?? token?.user;
+      const resolved = await credentials.resolve(req);
+      const user = resolved?.user;
       if (!user || !isPlatformOperator(user) || !auth.entitled(user)) {
         deny(req, res);
         return;
       }
-      if (token?.scope === 'read' && !READ_METHODS.includes(req.method)) {
+      if (
+        resolved.tokenScope === 'read' &&
+        !READ_METHODS.includes(req.method)
+      ) {
         deny(req, res);
         return;
       }
       if (
         refusesWhileSuspended(user.workspace, {
-          credential: session ? 'session' : 'token',
+          credential: resolved.credential,
           rateClass: surface.rateClass,
           allowedWhileUnentitled: false,
           exportsWorkspaceData: false,

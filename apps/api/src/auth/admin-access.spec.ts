@@ -8,7 +8,10 @@ import {
   configureAdminAccess,
   requireAdminAccess,
 } from './admin-access';
+import { AuthService } from './auth.service';
 import type { AccountUser } from './auth.types';
+import { CredentialResolver } from './credential-resolver';
+import { CredentialRateLimitError } from './rate-limit/rate-limit.errors';
 
 function fakeResponse() {
   const res = {
@@ -57,18 +60,22 @@ const operator = {
   workspace: { suspendedAt: null },
 } as unknown as AccountUser;
 
+function operatorToken(scope: ApiTokenScope): CredentialResolver['resolve'] {
+  return () =>
+    Promise.resolve({ user: operator, credential: 'token', tokenScope: scope });
+}
+
 function gateFor(
   surface: Parameters<typeof configureAdminAccess>[1][number],
-  scope: ApiTokenScope,
+  resolve: CredentialResolver['resolve'],
 ): RequestHandler {
   const handlers: RequestHandler[] = [];
-  const auth = {
-    resolveSessionUser: () => Promise.resolve(null),
-    resolveToken: () => Promise.resolve({ user: operator, scope }),
-    entitled: () => true,
-  };
+  const providers = new Map<unknown, unknown>([
+    [AuthService, { entitled: () => true }],
+    [CredentialResolver, { resolve }],
+  ]);
   const app = {
-    get: () => auth,
+    get: (type: unknown) => providers.get(type),
     use: (_path: string, handler: RequestHandler) => handlers.push(handler),
   } as unknown as INestApplication;
 
@@ -86,16 +93,16 @@ function requestFor(method: string) {
   } as unknown as Request;
 }
 
-describe('admin surface token scope', () => {
-  const settle = () => new Promise((resolve) => setImmediate(resolve));
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 
+describe('admin surface token scope', () => {
   it.each(['POST', 'PUT', 'PATCH', 'DELETE'])(
     'denies a read-only token the %s that changes queue state',
     async (method) => {
       const res = fakeResponse();
       const next = jest.fn();
 
-      gateFor(ADMIN_QUEUES_SURFACE, 'read')(
+      gateFor(ADMIN_QUEUES_SURFACE, operatorToken('read'))(
         requestFor(method),
         res as unknown as Response,
         next,
@@ -111,7 +118,7 @@ describe('admin surface token scope', () => {
     const res = fakeResponse();
     const next = jest.fn();
 
-    gateFor(ADMIN_QUEUES_SURFACE, 'read')(
+    gateFor(ADMIN_QUEUES_SURFACE, operatorToken('read'))(
       requestFor('GET'),
       res as unknown as Response,
       next,
@@ -125,7 +132,7 @@ describe('admin surface token scope', () => {
     const res = fakeResponse();
     const next = jest.fn();
 
-    gateFor(ADMIN_QUEUES_SURFACE, 'write')(
+    gateFor(ADMIN_QUEUES_SURFACE, operatorToken('write'))(
       requestFor('POST'),
       res as unknown as Response,
       next,
@@ -139,7 +146,7 @@ describe('admin surface token scope', () => {
     const res = fakeResponse();
     const next = jest.fn();
 
-    gateFor(METRICS_SURFACE, 'read')(
+    gateFor(METRICS_SURFACE, operatorToken('read'))(
       requestFor('GET'),
       res as unknown as Response,
       next,
@@ -147,5 +154,20 @@ describe('admin surface token scope', () => {
     await settle();
 
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('admin surface rejected credentials', () => {
+  it('answers a spent rejection budget with not found', async () => {
+    const res = fakeResponse();
+    const next = jest.fn();
+
+    gateFor(METRICS_SURFACE, () =>
+      Promise.reject(new CredentialRateLimitError(30)),
+    )(requestFor('GET'), res as unknown as Response, next);
+    await settle();
+
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(404);
   });
 });
