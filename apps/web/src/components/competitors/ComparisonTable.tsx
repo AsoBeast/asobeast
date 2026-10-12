@@ -34,15 +34,21 @@ import { exportComparison } from "./comparison-csv";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
 import { KeywordBreakdownSheet } from "./KeywordBreakdownSheet";
 
+const MARKET_PIN = "sticky left-0 w-20 min-w-20 bg-inherit text-center";
+
 const HEAD_CLASS: Record<string, string> = {
+  country: cn(MARKET_PIN, "z-20"),
   keyword: "sticky left-0 z-20 bg-inherit",
   you: "border-x bg-secondary text-center",
 };
 
 const CELL_CLASS: Record<string, string> = {
+  country: cn(MARKET_PIN, "z-10"),
   keyword: "sticky left-0 z-10 bg-inherit",
   you: "border-x bg-secondary/40 text-center",
 };
+
+const AFTER_MARKET = "left-20";
 
 export function ComparisonTable({
   data,
@@ -117,6 +123,9 @@ export function ComparisonTable({
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
   const rows = table.getRowModel().rows;
+  const keywordOffset = table.getColumn("country")?.getIsVisible()
+    ? AFTER_MARKET
+    : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -148,7 +157,10 @@ export function ComparisonTable({
                 <TableHead
                   key={header.id}
                   aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={HEAD_CLASS[header.column.id] ?? "text-center"}
+                  className={cn(
+                    HEAD_CLASS[header.column.id] ?? "text-center",
+                    header.column.id === "keyword" && keywordOffset,
+                  )}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -178,7 +190,10 @@ export function ComparisonTable({
               {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
-                  className={CELL_CLASS[cell.column.id] ?? "text-center"}
+                  className={cn(
+                    CELL_CLASS[cell.column.id] ?? "text-center",
+                    cell.column.id === "keyword" && keywordOffset,
+                  )}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>

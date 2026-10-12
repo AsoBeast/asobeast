@@ -13,6 +13,7 @@ import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -189,21 +190,21 @@ export function DiscoveryPanel({ id }: { id: string }) {
             <Badge variant="secondary">{storeName}</Badge>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Tabs
-            value={String(days)}
-            onValueChange={(next) => void setDays(Number(next) as typeof days)}
-          >
-            <TabsList>
-              {DISCOVERY_WINDOWS.map((window) => (
-                <TabsTrigger key={window} value={String(window)}>
-                  {window}d
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+        <CardAction>
           <CollapseToggle label="discovery" />
-        </div>
+        </CardAction>
+        <Tabs
+          value={String(days)}
+          onValueChange={(next) => void setDays(Number(next) as typeof days)}
+        >
+          <TabsList>
+            {DISCOVERY_WINDOWS.map((window) => (
+              <TabsTrigger key={window} value={String(window)}>
+                {window}d
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </CardHeader>
       <CollapsibleContent>
         <CardContent>
