@@ -106,6 +106,8 @@ Identical paths matter: both surfaces are single page applications that build th
 
 The gate itself runs before the application framework's guards, because both surfaces register their own routing outside them. It resolves the session cookie or the `asob_` token itself, and the queue dashboard re asserts the grant afterwards, so a deployment that forgot the wiring fails closed rather than open.
 
+A refused credential costs the same here as anywhere else in the API: it is counted against the per address budget described in [Rate limits](/api-reference/rate-limits), under the same rule about which credentials count, and an accepted credential that does not belong to the operator is never counted. Once an address has spent that budget these surfaces still answer `404` rather than `429`. Every other route answers that address with `429`, so a caller who spends the budget here can tell that a gate counted the refusals. That reveals nothing about the queue dashboard, the metrics scrape or the support tooling, which every instance mounts, and for the OpenAPI routes only whether `API_DOCS` is `owner` rather than `off`.
+
 The web app hides the links to both surfaces from anyone who is not the platform operator, using a capability the API computes and returns with the signed in user. That is presentation only. Authorization is the gate above, and a customer who follows a link anyway still gets `404`.
 
 ## A read scoped token cannot change queue state
