@@ -2,6 +2,7 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
@@ -12,11 +13,7 @@ import { metadataAuditOptions } from "@/lib/queries";
 import { CoverageTable } from "./CoverageTable";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
 import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
-import {
-  ScreenshotCaptionsSkeleton,
-  StorefrontLocalizationsSkeleton,
-} from "./skeletons";
-import { StorefrontLocalizationsCard } from "./StorefrontLocalizationsCard";
+import { ScreenshotCaptionsSkeleton } from "./skeletons";
 
 export function MetadataAuditView({
   id,
@@ -57,10 +54,11 @@ export function MetadataAuditView({
         </Suspense>
       ) : null}
 
-      {hasLocalizations ? (
-        <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
-          <StorefrontLocalizationsCard id={id} canDraft={canDraft} />
-        </Suspense>
+      {result.store === "APP_STORE" ? (
+        <AppLocalizationsSection
+          id={id}
+          canDraft={canDraft && market === home}
+        />
       ) : null}
 
       {canDraft && market === home ? (

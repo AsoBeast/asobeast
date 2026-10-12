@@ -44,7 +44,9 @@ test("switching the market shows that listing and keeps it in the url", async ({
 
   await expect(page).toHaveURL(/market=pl/);
   await expect(title).toHaveValue("Minutnik Skupienia");
-  await expect(page.getByRole("table")).toContainText("minutnik");
+  await expect(
+    page.getByRole("table", { name: /^Keyword coverage/ }),
+  ).toContainText("minutnik");
 
   await switcher.click();
   await page.getByRole("option", { name: HOME }).click();

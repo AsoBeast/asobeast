@@ -53,6 +53,7 @@ import {
   getHealth,
   getKeywordCountries,
   previewKeywordImport,
+  getAppLocalizations,
   getKeywordField,
   getKeywords,
   listKeywordFields,
@@ -114,6 +115,8 @@ export const appKeys = {
     [...appKeys.keywordFieldRoot(id), query] as const,
   keywordFields: (id: string) =>
     [...appKeys.detail(id), "keyword-fields"] as const,
+  localizations: (id: string) =>
+    [...appKeys.detail(id), "localizations"] as const,
   suggestions: (
     id: string,
     strategy: KeywordSuggestionStrategy,
@@ -518,6 +521,12 @@ export const keywordFieldsOptions = (id: string) =>
     queryFn: () => listKeywordFields(id),
   });
 
+export const appLocalizationsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.localizations(id),
+    queryFn: () => getAppLocalizations(id),
+  });
+
 export const suggestionsOptions = (
   id: string,
   strategy: KeywordSuggestionStrategy,
@@ -783,6 +792,15 @@ export function invalidateKeywordFieldMutation(
 ): void {
   invalidateKeywordMutation(client, id);
   void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
+}
+
+export function invalidateLocalizationMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateKeywordFieldMutation(client, id);
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
+  void client.invalidateQueries({ queryKey: accountPlanKey });
 }
 
 export function invalidateKeywordImport(client: QueryClient, id: string): void {
