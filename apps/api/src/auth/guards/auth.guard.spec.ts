@@ -4,6 +4,7 @@ import { SESSION_COOKIE } from '@asobeast/shared';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { AuthService } from '../auth.service';
 import type { AccountUser, SessionClaims } from '../auth.types';
+import { CredentialResolver } from '../credential-resolver';
 import type { CredentialRateLimiter } from '../rate-limit/credential-rate.limiter';
 import { CredentialRateLimitError } from '../rate-limit/rate-limit.errors';
 import { AuthGuard } from './auth.guard';
@@ -37,9 +38,11 @@ describe('AuthGuard', () => {
 
   const guard = new AuthGuard(
     new Reflector(),
-    { verifySession, userOfSession, resolveToken } as unknown as AuthService,
+    new CredentialResolver(
+      { verifySession, userOfSession, resolveToken } as unknown as AuthService,
+      { recordRejection } as unknown as CredentialRateLimiter,
+    ),
     { bind } as unknown as WorkspaceContext,
-    { recordRejection } as unknown as CredentialRateLimiter,
   );
 
   beforeEach(() => {
