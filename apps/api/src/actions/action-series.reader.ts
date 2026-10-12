@@ -91,17 +91,14 @@ export class ActionSeriesReader {
   ): Promise<SeriesBody> {
     const rows = await trackedRows(
       this.prisma,
-      { appId: item.scope.appId },
+      { appId: item.scope.appId, country: item.scope.country },
       from,
       to,
-    );
-    const market = rows.filter(
-      (row) => row.keyword.country === item.scope.country,
     );
     return {
       depth: null,
       points: dailyPoints(
-        visibilityPoints(market).map((point) => ({
+        visibilityPoints(rows).map((point) => ({
           date: new Date(point.date),
           value: point.visibility,
         })),
