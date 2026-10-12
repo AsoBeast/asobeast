@@ -5,21 +5,33 @@ import {
   KeywordImportRequest,
   KeywordImportResult,
 } from '@asobeast/shared';
-import { QuotaService, WorkspaceUsage } from '../auth/quota.service';
+import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { ClassifiedRow, classifyImportRows, pairKey } from './keyword-import';
+import {
+  ClassifiedRow,
+  classifyImportRows,
+  ImportCandidate,
+  pairKey,
+} from './keyword-import';
 import {
   Addition,
   costOf,
   ImportPlan,
   planImport,
   summarize,
-  TrackingLookup,
-  TrackingState,
 } from './keyword-import-plan';
+import { keywordQuotaOf } from './keyword-quota';
+import { loadTrackingStates } from './keyword-tracking-state';
 import { KeywordTracker } from './keyword-tracker';
 import { ensureApp, KeywordApp } from './keywords.support';
 import { MarketListingRequests } from './market-listing.requests';
+
+const candidatesOf = (
+  classified: readonly ClassifiedRow[],
+): ImportCandidate[] =>
+  classified.flatMap((row) =>
+    row.kind === 'candidate' ? [row.candidate] : [],
+  );
 
 interface PlannedImport {
   app: KeywordApp;
@@ -50,10 +62,11 @@ export class KeywordImportService {
   ): Promise<KeywordImportResult> {
     const planned = await this.planned(appId, request);
     const imported = await this.write(planned.app, planned.plan.additions);
-    const quota =
-      planned.quota && imported > 0
-        ? this.quotaOf(await this.quota.usage())
-        : planned.quota;
+    if (!planned.quota || imported === 0) {
+      return this.result(planned, imported, false);
+    }
+    const usage = await this.quota.usage();
+    const quota = keywordQuotaOf(usage, this.quota.upgradeFrom(usage.plan));
     return this.result({ ...planned, quota }, imported, false);
   }
 
@@ -69,7 +82,7 @@ export class KeywordImportService {
     assertStorefront(context.store, context.country);
     const classified = classifyImportRows(request.rows, context);
     const [tracking, usage] = await Promise.all([
-      this.trackingFor(app, classified),
+      loadTrackingStates(this.prisma, app, candidatesOf(classified)),
       this.quota.usage(),
     ]);
     const limit = usage.limits.keywordMarkets;
@@ -79,7 +92,7 @@ export class KeywordImportService {
     return {
       app,
       plan,
-      quota: this.quotaOf(usage),
+      quota: keywordQuotaOf(usage, this.quota.upgradeFrom(usage.plan)),
       marketListings: await this.listingsOpened(app, plan.additions),
     };
   }
@@ -189,59 +202,5 @@ export class KeywordImportService {
       quota,
       results: plan.results,
     };
-  }
-
-  private quotaOf(usage: WorkspaceUsage): KeywordImportQuota | null {
-    const limit = usage.limits.keywordMarkets;
-    if (limit === null) {
-      return null;
-    }
-    return {
-      used: usage.keywordMarkets,
-      limit,
-      upgradeTo: this.quota.upgradeFrom(usage.plan),
-    };
-  }
-
-  private async trackingFor(
-    app: KeywordApp,
-    classified: readonly ClassifiedRow[],
-  ): Promise<TrackingLookup> {
-    const candidates = classified.flatMap((row) =>
-      row.kind === 'candidate' ? [row.candidate] : [],
-    );
-    if (candidates.length === 0) {
-      return new Map();
-    }
-    const rows = await this.prisma.trackedKeyword.findMany({
-      where: {
-        keyword: {
-          is: {
-            store: app.store,
-            text: { in: [...new Set(candidates.map(({ text }) => text))] },
-            country: {
-              in: [...new Set(candidates.map(({ country }) => country))],
-            },
-          },
-        },
-      },
-      select: {
-        appId: true,
-        active: true,
-        keyword: { select: { text: true, country: true } },
-      },
-    });
-    const states = new Map<string, TrackingState>();
-    for (const row of rows) {
-      const key = pairKey(row.keyword.country, row.keyword.text);
-      const state = states.get(key) ?? { own: null, elsewhere: false };
-      if (row.appId === app.id) {
-        state.own = row.active ? 'active' : 'paused';
-      } else if (row.active) {
-        state.elsewhere = true;
-      }
-      states.set(key, state);
-    }
-    return states;
   }
 }
