@@ -13,13 +13,6 @@ export interface KeywordFieldTarget {
   localization: AppStoreLocalization;
 }
 
-const describeLocalization = (
-  localization: AppStoreLocalization | undefined,
-) =>
-  localization === undefined
-    ? 'any localization'
-    : APP_STORE_LOCALIZATIONS[localization];
-
 export function keywordFieldTarget(
   app: { store: Store; country: string },
   query: KeywordFieldQuery,
@@ -30,11 +23,11 @@ export function keywordFieldTarget(
   }
   const read = keywordFieldLocalizations(country);
   const localization = query.localization ?? read[0];
-  if (localization === undefined || !read.includes(localization)) {
+  if (!read.includes(localization)) {
     throw new BadRequestException(
       `The ${country.toUpperCase()} storefront reads ${read
         .map((tag) => APP_STORE_LOCALIZATIONS[tag])
-        .join(', ')}, not ${describeLocalization(localization)}`,
+        .join(', ')}, not ${APP_STORE_LOCALIZATIONS[localization]}`,
     );
   }
   return { country, localization };

@@ -717,8 +717,18 @@ describe('KeywordsController (e2e)', () => {
       .send({ text: 'habit,goals' })
       .expect(200);
     expect(
-      (saved.body as KeywordFieldResult).tracked.map((item) => item.text),
-    ).toEqual(['habit', 'goals']);
+      (saved.body as KeywordFieldResult).tracked.map(
+        (item) => `${item.text}:${item.country}`,
+      ),
+    ).toEqual(['habit:uk', 'goals:uk']);
+    await expect(
+      prisma.keywordField.findMany({
+        where: { appId: legacy.id },
+        select: { localization: true, phrases: true },
+      }),
+    ).resolves.toEqual([
+      { localization: 'en-GB', phrases: ['habit', 'goals'] },
+    ]);
   });
 
   it('refuses to read the keyword field of a google play app', async () => {
@@ -896,7 +906,8 @@ describe('KeywordsController (e2e)', () => {
       const id = await importApp();
       await putKeywordField(id, 'habit,goals');
       const habit = await trackedItem(id, 'habit');
-      await api.delete(`/apps/${id}/keywords/${habit?.keywordId}`).expect(204);
+      expect(habit).toBeDefined();
+      await api.delete(`/apps/${id}/keywords/${habit!.keywordId}`).expect(204);
 
       const field = (await api.get(`/apps/${id}/keyword-field`).expect(200))
         .body as KeywordFieldResult;
