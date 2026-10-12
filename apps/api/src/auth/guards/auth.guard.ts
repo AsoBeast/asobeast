@@ -10,6 +10,7 @@ import { SESSION_COOKIE } from '@asobeast/shared';
 import { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import { AuthService } from '../auth.service';
 import type { AuthenticatedRequest } from '../auth.types';
+import { apiToken } from '../bearer-token';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { CredentialRateLimiter } from '../rate-limit/credential-rate.limiter';
 import { addressTrackerOf } from '../rate-limit/request-tracker';
@@ -34,19 +35,16 @@ export class AuthGuard implements CanActivate {
       .switchToHttp()
       .getRequest<Request & AuthenticatedRequest>();
     const cookies = req.cookies as Record<string, string> | undefined;
-    const presented = Boolean(
-      cookies?.[SESSION_COOKIE] || req.headers.authorization,
-    );
-    const session = await this.auth.resolveSessionUser(
-      cookies?.[SESSION_COOKIE],
-    );
+    const claims = await this.auth.verifySession(cookies?.[SESSION_COOKIE]);
+    const session = claims && (await this.auth.userOfSession(claims));
     const token = session
       ? null
       : await this.auth.resolveToken(req.headers.authorization);
     const user = session ?? token?.user;
     if (!user) {
+      const lookedUp = Boolean(claims || apiToken(req.headers.authorization));
       const address = addressTrackerOf(req);
-      if (presented && address) await this.credentials.recordRejection(address);
+      if (lookedUp && address) await this.credentials.recordRejection(address);
       throw new UnauthorizedException('Not authenticated');
     }
 

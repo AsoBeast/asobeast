@@ -4,6 +4,7 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
@@ -519,6 +520,48 @@ describe('Rate limits (billing mode)', () => {
         .set('Cookie', 'asobeast_session=')
         .set('Authorization', `Bearer ${rejected}`);
 
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(1);
+
+    await present().expect(429);
+  });
+
+  it('never counts a session cookie signed with another secret', async () => {
+    await register('rotated@example.com');
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: 'rotated@example.com' },
+      select: { id: true, sessionVersion: true },
+    });
+    const unverifiable = await new JwtService({
+      secret: 'f'.repeat(64),
+    }).signAsync({ sub: user.id, sv: user.sessionVersion });
+    const present = () =>
+      request(app.getHttpServer())
+        .get('/apps')
+        .set('Cookie', `asobeast_session=${unverifiable}`);
+
+    for (let sent = 0; sent < CREDENTIAL_FAILURES_PER_MINUTE; sent += 1) {
+      await present().expect(401);
+    }
+
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(0);
+  });
+
+  it('counts a signed session cookie whose session was revoked', async () => {
+    const cookie = await register('revoked@example.com');
+    await prisma.user.update({
+      where: { email: 'revoked@example.com' },
+      data: { sessionVersion: { increment: 1 } },
+    });
+    const present = () =>
+      request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
+
+    await awaitBurnHeadroom(3);
     await present().expect(401);
     expect(
       await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
