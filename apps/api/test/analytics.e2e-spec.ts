@@ -841,6 +841,15 @@ describe('AnalyticsController (e2e)', () => {
     });
   });
 
+  it('keeps the ratings history on the home market', async () => {
+    const id = await seed();
+
+    await api
+      .get(`/apps/${id}/ratings-history`)
+      .query({ country: 'de' })
+      .expect(400);
+  });
+
   it('groups rank distribution into disjoint bands per day', async () => {
     const id = await seed();
 

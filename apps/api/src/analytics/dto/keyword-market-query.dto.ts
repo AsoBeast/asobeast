@@ -2,7 +2,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { COUNTRY_PATTERN } from '@asobeast/shared';
 import { IsOptional, Matches } from 'class-validator';
 
-export class SummaryQueryDto {
+export class KeywordMarketQueryDto {
   @ApiPropertyOptional({
     example: 'de',
     pattern: COUNTRY_PATTERN.source,

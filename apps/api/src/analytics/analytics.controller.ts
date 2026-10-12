@@ -8,7 +8,7 @@ import {
 } from '@asobeast/shared';
 import { AnalyticsService } from './analytics.service';
 import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
-import { SummaryQueryDto } from './dto/summary-query.dto';
+import { KeywordMarketQueryDto } from './dto/keyword-market-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 
 @ApiTags('analytics')
@@ -20,7 +20,7 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Dashboard summary for an app' })
   getSummary(
     @Param('id') id: string,
-    @Query() query: SummaryQueryDto,
+    @Query() query: KeywordMarketQueryDto,
   ): Promise<AppSummary> {
     return this.analytics.summary(id, query.country);
   }
