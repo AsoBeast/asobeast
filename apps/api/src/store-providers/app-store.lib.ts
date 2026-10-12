@@ -153,12 +153,12 @@ async function fetchText(
 const EDGE_CACHED_HOST = 'itunes.apple.com';
 
 const pastEdgeCache: typeof fetch = (input, init) => {
-  if (input instanceof Request) return fetch(input, init);
+  if (input instanceof Request) return egressFetch(input, init);
   const url = new URL(input);
   if (url.hostname === EDGE_CACHED_HOST) {
     url.searchParams.set('nonce', randomUUID());
   }
-  return fetch(url, init);
+  return egressFetch(url, init);
 };
 
 const pageUrl = (id: number, country: string, language?: string): string => {

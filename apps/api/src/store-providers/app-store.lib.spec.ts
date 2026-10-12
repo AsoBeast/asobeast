@@ -59,22 +59,16 @@ describe('appStoreLib edge cache', () => {
   const SEARCH_URL =
     'https://itunes.apple.com/search?term=explorer&country=us&media=software&entity=software&limit=200';
 
-  let direct: jest.SpiedFunction<typeof fetch>;
-
   beforeEach(() => {
-    direct = jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('{}'));
+    fetchMock.mockReset();
     jest.mocked(appStore.search).mockReset().mockResolvedValue([]);
   });
-
-  afterEach(() => jest.restoreAllMocks());
 
   async function requestedThroughScraper(url: string): Promise<string> {
     await appStoreLib.search({ term: 'explorer', country: 'us', num: 200 });
     const [options] = jest.mocked(appStore.search).mock.lastCall ?? [];
     await options?.requestOptions?.fetch?.(url, { method: 'GET' });
-    const [requested, init] = direct.mock.lastCall ?? [];
+    const [requested, init] = fetchMock.mock.lastCall ?? [];
     expect(init).toEqual({ method: 'GET' });
     return new URL(requested as URL | string).href;
   }
