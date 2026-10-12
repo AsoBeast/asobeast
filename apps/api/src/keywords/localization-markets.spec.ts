@@ -4,6 +4,7 @@ import {
   readersOf,
   readerRole,
   readsKeywordField,
+  trackInError,
 } from './localization-markets';
 
 describe('homeLocalization', () => {
@@ -112,5 +113,41 @@ describe('readersOf', () => {
 
   it('is empty when no market reads the localization', () => {
     expect(readersOf('fr', ['jp', 'de'], 'jp')).toEqual([]);
+  });
+});
+
+describe('trackInError', () => {
+  const markets = ['us', 'mx'];
+
+  it('accepts an empty trackIn', () => {
+    expect(trackInError('es-MX', [], markets)).toBeNull();
+  });
+
+  it('accepts every app market that reads the localization', () => {
+    expect(trackInError('es-MX', ['us', 'mx'], markets)).toBeNull();
+  });
+
+  it('names a country that is not one of the app markets', () => {
+    expect(trackInError('es-MX', ['de'], markets)).toBe(
+      "DE is not one of this app's markets",
+    );
+  });
+
+  it('names an app market whose storefront does not read the localization', () => {
+    expect(trackInError('en-US', ['us', 'mx'], markets)).toBe(
+      'The MX storefront does not read English (U.S.)',
+    );
+  });
+
+  it('reports the first offending country in the order it was sent', () => {
+    expect(trackInError('en-US', ['mx', 'de'], markets)).toBe(
+      'The MX storefront does not read English (U.S.)',
+    );
+  });
+
+  it('checks the market list before it checks what the storefront reads', () => {
+    expect(trackInError('en-US', ['de'], markets)).toBe(
+      "DE is not one of this app's markets",
+    );
   });
 });
