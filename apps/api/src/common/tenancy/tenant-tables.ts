@@ -7,6 +7,7 @@ export const TENANT_TABLES = [
   'ApiToken',
   'App',
   'AppGroup',
+  'AppLocalization',
   'AppSnapshot',
   'AuditInsight',
   'AuditScore',
