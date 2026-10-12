@@ -1,4 +1,4 @@
-import { KeywordSource } from '@prisma/client';
+import { KeywordSource, Prisma } from '@prisma/client';
 import { keywordFieldLocalizations } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -29,6 +29,18 @@ export const storedKeywordFields = (
     where: { appId },
     select: { localization: true, phrases: true },
   });
+
+export async function storedPhrases(
+  client: Prisma.TransactionClient | PrismaService,
+  appId: string,
+  localization: string,
+): Promise<string[]> {
+  const field = await client.keywordField.findUnique({
+    where: { appId_localization: { appId, localization } },
+    select: { phrases: true },
+  });
+  return field?.phrases ?? [];
+}
 
 export async function loadKeywordFieldIndex(
   prisma: PrismaService,

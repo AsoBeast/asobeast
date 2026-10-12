@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordFieldService } from './keyword-field.service';
+import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -182,8 +183,7 @@ function buildPrisma() {
 
 function buildService(prisma: ReturnType<typeof buildPrisma>) {
   const queue = { add: jest.fn() } as unknown as Queue;
-  return new KeywordFieldService(
-    prisma as unknown as PrismaService,
+  const writer = new KeywordFieldWriter(
     new KeywordTracker(
       prisma as unknown as PrismaService,
       queue,
@@ -200,6 +200,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
     { require: () => APP.workspaceId } as unknown as WorkspaceContext,
     { request: jest.fn() } as unknown as MarketListingRequests,
   );
+  return new KeywordFieldService(prisma as unknown as PrismaService, writer);
 }
 
 const deactivatedTexts = (prisma: ReturnType<typeof buildPrisma>) =>

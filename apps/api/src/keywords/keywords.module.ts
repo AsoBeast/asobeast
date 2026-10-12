@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { QUEUES } from '../jobs/jobs.types';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
 import { KeywordFieldService } from './keyword-field.service';
+import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordTracker } from './keyword-tracker';
@@ -24,6 +25,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   providers: [
     KeywordsService,
     KeywordFieldService,
+    KeywordFieldWriter,
     KeywordImportService,
     KeywordSuggestionService,
     KeywordTracker,
