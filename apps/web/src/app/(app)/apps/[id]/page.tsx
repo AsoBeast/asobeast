@@ -62,20 +62,27 @@ export default async function AppOverviewPage({
     actionsOptions({ status: ["OPEN"], limit: TOP_ACTION_LIMIT }, id),
   );
   const firstRun = queryClient.prefetchQuery(firstRunOptions(id));
+  const requested = marketParser.parseServerSide(sp.market);
+  const listingMarkets = queryClient
+    .fetchQuery(listingMarketsOptions(id))
+    .catch(() => []);
+  const scope = requested
+    ? listingMarkets.then((markets) => keywordScope(requested, markets))
+    : Promise.resolve(undefined);
+  void scope.then((country) => {
+    void queryClient.prefetchQuery(appSummaryOptions(id, country));
+    void queryClient.prefetchQuery(
+      visibilityOptions(id, presetToRange("30d"), country),
+    );
+    void queryClient.prefetchQuery(
+      rankDistributionHistoryOptions(id, presetToRange("30d"), country),
+    );
+  });
   const [app, markets] = await Promise.all([
     queryClient.fetchQuery(appDetailOptions(id)),
-    queryClient.fetchQuery(listingMarketsOptions(id)).catch(() => []),
+    listingMarkets,
   ]);
-  const requested = marketParser.parseServerSide(sp.market);
   const market = resolveMarket(requested, markets, app.country);
-  const scope = keywordScope(requested, markets);
-  void queryClient.prefetchQuery(appSummaryOptions(id, scope));
-  void queryClient.prefetchQuery(
-    visibilityOptions(id, presetToRange("30d"), scope),
-  );
-  void queryClient.prefetchQuery(
-    rankDistributionHistoryOptions(id, presetToRange("30d"), scope),
-  );
   await queryClient.prefetchQuery(
     appListingOptions(id, queryMarket(market, app.country)),
   );
