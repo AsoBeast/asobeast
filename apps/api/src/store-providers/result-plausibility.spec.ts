@@ -1,5 +1,7 @@
 import {
+  askAgainWhileEmpty,
   DAY_MS,
+  EMPTY_ANSWER_RETRY_DELAY_MS,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
 } from './result-plausibility';
@@ -59,5 +61,50 @@ describe('isImplausiblyEmpty', () => {
         today: TODAY,
       }),
     ).toBe(false);
+  });
+});
+
+describe('askAgainWhileEmpty', () => {
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it('asks once when the first answer has results', async () => {
+    const ask = jest.fn().mockResolvedValue(['a']);
+
+    await expect(askAgainWhileEmpty(ask, 3)).resolves.toEqual(['a']);
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks again after a pause until an answer has results', async () => {
+    const ask = jest
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce(['a']);
+
+    const answer = askAgainWhileEmpty(ask, 3);
+    await jest.advanceTimersByTimeAsync(EMPTY_ANSWER_RETRY_DELAY_MS - 1);
+    expect(ask).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(EMPTY_ANSWER_RETRY_DELAY_MS + 1);
+
+    await expect(answer).resolves.toEqual(['a']);
+    expect(ask).toHaveBeenCalledTimes(3);
+  });
+
+  it('settles for an empty answer once the retries are spent', async () => {
+    const ask = jest.fn().mockResolvedValue([]);
+
+    const answer = askAgainWhileEmpty(ask, 2);
+    await jest.runAllTimersAsync();
+
+    await expect(answer).resolves.toEqual([]);
+    expect(ask).toHaveBeenCalledTimes(3);
+  });
+
+  it('never asks again without retries', async () => {
+    const ask = jest.fn().mockResolvedValue([]);
+
+    await expect(askAgainWhileEmpty(ask, 0)).resolves.toEqual([]);
+    expect(ask).toHaveBeenCalledTimes(1);
   });
 });
