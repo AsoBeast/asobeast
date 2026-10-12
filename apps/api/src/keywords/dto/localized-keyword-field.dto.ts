@@ -2,6 +2,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import {
   COUNTRY_PATTERN,
   KEYWORD_FIELD_INPUT_LIMIT,
+  KeywordFieldPreviewRequest,
   LocalizedKeywordFieldRequest,
 } from '@asobeast/shared';
 import {
@@ -15,7 +16,7 @@ import {
 
 export const TRACK_IN_LIMIT = 200;
 
-export class LocalizedKeywordFieldDto implements LocalizedKeywordFieldRequest {
+export class KeywordFieldPreviewDto implements KeywordFieldPreviewRequest {
   @ApiProperty({
     example: 'habit,tracker,streak',
     maxLength: KEYWORD_FIELD_INPUT_LIMIT,
@@ -23,7 +24,12 @@ export class LocalizedKeywordFieldDto implements LocalizedKeywordFieldRequest {
   @IsString()
   @MaxLength(KEYWORD_FIELD_INPUT_LIMIT)
   text!: string;
+}
 
+export class LocalizedKeywordFieldDto
+  extends KeywordFieldPreviewDto
+  implements LocalizedKeywordFieldRequest
+{
   @ApiProperty({
     type: [String],
     example: ['us', 'mx'],

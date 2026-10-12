@@ -13,11 +13,17 @@ import type {
   AppLocalizationItem,
   AppLocalizationsResult,
   AppStoreLocalization,
+  KeywordFieldSavePreview,
   LocalizedKeywordFieldResult,
 } from '@asobeast/shared';
+import { RateLimitClass } from '../auth/rate-limit/rate-class';
+import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AppLocalizationsService } from './app-localizations.service';
 import { AddAppLocalizationDto } from './dto/app-localization.dto';
-import { LocalizedKeywordFieldDto } from './dto/localized-keyword-field.dto';
+import {
+  KeywordFieldPreviewDto,
+  LocalizedKeywordFieldDto,
+} from './dto/localized-keyword-field.dto';
 import { LocalizationPipe } from './localization.pipe';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 
@@ -78,5 +84,22 @@ export class LocalizationsController {
     @Body() dto: LocalizedKeywordFieldDto,
   ): Promise<LocalizedKeywordFieldResult> {
     return this.fieldSaves.save(id, localization, dto);
+  }
+
+  @Post('keyword-fields/:localization/preview')
+  @HttpCode(200)
+  @ReadOnlyEndpoint()
+  @RateLimitClass('read')
+  @ApiOperation({
+    summary: 'Preview saving the keyword field of one localization',
+    description:
+      'Answers, for every market of the app whose storefront reads the localization, the phrases the field would add to the tracked keywords, how many of them would open a new keyword market and the daily store requests that costs, plus the phrases the save would add to and drop from the stored field and the keyword limit of the plan. Writes nothing and queues nothing. Answers 400 for text over 100 characters and for a Google Play app, and 404 for a missing app.',
+  })
+  previewKeywordField(
+    @Param('id') id: string,
+    @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
+    @Body() dto: KeywordFieldPreviewDto,
+  ): Promise<KeywordFieldSavePreview> {
+    return this.fieldSaves.preview(id, localization, dto);
   }
 }

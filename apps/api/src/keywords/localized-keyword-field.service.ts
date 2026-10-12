@@ -7,16 +7,25 @@ import {
   APP_STORE_LOCALIZATIONS,
   type AppLocalizationItem,
   type AppStoreLocalization,
+  KEYWORD_FIELD_CHAR_LIMIT,
+  keywordFieldChars,
+  KeywordFieldPreviewRequest,
+  KeywordFieldSavePreview,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
 } from '@asobeast/shared';
+import { QuotaService } from '../auth/quota.service';
+import { requestsPerJob } from '../jobs/request-weights';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppLocalizationsService } from './app-localizations.service';
 import { loadAppMarkets } from './app-markets';
+import { planFieldSave } from './keyword-field-save-plan';
 import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldWriter } from './keyword-field-writer';
+import { keywordQuotaOf } from './keyword-quota';
+import { loadTrackingStates } from './keyword-tracking-state';
 import { ensureKeywordFieldApp } from './keywords.support';
-import { trackInError } from './localization-markets';
+import { readersOf, trackInError } from './localization-markets';
 
 @Injectable()
 export class LocalizedKeywordFieldService {
@@ -24,6 +33,7 @@ export class LocalizedKeywordFieldService {
     private readonly prisma: PrismaService,
     private readonly writer: KeywordFieldWriter,
     private readonly localizations: AppLocalizationsService,
+    private readonly quota: QuotaService,
   ) {}
 
   async save(
@@ -51,6 +61,45 @@ export class LocalizedKeywordFieldService {
       localization: await this.itemOf(appId, localization),
       duplicatesRemoved,
       trackedIn,
+    };
+  }
+
+  async preview(
+    appId: string,
+    localization: AppStoreLocalization,
+    request: KeywordFieldPreviewRequest,
+  ): Promise<KeywordFieldSavePreview> {
+    const app = await ensureKeywordFieldApp(this.prisma, appId);
+    const { phrases, duplicatesRemoved } = parseFieldText(request.text);
+    const [markets, stored, usage] = await Promise.all([
+      loadAppMarkets(this.prisma, app),
+      this.prisma.keywordField.findUnique({
+        where: { appId_localization: { appId, localization } },
+        select: { phrases: true },
+      }),
+      this.quota.usage(),
+    ]);
+    const readers = readersOf(localization, markets, app.country);
+    const tracking = await loadTrackingStates(
+      this.prisma,
+      app,
+      readers.flatMap(({ country }) =>
+        phrases.map((text) => ({ text, country })),
+      ),
+    );
+    return {
+      localization,
+      duplicatesRemoved,
+      charactersUsed: keywordFieldChars(phrases),
+      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+      ...planFieldSave({
+        stored: stored?.phrases ?? [],
+        phrases,
+        readers,
+        tracking,
+        requestsPerKeyword: requestsPerJob(app.store, 'keywords'),
+      }),
+      quota: keywordQuotaOf(usage, this.quota.upgradeFrom(usage.plan)),
     };
   }
 
