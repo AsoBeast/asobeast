@@ -3,12 +3,13 @@ import { Reflector } from '@nestjs/core';
 import { SESSION_COOKIE } from '@asobeast/shared';
 import type { WorkspaceContext } from '../../common/tenancy/workspace-context';
 import type { AuthService } from '../auth.service';
-import type { AccountUser } from '../auth.types';
+import type { AccountUser, SessionClaims } from '../auth.types';
 import type { CredentialRateLimiter } from '../rate-limit/credential-rate.limiter';
 import { CredentialRateLimitError } from '../rate-limit/rate-limit.errors';
 import { AuthGuard } from './auth.guard';
 
 const USER = { workspaceId: 'ws_acme' } as AccountUser;
+const CLAIMS: SessionClaims = { sub: 'user_1', sv: 0 };
 
 interface FakeRequest {
   ip?: string;
@@ -25,7 +26,8 @@ function contextFor(req: FakeRequest): ExecutionContext {
 }
 
 describe('AuthGuard', () => {
-  const resolveSessionUser = jest.fn<Promise<AccountUser | null>, [unknown]>();
+  const verifySession = jest.fn<Promise<SessionClaims | null>, [unknown]>();
+  const userOfSession = jest.fn<Promise<AccountUser | null>, [SessionClaims]>();
   const resolveToken = jest.fn<
     Promise<{ user: AccountUser; scope: 'read' } | null>,
     [unknown]
@@ -35,19 +37,21 @@ describe('AuthGuard', () => {
 
   const guard = new AuthGuard(
     new Reflector(),
-    { resolveSessionUser, resolveToken } as unknown as AuthService,
+    { verifySession, userOfSession, resolveToken } as unknown as AuthService,
     { bind } as unknown as WorkspaceContext,
     { recordRejection } as unknown as CredentialRateLimiter,
   );
 
   beforeEach(() => {
-    resolveSessionUser.mockReset().mockResolvedValue(null);
+    verifySession.mockReset().mockResolvedValue(null);
+    userOfSession.mockReset().mockResolvedValue(null);
     resolveToken.mockReset().mockResolvedValue(null);
     recordRejection.mockReset().mockResolvedValue(undefined);
     bind.mockReset();
   });
 
   it('counts a rejected credential against the address that presented it', async () => {
+    verifySession.mockResolvedValue(CLAIMS);
     const req = {
       ip: '203.0.113.7',
       cookies: { [SESSION_COOKIE]: 'stale' },
@@ -85,6 +89,52 @@ describe('AuthGuard', () => {
     );
 
     expect(recordRejection).not.toHaveBeenCalled();
+  });
+
+  it('never counts a session cookie that does not verify', async () => {
+    const req = {
+      ip: '203.0.113.7',
+      cookies: { [SESSION_COOKIE]: 'signed-with-another-secret' },
+      headers: {},
+    };
+
+    await expect(guard.canActivate(contextFor(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(userOfSession).not.toHaveBeenCalled();
+    expect(recordRejection).not.toHaveBeenCalled();
+  });
+
+  it.each([['Basic dXNlcjpwYXNz'], ['Bearer not-an-api-token']])(
+    'never counts a cookie that does not verify beside %j',
+    async (authorization) => {
+      const req = {
+        ip: '203.0.113.7',
+        cookies: { [SESSION_COOKIE]: 'signed-with-another-secret' },
+        headers: { authorization },
+      };
+
+      await expect(guard.canActivate(contextFor(req))).rejects.toBeInstanceOf(
+        UnauthorizedException,
+      );
+
+      expect(recordRejection).not.toHaveBeenCalled();
+    },
+  );
+
+  it('counts a rejected token that arrives beside a cookie that does not verify', async () => {
+    const req = {
+      ip: '203.0.113.7',
+      cookies: { [SESSION_COOKIE]: 'signed-with-another-secret' },
+      headers: { authorization: 'Bearer asob_unknown' },
+    };
+
+    await expect(guard.canActivate(contextFor(req))).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    expect(recordRejection).toHaveBeenCalledWith('ip:203.0.113.7');
   });
 
   it('never counts a request that presented no credential', async () => {

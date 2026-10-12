@@ -32,7 +32,7 @@ import { canStartTrial, trialStillOpen } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { bearerToken } from './bearer-token';
+import { apiToken } from './bearer-token';
 import { isEntitled } from './entitlement';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
@@ -196,15 +196,26 @@ export class AuthService {
     return user;
   }
 
-  resolveSessionUser(token: string | undefined): Promise<AccountUser | null> {
+  async resolveSessionUser(
+    token: string | undefined,
+  ): Promise<AccountUser | null> {
+    const claims = await this.verifySession(token);
+    return claims && this.userOfSession(claims);
+  }
+
+  async verifySession(
+    token: string | undefined,
+  ): Promise<SessionClaims | null> {
+    if (!token) return null;
+    try {
+      return await this.jwt.verifyAsync<SessionClaims>(token);
+    } catch {
+      return null;
+    }
+  }
+
+  userOfSession(claims: SessionClaims): Promise<AccountUser | null> {
     return this.beforeSignIn(async () => {
-      if (!token) return null;
-      let claims: SessionClaims;
-      try {
-        claims = await this.jwt.verifyAsync<SessionClaims>(token);
-      } catch {
-        return null;
-      }
       const user = await this.prisma.user.findUnique({
         where: { id: claims.sub },
         include: { workspace: true },
@@ -250,8 +261,8 @@ export class AuthService {
     now = new Date(),
   ): Promise<ResolvedToken | null> {
     return this.beforeSignIn(async () => {
-      const raw = bearerToken(authorization);
-      if (!raw?.startsWith(API_TOKEN_PREFIX)) return null;
+      const raw = apiToken(authorization);
+      if (!raw) return null;
       const record = await this.prisma.apiToken.findUnique({
         where: { tokenHash: sha256(raw) },
         include: { user: { include: { workspace: true } } },
