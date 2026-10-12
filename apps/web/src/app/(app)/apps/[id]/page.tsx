@@ -54,7 +54,6 @@ export default async function AppOverviewPage({
   const categoryRange = rangeParser.parseServerSide(sp.categoryRange);
 
   const queryClient = getQueryClient();
-  void queryClient.prefetchQuery(appSummaryOptions(id));
   void queryClient.prefetchQuery(
     categoryRanksOptions(id, presetToRange(categoryRange)),
   );
@@ -69,7 +68,7 @@ export default async function AppOverviewPage({
   ]);
   const requested = marketParser.parseServerSide(sp.market);
   const market = resolveMarket(requested, markets, app.country);
-  const scope = keywordScope(requested, market);
+  const scope = keywordScope(requested, markets);
   void queryClient.prefetchQuery(appSummaryOptions(id, scope));
   void queryClient.prefetchQuery(
     visibilityOptions(id, presetToRange("30d"), scope),

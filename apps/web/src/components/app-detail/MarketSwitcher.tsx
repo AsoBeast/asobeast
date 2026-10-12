@@ -8,8 +8,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ALL_MARKETS, marketLabel } from "@/lib/market";
+import { marketLabel } from "@/lib/market";
 import { useMarket } from "./use-market";
+
+const ALL_MARKETS = "all";
 
 export function MarketSwitcher({
   id,
@@ -18,23 +20,23 @@ export function MarketSwitcher({
   id: string;
   allowAll?: boolean;
 }) {
-  const { market, scope, markets, select, selectAll } = useMarket(id);
-  const all = allowAll && scope === undefined;
+  const { market, scope, home, markets, select } = useMarket(id);
   const selected = markets.find((entry) => entry.country === market);
   if (markets.length < 2 || selected === undefined) return null;
 
+  const value = allowAll && scope === undefined ? ALL_MARKETS : market;
+  const choose = (next: string) =>
+    select(next === ALL_MARKETS || (!allowAll && next === home) ? null : next);
+
   return (
     <div className="flex flex-wrap items-center gap-2 print:hidden">
-      <Label htmlFor={`market-${id}`}>Listing market</Label>
-      <Select
-        value={all ? ALL_MARKETS : market}
-        onValueChange={(next) =>
-          next === ALL_MARKETS ? selectAll() : select(next)
-        }
-      >
+      <Label htmlFor={`market-${id}`}>
+        {allowAll ? "Market" : "Listing market"}
+      </Label>
+      <Select value={value} onValueChange={choose}>
         <SelectTrigger id={`market-${id}`} className="w-[240px]">
           <SelectValue>
-            {all ? "All markets" : marketLabel(selected)}
+            {value === ALL_MARKETS ? "All markets" : marketLabel(selected)}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ListingMarket } from "@asobeast/shared";
 import {
-  ALL_MARKETS,
   isRefreshable,
   keywordScope,
   marketLabel,
@@ -101,15 +100,19 @@ describe("resolveLocalization", () => {
 });
 
 describe("keywordScope", () => {
-  it("narrows the numbers to the selected market", () => {
-    expect(keywordScope("de", "de")).toBe("de");
+  it("counts every market when none is requested", () => {
+    expect(keywordScope("", MARKETS)).toBeUndefined();
   });
 
-  it("narrows to the home market when none is requested", () => {
-    expect(keywordScope("", "us")).toBe("us");
+  it("narrows to a market that has a listing", () => {
+    expect(keywordScope("de", MARKETS)).toBe("de");
   });
 
-  it("covers every market when all markets are requested", () => {
-    expect(keywordScope(ALL_MARKETS, "us")).toBeUndefined();
+  it("narrows to the home market when it is requested", () => {
+    expect(keywordScope("us", MARKETS)).toBe("us");
+  });
+
+  it("counts every market for a market without a listing", () => {
+    expect(keywordScope("pl", MARKETS)).toBeUndefined();
   });
 });

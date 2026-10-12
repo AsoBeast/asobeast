@@ -16,6 +16,7 @@ import {
 import {
   ACTIONS,
   ACTION_SUMMARY,
+  APP_1_MARKET_SUMMARIES,
   APP_AUDIT,
   AUDIT_HISTORY_POINTS,
   LONG_AUDIT,
@@ -1687,7 +1688,11 @@ const routes: Route[] = [
       res.writeHead(204).end();
     },
   },
-  appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset) => dataset.summary),
+  appRoute(/^\/apps\/([^/]+)\/summary$/, (dataset, query) =>
+    dataset.detail.id === "app-1"
+      ? (APP_1_MARKET_SUMMARIES[query.get("country") ?? ""] ?? dataset.summary)
+      : dataset.summary,
+  ),
   {
     method: "POST",
     pattern: /^\/apps\/([^/]+)\/keywords$/,
