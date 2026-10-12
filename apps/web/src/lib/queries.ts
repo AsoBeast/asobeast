@@ -3,6 +3,7 @@ import type {
   AppAuditResult,
   EmailAlertItem,
   FirstRunStatus,
+  KeywordFieldQuery,
   KeywordImportRequest,
   KeywordSuggestionStrategy,
   WebhookItem,
@@ -54,6 +55,7 @@ import {
   previewKeywordImport,
   getKeywordField,
   getKeywords,
+  listKeywordFields,
   getListingMarkets,
   getMarketAvailability,
   getMetadataAudit,
@@ -106,8 +108,12 @@ export const appKeys = {
     [...appKeys.detail(id), "keyword-import-preview"] as const,
   importPreview: (id: string, request: KeywordImportRequest | null) =>
     [...appKeys.importPreviewRoot(id), request] as const,
-  keywordField: (id: string) =>
+  keywordFieldRoot: (id: string) =>
     [...appKeys.detail(id), "keyword-field"] as const,
+  keywordField: (id: string, query: KeywordFieldQuery = {}) =>
+    [...appKeys.keywordFieldRoot(id), query] as const,
+  keywordFields: (id: string) =>
+    [...appKeys.detail(id), "keyword-fields"] as const,
   suggestions: (
     id: string,
     strategy: KeywordSuggestionStrategy,
@@ -171,10 +177,11 @@ export const appKeys = {
     [...appKeys.detail(id), "listing-markets"] as const,
   listing: (id: string, market: string) =>
     [...appKeys.detail(id), "listing", { market }] as const,
+  metadataAuditRoot: (id: string) =>
+    [...appKeys.detail(id), "metadata-audit"] as const,
   metadataAudit: (id: string, market?: string, localization?: string) =>
     [
-      ...appKeys.detail(id),
-      "metadata-audit",
+      ...appKeys.metadataAuditRoot(id),
       { market, ...(localization === undefined ? {} : { localization }) },
     ] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
@@ -496,10 +503,19 @@ export const keywordImportPreviewOptions = (
     retry: false,
   });
 
-export const keywordFieldOptions = (id: string) =>
+export const keywordFieldOptions = (
+  id: string,
+  query: KeywordFieldQuery = {},
+) =>
   queryOptions({
-    queryKey: appKeys.keywordField(id),
-    queryFn: () => getKeywordField(id),
+    queryKey: appKeys.keywordField(id, query),
+    queryFn: () => getKeywordField(id, query),
+  });
+
+export const keywordFieldsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordFields(id),
+    queryFn: () => listKeywordFields(id),
   });
 
 export const suggestionsOptions = (
@@ -754,10 +770,19 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.audit(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordCountries(id) });
-  void client.invalidateQueries({ queryKey: appKeys.keywordField(id) });
+  void client.invalidateQueries({ queryKey: appKeys.keywordFieldRoot(id) });
+  void client.invalidateQueries({ queryKey: appKeys.keywordFields(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+}
+
+export function invalidateKeywordFieldMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateKeywordMutation(client, id);
+  void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
 }
 
 export function invalidateKeywordImport(client: QueryClient, id: string): void {

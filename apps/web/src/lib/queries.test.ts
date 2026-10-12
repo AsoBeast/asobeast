@@ -47,6 +47,7 @@ import {
   invalidateEmailAlertMutation,
   invalidateAudit,
   invalidateKeywordImport,
+  invalidateKeywordFieldMutation,
   invalidateKeywordMutation,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -54,6 +55,8 @@ import {
   seedEmailAlert,
   seedWebhook,
   keywordCountriesOptions,
+  keywordFieldOptions,
+  keywordFieldsOptions,
   keywordsOptions,
   appListingOptions,
   listingMarketsOptions,
@@ -110,6 +113,12 @@ const APP_SCOPED_OPTIONS = [
     keywordCountriesOptions(APP),
     appKeys.keywordCountries(APP),
   ],
+  [
+    "keywordField",
+    keywordFieldOptions(APP, { country: "de", localization: "en-GB" }),
+    appKeys.keywordField(APP, { country: "de", localization: "en-GB" }),
+  ],
+  ["keywordFields", keywordFieldsOptions(APP), appKeys.keywordFields(APP)],
   [
     "suggestions",
     suggestionsOptions(APP, "metadata", "us"),
@@ -479,10 +488,27 @@ describe("invalidation sets", () => {
       appKeys.audit(APP),
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
-      appKeys.keywordField(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.keywordFields(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
+    ]);
+  });
+
+  it("invalidates the metadata audit after a keyword field save", () => {
+    expect(
+      invalidatedKeys((client) => invalidateKeywordFieldMutation(client, APP)),
+    ).toEqual([
+      appKeys.audit(APP),
+      appKeys.keywordsRoot(APP),
+      appKeys.keywordCountries(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.keywordFields(APP),
+      appKeys.summary(APP),
+      appKeys.compareRoot(APP),
+      portfolioInsightsKey,
+      appKeys.metadataAuditRoot(APP),
     ]);
   });
 
@@ -493,7 +519,8 @@ describe("invalidation sets", () => {
       appKeys.audit(APP),
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
-      appKeys.keywordField(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.keywordFields(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,

@@ -2,8 +2,10 @@ import type {
   KeywordAddRequest,
   KeywordComparison,
   KeywordCountrySummary,
+  KeywordFieldQuery,
   KeywordFieldRequest,
   KeywordFieldResult,
+  KeywordFieldSummary,
   KeywordImportRequest,
   KeywordImportResult,
   KeywordSort,
@@ -16,7 +18,7 @@ import type {
   SpiderStatus,
   TrackedKeywordItem,
 } from "@asobeast/shared";
-import { apiFetch, withQuery } from "./client";
+import { apiFetch, marketParams, withQuery } from "./client";
 
 export function getKeywords(
   appId: string,
@@ -136,18 +138,34 @@ export function getComparison(
   );
 }
 
-export function getKeywordField(appId: string): Promise<KeywordFieldResult> {
-  return apiFetch<KeywordFieldResult>(`/apps/${appId}/keyword-field`);
+const keywordFieldPath = (appId: string, query: KeywordFieldQuery) =>
+  withQuery(
+    `/apps/${appId}/keyword-field`,
+    marketParams(query.country, query.localization),
+  );
+
+export function getKeywordField(
+  appId: string,
+  query: KeywordFieldQuery = {},
+): Promise<KeywordFieldResult> {
+  return apiFetch<KeywordFieldResult>(keywordFieldPath(appId, query));
 }
 
 export function setKeywordField(
   appId: string,
   text: string,
+  query: KeywordFieldQuery = {},
 ): Promise<KeywordFieldResult> {
-  return apiFetch<KeywordFieldResult>(`/apps/${appId}/keyword-field`, {
+  return apiFetch<KeywordFieldResult>(keywordFieldPath(appId, query), {
     method: "PUT",
     body: JSON.stringify({ text } satisfies KeywordFieldRequest),
   });
+}
+
+export function listKeywordFields(
+  appId: string,
+): Promise<KeywordFieldSummary[]> {
+  return apiFetch<KeywordFieldSummary[]>(`/apps/${appId}/keyword-fields`);
 }
 
 export function scoreKeyword(keywordId: string): Promise<ScoreEnqueueResult> {

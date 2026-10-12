@@ -24,6 +24,7 @@ export function KeywordsTableSkeleton() {
 export function KeywordFieldSkeleton() {
   return (
     <div className="flex flex-col gap-3">
+      <Skeleton className="h-9 w-[260px]" />
       <Skeleton className="h-20 w-full rounded-lg" />
       <Skeleton className="h-1 w-full rounded-full" />
       <div className="flex items-center justify-between">
