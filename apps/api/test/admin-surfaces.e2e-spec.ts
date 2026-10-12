@@ -3,7 +3,11 @@ import { INestApplication } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { CapacityReport, ProxyPoolHealth } from '@asobeast/shared';
+import {
+  API_TOKEN_PREFIX,
+  CapacityReport,
+  ProxyPoolHealth,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { configureAdminSurfaces } from '../src/admin-surfaces';
@@ -17,7 +21,10 @@ import {
 } from './helpers/api-tokens';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QUEUES as QUEUE_NAMES } from '../src/jobs/jobs.types';
-import { awaitBurnHeadroom } from './helpers/burn-headroom';
+import {
+  awaitBurnHeadroom,
+  SHORT_BURN_HEADROOM_SECONDS,
+} from './helpers/burn-headroom';
 import { ownerAgent, useCookies } from './helpers/session';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import {
@@ -27,12 +34,11 @@ import {
 } from './obliterate-queues';
 
 const TENANT_WORKSPACE = 'ws_tenant_owner';
-const REFUSED_TOKEN = `asob_${'7'.repeat(48)}`;
+const REFUSED_TOKEN = `${API_TOKEN_PREFIX}${'7'.repeat(48)}`;
 const QUEUES = '/admin/queues';
 const DOCS = '/docs';
 const METRICS = '/metrics';
 const SUPPORT = '/admin/support';
-const WINDOW_HEADROOM_SECONDS = 3;
 const SURFACES = [QUEUES, DOCS, '/docs-json', '/docs-yaml', METRICS];
 
 interface OpenApiSurface {
@@ -233,7 +239,7 @@ describe('Admin surfaces (e2e)', () => {
 
     beforeEach(async () => {
       await clearRateLimitCounters(app);
-      await awaitBurnHeadroom(WINDOW_HEADROOM_SECONDS);
+      await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
     });
     afterAll(() => clearRateLimitCounters(app));
 

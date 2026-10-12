@@ -3,6 +3,8 @@ import { secondsUntilReset } from '../../src/auth/rate-limit/window';
 
 const BURN_HEADROOM_SECONDS = 15;
 
+export const SHORT_BURN_HEADROOM_SECONDS = 3;
+
 export async function awaitBurnHeadroom(
   seconds = BURN_HEADROOM_SECONDS,
 ): Promise<void> {

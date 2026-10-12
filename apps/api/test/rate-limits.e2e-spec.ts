@@ -24,7 +24,10 @@ import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
 import { restoreAuthEnv } from './helpers/auth-env';
-import { awaitBurnHeadroom } from './helpers/burn-headroom';
+import {
+  awaitBurnHeadroom,
+  SHORT_BURN_HEADROOM_SECONDS,
+} from './helpers/burn-headroom';
 import { testDb } from './helpers/test-db';
 import {
   clearOnDemandCounters,
@@ -561,7 +564,7 @@ describe('Rate limits (billing mode)', () => {
     const present = () =>
       request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
 
-    await awaitBurnHeadroom(3);
+    await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
     await present().expect(401);
     expect(
       await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
