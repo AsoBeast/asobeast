@@ -30,6 +30,9 @@ import {
 
 const KEYWORD_FIELD_LOCK = 3_958_261;
 
+export type StoredKeywordFieldResult = KeywordFieldResult &
+  Required<Pick<KeywordFieldResult, 'country' | 'localization' | 'phrases'>>;
+
 const readsField = (country: string, localization: string): boolean =>
   keywordFieldLocalizations(country).some((tag) => tag === localization);
 
@@ -141,7 +144,7 @@ export class KeywordFieldService {
     app: KeywordApp,
     target: KeywordFieldTarget,
     duplicatesRemoved: number,
-  ): Promise<KeywordFieldResult> {
+  ): Promise<StoredKeywordFieldResult> {
     const phrases = await this.phrasesOf(app.id, target.localization);
     const rows = await this.prisma.trackedKeyword.findMany({
       where: {
@@ -182,7 +185,7 @@ export class KeywordFieldService {
   async getKeywordField(
     appId: string,
     query: KeywordFieldQuery = {},
-  ): Promise<KeywordFieldResult> {
+  ): Promise<StoredKeywordFieldResult> {
     const app = await this.keywordFieldApp(appId);
     return this.keywordFieldResult(app, keywordFieldTarget(app, query), 0);
   }
@@ -230,7 +233,7 @@ export class KeywordFieldService {
     appId: string,
     text: string,
     query: KeywordFieldQuery = {},
-  ): Promise<KeywordFieldResult> {
+  ): Promise<StoredKeywordFieldResult> {
     const app = await this.keywordFieldApp(appId);
     const target = keywordFieldTarget(app, query);
 

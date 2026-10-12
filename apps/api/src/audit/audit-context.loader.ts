@@ -87,8 +87,8 @@ export class AuditContextLoader {
     if (app.store !== Store.APP_STORE) {
       return null;
     }
-    const { tracked } = await this.keywordFields.getKeywordField(app.id);
-    return tracked.map((item) => item.text).join(',') || null;
+    const { phrases } = await this.keywordFields.getKeywordField(app.id);
+    return phrases.join(',') || null;
   }
 
   private async screenshotCaptions(app: AuditApp): Promise<string[] | null> {

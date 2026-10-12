@@ -103,9 +103,10 @@ const buildLoader = (options: LoaderOptions = {}) => {
     compare: jest.fn().mockResolvedValue({ competitors: [], rows: [] }),
   } as unknown as KeywordsService;
   const keywordFields = {
-    getKeywordField: jest
-      .fn()
-      .mockResolvedValue({ tracked: [{ text: 'habit' }, { text: 'streak' }] }),
+    getKeywordField: jest.fn().mockResolvedValue({
+      tracked: [{ text: 'habit' }],
+      phrases: ['habit', 'streak'],
+    }),
   } as unknown as KeywordFieldService;
   const model = options.model === undefined ? 'gpt-5.6-luna' : options.model;
   const auditAi = {
@@ -180,7 +181,7 @@ describe('AuditContextLoader.load', () => {
     expect(context.reviewScoreMax).toBe(2);
   });
 
-  it('joins the saved keyword field in paste order', async () => {
+  it('judges the saved keyword field, untracked phrases included', async () => {
     const context = await buildLoader().load('app-1');
 
     expect(context.keywordField).toBe('habit,streak');
