@@ -91,6 +91,18 @@ describe('askAgainWhileEmpty', () => {
     expect(ask).toHaveBeenCalledTimes(3);
   });
 
+  it('pauses before asking again when it is handed the empty first answer', async () => {
+    const ask = jest.fn().mockResolvedValue(['a']);
+
+    const answer = askAgainWhileEmpty(ask, 3, []);
+    await jest.advanceTimersByTimeAsync(EMPTY_ANSWER_RETRY_DELAY_MS - 1);
+    expect(ask).not.toHaveBeenCalled();
+    await jest.advanceTimersByTimeAsync(1);
+
+    await expect(answer).resolves.toEqual(['a']);
+    expect(ask).toHaveBeenCalledTimes(1);
+  });
+
   it('settles for an empty answer once the retries are spent', async () => {
     const ask = jest.fn().mockResolvedValue([]);
 

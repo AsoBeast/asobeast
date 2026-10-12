@@ -141,31 +141,36 @@ export class RankingsService {
   }
 
   private async search(keyword: KeywordScope): Promise<SearchItem[]> {
+    const provider = this.registry.get(keyword.store);
+    const ask = () =>
+      provider.search(keyword.text, keyword.country, RANK_DEPTH);
+    const results = await ask();
+    if (results.length > 0) return results;
+
     const today = utcToday();
     const lastRanked = await this.prisma.serpEntry.findFirst({
       where: { keywordId: keyword.id, date: { lt: today } },
       orderBy: { date: 'desc' },
       select: { date: true },
     });
-    const expected = isImplausiblyEmpty({
-      resultCount: 0,
-      lastSeenOn: lastRanked?.date ?? null,
-      today,
-    });
-    const retries = expected ? EMPTY_ANSWER_RETRIES[keyword.store] : 0;
-    const provider = this.registry.get(keyword.store);
-    const results = await askAgainWhileEmpty(
-      () => provider.search(keyword.text, keyword.country, RANK_DEPTH),
-      retries,
-    );
-    if (expected && lastRanked && results.length === 0) {
-      throw new ImplausibleResultError(
-        keyword.store,
-        `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
-        { retryable: retries > 0 },
-      );
+    if (
+      !lastRanked ||
+      !isImplausiblyEmpty({
+        resultCount: 0,
+        lastSeenOn: lastRanked.date,
+        today,
+      })
+    ) {
+      return results;
     }
-    return results;
+    const retries = EMPTY_ANSWER_RETRIES[keyword.store];
+    const again = await askAgainWhileEmpty(ask, retries, results);
+    if (again.length > 0) return again;
+    throw new ImplausibleResultError(
+      keyword.store,
+      `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
+      { retryable: retries > 0 },
+    );
   }
 
   private async collectableFor(

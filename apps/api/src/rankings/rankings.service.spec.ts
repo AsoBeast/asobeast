@@ -737,6 +737,21 @@ describe('RankingsService.checkKeyword', () => {
       return outcome;
     };
 
+    it('reads no ranking history before a search that answers with results', async () => {
+      const { service, search, serpFindFirst } = setup({
+        previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],
+      });
+
+      await service.checkKeyword('kw1');
+
+      const searched = search.mock.invocationCallOrder[0];
+      expect(
+        serpFindFirst.mock.invocationCallOrder.filter(
+          (order) => order < searched,
+        ),
+      ).toEqual([]);
+    });
+
     it('asks the app store again and records the answer that has results', async () => {
       const { service, search, upsert } = setup({
         previousSerp: [{ storeAppId: 'primary-store', title: 'Primary' }],

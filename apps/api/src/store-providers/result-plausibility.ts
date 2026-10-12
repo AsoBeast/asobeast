@@ -24,8 +24,9 @@ export function isImplausiblyEmpty(input: {
 export async function askAgainWhileEmpty<T>(
   ask: () => Promise<T[]>,
   retries: number,
+  first?: T[],
 ): Promise<T[]> {
-  let results = await ask();
+  let results = first ?? (await ask());
   for (let retry = 0; results.length === 0 && retry < retries; retry++) {
     await new Promise((resolve) =>
       setTimeout(resolve, EMPTY_ANSWER_RETRY_DELAY_MS),
