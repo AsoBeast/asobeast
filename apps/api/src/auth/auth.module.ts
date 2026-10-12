@@ -5,6 +5,7 @@ import type { Env } from '../config/env';
 import { AccountPlanService } from './account-plan.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { CredentialResolver } from './credential-resolver';
 import { WorkspaceTeamController } from './workspace-team.controller';
 import { WorkspaceTeamService } from './workspace-team.service';
 import { EmailVerificationService } from './email-verification.service';
@@ -36,6 +37,7 @@ import { SignupCapacityGate } from './signup-capacity.gate';
   controllers: [AuthController, WorkspaceTeamController],
   providers: [
     AuthService,
+    CredentialResolver,
     AccountPlanService,
     WorkspaceTeamService,
     EmailVerificationService,
@@ -46,6 +48,6 @@ import { SignupCapacityGate } from './signup-capacity.gate';
     SignupCapacityGate,
     DailyCapacity,
   ],
-  exports: [AuthService, SignupCapacityGate],
+  exports: [AuthService, CredentialResolver, SignupCapacityGate],
 })
 export class AuthModule {}
