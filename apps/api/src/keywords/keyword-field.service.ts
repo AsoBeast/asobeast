@@ -273,7 +273,9 @@ export class KeywordFieldService {
     for (const keywordId of keywordIds) {
       await this.tracker.enqueueFirstScore(keywordId, app);
     }
-    await this.listings.request(app, target.country);
+    if (keywordIds.length > 0) {
+      await this.listings.request(app, target.country);
+    }
 
     return this.keywordFieldResult(app, target, duplicatesRemoved);
   }
