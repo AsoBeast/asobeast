@@ -278,8 +278,10 @@ describe('Write isolation', () => {
       expect(sendAccountMail).toHaveBeenCalledWith(
         expect.objectContaining({ to: fixture.a.email }),
       );
-      await fixture.db.emailAlert.delete({ where: { id: alert.id } });
     } finally {
+      await fixture.db.emailAlert.deleteMany({
+        where: { workspaceId: fixture.b.id, email: fixture.a.email },
+      });
       for (const spy of spies) spy.mockRestore();
       sendAccountMail.mockRestore();
       await fixture.db.user.update({
