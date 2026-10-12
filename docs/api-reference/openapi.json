@@ -780,7 +780,64 @@
             }
           }
         },
-        "summary": "Send a sample email to an alert recipient",
+        "summary": "Send a sample email to a confirmed alert recipient",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
+    "/email-alerts/{id}/resend-confirmation": {
+      "post": {
+        "operationId": "EmailAlertsController_resendConfirmation",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Send the recipient a new confirmation email",
+        "tags": [
+          "email-alerts"
+        ]
+      }
+    },
+    "/email-alerts/{id}/confirm": {
+      "post": {
+        "operationId": "EmailAlertsController_confirm",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "token",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[A-Za-z0-9_-]{43}$",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Confirm an alert recipient from the link in the confirmation email",
         "tags": [
           "email-alerts"
         ]
@@ -2737,6 +2794,17 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2766,6 +2834,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           },
@@ -2813,6 +2892,17 @@
             "required": true,
             "in": "path",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Count only the keywords tracked in this storefront. Omitted means every market the app tracks.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
               "type": "string"
             }
           },

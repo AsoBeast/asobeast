@@ -128,7 +128,9 @@ INSERT INTO "Webhook" ("id", "workspaceId", "url", "events", "secret", "active",
 VALUES ('wh_ops', 'ws_default', 'https://hooks.test/asobeast', ARRAY['rank.drop','review.negative'], 'whsec_drill', true, '2026-07-01 00:00:00');
 
 INSERT INTO "EmailAlert" ("id", "workspaceId", "email", "events", "active", "createdAt")
-VALUES ('mail_ops', 'ws_default', 'alerts@asobeast.test', ARRAY['rank.drop'], true, '2026-07-01 00:00:00');
+VALUES
+  ('mail_ops', 'ws_default', 'alerts@asobeast.test', ARRAY['rank.drop'], true, '2026-07-01 00:00:00'),
+  ('mail_paused', 'ws_default', 'left@asobeast.test', ARRAY['rank.drop'], false, '2026-07-02 00:00:00');
 
 INSERT INTO "AlertDelivery" ("id", "channel", "webhookId", "emailAlertId", "event", "status", "detail", "attempt", "createdAt")
 VALUES

@@ -19,6 +19,8 @@ import {
   CompetitorDiscovery,
   CompetitorItem,
 } from '@asobeast/shared';
+import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
+import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { CompetitorsService } from './competitors.service';
 import { AddCompetitorDto } from './dto/add-competitor.dto';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
@@ -27,7 +29,10 @@ import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.inte
 @ApiTags('competitors')
 @Controller('apps/:id/competitors')
 export class CompetitorsController {
-  constructor(private readonly competitors: CompetitorsService) {}
+  constructor(
+    private readonly competitors: CompetitorsService,
+    private readonly limiter: OnDemandLimiter,
+  ) {}
 
   @Get('analysis')
   @ApiOperation({ summary: 'Keyword gap and positioning analysis' })
@@ -45,6 +50,7 @@ export class CompetitorsController {
   }
 
   @Post()
+  @SpendsStoreCapacity()
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
   @UseInterceptors(StoreDeadlineInterceptor)
   @ApiUnprocessableEntityResponse({
@@ -55,7 +61,9 @@ export class CompetitorsController {
     @Param('id') id: string,
     @Body() dto: AddCompetitorDto,
   ): Promise<CompetitorItem> {
-    return this.competitors.add(id, dto.url);
+    return this.competitors.add(id, dto.url, () =>
+      this.limiter.consume('addCompetitor'),
+    );
   }
 
   @Get()

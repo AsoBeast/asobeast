@@ -312,7 +312,7 @@ test("keyboard focus follows the visual order of the dashboard", async ({
   await page.keyboard.press("Enter");
 
   const names: string[] = [];
-  for (let step = 0; step < 16; step += 1) {
+  for (let step = 0; step < 17; step += 1) {
     await page.keyboard.press("Tab");
     names.push(
       await page.evaluate(() => {
@@ -332,6 +332,7 @@ test("keyboard focus follows the visual order of the dashboard", async ({
   const order = [
     at(/^Open the Action Center$/),
     at(/^focus timer .*Focus Timer US/),
+    at(/^About visibility$/),
     at(/^Sort by$/),
     at(/^Cards$/),
     at(/^Focus Timer$/),

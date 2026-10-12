@@ -10,6 +10,7 @@ import { App } from 'supertest/types';
 import { AlertsDispatcher } from '../src/alerts/alerts.dispatcher';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { QUEUES } from '../src/jobs/jobs.types';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
 import { ocrRecipe } from '../src/screenshots/ocr-languages';
 import { ScreenshotImageSource } from '../src/store-providers/screenshot-image.source';
@@ -24,7 +25,11 @@ import {
 import { lines, readsFinished } from './helpers/screenshot-reading';
 import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  isolateQueues,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 
 const BASE_HEIGHT = 1000;
 
@@ -104,6 +109,7 @@ describe('Screenshots of localized listings (e2e)', () => {
   });
 
   beforeEach(async () => {
+    await isolateQueues(app, QUEUES.SCREENSHOTS);
     registry.reset();
     engineRead.mockClear();
     await prisma.$executeRawUnsafe(

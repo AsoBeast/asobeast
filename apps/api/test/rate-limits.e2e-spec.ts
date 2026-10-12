@@ -4,13 +4,13 @@ import { execSync } from 'child_process';
 import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import {
   API_TOKEN_PREFIX,
-  MINUTE_SECONDS,
   PLAN_LIMITS,
   type ApiErrorEnvelope,
 } from '@asobeast/shared';
@@ -23,8 +23,11 @@ import { applyTrustedProxy } from '../src/config/trusted-proxy';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
-import { secondsUntilReset } from '../src/auth/rate-limit/window';
 import { restoreAuthEnv } from './helpers/auth-env';
+import {
+  awaitBurnHeadroom,
+  SHORT_BURN_HEADROOM_SECONDS,
+} from './helpers/burn-headroom';
 import { testDb } from './helpers/test-db';
 import {
   clearOnDemandCounters,
@@ -37,15 +40,8 @@ import {
 const PASSWORD = 'supersecret1';
 const WRITES_PER_MINUTE = PLAN_LIMITS.indie.apiWritesPerMinute as number;
 const READS_PER_MINUTE = PLAN_LIMITS.indie.apiRequestsPerMinute as number;
-const BURN_HEADROOM_SECONDS = 15;
 const LOGIN_ATTEMPTS_PER_MINUTE = 10;
 const ROTATING_SUBNET = '2001:db8:4a1:7';
-
-async function awaitBurnHeadroom(): Promise<void> {
-  const remaining = secondsUntilReset(MINUTE_SECONDS, new Date());
-  if (remaining >= BURN_HEADROOM_SECONDS) return;
-  await new Promise((resolve) => setTimeout(resolve, remaining * 1000 + 100));
-}
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -466,7 +462,7 @@ describe('Rate limits (billing mode)', () => {
     await held?.();
   });
 
-  it('stops looking up rejected credentials from one address', async () => {
+  it('refuses rejected credentials from one address once the budget is spent', async () => {
     const cookie = await register('accepted@example.com');
     const rejected = `${API_TOKEN_PREFIX}${'0'.repeat(48)}`;
     const present = () =>
@@ -496,6 +492,29 @@ describe('Rate limits (billing mode)', () => {
     );
   });
 
+  it('keeps admitting accepted credentials from an address that spent its rejection budget', async () => {
+    const cookie = await register('shared@example.com');
+    const token = await mintToken('shared@example.com', 'a'.repeat(48));
+    const rejected = `${API_TOKEN_PREFIX}${'2'.repeat(48)}`;
+    const presentRejected = () =>
+      request(app.getHttpServer())
+        .get('/apps')
+        .set('Authorization', `Bearer ${rejected}`);
+
+    await presentRejected().expect(401);
+    await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE);
+
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Cookie', cookie)
+      .expect(200);
+    await request(app.getHttpServer())
+      .get('/apps')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+    await presentRejected().expect(429);
+  });
+
   it('counts a rejected token that arrives beside an empty session cookie', async () => {
     const rejected = `${API_TOKEN_PREFIX}${'1'.repeat(48)}`;
     const present = () =>
@@ -504,6 +523,48 @@ describe('Rate limits (billing mode)', () => {
         .set('Cookie', 'asobeast_session=')
         .set('Authorization', `Bearer ${rejected}`);
 
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(1);
+
+    await present().expect(429);
+  });
+
+  it('never counts a session cookie signed with another secret', async () => {
+    await register('rotated@example.com');
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { email: 'rotated@example.com' },
+      select: { id: true, sessionVersion: true },
+    });
+    const unverifiable = await new JwtService({
+      secret: 'f'.repeat(64),
+    }).signAsync({ sub: user.id, sv: user.sessionVersion });
+    const present = () =>
+      request(app.getHttpServer())
+        .get('/apps')
+        .set('Cookie', `asobeast_session=${unverifiable}`);
+
+    for (let sent = 0; sent < CREDENTIAL_FAILURES_PER_MINUTE; sent += 1) {
+      await present().expect(401);
+    }
+
+    await present().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(0);
+  });
+
+  it('counts a signed session cookie whose session was revoked', async () => {
+    const cookie = await register('revoked@example.com');
+    await prisma.user.update({
+      where: { email: 'revoked@example.com' },
+      data: { sessionVersion: { increment: 1 } },
+    });
+    const present = () =>
+      request(app.getHttpServer()).get('/apps').set('Cookie', cookie);
+
+    await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
     await present().expect(401);
     expect(
       await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),

@@ -1,0 +1,86 @@
+---
+title: Visibility
+sidebarTitle: Visibility
+description: "Visibility rolls the positions of an app's tracked keywords into one number from 0 to 100, each keyword weighted by its popularity and discounted by how far down the results it ranks."
+icon: eye
+keywords: ["visibility","visibility score","search visibility","position weight","popularity weighted","7 day change","trend"]
+---
+
+Visibility answers one question: how close is the app to ranking first for every keyword it tracks? It is 100 when the app holds position 1 for all of them and 0 when it was found for none.
+
+## How is visibility calculated?
+
+Each tracked keyword contributes its popularity, multiplied by a weight for the position the app held that day. The sum is divided by the popularity of every keyword counted and shown as a share of 100.
+
+```text
+visibility = 100 × sum(popularity × weight) / sum(popularity)
+weight     = 1 / log2(position + 1), or 0 when the app was not found
+```
+
+The weight halves by position 3 and keeps falling more slowly after that, so climbing from 5 to 1 moves visibility far more than climbing from 150 to 100.
+
+| Position | Weight |
+| --- | --- |
+| 1 | 1.00 |
+| 2 | 0.63 |
+| 3 | 0.50 |
+| 5 | 0.39 |
+| 10 | 0.29 |
+| 20 | 0.23 |
+| 50 | 0.18 |
+| 100 | 0.15 |
+| 200 | 0.13 |
+| Not found | 0 |
+
+This is the position discount of discounted cumulative gain, the standard measure for a ranked list of search results. Popularity plays the part of the gain, so a keyword people actually search moves the number and a phrase nobody types barely does.
+
+The API returns visibility with one decimal. The overview and portfolio cards round it to a whole number.
+
+## A worked example
+
+An app tracks three keywords on one day.
+
+| Keyword | Popularity | Position | Weight | Counted |
+| --- | --- | --- | --- | --- |
+| habit tracker | 60 | 3 | 0.50 | 30 |
+| daily planner | 20 | 1 | 1.00 | 20 |
+| focus timer | 20 | Not found | 0 | 0 |
+
+The counted values add up to 50 out of a possible 100, so visibility is 50.0. Tracking a fourth keyword with a popularity of 50 that the app does not rank for raises the possible total to 150 and lowers visibility to 33.3, although no position moved.
+
+## Which keywords count?
+
+Every active keyword the app tracks. A paused keyword is left out of today's number and out of the history. The overview counts every market the app tracks keywords in until you choose one in its market switcher, and then only the keywords of that market; see [What does the overview count?](/concepts/countries#what-does-the-overview-count). The portfolio card for an app counts every market, and a group pools the keywords of every listing in it.
+
+| Input | What is used |
+| --- | --- |
+| Day | The latest day on which any keyword of the app was checked |
+| Position | The position recorded for that keyword on that day. A keyword not checked that day counts as not found |
+| Popularity | The latest score on or before that day, on the scale described in [Popularity, difficulty and opportunity](/concepts/scoring#which-scale-does-a-response-use) |
+| No popularity yet | Counts as a popularity of 10 out of 100, so a new keyword still counts a little before its first score |
+| Popularity of 0 | Adds nothing to either sum, so the keyword cannot move the number |
+
+What not found means, and why it is never position zero, is explained in [Positions](/concepts/positions).
+
+## What do the 7 and 30 day changes mean?
+
+The difference in points between visibility on the latest checked day and visibility 7 or 30 days earlier. It is missing when no keyword was checked on that earlier day.
+
+Both days are calculated over the keywords tracked today, each with the popularity it had on that day. Adding a keyword therefore changes past values too: on the days before its first check it counts as not found, and its own position moves the change from then on.
+
+## Where else is visibility used?
+
+| Place | Difference |
+| --- | --- |
+| [Portfolio](/guides/portfolio) | Each app shows its visibility with the 7 day change and a 30 day sparkline. A group shows one blended number over the keywords of all its listings |
+| [Change impact](/guides/listing-changes#measure-the-impact-of-a-change) | Covers one market and only the keywords checked on both days, and weights both numbers by the popularity on the last check before the change, so only positions move it |
+| [Action Center](/guides/action-center) | Calculated per market from the keywords checked each day, weighted by today's popularity. `rank.investigate_drop` and `rank.investigate_unexplained_drop` read a fall in it, after a listing change or without one, and `market.improve_country` reads the gap between a market and the home market |
+
+## How should I read it?
+
+As a trend. Visibility depends on which keywords you track, so the useful comparison is the same app against itself over time.
+
+- **Adding keywords moves it.** A keyword you do not rank for yet lowers the number on the day you add it and on every past day. One you already rank for lifts the 7 day change for a week and the 30 day change for a month, because the days before its first check count it as not found. Read each change once its earlier day comes after the keyword's first check.
+- **A rescore moves it.** The weekly scoring job can change popularity, which changes how much each position counts, without any position moving.
+- **Stores are not comparable.** App Store and Google Play popularity come from different evidence, so the same number means different things on each. See [App Store and Google Play](/concepts/stores).
+- **Apps are only comparable on the same keywords.** Two apps tracking different keywords measure different things.

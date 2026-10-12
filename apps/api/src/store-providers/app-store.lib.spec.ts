@@ -5,6 +5,7 @@ import { appStoreLib } from './app-store.lib';
 jest.mock('./egress/egress', () => ({ egressFetch: jest.fn() }));
 jest.mock('@perttu/app-store-scraper', () => ({
   app: jest.fn(),
+  search: jest.fn(),
   similar: jest.fn(),
 }));
 
@@ -51,6 +52,46 @@ describe('appStoreLib.reviews', () => {
     await expect(
       appStoreLib.reviews({ id: 1, country: 'us', page: 1 }),
     ).rejects.toThrow(SyntaxError);
+  });
+});
+
+describe('appStoreLib edge cache', () => {
+  const SEARCH_URL =
+    'https://itunes.apple.com/search?term=explorer&country=us&media=software&entity=software&limit=200';
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    jest.mocked(appStore.search).mockReset().mockResolvedValue([]);
+  });
+
+  async function requestedThroughScraper(url: string): Promise<string> {
+    await appStoreLib.search({ term: 'explorer', country: 'us', num: 200 });
+    const [options] = jest.mocked(appStore.search).mock.lastCall ?? [];
+    await options?.requestOptions?.fetch?.(url, { method: 'GET' });
+    const [requested, init] = fetchMock.mock.lastCall ?? [];
+    expect(init).toEqual({ method: 'GET' });
+    return new URL(requested as URL | string).href;
+  }
+
+  it('asks the itunes origin past the edge cache with a fresh nonce each time', async () => {
+    const first = new URL(await requestedThroughScraper(SEARCH_URL));
+    const second = new URL(await requestedThroughScraper(SEARCH_URL));
+
+    expect(first.searchParams.get('nonce')).toMatch(/^[0-9a-f-]{36}$/);
+    expect(second.searchParams.get('nonce')).not.toBe(
+      first.searchParams.get('nonce'),
+    );
+    first.searchParams.delete('nonce');
+    expect(first.href).toBe(SEARCH_URL);
+  });
+
+  it('leaves the product page and the search hints as they are', async () => {
+    const page = 'https://apps.apple.com/us/app/id1475326567';
+    const hints =
+      'https://search.itunes.apple.com/WebObjects/MZSearchHints.woa/wa/hints?clientApplication=Software&term=explorer';
+
+    expect(await requestedThroughScraper(page)).toBe(page);
+    expect(await requestedThroughScraper(hints)).toBe(hints);
   });
 });
 

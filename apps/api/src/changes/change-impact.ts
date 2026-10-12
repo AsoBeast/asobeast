@@ -7,6 +7,7 @@ import {
   ChangeImpactStatus,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
+  visibility,
 } from '@asobeast/shared';
 import {
   addDays,
@@ -17,7 +18,6 @@ import {
   startOfUtcDay,
   toDateKey,
 } from '../analytics/analytics.support';
-import { visibility } from '../analytics/visibility';
 
 export const IMPACT_BASELINE_MAX_AGE_DAYS = 3;
 export const IMPACT_WINDOW_TOLERANCE_DAYS = 2;

@@ -40,4 +40,8 @@ UPDATE "BillingEvent"
 SET "outcome" = 'orphaned', "processedAt" = "receivedAt", "failure" = NULL
 WHERE "id" IN ('evt_drill_orphan', 'evt_drill_foreign');
 
+UPDATE "EmailAlert"
+SET "confirmedAt" = "createdAt"
+WHERE "id" = 'mail_ops';
+
 COMMIT;

@@ -44,6 +44,7 @@ describe('EmailAlertUnsubscribe', () => {
     expect(build('https://aso.example.com').service.links(OPS)).toEqual({
       page: `https://aso.example.com/unsubscribe?alert=ea_1&token=${token}`,
       oneClick: `https://aso.example.com/api/backend/email-alerts/ea_1/unsubscribe?token=${token}`,
+      token,
     });
   });
 
@@ -81,7 +82,12 @@ describe('EmailAlertUnsubscribe', () => {
     await service.unsubscribe('ea_1', unsubscribeToken(SECRET, OPS));
     expect(updateMany).toHaveBeenCalledWith({
       where: { id: 'ea_1', email: OPS.email },
-      data: { active: false },
+      data: {
+        active: false,
+        confirmedAt: null,
+        confirmationSentAt: null,
+        unsubscribedAt: expect.any(Date) as Date,
+      },
     });
   });
 });

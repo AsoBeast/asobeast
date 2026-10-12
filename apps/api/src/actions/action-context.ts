@@ -9,6 +9,7 @@ import {
   MetadataFieldAudit,
   Store,
   TrackedKeywordItem,
+  visibility,
 } from '@asobeast/shared';
 import { AUDIT_FACTOR_LABELS } from '../audit/rubric';
 import { Env } from '../config/env';
@@ -17,7 +18,6 @@ import { KeywordsService } from '../keywords/keywords.service';
 import { MetadataService } from '../metadata/metadata.service';
 import { SerpSnapshotDay } from '../rankings/serp-movers';
 import { serpVolatilities } from '../keywords/keyword-volatility';
-import { visibility } from '../analytics/visibility';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import {
   ActionCompetitor,

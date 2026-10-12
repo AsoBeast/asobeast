@@ -28,7 +28,7 @@ test("asks before unsubscribing and never acts on load", async ({
 
   await expect(
     page.getByText(
-      "This address will stop receiving this AsoBeast email alert. You can turn it back on in Settings at any time.",
+      "This address will stop receiving this AsoBeast email alert and will not be asked to confirm it again.",
     ),
   ).toBeVisible();
 

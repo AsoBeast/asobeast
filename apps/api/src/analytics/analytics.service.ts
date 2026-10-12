@@ -25,6 +25,7 @@ import {
   addDays,
   DAY_MS,
   delta,
+  keywordWindow,
   metricAt,
   rankingAt,
   referenceDate,
@@ -36,6 +37,7 @@ import {
   visibilityAt,
   visibilityPoints,
 } from './analytics.support';
+import { MarketHistoryQueryDto } from './dto/market-history-query.dto';
 import { VisibilityHistoryQueryDto } from './dto/visibility-history-query.dto';
 import { movers } from './movers';
 import { bucketPositions, rankDistributionAt } from './rank-distribution';
@@ -97,16 +99,14 @@ const uncoveredWorthAdding = (
 export class AnalyticsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async summary(appId: string): Promise<AppSummary> {
+  async summary(appId: string, country?: string): Promise<AppSummary> {
     await this.ensureApp(appId);
 
-    const reference = await referenceDate(this.prisma, appId);
-    const windowStart = reference
-      ? addDays(reference, -SUMMARY_WINDOW_DAYS)
-      : null;
-
-    const [rows, snapshot, competitors] = await Promise.all([
-      trackedRows(this.prisma, appId, windowStart, reference),
+    const [market, everyMarket, snapshot, competitors] = await Promise.all([
+      keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
+      country
+        ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
+        : null,
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
         orderBy: NEWEST_FIRST,
@@ -119,21 +119,22 @@ export class AnalyticsService {
       }),
       this.prisma.app.count({ where: { primaryAppId: appId } }),
     ]);
+    const covered = everyMarket ?? market;
 
     return {
-      visibility: this.visibilitySummary(rows, reference),
-      rankDistribution: rankDistributionAt(rows, reference),
-      movers: movers(rows, reference),
-      coverage: this.coverage(rows, reference, snapshot),
+      visibility: this.visibilitySummary(market.rows, market.referenceDate),
+      rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
+      movers: movers(market.rows, market.referenceDate),
+      coverage: this.coverage(covered.rows, covered.referenceDate, snapshot),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
-      trackedKeywords: rows.length,
+      trackedKeywords: market.rows.length,
       competitors,
     };
   }
 
   async history(
     appId: string,
-    query: VisibilityHistoryQueryDto,
+    query: MarketHistoryQueryDto,
   ): Promise<VisibilityHistory> {
     await this.ensureApp(appId);
 
@@ -148,17 +149,25 @@ export class AnalyticsService {
       );
     }
 
-    const rows = await trackedRows(this.prisma, appId, from, to);
+    const rows = await trackedRows(
+      this.prisma,
+      { appId, country: query.country },
+      from,
+      to,
+    );
     return { points: visibilityPoints(rows) };
   }
 
   async rankDistributionHistory(
     appId: string,
-    query: VisibilityHistoryQueryDto,
+    query: MarketHistoryQueryDto,
   ): Promise<RankDistributionHistory> {
     await this.ensureApp(appId);
 
-    const reference = await referenceDate(this.prisma, appId);
+    const reference = await referenceDate(this.prisma, {
+      appId,
+      country: query.country,
+    });
     const to = query.to
       ? startOfUtcDay(new Date(query.to))
       : (reference ?? utcToday());
@@ -172,7 +181,12 @@ export class AnalyticsService {
       );
     }
 
-    const rows = await trackedRows(this.prisma, appId, from, to);
+    const rows = await trackedRows(
+      this.prisma,
+      { appId, country: query.country },
+      from,
+      to,
+    );
     const byDate = new Map<number, Array<number | null>>();
     for (const row of rows) {
       for (const ranking of row.keyword.rankings) {

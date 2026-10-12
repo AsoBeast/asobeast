@@ -13,11 +13,14 @@ import {
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { EmailAlertItem, WebhookTestResult } from '@asobeast/shared';
+import type { AccountUser } from '../auth/auth.types';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Public } from '../auth/decorators/public.decorator';
 import { RetryAfterThrottlerGuard } from '../auth/rate-limit/retry-after-throttler.guard';
+import { AlertLinkTokenDto } from './dto/alert-link-token.dto';
 import { CreateEmailAlertDto } from './dto/create-email-alert.dto';
-import { UnsubscribeEmailAlertDto } from './dto/unsubscribe-email-alert.dto';
 import { UpdateEmailAlertDto } from './dto/update-email-alert.dto';
+import { EmailAlertConfirmationClaim } from './email-alert-confirmation-claim.service';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { EmailAlertsService } from './email-alerts.service';
 
@@ -27,6 +30,7 @@ export class EmailAlertsController {
   constructor(
     private readonly emailAlerts: EmailAlertsService,
     private readonly unsubscribes: EmailAlertUnsubscribe,
+    private readonly confirmations: EmailAlertConfirmationClaim,
   ) {}
 
   @Get()
@@ -36,18 +40,26 @@ export class EmailAlertsController {
   }
 
   @Post()
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Register an email alert' })
-  create(@Body() dto: CreateEmailAlertDto): Promise<EmailAlertItem> {
-    return this.emailAlerts.create(dto);
+  create(
+    @CurrentUser() user: AccountUser,
+    @Body() dto: CreateEmailAlertDto,
+  ): Promise<EmailAlertItem> {
+    return this.emailAlerts.create(dto, user.email);
   }
 
   @Patch(':id')
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Update an email alert' })
   update(
+    @CurrentUser() user: AccountUser,
     @Param('id') id: string,
     @Body() dto: UpdateEmailAlertDto,
   ): Promise<EmailAlertItem> {
-    return this.emailAlerts.update(id, dto);
+    return this.emailAlerts.update(id, dto, user.email);
   }
 
   @Delete(':id')
@@ -58,9 +70,41 @@ export class EmailAlertsController {
   }
 
   @Post(':id/test')
-  @ApiOperation({ summary: 'Send a sample email to an alert recipient' })
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({
+    summary: 'Send a sample email to a confirmed alert recipient',
+  })
   test(@Param('id') id: string): Promise<WebhookTestResult> {
     return this.emailAlerts.test(id);
+  }
+
+  @Post(':id/resend-confirmation')
+  @HttpCode(204)
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Send the recipient a new confirmation email' })
+  resendConfirmation(
+    @CurrentUser() user: AccountUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    return this.emailAlerts.resendConfirmation(id, user.email);
+  }
+
+  @Post(':id/confirm')
+  @Public()
+  @HttpCode(204)
+  @UseGuards(RetryAfterThrottlerGuard)
+  @Throttle({ default: { limit: 60, ttl: 60_000 } })
+  @ApiOperation({
+    summary:
+      'Confirm an alert recipient from the link in the confirmation email',
+  })
+  confirm(
+    @Param('id') id: string,
+    @Query() query: AlertLinkTokenDto,
+  ): Promise<void> {
+    return this.confirmations.confirm(id, query.token);
   }
 
   @Post(':id/unsubscribe')
@@ -74,7 +118,7 @@ export class EmailAlertsController {
   })
   unsubscribe(
     @Param('id') id: string,
-    @Query() query: UnsubscribeEmailAlertDto,
+    @Query() query: AlertLinkTokenDto,
   ): Promise<void> {
     return this.unsubscribes.unsubscribe(id, query.token);
   }

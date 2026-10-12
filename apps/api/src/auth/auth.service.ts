@@ -3,7 +3,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -21,18 +20,18 @@ import {
   type AuthUser,
 } from '@asobeast/shared';
 import { Prisma, type ApiToken, type User } from '@prisma/client';
+import { revokeApiTokens } from './api-token-revocation';
 import type { AccountUser, ResolvedToken, SessionClaims } from './auth.types';
 import { isPlatformOperator } from './platform-operator';
 import type { CreateTokenDto } from './dto/create-token.dto';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
-import { isDisposableEmail } from './disposable-email';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
-import { canStartTrial, trialStillOpen } from './trial-grant';
+import { canStartTrial } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
-import { bearerToken } from './bearer-token';
+import { apiToken } from './bearer-token';
 import { isEntitled } from './entitlement';
 import type { ChangePasswordDto } from './dto/change-password.dto';
 import type { RegisterDto } from './dto/register.dto';
@@ -44,7 +43,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
   private dummyHash: Promise<string> | null = null;
 
   constructor(
@@ -87,9 +85,6 @@ export class AuthService {
     token: string;
   }> {
     const email = normalizeEmail(dto.email);
-    if (isDisposableEmail(email)) {
-      this.logger.warn(`registration from a disposable email domain: ${email}`);
-    }
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.prisma.withTransaction(async (tx) => {
       await lockRegistration(tx);
@@ -105,7 +100,7 @@ export class AuthService {
         data: {
           workspaceId: ownWorkspace
             ? await this.newWorkspace(tx, email)
-            : await this.defaultWorkspace(tx),
+            : await this.defaultWorkspace(tx, email),
           email,
           passwordHash,
           name: dto.name ?? null,
@@ -123,7 +118,10 @@ export class AuthService {
     email: string,
   ): Promise<string> {
     const workspace = await tx.workspace.create({
-      data: { name: email, ...this.verification.openingGrant() },
+      data: {
+        name: email,
+        ...(await this.verification.openingTerms(tx, email)),
+      },
       select: { id: true },
     });
     return workspace.id;
@@ -131,6 +129,7 @@ export class AuthService {
 
   private async defaultWorkspace(
     tx: Prisma.TransactionClient,
+    email: string,
   ): Promise<string> {
     const existing = await tx.workspace.findUnique({
       where: { id: DEFAULT_WORKSPACE_ID },
@@ -140,17 +139,15 @@ export class AuthService {
         data: {
           id: DEFAULT_WORKSPACE_ID,
           name: 'Default',
-          ...this.verification.openingGrant(),
+          ...(await this.verification.openingTerms(tx, email)),
         },
       });
       return DEFAULT_WORKSPACE_ID;
     }
-    const opening = this.verification.openingGrant();
-    if (opening && canStartTrial(existing, new Date())) {
-      await tx.workspace.updateMany({
-        where: trialStillOpen(existing),
-        data: opening,
-      });
+    if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
+    const opening = await this.verification.openingTerms(tx, email);
+    if (opening) {
+      await this.verification.writeTerms(tx, existing, email, opening);
     }
     return DEFAULT_WORKSPACE_ID;
   }
@@ -179,13 +176,15 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid current password');
     }
-    const updated = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash: await argon2.hash(dto.next),
-        sessionVersion: { increment: 1 },
-      },
-      include: { workspace: true },
+    const passwordHash = await argon2.hash(dto.next);
+    const updated = await this.prisma.withTransaction(async (tx) => {
+      const row = await tx.user.update({
+        where: { id: user.id },
+        data: { passwordHash, sessionVersion: { increment: 1 } },
+        include: { workspace: true },
+      });
+      await revokeApiTokens(tx, user.id);
+      return row;
     });
     return { user: updated, token: await this.sign(updated) };
   }
@@ -196,15 +195,26 @@ export class AuthService {
     return user;
   }
 
-  resolveSessionUser(token: string | undefined): Promise<AccountUser | null> {
+  async resolveSessionUser(
+    token: string | undefined,
+  ): Promise<AccountUser | null> {
+    const claims = await this.verifySession(token);
+    return claims && this.userOfSession(claims);
+  }
+
+  async verifySession(
+    token: string | undefined,
+  ): Promise<SessionClaims | null> {
+    if (!token) return null;
+    try {
+      return await this.jwt.verifyAsync<SessionClaims>(token);
+    } catch {
+      return null;
+    }
+  }
+
+  userOfSession(claims: SessionClaims): Promise<AccountUser | null> {
     return this.beforeSignIn(async () => {
-      if (!token) return null;
-      let claims: SessionClaims;
-      try {
-        claims = await this.jwt.verifyAsync<SessionClaims>(token);
-      } catch {
-        return null;
-      }
       const user = await this.prisma.user.findUnique({
         where: { id: claims.sub },
         include: { workspace: true },
@@ -250,8 +260,8 @@ export class AuthService {
     now = new Date(),
   ): Promise<ResolvedToken | null> {
     return this.beforeSignIn(async () => {
-      const raw = bearerToken(authorization);
-      if (!raw?.startsWith(API_TOKEN_PREFIX)) return null;
+      const raw = apiToken(authorization);
+      if (!raw) return null;
       const record = await this.prisma.apiToken.findUnique({
         where: { tokenHash: sha256(raw) },
         include: { user: { include: { workspace: true } } },
@@ -325,7 +335,7 @@ export class AuthService {
     };
   }
 
-  private registrationAllowed(): boolean {
+  registrationAllowed(): boolean {
     return (
       this.billing ||
       this.config.get('AUTH_ALLOW_REGISTRATION', { infer: true })

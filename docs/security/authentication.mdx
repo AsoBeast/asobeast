@@ -68,7 +68,7 @@ Rotating `AUTH_SECRET` invalidates every existing session, so everyone is signed
 
 ## Rotate a password
 
-Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost.
+Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost. The same write deletes every personal API token the account holds, because a token minted during a session somebody else briefly held would otherwise keep working. Mint the tokens you still need again from **Settings** afterwards.
 
 ## How are sign in attempts throttled?
 
@@ -88,7 +88,7 @@ Behind a reverse proxy, `TRUST_PROXY` decides what the client address is. Left a
 
 ## Recover a forgotten password
 
-Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open. See [Account recovery](/security/account-recovery).
+Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open and revokes every personal API token it held. See [Account recovery](/security/account-recovery).
 
 ## How is a request authorized?
 
@@ -107,7 +107,7 @@ Where a registration lands is the same on a self hosted instance and a hosted on
 
 `BILLING_ENABLED` defaults to `false`, which means every account is entitled and nothing is gated.
 
-Setting it to `true` turns on an entitlement check without wiring a payment provider. Registration stays open, each new account is stamped with a `TRIAL_DAYS` trial defaulting to 7, and an unentitled request answers `402` through the standard error envelope, which the web app catches and turns into the upgrade page.
+Setting it to `true` turns on an entitlement check without wiring a payment provider. Registration stays open, each new mailbox is stamped with a `TRIAL_DAYS` trial defaulting to 7 (see [One trial per mailbox](#one-trial-per-mailbox)), and an unentitled request answers `402` through the standard error envelope, which the web app catches and turns into the upgrade page.
 
 Entitlement lives on the workspace, not the user, because a workspace has one plan whatever the size of the team. The seam writes only `plan`, `trialEndsAt`, `planExpiresAt`, `billingCustomerId` and `subscriptionId` on `Workspace`. The plans are `free`, `trial`, `indie` and `ultimate`; `indie` and `ultimate` are the paid tiers and carry the quota limits, so setting `plan` to either one in the database restores access with no code change. `premium` is accepted as a legacy spelling of `indie` so accounts written before the tiers were named keep working.
 
@@ -117,11 +117,32 @@ The plan in force is derived, not just stored. A paid plan past its `planExpires
 
 With billing enabled and SMTP configured, registration creates the account but withholds the trial until the address is confirmed. asobeast emails a single use link; opening it stamps the address as confirmed and starts the trial on the workspace. Only a hash of the link token is stored.
 
-A workspace gets one trial, ever. `trialStartedAt` records it and is never cleared, so a cancelled customer who returns resumes on a paid plan rather than on a second free week. A workspace that holds a paid plan, or that ever held a subscription, gets none: confirming an address there only marks the address confirmed, including when the customer paid before confirming. Where SMTP is not configured the trial starts at registration, because there is no way to deliver a confirmation.
+A workspace gets one trial, ever. `trialStartedAt` records it and is never cleared, so a cancelled customer who returns resumes on a paid plan rather than on a second free week. A mailbox gets one too, as the next section explains. A workspace that holds a paid plan, or that ever held a subscription, gets none: confirming an address there only marks the address confirmed, including when the customer paid before confirming. Where SMTP is not configured the trial starts at registration, because there is no way to deliver a confirmation.
 
 Until the address is confirmed the web app asks the account to confirm instead of asking it to pay. `GET /auth/me` reports `trialAwaitsConfirmation: true` for an account that has not confirmed its address, in a workspace that has never had a trial or a subscription and has no plan in force, on an instance that sends confirmation email. The banner, the upgrade page and the plan card then say that confirming starts the free trial, the banner and the upgrade page offer a new link, and the plans stay available to anyone who would rather pay first. The field is `false` where SMTP is not configured, because the trial starts at registration there, and for a member of a workspace whose trial has already run or that ever held a subscription, because confirming would start nothing.
 
 Registration survives a confirmation email that could not be sent, so a mail outage never costs the account. The signed in account asks for a fresh link with `POST /auth/verify/resend`, which retires the previous one; the confirmation page offers it whenever a link is refused. Opening a link while signed in as someone else is refused before the link is spent, so it stays usable for the account it belongs to. A deployment with billing and SMTP but no `WEB_PUBLIC_URL` refuses to boot, because every link it sent would carry no host.
+
+## One trial per mailbox
+
+A trial is not a reason to register again. With billing enabled, an address is reduced to its mailbox before the trial is decided, and a mailbox gets one trial, ever, however many workspaces or addresses it has been registered under.
+
+| Rule | Example |
+| --- | --- |
+| Case and surrounding spaces are ignored | `Person@Example.com` is `person@example.com` |
+| A plus tag is dropped, on every domain | `person+trial2@example.com` is `person@example.com` |
+| Dots are ignored on Gmail only | `p.erson@gmail.com` is `person@gmail.com` |
+| `googlemail.com` is Gmail | `person@googlemail.com` is `person@gmail.com` |
+| Quotes around the local part are ignored | `"person"@example.com` is `person@example.com` |
+| A unicode domain is its ASCII form | `person@bücher.de` is `person@xn--bcher-kva.de` |
+
+Dots stay significant everywhere else, because most providers count them. The stored address and the sign in address are never changed: this is only how the trial is decided.
+
+An account whose mailbox already had a trial is created as usual and signs in, but its workspace gets no trial and sits on the paywall until it pays. The same holds for an address on a throwaway domain, taken from the [`mailchecker`](https://www.npmjs.com/package/mailchecker) list of disposable email providers. That list includes privacy relay alias domains such as `duck.com`, `mozmail.com`, `passmail.net` and the SimpleLogin domains, so an alias from one of them starts no trial either, because one relay account mints as many aliases as it likes. Each refusal is logged as a warning that names the address. Registration answers `201` in every case and `GET /auth/me` reports `entitled: false`, `trialEndsAt: null` and `trialAwaitsConfirmation: false`, so the web app offers the plans instead of asking for a confirmation that would start nothing. Where an instance sends confirmation email the mailbox is claimed when the address is confirmed, never at registration, so nobody can use up a mailbox they cannot read. Where it sends none the mailbox is claimed at registration, because nothing can prove it there. A claim is kept only for a trial that started: when a subscription reaches the workspace while its trial is being granted, the claim is given back.
+
+Each claim is stored as a keyed hash of the mailbox in `TrialClaim`, an operator table that belongs to no workspace and has no foreign key, so it survives the erasure of the workspace that took the trial. The key is an HMAC of the mailbox under `AUTH_SECRET`, which means the table alone cannot be tested against a list of known addresses and holds no email. [Rotating `AUTH_SECRET`](/operations/rotate-secrets) therefore forgets every claim, and the next registration of a returning mailbox starts a trial again. Every start of the API claims, in the background, the mailbox of every owner whose workspace already had a trial, so an upgrade covers the existing accounts without delaying the start, and a failed attempt is retried every thirty seconds. Until the first pass after an upgrade finishes, a variant of such an owner's mailbox can still register with a trial. Self hosted instances without billing store no claims.
+
+This slows trial farming down; it does not stop someone with a domain of their own, or with many real mailboxes. A card on file or a phone number would be the next step, and neither is required today.
 
 ## What an unentitled workspace keeps
 
@@ -130,7 +151,7 @@ Data belongs to the customer; capacity is what the plan pays for. An unentitled 
 | Still available | Refused with `402` |
 | --- | --- |
 | Reading apps, keywords, rankings, audits and reviews in the web app | Importing an app, tracking a keyword, adding a competitor |
-| Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring and keyword suggestions |
+| Exporting anything already collected as CSV or JSON | On demand refresh, daily run, scoring, keyword suggestions and deep search |
 | Reaching the account, plan and upgrade routes | Every request authenticated with a personal API token, including the MCP server |
 
 Reads stay open only to a browser session. A personal API token is refused outright, because the token surface is part of what the plan sells. Nothing is deleted when entitlement lapses.
@@ -142,7 +163,8 @@ A workspace has one owner and any number of members. The owner manages billing a
 A member sees the plan and its usage read only. The plan card in settings and the upgrade page say that the workspace owner manages billing, and neither offers a checkout or the billing portal, which the API refuses to anyone but the owner.
 
 - The owner invites by email from **Settings, Team**. The invitation expires after seven days.
-- asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. Otherwise the dialog shows the link for the owner to pass on.
+- asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. The link then reaches the invited mailbox and nowhere else: the owner's response carries only the bare `/invite` page, so nobody but the person who can read that mailbox can accept it.
+- Where mail is not configured, the dialog shows the link for the owner to pass on. After a failed send it shows the link only while registration is closed, because no stranger can then sign up to send an invitation. With registration open and mail configured a failed send shows no link; fix the mail transport and invite again, which retires the earlier link.
 - The invitee opens the link, chooses a password, and joins the existing workspace as a member. The token is single use.
 - The owner can revoke a pending invitation or remove a member. A workspace always keeps its owner.
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ListingMarket } from "@asobeast/shared";
 import {
   isRefreshable,
+  keywordScope,
   marketLabel,
   queryMarket,
   resolveLocalization,
@@ -95,5 +96,27 @@ describe("resolveLocalization", () => {
 
   it("reads the default listing when none is requested", () => {
     expect(resolveLocalization(null, markets, "pl")).toBeNull();
+  });
+});
+
+describe("keywordScope", () => {
+  it("counts every market when none is requested", () => {
+    expect(keywordScope("", MARKETS)).toBeUndefined();
+  });
+
+  it("narrows to a market that has a listing", () => {
+    expect(keywordScope("de", MARKETS)).toBe("de");
+  });
+
+  it("narrows to the home market when it is requested", () => {
+    expect(keywordScope("us", MARKETS)).toBe("us");
+  });
+
+  it("counts every market for a market without a listing", () => {
+    expect(keywordScope("pl", MARKETS)).toBeUndefined();
+  });
+
+  it("counts every market on an app with a single listing", () => {
+    expect(keywordScope("us", MARKETS.slice(0, 1))).toBeUndefined();
   });
 });
