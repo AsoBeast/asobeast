@@ -289,6 +289,7 @@ export const suggestionStrategyParser = parseAsStringLiteral(
 
 export const serpParser = parseAsString.withDefault("");
 
+export const breakdownParser = parseAsString.withDefault("");
 export const ideasCountryParser = parseAsString.withDefault("");
 
 export const spiderTermParser = parseAsString.withDefault("");

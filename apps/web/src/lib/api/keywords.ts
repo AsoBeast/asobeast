@@ -1,5 +1,6 @@
 import type {
   KeywordAddRequest,
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldRequest,
@@ -154,4 +155,13 @@ export function scoreKeyword(keywordId: string): Promise<ScoreEnqueueResult> {
   return apiFetch<ScoreEnqueueResult>(`/keywords/${keywordId}/score`, {
     method: "POST",
   });
+}
+
+export function getKeywordBreakdown(
+  appId: string,
+  keywordId: string,
+): Promise<KeywordBreakdown> {
+  return apiFetch<KeywordBreakdown>(
+    `/apps/${appId}/keywords/${keywordId}/breakdown`,
+  );
 }

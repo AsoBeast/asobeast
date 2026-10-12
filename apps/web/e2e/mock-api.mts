@@ -70,6 +70,7 @@ import {
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
   SCREENSHOTS,
+  KEYWORD_BREAKDOWNS,
   KEYWORD_IDEAS,
   SERP_SNAPSHOTS,
   WEBHOOKS,
@@ -1622,6 +1623,17 @@ const routes: Route[] = [
     method: "POST",
     pattern: /^\/keywords\/([^/]+)\/score$/,
     handler: (_p, _q, res) => json(res, 202, { enqueued: 1 }),
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/[^/]+\/keywords\/([^/]+)\/breakdown$/,
+    handler: ([keywordId], req, res) => {
+      const breakdown = KEYWORD_BREAKDOWNS[keywordId];
+      if (!breakdown) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, breakdown);
+    },
   },
   {
     method: "GET",

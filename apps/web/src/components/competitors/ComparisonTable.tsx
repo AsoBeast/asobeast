@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
-import { useQueryStates } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { dataTableFeatures } from "@/components/data-table/table-features";
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import {
   ALL_MATRIX_COUNTRIES,
+  breakdownParser,
   matrixFilterParsers,
   matrixSortParser,
   sortDirectionParser,
@@ -31,6 +32,7 @@ import {
 } from "./comparison-columns";
 import { exportComparison } from "./comparison-csv";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
+import { KeywordBreakdownSheet } from "./KeywordBreakdownSheet";
 
 const HEAD_CLASS: Record<string, string> = {
   keyword: "sticky left-0 z-20 bg-inherit",
@@ -59,6 +61,8 @@ export function ComparisonTable({
   });
   const [filters, setFilters] = useQueryStates(matrixFilterParsers);
 
+  const [, setBreakdown] = useQueryState("keyword", breakdownParser);
+
   const columns = useMemo(() => {
     const icons = new Map(competitors.map((item) => [item.id, item.iconUrl]));
     return comparisonColumns(
@@ -66,8 +70,9 @@ export function ComparisonTable({
         ...competitor,
         iconUrl: icons.get(competitor.id) ?? null,
       })),
+      (keywordId) => void setBreakdown(keywordId),
     );
-  }, [competitors, data.competitors]);
+  }, [competitors, data.competitors, setBreakdown]);
 
   const countries = useMemo(
     () => [...new Set(data.rows.map((row) => row.country))].sort(),
@@ -182,6 +187,7 @@ export function ComparisonTable({
           ))}
         </TableBody>
       </Table>
+      <KeywordBreakdownSheet appId={appId} />
     </div>
   );
 }

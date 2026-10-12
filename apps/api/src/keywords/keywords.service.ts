@@ -6,6 +6,7 @@ import {
 import { KeywordSource, Prisma, Store } from '@prisma/client';
 import {
   assertStorefront,
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   keywordFieldBytes,
@@ -17,8 +18,22 @@ import {
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
+import {
+  eventsOfMarket,
+  HOME_LISTING,
+  listingIn,
+  NEWEST_FIRST,
+} from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
+import {
+  breakdownApp,
+  BreakdownListing,
+  breakdownTerms,
+  sortBreakdown,
+} from './keyword-breakdown';
+import { withInsights } from './keyword-breakdown.insights';
+import { localizedCopies } from './keyword-breakdown.listings';
 import { inKeywordField } from './keyword-field-membership';
 import { extractCandidates } from './extraction';
 import { homeListingTexts } from './home-listings';
@@ -44,6 +59,8 @@ import {
 } from './keywords.support';
 
 const AUTO_TRACK_LIMIT = 15;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const RANKING_TEXT_FIELDS = ['title', 'subtitle', 'summary'] as const;
 const KEYWORD_FIELD_LOCK = 3_958_261;
 
 @Injectable()
@@ -167,6 +184,135 @@ export class KeywordsService {
 
     const filtered = onlyGaps ? rows.filter((row) => row.gap) : rows;
     return { competitors, rows: sortComparison(filtered) };
+  }
+
+  async breakdown(appId: string, keywordId: string): Promise<KeywordBreakdown> {
+    const app = await ensureApp(this.prisma, appId);
+    const tracked = await this.prisma.trackedKeyword.findFirst({
+      where: { appId, keywordId },
+      select: { keyword: { select: { text: true, country: true } } },
+    });
+    if (!tracked) {
+      throw new NotFoundException(`Keyword ${keywordId} is not tracked`);
+    }
+    const { text, country } = tracked.keyword;
+
+    const subjects = await this.prisma.app.findMany({
+      where: { OR: [{ id: appId }, { primaryAppId: appId }] },
+      select: { id: true, name: true, iconUrl: true, country: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    const [latest, listings, keywordField, localized, changedDaysAgo] =
+      await Promise.all([
+        latestPositions(
+          this.prisma,
+          subjects.map((subject) => subject.id),
+          [keywordId],
+        ),
+        Promise.all(
+          subjects.map((subject) =>
+            this.breakdownListing(subject.id, subject.country, country),
+          ),
+        ),
+        this.enteredKeywordField(app, country),
+        Promise.all(
+          subjects.map((subject) =>
+            localizedCopies(this.prisma, app.store, subject, country),
+          ),
+        ),
+        this.listingChangedDaysAgo(app, country),
+      ]);
+    const terms = breakdownTerms(text);
+
+    const explained = withInsights(
+      sortBreakdown(
+        subjects.map((subject, index) =>
+          breakdownApp(
+            {
+              appId: subject.id,
+              name: subject.name,
+              iconUrl: subject.iconUrl,
+              isYou: subject.id === appId,
+              position: latest.get(positionKey(subject.id, keywordId)) ?? null,
+              listing: listings[index],
+              keywordField: subject.id === appId ? keywordField : [],
+              localized: localized[index],
+            },
+            app.store,
+            text,
+          ),
+        ),
+      ),
+      terms,
+      changedDaysAgo,
+    );
+    return { keywordId, text, country, terms, ...explained };
+  }
+
+  private async listingChangedDaysAgo(
+    app: KeywordApp,
+    market: string,
+  ): Promise<number | null> {
+    const latest = await this.prisma.changeEvent.findFirst({
+      where: {
+        appId: app.id,
+        ...eventsOfMarket(app.country, market),
+        field: { in: [...RANKING_TEXT_FIELDS] },
+      },
+      orderBy: { capturedAt: 'desc' },
+      select: { capturedAt: true },
+    });
+    return latest
+      ? Math.floor((Date.now() - latest.capturedAt.getTime()) / DAY_MS)
+      : null;
+  }
+
+  private async enteredKeywordField(
+    app: KeywordApp,
+    market: string,
+  ): Promise<string[]> {
+    if (app.store !== Store.APP_STORE || market !== app.country) {
+      return [];
+    }
+    const rows = await this.prisma.trackedKeyword.findMany({
+      where: {
+        appId: app.id,
+        ...inKeywordField,
+        active: true,
+        keyword: { is: { country: app.country } },
+      },
+      orderBy: { fieldOrder: 'asc' },
+      select: { keyword: { select: { text: true } } },
+    });
+    return rows.map((row) => row.keyword.text);
+  }
+
+  private async breakdownListing(
+    appId: string,
+    home: string,
+    market: string,
+  ): Promise<BreakdownListing | null> {
+    const select = {
+      title: true,
+      subtitle: true,
+      summary: true,
+      ratingAvg: true,
+      ratingCount: true,
+    } as const;
+    const inMarket = await this.prisma.appSnapshot.findFirst({
+      where: { appId, ...listingIn(home, market) },
+      orderBy: NEWEST_FIRST,
+      select,
+    });
+    if (inMarket) {
+      return { ...inMarket, country: market };
+    }
+    const atHome = await this.prisma.appSnapshot.findFirst({
+      where: { appId, ...HOME_LISTING },
+      orderBy: NEWEST_FIRST,
+      select,
+    });
+    return atHome ? { ...atHome, country: home } : null;
   }
 
   async addManual(

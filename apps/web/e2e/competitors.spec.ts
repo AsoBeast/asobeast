@@ -120,6 +120,55 @@ test("the comparison matrix shows each keyword's market and filters by it", asyn
   await expect(rows).toHaveCount(5);
 });
 
+test("clicking a keyword opens why each app ranks for it", async ({ page }) => {
+  await page.goto("/apps/app-1/competitors");
+  await page.waitForLoadState("networkidle");
+
+  const keyword = matrix(page).getByRole("button", {
+    name: "Why apps rank for focus timer",
+  });
+  await (await hydrated(keyword)).click();
+
+  await expect(page).toHaveURL(/keyword=kw-1/);
+  const sheet = page.getByRole("dialog", {
+    name: "Why apps rank for this keyword",
+  });
+  const you = sheet.getByRole("listitem", { name: "Focus Timer" });
+  await expect(you).toContainText("You");
+  await expect(you).toContainText("Exact phrase");
+  await expect(you.locator("mark")).toHaveText(["Focus", "Timer", "timer"]);
+  await expect(you).toContainText("Keyword field");
+  await expect(you).toContainText("pomodoro, timer, planner");
+  await expect(you).toContainText("2 of 2 keyword words in the listing");
+  await expect(
+    you.getByRole("note", { name: "Where you stand" }),
+  ).toContainText("Your listing text changed 9 days ago.");
+
+  const rival = sheet.getByRole("listitem", { name: "Rival Focus" });
+  await expect(rival).toContainText("1 of 2 words");
+  await expect(
+    rival.getByRole("note", { name: "Why it may rank above you" }),
+  ).toContainText(
+    "No stronger placement than yours, but 48,000 ratings to your 1,200.",
+  );
+  await expect(rival.locator("mark").first()).toHaveText("Focus");
+  const spanish = rival.getByRole("group", {
+    name: "Spanish (Mexico) listing",
+  });
+  await expect(spanish).toContainText("Focus timer para estudiar");
+  await expect(spanish).toContainText("Exact phrase");
+  await expect(rival).toContainText("No match in its French listing.");
+  await expect(rival).toContainText(
+    "Not captured, so not checked: Korean and Vietnamese.",
+  );
+  await expect(rival).toContainText("Empty");
+  await expect(rival).not.toContainText("Keyword field");
+  await expect(rival).toContainText("4.2 rating from 310");
+
+  await page.keyboard.press("Escape");
+  await expect(page).not.toHaveURL(/keyword=/);
+});
+
 test("keyword ideas are fetched on demand and can be tracked", async ({
   page,
 }) => {
