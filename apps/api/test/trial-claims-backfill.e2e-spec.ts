@@ -121,6 +121,11 @@ describe('Mailboxes that had a trial before one trial per mailbox existed', () =
     expect(keys).toEqual([trialClaimKey('grownup@gmail.com')]);
   });
 
+  it('claims nothing more when it runs again', async () => {
+    await expect(app.get(TrialClaimBackfill).run()).resolves.toBe(0);
+    await expect(prisma.trialClaim.count()).resolves.toBe(1);
+  });
+
   it('refuses a second trial to a variant of the owner of a trialed workspace', async () => {
     const again = await register('grownup+again@googlemail.com');
 

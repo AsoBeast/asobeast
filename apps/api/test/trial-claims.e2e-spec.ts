@@ -216,7 +216,8 @@ describe('One trial per mailbox', () => {
   it('keeps a throwaway domain from using up any mailbox', async () => {
     await register('fresh@mailinator.com');
 
-    await expect(prisma.trialClaim.count()).resolves.toBe(1);
+    const keys = (await prisma.trialClaim.findMany()).map(({ key }) => key);
+    expect(keys).toEqual([trialClaimKey('operator@example.com')]);
   });
 
   it('still starts a trial on a provider that is not throwaway', async () => {
