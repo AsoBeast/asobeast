@@ -34,6 +34,7 @@ import { ListKeywordsQueryDto } from './dto/list-keywords-query.dto';
 import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsService } from './keywords.service';
@@ -45,6 +46,7 @@ import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.inte
 export class KeywordsController {
   constructor(
     private readonly keywords: KeywordsService,
+    private readonly fields: KeywordFieldService,
     private readonly keywordSuggestions: KeywordSuggestionService,
     private readonly spider: SpiderService,
     private readonly limiter: OnDemandLimiter,
@@ -182,7 +184,7 @@ export class KeywordsController {
       'Returns the normalized phrases tracked from the last submission in the home market, in the order they were submitted, not the string that was submitted, so spacing and casing may differ. duplicatesRemoved is always 0 because a read discards nothing.',
   })
   keywordField(@Param('id') id: string): Promise<KeywordFieldResult> {
-    return this.keywords.getKeywordField(id);
+    return this.fields.getKeywordField(id);
   }
 
   @Put('keyword-field')
@@ -195,6 +197,6 @@ export class KeywordsController {
     @Param('id') id: string,
     @Body() dto: KeywordFieldDto,
   ): Promise<KeywordFieldResult> {
-    return this.keywords.setKeywordField(id, dto.text);
+    return this.fields.setKeywordField(id, dto.text);
   }
 }

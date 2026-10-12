@@ -1,6 +1,7 @@
 import { ConfigService } from '@nestjs/config';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
+import { KeywordFieldService } from '../keywords/keyword-field.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
@@ -100,10 +101,12 @@ const buildLoader = (options: LoaderOptions = {}) => {
         trackedKeyword('daily goals', 'us', false),
       ]),
     compare: jest.fn().mockResolvedValue({ competitors: [], rows: [] }),
+  } as unknown as KeywordsService;
+  const keywordFields = {
     getKeywordField: jest
       .fn()
       .mockResolvedValue({ tracked: [{ text: 'habit' }, { text: 'streak' }] }),
-  } as unknown as KeywordsService;
+  } as unknown as KeywordFieldService;
   const model = options.model === undefined ? 'gpt-5.6-luna' : options.model;
   const auditAi = {
     configured: model !== null,
@@ -124,9 +127,15 @@ const buildLoader = (options: LoaderOptions = {}) => {
   const forApp =
     options.forApp ??
     jest.fn().mockResolvedValue({ screenshots: options.screenshots ?? [] });
-  return new AuditContextLoader(prisma, keywords, auditAi, analytics, config, {
-    forApp,
-  } as unknown as ScreenshotsService);
+  return new AuditContextLoader(
+    prisma,
+    keywords,
+    keywordFields,
+    auditAi,
+    analytics,
+    config,
+    { forApp } as unknown as ScreenshotsService,
+  );
 };
 
 describe('AuditContextLoader.load', () => {

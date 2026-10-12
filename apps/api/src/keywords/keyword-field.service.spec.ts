@@ -5,9 +5,8 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordTracker } from './keyword-tracker';
-import { KeywordsService } from './keywords.service';
-import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
@@ -163,7 +162,7 @@ function buildPrisma() {
 
 function buildService(prisma: ReturnType<typeof buildPrisma>) {
   const queue = { add: jest.fn() } as unknown as Queue;
-  return new KeywordsService(
+  return new KeywordFieldService(
     prisma as unknown as PrismaService,
     new KeywordTracker(
       prisma as unknown as PrismaService,
@@ -178,7 +177,6 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
         get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>,
     ),
-    { request: jest.fn() } as unknown as MarketListingRequests,
   );
 }
 
@@ -188,7 +186,7 @@ const deactivatedTexts = (prisma: ReturnType<typeof buildPrisma>) =>
     .map((row) => prisma.textOf(row.keywordId))
     .sort();
 
-describe('KeywordsService.setKeywordField deactivation', () => {
+describe('KeywordFieldService.setKeywordField deactivation', () => {
   it('deactivates exactly the phrases the shorter field dropped', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma);
@@ -228,7 +226,7 @@ describe('KeywordsService.setKeywordField deactivation', () => {
   });
 });
 
-describe('KeywordsService.setKeywordField writes', () => {
+describe('KeywordFieldService.setKeywordField writes', () => {
   it('locks the app inside the transaction before it writes a tracked keyword', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma);

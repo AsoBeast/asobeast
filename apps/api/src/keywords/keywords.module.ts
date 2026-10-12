@@ -2,6 +2,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { QUEUES } from '../jobs/jobs.types';
 import { StoreProvidersModule } from '../store-providers/store-providers.module';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordTracker } from './keyword-tracker';
@@ -22,6 +23,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   controllers: [KeywordsController],
   providers: [
     KeywordsService,
+    KeywordFieldService,
     KeywordImportService,
     KeywordSuggestionService,
     KeywordTracker,
@@ -31,6 +33,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
   ],
   exports: [
     KeywordsService,
+    KeywordFieldService,
     KeywordSuggestionService,
     SpiderService,
     TrackedKeywordAccess,
