@@ -12,7 +12,7 @@ import { AuthService } from '../auth.service';
 import type { AuthenticatedRequest } from '../auth.types';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { CredentialRateLimiter } from '../rate-limit/credential-rate.limiter';
-import { trackerOf } from '../rate-limit/request-tracker';
+import { addressTrackerOf } from '../rate-limit/request-tracker';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
@@ -37,9 +37,6 @@ export class AuthGuard implements CanActivate {
     const presented = Boolean(
       cookies?.[SESSION_COOKIE] || req.headers.authorization,
     );
-    const address = trackerOf(req as unknown as Record<string, unknown>);
-    if (presented) await this.credentials.assertAddressMayPresentOne(address);
-
     const session = await this.auth.resolveSessionUser(
       cookies?.[SESSION_COOKIE],
     );
@@ -48,7 +45,8 @@ export class AuthGuard implements CanActivate {
       : await this.auth.resolveToken(req.headers.authorization);
     const user = session ?? token?.user;
     if (!user) {
-      if (presented) await this.credentials.recordRejection(address);
+      const address = addressTrackerOf(req);
+      if (presented && address) await this.credentials.recordRejection(address);
       throw new UnauthorizedException('Not authenticated');
     }
 
