@@ -97,6 +97,23 @@ describe('Remote MCP credential isolation (e2e)', () => {
     expect(textOf(answer)).not.toContain('rejected credentials');
   });
 
+  it('keeps admitting a valid token over an address whose rejected tool calls spent its budget', async () => {
+    const rejected = mcpAs(app, UNKNOWN_TOKEN);
+    for (let call = 0; call < CREDENTIAL_FAILURES_PER_MINUTE; call += 1) {
+      await rejected
+        .rpc('tools/call', { name: 'list_apps', arguments: {} })
+        .expect(401);
+    }
+    await rejected
+      .rpc('tools/call', { name: 'list_apps', arguments: {} })
+      .expect(429);
+
+    const answer = await mcpAs(app, neighbourToken).callTool('list_apps', {});
+
+    expect(answer.error).toBeUndefined();
+    expect(answer.result?.isError).toBeFalsy();
+  });
+
   it('never counts a rejected tool call against an address', async () => {
     const recorded = jest.spyOn(
       app.get(CredentialRateLimiter),
