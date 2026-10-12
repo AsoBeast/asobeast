@@ -3802,18 +3802,54 @@ export const METADATA_AUDIT_PL: MetadataAuditResult = {
 
 export const APP_1_PL_LOCALIZED_TITLE = "Skupienie: Minutnik Pracy";
 
+export const APP_1_PL_KEYWORD_FIELD = "nawyki,cel";
+
 export const METADATA_AUDIT_PL_LOCALIZED: MetadataAuditResult = {
   ...METADATA_AUDIT_PL,
   localization: "pl",
-  fields: METADATA_AUDIT_PL.fields.map((field) =>
-    field.field === "title"
-      ? {
+  fields: METADATA_AUDIT_PL.fields.flatMap((field) => {
+    if (field.field === "title") {
+      return [
+        {
           ...field,
           value: APP_1_PL_LOCALIZED_TITLE,
           chars: APP_1_PL_LOCALIZED_TITLE.length,
+        },
+      ];
+    }
+    if (field.field === "subtitle") {
+      return [
+        field,
+        {
+          field: "keywordField",
+          value: APP_1_PL_KEYWORD_FIELD,
+          chars: APP_1_PL_KEYWORD_FIELD.length,
+          limit: 100,
+          indexed: true,
+          issues: [],
+        },
+      ];
+    }
+    return [field];
+  }),
+  coverage: METADATA_AUDIT_PL.coverage.map((row) =>
+    row.keywordId === "kw-pl-2"
+      ? {
+          ...row,
+          fields: [
+            ...row.fields,
+            { field: "keywordField", covered: true, localization: "pl" },
+          ],
         }
-      : field,
+      : row,
   ),
+  keywordFieldSuggestion: {
+    value: "nawyki,cel,plan",
+    charactersUsed: 15,
+    charactersLimit: 100,
+    addedTerms: ["plan"],
+    localization: "pl",
+  },
 };
 
 export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {

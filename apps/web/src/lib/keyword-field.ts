@@ -26,3 +26,18 @@ export function keywordFieldQuery(
       : { localization }),
   };
 }
+
+export function keywordFieldHref(
+  id: string,
+  home: string,
+  market: string,
+  localization: AppStoreLocalization | undefined,
+): string {
+  const query = keywordFieldQuery(home, market, localization ?? null);
+  const params = new URLSearchParams({
+    ...(query.country ? { country: query.country } : {}),
+    ...(query.localization ? { fieldLocale: query.localization } : {}),
+  });
+  const search = params.toString();
+  return `/apps/${id}/keywords${search ? `?${search}` : ""}`;
+}

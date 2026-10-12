@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { fieldLocalization, keywordFieldQuery } from "./keyword-field";
+import {
+  fieldLocalization,
+  keywordFieldHref,
+  keywordFieldQuery,
+} from "./keyword-field";
 
 describe("keywordFieldQuery", () => {
   it("leaves the home market and its default localization out", () => {
@@ -24,5 +28,19 @@ describe("keywordFieldQuery", () => {
   it("falls back to the default when the market does not read the request", () => {
     expect(fieldLocalization("de", "es-MX")).toBe("de");
     expect(keywordFieldQuery("us", "de", "es-MX")).toEqual({ country: "de" });
+  });
+});
+
+describe("keywordFieldHref", () => {
+  it("opens the home default field without a query", () => {
+    expect(keywordFieldHref("app-1", "us", "us", "en-US")).toBe(
+      "/apps/app-1/keywords",
+    );
+  });
+
+  it("opens a localized field of another market", () => {
+    expect(keywordFieldHref("app-1", "us", "pl", "pl")).toBe(
+      "/apps/app-1/keywords?country=pl&fieldLocale=pl",
+    );
   });
 });

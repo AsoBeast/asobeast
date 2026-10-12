@@ -1,13 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import type { KeywordFieldSuggestion } from "@asobeast/shared";
 import { Card, CardContent } from "@/components/ui/card";
+import { localizationName } from "@/lib/localizations";
 
 export function KeywordFieldSuggestionCard({
   suggestion,
+  editHref,
 }: {
   suggestion: KeywordFieldSuggestion;
+  editHref: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -27,6 +31,9 @@ export function KeywordFieldSuggestionCard({
         <div className="flex items-center justify-between gap-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Suggested keyword field
+            {suggestion.localization
+              ? ` · ${localizationName(suggestion.localization)}`
+              : ""}
           </span>
           <span className="text-sm tabular-nums text-muted-foreground">
             {suggestion.charactersUsed}/{suggestion.charactersLimit}
@@ -48,6 +55,12 @@ export function KeywordFieldSuggestionCard({
             >
               {copied ? "Copied" : "Copy"}
             </button>
+            <Link
+              href={editHref}
+              className="mt-2 text-sm text-foreground underline decoration-primary underline-offset-4"
+            >
+              Edit this keyword field
+            </Link>
           </>
         )}
       </CardContent>
