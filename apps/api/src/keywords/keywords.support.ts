@@ -79,6 +79,19 @@ export async function ensureApp(
   return app;
 }
 
+export async function ensureKeywordFieldApp(
+  prisma: PrismaService,
+  appId: string,
+): Promise<KeywordApp> {
+  const app = await ensureApp(prisma, appId);
+  if (app.store !== Store.APP_STORE) {
+    throw new BadRequestException(
+      'The keyword field is only available for App Store apps',
+    );
+  }
+  return app;
+}
+
 export async function trackedTexts(
   prisma: PrismaService,
   appId: string,
