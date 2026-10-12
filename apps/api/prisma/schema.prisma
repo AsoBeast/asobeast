@@ -285,7 +285,6 @@ model TrackedKeyword {
   source     KeywordSource
   active     Boolean       @default(true)
   relevance  Int?
-  fieldOrder Int?
   tags       String[]      @default([])
   note       String?
   createdAt  DateTime      @default(now())

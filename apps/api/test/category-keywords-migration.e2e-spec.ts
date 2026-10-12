@@ -3,6 +3,10 @@ import { join } from 'path';
 import { KeywordSource, PrismaClient, Store } from '@prisma/client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { migrationSql } from './helpers/migration-sql';
+import {
+  dropHistoricalFieldOrder,
+  restoreHistoricalFieldOrder,
+} from './helpers/historical-field-order';
 import { testDb } from './helpers/test-db';
 
 const HINDI_DICTIONARY = { genres: ['Education', 'Reference'] };
@@ -20,6 +24,7 @@ describe('the untrack category keywords migration', () => {
       stdio: 'ignore',
     });
     prisma = testDb();
+    await restoreHistoricalFieldOrder(prisma);
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },
       update: {},
@@ -34,6 +39,7 @@ describe('the untrack category keywords migration', () => {
   });
 
   afterAll(async () => {
+    await dropHistoricalFieldOrder(prisma);
     await prisma.$disconnect();
   });
 
@@ -75,10 +81,10 @@ describe('the untrack category keywords migration', () => {
       source?: KeywordSource;
       tags?: string[];
       note?: string;
-      fieldOrder?: number;
       relevance?: number;
       active?: boolean;
     } = {},
+    fieldOrder?: number,
   ) => {
     const keyword = await prisma.keyword.upsert({
       where: {
@@ -90,6 +96,9 @@ describe('the untrack category keywords migration', () => {
     await prisma.trackedKeyword.create({
       data: { appId, keywordId: keyword.id, source: 'SUBTITLE', ...options },
     });
+    if (fieldOrder !== undefined) {
+      await prisma.$executeRaw`UPDATE "TrackedKeyword" SET "fieldOrder" = ${fieldOrder} WHERE "appId" = ${appId} AND "keywordId" = ${keyword.id}`;
+    }
   };
 
   const trackedTexts = async (appId: string) =>
@@ -179,7 +188,7 @@ describe('the untrack category keywords migration', () => {
   it('keeps a keyword in the keyword field, one with a relevance and a paused one', async () => {
     const app = await seedApp();
     await snapshotOf(app.id, { genres: ['Education', 'Reference', 'Books'] });
-    await track(app.id, 'education', { fieldOrder: 0 });
+    await track(app.id, 'education', {}, 0);
     await track(app.id, 'reference', { relevance: 80 });
     await track(app.id, 'books', { active: false });
 

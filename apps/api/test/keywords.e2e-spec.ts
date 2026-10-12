@@ -534,24 +534,19 @@ describe('KeywordsController (e2e)', () => {
       select: {
         source: true,
         active: true,
-        fieldOrder: true,
         keyword: { select: { text: true } },
       },
     });
     expect(dropped).toEqual([
-      {
-        source: 'SUBTITLE',
-        active: true,
-        fieldOrder: null,
-        keyword: { text: 'streak' },
-      },
-      {
-        source: 'TITLE',
-        active: true,
-        fieldOrder: null,
-        keyword: { text: 'tracker' },
-      },
+      { source: 'SUBTITLE', active: true, keyword: { text: 'streak' } },
+      { source: 'TITLE', active: true, keyword: { text: 'tracker' } },
     ]);
+    await expect(
+      prisma.keywordField.findMany({
+        where: { appId: id },
+        select: { phrases: true },
+      }),
+    ).resolves.toEqual([{ phrases: ['habit', 'goals'] }]);
   });
 
   const putKeywordField = (id: string, text: string) =>

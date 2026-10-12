@@ -1,10 +1,5 @@
 BEGIN;
 
-UPDATE "TrackedKeyword"
-SET "fieldOrder" = 0
-WHERE "appId" = 'app_ios'
-  AND "keywordId" = 'kw_ios_us';
-
 INSERT INTO "KeywordField" ("appId", "workspaceId", "localization", "phrases", "updatedAt")
 VALUES ('app_ios', 'ws_default', 'en-US', ARRAY['workout tracker'], '2026-07-01 00:00:00')
 ON CONFLICT ("appId", "localization") DO UPDATE SET "phrases" = EXCLUDED."phrases";

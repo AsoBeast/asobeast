@@ -3,6 +3,10 @@ import { join } from 'path';
 import { PrismaClient, Store } from '@prisma/client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { migrationFolders, migrationSql } from './helpers/migration-sql';
+import {
+  dropHistoricalFieldOrder,
+  restoreHistoricalFieldOrder,
+} from './helpers/historical-field-order';
 import { testDb } from './helpers/test-db';
 
 const shot = (n: number) =>
@@ -41,6 +45,7 @@ describe('the delete echoed localizations migration', () => {
       stdio: 'ignore',
     });
     prisma = testDb();
+    await restoreHistoricalFieldOrder(prisma);
     await prisma.workspace.upsert({
       where: { id: DEFAULT_WORKSPACE_ID },
       update: {},
@@ -55,6 +60,7 @@ describe('the delete echoed localizations migration', () => {
   });
 
   afterAll(async () => {
+    await dropHistoricalFieldOrder(prisma);
     await prisma.$disconnect();
   });
 
