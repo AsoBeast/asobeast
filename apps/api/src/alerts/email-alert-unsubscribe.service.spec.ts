@@ -44,6 +44,7 @@ describe('EmailAlertUnsubscribe', () => {
     expect(build('https://aso.example.com').service.links(OPS)).toEqual({
       page: `https://aso.example.com/unsubscribe?alert=ea_1&token=${token}`,
       oneClick: `https://aso.example.com/api/backend/email-alerts/ea_1/unsubscribe?token=${token}`,
+      token,
     });
   });
 

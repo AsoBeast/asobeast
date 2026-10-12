@@ -1,5 +1,5 @@
 import { CallToAction } from '../../mail/call-to-action';
-import { FooterLine } from '../../mail/email-footer';
+import { FooterLine, FooterLink } from '../../mail/email-footer';
 import { EmailLayout } from '../../mail/email-layout';
 import { atHost } from '../../mail/email-links';
 import { EmailHeading, EmailParagraph } from '../../mail/email-text';
@@ -13,6 +13,7 @@ export interface AlertConfirmationEmailProps {
   address: string;
   requestedBy: string;
   link: string;
+  stop: string;
   days: number;
 }
 
@@ -21,6 +22,7 @@ export function AlertConfirmationEmail({
   address,
   requestedBy,
   link,
+  stop,
   days,
 }: AlertConfirmationEmailProps) {
   return (
@@ -28,9 +30,14 @@ export function AlertConfirmationEmail({
       preview={`${requestedBy} asked to send AsoBeast alerts to ${address}.`}
       origin={origin}
       footer={
-        <FooterLine>
-          {`You received this because ${requestedBy} entered this address${atHost(origin)}.`}
-        </FooterLine>
+        <>
+          <FooterLine>
+            {`You received this because ${requestedBy} entered this address${atHost(origin)}.`}
+          </FooterLine>
+          <FooterLine>
+            <FooterLink href={stop}>Do not ask this address again</FooterLink>
+          </FooterLine>
+        </>
       }
     >
       <EmailHeading>Confirm alert emails</EmailHeading>

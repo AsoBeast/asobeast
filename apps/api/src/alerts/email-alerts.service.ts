@@ -114,7 +114,10 @@ export class EmailAlertsService {
         const alert = await tx.emailAlert.update({ where: { id }, data });
         return { alert, ask: false };
       }
-      const confirmedAt = await this.confirmation.confirmationFor(dto.email);
+      const confirmedAt = await this.confirmation.confirmationFor(
+        dto.email,
+        tx,
+      );
       if (!confirmedAt) await assertRoomToWait(tx, id);
       const alert = await tx.emailAlert.update({
         where: { id },
@@ -247,7 +250,11 @@ async function assertRoomToWait(
   excluding?: string,
 ): Promise<void> {
   const waiting = await tx.emailAlert.count({
-    where: { confirmedAt: null, unsubscribedAt: null, NOT: { id: excluding } },
+    where: {
+      confirmedAt: null,
+      unsubscribedAt: null,
+      ...(excluding === undefined ? {} : { NOT: { id: excluding } }),
+    },
   });
   if (waiting >= MAX_UNCONFIRMED_EMAIL_ALERTS) {
     throw new ForbiddenException(

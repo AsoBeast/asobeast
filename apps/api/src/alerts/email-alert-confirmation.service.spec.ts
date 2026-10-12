@@ -1,12 +1,15 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
 import { confirmationToken } from './confirmation-token';
 import { EmailAlertConfirmation } from './email-alert-confirmation.service';
+import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { MailerService } from './mailer.service';
+import { unsubscribeToken } from './unsubscribe-token';
 
 const SECRET = 's'.repeat(32);
 const ORIGIN = 'https://aso.example.com';
@@ -16,15 +19,21 @@ const build = (mailer: Partial<MailerService>) => {
   const findFirst = jest.fn().mockResolvedValue(null);
   const send = jest.fn().mockResolvedValue(undefined);
   const claim = jest.fn().mockResolvedValue(undefined);
+  const config = {
+    get: jest.fn(() => SECRET),
+  } as unknown as ConfigService<Env, true>;
+  const mail = { sendAccountMail: send, ...mailer } as MailerService;
+  const prisma = {
+    emailAlert: { updateMany },
+    user: { findFirst },
+  } as unknown as PrismaService;
   const service = new EmailAlertConfirmation(
-    { get: jest.fn(() => SECRET) } as unknown as ConfigService<Env, true>,
-    { sendAccountMail: send, ...mailer } as MailerService,
-    {
-      emailAlert: { updateMany },
-      user: { findFirst },
-    } as unknown as PrismaService,
+    config,
+    mail,
+    prisma,
     { claim } as unknown as ConfirmationMailLimiter,
     { require: jest.fn(() => 'ws_1') } as unknown as WorkspaceContext,
+    new EmailAlertUnsubscribe(config, mail, prisma, {} as CrossTenantAccess),
   );
   return { service, updateMany, findFirst, send, claim };
 };
@@ -54,12 +63,12 @@ describe('EmailAlertConfirmation', () => {
       const { service, findFirst } = build({ enabled: true, origin: ORIGIN });
       findFirst.mockResolvedValue({ id: 'u_1' });
 
-      expect(await service.confirmationFor('Ops@Example.com')).toBeInstanceOf(
+      expect(await service.confirmationFor(' Ops@Example.com ')).toBeInstanceOf(
         Date,
       );
       expect(findFirst).toHaveBeenCalledWith({
         where: {
-          email: { equals: 'Ops@Example.com', mode: 'insensitive' },
+          email: 'ops@example.com',
           emailVerifiedAt: { not: null },
         },
         select: { id: true },
@@ -145,7 +154,14 @@ describe('EmailAlertConfirmation', () => {
       expect(mail.text).toContain(
         `${ORIGIN}/confirm-alert?alert=ea_1&token=${token}`,
       );
-      expect(mail.secrets).toEqual([token]);
+      const stop = unsubscribeToken(SECRET, {
+        alertId: 'ea_1',
+        email: 'ops@example.com',
+      });
+      expect(mail.text).toContain(
+        `${ORIGIN}/unsubscribe?alert=ea_1&token=${stop}`,
+      );
+      expect(mail.secrets).toEqual([token, stop]);
       expect(updateMany.mock.invocationCallOrder[0]).toBeLessThan(
         send.mock.invocationCallOrder[0],
       );

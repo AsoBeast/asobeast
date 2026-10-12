@@ -188,6 +188,7 @@ The confirmation link points at the web app, so it needs `WEB_PUBLIC_URL`. Witho
 | Change the address of an alert | The new address must confirm, and links sent to the old one stop working |
 | Change the events or pause and resume | None |
 | Unsubscribe from an alert email | The alert pauses and its confirmation is withdrawn. This alert never asks that address again, so **Resend confirmation** is refused until the address changes |
+| Press **Do not ask this address again** in a confirmation email | The same as an unsubscribe. The alert shows **Unsubscribed** and asks that address nothing more |
 | Press **Resend confirmation** | A new email goes out and the previous link stops working. One alert can be resent once an hour |
 
 A confirmation link works for 7 days, for the address it was sent to and for the latest email sent for that alert. When you upgraded, alerts that were active counted as confirmed. Paused alerts did not, because a pause may have been an unsubscribe, so each needs **Resend confirmation** before it delivers again.
@@ -237,7 +238,7 @@ Completed batch claims follow `RETENTION_ALERT_EVENTS_DAYS`, also 30 days by def
 - **Deep links are missing.** `WEB_PUBLIC_URL` is unset, so `link` is `null` by design.
 - **The email shows no buttons or logo.** `WEB_PUBLIC_URL` is unset. Set it to the public web origin.
 - **Mail apps show no unsubscribe button.** The instance is not on `https`, or the relay does not sign with DKIM. See [Email deliverability](/operations/email-deliverability).
-- **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows as paused in Settings. That alert does not ask the address to confirm again, so a recipient who wants alerts back is added as a new email alert and confirms it.
+- **A recipient stopped receiving alerts.** They unsubscribed, and the email alert shows **Unsubscribed** in Settings. That alert does not ask the address to confirm again, so a recipient who wants alerts back is added as a new email alert and confirms it.
 - **A new recipient receives nothing.** The alert shows **Awaiting confirmation**. Ask them to open the confirmation email, check the spam folder, or press **Resend confirmation**. Without `WEB_PUBLIC_URL` no confirmation email can be sent at all.
 - **Adding a recipient answers 429.** The recipient already had 5 confirmation emails today, or the workspace had 20. The message says which, and the limit resets at midnight UTC.
 - **Resend confirmation answers 429.** A confirmation email went to that alert less than an hour ago. The message says how long to wait.

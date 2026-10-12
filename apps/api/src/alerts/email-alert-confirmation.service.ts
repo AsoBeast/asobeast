@@ -10,6 +10,7 @@ import {
   ConfirmationMailLimiter,
   type ConfirmationRefund,
 } from './confirmation-mail.limiter';
+import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { MailerService } from './mailer.service';
 
 const NO_ORIGIN = 'WEB_PUBLIC_URL is not set, so the link has no host';
@@ -20,6 +21,15 @@ interface PendingRecipient {
   id: string;
   email: string;
   confirmationSentAt: Date | null;
+}
+
+export interface MemberDirectory {
+  user: {
+    findFirst(args: {
+      where: { email: string; emailVerifiedAt: { not: null } };
+      select: { id: true };
+    }): Promise<{ id: string } | null>;
+  };
 }
 
 function reasonOf(error: unknown): string {
@@ -36,14 +46,18 @@ export class EmailAlertConfirmation {
     private readonly prisma: PrismaService,
     private readonly limiter: ConfirmationMailLimiter,
     private readonly workspace: WorkspaceContext,
+    private readonly unsubscribes: EmailAlertUnsubscribe,
   ) {}
 
   get canSend(): boolean {
     return this.mailer.enabled && Boolean(this.mailer.origin);
   }
 
-  async confirmationFor(address: string): Promise<Date | null> {
-    return (await this.isVerifiedMember(address)) ? new Date() : null;
+  async confirmationFor(
+    address: string,
+    db: MemberDirectory = this.prisma,
+  ): Promise<Date | null> {
+    return (await this.isVerifiedMember(address, db)) ? new Date() : null;
   }
 
   async allowMailTo(address: string): Promise<ConfirmationRefund | null> {
@@ -126,7 +140,11 @@ export class EmailAlertConfirmation {
     sentAt: Date,
   ): Promise<void> {
     const origin = this.mailer.origin;
-    if (!origin) throw new Error(NO_ORIGIN);
+    const stop = this.unsubscribes.links({
+      alertId: alert.id,
+      email: alert.email,
+    });
+    if (!origin || !stop) throw new Error(NO_ORIGIN);
     const token = confirmationToken(this.secret, {
       alertId: alert.id,
       email: alert.email,
@@ -137,20 +155,24 @@ export class EmailAlertConfirmation {
       address: alert.email,
       requestedBy,
       link: `${origin}${CONFIRM_ALERT_PATH}?alert=${encodeURIComponent(alert.id)}&token=${token}`,
+      stop: stop.page,
       days: CONFIRMATION_DAYS,
     });
     await this.mailer.sendAccountMail({
       kind: 'alert-confirmation',
       to: alert.email,
       ...email,
-      secrets: [token],
+      secrets: [token, stop.token],
     });
   }
 
-  private async isVerifiedMember(address: string): Promise<boolean> {
-    const member = await this.prisma.user.findFirst({
+  private async isVerifiedMember(
+    address: string,
+    db: MemberDirectory,
+  ): Promise<boolean> {
+    const member = await db.user.findFirst({
       where: {
-        email: { equals: address, mode: 'insensitive' },
+        email: address.trim().toLowerCase(),
         emailVerifiedAt: { not: null },
       },
       select: { id: true },

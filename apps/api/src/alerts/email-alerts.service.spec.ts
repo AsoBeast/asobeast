@@ -115,6 +115,7 @@ describe('EmailAlertsService', () => {
 
       expect(confirmation.confirmationFor).toHaveBeenCalledWith(
         'new@example.com',
+        tx,
       );
       expect(tx.emailAlert.findFirst.mock.invocationCallOrder[0]).toBeLessThan(
         confirmation.confirmationFor.mock.invocationCallOrder[0],

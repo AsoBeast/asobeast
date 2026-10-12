@@ -7,12 +7,15 @@ const LINK = 'https://aso.example.com/confirm-alert?alert=ea_1&token=abc';
 
 const LINK_IN_HTML = LINK.replaceAll('&', '&amp;');
 
+const STOP = 'https://aso.example.com/unsubscribe?alert=ea_1&token=def';
+
 const render = (requestedBy = 'owner@example.com') =>
   alertConfirmationEmail({
     origin: 'https://aso.example.com',
     address: 'alerts@example.net',
     requestedBy,
     link: LINK,
+    stop: STOP,
     days: 7,
   });
 
@@ -34,6 +37,13 @@ describe('alertConfirmationEmail', () => {
     const { text } = await render();
     expect(text.split(LINK).length - 1).toBe(1);
     expect(text).toContain('nothing is sent to this address');
+  });
+
+  it('offers a way to stop being asked in both parts', async () => {
+    const { html, text } = await render();
+    expect(html).toContain(`href="${STOP.replaceAll('&', '&amp;')}"`);
+    expect(html).toContain('Do not ask this address again');
+    expect(text).toContain(STOP);
   });
 
   it('escapes the requester', async () => {

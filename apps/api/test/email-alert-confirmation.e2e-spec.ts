@@ -24,6 +24,7 @@ const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const TOKEN_IN_LINK =
   /\/confirm-alert\?alert=([^&\s]+)&token=([A-Za-z0-9_-]{43})/;
+const STOP_IN_LINK = /\/unsubscribe\?alert=([^&\s]+)&token=([A-Za-z0-9_-]{43})/;
 
 describe('Email alert recipient confirmation (e2e)', () => {
   let fixture: EmailAlertApp;
@@ -226,6 +227,21 @@ describe('Email alert recipient confirmation (e2e)', () => {
     expect(await sendTest(alert)).toEqual({ delivered: true, status: null });
   });
 
+  it.each(['o_ner@example.com', 'o%r@example.com'])(
+    'does not trust %s, which matches a member only as a pattern',
+    async (address) => {
+      await prisma.user.updateMany({
+        where: { email: OWNER.email },
+        data: { emailVerifiedAt: new Date() },
+      });
+
+      const alert = await addAlert(address);
+
+      expect(alert.confirmed).toBe(false);
+      expect(sendAccountMail).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('does not trust the unverified address of a member', async () => {
     const alert = await addAlert(OWNER.email);
 
@@ -330,13 +346,32 @@ describe('Email alert recipient confirmation (e2e)', () => {
     await confirm(alert, tokenOf(sentConfirmation())).expect(204);
 
     await unsubscribe(alert);
-    await api
+    const reactivated = await api
       .patch(`/email-alerts/${alert.id}`)
       .send({ active: true })
       .expect(200);
 
+    expect(reactivated.body).toMatchObject({
+      confirmed: false,
+      unsubscribed: true,
+    });
     expect(await sendTest(alert)).toEqual({ delivered: false, status: null });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it('lets the recipient stop being asked from the confirmation email', async () => {
+    const alert = await addAlert(STRANGER);
+    const stop = STOP_IN_LINK.exec(sentConfirmation().text);
+    expect(stop?.[1]).toBe(alert.id);
+    sendAccountMail.mockClear();
+
+    await request(app.getHttpServer())
+      .post(`/email-alerts/${alert.id}/unsubscribe`)
+      .query({ token: stop?.[2] })
+      .expect(204);
+
+    await api.post(`/email-alerts/${alert.id}/resend-confirmation`).expect(409);
+    expect(sendAccountMail).not.toHaveBeenCalled();
   });
 
   it('does not resend a confirmation to a recipient who unsubscribed', async () => {
@@ -365,7 +400,10 @@ describe('Email alert recipient confirmation (e2e)', () => {
       .send({ email: 'new@example.net' })
       .expect(200);
 
-    expect((patched.body as EmailAlertItem).confirmationSent).toBe(true);
+    expect(patched.body).toMatchObject({
+      confirmationSent: true,
+      unsubscribed: false,
+    });
     expect(sentConfirmation().to).toBe('new@example.net');
   });
 
