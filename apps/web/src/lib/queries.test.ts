@@ -42,6 +42,7 @@ import {
   invalidateAiUsage,
   invalidateAppListing,
   invalidateAuth,
+  invalidatePasswordChange,
   invalidateCompetitorMutation,
   invalidateEmailAlertMutation,
   invalidateAudit,
@@ -509,6 +510,15 @@ describe("invalidation sets", () => {
       authStatusKey,
       authMeKey,
       accountPlanKey,
+    ]);
+  });
+
+  it("also invalidates the api token list when the password changes", () => {
+    expect(invalidatedKeys(invalidatePasswordChange)).toEqual([
+      authStatusKey,
+      authMeKey,
+      accountPlanKey,
+      apiTokenKeys.all,
     ]);
   });
 

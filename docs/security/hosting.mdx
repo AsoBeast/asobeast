@@ -126,7 +126,7 @@ The last responses must be `429`. If every one is `401`, the count is **too high
 
 The web proxy never passes a caller supplied `X-Forwarded-For` or `X-Real-IP` through to the API. A caller can write either header, and Next.js keeps an incoming `X-Forwarded-For` rather than replacing it, so the proxy cannot tell a forged value from an observed one.
 
-Instead it sends exactly one address, the one its own `TRUST_PROXY` says it can trust. At `0` it sends none, and the API falls back to the connection. See [Web app configuration](/configuration/web).
+Instead it sends exactly one address, the one its own `TRUST_PROXY` says it can trust, on the requests it relays for the browser and on the requests it makes while rendering a page. At `0` it sends none, and the API falls back to the connection. See [Web app configuration](/configuration/web).
 
 ## Set WEB\_PUBLIC\_URL
 

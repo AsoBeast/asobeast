@@ -18,7 +18,9 @@ import {
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { MailerService } from '../alerts/mailer.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuthService } from './auth.service';
 import { invitationEmail } from './emails/invitation-email';
+import { acceptPathFor } from './invite-link';
 import { sha256 } from './password-hash';
 import { PublicWebUrl } from './public-web-url';
 import type { AccountUser } from './auth.types';
@@ -39,7 +41,12 @@ export class WorkspaceTeamService {
     private readonly crossTenant: CrossTenantAccess,
     private readonly mailer: MailerService,
     private readonly web: PublicWebUrl,
+    private readonly auth: AuthService,
   ) {}
+
+  private get canEmail(): boolean {
+    return this.mailer.enabled && this.web.configured;
+  }
 
   async team(): Promise<WorkspaceTeam> {
     const [members, invites] = await Promise.all([
@@ -80,10 +87,15 @@ export class WorkspaceTeamService {
       },
     });
 
+    const delivered = await this.deliver(normalized, token, owner);
     return {
       ...toInvite(invite),
-      acceptPath: `${INVITE_PATH}?token=${token}`,
-      delivered: await this.deliver(normalized, token, owner),
+      acceptPath: acceptPathFor(token, {
+        delivered,
+        canEmail: this.canEmail,
+        registrationOpen: this.auth.registrationAllowed(),
+      }),
+      delivered,
     };
   }
 
@@ -159,7 +171,7 @@ export class WorkspaceTeamService {
     token: string,
     owner: AccountUser,
   ): Promise<boolean> {
-    if (!this.mailer.enabled || !this.web.configured) return false;
+    if (!this.canEmail) return false;
 
     const link = this.web.tokenLink(INVITE_PATH, token, 'invitation link');
     try {

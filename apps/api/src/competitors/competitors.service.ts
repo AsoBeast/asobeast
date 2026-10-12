@@ -54,7 +54,11 @@ export class CompetitorsService {
     private readonly quota: QuotaService,
   ) {}
 
-  async add(primaryId: string, url: string): Promise<CompetitorItem> {
+  async add(
+    primaryId: string,
+    url: string,
+    spend?: () => Promise<void>,
+  ): Promise<CompetitorItem> {
     const primary = await this.prisma.app.findFirst({
       where: { id: primaryId, isCompetitor: false },
       select: { id: true, store: true, storeAppId: true, country: true },
@@ -83,6 +87,7 @@ export class CompetitorsService {
       return toCompetitorItem(known, known.snapshots[0] ?? null);
     }
     await this.quota.assertRoom('competitors', primary.id);
+    await spend?.();
 
     const { app, snapshot } = await this.capture.capture(
       store,

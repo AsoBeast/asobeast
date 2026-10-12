@@ -2,6 +2,7 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { AuthenticatedRequest } from '../auth.types';
 import { SpendsStoreCapacity } from '../decorators/spends-store-capacity.decorator';
+import { SessionOnly } from '../decorators/session-only.decorator';
 import { ReadOnlyEndpoint } from '../read-access';
 import { TokenScopeGuard } from './token-scope.guard';
 
@@ -63,5 +64,63 @@ describe('TokenScopeGuard', () => {
         contextFor({ method: 'POST', tokenScope: 'read' }, ReadOnlyEndpoint()),
       ),
     ).toBe(true);
+  });
+
+  describe('a route that needs a signed in session', () => {
+    it('lets a session use it', () => {
+      expect(
+        guard.canActivate(
+          contextFor({ method: 'POST', credential: 'session' }, SessionOnly()),
+        ),
+      ).toBe(true);
+    });
+
+    it.each(['read', 'write'] as const)(
+      'refuses a %s-scoped token',
+      (tokenScope) => {
+        expect(() =>
+          guard.canActivate(
+            contextFor(
+              { method: 'POST', credential: 'token', tokenScope },
+              SessionOnly(),
+            ),
+          ),
+        ).toThrow(ForbiddenException);
+      },
+    );
+
+    it('says a session is needed, not that the token is read-only', () => {
+      expect(() =>
+        guard.canActivate(
+          contextFor(
+            { method: 'POST', credential: 'token', tokenScope: 'read' },
+            SessionOnly(),
+          ),
+        ),
+      ).toThrow('signed in session');
+    });
+
+    it('refuses a token on a read served over GET too', () => {
+      expect(() =>
+        guard.canActivate(
+          contextFor(
+            { method: 'GET', credential: 'token', tokenScope: 'write' },
+            SessionOnly(),
+          ),
+        ),
+      ).toThrow(ForbiddenException);
+    });
+
+    it('leaves an ordinary write open to a write-scoped token', () => {
+      expect(
+        guard.canActivate(
+          contextFor({
+            method: 'POST',
+            credential: 'token',
+            tokenScope: 'write',
+          }),
+        ),
+      ).toBe(true);
+    });
   });
 });

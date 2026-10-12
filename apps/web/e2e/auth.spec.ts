@@ -1949,6 +1949,7 @@ test("a recovered account signs in with the password it just chose", async ({
   await page.getByRole("button", { name: "Set new password" }).click();
 
   await expect(page.getByRole("status")).toContainText("Your password is set");
+  await expect(page.getByText(/your API tokens were revoked/)).toBeVisible();
   expect(submitted).toEqual({
     token: "recovery-token-value",
     password: "brandnewsecret2",
@@ -2008,6 +2009,21 @@ test("the change password dialog states the rule beside the new password", async
 
   await expect(page.getByLabel("New password")).toHaveAccessibleDescription(
     PASSWORD_RULE,
+  );
+});
+
+test("the change password dialog says it revokes API tokens", async ({
+  page,
+}) => {
+  await seedSession(page);
+  await routeMe(page, TRIAL_USER);
+
+  await page.goto("/");
+  await page.getByRole("button", { name: "Account menu" }).click();
+  await page.getByRole("menuitem", { name: "Change password" }).click();
+
+  await expect(page.getByRole("dialog")).toContainText(
+    "revokes every API token",
   );
 });
 

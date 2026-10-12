@@ -332,6 +332,11 @@ export function invalidateApiTokenMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: apiTokenKeys.all });
 }
 
+export function invalidatePasswordChange(client: QueryClient): void {
+  invalidateAuth(client);
+  invalidateApiTokenMutation(client);
+}
+
 export function invalidateAiUsage(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: accountPlanKey });
 }
