@@ -172,6 +172,8 @@ describe('Market keyword fields (e2e)', () => {
           charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
         },
       ],
+      wastedWords: [],
+      splitPhrases: [],
     });
   });
 
@@ -253,5 +255,125 @@ describe('Market keyword fields (e2e)', () => {
       .get(`/apps/${appId}/keyword-fields/market`)
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
+  });
+
+  describe('wasted words and split phrases', () => {
+    const storeListing = (appId: string) =>
+      prisma.appSnapshot.create({
+        data: {
+          appId,
+          title: 'Habit Garden',
+          subtitle: 'Daily routines',
+          description: 'Grow habits',
+          raw: {},
+        },
+      });
+
+    const trackPhrase = (appId: string, keyword: string, country = 'us') =>
+      api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: [keyword], country })
+        .expect(201);
+
+    const marketOf = async (appId: string, country?: string) =>
+      bodyOf(await read(appId, country).expect(200));
+
+    const seedShippedApp = async () => {
+      const appId = await seedApp();
+      await storeListing(appId);
+      await ship(appId, 'en-US', ['habit', 'tracker']);
+      await ship(appId, 'es-MX', ['tracker', 'planner']);
+      return appId;
+    };
+
+    it('reports a word that two localizations the market reads both hold', async () => {
+      const appId = await seedShippedApp();
+
+      await expect(marketOf(appId)).resolves.toMatchObject({
+        wastedWords: [{ word: 'tracker', localizations: ['en-US', 'es-MX'] }],
+      });
+    });
+
+    it('reports a tracked phrase whose words sit in two localizations', async () => {
+      const appId = await seedShippedApp();
+      await trackPhrase(appId, 'habit planner');
+      const keyword = await prisma.keyword.findFirstOrThrow({
+        where: { text: 'habit planner', country: 'us' },
+      });
+
+      const { splitPhrases } = await marketOf(appId);
+
+      expect(splitPhrases).toEqual([
+        {
+          keywordId: keyword.id,
+          phrase: 'habit planner',
+          parts: [
+            { word: 'habit', localizations: ['en-US'] },
+            { word: 'planner', localizations: ['es-MX'] },
+          ],
+        },
+      ]);
+    });
+
+    it('does not split a phrase one localization holds whole', async () => {
+      const appId = await seedShippedApp();
+      await trackPhrase(appId, 'habit tracker');
+
+      const market = await marketOf(appId);
+
+      expect(market.splitPhrases).toEqual([]);
+      expect(market.wastedWords.map(({ word }) => word)).toEqual(['tracker']);
+    });
+
+    it('counts the title and subtitle of the default localization', async () => {
+      const appId = await seedShippedApp();
+      await trackPhrase(appId, 'garden planner');
+
+      const { splitPhrases } = await marketOf(appId);
+
+      expect(splitPhrases).toHaveLength(1);
+      expect(splitPhrases[0].parts).toEqual([
+        { word: 'garden', localizations: ['en-US'] },
+        { word: 'planner', localizations: ['es-MX'] },
+      ]);
+    });
+
+    it('answers empty lists for a market that reads none of the shipped fields', async () => {
+      const appId = await seedShippedApp();
+
+      await expect(marketOf(appId, 'de')).resolves.toMatchObject({
+        wastedWords: [],
+        splitPhrases: [],
+      });
+    });
+
+    it('ignores a shipped localization the market does not read', async () => {
+      const appId = await seedShippedApp();
+      await ship(appId, 'de', ['tracker']);
+
+      await expect(marketOf(appId)).resolves.toMatchObject({
+        wastedWords: [{ word: 'tracker', localizations: ['en-US', 'es-MX'] }],
+      });
+    });
+
+    it('ignores a paused tracked phrase', async () => {
+      const appId = await seedShippedApp();
+      await trackPhrase(appId, 'habit planner');
+      const keywords = (
+        await api
+          .get(`/apps/${appId}/keywords`)
+          .query({ country: 'us' })
+          .expect(200)
+      ).body as { keywordId: string; text: string }[];
+      const tracked = keywords.find((item) => item.text === 'habit planner');
+      await api
+        .patch(`/apps/${appId}/keywords/${tracked?.keywordId}`)
+        .send({ active: false })
+        .expect(200);
+
+      await expect(marketOf(appId)).resolves.toMatchObject({
+        splitPhrases: [],
+      });
+    });
   });
 });

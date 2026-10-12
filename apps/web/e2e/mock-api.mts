@@ -1006,6 +1006,8 @@ function marketReadsOf(
         };
       },
     ),
+    wastedWords: [],
+    splitPhrases: [],
   };
 }
 

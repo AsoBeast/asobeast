@@ -5,9 +5,8 @@ import {
   keywordFieldLocalizations,
   MarketLocalizationRead,
 } from '@asobeast/shared';
+import type { FieldPhrases } from '../metadata/listing-surfaces';
 import { homeLocalization } from './localization-markets';
-
-export type FieldPhrases = ReadonlyMap<string, readonly string[]>;
 
 export interface MarketReadsInput {
   country: string;
