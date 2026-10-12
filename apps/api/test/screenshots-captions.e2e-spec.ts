@@ -8,6 +8,7 @@ import { AppDetail, ChangeEventItem, ChangeTimeline } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { QUEUES } from '../src/jobs/jobs.types';
 import { CaptionChangeRecorder } from '../src/screenshots/caption-change-recorder';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
 import { ocrRecipe } from '../src/screenshots/ocr-languages';
@@ -29,7 +30,11 @@ import {
   solidPng,
 } from './helpers/screenshot-reading';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  isolateQueues,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 
 describe('Caption changes (e2e)', () => {
   jest.setTimeout(30_000);
@@ -71,6 +76,7 @@ describe('Caption changes (e2e)', () => {
   });
 
   beforeEach(async () => {
+    await isolateQueues(app, QUEUES.SCREENSHOTS);
     registry.reset();
     registry.screenshots = [appleShot(1), appleShot(2)];
     read.mockReset().mockResolvedValue(await solidPng());
