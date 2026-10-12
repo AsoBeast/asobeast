@@ -2681,6 +2681,49 @@
         ]
       }
     },
+    "/apps/{id}/keyword-fields/market": {
+      "get": {
+        "description": "Answers every localization the storefront of the market reads, in read order, with its role (default or additional), whether the app ships it, its origin (home, manual or detected, null when it is not shipped), its saved phrases and the characters they use. Without a query it describes the home storefront of the app. Any App Store storefront may be asked for, whether or not the app tracks keywords there. Answers 400 when country is neither the home storefront nor an App Store storefront and for a Google Play app, and 404 for a missing app.",
+        "operationId": "LocalizationsController_marketKeywordFields",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose search is described. Omitted means the home storefront of the app.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read what one market search reads",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keyword-fields/{localization}": {
       "put": {
         "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, ships the localization when it is not shipped yet, and tracks every phrase in each market of trackIn. trackIn may be empty and must name only markets of the app whose storefront reads the localization. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field read there holds it. Answers 400 when the text runs past 100 characters, when trackIn names a country that is not a market of the app or a storefront that does not read the localization, and for a Google Play app. Answers 403 with quota and writes nothing when the keyword markets would pass the plan limit. Answers 404 for a missing app, and for an empty save of a localization the app does not ship. Saves to one app are written one at a time, so the last save wins.",
