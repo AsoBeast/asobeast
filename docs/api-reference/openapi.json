@@ -2554,6 +2554,131 @@
         "tags": [
           "keywords"
         ]
+      },
+      "post": {
+        "description": "Marks one of the 50 App Store localizations as shipped by the app, with no keyword field yet, and answers 201 with the item. Answers 409 when the app already ships it, the default localization of the home storefront included, and 400 for a tag outside the 50 or a Google Play app.",
+        "operationId": "LocalizationsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAppLocalizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add an App Store localization to an app",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/localizations/{localization}": {
+      "delete": {
+        "description": "Removes a shipped localization and its keyword field in one transaction. Each phrase of the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field there holds it. Keywords tracked from another source stay tracked. Answers 204, 409 for the default localization of the home storefront, 404 when the app does not ship the localization, and 400 for an unknown tag or a Google Play app.",
+        "operationId": "LocalizationsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove an App Store localization from an app",
+        "tags": [
+          "keywords"
+        ]
       }
     },
     "/apps/{id}/changes": {
@@ -5301,6 +5426,70 @@
         },
         "required": [
           "text"
+        ]
+      },
+      "AddAppLocalizationDto": {
+        "type": "object",
+        "properties": {
+          "localization": {
+            "enum": [
+              "ar",
+              "bn",
+              "ca",
+              "zh-Hans",
+              "zh-Hant",
+              "hr",
+              "cs",
+              "da",
+              "nl",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "fi",
+              "fr",
+              "fr-CA",
+              "de",
+              "el",
+              "gu",
+              "he",
+              "hi",
+              "hu",
+              "id",
+              "it",
+              "ja",
+              "kn",
+              "ko",
+              "ms",
+              "ml",
+              "mr",
+              "no",
+              "or",
+              "pl",
+              "pt-BR",
+              "pt-PT",
+              "pa",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "es-MX",
+              "es-ES",
+              "sv",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "vi"
+            ],
+            "type": "string",
+            "example": "es-MX"
+          }
+        },
+        "required": [
+          "localization"
         ]
       },
       "MetadataAssistantDto": {

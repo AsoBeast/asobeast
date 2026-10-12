@@ -203,5 +203,45 @@ describe('Read-only token scope (e2e)', () => {
         expect(response.status).not.toBe(401);
       },
     );
+
+    const LOCALIZATION_WRITES = [
+      [
+        'adding a localization',
+        'post',
+        '/apps/app_missing/localizations',
+        { localization: 'es-MX' },
+      ],
+      [
+        'removing a localization',
+        'delete',
+        '/apps/app_missing/localizations/es-MX',
+        undefined,
+      ],
+    ] as const;
+
+    it.each(LOCALIZATION_WRITES)(
+      'refuses %s to a read-only token',
+      async (_name, method, path, body) => {
+        const response = await request(app.getHttpServer())
+          [method](path)
+          .set('Authorization', `Bearer ${READ_TOKEN}`)
+          .send(body);
+
+        expect(response.status).toBe(403);
+      },
+    );
+
+    it.each(LOCALIZATION_WRITES)(
+      'lets a write token reach %s',
+      async (_name, method, path, body) => {
+        const response = await request(app.getHttpServer())
+          [method](path)
+          .set('Authorization', `Bearer ${writeToken}`)
+          .send(body);
+
+        expect(response.status).not.toBe(403);
+        expect(response.status).not.toBe(401);
+      },
+    );
   });
 });

@@ -34,6 +34,7 @@ const build = (stored: string[] = []) => {
     },
     appLocalization: {
       createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
   };
   const quota = {
@@ -288,5 +289,92 @@ describe('KeywordFieldWriter', () => {
     });
 
     expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+  });
+
+  describe('remove', () => {
+    const rowsOf = (...rows: [string, string, string][]) =>
+      rows.map(([keywordId, text, country]) => ({
+        keywordId,
+        keyword: { text, country },
+      }));
+
+    it('empties the field and deletes the localization row in one admission', async () => {
+      const { writer, tx, quota } = build(['habito', 'metas']);
+
+      await writer.remove(APP, 'es-MX');
+
+      expect(quota.admitKeywordMarkets).toHaveBeenCalledTimes(1);
+      const where = { where: { appId: 'app1', localization: 'es-MX' } };
+      expect(tx.keywordField.deleteMany).toHaveBeenCalledWith(where);
+      expect(tx.appLocalization.deleteMany).toHaveBeenCalledWith(where);
+    });
+
+    it('takes the field lock inside the quota admission', async () => {
+      const { writer, events } = build(['habito']);
+
+      await writer.remove(APP, 'es-MX');
+
+      expect(events).toEqual(['quota admission', 'field lock']);
+    });
+
+    it('untracks every previous phrase in every market that reads the localization', async () => {
+      const { writer, tx } = build(['habito', 'metas']);
+      tx.trackedKeyword.findMany.mockResolvedValue(
+        rowsOf(
+          ['k1', 'metas', 'mx'],
+          ['k2', 'habito', 'us'],
+          ['k3', 'metas', 'de'],
+        ),
+      );
+
+      await writer.remove(APP, 'es-MX');
+
+      expect(tx.trackedKeyword.updateMany).toHaveBeenCalledTimes(1);
+      expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
+        where: {
+          appId: APP.id,
+          active: true,
+          source: 'KEYWORD_FIELD',
+          keywordId: { in: ['k1', 'k2'] },
+        },
+        data: { active: false },
+      });
+    });
+
+    it('keeps a phrase another saved field of the market still holds', async () => {
+      const { writer, tx } = build(['habito', 'metas']);
+      tx.trackedKeyword.findMany.mockResolvedValue(
+        rowsOf(
+          ['k1', 'metas', 'mx'],
+          ['k2', 'habito', 'us'],
+          ['k3', 'metas', 'de'],
+        ),
+      );
+      tx.keywordField.findMany.mockResolvedValue([
+        { localization: 'en-US', phrases: ['habito'] },
+      ]);
+
+      await writer.remove(APP, 'es-MX');
+
+      expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
+        where: {
+          appId: APP.id,
+          active: true,
+          source: 'KEYWORD_FIELD',
+          keywordId: { in: ['k1'] },
+        },
+        data: { active: false },
+      });
+    });
+
+    it('touches no tracked keyword when the field was already empty', async () => {
+      const { writer, tx } = build([]);
+
+      await writer.remove(APP, 'es-MX');
+
+      expect(tx.trackedKeyword.findMany).not.toHaveBeenCalled();
+      expect(tx.trackedKeyword.updateMany).not.toHaveBeenCalled();
+      expect(tx.appLocalization.deleteMany).toHaveBeenCalled();
+    });
   });
 });
