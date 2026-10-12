@@ -3,6 +3,7 @@ import {
   KEYWORD_FIELD_CHAR_LIMIT,
   UnknownStorefrontError,
 } from '@asobeast/shared';
+import { PrismaService } from '../prisma/prisma.service';
 import { AppLocalizationsService } from './app-localizations.service';
 import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 
@@ -22,10 +23,21 @@ const listed = (home: string): AppLocalizationsResult => ({
   ],
 });
 
+const prisma = {
+  trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+  appSnapshot: {
+    findFirst: jest.fn().mockResolvedValue(null),
+    findMany: jest.fn().mockResolvedValue([]),
+  },
+};
+
 const serviceFor = (home: string) =>
-  new MarketKeywordFieldsService({
-    list: jest.fn().mockResolvedValue(listed(home)),
-  } as unknown as AppLocalizationsService);
+  new MarketKeywordFieldsService(
+    {
+      list: jest.fn().mockResolvedValue(listed(home)),
+    } as unknown as AppLocalizationsService,
+    prisma as unknown as PrismaService,
+  );
 
 describe('MarketKeywordFieldsService.read', () => {
   it('reads the home market when no country is given', async () => {

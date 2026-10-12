@@ -76,8 +76,26 @@ export interface MarketLocalizationRead {
   charactersLimit: number;
 }
 
+export interface WastedWord {
+  word: string;
+  localizations: AppStoreLocalization[];
+}
+
+export interface SplitPhrasePart {
+  word: string;
+  localizations: AppStoreLocalization[];
+}
+
+export interface SplitPhrase {
+  keywordId: string;
+  phrase: string;
+  parts: SplitPhrasePart[];
+}
+
 export interface MarketKeywordFields {
   country: string;
   home: boolean;
   localizations: MarketLocalizationRead[];
+  wastedWords: WastedWord[];
+  splitPhrases: SplitPhrase[];
 }
