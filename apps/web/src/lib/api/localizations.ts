@@ -1,6 +1,8 @@
 import type {
   AppLocalizationsResult,
   AppStoreLocalization,
+  KeywordFieldPreviewRequest,
+  KeywordFieldSavePreview,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
@@ -22,6 +24,20 @@ export function saveLocalizedKeywordField(
     {
       method: "PUT",
       body: JSON.stringify(body satisfies LocalizedKeywordFieldRequest),
+    },
+  );
+}
+
+export function previewLocalizedKeywordField(
+  appId: string,
+  localization: AppStoreLocalization,
+  body: KeywordFieldPreviewRequest,
+): Promise<KeywordFieldSavePreview> {
+  return apiFetch<KeywordFieldSavePreview>(
+    `/apps/${appId}/keyword-fields/${localization}/preview`,
+    {
+      method: "POST",
+      body: JSON.stringify(body satisfies KeywordFieldPreviewRequest),
     },
   );
 }

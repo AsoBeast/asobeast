@@ -5,17 +5,26 @@ import {
   type AppLocalizationOrigin,
   type AppLocalizationsResult,
   type AppStoreLocalization,
+  type KeywordFieldMarketPreview,
+  type KeywordFieldSavePreview,
   type LocalizationReader,
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
 import {
+  addedSentence,
+  droppedSentence,
   editLocalizationHref,
   keywordFieldDraft,
   localizationMatrix,
   openLocalization,
   readingStorefrontNames,
+  saveCostText,
   savedDescription,
+  saveQuotaNotice,
+  selectedCost,
+  shouldConfirmSave,
+  tracksNewPhrases,
   upsertLocalization,
 } from "./app-localizations";
 
@@ -41,6 +50,38 @@ function item(
     updatedAt: null,
   };
 }
+
+const market = (
+  country: string,
+  role: LocalizationReadRole,
+  newPhrases: string[],
+  home = false,
+): KeywordFieldMarketPreview => ({
+  country,
+  role,
+  home,
+  newPhrases,
+  keywordMarkets: newPhrases.length,
+  dailyRequests: newPhrases.length,
+});
+
+const preview = (
+  patch: Partial<KeywordFieldSavePreview>,
+): KeywordFieldSavePreview => ({
+  localization: "es-MX",
+  phrases: [],
+  added: [],
+  dropped: [],
+  duplicatesRemoved: 0,
+  charactersUsed: 0,
+  charactersLimit: 100,
+  markets: [],
+  quota: null,
+  ...patch,
+});
+
+const US = market("us", "additional", [], true);
+const MX = market("mx", "default", []);
 
 const RESULT: AppLocalizationsResult = {
   home: "us",
@@ -226,5 +267,150 @@ describe("editLocalizationHref", () => {
     expect(editLocalizationHref("app-1", "es-MX")).toBe(
       "/apps/app-1/metadata?fieldLocale=es-MX#app-localizations",
     );
+  });
+});
+
+describe("the save review", () => {
+  const costly = preview({
+    markets: [
+      market("us", "additional", ["a", "b"], true),
+      market("mx", "default", ["a"]),
+    ],
+  });
+
+  it("W-SAV-01 saves straight away when nothing is added, dropped or newly tracked", () => {
+    expect(shouldConfirmSave(preview({ markets: [US, MX] }))).toBe(false);
+  });
+
+  it("W-SAV-02 asks when a phrase is added", () => {
+    expect(shouldConfirmSave(preview({ added: ["a"] }))).toBe(true);
+  });
+
+  it("W-SAV-03 asks when a phrase is dropped", () => {
+    expect(shouldConfirmSave(preview({ dropped: ["a"] }))).toBe(true);
+  });
+
+  it("W-SAV-04 asks when a market would track a phrase it does not track yet", () => {
+    expect(
+      shouldConfirmSave(
+        preview({ markets: [market("us", "additional", ["a"], true), MX] }),
+      ),
+    ).toBe(true);
+  });
+
+  it("W-SAV-05 sums the cost of the ticked markets only", () => {
+    expect(selectedCost(costly, ["us", "mx"])).toEqual({
+      keywordMarkets: 3,
+      dailyRequests: 3,
+    });
+    expect(selectedCost(costly, ["mx"])).toEqual({
+      keywordMarkets: 1,
+      dailyRequests: 1,
+    });
+  });
+
+  it("W-SAV-06 costs nothing when no market is ticked", () => {
+    expect(selectedCost(costly, [])).toEqual({
+      keywordMarkets: 0,
+      dailyRequests: 0,
+    });
+  });
+
+  it("W-SAV-07 words the cost", () => {
+    expect(saveCostText({ keywordMarkets: 2, dailyRequests: 2 })).toBe(
+      "Adds 2 keyword markets and about 2 store requests a day.",
+    );
+    expect(saveCostText({ keywordMarkets: 1, dailyRequests: 1 })).toBe(
+      "Adds 1 keyword market and about 1 store request a day.",
+    );
+    expect(saveCostText({ keywordMarkets: 0, dailyRequests: 0 })).toBe(
+      "Tracks nothing new.",
+    );
+  });
+
+  it.each([
+    [null, 4, null],
+    [
+      { used: 6, limit: 10, upgradeTo: "ultimate" as const },
+      4,
+      {
+        text: "10 of 10 keyword markets after saving.",
+        over: false,
+        upgrade: false,
+      },
+    ],
+    [
+      { used: 6, limit: 10, upgradeTo: "ultimate" as const },
+      5,
+      {
+        text: "11 of 10 keyword markets after saving.",
+        over: true,
+        upgrade: true,
+      },
+    ],
+    [
+      { used: 6, limit: 10, upgradeTo: null },
+      5,
+      {
+        text: "11 of 10 keyword markets after saving.",
+        over: true,
+        upgrade: false,
+      },
+    ],
+    [
+      { used: 0, limit: 0, upgradeTo: "indie" as const },
+      1,
+      {
+        text: "Your plan includes no keyword markets.",
+        over: true,
+        upgrade: true,
+      },
+    ],
+    [
+      { used: 0, limit: 0, upgradeTo: "indie" as const },
+      0,
+      {
+        text: "Your plan includes no keyword markets.",
+        over: false,
+        upgrade: false,
+      },
+    ],
+  ])(
+    "W-SAV-08 words the plan quota after the save (%j, %d)",
+    (quota, keywordMarkets, expected) => {
+      expect(
+        saveQuotaNotice(quota, {
+          keywordMarkets,
+          dailyRequests: keywordMarkets,
+        }),
+      ).toEqual(expected);
+    },
+  );
+
+  it("W-SAV-09 scores new keywords only when a ticked market tracks a new phrase", () => {
+    expect(tracksNewPhrases(costly, ["us"])).toBe(true);
+    expect(tracksNewPhrases(costly, [])).toBe(false);
+    expect(tracksNewPhrases(preview({ markets: [US, MX] }), ["us", "mx"])).toBe(
+      false,
+    );
+  });
+
+  it("W-SAV-10 words what is added and what leaves the field", () => {
+    expect(addedSentence(preview({ added: ["a", "b"] }))).toBe(
+      "2 new phrases: a, b",
+    );
+    expect(addedSentence(preview({ added: ["a"] }))).toBe("1 new phrase: a");
+    expect(addedSentence(preview({}))).toBeNull();
+    expect(
+      droppedSentence(preview({ dropped: ["a", "b"], markets: [US, MX] })),
+    ).toBe(
+      "2 phrases leave the field and stop being tracked as keyword field phrases in United States and Mexico",
+    );
+    expect(
+      droppedSentence(preview({ dropped: ["a"], markets: [US, MX] })),
+    ).toBe(
+      "1 phrase leaves the field and stops being tracked as a keyword field phrase in United States and Mexico",
+    );
+    expect(droppedSentence(preview({ markets: [US, MX] }))).toBeNull();
   });
 });

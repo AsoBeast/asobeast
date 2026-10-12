@@ -2,11 +2,13 @@ import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
 import type { LocalizationSeed } from "./fixtures.mts";
+import { expectFitsViewport } from "./dialog.mts";
 import {
   fieldRequests,
   LOCALES_APP,
   localizationItem,
   MOCK_API_URL,
+  QUOTA_COOKIE,
   seedLocalizations,
 } from "./localizations.mts";
 import { seedCookies } from "./routes.mts";
@@ -224,6 +226,12 @@ test.describe("on the locale lab", () => {
   const save = (page: Page) =>
     page.getByRole("button", { name: "Save keyword field" });
 
+  const confirmSave = (page: Page) =>
+    page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Save and track" })
+      .click();
+
   test("arrives with the page and the browser never asks for it", async ({
     page,
   }) => {
@@ -416,6 +424,10 @@ test.describe("on the locale lab", () => {
         request.url().endsWith("/keyword-fields/en-US"),
     );
     await save(page).click();
+    await expect(
+      page.getByRole("dialog").getByText("2 new", { exact: true }),
+    ).toBeVisible();
+    await confirmSave(page);
     expect((await put).postDataJSON()).toEqual({
       text: "alpha,beta",
       trackIn: ["us"],
@@ -455,6 +467,7 @@ test.describe("on the locale lab", () => {
         request.url().endsWith("/keyword-fields/es-MX"),
     );
     await save(page).click();
+    await confirmSave(page);
 
     expect((await put).postDataJSON()).toEqual({
       text: "temporizador",
@@ -487,6 +500,7 @@ test.describe("on the locale lab", () => {
 
     await typeInto(box, "");
     await save(page).click();
+    await confirmSave(page);
 
     await expect(page.getByText("The field is empty.")).toBeVisible();
     await page.reload();
@@ -510,6 +524,7 @@ test.describe("on the locale lab", () => {
     await english.click();
     await typeInto(editor(page, "English (U.S.)"), "focus timer");
     await save(page).click();
+    await confirmSave(page);
     await expect(
       page.getByText("Saved the English (U.S.) keyword field"),
     ).toBeVisible();
@@ -517,6 +532,7 @@ test.describe("on the locale lab", () => {
     await spanish.click();
     await typeInto(editor(page, "Spanish (Mexico)"), "temporizador");
     await save(page).click();
+    await confirmSave(page);
     await expect(
       page.getByText("Saved the Spanish (Mexico) keyword field"),
     ).toBeVisible();
@@ -525,5 +541,354 @@ test.describe("on the locale lab", () => {
     await expect(editor(page, "Spanish (Mexico)")).toHaveValue("temporizador");
     await english.click();
     await expect(editor(page, "English (U.S.)")).toHaveValue("focus timer");
+  });
+
+  test.describe("confirming where a save tracks", () => {
+    const TRACKED_ALPHA_BETA = {
+      ...MX_SEED,
+      fields: { "es-MX": ["alpha", "beta"] },
+      tracked: { us: ["alpha", "beta"], mx: ["alpha", "beta"] },
+    } satisfies LocalizationSeed;
+
+    const dialog = (page: Page) => page.getByRole("dialog");
+
+    async function putOf(
+      page: Page,
+      localization: string,
+      act: () => Promise<void>,
+    ): Promise<unknown> {
+      const put = page.waitForRequest(
+        (request) =>
+          request.method() === "PUT" &&
+          request.url().endsWith(`/keyword-fields/${localization}`),
+      );
+      await act();
+      return (await put).postDataJSON();
+    }
+
+    async function openSpanishDialog(page: Page, text: string) {
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      await typeInto(editor(page, "Spanish (Mexico)"), text);
+      await save(page).click();
+      await expect(dialog(page)).toBeVisible();
+    }
+
+    test("saves straight away when nothing new would be tracked", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, TRACKED_ALPHA_BETA);
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      await typeInto(editor(page, "Spanish (Mexico)"), "beta,alpha");
+
+      const checked = page.waitForRequest(
+        (request) =>
+          request.method() === "POST" &&
+          request.url().endsWith("/keyword-fields/es-MX/preview"),
+      );
+      const body = await putOf(page, "es-MX", async () => {
+        await save(page).click();
+        await checked;
+      });
+
+      expect(body).toEqual({ text: "beta,alpha", trackIn: ["us", "mx"] });
+      await expect(dialog(page)).toHaveCount(0);
+      await expect(
+        page.getByText("Saved the Spanish (Mexico) keyword field"),
+      ).toBeVisible();
+    });
+
+    test("asks where to track new phrases", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      const modal = page.getByRole("dialog", {
+        name: "Save the Spanish (Mexico) keyword field",
+      });
+      await expect(modal).toHaveAccessibleDescription(
+        "Choose the markets that should track its phrases. Every market on its list reads the field either way.",
+      );
+      await expect(
+        modal.getByText("2 new phrases: temporizador, enfoque"),
+      ).toBeVisible();
+      await expect(
+        modal.getByRole("checkbox", { name: "United States" }),
+      ).toBeChecked();
+      await expect(
+        modal.getByRole("checkbox", { name: "Mexico" }),
+      ).toBeChecked();
+      await expect(modal.getByText("2 new", { exact: true })).toHaveCount(2);
+      await expect(modal.getByText("Also", { exact: true })).toBeVisible();
+      await expect(modal.getByText("Default", { exact: true })).toBeVisible();
+      await expect(
+        modal.getByText(
+          "Adds 4 keyword markets and about 4 store requests a day.",
+        ),
+      ).toBeVisible();
+      await expect(modal.getByRole("button", { name: "Cancel" })).toBeVisible();
+      await expect(
+        modal.getByRole("button", { name: "Save and track" }),
+      ).toBeVisible();
+    });
+
+    test("sums the cost of the ticked markets and sends them as trackIn", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      await dialog(page)
+        .getByRole("checkbox", { name: "United States" })
+        .click();
+      await expect(
+        dialog(page).getByText(
+          "Adds 2 keyword markets and about 2 store requests a day.",
+        ),
+      ).toBeVisible();
+      const body = await putOf(page, "es-MX", () =>
+        dialog(page).getByRole("button", { name: "Save and track" }).click(),
+      );
+
+      expect(body).toEqual({ text: "temporizador, enfoque", trackIn: ["mx"] });
+      await expect(page.getByText("2 phrases tracked in Mexico")).toBeVisible();
+      await expect(page.getByText("Queued · scoring")).toBeVisible();
+    });
+
+    test("saves without tracking when no market is ticked", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      await dialog(page)
+        .getByRole("checkbox", { name: "United States" })
+        .click();
+      await dialog(page).getByRole("checkbox", { name: "Mexico" }).click();
+      await expect(dialog(page).getByText("Tracks nothing new.")).toBeVisible();
+      const body = await putOf(page, "es-MX", () =>
+        dialog(page).getByRole("button", { name: "Save", exact: true }).click(),
+      );
+
+      expect(body).toMatchObject({ trackIn: [] });
+      await expect(
+        page.getByText("Its phrases are not tracked in any market"),
+      ).toBeVisible();
+      await expect(page.getByText("Queued · scoring")).toHaveCount(0);
+    });
+
+    test("names the phrases that leave the field", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, TRACKED_ALPHA_BETA);
+      await openSpanishDialog(page, "alpha");
+
+      await expect(
+        dialog(page).getByText(
+          "1 phrase leaves the field and stops being tracked as a keyword field phrase in United States and Mexico",
+        ),
+      ).toBeVisible();
+      await expect(dialog(page).getByText(/new phrase/)).toHaveCount(0);
+      await expect(dialog(page).getByText("Tracks nothing new.")).toBeVisible();
+    });
+
+    test("warns when the plan cannot hold the new keyword markets", async ({
+      context,
+      page,
+    }) => {
+      await seedCookies(context, { [QUOTA_COOKIE]: "3" });
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      await expect(
+        dialog(page).getByText("4 of 3 keyword markets after saving."),
+      ).toBeVisible();
+      await expect(
+        dialog(page).getByRole("link", { name: "See plans" }),
+      ).toHaveAttribute("href", "/upgrade");
+      await expect(
+        dialog(page).getByRole("button", { name: "Save and track" }),
+      ).toBeDisabled();
+
+      await dialog(page)
+        .getByRole("checkbox", { name: "United States" })
+        .click();
+      await expect(
+        dialog(page).getByText("2 of 3 keyword markets after saving."),
+      ).toBeVisible();
+      await expect(
+        dialog(page).getByRole("link", { name: "See plans" }),
+      ).toHaveCount(0);
+      await expect(
+        dialog(page).getByRole("button", { name: "Save and track" }),
+      ).toBeEnabled();
+    });
+
+    test("shows the plan quota without a warning while the save fits", async ({
+      context,
+      page,
+    }) => {
+      await seedCookies(context, { [QUOTA_COOKIE]: "10" });
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador, enfoque");
+
+      await expect(
+        dialog(page).getByText("4 of 10 keyword markets after saving."),
+      ).toBeVisible();
+      await expect(
+        dialog(page).getByRole("link", { name: "See plans" }),
+      ).toHaveCount(0);
+      await expect(
+        dialog(page).getByRole("button", { name: "Save and track" }),
+      ).toBeEnabled();
+    });
+
+    test("cannot be closed while the save runs", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      await page.route("**/keyword-fields/es-MX", async (route) => {
+        await held;
+        await route.continue();
+      });
+      await openSpanishDialog(page, "temporizador");
+
+      await dialog(page)
+        .getByRole("button", { name: "Save and track" })
+        .click();
+      const cancel = dialog(page).getByRole("button", { name: "Cancel" });
+      await expect(cancel).toBeDisabled();
+      await page.keyboard.press("Escape");
+      await page.mouse.click(5, 5);
+      await expect(dialog(page)).toBeVisible();
+      await expect(cancel).toBeDisabled();
+
+      release();
+      await expect(dialog(page)).toHaveCount(0);
+      await expect(
+        page.getByText("Saved the Spanish (Mexico) keyword field"),
+      ).toBeVisible();
+    });
+
+    test("keeps the dialog open and shows the refusal when the plan limit was reached meanwhile", async ({
+      context,
+      page,
+    }) => {
+      await seedCookies(context, { e2e_field_race: "1" });
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador");
+
+      await dialog(page)
+        .getByRole("button", { name: "Save and track" })
+        .click();
+
+      await expect(
+        dialog(page).getByText(
+          "keywordMarkets limit reached: 998 of 1000 used on the indie plan, 5 more requested",
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Saved the Spanish (Mexico) keyword field"),
+      ).toHaveCount(0);
+      await dialog(page).getByRole("button", { name: "Cancel" }).click();
+      await expect(dialog(page)).toHaveCount(0);
+      await expect(editor(page, "Spanish (Mexico)")).toHaveValue(
+        "temporizador",
+      );
+    });
+
+    test("writes nothing until the dialog is confirmed", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador");
+
+      const spanishOf = async () =>
+        (
+          (await (
+            await page.request.get(
+              `${MOCK_API_URL}/apps/${LOCALES_APP}/localizations`,
+            )
+          ).json()) as AppLocalizationsResult
+        ).localizations.find((item) => item.localization === "es-MX");
+
+      expect(await spanishOf()).toMatchObject({ phrases: [] });
+      await dialog(page).getByRole("button", { name: "Cancel" }).click();
+      await expect(dialog(page)).toHaveCount(0);
+      expect(await spanishOf()).toMatchObject({ phrases: [] });
+    });
+
+    test("sends one save for a double click", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      await openSpanishDialog(page, "temporizador");
+      let puts = 0;
+      page.on("request", (request) => {
+        if (
+          request.method() === "PUT" &&
+          request.url().endsWith("/keyword-fields/es-MX")
+        ) {
+          puts += 1;
+        }
+      });
+
+      await dialog(page)
+        .getByRole("button", { name: "Save and track" })
+        .dblclick();
+
+      await expect(
+        page.getByText("Saved the Spanish (Mexico) keyword field"),
+      ).toBeVisible();
+      expect(puts).toBe(1);
+    });
+
+    test("tracks a field only in the markets that were ticked", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, {
+        markets: ["de", "at"],
+        shipped: [{ localization: "de", origin: "manual" }],
+      });
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=de`);
+      await typeInto(editor(page, "German"), "gewohnheit");
+      await save(page).click();
+
+      await expect(
+        dialog(page).getByRole("checkbox", { name: "Austria" }),
+      ).toBeVisible();
+      await expect(
+        dialog(page).getByRole("checkbox", { name: "Germany" }),
+      ).toBeVisible();
+      await expect(
+        dialog(page).getByRole("checkbox", { name: "United States" }),
+      ).toHaveCount(0);
+      await expect(
+        dialog(page).getByText("Default", { exact: true }),
+      ).toHaveCount(2);
+      await dialog(page).getByRole("checkbox", { name: "Austria" }).click();
+      const body = await putOf(page, "de", () =>
+        dialog(page).getByRole("button", { name: "Save and track" }).click(),
+      );
+
+      expect(body).toMatchObject({ trackIn: ["de"] });
+      await expect(page.getByText("1 phrase tracked in Germany")).toBeVisible();
+    });
+
+    for (const viewport of [
+      { width: 1280, height: 560 },
+      { width: 375, height: 480 },
+    ]) {
+      test(`keeps the save dialog inside a short viewport at ${viewport.width}x${viewport.height}`, async ({
+        page,
+      }) => {
+        await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+        await page.setViewportSize(viewport);
+        await openSpanishDialog(page, "temporizador, enfoque");
+
+        const modal = dialog(page);
+        await modal.evaluate((node) =>
+          Promise.all(
+            node.getAnimations().map((animation) => animation.finished),
+          ),
+        );
+        await expectFitsViewport(page, modal);
+        await expect(
+          modal.getByRole("button", { name: "Save and track" }),
+        ).toBeInViewport();
+      });
+    }
   });
 });
