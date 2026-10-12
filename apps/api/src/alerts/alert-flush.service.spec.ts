@@ -487,6 +487,17 @@ describe('AlertFlushService', () => {
     expect(harness.completionUpdates[0].where.flushId).toBe('claim-1');
   });
 
+  it('queries only confirmed, active email subscriptions', async () => {
+    const harness = buildHarness();
+
+    await harness.service.flushEveryWorkspace();
+
+    expect(harness.prisma.emailAlert.findMany).toHaveBeenCalledWith({
+      where: { active: true, confirmedAt: { not: null } },
+      select: { id: true, events: true },
+    });
+  });
+
   it('does not query email subscriptions when mail is disabled', async () => {
     const harness = buildHarness();
     Object.defineProperty(harness.mailer, 'enabled', { value: false });

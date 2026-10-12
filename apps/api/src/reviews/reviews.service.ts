@@ -12,6 +12,8 @@ import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import {
+  askAgainWhileEmpty,
+  EMPTY_ANSWER_RETRIES,
   IMPLAUSIBLE_LOOKBACK_DAYS,
   isImplausiblyEmpty,
 } from '../store-providers/result-plausibility';
@@ -29,13 +31,6 @@ export interface ReviewListFilters {
 }
 
 const REVIEW_TEXT_MAX = 500;
-
-export const EMPTY_FEED_RETRIES: Record<Store, number> = {
-  APP_STORE: 3,
-  GOOGLE_PLAY: 0,
-};
-
-const EMPTY_FEED_RETRY_DELAY_MS = 4000;
 
 interface ReviewSource {
   id: string;
@@ -73,7 +68,7 @@ export class ReviewsService {
     const provider = this.registry.get(app.store);
     const expected = await this.expectsReviews(app.id);
     const retries =
-      expected || payload.backfill ? EMPTY_FEED_RETRIES[app.store] : 0;
+      expected || payload.backfill ? EMPTY_ANSWER_RETRIES[app.store] : 0;
     const fetched = await this.fetchPages(
       provider,
       app,
@@ -160,27 +155,17 @@ export class ReviewsService {
   ): Promise<Map<string, ReviewResult>> {
     const fetched = new Map<string, ReviewResult>();
     for (let page = 1; page <= pages; page++) {
-      for (const review of await this.fetchPage(provider, app, page, retries)) {
+      const reviews = await askAgainWhileEmpty(
+        () => provider.reviews(app.storeAppId, app.country, page),
+        retries,
+      );
+      for (const review of reviews) {
         if (!fetched.has(review.reviewId)) {
           fetched.set(review.reviewId, review);
         }
       }
     }
     return fetched;
-  }
-
-  private async fetchPage(
-    provider: StoreProvider,
-    app: ReviewSource,
-    page: number,
-    retries: number,
-  ): Promise<ReviewResult[]> {
-    let results = await provider.reviews(app.storeAppId, app.country, page);
-    for (let retry = 0; results.length === 0 && retry < retries; retry++) {
-      await sleep(EMPTY_FEED_RETRY_DELAY_MS);
-      results = await provider.reviews(app.storeAppId, app.country, page);
-    }
-    return results;
   }
 
   private async expectsReviews(appId: string): Promise<boolean> {
@@ -327,8 +312,4 @@ export class ReviewsService {
       throw new NotFoundException(`App ${id} not found`);
     }
   }
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }

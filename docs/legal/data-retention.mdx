@@ -71,13 +71,14 @@ An end to end test seeds a row in **every** tenant owned table, deletes the work
 
 ### What erasure does not remove
 
-Three things survive, deliberately, and pretending otherwise would be dishonest.
+Four things survive, deliberately, and pretending otherwise would be dishonest.
 
 | Survives | Why | For how long |
 | --- | --- | --- |
 | Stored billing events | The link to your workspace is removed, but the payment provider's event record is kept for accounting and idempotency | 90 days, then pruned |
 | Support access records | An audit trail of operator access that expired with the account would not be an audit trail | Indefinitely. It holds an operator email, an action and a reason, never your data |
 | Keyword rows | One search serves every workspace tracking that phrase and market. The row is shared and carries no owner | While anyone tracks it |
+| Trial claims | One free trial per mailbox is only enforceable if the record outlives the workspace that took it. The row is a keyed hash of the mailbox (an HMAC under the instance secret), not the address, and it holds no workspace or account reference | Until the instance secret is rotated. Hosted retention is stated in the privacy policy |
 
 Beyond the application:
 

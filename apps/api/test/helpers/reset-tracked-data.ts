@@ -6,6 +6,9 @@ BEGIN
   IF to_regclass('public."App"') IS NOT NULL THEN
     TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE;
   END IF;
+  IF to_regclass('public."TrialClaim"') IS NOT NULL THEN
+    TRUNCATE TABLE "TrialClaim";
+  END IF;
 END
 $$`;
 

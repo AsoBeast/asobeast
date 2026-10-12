@@ -150,6 +150,17 @@ async function fetchText(
   return response.text();
 }
 
+const EDGE_CACHED_HOST = 'itunes.apple.com';
+
+const pastEdgeCache: typeof fetch = (input, init) => {
+  if (input instanceof Request) return egressFetch(input, init);
+  const url = new URL(input);
+  if (url.hostname === EDGE_CACHED_HOST) {
+    url.searchParams.set('nonce', randomUUID());
+  }
+  return egressFetch(url, init);
+};
+
 const pageUrl = (id: number, country: string, language?: string): string => {
   const url = new URL(`https://apps.apple.com/${country}/app/id${id}`);
   if (language !== undefined) url.searchParams.set('l', language);
@@ -159,13 +170,15 @@ const pageUrl = (id: number, country: string, language?: string): string => {
 async function scrape<O extends Abortable, T>(
   { signal, ...options }: O,
   call: (
-    options: Omit<O, 'signal'> & { requestOptions: { signal: AbortSignal } },
+    options: Omit<O, 'signal'> & {
+      requestOptions: { signal: AbortSignal; fetch: typeof fetch };
+    },
   ) => Promise<T>,
 ): Promise<T> {
   const attempt = attemptSignal(signal);
   const result = await call({
     ...options,
-    requestOptions: { signal: attempt },
+    requestOptions: { signal: attempt, fetch: pastEdgeCache },
   });
   attempt.throwIfAborted();
   return result;

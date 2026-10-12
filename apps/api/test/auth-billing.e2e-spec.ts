@@ -68,7 +68,7 @@ describe('Auth (billing mode)', () => {
     await clearRateLimitCounters(app);
     await clearOnDemandCounters(app);
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "App" RESTART IDENTITY CASCADE',
@@ -81,6 +81,7 @@ describe('Auth (billing mode)', () => {
       data: {
         plan: 'free',
         trialStartedAt: null,
+        trialDeclinedAt: null,
         trialEndsAt: null,
         planExpiresAt: null,
         subscriptionId: null,
@@ -91,7 +92,7 @@ describe('Auth (billing mode)', () => {
 
   afterAll(async () => {
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
     );
     await obliterateQueues(app);
     await app.close();

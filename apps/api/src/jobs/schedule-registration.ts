@@ -1,12 +1,14 @@
-import { QueueBase } from 'bullmq';
-
 export const REGISTRATION_RETRY_MS = 30_000;
+
+export interface Closable {
+  readonly closing: Promise<void> | undefined;
+}
 
 const elapse = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms).unref());
 
 async function registerUntilDone(
-  queue: QueueBase,
+  queue: Closable,
   register: () => Promise<void>,
   report: (error: Error) => void,
 ): Promise<void> {
@@ -22,7 +24,7 @@ async function registerUntilDone(
 }
 
 export function registerInBackground(
-  queue: QueueBase,
+  queue: Closable,
   register: () => Promise<void>,
   report: (error: Error) => void,
 ): Promise<void> {

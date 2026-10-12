@@ -288,4 +288,27 @@ describe('AlertsDispatcher', () => {
       select: { id: true },
     });
   });
+
+  it('fans an instant event out only to confirmed, active email alerts', async () => {
+    const prisma = buildPrisma();
+    const { queue } = buildQueue();
+    const dispatcher = new AlertsDispatcher(
+      prisma as unknown as PrismaService,
+      { enabled: true } as MailerService,
+      buildConfig('instant'),
+      queue,
+      workspace,
+    );
+
+    await inWorkspace(() => dispatcher.dispatch(overtake));
+
+    expect(prisma.emailAlert.findMany).toHaveBeenCalledWith({
+      where: {
+        active: true,
+        confirmedAt: { not: null },
+        events: { has: 'rank.overtaken' },
+      },
+      select: { id: true },
+    });
+  });
 });

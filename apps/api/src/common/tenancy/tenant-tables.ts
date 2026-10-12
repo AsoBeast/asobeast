@@ -38,4 +38,5 @@ export const OPERATOR_TABLES = [
   'ProxyHealth',
   'ProxySpend',
   'SupportAccess',
+  'TrialClaim',
 ] as const;

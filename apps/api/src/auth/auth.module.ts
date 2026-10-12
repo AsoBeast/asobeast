@@ -18,6 +18,8 @@ import { AlertsModule } from '../alerts/alerts.module';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { DailyCapacity } from '../jobs/daily-capacity.service';
 import { SignupCapacityGate } from './signup-capacity.gate';
+import { TrialClaimBackfill } from './trial-claim-backfill';
+import { TrialClaims } from './trial-claims';
 
 @Module({
   imports: [
@@ -41,6 +43,8 @@ import { SignupCapacityGate } from './signup-capacity.gate';
     AccountPlanService,
     WorkspaceTeamService,
     EmailVerificationService,
+    TrialClaims,
+    TrialClaimBackfill,
     PasswordResetService,
     PublicWebUrl,
     VerificationMailer,
