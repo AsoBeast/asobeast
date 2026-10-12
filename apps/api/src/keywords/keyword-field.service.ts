@@ -197,6 +197,7 @@ export class KeywordFieldService {
       this.prisma.keyword.findMany({
         where: { tracked: { some: { appId } } },
         distinct: ['country'],
+        orderBy: { country: 'asc' },
         select: { country: true },
       }),
     ]);

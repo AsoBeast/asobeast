@@ -905,6 +905,19 @@ describe('KeywordsController (e2e)', () => {
       expect(field.charactersUsed).toBe('habit,goals'.length);
     });
 
+    it('lists the markets that read a field home first, then by code', async () => {
+      const id = await importApp();
+      await put(id, { country: 'mx' }, 'metas').expect(200);
+      await put(id, { country: 'ar', localization: 'es-MX' }, 'metas').expect(
+        200,
+      );
+
+      const response = await api.get(`/apps/${id}/keyword-fields`).expect(200);
+      expect(
+        (response.body as KeywordFieldSummary[]).map(({ markets }) => markets),
+      ).toEqual([['us', 'ar', 'mx']]);
+    });
+
     it('lists every saved field with the markets of the app that read it', async () => {
       const id = await importApp();
       await putKeywordField(id, 'habit');
