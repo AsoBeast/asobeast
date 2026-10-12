@@ -23,6 +23,7 @@ export const ACCOUNT_MAIL_KINDS = [
   'verification',
   'recovery',
   'invitation',
+  'alert-confirmation',
 ] as const;
 
 export type AccountMailKind = (typeof ACCOUNT_MAIL_KINDS)[number];

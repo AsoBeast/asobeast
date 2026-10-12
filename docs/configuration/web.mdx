@@ -33,7 +33,7 @@ Two consequences follow from that, and both are the reason it works this way.
 
 The proxy never passes a caller supplied `X-Forwarded-For` or `X-Real-IP` through to the API, because a caller can write either one and the API keys authentication throttling on what it reads there.
 
-Instead it sends exactly one address, the one `TRUST_PROXY` says it can trust, taken that many entries back from the right of the incoming header. At `0` it sends no address at all, so the API sees the web container as the client and throttles every browser client as one connection. That is blunt but safe, and it is why the documented deployment sets `TRUST_PROXY=1` on both apps.
+Instead it sends exactly one address, on the requests it forwards for the browser and on the ones it makes while rendering a page: the one `TRUST_PROXY` says it can trust, taken that many entries back from the right of the incoming header. At `0` it sends no address at all, so the API sees the web container as the client and throttles every browser client as one connection. That is blunt but safe, and it is why the documented deployment sets `TRUST_PROXY=1` on both apps.
 
 See [How asobeast works](/concepts/architecture).
 

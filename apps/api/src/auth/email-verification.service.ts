@@ -6,20 +6,25 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { User, Workspace } from '@prisma/client';
+import type { Prisma, User, Workspace } from '@prisma/client';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { isDisposableEmail } from './disposable-email';
 import { sha256 } from './password-hash';
 import { refuseSessionSwap } from './session-swap';
 import type { AccountUser } from './auth.types';
 import {
   canStartTrial,
   grantTrial,
+  declineTrial,
+  isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
-  type TrialGrant,
+  type TrialDecline,
+  type TrialTerms,
 } from './trial-grant';
+import { TrialClaims, type TrialClaimStore } from './trial-claims';
 import { VERIFICATION_HOURS, VerificationMailer } from './verification-mailer';
 
 const CLAIM_JUSTIFICATION =
@@ -33,6 +38,7 @@ export class EmailVerificationService {
     private readonly prisma: PrismaService,
     private readonly crossTenant: CrossTenantAccess,
     private readonly verification: VerificationMailer,
+    private readonly claims: TrialClaims,
     private readonly config: ConfigService<Env, true>,
   ) {}
 
@@ -44,9 +50,57 @@ export class EmailVerificationService {
     return this.billing && this.verification.configured;
   }
 
-  openingGrant(): TrialGrant | undefined {
-    if (!this.billing || this.required) return undefined;
-    return grantTrial(this.config.get('TRIAL_DAYS', { infer: true }));
+  async openingTerms(
+    db: TrialClaimStore,
+    email: string,
+  ): Promise<TrialTerms | undefined> {
+    if (!this.billing) return undefined;
+    if (!this.required) return this.termsFor(db, email);
+    return this.refusalOf(email, () => this.claims.isClaimed(db, email));
+  }
+
+  private async termsFor(
+    db: TrialClaimStore,
+    email: string,
+  ): Promise<TrialTerms> {
+    const refusal = await this.refusalOf(
+      email,
+      async () => !(await this.claims.claim(db, email)),
+    );
+    return (
+      refusal ?? grantTrial(this.config.get('TRIAL_DAYS', { infer: true }))
+    );
+  }
+
+  private async refusalOf(
+    email: string,
+    mailboxTaken: () => Promise<boolean>,
+  ): Promise<TrialDecline | undefined> {
+    if (isDisposableEmail(email)) {
+      return this.decline(`an address on a disposable email domain: ${email}`);
+    }
+    if (await mailboxTaken()) {
+      return this.decline(`an address whose mailbox already had one: ${email}`);
+    }
+    return undefined;
+  }
+
+  private decline(reason: string): TrialDecline {
+    this.logger.warn(`no trial for ${reason}`);
+    return declineTrial();
+  }
+
+  async writeTerms(
+    db: Prisma.TransactionClient,
+    workspace: { id: string; plan: string },
+    email: string,
+    terms: TrialTerms,
+  ): Promise<void> {
+    const { count } = await db.workspace.updateMany({
+      where: trialStillOpen(workspace),
+      data: terms,
+    });
+    if (count === 0 && isGrant(terms)) await this.claims.release(db, email);
   }
 
   awaitsConfirmation(user: AccountUser, now = new Date()): boolean {
@@ -125,21 +179,25 @@ export class EmailVerificationService {
       emailVerifiedAt,
       verificationHash: null,
       verificationExpiresAt: null,
-      workspace: await this.startTrial(user.workspaceId),
+      workspace: await this.startTrial(user),
     };
   }
 
-  private async startTrial(workspaceId: string): Promise<Workspace> {
-    const workspace = await this.workspaceOf(workspaceId);
+  private async startTrial(user: User): Promise<Workspace> {
+    const workspace = await this.workspaceOf(user.workspaceId);
     if (!this.billing || !canStartTrial(workspace, new Date())) {
       return workspace;
     }
 
-    await this.prisma.workspace.updateMany({
-      where: trialStillOpen(workspace),
-      data: grantTrial(this.config.get('TRIAL_DAYS', { infer: true })),
-    });
-    return this.workspaceOf(workspaceId);
+    await this.prisma.withTransaction(async (tx) =>
+      this.writeTerms(
+        tx,
+        workspace,
+        user.email,
+        await this.termsFor(tx, user.email),
+      ),
+    );
+    return this.workspaceOf(user.workspaceId);
   }
 
   private workspaceOf(workspaceId: string): Promise<Workspace> {

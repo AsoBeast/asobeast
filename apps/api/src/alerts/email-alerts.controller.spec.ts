@@ -9,8 +9,10 @@ const marker = (key: string, handler: keyof EmailAlertsController): unknown =>
   );
 
 describe('EmailAlertsController', () => {
-  it('lets an unsubscribe through without a session or an entitlement', () => {
+  it('lets an unsubscribe and a confirmation through without a session or an entitlement', () => {
     expect(marker(IS_PUBLIC_KEY, 'unsubscribe')).toBe(true);
+    expect(marker(IS_PUBLIC_KEY, 'confirm')).toBe(true);
     expect(marker(IS_PUBLIC_KEY, 'test')).toBeUndefined();
+    expect(marker(IS_PUBLIC_KEY, 'resendConfirmation')).toBeUndefined();
   });
 });

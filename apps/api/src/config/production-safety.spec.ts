@@ -291,12 +291,38 @@ describe('production safety', () => {
           ALERT_DELIVERY: 'instant',
           SMTP_HOST: 'smtp.example.com',
           SMTP_FROM: 'alerts@example.com',
+          WEB_PUBLIC_URL: 'https://app.example.com',
         }),
       ).toEqual([]);
     });
 
     it('stays quiet for batched delivery', () => {
       expect(warningsFor({ ALERT_DELIVERY: 'batched' })).toEqual([]);
+    });
+  });
+
+  describe('alert confirmation links', () => {
+    const warningsFor = (overrides: Record<string, unknown>): string[] =>
+      productionWarnings(
+        production({
+          AUTH_COOKIE_SECURE: 'true',
+          TRUST_PROXY: 'true',
+          SMTP_HOST: 'smtp.example.com',
+          SMTP_FROM: 'alerts@example.com',
+          ...overrides,
+        }),
+      );
+
+    it('warns when smtp is configured with no host for the links', () => {
+      expect(warningsFor({}).join(' ')).toContain(
+        'SMTP is configured in production with no WEB_PUBLIC_URL',
+      );
+    });
+
+    it('stays quiet once the host is known', () => {
+      expect(
+        warningsFor({ WEB_PUBLIC_URL: 'https://app.example.com' }),
+      ).toEqual([]);
     });
   });
 
@@ -328,6 +354,7 @@ describe('production safety', () => {
           SMTP_FROM: 'alerts@example.com',
           SMTP_SECURE: 'true',
           SMTP_PORT: '465',
+          WEB_PUBLIC_URL: 'https://app.example.com',
         }),
       ).toEqual([]);
     });

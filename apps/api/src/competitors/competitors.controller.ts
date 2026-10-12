@@ -69,6 +69,7 @@ export class CompetitorsController {
   }
 
   @Post()
+  @SpendsStoreCapacity()
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
   @UseInterceptors(StoreDeadlineInterceptor)
   @ApiUnprocessableEntityResponse({
@@ -79,7 +80,9 @@ export class CompetitorsController {
     @Param('id') id: string,
     @Body() dto: AddCompetitorDto,
   ): Promise<CompetitorItem> {
-    return this.competitors.add(id, dto.url);
+    return this.competitors.add(id, dto.url, () =>
+      this.limiter.consume('addCompetitor'),
+    );
   }
 
   @Get()

@@ -1,4 +1,3 @@
-import type { NextRequest } from "next/server";
 import { TRUSTED_PROXY_HOPS_MAX, trustedProxyHops } from "@asobeast/shared";
 
 const TRUSTED_PROXY_HOPS = trustedProxyHops(process.env.TRUST_PROXY);
@@ -7,6 +6,12 @@ if (!Number.isInteger(TRUSTED_PROXY_HOPS)) {
   throw new Error(
     `TRUST_PROXY must be a hop count from 0 to ${TRUSTED_PROXY_HOPS_MAX}, or the boolean spelling true (one hop) or false (none). Received "${process.env.TRUST_PROXY}".`,
   );
+}
+
+export const FORWARDED_FOR_HEADER = "x-forwarded-for";
+
+interface HeaderSource {
+  headers: Pick<Headers, "get">;
 }
 
 const BUILDING = process.env.NEXT_PHASE === "phase-production-build";
@@ -21,9 +26,9 @@ if (
   );
 }
 
-export function trustedClientAddress(request: NextRequest): string | null {
+export function trustedClientAddress(request: HeaderSource): string | null {
   if (TRUSTED_PROXY_HOPS < 1) return null;
-  const chain = (request.headers.get("x-forwarded-for") ?? "")
+  const chain = (request.headers.get(FORWARDED_FOR_HEADER) ?? "")
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);

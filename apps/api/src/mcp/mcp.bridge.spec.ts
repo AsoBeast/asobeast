@@ -10,7 +10,7 @@ import { REDACTED } from '../common/logging/log-redaction';
 import type { Env } from '../config/env';
 import type { InProcessGateway } from './in-process.gateway';
 import { authInfoFor } from './mcp-auth-info';
-import { McpBridge } from './mcp.bridge';
+import { McpBridge, messageCountOf } from './mcp.bridge';
 
 const TOKEN = `${API_TOKEN_PREFIX}${'b'.repeat(48)}`;
 
@@ -236,5 +236,42 @@ describe('McpBridge tool listing by token scope', () => {
     expect(
       (req as Request & { auth?: { scopes: string[] } }).auth?.scopes,
     ).toEqual(['read']);
+  });
+});
+
+describe('messageCountOf', () => {
+  it.each([
+    { label: 'a single request', body: { jsonrpc: '2.0', id: 1 }, count: 1 },
+    { label: 'a missing body', body: undefined, count: 1 },
+    { label: 'an empty batch', body: [], count: 1 },
+    { label: 'a batch of one', body: [{ id: 1 }], count: 1 },
+    { label: 'a batch of three', body: [{}, {}, {}], count: 3 },
+  ])('counts $label as $count', ({ body, count }) => {
+    expect(messageCountOf(body)).toBe(count);
+  });
+});
+
+describe('McpBridge allowance', () => {
+  const tokenRequest = (body: unknown) =>
+    ({
+      credential: 'token',
+      body,
+      user: { workspaceId: 'ws_1', workspace: null },
+    }) as unknown as Request;
+
+  it.each([
+    { label: 'a single request', body: { jsonrpc: '2.0', id: 1 }, cost: 1 },
+    { label: 'a batch of three', body: [{}, {}, {}], cost: 3 },
+  ])('charges $label as $cost against the workspace', async (scenario) => {
+    const consumeMcp = jest.fn(() => Promise.resolve());
+    const bridge = bridgeFor({ consumeMcp });
+
+    await bridge.admit(tokenRequest(scenario.body));
+    await bridge.onModuleDestroy();
+
+    expect(consumeMcp).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceId: 'ws_1' }),
+      scenario.cost,
+    );
   });
 });

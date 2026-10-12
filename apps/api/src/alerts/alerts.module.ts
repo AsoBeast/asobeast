@@ -8,6 +8,9 @@ import { AlertsController } from './alerts.controller';
 import { AlertsDispatcher } from './alerts.dispatcher';
 import { AlertsWorker } from './alerts.worker';
 import { EmailAlertsController } from './email-alerts.controller';
+import { ConfirmationMailLimiter } from './confirmation-mail.limiter';
+import { EmailAlertConfirmationClaim } from './email-alert-confirmation-claim.service';
+import { EmailAlertConfirmation } from './email-alert-confirmation.service';
 import { EmailAlertUnsubscribe } from './email-alert-unsubscribe.service';
 import { EmailAlertsService } from './email-alerts.service';
 import { MailerService } from './mailer.service';
@@ -25,6 +28,9 @@ import { WebhooksService } from './webhooks.service';
     WebhooksService,
     EmailAlertsService,
     EmailAlertUnsubscribe,
+    EmailAlertConfirmation,
+    EmailAlertConfirmationClaim,
+    ConfirmationMailLimiter,
     AlertMail,
     AlertDeliveriesService,
     AlertFlushService,
