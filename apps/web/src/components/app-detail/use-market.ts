@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ListingMarket } from "@asobeast/shared";
@@ -36,6 +37,16 @@ export function useMarket(id: string): SelectedMarket {
       void setLocalization(null);
     },
   };
+}
+
+export interface KeywordScope {
+  country: string | undefined;
+  switchable: boolean;
+}
+
+export function useKeywordScope(id: string): KeywordScope {
+  const { scope, markets } = useMarket(id);
+  return { country: useDeferredValue(scope), switchable: markets.length > 1 };
 }
 
 export interface CachedMarket {

@@ -10,16 +10,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDate } from "@/lib/format";
-import { useMarket } from "@/components/app-detail/use-market";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import { appSummaryOptions } from "@/lib/queries";
 import { TrendChip } from "@/components/ui/delta-chip";
 import { VisibilityHelp } from "@/components/visibility/VisibilityHelp";
 
 export function StatCards({ id }: { id: string }) {
-  const { scope, markets } = useMarket(id);
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, scope));
-  const label =
-    markets.length > 1 ? ` · ${scope?.toUpperCase() ?? "All markets"}` : "";
+  const { country, switchable } = useKeywordScope(id);
+  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
+  const label = switchable
+    ? ` · ${country?.toUpperCase() ?? "All markets"}`
+    : "";
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

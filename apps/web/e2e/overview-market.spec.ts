@@ -73,6 +73,31 @@ test("renders the selected market in the server response", async ({ page }) => {
   await expect(card(page, "Visibility · PL")).toContainText("19");
 });
 
+test("keeps the numbers on screen while the next market loads", async ({
+  page,
+}) => {
+  let release = () => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(/\/apps\/app-1\/summary\?country=pl$/, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/apps/app-1");
+
+  await pickMarket(page, POLAND);
+
+  await expect(page.getByRole("combobox", { name: SWITCHER })).toHaveText(
+    POLAND,
+  );
+  const previous = card(page, "Visibility · All markets");
+  await expect(previous).toBeVisible();
+  await expect(previous).toContainText("62");
+  release();
+  await expect(card(page, "Visibility · PL")).toBeVisible();
+});
+
 test("names no market on the cards of an app with one listing", async ({
   page,
 }) => {

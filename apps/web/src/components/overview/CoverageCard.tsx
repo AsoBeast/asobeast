@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSuspenseQuery } from "@tanstack/react-query";
-import { useMarket } from "@/components/app-detail/use-market";
+import { useKeywordScope } from "@/components/app-detail/use-market";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { appDetailOptions, appSummaryOptions } from "@/lib/queries";
@@ -18,8 +18,8 @@ function CoverageStat({ label, value }: { label: string; value: number }) {
 }
 
 export function CoverageCard({ id }: { id: string }) {
-  const { scope } = useMarket(id);
-  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, scope));
+  const { country } = useKeywordScope(id);
+  const { data: summary } = useSuspenseQuery(appSummaryOptions(id, country));
   const { data: detail } = useSuspenseQuery(appDetailOptions(id));
   const coverage = summary.coverage;
 
