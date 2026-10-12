@@ -29,6 +29,7 @@ import {
 import { formatNumber, pluralize } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { marketKeywordFieldsOptions } from "@/lib/queries";
+import { MarketWastedWords } from "./MarketWastedWords";
 import { MarketSearchReadsSkeleton } from "./skeletons";
 
 function ReadsCard({
@@ -153,6 +154,11 @@ function MarketReads({ id, market }: { id: string; market: string }) {
           ))}
         </ul>
       )}
+      <MarketWastedWords
+        country={data.country}
+        wastedWords={data.wastedWords}
+        splitPhrases={data.splitPhrases}
+      />
       <UnshippedReads
         id={id}
         market={market}

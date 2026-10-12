@@ -18,6 +18,7 @@ import type {
   KeywordComparison,
   KeywordCountrySummary,
   KeywordSource,
+  MarketKeywordFields,
   ChangeImpactReport,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
@@ -3902,6 +3903,44 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
+
+type MarketWaste = Pick<MarketKeywordFields, "wastedWords" | "splitPhrases">;
+
+const NO_WASTE: MarketWaste = { wastedWords: [], splitPhrases: [] };
+
+const MARKET_WASTE: Record<string, MarketWaste> = {
+  "app-1:us": {
+    wastedWords: [{ word: "tracker", localizations: ["en-US", "es-MX"] }],
+    splitPhrases: [
+      {
+        keywordId: "kw-habit-planner",
+        phrase: "habit planner",
+        parts: [
+          { word: "habit", localizations: ["en-US"] },
+          { word: "planner", localizations: ["es-MX"] },
+        ],
+      },
+    ],
+  },
+  "app-1:mx": {
+    wastedWords: [
+      "alarm",
+      "break",
+      "calm",
+      "focus",
+      "goal",
+      "timer",
+      "zen",
+    ].map((word) => ({
+      word,
+      localizations: ["es-MX", "en-GB"] satisfies AppStoreLocalization[],
+    })),
+    splitPhrases: [],
+  },
+};
+
+export const marketWasteOf = (appId: string, country: string): MarketWaste =>
+  MARKET_WASTE[`${appId}:${country}`] ?? NO_WASTE;
 
 DATASETS[APP_READS_ID] = localesDataset(APP_READS_ID, "Read Lab");
 METADATA_AUDITS[APP_READS_ID] = METADATA_AUDIT;
