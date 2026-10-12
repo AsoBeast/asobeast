@@ -12,11 +12,16 @@ export function resolveMarket(
   return isListed(requested, markets) ? requested : home;
 }
 
+export const offersMarkets = (markets: readonly ListingMarket[]) =>
+  markets.length > 1;
+
 export function keywordScope(
   requested: string,
   markets: readonly ListingMarket[],
 ): string | undefined {
-  return isListed(requested, markets) ? requested : undefined;
+  return offersMarkets(markets) && isListed(requested, markets)
+    ? requested
+    : undefined;
 }
 
 export function queryMarket(market: string, home: string): string | undefined {

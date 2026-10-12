@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { marketLabel } from "@/lib/market";
+import { marketLabel, offersMarkets } from "@/lib/market";
 import { useMarket } from "./use-market";
 
 const ALL_MARKETS = "all";
@@ -22,7 +22,7 @@ export function MarketSwitcher({
 }) {
   const { market, scope, home, markets, select } = useMarket(id);
   const selected = markets.find((entry) => entry.country === market);
-  if (markets.length < 2 || selected === undefined) return null;
+  if (!offersMarkets(markets) || selected === undefined) return null;
 
   const value = allowAll && scope === undefined ? ALL_MARKETS : market;
   const choose = (next: string) =>

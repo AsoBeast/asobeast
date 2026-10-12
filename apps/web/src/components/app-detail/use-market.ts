@@ -7,6 +7,7 @@ import type { ListingMarket } from "@asobeast/shared";
 import {
   isRefreshable,
   keywordScope,
+  offersMarkets,
   queryMarket,
   resolveMarket,
 } from "@/lib/market";
@@ -46,7 +47,10 @@ export interface KeywordScope {
 
 export function useKeywordScope(id: string): KeywordScope {
   const { scope, markets } = useMarket(id);
-  return { country: useDeferredValue(scope), switchable: markets.length > 1 };
+  return {
+    country: useDeferredValue(scope),
+    switchable: offersMarkets(markets),
+  };
 }
 
 export interface CachedMarket {
