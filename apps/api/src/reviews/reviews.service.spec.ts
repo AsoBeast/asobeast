@@ -8,7 +8,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ReviewResult } from '../store-providers/types';
-import { EMPTY_FEED_RETRIES, ReviewsService } from './reviews.service';
+import { EMPTY_ANSWER_RETRIES } from '../store-providers/result-plausibility';
+import { ReviewsService } from './reviews.service';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS);
@@ -257,7 +258,7 @@ describe('ReviewsService silent block detection', () => {
       retryable: true,
     });
 
-    expect(reviews).toHaveBeenCalledTimes(1 + EMPTY_FEED_RETRIES.APP_STORE);
+    expect(reviews).toHaveBeenCalledTimes(1 + EMPTY_ANSWER_RETRIES.APP_STORE);
     expect(reviews).toHaveBeenLastCalledWith('123', 'us', 1);
     expect(createMany).not.toHaveBeenCalled();
   });

@@ -5,12 +5,16 @@ import {
   nextPlan,
   rateRules,
   type PlanLimit,
+  type RateLimitDetail,
   type RateClass,
   type RateRule,
   type PlanLimits,
   type PlanName,
 } from '@asobeast/shared';
-import { RateLimitExceededError } from './rate-limit.errors';
+import {
+  oversizedBatchMessage,
+  RateLimitExceededError,
+} from './rate-limit.errors';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './window';
 
@@ -68,9 +72,27 @@ export class RequestRateLimiter {
     return usage;
   }
 
-  async consumeMcp(scope: RateScope, now = new Date()): Promise<void> {
+  async consumeMcp(
+    scope: RateScope,
+    cost: number,
+    now = new Date(),
+  ): Promise<void> {
     const rule = mcpRateRule(scope.limits);
-    if (rule) await this.count(scope, 'read', rule, now);
+    if (!rule) return;
+    if (cost > rule.limit) {
+      const detail = this.detailOf(
+        scope,
+        'read',
+        rule.window,
+        rule.limit,
+        secondsUntilReset(rule.windowSeconds, now),
+      );
+      throw new RateLimitExceededError(
+        detail,
+        oversizedBatchMessage(detail, cost),
+      );
+    }
+    await this.count(scope, 'read', rule, now, cost);
   }
 
   private async count(
@@ -78,6 +100,7 @@ export class RequestRateLimiter {
     rateClass: RateClass,
     rule: RateRule,
     now: Date,
+    cost = 1,
   ): Promise<RateUsage | null> {
     const key = windowKey(
       'rate',
@@ -87,19 +110,15 @@ export class RequestRateLimiter {
       now,
     );
     const used = await this.redis.runOpen(async (client) => {
-      const hits = await client.incr(key);
-      if (hits === 1) await client.expire(key, rule.windowSeconds);
+      const hits = await client.incrby(key, cost);
+      if (hits === cost) await client.expire(key, rule.windowSeconds);
       return hits;
     }, null);
     if (used === null) return null;
     const resetSeconds = secondsUntilReset(rule.windowSeconds, now);
     if (used > rule.limit) {
-      throw this.exceeded(
-        scope,
-        rateClass,
-        rule.window,
-        rule.limit,
-        resetSeconds,
+      throw new RateLimitExceededError(
+        this.detailOf(scope, rateClass, rule.window, rule.limit, resetSeconds),
       );
     }
     return { rule, used, resetSeconds };
@@ -131,7 +150,9 @@ export class RequestRateLimiter {
     );
     if (admitted === null) return null;
     if (admitted !== 1) {
-      throw this.exceeded(scope, 'read', 'concurrent', limit, 1);
+      throw new RateLimitExceededError(
+        this.detailOf(scope, 'read', 'concurrent', limit, 1),
+      );
     }
 
     const renewal = setInterval(() => {
@@ -156,20 +177,20 @@ export class RequestRateLimiter {
     };
   }
 
-  private exceeded(
+  private detailOf(
     scope: RateScope,
     rateClass: RateClass,
     window: RateRule['window'],
     limit: PlanLimit,
     resetSeconds: number,
-  ): RateLimitExceededError {
-    return new RateLimitExceededError({
+  ): RateLimitDetail {
+    return {
       window,
       rateClass,
       plan: scope.plan,
       limit: limit ?? 0,
       resetSeconds,
       upgradeTo: nextPlan(scope.plan),
-    });
+    };
   }
 }

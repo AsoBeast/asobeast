@@ -1,18 +1,26 @@
 "use client";
 
+import { useDeferredValue } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useQueryState } from "nuqs";
 import type { ListingMarket } from "@asobeast/shared";
-import { isRefreshable, queryMarket, resolveMarket } from "@/lib/market";
+import {
+  isRefreshable,
+  keywordScope,
+  offersMarkets,
+  queryMarket,
+  resolveMarket,
+} from "@/lib/market";
 import { appDetailOptions, listingMarketsOptions } from "@/lib/queries";
 import { localizationParser, marketParser } from "@/lib/search-params";
 import { useCachedQueryData } from "@/lib/use-cached-query-data";
 
 export interface SelectedMarket {
   market: string;
+  scope: string | undefined;
   home: string;
   markets: ListingMarket[];
-  select: (market: string) => void;
+  select: (market: string | null) => void;
 }
 
 export function useMarket(id: string): SelectedMarket {
@@ -22,12 +30,26 @@ export function useMarket(id: string): SelectedMarket {
   const [, setLocalization] = useQueryState("localization", localizationParser);
   return {
     market: resolveMarket(requested, markets, app.country),
+    scope: keywordScope(requested, markets),
     home: app.country,
     markets,
     select: (next) => {
-      void setRequested(next === app.country ? null : next);
+      void setRequested(next);
       void setLocalization(null);
     },
+  };
+}
+
+export interface KeywordScope {
+  country: string | undefined;
+  switchable: boolean;
+}
+
+export function useKeywordScope(id: string): KeywordScope {
+  const { scope, markets } = useMarket(id);
+  return {
+    country: useDeferredValue(scope),
+    switchable: offersMarkets(markets),
   };
 }
 

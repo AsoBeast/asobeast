@@ -12,6 +12,7 @@ import {
 } from '../jobs/jobs.types';
 import { PrismaService } from '../prisma/prisma.service';
 import { AlertMail } from './alert-mail';
+import { isDeliverable } from './deliverable-email-alerts';
 import { MailerService } from './mailer.service';
 import { WebhookDelivery } from './webhook-delivery';
 
@@ -70,11 +71,11 @@ export class AlertsWorker extends WorkerHost {
     const { emailAlertId, payload } = job.data;
     const alert = await this.prisma.emailAlert.findUnique({
       where: { id: emailAlertId },
-      select: { email: true, active: true },
+      select: { email: true, active: true, confirmedAt: true },
     });
-    if (!alert?.active) {
+    if (!alert || !isDeliverable(alert)) {
       this.logger.debug(
-        `skipped ${payload.event} for missing or paused email alert ${emailAlertId}`,
+        `skipped ${payload.event} for missing, paused or unconfirmed email alert ${emailAlertId}`,
       );
       return;
     }

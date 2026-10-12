@@ -1,5 +1,10 @@
 import { Store } from '@prisma/client';
-import { REVIEW_SYNC_JOB_OPTIONS, reviewSyncJobOptions } from './job-options';
+import {
+  DEFERRED_JOB_OPTIONS,
+  JOB_OPTIONS,
+  REVIEW_SYNC_JOB_OPTIONS,
+  reviewSyncJobOptions,
+} from './job-options';
 
 describe('REVIEW_SYNC_JOB_OPTIONS', () => {
   it('spreads review sync retries over half an hour', () => {
@@ -15,5 +20,15 @@ describe('REVIEW_SYNC_JOB_OPTIONS', () => {
   it('applies only to the flaky app store review feed', () => {
     expect(reviewSyncJobOptions(Store.APP_STORE)).toBe(REVIEW_SYNC_JOB_OPTIONS);
     expect(reviewSyncJobOptions(Store.GOOGLE_PLAY)).toEqual({});
+  });
+});
+
+describe('job priority', () => {
+  it('leaves the jobs of the daily run without a priority, which BullMQ serves first', () => {
+    expect(JOB_OPTIONS).not.toHaveProperty('priority');
+  });
+
+  it('gives deferred work an explicit priority, which BullMQ serves after every job without one', () => {
+    expect(DEFERRED_JOB_OPTIONS.priority).toBeGreaterThan(0);
   });
 });

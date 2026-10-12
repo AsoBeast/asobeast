@@ -102,13 +102,16 @@ export class KeywordsController {
   }
 
   @Post('keywords/spider')
+  @SpendsStoreCapacity()
   @HttpCode(202)
   @ApiOperation({ summary: 'Enqueue suggest spider probes for a term' })
   startSpider(
     @Param('id') id: string,
     @Body() dto: SpiderStartDto,
   ): Promise<SpiderEnqueueResult> {
-    return this.spider.startSpider(id, dto.term, dto.country);
+    return this.spider.startSpider(id, dto.term, dto.country, () =>
+      this.limiter.consume('spider'),
+    );
   }
 
   @Post('keywords')

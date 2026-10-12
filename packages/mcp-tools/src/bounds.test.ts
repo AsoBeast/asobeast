@@ -53,6 +53,9 @@ describe("mcp input bounds match the api", () => {
     ["list_keywords", "country"],
     ["keyword_suggestions", "country"],
     ["change_impact", "country"],
+    ["app_summary", "country"],
+    ["visibility_history", "country"],
+    ["rank_distribution_history", "country"],
   ];
 
   it.each(COUNTRY_FIELDS)(

@@ -8,7 +8,11 @@ import { INestApplication, Logger } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import type { ApiErrorEnvelope, ApiTokenCreated } from '@asobeast/shared';
+import {
+  REQUEST_BODY_LIMIT_BYTES,
+  type ApiErrorEnvelope,
+  type ApiTokenCreated,
+} from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -23,7 +27,6 @@ import {
 } from './obliterate-queues';
 
 const PASSWORD = 'supersecret1';
-const BODY_LIMIT_BYTES = 102_400;
 const HANG_UP_SETTLE_MS = 300;
 const MCP_ACCEPT = 'application/json, text/event-stream';
 
@@ -179,14 +182,16 @@ describe('Request body limits (e2e)', () => {
   it('accepts a body of exactly the limit', async () => {
     const response = await postJson(
       '/apps',
-      jsonOfBytes(BODY_LIMIT_BYTES),
+      jsonOfBytes(REQUEST_BODY_LIMIT_BYTES),
     ).expect(400);
 
     expect((response.body as ApiErrorEnvelope).message).not.toMatch(/large/i);
   });
 
   it('refuses a body one byte over the limit', async () => {
-    await postJson('/apps', jsonOfBytes(BODY_LIMIT_BYTES + 1)).expect(413);
+    await postJson('/apps', jsonOfBytes(REQUEST_BODY_LIMIT_BYTES + 1)).expect(
+      413,
+    );
   });
 
   it('refuses an oversized body sent chunked with no content length', async () => {
@@ -202,7 +207,7 @@ describe('Request body limits (e2e)', () => {
 
   it('refuses a small gzip body that inflates past the limit', async () => {
     const body = gzipSync(jsonOfBytes(2 * 1024 * 1024));
-    expect(body.length).toBeLessThan(BODY_LIMIT_BYTES);
+    expect(body.length).toBeLessThan(REQUEST_BODY_LIMIT_BYTES);
 
     const response = await rawPost(
       { 'Content-Type': 'application/json', 'Content-Encoding': 'gzip' },

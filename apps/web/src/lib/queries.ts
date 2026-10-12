@@ -90,10 +90,13 @@ import {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+const marketKey = (country?: string): string[] => (country ? [country] : []);
+
 export const appKeys = {
   all: ["apps"] as const,
   detail: (id: string) => [...appKeys.all, id] as const,
-  summary: (id: string) => [...appKeys.detail(id), "summary"] as const,
+  summary: (id: string, country?: string) =>
+    [...appKeys.detail(id), "summary", ...marketKey(country)] as const,
   keywordsRoot: (id: string) => [...appKeys.detail(id), "keywords"] as const,
   compareRoot: (id: string) => [...appKeys.detail(id), "compare"] as const,
   keywords: (id: string, country?: string) =>
@@ -126,10 +129,20 @@ export const appKeys = {
   audit: (id: string) => [...appKeys.detail(id), "audit"] as const,
   auditHistory: (id: string, params: RangeParams) =>
     [...appKeys.detail(id), "audit-history", params] as const,
-  visibility: (id: string, params: RangeParams) =>
-    [...appKeys.detail(id), "visibility", params] as const,
-  rankDistribution: (id: string, params: RangeParams) =>
-    [...appKeys.detail(id), "rank-distribution", params] as const,
+  visibility: (id: string, params: RangeParams, country?: string) =>
+    [
+      ...appKeys.detail(id),
+      "visibility",
+      params,
+      ...marketKey(country),
+    ] as const,
+  rankDistribution: (id: string, params: RangeParams, country?: string) =>
+    [
+      ...appKeys.detail(id),
+      "rank-distribution",
+      params,
+      ...marketKey(country),
+    ] as const,
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
   keywordIdeas: (id: string, country: string) =>
@@ -335,6 +348,11 @@ export function invalidateApiTokenMutation(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: apiTokenKeys.all });
 }
 
+export function invalidatePasswordChange(client: QueryClient): void {
+  invalidateAuth(client);
+  invalidateApiTokenMutation(client);
+}
+
 export function invalidateAiUsage(client: QueryClient): void {
   void client.invalidateQueries({ queryKey: accountPlanKey });
 }
@@ -451,10 +469,10 @@ export const metadataAuditOptions = (
     queryFn: () => getMetadataAudit(id, market, localization),
   });
 
-export const appSummaryOptions = (id: string) =>
+export const appSummaryOptions = (id: string, country?: string) =>
   queryOptions({
-    queryKey: appKeys.summary(id),
-    queryFn: () => getSummary(id),
+    queryKey: appKeys.summary(id, country),
+    queryFn: () => getSummary(id, country),
   });
 
 export const keywordsOptions = (id: string, country?: string) =>
@@ -522,10 +540,14 @@ export const serpMoversOptions = (id: string, days: number) =>
     queryFn: () => getSerpMovers(id, days),
   });
 
-export const visibilityOptions = (id: string, params: RangeParams) =>
+export const visibilityOptions = (
+  id: string,
+  params: RangeParams,
+  country?: string,
+) =>
   queryOptions({
-    queryKey: appKeys.visibility(id, params),
-    queryFn: () => getVisibilityHistory(id, params),
+    queryKey: appKeys.visibility(id, params, country),
+    queryFn: () => getVisibilityHistory(id, params, country),
   });
 
 export const categoryRanksOptions = (id: string, params: RangeParams) =>
@@ -571,10 +593,11 @@ export const auditHistoryOptions = (id: string, params: RangeParams = {}) =>
 export const rankDistributionHistoryOptions = (
   id: string,
   params: RangeParams,
+  country?: string,
 ) =>
   queryOptions({
-    queryKey: appKeys.rankDistribution(id, params),
-    queryFn: () => getRankDistributionHistory(id, params),
+    queryKey: appKeys.rankDistribution(id, params, country),
+    queryFn: () => getRankDistributionHistory(id, params, country),
   });
 
 export const competitorsOptions = (id: string) =>

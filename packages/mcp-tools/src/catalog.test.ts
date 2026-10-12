@@ -64,20 +64,26 @@ describe("the tool catalog", () => {
   });
 });
 
+const MARKET_TOOLS = [
+  "get_app",
+  "metadata_audit",
+  "changes_timeline",
+  "app_summary",
+  "visibility_history",
+  "rank_distribution_history",
+];
+
 describe("the market argument", () => {
-  it.each(["get_app", "metadata_audit", "changes_timeline"])(
-    "sends %s to one market when asked",
-    (name) => {
-      const request = toolByName(name)?.request({
-        appId: "app-1",
-        country: "de",
-      });
+  it.each(MARKET_TOOLS)("sends %s to one market when asked", (name) => {
+    const request = toolByName(name)?.request({
+      appId: "app-1",
+      country: "de",
+    });
 
-      expect(request?.params).toMatchObject({ country: "de" });
-    },
-  );
+    expect(request?.params).toMatchObject({ country: "de" });
+  });
 
-  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+  it.each(MARKET_TOOLS)(
     "sends %s without a market when none is given",
     (name) => {
       const request = toolByName(name)?.request({ appId: "app-1" });
@@ -86,7 +92,7 @@ describe("the market argument", () => {
     },
   );
 
-  it.each(["get_app", "metadata_audit", "changes_timeline"])(
+  it.each(MARKET_TOOLS)(
     "refuses a market that is not a lowercase two letter code for %s",
     (name) => {
       const schema = toolByName(name)?.inputSchema;

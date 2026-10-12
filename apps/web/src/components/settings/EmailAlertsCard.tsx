@@ -15,6 +15,7 @@ import {
   ApiError,
   createEmailAlert,
   deleteEmailAlert,
+  resendEmailAlertConfirmation,
   testEmailAlert,
   updateEmailAlert,
 } from "@/lib/api";
@@ -43,6 +44,10 @@ const SMTP_VARS = [
   "SMTP_FROM",
 ];
 
+function awaitsConfirmation(alert: EmailAlertItem): boolean {
+  return alert.confirmed === false;
+}
+
 function AddEmailAlertDialog() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -52,9 +57,19 @@ function AddEmailAlertDialog() {
 
   const mutation = useMutation({
     mutationFn: () => createEmailAlert({ email, events }),
-    onSuccess: () => {
+    onSuccess: (saved) => {
       invalidateEmailAlertMutation(queryClient);
-      toast.success("Email alert added");
+      if (saved.confirmationSent === false) {
+        toast.warning(
+          `Email alert added. The confirmation email to ${saved.email} could not be sent, so use Resend confirmation to try again.`,
+        );
+      } else {
+        toast.success(
+          awaitsConfirmation(saved)
+            ? `Confirmation email sent to ${saved.email}`
+            : "Email alert added",
+        );
+      }
       setOpen(false);
       setEmail("");
       setEvents(["metadata.changed"]);
@@ -90,7 +105,7 @@ function AddEmailAlertDialog() {
       open={open}
       onOpenChange={setOpen}
       label="Add email alert"
-      description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server."
+      description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server. Unless it is the verified account email of a member of this workspace, the recipient confirms the address from the link in a first email."
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
@@ -145,6 +160,18 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onError: () => toast.error("Could not send the test email"),
   });
 
+  const resend = useMutation({
+    mutationFn: () => resendEmailAlertConfirmation(alert.id),
+    onSuccess: () => toast.success(`Confirmation email sent to ${alert.email}`),
+    onSettled: () => invalidateEmailAlertMutation(queryClient),
+    onError: (err) =>
+      toast.error(
+        err instanceof ApiError
+          ? err.envelope.message
+          : "Could not send the confirmation email",
+      ),
+  });
+
   const remove = useMutation({
     mutationFn: () => deleteEmailAlert(alert.id),
     onSuccess: () => {
@@ -161,6 +188,15 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
       channel="email"
       id={alert.id}
       events={alert.events}
+      awaiting={
+        awaitsConfirmation(alert)
+          ? {
+              pending: resend.isPending,
+              onResend: () => resend.mutate(),
+              unsubscribed: alert.unsubscribed === true,
+            }
+          : undefined
+      }
       active={alert.active}
       activePending={toggle.isPending}
       onActiveChange={(active) => toggle.mutate(active)}

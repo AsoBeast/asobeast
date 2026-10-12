@@ -8,6 +8,8 @@ export const SETTINGS_PATH = '/settings';
 
 export const UNSUBSCRIBE_PATH = '/unsubscribe';
 
+export const CONFIRM_ALERT_PATH = '/confirm-alert';
+
 export const BACKEND_PROXY_PATH = '/api/backend';
 
 export const INVITE_PATH = '/invite';

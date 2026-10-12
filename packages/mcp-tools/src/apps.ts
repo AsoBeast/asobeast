@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { COUNTRY_PATTERN } from "@asobeast/shared";
 import { defineReadTool, seg, type ReadTool } from "./define";
+import { keywordMarket } from "./keyword-market";
 
 export const APP_TOOLS: ReadTool[] = [
   defineReadTool({
@@ -37,11 +38,15 @@ export const APP_TOOLS: ReadTool[] = [
     name: "app_summary",
     title: "App summary",
     description:
-      "Headline metrics for one app: tracked keyword count, visibility, average position and recent movement. Position is 1-based; null means checked but not found within depth 200 (render as >200).",
+      "Headline metrics for one app: tracked keyword count, visibility, average position and recent movement. Position is 1-based; null means checked but not found within depth 200 (render as >200). Pass country to count only the keywords tracked in one market; the coverage block always counts every market.",
     inputSchema: z.object({
       appId: z.string().describe("The app id from list_apps."),
+      country: keywordMarket,
     }),
-    request: ({ appId }) => ({ path: `/apps/${seg(appId)}/summary` }),
+    request: ({ appId, country }) => ({
+      path: `/apps/${seg(appId)}/summary`,
+      params: { country },
+    }),
   }),
 
   defineReadTool({
