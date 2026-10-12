@@ -87,6 +87,7 @@
     "cron-parser": "^5.10.1",
     "helmet": "^8.3.0",
     "ioredis": "^6.0.0",
+    "mailchecker": "^6.0.21",
     "nestjs-pino": "5.3.1",
     "nodemailer": "^10.0.15",
     "openai": "^7.28.0",

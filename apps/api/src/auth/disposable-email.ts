@@ -1,20 +1,14 @@
-export const DISPOSABLE_EMAIL_DOMAINS = new Set([
-  '10minutemail.com',
-  'dispostable.com',
-  'fakeinbox.com',
-  'getnada.com',
-  'guerrillamail.com',
-  'mailinator.com',
-  'maildrop.cc',
-  'sharklasers.com',
-  'temp-mail.org',
-  'tempmail.com',
-  'throwawaymail.com',
-  'trashmail.com',
-  'yopmail.com',
-]);
+import { blacklist } from 'mailchecker';
+import { canonicalAddress } from './canonical-address';
+
+const DISPOSABLE_EMAIL_DOMAINS = blacklist();
 
 export function isDisposableEmail(email: string): boolean {
-  const domain = email.split('@').at(-1)?.trim().toLowerCase();
-  return domain !== undefined && DISPOSABLE_EMAIL_DOMAINS.has(domain);
+  let domain = canonicalAddress(email)?.domain;
+  while (domain) {
+    if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) return true;
+    const dot = domain.indexOf('.');
+    domain = dot === -1 ? undefined : domain.slice(dot + 1);
+  }
+  return false;
 }

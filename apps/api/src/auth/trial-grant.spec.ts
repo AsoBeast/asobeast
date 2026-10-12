@@ -1,7 +1,9 @@
 import {
   alreadyTrialed,
   canStartTrial,
+  declineTrial,
   grantTrial,
+  isGrant,
   trialAwaitsConfirmation,
   trialStillOpen,
   type TrialWorkspace,
@@ -22,6 +24,19 @@ describe('grantTrial', () => {
     expect(grantTrial(1, NOW).trialEndsAt).toEqual(
       new Date('2026-08-11T00:00:00.000Z'),
     );
+  });
+});
+
+describe('declineTrial', () => {
+  it('records the refusal now and grants nothing', () => {
+    expect(declineTrial(NOW)).toEqual({ trialDeclinedAt: NOW });
+  });
+});
+
+describe('isGrant', () => {
+  it('tells a granted trial from a refusal', () => {
+    expect(isGrant(grantTrial(7, NOW))).toBe(true);
+    expect(isGrant(declineTrial(NOW))).toBe(false);
   });
 });
 
@@ -48,6 +63,7 @@ describe('trialAwaitsConfirmation', () => {
     workspace: {
       plan: 'free',
       trialStartedAt: null,
+      trialDeclinedAt: null,
       trialEndsAt: null,
       planExpiresAt: null,
       subscriptionId: null,
@@ -74,6 +90,12 @@ describe('trialAwaitsConfirmation', () => {
     });
 
     expect(trialAwaitsConfirmation(lapsed, NOW)).toBe(false);
+  });
+
+  it('does not wait for a trial the workspace was refused', () => {
+    const refused = account({ workspace: { trialDeclinedAt: NOW } });
+
+    expect(trialAwaitsConfirmation(refused, NOW)).toBe(false);
   });
 
   it('does not wait while a trial is running', () => {
@@ -116,6 +138,7 @@ describe('canStartTrial', () => {
   const workspace = (over: Partial<TrialWorkspace> = {}): TrialWorkspace => ({
     plan: 'free',
     trialStartedAt: null,
+    trialDeclinedAt: null,
     trialEndsAt: null,
     planExpiresAt: null,
     subscriptionId: null,
@@ -151,6 +174,10 @@ describe('canStartTrial', () => {
     },
   );
 
+  it('offers none to a workspace that was refused one', () => {
+    expect(canStartTrial(workspace({ trialDeclinedAt: NOW }), NOW)).toBe(false);
+  });
+
   it('offers none to a workspace that ever held a subscription', () => {
     expect(canStartTrial(workspace({ subscriptionId: 'sub_ended' }), NOW)).toBe(
       false,
@@ -182,6 +209,7 @@ describe('trialStillOpen', () => {
       id: 'ws_1',
       plan: 'free',
       trialStartedAt: null,
+      trialDeclinedAt: null,
       subscriptionId: null,
     });
   });

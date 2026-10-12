@@ -3,7 +3,6 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -26,10 +25,9 @@ import type { AccountUser, ResolvedToken, SessionClaims } from './auth.types';
 import { isPlatformOperator } from './platform-operator';
 import type { CreateTokenDto } from './dto/create-token.dto';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
-import { isDisposableEmail } from './disposable-email';
 import { EmailVerificationService } from './email-verification.service';
 import { sha256 } from './password-hash';
-import { canStartTrial, trialStillOpen } from './trial-grant';
+import { canStartTrial } from './trial-grant';
 import { DEFAULT_WORKSPACE_ID } from '../common/tenancy/default-workspace';
 import type { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
@@ -45,7 +43,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AuthService {
-  private readonly logger = new Logger(AuthService.name);
   private dummyHash: Promise<string> | null = null;
 
   constructor(
@@ -88,9 +85,6 @@ export class AuthService {
     token: string;
   }> {
     const email = normalizeEmail(dto.email);
-    if (isDisposableEmail(email)) {
-      this.logger.warn(`registration from a disposable email domain: ${email}`);
-    }
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.prisma.withTransaction(async (tx) => {
       await lockRegistration(tx);
@@ -106,7 +100,7 @@ export class AuthService {
         data: {
           workspaceId: ownWorkspace
             ? await this.newWorkspace(tx, email)
-            : await this.defaultWorkspace(tx),
+            : await this.defaultWorkspace(tx, email),
           email,
           passwordHash,
           name: dto.name ?? null,
@@ -124,7 +118,10 @@ export class AuthService {
     email: string,
   ): Promise<string> {
     const workspace = await tx.workspace.create({
-      data: { name: email, ...this.verification.openingGrant() },
+      data: {
+        name: email,
+        ...(await this.verification.openingTerms(tx, email)),
+      },
       select: { id: true },
     });
     return workspace.id;
@@ -132,6 +129,7 @@ export class AuthService {
 
   private async defaultWorkspace(
     tx: Prisma.TransactionClient,
+    email: string,
   ): Promise<string> {
     const existing = await tx.workspace.findUnique({
       where: { id: DEFAULT_WORKSPACE_ID },
@@ -141,17 +139,15 @@ export class AuthService {
         data: {
           id: DEFAULT_WORKSPACE_ID,
           name: 'Default',
-          ...this.verification.openingGrant(),
+          ...(await this.verification.openingTerms(tx, email)),
         },
       });
       return DEFAULT_WORKSPACE_ID;
     }
-    const opening = this.verification.openingGrant();
-    if (opening && canStartTrial(existing, new Date())) {
-      await tx.workspace.updateMany({
-        where: trialStillOpen(existing),
-        data: opening,
-      });
+    if (!canStartTrial(existing, new Date())) return DEFAULT_WORKSPACE_ID;
+    const opening = await this.verification.openingTerms(tx, email);
+    if (opening) {
+      await this.verification.writeTerms(tx, existing, email, opening);
     }
     return DEFAULT_WORKSPACE_ID;
   }

@@ -56,6 +56,7 @@ model Workspace {
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
+  trialDeclinedAt     DateTime?
   trialEndsAt         DateTime?
   trialNoticeDay      Int?
   dunningNotifiedAt   DateTime?
@@ -120,6 +121,11 @@ model BillingEvent {
 
   @@index([processedAt])
   @@index([outcome, receivedAt])
+}
+
+model TrialClaim {
+  key       String   @id
+  createdAt DateTime @default(now())
 }
 
 model WorkspaceInvite {
