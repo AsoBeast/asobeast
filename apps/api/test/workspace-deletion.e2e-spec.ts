@@ -153,6 +153,14 @@ describe('Workspace deletion (e2e)', () => {
         phrases: ['habit'],
       },
     });
+    await prisma.appLocalization.create({
+      data: {
+        appId: owned.id,
+        workspaceId,
+        localization: 'es-MX',
+        origin: 'manual',
+      },
+    });
     await prisma.keywordRanking.create({
       data: {
         appId: owned.id,
@@ -324,6 +332,7 @@ describe('Workspace deletion (e2e)', () => {
       snapshotScreenshot,
       trackedKeyword,
       keywordField,
+      appLocalization,
       keywordRanking,
       categoryRank,
       review,
@@ -353,6 +362,7 @@ describe('Workspace deletion (e2e)', () => {
       }),
       prisma.trackedKeyword.count({ where: { appId: target.appId } }),
       prisma.keywordField.count({ where: { appId: target.appId } }),
+      prisma.appLocalization.count({ where: { appId: target.appId } }),
       prisma.keywordRanking.count({ where: { workspaceId: WORKSPACE } }),
       prisma.categoryRank.count({ where: { appId: target.appId } }),
       prisma.review.count({ where: { id: target.reviewId } }),
@@ -380,6 +390,7 @@ describe('Workspace deletion (e2e)', () => {
       SnapshotScreenshot: snapshotScreenshot,
       TrackedKeyword: trackedKeyword,
       KeywordField: keywordField,
+      AppLocalization: appLocalization,
       KeywordRanking: keywordRanking,
       CategoryRank: categoryRank,
       Review: review,
@@ -483,6 +494,9 @@ describe('Workspace deletion (e2e)', () => {
     ).resolves.toBe(2);
     await expect(
       prisma.aiCall.count({ where: { workspaceId: NEIGHBOUR } }),
+    ).resolves.toBe(1);
+    await expect(
+      prisma.appLocalization.count({ where: { workspaceId: NEIGHBOUR } }),
     ).resolves.toBe(1);
   });
 

@@ -19,6 +19,8 @@ An app is one row with a home storefront. Keywords are separate rows scoped by t
 | `AppSnapshot` | A captured copy of the listing metadata | Keeps the raw payload for reprocessing. One stream per market: a snapshot with no market is the home listing |
 | `Keyword` | A phrase in one store and one storefront | Unique on `text`, `store`, `country` |
 | `TrackedKeyword` | The link between an app and a keyword | Keyed on app and keyword, carries `source` and `relevance` |
+| `KeywordField` | The iOS keyword field of one App Store localization | Keyed on app and localization. Holds the normalized phrases in the order they were saved, and is private to the owner |
+| `AppLocalization` | One App Store localization the app ships beyond the default one of its home storefront | Keyed on app and localization. Origin is `manual` or `detected`. Deleted with its app |
 | `KeywordMetric` | Persisted popularity and difficulty for a day | Keyed on keyword and date |
 | `KeywordRanking` | One position observation | Keyed on app, keyword and date. Carries `depth` |
 | `SerpEntry` | One search result row for a keyword and day | Keyed on keyword, date and position |
@@ -41,6 +43,8 @@ erDiagram
   App ||--o{ AppSnapshot : captures
   AppSnapshot ||--o{ SnapshotScreenshot : lists
   App ||--o{ TrackedKeyword : tracks
+  App ||--o{ KeywordField : "stores one per localization"
+  App ||--o{ AppLocalization : ships
   Keyword ||--o{ TrackedKeyword : "is tracked by"
   Keyword ||--o{ KeywordMetric : scores
   App ||--o{ KeywordRanking : "is ranked in"
