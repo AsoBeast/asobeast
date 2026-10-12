@@ -5,18 +5,18 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient, Store } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { MINUTE_SECONDS, PLAN_LIMITS } from '@asobeast/shared';
+import { PLAN_LIMITS } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
-import { secondsUntilReset } from '../src/auth/rate-limit/window';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { mintApiToken } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { FakeRegistry, RIVAL_URL } from './helpers/mcp-fixtures';
 import { mcpAs, textOf } from './helpers/mcp-rpc';
+import { awaitMinuteHeadroom } from './helpers/minute-window';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
@@ -28,12 +28,6 @@ const PASSWORD = 'supersecret1';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WRITES_PER_MINUTE = PLAN_LIMITS.indie.apiWritesPerMinute as number;
 const BURN_HEADROOM_SECONDS = 15;
-
-async function awaitBurnHeadroom(): Promise<void> {
-  const remaining = secondsUntilReset(MINUTE_SECONDS, new Date());
-  if (remaining >= BURN_HEADROOM_SECONDS) return;
-  await new Promise((resolve) => setTimeout(resolve, remaining * 1000 + 100));
-}
 
 describe('Remote MCP write tools with billing (e2e)', () => {
   jest.setTimeout(45_000);
@@ -173,7 +167,7 @@ describe('Remote MCP write tools with billing (e2e)', () => {
 
   it('stops a runaway agent at the plan write budget', async () => {
     const primary = await seedApp();
-    await awaitBurnHeadroom();
+    await awaitMinuteHeadroom(BURN_HEADROOM_SECONDS);
     for (let spent = 0; spent < WRITES_PER_MINUTE; spent += 1) {
       await request(app.getHttpServer())
         .patch('/actions/missing')

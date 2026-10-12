@@ -11,7 +11,6 @@ import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
 import {
   API_TOKEN_PREFIX,
-  MINUTE_SECONDS,
   PLAN_LIMITS,
   type ApiErrorEnvelope,
 } from '@asobeast/shared';
@@ -24,8 +23,8 @@ import { applyTrustedProxy } from '../src/config/trusted-proxy';
 import { sha256 } from '../src/auth/password-hash';
 import { CREDENTIAL_FAILURES_PER_MINUTE } from '../src/auth/rate-limit/credential-rate.limiter';
 import { RequestRateLimiter } from '../src/auth/rate-limit/request-rate.limiter';
-import { secondsUntilReset } from '../src/auth/rate-limit/window';
 import { restoreAuthEnv } from './helpers/auth-env';
+import { awaitMinuteHeadroom } from './helpers/minute-window';
 import { testDb } from './helpers/test-db';
 import {
   clearOnDemandCounters,
@@ -41,12 +40,6 @@ const READS_PER_MINUTE = PLAN_LIMITS.indie.apiRequestsPerMinute as number;
 const BURN_HEADROOM_SECONDS = 15;
 const LOGIN_ATTEMPTS_PER_MINUTE = 10;
 const ROTATING_SUBNET = '2001:db8:4a1:7';
-
-async function awaitBurnHeadroom(): Promise<void> {
-  const remaining = secondsUntilReset(MINUTE_SECONDS, new Date());
-  if (remaining >= BURN_HEADROOM_SECONDS) return;
-  await new Promise((resolve) => setTimeout(resolve, remaining * 1000 + 100));
-}
 
 function sessionCookie(res: request.Response): string {
   const raw = res.headers['set-cookie'] as unknown as string[] | undefined;
@@ -118,7 +111,7 @@ describe('Rate limits (billing mode)', () => {
     cookie: string,
     times: number,
   ): Promise<void> => {
-    await awaitBurnHeadroom();
+    await awaitMinuteHeadroom(BURN_HEADROOM_SECONDS);
     for (let spent = 1; spent <= times; spent += 1) {
       const response = await send(cookie);
       expect({
