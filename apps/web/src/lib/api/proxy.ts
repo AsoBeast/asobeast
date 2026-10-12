@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { ApiErrorEnvelope } from "@asobeast/shared";
-import { trustedClientAddress } from "./client-address";
+import { FORWARDED_FOR_HEADER, trustedClientAddress } from "./client-address";
 
 const API_BASE = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
 const UPSTREAM_TIMEOUT_MS = Number(process.env.API_PROXY_TIMEOUT_MS ?? 30_000);
@@ -41,7 +41,7 @@ function requestHeaders(request: NextRequest): Headers {
     if (name.startsWith(FORWARDED_HEADER_PREFIX)) headers.set(name, value);
   });
   const clientAddress = trustedClientAddress(request);
-  if (clientAddress) headers.set("x-forwarded-for", clientAddress);
+  if (clientAddress) headers.set(FORWARDED_FOR_HEADER, clientAddress);
   return headers;
 }
 
