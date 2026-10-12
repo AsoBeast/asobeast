@@ -164,6 +164,16 @@ describe('MetadataController (e2e)', () => {
         },
       });
     }
+    if (withKeywordField) {
+      await prisma.keywordField.create({
+        data: {
+          appId: created.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          localization: 'en-US',
+          phrases: ['water reminder'],
+        },
+      });
+    }
     return created.id;
   };
 
@@ -323,6 +333,51 @@ describe('MetadataController (e2e)', () => {
 
     expect(keywordField?.value).toBe('zażółć');
     expect(keywordField?.chars).toBe(6);
+  });
+
+  it('lints the keyword field of a localized view against its own title', async () => {
+    const id = await seed(false);
+    await prisma.appSnapshot.create({
+      data: {
+        appId: id,
+        country: 'pl',
+        localization: 'pl',
+        title: 'Nawyki Tracker',
+        subtitle: 'Codzienne cele',
+        description: 'Opis',
+        raw: {},
+      },
+    });
+    await prisma.appSnapshot.create({
+      data: {
+        appId: id,
+        country: 'pl',
+        title: 'Habits',
+        description: 'd',
+        raw: {},
+      },
+    });
+    await prisma.keywordField.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'pl',
+        phrases: ['nawyki', 'cel'],
+      },
+    });
+
+    const response = await api
+      .get(`/apps/${id}/metadata/audit`)
+      .query({ country: 'pl', localization: 'pl' })
+      .expect(200);
+    const card = (response.body as MetadataAuditResult).fields.find(
+      (field) => field.field === 'keywordField',
+    );
+
+    expect(card?.value).toBe('nawyki,cel');
+    expect(card?.issues.map((issue) => issue.rule)).toContain(
+      'repeats-title-word',
+    );
   });
 
   it('includes the keyword field when it has been pasted', async () => {

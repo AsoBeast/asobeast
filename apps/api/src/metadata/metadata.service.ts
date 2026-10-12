@@ -5,10 +5,7 @@ import {
   assertStorefront,
   countChars,
   KEYWORD_FIELD_CHAR_LIMIT,
-  keywordFieldChars,
-  packKeywordField,
   KeywordCoverageRow,
-  KeywordFieldSuggestion,
   lintDescription,
   lintKeywordField,
   lintShortDescription,
@@ -18,13 +15,22 @@ import {
   MetadataAuditResult,
   MetadataField,
   MetadataFieldAudit,
+  readLocalizations,
   ScreenshotItem,
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
 } from '@asobeast/shared';
+import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { suggestKeywordField } from './keyword-field-suggestion';
+import {
+  FieldPhrases,
+  fieldPhrases,
+  judgingSurfaces,
+  keywordFieldOf,
+} from './listing-surfaces';
 import { judgeFields, LocalizedSurfaces, Surface } from './localized-coverage';
 import {
   latestListingTexts,
@@ -47,15 +53,6 @@ interface AuditListings {
   view: ListingTexts | undefined;
 }
 
-const singularize = (text: string): string =>
-  tokenize(text)
-    .map((word) =>
-      word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
-        ? word.slice(0, -1)
-        : word,
-    )
-    .join(' ');
-
 @Injectable()
 export class MetadataService {
   constructor(
@@ -71,27 +68,27 @@ export class MetadataService {
   ): Promise<MetadataAuditResult> {
     const app = await this.ensureApp(appId);
     const market = country ?? app.country;
-    const home = market === app.country;
-    if (!home) {
+    if (market !== app.country) {
       assertStorefront(app.store, market);
     }
-    const [tracked, competitors] = await Promise.all([
+    const [tracked, competitors, stored] = await Promise.all([
       this.keywords.listTracked(appId, undefined, country),
       this.prisma.app.findMany({
         where: { primaryAppId: appId },
         select: { name: true },
       }),
+      storedKeywordFields(this.prisma, appId),
     ]);
     const active = tracked.filter((item) => item.active);
     const read = await this.readListings(app, market, localization, active);
     const { listings, view } = read;
+    const keywordFields = fieldPhrases(stored);
+    const viewLocalization = localization ?? readLocalizations(market)[0];
 
-    const keywordFieldValue = home
-      ? active
-          .filter((item) => item.source === 'KEYWORD_FIELD')
-          .map((item) => item.text)
-          .join(',')
-      : '';
+    const keywordFieldValue =
+      app.store === Store.APP_STORE
+        ? keywordFieldOf(keywordFields, viewLocalization)
+        : '';
     const context: LintContext = {
       titleWords: tokenize(view?.title ?? ''),
       subtitleWords: tokenize(view?.subtitle ?? ''),
@@ -104,13 +101,9 @@ export class MetadataService {
     const fields =
       app.store === Store.GOOGLE_PLAY
         ? this.playFields(view, context)
-        : this.appStoreFields(
-            view,
-            context,
-            localization === null ? keywordFieldValue : '',
-          );
+        : this.appStoreFields(view, context, keywordFieldValue);
 
-    const coverage = this.judgeCoverage(app, active, read, keywordFieldValue);
+    const coverage = this.judgeCoverage(app, active, read, keywordFields);
     const shots = await this.screenshotsOf(app.store, listings, [
       market,
       ...coverage.map((row) => row.listingCountry),
@@ -136,10 +129,11 @@ export class MetadataService {
           : row,
       ),
       keywordFieldSuggestion:
-        home && localization === null && app.store === Store.APP_STORE
-          ? this.suggestion(
-              active.filter((item) => item.country === app.country),
-              coverage.filter((row) => row.country === app.country),
+        app.store === Store.APP_STORE
+          ? suggestKeywordField(
+              active.filter((item) => item.country === market),
+              coverage.filter((row) => row.country === market),
+              viewLocalization,
             )
           : null,
       ...(screenshotText ? { screenshotText } : {}),
@@ -280,47 +274,22 @@ export class MetadataService {
     app: { store: Store; country: string },
     active: TrackedKeywordItem[],
     { listings, localized }: AuditListings,
-    keywordFieldValue: string,
+    keywordFields: FieldPhrases,
   ): JudgedCoverageRow[] {
     return active.map((item) => {
-      const own = listings.get(item.country);
-      const judging = own ? item.country : app.country;
-      return this.coverageRow(
-        item,
-        this.surfaces(
-          app.store,
-          own ?? listings.get(app.country),
-          own && item.country !== app.country ? null : keywordFieldValue,
-        ),
-        (localized.get(judging) ?? []).map(({ localization, texts }) => ({
-          localization,
-          surfaces: this.surfaces(app.store, texts, null),
-        })),
-        judging,
+      const judging = listings.has(item.country) ? item.country : app.country;
+      const { surfaces, localized: localizedSurfaces } = judgingSurfaces(
+        {
+          store: app.store,
+          country: judging,
+          home: judging === app.country,
+          listing: listings.get(judging),
+          captured: localized.get(judging) ?? [],
+        },
+        keywordFields,
       );
+      return this.coverageRow(item, surfaces, localizedSurfaces, judging);
     });
-  }
-
-  private surfaces(
-    store: Store,
-    listing: ListingTexts | undefined,
-    keywordField: string | null,
-  ): Surface[] {
-    const title = { field: 'title' as const, value: listing?.title ?? '' };
-    if (store === Store.GOOGLE_PLAY) {
-      return [
-        title,
-        { field: 'shortDescription', value: listing?.summary ?? '' },
-        { field: 'description', value: listing?.description ?? '' },
-      ];
-    }
-    const subtitle = {
-      field: 'subtitle' as const,
-      value: listing?.subtitle ?? '',
-    };
-    return keywordField === null
-      ? [title, subtitle]
-      : [title, subtitle, { field: 'keywordField', value: keywordField }];
   }
 
   private field(
@@ -355,34 +324,6 @@ export class MetadataService {
       uncovered: fields.every((field) => !field.covered),
       country: item.country,
       listingCountry,
-    };
-  }
-
-  private suggestion(
-    tracked: TrackedKeywordItem[],
-    coverage: KeywordCoverageRow[],
-  ): KeywordFieldSuggestion {
-    const uncovered = new Set(
-      coverage.filter((row) => row.uncovered).map((row) => row.keywordId),
-    );
-    const candidates = tracked
-      .filter((item) => uncovered.has(item.keywordId))
-      .map((item) => ({
-        text: singularize(item.text),
-        score: (item.volume ?? 0) * (item.relevance ?? 0),
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const added = packKeywordField([
-      ...new Set(candidates.map((candidate) => candidate.text).filter(Boolean)),
-    ]);
-    const value = added.join(',');
-
-    return {
-      value,
-      charactersUsed: keywordFieldChars(added),
-      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-      addedTerms: added,
     };
   }
 

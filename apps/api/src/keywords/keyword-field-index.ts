@@ -21,16 +21,20 @@ export function indexKeywordFields(
     );
 }
 
+export const storedKeywordFields = (
+  prisma: PrismaService,
+  appId: string,
+): Promise<StoredKeywordField[]> =>
+  prisma.keywordField.findMany({
+    where: { appId },
+    select: { localization: true, phrases: true },
+  });
+
 export async function loadKeywordFieldIndex(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordFieldIndex> {
-  return indexKeywordFields(
-    await prisma.keywordField.findMany({
-      where: { appId },
-      select: { localization: true, phrases: true },
-    }),
-  );
+  return indexKeywordFields(await storedKeywordFields(prisma, appId));
 }
 
 export const reportedSource = (
