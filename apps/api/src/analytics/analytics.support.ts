@@ -40,19 +40,19 @@ interface AppGroupRef {
   name: string;
 }
 
-export interface GroupMemberWindow {
+export interface KeywordWindow {
   rows: TrackedRow[];
   referenceDate: Date | null;
 }
 
-export interface GroupMember extends GroupMemberWindow {
+export interface GroupMember extends KeywordWindow {
   appId: string;
   group: AppGroupRef | null;
 }
 
 export interface GroupAggregate extends AppGroupRef {
   memberAppIds: string[];
-  members: GroupMemberWindow[];
+  members: KeywordWindow[];
 }
 
 export const addDays = (date: Date, days: number): Date =>
@@ -133,7 +133,7 @@ export function visibilityPoints(rows: TrackedRow[]): VisibilityPoint[] {
 }
 
 const groupKeywordsAt = (
-  members: GroupMemberWindow[],
+  members: KeywordWindow[],
   offsetDays: number,
 ): VisibilityKeyword[] =>
   members.flatMap((member) => {
@@ -143,7 +143,7 @@ const groupKeywordsAt = (
     return keywordsAt(member.rows, addDays(member.referenceDate, offsetDays));
   });
 
-function groupDelta(members: GroupMemberWindow[], days: number): number | null {
+function groupDelta(members: KeywordWindow[], days: number): number | null {
   const comparable = members.filter(
     (member) =>
       member.referenceDate !== null &&
@@ -157,7 +157,7 @@ function groupDelta(members: GroupMemberWindow[], days: number): number | null {
   return Math.round((current - past) * 10) / 10;
 }
 
-export function groupVisibility(members: GroupMemberWindow[]): {
+export function groupVisibility(members: KeywordWindow[]): {
   current: number;
   delta7d: number | null;
 } {
@@ -168,7 +168,7 @@ export function groupVisibility(members: GroupMemberWindow[]): {
 }
 
 export function groupVisibilityPoints(
-  members: GroupMemberWindow[],
+  members: KeywordWindow[],
 ): VisibilityPoint[] {
   const referenceDates = members.flatMap((member) =>
     member.referenceDate ? [member.referenceDate] : [],
@@ -214,7 +214,7 @@ export function groupAggregates(members: GroupMember[]): GroupAggregate[] {
     if (!member.group) {
       continue;
     }
-    const window: GroupMemberWindow = {
+    const window: KeywordWindow = {
       rows: member.rows,
       referenceDate: member.referenceDate,
     };
@@ -235,12 +235,20 @@ export function groupAggregates(members: GroupMember[]): GroupAggregate[] {
   return [...byGroup.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
 
+export interface TrackedScope {
+  appId: string;
+  country?: string;
+}
+
+const inMarket = (country?: string) =>
+  country ? { keyword: { country } } : {};
+
 export async function referenceDate(
   prisma: PrismaService,
-  appId: string,
+  { appId, country }: TrackedScope,
 ): Promise<Date | null> {
   const latest = await prisma.keywordRanking.findFirst({
-    where: { appId },
+    where: { appId, ...inMarket(country) },
     orderBy: { date: 'desc' },
     select: { date: true },
   });
@@ -249,12 +257,12 @@ export async function referenceDate(
 
 export async function trackedRows(
   prisma: PrismaService,
-  appId: string,
+  { appId, country }: TrackedScope,
   windowStart: Date | null,
   window: Date | null,
 ): Promise<TrackedRow[]> {
   return prisma.trackedKeyword.findMany({
-    where: { appId, active: true },
+    where: { appId, active: true, ...inMarket(country) },
     orderBy: { createdAt: 'asc' },
     select: {
       keywordId: true,
@@ -291,16 +299,22 @@ export async function trackedRows(
   });
 }
 
-export async function sparklineRows(
+export async function keywordWindow(
   prisma: PrismaService,
-  appId: string,
-): Promise<{ rows: TrackedRow[]; referenceDate: Date | null }> {
-  const reference = await referenceDate(prisma, appId);
-  const windowStart = reference
-    ? addDays(reference, -SPARKLINE_WINDOW_DAYS)
-    : null;
+  scope: TrackedScope,
+  days: number,
+): Promise<KeywordWindow> {
+  const reference = await referenceDate(prisma, scope);
+  const windowStart = reference ? addDays(reference, -days) : null;
   return {
-    rows: await trackedRows(prisma, appId, windowStart, reference),
+    rows: await trackedRows(prisma, scope, windowStart, reference),
     referenceDate: reference,
   };
+}
+
+export function sparklineRows(
+  prisma: PrismaService,
+  appId: string,
+): Promise<KeywordWindow> {
+  return keywordWindow(prisma, { appId }, SPARKLINE_WINDOW_DAYS);
 }

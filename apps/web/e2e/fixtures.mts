@@ -584,6 +584,28 @@ export const APP_1_SUMMARY: AppSummary = {
   competitors: 1,
 };
 
+export const APP_1_MARKET_SUMMARIES: Record<string, AppSummary> = {
+  us: {
+    ...APP_1_SUMMARY,
+    visibility: { current: 71.2, delta7d: 4, delta30d: -1 },
+    trackedKeywords: 3,
+  },
+  pl: {
+    ...APP_1_SUMMARY,
+    visibility: { current: 18.6, delta7d: -2, delta30d: null },
+    rankDistribution: {
+      top1: 0,
+      top3: 0,
+      top10: 1,
+      top50: 2,
+      beyond: 0,
+      unranked: 0,
+    },
+    movers: { up: [], down: [] },
+    trackedKeywords: 2,
+  },
+};
+
 export const APP_1_VISIBILITY: VisibilityHistory = {
   points: Array.from({ length: 30 }, (_, index) => ({
     date: utcDaysAgo(29 - index),

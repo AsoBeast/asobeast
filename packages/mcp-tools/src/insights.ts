@@ -6,6 +6,7 @@ import {
 } from "@asobeast/shared";
 import { utcDate } from "./calendar-date";
 import { defineReadTool, seg, type ReadTool } from "./define";
+import { keywordMarket } from "./keyword-market";
 
 const appId = z.string().describe("The app id from list_apps.");
 const from = utcDate
@@ -84,11 +85,11 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "visibility_history",
     title: "Visibility history",
     description:
-      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords: each active tracked keyword counts in proportion to its popularity, discounted by position as 1 / log2(position + 1), and 0 when not found, so 100 means position 1 for every keyword with a popularity above 0, and a keyword with popularity 0 cannot move the score. History is calculated over the keywords tracked today, so compare the score with itself over time rather than across apps or stores.",
-    inputSchema: z.object({ appId, from, to }),
-    request: ({ appId, from, to }) => ({
+      "Daily visibility score (0-100) history for one app over a date window. Higher is more visible across tracked keywords: each active tracked keyword counts in proportion to its popularity, discounted by position as 1 / log2(position + 1), and 0 when not found, so 100 means position 1 for every keyword with a popularity above 0, and a keyword with popularity 0 cannot move the score. History is calculated over the keywords tracked today, so compare the score with itself over time rather than across apps or stores. Pass country for the keywords of one market.",
+    inputSchema: z.object({ appId, from, to, country: keywordMarket }),
+    request: ({ appId, from, to, country }) => ({
       path: `/apps/${seg(appId)}/visibility-history`,
-      params: { from, to },
+      params: { from, to, country },
     }),
   }),
 
@@ -96,11 +97,11 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "rank_distribution_history",
     title: "Rank distribution history",
     description:
-      "Daily counts of tracked keywords by rank band (top 1-3, 4-10, 11-50, etc.) for one app over a date window.",
-    inputSchema: z.object({ appId, from, to }),
-    request: ({ appId, from, to }) => ({
+      "Daily counts of tracked keywords by rank band (top 1-3, 4-10, 11-50, etc.) for one app over a date window. Pass country for the keywords of one market.",
+    inputSchema: z.object({ appId, from, to, country: keywordMarket }),
+    request: ({ appId, from, to, country }) => ({
       path: `/apps/${seg(appId)}/rank-distribution-history`,
-      params: { from, to },
+      params: { from, to, country },
     }),
   }),
 
