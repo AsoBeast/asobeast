@@ -80,6 +80,12 @@ export function productionWarnings(env: Env): string[] {
     );
   }
 
+  if (mailConfigured(env) && !env.WEB_PUBLIC_URL) {
+    warnings.push(
+      'SMTP is configured in production with no WEB_PUBLIC_URL. A confirmation email needs a link to the web app, so no new email alert recipient can be asked to confirm and none of them receives an alert, and alert emails go out with no unsubscribe link. Set WEB_PUBLIC_URL to the origin the web app is served from.',
+    );
+  }
+
   if (
     mailConfigured(env) &&
     env.SMTP_SECURE &&

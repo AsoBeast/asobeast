@@ -7,6 +7,8 @@ export function toEmailAlertItem(alert: EmailAlert): EmailAlertItem {
     email: alert.email,
     events: alert.events as WebhookEvent[],
     active: alert.active,
+    confirmed: alert.confirmedAt !== null,
+    unsubscribed: alert.unsubscribedAt !== null,
     createdAt: alert.createdAt.toISOString(),
   };
 }

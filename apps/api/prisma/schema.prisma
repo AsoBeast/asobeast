@@ -436,14 +436,17 @@ model Webhook {
 }
 
 model EmailAlert {
-  id          String          @id @default(cuid())
-  workspaceId String
-  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  email       String
-  events      String[]
-  active      Boolean         @default(true)
-  deliveries  AlertDelivery[]
-  createdAt   DateTime        @default(now())
+  id                 String          @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  email              String
+  events             String[]
+  active             Boolean         @default(true)
+  confirmedAt        DateTime?
+  confirmationSentAt DateTime?
+  unsubscribedAt     DateTime?
+  deliveries         AlertDelivery[]
+  createdAt          DateTime        @default(now())
 
   @@index([workspaceId])
 }

@@ -84,6 +84,16 @@ export const OPERATOR_TOKEN = "asob_operator";
 
 export const VALID_UNSUBSCRIBE_TOKEN = "valid-token-".padEnd(43, "x");
 
+export const VALID_CONFIRM_TOKEN = "confirm-token-".padEnd(43, "x");
+
+export const EXPIRED_CONFIRM_TOKEN = "expired-token-".padEnd(43, "x");
+
+export const TRUSTED_RECIPIENT = "owner@example.com";
+
+export const UNSENT_RECIPIENT_PREFIX = "unsent-";
+
+export const UNSUBSCRIBED_RECIPIENT = "left@example.net";
+
 export const METRICS_SCRAPE =
   'asobeast_store_canary{store="APP_STORE",outcome="ok"} 1\n';
 
@@ -2440,6 +2450,7 @@ export const EMAIL_ALERTS: EmailAlertItem[] = [
     email: "ops@example.com",
     events: ["metadata.changed", "rank.dropped"],
     active: true,
+    confirmed: true,
     createdAt: utcTimestampDaysAgo(3),
   },
 ];

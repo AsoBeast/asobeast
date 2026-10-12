@@ -100,6 +100,7 @@ const RATE_LIMIT_NAMESPACES = [
   'asobeast:credentials:*',
   'asobeast:abuse:*',
   'asobeast:recovery:*',
+  'asobeast:confirmation:*',
 ];
 
 export async function clearRateLimitCounters(
