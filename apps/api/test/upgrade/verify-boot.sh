@@ -109,6 +109,7 @@ assert_read "/apps/app_ios" '.competitors | map(.id) | index("app_rival") != nul
 assert_read "/apps/app_ios/keywords" '[.[] | .text] | index("workout tracker") != null'
 assert_read "/apps/app_ios/keywords?country=gb" '[.[] | .country] | all(. == "gb")'
 assert_read "/apps/app_ios/keyword-field" '[.tracked[].text] == ["workout tracker"]'
+assert_read "/apps/app_ios/localizations" '.localizations[0] | .localization == "en-US" and .origin == "home"'
 assert_read "/apps/app_ios/rankings?from=2026-07-14&to=2026-07-15" '[.series[] | select(.keywordId == "kw_ios_us") | .points[].position] == [12, 9]'
 assert_read "/apps/app_ios/reviews" '[.reviews[].reviewId] | index("r-2") != null'
 assert_read "/apps/app_ios/changes" '.events | type == "array"'

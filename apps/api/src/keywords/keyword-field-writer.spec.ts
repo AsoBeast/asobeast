@@ -32,6 +32,9 @@ const build = (stored: string[] = []) => {
       findMany: jest.fn().mockResolvedValue([]),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
+    appLocalization: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 }),
+    },
   };
   const quota = {
     admitKeywordMarkets: jest.fn(
@@ -216,5 +219,74 @@ describe('KeywordFieldWriter', () => {
       },
       data: { active: false },
     });
+  });
+
+  it('records a localization other than the home one as manual inside the transaction', async () => {
+    const { writer, tx, tracker } = build();
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: ['habito'],
+      markets: ['us'],
+    });
+
+    expect(tx.appLocalization.createMany).toHaveBeenCalledTimes(1);
+    expect(tx.appLocalization.createMany).toHaveBeenCalledWith({
+      data: [
+        {
+          appId: 'app1',
+          workspaceId: 'ws1',
+          localization: 'es-MX',
+          origin: 'manual',
+        },
+      ],
+      skipDuplicates: true,
+    });
+    const recordedAt =
+      tx.appLocalization.createMany.mock.invocationCallOrder[0];
+    expect(recordedAt).toBeGreaterThan(
+      tx.$executeRaw.mock.invocationCallOrder[0],
+    );
+    expect(recordedAt).toBeLessThan(tracker.track.mock.invocationCallOrder[0]);
+  });
+
+  it('does not record the home localization', async () => {
+    const { writer, tx } = build();
+
+    await writer.save({
+      app: APP,
+      localization: 'en-US',
+      phrases: ['habit'],
+      markets: ['us'],
+    });
+
+    expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+  });
+
+  it('does not record an emptied field', async () => {
+    const { writer, tx } = build(['habito']);
+
+    await writer.save({
+      app: APP,
+      localization: 'es-MX',
+      phrases: [],
+      markets: ['us'],
+    });
+
+    expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
+  });
+
+  it('treats English (U.K.) as the home localization of a country that is no storefront', async () => {
+    const { writer, tx } = build();
+
+    await writer.save({
+      app: { ...APP, country: 'zz' },
+      localization: 'en-GB',
+      phrases: ['habit'],
+      markets: ['zz'],
+    });
+
+    expect(tx.appLocalization.createMany).not.toHaveBeenCalled();
   });
 });
