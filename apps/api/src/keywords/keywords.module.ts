@@ -12,6 +12,7 @@ import { KeywordsController } from './keywords.controller';
 import { LocalizationsController } from './localizations.controller';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
 import { KeywordsService } from './keywords.service';
+import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 import { MarketListingRequests } from './market-listing.requests';
 import { SpiderService } from './spider.service';
 import { TrackedKeywordAccess } from './tracked-keyword.access';
@@ -34,6 +35,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     KeywordSuggestionService,
     KeywordTracker,
     LocalizedKeywordFieldService,
+    MarketKeywordFieldsService,
     MarketListingRequests,
     SpiderService,
     TrackedKeywordAccess,

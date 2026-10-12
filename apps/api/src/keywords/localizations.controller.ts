@@ -7,6 +7,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import type {
@@ -15,6 +16,7 @@ import type {
   AppStoreLocalization,
   KeywordFieldSavePreview,
   LocalizedKeywordFieldResult,
+  MarketKeywordFields,
 } from '@asobeast/shared';
 import { RateLimitClass } from '../auth/rate-limit/rate-class';
 import { ReadOnlyEndpoint } from '../auth/read-access';
@@ -24,8 +26,10 @@ import {
   KeywordFieldPreviewDto,
   LocalizedKeywordFieldDto,
 } from './dto/localized-keyword-field.dto';
+import { MarketQueryDto } from './dto/market-query.dto';
 import { LocalizationPipe } from './localization.pipe';
 import { LocalizedKeywordFieldService } from './localized-keyword-field.service';
+import { MarketKeywordFieldsService } from './market-keyword-fields.service';
 
 @ApiTags('keywords')
 @Controller('apps/:id')
@@ -33,6 +37,7 @@ export class LocalizationsController {
   constructor(
     private readonly localizations: AppLocalizationsService,
     private readonly fieldSaves: LocalizedKeywordFieldService,
+    private readonly marketFields: MarketKeywordFieldsService,
   ) {}
 
   @Get('localizations')
@@ -70,6 +75,19 @@ export class LocalizationsController {
     @Param('localization', LocalizationPipe) localization: AppStoreLocalization,
   ): Promise<void> {
     return this.localizations.remove(id, localization);
+  }
+
+  @Get('keyword-fields/market')
+  @ApiOperation({
+    summary: 'Read what one market search reads',
+    description:
+      'Answers every localization the storefront of the market reads, in read order, with its role (default or additional), whether the app ships it, its origin (home, manual or detected, null when it is not shipped), its saved phrases and the characters they use. Without a query it describes the home storefront of the app. Any App Store storefront may be asked for, whether or not the app tracks keywords there. Answers 400 when country is neither the home storefront nor an App Store storefront and for a Google Play app, and 404 for a missing app.',
+  })
+  marketKeywordFields(
+    @Param('id') id: string,
+    @Query() query: MarketQueryDto,
+  ): Promise<MarketKeywordFields> {
+    return this.marketFields.read(id, query.country);
   }
 
   @Put('keyword-fields/:localization')
