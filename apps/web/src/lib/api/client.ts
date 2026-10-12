@@ -9,6 +9,8 @@ function apiBase(): string {
 }
 
 async function serverForwardHeaders(): Promise<Record<string, string>> {
+  const { FORWARDED_FOR_HEADER, trustedClientAddress } =
+    await import("./client-address");
   try {
     const { headers } = await import("next/headers");
     const incoming = await headers();
@@ -17,6 +19,8 @@ async function serverForwardHeaders(): Promise<Record<string, string>> {
     if (cookie) forwarded.cookie = cookie;
     const authorization = incoming.get("authorization");
     if (authorization) forwarded.authorization = authorization;
+    const clientAddress = trustedClientAddress({ headers: incoming });
+    if (clientAddress) forwarded[FORWARDED_FOR_HEADER] = clientAddress;
     return forwarded;
   } catch {
     return {};

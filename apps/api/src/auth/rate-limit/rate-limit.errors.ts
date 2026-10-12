@@ -13,6 +13,9 @@ const ON_DEMAND_LABELS: Record<OnDemandAction, string> = {
   runDaily: 'Run daily',
   score: 'Score',
   suggestions: 'Keyword suggestions',
+  spider: 'Deep search',
+  importApp: 'Import app',
+  addCompetitor: 'Add competitor',
 };
 
 function onDemandMessage(
@@ -30,6 +33,13 @@ export function rateLimitMessage(detail: RateLimitDetail): string {
       ? 'Send fewer requests at once'
       : `Wait ${detail.resetSeconds} seconds before the next one, because retrying before then will fail`;
   return `Rate limit reached: ${allowance}. ${reopens}.`;
+}
+
+export function oversizedBatchMessage(
+  detail: RateLimitDetail,
+  messages: number,
+): string {
+  return `MCP batch too large: it carries ${messages} messages and the ${detail.plan} plan allows ${detail.limit} MCP requests ${WINDOW_NAMES[detail.window]}, so it can never be served. Split it into requests of at most ${detail.limit} messages.`;
 }
 
 export class CredentialRateLimitError extends Error {
@@ -52,8 +62,11 @@ export class RequestThrottledError extends Error {
 }
 
 export class RateLimitExceededError extends Error {
-  constructor(readonly detail: RateLimitDetail) {
-    super(rateLimitMessage(detail));
+  constructor(
+    readonly detail: RateLimitDetail,
+    message = rateLimitMessage(detail),
+  ) {
+    super(message);
     this.name = 'RateLimitExceededError';
   }
 }

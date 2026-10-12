@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
+import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { SpiderService } from '../keywords/spider.service';
@@ -35,10 +36,17 @@ export class StoreJobsHandler {
     private readonly egress: ProxyEgress,
     private readonly targetCountry: JobTargetCountry,
     private readonly subtitles: SubtitleBackfill,
+    private readonly eligibility: CollectionEligibility,
   ) {}
 
   async handle(job: Job): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
+      if (
+        job.name === JOBS.SPIDER_PROBE &&
+        !(await this.eligibility.forWorkspace())
+      ) {
+        return;
+      }
       const country = await this.targetCountry.of(job);
       await this.egress.through(jobStore(job), country, () =>
         this.dispatch(job),

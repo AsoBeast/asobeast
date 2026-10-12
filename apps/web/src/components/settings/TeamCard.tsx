@@ -44,6 +44,7 @@ import {
   workspaceTeamOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { inviteOutcome } from "./invite-outcome";
 
 function messageOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.envelope.message : fallback;
@@ -67,6 +68,8 @@ function InviteDialog() {
       setError(messageOf(err, "Could not send the invitation.")),
   });
   const inviteOnce = useSingleFlight(mutation);
+
+  const outcome = created ? inviteOutcome(created) : null;
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,16 +100,14 @@ function InviteDialog() {
             They join this workspace and see everything in it except billing.
           </DialogDescription>
         </DialogHeader>
-        {created ? (
+        {outcome ? (
           <DialogBody className="gap-2">
-            <p className="text-body">
-              {created.delivered
-                ? `Invitation sent to ${created.email}.`
-                : `Email is not configured, so send ${created.email} this link yourself.`}
-            </p>
-            <code className="rounded-md bg-muted px-2 py-1.5 text-caption break-all">
-              {created.acceptPath}
-            </code>
+            <p className="text-body">{outcome.message}</p>
+            {outcome.link ? (
+              <code className="rounded-md bg-muted px-2 py-1.5 text-caption break-all">
+                {outcome.link}
+              </code>
+            ) : null}
           </DialogBody>
         ) : (
           <form onSubmit={submit} className="flex min-h-0 flex-col gap-4">

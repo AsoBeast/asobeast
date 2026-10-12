@@ -63,7 +63,11 @@ export class AppsService {
       : this.appStoreQueue;
   }
 
-  async importFromUrl(url: string, country?: string): Promise<AppDetail> {
+  async importFromUrl(
+    url: string,
+    country?: string,
+    spend?: () => Promise<void>,
+  ): Promise<AppDetail> {
     const { store, storeAppId, country: parsedCountry } = parseStoreUrl(url);
 
     if (!SUPPORTED_STORES.includes(store)) {
@@ -84,6 +88,7 @@ export class AppsService {
       return this.detail(known.id);
     }
     await this.quota.assertRoom('apps');
+    await spend?.();
 
     const { app, snapshot } = await this.capture.capture(
       store,

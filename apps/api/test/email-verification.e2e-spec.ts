@@ -6,7 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import { AuthUser, WorkspaceInviteCreated } from '@asobeast/shared';
+import { AuthUser } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { MailerService } from '../src/alerts/mailer.service';
@@ -194,7 +194,7 @@ describe('Email verification before the trial starts', () => {
       .send({ token: tokenFrom(sent[0]) })
       .expect(200);
     const ownerCookie = sessionCookie(confirmed);
-    const invite = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/workspace/invites')
       .set('Cookie', ownerCookie)
       .send({ email: 'member@example.com' })
@@ -202,9 +202,7 @@ describe('Email verification before the trial starts', () => {
     const accepted = await request(app.getHttpServer())
       .post('/workspace/invites/accept')
       .send({
-        token: new URLSearchParams(
-          (invite.body as WorkspaceInviteCreated).acceptPath.split('?')[1],
-        ).get('token'),
+        token: tokenFrom(sent[sent.length - 1]),
         password: 'supersecret1',
       })
       .expect(201);
@@ -550,7 +548,7 @@ describe('Email verification before the trial starts', () => {
     it('keeps the plan when an invited member confirms into a paying workspace', async () => {
       const owner = await register('owner@example.com').expect(201);
       await subscribed('ultimate');
-      const invite = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .post('/workspace/invites')
         .set('Cookie', sessionCookie(owner))
         .send({ email: 'member@example.com' })
@@ -558,9 +556,7 @@ describe('Email verification before the trial starts', () => {
       const accepted = await request(app.getHttpServer())
         .post('/workspace/invites/accept')
         .send({
-          token: new URLSearchParams(
-            (invite.body as WorkspaceInviteCreated).acceptPath.split('?')[1],
-          ).get('token'),
+          token: tokenFrom(sent[sent.length - 1]),
           password: 'supersecret1',
         })
         .expect(201);

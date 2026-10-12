@@ -32,6 +32,7 @@ import { AllowUnentitled } from './decorators/allow-unentitled.decorator';
 import { CurrentTokenScope } from './decorators/current-token-scope.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { SessionOnly } from './decorators/session-only.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { CreateTokenDto } from './dto/create-token.dto';
 import { LoginDto } from './dto/login.dto';
@@ -141,6 +142,7 @@ export class AuthController {
 
   @Post('password')
   @AllowUnentitled()
+  @SessionOnly()
   @HttpCode(200)
   @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
@@ -190,6 +192,7 @@ export class AuthController {
   }
 
   @Post('tokens')
+  @SessionOnly()
   @UseGuards(RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Create a personal api token' })
@@ -202,6 +205,7 @@ export class AuthController {
 
   @Delete('tokens/:id')
   @AllowUnentitled()
+  @SessionOnly()
   @HttpCode(204)
   @ApiOperation({ summary: 'Revoke a personal api token' })
   revokeToken(

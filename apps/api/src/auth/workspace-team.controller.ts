@@ -24,6 +24,7 @@ import type { AccountUser } from './auth.types';
 import { AllowUnentitled } from './decorators/allow-unentitled.decorator';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { SessionOnly } from './decorators/session-only.decorator';
 import { AcceptInviteDto } from './dto/accept-invite.dto';
 import { InviteMemberDto } from './dto/invite-member.dto';
 import { OwnerGuard } from './guards/owner.guard';
@@ -46,6 +47,7 @@ export class WorkspaceTeamController {
   }
 
   @Post('invites')
+  @SessionOnly()
   @UseGuards(OwnerGuard, RetryAfterThrottlerGuard)
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @ApiOperation({ summary: 'Invite a member into this workspace' })
@@ -57,6 +59,7 @@ export class WorkspaceTeamController {
   }
 
   @Delete('invites/:id')
+  @SessionOnly()
   @UseGuards(OwnerGuard)
   @HttpCode(204)
   @ApiOperation({ summary: 'Revoke a pending invitation' })
@@ -65,6 +68,7 @@ export class WorkspaceTeamController {
   }
 
   @Delete('members/:id')
+  @SessionOnly()
   @UseGuards(OwnerGuard)
   @HttpCode(204)
   @ApiOperation({ summary: 'Remove a member from this workspace' })
