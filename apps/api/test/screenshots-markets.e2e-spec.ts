@@ -35,7 +35,11 @@ import {
   until,
 } from './helpers/screenshot-reading';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  isolateQueues,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 
 describe('Screenshots of market listings (e2e)', () => {
   jest.setTimeout(30_000);
@@ -77,6 +81,7 @@ describe('Screenshots of market listings (e2e)', () => {
   });
 
   beforeEach(async () => {
+    await isolateQueues(app, QUEUES.SCREENSHOTS, QUEUES.APP_STORE);
     registry.reset();
     registry.screenshots = [appleShot(1), appleShot(2)];
     read.mockReset().mockResolvedValue(await solidPng());

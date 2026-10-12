@@ -8,6 +8,7 @@ import { AppDetail } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { QUEUES } from '../src/jobs/jobs.types';
 import { OCR_ENGINE } from '../src/screenshots/ocr-engine';
 import { ScreenshotQueue } from '../src/screenshots/screenshot-queue';
 import { ScreenshotFetchError } from '../src/store-providers/errors';
@@ -28,7 +29,11 @@ import {
 } from './helpers/screenshot-reading';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
-import { obliterateQueues, settleBootRegistration } from './obliterate-queues';
+import {
+  isolateQueues,
+  obliterateQueues,
+  settleBootRegistration,
+} from './obliterate-queues';
 
 const OTHER_WORKSPACE = 'ws_screenshots_other';
 
@@ -72,6 +77,7 @@ describe('Reading screenshots (e2e)', () => {
   });
 
   beforeEach(async () => {
+    await isolateQueues(app, QUEUES.SCREENSHOTS);
     registry.reset();
     read.mockReset().mockResolvedValue(await solidPng());
     engineRead.mockReset().mockResolvedValue(lines('Track every habit'));
