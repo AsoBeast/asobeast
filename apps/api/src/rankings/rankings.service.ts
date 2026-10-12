@@ -11,8 +11,13 @@ import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { ImplausibleResultError } from '../store-providers/errors';
-import { isImplausiblyEmpty } from '../store-providers/result-plausibility';
+import {
+  askAgainWhileEmpty,
+  EMPTY_ANSWER_RETRIES,
+  isImplausiblyEmpty,
+} from '../store-providers/result-plausibility';
 import { StoreProviderRegistry } from '../store-providers/store-provider.registry';
+import { SearchItem } from '../store-providers/types';
 import { RankingHistoryQueryDto } from './dto/ranking-history-query.dto';
 import { CompetitorCapture, RankCapture } from './rank-milestones';
 import { RankingAlertsService } from './ranking-alerts.service';
@@ -79,10 +84,7 @@ export class RankingsService {
       return;
     }
 
-    const results = await this.registry
-      .get(keyword.store)
-      .search(keyword.text, keyword.country, RANK_DEPTH);
-    await this.rejectImplausibleEmptyResult(keyword, results.length);
+    const results = await this.search(keyword);
 
     const positionByStoreAppId = new Map<string, number>();
     results.forEach((item, index) => {
@@ -138,27 +140,32 @@ export class RankingsService {
     }
   }
 
-  private async rejectImplausibleEmptyResult(
-    keyword: { id: string; text: string; store: Store; country: string },
-    resultCount: number,
-  ): Promise<void> {
-    if (resultCount > 0) return;
+  private async search(keyword: KeywordScope): Promise<SearchItem[]> {
     const today = utcToday();
-    const previous = await this.prisma.serpEntry.findFirst({
+    const lastRanked = await this.prisma.serpEntry.findFirst({
       where: { keywordId: keyword.id, date: { lt: today } },
       orderBy: { date: 'desc' },
       select: { date: true },
     });
-    if (!previous) return;
-    if (
-      !isImplausiblyEmpty({ resultCount, lastSeenOn: previous.date, today })
-    ) {
-      return;
-    }
-    throw new ImplausibleResultError(
-      keyword.store,
-      `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(previous.date)}`,
+    const expected = isImplausiblyEmpty({
+      resultCount: 0,
+      lastSeenOn: lastRanked?.date ?? null,
+      today,
+    });
+    const retries = expected ? EMPTY_ANSWER_RETRIES[keyword.store] : 0;
+    const provider = this.registry.get(keyword.store);
+    const results = await askAgainWhileEmpty(
+      () => provider.search(keyword.text, keyword.country, RANK_DEPTH),
+      retries,
     );
+    if (expected && lastRanked && results.length === 0) {
+      throw new ImplausibleResultError(
+        keyword.store,
+        `"${keyword.text}" returned no results in ${keyword.country} but ranked apps on ${toDateKey(lastRanked.date)}`,
+        { retryable: retries > 0 },
+      );
+    }
+    return results;
   }
 
   private async collectableFor(
