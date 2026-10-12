@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import { Job, UnrecoverableError } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
+import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { SpiderService } from '../keywords/spider.service';
@@ -18,6 +19,8 @@ describe('StoreJobsHandler', () => {
   const refreshApp = jest.fn();
   const refreshListing = jest.fn();
   const resolveSubtitle = jest.fn();
+  const runSpiderProbe = jest.fn();
+  const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
       work(),
@@ -31,6 +34,8 @@ describe('StoreJobsHandler', () => {
     seen = undefined;
     through.mockClear();
     countryOf.mockReset().mockResolvedValue('us');
+    runSpiderProbe.mockReset().mockResolvedValue(undefined);
+    forWorkspace.mockReset().mockResolvedValue(true);
     refreshListing.mockReset().mockResolvedValue(null);
     refreshApp.mockReset().mockImplementation(() => {
       seen = workspace.current;
@@ -42,11 +47,12 @@ describe('StoreJobsHandler', () => {
       {} as ScoringService,
       {} as CategoryRanksService,
       {} as ReviewsService,
-      {} as SpiderService,
+      { runSpiderProbe } as unknown as SpiderService,
       workspace,
       { through } as unknown as ProxyEgress,
       { of: countryOf } as unknown as JobTargetCountry,
       { resolve: resolveSubtitle } as unknown as SubtitleBackfill,
+      { forWorkspace } as unknown as CollectionEligibility,
     );
   });
 
@@ -113,6 +119,40 @@ describe('StoreJobsHandler', () => {
     } as Job);
 
     expect(resolveSubtitle).toHaveBeenCalledWith(data);
+  });
+
+  describe('a deep search probe', () => {
+    const probe = {
+      name: JOBS.SPIDER_PROBE,
+      id: '4',
+      data: { appId: 'a1', term: 't', probe: 'a', workspaceId: 'ws_a' },
+      queueName: QUEUES.APP_STORE,
+    } as Job;
+
+    it('runs through one egress endpoint while its workspace may collect', async () => {
+      await handler.handle(probe);
+
+      expect(through).toHaveBeenCalledTimes(1);
+      expect(runSpiderProbe).toHaveBeenCalledWith(probe.data);
+    });
+
+    it('takes no egress endpoint once its workspace may no longer collect', async () => {
+      forWorkspace.mockResolvedValue(false);
+
+      await handler.handle(probe);
+
+      expect(through).not.toHaveBeenCalled();
+      expect(runSpiderProbe).not.toHaveBeenCalled();
+    });
+  });
+
+  it('asks whether the workspace may collect only for a deep search probe', async () => {
+    forWorkspace.mockResolvedValue(false);
+
+    await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));
+
+    expect(forWorkspace).not.toHaveBeenCalled();
+    expect(refreshApp).toHaveBeenCalledWith('a1');
   });
 
   it.each([

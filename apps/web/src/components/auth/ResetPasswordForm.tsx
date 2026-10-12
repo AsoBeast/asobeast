@@ -78,8 +78,8 @@ export function ResetPasswordForm() {
           </CardTitle>
           <CardDescription>
             {mutation.isSuccess
-              ? "Every other session has been signed out."
-              : "Setting it signs out every device that was already signed in."}
+              ? "Every other session has been signed out and your API tokens were revoked."
+              : "Setting it signs out every device that was already signed in and revokes your API tokens."}
           </CardDescription>
         </CardHeader>
         <CardContent>
