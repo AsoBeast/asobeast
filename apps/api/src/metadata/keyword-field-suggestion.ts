@@ -9,14 +9,22 @@ import {
   TrackedKeywordItem,
 } from '@asobeast/shared';
 
-const singularize = (text: string): string =>
-  tokenize(text)
-    .map((word) =>
-      word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
-        ? word.slice(0, -1)
-        : word,
-    )
-    .join(' ');
+const singular = (word: string): string =>
+  word.length > 3 && word.endsWith('s') && !word.endsWith('ss')
+    ? word.slice(0, -1)
+    : word;
+
+const candidateText = (
+  text: string,
+  localization: AppStoreLocalization | undefined,
+): string => {
+  const words = tokenize(text);
+  return (
+    localization === undefined || localization.startsWith('en')
+      ? words.map(singular)
+      : words
+  ).join(' ');
+};
 
 export function suggestKeywordField(
   tracked: TrackedKeywordItem[],
@@ -29,7 +37,7 @@ export function suggestKeywordField(
   const candidates = tracked
     .filter((item) => uncovered.has(item.keywordId))
     .map((item) => ({
-      text: singularize(item.text),
+      text: candidateText(item.text, localization),
       score: (item.volume ?? 0) * (item.relevance ?? 0),
     }))
     .sort((a, b) => b.score - a.score);

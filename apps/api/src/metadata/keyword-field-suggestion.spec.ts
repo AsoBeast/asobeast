@@ -33,4 +33,12 @@ describe('suggestKeywordField', () => {
       localization: 'es-MX',
     });
   });
+
+  it('keeps the words of a localization that is not english as they are', () => {
+    const german = [item('k1', 'yoga kurs', 9)];
+
+    expect(
+      suggestKeywordField(german, [row('k1', true)], 'de').addedTerms,
+    ).toEqual(['yoga kurs']);
+  });
 });
