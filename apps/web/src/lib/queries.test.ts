@@ -48,6 +48,7 @@ import {
   invalidateAudit,
   invalidateKeywordImport,
   invalidateKeywordFieldMutation,
+  invalidateLocalizationMutation,
   invalidateKeywordMutation,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -57,6 +58,7 @@ import {
   keywordCountriesOptions,
   keywordFieldOptions,
   keywordFieldsOptions,
+  appLocalizationsOptions,
   keywordsOptions,
   appListingOptions,
   listingMarketsOptions,
@@ -119,6 +121,7 @@ const APP_SCOPED_OPTIONS = [
     appKeys.keywordField(APP, { country: "de", localization: "en-GB" }),
   ],
   ["keywordFields", keywordFieldsOptions(APP), appKeys.keywordFields(APP)],
+  ["localizations", appLocalizationsOptions(APP), appKeys.localizations(APP)],
   [
     "suggestions",
     suggestionsOptions(APP, "metadata", "us"),
@@ -509,6 +512,24 @@ describe("invalidation sets", () => {
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
       appKeys.metadataAuditRoot(APP),
+    ]);
+  });
+
+  it("W-QRY-02 refreshes the localizations and the plan after a localization mutation", () => {
+    expect(
+      invalidatedKeys((client) => invalidateLocalizationMutation(client, APP)),
+    ).toEqual([
+      appKeys.audit(APP),
+      appKeys.keywordsRoot(APP),
+      appKeys.keywordCountries(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.keywordFields(APP),
+      appKeys.summary(APP),
+      appKeys.compareRoot(APP),
+      portfolioInsightsKey,
+      appKeys.metadataAuditRoot(APP),
+      appKeys.localizations(APP),
+      accountPlanKey,
     ]);
   });
 

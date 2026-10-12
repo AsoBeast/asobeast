@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   draftableLocalizations,
-  extraRoom,
   LOCALIZED_FIELDS_NOTE,
   localizationName,
   localizedLabel,
@@ -27,20 +26,6 @@ describe("storefrontRows", () => {
     expect(
       storefrontRows("pl", ["us", "pl"]).map((row) => row.country),
     ).toEqual(["pl", "us"]);
-  });
-});
-
-describe("extraRoom", () => {
-  it("counts the extra fields of several localizations", () => {
-    expect(extraRoom(9, "us")).toBe(
-      "9 more localizations: 9 more titles, subtitles and keyword fields that US search reads",
-    );
-  });
-
-  it("speaks of one localization in the singular", () => {
-    expect(extraRoom(1, "pl")).toBe(
-      "1 more localization: 1 more title, subtitle and keyword field that PL search reads",
-    );
   });
 });
 

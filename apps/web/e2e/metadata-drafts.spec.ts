@@ -53,7 +53,7 @@ test("drafts a chosen localization and sends it to the api", async ({
 test("a storefront language opens the drafts card on that language", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/metadata");
+  await page.goto("/apps/app-1/metadata?fieldLocale=es-MX");
   await page.evaluate(() => {
     document.addEventListener("focusin", (event) => {
       document.body.dataset.focusedText =

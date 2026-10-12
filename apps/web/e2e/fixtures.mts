@@ -5,6 +5,7 @@ import type {
   ApiErrorEnvelope,
   AppDetail,
   AppScreenshots,
+  AppStoreLocalization,
   AppListItem,
   AppSummary,
   CategoryCollection,
@@ -2098,6 +2099,31 @@ export const APP_PAID_UNRANKED_ID = "app-paid-unranked";
 export const APP_REPRICED_FREE_ID = "app-repriced-free";
 export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
+export const APP_LOCALES_ID = "app-locales";
+
+export interface LocalizationSeed {
+  markets?: string[];
+  shipped?: {
+    localization: AppStoreLocalization;
+    origin: "manual" | "detected";
+  }[];
+  fields?: Partial<Record<AppStoreLocalization, string[]>>;
+  tracked?: Record<string, string[]>;
+}
+
+function localesDataset(id: string, name: string): AppDataset {
+  const base = DATASETS["app-2"];
+  const detail = { ...base.detail, id, name };
+  return {
+    ...base,
+    detail,
+    keywords: [],
+    competitors: [],
+    changeImpact: emptyChangeImpact(detail),
+  };
+}
+
+DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
@@ -3804,6 +3830,20 @@ export const APP_1_PL_LOCALIZED_TITLE = "Skupienie: Minutnik Pracy";
 
 export const APP_1_PL_KEYWORD_FIELD = "nawyki,cel";
 
+export const INITIAL_LOCALIZATION_SEEDS: Record<string, LocalizationSeed> = {
+  "app-1": {
+    shipped: [
+      { localization: "en-GB", origin: "manual" },
+      { localization: "pl", origin: "detected" },
+      { localization: "es-MX", origin: "manual" },
+    ],
+    fields: {
+      pl: APP_1_PL_KEYWORD_FIELD.split(","),
+      "es-MX": ["temporizador", "enfoque"],
+    },
+  },
+};
+
 export const METADATA_AUDIT_PL_LOCALIZED: MetadataAuditResult = {
   ...METADATA_AUDIT_PL,
   localization: "pl",
@@ -3858,6 +3898,8 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
   [APP_FR_ID]: APP_FR_METADATA_AUDIT,
   [APP_HE_ID]: APP_HE_METADATA_AUDIT,
 };
+
+METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 
 export const APP_LONG_METADATA_DRAFTS: MetadataDraft[] = METADATA_DRAFTS.map(
   (draft) => ({

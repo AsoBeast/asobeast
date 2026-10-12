@@ -34,15 +34,6 @@ export function storefrontRows(
   });
 }
 
-export function extraRoom(count: number, country: string): string {
-  const one = count === 1;
-  const localizations = one ? "localization" : "localizations";
-  const fields = one
-    ? "title, subtitle and keyword field"
-    : "titles, subtitles and keyword fields";
-  return `${count} more ${localizations}: ${count} more ${fields} that ${country.toUpperCase()} search reads`;
-}
-
 export function draftableLocalizations(
   rows: readonly StorefrontRow[],
 ): AppStoreLocalization[] {
