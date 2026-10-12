@@ -68,7 +68,7 @@ Rotating `AUTH_SECRET` invalidates every existing session, so everyone is signed
 
 ## Rotate a password
 
-Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost.
+Changing your password from the account menu bumps a session version, which signs out every other session while the one you are using keeps working. That is what you want after a laptop is lost. The same write deletes every personal API token the account holds, because a token minted during a session somebody else briefly held would otherwise keep working. Mint the tokens you still need again from **Settings** afterwards.
 
 ## How are sign in attempts throttled?
 
@@ -88,7 +88,7 @@ Behind a reverse proxy, `TRUST_PROXY` decides what the client address is. Left a
 
 ## Recover a forgotten password
 
-Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open. See [Account recovery](/security/account-recovery).
+Somebody who cannot remember their password asks for a recovery link from the sign in card and sets a new one without the operator touching the database. Redeeming the link signs out every session that account had open and revokes every personal API token it held. See [Account recovery](/security/account-recovery).
 
 ## How is a request authorized?
 
@@ -142,7 +142,8 @@ A workspace has one owner and any number of members. The owner manages billing a
 A member sees the plan and its usage read only. The plan card in settings and the upgrade page say that the workspace owner manages billing, and neither offers a checkout or the billing portal, which the API refuses to anyone but the owner.
 
 - The owner invites by email from **Settings, Team**. The invitation expires after seven days.
-- asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. Otherwise the dialog shows the link for the owner to pass on.
+- asobeast emails the invitation when SMTP and `WEB_PUBLIC_URL` are both configured. The link then reaches the invited mailbox and nowhere else: the owner's response carries only the bare `/invite` page, so nobody but the person who can read that mailbox can accept it.
+- Where mail is not configured, the dialog shows the link for the owner to pass on. After a failed send it shows the link only while registration is closed, because no stranger can then sign up to send an invitation. With registration open and mail configured a failed send shows no link; fix the mail transport and invite again, which retires the earlier link.
 - The invitee opens the link, chooses a password, and joins the existing workspace as a member. The token is single use.
 - The owner can revoke a pending invitation or remove a member. A workspace always keeps its owner.
 

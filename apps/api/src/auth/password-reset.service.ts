@@ -9,6 +9,7 @@ import {
 import * as argon2 from 'argon2';
 import { CrossTenantAccess } from '../common/tenancy/cross-tenant-access';
 import { PrismaService } from '../prisma/prisma.service';
+import { revokeApiTokens } from './api-token-revocation';
 import { sha256 } from './password-hash';
 import { RecoveryRateLimiter } from './rate-limit/recovery-rate.limiter';
 import { RecoveryMailer } from './recovery-mailer';
@@ -107,20 +108,25 @@ export class PasswordResetService {
     }
 
     const passwordHash = await argon2.hash(password);
-    const { count } = await this.prisma.user.updateMany({
-      where: { resetHash, resetExpiresAt: { gt: now } },
-      data: {
-        passwordHash,
-        sessionVersion: { increment: 1 },
-        resetHash: null,
-        resetExpiresAt: null,
-      },
+    const recovered = await this.prisma.withTransaction(async (tx) => {
+      const { count } = await tx.user.updateMany({
+        where: { resetHash, resetExpiresAt: { gt: now } },
+        data: {
+          passwordHash,
+          sessionVersion: { increment: 1 },
+          resetHash: null,
+          resetExpiresAt: null,
+        },
+      });
+      if (count !== 1) return false;
+      await revokeApiTokens(tx, user.id);
+      return true;
     });
-    if (count !== 1) {
+    if (!recovered) {
       throw new NotFoundException(LINK_NOT_VALID);
     }
     this.logger.log(
-      `account ${user.id} recovered its password from an emailed link, ending every session it had open`,
+      `account ${user.id} recovered its password from an emailed link, ending every session and revoking every api token it had`,
     );
   }
 }
