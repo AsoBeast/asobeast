@@ -45,6 +45,7 @@ import { PipelineService } from './pipeline.service';
 import { reportQueueError } from './queue-error-reporter';
 import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
+import { LocalizationSweep } from '../apps/localization-sweep.service';
 import { RetentionService } from './retention.service';
 
 @Processor(QUEUES.PIPELINE)
@@ -73,6 +74,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     private readonly tracking: ErrorTracking,
     private readonly popularity: ApplePopularitySync,
     private readonly outage: RedisOutageLog,
+    private readonly sweep: LocalizationSweep,
   ) {
     super();
   }
@@ -122,6 +124,7 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     await this.scheduleStoreCanary();
     await this.schedulePublishedStatus();
     await this.scheduleApplePopularity();
+    await this.scheduleLocalizationSweep();
     await this.rescoreOutdatedKeywords();
   }
 
@@ -170,6 +173,21 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
       'store-canary',
       { pattern, tz: 'UTC' },
       { name: JOBS.STORE_CANARY },
+    );
+  }
+
+  private async scheduleLocalizationSweep(): Promise<void> {
+    const pattern = this.config.get('CRON_LOCALIZATION_SWEEP', {
+      infer: true,
+    });
+    if (!pattern) {
+      await this.pipelineQueue.removeJobScheduler('localization-sweep');
+      return;
+    }
+    await this.pipelineQueue.upsertJobScheduler(
+      'localization-sweep',
+      { pattern, tz: 'UTC' },
+      { name: JOBS.LOCALIZATION_SWEEP },
     );
   }
 
@@ -259,6 +277,11 @@ export class PipelineWorker extends WorkerHost implements OnModuleInit {
     }
     if (job.name === JOBS.STORE_STATUS) {
       await this.publishedStatus.run();
+      return;
+    }
+    if (job.name === JOBS.LOCALIZATION_SWEEP) {
+      const queued = await this.sweep.run();
+      this.logger.log(`localization sweep ${JSON.stringify({ queued })}`);
       return;
     }
     throw new Error(`Unknown pipeline job ${job.name}`);
