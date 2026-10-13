@@ -352,6 +352,30 @@ test.describe("seeding suggested markets", () => {
     expect(seeds).toEqual([]);
   });
 
+  test("a market added after an unavailable seed shows no stale outcome", async ({
+    page,
+  }) => {
+    await startSetup(page, "app-1");
+
+    await page.getByLabel("Japan (JP)").check();
+    await page
+      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .click();
+    const unavailable = page.getByText(
+      "Not published on this storefront, so it was not added",
+    );
+    await expect(unavailable).toBeVisible();
+
+    await page.getByLabel("Japan (JP)").check();
+    await page.getByLabel("Seed with its listing for Japan").uncheck();
+    await page
+      .getByRole("button", { name: "Add 1 market", exact: true })
+      .click();
+
+    await expect(selectedMarkets(page).getByText("Japan (JP)")).toBeVisible();
+    await expect(unavailable).toHaveCount(0);
+  });
+
   test("a refused seed still selects the market", async ({ page }) => {
     await page.context().addCookies([
       {

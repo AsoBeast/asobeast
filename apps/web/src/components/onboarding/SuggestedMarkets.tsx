@@ -16,8 +16,8 @@ import { Label } from "@/components/ui/label";
 import { formatCountry, formatList } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
-  defaultSeedChoice,
   outcomeText,
+  seedChosen,
   seedButtonLabel,
   seedPlan,
   type SeedOutcome,
@@ -54,19 +54,21 @@ export function SuggestedMarkets({
 }) {
   const languages = languageNames(result);
   const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
-  const [seedChoices, setSeedChoices] = useState<ReadonlySet<string>>(
-    () =>
-      new Set(
-        result.suggestions
-          .filter(defaultSeedChoice)
-          .map((suggestion) => suggestion.country),
-      ),
+  const [seedChoices, setSeedChoices] = useState<ReadonlyMap<string, boolean>>(
+    new Map(),
   );
   const { outcomes, run, seeding } = useMarketSeeding(appId, onSelect);
   const pending = result.suggestions
     .map((suggestion) => suggestion.country)
     .filter((country) => ticked.has(country));
-  const plan = seedPlan(pending, seedChoices);
+  const plan = seedPlan(
+    pending,
+    new Set(
+      result.suggestions
+        .filter((suggestion) => seedChosen(suggestion, seedChoices))
+        .map((suggestion) => suggestion.country),
+    ),
+  );
   const pick = (market: MarketSuggestion, on: boolean) => {
     if (selected.includes(market.country)) {
       if (!on) onSelect(market.country, false);
@@ -77,7 +79,7 @@ export function SuggestedMarkets({
   const add = () => {
     for (const market of plan.select) onSelect(market, true);
     setTicked(new Set());
-    if (plan.seed.length > 0) run(plan.seed);
+    run(plan);
   };
 
   return (
@@ -101,13 +103,13 @@ export function SuggestedMarkets({
               market={market}
               selected={selected.includes(market.country)}
               ticked={ticked.has(market.country)}
-              seed={seedChoices.has(market.country)}
+              seed={seedChosen(market, seedChoices)}
               seeding={seeding.includes(market.country)}
               outcome={outcomes[market.country]}
               onPick={(on) => pick(market, on)}
               onSeed={(on) =>
                 setSeedChoices((current) =>
-                  toggled(current, market.country, on),
+                  new Map(current).set(market.country, on),
                 )
               }
             />

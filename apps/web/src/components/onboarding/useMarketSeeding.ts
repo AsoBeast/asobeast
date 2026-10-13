@@ -6,7 +6,12 @@ import { apiErrorMessage } from "@/components/localizations/api-error-message";
 import { seedMarket } from "@/lib/api";
 import { invalidateMarketSeed } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
-import { outcomeOf, type SeedOutcome } from "./market-seeding";
+import {
+  outcomeOf,
+  withoutOutcomes,
+  type SeedOutcome,
+  type SeedPlan,
+} from "./market-seeding";
 
 export function useMarketSeeding(
   appId: string,
@@ -17,7 +22,8 @@ export function useMarketSeeding(
   const record = (market: string, outcome: SeedOutcome) =>
     setOutcomes((current) => ({ ...current, [market]: outcome }));
   const mutation = useMutation({
-    mutationFn: async (seed: readonly string[]) => {
+    mutationFn: async ({ select, seed }: SeedPlan) => {
+      setOutcomes((current) => withoutOutcomes(current, select));
       for (const market of seed) {
         try {
           const result = await seedMarket(appId, market);
@@ -37,6 +43,6 @@ export function useMarketSeeding(
   return {
     outcomes,
     run,
-    seeding: mutation.isPending ? (mutation.variables ?? []) : [],
+    seeding: mutation.isPending ? (mutation.variables?.seed ?? []) : [],
   };
 }
