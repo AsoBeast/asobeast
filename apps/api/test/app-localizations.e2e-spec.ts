@@ -652,7 +652,7 @@ describe('App localizations (e2e)', () => {
       const id = await seedApp();
       await saveField(id, { localization: 'es-MX' }, 'habito').expect(200);
 
-      await Promise.allSettled([
+      const settled = await Promise.allSettled([
         asWorkspace(app, () =>
           app
             .get(KeywordFieldService)
@@ -667,6 +667,8 @@ describe('App localizations (e2e)', () => {
         prisma.keywordField.count({ where: { appId: id } }),
         prisma.appLocalization.count({ where: { appId: id } }),
       ]);
+      expect(settled.filter(({ status }) => status === 'rejected')).toEqual([]);
+      expect([0, 1]).toContain(fields);
       expect(fields).toBe(rows);
     });
   });
