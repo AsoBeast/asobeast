@@ -6,6 +6,7 @@ import {
   localizationItem,
   seedLocalizations,
 } from "./localizations.mts";
+import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 
 const APP = APP_READS_ID;
@@ -81,6 +82,25 @@ test.describe("on the read lab", () => {
     await expect(
       page.getByRole("textbox", { name: "Spanish (Mexico) keyword field" }),
     ).toHaveValue("hábito,racha");
+    await expect(
+      page.getByRole("region", { name: "App Store localizations" }),
+    ).toBeInViewport();
+  });
+
+  test("lands on the editor when the metadata page streams in slowly", async ({
+    context,
+    page,
+  }) => {
+    await page.goto(KEYWORDS);
+    await seedCookies(context, { e2e_api_latency: "1500" });
+
+    await card(page, "US")
+      .getByRole("link", { name: "Edit the Spanish (Mexico) keyword field" })
+      .click();
+
+    await expect(
+      page.getByRole("textbox", { name: "Spanish (Mexico) keyword field" }),
+    ).toBeVisible({ timeout: 15_000 });
     await expect(
       page.getByRole("region", { name: "App Store localizations" }),
     ).toBeInViewport();

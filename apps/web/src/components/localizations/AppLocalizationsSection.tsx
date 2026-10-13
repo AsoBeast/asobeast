@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import type { AppLocalizationsResult } from "@asobeast/shared";
@@ -21,6 +22,16 @@ import { LocalizationList } from "./LocalizationList";
 import { LocalizationMatrix } from "./LocalizationMatrix";
 
 const HEADING_ID = "app-localizations-heading";
+
+function useScrollIntoViewOnHash(ready: boolean) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (ready && window.location.hash === `#${LOCALIZATIONS_SECTION_ID}`) {
+      ref.current?.scrollIntoView({ block: "start" });
+    }
+  }, [ready]);
+  return ref;
+}
 
 function LocalizationsPanel({
   id,
@@ -70,9 +81,11 @@ export function AppLocalizationsSection({
     ...appLocalizationsOptions(id),
     retry: false,
   });
+  const sectionRef = useScrollIntoViewOnHash(data !== undefined);
 
   return (
     <section
+      ref={sectionRef}
       id={LOCALIZATIONS_SECTION_ID}
       aria-labelledby={HEADING_ID}
       className="flex scroll-mt-20 flex-col gap-3"
