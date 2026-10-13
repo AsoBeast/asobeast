@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { App, AppSnapshot, Store } from '@prisma/client';
-import { AppStoreLocalization, SnapshotChange } from '@asobeast/shared';
+import {
+  AppStoreLocalization,
+  readLocalizations,
+  SnapshotChange,
+} from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { recordAppLocalizations } from '../keywords/app-localization-records';
 import { PrismaService } from '../prisma/prisma.service';
@@ -50,9 +54,10 @@ export class LocalizedListingCapture {
     fallback: ComparableListing,
   ): Promise<SnapshotChange[]> {
     if (app.store !== Store.APP_STORE) return [];
-    const shipped = app.isCompetitor
-      ? []
-      : await shippedLocalizations(this.prisma, app.id);
+    const shipped =
+      app.isCompetitor || readLocalizations(market).length < 2
+        ? []
+        : await shippedLocalizations(this.prisma, app.id);
     const changes: SnapshotChange[] = [];
     for (const localization of capturedLocalizations(market, shipped)) {
       try {
