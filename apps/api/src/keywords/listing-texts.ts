@@ -1,5 +1,9 @@
 import { Store } from '@prisma/client';
-import { localizationLanguage, nativeLocalizations } from '@asobeast/shared';
+import {
+  AppStoreLocalization,
+  localizationLanguage,
+  nativeLocalizations,
+} from '@asobeast/shared';
 import { listingIn, NEWEST_FIRST } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { listingLanguages } from './listing-languages';
@@ -36,9 +40,9 @@ export async function listingTexts(
   prisma: PrismaService,
   app: ListedApp,
   market: string = app.country,
+  read: readonly AppStoreLocalization[] = nativeLocalizations(market),
 ): Promise<ListingText[]> {
-  const localizations =
-    app.store === Store.APP_STORE ? nativeLocalizations(market) : [];
+  const localizations = app.store === Store.APP_STORE ? read : [];
   const rows = await Promise.all(
     [...localizations, null].map((localization) =>
       latestListing(prisma, app, market, localization),

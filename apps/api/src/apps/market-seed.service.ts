@@ -21,7 +21,9 @@ import { MarketListingRequests } from '../keywords/market-listing.requests';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
+import { capturedLocalizations } from './market-localizations';
 import { planSeed } from './market-seed-plan';
+import { shippedLocalizations } from './shipped-localizations';
 import { marketDailyRequests } from './market-suggestions.service';
 
 interface SeedCost {
@@ -72,9 +74,15 @@ export class MarketSeedService {
         cost: seedCost(app.store, { opened: 0, listingReads: 0 }),
       };
     }
+    const shipped = await shippedLocalizations(this.prisma, app.id);
     const candidates = seedCandidates(
       app.store,
-      await listingTexts(this.prisma, app, country),
+      await listingTexts(
+        this.prisma,
+        app,
+        country,
+        capturedLocalizations(country, shipped),
+      ),
     );
     const [tracking, room, alreadyTracked] = await Promise.all([
       loadTrackingStates(

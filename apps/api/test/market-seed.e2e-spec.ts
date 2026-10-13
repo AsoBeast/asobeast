@@ -294,4 +294,31 @@ describe('Market seed (e2e)', () => {
       'it',
     ]);
   });
+
+  it('seeds the phrases of a localization the app ships that the storefront reads', async () => {
+    const appId = await importApp();
+    await api
+      .post(`/apps/${appId}/localizations`)
+      .send({ localization: 'fr' })
+      .expect(201);
+    registry.listings.set('ch:default', GERMAN);
+    registry.listings.set('ch:fr', {
+      title: 'Où suis-je? Quiz Géographique',
+      subtitle: 'Carte du Monde',
+      description: 'Découvrez le monde',
+      screenshots: [],
+    });
+
+    await seeded(appId, 'ch');
+
+    const texts = (
+      await prisma.keyword.findMany({
+        where: { country: 'ch', tracked: { some: { appId } } },
+        select: { text: true },
+      })
+    ).map((row) => row.text);
+    expect(texts).toEqual(
+      expect.arrayContaining(['quiz géographique', 'geo quiz']),
+    );
+  });
 });
