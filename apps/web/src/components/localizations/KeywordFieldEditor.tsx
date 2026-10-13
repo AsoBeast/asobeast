@@ -97,6 +97,7 @@ export function KeywordFieldEditor({
           setDraft(event.target.value);
           clearError();
         }}
+        readOnly={busy}
         rows={3}
         spellCheck={false}
         aria-label={`${name} keyword field`}
