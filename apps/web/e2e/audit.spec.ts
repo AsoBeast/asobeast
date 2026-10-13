@@ -1,4 +1,5 @@
 import type { AppAuditResult, AuditAiRunResult } from "@asobeast/shared";
+import type { Response } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { seedCookies } from "./routes.mts";
 
@@ -203,7 +204,7 @@ test("reports one request time for the whole run", async ({ page }) => {
   const panel = page.getByRole("region", { name: "AI creative analysis" });
   const runs: Promise<{ state: string; requestedAt: string | null } | null>[] =
     [];
-  page.on("response", (response) => {
+  const record = (response: Response) => {
     const { pathname } = new URL(response.url());
     if (pathname === "/api/backend/apps/app-gp/audit/ai/runs") {
       runs.push(response.json() as Promise<AuditAiRunResult>);
@@ -214,12 +215,14 @@ test("reports one request time for the whole run", async ({ page }) => {
         ),
       );
     }
-  });
+  };
+  page.on("response", record);
 
   await panel.getByRole("button", { name: "Analyze creative" }).click();
   await expect(page.getByText("Creative analysis finished")).toBeVisible({
     timeout: 10_000,
   });
+  page.off("response", record);
 
   const lifecycle = (await Promise.all(runs)).filter((run) => run !== null);
   expect(lifecycle.map((run) => run.state)).toEqual(

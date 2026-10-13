@@ -110,9 +110,13 @@ test("a new recipient waits for confirmation and can be asked again", async ({
   const address = `stranger-${randomUUID()}@example.net`;
 
   const row = await addRecipient(page, address);
+  await page.reload();
 
   await expect(row.getByText(AWAITING)).toBeVisible();
   await expect(row.getByRole("button", { name: "Send test" })).toHaveCount(0);
+  await expect(
+    page.getByText(`Confirmation email sent to ${address}`),
+  ).toHaveCount(0);
   const resend = page.waitForRequest(
     (request) =>
       request.method() === "POST" &&
@@ -123,6 +127,26 @@ test("a new recipient waits for confirmation and can be asked again", async ({
   await expect(
     page.getByText(`Confirmation email sent to ${address}`),
   ).toBeVisible();
+});
+
+test("a resend replaces the confirmation notice still on screen", async ({
+  page,
+}) => {
+  const address = `stranger-${randomUUID()}@example.net`;
+  const notice = page.getByText(`Confirmation email sent to ${address}`);
+
+  const row = await addRecipient(page, address);
+  await expect(row.getByText(AWAITING)).toBeVisible();
+  await notice.hover();
+  const refetch = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname.endsWith("/email-alerts"),
+  );
+  await row.getByRole("button", { name: "Resend confirmation" }).press("Enter");
+  await refetch;
+
+  await expect(notice).toHaveCount(1);
 });
 
 test("says when the confirmation email to a new recipient did not go out", async ({
