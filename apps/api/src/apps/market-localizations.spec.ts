@@ -1,7 +1,4 @@
-import {
-  additionalLocalizations,
-  capturedLocalizations,
-} from './market-localizations';
+import { capturedLocalizations } from './market-localizations';
 
 describe('capturedLocalizations', () => {
   it.each([
@@ -27,12 +24,5 @@ describe('capturedLocalizations', () => {
       'fr',
       'it',
     ]);
-  });
-});
-
-describe('additionalLocalizations', () => {
-  it('leaves out the default a storefront reads', () => {
-    expect(additionalLocalizations('ch')).toEqual(['en-GB', 'fr', 'it']);
-    expect(additionalLocalizations('zz')).toEqual([]);
   });
 });

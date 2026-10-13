@@ -11,7 +11,7 @@ import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { listingMarket } from './listing';
-import { additionalLocalizations } from './market-localizations';
+import { capturedLocalizations } from './market-localizations';
 
 const STORE_ORDER: Record<App['store'], number> = {
   APP_STORE: 0,
@@ -46,6 +46,7 @@ export interface ListingMarketRow {
 function localizationsByMarket(
   home: string,
   rows: readonly ListingMarketRow[],
+  shipped: readonly string[],
 ): Map<string, string[]> {
   const captured = new Map<string, Set<string>>();
   for (const row of rows) {
@@ -59,7 +60,7 @@ function localizationsByMarket(
   return new Map(
     [...captured].map(([market, tags]) => [
       market,
-      additionalLocalizations(market).filter((tag) => tags.has(tag)),
+      capturedLocalizations(market, shipped).filter((tag) => tags.has(tag)),
     ]),
   );
 }
@@ -67,11 +68,12 @@ function localizationsByMarket(
 export function toListingMarkets(
   home: string,
   rows: readonly ListingMarketRow[],
+  shipped: readonly string[],
 ): ListingMarket[] {
   const capturedAt = (row: ListingMarketRow | undefined) =>
     row?._max.capturedAt?.toISOString() ?? null;
   const defaults = rows.filter((row) => !row.localization);
-  const localizations = localizationsByMarket(home, rows);
+  const localizations = localizationsByMarket(home, rows, shipped);
   const withLocalizations = (market: ListingMarket): ListingMarket => {
     const captured = localizations.get(market.country) ?? [];
     return captured.length > 0
