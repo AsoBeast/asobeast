@@ -46,6 +46,7 @@ export class LocalizationDetection {
     spend: () => Promise<void>,
   ): Promise<LocalizationDetectionResult> {
     const app = await ensureKeywordFieldApp(this.prisma, appId);
+    if (await this.isCompetitor(appId)) return { queued: 0, candidates: [] };
     const { home, markets, localizations } = await this.shipped.list(appId);
     const [listings, latest] = await Promise.all([
       latestListingTexts(this.prisma, appId, home, markets),
@@ -108,9 +109,10 @@ export class LocalizationDetection {
         store: true,
         storeAppId: true,
         country: true,
+        isCompetitor: true,
       },
     });
-    if (!app || app.store !== Store.APP_STORE) return;
+    if (!app || app.store !== Store.APP_STORE || app.isCompetitor) return;
     const stored = await this.prisma.appSnapshot.findFirst({
       where: { appId, ...listingIn(app.country, country) },
       orderBy: NEWEST_FIRST,
@@ -131,6 +133,14 @@ export class LocalizationDetection {
         origin: 'detected',
       },
     ]);
+  }
+
+  private async isCompetitor(appId: string): Promise<boolean> {
+    const app = await this.prisma.app.findFirst({
+      where: { id: appId },
+      select: { isCompetitor: true },
+    });
+    return app?.isCompetitor === true;
   }
 
   private async isOpen(jobId: string): Promise<boolean> {

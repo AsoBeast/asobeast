@@ -180,6 +180,17 @@ describe('LocalizationDetection.probe', () => {
     expect(getApp).not.toHaveBeenCalled();
   });
 
+  it('does nothing for a competitor app', async () => {
+    const { detection, getApp, createMany } = build({
+      app: { ...APP, isCompetitor: true },
+    });
+
+    await detection.probe(PROBE);
+
+    expect(getApp).not.toHaveBeenCalled();
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
   it('lets a store failure fail the job so the queue retries it', async () => {
     const failure = new Error('lookup failed for es-MX');
     const { detection, createMany } = build({ failure });
@@ -426,6 +437,23 @@ describe('LocalizationDetection.request', () => {
       expect(queue.add).not.toHaveBeenCalled();
     },
   );
+
+  it('spends nothing and queues nothing for a competitor app', async () => {
+    const { queue, spend, request } = buildRequest({
+      app: {
+        id: 'app_1',
+        workspaceId: 'ws_a',
+        store: Store.APP_STORE,
+        storeAppId: '6657987209',
+        country: 'us',
+        isCompetitor: true,
+      },
+    });
+
+    await expect(request()).resolves.toEqual({ queued: 0, candidates: [] });
+    expect(spend).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
 
   it('keeps every candidate when the home listing declares no languages', async () => {
     const { request } = buildRequest({ languages: [] });
