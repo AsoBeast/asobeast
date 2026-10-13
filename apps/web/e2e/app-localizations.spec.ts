@@ -766,6 +766,29 @@ test.describe("on the locale lab", () => {
       ).toBeVisible();
     });
 
+    test("keeps the field read only while the save is checked, so nothing typed meanwhile is lost", async ({
+      page,
+    }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      await page.route("**/keyword-fields/es-MX/preview", async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+      const field = editor(page, "Spanish (Mexico)");
+      await typeInto(field, "temporizador");
+
+      await save(page).click();
+      await field.press("End");
+      await page.keyboard.type(",extra");
+
+      await expect(field).toHaveValue("temporizador");
+      release();
+      await expect(dialog(page)).toBeVisible();
+    });
+
     test("keeps the dialog open and shows the refusal when the plan limit was reached meanwhile", async ({
       context,
       page,
