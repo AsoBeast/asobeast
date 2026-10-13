@@ -106,7 +106,7 @@ The guided setup suggests storefronts from the languages your home listing decla
 | You | asobeast |
 | --- | --- |
 | Tick a storefront and leave seeding off | adds it to the markets of the setup, and tracks nothing until you add a keyword there |
-| Tick a storefront and seed it | captures its listing now, tracks the title and subtitle phrases of that listing and of its native localizations as listing keywords, queues their first score and first position check and asks for the competitors' listings there |
+| Tick a storefront and seed it | captures its listing now, tracks the title and subtitle phrases of that listing, of its native localizations and of every localization your app ships that the storefront reads, as listing keywords, queues their first score and first position check and asks for the competitors' listings there |
 | Seed a storefront the app is not published in | answers that it is not published there, stores nothing and removes it from the setup |
 | Seed past the keyword limit of your plan | tracks the phrases that fit, counts the rest as left out and never refuses the request |
 
@@ -120,7 +120,7 @@ The API has the same two steps. `GET /apps/{id}/market-suggestions` lists the su
 
 The store lookup reports the languages a listing ships, and asobeast knows which localization every storefront reads, so joining the two costs no store request. The store has no call that lists where an app is published: availability is one request per storefront, 175 of them on the App Store, and a storefront can carry the app with the default listing only, so availability would answer a different question. Seeding captures the listing anyway and reports a storefront without the app from that same request.
 
-English is never suggested, because every storefront reads an English localization and your home market already covers it. An app whose listing declares English only, and every Google Play app, gets no suggestions, and the setup step keeps its country code field.
+English is never suggested, because every storefront reads an English localization and your home market already covers it. An app whose listing declares English only, a competitor and every Google Play app get no suggestions, and the setup step keeps its country code field.
 
 ## Which codes are storefronts?
 
