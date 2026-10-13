@@ -157,6 +157,29 @@ describe('Market suggestions (e2e)', () => {
     });
   });
 
+  it('prices the shipped localizations a market captures beside its default', async () => {
+    const appId = await seedApp(['EN', 'DE', 'FR']);
+    await prisma.appLocalization.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'fr',
+        origin: 'manual',
+      },
+    });
+
+    const result = await suggest(appId);
+
+    expect(find(result, 'ch')?.dailyRequests).toEqual({
+      listing: 2,
+      perKeyword: 1,
+    });
+    expect(find(result, 'de')?.dailyRequests).toEqual({
+      listing: 1,
+      perKeyword: 1,
+    });
+  });
+
   it('answers nothing for a google play app', async () => {
     const play = await createApp(Store.GOOGLE_PLAY);
     await snapshot(play.id, ['EN', 'DE']);

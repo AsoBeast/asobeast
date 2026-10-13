@@ -3,14 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Store } from '@prisma/client';
-import {
-  assertStorefront,
-  KeywordImportCost,
-  MarketSeedResult,
-} from '@asobeast/shared';
+import { assertStorefront, MarketSeedResult } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
-import { requestsPerJob } from '../jobs/request-weights';
 import { Candidate } from '../keywords/extraction';
 import { KeywordTracker } from '../keywords/keyword-tracker';
 import { loadTrackingStates } from '../keywords/keyword-tracking-state';
@@ -24,21 +18,7 @@ import { ListingCaptureService } from './listing-capture.service';
 import { capturedLocalizations } from './market-localizations';
 import { planSeed } from './market-seed-plan';
 import { shippedLocalizations } from './shipped-localizations';
-import { marketDailyRequests } from './market-suggestions.service';
-
-interface SeedCost {
-  opened: number;
-  listingReads: number;
-}
-
-export const seedCost = (
-  store: Store,
-  { opened, listingReads }: SeedCost,
-): KeywordImportCost => ({
-  store,
-  keywordMarkets: opened,
-  dailyRequests: opened * requestsPerJob(store, 'keywords') + listingReads,
-});
+import { marketDailyRequests, seedCost } from './market-cost';
 
 @Injectable()
 export class MarketSeedService {
@@ -103,7 +83,9 @@ export class MarketSeedService {
       skipped: plan.skipped,
       cost: seedCost(app.store, {
         opened: Math.min(plan.opened, seeded),
-        listingReads: opensListing ? await this.listingReads(app, country) : 0,
+        listingReads: opensListing
+          ? await this.listingReads(app, country, shipped)
+          : 0,
       }),
     };
   }
@@ -179,10 +161,11 @@ export class MarketSeedService {
   private async listingReads(
     app: KeywordApp,
     country: string,
+    shipped: readonly string[],
   ): Promise<number> {
     const family = await this.prisma.app.count({
       where: { OR: [{ id: app.id }, { primaryAppId: app.id }] },
     });
-    return marketDailyRequests(app.store, country, family).listing;
+    return marketDailyRequests(app.store, country, family, shipped).listing;
   }
 }
