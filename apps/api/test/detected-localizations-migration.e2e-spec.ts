@@ -88,6 +88,52 @@ describe('the record detected app localizations migration (e2e)', () => {
     );
   });
 
+  it('E-MIG-08 files each row under the workspace of its own app', async () => {
+    await prisma.workspace.upsert({
+      where: { id: 'ws_other' },
+      update: {},
+      create: { id: 'ws_other', name: 'Other' },
+    });
+    const own = await seedApp();
+    const other = await seedApp({ workspaceId: 'ws_other' });
+    await snapshotOf(own.id, 'pl');
+    await snapshotOf(other.id, 'de');
+
+    await migrate();
+
+    await expect(
+      prisma.appLocalization.findMany({
+        orderBy: { localization: 'asc' },
+        select: { appId: true, workspaceId: true, localization: true },
+      }),
+    ).resolves.toEqual([
+      { appId: other.id, workspaceId: 'ws_other', localization: 'de' },
+      { appId: own.id, workspaceId: DEFAULT_WORKSPACE_ID, localization: 'pl' },
+    ]);
+  });
+
+  it('E-MIG-09 stamps a row with the first capture of its localization', async () => {
+    const app = await seedApp();
+    for (const capturedAt of ['2026-07-03', '2026-07-01', '2026-07-02']) {
+      await prisma.appSnapshot.create({
+        data: {
+          appId: app.id,
+          localization: 'pl',
+          title: 'Title',
+          description: 'Text',
+          raw: {},
+          capturedAt: new Date(`${capturedAt}T03:00:00.000Z`),
+        },
+      });
+    }
+
+    await migrate();
+
+    await expect(
+      prisma.appLocalization.findMany({ select: { createdAt: true } }),
+    ).resolves.toEqual([{ createdAt: new Date('2026-07-01T03:00:00.000Z') }]);
+  });
+
   it('E-MIG-02 records one row for a localization stored many times or in several markets', async () => {
     const app = await seedApp();
     await snapshotOf(app.id, 'pl');
