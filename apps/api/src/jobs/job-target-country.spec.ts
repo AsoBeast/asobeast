@@ -43,6 +43,19 @@ describe('JobTargetCountry', () => {
     expect(findFirst).not.toHaveBeenCalled();
   });
 
+  it('takes the market a localization probe carries without reading the app', async () => {
+    await expect(
+      target.of(
+        job(JOBS.DETECT_LOCALIZATION, {
+          appId: 'a1',
+          localization: 'es-MX',
+          country: 'mx',
+        }),
+      ),
+    ).resolves.toBe('mx');
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+
   it('takes the home storefront of the app a subtitle backfill targets', async () => {
     await expect(
       target.of(job(JOBS.RESOLVE_SUBTITLE, { appId: 'a1', snapshotId: 's1' })),

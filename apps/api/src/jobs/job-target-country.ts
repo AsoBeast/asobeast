@@ -4,6 +4,7 @@ import { Job } from 'bullmq';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CheckCategoryPayload,
+  DetectLocalizationPayload,
   JOBS,
   QUEUES,
   RefreshAppPayload,
@@ -28,6 +29,8 @@ export class JobTargetCountry {
           (job.data as SpiderProbePayload).country ??
           this.appCountry((job.data as SpiderProbePayload).appId)
         );
+      case JOBS.DETECT_LOCALIZATION:
+        return (job.data as DetectLocalizationPayload).country;
       case JOBS.REFRESH_APP: {
         const { appId, country } = job.data as RefreshAppPayload;
         return country ?? this.appCountry(appId);

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Job, UnrecoverableError } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
+import { LocalizationDetection } from '../apps/localization-detection.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
@@ -14,6 +15,7 @@ import { jobStore, JobTargetCountry } from './job-target-country';
 import {
   CheckCategoryPayload,
   CheckKeywordPayload,
+  DetectLocalizationPayload,
   JOBS,
   RefreshAppPayload,
   ResolveSubtitlePayload,
@@ -22,6 +24,11 @@ import {
   SyncReviewsPayload,
 } from './jobs.types';
 import { requireJobScope } from './job-workspace';
+
+const ELIGIBILITY_GATED_JOBS: ReadonlySet<string> = new Set([
+  JOBS.SPIDER_PROBE,
+  JOBS.DETECT_LOCALIZATION,
+]);
 
 @Injectable()
 export class StoreJobsHandler {
@@ -37,12 +44,13 @@ export class StoreJobsHandler {
     private readonly targetCountry: JobTargetCountry,
     private readonly subtitles: SubtitleBackfill,
     private readonly eligibility: CollectionEligibility,
+    private readonly localizations: LocalizationDetection,
   ) {}
 
   async handle(job: Job): Promise<void> {
     await this.workspace.runScope(requireJobScope(job), async () => {
       if (
-        job.name === JOBS.SPIDER_PROBE &&
+        ELIGIBILITY_GATED_JOBS.has(job.name) &&
         !(await this.eligibility.forWorkspace())
       ) {
         return;
@@ -86,6 +94,9 @@ export class StoreJobsHandler {
         return;
       case JOBS.SPIDER_PROBE:
         await this.spider.runSpiderProbe(job.data as SpiderProbePayload);
+        return;
+      case JOBS.DETECT_LOCALIZATION:
+        await this.localizations.probe(job.data as DetectLocalizationPayload);
         return;
       default:
         throw new Error(`Unknown job ${job.name}`);

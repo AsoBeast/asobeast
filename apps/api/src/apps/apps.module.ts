@@ -13,6 +13,7 @@ import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
 import { ListingReadService } from './listing-read.service';
+import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
@@ -38,9 +39,15 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     FirstRunScheduler,
     ListingCaptureService,
     ListingReadService,
+    LocalizationDetection,
     LocalizedListingCapture,
     SubtitleBackfill,
   ],
-  exports: [AppsService, AppCaptureService, SubtitleBackfill],
+  exports: [
+    AppsService,
+    AppCaptureService,
+    LocalizationDetection,
+    SubtitleBackfill,
+  ],
 })
 export class AppsModule {}
