@@ -66,3 +66,11 @@ export function outcomeText(outcome: SeedOutcome): string {
     ? `Seeded no keywords${skipped}`
     : "No new keywords in its listing";
 }
+
+export function seedStatusText(
+  seeding: boolean,
+  outcome: SeedOutcome | undefined,
+): string | null {
+  if (outcome) return outcomeText(outcome);
+  return seeding ? "Seeding from its listing…" : null;
+}

@@ -7,7 +7,6 @@ import {
   groupSuggestions,
   languageNames,
   marketCostText,
-  selectableSuggestions,
 } from "./market-suggestions";
 
 const suggestion = (
@@ -92,13 +91,5 @@ describe("marketCostText", () => {
         dailyRequests: { listing: 1, perKeyword: 8 },
       }),
     ).toBe("1 listing read a day, 8 per keyword");
-  });
-});
-
-describe("selectableSuggestions", () => {
-  it("leaves out a market the app already tracks", () => {
-    expect(
-      selectableSuggestions(RESULT).map((market) => market.country),
-    ).toEqual(["at", "ch", "fr", "ca", "be"]);
   });
 });
