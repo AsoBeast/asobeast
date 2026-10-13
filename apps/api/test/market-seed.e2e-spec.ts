@@ -32,7 +32,7 @@ import { ownerAgent, useCookies } from './helpers/session';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
-const RIVAL_URL = 'https://apps.apple.com/us/app/rival/id6657987210';
+const SECOND_APP_URL = 'https://apps.apple.com/us/app/rival/id6657987210';
 
 describe('Market seed (e2e)', () => {
   let app: INestApplication<App>;
@@ -186,7 +186,7 @@ describe('Market seed (e2e)', () => {
     const appId = await importApp();
     await api
       .post(`/apps/${appId}/competitors`)
-      .send({ url: RIVAL_URL })
+      .send({ url: SECOND_APP_URL })
       .expect(201);
     const rival = await prisma.app.findFirstOrThrow({
       where: { isCompetitor: true },
@@ -211,11 +211,13 @@ describe('Market seed (e2e)', () => {
     registry.unlisted.add('jp');
     const consume = jest.spyOn(app.get(OnDemandLimiter), 'consume');
 
-    const result = await seeded(appId, 'jp');
-
-    const spent = consume.mock.calls.length;
-    consume.mockRestore();
-    expect(spent).toBe(1);
+    let result: MarketSeedResult;
+    try {
+      result = await seeded(appId, 'jp');
+      expect(consume).toHaveBeenCalledTimes(1);
+    } finally {
+      consume.mockRestore();
+    }
 
     expect(result).toEqual({
       country: 'jp',
@@ -234,7 +236,7 @@ describe('Market seed (e2e)', () => {
     const appId = await importApp();
     await api
       .post(`/apps/${appId}/competitors`)
-      .send({ url: RIVAL_URL })
+      .send({ url: SECOND_APP_URL })
       .expect(201);
     const rival = await prisma.app.findFirstOrThrow({
       where: { isCompetitor: true },

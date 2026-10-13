@@ -210,7 +210,7 @@ describe('Pipeline store routing (e2e)', () => {
     );
   });
 
-  it('counts a read of a shipped localization a tracked market reads', async () => {
+  it('counts a read of a shipped localization that a tracked market reads', async () => {
     const appId = await seedApp(Store.APP_STORE, 'apple-swiss');
     const keyword = await prisma.keyword.create({
       data: { text: 'notes', store: Store.APP_STORE, country: 'ch' },

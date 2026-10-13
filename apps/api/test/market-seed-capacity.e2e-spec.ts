@@ -40,10 +40,9 @@ describe('Market seed capacity (e2e)', () => {
       }
     });
 
-  const fillKeywordRoom = async (free: number) => {
-    const count = KEYWORD_LIMIT - free;
+  const fillKeywordRoom = async () => {
     await harness.prisma.keyword.createMany({
-      data: Array.from({ length: count }, (_, index) => ({
+      data: Array.from({ length: KEYWORD_LIMIT }, (_, index) => ({
         text: `filler ${index}`,
         store: Store.APP_STORE,
         country: 'gb',
@@ -117,7 +116,7 @@ describe('Market seed capacity (e2e)', () => {
   });
 
   it('skips the phrases the keyword room cannot hold and never answers 403', async () => {
-    await fillKeywordRoom(0);
+    await fillKeywordRoom();
 
     const answer = await seed('de').expect(200);
 
