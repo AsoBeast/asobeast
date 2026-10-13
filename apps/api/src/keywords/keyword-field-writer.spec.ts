@@ -2,6 +2,7 @@ import { Store } from '@prisma/client';
 import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { KeywordFieldWriter } from './keyword-field-writer';
+import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -30,6 +31,7 @@ const build = (stored: string[] = []) => {
     },
     trackedKeyword: {
       findMany: jest.fn().mockResolvedValue([]),
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     appLocalization: {
@@ -46,13 +48,18 @@ const build = (stored: string[] = []) => {
     ),
   };
   const tracker = {
-    keywordIdsFor: jest.fn((texts: string[], ...target: [Store, string]) =>
-      Promise.resolve(texts.map((text) => `${target[1]}:${text}`)),
+    keywordIdsAcrossMarkets: jest.fn(
+      (pairs: { text: string; country: string }[]) =>
+        Promise.resolve(
+          new Map(
+            pairs.map(({ text, country }) => [
+              pairKey(country, text),
+              `${country}:${text}`,
+            ]),
+          ),
+        ),
     ),
-    track: jest
-      .fn<Promise<void>, [unknown, { keywordId: string }, unknown]>()
-      .mockResolvedValue(undefined),
-    enqueueFirstScore: jest.fn().mockResolvedValue(undefined),
+    enqueueFirstScores: jest.fn().mockResolvedValue(undefined),
   };
   const listings = { request: jest.fn().mockResolvedValue(0) };
   const writer = new KeywordFieldWriter(
@@ -66,7 +73,7 @@ const build = (stored: string[] = []) => {
 
 describe('KeywordFieldWriter', () => {
   it('tracks every phrase in every market it is given', async () => {
-    const { writer, tracker } = build();
+    const { writer, tx } = build();
 
     await writer.save({
       app: APP,
@@ -75,15 +82,20 @@ describe('KeywordFieldWriter', () => {
       markets: ['us', 'mx'],
     });
 
-    expect(tracker.track.mock.calls.map(([, row]) => row.keywordId)).toEqual([
-      'us:habito',
-      'us:metas',
-      'mx:habito',
-      'mx:metas',
-    ]);
-    for (const [, row] of tracker.track.mock.calls) {
-      expect(row).toMatchObject({ source: 'KEYWORD_FIELD', active: true });
-    }
+    const ids = ['us:habito', 'us:metas', 'mx:habito', 'mx:metas'];
+    expect(tx.trackedKeyword.createMany).toHaveBeenCalledWith({
+      data: ids.map((keywordId) => ({
+        appId: APP.id,
+        keywordId,
+        source: 'KEYWORD_FIELD',
+        active: true,
+      })),
+      skipDuplicates: true,
+    });
+    expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
+      where: { appId: APP.id, active: false, keywordId: { in: ids } },
+      data: { active: true },
+    });
   });
 
   it('asks for the listing of each market that tracked a keyword and of no other', async () => {
@@ -120,12 +132,12 @@ describe('KeywordFieldWriter', () => {
     });
 
     expect(tx.keywordField.upsert).toHaveBeenCalledTimes(1);
-    expect(tracker.keywordIdsFor).not.toHaveBeenCalled();
-    expect(tracker.track).not.toHaveBeenCalled();
+    expect(tracker.keywordIdsAcrossMarkets).not.toHaveBeenCalled();
+    expect(tx.trackedKeyword.createMany).not.toHaveBeenCalled();
     expect(result).toEqual({ keywordIds: [], trackedIn: [] });
   });
 
-  it('resolves the keywords once per market, in the order given', async () => {
+  it('resolves every market in one lookup, in the order given', async () => {
     const { writer, tracker } = build();
 
     await writer.save({
@@ -135,10 +147,14 @@ describe('KeywordFieldWriter', () => {
       markets: ['mx', 'us', 'mx'],
     });
 
-    expect(tracker.keywordIdsFor.mock.calls.map((call) => call[2])).toEqual([
-      'mx',
-      'us',
-    ]);
+    expect(tracker.keywordIdsAcrossMarkets).toHaveBeenCalledTimes(1);
+    expect(tracker.keywordIdsAcrossMarkets).toHaveBeenCalledWith(
+      [
+        { text: 'habito', country: 'mx' },
+        { text: 'habito', country: 'us' },
+      ],
+      APP.store,
+    );
   });
 
   it('takes the field lock inside the quota admission', async () => {
@@ -178,7 +194,7 @@ describe('KeywordFieldWriter', () => {
   });
 
   it('queues the first score of every keyword after the transaction', async () => {
-    const { writer, tracker } = build();
+    const { writer, tx, tracker } = build();
 
     await writer.save({
       app: APP,
@@ -187,13 +203,14 @@ describe('KeywordFieldWriter', () => {
       markets: ['us', 'mx'],
     });
 
-    expect(tracker.enqueueFirstScore.mock.calls).toEqual([
-      ['us:habito', APP],
-      ['mx:habito', APP],
+    expect(tracker.enqueueFirstScores.mock.calls).toEqual([
+      [['us:habito', 'mx:habito'], APP],
     ]);
     expect(
-      tracker.enqueueFirstScore.mock.invocationCallOrder[0],
-    ).toBeGreaterThan(Math.max(...tracker.track.mock.invocationCallOrder));
+      tracker.enqueueFirstScores.mock.invocationCallOrder[0],
+    ).toBeGreaterThan(
+      Math.max(...tx.trackedKeyword.createMany.mock.invocationCallOrder),
+    );
   });
 
   it('untracks a dropped phrase in every market that reads the localization and no other', async () => {
@@ -210,20 +227,26 @@ describe('KeywordFieldWriter', () => {
       markets: ['mx'],
     });
 
-    expect(tx.trackedKeyword.updateMany).toHaveBeenCalledTimes(1);
-    expect(tx.trackedKeyword.updateMany).toHaveBeenCalledWith({
-      where: {
-        appId: APP.id,
-        active: true,
-        source: 'KEYWORD_FIELD',
-        keywordId: { in: ['k1'] },
-      },
-      data: { active: false },
-    });
+    const untracked = tx.trackedKeyword.updateMany.mock.calls.filter(
+      ([args]) => (args as { data: { active: boolean } }).data.active === false,
+    );
+    expect(untracked).toEqual([
+      [
+        {
+          where: {
+            appId: APP.id,
+            active: true,
+            source: 'KEYWORD_FIELD',
+            keywordId: { in: ['k1'] },
+          },
+          data: { active: false },
+        },
+      ],
+    ]);
   });
 
   it('records a localization other than the home one as manual inside the transaction', async () => {
-    const { writer, tx, tracker } = build();
+    const { writer, tx } = build();
 
     await writer.save({
       app: APP,
@@ -249,7 +272,9 @@ describe('KeywordFieldWriter', () => {
     expect(recordedAt).toBeGreaterThan(
       tx.$executeRaw.mock.invocationCallOrder[0],
     );
-    expect(recordedAt).toBeLessThan(tracker.track.mock.invocationCallOrder[0]);
+    expect(recordedAt).toBeLessThan(
+      tx.trackedKeyword.createMany.mock.invocationCallOrder[0],
+    );
   });
 
   it('does not record the home localization', async () => {

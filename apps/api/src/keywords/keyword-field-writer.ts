@@ -5,6 +5,7 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { recordAppLocalizations } from './app-localization-records';
 import { indexKeywordFields, storedPhrases } from './keyword-field-index';
+import { pairKey } from './keyword-import';
 import { KeywordTracker } from './keyword-tracker';
 import { KeywordApp } from './keywords.support';
 import { homeLocalization, readsKeywordField } from './localization-markets';
@@ -50,15 +51,11 @@ export class KeywordFieldWriter {
       const before = await storedPhrases(tx, app.id, localization);
       await this.storePhrases(tx, app.id, localization, phrases);
       await this.recordShipped(tx, app, localization, phrases);
-      for (const { keywordIds } of resolved) {
-        for (const keywordId of keywordIds) {
-          await this.tracker.track(
-            tx,
-            { appId: app.id, keywordId, source: 'KEYWORD_FIELD', active: true },
-            { active: true },
-          );
-        }
-      }
+      await this.trackAll(
+        tx,
+        app.id,
+        resolved.flatMap((entry) => entry.keywordIds),
+      );
       await this.untrackDropped(
         tx,
         app.id,
@@ -89,18 +86,42 @@ export class KeywordFieldWriter {
     phrases: string[],
     markets: readonly string[],
   ): Promise<MarketKeywords[]> {
-    const resolved: MarketKeywords[] = [];
-    for (const market of new Set(markets)) {
-      resolved.push({
-        market,
-        keywordIds: await this.tracker.keywordIdsFor(
-          phrases,
-          app.store,
-          market,
-        ),
-      });
+    const unique = [...new Set(markets)];
+    if (phrases.length === 0 || unique.length === 0) {
+      return unique.map((market) => ({ market, keywordIds: [] }));
     }
-    return resolved;
+    const ids = await this.tracker.keywordIdsAcrossMarkets(
+      unique.flatMap((country) => phrases.map((text) => ({ text, country }))),
+      app.store,
+    );
+    return unique.map((market) => ({
+      market,
+      keywordIds: phrases.flatMap((text) => {
+        const id = ids.get(pairKey(market, text));
+        return id ? [id] : [];
+      }),
+    }));
+  }
+
+  private async trackAll(
+    tx: Prisma.TransactionClient,
+    appId: string,
+    keywordIds: string[],
+  ): Promise<void> {
+    if (keywordIds.length === 0) return;
+    await tx.trackedKeyword.createMany({
+      data: keywordIds.map((keywordId) => ({
+        appId,
+        keywordId,
+        source: 'KEYWORD_FIELD' as const,
+        active: true,
+      })),
+      skipDuplicates: true,
+    });
+    await tx.trackedKeyword.updateMany({
+      where: { appId, active: false, keywordId: { in: keywordIds } },
+      data: { active: true },
+    });
   }
 
   private async announce(
@@ -108,9 +129,7 @@ export class KeywordFieldWriter {
     resolved: MarketKeywords[],
   ): Promise<KeywordFieldWrite> {
     const keywordIds = resolved.flatMap((entry) => entry.keywordIds);
-    for (const keywordId of keywordIds) {
-      await this.tracker.enqueueFirstScore(keywordId, app);
-    }
+    await this.tracker.enqueueFirstScores(keywordIds, app);
     const trackedIn = resolved
       .filter((entry) => entry.keywordIds.length > 0)
       .map((entry) => entry.market);
