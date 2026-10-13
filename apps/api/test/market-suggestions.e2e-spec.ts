@@ -180,6 +180,21 @@ describe('Market suggestions (e2e)', () => {
     });
   });
 
+  it('answers nothing for a competitor app', async () => {
+    const appId = await seedApp(['EN', 'DE'], 1);
+    const rival = await prisma.app.findFirstOrThrow({
+      where: { primaryAppId: appId },
+      select: { id: true },
+    });
+    await snapshot(rival.id, ['EN', 'DE']);
+
+    await expect(suggest(rival.id)).resolves.toEqual({
+      home: 'us',
+      languages: [],
+      suggestions: [],
+    } satisfies MarketSuggestionsResult);
+  });
+
   it('answers nothing for a google play app', async () => {
     const play = await createApp(Store.GOOGLE_PLAY);
     await snapshot(play.id, ['EN', 'DE']);
