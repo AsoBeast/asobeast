@@ -130,7 +130,7 @@ export type AuditCheckId =
   | 'subtitle-length'
   | 'keyword-field-saved'
   | 'keyword-field-hygiene'
-  | 'keyword-field-bytes'
+  | 'keyword-field-length'
   | 'keyword-field-relevance'
   | 'short-description-keyword'
   | 'short-description-length'
@@ -180,7 +180,7 @@ export const ALL_AUDIT_CHECK_IDS = [
   'subtitle-length',
   'keyword-field-saved',
   'keyword-field-hygiene',
-  'keyword-field-bytes',
+  'keyword-field-length',
   'keyword-field-relevance',
   'short-description-keyword',
   'short-description-length',

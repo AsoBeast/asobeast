@@ -370,7 +370,7 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
 
   const checks: RubricCheck[] = [
     check({
-      id: 'keyword-field-bytes',
+      id: 'keyword-field-length',
       label: 'Character usage',
       source: 'keywords',
       weight: 2,

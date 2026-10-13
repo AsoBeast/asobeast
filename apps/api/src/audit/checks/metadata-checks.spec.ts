@@ -303,7 +303,7 @@ describe('keywordFieldChecks', () => {
     const checks = keywordFieldChecks(appStoreContext({ keywordField: field }));
 
     expect(
-      checks.find((item) => item.id === 'keyword-field-bytes'),
+      checks.find((item) => item.id === 'keyword-field-length'),
     ).toMatchObject({
       label: 'Character usage',
       score: 10,
@@ -317,7 +317,7 @@ describe('keywordFieldChecks', () => {
     );
 
     expect(
-      checks.find((item) => item.id === 'keyword-field-bytes'),
+      checks.find((item) => item.id === 'keyword-field-length'),
     ).toMatchObject({
       score: 0,
       advice: { title: 'Cut your keyword field to 100 characters' },
@@ -348,7 +348,7 @@ describe('keywordFieldChecks', () => {
     );
 
     expect(
-      checks.find((item) => item.id === 'keyword-field-bytes')?.score,
+      checks.find((item) => item.id === 'keyword-field-length')?.score,
     ).toBe(score);
   });
 
@@ -364,8 +364,8 @@ describe('keywordFieldChecks', () => {
       }),
     );
 
-    const fix = checks.find((item) => item.id === 'keyword-field-bytes')?.advice
-      ?.fix;
+    const fix = checks.find((item) => item.id === 'keyword-field-length')
+      ?.advice?.fix;
     expect(fix).toContain('expense tracker');
     expect(fix).not.toContain('budget planner');
   });
