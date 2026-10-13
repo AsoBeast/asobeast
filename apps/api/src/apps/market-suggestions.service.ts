@@ -2,32 +2,16 @@ import { Injectable } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
   declaredLanguage,
-  MarketDailyRequests,
   MarketSuggestionsResult,
-  nativeLocalizations,
   storefrontsForLanguages,
 } from '@asobeast/shared';
-import { requestsPerJob } from '../jobs/request-weights';
 import { loadAppMarkets } from '../keywords/app-markets';
 import { ensureApp } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { HOME_LISTING, NEWEST_FIRST } from './listing';
-
-const localizedReads = (store: Store, country: string): number =>
-  store === Store.APP_STORE ? nativeLocalizations(country).length : 0;
-
-export const marketDailyRequests = (
-  store: Store,
-  country: string,
-  family: number,
-): MarketDailyRequests => ({
-  listing:
-    family *
-    (1 + localizedReads(store, country)) *
-    requestsPerJob(store, 'apps'),
-  perKeyword: requestsPerJob(store, 'keywords'),
-});
+import { marketDailyRequests } from './market-cost';
+import { shippedLocalizations } from './shipped-localizations';
 
 @Injectable()
 export class MarketSuggestionsService {
@@ -38,7 +22,7 @@ export class MarketSuggestionsService {
     if (app.store !== Store.APP_STORE) {
       return { home: app.country, languages: [], suggestions: [] };
     }
-    const [latest, markets, family] = await Promise.all([
+    const [latest, markets, family, shipped] = await Promise.all([
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
         orderBy: NEWEST_FIRST,
@@ -48,6 +32,7 @@ export class MarketSuggestionsService {
       this.prisma.app.count({
         where: { OR: [{ id: appId }, { primaryAppId: appId }] },
       }),
+      shippedLocalizations(this.prisma, appId),
     ]);
     const languages = [
       ...new Set(
@@ -63,7 +48,12 @@ export class MarketSuggestionsService {
         .map((entry) => ({
           ...entry,
           tracked: tracked.has(entry.country),
-          dailyRequests: marketDailyRequests(app.store, entry.country, family),
+          dailyRequests: marketDailyRequests(
+            app.store,
+            entry.country,
+            family,
+            shipped,
+          ),
         })),
     };
   }
