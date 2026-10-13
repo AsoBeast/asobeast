@@ -18,8 +18,8 @@ ALTER TABLE "AppLocalization" ADD CONSTRAINT "AppLocalization_appId_workspaceId_
 -- AddForeignKey
 ALTER TABLE "AppLocalization" ADD CONSTRAINT "AppLocalization_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO "AppLocalization" ("appId", "workspaceId", "localization", "origin")
-SELECT f."appId", f."workspaceId", f."localization", 'manual'
+INSERT INTO "AppLocalization" ("appId", "workspaceId", "localization", "origin", "createdAt")
+SELECT f."appId", f."workspaceId", f."localization", 'manual', f."updatedAt"
 FROM "KeywordField" f
 ON CONFLICT DO NOTHING;
 
