@@ -93,6 +93,16 @@ describe("requestOf", () => {
     ).toEqual({ method: "GET", path: "/apps/app_1/localizations" });
   });
 
+  it("suggests markets as a read only call", () => {
+    const tool = toolByName("market_suggestions")!;
+
+    expect(requestOf(tool, { appId: "app_1" })).toEqual({
+      method: "GET",
+      path: "/apps/app_1/market-suggestions",
+    });
+    expect(annotationsOf(tool)).toMatchObject({ readOnlyHint: true });
+  });
+
   it("reads one market's keyword fields", () => {
     expect(
       requestOf(toolByName("market_keyword_fields")!, {
