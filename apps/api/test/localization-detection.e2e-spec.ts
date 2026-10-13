@@ -15,6 +15,7 @@ import {
   QUEUES,
   RefreshAppPayload,
 } from '../src/jobs/jobs.types';
+import { LocalizationSweep } from '../src/apps/localization-sweep.service';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -208,6 +209,53 @@ describe('Localization detection probe (e2e)', () => {
       await captureListing(appId, 'ch');
 
       await expect(detectionJobs()).resolves.toHaveLength(before);
+    });
+  });
+
+  describe('the weekly sweep', () => {
+    beforeEach(async () => {
+      await obliterateQueues(app);
+      await pauseQueues(app);
+    });
+
+    const probes = async () =>
+      (
+        await app
+          .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
+          .getJobs(['prioritized'])
+      ).filter((job) => job.name === JOBS.DETECT_LOCALIZATION);
+
+    it('queues one probe per candidate of every primary app store app', async () => {
+      const appId = await importApp();
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'GOOGLE_PLAY',
+          storeAppId: 'com.example.sweep',
+          country: 'us',
+          name: 'Play app',
+        },
+      });
+
+      const queued = await app.get(LocalizationSweep).run();
+
+      const queuedProbes = await probes();
+      expect(queued).toBeGreaterThan(0);
+      expect(queuedProbes).toHaveLength(queued);
+      expect(
+        queuedProbes.every(
+          (job) => (job.data as DetectLocalizationPayload).appId === appId,
+        ),
+      ).toBe(true);
+    });
+
+    it('queues nothing more when it runs twice the same day', async () => {
+      await importApp();
+      await app.get(LocalizationSweep).run();
+      const before = (await probes()).length;
+
+      await expect(app.get(LocalizationSweep).run()).resolves.toBe(0);
+      await expect(probes()).resolves.toHaveLength(before);
     });
   });
 });

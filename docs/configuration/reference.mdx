@@ -44,6 +44,7 @@ Every cron expression is evaluated in UTC. A `CRON_` value anywhere on this page
 | `CRON_SCORING` | `0 4 * * 0` | No | Recomputes popularity and difficulty weekly on Sunday |
 | `CRON_RETENTION` | `0 5 * * *` | No | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | No | Writes the daily audit score snapshot |
+| `CRON_LOCALIZATION_SWEEP` | `0 7 * * 1` | No | Probes the store once a week for the localizations every App Store app ships, so a localization added later is found and a removed one comes back only if the store still serves it. An empty value removes the schedule. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship) |
 | `CRON_DIGEST` | `0 8 * * 1` | No | Sends the weekly digest webhook on Monday |
 | `CRON_PROXY_SYNC` | `0 2 * * *` | No | Reconciles the egress proxy pool against the provider. Never scheduled while `PROXY_PROVIDER` is `none` |
 | `CRON_STORE_CANARY` | `0 2,8,14,20 * * *` | No | Asks each store whether it still parses, one hour before the daily run so the day's first collection meets a known state. An empty value removes the schedule and switches the canary off. See [Recover from a broken store parser](/operations/scraper-breakage) |

@@ -24,6 +24,7 @@ import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { JOBS, QUEUES, resolveSubtitleJobId } from '../src/jobs/jobs.types';
 import { DailyBudgetService } from '../src/jobs/daily-budget.service';
 import { PipelineService } from '../src/jobs/pipeline.service';
+import { PipelineWorker } from '../src/jobs/pipeline.worker';
 import { requestsFor } from '../src/jobs/request-weights';
 import { scrapedAppStoreRaw } from '../src/store-providers/app-store-scraped.fixture';
 
@@ -231,6 +232,20 @@ describe('Pipeline store routing (e2e)', () => {
 
     expect(after.localizations).toBe((before.localizations ?? 0) + 1);
     expect(after.total).toBe(before.total + 1);
+  });
+
+  it('schedules the weekly localization sweep', async () => {
+    await app.get(PipelineWorker).registerSchedules();
+
+    const schedulers = await queue(QUEUES.PIPELINE).getJobSchedulers();
+
+    expect(schedulers).toContainEqual(
+      expect.objectContaining({
+        key: 'localization-sweep',
+        pattern: '0 7 * * 1',
+        name: JOBS.LOCALIZATION_SWEEP,
+      }),
+    );
   });
 
   describe('first run readiness', () => {

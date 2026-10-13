@@ -69,6 +69,7 @@ export const JOBS = {
   AUDIT_CREATIVE: 'audit-creative',
   PROXY_SYNC: 'proxy-pool-sync',
   STORE_CANARY: 'store-canary',
+  LOCALIZATION_SWEEP: 'localization-sweep',
   STORE_STATUS: 'store-status',
   BILLING_EVENT: 'billing-event',
   BILLING_RECONCILE: 'billing-reconcile',
