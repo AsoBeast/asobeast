@@ -1,6 +1,6 @@
 ---
 title: Optimize listing metadata
-description: "The workbench lints each indexed field against its store limit, reports keyword coverage, and holds the pasted private iOS keyword field."
+description: "The workbench lints each indexed field against its store limit, reports keyword coverage, and holds the App Store localizations of an app with one private iOS keyword field each."
 icon: pencil-ruler
 keywords: ["metadata","lint","coverage","character limit","keyword field","drafts","localization"]
 ---
@@ -24,11 +24,17 @@ Fields a store does not have are hidden rather than shown empty. See [App Store 
 
 On Google Play, a short description word that is also in the title is a warning, not an error. Google's metadata policy asks for succinct text without repeated keywords, but it does not forbid reusing a title word, so the lint points out the wasted room without calling it a rule break. On the App Store a subtitle or keyword field word that Apple already indexes from the title stays an error, and only errors open an Action Center item.
 
-## See which localizations each storefront reads
+## See which localizations your app ships
 
-On an App Store app, the card under the fields lists your home storefront first and then every storefront where you track keywords, each with Apple's default language and additional languages. A storefront with no additional language says so.
+On an App Store app, the **App Store localizations** section lists the localizations your app ships, your home storefront's default first. Each one is an item that holds its own keyword field and shows the markets that read it as chips, **Default** or **Additional**. When the app has two markets or two shipped localizations, a matrix above the items crosses them, so you see at a glance which market reads which localization.
 
-The fields above exist once per localization, so each additional language is another title, subtitle and keyword field for search in that storefront, and the card counts that room for you. The rule, its source and its limits are in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read) The listing market control above the fields shows what each of those storefronts actually serves.
+Each shipped localization is another title, subtitle and keyword field for search in every storefront that reads it, and the section counts that room for you. The rules, their source and their limits are in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read) and [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship) The **Listing market** control above the fields shows what each of those storefronts actually serves.
+
+Three buttons manage the list.
+
+- **Add localization** adds a language you ship in App Store Connect. The dialog lists the languages your markets read first, then every other language, and searches both names and codes.
+- **Find localizations** asks the store which of those languages your listing really serves and adds the ones it proves, marked **Detected**. It spends one refresh from your on demand allowance and the answers arrive as the queue drains, so the list fills in over a few minutes. It cannot see a localization whose text equals the default listing; add that one by hand. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship)
+- **Remove localization**, at the foot of an item, deletes the localization's field and stops tracking its phrases as keyword field phrases. Phrases you track for another reason stay tracked. The home localization has no remove button.
 
 ## Check keyword coverage
 
@@ -55,9 +61,23 @@ When the market has a native localization, a **Localization** control next to it
 
 Each keyword is judged against the listing of its own market, and against the home listing until its market has one. The keyword field card shows the field you saved for the localization on screen, linted against that localization's title and subtitle, and the suggestion below the coverage table names the localization it is for. The AI drafts stay on the home market. The API takes the same choice as the `country` parameter of `GET /apps/{id}/metadata/audit`. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
 
-## Paste the iOS keyword field
+## Edit the iOS keyword field
 
-The 100 character field is private and cannot be collected, so you paste it on the keywords page, once per localization. The **Edit this keyword field** link on a suggestion opens the field it suggests for. See [Paste the iOS keyword field](/guides/track-keywords#paste-the-ios-keyword-field).
+The 100 character field is private and cannot be collected, so you enter it here, once per localization. This is the only place that edits a keyword field; the keywords page reports what each market reads. See [See what each market reads](/guides/track-keywords#see-what-each-market-reads).
+
+<Steps>
+  <Step title="Open the localization">
+    Click its item in the **App Store localizations** section. The URL keeps the open item as `?fieldLocale=`, so an **Edit** link from the keywords page or the **Edit this keyword field** link on a suggestion opens the right one. An app with a single localization opens it for you.
+  </Step>
+  <Step title="Type or paste the field">
+    Separate the keywords with commas. The counter shows the characters used of 100 and turns to a warning when you pass the limit, and **Save keyword field** stays disabled while the field is over the limit, or empty and untouched. Saving an unchanged field is how you track its phrases in a market that does not track them yet.
+  </Step>
+  <Step title="Save and choose where to track">
+    asobeast previews the save. If it adds and drops nothing, it saves at once and tracks in every market that reads the localization. Otherwise a dialog lists the new phrases, the phrases that leave the field and a checkbox for each of your markets that reads the localization, all ticked. It sums, for the ticked markets, the keyword markets the save adds and the store requests they cost each day, and on a plan with a keyword market limit it shows how many you will use after saving.
+  </Step>
+</Steps>
+
+**Save and track** tracks every phrase of the field, with the source `KEYWORD_FIELD`, in each ticked market. **Save** with nothing ticked stores the field and tracks nothing new, and every market that reads the localization still counts the field for coverage. Phrases that left the field stop being tracked as keyword field phrases in every market that reads the localization, whatever you tick, unless another field there holds them. A save that would pass your plan's keyword market limit is refused with nothing written, the field included, and the dialog links to the plans instead. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
 
 Come back to the page and the field shows what asobeast tracks rather than the string you pasted. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field).
 
@@ -88,7 +108,7 @@ With no key the card is hidden entirely. See [Enable the optional AI features](/
 
 On an App Store app the drafts card has a **Localization** menu. **Primary listing** drafts the listing asobeast reads, as before. An additional language of one of your storefronts drafts that localization instead: its title, subtitle and keyword field, written in that language from the meaning of your tracked keywords rather than copied from them, preferring words your current listing does not use. A draft for a localization is told the keyword field you saved for it. The keyword field is held to its 100 character limit, and a Chinese, Japanese or Korean character counts once. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field)
 
-Each additional language on the storefront card has a button that picks it in the menu and moves the focus there. To fill a localization's keyword field with keywords in another language, a common tactic for Spanish (Mexico) in the United States, say so in the instructions. Which storefronts read which localization is explained in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
+Each localization item has a **Draft with AI** button that picks it in the menu and moves the focus there. To fill a localization's keyword field with keywords in another language, a common tactic for Spanish (Mexico) in the United States, say so in the instructions. Which storefronts read which localization is explained in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
 
 ## Troubleshooting
 
@@ -96,6 +116,8 @@ Each additional language on the storefront card has a button that picks it in th
 - **The subtitle card is missing.** You are looking at a Google Play app. It has no subtitle.
 - **Character counts differ from App Store Connect.** asobeast counts characters, so an emoji or an accented character counts as the store counts it in the stored value.
 - **The Localization menu is missing.** The app is on Google Play, none of your storefronts lists an additional language (the United Kingdom lists none), or asobeast could not read your keyword markets when the page loaded.
+- **Find localizations found nothing.** The store proves only a localization whose text differs from the default listing, and only for languages your home listing says the app supports. Add a localization with the default text by hand.
+- **A localization came back after I removed it.** **Find localizations** adds every localization the store serves again. Remove it once more after the run, or leave it: a localization the store serves is one your app ships.
 
 ## Related
 
