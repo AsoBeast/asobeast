@@ -45,6 +45,8 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     KeywordsService,
     KeywordFieldService,
     KeywordSuggestionService,
+    KeywordTracker,
+    MarketListingRequests,
     SpiderService,
     TrackedKeywordAccess,
   ],
