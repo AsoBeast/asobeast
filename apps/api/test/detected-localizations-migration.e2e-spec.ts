@@ -89,27 +89,37 @@ describe('the record detected app localizations migration (e2e)', () => {
   });
 
   it('E-MIG-08 files each row under the workspace of its own app', async () => {
-    await prisma.workspace.upsert({
-      where: { id: 'ws_other' },
-      update: {},
-      create: { id: 'ws_other', name: 'Other' },
+    await prisma.workspace.create({
+      data: { id: 'ws_migration_other', name: 'Other' },
     });
-    const own = await seedApp();
-    const other = await seedApp({ workspaceId: 'ws_other' });
-    await snapshotOf(own.id, 'pl');
-    await snapshotOf(other.id, 'de');
+    try {
+      const own = await seedApp();
+      const other = await seedApp({ workspaceId: 'ws_migration_other' });
+      await snapshotOf(own.id, 'pl');
+      await snapshotOf(other.id, 'de');
 
-    await migrate();
+      await migrate();
 
-    await expect(
-      prisma.appLocalization.findMany({
-        orderBy: { localization: 'asc' },
-        select: { appId: true, workspaceId: true, localization: true },
-      }),
-    ).resolves.toEqual([
-      { appId: other.id, workspaceId: 'ws_other', localization: 'de' },
-      { appId: own.id, workspaceId: DEFAULT_WORKSPACE_ID, localization: 'pl' },
-    ]);
+      await expect(
+        prisma.appLocalization.findMany({
+          orderBy: { localization: 'asc' },
+          select: { appId: true, workspaceId: true, localization: true },
+        }),
+      ).resolves.toEqual([
+        {
+          appId: other.id,
+          workspaceId: 'ws_migration_other',
+          localization: 'de',
+        },
+        {
+          appId: own.id,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          localization: 'pl',
+        },
+      ]);
+    } finally {
+      await prisma.workspace.delete({ where: { id: 'ws_migration_other' } });
+    }
   });
 
   it('E-MIG-09 stamps a row with the first capture of its localization', async () => {
