@@ -23,12 +23,17 @@ import {
   truncateUsers,
 } from './helpers/api-tokens';
 import { restoreAuthEnv } from './helpers/auth-env';
+import {
+  awaitBurnHeadroom,
+  SHORT_BURN_HEADROOM_SECONDS,
+} from './helpers/burn-headroom';
 import { mcpAs, textOf } from './helpers/mcp-rpc';
 import { testDb } from './helpers/test-db';
 import {
   clearRateLimitCounters,
   obliterateQueues,
   pauseQueues,
+  spendCredentialBudget,
 } from './obliterate-queues';
 
 const NEIGHBOUR = 'ws_mcp_neighbour';
@@ -98,15 +103,18 @@ describe('Remote MCP credential isolation (e2e)', () => {
   });
 
   it('keeps admitting a valid token over an address whose rejected tool calls spent its budget', async () => {
-    const rejected = mcpAs(app, UNKNOWN_TOKEN);
-    for (let call = 0; call < CREDENTIAL_FAILURES_PER_MINUTE; call += 1) {
-      await rejected
-        .rpc('tools/call', { name: 'list_apps', arguments: {} })
-        .expect(401);
-    }
-    await rejected
-      .rpc('tools/call', { name: 'list_apps', arguments: {} })
-      .expect(429);
+    const rejected = () =>
+      mcpAs(app, UNKNOWN_TOKEN).rpc('tools/call', {
+        name: 'list_apps',
+        arguments: {},
+      });
+
+    await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
+    await rejected().expect(401);
+    expect(
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+    ).toBe(1);
+    await rejected().expect(429);
 
     const answer = await mcpAs(app, neighbourToken).callTool('list_apps', {});
 
