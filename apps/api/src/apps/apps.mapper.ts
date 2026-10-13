@@ -6,12 +6,12 @@ import {
   AppSnapshotSummary,
   CompetitorItem,
   ListingMarket,
-  nativeLocalizations,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { NormalizedApp } from '../store-providers/types';
 import { listingMarket } from './listing';
+import { additionalLocalizations } from './market-localizations';
 
 const STORE_ORDER: Record<App['store'], number> = {
   APP_STORE: 0,
@@ -59,7 +59,7 @@ function localizationsByMarket(
   return new Map(
     [...captured].map(([market, tags]) => [
       market,
-      nativeLocalizations(market).filter((tag) => tags.has(tag)),
+      additionalLocalizations(market).filter((tag) => tags.has(tag)),
     ]),
   );
 }

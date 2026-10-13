@@ -32,13 +32,18 @@ export class DailyBudgetService {
   ) {}
 
   async estimate(): Promise<DailyBudget> {
-    const targets = await this.targets.collect();
+    const [targets, shipped] = await Promise.all([
+      this.targets.collect(),
+      this.targets.shipped(),
+    ]);
     const buckets = await this.categoryRanks.buckets(
       targets.apps.map((app) => app.id),
     );
 
     const stores = await Promise.all(
-      STORES.map((store) => this.storeBudget(store, targets, buckets)),
+      STORES.map((store) =>
+        this.storeBudget(store, { ...targets, shipped }, buckets),
+      ),
     );
     const total = sum(stores, (store) => store.total);
     const capacityPerDay = sum(stores, (store) => store.capacityPerDay);
@@ -61,7 +66,7 @@ export class DailyBudgetService {
 
   private async storeBudget(
     store: Store,
-    targets: DailyTargets,
+    targets: DailyTargets & { shipped: ReadonlyMap<string, string[]> },
     buckets: { store: Store }[],
   ): Promise<StoreDailyBudget> {
     const marketListings = targets.marketListings.filter(
@@ -71,7 +76,7 @@ export class DailyBudgetService {
       ...targets.apps.filter((app) => app.store === store),
       ...targets.marketListings.filter((listing) => listing.store === store),
     ];
-    const localizations = localizationReads(listings);
+    const localizations = localizationReads(listings, targets.shipped);
     const apps = listings.length + localizations;
     const keywords = targets.keywords.filter(
       (keyword) => keyword.store === store,
