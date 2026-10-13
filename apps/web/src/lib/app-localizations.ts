@@ -244,6 +244,11 @@ export function droppedSentence(
 ): string | null {
   const count = preview.dropped.length;
   if (count === 0) return null;
+  if (preview.markets.length === 0) {
+    return count === 1
+      ? "1 phrase leaves the field"
+      : `${formatNumber(count)} phrases leave the field`;
+  }
   const where = formatList(
     preview.markets.map((market) => formatCountry(market.country)),
   );
