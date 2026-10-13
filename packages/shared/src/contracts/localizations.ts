@@ -99,3 +99,8 @@ export interface MarketKeywordFields {
   wastedWords: WastedWord[];
   splitPhrases: SplitPhrase[];
 }
+
+export interface LocalizationDetectionResult {
+  queued: number;
+  candidates: AppStoreLocalization[];
+}
