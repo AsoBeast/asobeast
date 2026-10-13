@@ -301,8 +301,28 @@ describe('LocalizationDetection.request', () => {
           correlationId: 'req_1',
           enqueueClaim: expect.any(String) as string,
         },
-        { priority: 1, jobId: jobIdOf(localization) },
+        {
+          priority: 1,
+          removeOnComplete: { age: 86_400 },
+          jobId: jobIdOf(localization),
+        },
       ]),
+    );
+  });
+
+  it('keeps a finished probe for a day so the day scoped id holds whatever else the queue runs', async () => {
+    const { queue, request } = buildRequest();
+
+    await request();
+
+    expect(queue.add.mock.calls.map(([, , options]) => options)).toEqual(
+      ['fr', 'es-MX'].map(
+        (localization) =>
+          expect.objectContaining({
+            jobId: jobIdOf(localization),
+            removeOnComplete: { age: 86_400 },
+          }) as unknown,
+      ),
     );
   });
 
