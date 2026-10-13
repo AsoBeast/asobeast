@@ -87,6 +87,46 @@ describe("requestOf", () => {
     ).toEqual({ method: "GET", path: "/apps/app_1/keyword-fields" });
   });
 
+  it("lists the localizations an app ships", () => {
+    expect(
+      requestOf(toolByName("app_localizations")!, { appId: "app_1" }),
+    ).toEqual({ method: "GET", path: "/apps/app_1/localizations" });
+  });
+
+  it("reads one market's keyword fields", () => {
+    expect(
+      requestOf(toolByName("market_keyword_fields")!, {
+        appId: "app_1",
+        country: "pl",
+      }),
+    ).toEqual({
+      method: "GET",
+      path: "/apps/app_1/keyword-fields/market",
+      params: { country: "pl" },
+    });
+  });
+
+  it("leaves the market to the home storefront when no country is given", () => {
+    expect(
+      requestOf(toolByName("market_keyword_fields")!, { appId: "app_1" }),
+    ).toEqual({
+      method: "GET",
+      path: "/apps/app_1/keyword-fields/market",
+      params: { country: undefined },
+    });
+  });
+
+  it.each(["PL", "pol", "p", ""])(
+    "refuses %s as the country of market_keyword_fields",
+    (country) => {
+      const tool = toolByName("market_keyword_fields")!;
+
+      expect(
+        tool.inputSchema.safeParse({ appId: "app_1", country }).success,
+      ).toBe(false);
+    },
+  );
+
   it("audits one localization of a market", () => {
     expect(
       requestOf(toolByName("metadata_audit")!, {

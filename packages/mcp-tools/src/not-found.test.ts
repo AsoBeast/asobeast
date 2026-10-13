@@ -54,3 +54,17 @@ describe("notFoundText", () => {
     );
   });
 });
+
+describe.each(["app_localizations", "market_keyword_fields"])("%s", (name) => {
+  const tool = catalogTool(name);
+
+  it("reports a newer api when the route does not exist", () => {
+    expect(notFoundText(tool, "Cannot GET /apps/app-1/anything")).toBe(
+      tool.unavailableOn404,
+    );
+  });
+
+  it("keeps the api message when the app does not exist", () => {
+    expect(notFoundText(tool, "App nope not found")).toBe("App nope not found");
+  });
+});
