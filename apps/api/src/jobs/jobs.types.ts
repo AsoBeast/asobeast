@@ -1,5 +1,6 @@
 import {
   AlertPayload,
+  AppStoreLocalization,
   CategoryCollection,
   FanOutSummary,
   Store,
@@ -59,6 +60,7 @@ export const JOBS = {
   CHECK_CATEGORY: 'check-category',
   SCORE_KEYWORD: 'score-keyword',
   SPIDER_PROBE: 'spider-probe',
+  DETECT_LOCALIZATION: 'detect-localization',
   SYNC_REVIEWS: 'sync-reviews',
   DELIVER_ALERT: 'deliver-alert',
   DELIVER_EMAIL: 'deliver-email',
@@ -146,6 +148,12 @@ export interface SpiderProbePayload extends WorkspaceJobPayload {
   probe: string;
 }
 
+export interface DetectLocalizationPayload extends WorkspaceJobPayload {
+  appId: string;
+  localization: AppStoreLocalization;
+  country: string;
+}
+
 export interface SyncReviewsPayload extends WorkspaceJobPayload {
   appId: string;
   pages: number;
@@ -200,6 +208,14 @@ export function spiderJobId(
 ): string {
   const slug = `${term}~${country}~${probe || '_'}~${date}`.replace(/:/g, '-');
   return `spider~${appId}~${slug}`;
+}
+
+export function detectLocalizationJobId(
+  appId: string,
+  localization: string,
+  date: string,
+): string {
+  return ['detect-localization', appId, localization, date].join('~');
 }
 
 export function reviewsJobId(appId: string, date: string): string {
