@@ -130,11 +130,11 @@ import {
   KEYWORD_BULK_ADD_LIMIT,
   KEYWORD_IMPORT_LIMIT,
   isKeywordTag,
-  KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_FIELD_CHAR_LIMIT,
   KEYWORD_TAGS_MAX,
   normalizeKeywordNote,
   normalizeKeywordTags,
-  keywordFieldBytes,
+  keywordFieldChars,
   parseKeywordField,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
@@ -694,8 +694,8 @@ function keywordFieldResult(text: string, country: string): KeywordFieldResult {
 
   return {
     tracked: phrases.map((value) => trackedFromKeywordField(value, country)),
-    charactersUsed: keywordFieldBytes(phrases),
-    charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
+    charactersUsed: keywordFieldChars(phrases),
+    charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
     duplicatesRemoved,
   };
 }

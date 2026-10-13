@@ -3,8 +3,9 @@ import { Store } from '@prisma/client';
 import {
   AppStoreLocalization,
   assertStorefront,
-  fieldLength,
-  KEYWORD_FIELD_BYTE_LIMIT,
+  countChars,
+  KEYWORD_FIELD_CHAR_LIMIT,
+  keywordFieldChars,
   packKeywordField,
   KeywordCoverageRow,
   KeywordFieldSuggestion,
@@ -21,7 +22,6 @@ import {
   STORE_FIELD_LIMITS,
   tokenize,
   TrackedKeywordItem,
-  utf8ByteLength,
 } from '@asobeast/shared';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -250,7 +250,7 @@ export class MetadataService {
               lintKeywordField(
                 keywordFieldValue,
                 context,
-                KEYWORD_FIELD_BYTE_LIMIT,
+                KEYWORD_FIELD_CHAR_LIMIT,
               ),
             ),
           ]
@@ -333,7 +333,7 @@ export class MetadataService {
     return {
       field,
       value,
-      chars: fieldLength(field, value),
+      chars: countChars(value),
       limit: limit.limit,
       indexed: limit.indexed,
       issues,
@@ -380,8 +380,8 @@ export class MetadataService {
 
     return {
       value,
-      charactersUsed: utf8ByteLength(value),
-      charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
+      charactersUsed: keywordFieldChars(added),
+      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
       addedTerms: added,
     };
   }

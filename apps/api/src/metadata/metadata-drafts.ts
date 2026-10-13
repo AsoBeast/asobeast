@@ -1,6 +1,6 @@
 import { Store } from '@prisma/client';
 import {
-  fieldLength,
+  countChars,
   lintDescription,
   lintKeywordField,
   lintShortDescription,
@@ -27,7 +27,7 @@ const STORE_RULES: Record<Store, string[]> = {
   APP_STORE: [
     'Title: max 30 chars, indexed, highest weight — lead with the primary keyword.',
     'Subtitle: max 30 chars, indexed — add secondary keywords, never repeat the title.',
-    'Keyword field: max 100 bytes of UTF-8, so a letter such as ą counts twice, comma-separated with NO spaces, singular forms, no words already in title or subtitle, no brand or category words.',
+    'Keyword field: max 100 chars, comma-separated with NO spaces, singular forms, no words already in title or subtitle, no brand or category words.',
     'Description: not indexed — write for conversion with a strong first line.',
   ],
   GOOGLE_PLAY: [
@@ -246,7 +246,7 @@ export const validateDrafts = (
     return {
       field: draft.field,
       value: draft.value,
-      chars: fieldLength(draft.field, draft.value),
+      chars: countChars(draft.value),
       limit,
       issues: lintFor(store, draft, context, limit),
       rationale: draft.rationale,

@@ -1,36 +1,27 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  keywordFieldBytes,
   keywordFieldChars,
   packKeywordField,
   parseKeywordField,
 } from './keyword-field';
 
-describe('keywordFieldBytes', () => {
-  it('counts the stored field in UTF-8 bytes the way App Store Connect does', () => {
-    expect(keywordFieldBytes(['habit', 'tracker'])).toBe(13);
-    expect(keywordFieldBytes(['zażółć', 'łódź'])).toBe(18);
-    expect(keywordFieldBytes([])).toBe(0);
-  });
-});
-
 describe('packKeywordField', () => {
-  it('keeps whole phrases in order while the field fits 100 bytes', () => {
+  it('keeps whole phrases in order while the field fits 100 characters', () => {
     const packed = packKeywordField([
-      'ą'.repeat(40),
+      'ą'.repeat(80),
       'ę'.repeat(20),
       'ab',
       'c',
     ]);
 
-    expect(packed).toEqual(['ą'.repeat(40), 'ab', 'c']);
-    expect(keywordFieldBytes(packed)).toBeLessThanOrEqual(100);
+    expect(packed).toEqual(['ą'.repeat(80), 'ab', 'c']);
+    expect(keywordFieldChars(packed)).toBeLessThanOrEqual(100);
   });
 
-  it('keeps a field that lands exactly on the limit', () => {
-    expect(packKeywordField(['ą'.repeat(50)])).toEqual(['ą'.repeat(50)]);
-    expect(packKeywordField(['a'.repeat(99) + 'ą'])).toEqual([]);
+  it('keeps an accented field that lands exactly on the limit', () => {
+    expect(packKeywordField(['ą'.repeat(100)])).toEqual(['ą'.repeat(100)]);
+    expect(packKeywordField(['ą'.repeat(101)])).toEqual([]);
   });
 });
 
@@ -91,5 +82,10 @@ describe('keywordFieldChars', () => {
   it('counts nothing for no phrases and one phrase as itself', () => {
     expect(keywordFieldChars([])).toBe(0);
     expect(keywordFieldChars(['a'.repeat(100)])).toBe(100);
+  });
+
+  it('counts an accented or cjk letter once, as App Store Connect does', () => {
+    expect(keywordFieldChars(['zażółć', 'łódź'])).toBe(11);
+    expect(keywordFieldChars(['番茄钟', '冥想'])).toBe(6);
   });
 });

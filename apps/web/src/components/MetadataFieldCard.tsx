@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import {
-  fieldLength,
+  countChars,
   type LintIssue,
   type MetadataField,
 } from "@asobeast/shared";
@@ -25,7 +25,7 @@ export function MetadataFieldCard({
 }) {
   const countId = useId();
   const [draft, setDraft] = useState(value);
-  const used = fieldLength(field, draft);
+  const used = countChars(draft);
   const over = used > limit;
   const label = METADATA_FIELD_LABELS[field];
 

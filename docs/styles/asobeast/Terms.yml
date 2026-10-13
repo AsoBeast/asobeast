@@ -12,3 +12,6 @@ swap:
   "keyword rank(?! tracker)": "position"
   "Postgres ": "PostgreSQL "
   "docker-compose ": "docker compose "
+  "100 byte": "100 character"
+  "100 bytes": "100 characters"
+  "100-byte": "100 character"

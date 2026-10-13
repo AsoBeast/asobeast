@@ -297,16 +297,30 @@ describe('subtitleChecks', () => {
 });
 
 describe('keywordFieldChecks', () => {
-  it('fails a Polish field that fits 100 characters but not 100 bytes', () => {
+  it('scores the Polish field App Store Connect saved as a full field', () => {
     const field =
-      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
+      'geoguessr,geoguess,zgadywanka,stolice,miasto,lokalizacja,państwo,podróże,zabytki,odkrywca,kontynenty';
     const checks = keywordFieldChecks(appStoreContext({ keywordField: field }));
 
     expect(
-      checks.find((item) => item.id === 'keyword-field-bytes'),
+      checks.find((item) => item.id === 'keyword-field-length'),
+    ).toMatchObject({
+      label: 'Character usage',
+      score: 10,
+      detail: '100 of 100 characters used.',
+    });
+  });
+
+  it('fails an accented field one character over the limit', () => {
+    const checks = keywordFieldChecks(
+      appStoreContext({ keywordField: 'ą'.repeat(101) }),
+    );
+
+    expect(
+      checks.find((item) => item.id === 'keyword-field-length'),
     ).toMatchObject({
       score: 0,
-      advice: { title: 'Cut your keyword field to 100 bytes' },
+      advice: { title: 'Cut your keyword field to 100 characters' },
     });
   });
 
@@ -328,13 +342,13 @@ describe('keywordFieldChecks', () => {
     [90, 10],
     [100, 10],
     [101, 0],
-  ])('scores a field of %i bytes as %s', (bytes, score) => {
+  ])('scores a field of %i characters as %s', (chars, score) => {
     const checks = keywordFieldChecks(
-      appStoreContext({ keywordField: 'a'.repeat(bytes) }),
+      appStoreContext({ keywordField: 'a'.repeat(chars) }),
     );
 
     expect(
-      checks.find((item) => item.id === 'keyword-field-bytes')?.score,
+      checks.find((item) => item.id === 'keyword-field-length')?.score,
     ).toBe(score);
   });
 
@@ -350,8 +364,8 @@ describe('keywordFieldChecks', () => {
       }),
     );
 
-    const fix = checks.find((item) => item.id === 'keyword-field-bytes')?.advice
-      ?.fix;
+    const fix = checks.find((item) => item.id === 'keyword-field-length')
+      ?.advice?.fix;
     expect(fix).toContain('expense tracker');
     expect(fix).not.toContain('budget planner');
   });

@@ -38,7 +38,7 @@ test("the metadata page lists what the home storefront and each market read", as
   ]);
   await expect(
     card.getByText(
-      "Each localization has its own 30 character title, 30 character subtitle and 100 byte keyword field.",
+      "Each localization has its own 30 character title, 30 character subtitle and 100 character keyword field.",
     ),
   ).toBeVisible();
   await expect(

@@ -8,7 +8,6 @@ import {
   ApiErrorEnvelope,
   AppDetail,
   DailyBudget,
-  KEYWORD_FIELD_BYTE_LIMIT,
   KEYWORD_FIELD_CHAR_LIMIT,
   KeywordFieldResult,
   KeywordSuggestion,
@@ -16,7 +15,6 @@ import {
   SpiderEnqueueResult,
   SUGGEST_REACH_STATUSES,
   SpiderStatus,
-  utf8ByteLength,
   TrackedKeywordItem,
 } from '@asobeast/shared';
 import { Queue } from 'bullmq';
@@ -366,7 +364,7 @@ describe('KeywordsController (e2e)', () => {
       .expect(400);
 
     expect((response.body as ApiErrorEnvelope).message).toBe(
-      `Keyword field exceeds ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
+      `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
     );
     const stored = await api.get(`/apps/${id}/keyword-field`).expect(200);
     expect(
@@ -377,41 +375,55 @@ describe('KeywordsController (e2e)', () => {
     ).toBe(0);
   });
 
-  it('refuses a keyword field that fits 100 characters but not 100 bytes', async () => {
-    const id = await importApp();
-    const text =
-      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
-    expect(text).toHaveLength(83);
-    expect(utf8ByteLength(text)).toBe(111);
+  it.each([
+    [
+      'polish',
+      'geoguessr,geoguess,zgadywanka,stolice,miasto,lokalizacja,państwo,podróże,zabytki,odkrywca,kontynenty',
+      100,
+    ],
+    [
+      'turkish',
+      'trivia,guess,country,geoguessr,geo,harita,dünya,ülke,şehir,tahmin,başkent,konum,seyahat,kaşif,bilgi',
+      99,
+    ],
+  ])(
+    'saves a %s keyword field that App Store Connect accepts',
+    async (_language, text, characters) => {
+      const id = await importApp();
 
-    const response = await api
-      .put(`/apps/${id}/keyword-field`)
-      .send({ text })
-      .expect(400);
+      const response = await api
+        .put(`/apps/${id}/keyword-field`)
+        .send({ text })
+        .expect(200);
+      const body = response.body as KeywordFieldResult;
 
-    expect((response.body as ApiErrorEnvelope).message).toBe(
-      `Keyword field exceeds ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
-    );
-  });
+      expect(body.charactersUsed).toBe(characters);
+      expect(body.charactersLimit).toBe(KEYWORD_FIELD_CHAR_LIMIT);
+      expect(body.tracked.map((item) => item.text)).toEqual(text.split(','));
+    },
+  );
 
-  it('holds a multibyte keyword field to exactly 100 bytes', async () => {
+  it('holds an accented keyword field to exactly 100 characters', async () => {
     const id = await importApp();
 
     const atLimit = await api
       .put(`/apps/${id}/keyword-field`)
-      .send({ text: 'ą'.repeat(50) })
+      .send({ text: `${'ą'.repeat(49)},${'ę'.repeat(50)}` })
       .expect(200);
     expect((atLimit.body as KeywordFieldResult).charactersUsed).toBe(
-      KEYWORD_FIELD_BYTE_LIMIT,
+      KEYWORD_FIELD_CHAR_LIMIT,
     );
 
-    await api
+    const response = await api
       .put(`/apps/${id}/keyword-field`)
-      .send({ text: `${'a'.repeat(99)}ą` })
+      .send({ text: `${'ą'.repeat(50)},${'ę'.repeat(50)}` })
       .expect(400);
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+    );
   });
 
-  it('counts a stored multibyte keyword field in bytes', async () => {
+  it('counts a stored accented keyword field in characters', async () => {
     const id = await importApp();
 
     const response = await api
@@ -420,8 +432,8 @@ describe('KeywordsController (e2e)', () => {
       .expect(200);
     const body = response.body as KeywordFieldResult;
 
-    expect(body.charactersUsed).toBe(18);
-    expect(body.charactersLimit).toBe(KEYWORD_FIELD_BYTE_LIMIT);
+    expect(body.charactersUsed).toBe(11);
+    expect(body.charactersLimit).toBe(KEYWORD_FIELD_CHAR_LIMIT);
   });
 
   it('stores a decomposed keyword field in its precomposed form', async () => {
@@ -439,7 +451,7 @@ describe('KeywordsController (e2e)', () => {
       'zażółć',
       'łódź',
     ]);
-    expect(body.charactersUsed).toBe(18);
+    expect(body.charactersUsed).toBe(11);
     expect(
       await prisma.keyword.count({
         where: { text: { in: ['zażółć', 'łódź'] } },
