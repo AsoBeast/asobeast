@@ -781,6 +781,7 @@ test.describe("on the locale lab", () => {
       await typeInto(field, "temporizador");
 
       await save(page).click();
+      await expect(field).toHaveAttribute("readonly", "");
       await field.press("End");
       await page.keyboard.type(",extra");
 
