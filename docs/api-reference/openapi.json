@@ -1793,6 +1793,48 @@
         ]
       }
     },
+    "/apps/{id}/market-seed": {
+      "post": {
+        "description": "Captures the listing of the app in one storefront now, extracts the title and subtitle phrases of that listing and of its native localizations, tracks up to 15 of them in that market as listing keywords within the keyword room of the plan, queues their first score and first position check, and asks for the listings of the competitors there. A phrase the app already tracks there, active or paused, is left as it is. Phrases the room cannot hold are counted in skipped, never refused. Answers status unavailable and writes nothing when the store has no listing of the app in that storefront. Spends one refresh allowance once the store is asked, so a refusal costs nothing. Answers 400 for the home market, for a competitor app and for a code that is not a storefront of the app store, 404 for an unknown app and 429 when the refresh allowance is spent.",
+        "operationId": "MarketSeedController_seed",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarketSeedDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Seed a market with the keywords of its own listing",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/market-suggestions": {
       "get": {
         "description": "Reads the languages the newest home listing declares and answers every App Store storefront that reads a localization in one of them, the home storefront left out, with the localization, its role in that storefront (default or additional), whether the app already tracks keywords there and the daily store requests the market costs: the listing reads of the app and its competitors, native localizations included, and the requests one tracked keyword adds. English is never suggested because every storefront reads it. A Google Play app answers an empty list. Answers 404 for an unknown app.",
@@ -5594,6 +5636,19 @@
         },
         "required": [
           "appId"
+        ]
+      },
+      "MarketSeedDto": {
+        "type": "object",
+        "properties": {
+          "country": {
+            "type": "string",
+            "example": "de",
+            "pattern": "^[a-z]{2}$"
+          }
+        },
+        "required": [
+          "country"
         ]
       },
       "SpiderStartDto": {
