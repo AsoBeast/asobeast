@@ -5,6 +5,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import {
   AppDetail,
+  AppLocalizationsResult,
   AppScreenshots,
   ChangeTimeline,
   ListingMarket,
@@ -324,6 +325,79 @@ describe('Native localizations of a listing (e2e)', () => {
       expect(
         recent.events.some((event) => event.after === 'Gdzie jestem?'),
       ).toBe(false);
+    });
+  });
+
+  describe('the localizations a capture proves', () => {
+    const localizationsOf = (appId: string) =>
+      prisma.appLocalization.findMany({
+        where: { appId },
+        orderBy: { localization: 'asc' },
+        select: { localization: true, origin: true },
+      });
+
+    it('records the polish localization as detected for an app imported from a polish url', async () => {
+      registry.listings.set('pl:pl', POLISH);
+
+      const appId = await importFrom(PL_APP_URL);
+
+      await expect(localizationsOf(appId)).resolves.toEqual([
+        { localization: 'pl', origin: 'detected' },
+      ]);
+    });
+
+    it('lists the detected localization as shipped', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+
+      const { localizations } = (
+        await api.get(`/apps/${appId}/localizations`).expect(200)
+      ).body as AppLocalizationsResult;
+
+      expect(localizations).toContainEqual(
+        expect.objectContaining({ localization: 'pl', origin: 'detected' }),
+      );
+    });
+
+    it('records nothing when the polish listing echoes the default', async () => {
+      const appId = await importFrom(PL_APP_URL);
+
+      await expect(snapshotsOf(appId)).resolves.toHaveLength(1);
+      await expect(localizationsOf(appId)).resolves.toEqual([]);
+    });
+
+    it('keeps a manual localization manual when the capture proves it', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(US_APP_URL);
+      await api
+        .post(`/apps/${appId}/keywords`)
+        .send({ keywords: ['quiz geograficzny'], country: 'pl' })
+        .expect(201);
+      await api
+        .post(`/apps/${appId}/localizations`)
+        .send({ localization: 'pl' })
+        .expect(201);
+
+      await api.post(`/apps/${appId}/refresh?country=pl`).expect(200);
+
+      await expect(snapshotsOf(appId)).resolves.toContainEqual({
+        country: 'pl',
+        localization: 'pl',
+        title: POLISH.title,
+      });
+      await expect(localizationsOf(appId)).resolves.toEqual([
+        { localization: 'pl', origin: 'manual' },
+      ]);
+    });
+
+    it('does not bring a removed localization back on the next capture', async () => {
+      registry.listings.set('pl:pl', POLISH);
+      const appId = await importFrom(PL_APP_URL);
+
+      await api.delete(`/apps/${appId}/localizations/pl`).expect(204);
+      await api.post(`/apps/${appId}/refresh`).expect(200);
+
+      await expect(localizationsOf(appId)).resolves.toEqual([]);
     });
   });
 });
