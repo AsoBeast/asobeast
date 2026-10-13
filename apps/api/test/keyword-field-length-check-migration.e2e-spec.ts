@@ -25,6 +25,7 @@ const HYGIENE = {
 
 const factorsWith = (check: object) => [
   { id: 'title', score: 8, weight: 25, confidence: 1, checks: [] },
+  { id: 'subtitle', score: 6, weight: 10, confidence: 0 },
   {
     id: 'keywordField',
     score: 4,
@@ -149,10 +150,11 @@ describe('the rename keyword field length check migration', () => {
       failingChecks: [check, HYGIENE],
     });
     const audit = await action(app.id, 'audit.fix_factor', evidence(OLD_CHECK));
-    const other = await action(app.id, 'keyword.add_uncovered', {
+    const otherEvidence = {
       rule: 'keyword.add_uncovered',
-      note: 'keyword-field-bytes',
-    });
+      failingChecks: [OLD_CHECK],
+    };
+    const other = await action(app.id, 'keyword.add_uncovered', otherEvidence);
 
     await runMigration();
 
@@ -162,10 +164,7 @@ describe('the rename keyword field length check migration', () => {
     });
     const byId = Object.fromEntries(rows.map((row) => [row.id, row.evidence]));
     expect(byId[audit.id]).toEqual(evidence(NEW_CHECK));
-    expect(byId[other.id]).toEqual({
-      rule: 'keyword.add_uncovered',
-      note: 'keyword-field-bytes',
-    });
+    expect(byId[other.id]).toEqual(otherEvidence);
   });
 
   it('is a no op when it runs again', async () => {
