@@ -33,7 +33,7 @@ const GROUPS = [
   {
     title: "Apps",
     tools: APP_TOOLS,
-    note: "Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing.",
+    note: "Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing. `market_suggestions` lists the App Store storefronts that read a language the home listing declares, with the daily requests each one would cost. See [How do you add a market?](/concepts/countries#how-do-you-add-a-market).",
   },
   {
     title: "Keywords",

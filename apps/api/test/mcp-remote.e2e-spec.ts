@@ -402,6 +402,24 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('matches the rest api for the market suggestions of an app', async () => {
+    const appId = await fixtureAppId();
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('market_suggestions', { appId }),
+      request(app.getHttpServer())
+        .get(`/apps/${appId}/market-suggestions`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(viaMcp?.isError).toBeUndefined();
+    const text = viaMcp?.content?.[0].text ?? 'null';
+    expect(text).toContain('"home"');
+    expect(text).toContain('"suggestions"');
+    expect(JSON.parse(text)).toEqual(viaRest.body);
+  });
+
   it('matches the rest api for the keyword fields of the home market', async () => {
     const appId = await fixtureAppId();
 

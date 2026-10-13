@@ -1,13 +1,13 @@
 ---
 title: MCP tool reference
 sidebarTitle: Tools
-description: "30 read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
+description: "31 read only tools covering apps, keywords, competitors, rankings, SERPs, audits, reviews, analytics and the Action Center, plus 5 opt in tools that change keywords, competitors and actions."
 icon: wrench
 keywords: ["MCP tools","list_apps","ranking_history","serp_movers","app_audit","actions_summary","track_keywords","set_action_status","read only","write tools"]
 mode: wide
 ---
 
-This page is generated from the tool catalog both transports share, so it cannot drift. 30 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
+This page is generated from the tool catalog both transports share, so it cannot drift. 31 tools read and nothing else: each is a `GET` annotated `readOnlyHint: true`. 5 more tools change things and are listed only to a token with the write scope. Almost all of them take an `appId`, which you get from `list_apps`.
 
 ## Apps
 
@@ -17,8 +17,9 @@ This page is generated from the tool catalog both transports share, so it cannot
 | `get_app` | Get app | Full detail for one app: store metadata, home storefront, latest snapshot and category | `appId` (required), `country` |
 | `app_summary` | App summary | Headline metrics for one app: tracked keyword count, visibility, average position and recent movement | `appId` (required), `country` |
 | `portfolio` | Portfolio summary | Cross-app portfolio roll-up: totals and per-app visibility, keyword and movement figures across every tracked app | None |
+| `market_suggestions` | Suggest markets from the app's languages | App Store storefronts that read a localization in a language the app's home listing declares, the home storefront left out, each with the localization, its role in that storefront (default or additional), whether the app already tracks keywords there and the daily store requests the market would cost: the listing reads of the app and its competitors and the requests one tracked keyword adds | `appId` (required) |
 
-Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing.
+Start with `list_apps`. Nothing else works without an app id. Pass `country` to `get_app`, `metadata_audit` or `changes_timeline` to read one market's listing. `market_suggestions` lists the App Store storefronts that read a language the home listing declares, with the daily requests each one would cost. See [How do you add a market?](/concepts/countries#how-do-you-add-a-market).
 
 ## Keywords
 

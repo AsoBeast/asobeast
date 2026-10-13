@@ -16,7 +16,13 @@ describe("app tools", () => {
     const { client } = stubFetch(() => ({ status: 200, body: [] }));
     registerCatalogTools(server, client, APP_TOOLS);
 
-    for (const name of ["list_apps", "get_app", "app_summary", "portfolio"]) {
+    for (const name of [
+      "list_apps",
+      "get_app",
+      "app_summary",
+      "portfolio",
+      "market_suggestions",
+    ]) {
       const tool = tools.get(name);
       expect(tool).toBeDefined();
       expect(tool?.config.annotations?.readOnlyHint).toBe(true);
@@ -38,6 +44,25 @@ describe("app tools", () => {
     expect(calls[0]?.headers.authorization).toBe("Bearer asob_secret_token");
     expect(result.isError).toBeUndefined();
     expect(result.content[0]).toMatchObject({ type: "text" });
+  });
+
+  it("maps market_suggestions to the right path and sends the bearer header", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({
+      status: 200,
+      body: { home: "us", languages: ["en"], suggestions: [] },
+    }));
+    registerCatalogTools(server, client, APP_TOOLS);
+
+    const result = await tools
+      .get("market_suggestions")!
+      .handler({ appId: "app-1" });
+
+    expect(calls[0]?.url).toBe(
+      "http://localhost:4000/apps/app-1/market-suggestions",
+    );
+    expect(calls[0]?.headers.authorization).toBe("Bearer asob_secret_token");
+    expect(result.isError).toBeUndefined();
   });
 
   it("sends the market a get_app call names", async () => {
