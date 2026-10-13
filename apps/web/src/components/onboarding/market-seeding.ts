@@ -14,6 +14,20 @@ export interface SeedPlan {
 export const defaultSeedChoice = (suggestion: MarketSuggestion): boolean =>
   suggestion.role === "default";
 
+export const seedChosen = (
+  suggestion: MarketSuggestion,
+  choices: ReadonlyMap<string, boolean>,
+): boolean => choices.get(suggestion.country) ?? defaultSeedChoice(suggestion);
+
+export function withoutOutcomes(
+  outcomes: Readonly<Record<string, SeedOutcome>>,
+  markets: readonly string[],
+): Record<string, SeedOutcome> {
+  return Object.fromEntries(
+    Object.entries(outcomes).filter(([market]) => !markets.includes(market)),
+  );
+}
+
 export function seedButtonLabel(markets: number, seeds: number): string {
   if (markets === 0) return "Add markets";
   const add = `Add ${pluralize(markets, "market")}`;

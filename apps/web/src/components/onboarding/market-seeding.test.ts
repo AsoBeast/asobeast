@@ -5,7 +5,9 @@ import {
   outcomeOf,
   outcomeText,
   seedButtonLabel,
+  seedChosen,
   seedPlan,
+  withoutOutcomes,
 } from "./market-seeding";
 
 const GERMANY: MarketSuggestion = {
@@ -32,6 +34,33 @@ describe("defaultSeedChoice", () => {
   it("seeds a storefront whose default is the localization, not one that also reads it", () => {
     expect(defaultSeedChoice(GERMANY)).toBe(true);
     expect(defaultSeedChoice({ ...GERMANY, role: "additional" })).toBe(false);
+  });
+});
+
+describe("seedChosen", () => {
+  it("falls back to the default choice for a market the owner left alone", () => {
+    expect(seedChosen(GERMANY, new Map())).toBe(true);
+    expect(seedChosen({ ...GERMANY, role: "additional" }, new Map())).toBe(
+      false,
+    );
+  });
+
+  it("keeps the owner's choice", () => {
+    expect(seedChosen(GERMANY, new Map([["de", false]]))).toBe(false);
+  });
+});
+
+describe("withoutOutcomes", () => {
+  it("drops the outcomes of the markets a new run adds", () => {
+    expect(
+      withoutOutcomes(
+        {
+          jp: { kind: "unavailable" },
+          at: { kind: "seeded", seeded: 2, skipped: 0 },
+        },
+        ["jp"],
+      ),
+    ).toEqual({ at: { kind: "seeded", seeded: 2, skipped: 0 } });
   });
 });
 
