@@ -35,10 +35,8 @@ export const STORE_FIELD_LIMITS: Record<
   },
 };
 
-export const KEYWORD_FIELD_BYTE_LIMIT =
+export const KEYWORD_FIELD_CHAR_LIMIT =
   STORE_FIELD_LIMITS.APP_STORE.keywordField!.limit;
-
-export const KEYWORD_FIELD_CHAR_LIMIT = KEYWORD_FIELD_BYTE_LIMIT;
 
 export const TRACKED_KEYWORD_CHAR_LIMIT = 100;
 
@@ -53,11 +51,3 @@ export function countChars(text: string): number {
 }
 
 export const KEYWORD_MIN_CHARS = 3;
-
-export function utf8ByteLength(text: string): number {
-  return new TextEncoder().encode(text).length;
-}
-
-export function fieldLength(field: MetadataField, value: string): number {
-  return field === 'keywordField' ? utf8ByteLength(value) : countChars(value);
-}
