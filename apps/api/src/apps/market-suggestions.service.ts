@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import {
   declaredLanguage,
@@ -6,7 +6,6 @@ import {
   storefrontsForLanguages,
 } from '@asobeast/shared';
 import { loadAppMarkets } from '../keywords/app-markets';
-import { ensureApp } from '../keywords/keywords.support';
 import { PrismaService } from '../prisma/prisma.service';
 import { extractRawFacts } from '../store-providers/raw-facts';
 import { HOME_LISTING, NEWEST_FIRST } from './listing';
@@ -18,8 +17,14 @@ export class MarketSuggestionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async suggest(appId: string): Promise<MarketSuggestionsResult> {
-    const app = await ensureApp(this.prisma, appId);
-    if (app.store !== Store.APP_STORE) {
+    const app = await this.prisma.app.findFirst({
+      where: { id: appId },
+      select: { id: true, store: true, country: true, isCompetitor: true },
+    });
+    if (!app) {
+      throw new NotFoundException(`App ${appId} not found`);
+    }
+    if (app.store !== Store.APP_STORE || app.isCompetitor) {
       return { home: app.country, languages: [], suggestions: [] };
     }
     const [latest, markets, family, shipped] = await Promise.all([
