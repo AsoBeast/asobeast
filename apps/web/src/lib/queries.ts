@@ -785,6 +785,10 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.marketKeywordFieldsRoot(id),
+  });
 }
 
 export function invalidateKeywordFieldMutation(
@@ -800,10 +804,6 @@ export function invalidateLocalizationMutation(
   id: string,
 ): void {
   invalidateKeywordFieldMutation(client, id);
-  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
-  void client.invalidateQueries({
-    queryKey: appKeys.marketKeywordFieldsRoot(id),
-  });
   void client.invalidateQueries({ queryKey: accountPlanKey });
 }
 
