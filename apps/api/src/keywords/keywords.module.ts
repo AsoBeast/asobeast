@@ -41,6 +41,7 @@ import { TrackedKeywordAccess } from './tracked-keyword.access';
     TrackedKeywordAccess,
   ],
   exports: [
+    AppLocalizationsService,
     KeywordsService,
     KeywordFieldService,
     KeywordSuggestionService,
