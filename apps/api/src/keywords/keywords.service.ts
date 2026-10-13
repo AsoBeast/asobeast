@@ -11,9 +11,6 @@ import {
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
-import { extractCandidates } from './extraction';
-import { homeListingTexts } from './home-listings';
-import { interleaveDistinct } from './interleave';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
@@ -25,10 +22,10 @@ import { sortTracked } from './keyword-sort';
 import { serpVolatilities } from './keyword-volatility';
 import { toTrackedKeywordItem } from './keywords.mapper';
 import { listingFacts } from './listing-facts';
+import { seedCandidates } from './listing-seed';
+import { listingTexts } from './listing-texts';
 import { MarketListingRequests } from './market-listing.requests';
 import { ensureApp, normalizeKeyword, trackedArgs } from './keywords.support';
-
-const AUTO_TRACK_LIMIT = 15;
 
 @Injectable()
 export class KeywordsService {
@@ -243,30 +240,12 @@ export class KeywordsService {
       return;
     }
 
-    const listings = await homeListingTexts(this.prisma, app);
+    const listings = await listingTexts(this.prisma, app);
     if (listings.length === 0) {
       return;
     }
 
-    const autoTrackSources: KeywordSource[] =
-      app.store === Store.GOOGLE_PLAY
-        ? ['TITLE', 'DESCRIPTION']
-        : ['TITLE', 'SUBTITLE'];
-
-    const candidates = interleaveDistinct(
-      listings.map((listing) =>
-        extractCandidates(
-          {
-            title: listing.title,
-            subtitle: listing.subtitle ?? undefined,
-            summary: listing.summary ?? undefined,
-          },
-          listing.languages,
-        ).filter((candidate) => autoTrackSources.includes(candidate.source)),
-      ),
-      AUTO_TRACK_LIMIT,
-      (candidate) => candidate.text,
-    );
+    const candidates = seedCandidates(app.store, listings);
 
     await this.prisma.keyword.createMany({
       data: keywordRows(
