@@ -8,11 +8,11 @@ import {
   assertStorefront,
   KeywordComparison,
   KeywordCountrySummary,
-  keywordFieldBytes,
+  keywordFieldChars,
   KeywordFieldResult,
   KeywordSort,
   KeywordUpdateRequest,
-  KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_FIELD_CHAR_LIMIT,
   parseKeywordField,
   TrackedKeywordItem,
 } from '@asobeast/shared';
@@ -286,8 +286,8 @@ export class KeywordsService {
 
     return {
       tracked,
-      charactersUsed: keywordFieldBytes(tracked.map((item) => item.text)),
-      charactersLimit: KEYWORD_FIELD_BYTE_LIMIT,
+      charactersUsed: keywordFieldChars(tracked.map((item) => item.text)),
+      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
       duplicatesRemoved,
     };
   }
@@ -307,9 +307,9 @@ export class KeywordsService {
 
     const { phrases, duplicatesRemoved } = parseKeywordField(text);
     const unique = phrases.map(normalizeKeyword);
-    if (keywordFieldBytes(unique) > KEYWORD_FIELD_BYTE_LIMIT) {
+    if (keywordFieldChars(unique) > KEYWORD_FIELD_CHAR_LIMIT) {
       throw new BadRequestException(
-        `Keyword field exceeds ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
+        `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
       );
     }
 
