@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import type { ChangesService } from '../changes/changes.service';
 import type { KeywordsService } from '../keywords/keywords.service';
@@ -7,6 +8,7 @@ import type { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
 import type { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import type { StoreProviderRegistry } from '../store-providers/store-provider.registry';
 import { ListingCaptureService } from './listing-capture.service';
+import type { LocalizationDetection } from './localization-detection.service';
 import type { LocalizedListingCapture } from './localized-listing-capture.service';
 
 const APP = {
@@ -15,6 +17,7 @@ const APP = {
   storeAppId: '1234567890',
   country: 'us',
   iconUrl: null,
+  isCompetitor: false,
 };
 
 const SNAPSHOT = {
@@ -49,14 +52,19 @@ const build = (overrides: {
   recordRefresh?: jest.Mock;
   recordMarketRefresh?: jest.Mock;
   localized?: unknown[];
+  app?: typeof APP;
+  previous?: typeof SNAPSHOT | null;
+  detect?: jest.Mock;
 }) => {
   const tx = {
     appSnapshot: { create: jest.fn().mockResolvedValue(SNAPSHOT) },
     app: { update: jest.fn().mockResolvedValue(APP) },
   };
   const prisma = {
-    app: { findFirst: jest.fn().mockResolvedValue(APP) },
-    appSnapshot: { findFirst: jest.fn().mockResolvedValue(null) },
+    app: { findFirst: jest.fn().mockResolvedValue(overrides.app ?? APP) },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue(overrides.previous ?? null),
+    },
     withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
       work(tx),
     ),
@@ -90,6 +98,9 @@ const build = (overrides: {
   const screenshots = { record } as unknown as ScreenshotRecorder;
   const request = jest.fn().mockResolvedValue(undefined);
   const capture = jest.fn().mockResolvedValue(overrides.localized ?? []);
+  const detect =
+    overrides.detect ??
+    jest.fn().mockResolvedValue({ queued: 0, candidates: [] });
   const service = new ListingCaptureService(
     prisma,
     registry,
@@ -99,8 +110,9 @@ const build = (overrides: {
     screenshots,
     { request } as unknown as ScreenshotQueue,
     { capture } as unknown as LocalizedListingCapture,
+    { request: detect } as unknown as LocalizationDetection,
   );
-  return { service, request, record, capture };
+  return { service, request, record, capture, detect };
 };
 
 describe('ListingCaptureService.refresh', () => {
@@ -276,5 +288,56 @@ describe('ListingCaptureService screenshots', () => {
       SNAPSHOT,
     );
     expect(request).toHaveBeenCalledWith(APP.id, SNAPSHOT.id);
+  });
+});
+
+describe('ListingCaptureService localization detection', () => {
+  it('asks for the localizations of a market after its first capture', async () => {
+    const { service, detect } = build({});
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(detect).toHaveBeenCalledTimes(1);
+    expect(detect).toHaveBeenCalledWith(APP.id, expect.any(Function), 'de');
+    const [[, spend]] = detect.mock.calls as [[string, () => Promise<void>]];
+    await expect(spend()).resolves.toBeUndefined();
+  });
+
+  it('asks nothing on a later capture of the same market', async () => {
+    const { service, detect } = build({ previous: SNAPSHOT });
+
+    await service.refreshListing(APP.id, 'de');
+
+    expect(detect).not.toHaveBeenCalled();
+  });
+
+  it('asks nothing for the home market or a competitor', async () => {
+    const home = build({});
+    await home.service.refreshListing(APP.id, 'us');
+    expect(home.detect).not.toHaveBeenCalled();
+
+    const rival = build({ app: { ...APP, isCompetitor: true } });
+    await rival.service.refreshListing(APP.id, 'de');
+    expect(rival.detect).not.toHaveBeenCalled();
+  });
+
+  it('keeps the capture when the detection request fails', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { service } = build({
+      detect: jest.fn().mockRejectedValue(new Error('redis is down')),
+    });
+
+    try {
+      await expect(service.refreshListing(APP.id, 'de')).resolves.toMatchObject(
+        { snapshotId: SNAPSHOT.id, country: 'de' },
+      );
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining('redis is down'),
+      );
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

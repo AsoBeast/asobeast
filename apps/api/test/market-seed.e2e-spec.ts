@@ -279,4 +279,19 @@ describe('Market seed (e2e)', () => {
     ).map((row) => row.text);
     expect(texts).toContain('quiz geograficzny');
   });
+
+  it('queues the localization probes of the seeded market', async () => {
+    const appId = await importApp();
+
+    await seeded(appId, 'ch');
+
+    const probes = (await appStoreQueue().getJobs(['prioritized']))
+      .filter((job) => job.name === JOBS.DETECT_LOCALIZATION)
+      .map((job) => job.data as { country: string; localization: string })
+      .filter((probe) => probe.country === 'ch');
+    expect(probes.map((probe) => probe.localization).sort()).toEqual([
+      'en-GB',
+      'it',
+    ]);
+  });
 });

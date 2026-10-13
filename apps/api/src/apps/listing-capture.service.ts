@@ -18,6 +18,7 @@ import { snapshotIcon, toSnapshotData } from './apps.mapper';
 import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
+import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
@@ -34,6 +35,7 @@ export class ListingCaptureService {
     private readonly screenshots: ScreenshotRecorder,
     private readonly screenshotQueue: ScreenshotQueue,
     private readonly localizations: LocalizedListingCapture,
+    private readonly detection: LocalizationDetection,
   ) {}
 
   async refresh(
@@ -151,6 +153,9 @@ export class ListingCaptureService {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
     });
+    if (!home && !previous && !app.isCompetitor) {
+      await this.requestDetection(app.id, market);
+    }
     if (home) await this.keywords.syncFromSnapshot(app.id);
 
     return {
@@ -162,4 +167,18 @@ export class ListingCaptureService {
       country: market,
     };
   }
+
+  private async requestDetection(appId: string, market: string): Promise<void> {
+    try {
+      await this.detection.request(appId, () => Promise.resolve(), market);
+    } catch (error: unknown) {
+      this.logger.warn(
+        `could not queue the localization probes of ${appId} after its first market capture, so they wait for the sweep: ${reason(error)}`,
+      );
+    }
+  }
+}
+
+function reason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
