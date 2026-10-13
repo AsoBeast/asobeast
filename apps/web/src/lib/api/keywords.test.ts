@@ -1,6 +1,6 @@
 import type { KeywordImportResult } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { importKeywords, previewKeywordImport } from "./keywords";
+import { importKeywords, previewKeywordImport, seedMarket } from "./keywords";
 
 const RESULT: KeywordImportResult = {
   dryRun: true,
@@ -73,5 +73,21 @@ describe("keyword import calls", () => {
     expect(sent).toHaveLength(1);
     expect(sent[0].url).toMatch(/\/apps\/app-1\/keywords\/import$/);
     expect(sent[0]).toMatchObject({ method: "POST", body: REQUEST });
+  });
+});
+
+describe("market seed call", () => {
+  it("posts the storefront to seed", async () => {
+    const sent = stubFetch();
+
+    await seedMarket("app-1", "de");
+
+    expect(sent).toEqual([
+      {
+        url: expect.stringMatching(/\/apps\/app-1\/market-seed$/) as string,
+        method: "POST",
+        body: { country: "de" },
+      },
+    ]);
   });
 });

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import {
   ONBOARDING_STORAGE_KEY,
@@ -12,6 +12,19 @@ const storedStatus = async (page: Page): Promise<string> => {
     ONBOARDING_STORAGE_KEY,
   );
   return parseOnboardingState(stored).status;
+};
+
+const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
+
+const resetSeed = (request: APIRequestContext, country: string) =>
+  request.post(`${MOCK_API_URL}/__reset/market-seed/app-1/${country}`);
+
+const storedMarkets = async (page: Page): Promise<string[]> => {
+  const stored = await page.evaluate(
+    (key) => localStorage.getItem(key),
+    ONBOARDING_STORAGE_KEY,
+  );
+  return parseOnboardingState(stored).selectedMarkets;
 };
 
 const selectedMarkets = (page: Page) =>
@@ -91,6 +104,8 @@ test("direct setup is resumable and completes after live checks", async ({
       .getByText("2 listing reads a day, 1 per keyword"),
   ).toBeVisible();
   await page.getByLabel("Germany (DE)").check();
+  await page.getByLabel("Seed with its listing for Germany").uncheck();
+  await page.getByRole("button", { name: "Add 1 market", exact: true }).click();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Review DE keywords" }),
@@ -274,4 +289,109 @@ test("suggested markets fit a narrow dark layout", async ({ page }) => {
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(390);
+});
+
+test.describe("seeding suggested markets", () => {
+  test("suggested markets are added and seeded from their listings", async ({
+    page,
+    request,
+  }) => {
+    await resetSeed(request, "at");
+    await startSetup(page, "app-1");
+
+    await page.getByLabel("Austria (AT)").check();
+    await page.getByLabel("Japan (JP)").check();
+    await expect(
+      page.getByLabel("Seed with its listing for Austria"),
+    ).toBeChecked();
+    await expect(
+      page.getByLabel("Seed with its listing for Japan"),
+    ).toBeChecked();
+    await page
+      .getByRole("button", { name: "Add 2 markets and seed 2", exact: true })
+      .click();
+
+    await expect(
+      page.getByText("Seeded 2 keywords from the German listing"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Not published on this storefront, so it was not added"),
+    ).toBeVisible();
+    await expect(selectedMarkets(page).getByText("Austria (AT)")).toBeVisible();
+    await expect(selectedMarkets(page).getByText("Japan (JP)")).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("listitem")
+        .filter({ hasText: "Austria" })
+        .filter({ hasText: "2 active" }),
+    ).toBeVisible();
+    expect(await storedStatus(page)).toBe("in_progress");
+    expect(await storedMarkets(page)).toEqual(["at", "us"]);
+  });
+
+  test("a market can be added without seeding", async ({ page }) => {
+    const seeds: string[] = [];
+    page.on("request", (sent) => {
+      if (sent.url().includes("/market-seed")) seeds.push(sent.url());
+    });
+    await startSetup(page, "app-1");
+    await expect(
+      page.getByLabel("Seed with its listing for Canada"),
+    ).toHaveCount(0);
+
+    await page.getByLabel("Canada (CA)").check();
+    await expect(
+      page.getByLabel("Seed with its listing for Canada"),
+    ).not.toBeChecked();
+    await page
+      .getByRole("button", { name: "Add 1 market", exact: true })
+      .click();
+
+    await expect(selectedMarkets(page).getByText("Canada (CA)")).toBeVisible();
+    await expect(page.getByText(/^Seeded/)).toHaveCount(0);
+    expect(seeds).toEqual([]);
+  });
+
+  test("a refused seed still selects the market", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_seed_refused",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    await page.getByLabel("France (FR)").check();
+    await page
+      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .click();
+
+    await expect(
+      page.getByText(/^Refresh limit reached: the indie plan allows/),
+    ).toBeVisible();
+    await expect(selectedMarkets(page).getByText("France (FR)")).toBeVisible();
+  });
+
+  test("seeding respects the keyword room", async ({ page, request }) => {
+    await resetSeed(request, "ch");
+    await page
+      .context()
+      .addCookies([
+        { name: "e2e_seed_room", value: "1", domain: "localhost", path: "/" },
+      ]);
+    await startSetup(page, "app-1");
+
+    await page.getByLabel("Switzerland (CH)").check();
+    await page
+      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .click();
+
+    await expect(
+      page.getByText(
+        "Seeded 1 keyword from the German listing, 1 left out by the keyword limit",
+      ),
+    ).toBeVisible();
+  });
 });

@@ -802,6 +802,17 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
 }
 
+export function invalidateMarketSeed(
+  client: QueryClient,
+  id: string,
+): Promise<void> {
+  invalidateKeywordMutation(client, id);
+  return Promise.all([
+    client.invalidateQueries({ queryKey: appKeys.listingMarkets(id) }),
+    client.invalidateQueries({ queryKey: budgetKey }),
+  ]).then(() => undefined);
+}
+
 export function invalidateKeywordFieldMutation(
   client: QueryClient,
   id: string,

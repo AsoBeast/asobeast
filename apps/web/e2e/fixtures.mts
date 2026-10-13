@@ -3868,6 +3868,17 @@ export const DETECTABLE_LOCALIZATIONS: Record<string, AppStoreLocalization[]> =
     [APP_LOCALES_ID]: ["fr", "pt-BR"],
   };
 
+export const SEED_REFUSED_MESSAGE =
+  "Refresh limit reached: the indie plan allows 20 requests per day. Try again in 3 hours.";
+
+export const SEED_UNLISTED_MARKET = "jp";
+
+export const SEED_TEXTS: Record<string, string[]> = {
+  at: ["fokus timer", "gewohnheiten"],
+};
+
+export const DEFAULT_SEED_TEXTS = ["focus timer", "habits"];
+
 export const DETECT_REFUSED_MESSAGE =
   "Refresh limit reached: the trial plan allows 5 requests per day. Try again in 3 hours.";
 

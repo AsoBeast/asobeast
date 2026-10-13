@@ -69,7 +69,9 @@ function useBrowserOnboarding() {
   );
   const state = useMemo(() => parseOnboardingState(snapshot), [snapshot]);
   const persist: Persist = (transition) => {
-    saveOnboardingState(transition(state));
+    saveOnboardingState(
+      transition(parseOnboardingState(getOnboardingSnapshot())),
+    );
   };
   return { state, persist };
 }
