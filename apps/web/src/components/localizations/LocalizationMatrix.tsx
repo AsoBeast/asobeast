@@ -8,11 +8,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type {
-  LocalizationGrid,
-  SuggestedMarketHint,
+import {
+  SUGGESTED_COLUMNS,
+  type LocalizationGrid,
+  type SuggestedMarketHint,
 } from "@/lib/app-localizations";
-import { formatCountry } from "@/lib/format";
+import { formatCountry, formatNumber } from "@/lib/format";
 import { localizationName } from "@/lib/localizations";
 import { OriginBadge } from "./OriginBadge";
 import { ReadRoleBadge } from "./ReadRoleBadge";
@@ -44,7 +45,7 @@ export function LocalizationMatrix({
         <Table>
           <TableCaption className="sr-only">
             {grid.suggested.length > 0
-              ? "Which of your markets read each localization, and up to three suggested markets"
+              ? `Which of your markets read each localization, and up to ${formatNumber(SUGGESTED_COLUMNS)} suggested markets`
               : "Which of your markets read each localization"}
           </TableCaption>
           <TableHeader>

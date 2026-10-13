@@ -7,6 +7,7 @@ import {
   seedButtonLabel,
   seedChosen,
   seedPlan,
+  seedStatusText,
   withoutOutcomes,
 } from "./market-seeding";
 
@@ -131,5 +132,15 @@ describe("outcomeText", () => {
     ],
   ] as const)("words %j", (outcome, text) => {
     expect(outcomeText(outcome)).toBe(text);
+  });
+});
+
+describe("seedStatusText", () => {
+  it("says a seed runs until its outcome arrives, then words the outcome", () => {
+    expect(seedStatusText(true, undefined)).toBe("Seeding from its listing…");
+    expect(seedStatusText(true, { kind: "unavailable" })).toBe(
+      "Not published on this storefront, so it was not added",
+    );
+    expect(seedStatusText(false, undefined)).toBeNull();
   });
 });

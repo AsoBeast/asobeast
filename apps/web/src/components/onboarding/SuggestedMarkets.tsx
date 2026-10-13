@@ -16,8 +16,8 @@ import { Label } from "@/components/ui/label";
 import { formatCountry, formatList } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
-  outcomeText,
   seedChosen,
+  seedStatusText,
   seedButtonLabel,
   seedPlan,
   type SeedOutcome,
@@ -211,11 +211,7 @@ function SuggestedMarket({
             : "text-muted-foreground",
         )}
       >
-        {seeding && !outcome
-          ? "Seeding from its listing…"
-          : outcome
-            ? outcomeText(outcome)
-            : null}
+        {seedStatusText(seeding, outcome)}
       </p>
     </div>
   );

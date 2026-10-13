@@ -54,9 +54,3 @@ export function languageNames(result: MarketSuggestionsResult): string[] {
 export function marketCostText({ dailyRequests }: MarketSuggestion): string {
   return `${pluralize(dailyRequests.listing, "listing read")} a day, ${dailyRequests.perKeyword} per keyword`;
 }
-
-export function selectableSuggestions(
-  result: MarketSuggestionsResult,
-): MarketSuggestion[] {
-  return result.suggestions.filter((suggestion) => !suggestion.tracked);
-}
