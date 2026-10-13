@@ -48,7 +48,7 @@ function awaitsConfirmation(alert: EmailAlertItem): boolean {
   return alert.confirmed === false;
 }
 
-function confirmationNotice(alert: EmailAlertItem) {
+function recipientToast(alert: EmailAlertItem) {
   return { id: `email-alert-confirmation-${alert.id}` };
 }
 
@@ -66,14 +66,14 @@ function AddEmailAlertDialog() {
       if (saved.confirmationSent === false) {
         toast.warning(
           `Email alert added. The confirmation email to ${saved.email} could not be sent, so use Resend confirmation to try again.`,
-          confirmationNotice(saved),
+          recipientToast(saved),
         );
       } else {
         toast.success(
           awaitsConfirmation(saved)
             ? `Confirmation email sent to ${saved.email}`
             : "Email alert added",
-          confirmationNotice(saved),
+          recipientToast(saved),
         );
       }
       setOpen(false);
@@ -171,7 +171,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
     onSuccess: () =>
       toast.success(
         `Confirmation email sent to ${alert.email}`,
-        confirmationNotice(alert),
+        recipientToast(alert),
       ),
     onSettled: () => invalidateEmailAlertMutation(queryClient),
     onError: (err) =>
@@ -179,7 +179,7 @@ function EmailAlertRow({ alert }: { alert: EmailAlertItem }) {
         err instanceof ApiError
           ? err.envelope.message
           : "Could not send the confirmation email",
-        confirmationNotice(alert),
+        recipientToast(alert),
       ),
   });
 
