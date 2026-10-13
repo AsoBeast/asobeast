@@ -263,9 +263,14 @@ describe('Localization detection capacity (e2e)', () => {
 
     it('records the localization while the plan is in force', async () => {
       await detect().expect(202);
+      const through = jest.spyOn(harness.app.get(ProxyEgress), 'through');
 
-      await runProbe();
-
+      try {
+        await runProbe();
+        expect(through).toHaveBeenCalledTimes(1);
+      } finally {
+        through.mockRestore();
+      }
       await expect(
         harness.prisma.appLocalization.findMany({
           select: { localization: true, origin: true },

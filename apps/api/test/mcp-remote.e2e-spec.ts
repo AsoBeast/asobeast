@@ -413,6 +413,7 @@ describe('Remote MCP transport (e2e)', () => {
         .expect(200),
     ]);
 
+    expect(viaMcp?.isError).toBeUndefined();
     expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
       viaRest.body,
     );

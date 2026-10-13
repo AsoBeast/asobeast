@@ -411,9 +411,9 @@ describe('Keyword writes under concurrency (e2e)', () => {
     ).phrases;
     expect([ALPHA_SET, DELTA_SET]).toContainEqual(stored);
     expect(await fieldTexts(appId, 'us')).toEqual([...stored].sort());
-    expect(
-      (await fieldTexts(appId, 'mx')).every((text) => stored.includes(text)),
-    ).toBe(true);
+    expect(await fieldTexts(appId, 'mx')).toEqual(
+      stored.join(',') === DELTA_SET.join(',') ? [...DELTA_SET].sort() : [],
+    );
   });
 
   it('E-CON-02 makes the new save wait until an old save to the same app commits', async () => {

@@ -116,6 +116,25 @@ describe('the app localization table (e2e)', () => {
     ]);
   });
 
+  it('stamps each row with the time its field was saved', async () => {
+    const app = await seedApp('a');
+    await prisma.keywordField.create({
+      data: {
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        phrases: ['habit'],
+        updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+      },
+    });
+
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expect(
+      prisma.appLocalization.findMany({ select: { createdAt: true } }),
+    ).resolves.toEqual([{ createdAt: new Date('2026-07-01T00:00:00.000Z') }]);
+  });
+
   it('can run twice without changing the table', async () => {
     const app = await seedApp('a');
     await seedField(app.id, 'en-US');
@@ -160,7 +179,7 @@ describe('the app localization table (e2e)', () => {
             origin: 'manual',
           },
         }),
-      ).rejects.toThrow();
+      ).rejects.toThrow('AppLocalization_appId_workspaceId_fkey');
     } finally {
       await prisma.workspace.delete({ where: { id: 'ws_other' } });
     }

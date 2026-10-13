@@ -3,7 +3,7 @@ import { join } from 'path';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { AppDetail } from '@asobeast/shared';
+import { AppDetail, AppStoreLocalization } from '@asobeast/shared';
 import { Job } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -77,7 +77,11 @@ describe('Localization detection probe (e2e)', () => {
     return id;
   };
 
-  const runProbe = (appId: string, localization: string, country: string) =>
+  const runProbe = (
+    appId: string,
+    localization: AppStoreLocalization,
+    country: string,
+  ) =>
     app.get(StoreJobsHandler).handle({
       name: JOBS.DETECT_LOCALIZATION,
       id: 'probe-1',
@@ -87,7 +91,7 @@ describe('Localization detection probe (e2e)', () => {
         localization,
         country,
         workspaceId: DEFAULT_WORKSPACE_ID,
-      } as DetectLocalizationPayload,
+      } satisfies DetectLocalizationPayload,
     } as Job);
 
   const localizationsOf = (appId: string) =>
