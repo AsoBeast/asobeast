@@ -4,7 +4,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { App } from '@prisma/client';
+import { App, Store } from '@prisma/client';
 import { assertStorefront, SnapshotDiffResult } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { KeywordsService } from '../keywords/keywords.service';
@@ -153,7 +153,12 @@ export class ListingCaptureService {
       ...snapshot,
       subtitleUnavailable: normalized.subtitleUnavailable,
     });
-    if (!home && !previous && !app.isCompetitor) {
+    if (
+      !home &&
+      !previous &&
+      !app.isCompetitor &&
+      app.store === Store.APP_STORE
+    ) {
       await this.requestDetection(app.id, market);
     }
     if (home) await this.keywords.syncFromSnapshot(app.id);

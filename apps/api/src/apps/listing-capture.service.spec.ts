@@ -321,6 +321,24 @@ describe('ListingCaptureService localization detection', () => {
     expect(rival.detect).not.toHaveBeenCalled();
   });
 
+  it('asks nothing for a google play market', async () => {
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation(() => undefined);
+    const { service, detect } = build({
+      app: { ...APP, store: Store.GOOGLE_PLAY },
+    });
+
+    try {
+      await service.refreshListing(APP.id, 'de');
+
+      expect(detect).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
   it('keeps the capture when the detection request fails', async () => {
     const warn = jest
       .spyOn(Logger.prototype, 'warn')
