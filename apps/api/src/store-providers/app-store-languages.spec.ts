@@ -1,4 +1,8 @@
-import { APP_STORE_STOREFRONTS, nativeLocalizations } from '@asobeast/shared';
+import {
+  APP_STORE_LOCALIZATION_IDS,
+  APP_STORE_STOREFRONTS,
+  nativeLocalizations,
+} from '@asobeast/shared';
 import { lookupLanguage, pageLanguage } from './app-store-languages';
 
 const LOOKUP = /^[a-z]{2}(?:[_-][A-Za-z]{2})?$/;
@@ -23,6 +27,19 @@ describe('app store language parameters', () => {
     expect(lookupLanguage('es-MX')).toBe('es-MX');
     expect(pageLanguage('fr-CA')).toBe('fr-CA');
   });
+
+  it('asks the lookup for traditional chinese the way it accepts it', () => {
+    expect(lookupLanguage('zh-Hant')).toBe('zh_tw');
+  });
+
+  it.each(APP_STORE_LOCALIZATION_IDS)(
+    'has a well formed lookup value for %s, which detection may probe',
+    (tag) => {
+      expect(lookupLanguage(tag)).toMatch(LOOKUP);
+      expect(lookupLanguage(tag)).not.toBe('no');
+      expect(lookupLanguage(tag)).not.toMatch(/hans|hant/i);
+    },
+  );
 
   it.each(NATIVE)('has a well formed lookup and page value for %s', (tag) => {
     expect(lookupLanguage(tag)).toMatch(LOOKUP);

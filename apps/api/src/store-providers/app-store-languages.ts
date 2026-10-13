@@ -3,6 +3,7 @@ import { AppStoreLocalization } from '@asobeast/shared';
 const LOOKUP_EXCEPTIONS: Partial<Record<AppStoreLocalization, string>> = {
   no: 'nb',
   'zh-Hans': 'zh_cn',
+  'zh-Hant': 'zh_tw',
 };
 
 const PAGE_EXCEPTIONS: Partial<Record<AppStoreLocalization, string>> = {
