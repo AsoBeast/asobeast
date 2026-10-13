@@ -5,6 +5,7 @@ import type {
   AppStoreLocalization,
   KeywordFieldPreviewRequest,
   KeywordFieldSavePreview,
+  LocalizationDetectionResult,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
@@ -15,6 +16,15 @@ export function getAppLocalizations(
   appId: string,
 ): Promise<AppLocalizationsResult> {
   return apiFetch<AppLocalizationsResult>(`/apps/${appId}/localizations`);
+}
+
+export function detectAppLocalizations(
+  appId: string,
+): Promise<LocalizationDetectionResult> {
+  return apiFetch<LocalizationDetectionResult>(
+    `/apps/${appId}/localizations/detect`,
+    { method: "POST" },
+  );
 }
 
 export function saveLocalizedKeywordField(

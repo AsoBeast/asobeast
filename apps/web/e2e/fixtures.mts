@@ -3831,6 +3831,14 @@ export const APP_1_PL_LOCALIZED_TITLE = "Skupienie: Minutnik Pracy";
 
 export const APP_1_PL_KEYWORD_FIELD = "nawyki,cel";
 
+export const DETECTABLE_LOCALIZATIONS: Record<string, AppStoreLocalization[]> =
+  {
+    [APP_LOCALES_ID]: ["fr", "pt-BR"],
+  };
+
+export const DETECT_REFUSED_MESSAGE =
+  "Refresh limit reached: the trial plan allows 5 requests per day. Try again in 3 hours.";
+
 export const INITIAL_LOCALIZATION_SEEDS: Record<string, LocalizationSeed> = {
   "app-1": {
     shipped: [
