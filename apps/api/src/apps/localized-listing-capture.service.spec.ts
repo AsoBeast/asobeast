@@ -28,9 +28,11 @@ const POLISH = {
 
 const APP = {
   id: 'app_1',
+  workspaceId: 'ws_a',
   store: Store.APP_STORE,
   storeAppId: '6657987209',
   country: 'pl',
+  isCompetitor: false,
 };
 
 const row = (
@@ -71,13 +73,15 @@ const build = (options: {
   const create = jest
     .fn()
     .mockResolvedValue(options.created ?? row(POLISH, 'pl'));
-  const tx = { appSnapshot: { create } };
+  const createMany = jest.fn().mockResolvedValue({ count: 1 });
+  const tx = { appSnapshot: { create }, appLocalization: { createMany } };
   const findFirst = jest.fn().mockResolvedValue(options.previous ?? null);
+  const withTransaction = jest.fn((work: (client: typeof tx) => unknown) =>
+    work(tx),
+  );
   const prisma = {
     appSnapshot: { findFirst },
-    withTransaction: jest.fn((work: (client: typeof tx) => unknown) =>
-      work(tx),
-    ),
+    withTransaction,
   } as unknown as PrismaService;
   const registry = {
     get: () => ({ getApp: options.getApp }),
@@ -96,7 +100,16 @@ const build = (options: {
     { record } as unknown as ScreenshotRecorder,
     { request } as unknown as ScreenshotQueue,
   );
-  return { capture, create, findFirst, recordMarketRefresh, record, request };
+  return {
+    capture,
+    create,
+    createMany,
+    findFirst,
+    recordMarketRefresh,
+    record,
+    request,
+    withTransaction,
+  };
 };
 
 describe('LocalizedListingCapture', () => {
@@ -305,5 +318,88 @@ describe('LocalizedListingCapture', () => {
     await capture.capture({ ...APP, country: 'de' }, 'de', fallback);
 
     expect(getApp).not.toHaveBeenCalled();
+  });
+
+  describe('recording the localization the store proves', () => {
+    it('records the localization as detected when it stores the first native snapshot', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, createMany } = build({ getApp });
+
+      await capture.capture(APP, 'pl', fallback);
+
+      expect(createMany).toHaveBeenCalledTimes(1);
+      expect(createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            appId: 'app_1',
+            workspaceId: 'ws_a',
+            localization: 'pl',
+            origin: 'detected',
+          },
+        ],
+        skipDuplicates: true,
+      });
+    });
+
+    it('records nothing when a snapshot of the localization is stored already', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, create, createMany } = build({
+        getApp,
+        previous: row(POLISH, 'pl', 'snap_pl_old'),
+      });
+
+      await capture.capture(APP, 'pl', fallback);
+
+      expect(create).toHaveBeenCalled();
+      expect(createMany).not.toHaveBeenCalled();
+    });
+
+    it('records nothing when the store echoes the default listing', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+      const { capture, create, createMany } = build({ getApp });
+
+      await capture.capture(APP, 'pl', fallback);
+
+      expect(create).not.toHaveBeenCalled();
+      expect(createMany).not.toHaveBeenCalled();
+    });
+
+    it('records nothing for a competitor', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, create, createMany } = build({ getApp });
+
+      await capture.capture({ ...APP, isCompetitor: true }, 'pl', fallback);
+
+      expect(create).toHaveBeenCalled();
+      expect(createMany).not.toHaveBeenCalled();
+    });
+
+    it('writes the localization in the transaction that stores the snapshot', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, create, createMany, withTransaction } = build({
+        getApp,
+      });
+
+      await capture.capture(APP, 'pl', fallback);
+
+      expect(withTransaction).toHaveBeenCalledTimes(1);
+      expect(createMany.mock.invocationCallOrder[0]).toBeGreaterThan(
+        create.mock.invocationCallOrder[0],
+      );
+    });
+
+    it('records each native localization of a storefront on its own first snapshot', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, createMany } = build({ getApp });
+
+      await capture.capture({ ...APP, country: 'us' }, 'be', fallback);
+
+      expect(
+        createMany.mock.calls.map(
+          ([args]) =>
+            (args as { data: { localization: string }[] }).data[0].localization,
+        ),
+      ).toEqual(['nl', 'fr']);
+    });
   });
 });
