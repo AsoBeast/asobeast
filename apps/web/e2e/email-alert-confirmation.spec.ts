@@ -125,6 +125,25 @@ test("a new recipient waits for confirmation and can be asked again", async ({
   ).toBeVisible();
 });
 
+test("a resend replaces the confirmation notice still on screen", async ({
+  page,
+}) => {
+  const address = `stranger-${randomUUID()}@example.net`;
+  const notice = page.getByText(`Confirmation email sent to ${address}`);
+
+  const row = await addRecipient(page, address);
+  await notice.hover();
+  const refetch = page.waitForResponse(
+    (response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname.endsWith("/email-alerts"),
+  );
+  await row.getByRole("button", { name: "Resend confirmation" }).press("Enter");
+  await refetch;
+
+  await expect(notice).toHaveCount(1);
+});
+
 test("says when the confirmation email to a new recipient did not go out", async ({
   page,
 }) => {
