@@ -83,4 +83,9 @@ describe('keywordFieldChars', () => {
     expect(keywordFieldChars([])).toBe(0);
     expect(keywordFieldChars(['a'.repeat(100)])).toBe(100);
   });
+
+  it('counts an accented or cjk letter once, as App Store Connect does', () => {
+    expect(keywordFieldChars(['zażółć', 'łódź'])).toBe(11);
+    expect(keywordFieldChars(['番茄钟', '冥想'])).toBe(6);
+  });
 });
