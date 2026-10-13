@@ -4,6 +4,10 @@ INSERT INTO "KeywordField" ("appId", "workspaceId", "localization", "phrases", "
 VALUES ('app_ios', 'ws_default', 'en-US', ARRAY['workout tracker'], '2026-07-01 00:00:00')
 ON CONFLICT ("appId", "localization") DO UPDATE SET "phrases" = EXCLUDED."phrases";
 
+INSERT INTO "AppLocalization" ("appId", "workspaceId", "localization", "origin", "createdAt")
+VALUES ('app_ios', 'ws_default', 'en-US', 'manual', '2026-07-01 00:00:00')
+ON CONFLICT DO NOTHING;
+
 UPDATE "App"
 SET "storeAppId" = CASE "id"
   WHEN 'app_padded' THEN '333333333'
