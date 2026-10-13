@@ -87,7 +87,9 @@ export class DailyTargetsCollector {
     });
     const shipped = new Map<string, string[]>();
     for (const { appId, localization } of rows) {
-      shipped.set(appId, [...(shipped.get(appId) ?? []), localization]);
+      const tags = shipped.get(appId) ?? [];
+      tags.push(localization);
+      shipped.set(appId, tags);
     }
     return shipped;
   }

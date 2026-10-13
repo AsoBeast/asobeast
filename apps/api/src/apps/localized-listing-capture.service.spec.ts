@@ -344,6 +344,16 @@ describe('LocalizedListingCapture', () => {
     });
   });
 
+  it('reads no shipped localization for a storefront that reads only its default', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+    const { capture, shippedRows } = build({ getApp, shipped: ['fr'] });
+
+    await capture.capture({ ...APP, country: 'us' }, 'za', fallback);
+
+    expect(shippedRows).not.toHaveBeenCalled();
+    expect(getApp).not.toHaveBeenCalled();
+  });
+
   it('captures no shipped localization for a competitor', async () => {
     const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
     const { capture, shippedRows } = build({ getApp, shipped: ['fr'] });
