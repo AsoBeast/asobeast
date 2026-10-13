@@ -14,6 +14,9 @@ const storedStatus = async (page: Page): Promise<string> => {
   return parseOnboardingState(stored).status;
 };
 
+const selectedMarkets = (page: Page) =>
+  page.getByRole("list", { name: "Selected markets" });
+
 const startSetup = async (page: Page, id: string): Promise<void> => {
   await page.goto(`/apps/${id}/setup`);
   await page.getByRole("button", { name: "Start this setup" }).click();
@@ -69,9 +72,41 @@ test("direct setup is resumable and completes after live checks", async ({
   await expect(page.getByText("1 competitor configured")).toBeVisible();
   await expect(page.getByText("4 active")).toBeVisible();
 
-  await page.getByLabel("Add a country code").fill("PL");
+  await expect(
+    page.getByText(
+      "Your listing ships English, German, French, Japanese, and Polish.",
+    ),
+  ).toBeVisible();
+  const german = page.getByRole("group", { name: "German" });
+  for (const market of ["Germany (DE)", "Austria (AT)", "Switzerland (CH)"]) {
+    await expect(german.getByText(market, { exact: true })).toBeVisible();
+  }
+  await expect(
+    page.getByRole("group", { name: "Polish" }).getByText("Tracked"),
+  ).toBeVisible();
+  await expect(
+    german
+      .locator("div")
+      .filter({ hasText: "Germany (DE)" })
+      .getByText("2 listing reads a day, 1 per keyword"),
+  ).toBeVisible();
+  await page.getByLabel("Germany (DE)").check();
+  await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Review DE keywords" }),
+  ).toHaveAttribute("href", "/apps/app-1/keywords?country=de");
+  await expect(
+    page
+      .getByRole("listitem")
+      .filter({ hasText: "Germany" })
+      .filter({ hasText: "active" }),
+  ).toBeVisible();
+  await page.getByLabel("Germany (DE)").uncheck();
+  await expect(selectedMarkets(page).getByText("Germany (DE)")).toHaveCount(0);
+
+  await page.getByLabel("Another storefront? Add a country code").fill("PL");
   await page.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(page.getByText("Poland (PL)")).toBeVisible();
+  await expect(selectedMarkets(page).getByText("Poland (PL)")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Review PL keywords" }),
   ).toHaveAttribute("href", "/apps/app-1/keywords?country=pl");
@@ -216,4 +251,27 @@ test("corrupt state resets and setup can be dismissed on a narrow dark layout", 
   await expect(
     page.getByText("Setup dismissed", { exact: true }),
   ).toBeVisible();
+});
+
+test("an app with no suggested markets keeps the plain country input", async ({
+  page,
+}) => {
+  await startSetup(page, "app-2");
+
+  await expect(
+    page.getByLabel("Add a country code", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Your listing ships")).toHaveCount(0);
+  await expect(page.locator("legend")).toHaveCount(0);
+});
+
+test("suggested markets fit a narrow dark layout", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await startSetup(page, "app-1");
+
+  await expect(page.getByRole("group", { name: "German" })).toBeVisible();
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(390);
 });

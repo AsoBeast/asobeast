@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { Check, ExternalLink, Plus, X } from "lucide-react";
 import Link from "next/link";
+import type { MarketSuggestionsResult } from "@asobeast/shared";
 import { formatCountry } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SuggestedMarkets } from "./SuggestedMarkets";
 
 function StepHeader({
   label,
@@ -68,14 +70,20 @@ export function MarketsStep({
   appId,
   homeMarket,
   markets,
+  suggestions,
   onSelect,
 }: {
   label: string;
   appId: string;
   homeMarket: string;
   markets: string[];
+  suggestions: MarketSuggestionsResult | null;
   onSelect: (market: string, selected: boolean) => void;
 }) {
+  const suggested =
+    suggestions !== null && suggestions.suggestions.length > 0
+      ? suggestions
+      : null;
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const submit = (event: FormEvent) => {
@@ -95,33 +103,46 @@ export function MarketsStep({
       <StepHeader
         label={label}
         title="Choose markets"
-        description="Your home storefront is selected. Add any other storefronts where you want to track keywords."
+        description={
+          suggested
+            ? "Your home storefront is selected. Tick the storefronts that read a language your listing ships, or add any other storefront by its code."
+            : "Your home storefront is selected. Add any other storefronts where you want to track keywords."
+        }
       />
       <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-wrap gap-2">
+        {suggested ? (
+          <SuggestedMarkets
+            result={suggested}
+            selected={markets}
+            onSelect={onSelect}
+          />
+        ) : null}
+        <ul aria-label="Selected markets" className="flex flex-wrap gap-2">
           {markets.map((market) => (
-            <Badge
-              key={market}
-              variant="secondary"
-              className="h-7 gap-1 pl-2.5"
-            >
-              {formatCountry(market)} ({market.toUpperCase()})
-              {market !== homeMarket && markets.length > 1 ? (
-                <button
-                  type="button"
-                  aria-label={`Remove ${formatCountry(market)}`}
-                  onClick={() => onSelect(market, false)}
-                  className="rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <X />
-                </button>
-              ) : null}
-            </Badge>
+            <li key={market}>
+              <Badge variant="secondary" className="h-7 gap-1 pl-2.5">
+                {formatCountry(market)} ({market.toUpperCase()})
+                {market !== homeMarket && markets.length > 1 ? (
+                  <button
+                    type="button"
+                    aria-label={`Remove ${formatCountry(market)}`}
+                    onClick={() => onSelect(market, false)}
+                    className="rounded-full p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X />
+                  </button>
+                ) : null}
+              </Badge>
+            </li>
           ))}
-        </div>
+        </ul>
         <form onSubmit={submit} className="flex max-w-sm items-start gap-2">
           <div className="flex flex-1 flex-col gap-1">
-            <Label htmlFor="setup-market">Add a country code</Label>
+            <Label htmlFor="setup-market">
+              {suggested
+                ? "Another storefront? Add a country code"
+                : "Add a country code"}
+            </Label>
             <Input
               id="setup-market"
               value={value}

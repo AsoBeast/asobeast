@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getApp } from "./apps";
+import { getApp, getMarketSuggestions } from "./apps";
 import { getChanges } from "./changes";
 import { refreshApp } from "./jobs";
 import { getMetadataAudit } from "./metadata";
@@ -70,5 +70,13 @@ describe("market aware calls", () => {
 
     expect(requested[0]).toMatch(/\/apps\/app-1\/refresh\?country=de$/);
     expect(requested[1]).toMatch(/\/apps\/app-1\/refresh$/);
+  });
+
+  it("asks for the market suggestions of an app", async () => {
+    const requested = stubFetch();
+
+    await getMarketSuggestions("app-1");
+
+    expect(requested[0]).toMatch(/\/apps\/app-1\/market-suggestions$/);
   });
 });

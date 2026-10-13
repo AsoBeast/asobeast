@@ -6,6 +6,7 @@ import {
   competitorsOptions,
   emailAlertsOptions,
   keywordsOptions,
+  marketSuggestionsOptions,
   webhooksOptions,
 } from "@/lib/queries";
 
@@ -18,6 +19,7 @@ export default async function SetupPage({
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
   await Promise.all([
+    queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
     queryClient.prefetchQuery(webhooksOptions),

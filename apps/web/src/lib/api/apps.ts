@@ -6,6 +6,7 @@ import type {
   AppListItem,
   ListingMarket,
   MarketAvailabilityResult,
+  MarketSuggestionsResult,
 } from "@asobeast/shared";
 import { apiFetch, marketParams, withQuery } from "./client";
 
@@ -51,4 +52,10 @@ export function getMarketAvailability(
   return apiFetch<MarketAvailabilityResult>(
     withQuery(`/apps/${appId}/market-availability`, params),
   );
+}
+
+export function getMarketSuggestions(
+  id: string,
+): Promise<MarketSuggestionsResult> {
+  return apiFetch<MarketSuggestionsResult>(`/apps/${id}/market-suggestions`);
 }

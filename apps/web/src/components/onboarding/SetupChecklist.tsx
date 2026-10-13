@@ -42,6 +42,7 @@ import {
   competitorsOptions,
   emailAlertsOptions,
   keywordsOptions,
+  marketSuggestionsOptions,
   webhooksOptions,
 } from "@/lib/queries";
 import {
@@ -126,6 +127,10 @@ function ActiveSetup({
   const budget = useQuery({ ...budgetOptions, enabled: reviewsCapacity });
   const webhooks = useQuery(webhooksOptions);
   const emailAlerts = useQuery(emailAlertsOptions);
+  const suggestions = useQuery({
+    ...marketSuggestionsOptions(app.id),
+    retry: false,
+  });
   const keywordQueries = useQueries({
     queries: state.selectedMarkets.map((market) =>
       keywordsOptions(app.id, market),
@@ -178,6 +183,7 @@ function ActiveSetup({
         appId={app.id}
         homeMarket={app.country}
         markets={state.selectedMarkets}
+        suggestions={suggestions.data ?? null}
         onSelect={(market, selected) =>
           persist((current) => setMarketSelected(current, market, selected))
         }
