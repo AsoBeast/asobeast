@@ -1,6 +1,7 @@
 import { KeywordSource, Store } from '@prisma/client';
 import {
-  KEYWORD_FIELD_BYTE_LIMIT,
+  countChars,
+  KEYWORD_FIELD_CHAR_LIMIT,
   LintIssue,
   LintSeverity,
   tokenize,
@@ -10,7 +11,6 @@ import {
   lintSubtitle,
   lintTitle,
   STORE_FIELD_LIMITS,
-  utf8ByteLength,
 } from '@asobeast/shared';
 import { round1 } from '../audit-engine';
 import {
@@ -51,7 +51,7 @@ const coverageScore = (covered: number): number => {
 
 export const TITLE_LIMIT = STORE_FIELD_LIMITS.APP_STORE.title!.limit;
 export const SUBTITLE_LIMIT = STORE_FIELD_LIMITS.APP_STORE.subtitle!.limit;
-export const KEYWORD_FIELD_FULL_BYTES = 90;
+export const KEYWORD_FIELD_FULL_CHARS = 90;
 export const LOW_RELEVANCE = 40;
 
 export const BRAND_TITLE_SCORE: Readonly<Record<string, number>> =
@@ -85,11 +85,12 @@ const KEYWORD_FIELD_FIXES: Readonly<Record<string, string>> = Object.freeze({
   'repeats-subtitle-word': 'It is already indexed from your subtitle.',
   'plural-form': 'Apple matches singular and plural, so the stem is enough.',
   'contains-generic-word':
-    'Words like \u201capp\u201d and \u201cfree\u201d waste bytes.',
+    'Words like \u201capp\u201d and \u201cfree\u201d waste characters.',
   'contains-own-brand': 'Your app and company name are already searchable.',
   'contains-competitor-brand': "Other apps' names are not allowed.",
   'short-keyword': 'Apple ignores keywords of two characters or fewer.',
-  'space-after-comma': 'Spaces after commas spend bytes Apple does not index.',
+  'space-after-comma':
+    'Spaces after commas spend characters Apple does not index.',
 });
 
 const coveredAnywhere = (context: AuditContext, phrase: string): boolean =>
@@ -352,9 +353,9 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
     ];
   }
 
-  const bytes = utf8ByteLength(field);
+  const chars = countChars(field);
   const hygiene = policyIssues(
-    lintKeywordField(field, lintContext(context), KEYWORD_FIELD_BYTE_LIMIT),
+    lintKeywordField(field, lintContext(context), KEYWORD_FIELD_CHAR_LIMIT),
   );
   const candidates = priorityKeywords(context.keywords).filter(
     (keyword) =>
@@ -370,24 +371,24 @@ export const keywordFieldChecks = (context: AuditContext): RubricCheck[] => {
   const checks: RubricCheck[] = [
     check({
       id: 'keyword-field-bytes',
-      label: 'Byte usage',
+      label: 'Character usage',
       source: 'keywords',
       weight: 2,
       score:
-        bytes > KEYWORD_FIELD_BYTE_LIMIT
+        chars > KEYWORD_FIELD_CHAR_LIMIT
           ? 0
-          : bytes >= KEYWORD_FIELD_FULL_BYTES
+          : chars >= KEYWORD_FIELD_FULL_CHARS
             ? 10
-            : round1((bytes / KEYWORD_FIELD_FULL_BYTES) * 10),
-      detail: `${bytes} of ${KEYWORD_FIELD_BYTE_LIMIT} bytes used.`,
+            : round1((chars / KEYWORD_FIELD_FULL_CHARS) * 10),
+      detail: `${chars} of ${KEYWORD_FIELD_CHAR_LIMIT} characters used.`,
       advice:
-        bytes > KEYWORD_FIELD_BYTE_LIMIT
+        chars > KEYWORD_FIELD_CHAR_LIMIT
           ? {
-              title: `Cut your keyword field to ${KEYWORD_FIELD_BYTE_LIMIT} bytes`,
-              fix: `It uses ${bytes} bytes. Letters such as \u0105 or \u00fc take 2 bytes and Chinese, Japanese or Korean characters take 3, and App Store Connect refuses more than ${KEYWORD_FIELD_BYTE_LIMIT}.`,
+              title: `Cut your keyword field to ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+              fix: `It uses ${chars} characters, and App Store Connect refuses more than ${KEYWORD_FIELD_CHAR_LIMIT}.`,
             }
           : {
-              title: `Fill the ${KEYWORD_FIELD_BYTE_LIMIT - bytes} unused keyword field bytes`,
+              title: `Fill the ${KEYWORD_FIELD_CHAR_LIMIT - chars} unused keyword field characters`,
               fix: `Add comma separated terms you track but do not cover yet${
                 candidates.length === 0
                   ? ''
