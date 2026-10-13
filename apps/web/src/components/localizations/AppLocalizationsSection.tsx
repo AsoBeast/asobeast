@@ -16,6 +16,7 @@ import {
 } from "@/lib/localizations";
 import { appLocalizationsOptions } from "@/lib/queries";
 import { AddLocalizationDialog } from "./AddLocalizationDialog";
+import { FindLocalizationsButton } from "./FindLocalizationsButton";
 import { LocalizationList } from "./LocalizationList";
 import { LocalizationMatrix } from "./LocalizationMatrix";
 
@@ -82,6 +83,7 @@ export function AppLocalizationsSection({
         </h2>
         {data ? (
           <div className="flex flex-wrap items-center gap-2">
+            <FindLocalizationsButton appId={id} />
             <AddLocalizationDialog id={id} result={data} />
           </div>
         ) : null}

@@ -38,6 +38,8 @@ import {
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
   INITIAL_LOCALIZATION_SEEDS,
+  DETECTABLE_LOCALIZATIONS,
+  DETECT_REFUSED_MESSAGE,
   marketWasteOf,
   type LocalizationSeed,
   BUDGET,
@@ -95,6 +97,7 @@ import type {
   AppLocalizationsResult,
   KeywordFieldPreviewRequest,
   KeywordFieldSavePreview,
+  LocalizationDetectionResult,
   LocalizedKeywordFieldRequest,
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
@@ -1009,6 +1012,26 @@ function marketReadsOf(
     ),
     ...marketWasteOf(id, country),
   };
+}
+
+const detectedToday = new Set<string>();
+
+function detectLocalizations(
+  id: string,
+  home: string,
+): LocalizationDetectionResult {
+  const candidates = DETECTABLE_LOCALIZATIONS[id] ?? [];
+  const shipped = shippedTags(id, home);
+  const fresh = detectedToday.has(id)
+    ? []
+    : candidates.filter((tag) => !shipped.includes(tag));
+  detectedToday.add(id);
+  const stored =
+    shippedLocalizations.get(id) ??
+    new Map<AppStoreLocalization, ShippedOrigin>();
+  for (const tag of fresh) stored.set(tag, "detected");
+  shippedLocalizations.set(id, stored);
+  return { queued: fresh.length, candidates };
 }
 
 function recordShipped(id: string, localization: AppStoreLocalization): void {
@@ -2690,6 +2713,22 @@ const routes: Route[] = [
     },
   },
   {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/localizations\/detect$/,
+    handler: ([id], req, res) => {
+      if (hasCookie(req, "detect_refused", "1")) {
+        return json(
+          res,
+          429,
+          errorEnvelope(429, req.url ?? "/", DETECT_REFUSED_MESSAGE),
+        );
+      }
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      json(res, 202, detectLocalizations(id, app.dataset.detail.country));
+    },
+  },
+  {
     method: "DELETE",
     pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)$/,
     handler: ([id, localization], req, res) => {
@@ -2872,6 +2911,17 @@ const routes: Route[] = [
         seedLocalizations(id, seed);
         json(res, 200, { seeded: true });
       });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/localization-detection\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      detectedToday.delete(id);
+      for (const tag of DETECTABLE_LOCALIZATIONS[id] ?? []) {
+        shippedLocalizations.get(id)?.delete(tag);
+      }
+      json(res, 200, { reset: true });
     },
   },
   {

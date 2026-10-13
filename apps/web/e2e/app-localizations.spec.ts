@@ -1113,4 +1113,107 @@ test.describe("on the locale lab", () => {
       });
     }
   });
+
+  test.describe("find localizations", () => {
+    test.beforeEach(async ({ page }) => {
+      await page.request.post(
+        `${MOCK_API_URL}/__reset/localization-detection/${LOCALES_APP}`,
+      );
+      await seedLocalizations(page.request, LOCALES_APP);
+    });
+
+    const find = (page: Page) =>
+      page
+        .getByRole("region", { name: SECTION })
+        .getByRole("button", { name: "Find localizations" });
+
+    test("finds localizations the store proves", async ({ page }) => {
+      await page.goto(LOCALES_METADATA);
+
+      await find(page).click();
+
+      await expect(page.getByText("Queued · localizations")).toBeVisible();
+      await expect(
+        page.getByText(
+          "Checking 2 languages in the App Store. Detected ones appear here.",
+        ),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /French.*Detected/ }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: /Portuguese \(Brazil\).*Detected/ }),
+      ).toBeVisible();
+    });
+
+    test("lists the detected localizations in the matrix with a Detected badge", async ({
+      page,
+    }) => {
+      await page.goto(LOCALES_METADATA);
+
+      await find(page).click();
+
+      const matrix = page.getByRole("table", {
+        name: "Which of your markets read each localization",
+      });
+      for (const name of ["French", "Portuguese \\(Brazil\\)"]) {
+        const row = matrix.getByRole("row").filter({
+          has: page.getByRole("rowheader", { name: new RegExp(name) }),
+        });
+        await expect(row).toContainText("Detected");
+        await expect(row.getByRole("cell")).toContainText(["Also"]);
+      }
+    });
+
+    test("says so when every language is already listed or was checked today", async ({
+      page,
+    }) => {
+      await page.goto(LOCALES_METADATA);
+      await find(page).click();
+      await expect(page.getByText("Queued · localizations")).toBeVisible();
+      await page.reload();
+
+      await find(page).click();
+
+      await expect(
+        page.getByText(
+          "Every language your markets read is already listed or was checked today.",
+        ),
+      ).toBeVisible();
+      await expect(page.getByText("Queued · localizations")).toHaveCount(0);
+    });
+
+    test("shows the allowance message when detection is refused", async ({
+      page,
+    }) => {
+      await seedCookies(page.context(), { detect_refused: "1" });
+      await page.goto(LOCALES_METADATA);
+
+      await find(page).click();
+
+      await expect(page.getByText(/Refresh limit reached/)).toBeVisible();
+    });
+
+    test("disables the button while the request runs", async ({ page }) => {
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      await page.route(
+        `**/api/backend/apps/${LOCALES_APP}/localizations/detect`,
+        async (route) => {
+          await held;
+          await route.continue();
+        },
+      );
+      await page.goto(LOCALES_METADATA);
+
+      await find(page).click();
+
+      await expect(find(page)).toBeDisabled();
+      release();
+      await expect(page.getByText("Queued · localizations")).toBeVisible();
+      await expect(find(page)).toBeEnabled();
+    });
+  });
 });
