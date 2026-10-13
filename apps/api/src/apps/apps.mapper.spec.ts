@@ -52,7 +52,7 @@ describe('toListingMarkets', () => {
 
   it('lists the home market first even before it has a listing', () => {
     expect(
-      toListingMarkets('us', [row('de', '2026-07-02T00:00:00.000Z')]),
+      toListingMarkets('us', [row('de', '2026-07-02T00:00:00.000Z')], []),
     ).toEqual([
       { country: 'us', home: true, capturedAt: null },
       { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },
@@ -61,14 +61,18 @@ describe('toListingMarkets', () => {
 
   it('folds the captured localizations of a market into it in table order', () => {
     expect(
-      toListingMarkets('pl', [
-        row(null, '2026-07-01T00:00:00.000Z'),
-        { ...row(null, '2026-07-01T00:01:00.000Z'), localization: 'pl' },
-        row('be', '2026-07-02T00:00:00.000Z'),
-        { ...row('be', '2026-07-02T00:01:00.000Z'), localization: 'fr' },
-        { ...row('be', '2026-07-02T00:02:00.000Z'), localization: 'nl' },
-        row('de', '2026-07-03T00:00:00.000Z'),
-      ]),
+      toListingMarkets(
+        'pl',
+        [
+          row(null, '2026-07-01T00:00:00.000Z'),
+          { ...row(null, '2026-07-01T00:01:00.000Z'), localization: 'pl' },
+          row('be', '2026-07-02T00:00:00.000Z'),
+          { ...row('be', '2026-07-02T00:01:00.000Z'), localization: 'fr' },
+          { ...row('be', '2026-07-02T00:02:00.000Z'), localization: 'nl' },
+          row('de', '2026-07-03T00:00:00.000Z'),
+        ],
+        [],
+      ),
     ).toEqual([
       {
         country: 'pl',
@@ -86,13 +90,37 @@ describe('toListingMarkets', () => {
     ]);
   });
 
+  it('folds a shipped localization in and leaves out one the app stopped shipping', () => {
+    const rows = [
+      row(null, '2026-07-01T00:00:00.000Z'),
+      row('ch', '2026-07-02T00:00:00.000Z'),
+      { ...row('ch', '2026-07-02T00:01:00.000Z'), localization: 'fr' },
+    ];
+
+    expect(toListingMarkets('us', rows, ['fr'])[1]).toEqual({
+      country: 'ch',
+      home: false,
+      capturedAt: '2026-07-02T00:00:00.000Z',
+      localizations: ['fr'],
+    });
+    expect(toListingMarkets('us', rows, [])[1]).toEqual({
+      country: 'ch',
+      home: false,
+      capturedAt: '2026-07-02T00:00:00.000Z',
+    });
+  });
+
   it('lists the other markets by code with the time of their newest listing', () => {
     expect(
-      toListingMarkets('us', [
-        row('pl', '2026-07-03T00:00:00.000Z'),
-        row(null, '2026-07-01T00:00:00.000Z'),
-        row('de', '2026-07-02T00:00:00.000Z'),
-      ]),
+      toListingMarkets(
+        'us',
+        [
+          row('pl', '2026-07-03T00:00:00.000Z'),
+          row(null, '2026-07-01T00:00:00.000Z'),
+          row('de', '2026-07-02T00:00:00.000Z'),
+        ],
+        [],
+      ),
     ).toEqual([
       { country: 'us', home: true, capturedAt: '2026-07-01T00:00:00.000Z' },
       { country: 'de', home: false, capturedAt: '2026-07-02T00:00:00.000Z' },

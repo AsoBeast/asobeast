@@ -75,11 +75,17 @@ describe('relevanceText', () => {
 });
 
 describe('latestLocalizedTexts', () => {
-  const localizedPrisma = (rows: unknown[]) => {
+  const localizedPrisma = (rows: unknown[], shipped: string[] = []) => {
     const findMany = jest.fn().mockResolvedValue(rows);
+    const shippedRows = jest
+      .fn()
+      .mockResolvedValue(shipped.map((localization) => ({ localization })));
     return {
       findMany,
-      prisma: { appSnapshot: { findMany } } as unknown as PrismaService,
+      prisma: {
+        appSnapshot: { findMany },
+        appLocalization: { findMany: shippedRows },
+      } as unknown as PrismaService,
     };
   };
 
@@ -95,10 +101,11 @@ describe('latestLocalizedTexts', () => {
     expect(localized.get('za')).toEqual([]);
   });
 
-  it('reads a captured localization the market reads besides its default', async () => {
-    const { findMany, prisma } = localizedPrisma([
-      { ...texts('Suisse'), localization: 'fr' },
-    ]);
+  it('reads a localization the app ships that the market reads besides its default', async () => {
+    const { findMany, prisma } = localizedPrisma(
+      [{ ...texts('Suisse'), localization: 'fr' }],
+      ['fr', 'de'],
+    );
 
     const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', ['ch']);
 
@@ -107,7 +114,7 @@ describe('latestLocalizedTexts', () => {
         where: {
           appId: 'app_1',
           country: 'ch',
-          localization: { in: ['en-GB', 'fr', 'it'] },
+          localization: { in: ['fr'] },
         },
       }),
     );
@@ -118,7 +125,16 @@ describe('latestLocalizedTexts', () => {
     ).toEqual([['fr', 'Suisse']]);
   });
 
-  it('reads the newest snapshot of every localization a market reads beside its default in one query', async () => {
+  it('reads nothing of a localization the app stopped shipping', async () => {
+    const { findMany, prisma } = localizedPrisma([], []);
+
+    const localized = await latestLocalizedTexts(prisma, 'app_1', 'us', ['ch']);
+
+    expect(findMany).not.toHaveBeenCalled();
+    expect(localized.get('ch')).toEqual([]);
+  });
+
+  it('reads the newest snapshot of every native localization of a market in one query', async () => {
     const { findMany, prisma } = localizedPrisma([
       { ...texts('Frans'), localization: 'fr' },
       { ...texts('Nederlands'), localization: 'nl' },

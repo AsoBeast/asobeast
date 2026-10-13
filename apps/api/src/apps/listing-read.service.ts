@@ -7,6 +7,7 @@ import {
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { toAppDetail, toListingMarkets, withTracking } from './apps.mapper';
+import { shippedLocalizations } from './shipped-localizations';
 import { EVERY_LISTING, latestListingIn } from './listing';
 import { missingListing } from './missing-listing';
 
@@ -26,7 +27,7 @@ export class ListingReadService {
     if (!app) {
       throw new NotFoundException(`App ${id} not found`);
     }
-    const [rows, keywords] = await Promise.all([
+    const [rows, keywords, shipped] = await Promise.all([
       this.prisma.appSnapshot.groupBy({
         by: ['country', 'localization'],
         where: { appId: id, ...EVERY_LISTING },
@@ -37,9 +38,10 @@ export class ListingReadService {
         select: { country: true },
         distinct: ['country'],
       }),
+      shippedLocalizations(this.prisma, id),
     ]);
     return withTracking(
-      toListingMarkets(app.country, rows),
+      toListingMarkets(app.country, rows, shipped),
       new Set(keywords.map((keyword) => keyword.country)),
     );
   }

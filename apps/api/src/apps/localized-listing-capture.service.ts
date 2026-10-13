@@ -16,6 +16,7 @@ import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
 import { capturedLocalizations } from './market-localizations';
+import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 type ListedApp = Pick<
@@ -52,7 +53,7 @@ export class LocalizedListingCapture {
     if (app.store !== Store.APP_STORE) return [];
     const shipped = app.isCompetitor
       ? []
-      : await this.shippedLocalizations(app.id);
+      : await shippedLocalizations(this.prisma, app.id);
     const changes: SnapshotChange[] = [];
     for (const localization of capturedLocalizations(market, shipped)) {
       try {
@@ -66,14 +67,6 @@ export class LocalizedListingCapture {
       }
     }
     return changes;
-  }
-
-  private async shippedLocalizations(appId: string): Promise<string[]> {
-    const rows = await this.prisma.appLocalization.findMany({
-      where: { appId },
-      select: { localization: true },
-    });
-    return rows.map(({ localization }) => localization);
   }
 
   private async captureOne(

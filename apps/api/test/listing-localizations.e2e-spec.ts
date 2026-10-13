@@ -184,6 +184,40 @@ describe('Native localizations of a listing (e2e)', () => {
     });
   });
 
+  it('stops reading a captured localization once the app no longer ships it', async () => {
+    registry.listings.set('ch:fr', {
+      title: 'Où suis-je? Quiz Géographique',
+      subtitle: 'Carte du Monde',
+      description: 'Découvrez le monde',
+      screenshots: [],
+    });
+    const appId = await importFrom(US_APP_URL);
+    await api
+      .post(`/apps/${appId}/localizations`)
+      .send({ localization: 'fr' })
+      .expect(201);
+    await api
+      .post(`/apps/${appId}/keywords`)
+      .send({ keywords: ['quiz géographique'], country: 'ch' })
+      .expect(201);
+    await api.post(`/apps/${appId}/refresh?country=ch`).expect(200);
+
+    await api.delete(`/apps/${appId}/localizations/fr`).expect(204);
+
+    const audit = (
+      await api.get(`/apps/${appId}/metadata/audit?country=ch`).expect(200)
+    ).body as MetadataAuditResult;
+    expect(
+      audit.coverage.find((item) => item.text === 'quiz géographique'),
+    ).toMatchObject({ uncovered: true });
+    const markets = (
+      await api.get(`/apps/${appId}/listing-markets`).expect(200)
+    ).body as ListingMarket[];
+    expect(
+      markets.find((market) => market.country === 'ch')?.localizations,
+    ).toBeUndefined();
+  });
+
   it('stores only the default listing of an app without a polish listing', async () => {
     const appId = await importFrom(PL_APP_URL);
 

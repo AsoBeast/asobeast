@@ -110,6 +110,7 @@ const build = (
     appSnapshot,
     snapshotScreenshot,
     keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+    appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
   } as unknown as PrismaService;
   const keywords = {
     listTracked: jest
