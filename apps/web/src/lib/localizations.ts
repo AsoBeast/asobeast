@@ -2,7 +2,6 @@ import {
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
   isAppStoreLocalization,
-  KEYWORD_FIELD_BYTE_LIMIT,
   STORE_FIELD_LIMITS,
   storefrontLocalizations,
 } from "@asobeast/shared";
@@ -17,11 +16,11 @@ export interface StorefrontRow {
   additional: readonly AppStoreLocalization[];
 }
 
-function limitOf(field: "title" | "subtitle"): number {
+function limitOf(field: "title" | "subtitle" | "keywordField"): number {
   return STORE_FIELD_LIMITS.APP_STORE[field]?.limit ?? 0;
 }
 
-export const LOCALIZED_FIELDS_NOTE = `Each localization has its own ${limitOf("title")} character title, ${limitOf("subtitle")} character subtitle and ${KEYWORD_FIELD_BYTE_LIMIT} byte keyword field.`;
+export const LOCALIZED_FIELDS_NOTE = `Each localization has its own ${limitOf("title")} character title, ${limitOf("subtitle")} character subtitle and ${limitOf("keywordField")} character keyword field.`;
 
 export function storefrontRows(
   home: string,

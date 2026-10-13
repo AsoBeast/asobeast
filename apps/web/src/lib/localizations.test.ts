@@ -47,7 +47,7 @@ describe("extraRoom", () => {
 describe("LOCALIZED_FIELDS_NOTE", () => {
   it("reads every limit from the shared field limits", () => {
     expect(LOCALIZED_FIELDS_NOTE).toBe(
-      "Each localization has its own 30 character title, 30 character subtitle and 100 byte keyword field.",
+      "Each localization has its own 30 character title, 30 character subtitle and 100 character keyword field.",
     );
   });
 });
