@@ -116,10 +116,13 @@ export class LocalizationDetection {
       orderBy: NEWEST_FIRST,
     });
     if (!stored) return;
-    const served = await this.registry
-      .get(app.store)
-      .getApp(app.storeAppId, country, localization);
-    if (!servesLocalization(app.store, stored, served)) return;
+    const provider = this.registry.get(app.store);
+    const served = await provider.getApp(app.storeAppId, country, localization);
+    const fallback =
+      (stored.version ?? null) === (served.version ?? null)
+        ? stored
+        : await provider.getApp(app.storeAppId, country);
+    if (!servesLocalization(app.store, fallback, served)) return;
     await recordAppLocalizations(this.prisma, [
       {
         appId,

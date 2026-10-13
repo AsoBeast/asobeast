@@ -42,6 +42,7 @@ const build = (
     app?: object | null;
     stored?: object | null;
     served?: object;
+    fresh?: object;
     failure?: Error;
   } = {},
 ) => {
@@ -54,7 +55,13 @@ const build = (
   const createMany = jest.fn().mockResolvedValue({ count: 1 });
   const getApp = options.failure
     ? jest.fn().mockRejectedValue(options.failure)
-    : jest.fn().mockResolvedValue(options.served ?? SPANISH);
+    : jest.fn((_id: string, _country: string, localization?: string) =>
+        Promise.resolve(
+          localization === undefined && options.fresh
+            ? options.fresh
+            : (options.served ?? SPANISH),
+        ),
+      );
   const prisma = {
     app: { findFirst: appFindFirst },
     appSnapshot: { findFirst: snapshotFindFirst },
@@ -112,6 +119,36 @@ describe('LocalizationDetection.probe', () => {
         }) as unknown,
       }),
     );
+  });
+
+  it('compares with a fresh default listing when the app released a version since the stored one', async () => {
+    const released = {
+      ...ENGLISH,
+      version: '5.0',
+      raw: { screenshots: [], releaseNotes: 'New in 5.0' },
+    };
+    const { detection, getApp, createMany } = build({
+      stored: { ...ENGLISH, version: '4.0' },
+      served: released,
+      fresh: released,
+    });
+
+    await detection.probe(PROBE);
+
+    expect(getApp).toHaveBeenCalledWith('6657987209', 'mx');
+    expect(createMany).not.toHaveBeenCalled();
+  });
+
+  it('asks the store once when the stored listing is of the served version', async () => {
+    const { detection, getApp, createMany } = build({
+      stored: { ...ENGLISH, version: '4.0' },
+      served: { ...SPANISH, version: '4.0' },
+    });
+
+    await detection.probe(PROBE);
+
+    expect(getApp).toHaveBeenCalledTimes(1);
+    expect(createMany).toHaveBeenCalledTimes(1);
   });
 
   it('records nothing when the store echoes the default listing', async () => {
