@@ -49,7 +49,7 @@ function awaitsConfirmation(alert: EmailAlertItem): boolean {
 }
 
 function recipientToast(alert: EmailAlertItem) {
-  return { id: `email-alert-confirmation-${alert.id}` };
+  return { id: `email-alert-${alert.id}` };
 }
 
 function AddEmailAlertDialog() {
