@@ -112,6 +112,7 @@ export function MarketsStep({
       <CardContent className="flex flex-col gap-4">
         {suggested ? (
           <SuggestedMarkets
+            appId={appId}
             result={suggested}
             selected={markets}
             onSelect={onSelect}

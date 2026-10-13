@@ -81,6 +81,10 @@ import {
   errorEnvelope,
   rateLimitedEnvelope,
   MARKET_SUGGESTIONS,
+  DEFAULT_SEED_TEXTS,
+  SEED_REFUSED_MESSAGE,
+  SEED_TEXTS,
+  SEED_UNLISTED_MARKET,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -103,6 +107,8 @@ import type {
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
   MarketLocalizationRead,
+  MarketSeedRequest,
+  MarketSeedResult,
   MarketSuggestionsResult,
   ActionBulkUpdateResult,
   ActionDetail,
@@ -936,6 +942,50 @@ function marketSuggestionsOf(
   };
 }
 
+const seededKeywordId = (id: string, country: string, text: string) =>
+  `kw-${id}-seeded-${country}-${text.replaceAll(" ", "-")}`;
+
+function seedMockMarket(
+  dataset: (typeof DATASETS)[string],
+  country: string,
+  req: IncomingMessage,
+): MarketSeedResult {
+  const store = dataset.detail.store;
+  const answer = (seeded: number, skipped: number): MarketSeedResult => ({
+    country,
+    status: "seeded",
+    seeded,
+    skipped,
+    cost: {
+      store,
+      keywordMarkets: seeded,
+      dailyRequests: seeded === 0 ? 0 : seeded + 1,
+    },
+  });
+  if (country === SEED_UNLISTED_MARKET) {
+    return { ...answer(0, 0), status: "unavailable" };
+  }
+  const fresh = (SEED_TEXTS[country] ?? DEFAULT_SEED_TEXTS).filter(
+    (text) =>
+      !dataset.keywords.some(
+        (row) => row.text === text && row.country === country,
+      ),
+  );
+  const room = cookieValue(req, "e2e_seed_room");
+  const chosen = fresh.slice(
+    0,
+    room === undefined ? fresh.length : Number(room),
+  );
+  chosen.forEach((text, index) =>
+    dataset.keywords.push({
+      ...manualKeyword(dataset.detail.id, text, country, 0),
+      keywordId: seededKeywordId(dataset.detail.id, country, text),
+      source: index === 0 ? "TITLE" : "SUBTITLE",
+    }),
+  );
+  return answer(chosen.length, fresh.length - chosen.length);
+}
+
 function localizationItemOf(
   id: string,
   home: string,
@@ -1635,6 +1685,20 @@ const routes: Route[] = [
   },
   {
     method: "POST",
+    pattern: /^\/__reset\/market-seed\/([^/]+)\/([^/]+)$/,
+    handler: ([id, country], _req, res) => {
+      const dataset = DATASETS[id];
+      if (dataset) {
+        const prefix = seededKeywordId(id, country, "");
+        dataset.keywords = dataset.keywords.filter(
+          (row) => !row.keywordId.startsWith(prefix),
+        );
+      }
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
     pattern: /^\/__reset\/keyword-annotations\/([^/]+)$/,
     handler: ([id], _req, res) => {
       annotations.delete(id);
@@ -2097,6 +2161,21 @@ const routes: Route[] = [
   appRoute(/^\/apps\/([^/]+)\/market-suggestions$/, (dataset) =>
     marketSuggestionsOf(dataset),
   ),
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/market-seed$/,
+    handler: ([id], req, res) => {
+      withBody<MarketSeedRequest>(req, res, ({ country }) => {
+        const path = req.url ?? "/";
+        const dataset = DATASETS[id];
+        if (!dataset) return json(res, 404, errorEnvelope(404, path));
+        if (hasCookie(req, "e2e_seed_refused", "1")) {
+          return json(res, 429, errorEnvelope(429, path, SEED_REFUSED_MESSAGE));
+        }
+        json(res, 200, seedMockMarket(dataset, country, req));
+      });
+    },
+  },
   appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
     dataset.detail.id === "app-1"
       ? APP_1_LISTING_MARKETS.map((market) => ({
