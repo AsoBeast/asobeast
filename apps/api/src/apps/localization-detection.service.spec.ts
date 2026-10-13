@@ -318,7 +318,8 @@ const buildRequest = (
     queue,
     spend,
     list,
-    request: () => detection.request('app_1', spend),
+    request: (capturedIn?: string) =>
+      detection.request('app_1', spend, capturedIn),
   };
 };
 
@@ -489,5 +490,19 @@ describe('LocalizationDetection.request', () => {
       queued: 1,
       candidates: ['fr', 'es-MX'],
     });
+  });
+
+  it('probes the market a capture just listed before any keyword is tracked there', async () => {
+    const { queue, request } = buildRequest({ languages: ['EN', 'IT'] });
+
+    await expect(request('ch')).resolves.toEqual({
+      queued: 2,
+      candidates: ['en-GB', 'it'],
+    });
+    expect(
+      queue.add.mock.calls.map(
+        ([, data]) => (data as unknown as { country: string }).country,
+      ),
+    ).toEqual(['ch', 'ch']);
   });
 });

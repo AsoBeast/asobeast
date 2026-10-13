@@ -44,12 +44,14 @@ export class LocalizationDetection {
   async request(
     appId: string,
     spend: () => Promise<void>,
+    capturedIn?: string,
   ): Promise<LocalizationDetectionResult> {
     const app = await ensureKeywordFieldApp(this.prisma, appId);
     if (await this.isCompetitor(appId)) return { queued: 0, candidates: [] };
     const { home, markets, localizations } = await this.shipped.list(appId);
+    const probed = capturedIn ? [...markets, capturedIn] : markets;
     const [listings, latest] = await Promise.all([
-      latestListingTexts(this.prisma, appId, home, markets),
+      latestListingTexts(this.prisma, appId, home, probed),
       this.prisma.appSnapshot.findFirst({
         where: { appId, ...HOME_LISTING },
         orderBy: NEWEST_FIRST,
@@ -59,7 +61,7 @@ export class LocalizationDetection {
     const languages = extractRawFacts(app.store, latest?.raw).languages;
     const candidates = detectionCandidates({
       home,
-      markets,
+      markets: probed,
       listedMarkets: new Set(listings.keys()),
       shipped: new Set(localizations.map((item) => item.localization)),
       languages: languages.length > 0 ? languages : null,
