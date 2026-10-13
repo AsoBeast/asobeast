@@ -224,7 +224,7 @@ export function saveQuotaNotice(
   if (quota === null || quota.limit === null) return null;
   const after = quota.used + cost.keywordMarkets;
   const empty = hasNoCapacity(quota);
-  const over = empty ? cost.keywordMarkets > 0 : after > quota.limit;
+  const over = cost.keywordMarkets > 0 && (empty || after > quota.limit);
   return {
     text: empty
       ? "Your plan includes no keyword markets."

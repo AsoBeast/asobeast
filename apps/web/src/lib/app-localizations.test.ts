@@ -383,6 +383,15 @@ describe("the save review", () => {
         upgrade: false,
       },
     ],
+    [
+      { used: 12, limit: 10, upgradeTo: "ultimate" as const },
+      0,
+      {
+        text: "12 of 10 keyword markets after saving.",
+        over: false,
+        upgrade: false,
+      },
+    ],
   ])(
     "W-SAV-08 words the plan quota after the save (%j, %d)",
     (quota, keywordMarkets, expected) => {
