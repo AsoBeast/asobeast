@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Store } from '@prisma/client';
-import { Queue } from 'bullmq';
+import { JobsOptions, Queue } from 'bullmq';
 import { LocalizationDetectionResult } from '@asobeast/shared';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { enqueueReplacingFailed } from '../jobs/enqueue-replacing-failed';
@@ -23,6 +23,13 @@ import { HOME_LISTING, listingIn, NEWEST_FIRST } from './listing';
 import { latestListingTexts } from './listing-texts';
 import { detectionCandidates } from './localization-candidates';
 import { servesLocalization } from './localization-served';
+
+const DETECTION_DEDUPE_SECONDS = 24 * 60 * 60;
+
+const DETECTION_JOB_OPTIONS = {
+  ...DEFERRED_JOB_OPTIONS,
+  removeOnComplete: { age: DETECTION_DEDUPE_SECONDS },
+} satisfies JobsOptions;
 
 @Injectable()
 export class LocalizationDetection {
@@ -82,7 +89,7 @@ export class LocalizationDetection {
             country,
             ...scope,
           } satisfies DetectLocalizationPayload,
-          { ...DEFERRED_JOB_OPTIONS, jobId: idOf(localization) },
+          { ...DETECTION_JOB_OPTIONS, jobId: idOf(localization) },
         ),
       ),
     );
