@@ -14,6 +14,7 @@ import {
   appLocalizationsOptions,
   keywordCountriesOptions,
   listingMarketsOptions,
+  marketSuggestionsOptions,
   metadataAuditOptions,
   screenshotsOptions,
 } from "@/lib/queries";
@@ -73,6 +74,7 @@ export default async function MetadataPage({
       : null,
     getMetadataAssistantStatus().catch(() => null),
     isAppStore ? queryClient.prefetchQuery(appLocalizationsOptions(id)) : null,
+    isAppStore ? queryClient.prefetchQuery(marketSuggestionsOptions(id)) : null,
   ]);
 
   return (

@@ -2103,6 +2103,7 @@ export const APP_REPRICED_FREE_ID = "app-repriced-free";
 export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
 export const APP_LOCALES_ID = "app-locales";
+export const APP_SUGGESTED_LOCALES_ID = "app-suggested-locales";
 
 export interface LocalizationSeed {
   markets?: string[];
@@ -2127,6 +2128,10 @@ function localesDataset(id: string, name: string): AppDataset {
 }
 
 DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
+DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
+  APP_SUGGESTED_LOCALES_ID,
+  "Market Lab",
+);
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
@@ -2320,6 +2325,15 @@ export const MARKET_SUGGESTIONS: Record<string, MarketSuggestionsResult> = {
       suggestedMarket("jp", "ja", "default"),
       suggestedMarket("ca", "fr-CA", "additional"),
       suggestedMarket("pl", "pl", "additional", 4),
+    ],
+  },
+  "app-suggested-locales": {
+    home: "us",
+    languages: ["en", "fr", "pt"],
+    suggestions: [
+      suggestedMarket("fr", "fr", "default", 1),
+      suggestedMarket("br", "pt-BR", "default", 1),
+      suggestedMarket("ca", "fr-CA", "additional", 1),
     ],
   },
 };
@@ -3952,6 +3966,7 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 };
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_SUGGESTED_LOCALES_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

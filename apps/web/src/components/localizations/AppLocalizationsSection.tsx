@@ -10,12 +10,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   LOCALIZATIONS_SECTION_ID,
   localizationMatrix,
+  suggestedHint,
 } from "@/lib/app-localizations";
 import {
   APPLE_LOCALIZATIONS_URL,
   LOCALIZED_FIELDS_NOTE,
 } from "@/lib/localizations";
-import { appLocalizationsOptions } from "@/lib/queries";
+import {
+  appLocalizationsOptions,
+  marketSuggestionsOptions,
+} from "@/lib/queries";
 import { AddLocalizationDialog } from "./AddLocalizationDialog";
 import { FindLocalizationsButton } from "./FindLocalizationsButton";
 import { LocalizationList } from "./LocalizationList";
@@ -42,7 +46,11 @@ function LocalizationsPanel({
   result: AppLocalizationsResult;
   canDraft: boolean;
 }) {
-  const grid = localizationMatrix(result);
+  const suggestions = useQuery({
+    ...marketSuggestionsOptions(id),
+    retry: false,
+  });
+  const grid = localizationMatrix(result, suggestions.data ?? null);
 
   return (
     <Card className="min-w-0">
@@ -63,7 +71,12 @@ function LocalizationsPanel({
           </p>
           <p className="text-body text-foreground">{LOCALIZED_FIELDS_NOTE}</p>
         </div>
-        {grid ? <LocalizationMatrix grid={grid} /> : null}
+        {grid ? (
+          <LocalizationMatrix
+            grid={grid}
+            hint={suggestedHint(id, grid.suggested)}
+          />
+        ) : null}
         <LocalizationList id={id} result={result} canDraft={canDraft} />
       </CardContent>
     </Card>
