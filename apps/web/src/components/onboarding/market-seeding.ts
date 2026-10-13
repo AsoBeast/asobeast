@@ -1,6 +1,5 @@
 import type { MarketSeedResult, MarketSuggestion } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
-import { localizationName } from "@/lib/localizations";
 
 export type SeedOutcome =
   | { kind: "seeded"; seeded: number; skipped: number }
@@ -37,10 +36,7 @@ export function outcomeOf(result: MarketSeedResult): SeedOutcome {
     : { kind: "seeded", seeded: result.seeded, skipped: result.skipped };
 }
 
-export function outcomeText(
-  suggestion: MarketSuggestion,
-  outcome: SeedOutcome,
-): string {
+export function outcomeText(outcome: SeedOutcome): string {
   if (outcome.kind === "failed") return outcome.message;
   if (outcome.kind === "unavailable") {
     return "Not published on this storefront, so it was not added";
@@ -50,7 +46,9 @@ export function outcomeText(
       ? `, ${outcome.skipped} left out by the keyword limit`
       : "";
   if (outcome.seeded > 0) {
-    return `Seeded ${pluralize(outcome.seeded, "keyword")} from the ${localizationName(suggestion.localization)} listing${skipped}`;
+    return `Seeded ${pluralize(outcome.seeded, "keyword")} from its listing${skipped}`;
   }
-  return skipped ? `Seeded no keywords${skipped}` : "Already seeded";
+  return skipped
+    ? `Seeded no keywords${skipped}`
+    : "No new keywords in its listing";
 }
