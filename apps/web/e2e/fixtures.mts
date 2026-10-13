@@ -19,6 +19,8 @@ import type {
   KeywordCountrySummary,
   KeywordSource,
   MarketKeywordFields,
+  MarketSuggestion,
+  MarketSuggestionsResult,
   ChangeImpactReport,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
@@ -2291,6 +2293,36 @@ export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "pl", keywordCount: 0 },
   { country: "gb", keywordCount: 0 },
 ];
+
+const suggestedMarket = (
+  country: string,
+  localization: AppStoreLocalization,
+  role: MarketSuggestion["role"],
+  listing = 2,
+): MarketSuggestion => ({
+  country,
+  localization,
+  language: localization.split("-")[0],
+  role,
+  tracked: false,
+  dailyRequests: { listing, perKeyword: 1 },
+});
+
+export const MARKET_SUGGESTIONS: Record<string, MarketSuggestionsResult> = {
+  "app-1": {
+    home: "us",
+    languages: ["en", "de", "fr", "ja", "pl"],
+    suggestions: [
+      suggestedMarket("at", "de", "default"),
+      suggestedMarket("ch", "de", "default"),
+      suggestedMarket("de", "de", "default"),
+      suggestedMarket("fr", "fr", "default"),
+      suggestedMarket("jp", "ja", "default"),
+      suggestedMarket("ca", "fr-CA", "additional"),
+      suggestedMarket("pl", "pl", "additional", 4),
+    ],
+  },
+};
 
 export const BUDGET: DailyBudget = {
   apps: 3,

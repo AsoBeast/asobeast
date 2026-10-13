@@ -80,6 +80,7 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  MARKET_SUGGESTIONS,
 } from "./fixtures.mts";
 import {
   EMPTY_PORTFOLIO_INSIGHTS,
@@ -102,6 +103,7 @@ import type {
   LocalizedKeywordFieldResult,
   MarketKeywordFields,
   MarketLocalizationRead,
+  MarketSuggestionsResult,
   ActionBulkUpdateResult,
   ActionDetail,
   ActionDismissReason,
@@ -913,6 +915,25 @@ function appMarketsOf(id: string, home: string): string[] {
     .filter((country) => country !== home)
     .sort();
   return [home, ...others];
+}
+
+function marketSuggestionsOf(
+  dataset: (typeof DATASETS)[string],
+): MarketSuggestionsResult {
+  const { id, country: home } = dataset.detail;
+  const result = MARKET_SUGGESTIONS[id];
+  if (!result) return { home, languages: ["en"], suggestions: [] };
+  const tracked = new Set([
+    ...appMarketsOf(id, home),
+    ...dataset.keywords.map((keyword) => keyword.country),
+  ]);
+  return {
+    ...result,
+    suggestions: result.suggestions.map((suggestion) => ({
+      ...suggestion,
+      tracked: tracked.has(suggestion.country),
+    })),
+  };
 }
 
 function localizationItemOf(
@@ -2072,6 +2093,9 @@ const routes: Route[] = [
   },
   appRoute(/^\/apps\/([^/]+)$/, (dataset, query) =>
     isPolishListingOf(dataset, query) ? APP_1_PL_DETAIL : dataset.detail,
+  ),
+  appRoute(/^\/apps\/([^/]+)\/market-suggestions$/, (dataset) =>
+    marketSuggestionsOf(dataset),
   ),
   appRoute(/^\/apps\/([^/]+)\/listing-markets$/, (dataset, _query, req) =>
     dataset.detail.id === "app-1"
