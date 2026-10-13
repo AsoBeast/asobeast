@@ -112,8 +112,9 @@ describe('Remote MCP credential isolation (e2e)', () => {
     await awaitBurnHeadroom(SHORT_BURN_HEADROOM_SECONDS);
     await rejected().expect(401);
     expect(
-      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE),
+      await spendCredentialBudget(app, CREDENTIAL_FAILURES_PER_MINUTE - 1),
     ).toBe(1);
+    await rejected().expect(401);
     await rejected().expect(429);
 
     const answer = await mcpAs(app, neighbourToken).callTool('list_apps', {});
