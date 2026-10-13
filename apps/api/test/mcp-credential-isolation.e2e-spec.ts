@@ -81,6 +81,7 @@ describe('Remote MCP credential isolation (e2e)', () => {
   beforeEach(() => clearRateLimitCounters(app));
 
   afterAll(async () => {
+    await clearRateLimitCounters(app);
     await truncateUsers(prisma);
     await prisma.workspace.deleteMany({ where: { id: NEIGHBOUR } });
     await obliterateQueues(app);
@@ -121,6 +122,7 @@ describe('Remote MCP credential isolation (e2e)', () => {
 
     expect(answer.error).toBeUndefined();
     expect(answer.result?.isError).toBeFalsy();
+    await rejected().expect(429);
   });
 
   it('never counts a rejected tool call against an address', async () => {
