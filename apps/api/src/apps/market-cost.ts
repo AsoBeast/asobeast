@@ -15,10 +15,13 @@ export function marketDailyRequests(
 ): MarketDailyRequests {
   const appStore = store === Store.APP_STORE;
   const native = appStore ? nativeLocalizations(country).length : 0;
-  const own = appStore ? capturedLocalizations(country, shipped).length : 0;
+  const captured = appStore
+    ? capturedLocalizations(country, shipped).length
+    : 0;
+  const shippedExtras = captured - native;
   return {
     listing:
-      (family * (1 + native) + own - native) * requestsPerJob(store, 'apps'),
+      (family * (1 + native) + shippedExtras) * requestsPerJob(store, 'apps'),
     perKeyword: requestsPerJob(store, 'keywords'),
   };
 }
