@@ -2,15 +2,16 @@ import { Logger } from '@nestjs/common';
 import { Store } from '@prisma/client';
 import type { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import type { PrismaService } from '../prisma/prisma.service';
-import type { LocalizationDetection } from './localization-detection.service';
+import type { LocalizationDetection } from '../apps/localization-detection.service';
+import type { ActiveWorkspaces } from './active-workspaces';
 import { LocalizationSweep } from './localization-sweep.service';
 
-const build = (request: jest.Mock, workspaces = 1) => {
+const build = (request: jest.Mock, workspaces = ['ws_a']) => {
   const findMany = jest.fn().mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
   const fanOut = {
-    each: jest.fn(async (_why: string, work: () => Promise<number>) => {
+    eachOf: jest.fn(async (ids: string[], work: () => Promise<number>) => {
       const results: number[] = [];
-      for (let index = 0; index < workspaces; index += 1) {
+      for (let index = 0; index < ids.length; index += 1) {
         results.push(await work());
       }
       return { results, failures: [] };
@@ -20,6 +21,9 @@ const build = (request: jest.Mock, workspaces = 1) => {
     { app: { findMany } } as unknown as PrismaService,
     { request } as unknown as LocalizationDetection,
     fanOut as unknown as WorkspaceFanOut,
+    {
+      forDailyRun: jest.fn().mockResolvedValue(workspaces),
+    } as unknown as ActiveWorkspaces,
   );
   return { sweep, findMany, fanOut };
 };
@@ -43,9 +47,23 @@ describe('LocalizationSweep', () => {
     await expect(spend()).resolves.toBeUndefined();
   });
 
+  it('sweeps only the workspaces the daily run collects for', async () => {
+    const { sweep, fanOut } = build(
+      jest.fn().mockResolvedValue({ queued: 0, candidates: [] }),
+      ['ws_active'],
+    );
+
+    await sweep.run();
+
+    expect(fanOut.eachOf).toHaveBeenCalledWith(
+      ['ws_active'],
+      expect.any(Function),
+    );
+  });
+
   it('sums what every workspace queued', async () => {
     const request = jest.fn().mockResolvedValue({ queued: 1, candidates: [] });
-    const { sweep } = build(request, 2);
+    const { sweep } = build(request, ['ws_a', 'ws_b']);
 
     await expect(sweep.run()).resolves.toBe(4);
   });
@@ -72,7 +90,7 @@ describe('LocalizationSweep', () => {
 
   it('fails the job when a workspace fails', async () => {
     const { sweep, fanOut } = build(jest.fn());
-    fanOut.each.mockResolvedValueOnce({
+    fanOut.eachOf.mockResolvedValueOnce({
       results: [],
       failures: [{ workspaceId: 'ws_a', error: new Error('boom') }],
     } as never);
