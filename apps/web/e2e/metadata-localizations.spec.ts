@@ -1,4 +1,7 @@
 import { expect, test } from "./session.mts";
+import type { Page } from "@playwright/test";
+import { APP_SUGGESTED_LOCALES_ID } from "./fixtures.mts";
+import { seedLocalizations } from "./localizations.mts";
 
 const APPLE_URL =
   "https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/";
@@ -138,4 +141,64 @@ test("shows the keyword field card of the viewed localization", async ({
   await expect(
     page.getByRole("textbox", { name: "Keyword field" }),
   ).toHaveValue("nawyki,cel");
+});
+
+test.describe("suggested markets in the localization matrix", () => {
+  test.describe.configure({ mode: "serial" });
+  const LOCALES = APP_SUGGESTED_LOCALES_ID;
+  const matrixOf = (page: Page) =>
+    page.getByRole("region", { name: SECTION }).getByRole("table", {
+      name: /Which of your markets read each localization/,
+    });
+
+  test("the matrix suggests an untracked default reader of a shipped localization", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, LOCALES, {
+      shipped: [{ localization: "fr", origin: "detected" }],
+    });
+    await page.goto(`/apps/${LOCALES}/metadata`);
+
+    const matrix = matrixOf(page);
+    const suggested = matrix.getByRole("columnheader", {
+      name: /^FR suggested/,
+    });
+    await expect(suggested).toBeVisible();
+    await expect(suggested).toHaveAttribute("title", "France, suggested");
+    await expect(
+      matrix.getByRole("columnheader", { name: /^BR suggested/ }),
+    ).toHaveCount(0);
+    const french = matrix
+      .getByRole("row")
+      .filter({ has: page.getByRole("rowheader", { name: /^French/ }) });
+    await expect(french.getByRole("cell").last()).toHaveText("Default");
+    await expect(
+      page.getByText("France reads French.", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Add FR as a market" }),
+    ).toHaveAttribute("href", `/apps/${LOCALES}/keywords?country=fr`);
+  });
+
+  test("a suggested market becomes an ordinary column once tracked", async ({
+    page,
+  }) => {
+    await seedLocalizations(page.request, LOCALES, {
+      shipped: [{ localization: "fr", origin: "detected" }],
+      fields: { fr: ["minuteur"] },
+      tracked: { fr: ["minuteur"] },
+    });
+    await page.goto(`/apps/${LOCALES}/metadata`);
+
+    const matrix = matrixOf(page);
+    await expect(
+      matrix.getByRole("columnheader", { name: /^FR France$/ }),
+    ).toBeVisible();
+    await expect(
+      matrix.getByRole("columnheader", { name: /suggested/ }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: "Add FR as a market" }),
+    ).toHaveCount(0);
+  });
 });

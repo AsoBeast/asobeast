@@ -10,6 +10,8 @@ import {
   type LocalizationReader,
   type MarketLocalizationRead,
   type LocalizationReadRole,
+  type MarketSuggestion,
+  type MarketSuggestionsResult,
   type LocalizedKeywordFieldResult,
 } from "@asobeast/shared";
 import {
@@ -21,6 +23,7 @@ import {
   keywordFieldDraft,
   localizationMatrix,
   localizationsSectionHref,
+  suggestedHint,
   openLocalization,
   readingStorefrontNames,
   removeDescription,
@@ -127,6 +130,7 @@ describe("localizationMatrix", () => {
   it("W-LOC-02 lays one row per localization and one cell per market", () => {
     expect(localizationMatrix(RESULT)).toEqual({
       markets: ["us", "mx"],
+      suggested: [],
       rows: [
         { localization: "en-US", origin: "home", cells: ["default", null] },
         {
@@ -153,6 +157,100 @@ describe("localizationMatrix", () => {
     const grid = localizationMatrix({ ...RESULT, markets: ["us"] });
 
     expect(grid?.rows.map((row) => row.cells.length)).toEqual([1, 1]);
+  });
+
+  describe("suggested markets", () => {
+    const suggestion = (
+      country: string,
+      localization: AppStoreLocalization,
+      role: LocalizationReadRole = "default",
+      tracked = false,
+    ): MarketSuggestion => ({
+      country,
+      localization,
+      language: localization.split("-")[0],
+      role,
+      tracked,
+      dailyRequests: { listing: 1, perKeyword: 1 },
+    });
+    const SHIPS_GERMAN: AppLocalizationsResult = {
+      ...RESULT,
+      localizations: [
+        ...RESULT.localizations,
+        item("de", "detected", [], ["uhr"]),
+      ],
+    };
+    const suggestions = (
+      ...entries: MarketSuggestion[]
+    ): MarketSuggestionsResult => ({
+      home: "us",
+      languages: ["en", "de", "fr"],
+      suggestions: entries,
+    });
+
+    it("adds an untracked default reader of a shipped localization as a column", () => {
+      const grid = localizationMatrix(
+        SHIPS_GERMAN,
+        suggestions(
+          suggestion("de", "de"),
+          suggestion("fr", "fr"),
+          suggestion("ca", "fr-CA", "additional"),
+        ),
+      );
+
+      expect(grid?.suggested).toEqual(["de"]);
+      expect(
+        grid?.rows.find((row) => row.localization === "de")?.cells,
+      ).toEqual([null, null, "default"]);
+      expect(
+        grid?.rows.find((row) => row.localization === "en-US")?.cells,
+      ).toEqual(["default", null, null]);
+    });
+
+    it("leaves out a market the app tracks already", () => {
+      expect(
+        localizationMatrix(
+          SHIPS_GERMAN,
+          suggestions(suggestion("de", "de", "default", true)),
+        )?.suggested,
+      ).toEqual([]);
+    });
+
+    it("shows at most three suggested markets", () => {
+      expect(
+        localizationMatrix(
+          SHIPS_GERMAN,
+          suggestions(
+            suggestion("at", "de"),
+            suggestion("ch", "de"),
+            suggestion("de", "de"),
+            suggestion("li", "de"),
+          ),
+        )?.suggested,
+      ).toEqual(["at", "ch", "de"]);
+    });
+
+    it("keeps a single market app with one localization without a matrix", () => {
+      expect(
+        localizationMatrix(
+          {
+            home: "us",
+            markets: ["us"],
+            localizations: [RESULT.localizations[0]],
+          },
+          suggestions(suggestion("gb", "en-GB")),
+        ),
+      ).toBeNull();
+    });
+
+    it("names the first suggested market and links to its keywords", () => {
+      expect(suggestedHint("app-1", ["ch", "de"])).toEqual({
+        text: "Switzerland reads German, French, and Italian.",
+        link: "Add CH as a market",
+        href: "/apps/app-1/keywords?country=ch",
+      });
+      expect(suggestedHint("app-1", [])).toBeNull();
+    });
   });
 });
 
