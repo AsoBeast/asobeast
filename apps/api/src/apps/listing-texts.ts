@@ -1,6 +1,6 @@
-import { nativeLocalizations } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { listingIn, NEWEST_FIRST } from './listing';
+import { additionalLocalizations } from './market-localizations';
 
 export interface ListingTexts {
   id: string;
@@ -51,7 +51,7 @@ export async function latestLocalizedTexts(
   const entries = await Promise.all(
     [...new Set(markets)].map(
       async (market): Promise<[string, LocalizedTexts[]]> => {
-        const tags = nativeLocalizations(market);
+        const tags = additionalLocalizations(market);
         if (tags.length === 0) return [market, []];
         const rows = await prisma.appSnapshot.findMany({
           where: {

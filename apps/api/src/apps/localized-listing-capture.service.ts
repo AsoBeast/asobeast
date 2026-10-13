@@ -1,10 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { App, AppSnapshot, Store } from '@prisma/client';
-import {
-  AppStoreLocalization,
-  nativeLocalizations,
-  SnapshotChange,
-} from '@asobeast/shared';
+import { AppStoreLocalization, SnapshotChange } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { recordAppLocalizations } from '../keywords/app-localization-records';
 import { PrismaService } from '../prisma/prisma.service';
@@ -18,6 +14,7 @@ import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
+import { capturedLocalizations } from './market-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 type ListedApp = Pick<
@@ -52,8 +49,11 @@ export class LocalizedListingCapture {
     fallback: ComparableListing,
   ): Promise<SnapshotChange[]> {
     if (app.store !== Store.APP_STORE) return [];
+    const shipped = app.isCompetitor
+      ? []
+      : await this.shippedLocalizations(app.id);
     const changes: SnapshotChange[] = [];
-    for (const localization of nativeLocalizations(market)) {
+    for (const localization of capturedLocalizations(market, shipped)) {
       try {
         changes.push(
           ...(await this.captureOne(app, market, localization, fallback)),
@@ -65,6 +65,14 @@ export class LocalizedListingCapture {
       }
     }
     return changes;
+  }
+
+  private async shippedLocalizations(appId: string): Promise<string[]> {
+    const rows = await this.prisma.appLocalization.findMany({
+      where: { appId },
+      select: { localization: true },
+    });
+    return rows.map(({ localization }) => localization);
   }
 
   private async captureOne(

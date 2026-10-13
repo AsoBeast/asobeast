@@ -80,6 +80,17 @@ export class DailyTargetsCollector {
       marketListings: marketListingTargets(apps, markets),
     };
   }
+
+  async shipped(): Promise<Map<string, string[]>> {
+    const rows = await this.prisma.appLocalization.findMany({
+      select: { appId: true, localization: true },
+    });
+    const shipped = new Map<string, string[]>();
+    for (const { appId, localization } of rows) {
+      shipped.set(appId, [...(shipped.get(appId) ?? []), localization]);
+    }
+    return shipped;
+  }
 }
 
 function droppedKeywordIds(

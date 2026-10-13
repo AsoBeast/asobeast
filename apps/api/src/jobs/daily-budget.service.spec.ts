@@ -40,12 +40,13 @@ const BUCKETS: CategoryBucket[] = [
 
 describe('DailyBudgetService', () => {
   const collect = jest.fn<Promise<DailyTargets>, []>();
+  const shipped = jest.fn<Promise<Map<string, string[]>>, []>();
   const buckets = jest.fn<Promise<CategoryBucket[]>, []>();
   const perDay = jest.fn<Promise<number>, [Store]>();
 
   const build = (quota: Partial<QuotaService> = { enforced: false }) =>
     new DailyBudgetService(
-      { collect } as unknown as DailyTargetsCollector,
+      { collect, shipped } as unknown as DailyTargetsCollector,
       { buckets } as unknown as CategoryRanksService,
       { perDay } as unknown as DailyCapacity,
       quota as unknown as QuotaService,
@@ -67,6 +68,7 @@ describe('DailyBudgetService', () => {
 
   beforeEach(() => {
     collect.mockReset().mockResolvedValue(targetsOf());
+    shipped.mockReset().mockResolvedValue(new Map());
     buckets.mockReset().mockResolvedValue(BUCKETS);
     perDay
       .mockReset()
@@ -152,6 +154,23 @@ describe('DailyBudgetService', () => {
     expect(plain.localizations).toBe(2);
     expect(plain.total).toBe(without.total + 2);
     expect(without.localizations).toBe(0);
+  });
+
+  it('charges a read per shipped localization in every market that reads it beside its default', async () => {
+    collect.mockResolvedValue(
+      targetsOf({
+        apps: [{ id: 'apple', store: Store.APP_STORE, country: 'us' }],
+        marketListings: [
+          { id: 'apple', store: Store.APP_STORE, country: 'ch' },
+        ],
+      }),
+    );
+    shipped.mockResolvedValue(new Map([['apple', ['fr', 'it', 'de']]]));
+
+    const budget = await build().estimate();
+
+    expect(budget.localizations).toBe(3);
+    expect(budget.stores[0]).toMatchObject({ apps: 5, localizations: 3 });
   });
 
   it('reports no market listings when no market has a keyword', async () => {
