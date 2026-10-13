@@ -97,6 +97,15 @@ describe('Localization detection probe (e2e)', () => {
       } satisfies DetectLocalizationPayload,
     } as Job);
 
+  const detectionJobs = async () =>
+    (
+      await app
+        .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
+        .getJobs(['prioritized'])
+    )
+      .filter((job) => job.name === JOBS.DETECT_LOCALIZATION)
+      .map((job) => job.data as DetectLocalizationPayload);
+
   const localizationsOf = (appId: string) =>
     prisma.appLocalization.findMany({
       where: { appId },
@@ -172,15 +181,6 @@ describe('Localization detection probe (e2e)', () => {
         } satisfies RefreshAppPayload,
       } as Job);
 
-    const detectionJobs = async () =>
-      (
-        await app
-          .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
-          .getJobs(['prioritized'])
-      )
-        .filter((job) => job.name === JOBS.DETECT_LOCALIZATION)
-        .map((job) => job.data as DetectLocalizationPayload);
-
     beforeEach(async () => {
       await obliterateQueues(app);
       await pauseQueues(app);
@@ -218,13 +218,6 @@ describe('Localization detection probe (e2e)', () => {
       await pauseQueues(app);
     });
 
-    const probes = async () =>
-      (
-        await app
-          .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
-          .getJobs(['prioritized'])
-      ).filter((job) => job.name === JOBS.DETECT_LOCALIZATION);
-
     it('queues one probe per candidate of every primary app store app', async () => {
       const appId = await importApp();
       await prisma.app.create({
@@ -239,23 +232,19 @@ describe('Localization detection probe (e2e)', () => {
 
       const queued = await app.get(LocalizationSweep).run();
 
-      const queuedProbes = await probes();
+      const probes = await detectionJobs();
       expect(queued).toBeGreaterThan(0);
-      expect(queuedProbes).toHaveLength(queued);
-      expect(
-        queuedProbes.every(
-          (job) => (job.data as DetectLocalizationPayload).appId === appId,
-        ),
-      ).toBe(true);
+      expect(probes).toHaveLength(queued);
+      expect(probes.every((probe) => probe.appId === appId)).toBe(true);
     });
 
     it('queues nothing more when it runs twice the same day', async () => {
       await importApp();
       await app.get(LocalizationSweep).run();
-      const before = (await probes()).length;
+      const before = (await detectionJobs()).length;
 
       await expect(app.get(LocalizationSweep).run()).resolves.toBe(0);
-      await expect(probes()).resolves.toHaveLength(before);
+      await expect(detectionJobs()).resolves.toHaveLength(before);
     });
   });
 });
