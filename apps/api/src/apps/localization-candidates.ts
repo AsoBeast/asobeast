@@ -1,5 +1,6 @@
 import {
   type AppStoreLocalization,
+  declaredLanguage,
   keywordFieldLocalizations,
   localizationLanguage,
 } from '@asobeast/shared';
@@ -8,13 +9,6 @@ export interface DetectionCandidate {
   localization: AppStoreLocalization;
   country: string;
 }
-
-const LANGUAGE_ALIASES: Readonly<Record<string, string>> = { nb: 'no' };
-
-const declaredLanguage = (code: string): string => {
-  const language = code.toLowerCase();
-  return LANGUAGE_ALIASES[language] ?? language;
-};
 
 const probeOrder = (
   home: string,
