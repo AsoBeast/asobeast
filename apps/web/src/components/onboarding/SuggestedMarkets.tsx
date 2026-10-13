@@ -212,7 +212,7 @@ function SuggestedMarket({
         {seeding && !outcome
           ? "Seeding from its listing…"
           : outcome
-            ? outcomeText(market, outcome)
+            ? outcomeText(outcome)
             : null}
       </p>
     </div>

@@ -69,16 +69,25 @@ describe("outcomeOf", () => {
 });
 
 describe("outcomeText", () => {
+  it("names no language, because the seed reads every localization the storefront captures", () => {
+    expect(outcomeText({ kind: "seeded", seeded: 3, skipped: 0 })).toBe(
+      "Seeded 3 keywords from its listing",
+    );
+  });
+
   it.each([
     [
       { kind: "seeded", seeded: 9, skipped: 0 },
-      "Seeded 9 keywords from the German listing",
+      "Seeded 9 keywords from its listing",
     ],
     [
       { kind: "seeded", seeded: 1, skipped: 3 },
-      "Seeded 1 keyword from the German listing, 3 left out by the keyword limit",
+      "Seeded 1 keyword from its listing, 3 left out by the keyword limit",
     ],
-    [{ kind: "seeded", seeded: 0, skipped: 0 }, "Already seeded"],
+    [
+      { kind: "seeded", seeded: 0, skipped: 0 },
+      "No new keywords in its listing",
+    ],
     [
       { kind: "seeded", seeded: 0, skipped: 2 },
       "Seeded no keywords, 2 left out by the keyword limit",
@@ -92,6 +101,6 @@ describe("outcomeText", () => {
       "Refresh limit reached",
     ],
   ] as const)("words %j", (outcome, text) => {
-    expect(outcomeText(GERMANY, outcome)).toBe(text);
+    expect(outcomeText(outcome)).toBe(text);
   });
 });

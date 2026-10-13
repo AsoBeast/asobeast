@@ -312,7 +312,7 @@ test.describe("seeding suggested markets", () => {
       .click();
 
     await expect(
-      page.getByText("Seeded 2 keywords from the German listing"),
+      page.getByText("Seeded 2 keywords from its listing"),
     ).toBeVisible();
     await expect(
       page.getByText("Not published on this storefront, so it was not added"),
@@ -390,7 +390,7 @@ test.describe("seeding suggested markets", () => {
 
     await expect(
       page.getByText(
-        "Seeded 1 keyword from the German listing, 1 left out by the keyword limit",
+        "Seeded 1 keyword from its listing, 1 left out by the keyword limit",
       ),
     ).toBeVisible();
   });
