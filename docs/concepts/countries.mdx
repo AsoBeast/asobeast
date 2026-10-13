@@ -47,6 +47,8 @@ Two places show you the cost before it bites.
 
 Each market with keywords also adds one listing refresh per app and competitor to the daily run, and the budget counts them: `GET /jobs/budget` reports them as `marketListings`, a part of `apps`.
 
+A seeded market adds its keywords as daily searches like any keyword you track. The guided setup and `GET /apps/{id}/market-suggestions` show what a market would cost before you add it: the listing reads a day, for the app and each competitor, and the requests each keyword adds.
+
 When you are over budget, remove keywords or markets, or raise `SCRAPE_ITUNES_RPM` and accept the risk. See [The daily pipeline and rate limits](/concepts/pipeline).
 
 ## What is a market listing?
@@ -73,6 +75,8 @@ Sixty five App Store storefronts show their listing in English by default althou
 
 A localization the app does not have is answered by the store with the default text, so asobeast stores nothing for it. That includes a page that repeats the default title, description, screenshots and release notes and only shows its translated category where the default has a subtitle. asobeast still reads such a page every run to learn whether the app gained a localization, so it stays in the `localizations` count of `GET /jobs/budget`. Once stored, a localization is captured on every refresh, so removing it shows up as a change. An upgrade deletes the localizations that earlier versions stored from pages that only echoed the default.
 
+A market capture also reads every localization your app ships that the storefront reads besides its default, so French and Italian in Switzerland, Catalan in Spain or Spanish (Mexico) in the United States are captured once the app ships them. It stores one only when the store serves its own text, exactly as for a native localization, and the budget counts each read under `localizations`. Competitors are captured with the native localizations only, because the localizations on the list are your app's. See [Which localizations does an app ship?](#which-localizations-does-an-app-ship)
+
 The native localizations are captured with the listing they belong to: when you import an app, when you refresh a listing and in the daily run. Each one costs one more listing read, and `GET /jobs/budget` reports them as `localizations`, a part of `apps`. India reads eleven localizations, so a market there costs the most.
 
 Coverage judges a keyword within each localization, because the words of one localization combine into phrases only with each other: a keyword in the Polish title is covered even when the English title does not contain it, and the metadata page names the localization that covers it. Auto tracked keywords take phrases from every localization of the home storefront in turn, native first, up to the same limit. The keyword field you saved for a localization is judged with that localization too. Changes to a native localization are recorded in that localization only and send no alert.
@@ -97,7 +101,26 @@ The API takes the same choice as an optional `country` on `GET /apps/{id}/summar
 
 ## How do you add a market?
 
-On the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button. The first keyword you add there asks for the market's listing, so the market appears in the listing market switcher after the next job runs.
+The guided setup suggests storefronts from the languages your home listing declares, groups them by localization and lets you tick the ones to track. Each ticked storefront can be seeded with up to 15 keywords from its own title and subtitle, so the keyword monitor, the coverage check and the wasted words check have something to show on day one. A storefront whose default is the localization is ticked for seeding by default; one that reads it as an additional language is not.
+
+| You | asobeast |
+| --- | --- |
+| Tick a storefront and leave seeding off | adds it to the markets of the setup, and tracks nothing until you add a keyword there |
+| Tick a storefront and seed it | captures its listing now, tracks the title and subtitle phrases of that listing and of its native localizations as listing keywords, queues their first score and first position check and asks for the competitors' listings there |
+| Seed a storefront the app is not published in | answers that it is not published there, stores nothing and removes it from the setup |
+| Seed past the keyword limit of your plan | tracks the phrases that fit, counts the rest as left out and never refuses the request |
+
+A phrase the app already tracks in that market, active or paused, is left as it is, so seeding a market twice tracks nothing new. Seeding spends one refresh from your on demand allowance once the store is asked. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action).
+
+Later, on the keyword monitor, switch markets with the country filter, which shows the keyword count per market, then add keywords into the market you selected. A market with no keywords yet shows an empty state with an add button. The first keyword you add there asks for the market's listing, so the market appears in the listing market switcher after the next job runs.
+
+The API has the same two steps. `GET /apps/{id}/market-suggestions` lists the suggested storefronts, each with its localization, its role, whether the app already tracks keywords there and its daily cost. `POST /apps/{id}/market-seed` with a `country` seeds one market and answers `seeded`, `skipped` and a `status` that is `unavailable` when the store has no listing of the app in that storefront.
+
+### Why are storefronts suggested from languages, not availability?
+
+The store lookup reports the languages a listing ships, and asobeast knows which localization every storefront reads, so joining the two costs no store request. The store has no call that lists where an app is published: availability is one request per storefront, 175 of them on the App Store, and a storefront can carry the app with the default listing only, so availability would answer a different question. Seeding captures the listing anyway and reports a storefront without the app from that same request.
+
+English is never suggested, because every storefront reads an English localization and your home market already covers it. An app whose listing declares English only, and every Google Play app, gets no suggestions, and the setup step keeps its country code field.
 
 ## Which codes are storefronts?
 
@@ -162,6 +185,8 @@ Saving a non-empty keyword field for a localization ships it, because writing a 
 
 **Find localizations** asks the store, for each language that one of your markets reads, that is not on the list yet and that your home listing says the app supports, whether it serves that localization's text. The questions are store lookups that run behind the daily run, and each language is asked at most once a day, so a second click on the same day queues nothing. Finding localizations spends one refresh from your on demand allowance, and only when it queues at least one lookup. See [A spent on demand allowance names its action](/api-reference/rate-limits#a-spent-on-demand-allowance-names-its-action). A localization the store proves is added as detected. If you removed it, it comes back the next time you run **Find localizations**, because the store still says you ship it.
 
+asobeast also asks the store on its own. The lookups queue after the first capture of a market's listing, for the localizations that market reads, and once a week for every App Store app (`CRON_LOCALIZATION_SWEEP`, Monday 07:00 UTC, see the [configuration reference](/configuration/reference)). Neither spends your allowance, so **Find localizations** is for when you want the answer today. A detected localization you removed comes back only if the store still serves it.
+
 asobeast also records a native localization when it first captures one, which is how English storefronts such as Poland or India add their native languages without a click. See [What about storefronts that default to English?](#what-about-storefronts-that-default-to-english)
 
 What asobeast still cannot know:
@@ -187,6 +212,6 @@ Two hints on the card are diagnostics. They never change coverage, the audit or 
 - **Words read twice.** A word saved in the keyword fields of two or more localizations that this market reads spends characters twice, because search combines the words of a localization only with each other and gains nothing from the repeat. Stopwords are skipped.
 - **Split phrases.** A tracked phrase of two or more words in this market, whose words are all read by the market but sit in different localizations, cannot match as typed. The card names the localization that holds each word. The words of a localization are those of its keyword field, its title and its subtitle where asobeast captured them.
 
-asobeast reads the default listing of every storefront and the native localizations of the storefronts that default to English. It does not read the other localizations, such as Spanish (Mexico) in the United States or English (U.K.) in Germany, so it cannot tell what your listing fills there except through **Find localizations** or what you add. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+asobeast reads the default listing of every storefront, the native localizations of the storefronts that default to English and every localization on your list that a storefront reads besides its default. A localization that is not on the list, such as Spanish (Mexico) in the United States before it is detected or added, is not read, so asobeast cannot tell what your listing fills there until **Find localizations**, the weekly lookups or you add it. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
 
 Google Play has no such list. It shows the listing that matches the device language, so storefront localizations are App Store only. asobeast asks each Google Play storefront for one language; see [Where else do the stores differ?](/concepts/stores#where-else-do-the-stores-differ) for Taiwan and Hong Kong.
