@@ -94,4 +94,42 @@ export const KEYWORD_TOOLS: ReadTool[] = [
     unavailableOn404:
       "Keyword fields per localization are not available on this instance; it needs a newer asobeast API.",
   }),
+
+  defineReadTool({
+    name: "app_localizations",
+    title: "List app localizations",
+    description:
+      "The App Store localizations one app ships, the home localization first, each with its private keyword field and the markets of the app that read it. Every item carries its origin (home, manual or detected), the phrases of its keyword field in submission order, the characters used against the 100 character limit, and readBy: the app's markets whose storefront reads that localization, each with its role, default when it is the first localization of the storefront and additional otherwise. A keyword field belongs to a localization, search in every storefront on its list reads it, and the words of one localization combine into phrases only with each other. A localization no market of the app reads has an empty readBy, so its phrases are not tracked anywhere. An empty phrases list means the owner has saved no field for that localization, so coverage cannot count one. Google Play has no keyword field and answers an error.",
+    inputSchema: z.object({
+      appId: z.string().describe("The app id from list_apps."),
+    }),
+    request: ({ appId }) => ({
+      path: `/apps/${seg(appId)}/localizations`,
+    }),
+    unavailableOn404:
+      "App localizations are not available on this instance; it needs a newer asobeast API.",
+  }),
+
+  defineReadTool({
+    name: "market_keyword_fields",
+    title: "Read one market's keyword fields",
+    description:
+      "What App Store search in one market reads for one app: every localization the storefront reads, in read order, with its role (default or additional), whether the app ships it, the phrases of the keyword field saved for it and the characters used. Omit country for the home storefront. A localization with shipped false is room the storefront reads that the app does not use. wastedWords lists words saved in the keyword fields of two or more localizations this market reads, which spend characters twice, and splitPhrases lists tracked phrases whose words sit in different localizations, which search cannot combine into the phrase. Both are diagnostics and never change coverage. Google Play has no keyword field and answers an error, and so does a country that is not an App Store storefront.",
+    inputSchema: z.object({
+      appId: z.string().describe("The app id from list_apps."),
+      country: z
+        .string()
+        .regex(COUNTRY_PATTERN)
+        .optional()
+        .describe(
+          "Two-letter storefront code of the market to read. Defaults to the app's home storefront.",
+        ),
+    }),
+    request: ({ appId, country }) => ({
+      path: `/apps/${seg(appId)}/keyword-fields/market`,
+      params: { country },
+    }),
+    unavailableOn404:
+      "Market keyword fields are not available on this instance; it needs a newer asobeast API.",
+  }),
 ];
