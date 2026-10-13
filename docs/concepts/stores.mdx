@@ -37,31 +37,42 @@ Since early June 2025, ASO practitioners have reported that apps rank for words 
 
 The 100 character iOS keyword field never appears on the public store page, so no amount of collection can read it. It exists only in App Store Connect.
 
-asobeast handles this by asking you for it. Paste the field on the keywords page and asobeast stores those keywords with the source `KEYWORD_FIELD`, which lets coverage checks, the audit rubric and the Action Center reason about a surface they cannot otherwise see.
+asobeast handles this by asking you for it. Type or paste the field on the metadata page, one localization at a time, and asobeast stores those keywords with the source `KEYWORD_FIELD`, which lets coverage checks, the audit rubric and the Action Center reason about a surface they cannot otherwise see.
 
 Leaving it empty is not neutral. Coverage will report the field as uncovered because asobeast has no evidence that it contains anything.
 
 ## How do you read and write the keyword field?
 
-Each App Store localization has one field, and the endpoints take the storefront and the localization as optional query parameters. Without them they read and write the default localization of the home storefront. Both answer the same `KeywordFieldResult` shape.
+Each App Store localization has one field. The per-localization routes take the localization in the path and the markets to track in the body, and they are what the web app calls. The storefront shaped routes take the storefront and the localization as optional query parameters, and without them they read and write the default localization of the home storefront. They are unchanged. The two families store the same fields.
 
 | Operation | Endpoint |
 | --- | --- |
-| Submit a field | `PUT /apps/{id}/keyword-field?country=&localization=` |
+| List the localizations an app ships | `GET /apps/{id}/localizations` |
+| Add a localization | `POST /apps/{id}/localizations` |
+| Remove a localization | `DELETE /apps/{id}/localizations/{localization}` |
+| Find localizations in the store | `POST /apps/{id}/localizations/detect` |
+| Save a field and choose where to track it | `PUT /apps/{id}/keyword-fields/{localization}` |
+| Preview that save | `POST /apps/{id}/keyword-fields/{localization}/preview` |
+| Read what one market's search reads | `GET /apps/{id}/keyword-fields/market?country=` |
+| Submit a field for one storefront | `PUT /apps/{id}/keyword-field?country=&localization=` |
 | Read a stored field | `GET /apps/{id}/keyword-field?country=&localization=` |
 | List every stored field | `GET /apps/{id}/keyword-fields` |
 
-Seven things the schema cannot tell you.
+The two storefront shaped reads answer the `KeywordFieldResult` shape and the list answers one per localization. The new routes answer `AppLocalizationsResult`, `AppLocalizationItem`, `LocalizedKeywordFieldResult`, `KeywordFieldSavePreview`, `MarketKeywordFields` and `LocalizationDetectionResult`, all described in the API reference.
+
+Nine things the schema cannot tell you.
 
 - **The value is the saved set, not your string.** asobeast normalizes each phrase, drops the empties and removes the duplicates before it tracks anything, so `Focus Timer, POMODORO ,pomodoro` reads back as `focus timer,pomodoro`. Spacing and casing can differ from what you submitted, a repeated phrase stays where it first appeared, and the character count is the count of the normalized set. Accented letters are stored in their composed form, so `zażółć` pasted as decomposed text, which macOS copy and paste can produce, is tracked and counted the same as `zażółć` typed directly. The phrases keep the order of the latest submission. `phrases` is the whole field in that order; `tracked` is those of its phrases tracked and active in `country`.
 - **A save is held to the 100 character limit.** App Store Connect counts the keyword field in characters, so a letter such as ą and a Chinese, Japanese or Korean character each count once. The limit is measured on the normalized set, the same count `charactersUsed` reports, so spacing and duplicates in the submitted text do not count against it. A save whose normalized set runs past 100 characters answers 400 and changes nothing.
-- **It belongs to a localization, not to a market.** `localization` must be one the `country` storefront reads, or the request answers 400 naming the ones it reads; omitted, it is the storefront's default. A save tracks the phrases in `country` only. The German field saved from Austria is the same field Germany reads. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
+- **A field belongs to a localization, and you choose where its phrases are tracked.** The per-localization save takes `text` and `trackIn`, the markets in which to track every phrase of the field. `trackIn` may name only markets of the app whose storefront reads the localization, or the request answers 400 naming the country, and it may be empty, which stores the field and tracks nothing. A phrase dropped from the field stops being tracked as `KEYWORD_FIELD` in every market that reads the localization, whatever `trackIn` says, unless another field read there still holds it. The storefront shaped save keeps its old meaning: `localization` must be one the `country` storefront reads, or the request answers 400 naming the ones it reads, omitted it is the storefront's default, and the phrases are tracked in `country` only. The German field saved from Austria is the same field Germany reads. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
+- **A preview writes nothing.** `POST .../preview` takes `text` and answers, for every market of the app that reads the localization, the phrases it would add, the keyword markets it would open and the daily store requests they cost, plus the phrases that join or leave the field and your plan's keyword market quota. It creates no keyword, spends no on demand allowance and works with a read only token. It answers the same 400 a save would for invalid input.
+- **A save records the localization as shipped.** Both save routes add a non-empty field's localization to the list `GET /apps/{id}/localizations` reads. See [Which localizations does an app ship?](/concepts/countries#which-localizations-does-an-app-ship)
 - **`duplicatesRemoved` is 0 on a read.** It reports what the last submission discarded, and a read submits nothing.
 - **A save never untracks a keyword something else tracks.** A phrase already tracked from the title, the subtitle, the short description or a manual add joins the field without losing that source, and the API reports it as `KEYWORD_FIELD` while it is in the field. A later save that leaves it out only takes it out of the field, so it stays tracked under its own source. A phrase that only a field tracks is deactivated, in every market that reads the localization, when a save leaves it out and no other field read there holds it. Adding such a phrase manually or reactivating it makes it a manual keyword, and a snapshot that finds it in the title, subtitle or short description gives it that source.
 - **Untracking a keyword leaves the field alone.** The field is what you submitted in App Store Connect, so `DELETE /apps/{id}/keywords/{keywordId}` stops tracking the phrase in that market and keeps it in `phrases`, and `charactersUsed` still counts it.
 - **The last save wins.** Saves to one app are written one at a time, so two saves that overlap never merge: the field holds the phrases of whichever save was written last. Each save answers with the field as it was stored when that save finished, so a save that overlapped another may be answered with the other save's phrases.
 
-A localization that has no saved field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A Google Play app refuses both operations with 400.
+A localization that has no saved field reads as an empty result with 0 characters used rather than a 404, because an empty field is a normal state. A localization tag outside the 50 answers 400 naming it. Removing a localization that is not on the list answers 404, and removing the home localization answers 409. A Google Play app refuses every operation on this page with 400.
 
 ## Why is the Google Play short description its indexed surface?
 

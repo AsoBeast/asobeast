@@ -1,6 +1,6 @@
 ---
 title: Track keywords
-description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, paste the private iOS keyword field by hand, and know what every added market costs in daily store requests."
+description: "Add keywords per storefront on the keyword monitor, import a list from a CSV file, see which keyword fields each market reads, and know what every added market costs in daily store requests."
 icon: key
 keywords: ["keywords","keyword monitor","market","keyword field","suggestions","bulk","budget","import","CSV","spreadsheet","tags"]
 ---
@@ -96,25 +96,29 @@ The dialog sends JSON rows, so a script can do the same: `POST /apps/{id}/keywor
 
 Both answers carry the same fields. `summary` and `results` describe the plan, row by row. On the import, `imported` counts the keywords that request actually tracked or resumed, which is lower than `new` plus `resume` only when another request tracked some of the same keywords in between. `quota.used` counts the keyword markets in use when the answer was made, so after an import it already includes the rows just tracked.
 
-## Paste the iOS keyword field
+## See what each market reads
 
-The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. Paste it yourself, once for each localization you filled in App Store Connect.
+The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. You type it on the metadata page, once for each localization your app ships. See [Edit the iOS keyword field](/guides/metadata-workbench#edit-the-ios-keyword-field).
+
+The keywords page only reports. Its last card shows what the market you selected reads.
 
 <Steps>
-  <Step title="Open the market">
-    On the keywords page, choose the market whose storefront reads the localization. The keyword field card is at the bottom.
+  <Step title="Choose the market">
+    Pick a market in the country filter. The card is named after it, for example **What US search reads**, and its header counts the unique words in the fields that market reads.
   </Step>
-  <Step title="Choose the localization">
-    The **Localization** menu lists what that storefront reads, default first, and marks the ones you saved. The URL keeps the choice as `?fieldLocale=`.
+  <Step title="Read the rows">
+    Each row is a localization your app ships and that storefront reads, default first, with its role, **Default** or **Additional**, and the characters its field uses of 100. An empty field says **Empty**.
   </Step>
-  <Step title="Paste the field and save">
-    asobeast splits it, tracks the keywords in that market with the source `KEYWORD_FIELD` and lints the field against its 100 character limit. The card names the other markets of the app that read the same field, and the phrases not tracked in the market on screen.
+  <Step title="Edit where it belongs">
+    **Edit** opens that localization's editor on the metadata page. The card also folds the localizations the storefront reads that your app does not ship into a line you can open, with a link to add one.
   </Step>
 </Steps>
 
-The keyword field is App Store only. Google Play has no keyword field. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
+Below the rows, the card warns about words read twice and phrases split across localizations. They are hints about where characters are wasted and never change coverage. See [What does a market read?](/concepts/countries#what-does-a-market-read)
 
-Leaving it empty makes coverage report the field as uncovered, because asobeast has no evidence about what is in it.
+A link to the keywords page that still carries `?fieldLocale=` opens the page as usual and the parameter does nothing there. The metadata page uses it to open an editor.
+
+The keyword field is App Store only. Google Play has no keyword field, so the card does not appear for a Play app. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
 
 ## Get keyword suggestions
 
