@@ -429,6 +429,12 @@ describe("the save review", () => {
       "1 phrase leaves the field and stops being tracked as a keyword field phrase in United States and Mexico",
     );
     expect(droppedSentence(preview({ markets: [US, MX] }))).toBeNull();
+    expect(droppedSentence(preview({ dropped: ["a", "b"], markets: [] }))).toBe(
+      "2 phrases leave the field",
+    );
+    expect(droppedSentence(preview({ dropped: ["a"], markets: [] }))).toBe(
+      "1 phrase leaves the field",
+    );
   });
 });
 
