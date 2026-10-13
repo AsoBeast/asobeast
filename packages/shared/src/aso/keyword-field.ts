@@ -1,5 +1,5 @@
 import { normalizeText } from '../text';
-import { countChars, KEYWORD_FIELD_BYTE_LIMIT, utf8ByteLength } from './limits';
+import { countChars, KEYWORD_FIELD_CHAR_LIMIT, utf8ByteLength } from './limits';
 
 export interface ParsedKeywordField {
   phrases: string[];
@@ -26,7 +26,7 @@ export function keywordFieldBytes(phrases: readonly string[]): number {
 export function packKeywordField(phrases: readonly string[]): string[] {
   const packed: string[] = [];
   for (const phrase of phrases) {
-    if (keywordFieldBytes([...packed, phrase]) <= KEYWORD_FIELD_BYTE_LIMIT) {
+    if (keywordFieldChars([...packed, phrase]) <= KEYWORD_FIELD_CHAR_LIMIT) {
       packed.push(phrase);
     }
   }

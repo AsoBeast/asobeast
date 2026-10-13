@@ -1,6 +1,6 @@
 import {
   KeywordAddUncoveredEvidence,
-  KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_FIELD_CHAR_LIMIT,
   KeywordCoverageRow,
   MetadataField,
   MetadataFieldAudit,
@@ -38,7 +38,7 @@ function keywordFieldCharsFree(fields: MetadataFieldAudit[]): number | null {
     return Math.max(0, declared.limit - declared.chars);
   }
   return fields.some((field) => field.field === 'subtitle')
-    ? KEYWORD_FIELD_BYTE_LIMIT
+    ? KEYWORD_FIELD_CHAR_LIMIT
     : null;
 }
 

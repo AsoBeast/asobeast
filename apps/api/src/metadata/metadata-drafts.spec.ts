@@ -1,10 +1,9 @@
 import { Store } from '@prisma/client';
 import {
-  KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_FIELD_CHAR_LIMIT,
   LintContext,
   MetadataAuditResult,
   TrackedKeywordItem,
-  utf8ByteLength,
 } from '@asobeast/shared';
 import {
   buildAssistantContext,
@@ -110,14 +109,28 @@ describe('validateDrafts', () => {
     expect(Array.isArray(title?.issues)).toBe(true);
   });
 
-  it('trims a keyword field draft to whole phrases within 100 bytes', () => {
+  it('keeps a Polish keyword field draft that fits 100 characters whole', () => {
+    const value =
+      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
+    const [draft] = validateDrafts(
+      { drafts: [{ field: 'keywordField', value, rationale: 'r' }] },
+      Store.APP_STORE,
+      ['keywordField'],
+      EMPTY_CONTEXT,
+    );
+
+    expect(draft.value).toBe(value);
+    expect(draft.chars).toBe(83);
+    expect(draft.limit).toBe(KEYWORD_FIELD_CHAR_LIMIT);
+  });
+
+  it('trims a keyword field draft to whole phrases within 100 characters', () => {
     const [draft] = validateDrafts(
       {
         drafts: [
           {
             field: 'keywordField',
-            value:
-              'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć',
+            value: `${'ą'.repeat(60)},${'ę'.repeat(40)},ab`,
             rationale: 'r',
           },
         ],
@@ -127,11 +140,8 @@ describe('validateDrafts', () => {
       EMPTY_CONTEXT,
     );
 
-    expect(draft.value).toBe(
-      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba',
-    );
-    expect(draft.chars).toBe(utf8ByteLength(draft.value));
-    expect(draft.chars).toBeLessThanOrEqual(KEYWORD_FIELD_BYTE_LIMIT);
+    expect(draft.value).toBe(`${'ą'.repeat(60)},ab`);
+    expect(draft.chars).toBe(63);
   });
 
   it('measures a decomposed keyword field draft once it is composed', () => {
@@ -151,7 +161,7 @@ describe('validateDrafts', () => {
     );
 
     expect(draft.value).toBe(`${'á'.repeat(34)},été`);
-    expect(draft.chars).toBe(utf8ByteLength(draft.value));
+    expect(draft.chars).toBe(38);
   });
 
   it('tolerates junk without throwing', () => {
@@ -176,27 +186,18 @@ describe('validateDrafts', () => {
     ).toEqual([]);
   });
 
-  it('packs a chinese keyword field draft into whole phrases within 100 bytes', () => {
+  it('keeps a chinese keyword field draft that fits 100 characters whole', () => {
+    const value =
+      '番茄钟,专注计时,学习计时器,工作效率,待办清单,习惯养成,冥想,睡眠,阅读,运动记录,番茄工作法';
     const [draft] = validateDrafts(
-      {
-        drafts: [
-          {
-            field: 'keywordField',
-            value:
-              '番茄钟,专注计时,学习计时器,工作效率,待办清单,习惯养成,冥想,睡眠,阅读,运动记录,番茄工作法',
-            rationale: 'r',
-          },
-        ],
-      },
+      { drafts: [{ field: 'keywordField', value, rationale: 'r' }] },
       Store.APP_STORE,
       ['keywordField'],
       EMPTY_CONTEXT,
     );
 
-    expect(draft.value).toBe(
-      '番茄钟,专注计时,学习计时器,工作效率,待办清单,习惯养成,冥想,睡眠,阅读',
-    );
-    expect(draft.chars).toBe(98);
+    expect(draft.value).toBe(value);
+    expect(draft.chars).toBe(49);
   });
 });
 

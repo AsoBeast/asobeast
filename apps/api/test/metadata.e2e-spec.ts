@@ -7,10 +7,9 @@ import {
   ApiErrorEnvelope,
   MetadataAssistantResult,
   MetadataAssistantStatus,
-  KEYWORD_FIELD_BYTE_LIMIT,
+  KEYWORD_FIELD_CHAR_LIMIT,
   MetadataAuditResult,
   TrackedKeywordItem,
-  utf8ByteLength,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -252,7 +251,7 @@ describe('MetadataController (e2e)', () => {
     expect(suggestion?.addedTerms).toContain('daily goal');
   });
 
-  it('packs the keyword field suggestion within 100 bytes', async () => {
+  it('packs every polish keyword that fits the 100 character suggestion', async () => {
     const id = await seed(false);
     const polish = [
       'zażółć',
@@ -289,12 +288,13 @@ describe('MetadataController (e2e)', () => {
       .keywordFieldSuggestion;
 
     const value = suggestion?.value ?? '';
-    expect(suggestion?.addedTerms.length).toBeGreaterThan(2);
-    expect(utf8ByteLength(value)).toBeLessThanOrEqual(KEYWORD_FIELD_BYTE_LIMIT);
-    expect(suggestion?.charactersUsed).toBe(utf8ByteLength(value));
+    expect(suggestion?.addedTerms).toHaveLength(15);
+    expect(value.length).toBeLessThanOrEqual(KEYWORD_FIELD_CHAR_LIMIT);
+    expect(suggestion?.charactersUsed).toBe(value.length);
+    expect(suggestion?.charactersLimit).toBe(KEYWORD_FIELD_CHAR_LIMIT);
   });
 
-  it('counts a pasted keyword field in bytes', async () => {
+  it('counts a pasted keyword field in characters', async () => {
     const id = await seed(false);
     const keyword = await prisma.keyword.create({
       data: { text: 'zażółć', store: Store.APP_STORE, country: 'us' },
@@ -315,7 +315,7 @@ describe('MetadataController (e2e)', () => {
     );
 
     expect(keywordField?.value).toBe('zażółć');
-    expect(keywordField?.chars).toBe(10);
+    expect(keywordField?.chars).toBe(6);
   });
 
   it('includes the keyword field when it has been pasted', async () => {
