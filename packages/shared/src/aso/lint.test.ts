@@ -8,7 +8,6 @@ import {
   lintTitle,
   LintIssue,
 } from './lint';
-import { utf8ByteLength } from './limits';
 
 const rules = (issues: LintIssue[]): string[] =>
   issues.map((issue) => issue.rule);
@@ -235,22 +234,42 @@ describe('lintKeywordField', () => {
     );
   });
 
-  it('refuses a field that fits 100 characters but not 100 bytes', () => {
-    const field =
-      'zażółć,gęślą,jaźń,łódź,źrebię,ćma,żółw,świeca,mąka,ślimak,pączek,żaba,źdźbło,ćwierć';
-
-    expect(field.length).toBe(83);
-    expect(utf8ByteLength(field)).toBe(111);
-    expect(rules(lintKeywordField(field))).toContain('over-limit');
+  it.each([
+    [
+      'English (U.K.)',
+      'guesser,guess,geoguesser,geoguessr,location,country,city,explorer,travel,learn,geo,challenge,flag',
+    ],
+    [
+      'French',
+      'guesser,geoguesser,guess,geography,géographie,capitales,country,geo,world,deviner,villes,voyage,lieu',
+    ],
+    [
+      'German',
+      'guesser,guess,geoguesser,geo,challenge,country,world,ratespiel,länder,hauptstädte,geografie,raten',
+    ],
+    [
+      'Polish',
+      'geoguessr,geoguess,zgadywanka,stolice,miasto,lokalizacja,państwo,podróże,zabytki,odkrywca,kontynenty',
+    ],
+    [
+      'Turkish',
+      'trivia,guess,country,geoguessr,geo,harita,dünya,ülke,şehir,tahmin,başkent,konum,seyahat,kaşif,bilgi',
+    ],
+  ])('accepts the %s field App Store Connect saved', (_language, field) => {
+    expect(field.length).toBeLessThanOrEqual(100);
+    expect(rules(lintKeywordField(field))).not.toContain('over-limit');
   });
 
-  it('accepts a field of exactly 100 bytes and refuses 101', () => {
-    const exact = `${'a'.repeat(98)}ą`;
-    const over = `${'a'.repeat(99)}ą`;
-
-    expect(utf8ByteLength(exact)).toBe(100);
-    expect(rules(lintKeywordField(exact))).not.toContain('over-limit');
-    expect(rules(lintKeywordField(over))).toContain('over-limit');
+  it('accepts an accented field of exactly 100 characters and refuses 101', () => {
+    expect(rules(lintKeywordField('ą'.repeat(100)))).not.toContain(
+      'over-limit',
+    );
+    expect(lintKeywordField('ą'.repeat(101))).toContainEqual(
+      expect.objectContaining({
+        rule: 'over-limit',
+        message: 'Exceeds the 100 character limit (101).',
+      }),
+    );
   });
 
   it('flags keywords of two characters or fewer', () => {
