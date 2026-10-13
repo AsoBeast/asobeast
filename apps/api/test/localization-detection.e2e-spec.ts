@@ -15,7 +15,7 @@ import {
   QUEUES,
   RefreshAppPayload,
 } from '../src/jobs/jobs.types';
-import { LocalizationSweep } from '../src/apps/localization-sweep.service';
+import { LocalizationSweep } from '../src/jobs/localization-sweep.service';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {

@@ -45,7 +45,7 @@ import { PipelineService } from './pipeline.service';
 import { reportQueueError } from './queue-error-reporter';
 import { registerInBackground } from './schedule-registration';
 import { AccountDeletionService } from '../account/account-deletion.service';
-import { LocalizationSweep } from '../apps/localization-sweep.service';
+import { LocalizationSweep } from './localization-sweep.service';
 import { RetentionService } from './retention.service';
 
 @Processor(QUEUES.PIPELINE)

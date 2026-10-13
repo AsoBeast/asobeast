@@ -4,8 +4,9 @@ import {
   WorkspaceFanOut,
   workspaceFailure,
 } from '../common/tenancy/workspace-fanout';
+import { LocalizationDetection } from '../apps/localization-detection.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { LocalizationDetection } from './localization-detection.service';
+import { ActiveWorkspaces } from './active-workspaces';
 
 const reason = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
@@ -18,11 +19,12 @@ export class LocalizationSweep {
     private readonly prisma: PrismaService,
     private readonly detection: LocalizationDetection,
     private readonly fanOut: WorkspaceFanOut,
+    private readonly active: ActiveWorkspaces,
   ) {}
 
   async run(): Promise<number> {
-    const { results, failures } = await this.fanOut.each(
-      'the weekly localization sweep covers every workspace',
+    const { results, failures } = await this.fanOut.eachOf(
+      await this.active.forDailyRun(),
       () => this.sweepWorkspace(),
     );
     const failure = workspaceFailure(failures, 'failed its localization sweep');
