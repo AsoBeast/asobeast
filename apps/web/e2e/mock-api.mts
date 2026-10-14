@@ -1651,10 +1651,28 @@ function runStatusFor(req: IncomingMessage): WorkspaceRunStatus {
 const FIRST_RUN_FAIL_COOKIE = "e2e_first_run_fail";
 const FIRST_RUN_LATENCY_COOKIE = "e2e_first_run_latency";
 
-function firstRunFor(appId: string): FirstRunStatus {
+const HISTORY_DAYS_COOKIE = "e2e_history_days";
+
+function withHistoryDays(
+  status: FirstRunStatus,
+  req: IncomingMessage,
+): FirstRunStatus {
+  const days = cookieValue(req, HISTORY_DAYS_COOKIE);
+  if (days === undefined) return status;
+  return {
+    ...status,
+    stages: status.stages.map((row) =>
+      row.stage === "history"
+        ? { ...row, ready: Number(days), complete: false }
+        : row,
+    ),
+  };
+}
+
+function firstRunFor(appId: string, req: IncomingMessage): FirstRunStatus {
   if (appId === "app-new") return FIRST_RUN_MID;
   if (appId === "app-2") return FIRST_RUN_UNSCHEDULED;
-  return { ...FIRST_RUN_COMPLETE, appId };
+  return withHistoryDays({ ...FIRST_RUN_COMPLETE, appId }, req);
 }
 
 const API_LATENCY_COOKIE = "e2e_api_latency";
@@ -1935,7 +1953,7 @@ const routes: Route[] = [
       if (hasCookie(req, FIRST_RUN_FAIL_COOKIE, "1")) {
         return json(res, 500, errorEnvelope(500, req.url ?? "/"));
       }
-      json(res, 200, firstRunFor(params[0]));
+      json(res, 200, firstRunFor(params[0], req));
     },
   },
   {
@@ -2178,7 +2196,8 @@ const routes: Route[] = [
   {
     method: "GET",
     pattern: /^\/alerts\/config$/,
-    handler: (_p, _q, res) => json(res, 200, { emailEnabled: true }),
+    handler: (_p, req, res) =>
+      json(res, 200, { emailEnabled: !hasCookie(req, "e2e_smtp_off", "1") }),
   },
   {
     method: "GET",

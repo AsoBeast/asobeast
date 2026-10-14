@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { WebhookEvent } from "@asobeast/shared";
@@ -13,7 +13,7 @@ import { useSingleFlight } from "@/lib/single-flight";
 import { EventSelection } from "./alert-events";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 
-export function AddWebhookDialog() {
+export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
@@ -80,6 +80,7 @@ export function AddWebhookDialog() {
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
+      trigger={trigger}
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="webhook-url">Endpoint URL</Label>

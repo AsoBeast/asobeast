@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { WebhookEvent } from "@asobeast/shared";
@@ -14,7 +14,7 @@ import { EventSelection } from "./alert-events";
 import { AlertChannelDialog } from "./alert-channel/AlertChannelDialog";
 import { awaitsConfirmation, recipientToast } from "./email-alert-recipient";
 
-export function AddEmailAlertDialog() {
+export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -77,6 +77,7 @@ export function AddEmailAlertDialog() {
       error={error}
       pending={mutation.isPending}
       onSubmit={submit}
+      trigger={trigger}
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor="email-alert-address">Recipient email</Label>
