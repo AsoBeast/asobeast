@@ -57,7 +57,7 @@ export class LocalizedListingCapture {
     const shipped =
       app.isCompetitor || readLocalizations(market).length < 2
         ? []
-        : await shippedLocalizations(this.prisma, app.id);
+        : await shippedLocalizations(this.prisma, app);
     const changes: SnapshotChange[] = [];
     for (const localization of capturedLocalizations(market, shipped)) {
       try {
