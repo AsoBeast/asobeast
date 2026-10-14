@@ -23,6 +23,7 @@ import {
   keywordFieldDraft,
   localizationMatrix,
   localizationsSectionHref,
+  ownsKeywordFields,
   suggestedHint,
   openLocalization,
   readingStorefrontNames,
@@ -675,6 +676,17 @@ describe("what a market reads", () => {
     expect(hasMarketReads("us", "pl")).toBe(true);
     expect(hasMarketReads("us", "zz")).toBe(false);
     expect(hasMarketReads("uk", "uk")).toBe(true);
+  });
+
+  it("W-MKT-05 asks about localizations only for a primary App Store app", () => {
+    expect(ownsKeywordFields({ store: "APP_STORE" })).toBe(true);
+    expect(ownsKeywordFields({ store: "APP_STORE", isCompetitor: false })).toBe(
+      true,
+    );
+    expect(ownsKeywordFields({ store: "APP_STORE", isCompetitor: true })).toBe(
+      false,
+    );
+    expect(ownsKeywordFields({ store: "GOOGLE_PLAY" })).toBe(false);
   });
 
   it("W-LNK-02 links to the localizations section of the metadata page", () => {

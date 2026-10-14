@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
-import { APP_READS_ID, type LocalizationSeed } from "./fixtures.mts";
+import {
+  APP_READS_ID,
+  APP_RIVAL_ID,
+  type LocalizationSeed,
+} from "./fixtures.mts";
 import {
   fieldRequests,
   localizationItem,
@@ -182,6 +186,24 @@ test.describe("on the read lab", () => {
     ).toBeVisible();
     await expect(page.getByRole("region", { name: /^What / })).toHaveCount(0);
     expect(await fieldRequests(page.request, "app-gp")).toEqual([]);
+    expect(requested).toEqual([]);
+  });
+
+  test("a competitor app has no card and asks for nothing", async ({
+    page,
+  }) => {
+    const requested: string[] = [];
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (pathname.includes("/keyword-fields")) requested.push(pathname);
+    });
+    await page.goto(`/apps/${APP_RIVAL_ID}/keywords`);
+
+    await expect(
+      page.getByRole("heading", { name: "Tracked keywords" }),
+    ).toBeVisible();
+    await expect(page.getByRole("region", { name: /^What / })).toHaveCount(0);
+    expect(await fieldRequests(page.request, APP_RIVAL_ID)).toEqual([]);
     expect(requested).toEqual([]);
   });
 

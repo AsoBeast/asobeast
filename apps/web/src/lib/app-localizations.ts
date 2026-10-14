@@ -9,6 +9,7 @@ import {
   tokenize,
   parseKeywordField,
   storefrontsReading,
+  type AppDetail,
   type AppLocalizationItem,
   type AppLocalizationOrigin,
   type AppLocalizationsResult,
@@ -146,6 +147,12 @@ export function unshippedReads(
   reads: readonly MarketLocalizationRead[],
 ): MarketLocalizationRead[] {
   return reads.filter((read) => !read.shipped);
+}
+
+export function ownsKeywordFields(
+  app: Pick<AppDetail, "store" | "isCompetitor">,
+): boolean {
+  return app.store === "APP_STORE" && app.isCompetitor !== true;
 }
 
 export function hasMarketReads(home: string, market: string): boolean {

@@ -2104,6 +2104,7 @@ export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
 export const APP_LOCALES_ID = "app-locales";
 export const APP_SUGGESTED_LOCALES_ID = "app-suggested-locales";
+export const APP_RIVAL_ID = "app-rival";
 
 export interface LocalizationSeed {
   markets?: string[];
@@ -2132,6 +2133,11 @@ DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
   APP_SUGGESTED_LOCALES_ID,
   "Market Lab",
 );
+const rivalDataset = localesDataset(APP_RIVAL_ID, "Rival Lab");
+DATASETS[APP_RIVAL_ID] = {
+  ...rivalDataset,
+  detail: { ...rivalDataset.detail, isCompetitor: true },
+};
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
@@ -3967,6 +3973,7 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
 METADATA_AUDITS[APP_SUGGESTED_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

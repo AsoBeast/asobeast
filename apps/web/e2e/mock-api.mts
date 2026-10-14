@@ -1192,6 +1192,18 @@ function fieldAppFor(
   logFieldRequest(id, req);
   const dataset = keywordFieldDataset(id, req, res);
   if (!dataset) return undefined;
+  if (dataset.detail.isCompetitor) {
+    json(
+      res,
+      400,
+      errorEnvelope(
+        400,
+        req.url ?? "/",
+        "A competitor app has no localizations or keyword fields; use its primary app",
+      ),
+    );
+    return undefined;
+  }
   if (localization === undefined) return { dataset, tag: undefined };
   if (!isAppStoreLocalization(localization)) {
     json(

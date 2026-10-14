@@ -1,6 +1,6 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { KeywordsWorkspace } from "@/components/keywords/KeywordsWorkspace";
-import { hasMarketReads } from "@/lib/app-localizations";
+import { hasMarketReads, ownsKeywordFields } from "@/lib/app-localizations";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
@@ -43,7 +43,8 @@ export default async function KeywordsPage({
       ? queryClient.prefetchQuery(keywordFieldOptions(id))
       : null,
   ]);
-  if (isAppStore && hasMarketReads(app.country, market)) {
+  const keywordFields = ownsKeywordFields(app);
+  if (keywordFields && hasMarketReads(app.country, market)) {
     void queryClient.prefetchQuery(marketKeywordFieldsOptions(id, market));
   }
 
@@ -54,6 +55,7 @@ export default async function KeywordsPage({
           id={id}
           homeCountry={app.country}
           store={app.store}
+          keywordFields={keywordFields}
         />
       </div>
     </HydrationBoundary>

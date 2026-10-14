@@ -20,10 +20,12 @@ export function MetadataAuditView({
   id,
   canDraft,
   hasLocalizations,
+  keywordFields,
 }: {
   id: string;
   canDraft: boolean;
   hasLocalizations: boolean;
+  keywordFields: boolean;
 }) {
   const { market, home } = useMarket(id);
   const localization = useLocalization(id).localization ?? undefined;
@@ -55,7 +57,7 @@ export function MetadataAuditView({
         </Suspense>
       ) : null}
 
-      {result.store === "APP_STORE" ? (
+      {keywordFields ? (
         <AppLocalizationsSection
           id={id}
           canDraft={canDraft && market === home}
