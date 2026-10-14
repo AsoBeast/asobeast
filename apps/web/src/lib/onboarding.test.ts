@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeKeywordCount,
   beginOnboarding,
   canCompleteOnboarding,
   claimBrowserOnboarding,
@@ -192,6 +193,25 @@ describe("transitions", () => {
       true,
     );
     expect(setCountriesReviewed(started()).countriesReviewed).toBe(true);
+  });
+
+  it("leaves countries unreviewed when a choice changes nothing", () => {
+    expect(setMarketSelected(started(), "us", true).countriesReviewed).toBe(
+      false,
+    );
+    expect(setMarketSelected(started(), "us", false).countriesReviewed).toBe(
+      false,
+    );
+  });
+
+  it("counts only active keywords", () => {
+    expect(
+      activeKeywordCount([
+        { active: true },
+        { active: false },
+        { active: true },
+      ]),
+    ).toBe(2);
   });
 
   it("dismisses and freezes terminal records", () => {

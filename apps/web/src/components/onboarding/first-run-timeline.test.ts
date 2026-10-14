@@ -12,6 +12,7 @@ import {
   listingSettled,
   rankingsAdvanced,
   rankingsCollecting,
+  rankingsTracked,
 } from "./first-run-timeline";
 
 const NOW = new Date("2026-08-10T09:00:00Z").getTime();
@@ -243,6 +244,15 @@ describe("rankingsAdvanced", () => {
   it("stays quiet without both answers", () => {
     expect(rankingsAdvanced(undefined, ranked(5))).toBe(false);
     expect(rankingsAdvanced(ranked(3), undefined)).toBe(false);
+  });
+
+  it("knows whether any keyword expects a position", () => {
+    expect(rankingsTracked(ranked(3))).toBe(true);
+    expect(
+      rankingsTracked(
+        statusOf([stage("rankings", { ready: 0, total: 0, complete: true })]),
+      ),
+    ).toBe(false);
   });
 
   it("reports collection only while the rankings stage is incomplete", () => {

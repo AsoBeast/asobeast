@@ -14,6 +14,7 @@ import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
 import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
 import { formatCountry, formatList } from "@/lib/format";
 import {
+  activeKeywordCount,
   SETUP_KEYWORD_TARGET,
   stepLabel,
   type SetupStep,
@@ -114,7 +115,12 @@ function SkipAction({ step, state, onSkip }: StepProps & { step: SetupStep }) {
 const competitorName = (competitor: CompetitorItem): string =>
   competitor.name ?? competitor.latestSnapshot?.title ?? "Unnamed app";
 
-function trackedCompetitorsLine(competitors: CompetitorItem[]): string {
+function competitorsLine(
+  competitors: CompetitorItem[] | null,
+  error: boolean,
+): string {
+  if (error) return "Competitor count is temporarily unavailable.";
+  if (competitors === null) return "Loading competitors…";
   if (competitors.length === 0) return "No competitor yet";
   return `${competitors.length} tracked: ${formatList(competitors.map(competitorName))}`;
 }
@@ -141,11 +147,7 @@ export function CompetitorsStep({
         <AddCompetitorForm id={appId} />
       </Suspense>
       <p className="text-sm text-muted-foreground">
-        {error
-          ? "Competitor count is temporarily unavailable."
-          : competitors === null
-            ? "Loading competitors…"
-            : trackedCompetitorsLine(competitors)}
+        {competitorsLine(competitors, error)}
       </p>
       <DiscoveredApps appId={appId} collecting={collecting} />
       <Button asChild variant="link" className="h-auto w-fit px-0">
@@ -168,7 +170,7 @@ function homeKeywordsLine(
 ): string {
   if (error) return "Keywords are temporarily unavailable.";
   if (tracked === null) return "Loading keywords…";
-  const active = tracked.filter((keyword) => keyword.active).length;
+  const active = activeKeywordCount(tracked);
   const market = formatCountry(homeMarket);
   return active > SETUP_KEYWORD_TARGET
     ? `${active} tracked in ${market}`

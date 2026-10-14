@@ -1,5 +1,6 @@
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import { pluralize } from "@/lib/format";
+import { activeKeywordCount } from "@/lib/onboarding";
 
 export const FIRST_POSITIONS_LIMIT = 8;
 
@@ -38,17 +39,12 @@ function checkedRows(
     .sort(byPosition);
 }
 
-export function firstPositionRows(
-  keywords: readonly TrackedKeywordItem[],
-): FirstPositionRow[] {
-  return checkedRows(keywords).slice(0, FIRST_POSITIONS_LIMIT);
+export interface FirstPositions {
+  headline: string;
+  rows: FirstPositionRow[];
 }
 
-export function firstPositionsHeadline(
-  keywords: readonly TrackedKeywordItem[],
-): string {
-  const tracked = keywords.filter((keyword) => keyword.active).length;
-  const checked = checkedRows(keywords);
+function headlineOf(checked: FirstPositionRow[], tracked: number): string {
   const best = checked[0];
   if (!best) {
     return `Positions are being collected for ${pluralize(tracked, "keyword")}.`;
@@ -56,7 +52,18 @@ export function firstPositionsHeadline(
   if (best.position !== null) {
     return `Your app ranks #${best.position} for “${best.text}”.`;
   }
-  return `Checked ${checked.length} of ${pluralize(tracked, "keyword")}, none in the top ${best.depth} yet.`;
+  const depth = Math.min(...checked.map((row) => row.depth));
+  return `Checked ${checked.length} of ${pluralize(tracked, "keyword")}, none in the top ${depth} yet.`;
+}
+
+export function firstPositions(
+  keywords: readonly TrackedKeywordItem[],
+): FirstPositions {
+  const checked = checkedRows(keywords);
+  return {
+    headline: headlineOf(checked, activeKeywordCount(keywords)),
+    rows: checked.slice(0, FIRST_POSITIONS_LIMIT),
+  };
 }
 
 export function positionLabel(row: FirstPositionRow): string {

@@ -30,7 +30,6 @@ export function OnboardingBanner() {
   if (state.status !== "in_progress" || !state.appId) return null;
 
   const app = data.apps.find((item) => item.id === state.appId);
-  if (!app) return null;
 
   return (
     <Alert
@@ -39,17 +38,23 @@ export function OnboardingBanner() {
     >
       <ListChecks />
       <AlertDescription className="flex flex-col gap-2">
-        <BannerProgress
-          appId={app.id}
-          country={app.country}
-          name={app.name}
-          state={state}
-        />
+        {app ? (
+          <BannerProgress
+            appId={app.id}
+            country={app.country}
+            name={app.name}
+            state={state}
+          />
+        ) : (
+          <span>{setupSentence(null)}</span>
+        )}
       </AlertDescription>
       <div className="col-span-full flex flex-wrap gap-2 sm:col-span-1 sm:col-start-3 sm:row-span-2">
-        <Button asChild size="sm">
-          <Link href={`/apps/${state.appId}/setup`}>Resume setup</Link>
-        </Button>
+        {app ? (
+          <Button asChild size="sm">
+            <Link href={`/apps/${app.id}/setup`}>Resume setup</Link>
+          </Button>
+        ) : null}
         <Button
           size="sm"
           variant="ghost"

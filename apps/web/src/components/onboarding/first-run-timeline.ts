@@ -117,6 +117,9 @@ export function listingSettled(
 const rankingsStage = (status: FirstRunStatus) =>
   status.stages.find((row) => row.stage === "rankings");
 
+export const rankingsTracked = (status: FirstRunStatus): boolean =>
+  (rankingsStage(status)?.total ?? 0) > 0;
+
 export const rankingsCollecting = (status: FirstRunStatus | undefined) =>
   status ? rankingsStage(status)?.complete === false : false;
 

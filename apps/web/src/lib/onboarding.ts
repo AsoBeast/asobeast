@@ -20,6 +20,10 @@ export type SetupCounts = Record<CountedStep, number | null>;
 
 export type StepState = "done" | "skipped" | "open" | "loading";
 
+export const activeKeywordCount = (
+  keywords: readonly { active: boolean }[],
+): number => keywords.filter((keyword) => keyword.active).length;
+
 export interface StepProgress {
   done: number;
   total: number;
@@ -312,7 +316,8 @@ export function setMarketSelected(
   return {
     ...state,
     selectedMarkets: [...markets].sort(),
-    countriesReviewed: true,
+    countriesReviewed:
+      state.countriesReviewed || markets.size !== state.selectedMarkets.length,
   };
 }
 

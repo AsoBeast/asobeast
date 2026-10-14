@@ -3,7 +3,6 @@
 import { useEffect, useId, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
-import type { FirstRunStatus } from "@asobeast/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -18,6 +17,7 @@ import {
   firstRunRows,
   listingSettled,
   rankingsAdvanced,
+  rankingsTracked,
   type FirstRunRow,
 } from "./first-run-timeline";
 
@@ -48,9 +48,6 @@ function StageRow({ row }: { row: FirstRunRow }) {
     </li>
   );
 }
-
-const tracksKeywords = (status: FirstRunStatus): boolean =>
-  status.stages.some((row) => row.stage === "rankings" && row.total > 0);
 
 export function FirstRunTimeline({ id }: { id: string }) {
   const headingId = useId();
@@ -90,7 +87,7 @@ export function FirstRunTimeline({ id }: { id: string }) {
             <StageRow key={row.stage} row={row} />
           ))}
         </ul>
-        {app && tracksKeywords(data) ? (
+        {app && rankingsTracked(data) ? (
           <>
             <Separator />
             <FirstPositions id={id} country={app.country} />

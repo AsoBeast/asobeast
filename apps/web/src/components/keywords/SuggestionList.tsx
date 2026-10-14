@@ -48,14 +48,32 @@ export type SuggestionAction =
       onToggle: (text: string, selected: boolean) => void;
     };
 
+export type SuggestionListState =
+  | { status: "pending" }
+  | { status: "error"; error: unknown }
+  | { status: "ready"; suggestions: KeywordSuggestion[] };
+
+export function suggestionListState(query: {
+  isPending: boolean;
+  isError: boolean;
+  error: unknown;
+  data: KeywordSuggestion[] | undefined;
+}): SuggestionListState {
+  if (query.isError) return { status: "error", error: query.error };
+  if (query.isPending || !query.data) return { status: "pending" };
+  return { status: "ready", suggestions: query.data };
+}
+
 function TrackAction({
   text,
   already,
   pendingText,
   onTrack,
-}: Extract<SuggestionAction, { kind: "track" }> & {
+}: {
   text: string;
   already: boolean;
+  pendingText: string | undefined;
+  onTrack: (text: string) => void;
 }) {
   const pending = pendingText === text;
   return (
@@ -90,10 +108,7 @@ export function SuggestionList({
   onRetry,
 }: {
   strategy: KeywordSuggestionStrategy;
-  state:
-    | { status: "pending" }
-    | { status: "error"; error: unknown }
-    | { status: "ready"; suggestions: KeywordSuggestion[] };
+  state: SuggestionListState;
   trackedTexts: ReadonlySet<string>;
   action: SuggestionAction;
   onRetry: () => void;
@@ -175,7 +190,12 @@ export function SuggestionList({
               </span>
               <SuggestionMeta suggestion={suggestion} />
             </div>
-            <TrackAction {...action} text={suggestion.text} already={already} />
+            <TrackAction
+              text={suggestion.text}
+              already={already}
+              pendingText={action.pendingText}
+              onTrack={action.onTrack}
+            />
           </li>
         );
       })}

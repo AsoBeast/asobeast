@@ -5,12 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { TrackedKeywordItem } from "@asobeast/shared";
-import { SuggestionList } from "@/components/keywords/SuggestionList";
+import {
+  SuggestionList,
+  suggestionListState,
+} from "@/components/keywords/SuggestionList";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { pluralize } from "@/lib/format";
-import { SETUP_KEYWORD_TARGET } from "@/lib/onboarding";
+import { activeKeywordCount, SETUP_KEYWORD_TARGET } from "@/lib/onboarding";
 import {
   invalidateKeywordMutation,
   pickerSuggestionsOptions,
@@ -61,7 +64,7 @@ export function KeywordPicker({
   const trackOnce = useSingleFlight(track);
   const trackedTexts = new Set(tracked.map((keyword) => keyword.text));
   const remaining = remainingToTarget(
-    tracked.filter((keyword) => keyword.active).length,
+    activeKeywordCount(tracked),
     SETUP_KEYWORD_TARGET,
   );
   const toggle = (text: string, on: boolean) =>
@@ -71,18 +74,15 @@ export function KeywordPicker({
       else next.delete(text);
       return next;
     });
-  const state = suggestions.isPending
-    ? ({ status: "pending" } as const)
-    : suggestions.isError
-      ? ({ status: "error", error: suggestions.error } as const)
-      : ({ status: "ready", suggestions: suggestions.data } as const);
 
   return (
     <div className="flex flex-col gap-3">
       <Tabs
         value={strategy}
         onValueChange={(value) => {
-          if (isPickerStrategy(value)) setStrategy(value);
+          if (!isPickerStrategy(value)) return;
+          setStrategy(value);
+          setSelected(NOTHING_SELECTED);
         }}
       >
         <TabsList>
@@ -95,7 +95,7 @@ export function KeywordPicker({
       </Tabs>
       <SuggestionList
         strategy={strategy}
-        state={state}
+        state={suggestionListState(suggestions)}
         trackedTexts={trackedTexts}
         action={{ kind: "select", selected, onToggle: toggle }}
         onRetry={() => void suggestions.refetch()}

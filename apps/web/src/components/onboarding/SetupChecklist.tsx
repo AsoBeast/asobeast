@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  activeKeywordCount,
   canCompleteOnboarding,
   completeOnboarding,
   dismissOnboarding,
@@ -49,8 +50,7 @@ const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
 
 const activeCount = (
   keywords: { active: boolean }[] | undefined,
-): number | null =>
-  keywords ? keywords.filter((keyword) => keyword.active).length : null;
+): number | null => (keywords ? activeKeywordCount(keywords) : null);
 
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));

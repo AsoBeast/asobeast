@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { TrackedKeywordItem } from "@asobeast/shared";
 import {
   FIRST_POSITIONS_LIMIT,
-  firstPositionRows,
-  firstPositionsHeadline,
+  firstPositions,
   positionLabel,
 } from "./first-positions";
+
+const firstPositionRows = (keywords: TrackedKeywordItem[]) =>
+  firstPositions(keywords).rows;
+
+const firstPositionsHeadline = (keywords: TrackedKeywordItem[]) =>
+  firstPositions(keywords).headline;
 
 const keyword = (
   text: string,
@@ -74,6 +79,15 @@ describe("firstPositionsHeadline", () => {
         keyword("focus timer", 3, 200),
       ]),
     ).toBe("Your app ranks #3 for “focus timer”.");
+  });
+
+  it("names the smallest depth when no checked keyword was found", () => {
+    expect(
+      firstPositionsHeadline([
+        keyword("a", null, 200),
+        keyword("b", null, 100),
+      ]),
+    ).toBe("Checked 2 of 2 keywords, none in the top 100 yet.");
   });
 
   it("says no checked keyword is inside the depth yet", () => {
