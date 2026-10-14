@@ -46,8 +46,8 @@ export function useKeywordFieldSave(
   const save = useMutation({
     mutationFn: ({ text, trackIn }: SaveVariables) =>
       saveLocalizedKeywordField(id, item.localization, { text, trackIn }),
+    onMutate: () => setError(null),
     onSuccess: (result, { plan, trackIn }) => {
-      setError(null);
       setReview(null);
       queryClient.setQueryData<AppLocalizationsResult>(
         appKeys.localizations(id),
@@ -69,6 +69,7 @@ export function useKeywordFieldSave(
   const check = useMutation({
     mutationFn: (text: string) =>
       previewLocalizedKeywordField(id, item.localization, { text }),
+    onMutate: () => setError(null),
     onSuccess: (plan, text) => {
       if (shouldConfirmSave(plan)) {
         setReview({ plan, text });

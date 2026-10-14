@@ -11,6 +11,7 @@ import {
   QUOTA_COOKIE,
   seedLocalizations,
 } from "./localizations.mts";
+import { fulfillJson } from "./plan-helpers.mts";
 import { seedCookies } from "./routes.mts";
 import { expect, test } from "./session.mts";
 import { typeInto } from "./type.mts";
@@ -815,6 +816,73 @@ test.describe("on the locale lab", () => {
       await expect(editor(page, "Spanish (Mexico)")).toHaveValue(
         "temporizador",
       );
+    });
+
+    test.describe("retrying after a failure", () => {
+      const UNAVAILABLE = "Redis is briefly unavailable";
+
+      async function failOnce(page: Page, path: string): Promise<() => void> {
+        let release!: () => void;
+        const held = new Promise<void>((resolve) => (release = resolve));
+        let calls = 0;
+        await page.route(path, async (route) => {
+          calls += 1;
+          if (calls === 1) {
+            await route.fulfill(
+              fulfillJson(503, {
+                statusCode: 503,
+                error: "Service Unavailable",
+                message: UNAVAILABLE,
+                path: "/",
+                timestamp: new Date(0).toISOString(),
+              }),
+            );
+            return;
+          }
+          await held;
+          await route.continue();
+        });
+        return release;
+      }
+
+      test("opens the review without the error of the failed check", async ({
+        page,
+      }) => {
+        await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+        const release = await failOnce(page, "**/keyword-fields/es-MX/preview");
+        await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+        await typeInto(editor(page, "Spanish (Mexico)"), "temporizador");
+
+        await save(page).click();
+        await expect(page.getByText(UNAVAILABLE)).toBeVisible();
+        await save(page).click();
+        await expect(page.getByText(UNAVAILABLE)).toHaveCount(0);
+        release();
+
+        await expect(dialog(page)).toBeVisible();
+        await expect(page.getByText(UNAVAILABLE)).toHaveCount(0);
+      });
+
+      test("clears the error of a failed save while it is tried again", async ({
+        page,
+      }) => {
+        await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+        const release = await failOnce(page, "**/keyword-fields/es-MX");
+        await openSpanishDialog(page, "temporizador");
+        const confirm = dialog(page).getByRole("button", {
+          name: "Save and track",
+        });
+
+        await confirm.click();
+        await expect(dialog(page).getByText(UNAVAILABLE)).toBeVisible();
+        await confirm.click();
+        await expect(dialog(page).getByText(UNAVAILABLE)).toHaveCount(0);
+        release();
+
+        await expect(
+          page.getByText("Saved the Spanish (Mexico) keyword field"),
+        ).toBeVisible();
+      });
     });
 
     test("writes nothing until the dialog is confirmed", async ({ page }) => {
