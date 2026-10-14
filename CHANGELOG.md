@@ -3,6 +3,41 @@
 All notable changes to asobeast are documented here. This project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [1.10.0](https://github.com/AsoBeast/asobeast/compare/v1.9.0...v1.10.0) (2026-10-14)
+
+
+### Features
+
+* **api:** send every email in a branded responsive layout ([#303](https://github.com/AsoBeast/asobeast/issues/303)) ([eca538d](https://github.com/AsoBeast/asobeast/commit/eca538d587541b92b9a390dde6dd43f001968b1f))
+* **apps:** suggest markets from an app's languages and seed them ([#333](https://github.com/AsoBeast/asobeast/issues/333)) ([44de3b8](https://github.com/AsoBeast/asobeast/commit/44de3b8a45ea82964ed9f7acb672e4dc8e2cfb91))
+* **keywords:** edit each app store keyword field once per localization ([#326](https://github.com/AsoBeast/asobeast/issues/326)) ([34397b6](https://github.com/AsoBeast/asobeast/commit/34397b67efa348f5b942b3443639a9b8139199fd))
+* **keywords:** keep an ios keyword field for every localization ([#322](https://github.com/AsoBeast/asobeast/issues/322)) ([ed84aff](https://github.com/AsoBeast/asobeast/commit/ed84affac156f5ab383240a0fb75bbe1db07d193))
+* **web:** explain how the visibility score is calculated ([#306](https://github.com/AsoBeast/asobeast/issues/306)) ([bba7a44](https://github.com/AsoBeast/asobeast/commit/bba7a44427f4b1e8ca0f2d053ebb68f5698b85f2))
+* **web:** scope the overview numbers to the selected market ([#321](https://github.com/AsoBeast/asobeast/issues/321)) ([7c7a132](https://github.com/AsoBeast/asobeast/commit/7c7a1322c3ee96a23c7a130785b883a967752654))
+
+
+### Bug Fixes
+
+* **actions:** scope the in-flight action explanation to its workspace ([#307](https://github.com/AsoBeast/asobeast/issues/307)) ([a9c02b6](https://github.com/AsoBeast/asobeast/commit/a9c02b634d46854210211aaa49c3664478f48035))
+* **alerts:** confirm email alert recipients before mailing them ([#314](https://github.com/AsoBeast/asobeast/issues/314)) ([5cb6b67](https://github.com/AsoBeast/asobeast/commit/5cb6b677424c790662d5f60683a288ec0af56be3))
+* **auth:** close the invite, recovery and write-token takeover paths ([#310](https://github.com/AsoBeast/asobeast/issues/310)) ([1621812](https://github.com/AsoBeast/asobeast/commit/16218129aff14f384064fb4118d055e311f26547))
+* **auth:** count refused credentials after a lookup on every surface ([#317](https://github.com/AsoBeast/asobeast/issues/317)) ([e64ce13](https://github.com/AsoBeast/asobeast/commit/e64ce13fa9d0fdf62e0b3ce98ef436190af2e35e))
+* **auth:** never refuse an accepted credential over a shared address ([#311](https://github.com/AsoBeast/asobeast/issues/311)) ([90600a7](https://github.com/AsoBeast/asobeast/commit/90600a710c99fbb858c4da8c0c31e3c5a36130a6))
+* **auth:** start one free trial per mailbox, not per address ([#313](https://github.com/AsoBeast/asobeast/issues/313)) ([3297b86](https://github.com/AsoBeast/asobeast/commit/3297b8651fd72a58de92a5e634af0cad03978023))
+* **jobs:** boot, serve and stop while redis is down ([#302](https://github.com/AsoBeast/asobeast/issues/302)) ([85ca64d](https://github.com/AsoBeast/asobeast/commit/85ca64d65cb4ce44c2d1fad09cc0611dd37f4977))
+* **jobs:** report queue connection errors in the json log ([#300](https://github.com/AsoBeast/asobeast/issues/300)) ([d0e3e6e](https://github.com/AsoBeast/asobeast/commit/d0e3e6ed47a14ab9a72d76ae399d5e68934fabd4))
+* **keywords:** count the app store keyword field in characters ([#331](https://github.com/AsoBeast/asobeast/issues/331)) ([a9ec024](https://github.com/AsoBeast/asobeast/commit/a9ec0245ff44fc63714b00af9ae586fdba2cf62c))
+* **keywords:** limit deep search to a daily on-demand allowance ([#308](https://github.com/AsoBeast/asobeast/issues/308)) ([c8ddbcb](https://github.com/AsoBeast/asobeast/commit/c8ddbcbee1a52b4af6244abb217a37ef121fe531))
+* **mcp:** charge every message of a batch against the mcp allowance ([#309](https://github.com/AsoBeast/asobeast/issues/309)) ([28bd66d](https://github.com/AsoBeast/asobeast/commit/28bd66dc39df729a8de3182fa60e6aae7b776fae))
+* **providers:** answer an on demand store call before the proxy gives up ([#299](https://github.com/AsoBeast/asobeast/issues/299)) ([b33eeac](https://github.com/AsoBeast/asobeast/commit/b33eeac3491214a7278205789b2513bfa7f957e0))
+* **rankings:** retry an empty app store search past apple's edge cache ([#316](https://github.com/AsoBeast/asobeast/issues/316)) ([b65fce7](https://github.com/AsoBeast/asobeast/commit/b65fce7ba807e89f43b862c0f52fa5a3d86087a8))
+* **repo:** link emails to the serving stack and guide every first import ([#337](https://github.com/AsoBeast/asobeast/issues/337)) ([4b8f91b](https://github.com/AsoBeast/asobeast/commit/4b8f91b8d4b14663852b9a78763aa9351c92bbdf))
+* **repo:** resolve qa findings 340 to 353 ([#356](https://github.com/AsoBeast/asobeast/issues/356)) ([a3201ce](https://github.com/AsoBeast/asobeast/commit/a3201ce029b1570c39e77cdcfd99f479ed294c55))
+* **shared:** scan url credentials in linear time when redacting logs ([#354](https://github.com/AsoBeast/asobeast/issues/354)) ([ccfdcfa](https://github.com/AsoBeast/asobeast/commit/ccfdcfac44dc2eef8cd3e5b02af1d1c514b842ca))
+* **shared:** strip release note tags and caption noise in linear time ([#355](https://github.com/AsoBeast/asobeast/issues/355)) ([bfb35df](https://github.com/AsoBeast/asobeast/commit/bfb35df9a15f0494014c66a6e9e47486a236243b))
+* **web:** refuse oversized request bodies in the backend proxy ([#312](https://github.com/AsoBeast/asobeast/issues/312)) ([14ab392](https://github.com/AsoBeast/asobeast/commit/14ab392d725a66c68cc9da28fce3beef7270c182))
+* **web:** show one confirmation notice per email alert recipient ([#332](https://github.com/AsoBeast/asobeast/issues/332)) ([bc20c2e](https://github.com/AsoBeast/asobeast/commit/bc20c2e7307ffdfe0872bd137594b4e83b543a2c))
+
 ## [1.9.0](https://github.com/AsoBeast/asobeast/compare/v1.8.0...v1.9.0) (2026-10-10)
 
 
