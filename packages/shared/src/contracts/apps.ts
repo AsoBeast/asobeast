@@ -57,6 +57,7 @@ export interface AppDetail {
   competitors: CompetitorItem[];
   group: AppGroupSummary | null;
   localization?: string;
+  isCompetitor?: boolean;
 }
 
 export interface AppListItem {

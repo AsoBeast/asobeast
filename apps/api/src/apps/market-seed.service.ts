@@ -1,14 +1,10 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { assertStorefront, MarketSeedResult } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { Candidate } from '../keywords/extraction';
 import { KeywordTracker } from '../keywords/keyword-tracker';
 import { loadTrackingStates } from '../keywords/keyword-tracking-state';
-import { KeywordApp } from '../keywords/keywords.support';
+import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
 import { seedCandidates } from '../keywords/listing-seed';
 import { listingTexts } from '../keywords/listing-texts';
 import { MarketListingRequests } from '../keywords/market-listing.requests';
@@ -122,27 +118,12 @@ export class MarketSeedService {
     return seeded;
   }
 
-  private async primaryApp(appId: string): Promise<KeywordApp> {
-    const app = await this.prisma.app.findFirst({
-      where: { id: appId },
-      select: {
-        id: true,
-        workspaceId: true,
-        store: true,
-        country: true,
-        storeAppId: true,
-        isCompetitor: true,
-      },
-    });
-    if (!app) {
-      throw new NotFoundException(`App ${appId} not found`);
-    }
-    if (app.isCompetitor) {
-      throw new BadRequestException(
-        'A competitor app is not seeded; seed its primary app',
-      );
-    }
-    return app;
+  private primaryApp(appId: string): Promise<KeywordApp> {
+    return ensurePrimaryApp(
+      this.prisma,
+      appId,
+      'A competitor app is not seeded; seed its primary app',
+    );
   }
 
   private async room(): Promise<number | null> {

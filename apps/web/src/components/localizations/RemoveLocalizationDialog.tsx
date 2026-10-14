@@ -66,7 +66,12 @@ export function RemoveLocalizationDialog({
   const removeOnce = useSingleFlight(remove);
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!remove.isPending) setOpen(next);
+      }}
+    >
       <AlertDialogTrigger asChild>
         <Button
           variant="ghost"
