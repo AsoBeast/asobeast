@@ -43,6 +43,31 @@ test("a mid run app lists its first positions", async ({ page }) => {
   ).toHaveAttribute("href", `/apps/${MID_RUN_APP}/rankings`);
 });
 
+test("first positions that fail to load offer a retry", async ({ page }) => {
+  let failing = true;
+  await page.route(
+    `**/api/backend/apps/${MID_RUN_APP}/keywords?country=us`,
+    (route) =>
+      failing
+        ? route.fulfill({ status: 500, json: { statusCode: 500 } })
+        : route.fallback(),
+  );
+  await page.goto(`/apps/${MID_RUN_APP}`);
+
+  const section = page.getByRole("region", { name: "First positions" });
+  await expect(section.getByRole("alert")).toHaveText(
+    "Could not load the first positions.",
+    { timeout: 15_000 },
+  );
+
+  failing = false;
+  await section.getByRole("button", { name: "Retry" }).click();
+
+  await expect(
+    section.getByText("Your app ranks #2 for “focus timer”."),
+  ).toBeVisible();
+});
+
 test("a fully collected app renders no panel at all", async ({ page }) => {
   await page.goto(`/apps/${APP_1_DETAIL.id}`);
 
