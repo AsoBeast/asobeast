@@ -208,6 +208,19 @@ describe('SerpController (e2e)', () => {
     expect(entries[0]).toMatchObject({ appId: you.id, isCompetitor: false });
   });
 
+  it('prefers the row of the keyword storefront over a primary of another storefront', async () => {
+    await appRow('self-store', 'us');
+    const other = await appRow('other-primary', 'de');
+    const competitor = await appRow('self-store', 'de', other.id);
+
+    const entries = await serpIn(other.id, 'de', ['self-store']);
+
+    expect(entries[0]).toMatchObject({
+      appId: competitor.id,
+      isCompetitor: true,
+    });
+  });
+
   describe('the snapshot date', () => {
     async function trackedKeywordWithSnapshotOn(date: string) {
       const you = await prisma.app.create({

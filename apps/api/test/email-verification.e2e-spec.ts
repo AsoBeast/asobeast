@@ -132,6 +132,10 @@ describe('Email verification before the trial starts', () => {
     });
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   afterAll(async () => {
     await prisma.$executeRawUnsafe(
       'TRUNCATE TABLE "User", "TrialClaim" RESTART IDENTITY CASCADE',
@@ -280,7 +284,7 @@ describe('Email verification before the trial starts', () => {
     const users = app.get(PrismaService).user;
     const read = users.findUnique.bind(users);
     let arrived = 0;
-    let release = () => undefined as void;
+    let release!: () => void;
     const allRead = new Promise<void>((resolve) => {
       release = resolve;
     });
@@ -313,7 +317,6 @@ describe('Email verification before the trial starts', () => {
     ).toEqual([]);
     await expect(workspaceRow()).resolves.toMatchObject({ plan: 'trial' });
     await expect(prisma.trialClaim.count()).resolves.toBe(1);
-    jest.restoreAllMocks();
   });
 
   it('refuses a link past its expiry', async () => {
@@ -456,10 +459,6 @@ describe('Email verification before the trial starts', () => {
   });
 
   describe('a workspace that already pays', () => {
-    afterEach(() => {
-      jest.restoreAllMocks();
-    });
-
     it('offers no trial in a link sent after the workspace paid', async () => {
       const registered = await register('owner@example.com').expect(201);
       expect(sent[0].text).toContain('to start your trial');

@@ -111,7 +111,11 @@ function SerpExportButton({
       variant="outline"
       size="sm"
       className="self-start"
-      disabled={data === undefined || data.entries.length === 0}
+      disabled={
+        data === undefined ||
+        data.entries.length === 0 ||
+        viewer.storeAppId === undefined
+      }
       onClick={() => {
         if (data) exportSerp(viewer, data);
       }}

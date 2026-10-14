@@ -34,6 +34,13 @@ function within(test: request.Test): request.Test {
   });
 }
 
+async function refusedWithWait(test: request.Test): Promise<void> {
+  const response = await within(test).expect(503);
+  const body = response.body as ApiErrorEnvelope;
+  expect(body.retryAfterSeconds).toBeGreaterThan(0);
+  expect(response.headers['retry-after']).toBe(String(body.retryAfterSeconds));
+}
+
 describe('Redis outage (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
@@ -71,7 +78,7 @@ describe('Redis outage (e2e)', () => {
       create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
     });
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "App", "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "User" RESTART IDENTITY CASCADE',
     );
     agent = await ownerAgent(app);
     appId = (
@@ -103,7 +110,7 @@ describe('Redis outage (e2e)', () => {
   afterAll(async () => {
     await outage.restore().catch(() => undefined);
     await prisma.$executeRawUnsafe(
-      'TRUNCATE TABLE "User" RESTART IDENTITY CASCADE',
+      'TRUNCATE TABLE "App", "Keyword", "User" RESTART IDENTITY CASCADE',
     );
     await obliterateQueues(app);
     await app.close();
@@ -176,28 +183,26 @@ describe('Redis outage (e2e)', () => {
     ] as const)(
       'refuses %s with 503 and a wait instead of waiting on the queue',
       async (_label, method, path, body) => {
-        const response = await within(
+        await refusedWithWait(
           agent[method](`/apps/${appId}/${path}`).send(body),
-        ).expect(503);
-
-        expect(response.headers['retry-after']).toBeDefined();
+        );
       },
     );
 
     it('refuses to resume a keyword of another market with 503 instead of waiting on the queue', async () => {
-      await within(
+      await refusedWithWait(
         agent
           .patch(`/apps/${appId}/keywords/${pausedKeywordId}`)
           .send({ active: true }),
-      ).expect(503);
+      );
     });
 
     it('refuses an app import with 503 instead of waiting on the queue', async () => {
-      await within(
+      await refusedWithWait(
         agent
           .post('/apps')
           .send({ url: 'https://apps.apple.com/us/app/things-3/id904237744' }),
-      ).expect(503);
+      );
     });
 
     it('lists actions for a signed in request', async () => {

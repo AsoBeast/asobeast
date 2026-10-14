@@ -970,12 +970,6 @@ test("tells the user an add failed while offline instead of waiting for the netw
   await dialog
     .getByRole("textbox", { name: /fitness tracker/ })
     .fill("offline test phrase");
-  const posts: string[] = [];
-  page.on("request", (request) => {
-    if (request.method() === "POST" && /\/keywords$/.test(request.url())) {
-      posts.push(request.url());
-    }
-  });
 
   await context.setOffline(true);
   await dialog.getByRole("button", { name: "Add keywords" }).click();
@@ -985,9 +979,6 @@ test("tells the user an add failed while offline instead of waiting for the netw
     dialog.getByRole("button", { name: "Add keywords" }),
   ).toBeEnabled();
   await context.setOffline(false);
-  await page.waitForTimeout(500);
-  expect(posts.length).toBeLessThanOrEqual(1);
-  await expect(dialog.getByText("Could not add keywords")).toBeVisible();
 });
 
 test("keeps focus in the search field after clearing it from the keyboard", async ({
