@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { Job, UnrecoverableError } from 'bullmq';
 import { AppsService } from '../apps/apps.service';
+import { LocalizationDetection } from '../apps/localization-detection.service';
 import { SubtitleBackfill } from '../apps/subtitle-backfill.service';
 import { CollectionEligibility } from '../auth/collection-eligibility.service';
 import { CategoryRanksService } from '../category-ranks/category-ranks.service';
@@ -20,6 +21,7 @@ describe('StoreJobsHandler', () => {
   const refreshListing = jest.fn();
   const resolveSubtitle = jest.fn();
   const runSpiderProbe = jest.fn();
+  const probeLocalization = jest.fn();
   const forWorkspace = jest.fn<Promise<boolean>, []>();
   const through = jest.fn(
     (_store: Store, _country: string | undefined, work: () => Promise<void>) =>
@@ -35,6 +37,7 @@ describe('StoreJobsHandler', () => {
     through.mockClear();
     countryOf.mockReset().mockResolvedValue('us');
     runSpiderProbe.mockReset().mockResolvedValue(undefined);
+    probeLocalization.mockReset().mockResolvedValue(undefined);
     forWorkspace.mockReset().mockResolvedValue(true);
     refreshListing.mockReset().mockResolvedValue(null);
     refreshApp.mockReset().mockImplementation(() => {
@@ -53,6 +56,7 @@ describe('StoreJobsHandler', () => {
       { of: countryOf } as unknown as JobTargetCountry,
       { resolve: resolveSubtitle } as unknown as SubtitleBackfill,
       { forWorkspace } as unknown as CollectionEligibility,
+      { probe: probeLocalization } as unknown as LocalizationDetection,
     );
   });
 
@@ -146,7 +150,55 @@ describe('StoreJobsHandler', () => {
     });
   });
 
-  it('asks whether the workspace may collect only for a deep search probe', async () => {
+  describe('a localization probe', () => {
+    const detect = {
+      name: JOBS.DETECT_LOCALIZATION,
+      id: '5',
+      data: {
+        appId: 'a1',
+        localization: 'es-MX',
+        country: 'mx',
+        workspaceId: 'ws_a',
+      },
+      queueName: QUEUES.APP_STORE,
+    } as Job;
+
+    it('runs through one egress endpoint while its workspace may collect', async () => {
+      await handler.handle(detect);
+
+      expect(through).toHaveBeenCalledTimes(1);
+      expect(probeLocalization).toHaveBeenCalledWith(detect.data);
+    });
+
+    it('takes no egress endpoint once its workspace may no longer collect', async () => {
+      forWorkspace.mockResolvedValue(false);
+
+      await handler.handle(detect);
+
+      expect(through).not.toHaveBeenCalled();
+      expect(probeLocalization).not.toHaveBeenCalled();
+    });
+
+    it('runs the probe inside the workspace its payload carries', async () => {
+      probeLocalization.mockImplementation(() => {
+        seen = workspace.current;
+        return Promise.resolve();
+      });
+
+      await handler.handle(detect);
+
+      expect(seen).toBe('ws_a');
+    });
+
+    it('fails a probe whose payload carries no workspace', async () => {
+      await expect(
+        handler.handle({ ...detect, data: { appId: 'a1' } } as Job),
+      ).rejects.toBeInstanceOf(JobWorkspaceMissingError);
+      expect(probeLocalization).not.toHaveBeenCalled();
+    });
+  });
+
+  it('asks whether the workspace may collect only for a deferred job', async () => {
     forWorkspace.mockResolvedValue(false);
 
     await handler.handle(job({ appId: 'a1', workspaceId: 'ws_a' }));

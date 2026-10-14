@@ -6,6 +6,8 @@ import {
   SnapshotChange,
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
+import { recordAppLocalizations } from '../keywords/app-localization-records';
+import { homeLocalization } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
@@ -19,7 +21,10 @@ import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
-type ListedApp = Pick<App, 'id' | 'store' | 'storeAppId' | 'country'>;
+type ListedApp = Pick<
+  App,
+  'id' | 'workspaceId' | 'store' | 'storeAppId' | 'country' | 'isCompetitor'
+>;
 
 interface LocalizedListing {
   market: string;
@@ -126,6 +131,20 @@ export class LocalizedListingCapture {
         { store: app.store, country: market, localization },
         created,
       );
+      if (
+        !previous &&
+        !app.isCompetitor &&
+        localization !== homeLocalization(app.country)
+      ) {
+        await recordAppLocalizations(tx, [
+          {
+            appId: app.id,
+            workspaceId: app.workspaceId,
+            localization,
+            origin: 'detected',
+          },
+        ]);
+      }
       return created;
     });
     if (pending > 0) await this.screenshotQueue.request(app.id, snapshot.id);

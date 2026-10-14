@@ -1761,6 +1761,38 @@
         ]
       }
     },
+    "/apps/{id}/localizations/detect": {
+      "post": {
+        "description": "Takes the localizations the markets of the app read, drops the ones the app ships and, when the home listing declares its languages, the ones in languages it does not declare, then queues one deferred store lookup per remaining localization in the first market that has a stored default listing and can probe it. A lookup records the localization as detected when the store serves a listing that differs from the default one. Spends one refresh allowance only when at least one lookup is newly queued; a localization already queued today queues nothing and spends nothing. Answers 202 with the number of lookups queued and every candidate. Answers 400 for a Google Play app, 404 for an unknown app and 429 when the refresh allowance is spent.",
+        "operationId": "LocalizationDetectionController_detect",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Queue lookups that detect the localizations an app ships",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
     "/apps/{id}/keywords": {
       "get": {
         "operationId": "KeywordsController_list",
@@ -2519,6 +2551,410 @@
           }
         },
         "summary": "List the stored iOS keyword fields",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/localizations": {
+      "get": {
+        "description": "Returns the default localization of the home storefront, every localization added by hand or detected, and every localization with a saved keyword field, the home localization first and the rest by display name. Each item carries its keyword field and the markets of the app that read it, with the role each market gives it, default or additional. markets lists the home market first and then every market in which the app tracks keywords. Answers 400 for a Google Play app and 404 for a missing app.",
+        "operationId": "LocalizationsController_list",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List the App Store localizations an app ships",
+        "tags": [
+          "keywords"
+        ]
+      },
+      "post": {
+        "description": "Marks one of the 50 App Store localizations as shipped by the app, with no keyword field yet, and answers 201 with the item. Answers 409 when the app already ships it, the default localization of the home storefront included, and 400 for a tag outside the 50 or a Google Play app.",
+        "operationId": "LocalizationsController_add",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddAppLocalizationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Add an App Store localization to an app",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/localizations/{localization}": {
+      "delete": {
+        "description": "Removes a shipped localization and its keyword field in one transaction. Each phrase of the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field there holds it. Keywords tracked from another source stay tracked. Answers 204, 409 for the default localization of the home storefront, 404 when the app does not ship the localization, and 400 for an unknown tag or a Google Play app.",
+        "operationId": "LocalizationsController_remove",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          }
+        },
+        "summary": "Remove an App Store localization from an app",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-fields/market": {
+      "get": {
+        "description": "Answers every localization the storefront of the market reads, in read order, with its role (default or additional), whether the app ships it, its origin (home, manual or detected, null when it is not shipped), its saved phrases and the characters they use. Without a query it describes the home storefront of the app. Any App Store storefront may be asked for, whether or not the app tracks keywords there. Answers 400 when country is neither the home storefront nor an App Store storefront and for a Google Play app, and 404 for a missing app.",
+        "operationId": "LocalizationsController_marketKeywordFields",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "The storefront whose search is described. Omitted means the home storefront of the app.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Read what one market search reads",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-fields/{localization}": {
+      "put": {
+        "description": "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, ships the localization when it is not shipped yet, and tracks every phrase in each market of trackIn. trackIn may be empty and must name only markets of the app whose storefront reads the localization. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization, unless another saved field read there holds it. Answers 400 when the text runs past 100 characters, when trackIn names a country that is not a market of the app or a storefront that does not read the localization, and for a Google Play app. Answers 403 with quota and writes nothing when the keyword markets would pass the plan limit. Answers 404 for a missing app, and for an empty save of a localization the app does not ship. Saves to one app are written one at a time, so the last save wins.",
+        "operationId": "LocalizationsController_saveKeywordField",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalizedKeywordFieldDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Save the keyword field of one localization",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
+    "/apps/{id}/keyword-fields/{localization}/preview": {
+      "post": {
+        "description": "Answers, for every market of the app whose storefront reads the localization, the phrases the field would add to the tracked keywords, how many of them would open a new keyword market and the daily store requests that costs, plus the phrases the save would add to and drop from the stored field and the keyword limit of the plan. Writes nothing and queues nothing. Answers 400 for text over 100 characters and for a Google Play app, and 404 for a missing app.",
+        "operationId": "LocalizationsController_previewKeywordField",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "localization",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "id",
+                "ru",
+                "th",
+                "de",
+                "fr",
+                "ar",
+                "pa",
+                "sv",
+                "it",
+                "pl",
+                "bn",
+                "ca",
+                "zh-Hans",
+                "zh-Hant",
+                "hr",
+                "cs",
+                "da",
+                "nl",
+                "en-AU",
+                "en-CA",
+                "en-GB",
+                "en-US",
+                "fi",
+                "fr-CA",
+                "el",
+                "gu",
+                "he",
+                "hi",
+                "hu",
+                "ja",
+                "kn",
+                "ko",
+                "ms",
+                "ml",
+                "mr",
+                "no",
+                "or",
+                "pt-BR",
+                "pt-PT",
+                "ro",
+                "sk",
+                "sl",
+                "es-MX",
+                "es-ES",
+                "ta",
+                "te",
+                "tr",
+                "uk",
+                "ur",
+                "vi"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KeywordFieldPreviewDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Preview saving the keyword field of one localization",
         "tags": [
           "keywords"
         ]
@@ -5265,6 +5701,110 @@
             "type": "string",
             "maxLength": 1000,
             "example": "habit,tracker,streak,daily goals"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "AddAppLocalizationDto": {
+        "type": "object",
+        "properties": {
+          "localization": {
+            "enum": [
+              "ar",
+              "bn",
+              "ca",
+              "zh-Hans",
+              "zh-Hant",
+              "hr",
+              "cs",
+              "da",
+              "nl",
+              "en-AU",
+              "en-CA",
+              "en-GB",
+              "en-US",
+              "fi",
+              "fr",
+              "fr-CA",
+              "de",
+              "el",
+              "gu",
+              "he",
+              "hi",
+              "hu",
+              "id",
+              "it",
+              "ja",
+              "kn",
+              "ko",
+              "ms",
+              "ml",
+              "mr",
+              "no",
+              "or",
+              "pl",
+              "pt-BR",
+              "pt-PT",
+              "pa",
+              "ro",
+              "ru",
+              "sk",
+              "sl",
+              "es-MX",
+              "es-ES",
+              "sv",
+              "ta",
+              "te",
+              "th",
+              "tr",
+              "uk",
+              "ur",
+              "vi"
+            ],
+            "type": "string",
+            "example": "es-MX"
+          }
+        },
+        "required": [
+          "localization"
+        ]
+      },
+      "LocalizedKeywordFieldDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "habit,tracker,streak"
+          },
+          "trackIn": {
+            "uniqueItems": true,
+            "example": [
+              "us",
+              "mx"
+            ],
+            "maxItems": 200,
+            "description": "The markets of the app that track the phrases of this field. Every one must be a market of the app whose storefront reads the localization. An empty list stores the field and tracks nothing.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "text",
+          "trackIn"
+        ]
+      },
+      "KeywordFieldPreviewDto": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 1000,
+            "example": "habit,tracker,streak"
           }
         },
         "required": [

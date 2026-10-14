@@ -13,6 +13,10 @@ const ROUTES: ReadonlyArray<
   ["play audit", "/apps/app-gp/audit"],
   ["competitors", "/apps/app-1/competitors"],
   ["metadata", "/apps/app-1/metadata"],
+  [
+    "metadata with a localization open",
+    "/apps/app-1/metadata?fieldLocale=en-GB",
+  ],
   ["keyword combinations", "/apps/app-long/keywords?combos=true"],
   ["metadata with a long listing", "/apps/app-long/metadata"],
   ["metadata of an arabic play listing", "/apps/app-ar/metadata"],

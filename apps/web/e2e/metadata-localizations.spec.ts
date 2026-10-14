@@ -3,79 +3,29 @@ import { expect, test } from "./session.mts";
 const APPLE_URL =
   "https://developer.apple.com/help/app-store-connect/reference/app-store-localizations/";
 
-const US_LANGUAGES = [
-  "Arabic",
-  "Chinese (Simplified)",
-  "Chinese (Traditional)",
-  "French",
-  "Korean",
-  "Portuguese (Brazil)",
-  "Russian",
-  "Spanish (Mexico)",
-  "Vietnamese",
-];
+const SECTION = "App Store localizations";
 
 test("the metadata page lists what the home storefront and each market read", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/metadata");
 
-  const card = page.getByRole("region", { name: "Storefront localizations" });
-  const storefront = (name: string) =>
-    card
-      .getByRole("listitem")
-      .filter({ has: page.getByRole("heading", { level: 3, name }) });
+  const section = page.getByRole("region", { name: SECTION });
 
   await expect(page.getByRole("heading", { level: 2 })).toHaveText([
     "Screenshot captions",
-    "Storefront localizations",
+    SECTION,
     "Keyword coverage",
   ]);
-  await expect(card.getByRole("heading", { level: 3 })).toHaveText([
-    "United States",
-    "Poland",
-    "United Kingdom",
-  ]);
   await expect(
-    card.getByText(
+    section.getByText(
       "Each localization has its own 30 character title, 30 character subtitle and 100 character keyword field.",
     ),
   ).toBeVisible();
   await expect(
-    card.getByRole("link", { name: /Apple.s localization table/ }),
+    section.getByRole("link", { name: /Apple.s localization table/ }),
   ).toHaveAttribute("href", APPLE_URL);
-
-  const us = storefront("United States");
-  await expect(us.getByText("Home storefront")).toBeVisible();
-  await expect(us.getByText("Default language: English (U.S.)")).toBeVisible();
-  await expect(
-    us.getByText(
-      "9 more localizations: 9 more titles, subtitles and keyword fields that US search reads",
-    ),
-  ).toBeVisible();
-  await expect(
-    us
-      .getByRole("list", { name: "Additional languages in United States" })
-      .getByRole("listitem"),
-  ).toHaveText(US_LANGUAGES);
-
-  const poland = storefront("Poland");
-  await expect(
-    poland.getByText(
-      "1 more localization: 1 more title, subtitle and keyword field that PL search reads",
-    ),
-  ).toBeVisible();
-  await expect(
-    poland
-      .getByRole("list", { name: "Additional languages in Poland" })
-      .getByRole("listitem"),
-  ).toHaveText(["Polish"]);
-
-  await expect(
-    storefront("United Kingdom").getByText(
-      "Apple lists no additional language for this storefront.",
-    ),
-  ).toBeVisible();
+  await expect(section.locator("[data-slot=accordion-trigger]")).toHaveCount(4);
 });
 
 test("a google play app shows no storefront localizations", async ({
@@ -86,17 +36,19 @@ test("a google play app shows no storefront localizations", async ({
   await expect(
     page.getByRole("heading", { name: "Keyword coverage" }),
   ).toBeVisible();
-  await expect(
-    page.getByRole("region", { name: "Storefront localizations" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("region", { name: SECTION })).toHaveCount(0);
 });
 
-test("the card arrives with the page and the browser never asks for it", async ({
+test("the section arrives with the page and the browser never asks for it", async ({
   page,
 }) => {
   const requested: string[] = [];
   page.on("request", (request) => {
-    if (new URL(request.url()).pathname.endsWith("/keyword-countries")) {
+    const { pathname } = new URL(request.url());
+    if (
+      pathname.endsWith("/keyword-countries") ||
+      pathname.endsWith("/localizations")
+    ) {
       requested.push(request.url());
     }
   });
@@ -104,12 +56,10 @@ test("the card arrives with the page and the browser never asks for it", async (
   const html = await page.request
     .get("/apps/app-1/metadata")
     .then((response) => response.text());
-  expect(html).toContain("9 more localizations");
+  expect(html).toContain("A keyword field belongs to a language");
 
   await page.goto("/apps/app-1/metadata");
-  await expect(
-    page.getByRole("region", { name: "Storefront localizations" }),
-  ).toBeVisible();
+  await expect(page.getByRole("region", { name: SECTION })).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(requested).toEqual([]);
@@ -141,18 +91,17 @@ test("the metadata page stays up when the markets cannot be read", async ({
 
   expect(requested).toEqual([]);
   await expect(page.getByText("Metadata could not be loaded")).toHaveCount(0);
-  await expect(
-    page.getByRole("region", { name: "Storefront localizations" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("region", { name: SECTION })).toBeVisible();
 });
 
-test("without ai drafts the storefront languages are plain labels", async ({
+test("without ai drafts there is no draft button in a localization", async ({
   page,
 }) => {
-  await page.goto("/apps/app-1/metadata");
+  await page.goto("/apps/app-1/metadata?fieldLocale=es-MX");
 
+  await expect(page.getByRole("region", { name: SECTION })).toBeVisible();
   await expect(
-    page.getByRole("region", { name: "Storefront localizations" }),
+    page.getByRole("textbox", { name: "Spanish (Mexico) keyword field" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: /^Draft with AI/ }),
@@ -160,7 +109,7 @@ test("without ai drafts the storefront languages are plain labels", async ({
   await expect(page.getByRole("heading", { name: "AI drafts" })).toHaveCount(0);
 });
 
-test("suggests and links the keyword field of the viewed localization", async ({
+test("links the suggestion to the keyword field of the viewed localization", async ({
   page,
 }) => {
   await page.goto("/apps/app-1/metadata?market=pl&localization=pl");
@@ -170,11 +119,15 @@ test("suggests and links the keyword field of the viewed localization", async ({
   ).toBeVisible();
   await page.getByRole("link", { name: "Edit this keyword field" }).click();
   await expect(page).toHaveURL(
-    /\/apps\/app-1\/keywords\?country=pl&fieldLocale=pl$/,
+    /\/apps\/app-1\/metadata\?fieldLocale=pl#app-localizations$/,
+  );
+  await expect(page.getByRole("button", { name: /^Polish/ })).toHaveAttribute(
+    "aria-expanded",
+    "true",
   );
   await expect(
-    page.getByText("App Store keyword field · Polish"),
-  ).toBeVisible();
+    page.getByRole("textbox", { name: "Polish keyword field" }),
+  ).toHaveValue("nawyki,cel");
 });
 
 test("shows the keyword field card of the viewed localization", async ({

@@ -68,4 +68,39 @@ describe("keyword tools", () => {
     expect(description).toContain("latestDepth");
     expect(description).not.toMatch(/>\d+/);
   });
+
+  it("reads app_localizations from the localizations route", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    await tools.get("app_localizations")!.handler({ appId: "app-1" });
+
+    expect(new URL(calls[0]!.url).pathname).toBe("/apps/app-1/localizations");
+  });
+
+  it("passes country to market_keyword_fields", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    await tools.get("market_keyword_fields")!.handler({
+      appId: "app-1",
+      country: "pl",
+    });
+
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/apps/app-1/keyword-fields/market");
+    expect(url.searchParams.get("country")).toBe("pl");
+  });
+
+  it("omits country from market_keyword_fields when absent", async () => {
+    const { server, tools } = createHarness();
+    const { calls, client } = stubFetch(() => ({ status: 200, body: {} }));
+    registerCatalogTools(server, client, KEYWORD_TOOLS);
+
+    await tools.get("market_keyword_fields")!.handler({ appId: "app-1" });
+
+    expect(new URL(calls[0]!.url).searchParams.has("country")).toBe(false);
+  });
 });

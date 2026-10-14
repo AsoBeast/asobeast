@@ -37,6 +37,11 @@ import {
   METADATA_DRAFTS,
   APP_LONG_METADATA_DRAFTS,
   APP_1_KEYWORD_COUNTRIES,
+  INITIAL_LOCALIZATION_SEEDS,
+  DETECTABLE_LOCALIZATIONS,
+  DETECT_REFUSED_MESSAGE,
+  marketWasteOf,
+  type LocalizationSeed,
   BUDGET,
   DATASETS,
   EMAIL_ALERTS,
@@ -86,6 +91,17 @@ import {
 } from "./portfolio-insights.mts";
 import type {
   AccountPlan,
+  AddAppLocalizationRequest,
+  AppLocalizationItem,
+  AppLocalizationOrigin,
+  AppLocalizationsResult,
+  KeywordFieldPreviewRequest,
+  KeywordFieldSavePreview,
+  LocalizationDetectionResult,
+  LocalizedKeywordFieldRequest,
+  LocalizedKeywordFieldResult,
+  MarketKeywordFields,
+  MarketLocalizationRead,
   ActionBulkUpdateResult,
   ActionDetail,
   ActionDismissReason,
@@ -109,7 +125,6 @@ import type {
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
-  KeywordFieldSummary,
   KeywordImportRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
@@ -137,9 +152,8 @@ import {
   normalizeKeywordTags,
   keywordFieldChars,
   parseKeywordField,
+  keywordFieldLocalizations,
   readLocalizations,
-  readsLocalization,
-  storefrontsReading,
   APP_STORE_LOCALIZATIONS,
   type AppStoreLocalization,
   isAppStoreLocalization,
@@ -243,6 +257,7 @@ const keywordFieldTracked = new Map<string, Set<string>>();
 const fieldKey = (id: string, localization: string) => `${id}:${localization}`;
 const trackedKey = (id: string, country: string) => `${id}:${country}`;
 const KEYWORD_FIELD_UPDATED_AT = "2026-10-12T00:00:00.000Z";
+const DAILY_REQUESTS_PER_KEYWORD_MARKET = 1;
 const AUTH_USER: AuthUser = {
   id: "u1",
   email: "owner@example.com",
@@ -772,69 +787,47 @@ function trackedMarketsOf(id: string): string[] {
     .map((key) => key.slice(id.length + 1));
 }
 
+const readsTag = (
+  country: string,
+  localization: AppStoreLocalization,
+): boolean => keywordFieldLocalizations(country).includes(localization);
+
 function heldByAnotherField(
   id: string,
   country: string,
   phrase: string,
 ): boolean {
-  return readLocalizations(country).some((tag) =>
+  return keywordFieldLocalizations(country).some((tag) =>
     keywordFields.get(fieldKey(id, tag))?.includes(phrase),
   );
 }
 
-function saveKeywordField(
+function storeKeywordField(
   id: string,
-  target: KeywordFieldTarget,
+  localization: AppStoreLocalization,
   phrases: string[],
+  trackIn: readonly string[],
 ): void {
-  const key = fieldKey(id, target.localization);
+  const key = fieldKey(id, localization);
   const dropped = (keywordFields.get(key) ?? []).filter(
     (phrase) => !phrases.includes(phrase),
   );
   if (phrases.length === 0) keywordFields.delete(key);
   else keywordFields.set(key, phrases);
-  const tracked =
-    keywordFieldTracked.get(trackedKey(id, target.country)) ?? new Set();
-  for (const phrase of phrases) tracked.add(phrase);
-  keywordFieldTracked.set(trackedKey(id, target.country), tracked);
+  for (const country of trackIn) {
+    const tracked =
+      keywordFieldTracked.get(trackedKey(id, country)) ?? new Set<string>();
+    for (const phrase of phrases) tracked.add(phrase);
+    keywordFieldTracked.set(trackedKey(id, country), tracked);
+  }
   for (const country of trackedMarketsOf(id)) {
-    if (!readsLocalization(country, target.localization)) continue;
+    if (!readsTag(country, localization)) continue;
     for (const phrase of dropped) {
       if (!heldByAnotherField(id, country, phrase)) {
         keywordFieldTracked.get(trackedKey(id, country))?.delete(phrase);
       }
     }
   }
-}
-
-function keywordFieldSummaries(
-  id: string,
-  home: string,
-): KeywordFieldSummary[] {
-  const markets = [...new Set([home, ...trackedMarketsOf(id)])];
-  const homeDefault = readLocalizations(home)[0];
-  return [...keywordFields.entries()]
-    .filter(([key]) => key.startsWith(`${id}:`))
-    .flatMap(([key, phrases]) => {
-      const localization = key.slice(id.length + 1);
-      return isAppStoreLocalization(localization)
-        ? [{ localization, phrases }]
-        : [];
-    })
-    .sort(
-      (left, right) =>
-        Number(left.localization !== homeDefault) -
-          Number(right.localization !== homeDefault) ||
-        left.localization.localeCompare(right.localization),
-    )
-    .map(({ localization, phrases }) => ({
-      localization,
-      phrases,
-      charactersUsed: keywordFieldChars(phrases),
-      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
-      markets: storefrontsReading(localization, markets),
-      updatedAt: KEYWORD_FIELD_UPDATED_AT,
-    }));
 }
 
 function keywordFieldDataset(
@@ -861,6 +854,287 @@ function keywordFieldDataset(
     return undefined;
   }
   return dataset;
+}
+
+type ShippedOrigin = "manual" | "detected";
+
+const shippedLocalizations = new Map<
+  string,
+  Map<AppStoreLocalization, ShippedOrigin>
+>();
+const seededMarkets = new Map<string, string[]>();
+const fieldRequests = new Map<string, string[]>();
+
+function logFieldRequest(id: string, req: IncomingMessage): void {
+  const url = new URL(req.url ?? "/", "http://localhost");
+  fieldRequests.set(id, [
+    ...(fieldRequests.get(id) ?? []),
+    `${req.method} ${url.pathname}${url.search}`,
+  ]);
+}
+
+function seedLocalizations(id: string, seed: LocalizationSeed): void {
+  for (const key of [...keywordFields.keys()]) {
+    if (key.startsWith(`${id}:`)) keywordFields.delete(key);
+  }
+  for (const key of [...keywordFieldTracked.keys()]) {
+    if (key.startsWith(`${id}:`)) keywordFieldTracked.delete(key);
+  }
+  for (const [tag, phrases] of Object.entries(seed.fields ?? {})) {
+    if (isAppStoreLocalization(tag)) {
+      keywordFields.set(fieldKey(id, tag), phrases);
+    }
+  }
+  for (const [country, phrases] of Object.entries(seed.tracked ?? {})) {
+    keywordFieldTracked.set(trackedKey(id, country), new Set(phrases));
+  }
+  shippedLocalizations.set(
+    id,
+    new Map((seed.shipped ?? []).map((row) => [row.localization, row.origin])),
+  );
+  seededMarkets.set(id, seed.markets ?? []);
+  fieldRequests.delete(id);
+}
+
+for (const [id, seed] of Object.entries(INITIAL_LOCALIZATION_SEEDS)) {
+  seedLocalizations(id, seed);
+}
+
+function appMarketsOf(id: string, home: string): string[] {
+  const known =
+    id === "app-1" ? APP_1_KEYWORD_COUNTRIES.map((entry) => entry.country) : [];
+  const tracked = trackedMarketsOf(id).filter(
+    (country) =>
+      (keywordFieldTracked.get(trackedKey(id, country))?.size ?? 0) > 0,
+  );
+  const others = [
+    ...new Set([...known, ...(seededMarkets.get(id) ?? []), ...tracked]),
+  ]
+    .filter((country) => country !== home)
+    .sort();
+  return [home, ...others];
+}
+
+function localizationItemOf(
+  id: string,
+  home: string,
+  localization: AppStoreLocalization,
+  markets: readonly string[],
+): AppLocalizationItem {
+  const phrases = keywordFields.get(fieldKey(id, localization)) ?? [];
+  const origin: AppLocalizationOrigin =
+    localization === keywordFieldLocalizations(home)[0]
+      ? "home"
+      : (shippedLocalizations.get(id)?.get(localization) ?? "manual");
+  return {
+    localization,
+    origin,
+    phrases,
+    charactersUsed: keywordFieldChars(phrases),
+    charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+    readBy: markets.flatMap((country) => {
+      const index = keywordFieldLocalizations(country).indexOf(localization);
+      return index < 0
+        ? []
+        : [
+            {
+              country,
+              role:
+                index === 0 ? ("default" as const) : ("additional" as const),
+              home: country === home,
+            },
+          ];
+    }),
+    updatedAt: phrases.length > 0 ? KEYWORD_FIELD_UPDATED_AT : null,
+  };
+}
+
+function shippedTags(id: string, home: string): AppStoreLocalization[] {
+  const saved = [...keywordFields.keys()]
+    .filter((key) => key.startsWith(`${id}:`))
+    .map((key) => key.slice(id.length + 1))
+    .filter(isAppStoreLocalization);
+  return [
+    ...new Set([
+      keywordFieldLocalizations(home)[0],
+      ...(shippedLocalizations.get(id)?.keys() ?? []),
+      ...saved,
+    ]),
+  ];
+}
+
+function localizationsOf(id: string, home: string): AppLocalizationsResult {
+  const markets = appMarketsOf(id, home);
+  const items = shippedTags(id, home).map((tag) =>
+    localizationItemOf(id, home, tag, markets),
+  );
+  return {
+    home,
+    markets,
+    localizations: items.sort(
+      (left, right) =>
+        Number(right.origin === "home") - Number(left.origin === "home") ||
+        APP_STORE_LOCALIZATIONS[left.localization].localeCompare(
+          APP_STORE_LOCALIZATIONS[right.localization],
+          "en",
+        ),
+    ),
+  };
+}
+
+function marketReadsOf(
+  id: string,
+  home: string,
+  country: string,
+): MarketKeywordFields {
+  const shipped = new Map(
+    localizationsOf(id, home).localizations.map((item) => [
+      item.localization,
+      item,
+    ]),
+  );
+  return {
+    country,
+    home: country === home,
+    localizations: keywordFieldLocalizations(country).map(
+      (localization, index): MarketLocalizationRead => {
+        const item = shipped.get(localization);
+        return {
+          localization,
+          role: index === 0 ? "default" : "additional",
+          shipped: item !== undefined,
+          origin: item?.origin ?? null,
+          phrases: item?.phrases ?? [],
+          charactersUsed: item?.charactersUsed ?? 0,
+          charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+        };
+      },
+    ),
+    ...marketWasteOf(id, country),
+  };
+}
+
+const detectedToday = new Set<string>();
+
+function detectLocalizations(
+  id: string,
+  home: string,
+): LocalizationDetectionResult {
+  const candidates = DETECTABLE_LOCALIZATIONS[id] ?? [];
+  const shipped = shippedTags(id, home);
+  const fresh = detectedToday.has(id)
+    ? []
+    : candidates.filter((tag) => !shipped.includes(tag));
+  detectedToday.add(id);
+  const stored =
+    shippedLocalizations.get(id) ??
+    new Map<AppStoreLocalization, ShippedOrigin>();
+  for (const tag of fresh) stored.set(tag, "detected");
+  shippedLocalizations.set(id, stored);
+  return { queued: fresh.length, candidates };
+}
+
+function recordShipped(id: string, localization: AppStoreLocalization): void {
+  const home = DATASETS[id]?.detail.country;
+  if (
+    home === undefined ||
+    localization === keywordFieldLocalizations(home)[0]
+  ) {
+    return;
+  }
+  if (!keywordFields.has(fieldKey(id, localization))) return;
+  const shipped =
+    shippedLocalizations.get(id) ??
+    new Map<AppStoreLocalization, ShippedOrigin>();
+  if (!shipped.has(localization)) shipped.set(localization, "manual");
+  shippedLocalizations.set(id, shipped);
+}
+
+function keywordQuotaRefusal(
+  path: string,
+  used: number,
+  limit: number,
+  requested: number,
+) {
+  return {
+    ...errorEnvelope(
+      403,
+      path,
+      `keywordMarkets limit reached: ${used} of ${limit} used on the indie plan, ${requested} more requested`,
+    ),
+    quota: {
+      resource: "keywordMarkets",
+      plan: "indie",
+      limit,
+      used,
+      requested,
+      upgradeTo: "ultimate",
+    },
+  };
+}
+
+function trackedKeywordCount(id: string): number {
+  const fromFields = [...keywordFieldTracked.entries()]
+    .filter(([key]) => key.startsWith(`${id}:`))
+    .reduce((sum, [, tracked]) => sum + tracked.size, 0);
+  return DATASETS[id].keywords.filter((row) => row.active).length + fromFields;
+}
+
+function isTrackedIn(id: string, country: string, phrase: string): boolean {
+  return (
+    keywordFieldTracked.get(trackedKey(id, country))?.has(phrase) === true ||
+    DATASETS[id].keywords.some(
+      (row) => row.active && row.country === country && row.text === phrase,
+    )
+  );
+}
+
+function trackInRefusal(
+  id: string,
+  home: string,
+  localization: AppStoreLocalization,
+  trackIn: readonly string[],
+): string | null {
+  const markets = appMarketsOf(id, home);
+  for (const country of trackIn) {
+    if (!markets.includes(country)) {
+      return `${country.toUpperCase()} is not one of this app's markets`;
+    }
+    if (!readsTag(country, localization)) {
+      return `The ${country.toUpperCase()} storefront does not read ${APP_STORE_LOCALIZATIONS[localization]}`;
+    }
+  }
+  return null;
+}
+
+function fieldAppFor(
+  id: string,
+  localization: string | undefined,
+  req: IncomingMessage,
+  res: ServerResponse,
+):
+  | {
+      dataset: (typeof DATASETS)[string];
+      tag: AppStoreLocalization | undefined;
+    }
+  | undefined {
+  logFieldRequest(id, req);
+  const dataset = keywordFieldDataset(id, req, res);
+  if (!dataset) return undefined;
+  if (localization === undefined) return { dataset, tag: undefined };
+  if (!isAppStoreLocalization(localization)) {
+    json(
+      res,
+      400,
+      errorEnvelope(
+        400,
+        req.url ?? "/",
+        `Unknown App Store localization: ${localization}`,
+      ),
+    );
+    return undefined;
+  }
+  return { dataset, tag: localization };
 }
 
 const CAPTURED_SUBTITLE = "Focus timer and planner";
@@ -2355,20 +2629,12 @@ const routes: Route[] = [
     method: "GET",
     pattern: /^\/apps\/([^/]+)\/keyword-field$/,
     handler: ([id], req, res) => {
+      logFieldRequest(id, req);
       const dataset = keywordFieldDataset(id, req, res);
       if (!dataset) return;
       const target = keywordFieldTarget(dataset, req, res);
       if (!target) return;
       json(res, 200, keywordFieldResult(id, target, 0));
-    },
-  },
-  {
-    method: "GET",
-    pattern: /^\/apps\/([^/]+)\/keyword-fields$/,
-    handler: ([id], req, res) => {
-      const dataset = keywordFieldDataset(id, req, res);
-      if (!dataset) return;
-      json(res, 200, keywordFieldSummaries(id, dataset.detail.country));
     },
   },
   {
@@ -2383,10 +2649,285 @@ const routes: Route[] = [
         const { phrases, duplicatesRemoved } = parseKeywordField(
           body.text ?? "",
         );
-        saveKeywordField(id, target, phrases);
+        storeKeywordField(id, target.localization, phrases, [target.country]);
+        recordShipped(id, target.localization);
         json(res, 200, keywordFieldResult(id, target, duplicatesRemoved));
       });
     },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/localizations$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      if (hasCookie(req, "e2e-localizations-error", "1")) {
+        return json(res, 500, errorEnvelope(500, req.url ?? "/"));
+      }
+      json(res, 200, localizationsOf(id, app.dataset.detail.country));
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/localizations$/,
+    handler: ([id], req, res) => {
+      withBody<AddAppLocalizationRequest>(req, res, (body) => {
+        const app = fieldAppFor(id, undefined, req, res);
+        if (!app) return;
+        const path = req.url ?? "/";
+        const home = app.dataset.detail.country;
+        const { localization } = body;
+        if (!isAppStoreLocalization(localization)) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              "localization must be one of the App Store localizations",
+            ),
+          );
+        }
+        if (shippedTags(id, home).includes(localization)) {
+          return json(
+            res,
+            409,
+            errorEnvelope(
+              409,
+              path,
+              `${APP_STORE_LOCALIZATIONS[localization]} is already one of this app's localizations`,
+            ),
+          );
+        }
+        const shipped =
+          shippedLocalizations.get(id) ??
+          new Map<AppStoreLocalization, ShippedOrigin>();
+        shipped.set(localization, "manual");
+        shippedLocalizations.set(id, shipped);
+        json(
+          res,
+          201,
+          localizationItemOf(id, home, localization, appMarketsOf(id, home)),
+        );
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/localizations\/detect$/,
+    handler: ([id], req, res) => {
+      if (hasCookie(req, "detect_refused", "1")) {
+        return json(
+          res,
+          429,
+          errorEnvelope(429, req.url ?? "/", DETECT_REFUSED_MESSAGE),
+        );
+      }
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      json(res, 202, detectLocalizations(id, app.dataset.detail.country));
+    },
+  },
+  {
+    method: "DELETE",
+    pattern: /^\/apps\/([^/]+)\/localizations\/([^/]+)$/,
+    handler: ([id, localization], req, res) => {
+      const app = fieldAppFor(id, localization, req, res);
+      if (!app?.tag) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const name = APP_STORE_LOCALIZATIONS[app.tag];
+      if (app.tag === keywordFieldLocalizations(home)[0]) {
+        return json(
+          res,
+          409,
+          errorEnvelope(
+            409,
+            path,
+            `${name} is the default localization of the ${home.toUpperCase()} storefront and cannot be removed`,
+          ),
+        );
+      }
+      if (!shippedTags(id, home).includes(app.tag)) {
+        return json(
+          res,
+          404,
+          errorEnvelope(
+            404,
+            path,
+            `${name} is not one of this app's localizations`,
+          ),
+        );
+      }
+      storeKeywordField(id, app.tag, [], []);
+      shippedLocalizations.get(id)?.delete(app.tag);
+      res.writeHead(204).end();
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/market$/,
+    handler: ([id], req, res) => {
+      const app = fieldAppFor(id, undefined, req, res);
+      if (!app) return;
+      const path = req.url ?? "/";
+      const home = app.dataset.detail.country;
+      const country =
+        new URL(path, "http://localhost").searchParams.get("country") ?? home;
+      if (country !== home && !isStorefront("APP_STORE", country)) {
+        return json(
+          res,
+          400,
+          errorEnvelope(400, path, `${country} is not an App Store storefront`),
+        );
+      }
+      json(res, 200, marketReadsOf(id, home, country));
+    },
+  },
+  {
+    method: "PUT",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/([^/]+)$/,
+    handler: ([id, localization], req, res) => {
+      withBody<LocalizedKeywordFieldRequest>(req, res, (body) => {
+        const app = fieldAppFor(id, localization, req, res);
+        if (!app?.tag) return;
+        const path = req.url ?? "/";
+        const home = app.dataset.detail.country;
+        const { phrases, duplicatesRemoved } = parseKeywordField(
+          body.text ?? "",
+        );
+        if (keywordFieldChars(phrases) > KEYWORD_FIELD_CHAR_LIMIT) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              path,
+              `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+            ),
+          );
+        }
+        const trackIn = body.trackIn ?? [];
+        const refusal = trackInRefusal(id, home, app.tag, trackIn);
+        if (refusal) return json(res, 400, errorEnvelope(400, path, refusal));
+        if (hasCookie(req, "e2e_field_race", "1")) {
+          return json(res, 403, keywordQuotaRefusal(path, 998, 1000, 5));
+        }
+        const limit = Number(cookieValue(req, KEYWORD_QUOTA_COOKIE)) || null;
+        const requested = trackIn.reduce(
+          (sum, country) =>
+            sum +
+            phrases.filter((phrase) => !isTrackedIn(id, country, phrase))
+              .length,
+          0,
+        );
+        const used = trackedKeywordCount(id);
+        if (limit !== null && used + requested > limit) {
+          return json(
+            res,
+            403,
+            keywordQuotaRefusal(path, used, limit, requested),
+          );
+        }
+        storeKeywordField(id, app.tag, phrases, trackIn);
+        recordShipped(id, app.tag);
+        const result: LocalizedKeywordFieldResult = {
+          localization: localizationItemOf(
+            id,
+            home,
+            app.tag,
+            appMarketsOf(id, home),
+          ),
+          duplicatesRemoved,
+          trackedIn: phrases.length > 0 ? [...trackIn] : [],
+        };
+        json(res, 200, result);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields\/([^/]+)\/preview$/,
+    handler: ([id, localization], req, res) => {
+      withBody<KeywordFieldPreviewRequest>(req, res, (body) => {
+        const app = fieldAppFor(id, localization, req, res);
+        if (!app?.tag) return;
+        const home = app.dataset.detail.country;
+        const { phrases, duplicatesRemoved } = parseKeywordField(
+          body.text ?? "",
+        );
+        if (keywordFieldChars(phrases) > KEYWORD_FIELD_CHAR_LIMIT) {
+          return json(
+            res,
+            400,
+            errorEnvelope(
+              400,
+              req.url ?? "/",
+              `Keyword field exceeds ${KEYWORD_FIELD_CHAR_LIMIT} characters`,
+            ),
+          );
+        }
+        const stored = keywordFields.get(fieldKey(id, app.tag)) ?? [];
+        const limit = Number(cookieValue(req, KEYWORD_QUOTA_COOKIE)) || null;
+        const result: KeywordFieldSavePreview = {
+          localization: app.tag,
+          phrases,
+          added: phrases.filter((phrase) => !stored.includes(phrase)),
+          dropped: stored.filter((phrase) => !phrases.includes(phrase)),
+          duplicatesRemoved,
+          charactersUsed: keywordFieldChars(phrases),
+          charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+          markets: localizationItemOf(
+            id,
+            home,
+            app.tag,
+            appMarketsOf(id, home),
+          ).readBy.map((reader) => {
+            const newPhrases = phrases.filter(
+              (phrase) => !isTrackedIn(id, reader.country, phrase),
+            );
+            return {
+              ...reader,
+              newPhrases,
+              keywordMarkets: newPhrases.length,
+              dailyRequests:
+                newPhrases.length * DAILY_REQUESTS_PER_KEYWORD_MARKET,
+            };
+          }),
+          quota:
+            limit === null
+              ? null
+              : { used: trackedKeywordCount(id), limit, upgradeTo: "ultimate" },
+        };
+        json(res, 200, result);
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__seed\/localizations\/([^/]+)$/,
+    handler: ([id], req, res) => {
+      withBody<LocalizationSeed>(req, res, (seed) => {
+        seedLocalizations(id, seed);
+        json(res, 200, { seeded: true });
+      });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/localization-detection\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      detectedToday.delete(id);
+      for (const tag of DETECTABLE_LOCALIZATIONS[id] ?? []) {
+        shippedLocalizations.get(id)?.delete(tag);
+      }
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/__log\/field-requests\/([^/]+)$/,
+    handler: ([id], _req, res) => json(res, 200, fieldRequests.get(id) ?? []),
   },
   appRoute(
     /^\/apps\/([^/]+)\/ratings-history$/,

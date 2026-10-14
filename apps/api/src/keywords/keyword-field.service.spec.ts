@@ -6,6 +6,7 @@ import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
 import { KeywordFieldService } from './keyword-field.service';
+import { KeywordFieldWriter } from './keyword-field-writer';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
 
@@ -21,6 +22,11 @@ interface CreateManyArgs<T> {
 
 interface KeywordFilter {
   keyword?: { is: { text?: { in: string[] } } };
+}
+
+interface KeywordLookup {
+  text?: { in: string[] };
+  OR?: { text?: { in: string[] } }[];
 }
 
 interface FindManyArgs {
@@ -74,7 +80,10 @@ function buildPrisma() {
       findFirst: () => Promise.resolve(APP),
     },
     appSnapshot: { findFirst: () => Promise.resolve(null) },
-    keywordMetric: { findFirst: () => Promise.resolve(null) },
+    keywordMetric: {
+      findFirst: () => Promise.resolve(null),
+      findMany: () => Promise.resolve([]),
+    },
     serpEntry: {
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
@@ -107,11 +116,16 @@ function buildPrisma() {
         }
         return Promise.resolve({ count: created.length });
       },
-      findMany: ({ where }: { where: { text: { in: string[] } } }) =>
+      findMany: ({ where }: { where: KeywordLookup }) =>
         Promise.resolve(
-          where.text.in
+          (where.OR ?? [where])
+            .flatMap(({ text }) => text?.in ?? [])
             .filter((text) => keywordIds.has(text))
-            .map((text) => ({ id: keywordIds.get(text), text })),
+            .map((text) => ({
+              id: keywordIds.get(text),
+              text,
+              country: APP.country,
+            })),
         ),
     },
     trackedKeyword: {
@@ -181,9 +195,8 @@ function buildPrisma() {
 }
 
 function buildService(prisma: ReturnType<typeof buildPrisma>) {
-  const queue = { add: jest.fn() } as unknown as Queue;
-  return new KeywordFieldService(
-    prisma as unknown as PrismaService,
+  const queue = { add: jest.fn(), addBulk: jest.fn() } as unknown as Queue;
+  const writer = new KeywordFieldWriter(
     new KeywordTracker(
       prisma as unknown as PrismaService,
       queue,
@@ -200,6 +213,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
     { require: () => APP.workspaceId } as unknown as WorkspaceContext,
     { request: jest.fn() } as unknown as MarketListingRequests,
   );
+  return new KeywordFieldService(prisma as unknown as PrismaService, writer);
 }
 
 const deactivatedTexts = (prisma: ReturnType<typeof buildPrisma>) =>

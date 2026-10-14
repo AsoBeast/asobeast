@@ -129,6 +129,14 @@ const LISTS: ScopedRead[] = [
     path: (workspace) => `/apps/${workspace.appleAppId}/actions`,
     identity: (body) => ids((body as { items: { id: string }[] }).items),
   },
+  {
+    name: 'GET /apps/:id/localizations',
+    path: (workspace) => `/apps/${workspace.appleAppId}/localizations`,
+    identity: (body) =>
+      (body as { localizations: { phrases: string[] }[] }).localizations
+        .flatMap((item) => item.phrases)
+        .sort(),
+  },
 ];
 
 const BY_ID = [
@@ -151,6 +159,10 @@ const BY_ID = [
   {
     name: 'GET /apps/:id/reviews/histogram',
     path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/reviews/histogram`,
+  },
+  {
+    name: 'GET /apps/:id/localizations',
+    path: (w: IsolationWorkspace) => `/apps/${w.appleAppId}/localizations`,
   },
   {
     name: 'GET /apps/:id/keyword-countries',

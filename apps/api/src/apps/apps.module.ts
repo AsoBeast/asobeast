@@ -13,6 +13,8 @@ import { AppsService } from './apps.service';
 import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
 import { ListingReadService } from './listing-read.service';
+import { LocalizationDetectionController } from './localization-detection.controller';
+import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
@@ -30,7 +32,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     ),
     BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.FIRST_RUN }),
   ],
-  controllers: [AppsController],
+  controllers: [AppsController, LocalizationDetectionController],
   providers: [
     AppsService,
     AppCaptureService,
@@ -38,9 +40,15 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     FirstRunScheduler,
     ListingCaptureService,
     ListingReadService,
+    LocalizationDetection,
     LocalizedListingCapture,
     SubtitleBackfill,
   ],
-  exports: [AppsService, AppCaptureService, SubtitleBackfill],
+  exports: [
+    AppsService,
+    AppCaptureService,
+    LocalizationDetection,
+    SubtitleBackfill,
+  ],
 })
 export class AppsModule {}

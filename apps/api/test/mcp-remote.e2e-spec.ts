@@ -385,6 +385,64 @@ describe('Remote MCP transport (e2e)', () => {
     );
   });
 
+  it('matches the rest api for the localizations of an app', async () => {
+    const appId = await fixtureAppId();
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('app_localizations', { appId }),
+      request(app.getHttpServer())
+        .get(`/apps/${appId}/localizations`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(viaMcp?.isError).toBeUndefined();
+    expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
+      viaRest.body,
+    );
+  });
+
+  it('matches the rest api for the keyword fields of the home market', async () => {
+    const appId = await fixtureAppId();
+
+    const [viaMcp, viaRest] = await Promise.all([
+      callTool('market_keyword_fields', { appId }),
+      request(app.getHttpServer())
+        .get(`/apps/${appId}/keyword-fields/market`)
+        .set('Authorization', `Bearer ${TOKEN}`)
+        .expect(200),
+    ]);
+
+    expect(viaMcp?.isError).toBeUndefined();
+    expect(JSON.parse(viaMcp?.content?.[0].text ?? 'null')).toEqual(
+      viaRest.body,
+    );
+  });
+
+  it('reads the keyword fields of another storefront through country', async () => {
+    const result = await callTool('market_keyword_fields', {
+      appId: await fixtureAppId(),
+      country: 'mx',
+    });
+
+    expect(result?.isError).toBeUndefined();
+    const market = JSON.parse(result?.content?.[0].text ?? '{}') as {
+      country: string;
+      home: boolean;
+    };
+    expect(market).toMatchObject({ country: 'mx', home: false });
+  });
+
+  it('reports a country that is no storefront as a tool error', async () => {
+    const result = await callTool('market_keyword_fields', {
+      appId: await fixtureAppId(),
+      country: 'zz',
+    });
+
+    expect(result?.isError).toBe(true);
+    expect(result?.content?.[0].text).toContain('zz');
+  });
+
   it('analyses competitors and reports the three gap lists', async () => {
     const result = await callTool('competitor_analysis', {
       appId: await fixtureAppId(),

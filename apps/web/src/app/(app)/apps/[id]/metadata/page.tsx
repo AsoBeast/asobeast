@@ -11,6 +11,7 @@ import { getQueryClient } from "@/lib/get-query-client";
 import { queryMarket, resolveLocalization, resolveMarket } from "@/lib/market";
 import {
   appDetailOptions,
+  appLocalizationsOptions,
   keywordCountriesOptions,
   listingMarketsOptions,
   metadataAuditOptions,
@@ -60,16 +61,18 @@ export default async function MetadataPage({
       </div>
     );
   }
-  if (result.store === "APP_STORE") {
+  const isAppStore = result.store === "APP_STORE";
+  if (isAppStore) {
     void queryClient.prefetchQuery(
       screenshotsOptions(id, queryMarket(market, app.country), localization),
     );
   }
   const [keywordMarkets, assistant] = await Promise.all([
-    result.store === "APP_STORE"
+    isAppStore
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
       : null,
     getMetadataAssistantStatus().catch(() => null),
+    isAppStore ? queryClient.prefetchQuery(appLocalizationsOptions(id)) : null,
   ]);
 
   return (

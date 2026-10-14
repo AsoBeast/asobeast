@@ -2,21 +2,19 @@
 
 import { Suspense } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { keywordFieldLocalizations } from "@asobeast/shared";
+import { AppLocalizationsSection } from "@/components/localizations/AppLocalizationsSection";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
-import { keywordFieldHref } from "@/lib/keyword-field";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
+import { editLocalizationHref } from "@/lib/app-localizations";
 import { queryMarket } from "@/lib/market";
 import { metadataAuditOptions } from "@/lib/queries";
 import { CoverageTable } from "./CoverageTable";
 import { MetadataAssistantPanel } from "./MetadataAssistantPanel";
 import { ScreenshotCaptionsCard } from "./ScreenshotCaptionsCard";
-import {
-  ScreenshotCaptionsSkeleton,
-  StorefrontLocalizationsSkeleton,
-} from "./skeletons";
-import { StorefrontLocalizationsCard } from "./StorefrontLocalizationsCard";
+import { ScreenshotCaptionsSkeleton } from "./skeletons";
 
 export function MetadataAuditView({
   id,
@@ -57,10 +55,11 @@ export function MetadataAuditView({
         </Suspense>
       ) : null}
 
-      {hasLocalizations ? (
-        <Suspense fallback={<StorefrontLocalizationsSkeleton />}>
-          <StorefrontLocalizationsCard id={id} canDraft={canDraft} />
-        </Suspense>
+      {result.store === "APP_STORE" ? (
+        <AppLocalizationsSection
+          id={id}
+          canDraft={canDraft && market === home}
+        />
       ) : null}
 
       {canDraft && market === home ? (
@@ -91,11 +90,10 @@ export function MetadataAuditView({
           <h2 className="text-lg font-medium">Suggestion</h2>
           <KeywordFieldSuggestionCard
             suggestion={result.keywordFieldSuggestion}
-            editHref={keywordFieldHref(
+            editHref={editLocalizationHref(
               id,
-              home,
-              market,
-              result.keywordFieldSuggestion.localization,
+              result.keywordFieldSuggestion.localization ??
+                keywordFieldLocalizations(home)[0],
             )}
           />
         </section>

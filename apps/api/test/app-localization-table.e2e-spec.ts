@@ -1,0 +1,238 @@
+import { execSync } from 'child_process';
+import { join } from 'path';
+import { PrismaClient, Store } from '@prisma/client';
+import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { migrationSql } from './helpers/migration-sql';
+import { testDb } from './helpers/test-db';
+
+describe('the app localization table (e2e)', () => {
+  const sql = migrationSql('add_app_localizations');
+  const backfill =
+    /INSERT INTO "AppLocalization"[\s\S]*?;/.exec(sql)?.[0] ?? '';
+  let prisma: PrismaClient;
+
+  const seedApp = (storeAppId: string, country = 'us') =>
+    prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId,
+        country,
+        name: storeAppId,
+      },
+    });
+
+  const seedLocalization = (
+    appId: string,
+    localization: string,
+    origin = 'manual',
+  ) =>
+    prisma.appLocalization.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization,
+        origin,
+      },
+    });
+
+  const seedField = (appId: string, localization: string) =>
+    prisma.keywordField.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization,
+        phrases: ['habit'],
+      },
+    });
+
+  const rows = () =>
+    prisma.appLocalization.findMany({
+      orderBy: [{ appId: 'asc' }, { localization: 'asc' }],
+      select: {
+        appId: true,
+        workspaceId: true,
+        localization: true,
+        origin: true,
+      },
+    });
+
+  beforeAll(async () => {
+    execSync('pnpm prisma migrate deploy', {
+      cwd: join(__dirname, '..'),
+      env: process.env,
+      stdio: 'ignore',
+    });
+    prisma = testDb();
+    await prisma.workspace.upsert({
+      where: { id: DEFAULT_WORKSPACE_ID },
+      update: {},
+      create: { id: DEFAULT_WORKSPACE_ID, name: 'Default' },
+    });
+  });
+
+  beforeEach(() =>
+    prisma.$executeRawUnsafe(
+      'TRUNCATE TABLE "App", "Keyword" RESTART IDENTITY CASCADE',
+    ),
+  );
+
+  afterAll(() => prisma.$disconnect());
+
+  it('files a manual row for every stored keyword field', async () => {
+    const [first, second] = [await seedApp('a'), await seedApp('b')];
+    await seedField(first.id, 'en-US');
+    await seedField(first.id, 'es-MX');
+    await seedField(second.id, 'de');
+
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expect(rows()).resolves.toEqual(
+      [
+        { appId: first.id, localization: 'en-US' },
+        { appId: first.id, localization: 'es-MX' },
+        { appId: second.id, localization: 'de' },
+      ]
+        .map((row) => ({
+          ...row,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          origin: 'manual',
+        }))
+        .sort(
+          (left, right) =>
+            left.appId.localeCompare(right.appId) ||
+            left.localization.localeCompare(right.localization),
+        ),
+    );
+  });
+
+  it('leaves a row that already exists as it is', async () => {
+    const app = await seedApp('a');
+    await seedField(app.id, 'es-MX');
+    await prisma.appLocalization.create({
+      data: {
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        origin: 'detected',
+      },
+    });
+
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expect(rows()).resolves.toEqual([
+      {
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        origin: 'detected',
+      },
+    ]);
+  });
+
+  it('stamps each row with the time its field was saved', async () => {
+    const app = await seedApp('a');
+    await prisma.keywordField.create({
+      data: {
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        phrases: ['habit'],
+        updatedAt: new Date('2026-07-01T00:00:00.000Z'),
+      },
+    });
+
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expect(
+      prisma.appLocalization.findMany({ select: { createdAt: true } }),
+    ).resolves.toEqual([{ createdAt: new Date('2026-07-01T00:00:00.000Z') }]);
+  });
+
+  it('can run twice without changing the table', async () => {
+    const app = await seedApp('a');
+    await seedField(app.id, 'en-US');
+    await seedField(app.id, 'es-MX');
+
+    await prisma.$executeRawUnsafe(backfill);
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expect(prisma.appLocalization.count()).resolves.toBe(2);
+  });
+
+  it('never reads the migration history table', () => {
+    expect(sql).not.toContain('_prisma_migrations');
+  });
+
+  it('deletes the rows of an app with the app', async () => {
+    const app = await seedApp('a');
+    await prisma.appLocalization.create({
+      data: {
+        appId: app.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        origin: 'manual',
+      },
+    });
+
+    await prisma.app.delete({ where: { id: app.id } });
+
+    await expect(prisma.appLocalization.count()).resolves.toBe(0);
+  });
+
+  describe('dropping a stored home localization', () => {
+    const drop = migrationSql('drop_home_app_localizations');
+
+    it('deletes the home localization of each app and keeps every other row', async () => {
+      const [us, fr, uk] = [
+        await seedApp('a'),
+        await seedApp('b', 'fr'),
+        await seedApp('c', 'uk'),
+      ];
+      await seedLocalization(us.id, 'en-US');
+      await seedLocalization(us.id, 'es-MX');
+      await seedLocalization(fr.id, 'fr', 'detected');
+      await seedLocalization(fr.id, 'nl', 'detected');
+      await seedLocalization(uk.id, 'en-GB');
+      await seedLocalization(uk.id, 'en-US');
+
+      await prisma.$executeRawUnsafe(drop);
+
+      await expect(
+        prisma.appLocalization.findMany({
+          select: { appId: true, localization: true },
+        }),
+      ).resolves.toEqual(
+        expect.arrayContaining([
+          { appId: us.id, localization: 'es-MX' },
+          { appId: fr.id, localization: 'nl' },
+          { appId: uk.id, localization: 'en-US' },
+        ]),
+      );
+      await expect(prisma.appLocalization.count()).resolves.toBe(3);
+    });
+
+    it('never reads the migration history table', () => {
+      expect(drop).not.toContain('_prisma_migrations');
+    });
+  });
+
+  it('refuses a row that names another workspace than its app', async () => {
+    const app = await seedApp('a');
+    await prisma.workspace.create({ data: { id: 'ws_other', name: 'Other' } });
+    try {
+      await expect(
+        prisma.appLocalization.create({
+          data: {
+            appId: app.id,
+            workspaceId: 'ws_other',
+            localization: 'es-MX',
+            origin: 'manual',
+          },
+        }),
+      ).rejects.toThrow('AppLocalization_appId_workspaceId_fkey');
+    } finally {
+      await prisma.workspace.delete({ where: { id: 'ws_other' } });
+    }
+  });
+});

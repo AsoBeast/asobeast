@@ -53,9 +53,10 @@ import {
   getHealth,
   getKeywordCountries,
   previewKeywordImport,
+  getAppLocalizations,
   getKeywordField,
   getKeywords,
-  listKeywordFields,
+  getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
   getMetadataAudit,
@@ -112,8 +113,12 @@ export const appKeys = {
     [...appKeys.detail(id), "keyword-field"] as const,
   keywordField: (id: string, query: KeywordFieldQuery = {}) =>
     [...appKeys.keywordFieldRoot(id), query] as const,
-  keywordFields: (id: string) =>
-    [...appKeys.detail(id), "keyword-fields"] as const,
+  localizations: (id: string) =>
+    [...appKeys.detail(id), "localizations"] as const,
+  marketKeywordFieldsRoot: (id: string) =>
+    [...appKeys.detail(id), "market-keyword-fields"] as const,
+  marketKeywordFields: (id: string, country: string) =>
+    [...appKeys.marketKeywordFieldsRoot(id), { country }] as const,
   suggestions: (
     id: string,
     strategy: KeywordSuggestionStrategy,
@@ -512,10 +517,16 @@ export const keywordFieldOptions = (
     queryFn: () => getKeywordField(id, query),
   });
 
-export const keywordFieldsOptions = (id: string) =>
+export const appLocalizationsOptions = (id: string) =>
   queryOptions({
-    queryKey: appKeys.keywordFields(id),
-    queryFn: () => listKeywordFields(id),
+    queryKey: appKeys.localizations(id),
+    queryFn: () => getAppLocalizations(id),
+  });
+
+export const marketKeywordFieldsOptions = (id: string, country: string) =>
+  queryOptions({
+    queryKey: appKeys.marketKeywordFields(id, country),
+    queryFn: () => getMarketKeywordFields(id, country),
   });
 
 export const suggestionsOptions = (
@@ -771,10 +782,13 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordsRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordCountries(id) });
   void client.invalidateQueries({ queryKey: appKeys.keywordFieldRoot(id) });
-  void client.invalidateQueries({ queryKey: appKeys.keywordFields(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+  void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.marketKeywordFieldsRoot(id),
+  });
 }
 
 export function invalidateKeywordFieldMutation(
@@ -783,6 +797,14 @@ export function invalidateKeywordFieldMutation(
 ): void {
   invalidateKeywordMutation(client, id);
   void client.invalidateQueries({ queryKey: appKeys.metadataAuditRoot(id) });
+}
+
+export function invalidateLocalizationMutation(
+  client: QueryClient,
+  id: string,
+): void {
+  invalidateKeywordFieldMutation(client, id);
+  void client.invalidateQueries({ queryKey: accountPlanKey });
 }
 
 export function invalidateKeywordImport(client: QueryClient, id: string): void {

@@ -48,6 +48,7 @@ import {
   invalidateAudit,
   invalidateKeywordImport,
   invalidateKeywordFieldMutation,
+  invalidateLocalizationMutation,
   invalidateKeywordMutation,
   invalidateKeywords,
   invalidateLinkMutation,
@@ -56,7 +57,8 @@ import {
   seedWebhook,
   keywordCountriesOptions,
   keywordFieldOptions,
-  keywordFieldsOptions,
+  appLocalizationsOptions,
+  marketKeywordFieldsOptions,
   keywordsOptions,
   appListingOptions,
   listingMarketsOptions,
@@ -118,7 +120,12 @@ const APP_SCOPED_OPTIONS = [
     keywordFieldOptions(APP, { country: "de", localization: "en-GB" }),
     appKeys.keywordField(APP, { country: "de", localization: "en-GB" }),
   ],
-  ["keywordFields", keywordFieldsOptions(APP), appKeys.keywordFields(APP)],
+  ["localizations", appLocalizationsOptions(APP), appKeys.localizations(APP)],
+  [
+    "marketKeywordFields",
+    marketKeywordFieldsOptions(APP, "de"),
+    appKeys.marketKeywordFields(APP, "de"),
+  ],
   [
     "suggestions",
     suggestionsOptions(APP, "metadata", "us"),
@@ -221,6 +228,11 @@ const ROOT_TO_LEAF = [
     appKeys.rankDistribution(APP, RANGE, "de"),
   ],
   ["keywordsRoot", appKeys.keywordsRoot(APP), appKeys.keywords(APP, "us")],
+  [
+    "marketKeywordFieldsRoot",
+    appKeys.marketKeywordFieldsRoot(APP),
+    appKeys.marketKeywordFields(APP, "de"),
+  ],
   ["compareRoot", appKeys.compareRoot(APP), appKeys.compare(APP, true)],
   ["serpMoversRoot", appKeys.serpMoversRoot(APP), appKeys.serpMovers(APP, 7)],
   ["discoveryRoot", appKeys.discoveryRoot(APP), appKeys.discovery(APP, 30)],
@@ -241,6 +253,12 @@ const ROOT_TO_LEAF = [
 ] as const;
 
 describe("appKeys", () => {
+  it("W-QRY-05 keys the reads of each market apart", () => {
+    expect(appKeys.marketKeywordFields(APP, "de")).not.toEqual(
+      appKeys.marketKeywordFields(APP, "pl"),
+    );
+  });
+
   it.each(APP_SCOPED_OPTIONS)(
     "keys the %s query from the hierarchy",
     (_name, options, key) => {
@@ -489,10 +507,11 @@ describe("invalidation sets", () => {
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
       appKeys.keywordFieldRoot(APP),
-      appKeys.keywordFields(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
+      appKeys.localizations(APP),
+      appKeys.marketKeywordFieldsRoot(APP),
     ]);
   });
 
@@ -504,11 +523,30 @@ describe("invalidation sets", () => {
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
       appKeys.keywordFieldRoot(APP),
-      appKeys.keywordFields(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
+      appKeys.localizations(APP),
+      appKeys.marketKeywordFieldsRoot(APP),
       appKeys.metadataAuditRoot(APP),
+    ]);
+  });
+
+  it("W-QRY-02 refreshes the localizations and the plan after a localization mutation", () => {
+    expect(
+      invalidatedKeys((client) => invalidateLocalizationMutation(client, APP)),
+    ).toEqual([
+      appKeys.audit(APP),
+      appKeys.keywordsRoot(APP),
+      appKeys.keywordCountries(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.summary(APP),
+      appKeys.compareRoot(APP),
+      portfolioInsightsKey,
+      appKeys.localizations(APP),
+      appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.metadataAuditRoot(APP),
+      accountPlanKey,
     ]);
   });
 
@@ -520,10 +558,11 @@ describe("invalidation sets", () => {
       appKeys.keywordsRoot(APP),
       appKeys.keywordCountries(APP),
       appKeys.keywordFieldRoot(APP),
-      appKeys.keywordFields(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
       portfolioInsightsKey,
+      appKeys.localizations(APP),
+      appKeys.marketKeywordFieldsRoot(APP),
       appKeys.importPreviewRoot(APP),
     ]);
   });
