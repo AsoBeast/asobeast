@@ -20,8 +20,11 @@ export function progressSentence(
   return `Set up ${name ?? "this app"} · ${progress.done} of ${progress.total} · ${next}`;
 }
 
+export const setupSentence = (name: string | null): string =>
+  `Set up ${name ?? "this app"}`;
+
 export const loadingSentence = (name: string | null): string =>
-  `Set up ${name ?? "this app"} · loading progress`;
+  `${setupSentence(name)} · loading progress`;
 
 export const progressPercent = ({ done, total }: StepProgress): number =>
   total === 0 ? 0 : (done / total) * 100;

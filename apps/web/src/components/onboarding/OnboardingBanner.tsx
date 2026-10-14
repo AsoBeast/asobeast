@@ -20,6 +20,7 @@ import {
   loadingSentence,
   progressPercent,
   progressSentence,
+  setupSentence,
 } from "./setup-progress";
 import { useOnboarding } from "./use-onboarding";
 
@@ -29,6 +30,7 @@ export function OnboardingBanner() {
   if (state.status !== "in_progress" || !state.appId) return null;
 
   const app = data.apps.find((item) => item.id === state.appId);
+  if (!app) return null;
 
   return (
     <Alert
@@ -38,9 +40,9 @@ export function OnboardingBanner() {
       <ListChecks />
       <AlertDescription className="flex flex-col gap-2">
         <BannerProgress
-          appId={state.appId}
-          country={app?.country ?? null}
-          name={app?.name ?? null}
+          appId={app.id}
+          country={app.country}
+          name={app.name}
           state={state}
         />
       </AlertDescription>
@@ -67,15 +69,15 @@ function BannerProgress({
   state,
 }: {
   appId: string;
-  country: string | null;
+  country: string;
   name: string | null;
   state: OnboardingState;
 }) {
   const competitors = useQuery(competitorsOptions(appId));
-  const keywords = useQuery({
-    ...keywordsOptions(appId, country ?? ""),
-    enabled: country !== null,
-  });
+  const keywords = useQuery(keywordsOptions(appId, country));
+  if (competitors.isError || keywords.isError) {
+    return <span>{setupSentence(name)}</span>;
+  }
   if (!competitors.data || !keywords.data) {
     return <span>{loadingSentence(name)}</span>;
   }

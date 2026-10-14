@@ -4,6 +4,7 @@ import {
   nextLabel,
   progressPercent,
   progressSentence,
+  setupSentence,
 } from "./setup-progress";
 
 describe("progressSentence", () => {
@@ -24,6 +25,7 @@ describe("progressSentence", () => {
       progressSentence(null, { done: 0, total: 3, next: "competitors" }),
     ).toBe("Set up this app · 0 of 3 · next: pick competitors");
     expect(loadingSentence(null)).toBe("Set up this app · loading progress");
+    expect(setupSentence("Focus Timer")).toBe("Set up Focus Timer");
   });
 });
 

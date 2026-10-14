@@ -147,11 +147,7 @@ export function CompetitorsStep({
             ? "Loading competitors…"
             : trackedCompetitorsLine(competitors)}
       </p>
-      <DiscoveredApps
-        appId={appId}
-        competitors={competitors ?? []}
-        collecting={collecting}
-      />
+      <DiscoveredApps appId={appId} collecting={collecting} />
       <Button asChild variant="link" className="h-auto w-fit px-0">
         <Link href={`/apps/${appId}/competitors`}>Manage competitors</Link>
       </Button>
@@ -173,7 +169,10 @@ function homeKeywordsLine(
   if (error) return "Keywords are temporarily unavailable.";
   if (tracked === null) return "Loading keywords…";
   const active = tracked.filter((keyword) => keyword.active).length;
-  return `${active} of ${SETUP_KEYWORD_TARGET} tracked in ${formatCountry(homeMarket)}`;
+  const market = formatCountry(homeMarket);
+  return active > SETUP_KEYWORD_TARGET
+    ? `${active} tracked in ${market}`
+    : `${active} of ${SETUP_KEYWORD_TARGET} tracked in ${market}`;
 }
 
 export function KeywordsStep({
@@ -255,14 +254,14 @@ export function CountriesStep({
     suggestions !== null && suggestions.suggestions.length > 0
       ? suggestions
       : null;
-  const [value, setValue] = useState(() => nextCountry(markets));
-  const addable =
-    marketError(store, value) === null && !markets.includes(value);
+  const [picked, setPicked] = useState(() => nextCountry(markets));
+  const value = markets.includes(picked) ? nextCountry(markets) : picked;
+  const addable = value !== "" && marketError(store, value) === null;
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!addable) return;
     onSelect(value, true);
-    setValue(nextCountry([...markets, value]));
+    setPicked(nextCountry([...markets, value]));
   };
 
   return (
@@ -312,7 +311,7 @@ export function CountriesStep({
             id="setup-country"
             store={store}
             value={value}
-            onChange={setValue}
+            onChange={setPicked}
             ariaLabel="Country to add"
           />
           <Button type="submit" variant="outline" disabled={!addable}>

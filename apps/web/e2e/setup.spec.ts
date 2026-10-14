@@ -3,6 +3,8 @@ import { expect, test } from "./session.mts";
 import { parseOnboardingState } from "../src/lib/onboarding";
 import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 
+test.describe.configure({ mode: "serial" });
+
 const storedStatus = async (page: Page): Promise<string> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
@@ -230,6 +232,30 @@ test("direct setup is resumable and completes after live checks", async ({
   expect(await storedSkipped(page)).toEqual(["keywords"]);
 });
 
+test("a skipped step turns done once its target is reached", async ({
+  page,
+  request,
+}) => {
+  await resetCompetitors(request, "app-new");
+  await startSetup(page, "app-new");
+
+  const competitors = stepCard(page, "Pick competitors");
+  await competitors.getByRole("button", { name: "Skip this step" }).click();
+  await expect(competitors.getByText("Skipped", { exact: true })).toBeVisible();
+  await competitors
+    .getByLabel("Competitor App Store URL")
+    .fill("https://apps.apple.com/us/app/rival/id555000998");
+  await competitors.getByRole("button", { name: "Add competitor" }).click();
+
+  await expect(competitors.getByText("Done", { exact: true })).toBeVisible();
+  await expect(
+    competitors.getByText(
+      "Positions are compared against nobody until a competitor is added.",
+    ),
+  ).toHaveCount(0);
+  await resetCompetitors(request, "app-new");
+});
+
 test("a skipped step names its reason and can be undone", async ({ page }) => {
   await startSetup(page, "app-2");
 
@@ -257,7 +283,7 @@ test("a version 1 record resumes as in progress with its markets", async ({
       JSON.stringify({
         version: 1,
         status: "in_progress",
-        appId: "app-1",
+        appId: "app-2",
         selectedMarkets: ["de", "us"],
         acknowledgements: {
           noCompetitors: true,
@@ -268,10 +294,10 @@ test("a version 1 record resumes as in progress with its markets", async ({
       }),
     );
   }, OWNER_ONBOARDING_KEY);
-  await page.goto("/apps/app-1/setup");
+  await page.goto("/apps/app-2/setup");
 
   await expect(
-    page.getByRole("heading", { name: /^Set up Focus Timer · 1 of 3/ }),
+    page.getByRole("heading", { name: /^Set up Habit Tracker · 1 of 3/ }),
   ).toBeVisible();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
   await expect(
@@ -359,12 +385,7 @@ test.describe("picking competitors inside the step", () => {
       page.getByText("2 tracked: Rival Focus and Deep Work Sessions"),
     ).toBeVisible();
     await expect(
-      discovered
-        .getByRole("listitem")
-        .filter({ hasText: "Deep Work Sessions" }),
-    ).toHaveCount(0);
-    await expect(
-      discovered.getByRole("listitem").filter({ hasText: "Tomato Clock" }),
+      stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
     ).toBeVisible();
   });
 });

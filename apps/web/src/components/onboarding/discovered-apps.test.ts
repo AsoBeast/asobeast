@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CompetitorDiscoveryItem, CompetitorItem } from "@asobeast/shared";
+import type { CompetitorDiscoveryItem } from "@asobeast/shared";
 import {
   DISCOVERED_LIMIT,
   discoveredEmptyText,
@@ -19,27 +19,6 @@ const item = (title: string): CompetitorDiscoveryItem => ({
   keywords: [],
 });
 
-const competitor = (name: string | null, title?: string): CompetitorItem => ({
-  id: `comp-${name ?? title}`,
-  store: "APP_STORE",
-  name,
-  iconUrl: null,
-  latestSnapshot: title
-    ? {
-        id: "snap",
-        title,
-        subtitle: null,
-        summary: null,
-        ratingAvg: null,
-        ratingCount: null,
-        installs: null,
-        price: null,
-        version: null,
-        capturedAt: "2026-10-14T00:00:00.000Z",
-      }
-    : null,
-});
-
 const discovery = (titles: string[]) => ({
   windowDays: 30,
   items: titles.map(item),
@@ -47,24 +26,15 @@ const discovery = (titles: string[]) => ({
 
 describe("discoveredRows", () => {
   it("answers nothing before discovery loads", () => {
-    expect(discoveredRows(undefined, [])).toEqual([]);
+    expect(discoveredRows(undefined)).toEqual([]);
   });
 
   it("keeps the first rows in api order up to the limit", () => {
     const titles = Array.from({ length: 8 }, (_, index) => `App ${index}`);
 
-    expect(
-      discoveredRows(discovery(titles), []).map((row) => row.title),
-    ).toEqual(titles.slice(0, DISCOVERED_LIMIT));
-  });
-
-  it("leaves out an app already tracked by name or by listing title", () => {
-    const rows = discoveredRows(
-      discovery(["Tomato Clock", "Deep Work", "Zen"]),
-      [competitor("Tomato Clock"), competitor(null, "Deep Work")],
+    expect(discoveredRows(discovery(titles)).map((row) => row.title)).toEqual(
+      titles.slice(0, DISCOVERED_LIMIT),
     );
-
-    expect(rows.map((row) => row.title)).toEqual(["Zen"]);
   });
 });
 

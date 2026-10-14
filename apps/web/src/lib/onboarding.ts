@@ -340,11 +340,13 @@ export function stepState(
   step: SetupStep,
   counts: SetupCounts,
 ): StepState {
+  const reached =
+    step === "countries"
+      ? state.countriesReviewed
+      : (counts[step] ?? 0) >= STEP_TARGETS[step];
+  if (reached) return "done";
   if (state.skipped.includes(step)) return "skipped";
-  if (step === "countries") return state.countriesReviewed ? "done" : "open";
-  const count = counts[step];
-  if (count === null) return "loading";
-  return count >= STEP_TARGETS[step] ? "done" : "open";
+  return step !== "countries" && counts[step] === null ? "loading" : "open";
 }
 
 export function stepStates(

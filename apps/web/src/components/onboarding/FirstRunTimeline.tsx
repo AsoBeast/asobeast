@@ -74,14 +74,18 @@ export function FirstRunTimeline({ id }: { id: string }) {
   }
 
   return (
-    <Card aria-live="polite" className="print:hidden">
-      <CardHeader>
+    <Card className="print:hidden">
+      <CardHeader aria-live="polite">
         <CardTitle asChild>
           <h2 id={headingId}>{firstRunHeadline(data)}</h2>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <ul aria-labelledby={headingId} className="flex flex-col gap-3">
+        <ul
+          aria-labelledby={headingId}
+          aria-live="polite"
+          className="flex flex-col gap-3"
+        >
           {firstRunRows(data, dataUpdatedAt).map((row) => (
             <StageRow key={row.stage} row={row} />
           ))}

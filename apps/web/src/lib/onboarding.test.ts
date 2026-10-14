@@ -237,10 +237,19 @@ describe("stepState", () => {
     ).toBe("done");
   });
 
-  it("reports a skipped step as skipped whatever its count", () => {
+  it("reports a skipped step as skipped until its target is reached", () => {
     const state = setStepSkipped(started(), "competitors", true);
 
     expect(stepState(state, "competitors", counts(null, 0))).toBe("skipped");
+    expect(stepState(state, "competitors", counts(0, 0))).toBe("skipped");
+    expect(stepState(state, "competitors", counts(1, 0))).toBe("done");
+    expect(
+      stepState(
+        setCountriesReviewed(setStepSkipped(started(), "countries", true)),
+        "countries",
+        counts(0, 0),
+      ),
+    ).toBe("done");
     expect(
       stepState(
         setStepSkipped(state, "competitors", false),

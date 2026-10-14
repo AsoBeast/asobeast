@@ -3,7 +3,6 @@
 import { useId } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
-import type { CompetitorItem } from "@asobeast/shared";
 import { TrackButton } from "@/components/competitors/TrackButton";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,16 +16,14 @@ import {
 
 export function DiscoveredApps({
   appId,
-  competitors,
   collecting,
 }: {
   appId: string;
-  competitors: CompetitorItem[];
   collecting: boolean;
 }) {
   const headingId = useId();
   const discovery = useQuery(discoveryOptions(appId, DISCOVERY_WINDOW_DAYS));
-  const rows = discoveredRows(discovery.data, competitors);
+  const rows = discoveredRows(discovery.data);
 
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-2">
