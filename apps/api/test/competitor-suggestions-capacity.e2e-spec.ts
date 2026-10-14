@@ -1,6 +1,7 @@
 import './helpers/enable-billing';
 import { CompetitorSuggestions, PLAN_LIMITS } from '@asobeast/shared';
 import { Store } from '@prisma/client';
+import { addDays, utcToday } from '../src/analytics/analytics.support';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
   allowanceSpendsDuring,
@@ -43,6 +44,29 @@ describe('Competitor suggestions capacity (e2e)', () => {
 
   afterAll(() => stopCapacityHarness(harness));
 
+  const seedKeywordResult = async () => {
+    const keyword = await harness.prisma.keyword.create({
+      data: { text: 'focus timer', store: Store.APP_STORE, country: 'us' },
+    });
+    await harness.prisma.trackedKeyword.create({
+      data: {
+        appId: primaryId,
+        keywordId: keyword.id,
+        source: 'MANUAL',
+        active: true,
+      },
+    });
+    await harness.prisma.serpEntry.create({
+      data: {
+        keywordId: keyword.id,
+        date: addDays(utcToday(), -1),
+        position: 2,
+        storeAppId: '333000333',
+        title: 'Ranked Rival',
+      },
+    });
+  };
+
   it('spends one store lookup per suggestion list', async () => {
     const [, calls] = await allowanceSpendsDuring(harness, () =>
       suggest().expect(200),
@@ -84,9 +108,14 @@ describe('Competitor suggestions capacity (e2e)', () => {
     }
     await clearRateLimitCounters(harness.app);
 
+    await seedKeywordResult();
     const spent = await suggest().expect(200);
 
-    expect((spent.body as CompetitorSuggestions).similar).toBe('unavailable');
+    const body = spent.body as CompetitorSuggestions;
+    expect(body.similar).toBe('unavailable');
+    expect(body.items).toEqual([
+      expect.objectContaining({ storeAppId: '333000333', source: 'serp' }),
+    ]);
     await clearRateLimitCounters(harness.app);
     await owner
       .get('/store/search?store=APP_STORE&country=us&q=focus')
