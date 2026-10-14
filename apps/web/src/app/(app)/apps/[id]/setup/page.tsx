@@ -6,6 +6,7 @@ import {
   appDetailOptions,
   competitorsOptions,
   discoveryOptions,
+  firstRunOptions,
   keywordsOptions,
   marketSuggestionsOptions,
   pickerSuggestionsOptions,
@@ -22,6 +23,7 @@ export default async function SetupPage({
   await Promise.all([
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
+    queryClient.prefetchQuery(firstRunOptions(id)),
     queryClient.prefetchQuery(discoveryOptions(id, DISCOVERY_WINDOW_DAYS)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
     queryClient.prefetchQuery(

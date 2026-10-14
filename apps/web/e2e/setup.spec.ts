@@ -535,13 +535,18 @@ test.describe("picking keywords inside the step", () => {
 test("the discovered list says positions are still collected on a new app", async ({
   page,
 }) => {
+  await page.route("**/api/backend/apps/app-new/first-run", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+    await route.continue();
+  });
   await startSetup(page, "app-new");
 
   await expect(
     page.getByText(
       "Positions are still being collected. Apps that rank for your keywords appear here within minutes.",
     ),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 1_500 });
+  await expect(page.getByText(/^Nothing ranks beside you/)).toHaveCount(0);
 });
 
 test("corrupt state resets and setup can be dismissed on a narrow dark layout", async ({
