@@ -7,20 +7,21 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { Info, Loader2, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { parseStoreUrl, type Store } from "@asobeast/shared";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Store } from "@asobeast/shared";
+import { StoreSearchField } from "@/components/apps/StoreSearchField";
+import { useStoreSearch } from "@/components/apps/useStoreSearch";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { addCompetitor, ApiError } from "@/lib/api";
 import { storeLabel } from "@/lib/format";
 import { appDetailOptions, invalidateCompetitorMutation } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
 const STORE_URL_EXAMPLES: Record<Store, string> = {
-  APP_STORE: "https://apps.apple.com/us/app/name/id123456789",
-  GOOGLE_PLAY: "https://play.google.com/store/apps/details?id=com.example.app",
+  APP_STORE: "Focus Timer or https://apps.apple.com/us/app/name/id123456789",
+  GOOGLE_PLAY:
+    "Focus Timer or https://play.google.com/store/apps/details?id=com.example.app",
 };
 
 export function AddCompetitorForm({ id }: { id: string }) {
@@ -29,6 +30,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const search = useStoreSearch(detail.store, detail.country, url);
 
   const mutation = useMutation({
     mutationFn: (value: string) => addCompetitor(id, value),
@@ -51,31 +53,40 @@ export function AddCompetitorForm({ id }: { id: string }) {
   });
   const addOnce = useSingleFlight(mutation);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function add(value: string) {
     setError(null);
     setNote(null);
+    addOnce(value);
+  }
 
-    try {
-      parseStoreUrl(url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unrecognized store URL");
-      return;
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const { input, enter } = search;
+    if (input.kind === "url") add(url);
+    if (input.kind === "invalid") {
+      setNote(null);
+      setError(input.message);
     }
-
-    addOnce(url);
+    if (enter.kind === "pick") add(enter.result.storeAppId);
+    if (enter.kind === "focus") search.firstResultRef.current?.focus();
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2">
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input
-          value={url}
-          onChange={(event) => setUrl(event.target.value)}
-          placeholder={STORE_URL_EXAMPLES[detail.store]}
-          aria-invalid={error !== null}
-          aria-label={`Competitor ${storeLabel(detail.store)} URL`}
-        />
+    <form onSubmit={submit}>
+      <StoreSearchField
+        id="competitor-search"
+        label={`Competitor name or ${storeLabel(detail.store)} URL`}
+        hint="Type a name to search, or paste a store URL. A new competitor gets positions on the next keyword check."
+        placeholder={STORE_URL_EXAMPLES[detail.store]}
+        store={detail.store}
+        country={detail.country}
+        value={url}
+        onChange={setUrl}
+        onPick={(result) => add(result.storeAppId)}
+        search={search}
+        error={error}
+        note={note}
+      >
         <Button
           type="submit"
           disabled={mutation.isPending || url.trim() === ""}
@@ -83,17 +94,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {mutation.isPending ? "Adding…" : "Add competitor"}
         </Button>
-      </div>
-      <p className="text-xs text-muted-foreground">
-        A new competitor gets positions on the next keyword check.
-      </p>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      {note ? (
-        <Alert>
-          <Info />
-          <AlertDescription>{note}</AlertDescription>
-        </Alert>
-      ) : null}
+      </StoreSearchField>
     </form>
   );
 }

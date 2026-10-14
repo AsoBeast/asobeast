@@ -317,7 +317,7 @@ test("a skipped step turns done once its target is reached", async ({
   await competitors.getByRole("button", { name: "Skip this step" }).click();
   await expect(competitors.getByText("Skipped", { exact: true })).toBeVisible();
   await competitors
-    .getByLabel("Competitor App Store URL")
+    .getByLabel("Competitor name or App Store URL")
     .fill("https://apps.apple.com/us/app/rival/id555000998");
   await competitors.getByRole("button", { name: "Add competitor" }).click();
 
@@ -396,7 +396,7 @@ test.describe("picking competitors inside the step", () => {
     const competitors = stepCard(page, "Pick competitors");
     await expect(competitors.getByText("No competitor yet")).toBeVisible();
     await competitors
-      .getByLabel("Competitor App Store URL")
+      .getByLabel("Competitor name or App Store URL")
       .fill("https://apps.apple.com/us/app/rival/id555000999");
     await competitors.getByRole("button", { name: "Add competitor" }).click();
 

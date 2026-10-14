@@ -1312,7 +1312,10 @@ function capturedCompetitor(
   const discovered = dataset.discovery.items.find(
     (item) => item.storeAppId === parsed.storeAppId,
   );
-  const title = discovered?.title ?? parsed.storeAppId;
+  const searched = STORE_SEARCH[parsed.store].find(
+    (item) => item.storeAppId === parsed.storeAppId,
+  );
+  const title = discovered?.title ?? searched?.title ?? parsed.storeAppId;
 
   return {
     id: `comp-${parsed.storeAppId}`,
@@ -1325,8 +1328,8 @@ function capturedCompetitor(
       subtitle: parsed.store === "APP_STORE" ? CAPTURED_SUBTITLE : null,
       summary:
         parsed.store === "GOOGLE_PLAY" ? CAPTURED_SHORT_DESCRIPTION : null,
-      ratingAvg: discovered?.ratingAvg ?? null,
-      ratingCount: discovered?.ratingCount ?? null,
+      ratingAvg: discovered?.ratingAvg ?? searched?.ratingAvg ?? null,
+      ratingCount: discovered?.ratingCount ?? searched?.ratingCount ?? null,
       installs: null,
       price: 0,
       version: "1.0.0",
