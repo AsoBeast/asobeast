@@ -250,6 +250,7 @@ These live in the root `.env` and are read by Compose, not by the API directly.
 | --- | --- | --- | --- |
 | `POSTGRES_PASSWORD` | None | Yes | Sets the PostgreSQL role password and is interpolated into `DATABASE_URL` |
 | `AUTH_SECRET` | None | Yes | Passed through to the API container |
+| `WEB_PUBLIC_URL` | `http://localhost:3001` | No | Passed to the API container in place of any value in `apps/api/.env`, which `pnpm dev` reads on port 3000. Set it to the origin a person would type when a proxy or another host serves the stack. The tunnel overlay replaces it with `https://` and `ASOBEAST_DOMAIN` |
 | `TRUST_PROXY` | `0` | No | Hops you control in front of the web app. The tunnel overlay pins `1` for the web app whatever this file says, because the tunnel is always exactly one hop. Set it yourself when you run `cloudflared` on the host or bring your own proxy |
 | `TUNNEL_TOKEN` | None | With the tunnel overlay | Token of the Cloudflare Tunnel you created in the dashboard. Read only by `docker-compose.tunnel.yml` |
 | `ASOBEAST_DOMAIN` | None | With the tunnel overlay | Public hostname attached to that tunnel. Becomes `WEB_PUBLIC_URL` |

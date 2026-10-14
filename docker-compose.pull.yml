@@ -82,6 +82,7 @@ services:
       NODE_ENV: production
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env}
       AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-true}
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL:-http://localhost:3001}
       TRUST_PROXY: 1
       LOG_LEVEL: ${LOG_LEVEL:-log}
     volumes:
