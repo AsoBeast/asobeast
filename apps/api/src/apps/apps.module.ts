@@ -22,6 +22,8 @@ import { MarketSeedController } from './market-seed.controller';
 import { MarketSeedService } from './market-seed.service';
 import { MarketSuggestionsController } from './market-suggestions.controller';
 import { MarketSuggestionsService } from './market-suggestions.service';
+import { StoreSearchController } from './store-search.controller';
+import { StoreSearchService } from './store-search.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
 @Module({
@@ -44,6 +46,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     LocalizationDetectionController,
     MarketSeedController,
     MarketSuggestionsController,
+    StoreSearchController,
   ],
   providers: [
     AppsService,
@@ -57,6 +60,7 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     LocalizedListingCapture,
     MarketSeedService,
     MarketSuggestionsService,
+    StoreSearchService,
     SubtitleBackfill,
   ],
   exports: [

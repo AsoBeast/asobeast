@@ -1939,6 +1939,80 @@
         ]
       }
     },
+    "/store/search": {
+      "get": {
+        "description": "Lists up to 25 listings the store returns for a name in one storefront, with the store app id, title, developer, rating and icon, so an app or a competitor can be picked by name before it is imported or added by its id. Reaches the store while you wait, so it answers within the store deadline and spends one store lookup of the hourly allowance; a request the validation refuses spends nothing.",
+        "operationId": "StoreSearchController_search",
+        "parameters": [
+          {
+            "name": "store",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "APP_STORE",
+                "GOOGLE_PLAY"
+              ]
+            }
+          },
+          {
+            "name": "country",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "us",
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "maxLength": 80,
+              "example": "focus timer",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 25,
+              "default": 10,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search a store by app name",
+        "tags": [
+          "apps"
+        ]
+      }
+    },
     "/apps/{id}/keywords": {
       "get": {
         "operationId": "KeywordsController_list",
