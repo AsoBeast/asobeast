@@ -17,7 +17,12 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
-import { JOBS, QUEUES } from '../src/jobs/jobs.types';
+import {
+  firstRunCheckJobId,
+  JOBS,
+  QUEUES,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { NormalizedApp, StoreProvider } from '../src/store-providers/types';
 import { seedApiToken } from './helpers/api-tokens';
@@ -523,6 +528,33 @@ describe('Keyword import (e2e)', () => {
     ]);
 
     expect(await queuedScores()).toBe(scores + 2);
+  });
+
+  it('E-IMP-25 checks the position of every imported keyword and none already tracked', async () => {
+    const id = await importApp();
+    await obliterateQueues(app);
+    await pauseQueues(app);
+
+    await commit(id, [
+      { keyword: 'habit' },
+      { keyword: 'focus timer' },
+      { keyword: 'sleep notes', country: 'pl' },
+    ]);
+
+    const imported = await prisma.keyword.findMany({
+      where: { text: { in: ['focus timer', 'sleep notes'] } },
+      select: { id: true },
+    });
+    const checked = (
+      await appStoreQueue().getJobs(['waiting', 'paused', 'delayed'])
+    )
+      .filter((job) => job.name === JOBS.CHECK_KEYWORD)
+      .map((job) => job.id);
+    expect(checked.sort()).toEqual(
+      imported
+        .map((keyword) => firstRunCheckJobId(id, keyword.id, utcDateKey()))
+        .sort(),
+    );
   });
 
   it('E-IMP-23 imports the largest request of realistic rows', async () => {

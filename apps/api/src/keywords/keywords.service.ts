@@ -11,6 +11,7 @@ import {
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { classifyBuckets } from './buckets';
+import { FirstPositionChecks } from './first-position-checks';
 import { KeywordTracker, keywordRows } from './keyword-tracker';
 import {
   isGap,
@@ -34,6 +35,7 @@ export class KeywordsService {
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
     private readonly listings: MarketListingRequests,
+    private readonly checks: FirstPositionChecks,
   ) {}
 
   async listTracked(
@@ -163,6 +165,7 @@ export class KeywordsService {
       app.store,
       market,
     );
+    const alreadyActive = await this.activeKeywordIds(appId, keywordIds);
 
     await this.quota.admitKeywordMarkets(async (tx) => {
       for (const keywordId of keywordIds) {
@@ -178,9 +181,24 @@ export class KeywordsService {
     for (const keywordId of keywordIds) {
       await this.tracker.enqueueFirstScore(keywordId, app);
     }
+    await this.checks.schedule(
+      appId,
+      keywordIds.filter((keywordId) => !alreadyActive.has(keywordId)),
+    );
     await this.listings.request(app, market);
 
     return this.listTracked(appId, undefined, market);
+  }
+
+  private async activeKeywordIds(
+    appId: string,
+    keywordIds: string[],
+  ): Promise<Set<string>> {
+    const rows = await this.prisma.trackedKeyword.findMany({
+      where: { appId, active: true, keywordId: { in: keywordIds } },
+      select: { keywordId: true },
+    });
+    return new Set(rows.map((row) => row.keywordId));
   }
 
   async updateKeyword(

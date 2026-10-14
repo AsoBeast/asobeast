@@ -7,6 +7,7 @@ import {
 } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { FirstPositionChecks } from './first-position-checks';
 import {
   ClassifiedRow,
   classifyImportRows,
@@ -47,6 +48,7 @@ export class KeywordImportService {
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
     private readonly listings: MarketListingRequests,
+    private readonly checks: FirstPositionChecks,
   ) {}
 
   async preview(
@@ -144,6 +146,7 @@ export class KeywordImportService {
       );
       return keywordId ? [{ addition, keywordId }] : [];
     });
+    const keywordIds = located.map(({ keywordId }) => keywordId);
     const created = located.filter(({ addition }) => addition.status === 'new');
     const resumed = located.filter(
       ({ addition }) => addition.status === 'resume',
@@ -169,17 +172,11 @@ export class KeywordImportService {
         },
         data: { active: true },
       });
-      await this.tracker.claimForManual(
-        tx,
-        app.id,
-        located.map(({ keywordId }) => keywordId),
-      );
+      await this.tracker.claimForManual(tx, app.id, keywordIds);
       imported = added.count + reactivated.count;
     });
-    await this.tracker.enqueueFirstScores(
-      located.map(({ keywordId }) => keywordId),
-      app,
-    );
+    await this.tracker.enqueueFirstScores(keywordIds, app);
+    await this.checks.schedule(app.id, keywordIds);
     const markets = new Set(
       located.map(({ addition }) => addition.candidate.country),
     );

@@ -21,7 +21,12 @@ import {
 import { Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
-import { QUEUES } from '../src/jobs/jobs.types';
+import {
+  firstRunCheckJobId,
+  JOBS,
+  QUEUES,
+  utcDateKey,
+} from '../src/jobs/jobs.types';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { ownerAgent, useCookies } from './helpers/session';
@@ -261,6 +266,96 @@ describe('KeywordsController (e2e)', () => {
         where: { text: 'aplikacja treningowa', country: 'pl' },
       }),
     ).toBe(1);
+  });
+
+  describe('first position checks', () => {
+    const checkedJobIds = async (): Promise<string[]> => {
+      const queue = app.get<Queue>(getQueueToken(QUEUES.APP_STORE), {
+        strict: false,
+      });
+      const jobs = await queue.getJobs([
+        'wait',
+        'paused',
+        'delayed',
+        'prioritized',
+      ]);
+      return jobs
+        .filter((job) => job.name === JOBS.CHECK_KEYWORD)
+        .map((job) => job.id ?? '')
+        .sort();
+    };
+
+    const firstRunIds = (appId: string, keywordIds: string[]): string[] =>
+      keywordIds
+        .map((keywordId) => firstRunCheckJobId(appId, keywordId, utcDateKey()))
+        .sort();
+
+    const importAndClear = async (): Promise<string> => {
+      const id = await importApp();
+      await obliterateQueues(app);
+      await pauseQueues(app);
+      return id;
+    };
+
+    const add = async (
+      id: string,
+      keywords: string[],
+      country?: string,
+    ): Promise<TrackedKeywordItem[]> =>
+      (
+        await api
+          .post(`/apps/${id}/keywords`)
+          .send({ keywords, ...(country ? { country } : {}) })
+          .expect(201)
+      ).body as TrackedKeywordItem[];
+
+    const idsOf = (items: TrackedKeywordItem[], texts: string[]): string[] =>
+      texts.map(
+        (text) => items.find((item) => item.text === text)?.keywordId ?? '',
+      );
+
+    it('checks the position of a keyword right after it is added', async () => {
+      const id = await importAndClear();
+
+      const added = await add(id, ['deep focus', 'exam timer']);
+
+      const expected = firstRunIds(
+        id,
+        idsOf(added, ['deep focus', 'exam timer']),
+      );
+      expect(await checkedJobIds()).toEqual(expected);
+
+      await add(id, ['deep focus', 'exam timer']);
+      expect(await checkedJobIds()).toEqual(expected);
+
+      const polish = await add(id, ['aplikacja'], 'pl');
+      expect(await checkedJobIds()).toEqual(
+        [...expected, ...firstRunIds(id, idsOf(polish, ['aplikacja']))].sort(),
+      );
+    });
+
+    it('checks nothing for a keyword the app already tracks', async () => {
+      const id = await importAndClear();
+
+      await add(id, ['habit']);
+
+      expect(await checkedJobIds()).toEqual([]);
+    });
+
+    it('checks a paused keyword again once it is added back', async () => {
+      const id = await importAndClear();
+      const [paused] = idsOf(await add(id, ['deep focus']), ['deep focus']);
+      await api
+        .patch(`/apps/${id}/keywords/${paused}`)
+        .send({ active: false })
+        .expect(200);
+      await obliterateQueues(app);
+      await pauseQueues(app);
+
+      await add(id, ['deep focus']);
+
+      expect(await checkedJobIds()).toEqual(firstRunIds(id, [paused]));
+    });
   });
 
   it('adds no keyword searches to the budget when a competitor is refreshed', async () => {

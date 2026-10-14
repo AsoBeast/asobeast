@@ -1,6 +1,7 @@
 import { Store } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuotaService } from '../auth/quota.service';
+import { FirstPositionChecks } from './first-position-checks';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordTracker } from './keyword-tracker';
 import { MarketListingRequests } from './market-listing.requests';
@@ -77,13 +78,19 @@ const build = (
   const listings = {
     request: jest.fn<Promise<number>, [unknown, string]>().mockResolvedValue(0),
   };
+  const checks = {
+    schedule: jest
+      .fn<Promise<number>, [string, string[]]>()
+      .mockResolvedValue(0),
+  };
   const service = new KeywordImportService(
     prisma as unknown as PrismaService,
     tracker as unknown as KeywordTracker,
     quota as unknown as QuotaService,
     listings as unknown as MarketListingRequests,
+    checks as unknown as FirstPositionChecks,
   );
-  return { prisma, tx, quota, tracker, listings, service };
+  return { prisma, tx, quota, tracker, listings, checks, service };
 };
 
 describe('KeywordImportService.preview', () => {
@@ -271,7 +278,7 @@ describe('KeywordImportService.import', () => {
   });
 
   it('writes nothing, and skips the transaction, when no row is importable', async () => {
-    const { quota, tracker, listings, service } = build(
+    const { quota, tracker, listings, checks, service } = build(
       [trackedRow('app1', true, 'habit')],
       { limit: null, used: 0 },
     );
@@ -283,11 +290,15 @@ describe('KeywordImportService.import', () => {
     expect(result.imported).toBe(0);
     expect(quota.admitKeywordMarkets).not.toHaveBeenCalled();
     expect(tracker.enqueueFirstScores).not.toHaveBeenCalled();
+    expect(checks.schedule).not.toHaveBeenCalled();
     expect(listings.request).not.toHaveBeenCalled();
   });
 
   it('writes only the rows that fit, looks every market up at once and queues the first scores in one batch', async () => {
-    const { tx, tracker, service } = build([], { limit: 10, used: 8 });
+    const { tx, tracker, checks, service } = build([], {
+      limit: 10,
+      used: 8,
+    });
     tx.trackedKeyword.createMany.mockResolvedValue({ count: 2 });
 
     const result = await service.import('app1', {
@@ -317,6 +328,7 @@ describe('KeywordImportService.import', () => {
       ['pl:a1', 'de:a2'],
       app,
     );
+    expect(checks.schedule).toHaveBeenCalledWith('app1', ['pl:a1', 'de:a2']);
   });
 
   it('reports the keyword markets in use after the import, not before it', async () => {

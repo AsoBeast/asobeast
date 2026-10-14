@@ -194,7 +194,7 @@ describe('Remote MCP write tools (e2e)', () => {
   });
 
   describe('keywords', () => {
-    it('tracks phrases as manual keywords and queues one scoring job each', async () => {
+    it('tracks phrases as manual keywords and queues one scoring job and one first position check each', async () => {
       const fixture = await seedApp();
 
       const result = await writer.callTool('track_keywords', {
@@ -221,7 +221,9 @@ describe('Remote MCP write tools (e2e)', () => {
         'MANUAL',
       ]);
       const jobs = await queuedJobs();
-      expect(jobs.map((job) => job.name)).toEqual([
+      expect(jobs.map((job) => job.name).sort()).toEqual([
+        JOBS.CHECK_KEYWORD,
+        JOBS.CHECK_KEYWORD,
         JOBS.SCORE_KEYWORD,
         JOBS.SCORE_KEYWORD,
       ]);
@@ -264,7 +266,10 @@ describe('Remote MCP write tools (e2e)', () => {
       await call();
 
       expect(await tracked(fixture.id)).toHaveLength(1);
-      expect(await queuedJobs()).toHaveLength(1);
+      expect((await queuedJobs()).map((job) => job.name).sort()).toEqual([
+        JOBS.CHECK_KEYWORD,
+        JOBS.SCORE_KEYWORD,
+      ]);
     });
 
     it('tracks in the market it is told to and refuses one the store does not serve', async () => {
