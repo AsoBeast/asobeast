@@ -29,6 +29,15 @@ export interface AlertBatchBlock {
   lines: string[];
 }
 
+const utcDay = (value: string): string =>
+  new Date(value).toISOString().slice(0, 10);
+
+export function windowLine({ window }: AlertBatchPayload): string {
+  const from = utcDay(window.from);
+  const to = utcDay(window.to);
+  return `Window (UTC): ${from === to ? from : `${from} → ${to}`}`;
+}
+
 export function position(value: number | null, depth = RANK_DEPTH): string {
   return isRanked(value) ? `#${value}` : `outside top ${depth}`;
 }

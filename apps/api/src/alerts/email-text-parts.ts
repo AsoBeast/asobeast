@@ -6,20 +6,12 @@ import {
   changeLines,
   sectionBlocks,
   storeLabel,
+  windowLine,
 } from './alert-summary';
 
 export const BATCH_GROUP_CAP = 10;
 export const COMPETITOR_CAP = 10;
 export const DETAIL_LINE_CAP = 20;
-
-const utcDay = (value: string): string =>
-  new Date(value).toISOString().slice(0, 10);
-
-export function windowLine(payload: AlertBatchPayload): string {
-  const from = utcDay(payload.window.from);
-  const to = utcDay(payload.window.to);
-  return `Window (UTC): ${from === to ? from : `${from} → ${to}`}`;
-}
 
 export function plural(count: number, singular: string): string {
   return `${count} ${singular}${count === 1 ? '' : 's'}`;
