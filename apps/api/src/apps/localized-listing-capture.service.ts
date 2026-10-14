@@ -7,6 +7,7 @@ import {
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
 import { recordAppLocalizations } from '../keywords/app-localization-records';
+import { homeLocalization } from '../keywords/localization-markets';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotQueue } from '../screenshots/screenshot-queue';
 import { ScreenshotRecorder } from '../screenshots/screenshot-recorder';
@@ -130,7 +131,11 @@ export class LocalizedListingCapture {
         { store: app.store, country: market, localization },
         created,
       );
-      if (!previous && !app.isCompetitor) {
+      if (
+        !previous &&
+        !app.isCompetitor &&
+        localization !== homeLocalization(app.country)
+      ) {
         await recordAppLocalizations(tx, [
           {
             appId: app.id,

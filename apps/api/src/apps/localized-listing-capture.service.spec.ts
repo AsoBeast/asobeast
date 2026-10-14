@@ -401,5 +401,20 @@ describe('LocalizedListingCapture', () => {
         ),
       ).toEqual(['nl', 'fr']);
     });
+
+    it('never records the home localization of the app', async () => {
+      const getApp = jest.fn().mockResolvedValue(normalized(POLISH));
+      const { capture, create, createMany } = build({ getApp });
+
+      await capture.capture({ ...APP, country: 'fr' }, 'be', fallback);
+
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(
+        createMany.mock.calls.map(
+          ([args]) =>
+            (args as { data: { localization: string }[] }).data[0].localization,
+        ),
+      ).toEqual(['nl']);
+    });
   });
 });

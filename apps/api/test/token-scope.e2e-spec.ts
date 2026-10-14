@@ -217,6 +217,18 @@ describe('Read-only token scope (e2e)', () => {
         '/apps/app_missing/localizations/es-MX',
         undefined,
       ],
+      [
+        'saving a localized keyword field',
+        'put',
+        '/apps/app_missing/keyword-fields/es-MX',
+        { text: 'habit', trackIn: [] },
+      ],
+      [
+        'setting the keyword field',
+        'put',
+        '/apps/app_missing/keyword-field',
+        { text: 'habit' },
+      ],
     ] as const;
 
     it.each(LOCALIZATION_WRITES)(
@@ -243,5 +255,14 @@ describe('Read-only token scope (e2e)', () => {
         expect(response.status).not.toBe(401);
       },
     );
+
+    it('lets a read-only token preview a keyword field save', async () => {
+      const response = await request(app.getHttpServer())
+        .post('/apps/app_missing/keyword-fields/es-MX/preview')
+        .set('Authorization', `Bearer ${READ_TOKEN}`)
+        .send({ text: 'habit' });
+
+      expect(response.status).toBe(404);
+    });
   });
 });
