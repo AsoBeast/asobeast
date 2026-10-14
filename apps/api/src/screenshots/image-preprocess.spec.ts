@@ -17,7 +17,7 @@ const passImages = async (bytes: Buffer) =>
 
 describe('prepareForOcr', () => {
   it('reads a grey pass with otsu and an inverted pass with sauvola', async () => {
-    const prepared = await prepareForOcr(await solid(540, 1170, 'png'));
+    const prepared = await prepareForOcr(await solid(540, 100, 'png'));
 
     expect(prepared.passes.map((pass) => pass.thresholding)).toEqual([
       'otsu',
@@ -26,9 +26,9 @@ describe('prepareForOcr', () => {
   });
 
   it('scales a narrow image up to the ocr width and reports its height', async () => {
-    const prepared = await prepareForOcr(await solid(540, 1170, 'png'));
+    const prepared = await prepareForOcr(await solid(540, 100, 'png'));
 
-    expect(prepared.height).toBe(2340);
+    expect(prepared.height).toBe(200);
     for (const pass of prepared.passes) {
       const { width, height } = await sharp(pass.image).metadata();
       expect(width).toBe(OCR_IMAGE_WIDTH);
@@ -37,7 +37,7 @@ describe('prepareForOcr', () => {
   });
 
   it('scales a wide image down to the ocr width', async () => {
-    for (const image of await passImages(await solid(2160, 4680, 'jpeg'))) {
+    for (const image of await passImages(await solid(2160, 200, 'jpeg'))) {
       expect((await sharp(image).metadata()).width).toBe(OCR_IMAGE_WIDTH);
     }
   });
