@@ -229,7 +229,7 @@ test("a stored onboarding checklist hydrates without an uncaught error", async (
   const errors = collectPageErrors(page);
 
   await page.goto("/");
-  await expect(page.getByText("Finish setting up")).toBeVisible();
+  await expect(page.getByText(/^Set up Focus Timer/)).toBeVisible();
   await page.waitForLoadState("networkidle");
 
   expect(errors, `the onboarding banner threw: ${errors.join(", ")}`).toEqual(

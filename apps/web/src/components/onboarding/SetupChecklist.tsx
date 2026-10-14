@@ -23,7 +23,8 @@ import {
   setCountriesReviewed,
   setMarketSelected,
   setStepSkipped,
-  stepState,
+  setupProgress,
+  stepStates,
   type OnboardingState,
   type SetupCounts,
   type SetupStep,
@@ -36,6 +37,7 @@ import {
 } from "@/lib/queries";
 import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
 import { SetupChecklistSkeleton } from "./SetupChecklistSkeleton";
+import { SetupProgress } from "./SetupProgress";
 import { useFirstRunDiscovery } from "./use-first-run-discovery";
 import { useOnboarding, type OnboardingTransition } from "./use-onboarding";
 
@@ -126,18 +128,21 @@ function ActiveSetup({
       if (query.isError) void query.refetch();
     }
   };
+  const states = stepStates(state, counts);
   const step = (name: SetupStep) => ({
-    state: stepState(state, name, counts),
+    state: states[name],
     onSkip: (skipped: boolean) =>
       persist((current) => setStepSkipped(current, name, skipped)),
   });
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-xl font-semibold tracking-tight text-balance">
-          Set up {app.name ?? "this app"}
-        </h2>
+      <div className="flex flex-col gap-3">
+        <SetupProgress
+          name={app.name}
+          progress={setupProgress(state, counts)}
+          states={states}
+        />
         <p className="text-sm text-muted-foreground">
           Three short steps. Each one is done once its number is reached, or
           skipped when it does not apply.

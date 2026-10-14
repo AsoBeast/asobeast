@@ -32,6 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
+import { STEP_TITLES } from "./setup-progress";
 import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
@@ -49,23 +50,21 @@ export interface StepProps {
 function StepCard({
   step,
   state,
-  title,
   description,
   onSkip,
   children,
 }: StepProps & {
   step: SetupStep;
-  title: string;
   description: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <Card>
+    <Card id={`setup-${step}`} className="scroll-mt-20">
       <CardHeader>
         <CardDescription>{stepLabel(step)}</CardDescription>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle asChild>
-            <h3>{title}</h3>
+            <h3>{STEP_TITLES[step]}</h3>
           </CardTitle>
           <StepBadge state={state} />
         </div>
@@ -135,7 +134,6 @@ export function CompetitorsStep({
   return (
     <StepCard
       step="competitors"
-      title="Pick competitors"
       description="Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical."
       {...step}
     >
@@ -195,7 +193,6 @@ export function KeywordsStep({
   return (
     <StepCard
       step="keywords"
-      title="Track keywords"
       description={`Track at least ${SETUP_KEYWORD_TARGET} keywords in your home storefront. The import already tracked the phrases of your title and subtitle.`}
       {...step}
     >
@@ -271,7 +268,6 @@ export function CountriesStep({
   return (
     <StepCard
       step="countries"
-      title="Add countries"
       description={
         <>
           Your home country is selected. Add the countries you sell in; each one

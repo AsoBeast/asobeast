@@ -3,7 +3,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function SetupChecklistSkeleton() {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-3">
+        <Skeleton className="h-7 w-full max-w-md" />
+        <Skeleton className="h-1 w-full rounded-full" />
+        <Skeleton className="h-5 w-full max-w-sm" />
+      </div>
       {Array.from({ length: 3 }, (_, index) => (
         <Card key={index}>
           <CardHeader className="gap-2">

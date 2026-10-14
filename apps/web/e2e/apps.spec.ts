@@ -43,7 +43,7 @@ test("importing an app posts to the api and shows the new app", async ({
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
   await expect(page).toHaveURL("/apps/app-new/setup");
   await expect(
-    page.getByRole("heading", { name: "Set up Imported App" }),
+    page.getByRole("heading", { name: /^Set up Imported App/ }),
   ).toBeVisible();
   await expect(page.getByText("United States (US)")).toBeVisible();
 
@@ -339,7 +339,7 @@ test("setup another account finished in this browser still guides a new account"
   await seedViewer(page.context(), "customer");
   await importApp();
   await expect(
-    page.getByRole("heading", { name: "Set up Imported App" }),
+    page.getByRole("heading", { name: /^Set up Imported App/ }),
   ).toBeVisible();
 });
 
@@ -355,15 +355,24 @@ test("pending setup can be resumed or dismissed from the dashboard", async ({
   );
   await page.goto("/");
 
-  await expect(page.getByText("Finish setting up Focus Timer.")).toBeVisible();
+  const banner = page
+    .getByRole("status")
+    .filter({ hasText: "Set up Focus Timer" });
+  await expect(
+    banner.getByText("Set up Focus Timer · 1 of 3 · next: track keywords"),
+  ).toBeVisible();
+  await expect(
+    banner.getByRole("progressbar", { name: "Setup progress" }),
+  ).toHaveAttribute("aria-valuetext", "1 of 3 steps");
+  await expect(banner).not.toContainText("browser");
   await page.getByRole("link", { name: "Resume setup" }).click();
   await expect(page).toHaveURL("/apps/app-1/setup");
 
   await page.goto("/");
   await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByText("Finish setting up Focus Timer.")).toBeHidden();
+  await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
   await page.reload();
-  await expect(page.getByText("Finish setting up Focus Timer.")).toBeHidden();
+  await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
 });
 
 test("an existing portfolio is not enrolled without an import", async ({
@@ -404,7 +413,7 @@ test("blocked onboarding storage does not turn import success into failure", asy
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
   await expect(page).toHaveURL("/apps/app-new/setup");
   await expect(
-    page.getByRole("heading", { name: "Set up Imported App" }),
+    page.getByRole("heading", { name: /^Set up Imported App/ }),
   ).toBeVisible();
   await expect(page.getByText("Could not reach the api")).toHaveCount(0);
 });

@@ -101,7 +101,7 @@ test("a direct visit never enrols without an explicit start", async ({
   expect(await storedStatus(page)).toBe("not_started");
 
   await page.goto("/");
-  await expect(page.getByText("Finish setting up")).toBeHidden();
+  await expect(page.getByRole("link", { name: "Resume setup" })).toBeHidden();
 
   await startSetup(page, "app-1");
   expect(await storedStatus(page)).toBe("in_progress");
@@ -113,8 +113,16 @@ test("direct setup is resumable and completes after live checks", async ({
   await startSetup(page, "app-1");
 
   await expect(
-    page.getByRole("heading", { name: "Set up Focus Timer" }),
+    page.getByRole("heading", {
+      name: "Set up Focus Timer · 1 of 3 · next: track keywords",
+    }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("progressbar", { name: "Setup progress" }),
+  ).toHaveAttribute("aria-valuetext", "1 of 3 steps");
+  await expect(
+    page.getByRole("navigation", { name: "Setup steps" }).getByRole("link"),
+  ).toHaveText(["Pick competitors", "Track keywords", "Add countries"]);
   await expect(page.getByRole("heading", { level: 3 })).toHaveText([
     "Pick competitors",
     "Track keywords",
@@ -146,6 +154,11 @@ test("direct setup is resumable and completes after live checks", async ({
     stepCard(page, "Add countries").getByText("Done", { exact: true }),
   ).toBeVisible();
   await expect(complete).toBeEnabled();
+  await expect(
+    page.getByRole("heading", {
+      name: "Set up Focus Timer · 3 of 3 · ready to complete",
+    }),
+  ).toBeVisible();
 
   await expect(
     page.getByText(
@@ -258,7 +271,7 @@ test("a version 1 record resumes as in progress with its markets", async ({
   await page.goto("/apps/app-1/setup");
 
   await expect(
-    page.getByRole("heading", { name: "Set up Focus Timer" }),
+    page.getByRole("heading", { name: /^Set up Focus Timer · 1 of 3/ }),
   ).toBeVisible();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
   await expect(

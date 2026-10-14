@@ -347,6 +347,17 @@ export function stepState(
   return count >= STEP_TARGETS[step] ? "done" : "open";
 }
 
+export function stepStates(
+  state: OnboardingState,
+  counts: SetupCounts,
+): Record<SetupStep, StepState> {
+  return {
+    competitors: stepState(state, "competitors", counts),
+    keywords: stepState(state, "keywords", counts),
+    countries: stepState(state, "countries", counts),
+  };
+}
+
 const isSettled = (step: StepState): boolean =>
   step === "done" || step === "skipped";
 
@@ -354,10 +365,10 @@ export function setupProgress(
   state: OnboardingState,
   counts: SetupCounts,
 ): StepProgress {
-  const states = SETUP_STEPS.map((step) => stepState(state, step, counts));
-  const next = SETUP_STEPS.find((_, index) => !isSettled(states[index]));
+  const states = stepStates(state, counts);
+  const next = SETUP_STEPS.find((step) => !isSettled(states[step]));
   return {
-    done: states.filter(isSettled).length,
+    done: SETUP_STEPS.filter((step) => isSettled(states[step])).length,
     total: SETUP_STEPS.length,
     next: next ?? null,
   };
