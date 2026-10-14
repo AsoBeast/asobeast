@@ -1,12 +1,10 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
 import { notFound } from "next/navigation";
-import { DISCOVERY_WINDOW_DAYS } from "@/components/onboarding/discovered-apps";
 import { SetupChecklist } from "@/components/onboarding/SetupChecklist";
 import { getQueryClient } from "@/lib/get-query-client";
 import {
   appDetailOptions,
   competitorsOptions,
-  discoveryOptions,
   firstRunOptions,
   keywordsOptions,
   marketSuggestionsOptions,
@@ -28,7 +26,6 @@ export default async function SetupPage({
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(firstRunOptions(id)),
-    queryClient.prefetchQuery(discoveryOptions(id, DISCOVERY_WINDOW_DAYS)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
     queryClient.prefetchQuery(
       pickerSuggestionsOptions(id, "metadata", app.country),

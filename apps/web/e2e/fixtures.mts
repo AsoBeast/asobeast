@@ -31,6 +31,8 @@ import type {
   HealthStatus,
   StoreHealthReport,
   StoreSearchResult,
+  CompetitorSuggestion,
+  SimilarLookupState,
   WorkspaceRunStatus,
   PortfolioSummary,
   RankDistributionHistory,
@@ -936,6 +938,39 @@ export const STORE_SEARCH: Record<
       iconUrl: null,
     },
   ],
+};
+
+export const SIMILAR_ICON_URL =
+  "https://is1-ssl.mzstatic.com/image/thumb/e2e-deep-focus-pro/512x512bb.png";
+
+export const SIMILAR_APPS: Record<
+  string,
+  { similar: SimilarLookupState; items: CompetitorSuggestion[] }
+> = {
+  "app-1": {
+    similar: "ok",
+    items: [
+      {
+        storeAppId: "555000444",
+        title: "Deep Focus Pro",
+        developer: "Calm Works",
+        iconUrl: SIMILAR_ICON_URL,
+        source: "similar",
+        appearances: null,
+        bestPosition: null,
+      },
+      {
+        storeAppId: "555000555",
+        title: "Study Bunny",
+        developer: null,
+        iconUrl: null,
+        source: "similar",
+        appearances: null,
+        bestPosition: null,
+      },
+    ],
+  },
+  "app-new": { similar: "unavailable", items: [] },
 };
 
 export const STORE_LOOKUP_LIMIT = 60;

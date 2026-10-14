@@ -35,6 +35,7 @@ import {
   competitorsOptions,
   comparisonOptions,
   discoveryOptions,
+  competitorSuggestionsOptions,
   storeSearchKey,
   storeSearchOptions,
   emailAlertKeys,
@@ -181,6 +182,11 @@ const APP_SCOPED_OPTIONS = [
   ],
   ["competitors", competitorsOptions(APP), appKeys.competitors(APP)],
   ["discovery", discoveryOptions(APP, 30), appKeys.discovery(APP, 30)],
+  [
+    "competitorSuggestions",
+    competitorSuggestionsOptions(APP),
+    appKeys.competitorSuggestions(APP),
+  ],
   ["changes", changesOptions(APP, 90), appKeys.changes(APP, 90)],
   [
     "changeImpact",

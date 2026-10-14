@@ -13,7 +13,7 @@ export function useFirstRunDiscovery(appId: string): boolean {
   useEffect(() => {
     if (rankingsAdvanced(previous.current, data)) {
       void queryClient.invalidateQueries({
-        queryKey: appKeys.discoveryRoot(appId),
+        queryKey: appKeys.competitorSuggestions(appId),
       });
     }
     previous.current = data;

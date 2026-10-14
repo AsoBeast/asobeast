@@ -2,6 +2,7 @@ import type {
   CompetitorAddRequest,
   CompetitorDiscovery,
   CompetitorItem,
+  CompetitorSuggestions,
 } from "@asobeast/shared";
 import { apiFetch } from "./client";
 
@@ -35,5 +36,13 @@ export function getCompetitorDiscovery(
   const query = days !== undefined ? `?days=${days}` : "";
   return apiFetch<CompetitorDiscovery>(
     `/apps/${appId}/competitors/discovery${query}`,
+  );
+}
+
+export function getCompetitorSuggestions(
+  appId: string,
+): Promise<CompetitorSuggestions> {
+  return apiFetch<CompetitorSuggestions>(
+    `/apps/${appId}/competitors/suggestions`,
   );
 }

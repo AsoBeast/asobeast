@@ -81,6 +81,7 @@ import {
   emptyScreenshots,
   errorEnvelope,
   rateLimitedEnvelope,
+  SIMILAR_APPS,
   STORE_SEARCH,
   storeLookupRefusedEnvelope,
   MARKET_SUGGESTIONS,
@@ -128,6 +129,8 @@ import type {
   ActionStatus,
   AuthUser,
   CompetitorAddRequest,
+  CompetitorSuggestion,
+  CompetitorSuggestions,
   CompetitorItem,
   DailyBudget,
   EmailAlertCreateRequest,
@@ -1315,7 +1318,11 @@ function capturedCompetitor(
   const searched = STORE_SEARCH[parsed.store].find(
     (item) => item.storeAppId === parsed.storeAppId,
   );
-  const title = discovered?.title ?? searched?.title ?? parsed.storeAppId;
+  const similar = Object.values(SIMILAR_APPS)
+    .flatMap((entry) => entry.items)
+    .find((item) => item.storeAppId === parsed.storeAppId);
+  const title =
+    discovered?.title ?? searched?.title ?? similar?.title ?? parsed.storeAppId;
 
   return {
     id: `comp-${parsed.storeAppId}`,
@@ -1335,6 +1342,36 @@ function capturedCompetitor(
       version: "1.0.0",
       capturedAt: new Date().toISOString(),
     },
+  };
+}
+
+const SUGGESTIONS_LIMIT = 10;
+
+function competitorSuggestionsOf(
+  id: string,
+  dataset: (typeof DATASETS)[string],
+  req: IncomingMessage,
+): CompetitorSuggestions {
+  const fixture = hasCookie(req, "e2e_similar_unavailable", "1")
+    ? { similar: "unavailable" as const, items: [] }
+    : (SIMILAR_APPS[id] ?? { similar: "ok" as const, items: [] });
+  const tracked = new Set(dataset.competitors.map((row) => row.id));
+  const serp: CompetitorSuggestion[] = dataset.discovery.items.map((item) => ({
+    storeAppId: item.storeAppId,
+    title: item.title,
+    developer: item.developer,
+    iconUrl: null,
+    source: "serp",
+    appearances: item.appearances,
+    bestPosition: item.bestPosition,
+  }));
+  return {
+    store: dataset.detail.store,
+    country: dataset.detail.country,
+    similar: fixture.similar,
+    items: [...serp, ...fixture.items]
+      .filter((item) => !tracked.has(`comp-${item.storeAppId}`))
+      .slice(0, SUGGESTIONS_LIMIT),
   };
 }
 
@@ -2859,6 +2896,21 @@ const routes: Route[] = [
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
       json(res, 200, dataset.competitors);
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/competitors\/suggestions$/,
+    handler: ([id], req, res) => {
+      const path = req.url ?? "/";
+      const dataset = DATASETS[id];
+      if (!dataset) return json(res, 404, errorEnvelope(404, path));
+      if (hasCookie(req, "e2e_suggestions_spent", "1")) {
+        return json(res, 429, storeLookupRefusedEnvelope(path), {
+          "retry-after": String(RATE_LIMIT_RESET_SECONDS),
+        });
+      }
+      json(res, 200, competitorSuggestionsOf(id, dataset, req));
     },
   },
   {

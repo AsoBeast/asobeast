@@ -49,6 +49,7 @@ import {
   getEmailAlerts,
   getComparison,
   getCompetitorDiscovery,
+  getCompetitorSuggestions,
   getCompetitors,
   getFirstRun,
   getHealth,
@@ -159,6 +160,8 @@ export const appKeys = {
     ] as const,
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
+  competitorSuggestions: (id: string) =>
+    [...appKeys.detail(id), "competitor-suggestions"] as const,
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
@@ -649,6 +652,14 @@ export const competitorsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.competitors(id),
     queryFn: () => getCompetitors(id),
+  });
+
+export const competitorSuggestionsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.competitorSuggestions(id),
+    queryFn: () => getCompetitorSuggestions(id),
+    staleTime: ONE_DAY_MS,
+    retry: false,
   });
 
 export const discoveryOptions = (id: string, days: number) =>

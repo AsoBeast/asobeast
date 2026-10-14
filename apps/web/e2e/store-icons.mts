@@ -2,6 +2,7 @@ import { test as base } from "@playwright/test";
 import {
   APP_2_ICON_URL,
   APP_LONG_ICON_URL,
+  SIMILAR_ICON_URL,
   STORE_SEARCH_ICON_URL,
 } from "./fixtures.mts";
 
@@ -31,6 +32,7 @@ export const test = base.extend<{ storeIcons: void }>({
         APP_2_ICON_URL,
         APP_LONG_ICON_URL,
         STORE_SEARCH_ICON_URL,
+        SIMILAR_ICON_URL,
       ]) {
         await context.route(optimizedIcon(iconUrl), (route) =>
           route.fulfill({ contentType: "image/png", body: ICON_PIXEL }),
