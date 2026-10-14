@@ -162,6 +162,7 @@ export class KeywordsController {
   }
 
   @Patch('keywords/:keywordId')
+  @QueuesWork()
   @ApiOperation({
     summary: 'Update a tracked keyword active flag or relevance',
   })

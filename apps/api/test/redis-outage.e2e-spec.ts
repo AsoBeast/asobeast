@@ -40,6 +40,7 @@ describe('Redis outage (e2e)', () => {
   let outage: RedisOutage;
   let agent: ReturnType<typeof request.agent>;
   let appId: string;
+  let pausedKeywordId: string;
   const upstreamPort = Number(process.env.REDIS_PORT);
 
   beforeAll(async () => {
@@ -84,6 +85,19 @@ describe('Redis outage (e2e)', () => {
         },
       })
     ).id;
+    pausedKeywordId = (
+      await prisma.keyword.create({
+        data: { text: 'notizen', store: 'APP_STORE', country: 'de' },
+      })
+    ).id;
+    await prisma.trackedKeyword.create({
+      data: {
+        appId,
+        keywordId: pausedKeywordId,
+        source: 'MANUAL',
+        active: false,
+      },
+    });
   });
 
   afterAll(async () => {
@@ -169,6 +183,14 @@ describe('Redis outage (e2e)', () => {
         expect(response.headers['retry-after']).toBeDefined();
       },
     );
+
+    it('refuses to resume a keyword of another market with 503 instead of waiting on the queue', async () => {
+      await within(
+        agent
+          .patch(`/apps/${appId}/keywords/${pausedKeywordId}`)
+          .send({ active: true }),
+      ).expect(503);
+    });
 
     it('refuses an app import with 503 instead of waiting on the queue', async () => {
       await within(
