@@ -1,4 +1,4 @@
-import { API_TOKEN_PREFIX } from "@asobeast/shared";
+import { API_TOKEN_PREFIX, REQUEST_BODY_LIMIT_BYTES } from "@asobeast/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { logError, logInfo } from "./log.js";
@@ -49,6 +49,20 @@ describe("the stderr log", () => {
 
     expect(written).not.toContain("hunter2");
     expect(written).toContain("api.example.com/backend");
+  });
+
+  it("writes a body-sized run of letters in linear time", () => {
+    const stderr = captureStderr();
+    const message = `App ${"a".repeat(REQUEST_BODY_LIMIT_BYTES)}`;
+
+    const started = performance.now();
+    logInfo(message);
+    const elapsed = performance.now() - started;
+    const written = stderr.written();
+    stderr.restore();
+
+    expect(elapsed).toBeLessThan(250);
+    expect(written).toBe(`[asobeast-mcp] ${message}\n`);
   });
 
   it("leaves a message that carries no token untouched", () => {

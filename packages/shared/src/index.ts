@@ -120,3 +120,4 @@ export * from './brand';
 export * from './trusted-proxy';
 export * from './loopback';
 export * from './request-body';
+export * from './url-credentials';
