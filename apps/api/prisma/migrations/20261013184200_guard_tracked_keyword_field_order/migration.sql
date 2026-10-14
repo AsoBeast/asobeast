@@ -27,7 +27,7 @@ BEGIN
         )
       )
   ) THEN
-    RAISE EXCEPTION 'TrackedKeyword.fieldOrder holds keyword field phrases that no KeywordField row carries; the column is kept so they are not lost. Copy or clear those rows, then run prisma migrate resolve --rolled-back 20261013184200_guard_tracked_keyword_field_order';
+    RAISE EXCEPTION 'TrackedKeyword.fieldOrder holds keyword field phrases that no KeywordField row carries, such as those of a Google Play app or of a market other than the app''s own; the column is kept so they are not lost. Note the phrases worth keeping, set fieldOrder to NULL on those rows, then run prisma migrate resolve --rolled-back 20261013184200_guard_tracked_keyword_field_order';
   END IF;
 END;
 $$;

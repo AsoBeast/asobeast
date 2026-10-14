@@ -6,7 +6,7 @@ import {
   dropHistoricalFieldOrder,
   restoreHistoricalFieldOrder,
 } from './helpers/historical-field-order';
-import { migrationSql } from './helpers/migration-sql';
+import { migrationFolder, migrationSql } from './helpers/migration-sql';
 import { testDb } from './helpers/test-db';
 
 const statementOf = (sql: string, pattern: RegExp): string => {
@@ -61,7 +61,7 @@ describe('the tracked keyword field order drop', () => {
 
   const expectDropRefused = async () => {
     await expect(prisma.$executeRawUnsafe(guard)).rejects.toThrow(
-      /no KeywordField row carries/,
+      `set fieldOrder to NULL on those rows, then run prisma migrate resolve --rolled-back ${migrationFolder('guard_tracked_keyword_field_order')}`,
     );
     await expect(hasFieldOrder()).resolves.toBe(true);
   };
