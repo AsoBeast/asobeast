@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { FirstRunStatus } from "@asobeast/shared";
 import {
   alertsNudgeState,
+  nudgeDue,
   nudgeDismissalKey,
   readDismissed,
   writeDismissed,
@@ -72,6 +73,15 @@ describe("alertsNudgeState", () => {
     ["the first positions are still collected", { firstRun: status(3, false) }],
   ])("stays hidden when %s", (_label, change) => {
     expect(alertsNudgeState({ ...READY, ...change })).toBe("hidden");
+  });
+});
+
+describe("nudgeDue", () => {
+  it("is due once the first positions are in and two captures exist", () => {
+    expect(nudgeDue(status(2))).toBe(true);
+    expect(nudgeDue(status(1))).toBe(false);
+    expect(nudgeDue(status(2, false))).toBe(false);
+    expect(nudgeDue(undefined)).toBe(false);
   });
 });
 

@@ -16,6 +16,14 @@ export interface NudgeInput {
 const historyCaptures = (status: FirstRunStatus): number =>
   status.stages.find((row) => row.stage === "history")?.ready ?? 0;
 
+export function nudgeDue(firstRun: FirstRunStatus | undefined): boolean {
+  return (
+    firstRun !== undefined &&
+    !rankingsCollecting(firstRun) &&
+    historyCaptures(firstRun) >= ALERTS_NUDGE_MIN_CAPTURES
+  );
+}
+
 export function alertsNudgeState({
   firstRun,
   channels,
@@ -23,13 +31,11 @@ export function alertsNudgeState({
   dismissed,
 }: NudgeInput): NudgeState {
   if (
-    firstRun === undefined ||
+    !nudgeDue(firstRun) ||
     channels === undefined ||
     emailEnabled === undefined ||
     dismissed ||
-    channels > 0 ||
-    rankingsCollecting(firstRun) ||
-    historyCaptures(firstRun) < ALERTS_NUDGE_MIN_CAPTURES
+    channels > 0
   ) {
     return "hidden";
   }

@@ -22,6 +22,7 @@ import {
 import {
   ALERTS_NUDGE_CHANGE_EVENT,
   alertsNudgeState,
+  nudgeDue,
   readDismissed,
   writeDismissed,
 } from "./alerts-nudge";
@@ -30,7 +31,7 @@ const EMAIL_DELIVERY_GUIDE =
   "https://docs.asobeast.com/guides/alerts#email-delivery";
 
 const dismissedInMemory = new Set<string>();
-const localStorage = () => window.localStorage;
+const storage = () => window.localStorage;
 
 function subscribe(listener: () => void) {
   window.addEventListener("storage", listener);
@@ -44,11 +45,11 @@ function subscribe(listener: () => void) {
 function useNudgeDismissal(appId: string) {
   const dismissed = useSyncExternalStore(
     subscribe,
-    () => dismissedInMemory.has(appId) || readDismissed(localStorage, appId),
+    () => dismissedInMemory.has(appId) || readDismissed(storage, appId),
     () => true,
   );
   const dismiss = () => {
-    if (!writeDismissed(localStorage, appId)) dismissedInMemory.add(appId);
+    if (!writeDismissed(storage, appId)) dismissedInMemory.add(appId);
     window.dispatchEvent(new Event(ALERTS_NUDGE_CHANGE_EVENT));
   };
   return [dismissed, dismiss] as const;
@@ -56,10 +57,11 @@ function useNudgeDismissal(appId: string) {
 
 export function AlertsNudge({ id }: { id: string }) {
   const firstRun = useQuery(firstRunOptions(id));
-  const webhooks = useQuery(webhooksOptions);
-  const emailAlerts = useQuery(emailAlertsOptions);
-  const config = useQuery(alertsConfigOptions);
   const [dismissed, dismiss] = useNudgeDismissal(id);
+  const enabled = !dismissed && nudgeDue(firstRun.data);
+  const webhooks = useQuery({ ...webhooksOptions, enabled });
+  const emailAlerts = useQuery({ ...emailAlertsOptions, enabled });
+  const config = useQuery({ ...alertsConfigOptions, enabled });
   const state = alertsNudgeState({
     firstRun: firstRun.data,
     channels:
@@ -88,10 +90,12 @@ export function AlertsNudge({ id }: { id: string }) {
         <div className="flex flex-wrap items-center gap-2">
           {state === "email" ? (
             <AddEmailAlertDialog
-              trigger={<Button>Add an email alert</Button>}
+              trigger={<Button variant="outline">Add an email alert</Button>}
             />
           ) : (
-            <AddWebhookDialog trigger={<Button>Add a webhook</Button>} />
+            <AddWebhookDialog
+              trigger={<Button variant="outline">Add a webhook</Button>}
+            />
           )}
           <Button variant="ghost" onClick={dismiss}>
             Not now
