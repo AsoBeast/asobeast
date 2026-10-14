@@ -5,6 +5,7 @@ import {
   classifyInput,
   enterAction,
   isSearchable,
+  isStoreAddress,
   searchErrorText,
 } from "./store-search";
 
@@ -57,6 +58,18 @@ describe("classifyInput", () => {
 
   it.each(["focus timer", "Duolingo", "f"])("reads %s as a name", (value) => {
     expect(classifyInput(` ${value} `)).toEqual({ kind: "name", q: value });
+  });
+});
+
+describe("isStoreAddress", () => {
+  it("tells a store address apart from a bare id or package name", () => {
+    expect(isStoreAddress("apps.apple.com/de/app/focus/id123456789")).toBe(
+      true,
+    );
+    expect(isStoreAddress("https://play.google.com/store/apps")).toBe(true);
+    expect(isStoreAddress("570060128")).toBe(false);
+    expect(isStoreAddress("com.duolingo")).toBe(false);
+    expect(isStoreAddress("2 Player Games")).toBe(false);
   });
 });
 

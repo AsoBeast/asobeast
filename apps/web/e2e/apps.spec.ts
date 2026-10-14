@@ -314,6 +314,40 @@ test.describe("importing by name", () => {
     expect(imports).toEqual([{ url: "555000333", country: "us" }]);
   });
 
+  test("a name that starts with a digit keeps the chosen store and storefront", async ({
+    page,
+  }) => {
+    const dialog = await openDialog(page);
+
+    await dialog.getByRole("tab", { name: "Google Play" }).click();
+    await dialog.getByRole("combobox", { name: "Home storefront" }).click();
+    await page.getByRole("option", { name: "DE · Germany" }).click();
+    await dialog
+      .getByLabel("App name or store URL")
+      .pressSequentially("2 Player");
+
+    await expect(
+      dialog.getByText("No listing named “2 Player” in Germany."),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("tab", { name: "Google Play" }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("enter on a one letter name asks for more", async ({ page }) => {
+    const imports = recordImports(page);
+    const dialog = await openDialog(page);
+
+    const field = dialog.getByLabel("App name or store URL");
+    await field.fill("f");
+    await field.press("Enter");
+
+    await expect(
+      dialog.getByText("Type at least 2 characters to search."),
+    ).toBeVisible();
+    expect(imports).toEqual([]);
+  });
+
   test("enter moves to the results when there is a choice", async ({
     page,
   }) => {

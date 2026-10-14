@@ -5,12 +5,7 @@ import type { FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import {
-  parseStoreUrl,
-  STORES,
-  type Store,
-  type StoreSearchResult,
-} from "@asobeast/shared";
+import { STORES, type Store, type StoreSearchResult } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
 import { CountrySelect } from "@/components/CountrySelect";
 import { Button } from "@/components/ui/button";
@@ -31,6 +26,7 @@ import { marketError } from "@/lib/countries";
 import { storeLabel } from "@/lib/format";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { classifyInput, isStoreAddress } from "./store-search";
 import { StoreSearchField } from "./StoreSearchField";
 import { useStoreSearch } from "./useStoreSearch";
 
@@ -152,12 +148,10 @@ export function ImportAppDialog({
 
   function onValueChange(next: string) {
     setValue(next);
-    try {
-      const parsed = parseStoreUrl(next);
-      setStore(parsed.store);
-      setCountry(parsed.country);
-    } catch {
-      return;
+    const input = classifyInput(next);
+    if (input.kind === "url" && isStoreAddress(next)) {
+      setStore(input.parsed.store);
+      setCountry(input.parsed.country);
     }
   }
 
@@ -180,11 +174,11 @@ export function ImportAppDialog({
     event.preventDefault();
     setError(null);
     setNote(null);
-    const { input, enter } = search;
-    if (input.kind === "url") importFrom(input.parsed.store, value);
-    if (input.kind === "invalid") setError(input.message);
-    if (enter.kind === "pick") importFrom(store, enter.result.storeAppId);
-    if (enter.kind === "focus") search.firstResultRef.current?.focus();
+    const { input } = search;
+    if (input.kind === "url") return importFrom(input.parsed.store, value);
+    if (input.kind === "invalid") return setError(input.message);
+    const message = search.enterName(pick);
+    if (message) setError(message);
   }
 
   return (

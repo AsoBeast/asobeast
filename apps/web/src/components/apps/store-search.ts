@@ -21,13 +21,17 @@ export type EnterAction =
 
 const URL_SHAPE = /[/:]/;
 
+export function isStoreAddress(value: string): boolean {
+  return URL_SHAPE.test(value.trim());
+}
+
 export function classifyInput(value: string): StoreInput {
   const trimmed = value.trim();
   if (trimmed === "") return { kind: "empty" };
   try {
     return { kind: "url", parsed: parseStoreUrl(trimmed) };
   } catch (error) {
-    if (URL_SHAPE.test(trimmed)) {
+    if (isStoreAddress(trimmed)) {
       return {
         kind: "invalid",
         message: error instanceof Error ? error.message : "Unrecognized URL",

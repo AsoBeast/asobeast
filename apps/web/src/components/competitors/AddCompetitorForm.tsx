@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import type { Store } from "@asobeast/shared";
+import type { Store, StoreSearchResult } from "@asobeast/shared";
 import { StoreSearchField } from "@/components/apps/StoreSearchField";
 import { useStoreSearch } from "@/components/apps/useStoreSearch";
 import { Button } from "@/components/ui/button";
@@ -59,16 +59,19 @@ export function AddCompetitorForm({ id }: { id: string }) {
     addOnce(value);
   }
 
+  function pick(result: StoreSearchResult) {
+    add(result.storeAppId);
+  }
+
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const { input, enter } = search;
-    if (input.kind === "url") add(url);
-    if (input.kind === "invalid") {
-      setNote(null);
-      setError(input.message);
-    }
-    if (enter.kind === "pick") add(enter.result.storeAppId);
-    if (enter.kind === "focus") search.firstResultRef.current?.focus();
+    setError(null);
+    setNote(null);
+    const { input } = search;
+    if (input.kind === "url") return add(url);
+    if (input.kind === "invalid") return setError(input.message);
+    const message = search.enterName(pick);
+    if (message) setError(message);
   }
 
   return (
@@ -82,7 +85,7 @@ export function AddCompetitorForm({ id }: { id: string }) {
         country={detail.country}
         value={url}
         onChange={setUrl}
-        onPick={(result) => add(result.storeAppId)}
+        onPick={pick}
         search={search}
         error={error}
         note={note}
