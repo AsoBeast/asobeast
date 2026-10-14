@@ -1,5 +1,7 @@
 import {
   SETUP_STEPS,
+  type AppSetupSummary,
+  type PortfolioApp,
   type SetupStep,
   type SetupStepProgress,
 } from "@asobeast/shared";
@@ -40,3 +42,20 @@ export function stepLabel(step: SetupStep): string {
 export const activeKeywordCount = (
   keywords: readonly { active: boolean }[],
 ): number => keywords.filter((keyword) => keyword.active).length;
+
+export type AppInSetup = PortfolioApp & { setup: AppSetupSummary };
+
+const isInSetup = (app: PortfolioApp): app is AppInSetup =>
+  app.setup?.status === "in_progress";
+
+const touchedAt = (app: AppInSetup): number =>
+  app.setup.updatedAt === null ? -Infinity : Date.parse(app.setup.updatedAt);
+
+export function bannerApps(
+  apps: readonly PortfolioApp[],
+): { app: AppInSetup; more: number } | null {
+  const [app, ...rest] = apps
+    .filter(isInSetup)
+    .sort((left, right) => touchedAt(right) - touchedAt(left));
+  return app ? { app, more: rest.length } : null;
+}

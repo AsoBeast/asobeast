@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { PortfolioApp, PortfolioAppInsight } from "@asobeast/shared";
 import { RankBandBar } from "@/components/charts/RankBandBar";
 import { AppIcon } from "@/components/AppIcon";
@@ -14,6 +15,7 @@ import {
 import { AppCardLink } from "@/components/apps/AppCardLink";
 import { DeleteAppMenu } from "@/components/apps/DeleteAppMenu";
 import { AppFacts } from "./AppFacts";
+import { setupChipText } from "./setup-chip";
 import { Sparkline } from "./Sparkline";
 
 export function AppStats({ app }: { app: PortfolioApp }) {
@@ -27,6 +29,7 @@ export function AppStats({ app }: { app: PortfolioApp }) {
 }
 
 export function AppBadges({ app }: { app: PortfolioApp }) {
+  const setup = setupChipText(app.setup);
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Badge variant="secondary" className="w-fit">
@@ -39,6 +42,11 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
       >
         {app.country.toUpperCase()}
       </Badge>
+      {setup ? (
+        <Badge variant="info" asChild className="relative z-20 w-fit">
+          <Link href={`/apps/${app.id}/setup`}>{setup}</Link>
+        </Badge>
+      ) : null}
     </div>
   );
 }
@@ -92,7 +100,7 @@ export function PortfolioAppCard({
 
         {app.lastCapturedAt === null ? (
           <p className="text-body text-muted-foreground">
-            Awaiting the first daily run — visibility appears within 24 hours.
+            Collecting the first positions. Visibility appears within the hour.
           </p>
         ) : (
           <>
@@ -166,7 +174,7 @@ export function PortfolioGroupMember({
 
       {app.lastCapturedAt === null ? (
         <p className="text-caption text-muted-foreground">
-          Awaiting the first daily run.
+          Collecting the first positions.
         </p>
       ) : (
         <>

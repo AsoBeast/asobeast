@@ -6,16 +6,21 @@ import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { pluralize } from "@/lib/format";
 import { portfolioOptions } from "@/lib/queries";
-import { progressPercent, progressSentence } from "./setup-progress";
+import {
+  bannerApps,
+  progressPercent,
+  progressSentence,
+} from "./setup-progress";
 import { useSetupDismissal } from "./use-setup-dismissal";
 
 export function OnboardingBanner() {
   const { data } = useSuspenseQuery(portfolioOptions);
   const dismiss = useSetupDismissal();
-  const app = data.apps.find((item) => item.setup?.status === "in_progress");
-  if (!app?.setup) return null;
-  const { setup } = app;
+  const picked = bannerApps(data.apps);
+  if (!picked) return null;
+  const { app, more } = picked;
 
   return (
     <Alert
@@ -24,11 +29,24 @@ export function OnboardingBanner() {
     >
       <ListChecks />
       <AlertDescription className="flex flex-col gap-2">
-        <span>{progressSentence(app.name, setup)}</span>
+        <span>
+          {progressSentence(app.name, app.setup)}
+          {more > 0 ? (
+            <>
+              {" · "}
+              <Link
+                href="/?view=cards"
+                className="underline decoration-primary underline-offset-4"
+              >
+                and {pluralize(more, "more app", "more apps")}
+              </Link>
+            </>
+          ) : null}
+        </span>
         <Progress
-          value={progressPercent(setup)}
+          value={progressPercent(app.setup)}
           aria-label="Setup progress"
-          getValueLabel={() => `${setup.done} of ${setup.total} steps`}
+          getValueLabel={() => `${app.setup.done} of ${app.setup.total} steps`}
           className="max-w-xs"
         />
       </AlertDescription>

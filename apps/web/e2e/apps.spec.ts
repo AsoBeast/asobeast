@@ -292,15 +292,23 @@ test("a second import keeps the setup of the first app in progress", async ({
 test("pending setup can be resumed or dismissed from the dashboard", async ({
   page,
 }) => {
+  await startedSetup(page.context(), "app-2");
   await startedSetup(page.context(), "app-1");
+  const patches: unknown[] = [];
+  page.on("request", (request) => {
+    if (
+      request.method() === "PATCH" &&
+      request.url().endsWith("/api/backend/apps/app-1/setup")
+    ) {
+      patches.push(request.postDataJSON());
+    }
+  });
   await page.goto("/");
 
-  const banner = page
-    .getByRole("status")
-    .filter({ hasText: "Set up Focus Timer" });
-  await expect(
-    banner.getByText("Set up Focus Timer · 1 of 3 · next: track keywords"),
-  ).toBeVisible();
+  const banner = page.getByRole("status").filter({ hasText: /^Set up / });
+  await expect(banner.getByText(/^Set up Focus Timer/)).toHaveText(
+    "Set up Focus Timer · 1 of 3 · next: track keywords · and 1 more app",
+  );
   await expect(
     banner.getByRole("progressbar", { name: "Setup progress" }),
   ).toHaveAttribute("aria-valuetext", "1 of 3 steps");
@@ -309,10 +317,14 @@ test("pending setup can be resumed or dismissed from the dashboard", async ({
   await expect(page).toHaveURL("/apps/app-1/setup");
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
+  await banner.getByRole("button", { name: "Dismiss" }).click();
+  await expect(banner.getByText(/^Set up Habit Tracker/)).toHaveText(
+    "Set up Habit Tracker · 0 of 3 · next: pick competitors",
+  );
+  expect(patches).toEqual([{ status: "dismissed" }]);
   await page.reload();
   await expect(page.getByText(/^Set up Focus Timer/)).toBeHidden();
+  await expect(banner.getByText(/^Set up Habit Tracker/)).toBeVisible();
 });
 
 test("an existing portfolio is not enrolled without an import", async ({
