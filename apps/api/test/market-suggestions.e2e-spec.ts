@@ -60,13 +60,17 @@ describe('Market suggestions (e2e)', () => {
     await app.close();
   });
 
-  const createApp = (store: Store = Store.APP_STORE, primaryAppId?: string) =>
+  const createApp = (
+    store: Store = Store.APP_STORE,
+    primaryAppId?: string,
+    country = 'us',
+  ) =>
     prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store,
         storeAppId: primaryAppId ? '555000999' : '555000111',
-        country: 'us',
+        country,
         name: primaryAppId ? 'Rival' : 'Suggest Fixture',
         isCompetitor: primaryAppId !== undefined,
         primaryAppId,
@@ -84,8 +88,12 @@ describe('Market suggestions (e2e)', () => {
       },
     });
 
-  const seedApp = async (languages: string[], competitors = 0) => {
-    const created = await createApp();
+  const seedApp = async (
+    languages: string[],
+    competitors = 0,
+    country = 'us',
+  ) => {
+    const created = await createApp(Store.APP_STORE, undefined, country);
     await snapshot(created.id, languages);
     for (let index = 0; index < competitors; index += 1) {
       await createApp(Store.APP_STORE, created.id);
@@ -177,6 +185,17 @@ describe('Market suggestions (e2e)', () => {
     expect(find(result, 'de')?.dailyRequests).toEqual({
       listing: 1,
       perKeyword: 1,
+    });
+  });
+
+  it('prices the home localization a market reads beside its default', async () => {
+    const appId = await seedApp(['ES'], 0, 'mx');
+
+    const result = await suggest(appId);
+
+    expect(find(result, 'us')).toMatchObject({
+      localization: 'es-MX',
+      dailyRequests: { listing: 2, perKeyword: 1 },
     });
   });
 
