@@ -43,7 +43,7 @@ export function AppBadges({ app }: { app: PortfolioApp }) {
         {app.country.toUpperCase()}
       </Badge>
       {setup ? (
-        <Badge variant="info" asChild className="relative z-20 w-fit">
+        <Badge variant="info" asChild className="relative z-20 min-h-6 w-fit">
           <Link href={`/apps/${app.id}/setup`}>{setup}</Link>
         </Badge>
       ) : null}

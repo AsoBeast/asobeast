@@ -54,6 +54,18 @@ test("unknown and unavailable apps render route boundaries", async ({
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
 });
 
+test("a competitor has no setup and renders the not found page", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-rival/setup");
+
+  await expect(page.getByRole("main").getByText("App not found")).toBeVisible();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Start this setup" }),
+  ).toHaveCount(0);
+});
+
 test("a not started app offers to start and never enrols on a visit", async ({
   page,
 }) => {

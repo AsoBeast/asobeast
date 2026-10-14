@@ -8,28 +8,33 @@ import {
 import { toast } from "sonner";
 import type { AppSetupState, AppSetupUpdateRequest } from "@asobeast/shared";
 import { ApiError, updateAppSetup } from "@/lib/api";
-import { appKeys, invalidateSetupMutation, setupOptions } from "@/lib/queries";
+import { invalidateSetupMutation, setupKey, setupOptions } from "@/lib/queries";
 import { applySetupPatch, type SetupTransition } from "./setup-transitions";
 
 export const SETUP_SAVE_ERROR = "Could not save your setup progress";
 
+interface SetupSave {
+  patch: AppSetupUpdateRequest;
+  previous: AppSetupState;
+}
+
 export function useSetup(id: string) {
   const client = useQueryClient();
-  const queryKey = appKeys.setup(id);
+  const queryKey = setupKey(id);
   const { data: setup } = useSuspenseQuery(setupOptions(id));
+  const isLastSave = () => client.isMutating({ mutationKey: queryKey }) === 1;
   const mutation = useMutation({
     mutationKey: queryKey,
     scope: { id: queryKey.join(":") },
-    mutationFn: (patch: AppSetupUpdateRequest) => updateAppSetup(id, patch),
-    onError: (error) => {
+    mutationFn: ({ patch }: SetupSave) => updateAppSetup(id, patch),
+    onError: (error, { previous }) => {
+      if (isLastSave()) client.setQueryData(queryKey, previous);
       toast.error(
         error instanceof ApiError ? error.envelope.message : SETUP_SAVE_ERROR,
       );
     },
     onSettled: () =>
-      client.isMutating({ mutationKey: queryKey }) === 1
-        ? invalidateSetupMutation(client, id)
-        : undefined,
+      isLastSave() ? invalidateSetupMutation(client, id) : undefined,
   });
 
   const apply = (transition: SetupTransition) => {
@@ -38,7 +43,7 @@ export function useSetup(id: string) {
     if (!patch) return;
     void client.cancelQueries({ queryKey });
     client.setQueryData(queryKey, applySetupPatch(current, patch, new Date()));
-    mutation.mutate(patch);
+    mutation.mutate({ patch, previous: current });
   };
 
   return { setup, apply };

@@ -176,7 +176,6 @@ export const appKeys = {
   marketSuggestions: (id: string) =>
     [...appKeys.detail(id), "market-suggestions"] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
-  setup: (id: string) => [...appKeys.detail(id), "setup"] as const,
   screenshots: (id: string, market?: string, localization?: string) =>
     [
       ...appKeys.detail(id),
@@ -196,6 +195,8 @@ export const appKeys = {
     ] as const,
   serp: (keywordId: string) => ["serp", keywordId] as const,
 };
+
+export const setupKey = (id: string) => ["setup", id] as const;
 
 export const portfolioKey = ["portfolio"] as const;
 export const portfolioInsightsKey = [...portfolioKey, "insights"] as const;
@@ -721,8 +722,10 @@ export const marketSuggestionsOptions = (id: string) =>
 
 export const setupOptions = (id: string) =>
   queryOptions({
-    queryKey: appKeys.setup(id),
+    queryKey: setupKey(id),
     queryFn: () => getAppSetup(id),
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
 export const serpOptions = (keywordId: string) =>
@@ -863,7 +866,7 @@ export function invalidateSetupMutation(
   id: string,
 ): Promise<void> {
   return Promise.all([
-    client.invalidateQueries({ queryKey: appKeys.setup(id) }),
+    client.invalidateQueries({ queryKey: setupKey(id) }),
     client.invalidateQueries({ queryKey: portfolioKey }),
   ]).then(() => undefined);
 }

@@ -54,6 +54,7 @@ test("an app in setup carries a progress chip that opens its setup", async ({
   const chip = card("Focus Timer").getByRole("link", { name: "Setup 1 of 3" });
 
   await expect(chip).toHaveAttribute("href", "/apps/app-1/setup");
+  expect((await chip.boundingBox())?.height).toBeGreaterThanOrEqual(24);
   await expect(
     card("Habit Tracker").getByRole("link", { name: /^Setup / }),
   ).toHaveCount(0);

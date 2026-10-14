@@ -80,6 +80,7 @@ import {
   serpMoversOptions,
   screenshotsOptions,
   serpOptions,
+  setupKey,
   setupOptions,
   spiderOptions,
   pickerSuggestionsOptions,
@@ -214,7 +215,6 @@ const APP_SCOPED_OPTIONS = [
     marketSuggestionsOptions(APP),
     appKeys.marketSuggestions(APP),
   ],
-  ["setup", setupOptions(APP), appKeys.setup(APP)],
   ["listingMarkets", listingMarketsOptions(APP), appKeys.listingMarkets(APP)],
   ["listing", appListingOptions(APP, "de"), appKeys.listing(APP, "de")],
   [
@@ -618,7 +618,7 @@ describe("invalidation sets", () => {
       invalidatedKeys((client) => {
         void invalidateSetupMutation(client, APP);
       }),
-    ).toEqual([appKeys.setup(APP), portfolioKey]);
+    ).toEqual([setupKey(APP), portfolioKey]);
   });
 
   it("invalidates everything a competitor mutation changes", () => {
@@ -737,6 +737,19 @@ describe("portfolio insights key", () => {
   it("sits under the portfolio key so a portfolio invalidation reaches it", () => {
     expect(isPrefixOf(portfolioKey, portfolioInsightsKey)).toBe(true);
     expect(portfolioInsightsOptions.queryKey).toEqual(portfolioInsightsKey);
+  });
+});
+
+describe("setup key", () => {
+  it("sits outside the app detail so a listing or competitor invalidation never refetches it mid save", () => {
+    expect(isPrefixOf(appKeys.detail(APP), setupKey(APP))).toBe(false);
+    expect(isPrefixOf(appKeys.all, setupKey(APP))).toBe(false);
+    expect(setupOptions(APP).queryKey).toEqual(setupKey(APP));
+  });
+
+  it("refetches whenever another tab or device may have changed it", () => {
+    expect(setupOptions(APP).staleTime).toBe(0);
+    expect(setupOptions(APP).refetchOnWindowFocus).toBe(true);
   });
 });
 
