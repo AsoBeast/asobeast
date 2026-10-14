@@ -845,6 +845,29 @@ describe('AppsController (e2e)', () => {
     });
   });
 
+  it('says whether the app is a competitor', async () => {
+    const primary = (
+      await api
+        .post('/apps')
+        .send({ url: 'https://apps.apple.com/us/app/fixture/id1234567890' })
+        .expect(201)
+    ).body as AppDetail;
+    await api
+      .post(`/apps/${primary.id}/competitors`)
+      .send({ url: 'https://apps.apple.com/us/app/rival/id9876543210' })
+      .expect(201);
+    const rival = await prisma.app.findFirstOrThrow({
+      where: { isCompetitor: true },
+      select: { id: true },
+    });
+
+    const detailOf = async (id: string) =>
+      (await api.get(`/apps/${id}`).expect(200)).body as AppDetail;
+
+    expect((await detailOf(primary.id)).isCompetitor).toBe(false);
+    expect((await detailOf(rival.id)).isCompetitor).toBe(true);
+  });
+
   const expectEnvelope = (
     body: ApiErrorEnvelope,
     statusCode: number,

@@ -185,6 +185,7 @@ export function toAppDetail(
     ),
     group: group ? toAppGroupSummary(group) : null,
     ...(localization ? { localization } : {}),
+    isCompetitor: app.isCompetitor,
   };
 }
 
