@@ -241,6 +241,28 @@ describe('Market keyword fields (e2e)', () => {
     await api.get('/apps/missing-app/keyword-fields/market').expect(404);
   });
 
+  it('E-MKT-09 refuses a competitor app', async () => {
+    const rival = (
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'market-rival',
+          country: 'us',
+          isCompetitor: true,
+          primaryAppId: await seedApp(),
+        },
+        select: { id: true },
+      })
+    ).id;
+
+    const response = await read(rival).expect(400);
+
+    expect((response.body as ApiErrorEnvelope).message).toBe(
+      'A competitor app has no localizations or keyword fields; edit its primary app',
+    );
+  });
+
   it('E-MKT-08 lets a read only token read', async () => {
     const appId = await seedApp();
     const token = await seedApiToken(prisma, {

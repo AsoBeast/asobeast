@@ -15,7 +15,7 @@ import { recordAppLocalizations } from './app-localization-records';
 import { toAppLocalizationItems } from './app-localizations';
 import { loadAppMarkets } from './app-markets';
 import { KeywordFieldWriter } from './keyword-field-writer';
-import { ensureKeywordFieldApp, KeywordApp } from './keywords.support';
+import { ensureLocalizedFieldApp, KeywordApp } from './keywords.support';
 import { homeLocalization } from './localization-markets';
 
 const itemOf = (
@@ -48,14 +48,14 @@ export class AppLocalizationsService {
   ) {}
 
   async list(appId: string): Promise<AppLocalizationsResult> {
-    return this.resultOf(await ensureKeywordFieldApp(this.prisma, appId));
+    return this.resultOf(await ensureLocalizedFieldApp(this.prisma, appId));
   }
 
   async add(
     appId: string,
     localization: AppStoreLocalization,
   ): Promise<AppLocalizationItem> {
-    const app = await ensureKeywordFieldApp(this.prisma, appId);
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
     if (itemOf(await this.resultOf(app), localization)) {
       throw alreadyShipped(localization);
     }
@@ -77,7 +77,7 @@ export class AppLocalizationsService {
     appId: string,
     localization: AppStoreLocalization,
   ): Promise<void> {
-    const app = await ensureKeywordFieldApp(this.prisma, appId);
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
     if (localization === homeLocalization(app.country)) {
       throw notRemovable(app, localization);
     }

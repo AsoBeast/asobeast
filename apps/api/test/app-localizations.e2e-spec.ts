@@ -21,6 +21,9 @@ import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
 import { obliterateQueues, pauseQueues } from './obliterate-queues';
 
+const COMPETITOR_REFUSAL =
+  'A competitor app has no localizations or keyword fields; edit its primary app';
+
 const noStoreRequests = {
   get: () => {
     throw new Error('no store request expected');
@@ -41,6 +44,22 @@ describe('App localizations (e2e)', () => {
           storeAppId: `${store}-${country}`,
           country,
           name: 'Habit Tracker',
+        },
+        select: { id: true },
+      })
+    ).id;
+
+  const seedCompetitor = async (primaryAppId: string) =>
+    (
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: Store.APP_STORE,
+          storeAppId: 'rival',
+          country: 'us',
+          name: 'Rival Habits',
+          isCompetitor: true,
+          primaryAppId,
         },
         select: { id: true },
       })
@@ -349,6 +368,18 @@ describe('App localizations (e2e)', () => {
     it('answers 404 for a missing app', async () => {
       await api.get('/apps/missing-app/localizations').expect(404);
     });
+
+    it('answers 400 for a competitor app', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await api
+        .get(`/apps/${rival}/localizations`)
+        .expect(400);
+
+      expect((response.body as ApiErrorEnvelope).message).toBe(
+        COMPETITOR_REFUSAL,
+      );
+    });
   });
 
   describe('the old keyword field route records the localization', () => {
@@ -524,6 +555,15 @@ describe('App localizations (e2e)', () => {
       await add('missing-app', { localization: 'es-MX' }).expect(404);
     });
 
+    it('answers 400 for a competitor app and stores nothing', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await add(rival, { localization: 'es-MX' }).expect(400);
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+      await expect(prisma.appLocalization.count()).resolves.toBe(0);
+    });
+
     it('lets exactly one of two racing adds win', async () => {
       const id = await seedApp();
       const body = { localization: 'es-MX' };
@@ -646,6 +686,18 @@ describe('App localizations (e2e)', () => {
 
       await remove(play, 'es-MX').expect(400);
       await remove('missing-app', 'es-MX').expect(404);
+    });
+
+    it('answers 400 for a competitor app and keeps its row', async () => {
+      const rival = await seedCompetitor(await seedApp());
+      await seedRow(rival, 'es-MX');
+
+      const response = await remove(rival, 'es-MX').expect(400);
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+      await expect(
+        prisma.appLocalization.count({ where: { appId: rival } }),
+      ).resolves.toBe(1);
     });
 
     it('leaves a field and its row together when a remove races a save', async () => {

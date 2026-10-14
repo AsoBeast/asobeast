@@ -22,6 +22,9 @@ import {
 
 const NUL = '\u0000';
 
+const COMPETITOR_REFUSAL =
+  'A competitor app has no localizations or keyword fields; edit its primary app';
+
 const OVERSIZED = Array.from(
   { length: 12 },
   (_, index) => `phrase ${String(index).padStart(2, '0')}`,
@@ -38,6 +41,21 @@ describe('Localized keyword fields (e2e)', () => {
     (
       await harness.prisma.app.create({
         data: { workspaceId: WORKSPACE, store, storeAppId, country },
+        select: { id: true },
+      })
+    ).id;
+
+  const seedCompetitor = async (primaryAppId: string): Promise<string> =>
+    (
+      await harness.prisma.app.create({
+        data: {
+          workspaceId: WORKSPACE,
+          store: Store.APP_STORE,
+          storeAppId: 'rival',
+          country: 'us',
+          isCompetitor: true,
+          primaryAppId,
+        },
         select: { id: true },
       })
     ).id;
@@ -362,6 +380,22 @@ describe('Localized keyword fields (e2e)', () => {
       );
     });
 
+    it('E-SAV-19 refuses a competitor app and writes nothing', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await save(rival, 'en-US', {
+        text: 'uno,dos',
+        trackIn: ['us'],
+      }).expect(400);
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+      await expect(written()).resolves.toEqual({
+        fields: 0,
+        localizations: 0,
+        tracked: 0,
+      });
+    });
+
     it('E-SAV-15 refuses a NUL character in the text and in trackIn', async () => {
       const appId = await seedApp();
       const before = await written();
@@ -611,6 +645,16 @@ describe('Localized keyword fields (e2e)', () => {
         'The keyword field is only available for App Store apps',
       );
       await preview('missing-app', 'en-US', { text: 'uno' }).expect(404);
+    });
+
+    it('E-PRV-13 refuses a competitor app', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await preview(rival, 'en-US', { text: 'uno' }).expect(
+        400,
+      );
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
     });
 
     it('E-PRV-10 counts a paused phrase as new', async () => {
