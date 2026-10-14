@@ -1,4 +1,8 @@
-import { API_TOKEN_PREFIX, SESSION_COOKIE } from '@asobeast/shared';
+import {
+  API_TOKEN_PREFIX,
+  SESSION_COOKIE,
+  URL_CREDENTIALS,
+} from '@asobeast/shared';
 
 export const REDACTED = '[redacted]';
 
@@ -26,7 +30,7 @@ const SECRET_SHAPES: [RegExp, string][] = [
     new RegExp(`${SESSION_COOKIE}=[^;\\s"']+`, 'g'),
     `${SESSION_COOKIE}=${REDACTED}`,
   ],
-  [/([a-z][a-z0-9+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${REDACTED}@`],
+  [URL_CREDENTIALS, `$1${REDACTED}@`],
   [/([?&]token=)[^&#\s"']+/g, `$1${REDACTED}`],
 ];
 
