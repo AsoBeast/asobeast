@@ -112,13 +112,13 @@ describe('market listings in the daily pipeline (e2e)', () => {
     await app.close();
   });
 
-  const seed = async () => {
+  const seed = async (home = 'us', market = 'de') => {
     const primary = await prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
         storeAppId: '111',
-        country: 'us',
+        country: home,
         name: 'Mine',
       },
     });
@@ -127,14 +127,14 @@ describe('market listings in the daily pipeline (e2e)', () => {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
         storeAppId: '222',
-        country: 'us',
+        country: home,
         name: 'Rival',
         isCompetitor: true,
         primaryAppId: primary.id,
       },
     });
     const keyword = await prisma.keyword.create({
-      data: { text: 'gewohnheit', store: Store.APP_STORE, country: 'de' },
+      data: { text: 'gewohnheit', store: Store.APP_STORE, country: market },
     });
     await prisma.trackedKeyword.create({
       data: {
@@ -205,5 +205,13 @@ describe('market listings in the daily pipeline (e2e)', () => {
     expect(
       budget.stores.find((row) => row.store === 'APP_STORE')?.marketListings,
     ).toBe(2);
+  });
+
+  it('counts the home localization a market reads beside its default for the app only', async () => {
+    await seed('mx', 'us');
+
+    const response = await api.get('/jobs/budget').expect(200);
+
+    expect((response.body as DailyBudget).localizations).toBe(1);
   });
 });

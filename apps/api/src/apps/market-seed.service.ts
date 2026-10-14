@@ -54,7 +54,7 @@ export class MarketSeedService {
         cost: seedCost(app.store, { opened: 0, listingReads: 0 }),
       };
     }
-    const shipped = await shippedLocalizations(this.prisma, app.id);
+    const shipped = await shippedLocalizations(this.prisma, app);
     const candidates = seedCandidates(
       app.store,
       await listingTexts(

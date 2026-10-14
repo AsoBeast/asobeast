@@ -49,7 +49,10 @@ export async function latestLocalizedTexts(
   home: string,
   markets: readonly string[],
 ): Promise<Map<string, LocalizedTexts[]>> {
-  const shipped = await shippedLocalizations(prisma, appId);
+  const shipped = await shippedLocalizations(prisma, {
+    id: appId,
+    country: home,
+  });
   const entries = await Promise.all(
     [...new Set(markets)].map(
       async (market): Promise<[string, LocalizedTexts[]]> => {

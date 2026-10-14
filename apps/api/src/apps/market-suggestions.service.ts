@@ -37,7 +37,7 @@ export class MarketSuggestionsService {
       this.prisma.app.count({
         where: { OR: [{ id: appId }, { primaryAppId: appId }] },
       }),
-      shippedLocalizations(this.prisma, appId),
+      shippedLocalizations(this.prisma, app),
     ]);
     const languages = [
       ...new Set(

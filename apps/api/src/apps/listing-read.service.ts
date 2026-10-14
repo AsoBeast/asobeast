@@ -38,7 +38,7 @@ export class ListingReadService {
         select: { country: true },
         distinct: ['country'],
       }),
-      shippedLocalizations(this.prisma, id),
+      shippedLocalizations(this.prisma, { id, country: app.country }),
     ]);
     return withTracking(
       toListingMarkets(app.country, rows, shipped),
