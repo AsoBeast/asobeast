@@ -98,6 +98,12 @@ export function exportTables(prisma: PrismaService): ExportTable[] {
         }),
     ),
     table(
+      'appSetup',
+      () => prisma.appSetup.count(),
+      (skip, take) =>
+        prisma.appSetup.findMany({ skip, take, orderBy: { appId: 'asc' } }),
+    ),
+    table(
       'appLocalization',
       () => prisma.appLocalization.count(),
       (skip, take) =>

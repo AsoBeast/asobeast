@@ -55,6 +55,7 @@ model Workspace {
   snapshotScreenshots SnapshotScreenshot[]
   keywordFields KeywordField[]
   appLocalizations AppLocalization[]
+  appSetups   AppSetup[]
   rankings    KeywordRanking[]
   plan                String    @default("free")
   trialStartedAt      DateTime?
@@ -197,6 +198,7 @@ model App {
   reviews      Review[]
   suggestProbes SuggestProbe[]
   auditInsight AuditInsight?
+  appSetup     AppSetup?
   auditScores  AuditScore[]
   actions      ActionItem[]
   actionEvents ActionEvent[]
@@ -318,6 +320,23 @@ model AppLocalization {
   createdAt    DateTime  @default(now())
 
   @@id([appId, localization])
+  @@index([workspaceId])
+}
+
+model AppSetup {
+  appId             String    @id
+  workspaceId       String
+  app               App       @relation(fields: [appId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  status            String    @default("not_started")
+  skipped           String[]  @default([])
+  countriesReviewed Boolean   @default(false)
+  selectedMarkets   String[]  @default([])
+  completedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([appId, workspaceId])
   @@index([workspaceId])
 }
 

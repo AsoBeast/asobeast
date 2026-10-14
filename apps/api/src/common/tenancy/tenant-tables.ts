@@ -8,6 +8,7 @@ export const TENANT_TABLES = [
   'App',
   'AppGroup',
   'AppLocalization',
+  'AppSetup',
   'AppSnapshot',
   'AuditInsight',
   'AuditScore',
