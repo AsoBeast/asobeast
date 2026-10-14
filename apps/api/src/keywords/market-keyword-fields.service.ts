@@ -55,15 +55,13 @@ export class MarketKeywordFieldsService {
     market: string,
     fields: FieldPhrases,
   ): Promise<SplitPhrase[]> {
-    const [listings, tracked] = await Promise.all([
-      latestListingTexts(this.prisma, appId, home, [home, market]),
+    const [listings, localized, tracked] = await Promise.all([
+      latestListingTexts(this.prisma, appId, home, [market]),
+      latestLocalizedTexts(this.prisma, appId, home, [market]),
       this.prisma.trackedKeyword.findMany({
         where: { appId, active: true, keyword: { is: { country: market } } },
         select: { keywordId: true, keyword: { select: { text: true } } },
       }),
-    ]);
-    const localized = await latestLocalizedTexts(this.prisma, appId, home, [
-      ...listings.keys(),
     ]);
     const saved: FieldPhrases = new Map(
       [...fields].filter(([, phrases]) => phrases.length > 0),
@@ -75,7 +73,7 @@ export class MarketKeywordFieldsService {
           store: Store.APP_STORE,
           country: market,
           home: market === home,
-          listing: listings.get(market) ?? listings.get(home),
+          listing: listings.get(market),
           captured: localized.get(market) ?? [],
         },
         saved,

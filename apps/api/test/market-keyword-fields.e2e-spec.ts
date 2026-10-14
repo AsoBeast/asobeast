@@ -338,6 +338,39 @@ describe('Market keyword fields (e2e)', () => {
       ]);
     });
 
+    it('never credits the home listing to a market that has none of its own', async () => {
+      const appId = await seedShippedApp();
+      await ship(appId, 'en-GB', ['journal']);
+      await trackPhrase(appId, 'garden journal', 'mx');
+
+      await expect(marketOf(appId, 'mx')).resolves.toMatchObject({
+        splitPhrases: [],
+      });
+    });
+
+    it('reads the title and subtitle of the market listing itself', async () => {
+      const appId = await seedShippedApp();
+      await ship(appId, 'en-GB', ['journal']);
+      await trackPhrase(appId, 'garden journal', 'mx');
+      await prisma.appSnapshot.create({
+        data: {
+          appId,
+          country: 'mx',
+          title: 'Jardin Garden',
+          description: 'Crece',
+          raw: {},
+        },
+      });
+
+      const { splitPhrases } = await marketOf(appId, 'mx');
+
+      expect(splitPhrases).toHaveLength(1);
+      expect(splitPhrases[0].parts).toEqual([
+        { word: 'garden', localizations: ['es-MX'] },
+        { word: 'journal', localizations: ['en-GB'] },
+      ]);
+    });
+
     it('answers empty lists for a market that reads none of the shipped fields', async () => {
       const appId = await seedShippedApp();
 

@@ -11,14 +11,28 @@ describe('the app localization table (e2e)', () => {
     /INSERT INTO "AppLocalization"[\s\S]*?;/.exec(sql)?.[0] ?? '';
   let prisma: PrismaClient;
 
-  const seedApp = (storeAppId: string) =>
+  const seedApp = (storeAppId: string, country = 'us') =>
     prisma.app.create({
       data: {
         workspaceId: DEFAULT_WORKSPACE_ID,
         store: Store.APP_STORE,
         storeAppId,
-        country: 'us',
+        country,
         name: storeAppId,
+      },
+    });
+
+  const seedLocalization = (
+    appId: string,
+    localization: string,
+    origin = 'manual',
+  ) =>
+    prisma.appLocalization.create({
+      data: {
+        appId,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization,
+        origin,
       },
     });
 
@@ -164,6 +178,43 @@ describe('the app localization table (e2e)', () => {
     await prisma.app.delete({ where: { id: app.id } });
 
     await expect(prisma.appLocalization.count()).resolves.toBe(0);
+  });
+
+  describe('dropping a stored home localization', () => {
+    const drop = migrationSql('drop_home_app_localizations');
+
+    it('deletes the home localization of each app and keeps every other row', async () => {
+      const [us, fr, uk] = [
+        await seedApp('a'),
+        await seedApp('b', 'fr'),
+        await seedApp('c', 'uk'),
+      ];
+      await seedLocalization(us.id, 'en-US');
+      await seedLocalization(us.id, 'es-MX');
+      await seedLocalization(fr.id, 'fr', 'detected');
+      await seedLocalization(fr.id, 'nl', 'detected');
+      await seedLocalization(uk.id, 'en-GB');
+      await seedLocalization(uk.id, 'en-US');
+
+      await prisma.$executeRawUnsafe(drop);
+
+      await expect(
+        prisma.appLocalization.findMany({
+          select: { appId: true, localization: true },
+        }),
+      ).resolves.toEqual(
+        expect.arrayContaining([
+          { appId: us.id, localization: 'es-MX' },
+          { appId: fr.id, localization: 'nl' },
+          { appId: uk.id, localization: 'en-US' },
+        ]),
+      );
+      await expect(prisma.appLocalization.count()).resolves.toBe(3);
+    });
+
+    it('never reads the migration history table', () => {
+      expect(drop).not.toContain('_prisma_migrations');
+    });
   });
 
   it('refuses a row that names another workspace than its app', async () => {
