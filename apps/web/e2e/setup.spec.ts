@@ -16,6 +16,9 @@ const MOCK_API_URL = `http://localhost:${process.env.MOCK_API_PORT ?? 4100}`;
 const resetSeed = (request: APIRequestContext, country: string) =>
   request.post(`${MOCK_API_URL}/__reset/market-seed/app-1/${country}`);
 
+const resetCompetitors = (request: APIRequestContext, appId: string) =>
+  request.post(`${MOCK_API_URL}/__reset/competitors/${appId}`);
+
 const storedMarkets = async (page: Page): Promise<string[]> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
@@ -113,7 +116,7 @@ test("direct setup is resumable and completes after live checks", async ({
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
   await expect(page.getByText("United States (US)")).toBeVisible();
-  await expect(page.getByText("1 competitor configured")).toBeVisible();
+  await expect(page.getByText("1 tracked: Rival Focus")).toBeVisible();
   await expect(
     stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
   ).toBeVisible();
@@ -262,10 +265,80 @@ test("a failed live count blocks completion until a retry succeeds", async ({
   await page.context().clearCookies({ name: "e2e-fail-competitors" });
   await page.getByRole("button", { name: "Retry" }).click();
 
-  await expect(page.getByText("1 competitor configured")).toBeVisible();
+  await expect(page.getByText("1 tracked: Rival Focus")).toBeVisible();
   await expect(
     page.getByText("Some live counts could not be loaded."),
   ).toBeHidden();
+});
+
+test.describe("picking competitors inside the step", () => {
+  test.afterEach(async ({ request }) => {
+    await resetCompetitors(request, "app-1");
+    await resetCompetitors(request, "app-2");
+  });
+
+  test("a competitor added by url inside the step raises the count", async ({
+    page,
+    request,
+  }) => {
+    await resetCompetitors(request, "app-2");
+    await startSetup(page, "app-2");
+
+    const competitors = stepCard(page, "Pick competitors");
+    await expect(competitors.getByText("No competitor yet")).toBeVisible();
+    await competitors
+      .getByLabel("Competitor App Store URL")
+      .fill("https://apps.apple.com/us/app/rival/id555000999");
+    await competitors.getByRole("button", { name: "Add competitor" }).click();
+
+    await expect(page.getByText("Added 555000999")).toBeVisible();
+    await expect(competitors.getByText("1 tracked: 555000999")).toBeVisible();
+    await expect(competitors.getByText("Done", { exact: true })).toBeVisible();
+    await expect(page).toHaveURL("/apps/app-2/setup");
+  });
+
+  test("a discovered app can be tracked from the step", async ({
+    page,
+    request,
+  }) => {
+    await resetCompetitors(request, "app-1");
+    await startSetup(page, "app-1");
+
+    const discovered = page.getByRole("list", {
+      name: "Apps ranking for your keywords",
+    });
+    const row = discovered
+      .getByRole("listitem")
+      .filter({ hasText: "Deep Work Sessions" });
+    await row.getByRole("button", { name: "Track" }).click();
+
+    await expect(
+      page.getByText("Now tracking Deep Work Sessions"),
+    ).toBeVisible();
+    await expect(
+      page.getByText("2 tracked: Rival Focus and Deep Work Sessions"),
+    ).toBeVisible();
+    await expect(
+      discovered
+        .getByRole("listitem")
+        .filter({ hasText: "Deep Work Sessions" }),
+    ).toHaveCount(0);
+    await expect(
+      discovered.getByRole("listitem").filter({ hasText: "Tomato Clock" }),
+    ).toBeVisible();
+  });
+});
+
+test("the discovered list says positions are still collected on a new app", async ({
+  page,
+}) => {
+  await startSetup(page, "app-new");
+
+  await expect(
+    page.getByText(
+      "Positions are still being collected. Apps that rank for your keywords appear here within minutes.",
+    ),
+  ).toBeVisible();
 });
 
 test("corrupt state resets and setup can be dismissed on a narrow dark layout", async ({

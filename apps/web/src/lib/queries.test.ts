@@ -607,6 +607,7 @@ describe("invalidation sets", () => {
       appKeys.discoveryRoot(APP),
       appKeys.serpMoversRoot(APP),
       portfolioKey,
+      appKeys.firstRun(APP),
     ]);
   });
 

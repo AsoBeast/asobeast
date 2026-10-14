@@ -847,6 +847,7 @@ export function invalidateCompetitorMutation(
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
+  void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
 }
 
 export function invalidateLinkMutation(

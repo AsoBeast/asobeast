@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { Suspense, useState, type FormEvent, type ReactNode } from "react";
 import { ExternalLink, Plus, X } from "lucide-react";
 import Link from "next/link";
-import type { MarketSuggestionsResult } from "@asobeast/shared";
-import { formatCountry } from "@/lib/format";
+import type { CompetitorItem, MarketSuggestionsResult } from "@asobeast/shared";
+import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
+import { formatCountry, formatList } from "@/lib/format";
 import {
   SETUP_KEYWORD_TARGET,
   stepLabel,
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DiscoveredApps } from "./DiscoveredApps";
 import { SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
@@ -102,15 +105,25 @@ function SkipAction({ step, state, onSkip }: StepProps & { step: SetupStep }) {
   );
 }
 
+const competitorName = (competitor: CompetitorItem): string =>
+  competitor.name ?? competitor.latestSnapshot?.title ?? "Unnamed app";
+
+function trackedCompetitorsLine(competitors: CompetitorItem[]): string {
+  if (competitors.length === 0) return "No competitor yet";
+  return `${competitors.length} tracked: ${formatList(competitors.map(competitorName))}`;
+}
+
 export function CompetitorsStep({
   appId,
-  count,
+  competitors,
   error,
+  collecting,
   ...step
 }: StepProps & {
   appId: string;
-  count: number | null;
+  competitors: CompetitorItem[] | null;
   error: boolean;
+  collecting: boolean;
 }) {
   return (
     <StepCard
@@ -119,18 +132,23 @@ export function CompetitorsStep({
       description="Track at least one app you compete with, so every keyword search compares you against it. Two or three is typical."
       {...step}
     >
+      <Suspense fallback={<Skeleton className="h-9 w-full" />}>
+        <AddCompetitorForm id={appId} />
+      </Suspense>
       <p className="text-sm text-muted-foreground">
         {error
           ? "Competitor count is temporarily unavailable."
-          : count === null
+          : competitors === null
             ? "Loading competitors…"
-            : `${count} competitor${count === 1 ? "" : "s"} configured`}
+            : trackedCompetitorsLine(competitors)}
       </p>
-      <Button asChild variant="outline" className="w-fit">
-        <Link href={`/apps/${appId}/competitors`}>
-          Manage competitors
-          <ExternalLink />
-        </Link>
+      <DiscoveredApps
+        appId={appId}
+        competitors={competitors ?? []}
+        collecting={collecting}
+      />
+      <Button asChild variant="link" className="h-auto w-fit px-0">
+        <Link href={`/apps/${appId}/competitors`}>Manage competitors</Link>
       </Button>
     </StepCard>
   );

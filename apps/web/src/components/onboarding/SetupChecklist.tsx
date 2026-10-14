@@ -35,6 +35,7 @@ import {
 } from "@/lib/queries";
 import { CompetitorsStep, CountriesStep, KeywordsStep } from "./setup-steps";
 import { SetupChecklistSkeleton } from "./SetupChecklistSkeleton";
+import { useFirstRunDiscovery } from "./use-first-run-discovery";
 import { useOnboarding, type OnboardingTransition } from "./use-onboarding";
 
 type Persist = (transition: OnboardingTransition) => void;
@@ -93,6 +94,7 @@ function ActiveSetup({
   persist: Persist;
 }) {
   const competitors = useQuery(competitorsOptions(app.id));
+  const collecting = useFirstRunDiscovery(app.id);
   const homeKeywords = useQuery(keywordsOptions(app.id, app.country));
   const suggestions = useQuery({
     ...marketSuggestionsOptions(app.id),
@@ -141,8 +143,9 @@ function ActiveSetup({
       <CompetitorsStep
         {...step("competitors")}
         appId={app.id}
-        count={counts.competitors}
+        competitors={competitors.data ?? null}
         error={competitors.isError}
+        collecting={collecting}
       />
       <KeywordsStep
         {...step("keywords")}

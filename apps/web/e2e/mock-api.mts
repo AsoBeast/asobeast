@@ -202,6 +202,18 @@ const initialKeywords = new Map(
   ]),
 );
 
+const initialCompetitors = new Map(
+  Object.entries(DATASETS).map(([id, dataset]) => [
+    id,
+    structuredClone(dataset.competitors),
+  ]),
+);
+
+function resetCompetitors(id: string): void {
+  const competitors = initialCompetitors.get(id);
+  if (competitors) DATASETS[id].competitors = structuredClone(competitors);
+}
+
 function resetKeywords(only?: string): void {
   for (const [id, keywords] of initialKeywords) {
     if (only === undefined || id === only) {
@@ -1697,6 +1709,14 @@ const routes: Route[] = [
     pattern: /^\/__reset\/keywords(?:\/([^/]+))?$/,
     handler: ([id], _req, res) => {
       resetKeywords(id);
+      json(res, 200, { reset: true });
+    },
+  },
+  {
+    method: "POST",
+    pattern: /^\/__reset\/competitors\/([^/]+)$/,
+    handler: ([id], _req, res) => {
+      resetCompetitors(id);
       json(res, 200, { reset: true });
     },
   },

@@ -113,3 +113,20 @@ export function listingSettled(
     !listingWaiting(next)
   );
 }
+
+const rankingsStage = (status: FirstRunStatus) =>
+  status.stages.find((row) => row.stage === "rankings");
+
+export const rankingsCollecting = (status: FirstRunStatus | undefined) =>
+  status ? rankingsStage(status)?.complete === false : false;
+
+export function rankingsAdvanced(
+  previous: FirstRunStatus | undefined,
+  next: FirstRunStatus | undefined,
+): boolean {
+  return (
+    previous !== undefined &&
+    next !== undefined &&
+    (rankingsStage(next)?.ready ?? 0) > (rankingsStage(previous)?.ready ?? 0)
+  );
+}
