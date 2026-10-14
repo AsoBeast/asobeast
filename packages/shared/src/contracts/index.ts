@@ -13,6 +13,7 @@ export * from './metadata';
 export * from './screenshots';
 export * from './competitors';
 export * from './serp';
+export * from './store-search';
 export * from './changes';
 export * from './change-impact';
 export * from './spider';
