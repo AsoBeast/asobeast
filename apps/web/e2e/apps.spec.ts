@@ -195,6 +195,72 @@ test("finished setup suppresses redirects after later imports", async ({
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
 });
 
+test("a first import replaces the first run screen without a reload", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    ({ key, value }) => localStorage.setItem(key, value),
+    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+  );
+  await page
+    .context()
+    .addCookies([
+      { name: "portfolio_empty", value: "1", url: "http://localhost:3000" },
+    ]);
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toBeVisible();
+  await page.context().clearCookies({ name: "portfolio_empty" });
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(
+    page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toHaveCount(0);
+});
+
+test("deleting the last app returns the dashboard to the first run screen", async ({
+  page,
+}) => {
+  let deleted = false;
+  await page.route(/\/api\/backend\/apps\/[^/]+$/, async (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    deleted = true;
+    await route.fulfill({ status: 204 });
+  });
+  await page.route("**/api/backend/portfolio", async (route) => {
+    if (!deleted) return route.fallback();
+    const response = await route.fetch();
+    const portfolio = await response.json();
+    await route.fulfill({
+      response,
+      json: { ...portfolio, apps: [], groups: [] },
+    });
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "App actions" }).first().click();
+  await page.getByRole("menuitem", { name: "Delete app" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete app" })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toBeVisible();
+});
+
 test("pending setup can be resumed or dismissed from the dashboard", async ({
   page,
 }) => {
