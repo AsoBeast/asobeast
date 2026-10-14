@@ -1,18 +1,11 @@
-import { API_TOKEN_PREFIX, URL_CREDENTIALS } from "@asobeast/shared";
+import { API_TOKEN_PREFIX, redactUrlCredentials } from "@asobeast/shared";
 
 const REDACTED = "[redacted]";
 
-const SECRET_SHAPES: [RegExp, string][] = [
-  [new RegExp(`${API_TOKEN_PREFIX}[A-Za-z0-9_-]{8,}`, "g"), REDACTED],
-  [URL_CREDENTIALS, `$1${REDACTED}@`],
-];
+const API_TOKEN = new RegExp(`${API_TOKEN_PREFIX}[A-Za-z0-9_-]{8,}`, "g");
 
 function redact(message: string): string {
-  let redacted = message;
-  for (const [shape, replacement] of SECRET_SHAPES) {
-    redacted = redacted.replace(shape, replacement);
-  }
-  return redacted;
+  return redactUrlCredentials(message.replace(API_TOKEN, REDACTED), REDACTED);
 }
 
 export function logError(message: string): void {

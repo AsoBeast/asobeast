@@ -1,7 +1,7 @@
 import {
   API_TOKEN_PREFIX,
   SESSION_COOKIE,
-  URL_CREDENTIALS,
+  redactUrlCredentials,
 } from '@asobeast/shared';
 
 export const REDACTED = '[redacted]';
@@ -30,7 +30,6 @@ const SECRET_SHAPES: [RegExp, string][] = [
     new RegExp(`${SESSION_COOKIE}=[^;\\s"']+`, 'g'),
     `${SESSION_COOKIE}=${REDACTED}`,
   ],
-  [URL_CREDENTIALS, `$1${REDACTED}@`],
   [/([?&]token=)[^&#\s"']+/g, `$1${REDACTED}`],
 ];
 
@@ -55,7 +54,7 @@ export function scrubText(text: string, literals: readonly string[]): string {
   for (const [shape, replacement] of SECRET_SHAPES) {
     scrubbed = scrubbed.replace(shape, replacement);
   }
-  return scrubbed;
+  return redactUrlCredentials(scrubbed, REDACTED);
 }
 
 function scrubError(

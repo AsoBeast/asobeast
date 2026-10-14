@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { REQUEST_BODY_LIMIT_BYTES } from './request-body';
-import { URL_CREDENTIALS } from './url-credentials';
+import { redactUrlCredentials } from './url-credentials';
 
-const redact = (text: string) => text.replace(URL_CREDENTIALS, '$1***@');
+const redact = (text: string) => redactUrlCredentials(text, '***');
 
-describe('URL_CREDENTIALS', () => {
+describe('redactUrlCredentials', () => {
   it('keeps the scheme and host of a credentialed url', () => {
     expect(redact('http://user:pass@proxy.example.com:80')).toBe(
       'http://***@proxy.example.com:80',
@@ -21,6 +21,12 @@ describe('URL_CREDENTIALS', () => {
       expect(redact(text)).not.toContain('pass@');
     },
   );
+
+  it('redacts every credentialed url in a text', () => {
+    expect(redact('from http://a:b@one to https://c:d@two')).toBe(
+      'from http://***@one to https://***@two',
+    );
+  });
 
   it('leaves a url without credentials alone', () => {
     expect(redact('https://api.example.com/backend?q=1')).toBe(
