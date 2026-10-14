@@ -3,6 +3,7 @@ import {
   mineReviewPhrases,
   REVIEW_THEME_MIN_MENTIONS,
 } from '../../keywords/review-mining';
+import { listingLanguages } from '../../keywords/listing-languages';
 import type {
   ActionContext,
   ActionContextApp,
@@ -31,10 +32,14 @@ function withinWindow(reviews: ActionReview[], now: Date): ActionReview[] {
   );
 }
 
-function mentionsByPhrase(reviews: ActionReview[]): Map<string, number> {
+function mentionsByPhrase(
+  reviews: ActionReview[],
+  app: ActionContextApp,
+): Map<string, number> {
   const mined = mineReviewPhrases(
     reviews.map((review) => ({ title: review.title, text: review.text })),
     new Set(),
+    listingLanguages(app.store, app.country),
   );
   return new Map(
     mined.map((suggestion) => [suggestion.text, suggestion.usedByCount ?? 0]),
@@ -88,8 +93,8 @@ function detectForApp(
   );
   if (negative.length === 0 || previousNegative.length === 0) return [];
 
-  const current = mentionsByPhrase(negative);
-  const previous = mentionsByPhrase(previousNegative);
+  const current = mentionsByPhrase(negative, app);
+  const previous = mentionsByPhrase(previousNegative, app);
 
   const ratingAvgDelta = scoreDelta(
     forVersion,

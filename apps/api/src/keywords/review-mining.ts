@@ -1,4 +1,8 @@
-import { isStopword, KeywordSuggestion, tokenize } from '@asobeast/shared';
+import { KeywordSuggestion, tokenize } from '@asobeast/shared';
+import { usableIn } from './extraction';
+import { functionWordTest } from './function-words';
+import type { TokenTest } from './function-words';
+import { listingSegments } from './listing-segments';
 
 export interface MinableReview {
   title: string | null;
@@ -9,21 +13,32 @@ export const REVIEW_THEME_MIN_MENTIONS = 3;
 
 const MAX_NGRAM = 3;
 const MIN_PHRASE_LENGTH = 3;
+const REVIEW_FILLERS: ReadonlySet<string> = new Set([
+  'just',
+  'really',
+  'actually',
+  'even',
+  'still',
+  'please',
+]);
 
-function phrasesOf(review: MinableReview): Set<string> {
-  const tokens = tokenize(`${review.title ?? ''} ${review.text}`);
-  const phrases = new Set<string>();
+function* ngramsOf(tokens: string[], isUsable: TokenTest): Generator<string> {
   for (let n = 1; n <= MAX_NGRAM; n += 1) {
     for (let i = 0; i + n <= tokens.length; i += 1) {
-      const slice = tokens.slice(i, i + n);
-      const text = slice.join(' ');
-      if (text.length < MIN_PHRASE_LENGTH) {
-        continue;
+      if (!isUsable(tokens[i]) || !isUsable(tokens[i + n - 1])) continue;
+      const text = tokens.slice(i, i + n).join(' ');
+      if (text.length >= MIN_PHRASE_LENGTH) yield text;
+    }
+  }
+}
+
+function phrasesOf(review: MinableReview, isUsable: TokenTest): Set<string> {
+  const phrases = new Set<string>();
+  for (const field of [review.title ?? '', review.text]) {
+    for (const segment of listingSegments(field)) {
+      for (const text of ngramsOf(tokenize(segment), isUsable)) {
+        phrases.add(text);
       }
-      if (slice.every((token) => isStopword(token))) {
-        continue;
-      }
-      phrases.add(text);
     }
   }
   return phrases;
@@ -32,10 +47,14 @@ function phrasesOf(review: MinableReview): Set<string> {
 export function mineReviewPhrases(
   reviews: MinableReview[],
   tracked: Set<string>,
+  languages: readonly string[],
 ): KeywordSuggestion[] {
+  const usable = usableIn(functionWordTest(languages));
+  const isUsable: TokenTest = (token) =>
+    usable(token) && !REVIEW_FILLERS.has(token);
   const counts = new Map<string, number>();
   for (const review of reviews) {
-    for (const phrase of phrasesOf(review)) {
+    for (const phrase of phrasesOf(review, isUsable)) {
       if (tracked.has(phrase)) {
         continue;
       }

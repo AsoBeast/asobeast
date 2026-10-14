@@ -9,6 +9,7 @@ describe('mineReviewPhrases', () => {
         { title: null, text: 'love the widget' },
       ],
       new Set(),
+      [],
     );
 
     const darkMode = suggestions.find((item) => item.text === 'dark mode');
@@ -27,6 +28,7 @@ describe('mineReviewPhrases', () => {
         { title: null, text: 'dark mode please' },
       ],
       new Set(),
+      [],
     );
 
     expect(suggestions.map((item) => item.text)).toContain('dark mode');
@@ -37,6 +39,7 @@ describe('mineReviewPhrases', () => {
     const suggestions = mineReviewPhrases(
       [{ title: 'widget widget', text: 'widget everywhere' }],
       new Set(),
+      [],
     );
 
     expect(
@@ -51,6 +54,7 @@ describe('mineReviewPhrases', () => {
         { title: null, text: 'dark mode please' },
       ],
       new Set(),
+      [],
     );
 
     expect(
@@ -62,6 +66,7 @@ describe('mineReviewPhrases', () => {
     const suggestions = mineReviewPhrases(
       [{ title: null, text: 'dark mode widget' }],
       new Set(['dark mode']),
+      [],
     );
 
     expect(suggestions.map((item) => item.text)).not.toContain('dark mode');
@@ -72,8 +77,66 @@ describe('mineReviewPhrases', () => {
     const suggestions = mineReviewPhrases(
       [{ title: null, text: 'it is on' }],
       new Set(),
+      [],
     );
 
     expect(suggestions).toEqual([]);
+  });
+
+  const textsOf = (texts: string[], languages: readonly string[] = []) =>
+    mineReviewPhrases(
+      texts.map((text) => ({ title: null, text })),
+      new Set(),
+      languages,
+    ).map((item) => item.text);
+
+  it.each([
+    ["It's fast and I've used it daily, I'm happy", ['it s', 'i ve', 'i m']],
+    ["Don't trust the driver, it doesn't work", ['don', 'don t', 'doesn']],
+  ])('reads a contraction as the word it contracts in %p', (text, noise) => {
+    const texts = textsOf([text]);
+
+    for (const fragment of noise) expect(texts).not.toContain(fragment);
+  });
+
+  it('never starts or ends a phrase with a function word', () => {
+    const texts = textsOf([
+      'Bear is easy to use and I love the driver, just works',
+    ]);
+
+    expect(texts).toEqual(
+      expect.arrayContaining(['bear', 'easy', 'love', 'driver', 'works']),
+    );
+    for (const noise of ['bear is', 'to use', 'i love', 'the driver', 'just']) {
+      expect(texts).not.toContain(noise);
+    }
+  });
+
+  it('keeps a function word inside a phrase', () => {
+    expect(textsOf(['crashes on launch'])).toContain('crashes on launch');
+  });
+
+  it('drops the function words of the market language', () => {
+    const texts = textsOf(['die Synchronisation mit der Uhr'], ['de']);
+
+    expect(texts).toEqual(expect.arrayContaining(['synchronisation', 'uhr']));
+    expect(texts).not.toContain('die synchronisation');
+    expect(texts).not.toContain('mit');
+  });
+
+  it('reads a version number as a quantity rather than words', () => {
+    const texts = textsOf(['crashes in 0.78.8 and 0.1']);
+
+    expect(texts).toEqual(['crashes']);
+  });
+
+  it('never joins the title to the text', () => {
+    const suggestions = mineReviewPhrases(
+      [{ title: 'Great sync', text: 'widget broke' }],
+      new Set(),
+      [],
+    );
+
+    expect(suggestions.map((item) => item.text)).not.toContain('sync widget');
   });
 });
