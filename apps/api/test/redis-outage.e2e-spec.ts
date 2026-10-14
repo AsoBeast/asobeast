@@ -9,6 +9,7 @@ import { API_TOKEN_PREFIX, ApiErrorEnvelope } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { restoreAuthEnv } from './helpers/auth-env';
 import { startRedisOutage, type RedisOutage } from './helpers/redis-outage';
 import { OWNER, ownerAgent } from './helpers/session';
@@ -20,6 +21,11 @@ const REJECTED_TOKEN = `${API_TOKEN_PREFIX}${'3'.repeat(48)}`;
 const RECOVERY_DEADLINE_MS = 15_000;
 const RECONNECT_CYCLES_MS = 2_500;
 const OUTAGE_WARNING = 'redis is unreachable';
+const NO_STORE = {
+  get: () => {
+    throw new Error('no store request may leave while redis is down');
+  },
+};
 
 function within(test: request.Test): request.Test {
   return test.timeout({
@@ -33,6 +39,7 @@ describe('Redis outage (e2e)', () => {
   let prisma: PrismaClient;
   let outage: RedisOutage;
   let agent: ReturnType<typeof request.agent>;
+  let appId: string;
   const upstreamPort = Number(process.env.REDIS_PORT);
 
   beforeAll(async () => {
@@ -47,7 +54,10 @@ describe('Redis outage (e2e)', () => {
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StoreProviderRegistry)
+      .useValue(NO_STORE)
+      .compile();
     app = moduleFixture.createNestApplication<App>();
     app.use(cookieParser());
     await app.init();
@@ -63,6 +73,17 @@ describe('Redis outage (e2e)', () => {
       'TRUNCATE TABLE "App", "User" RESTART IDENTITY CASCADE',
     );
     agent = await ownerAgent(app);
+    appId = (
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'APP_STORE',
+          storeAppId: '904237743',
+          country: 'us',
+          name: 'Queued While Down',
+        },
+      })
+    ).id;
   });
 
   afterAll(async () => {
@@ -117,6 +138,44 @@ describe('Redis outage (e2e)', () => {
       expect(response.headers['retry-after']).toBe(
         String(body.retryAfterSeconds),
       );
+    });
+
+    it.each([
+      ['an added keyword', 'post', 'keywords', { keywords: ['notes'] }],
+      ['a deep search', 'post', 'keywords/spider', { term: 'notes' }],
+      ['a run daily', 'post', 'run-daily', {}],
+      ['a refresh', 'post', 'refresh', {}],
+      [
+        'a keyword import',
+        'post',
+        'keywords/import',
+        { rows: [{ keyword: 'notes' }] },
+      ],
+      ['a keyword field', 'put', 'keyword-field', { text: 'notes' }],
+      [
+        'an added competitor',
+        'post',
+        'competitors',
+        { url: 'https://apps.apple.com/us/app/x/id1' },
+      ],
+      ['a market seed', 'post', 'market-seed', { country: 'de' }],
+    ] as const)(
+      'refuses %s with 503 and a wait instead of waiting on the queue',
+      async (_label, method, path, body) => {
+        const response = await within(
+          agent[method](`/apps/${appId}/${path}`).send(body),
+        ).expect(503);
+
+        expect(response.headers['retry-after']).toBeDefined();
+      },
+    );
+
+    it('refuses an app import with 503 instead of waiting on the queue', async () => {
+      await within(
+        agent
+          .post('/apps')
+          .send({ url: 'https://apps.apple.com/us/app/things-3/id904237744' }),
+      ).expect(503);
     });
 
     it('lists actions for a signed in request', async () => {

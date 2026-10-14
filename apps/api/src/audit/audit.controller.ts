@@ -19,6 +19,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuditAiRunsService } from './audit-ai-runs.service';
 import { AuditService } from './audit.service';
 import { AuditHistoryQueryDto } from './dto/audit-history-query.dto';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('audit')
 @Controller('apps/:id/audit')
@@ -57,6 +58,7 @@ export class AuditController {
   }
 
   @Post('ai/runs')
+  @QueuesWork()
   @HttpCode(202)
   @ApiAcceptedResponse({
     description:

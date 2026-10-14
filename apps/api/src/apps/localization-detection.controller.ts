@@ -4,6 +4,7 @@ import { LocalizationDetectionResult } from '@asobeast/shared';
 import { SpendsStoreCapacity } from '../auth/decorators/spends-store-capacity.decorator';
 import { OnDemandLimiter } from '../auth/on-demand.limiter';
 import { LocalizationDetection } from './localization-detection.service';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('apps')
 @Controller('apps/:id')
@@ -14,6 +15,7 @@ export class LocalizationDetectionController {
   ) {}
 
   @Post('localizations/detect')
+  @QueuesWork()
   @SpendsStoreCapacity()
   @HttpCode(202)
   @ApiOperation({

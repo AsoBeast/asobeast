@@ -25,6 +25,7 @@ import { CompetitorsService } from './competitors.service';
 import { AddCompetitorDto } from './dto/add-competitor.dto';
 import { DiscoveryQueryDto } from './dto/discovery-query.dto';
 import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.interceptor';
+import { QueuesWork } from '../redis/queues-work.decorator';
 
 @ApiTags('competitors')
 @Controller('apps/:id/competitors')
@@ -50,6 +51,7 @@ export class CompetitorsController {
   }
 
   @Post()
+  @QueuesWork()
   @SpendsStoreCapacity()
   @ApiOperation({ summary: 'Add a competitor app from a store URL' })
   @UseInterceptors(StoreDeadlineInterceptor)
