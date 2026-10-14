@@ -45,6 +45,28 @@ test("unknown and unavailable apps render route boundaries", async ({
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
 });
 
+test("setup offers a retry when the account cannot be loaded", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { statusCode: 503 } }),
+  );
+  await page.goto("/apps/app-1/setup");
+
+  const failure = page
+    .getByRole("main")
+    .getByRole("alert")
+    .filter({ hasText: "Account could not be loaded" });
+  await expect(failure).toBeVisible();
+
+  await page.unroute("**/api/backend/auth/me");
+  await failure.getByRole("button", { name: "Try again" }).click();
+
+  await expect(
+    page.getByText("Start setup for this app", { exact: true }),
+  ).toBeVisible();
+});
+
 test("a direct visit never enrols without an explicit start", async ({
   page,
 }) => {

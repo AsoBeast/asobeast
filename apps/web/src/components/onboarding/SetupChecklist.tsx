@@ -6,6 +6,7 @@ import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import type { AppDetail } from "@asobeast/shared";
 import { useAuth } from "@/components/auth/use-auth";
+import { ErrorState } from "@/components/layout/ErrorState";
 import { BudgetCard } from "@/components/settings/BudgetCard";
 import { BudgetCardSkeleton } from "@/components/settings/skeletons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -59,11 +60,20 @@ const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
 
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
-  const { account, state, persist } = useOnboarding();
+  const { account, state, persist, userError, retryUser } = useOnboarding();
   const { isOperator } = useAuth();
   const steps = setupSteps(isOperator);
   const start = () => persist(() => restartOnboarding(id, app.country));
 
+  if (userError) {
+    return (
+      <ErrorState
+        error={userError}
+        retry={retryUser}
+        title="Account could not be loaded"
+      />
+    );
+  }
   if (!account) return <SetupChecklistSkeleton />;
 
   if (state.appId === id && state.status === "in_progress") {

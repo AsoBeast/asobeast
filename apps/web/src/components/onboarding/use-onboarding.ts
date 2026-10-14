@@ -17,7 +17,8 @@ export type OnboardingTransition = (
 ) => OnboardingState;
 
 export function useOnboarding() {
-  const account = useAuth().user?.id;
+  const { user, userError, retryUser } = useAuth();
+  const account = user?.id;
   useEffect(() => {
     if (account) claimBrowserOnboarding(account);
   }, [account]);
@@ -34,5 +35,5 @@ export function useOnboarding() {
       transition(parseOnboardingState(getOnboardingSnapshot(account))),
     );
   };
-  return { account, state, persist };
+  return { account, state, persist, userError, retryUser };
 }
