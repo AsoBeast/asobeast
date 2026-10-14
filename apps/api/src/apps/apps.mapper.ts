@@ -1,11 +1,15 @@
-import { App, AppSnapshot, Prisma, Store } from '@prisma/client';
+import { App, AppSetup, AppSnapshot, Prisma, Store } from '@prisma/client';
 import {
   AppDetail,
   AppGroupSummary,
   AppListItem,
+  AppSetupState,
   AppSnapshotSummary,
   CompetitorItem,
   ListingMarket,
+  SETUP_STATUSES,
+  SETUP_STEPS,
+  SetupStatus,
 } from '@asobeast/shared';
 import { rawListedInIphoneSearch } from '../store-providers/iphone-search';
 import { extractRawFacts } from '../store-providers/raw-facts';
@@ -219,4 +223,31 @@ export function snapshotIcon(
   snapshot: Pick<AppSnapshot, 'raw'>,
 ): string | null {
   return extractRawFacts(store, snapshot.raw).iconUrl;
+}
+
+const isSetupStatus = (value: string): value is SetupStatus =>
+  (SETUP_STATUSES as readonly string[]).includes(value);
+
+export function defaultSetup(app: Pick<App, 'id' | 'country'>): AppSetupState {
+  return {
+    appId: app.id,
+    status: 'not_started',
+    skipped: [],
+    countriesReviewed: false,
+    selectedMarkets: [app.country],
+    completedAt: null,
+    updatedAt: null,
+  };
+}
+
+export function toSetupState(row: AppSetup): AppSetupState {
+  return {
+    appId: row.appId,
+    status: isSetupStatus(row.status) ? row.status : 'not_started',
+    skipped: SETUP_STEPS.filter((step) => row.skipped.includes(step)),
+    countriesReviewed: row.countriesReviewed,
+    selectedMarkets: row.selectedMarkets,
+    completedAt: row.completedAt?.toISOString() ?? null,
+    updatedAt: row.updatedAt.toISOString(),
+  };
 }

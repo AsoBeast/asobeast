@@ -1,9 +1,11 @@
-import { AppSnapshot, Store } from '@prisma/client';
+import { AppSetup, AppSnapshot, Store } from '@prisma/client';
 import { NormalizedApp } from '../store-providers/types';
 import {
+  defaultSetup,
   snapshotIcon,
   toListingMarkets,
   toSnapshotData,
+  toSetupState,
   toSnapshotSummary,
   withTracking,
 } from './apps.mapper';
@@ -165,5 +167,57 @@ describe('withTracking', () => {
     expect(
       withTracking(markets, new Set(['de'])).map((market) => market.tracked),
     ).toEqual([true, true, false]);
+  });
+});
+
+describe('the setup state', () => {
+  const row = (overrides: Partial<AppSetup> = {}): AppSetup => ({
+    appId: 'app_1',
+    workspaceId: 'ws_1',
+    status: 'in_progress',
+    skipped: ['countries', 'competitors'],
+    countriesReviewed: true,
+    selectedMarkets: ['de', 'us'],
+    completedAt: null,
+    createdAt: new Date('2026-10-14T08:00:00.000Z'),
+    updatedAt: new Date('2026-10-14T09:00:00.000Z'),
+    ...overrides,
+  });
+
+  it('answers not started with the home market for an app without a row', () => {
+    expect(defaultSetup({ id: 'app_1', country: 'pl' })).toEqual({
+      appId: 'app_1',
+      status: 'not_started',
+      skipped: [],
+      countriesReviewed: false,
+      selectedMarkets: ['pl'],
+      completedAt: null,
+      updatedAt: null,
+    });
+  });
+
+  it('maps a row with its skipped steps in step order', () => {
+    expect(
+      toSetupState(
+        row({
+          status: 'completed',
+          completedAt: new Date('2026-10-14T09:30:00.000Z'),
+        }),
+      ),
+    ).toEqual({
+      appId: 'app_1',
+      status: 'completed',
+      skipped: ['competitors', 'countries'],
+      countriesReviewed: true,
+      selectedMarkets: ['de', 'us'],
+      completedAt: '2026-10-14T09:30:00.000Z',
+      updatedAt: '2026-10-14T09:00:00.000Z',
+    });
+  });
+
+  it('reads an unknown status as not started and drops an unknown step', () => {
+    expect(
+      toSetupState(row({ status: 'paused', skipped: ['alerts', 'keywords'] })),
+    ).toMatchObject({ status: 'not_started', skipped: ['keywords'] });
   });
 });
