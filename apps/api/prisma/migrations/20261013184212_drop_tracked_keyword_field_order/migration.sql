@@ -1,25 +1,8 @@
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1
-    FROM "TrackedKeyword" AS "tracked"
-    JOIN "App" AS "app" ON "app"."id" = "tracked"."appId"
-    JOIN "Keyword" AS "keyword" ON "keyword"."id" = "tracked"."keywordId"
-    WHERE "tracked"."fieldOrder" IS NOT NULL
-      AND NOT (
-        "app"."store" = 'APP_STORE'
-        AND "keyword"."country" = "app"."country"
-        AND EXISTS (
-          SELECT 1
-          FROM "KeywordField" AS "field"
-          WHERE "field"."appId" = "tracked"."appId"
-            AND "keyword"."text" = ANY ("field"."phrases")
-        )
-      )
-  ) THEN
-    RAISE EXCEPTION 'TrackedKeyword.fieldOrder holds keyword field phrases that no KeywordField row carries; the column is kept so they are not lost. Copy or clear those rows, then run prisma migrate resolve --rolled-back 20261013184212_drop_tracked_keyword_field_order';
-  END IF;
-END;
-$$;
+/*
+  Warnings:
 
+  - You are about to drop the column `fieldOrder` on the `TrackedKeyword` table. All the data in the column will be lost.
+
+*/
+-- AlterTable
 ALTER TABLE "TrackedKeyword" DROP COLUMN "fieldOrder";

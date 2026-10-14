@@ -20,6 +20,7 @@ describe('the tracked keyword field order drop', () => {
     migrationSql('add_keyword_fields'),
     /INSERT INTO "KeywordField"[\s\S]*?;/,
   );
+  const guard = migrationSql('guard_tracked_keyword_field_order');
   const drop = migrationSql('drop_tracked_keyword_field_order');
   let prisma: PrismaClient;
 
@@ -59,7 +60,7 @@ describe('the tracked keyword field order drop', () => {
     )[0].found;
 
   const expectDropRefused = async () => {
-    await expect(prisma.$executeRawUnsafe(drop)).rejects.toThrow(
+    await expect(prisma.$executeRawUnsafe(guard)).rejects.toThrow(
       /no KeywordField row carries/,
     );
     await expect(hasFieldOrder()).resolves.toBe(true);
@@ -97,9 +98,16 @@ describe('the tracked keyword field order drop', () => {
     await seedFieldPhrase(appId, 'sleep', { order: 1 });
     await prisma.$executeRawUnsafe(backfill);
 
+    await prisma.$executeRawUnsafe(guard);
     await prisma.$executeRawUnsafe(drop);
 
     await expect(hasFieldOrder()).resolves.toBe(false);
+  });
+
+  it('passes a database that already dropped the column', async () => {
+    await dropHistoricalFieldOrder(prisma);
+
+    await expect(prisma.$executeRawUnsafe(guard)).resolves.toBe(0);
   });
 
   it('keeps the column when the backfill left out a keyword tracked in another market', async () => {
