@@ -1,5 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { CompetitorSuggestions } from '@asobeast/shared';
+import { RateLimitExceededError } from '../auth/rate-limit/rate-limit.errors';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProxyEgress } from '../store-providers/egress/proxy-egress.service';
 import { StoreRequestError } from '../store-providers/errors';
@@ -40,8 +41,7 @@ export class CompetitorSuggestionsService {
     const serp = await this.competitors.discovery(appId, {
       days: DISCOVERY_WINDOW_DAYS,
     });
-    await spend?.();
-    const similar = await this.similarApps(app);
+    const similar = await this.similarApps(app, spend);
     return {
       store: app.store,
       country: app.country,
@@ -66,13 +66,22 @@ export class CompetitorSuggestionsService {
     return app;
   }
 
-  private async similarApps(app: PrimaryApp): Promise<SearchItem[] | null> {
+  private async similarApps(
+    app: PrimaryApp,
+    spend?: () => Promise<void>,
+  ): Promise<SearchItem[] | null> {
     try {
+      await spend?.();
       return await this.egress.through(app.store, app.country, () =>
         this.registry.get(app.store).similar(app.storeAppId, app.country),
       );
     } catch (error) {
-      if (!(error instanceof StoreRequestError)) throw error;
+      if (
+        !(error instanceof StoreRequestError) &&
+        !(error instanceof RateLimitExceededError)
+      ) {
+        throw error;
+      }
       this.logger.warn(
         `similar apps of ${app.storeAppId} unavailable: ${error.message}`,
       );

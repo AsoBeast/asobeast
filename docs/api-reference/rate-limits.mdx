@@ -126,7 +126,7 @@ A client that reads `RateLimit-Remaining` and honours `Retry-After` never needs 
 
 ## A spent on demand allowance names its action
 
-Refresh, run daily, score, keyword suggestions, deep search, importing an app, adding a competitor and store lookups each carry an allowance of their own, counted per day, or per hour for keyword suggestions and store lookups. A store lookup is a name search or a similar apps lookup. When one is spent the `429` carries the same `rateLimit` object with `rateClass` set to `store`, and `action` names which allowance closed: `refresh`, `runDaily`, `score`, `suggestions`, `spider`, `importApp`, `addCompetitor` or `storeLookup`.
+Refresh, run daily, score, keyword suggestions, deep search, importing an app, adding a competitor and store lookups each carry an allowance of their own, counted per day, or per hour for keyword suggestions and store lookups. A store lookup is a name search or a similar apps lookup. Competitor suggestions never answer `429` for a spent store lookup allowance: they still answer the keyword result apps, with `similar` set to `unavailable`. When one is spent the `429` carries the same `rateLimit` object with `rateClass` set to `store`, and `action` names which allowance closed: `refresh`, `runDaily`, `score`, `suggestions`, `spider`, `importApp`, `addCompetitor` or `storeLookup`.
 
 Finding localizations (`POST /apps/{id}/localizations/detect`) is not an allowance of its own. It spends one refresh, and only when it queues at least one store lookup, so a request that finds every language already listed or already asked today costs nothing. When the refresh allowance is spent it answers `429` with `action` set to `refresh`.
 

@@ -1,5 +1,5 @@
 import './helpers/enable-billing';
-import { ApiErrorEnvelope, PLAN_LIMITS } from '@asobeast/shared';
+import { CompetitorSuggestions, PLAN_LIMITS } from '@asobeast/shared';
 import { Store } from '@prisma/client';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import {
@@ -59,21 +59,37 @@ describe('Competitor suggestions capacity (e2e)', () => {
     expect(calls).toBe(0);
   });
 
-  it('refuses the list once the hourly store lookup allowance is spent', async () => {
+  it('spends nothing on a competitor app', async () => {
+    const competitor = await harness.prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '222000222',
+        country: 'us',
+        isCompetitor: true,
+        primaryAppId: primaryId,
+      },
+    });
+    const [, calls] = await allowanceSpendsDuring(harness, () =>
+      suggest(competitor.id).expect(404),
+    );
+
+    expect(calls).toBe(0);
+  });
+
+  it('still answers the keyword result apps once the hourly allowance is spent', async () => {
     for (let used = 0; used < LOOKUP_LIMIT; used += 1) {
       await clearRateLimitCounters(harness.app);
       await suggest().expect(200);
     }
     await clearRateLimitCounters(harness.app);
 
-    const refused = await suggest().expect(429);
+    const spent = await suggest().expect(200);
 
-    const envelope = refused.body as ApiErrorEnvelope;
-    expect(envelope.rateLimit).toMatchObject({
-      window: 'hour',
-      rateClass: 'store',
-      action: 'storeLookup',
-    });
-    expect(envelope.message).toMatch(/^Store lookup limit reached/);
+    expect((spent.body as CompetitorSuggestions).similar).toBe('unavailable');
+    await clearRateLimitCounters(harness.app);
+    await owner
+      .get('/store/search?store=APP_STORE&country=us&q=focus')
+      .expect(429);
   });
 });
