@@ -1,15 +1,13 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import {
-  ONBOARDING_STORAGE_KEY,
-  parseOnboardingState,
-} from "../src/lib/onboarding";
+import { parseOnboardingState } from "../src/lib/onboarding";
+import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 import { seedViewer } from "./viewer.mts";
 
 const storedStatus = async (page: Page): Promise<string> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
-    ONBOARDING_STORAGE_KEY,
+    OWNER_ONBOARDING_KEY,
   );
   return parseOnboardingState(stored).status;
 };
@@ -22,7 +20,7 @@ const resetSeed = (request: APIRequestContext, country: string) =>
 const storedMarkets = async (page: Page): Promise<string[]> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
-    ONBOARDING_STORAGE_KEY,
+    OWNER_ONBOARDING_KEY,
   );
   return parseOnboardingState(stored).selectedMarkets;
 };
@@ -252,7 +250,7 @@ test("corrupt state resets and setup can be dismissed on a narrow dark layout", 
       localStorage.setItem(key, "{broken");
     }
     localStorage.setItem("theme", "dark");
-  }, ONBOARDING_STORAGE_KEY);
+  }, OWNER_ONBOARDING_KEY);
   await page.setViewportSize({ width: 390, height: 844 });
   await startSetup(page, "app-2");
 

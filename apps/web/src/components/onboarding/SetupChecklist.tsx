@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useSyncExternalStore } from "react";
+import { Suspense } from "react";
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
@@ -21,17 +21,12 @@ import {
   canCompleteOnboarding,
   completeOnboarding,
   dismissOnboarding,
-  getOnboardingSnapshot,
-  getServerOnboardingSnapshot,
-  parseOnboardingState,
   restartOnboarding,
   reviewedStepsSentence,
-  saveOnboardingState,
   setMarketSelected,
   setOnboardingAcknowledgement,
   setupSteps,
   stepLabel,
-  subscribeOnboarding,
   type OnboardingAcknowledgements,
   type OnboardingState,
   type SetupStep,
@@ -52,46 +47,28 @@ import {
   MarketsStep,
   SetupCheckbox,
 } from "./setup-steps";
+import { SetupChecklistSkeleton } from "./SetupChecklistSkeleton";
+import { useOnboarding, type OnboardingTransition } from "./use-onboarding";
 
-type Transition = (current: OnboardingState) => OnboardingState;
-type Persist = (transition: Transition) => void;
+type Persist = (transition: OnboardingTransition) => void;
 type LiveQuery = { data: unknown; isError: boolean; refetch: () => void };
 
 const lengthOrZero = <T,>(value: T[] | undefined): number => value?.length ?? 0;
 const lengthOrNull = <T,>(value: T[] | undefined): number | null =>
   value ? value.length : null;
 
-function useBrowserOnboarding() {
-  const snapshot = useSyncExternalStore(
-    subscribeOnboarding,
-    getOnboardingSnapshot,
-    getServerOnboardingSnapshot,
-  );
-  const state = useMemo(() => parseOnboardingState(snapshot), [snapshot]);
-  const persist: Persist = (transition) => {
-    saveOnboardingState(
-      transition(parseOnboardingState(getOnboardingSnapshot())),
-    );
-  };
-  return { state, persist };
-}
-
 export function SetupChecklist({ id }: { id: string }) {
   const { data: app } = useSuspenseQuery(appDetailOptions(id));
-  const { state, persist } = useBrowserOnboarding();
-  const { user, isOperator } = useAuth();
+  const { account, state, persist } = useOnboarding();
+  const { isOperator } = useAuth();
   const steps = setupSteps(isOperator);
   const start = () => persist(() => restartOnboarding(id, app.country));
 
+  if (!account) return <SetupChecklistSkeleton />;
+
   if (state.appId === id && state.status === "in_progress") {
     return (
-      <ActiveSetup
-        app={app}
-        state={state}
-        steps={steps}
-        roleKnown={user !== undefined}
-        persist={persist}
-      />
+      <ActiveSetup app={app} state={state} steps={steps} persist={persist} />
     );
   }
   if (state.appId === id) {
@@ -115,13 +92,11 @@ function ActiveSetup({
   app,
   state,
   steps,
-  roleKnown,
   persist,
 }: {
   app: AppDetail;
   state: OnboardingState;
   steps: readonly SetupStep[];
-  roleKnown: boolean;
   persist: Persist;
 }) {
   const reviewsCapacity = steps.includes("capacity");
@@ -154,8 +129,7 @@ function ActiveSetup({
   }));
   const channelsLoaded =
     webhooks.data !== undefined && emailAlerts.data !== undefined;
-  const ready =
-    roleKnown && liveQueries.every((query) => query.data !== undefined);
+  const ready = liveQueries.every((query) => query.data !== undefined);
   const failed = liveQueries.some((query) => query.isError);
   const retry = () => {
     for (const query of liveQueries) {

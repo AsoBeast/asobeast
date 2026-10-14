@@ -1,28 +1,16 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { ListChecks } from "lucide-react";
 import Link from "next/link";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  dismissOnboarding,
-  getOnboardingSnapshot,
-  getServerOnboardingSnapshot,
-  parseOnboardingState,
-  saveOnboardingState,
-  subscribeOnboarding,
-} from "@/lib/onboarding";
+import { dismissOnboarding } from "@/lib/onboarding";
 import { portfolioOptions } from "@/lib/queries";
+import { useOnboarding } from "./use-onboarding";
 
 export function OnboardingBanner() {
-  const snapshot = useSyncExternalStore(
-    subscribeOnboarding,
-    getOnboardingSnapshot,
-    getServerOnboardingSnapshot,
-  );
-  const state = useMemo(() => parseOnboardingState(snapshot), [snapshot]);
+  const { state, persist } = useOnboarding();
   const { data } = useSuspenseQuery(portfolioOptions);
   if (state.status !== "in_progress" || !state.appId) return null;
 
@@ -46,7 +34,7 @@ export function OnboardingBanner() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => saveOnboardingState(dismissOnboarding(state))}
+          onClick={() => persist(dismissOnboarding)}
         >
           Dismiss
         </Button>

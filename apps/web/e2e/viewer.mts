@@ -2,6 +2,8 @@ import type { BrowserContext } from "@playwright/test";
 
 export const VIEWER_COOKIE = "e2e_viewer";
 
+export const OWNER_ID = "u1";
+
 export const VIEWERS = ["customer", "member"] as const;
 
 export const UNPLANNED_OPERATORS = [

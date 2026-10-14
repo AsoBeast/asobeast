@@ -172,7 +172,12 @@ import {
   isStorefront,
   UnknownStorefrontError,
 } from "@asobeast/shared";
-import { ALL_VIEWERS, VIEWER_COOKIE, type Viewer } from "./viewer.mts";
+import {
+  ALL_VIEWERS,
+  OWNER_ID,
+  VIEWER_COOKIE,
+  type Viewer,
+} from "./viewer.mts";
 import {
   ADMIN_OVERVIEW,
   ADMIN_OVERVIEW_SELF_HOSTED,
@@ -267,7 +272,7 @@ const trackedKey = (id: string, country: string) => `${id}:${country}`;
 const KEYWORD_FIELD_UPDATED_AT = "2026-10-12T00:00:00.000Z";
 const DAILY_REQUESTS_PER_KEYWORD_MARKET = 1;
 const AUTH_USER: AuthUser = {
-  id: "u1",
+  id: OWNER_ID,
   email: "owner@example.com",
   emailVerified: true,
   name: "Owner",

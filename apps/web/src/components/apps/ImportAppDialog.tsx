@@ -7,6 +7,7 @@ import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -93,6 +94,7 @@ export function ImportAppDialog({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const account = useAuth().user?.id;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChangeProp ?? setUncontrolledOpen;
@@ -111,7 +113,9 @@ export function ImportAppDialog({
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
       try {
-        const started = startOnboardingAfterImport(app.id, app.country);
+        const started =
+          account !== undefined &&
+          startOnboardingAfterImport(account, app.id, app.country);
         if (
           started &&
           !navigateToOnboarding(app.id, (path) => router.push(path))

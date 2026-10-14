@@ -2,6 +2,11 @@ export const ONBOARDING_STORAGE_KEY = "asobeast:onboarding";
 export const ONBOARDING_VERSION = 1 as const;
 export const ONBOARDING_CHANGE_EVENT = "asobeast:onboarding-change";
 
+const ACCOUNT_KEY_PREFIX = `${ONBOARDING_STORAGE_KEY}:`;
+
+export const onboardingStorageKey = (account: string): string =>
+  `${ACCOUNT_KEY_PREFIX}${account}`;
+
 export const SETUP_STEPS = [
   "markets",
   "competitors",
@@ -53,6 +58,7 @@ export interface OnboardingState {
 export interface OnboardingStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem(key: string): void;
 }
 
 export const NOT_STARTED_ONBOARDING: OnboardingState = {
@@ -151,40 +157,61 @@ export function parseOnboardingState(value: string | null): OnboardingState {
 }
 
 export function readOnboardingState(
+  account: string,
   storage?: OnboardingStorage,
 ): OnboardingState {
   try {
     const target = storage ?? window.localStorage;
-    return parseOnboardingState(target.getItem(ONBOARDING_STORAGE_KEY));
+    return parseOnboardingState(target.getItem(onboardingStorageKey(account)));
   } catch {
     return NOT_STARTED_ONBOARDING;
   }
 }
 
 export function writeOnboardingState(
+  account: string,
   state: OnboardingState,
   storage?: OnboardingStorage,
 ): boolean {
   try {
     const target = storage ?? window.localStorage;
-    target.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(state));
+    target.setItem(onboardingStorageKey(account), JSON.stringify(state));
     return true;
   } catch {
     return false;
   }
 }
 
-let volatileSnapshot: string | null = null;
-let preferVolatileSnapshot = false;
-
-export function getOnboardingSnapshot(): string | null {
-  if (preferVolatileSnapshot) return volatileSnapshot;
+export function claimBrowserOnboarding(
+  account: string,
+  storage?: OnboardingStorage,
+): boolean {
   try {
-    return (
-      window.localStorage.getItem(ONBOARDING_STORAGE_KEY) ?? volatileSnapshot
-    );
+    const target = storage ?? window.localStorage;
+    const browserWide = target.getItem(ONBOARDING_STORAGE_KEY);
+    if (browserWide === null) return false;
+    const key = onboardingStorageKey(account);
+    if (target.getItem(key) === null) target.setItem(key, browserWide);
+    target.removeItem(ONBOARDING_STORAGE_KEY);
+    notifyOnboardingChange();
+    return true;
   } catch {
-    return volatileSnapshot;
+    return false;
+  }
+}
+
+const unsavedSnapshots = new Map<string, string>();
+
+export function getOnboardingSnapshot(
+  account: string | undefined,
+): string | null {
+  if (!account) return null;
+  const unsaved = unsavedSnapshots.get(account);
+  if (unsaved !== undefined) return unsaved;
+  try {
+    return window.localStorage.getItem(onboardingStorageKey(account));
+  } catch {
+    return null;
   }
 }
 
@@ -192,7 +219,9 @@ export const getServerOnboardingSnapshot = (): null => null;
 
 export function subscribeOnboarding(onChange: () => void): () => void {
   const handleStorage = (event: StorageEvent) => {
-    if (event.key === ONBOARDING_STORAGE_KEY) onChange();
+    if (event.key === null || event.key.startsWith(ACCOUNT_KEY_PREFIX)) {
+      onChange();
+    }
   };
   window.addEventListener("storage", handleStorage);
   window.addEventListener(ONBOARDING_CHANGE_EVENT, onChange);
@@ -202,9 +231,16 @@ export function subscribeOnboarding(onChange: () => void): () => void {
   };
 }
 
-export function saveOnboardingState(state: OnboardingState): void {
-  volatileSnapshot = JSON.stringify(state);
-  preferVolatileSnapshot = !writeOnboardingState(state);
+export function saveOnboardingState(
+  account: string,
+  state: OnboardingState,
+): void {
+  if (writeOnboardingState(account, state)) unsavedSnapshots.delete(account);
+  else unsavedSnapshots.set(account, JSON.stringify(state));
+  notifyOnboardingChange();
+}
+
+function notifyOnboardingChange(): void {
   try {
     window.dispatchEvent(new Event(ONBOARDING_CHANGE_EVENT));
   } catch {
@@ -213,13 +249,15 @@ export function saveOnboardingState(state: OnboardingState): void {
 }
 
 export function startOnboardingAfterImport(
+  account: string,
   appId: string,
   homeMarket: string,
 ): boolean {
-  const current = parseOnboardingState(getOnboardingSnapshot());
+  claimBrowserOnboarding(account);
+  const current = parseOnboardingState(getOnboardingSnapshot(account));
   const next = beginOnboarding(current, appId, homeMarket);
   if (next === current) return false;
-  saveOnboardingState(next);
+  saveOnboardingState(account, next);
   return true;
 }
 

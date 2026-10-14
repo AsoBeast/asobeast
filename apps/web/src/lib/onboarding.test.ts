@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   beginOnboarding,
   canCompleteOnboarding,
+  claimBrowserOnboarding,
   completeOnboarding,
   dismissOnboarding,
   navigateToOnboarding,
   NOT_STARTED_ONBOARDING,
+  ONBOARDING_STORAGE_KEY,
   ONBOARDING_VERSION,
+  onboardingStorageKey,
   parseOnboardingState,
   readOnboardingState,
   restartOnboarding,
@@ -46,7 +49,23 @@ const unavailableStorage = {
   setItem: () => {
     throw new Error("full");
   },
+  removeItem: () => {
+    throw new Error("blocked");
+  },
 };
+
+const memoryStorage = (initial: Record<string, string> = {}) => {
+  const items = new Map(Object.entries(initial));
+  return {
+    items,
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => void items.set(key, value),
+    removeItem: (key: string) => void items.delete(key),
+  };
+};
+
+const dismissedSetup = (): OnboardingState =>
+  dismissOnboarding(beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us"));
 
 describe("parseOnboardingState", () => {
   it.each([
@@ -206,12 +225,53 @@ describe("reviewedStepsSentence", () => {
 
 describe("guarded adapters", () => {
   it("falls back when storage throws", () => {
-    expect(readOnboardingState(unavailableStorage)).toEqual(
+    expect(readOnboardingState("u1", unavailableStorage)).toEqual(
       NOT_STARTED_ONBOARDING,
     );
     expect(
-      writeOnboardingState(NOT_STARTED_ONBOARDING, unavailableStorage),
+      writeOnboardingState("u1", NOT_STARTED_ONBOARDING, unavailableStorage),
     ).toBe(false);
+  });
+
+  it("keeps the progress of each account apart", () => {
+    const storage = memoryStorage();
+    const finished = dismissedSetup();
+
+    expect(writeOnboardingState("u1", finished, storage)).toBe(true);
+
+    expect(readOnboardingState("u1", storage)).toEqual(finished);
+    expect(readOnboardingState("u2", storage)).toEqual(NOT_STARTED_ONBOARDING);
+  });
+});
+
+describe("claimBrowserOnboarding", () => {
+  it("hands browser wide progress to the first account that reads it", () => {
+    const finished = JSON.stringify(dismissedSetup());
+    const storage = memoryStorage({ [ONBOARDING_STORAGE_KEY]: finished });
+
+    expect(claimBrowserOnboarding("u1", storage)).toBe(true);
+    expect(claimBrowserOnboarding("u2", storage)).toBe(false);
+
+    expect(storage.items.get(onboardingStorageKey("u1"))).toBe(finished);
+    expect(storage.items.has(onboardingStorageKey("u2"))).toBe(false);
+    expect(storage.items.has(ONBOARDING_STORAGE_KEY)).toBe(false);
+  });
+
+  it("never overwrites progress the account already keeps", () => {
+    const own = JSON.stringify(NOT_STARTED_ONBOARDING);
+    const storage = memoryStorage({
+      [ONBOARDING_STORAGE_KEY]: JSON.stringify(dismissedSetup()),
+      [onboardingStorageKey("u1")]: own,
+    });
+
+    expect(claimBrowserOnboarding("u1", storage)).toBe(true);
+
+    expect(storage.items.get(onboardingStorageKey("u1"))).toBe(own);
+    expect(storage.items.has(ONBOARDING_STORAGE_KEY)).toBe(false);
+  });
+
+  it("claims nothing when storage is unavailable", () => {
+    expect(claimBrowserOnboarding("u1", unavailableStorage)).toBe(false);
   });
 
   it("reports a failed navigation instead of throwing", () => {

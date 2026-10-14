@@ -19,9 +19,9 @@ import { firstRunHeadline } from "../src/components/onboarding/first-run-timelin
 import { formatNumber } from "../src/lib/format";
 import {
   NOT_STARTED_ONBOARDING,
-  ONBOARDING_STORAGE_KEY,
   type OnboardingState,
 } from "../src/lib/onboarding";
+import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 
 const SLOW_API_MS = 300;
 const SLOW_FIRST_RUN_MS = 1000;
@@ -224,7 +224,7 @@ test("a stored onboarding checklist hydrates without an uncaught error", async (
 }) => {
   await context.addInitScript(
     ([key, state]) => window.localStorage.setItem(key, state),
-    [ONBOARDING_STORAGE_KEY, JSON.stringify(IN_PROGRESS_ONBOARDING)] as const,
+    [OWNER_ONBOARDING_KEY, JSON.stringify(IN_PROGRESS_ONBOARDING)] as const,
   );
   const errors = collectPageErrors(page);
 

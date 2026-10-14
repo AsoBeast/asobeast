@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
+import { seedViewer } from "./viewer.mts";
 import {
   beginOnboarding,
   completeOnboarding,
@@ -9,6 +10,7 @@ import {
   setOnboardingAcknowledgement,
   setupSteps,
 } from "../src/lib/onboarding";
+import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 
 function finishedSetup() {
   let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
@@ -123,7 +125,7 @@ test.describe("a fast double click", () => {
   }) => {
     await page.addInitScript(
       ({ key, value }) => localStorage.setItem(key, value),
-      { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+      { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
     );
     await page.route("**/api/backend/apps", async (route) => {
       if (route.request().method() === "POST") {
@@ -181,7 +183,7 @@ test("finished setup suppresses redirects after later imports", async ({
 }) => {
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
   );
   await page.goto("/");
 
@@ -200,7 +202,7 @@ test("a first import replaces the first run screen without a reload", async ({
 }) => {
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
   );
   await page
     .context()
@@ -227,6 +229,43 @@ test("a first import replaces the first run screen without a reload", async ({
   await expect(
     page.getByRole("heading", { name: "Track your first app" }),
   ).toHaveCount(0);
+});
+
+test("setup finished before progress was kept per account is not asked again", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    ({ key, value }) => localStorage.setItem(key, value),
+    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+  );
+  await page
+    .context()
+    .addCookies([
+      { name: "portfolio_empty", value: "1", url: "http://localhost:3000" },
+    ]);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.context().clearCookies({ name: "portfolio_empty" });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
+  ).toBeVisible();
+  await expect(page).toHaveURL("/");
+  expect(
+    await page.evaluate(
+      ([legacy, owned]) => [
+        localStorage.getItem(legacy),
+        localStorage.getItem(owned),
+      ],
+      [ONBOARDING_STORAGE_KEY, OWNER_ONBOARDING_KEY],
+    ),
+  ).toEqual([null, JSON.stringify(finishedSetup())]);
 });
 
 test("deleting the last app returns the dashboard to the first run screen", async ({
@@ -261,6 +300,30 @@ test("deleting the last app returns the dashboard to the first run screen", asyn
   ).toBeVisible();
 });
 
+test("setup another account finished in this browser still guides a new account", async ({
+  page,
+}) => {
+  const importApp = async () => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page
+      .getByLabel("Store URL")
+      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+  };
+
+  await importApp();
+  await page.getByRole("button", { name: "Dismiss setup" }).click();
+  await expect(page.getByText("Setup dismissed")).toBeVisible();
+
+  await seedViewer(page.context(), "customer");
+  await importApp();
+  await expect(
+    page.getByRole("heading", { name: "Set up Imported App" }),
+  ).toBeVisible();
+});
+
 test("pending setup can be resumed or dismissed from the dashboard", async ({
   page,
 }) => {
@@ -269,7 +332,7 @@ test("pending setup can be resumed or dismissed from the dashboard", async ({
     ({ key, value }) => {
       if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
     },
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(state) },
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(state) },
   );
   await page.goto("/");
 
@@ -307,7 +370,7 @@ test("blocked onboarding storage does not turn import success into failure", asy
       };
     },
     {
-      key: ONBOARDING_STORAGE_KEY,
+      key: OWNER_ONBOARDING_KEY,
       stale: JSON.stringify(NOT_STARTED_ONBOARDING),
     },
   );
