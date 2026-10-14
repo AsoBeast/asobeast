@@ -206,11 +206,14 @@ test("direct setup is resumable and completes after live checks", async ({
 
   await expect(complete).toBeEnabled();
   await complete.click();
-  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  await expect(page).toHaveURL("/apps/app-1");
   expect(await storedStatus(page)).toBe("completed");
+
+  await page.goto("/apps/app-1/setup");
+  await expect(page.getByText("Setup complete", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Open the overview" }),
+  ).toHaveAttribute("href", "/apps/app-1");
   expect(await storedSkipped(page)).toEqual(["keywords"]);
 });
 
@@ -455,11 +458,13 @@ test.describe("picking keywords inside the step", () => {
     await startSetup(page, "app-new");
 
     const keywords = stepCard(page, "Track keywords");
-    await expect(keywords.getByText("10 more to reach 10")).toBeVisible();
-    for (const checkbox of await keywords.getByRole("checkbox").all()) {
-      await checkbox.check();
-    }
-    await keywords.getByRole("button", { name: "Track 10 selected" }).click();
+    await expect(
+      keywords.getByText("8 of 10 tracked in United States"),
+    ).toBeVisible();
+    await expect(keywords.getByText("2 more to reach 10")).toBeVisible();
+    await keywords.getByLabel("imported timer").check();
+    await keywords.getByLabel("work sessions").check();
+    await keywords.getByRole("button", { name: "Track 2 selected" }).click();
 
     await expect(
       keywords.getByText("10 of 10 tracked in United States"),

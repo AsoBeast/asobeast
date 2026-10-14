@@ -3,6 +3,7 @@
 import { useQueries, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { CheckCircle2, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { AppDetail } from "@asobeast/shared";
 import { ErrorState } from "@/components/layout/ErrorState";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -71,6 +72,7 @@ export function SetupChecklist({ id }: { id: string }) {
   if (state.appId === id) {
     return (
       <TerminalStatus
+        appId={id}
         completed={state.status === "completed"}
         onRestart={start}
       />
@@ -93,6 +95,7 @@ function ActiveSetup({
   state: OnboardingState;
   persist: Persist;
 }) {
+  const router = useRouter();
   const competitors = useQuery(competitorsOptions(app.id));
   const collecting = useFirstRunDiscovery(app.id);
   const homeKeywords = useQuery(keywordsOptions(app.id, app.country));
@@ -173,9 +176,10 @@ function ActiveSetup({
         completable={ready && canCompleteOnboarding(state, counts)}
         onRetry={retry}
         onDismiss={() => persist(dismissOnboarding)}
-        onComplete={() =>
-          persist((current) => completeOnboarding(current, counts))
-        }
+        onComplete={() => {
+          persist((current) => completeOnboarding(current, counts));
+          router.push(`/apps/${app.id}`);
+        }}
       />
     </div>
   );
@@ -252,23 +256,41 @@ function StartStatus({
 }
 
 function TerminalStatus({
+  appId,
   completed,
   onRestart,
 }: {
+  appId: string;
   completed: boolean;
   onRestart: () => void;
 }) {
+  if (!completed) {
+    return (
+      <SetupStatus
+        title="Setup dismissed"
+        description="The checklist will not resume automatically. You can restart it whenever you need it."
+        action="Restart setup"
+        onAction={onRestart}
+      />
+    );
+  }
   return (
-    <SetupStatus
-      title={completed ? "Setup complete" : "Setup dismissed"}
-      description={
-        completed
-          ? "Positions, competitors and countries are being collected."
-          : "The checklist will not resume automatically. You can restart it whenever you need it."
-      }
-      action="Restart setup"
-      onAction={onRestart}
-    />
+    <Card>
+      <CardHeader>
+        <CardTitle>Setup complete</CardTitle>
+        <CardDescription>
+          Positions, competitors and countries are being collected.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button asChild>
+          <Link href={`/apps/${appId}`}>Open the overview</Link>
+        </Button>
+        <Button variant="outline" onClick={onRestart}>
+          Restart setup
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 

@@ -526,6 +526,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
     ]);
   });
 
@@ -545,6 +546,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.listingMarkets(APP),
       budgetKey,
     ]);
@@ -564,6 +566,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.metadataAuditRoot(APP),
     ]);
   });
@@ -582,6 +585,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
     ]);
@@ -601,6 +605,7 @@ describe("invalidation sets", () => {
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
+      appKeys.firstRun(APP),
       appKeys.importPreviewRoot(APP),
     ]);
   });

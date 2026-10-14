@@ -810,6 +810,7 @@ export function invalidateKeywordMutation(
     queryKey: appKeys.marketKeywordFieldsRoot(id),
   });
   void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
+  void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });
 }
 
 export function invalidateMarketSeed(
