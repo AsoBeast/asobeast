@@ -8,6 +8,8 @@ import { authMeOptions, authStatusOptions } from "@/lib/queries";
 export interface AuthState {
   status: AuthStatus | undefined;
   user: AuthUser | undefined;
+  userError: Error | null;
+  retryUser: () => void;
   isLoading: boolean;
   isFetching: boolean;
   trialOnly: boolean;
@@ -32,6 +34,8 @@ function useHydrated(): boolean {
 const SERVER_AUTH_STATE: AuthState = {
   status: undefined,
   user: undefined,
+  userError: null,
+  retryUser: () => {},
   isLoading: true,
   isFetching: true,
   trialOnly: false,
@@ -49,7 +53,12 @@ export function useAuth(): AuthState {
     isFetching: statusFetching,
   } = useQuery(authStatusOptions);
   const authenticated = Boolean(status?.authenticated);
-  const { data: user, isLoading: userLoading } = useQuery({
+  const {
+    data: user,
+    error: userError,
+    isLoading: userLoading,
+    refetch: refetchUser,
+  } = useQuery({
     ...authMeOptions,
     enabled: authenticated,
   });
@@ -67,6 +76,8 @@ export function useAuth(): AuthState {
   return {
     status,
     user: signedIn,
+    userError: authenticated ? userError : null,
+    retryUser: () => void refetchUser(),
     isLoading: statusLoading || (authenticated && userLoading),
     isFetching: statusFetching,
     trialOnly,

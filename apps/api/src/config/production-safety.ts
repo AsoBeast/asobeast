@@ -5,6 +5,9 @@ const IMPLICIT_TLS_PORT = 465;
 
 const SANDBOX_KEY_PREFIXES = ['sk_test_', 'rk_test_'];
 
+const LOOPBACK_HOST =
+  /^(?:localhost|.+\.localhost|127(?:\.\d{1,3}){3}|\[::1\])$/;
+
 const logger = new Logger('ProductionSafety');
 
 export function assertProductionSafety(env: Env): void {
@@ -83,6 +86,16 @@ export function productionWarnings(env: Env): string[] {
   if (mailConfigured(env) && !env.WEB_PUBLIC_URL) {
     warnings.push(
       'SMTP is configured in production with no WEB_PUBLIC_URL. A confirmation email needs a link to the web app, so no new email alert recipient can be asked to confirm and none of them receives an alert, and alert emails go out with no unsubscribe link. Set WEB_PUBLIC_URL to the origin the web app is served from.',
+    );
+  }
+
+  if (
+    mailConfigured(env) &&
+    env.WEB_PUBLIC_URL &&
+    LOOPBACK_HOST.test(new URL(env.WEB_PUBLIC_URL).hostname)
+  ) {
+    warnings.push(
+      `WEB_PUBLIC_URL is ${env.WEB_PUBLIC_URL} in production. Every link in an email points at this machine, so a recipient anywhere else cannot open it. Set WEB_PUBLIC_URL to the origin a person would type. The Compose stacks read it from the root .env, not from apps/api/.env.`,
     );
   }
 

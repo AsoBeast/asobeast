@@ -54,6 +54,10 @@ Let the queues empty before you swap the image. The cheapest window is well afte
 
 If you upgrade with jobs still queued, the affected jobs fail immediately and the next daily run schedules their replacements, so the only cost is one lost day for the drained jobs. Alert jobs are the exception worth watching: their source events may already be marked flushed, so a batch that fails this way is not sent again. Check the failed list after the first boot and clear it once you have read it.
 
+## Move WEB\_PUBLIC\_URL to the root .env
+
+The Compose stacks pass `WEB_PUBLIC_URL` to the API from the root `.env` and default it to `http://localhost:3001`, so a value in `apps/api/.env` no longer reaches them. If you set it there, move the line to the root `.env` before you restart. Otherwise every email links to `localhost`, and the API logs a warning at startup that names the address. See [Hosting behind TLS and a reverse proxy](/security/hosting).
+
 ## How the upgrade path is proven
 
 Every pull request runs an upgrade drill in CI. It builds a database at the schema of the oldest supported baseline, loads a fixture carrying multi store and multi market data, applies every migration added since, and then asserts:

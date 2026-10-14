@@ -84,11 +84,11 @@ Every service has a health check and a restart policy, and the application conta
 
 ## Customize the installation
 
-The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default.
+The root `.env` carries only `POSTGRES_PASSWORD` and `AUTH_SECRET`. Everything else has a working default, including `WEB_PUBLIC_URL`, which builds every link in an email and defaults to `http://localhost:3001`. Set it in the root `.env` when a person reaches the stack at another origin. See [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 Copy `apps/api/.env.example` to `apps/api/.env` only when you want an optional feature such as email alerts, the AI assisted audit, a different collection schedule or different retention windows. Compose loads that file when it exists and ignores it when it does not. See [Configuration reference](/configuration/reference).
 
-Values set directly in `docker-compose.yml`, including `DATABASE_URL`, `REDIS_HOST` and `REDIS_PORT`, override anything an older `apps/api/.env` sets for the same keys. Run `docker compose config` to inspect the resolved topology.
+Values set directly in `docker-compose.yml`, including `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT` and `WEB_PUBLIC_URL`, override anything an older `apps/api/.env` sets for the same keys. Run `docker compose config` to inspect the resolved topology.
 
 ## Common operations
 

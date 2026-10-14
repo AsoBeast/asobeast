@@ -7,6 +7,7 @@ import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +38,8 @@ import {
 } from "@/lib/onboarding";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+
+const SETUP_HINT = "Import complete. Open the app setup page to continue.";
 
 function StoreUrlField({
   url,
@@ -93,6 +96,7 @@ export function ImportAppDialog({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const account = useAuth().user?.id;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChangeProp ?? setUncontrolledOpen;
@@ -111,15 +115,13 @@ export function ImportAppDialog({
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
       try {
-        const started = startOnboardingAfterImport(app.id, app.country);
-        if (
-          started &&
-          !navigateToOnboarding(app.id, (path) => router.push(path))
-        ) {
-          toast.info("Import complete. Open the app setup page to continue.");
-        }
+        const guided =
+          account !== undefined &&
+          (!startOnboardingAfterImport(account, app.id, app.country) ||
+            navigateToOnboarding(app.id, (path) => router.push(path)));
+        if (!guided) toast.info(SETUP_HINT);
       } catch {
-        toast.info("Import complete. Open the app setup page to continue.");
+        toast.info(SETUP_HINT);
       }
     },
     onError: (err) => {

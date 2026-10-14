@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
 import { APP_1_SUMMARY, IMPORTED_APP } from "./fixtures.mts";
+import { seedViewer } from "./viewer.mts";
 import {
   beginOnboarding,
   completeOnboarding,
@@ -9,6 +10,7 @@ import {
   setOnboardingAcknowledgement,
   setupSteps,
 } from "../src/lib/onboarding";
+import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 
 function finishedSetup() {
   let state = beginOnboarding(NOT_STARTED_ONBOARDING, "app-1", "us");
@@ -123,7 +125,7 @@ test.describe("a fast double click", () => {
   }) => {
     await page.addInitScript(
       ({ key, value }) => localStorage.setItem(key, value),
-      { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+      { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
     );
     await page.route("**/api/backend/apps", async (route) => {
       if (route.request().method() === "POST") {
@@ -181,7 +183,7 @@ test("finished setup suppresses redirects after later imports", async ({
 }) => {
   await page.addInitScript(
     ({ key, value }) => localStorage.setItem(key, value),
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
   );
   await page.goto("/");
 
@@ -195,6 +197,153 @@ test("finished setup suppresses redirects after later imports", async ({
   await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
 });
 
+test("a first import replaces the first run screen without a reload", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    ({ key, value }) => localStorage.setItem(key, value),
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(finishedSetup()) },
+  );
+  await page
+    .context()
+    .addCookies([
+      { name: "portfolio_empty", value: "1", url: "http://localhost:3000" },
+    ]);
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toBeVisible();
+  await page.context().clearCookies({ name: "portfolio_empty" });
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(page).toHaveURL("/");
+  await expect(
+    page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toHaveCount(0);
+});
+
+test("an import whose account is unknown still points at the setup page", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { statusCode: 503 } }),
+  );
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(
+    page.getByText("Import complete. Open the app setup page to continue."),
+  ).toBeVisible();
+});
+
+test("setup finished before progress was kept per account is not asked again", async ({
+  page,
+}) => {
+  await page.addInitScript(
+    ({ key, value }) => localStorage.setItem(key, value),
+    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(finishedSetup()) },
+  );
+  await page
+    .context()
+    .addCookies([
+      { name: "portfolio_empty", value: "1", url: "http://localhost:3000" },
+    ]);
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.context().clearCookies({ name: "portfolio_empty" });
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: IMPORTED_APP.name ?? "" }).first(),
+  ).toBeVisible();
+  await expect(page).toHaveURL("/");
+  expect(
+    await page.evaluate(
+      ([legacy, owned]) => [
+        localStorage.getItem(legacy),
+        localStorage.getItem(owned),
+      ],
+      [ONBOARDING_STORAGE_KEY, OWNER_ONBOARDING_KEY],
+    ),
+  ).toEqual([null, JSON.stringify(finishedSetup())]);
+});
+
+test("deleting the last app returns the dashboard to the first run screen", async ({
+  page,
+}) => {
+  let deleted = false;
+  await page.route(/\/api\/backend\/apps\/[^/]+$/, async (route) => {
+    if (route.request().method() !== "DELETE") return route.fallback();
+    deleted = true;
+    await route.fulfill({ status: 204 });
+  });
+  await page.route("**/api/backend/portfolio", async (route) => {
+    if (!deleted) return route.fallback();
+    const response = await route.fetch();
+    const portfolio = await response.json();
+    await route.fulfill({
+      response,
+      json: { ...portfolio, apps: [], groups: [] },
+    });
+  });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "App actions" }).first().click();
+  await page.getByRole("menuitem", { name: "Delete app" }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete app" })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "Track your first app" }),
+  ).toBeVisible();
+});
+
+test("setup another account finished in this browser still guides a new account", async ({
+  page,
+}) => {
+  const importApp = async () => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Import app" }).click();
+    await page
+      .getByLabel("Store URL")
+      .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+    await page.getByRole("button", { name: "Import", exact: true }).click();
+    await expect(page).toHaveURL("/apps/app-new/setup");
+  };
+
+  await importApp();
+  await page.getByRole("button", { name: "Dismiss setup" }).click();
+  await expect(page.getByText("Setup dismissed")).toBeVisible();
+
+  await seedViewer(page.context(), "customer");
+  await importApp();
+  await expect(
+    page.getByRole("heading", { name: "Set up Imported App" }),
+  ).toBeVisible();
+});
+
 test("pending setup can be resumed or dismissed from the dashboard", async ({
   page,
 }) => {
@@ -203,7 +352,7 @@ test("pending setup can be resumed or dismissed from the dashboard", async ({
     ({ key, value }) => {
       if (localStorage.getItem(key) === null) localStorage.setItem(key, value);
     },
-    { key: ONBOARDING_STORAGE_KEY, value: JSON.stringify(state) },
+    { key: OWNER_ONBOARDING_KEY, value: JSON.stringify(state) },
   );
   await page.goto("/");
 
@@ -241,7 +390,7 @@ test("blocked onboarding storage does not turn import success into failure", asy
       };
     },
     {
-      key: ONBOARDING_STORAGE_KEY,
+      key: OWNER_ONBOARDING_KEY,
       stale: JSON.stringify(NOT_STARTED_ONBOARDING),
     },
   );

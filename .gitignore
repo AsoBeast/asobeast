@@ -21,3 +21,6 @@ keys
 
 /raw/
 apps/api/test/fixtures/stripe/raw/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+.playwright

@@ -8,7 +8,7 @@ export const root = resolve(
   "..",
 );
 
-export function composeConfig(files) {
+export function composeConfig(files, env = {}) {
   const raw = execFileSync(
     "docker",
     [
@@ -27,6 +27,7 @@ export function composeConfig(files) {
         AUTH_SECRET: process.env.AUTH_SECRET ?? "verify".repeat(8),
         ASOBEAST_DOMAIN: process.env.ASOBEAST_DOMAIN ?? "asobeast.example.com",
         TUNNEL_TOKEN: process.env.TUNNEL_TOKEN ?? "verify",
+        ...env,
       },
     },
   );

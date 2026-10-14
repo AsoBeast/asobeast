@@ -158,7 +158,7 @@ Each entry of `apps` groups one owned app's facts in arrays: `rankDrops`, `rankI
 
 Branch on `event` and ignore values and fields you do not recognise. New events and fields arrive as additive changes within a major version.
 
-`link` is present only when `WEB_PUBLIC_URL` is set. When it is unset the link is `null` rather than a broken `localhost` guess.
+`link` is present only when `WEB_PUBLIC_URL` is set. When it is unset the link is `null` rather than a broken `localhost` guess. The Compose stacks always set it, see [Hosting behind TLS and a reverse proxy](/security/hosting).
 
 Slack, Discord and ntfy all accept a plain webhook endpoint, and asobeast formats for the first two.
 

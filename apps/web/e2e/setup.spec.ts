@@ -1,15 +1,13 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 import { expect, test } from "./session.mts";
-import {
-  ONBOARDING_STORAGE_KEY,
-  parseOnboardingState,
-} from "../src/lib/onboarding";
+import { parseOnboardingState } from "../src/lib/onboarding";
+import { OWNER_ONBOARDING_KEY } from "./onboarding.mts";
 import { seedViewer } from "./viewer.mts";
 
 const storedStatus = async (page: Page): Promise<string> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
-    ONBOARDING_STORAGE_KEY,
+    OWNER_ONBOARDING_KEY,
   );
   return parseOnboardingState(stored).status;
 };
@@ -22,7 +20,7 @@ const resetSeed = (request: APIRequestContext, country: string) =>
 const storedMarkets = async (page: Page): Promise<string[]> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
-    ONBOARDING_STORAGE_KEY,
+    OWNER_ONBOARDING_KEY,
   );
   return parseOnboardingState(stored).selectedMarkets;
 };
@@ -45,6 +43,28 @@ test("unknown and unavailable apps render route boundaries", async ({
 
   await page.goto("/apps/err-app/setup");
   await expect(page.getByRole("main").getByRole("alert")).toBeVisible();
+});
+
+test("setup offers a retry when the account cannot be loaded", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { statusCode: 503 } }),
+  );
+  await page.goto("/apps/app-1/setup");
+
+  const failure = page
+    .getByRole("main")
+    .getByRole("alert")
+    .filter({ hasText: "Account could not be loaded" });
+  await expect(failure).toBeVisible();
+
+  await page.unroute("**/api/backend/auth/me");
+  await failure.getByRole("button", { name: "Try again" }).click();
+
+  await expect(
+    page.getByText("Start setup for this app", { exact: true }),
+  ).toBeVisible();
 });
 
 test("a direct visit never enrols without an explicit start", async ({
@@ -252,7 +272,7 @@ test("corrupt state resets and setup can be dismissed on a narrow dark layout", 
       localStorage.setItem(key, "{broken");
     }
     localStorage.setItem("theme", "dark");
-  }, ONBOARDING_STORAGE_KEY);
+  }, OWNER_ONBOARDING_KEY);
   await page.setViewportSize({ width: 390, height: 844 });
   await startSetup(page, "app-2");
 
