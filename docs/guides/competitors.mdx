@@ -1,6 +1,6 @@
 ---
 title: Track competitors
-description: Add a competitor from a store URL or from a stored SERP snapshot. Competitors cost no extra store requests on keywords you already track.
+description: Add a competitor by name, from a store URL, from a stored SERP snapshot or from the suggestions in the guided setup. Competitors cost no extra store requests on keywords you already track.
 icon: users
 keywords: ["competitors","comparison","gap analysis","SERP","no extra requests"]
 ---
@@ -9,19 +9,31 @@ A competitor is a listing asobeast tracks alongside yours so you can compare met
 
 ## Add a competitor
 
-Three paths, the first two on the competitors tab of an app.
+Four paths, the first three on the competitors tab of an app.
 
 | Path | When to use it |
 | --- | --- |
+| By name | You know the app but not its URL. The form searches your app's store and storefront and lists the results with their icon |
 | From a store URL | You already know which app you want to watch |
 | From a stored SERP snapshot | You want the apps that actually outrank you on a keyword |
-| From the guided setup | Right after an import, the apps already ranking for your keywords are listed in the competitor step |
+| From the suggestions in the guided setup | Right after an import, the apps that rank in your keyword results and the apps the store calls similar are listed with a checkbox each and added together |
 
 The second path is usually better, because it names the apps the store already puts in front of your users rather than the ones you assume are competitors.
 
 One listing in one storefront is either an app you track or a competitor of one app, never both and never two at once. Adding a listing you already track as an app, importing one you already watch as a competitor, or attaching a competitor that already belongs to another app all answer `409` and change nothing. Remove the listing from where it is first.
 
 Adding a competitor this app already tracks returns that competitor without reaching the store and without writing a snapshot, for the same reason a repeat import does. See [Importing twice costs nothing extra](/guides/import-an-app#importing-twice-costs-nothing-extra).
+
+## Suggested competitors
+
+The competitor step of the guided setup suggests up to ten apps from two sources, in this order.
+
+| Source | What it is | Shows |
+| --- | --- | --- |
+| Keyword results | Untracked apps that appear in your own keyword results over the last 30 days | How often they appeared and their best position |
+| Similar apps | The apps the store lists as similar to yours | Their icon |
+
+Your own app and the competitors you already track are never suggested, and an app both sources name is listed once, as a keyword result. Reading the keyword results costs nothing, because they come from the searches the daily run already made. The similar apps lookup reaches the store while you wait and spends one store lookup of the hourly allowance. When the store does not answer, the keyword result apps are still listed. `GET /apps/{id}/competitors/suggestions` answers the same list, and so does the `competitor_suggestions` MCP tool.
 
 ## Why are competitors free to track?
 

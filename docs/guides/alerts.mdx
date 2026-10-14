@@ -22,6 +22,10 @@ Batched delivery is durable. A flush claims a fixed snapshot of pending rows bef
 
 There is no separate alert schedule. `CRON_DAILY` controls when processing starts, while workload and retry duration decide when the report goes out.
 
+## The nudge on the overview
+
+Alerts are not part of the guided setup, because nothing can move before positions exist. Once an app has two daily captures and your workspace has no webhook and no email alert, the app overview shows a card offering to add one: an email alert when SMTP is configured, a webhook otherwise. **Not now** hides the card in that browser, and adding any channel hides it everywhere.
+
 ## Subscribe to events
 
 | Event | Fires when | Threshold setting |
