@@ -263,6 +263,18 @@ describe('RequestRateLimiter', () => {
     });
   });
 
+  it('names the mcp budget rather than the read budget when it refuses', async () => {
+    incrby.mockResolvedValue(
+      (PLAN_LIMITS.indie.mcpRequestsPerMinute as number) + 1,
+    );
+
+    await expect(limiter.consumeMcp(metered, 1, NOW)).rejects.toMatchObject({
+      message: expect.stringContaining(
+        'the indie plan allows 60 MCP requests per minute',
+      ) as string,
+    });
+  });
+
   it('never caps mcp on a self hosted instance', async () => {
     await expect(
       limiter.consumeMcp(selfHosted, 7, NOW),

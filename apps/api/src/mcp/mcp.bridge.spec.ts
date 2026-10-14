@@ -1,6 +1,6 @@
 import { IncomingMessage } from 'node:http';
 import { Socket } from 'node:net';
-import { Logger } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import { API_TOKEN_PREFIX } from '@asobeast/shared';
@@ -273,5 +273,43 @@ describe('McpBridge allowance', () => {
       expect.objectContaining({ workspaceId: 'ws_1' }),
       scenario.cost,
     );
+  });
+
+  it('refuses a batch the transport can never serve without charging it', async () => {
+    const consumeMcp = jest.fn(() => Promise.resolve());
+    const bridge = bridgeFor({ consumeMcp });
+
+    await expect(
+      bridge.admit(tokenRequest(Array.from({ length: 101 }, () => ({})))),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await bridge.onModuleDestroy();
+
+    expect(consumeMcp).not.toHaveBeenCalled();
+  });
+
+  it('charges a batch of exactly 100 messages', async () => {
+    const consumeMcp = jest.fn(() => Promise.resolve());
+    const bridge = bridgeFor({ consumeMcp });
+
+    await bridge.admit(tokenRequest(Array.from({ length: 100 }, () => ({}))));
+    await bridge.onModuleDestroy();
+
+    expect(consumeMcp).toHaveBeenCalledWith(expect.anything(), 100);
+  });
+
+  it('refuses a body nested deeper than the pipe allows without charging it', async () => {
+    const consumeMcp = jest.fn(() => Promise.resolve());
+    const bridge = bridgeFor({ consumeMcp });
+    const nested = Array.from({ length: 65 }).reduce<unknown>(
+      (inner) => [inner],
+      [],
+    );
+
+    await expect(
+      bridge.admit(tokenRequest({ jsonrpc: '2.0', params: nested })),
+    ).rejects.toThrow('body must not be nested more than 64 levels deep');
+    await bridge.onModuleDestroy();
+
+    expect(consumeMcp).not.toHaveBeenCalled();
   });
 });

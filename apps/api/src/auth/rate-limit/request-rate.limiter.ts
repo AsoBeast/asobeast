@@ -14,6 +14,7 @@ import {
 import {
   oversizedBatchMessage,
   RateLimitExceededError,
+  rateLimitMessage,
 } from './rate-limit.errors';
 import { FailFastRedis } from '../../redis/fail-fast-redis';
 import { secondsUntilReset, windowKey } from './window';
@@ -117,8 +118,19 @@ export class RequestRateLimiter {
     if (used === null) return null;
     const resetSeconds = secondsUntilReset(rule.windowSeconds, now);
     if (used > rule.limit) {
+      const detail = this.detailOf(
+        scope,
+        rateClass,
+        rule.window,
+        rule.limit,
+        resetSeconds,
+      );
       throw new RateLimitExceededError(
-        this.detailOf(scope, rateClass, rule.window, rule.limit, resetSeconds),
+        detail,
+        rateLimitMessage(
+          detail,
+          rule.budget === 'mcp' ? 'MCP requests' : undefined,
+        ),
       );
     }
     return { rule, used, resetSeconds };

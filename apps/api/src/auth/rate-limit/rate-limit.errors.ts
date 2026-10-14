@@ -25,9 +25,12 @@ function onDemandMessage(
   return `${ON_DEMAND_LABELS[action]} limit reached: the ${detail.plan} plan allows ${detail.limit} requests ${WINDOW_NAMES[detail.window]}. Try again in ${describeWait(detail.resetSeconds)}.`;
 }
 
-export function rateLimitMessage(detail: RateLimitDetail): string {
+export function rateLimitMessage(
+  detail: RateLimitDetail,
+  requests = `${detail.rateClass} requests`,
+): string {
   if (detail.action) return onDemandMessage(detail.action, detail);
-  const allowance = `the ${detail.plan} plan allows ${detail.limit} ${detail.rateClass} requests ${WINDOW_NAMES[detail.window]}`;
+  const allowance = `the ${detail.plan} plan allows ${detail.limit} ${requests} ${WINDOW_NAMES[detail.window]}`;
   const reopens =
     detail.window === 'concurrent'
       ? 'Send fewer requests at once'
