@@ -437,6 +437,13 @@ describe('App localizations (e2e)', () => {
       await expect(prisma.appLocalization.count()).resolves.toBe(0);
     });
 
+    it('keeps accepting a competitor app, as it did before localizations', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      await saveField(rival, {}, 'habit').expect(200);
+      await api.get(`/apps/${rival}/keyword-field`).expect(200);
+    });
+
     it('records nothing for an emptied field that never had a row', async () => {
       const id = await seedApp();
 
