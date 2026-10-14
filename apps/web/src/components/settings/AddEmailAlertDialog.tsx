@@ -38,9 +38,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
           recipientToast(saved),
         );
       }
-      setOpen(false);
-      setEmail("");
-      setEvents(["metadata.changed"]);
+      onOpenChange(false);
     },
     onError: (err) => {
       setError(
@@ -51,6 +49,14 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
     },
   });
   const createOnce = useSingleFlight(mutation);
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) return;
+    setEmail("");
+    setEvents(["metadata.changed"]);
+    setError(null);
+  }
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
@@ -71,7 +77,7 @@ export function AddEmailAlertDialog({ trigger }: { trigger?: ReactNode }) {
   return (
     <AlertChannelDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       label="Add email alert"
       description="AsoBeast emails this recipient when a subscribed event fires, using your configured SMTP server. Unless it is the verified account email of a member of this workspace, the recipient confirms the address from the link in a first email."
       error={error}

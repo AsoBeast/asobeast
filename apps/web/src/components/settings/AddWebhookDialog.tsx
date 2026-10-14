@@ -31,10 +31,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     onSuccess: () => {
       invalidateWebhookMutation(queryClient);
       toast.success("Webhook added");
-      setOpen(false);
-      setUrl("");
-      setEvents(["metadata.changed"]);
-      setSecret("");
+      onOpenChange(false);
     },
     onError: (err) => {
       setError(
@@ -45,6 +42,15 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
     },
   });
   const createOnce = useSingleFlight(mutation);
+
+  function onOpenChange(next: boolean) {
+    setOpen(next);
+    if (next) return;
+    setUrl("");
+    setEvents(["metadata.changed"]);
+    setSecret("");
+    setError(null);
+  }
 
   function submit(formEvent: FormEvent<HTMLFormElement>) {
     formEvent.preventDefault();
@@ -74,7 +80,7 @@ export function AddWebhookDialog({ trigger }: { trigger?: ReactNode }) {
   return (
     <AlertChannelDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       label="Add webhook"
       description="AsoBeast POSTs a JSON payload to this URL when a subscribed event fires. Add a secret to receive an HMAC signature header."
       error={error}

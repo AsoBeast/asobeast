@@ -106,6 +106,26 @@ test.describe("the alerts nudge", () => {
     ).toBeVisible();
   });
 
+  test("a closed email dialog opens again without the earlier input", async ({
+    page,
+  }) => {
+    await setCookies(page, { "e2e-empty-alerts": "1", e2e_history_days: "2" });
+    await page.goto(`/apps/${APP_1_DETAIL.id}`);
+
+    await page.getByRole("button", { name: "Add an email alert" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add email alert" });
+    await dialog.getByLabel("Recipient email").fill("alerts@example");
+    await dialog.getByRole("button", { name: "Add email alert" }).click();
+    await expect(dialog.getByText("Enter a valid email address")).toBeVisible();
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "Add an email alert" }).click();
+    await expect(dialog.getByLabel("Recipient email")).toHaveValue("");
+    await expect(dialog.getByText("Enter a valid email address")).toHaveCount(
+      0,
+    );
+  });
+
   test("offers a webhook when the instance cannot send email", async ({
     page,
   }) => {
