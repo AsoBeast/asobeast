@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { assertStorefront, MarketSeedResult } from '@asobeast/shared';
 import { QuotaService } from '../auth/quota.service';
 import { Candidate } from '../keywords/extraction';
+import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { KeywordTracker } from '../keywords/keyword-tracker';
 import { loadTrackingStates } from '../keywords/keyword-tracking-state';
 import { ensurePrimaryApp, KeywordApp } from '../keywords/keywords.support';
@@ -9,7 +10,6 @@ import { seedCandidates } from '../keywords/listing-seed';
 import { listingTexts } from '../keywords/listing-texts';
 import { MarketListingRequests } from '../keywords/market-listing.requests';
 import { PrismaService } from '../prisma/prisma.service';
-import { FirstRunScheduler } from './first-run.scheduler';
 import { ListingCaptureService } from './listing-capture.service';
 import { capturedLocalizations } from './market-localizations';
 import { planSeed } from './market-seed-plan';
@@ -23,7 +23,7 @@ export class MarketSeedService {
     private readonly capture: ListingCaptureService,
     private readonly tracker: KeywordTracker,
     private readonly quota: QuotaService,
-    private readonly firstRun: FirstRunScheduler,
+    private readonly checks: FirstPositionChecks,
     private readonly listings: MarketListingRequests,
   ) {}
 
@@ -113,7 +113,7 @@ export class MarketSeedService {
     if (seeded === 0) return 0;
     const keywordIds = rows.map(({ keywordId }) => keywordId);
     await this.tracker.enqueueFirstScores(keywordIds, app);
-    await this.firstRun.checkKeywords(app.id, keywordIds);
+    await this.checks.schedule(app.id, keywordIds);
     await this.listings.request(app, country);
     return seeded;
   }

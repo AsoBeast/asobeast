@@ -12,6 +12,7 @@ import {
   QUEUES,
   utcDateKey,
 } from '../jobs/jobs.types';
+import { FirstPositionChecks } from '../keywords/first-position-checks';
 import { PrismaService } from '../prisma/prisma.service';
 import { FirstRunScheduler } from './first-run.scheduler';
 
@@ -46,11 +47,16 @@ function schedulerWith(tracked: TrackedRow[]) {
       .mockResolvedValue({ queued: true, jobId: 'run_1' }),
   };
   const workspace = new WorkspaceContext();
-  const scheduler = new FirstRunScheduler(
+  const checks = new FirstPositionChecks(
     { trackedKeyword: { findMany } } as unknown as PrismaService,
+    flowProducer as unknown as FlowProducer,
+    workspace,
+  );
+  const scheduler = new FirstRunScheduler(
     flowProducer as unknown as FlowProducer,
     actionRuns as unknown as ActionRunQueue,
     workspace,
+    checks,
   );
 
   const inWorkspace = <T>(work: () => Promise<T>): Promise<T> =>
@@ -166,37 +172,6 @@ describe('FirstRunScheduler', () => {
     expect(schedule).toEqual({ ranked: 0, actionsQueued: true });
     expect(flowProducer.add).not.toHaveBeenCalled();
     expect(actionRuns.request).toHaveBeenCalledWith(SCOPE);
-  });
-
-  it('checks only the keywords it is given, without a second actions run', async () => {
-    const { scheduler, findMany, flowProducer, actionRuns, inWorkspace } =
-      schedulerWith([trackedRow('k3', Store.APP_STORE)]);
-
-    const queued = await inWorkspace(() =>
-      scheduler.checkKeywords(APP_ID, ['k3']),
-    );
-
-    expect(queued).toBe(1);
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { appId: APP_ID, active: true, keywordId: { in: ['k3'] } },
-      }),
-    );
-    const [jobs] = flowProducer.addBulk.mock.calls[0];
-    expect(jobs.map((job) => job.opts?.jobId)).toEqual([
-      firstRunCheckJobId(APP_ID, 'k3', utcDateKey()),
-    ]);
-    expect(flowProducer.add).not.toHaveBeenCalled();
-    expect(actionRuns.request).not.toHaveBeenCalled();
-  });
-
-  it('queues nothing when no keyword was added', async () => {
-    const { scheduler, flowProducer, inWorkspace } = schedulerWith([]);
-
-    expect(await inWorkspace(() => scheduler.checkKeywords(APP_ID, []))).toBe(
-      0,
-    );
-    expect(flowProducer.addBulk).not.toHaveBeenCalled();
   });
 
   it('refuses to schedule without a workspace in scope', async () => {
