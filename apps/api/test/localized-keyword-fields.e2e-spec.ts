@@ -380,22 +380,6 @@ describe('Localized keyword fields (e2e)', () => {
       );
     });
 
-    it('E-SAV-19 refuses a competitor app and writes nothing', async () => {
-      const rival = await seedCompetitor(await seedApp());
-
-      const response = await save(rival, 'en-US', {
-        text: 'uno,dos',
-        trackIn: ['us'],
-      }).expect(400);
-
-      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
-      await expect(written()).resolves.toEqual({
-        fields: 0,
-        localizations: 0,
-        tracked: 0,
-      });
-    });
-
     it('E-SAV-15 refuses a NUL character in the text and in trackIn', async () => {
       const appId = await seedApp();
       const before = await written();
@@ -477,6 +461,22 @@ describe('Localized keyword fields (e2e)', () => {
       );
       expect(keywordIds).toHaveLength(4);
       expect(scores).toHaveLength(4);
+    });
+
+    it('E-SAV-19 refuses a competitor app and writes nothing', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await save(rival, 'en-US', {
+        text: 'uno,dos',
+        trackIn: ['us'],
+      }).expect(400);
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+      await expect(written()).resolves.toEqual({
+        fields: 0,
+        localizations: 0,
+        tracked: 0,
+      });
     });
   });
 
@@ -647,16 +647,6 @@ describe('Localized keyword fields (e2e)', () => {
       await preview('missing-app', 'en-US', { text: 'uno' }).expect(404);
     });
 
-    it('E-PRV-13 refuses a competitor app', async () => {
-      const rival = await seedCompetitor(await seedApp());
-
-      const response = await preview(rival, 'en-US', { text: 'uno' }).expect(
-        400,
-      );
-
-      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
-    });
-
     it('E-PRV-10 counts a paused phrase as new', async () => {
       const appId = await seedApp();
       await trackActive(appId, 'us', ['uno']);
@@ -689,6 +679,16 @@ describe('Localized keyword fields (e2e)', () => {
       }).expect(400);
 
       expect(messageOf(response)).toBe('text must not contain a NUL character');
+    });
+
+    it('E-PRV-13 refuses a competitor app', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await preview(rival, 'en-US', { text: 'uno' }).expect(
+        400,
+      );
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
     });
   });
 });

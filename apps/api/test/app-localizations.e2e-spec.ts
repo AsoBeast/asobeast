@@ -441,7 +441,15 @@ describe('App localizations (e2e)', () => {
       const rival = await seedCompetitor(await seedApp());
 
       await saveField(rival, {}, 'habit').expect(200);
-      await api.get(`/apps/${rival}/keyword-field`).expect(200);
+      const read = await api.get(`/apps/${rival}/keyword-field`).expect(200);
+
+      expect((read.body as KeywordFieldResult).phrases).toEqual(['habit']);
+      await expect(
+        prisma.keywordField.findMany({
+          where: { appId: rival },
+          select: { localization: true, phrases: true },
+        }),
+      ).resolves.toEqual([{ localization: 'en-US', phrases: ['habit'] }]);
     });
 
     it('records nothing for an emptied field that never had a row', async () => {
