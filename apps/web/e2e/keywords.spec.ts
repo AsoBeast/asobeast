@@ -958,3 +958,34 @@ test.describe("the tags facet", () => {
     ).toBeVisible();
   });
 });
+
+test("tells the user an add failed while offline instead of waiting for the network", async ({
+  page,
+  context,
+}) => {
+  await page.goto("/apps/app-1/keywords");
+  const add = page.getByRole("button", { name: "Add keywords" }).first();
+  await (await hydrated(add)).click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("textbox", { name: /fitness tracker/ })
+    .fill("offline test phrase");
+  const posts: string[] = [];
+  page.on("request", (request) => {
+    if (request.method() === "POST" && /\/keywords$/.test(request.url())) {
+      posts.push(request.url());
+    }
+  });
+
+  await context.setOffline(true);
+  await dialog.getByRole("button", { name: "Add keywords" }).click();
+
+  await expect(dialog.getByText("Could not add keywords")).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "Add keywords" }),
+  ).toBeEnabled();
+  await context.setOffline(false);
+  await page.waitForTimeout(500);
+  expect(posts.length).toBeLessThanOrEqual(1);
+  await expect(dialog.getByText("Could not add keywords")).toBeVisible();
+});
