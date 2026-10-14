@@ -135,7 +135,6 @@ const LIST_PARSERS = [
 ] as const;
 
 const STRING_PARSERS = [
-  ["country", countryParser],
   ["market", marketParser],
   ["serp", serpParser],
   ["spiderTerm", spiderTermParser],
@@ -226,6 +225,28 @@ describe.each(STRING_PARSERS)("%s parser", (_name, parser) => {
   it("falls back to the default for a missing value", () => {
     expect(parser.parseServerSide(undefined)).toBe("");
   });
+});
+
+describe("country parser", () => {
+  it("defaults to every market", () => {
+    expect(countryParser.defaultValue).toBe("");
+    expect(countryParser.parseServerSide(undefined)).toBe("");
+  });
+
+  it.each([
+    ["de", "de"],
+    ["DE", "de"],
+    ["Pl", "pl"],
+  ])("reads %s as the storefront %s", (value, country) => {
+    expect(countryParser.parseServerSide(value)).toBe(country);
+  });
+
+  it.each(["ZZZ", "d", "d3", "", "de "])(
+    "falls back to every market for %j",
+    (value) => {
+      expect(countryParser.parseServerSide(value)).toBe("");
+    },
+  );
 });
 
 describe("keywordIds parser", () => {

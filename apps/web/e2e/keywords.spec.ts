@@ -45,6 +45,29 @@ test("market filter switches to an empty market with an add prompt", async ({
   ).toBeVisible();
 });
 
+test("reads an upper case market in the url as that market", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?country=PL");
+
+  await expect(
+    page.getByText(/No keywords tracked in Poland yet/),
+  ).toBeVisible();
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+});
+
+test("falls back to the default market for a country that is no storefront code", async ({
+  page,
+}) => {
+  await page.goto("/apps/app-1/keywords?country=ZZZ");
+
+  await expect(page.getByRole("button", { name: /^US/ })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(page.getByText(/could not be loaded/)).toHaveCount(0);
+});
+
 test("clicking a sort header updates the url and reorders rows", async ({
   page,
 }) => {
