@@ -23,25 +23,30 @@ describe('the tracked keyword field order drop', () => {
   const drop = migrationSql('drop_tracked_keyword_field_order');
   let prisma: PrismaClient;
 
-  const fieldPhrase = async (
+  const seedApp = async (store: Store = Store.APP_STORE) =>
+    (
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store,
+          storeAppId: `drop-${store}`,
+          country: 'us',
+        },
+      })
+    ).id;
+
+  const seedFieldPhrase = async (
+    appId: string,
     text: string,
-    { store = Store.APP_STORE, country = 'us' } = {},
+    { store = Store.APP_STORE, country = 'us', order = 0 } = {},
   ) => {
-    const app = await prisma.app.create({
-      data: {
-        workspaceId: DEFAULT_WORKSPACE_ID,
-        store,
-        storeAppId: `drop-${store}-${country}`,
-        country: 'us',
-      },
-    });
     const keyword = await prisma.keyword.create({
       data: { text, store, country },
     });
     await prisma.trackedKeyword.create({
-      data: { appId: app.id, keywordId: keyword.id, source: 'KEYWORD_FIELD' },
+      data: { appId, keywordId: keyword.id, source: 'KEYWORD_FIELD' },
     });
-    await prisma.$executeRaw`UPDATE "TrackedKeyword" SET "fieldOrder" = 0 WHERE "appId" = ${app.id}`;
+    await prisma.$executeRaw`UPDATE "TrackedKeyword" SET "fieldOrder" = ${order} WHERE "appId" = ${appId} AND "keywordId" = ${keyword.id}`;
   };
 
   const hasFieldOrder = async () =>
@@ -52,6 +57,13 @@ describe('the tracked keyword field order drop', () => {
           WHERE table_name = 'TrackedKeyword' AND column_name = 'fieldOrder'
         ) AS found`
     )[0].found;
+
+  const expectDropRefused = async () => {
+    await expect(prisma.$executeRawUnsafe(drop)).rejects.toThrow(
+      /no KeywordField row carries/,
+    );
+    await expect(hasFieldOrder()).resolves.toBe(true);
+  };
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -80,7 +92,9 @@ describe('the tracked keyword field order drop', () => {
   });
 
   it('drops the column once the backfill carried every field phrase', async () => {
-    await fieldPhrase('habit tracker');
+    const appId = await seedApp();
+    await seedFieldPhrase(appId, 'habit tracker');
+    await seedFieldPhrase(appId, 'sleep', { order: 1 });
     await prisma.$executeRawUnsafe(backfill);
 
     await prisma.$executeRawUnsafe(drop);
@@ -88,16 +102,27 @@ describe('the tracked keyword field order drop', () => {
     await expect(hasFieldOrder()).resolves.toBe(false);
   });
 
-  it.each([
-    ['a keyword tracked in another market', { country: 'gb' }],
-    ['a google play app', { store: Store.GOOGLE_PLAY }],
-  ])('keeps the column when the backfill left out %s', async (_, origin) => {
-    await fieldPhrase('habit tracker', origin);
+  it('keeps the column when the backfill left out a keyword tracked in another market', async () => {
+    await seedFieldPhrase(await seedApp(), 'habit tracker', { country: 'gb' });
     await prisma.$executeRawUnsafe(backfill);
 
-    await expect(prisma.$executeRawUnsafe(drop)).rejects.toThrow(
-      /no KeywordField row carries/,
-    );
-    await expect(hasFieldOrder()).resolves.toBe(true);
+    await expectDropRefused();
+  });
+
+  it('keeps the column when the backfill left out a google play app', async () => {
+    const store = Store.GOOGLE_PLAY;
+    await seedFieldPhrase(await seedApp(store), 'habit tracker', { store });
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expectDropRefused();
+  });
+
+  it('keeps the column when a phrase left out shares its text with a carried one', async () => {
+    const appId = await seedApp();
+    await seedFieldPhrase(appId, 'habit tracker');
+    await seedFieldPhrase(appId, 'habit tracker', { country: 'gb', order: 1 });
+    await prisma.$executeRawUnsafe(backfill);
+
+    await expectDropRefused();
   });
 });
