@@ -12,7 +12,7 @@ describe('App localizations against an upgraded baseline database', () => {
     await prisma.$disconnect();
   });
 
-  it('stores no row for the home localization the field saved before the upgrade belongs to', async () => {
+  it('keeps no app localization row because the field saved before the upgrade is the home one', async () => {
     await expect(prisma.appLocalization.findMany()).resolves.toEqual([]);
   });
 });
