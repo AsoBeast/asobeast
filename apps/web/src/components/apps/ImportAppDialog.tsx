@@ -39,6 +39,8 @@ import {
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
+const SETUP_HINT = "Import complete. Open the app setup page to continue.";
+
 function StoreUrlField({
   url,
   error,
@@ -113,17 +115,13 @@ export function ImportAppDialog({
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
       try {
-        const started =
+        const guided =
           account !== undefined &&
-          startOnboardingAfterImport(account, app.id, app.country);
-        if (
-          started &&
-          !navigateToOnboarding(app.id, (path) => router.push(path))
-        ) {
-          toast.info("Import complete. Open the app setup page to continue.");
-        }
+          (!startOnboardingAfterImport(account, app.id, app.country) ||
+            navigateToOnboarding(app.id, (path) => router.push(path)));
+        if (!guided) toast.info(SETUP_HINT);
       } catch {
-        toast.info("Import complete. Open the app setup page to continue.");
+        toast.info(SETUP_HINT);
       }
     },
     onError: (err) => {

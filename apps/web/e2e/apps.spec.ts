@@ -231,6 +231,26 @@ test("a first import replaces the first run screen without a reload", async ({
   ).toHaveCount(0);
 });
 
+test("an import whose account is unknown still points at the setup page", async ({
+  page,
+}) => {
+  await page.route("**/api/backend/auth/me", (route) =>
+    route.fulfill({ status: 503, json: { statusCode: 503 } }),
+  );
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Import app" }).click();
+  await page
+    .getByLabel("Store URL")
+    .fill("https://apps.apple.com/us/app/focus-timer/id123456789");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+
+  await expect(page.getByText(`Imported ${IMPORTED_APP.name}`)).toBeVisible();
+  await expect(
+    page.getByText("Import complete. Open the app setup page to continue."),
+  ).toBeVisible();
+});
+
 test("setup finished before progress was kept per account is not asked again", async ({
   page,
 }) => {
