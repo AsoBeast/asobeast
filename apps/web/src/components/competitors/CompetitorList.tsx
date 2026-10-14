@@ -28,6 +28,11 @@ import {
   storeLabel,
 } from "@/lib/format";
 import { useSingleFlight } from "@/lib/single-flight";
+import {
+  CollapseToggle,
+  CollapsibleContent,
+  CollapsibleSection,
+} from "./CollapsibleSection";
 import { exportCompetitors } from "./competitor-csv";
 
 function CompetitorCard({
@@ -130,26 +135,35 @@ export function CompetitorList({
 }) {
   const count = competitors.length;
   return (
-    <div className="flex flex-col gap-3">
+    <CollapsibleSection section="list" className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-body text-muted-foreground">
           {`${count} tracked ${count === 1 ? "competitor" : "competitors"}`}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => exportCompetitors(id, competitors)}
-          aria-label="Export competitors to CSV"
-        >
-          <Download />
-          Export CSV
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportCompetitors(id, competitors)}
+            aria-label="Export competitors to CSV"
+          >
+            <Download />
+            Export CSV
+          </Button>
+          <CollapseToggle label="tracked competitors" />
+        </div>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {competitors.map((competitor) => (
-          <CompetitorCard key={competitor.id} id={id} competitor={competitor} />
-        ))}
-      </div>
-    </div>
+      <CollapsibleContent className="-m-1 p-1">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {competitors.map((competitor) => (
+            <CompetitorCard
+              key={competitor.id}
+              id={id}
+              competitor={competitor}
+            />
+          ))}
+        </div>
+      </CollapsibleContent>
+    </CollapsibleSection>
   );
 }

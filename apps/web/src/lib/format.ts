@@ -131,3 +131,15 @@ export function storeLabel(store: Store): string {
 export function formatCountry(code: string): string {
   return countryNames.get(code.toLowerCase()) ?? code.toUpperCase();
 }
+
+const REGIONAL_INDICATOR_OFFSET = 0x1f1e6 - "a".charCodeAt(0);
+
+export function countryFlag(code: string): string {
+  const lower = code.toLowerCase();
+  if (!/^[a-z]{2}$/.test(lower)) return "";
+  return String.fromCodePoint(
+    ...[...lower].map(
+      (letter) => letter.charCodeAt(0) + REGIONAL_INDICATOR_OFFSET,
+    ),
+  );
+}

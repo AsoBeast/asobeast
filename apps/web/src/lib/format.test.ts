@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCategoryPosition,
   formatCompact,
+  countryFlag,
   formatCountry,
   formatDate,
   formatDateTime,
@@ -162,6 +163,19 @@ describe("storeLabel", () => {
     ["GOOGLE_PLAY", "Google Play"],
   ] as const)("labels %s as %s", (store, expected) => {
     expect(storeLabel(store)).toBe(expected);
+  });
+});
+
+describe("countryFlag", () => {
+  it("draws the flag of a storefront in any case", () => {
+    expect(countryFlag("de")).toBe("🇩🇪");
+    expect(countryFlag("US")).toBe("🇺🇸");
+  });
+
+  it("draws nothing for a code that is not two letters", () => {
+    expect(countryFlag("")).toBe("");
+    expect(countryFlag("usa")).toBe("");
+    expect(countryFlag("u1")).toBe("");
   });
 });
 

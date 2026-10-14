@@ -427,6 +427,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwGap',
           keyword: {
             text: 'habit tracker',
+            country: 'us',
             metrics: [{ traffic: 5, difficulty: 3 }],
           },
         },
@@ -434,6 +435,7 @@ describe('KeywordsService.compare', () => {
           keywordId: 'kwLead',
           keyword: {
             text: 'daily planner',
+            country: 'de',
             metrics: [{ traffic: 8, difficulty: 4 }],
           },
         },
@@ -458,6 +460,8 @@ describe('KeywordsService.compare', () => {
     const gapRow = result.rows.find((row) => row.keywordId === 'kwGap');
     const leadRow = result.rows.find((row) => row.keywordId === 'kwLead');
     expect(gapRow?.gap).toBe(true);
+    expect(gapRow?.country).toBe('us');
+    expect(leadRow?.country).toBe('de');
     expect(gapRow?.you).toBeNull();
     expect(gapRow?.positions.rival).toBe(3);
     expect(leadRow?.gap).toBe(false);

@@ -53,11 +53,12 @@ A column the store does not publish stays empty: `subtitle` on Google Play, `sum
 
 ## Export the keyword comparison to CSV
 
-The comparison matrix exports the rows it shows, in the order shown, after the search and the result filter. The file is named `keyword-comparison-<appId>-<date>.csv`, or `keyword-gaps-<appId>-<date>.csv` when **only gaps** is on, and then it holds the gap rows alone.
+The comparison matrix exports the rows it shows, in the order shown, after the search, the market filter and the result filter. The file is named `keyword-comparison-<appId>-<date>.csv`, or `keyword-gaps-<appId>-<date>.csv` when **only gaps** is on, and then it holds the gap rows alone.
 
 | Column | What it holds |
 | --- | --- |
 | `keyword` | The tracked phrase |
+| `country` | The two letter code of the market the keyword is tracked in |
 | `popularity`, `difficulty` | The scores on the 0 to 100 scale the matrix shows, empty when unscored |
 | `you` | Your position |
 | One column per competitor | That competitor's position, headed by its name |

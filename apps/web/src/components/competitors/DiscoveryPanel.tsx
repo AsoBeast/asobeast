@@ -13,7 +13,7 @@ import { dataTableFeatures } from "@/components/data-table/table-features";
 import { useUrlSorting } from "@/components/data-table/useUrlSorting";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -41,6 +41,11 @@ import {
 } from "@/lib/search-params";
 import { ariaSort } from "@/lib/table/sorting";
 import { cn } from "@/lib/utils";
+import {
+  CollapseToggle,
+  CollapsibleCard,
+  CollapsibleContent,
+} from "./CollapsibleSection";
 import { discoveryColumns } from "./discovery-columns";
 import { DiscoveryPanelSkeleton } from "./skeletons";
 
@@ -176,7 +181,7 @@ export function DiscoveryPanel({ id }: { id: string }) {
   const storeName = storeLabel(detail.store);
 
   return (
-    <Card>
+    <CollapsibleCard section="discovery">
       <CardHeader className="flex-row items-start justify-between gap-4">
         <div className="flex flex-col gap-1.5">
           <CardDescription>Discovery</CardDescription>
@@ -185,6 +190,9 @@ export function DiscoveryPanel({ id }: { id: string }) {
             <Badge variant="secondary">{storeName}</Badge>
           </div>
         </div>
+        <CardAction>
+          <CollapseToggle label="discovery" />
+        </CardAction>
         <Tabs
           value={String(days)}
           onValueChange={(next) => void setDays(Number(next) as typeof days)}
@@ -198,11 +206,13 @@ export function DiscoveryPanel({ id }: { id: string }) {
           </TabsList>
         </Tabs>
       </CardHeader>
-      <CardContent>
-        <Suspense fallback={<DiscoveryPanelSkeleton />}>
-          <DiscoveryTable id={id} days={days} storeName={storeName} />
-        </Suspense>
-      </CardContent>
-    </Card>
+      <CollapsibleContent>
+        <CardContent>
+          <Suspense fallback={<DiscoveryPanelSkeleton />}>
+            <DiscoveryTable id={id} days={days} storeName={storeName} />
+          </Suspense>
+        </CardContent>
+      </CollapsibleContent>
+    </CollapsibleCard>
   );
 }

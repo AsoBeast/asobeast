@@ -6,6 +6,7 @@ import type { KeywordComparisonRow } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
 import { Badge } from "@/components/ui/badge";
 import { GradedNumber, gradeWash } from "@/components/ui/graded";
+import { countryFlag, formatCountry } from "@/lib/format";
 import { grade } from "@/lib/grade";
 import { SortableHeader } from "@/components/data-table/SortableHeader";
 import { versusOf, type Versus } from "@/lib/table/facets";
@@ -55,7 +56,7 @@ export function bestPosition(
   return found.length > 0 ? Math.min(...found) : null;
 }
 
-function PositionCell({
+export function PositionCell({
   value,
   best,
 }: {
@@ -116,16 +117,24 @@ const SCORE_ABBR: Record<ComparisonScore, string> = {
 function KeywordCell({
   row,
   scores,
+  onOpen,
 }: {
   row: KeywordComparisonRow;
   scores: readonly ComparisonScore[];
+  onOpen: (keywordId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="inline-flex items-center gap-2 font-medium">
-        <span title={row.text} className="max-w-32 truncate md:max-w-64">
+        <button
+          type="button"
+          title={row.text}
+          aria-label={`Why apps rank for ${row.text}`}
+          onClick={() => onOpen(row.keywordId)}
+          className="max-w-32 truncate rounded-sm text-left underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring md:max-w-64"
+        >
           {row.text}
-        </span>
+        </button>
         {row.gap ? (
           <Badge variant="outline" className="border-warning/40 text-warning">
             Gap
@@ -148,12 +157,39 @@ function KeywordCell({
   );
 }
 
-export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
+function CountryCell({ country }: { country: string }) {
+  const name = formatCountry(country);
+  const flag = countryFlag(country);
+  if (!flag) {
+    return <span className="font-mono">{country.toUpperCase()}</span>;
+  }
+  return (
+    <span title={name} className="text-base leading-none">
+      <span aria-hidden>{flag}</span>
+      <span className="sr-only">{name}</span>
+    </span>
+  );
+}
+
+export function comparisonColumns(
+  competitors: readonly MatrixCompetitor[],
+  onOpenKeyword: (keywordId: string) => void,
+) {
   const competitorIds = competitors.map((competitor) => competitor.id);
   const isBest = (row: KeywordComparisonRow, value: number | null) =>
     value !== null && value === bestPosition(row, competitorIds);
 
   return columnHelper.columns([
+    columnHelper.accessor("country", {
+      id: "country",
+      sortFn: "text",
+      sortDescFirst: false,
+      meta: { label: "Market" },
+      filterFn: (row, id, country: string) =>
+        row.getValue<string>(id) === country,
+      header: ({ column }) => <SortableHeader column={column} label="Market" />,
+      cell: ({ row }) => <CountryCell country={row.original.country} />,
+    }),
     columnHelper.accessor("text", {
       id: "keyword",
       sortFn: "text",
@@ -165,6 +201,7 @@ export function comparisonColumns(competitors: readonly MatrixCompetitor[]) {
       cell: ({ row, table }) => (
         <KeywordCell
           row={row.original}
+          onOpen={onOpenKeyword}
           scores={SCORES.filter(
             (score) => !table.getColumn(score)?.getIsVisible(),
           )}

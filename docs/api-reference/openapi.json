@@ -1940,6 +1940,45 @@
         ]
       }
     },
+    "/apps/{id}/keywords/{keywordId}/breakdown": {
+      "get": {
+        "operationId": "KeywordsController_breakdown",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "keywordId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Show how the listing of an app and of each competitor matches a keyword",
+        "tags": [
+          "keywords"
+        ]
+      }
+    },
     "/apps/{id}/keywords/suggestions": {
       "get": {
         "operationId": "KeywordsController_suggestions",
@@ -4032,6 +4071,63 @@
           }
         },
         "summary": "Keyword gap and positioning analysis",
+        "tags": [
+          "competitors"
+        ]
+      }
+    },
+    "/apps/{id}/competitors/keyword-ideas": {
+      "get": {
+        "operationId": "CompetitorsController_keywordIdeas",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "required": false,
+            "in": "query",
+            "description": "Storefront to read competitor listings and search suggestions in. Omitted means the home market of the app.",
+            "schema": {
+              "pattern": "^[a-z]{2}$",
+              "example": "de",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Object"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Search suggestions the store returns for the phrases competitors share",
         "tags": [
           "competitors"
         ]

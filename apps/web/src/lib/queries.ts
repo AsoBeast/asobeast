@@ -46,7 +46,9 @@ import {
   getChanges,
   getEmailAlerts,
   getComparison,
+  getKeywordBreakdown,
   getCompetitorDiscovery,
+  getCompetitorKeywordIdeas,
   getCompetitors,
   getFirstRun,
   getHealth,
@@ -117,6 +119,8 @@ export const appKeys = {
     [...appKeys.detail(id), "spider", { term, country }] as const,
   compare: (id: string, onlyGaps: boolean) =>
     [...appKeys.detail(id), "compare", { onlyGaps }] as const,
+  keywordBreakdown: (id: string, keywordId: string) =>
+    [...appKeys.detail(id), "compare", "breakdown", keywordId] as const,
   rankings: (id: string, params: RankingParams) =>
     [...appKeys.detail(id), "rankings", params] as const,
   serpMoversRoot: (id: string) =>
@@ -144,6 +148,8 @@ export const appKeys = {
     ] as const,
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
+  keywordIdeas: (id: string, country: string) =>
+    [...appKeys.detail(id), "keyword-ideas", { country }] as const,
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
@@ -525,6 +531,12 @@ export const comparisonOptions = (id: string, onlyGaps: boolean) =>
     queryFn: () => getComparison(id, onlyGaps),
   });
 
+export const keywordBreakdownOptions = (id: string, keywordId: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordBreakdown(id, keywordId),
+    queryFn: () => getKeywordBreakdown(id, keywordId),
+  });
+
 export const rankingsOptions = (id: string, params: RankingParams) =>
   queryOptions({
     queryKey: appKeys.rankings(id, params),
@@ -601,6 +613,14 @@ export const competitorsOptions = (id: string) =>
   queryOptions({
     queryKey: appKeys.competitors(id),
     queryFn: () => getCompetitors(id),
+  });
+
+export const keywordIdeasOptions = (id: string, country: string) =>
+  queryOptions({
+    queryKey: appKeys.keywordIdeas(id, country),
+    queryFn: () => getCompetitorKeywordIdeas(id, country),
+    staleTime: Number.POSITIVE_INFINITY,
+    retry: false,
   });
 
 export const discoveryOptions = (id: string, days: number) =>

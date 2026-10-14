@@ -28,6 +28,8 @@ A position check searches the keyword's storefront once and records positions fo
 
 So adding a competitor costs zero extra store requests on keywords you already track. Ten competitors on a keyword are still one search per day. Adding a _keyword_, or a market, is what costs budget. See [Countries and markets](/concepts/countries).
 
+Every section of the competitors page has a chevron in its header that collapses it and expands it again. Your browser remembers which sections you collapsed.
+
 ## Compare listings
 
 The comparison view puts your listing beside each competitor field by field, with character counts against the store limits.
@@ -36,13 +38,25 @@ The gap analysis is the useful half: it shows phrases competitors index that you
 
 ## Read the comparison matrix
 
-The matrix lists every tracked keyword with your position and each competitor's. Click any header to sort by it, your own column and each competitor included, and click again to reverse. Search narrows the keywords by text, and the result filter keeps the rows where you are **winning** (you rank best, or alone), **losing** (a competitor ranks better, or ranks where you do not) or **tied**. The only gaps switch still asks the server for gap rows alone.
+The matrix lists every tracked keyword with your position and each competitor's. The first column shows the flag of the market the keyword is tracked in, so the same phrase tracked in two markets is two rows you can tell apart. Click any header to sort by it, your own column and each competitor included, and click again to reverse. Search narrows the keywords by text, the market filter keeps the rows of one market and appears once you track keywords in more than one, and the result filter keeps the rows where you are **winning** (you rank best, or alone), **losing** (a competitor ranks better, or ranks where you do not) or **tied**. The only gaps switch still asks the server for gap rows alone.
 
 Each position is shaded by its grade and the best position in a row stays underlined. Popularity and difficulty carry their grade too. See [How are scores graded?](/concepts/scoring#how-are-scores-graded).
+
+Click a keyword to open a panel that lists you and every competitor with the position each holds and what its listing says for that keyword. The panel reads the title and the subtitle, or the short description on Google Play, of the listing in the keyword's market. For your own app it also reads the App Store keyword field you entered, when the keyword is tracked in your home market. An App Store market searches every language version of a listing it offers, so the panel also reads those for each app where asobeast has captured them, shows the ones that match under the name of their language, and names the ones it could not check. Words in two different language versions do not combine into one phrase, so each version is counted on its own.
+
+Each competitor that ranks above you carries a one line reason, picked by fixed rules from what the panel can see: a stronger place for the keyword (title before subtitle before keyword field, and an intact phrase before scattered words), a much larger number of ratings in that market, no visible match at all, or language versions that could not be checked. Your own card says how many competitors rank above you, which words no single listing of yours covers, and whether your listing text changed in the last four weeks, because ranks usually take two to four weeks to settle. A word counts as a match when it differs from the keyword only by its accents, such as `visites` for `visités`, because the stores usually treat the two spellings as the same search. The panel says when a match is of that kind, since the accented spelling could still help. These are rules of thumb. Neither store publishes how it weighs a field, and installs, the strongest signal, are not visible for other apps. It marks the keyword's words where they appear and says whether a field holds the exact phrase, some of the words or none. It shows the rating beside them. An app can still rank without the words showing, because search also reads fields only the developer sees, such as the App Store keyword field.
 
 **Export CSV** in the matrix writes the rows shown, in the order shown, and the competitor list above it exports as well. See [Export the keyword comparison to CSV](/guides/export-data#export-the-keyword-comparison-to-csv).
 
 Discovery sorts the same way, by appearances, keywords, best position, average position or rating, and searches by app name.
+
+## Find keyword ideas from competitors
+
+The keyword ideas card turns what your competitors say into searches worth tracking. Pick a market and choose **Find ideas**. asobeast reads each competitor's title and subtitle in that market, keeps the phrases of two or three words, and asks the store's search suggestions what people type around each one. A suggestion is a search real people make, so nothing is invented by combining words.
+
+Each idea shows its position in the suggestions for the phrase it came from, the competitors whose listing already covers it, and the Apple search popularity when Apple reports one. Apple reports a score only for the most searched terms of a market, so most ideas carry a position and no score. Names of apps, the brand a single competitor leads its title with and phrases you already track in that market are left out. **Track** adds the idea to your keywords in the market you picked, and it gets a popularity and a difficulty score on the next scoring run.
+
+The search runs when you ask for it, because it spends store requests, and it counts against the same limit as keyword suggestions.
 
 ## Watch competitor metadata changes
 

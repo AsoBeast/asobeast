@@ -2,6 +2,7 @@ import type {
   CompetitorAddRequest,
   CompetitorDiscovery,
   CompetitorItem,
+  CompetitorKeywordIdeas,
 } from "@asobeast/shared";
 import { apiFetch } from "./client";
 
@@ -35,5 +36,14 @@ export function getCompetitorDiscovery(
   const query = days !== undefined ? `?days=${days}` : "";
   return apiFetch<CompetitorDiscovery>(
     `/apps/${appId}/competitors/discovery${query}`,
+  );
+}
+
+export function getCompetitorKeywordIdeas(
+  appId: string,
+  country: string,
+): Promise<CompetitorKeywordIdeas> {
+  return apiFetch<CompetitorKeywordIdeas>(
+    `/apps/${appId}/competitors/keyword-ideas?country=${country}`,
   );
 }

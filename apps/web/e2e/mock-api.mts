@@ -70,6 +70,8 @@ import {
   RATE_LIMIT_RESET_SECONDS,
   RECENT_CHANGES,
   SCREENSHOTS,
+  KEYWORD_BREAKDOWNS,
+  KEYWORD_IDEAS,
   SERP_SNAPSHOTS,
   WEBHOOKS,
   emptyScreenshots,
@@ -1624,6 +1626,17 @@ const routes: Route[] = [
   },
   {
     method: "GET",
+    pattern: /^\/apps\/[^/]+\/keywords\/([^/]+)\/breakdown$/,
+    handler: ([keywordId], req, res) => {
+      const breakdown = KEYWORD_BREAKDOWNS[keywordId];
+      if (!breakdown) {
+        return json(res, 404, errorEnvelope(404, req.url ?? "/"));
+      }
+      json(res, 200, breakdown);
+    },
+  },
+  {
+    method: "GET",
     pattern: /^\/keywords\/([^/]+)\/serp$/,
     handler: ([keywordId], req, res) => {
       const snapshot = SERP_SNAPSHOTS[keywordId];
@@ -2125,6 +2138,13 @@ const routes: Route[] = [
   appRoute(
     /^\/apps\/([^/]+)\/changes\/impact$/,
     (dataset) => dataset.changeImpact,
+  ),
+  appRoute(
+    /^\/apps\/([^/]+)\/competitors\/keyword-ideas$/,
+    (_dataset, query) => ({
+      ...KEYWORD_IDEAS,
+      country: query.get("country") ?? KEYWORD_IDEAS.country,
+    }),
   ),
   appRoute(
     /^\/apps\/([^/]+)\/competitors\/discovery$/,

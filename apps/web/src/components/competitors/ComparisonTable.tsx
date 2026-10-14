@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { flexRender, useTable } from "@tanstack/react-table";
-import { useQueryStates } from "nuqs";
+import { useQueryState, useQueryStates } from "nuqs";
 import type { CompetitorItem, KeywordComparison } from "@asobeast/shared";
 import { FilteredEmpty } from "@/components/data-table/FilteredEmpty";
 import { dataTableFeatures } from "@/components/data-table/table-features";
@@ -18,6 +18,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  ALL_MATRIX_COUNTRIES,
+  breakdownParser,
   matrixFilterParsers,
   matrixSortParser,
   sortDirectionParser,
@@ -30,16 +32,23 @@ import {
 } from "./comparison-columns";
 import { exportComparison } from "./comparison-csv";
 import { ComparisonFilterBar } from "./ComparisonFilterBar";
+import { KeywordBreakdownSheet } from "./KeywordBreakdownSheet";
+
+const MARKET_PIN = "sticky left-0 w-20 min-w-20 bg-inherit text-center";
 
 const HEAD_CLASS: Record<string, string> = {
+  country: cn(MARKET_PIN, "z-20"),
   keyword: "sticky left-0 z-20 bg-inherit",
   you: "border-x bg-secondary text-center",
 };
 
 const CELL_CLASS: Record<string, string> = {
+  country: cn(MARKET_PIN, "z-10"),
   keyword: "sticky left-0 z-10 bg-inherit",
   you: "border-x bg-secondary/40 text-center",
 };
+
+const AFTER_MARKET = "left-20";
 
 export function ComparisonTable({
   data,
@@ -58,6 +67,8 @@ export function ComparisonTable({
   });
   const [filters, setFilters] = useQueryStates(matrixFilterParsers);
 
+  const [, setBreakdown] = useQueryState("keyword", breakdownParser);
+
   const columns = useMemo(() => {
     const icons = new Map(competitors.map((item) => [item.id, item.iconUrl]));
     return comparisonColumns(
@@ -65,8 +76,21 @@ export function ComparisonTable({
         ...competitor,
         iconUrl: icons.get(competitor.id) ?? null,
       })),
+      (keywordId) => void setBreakdown(keywordId),
     );
-  }, [competitors, data.competitors]);
+  }, [competitors, data.competitors, setBreakdown]);
+
+  const countries = useMemo(
+    () => [...new Set(data.rows.map((row) => row.country))].sort(),
+    [data.rows],
+  );
+
+  const columnFilters = [
+    ...(filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }]),
+    ...(filters.country === ALL_MATRIX_COUNTRIES
+      ? []
+      : [{ id: "country", value: filters.country }]),
+  ];
 
   const [visibility, setVisibility] = useStoredColumnVisibility(
     "comparison",
@@ -88,8 +112,7 @@ export function ComparisonTable({
     state: {
       sorting,
       globalFilter: filters.q,
-      columnFilters:
-        filters.vs === "all" ? [] : [{ id: "versus", value: filters.vs }],
+      columnFilters,
       columnVisibility: { ...visibility, ...HIDDEN_COMPARISON_COLUMNS },
     },
     onSortingChange,
@@ -100,12 +123,16 @@ export function ComparisonTable({
     getColumnCanGlobalFilter: (column) => column.id === "keyword",
   });
   const rows = table.getRowModel().rows;
+  const keywordOffset = table.getColumn("country")?.getIsVisible()
+    ? AFTER_MARKET
+    : null;
 
   return (
     <div className="flex flex-col gap-3">
       <ComparisonFilterBar
         filters={filters}
         setFilters={setFilters}
+        countries={countries}
         shown={rows.length}
         total={data.rows.length}
         columns={table.getAllLeafColumns()}
@@ -130,7 +157,10 @@ export function ComparisonTable({
                 <TableHead
                   key={header.id}
                   aria-sort={ariaSort(header.column.getIsSorted())}
-                  className={HEAD_CLASS[header.column.id] ?? "text-center"}
+                  className={cn(
+                    HEAD_CLASS[header.column.id] ?? "text-center",
+                    header.column.id === "keyword" && keywordOffset,
+                  )}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -160,7 +190,10 @@ export function ComparisonTable({
               {row.getVisibleCells().map((cell) => (
                 <TableCell
                   key={cell.id}
-                  className={CELL_CLASS[cell.column.id] ?? "text-center"}
+                  className={cn(
+                    CELL_CLASS[cell.column.id] ?? "text-center",
+                    cell.column.id === "keyword" && keywordOffset,
+                  )}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </TableCell>
@@ -169,6 +202,7 @@ export function ComparisonTable({
           ))}
         </TableBody>
       </Table>
+      <KeywordBreakdownSheet appId={appId} />
     </div>
   );
 }

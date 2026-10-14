@@ -9,6 +9,7 @@ function row(
   return {
     keywordId: "kw-1",
     text: "geography quiz",
+    country: "us",
     traffic,
     difficulty,
     you: null,

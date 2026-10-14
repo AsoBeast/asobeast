@@ -67,6 +67,11 @@ describe('StoreDeadlineInterceptor', () => {
       'marketAvailability',
     ],
     ['POST /apps/{id}/competitors', CompetitorsController, 'add'],
+    [
+      'GET /apps/{id}/competitors/keyword-ideas',
+      CompetitorsController,
+      'keywordIdeas',
+    ],
     ['GET /apps/{id}/keywords/suggestions', KeywordsController, 'suggestions'],
   ])(
     'bounds %s, which waits on a store, by the deadline',

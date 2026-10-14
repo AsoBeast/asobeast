@@ -15,6 +15,7 @@ function row(over: Partial<KeywordComparisonRow> = {}): KeywordComparisonRow {
   return {
     keywordId: "kw-1",
     text: "focus timer",
+    country: "us",
     traffic: 5.5,
     difficulty: 4,
     you: 3,
@@ -32,7 +33,7 @@ const lines = (
 describe("comparisonCsv", () => {
   it("heads the file with the fixed columns around one column per competitor", () => {
     expect(lines([RIVAL], [])[0]).toBe(
-      "﻿keyword,popularity,difficulty,you,Rival Focus,result,gap",
+      "﻿keyword,country,popularity,difficulty,you,Rival Focus,result,gap",
     );
   });
 
@@ -42,15 +43,15 @@ describe("comparisonCsv", () => {
       [row({ text: "=cmd|'/c calc'!A1" })],
     );
     expect(header).toContain(",you,'+Rival,result,");
-    expect(first.startsWith("'=cmd|'/c calc'!A1,")).toBe(true);
+    expect(first.startsWith("'=cmd|'/c calc'!A1,us,")).toBe(true);
   });
 
   it("writes scores on the display scale and leaves an unscored one empty", () => {
     expect(lines([RIVAL], [row({ traffic: 4.1, difficulty: 48.2 })])[1]).toBe(
-      "focus timer,41,100,3,9,winning,false",
+      "focus timer,us,41,100,3,9,winning,false",
     );
     expect(lines([RIVAL], [row({ traffic: null, difficulty: null })])[1]).toBe(
-      "focus timer,,,3,9,winning,false",
+      "focus timer,us,,,3,9,winning,false",
     );
   });
 
@@ -60,26 +61,26 @@ describe("comparisonCsv", () => {
         [RIVAL],
         [row({ you: null, positions: { "comp-1": 8 }, gap: true })],
       )[1],
-    ).toBe(`focus timer,55,40,>${RANK_DEPTH},8,losing,true`);
+    ).toBe(`focus timer,us,55,40,>${RANK_DEPTH},8,losing,true`);
     expect(lines([RIVAL], [row({ positions: {} })])[1]).toBe(
-      `focus timer,55,40,3,>${RANK_DEPTH},winning,false`,
+      `focus timer,us,55,40,3,>${RANK_DEPTH},winning,false`,
     );
   });
 
   it("names the result and flags the gap", () => {
     expect(
       lines([RIVAL], [row({ you: 5, positions: { "comp-1": 5 } })])[1],
-    ).toBe("focus timer,55,40,5,5,tied,false");
+    ).toBe("focus timer,us,55,40,5,5,tied,false");
     expect(
       lines([RIVAL], [row({ you: null, positions: { "comp-1": null } })])[1],
-    ).toBe(`focus timer,55,40,>${RANK_DEPTH},>${RANK_DEPTH},,false`);
+    ).toBe(`focus timer,us,55,40,>${RANK_DEPTH},>${RANK_DEPTH},,false`);
   });
 
   it("keeps every header unique when competitor names repeat or are missing", () => {
     const named = (names: Array<string | null>) =>
       names.map((name, index) => ({ id: `comp-${index}`, name }));
     expect(lines(named(["Focus", "Focus", null, null, "you"]), [])[0]).toBe(
-      "﻿keyword,popularity,difficulty,you,Focus,Focus (2),Competitor,Competitor (2),you (2),result,gap",
+      "﻿keyword,country,popularity,difficulty,you,Focus,Focus (2),Competitor,Competitor (2),you (2),result,gap",
     );
     expect(lines(named(["Focus (2)", "Focus", "Focus"]), [])[0]).toContain(
       ",you,Focus (2),Focus,Focus (3),result,",

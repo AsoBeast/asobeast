@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
+  KeywordBreakdown,
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
@@ -73,6 +74,18 @@ export class KeywordsController {
     @Query() query: CompareQueryDto,
   ): Promise<KeywordComparison> {
     return this.keywords.compare(id, query.onlyGaps);
+  }
+
+  @Get('keywords/:keywordId/breakdown')
+  @ApiOperation({
+    summary:
+      'Show how the listing of an app and of each competitor matches a keyword',
+  })
+  breakdown(
+    @Param('id') id: string,
+    @Param('keywordId') keywordId: string,
+  ): Promise<KeywordBreakdown> {
+    return this.keywords.breakdown(id, keywordId);
   }
 
   @Get('keywords/suggestions')

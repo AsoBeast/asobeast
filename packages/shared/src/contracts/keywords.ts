@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { MetadataField } from '../aso/limits';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
 export interface ScoreSignals {
@@ -83,6 +84,7 @@ export interface KeywordComparisonCompetitor {
 export interface KeywordComparisonRow {
   keywordId: string;
   text: string;
+  country: string;
   traffic: number | null;
   difficulty: number | null;
   you: number | null;
@@ -93,6 +95,74 @@ export interface KeywordComparisonRow {
 export interface KeywordComparison {
   competitors: KeywordComparisonCompetitor[];
   rows: KeywordComparisonRow[];
+}
+
+export interface KeywordBreakdownField {
+  field: MetadataField;
+  value: string | null;
+  phrase: boolean;
+  terms: string[];
+  looseTerms: string[];
+}
+
+export interface KeywordBreakdownLocalization {
+  localization: string;
+  sourceCountry: string;
+  fields: KeywordBreakdownField[];
+  matchedTerms: number;
+}
+
+export type KeywordPlacement =
+  | 'title'
+  | 'subtitle'
+  | 'shortDescription'
+  | 'keywordField'
+  | 'split'
+  | 'partial'
+  | 'none';
+
+export type KeywordBreakdownInsight =
+  | { rule: 'placement'; theirs: KeywordPlacement; yours: KeywordPlacement }
+  | { rule: 'accent'; terms: string[] }
+  | { rule: 'ratings'; theirs: number; yours: number }
+  | { rule: 'unchecked'; localizations: number }
+  | { rule: 'hidden' }
+  | { rule: 'similar' };
+
+export interface KeywordBreakdownStanding {
+  above: number;
+  competitors: number;
+  aboveWithStrongerPlacement: number;
+  missingTerms: string[];
+  accentTerms: string[];
+  changedDaysAgo: number | null;
+}
+
+export interface KeywordBreakdownApp {
+  appId: string;
+  name: string | null;
+  iconUrl: string | null;
+  isYou: boolean;
+  position: number | null;
+  listingCountry: string | null;
+  fields: KeywordBreakdownField[];
+  matchedTerms: number;
+  localizations: KeywordBreakdownLocalization[];
+  unreadLocalizations: string[];
+  placement: KeywordPlacement;
+  accentTerms: string[];
+  insight: KeywordBreakdownInsight | null;
+  ratingAvg: number | null;
+  ratingCount: number | null;
+}
+
+export interface KeywordBreakdown {
+  keywordId: string;
+  text: string;
+  country: string;
+  terms: string[];
+  standing: KeywordBreakdownStanding | null;
+  apps: KeywordBreakdownApp[];
 }
 
 export interface KeywordUpdateRequest {
