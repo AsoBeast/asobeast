@@ -7,7 +7,8 @@ import { testDb } from './helpers/test-db';
 
 describe('the app setup table (e2e)', () => {
   const sql = migrationSql('add_app_setup');
-  const backfill = /INSERT INTO "AppSetup"[\s\S]*?;/.exec(sql)?.[0] ?? '';
+  const backfill = /INSERT INTO "AppSetup"[\s\S]*?;/.exec(sql)?.[0];
+  if (!backfill) throw new Error('the add_app_setup migration has no backfill');
   let prisma: PrismaClient;
 
   const seedApp = (
@@ -143,7 +144,10 @@ describe('the app setup table (e2e)', () => {
 
   it('deletes the row with its app', async () => {
     const app = await seedApp('a');
-    await prisma.$executeRawUnsafe(backfill);
+    await prisma.appSetup.create({
+      data: { appId: app.id, workspaceId: DEFAULT_WORKSPACE_ID },
+    });
+    await expect(prisma.appSetup.count()).resolves.toBe(1);
 
     await prisma.app.delete({ where: { id: app.id } });
 
@@ -154,7 +158,7 @@ describe('the app setup table (e2e)', () => {
     const workspace = await prisma.workspace.create({
       data: { id: 'ws_setup_gone', name: 'Gone' },
     });
-    await prisma.app.create({
+    const app = await prisma.app.create({
       data: {
         workspaceId: workspace.id,
         store: Store.APP_STORE,
@@ -162,7 +166,10 @@ describe('the app setup table (e2e)', () => {
         country: 'us',
       },
     });
-    await prisma.$executeRawUnsafe(backfill);
+    await prisma.appSetup.create({
+      data: { appId: app.id, workspaceId: workspace.id },
+    });
+    await expect(prisma.appSetup.count()).resolves.toBe(1);
 
     await prisma.workspace.delete({ where: { id: workspace.id } });
 

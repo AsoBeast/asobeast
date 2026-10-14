@@ -7,6 +7,7 @@ import { AppDetail, AppSetupState, SETUP_MARKETS_MAX } from '@asobeast/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
+import { AppSetupService } from '../src/apps/app-setup.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import { seedApiToken, seedWorkspace } from './helpers/api-tokens';
@@ -144,6 +145,35 @@ describe('App setup (e2e)', () => {
       status: 'in_progress',
       skipped: ['keywords'],
     });
+  });
+
+  it('still imports the app when its setup cannot be started', async () => {
+    jest
+      .spyOn(app.get(AppSetupService), 'begin')
+      .mockRejectedValueOnce(new Error('database unreachable'));
+
+    const imported = (
+      await api.post('/apps').send({ url: US_APP_URL }).expect(201)
+    ).body as AppDetail;
+
+    await expect(readSetup(imported.id)).resolves.toMatchObject({
+      status: 'not_started',
+      updatedAt: null,
+    });
+  });
+
+  it('keeps the first completion time and clears it when restarted from a dismissal', async () => {
+    const { id } = await createApp();
+    await patchSetup(id, { status: 'in_progress' });
+
+    const first = await patchSetup(id, { status: 'completed' });
+    const again = await patchSetup(id, { status: 'completed' });
+    expect(again.completedAt).toBe(first.completedAt);
+
+    await patchSetup(id, { status: 'dismissed' });
+    await expect(
+      patchSetup(id, { status: 'in_progress' }),
+    ).resolves.toMatchObject({ status: 'in_progress', completedAt: null });
   });
 
   it('patches one field and keeps the rest', async () => {

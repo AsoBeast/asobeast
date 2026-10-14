@@ -99,7 +99,7 @@ export class AppsService {
       { admit: this.quota.admitApp() },
     );
 
-    await this.setups.begin(app);
+    await this.beginSetup(app);
     await this.localizations.capture(app, market, snapshot);
     await this.keywords.syncFromSnapshot(app.id);
 
@@ -118,6 +118,16 @@ export class AppsService {
     await this.scheduleFirstRun(app.id);
 
     return toAppDetail(app, snapshot, [], null);
+  }
+
+  private async beginSetup(app: { id: string; country: string }) {
+    try {
+      await this.setups.begin(app);
+    } catch (error: unknown) {
+      this.logger.error(
+        `could not start the guided setup of ${app.id}, so it opens as not started: ${reason(error)}`,
+      );
+    }
   }
 
   private async scheduleFirstRun(appId: string): Promise<void> {
