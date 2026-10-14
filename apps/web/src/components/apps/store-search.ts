@@ -19,10 +19,11 @@ export type EnterAction =
   | { kind: "pick"; result: StoreSearchResult }
   | { kind: "focus" };
 
-const URL_SHAPE = /[/:]/;
+const STORE_ADDRESS =
+  /^(?:https?:\/\/|(?:apps|itunes)\.apple\.com\/|play\.google\.com\/)/i;
 
 export function isStoreAddress(value: string): boolean {
-  return URL_SHAPE.test(value.trim());
+  return STORE_ADDRESS.test(value.trim());
 }
 
 export function classifyInput(value: string): StoreInput {

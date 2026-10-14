@@ -166,7 +166,8 @@ export function StoreSearchField({
   const listId = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const listed = search.results !== undefined && search.results.length > 0;
+  const listed =
+    !search.error && search.results !== undefined && search.results.length > 0;
 
   return (
     <div className="flex flex-col gap-2">
@@ -175,7 +176,7 @@ export function StoreSearchField({
         <Input
           id={id}
           type="text"
-          inputMode="url"
+          inputMode="search"
           autoComplete="off"
           autoCapitalize="none"
           spellCheck={false}

@@ -46,7 +46,7 @@ export function useStoreSearch(
 
   const query = useQuery({
     ...storeSearchOptions(store, country, term),
-    enabled: term !== "",
+    enabled: term !== "" && q !== "",
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === store &&
       previousQuery.queryKey[2] === country
@@ -72,10 +72,12 @@ export function useStoreSearch(
     input,
     q,
     results,
-    pending: q !== "" && !settled && !query.isError,
+    pending: q !== "" && !settled && !(current && query.isError),
     settled,
     error: current ? query.error : null,
-    retry: () => void query.refetch(),
+    retry: () => {
+      if (current) void query.refetch();
+    },
     firstResultRef,
     enterName,
   };

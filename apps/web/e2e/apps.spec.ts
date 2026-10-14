@@ -334,6 +334,20 @@ test.describe("importing by name", () => {
     ).toHaveAttribute("aria-selected", "true");
   });
 
+  test("a name with a colon or a slash is searched rather than refused", async ({
+    page,
+  }) => {
+    const searches = recordSearches(page);
+    const dialog = await openDialog(page);
+
+    await dialog.getByLabel("App name or store URL").fill("Focus: Deep/Work");
+
+    await expect(
+      dialog.getByText("No listing named “Focus: Deep/Work” in United States."),
+    ).toBeVisible();
+    expect(searches.at(-1)?.searchParams.get("q")).toBe("Focus: Deep/Work");
+  });
+
   test("enter on a one letter name asks for more", async ({ page }) => {
     const imports = recordImports(page);
     const dialog = await openDialog(page);

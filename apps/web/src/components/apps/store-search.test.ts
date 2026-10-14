@@ -56,9 +56,12 @@ describe("classifyInput", () => {
     });
   });
 
-  it.each(["focus timer", "Duolingo", "f"])("reads %s as a name", (value) => {
-    expect(classifyInput(` ${value} `)).toEqual({ kind: "name", q: value });
-  });
+  it.each(["focus timer", "Duolingo", "f", "Todoist: To-Do List", "AC/DC Fan"])(
+    "reads %s as a name",
+    (value) => {
+      expect(classifyInput(` ${value} `)).toEqual({ kind: "name", q: value });
+    },
+  );
 });
 
 describe("isStoreAddress", () => {
@@ -70,6 +73,8 @@ describe("isStoreAddress", () => {
     expect(isStoreAddress("570060128")).toBe(false);
     expect(isStoreAddress("com.duolingo")).toBe(false);
     expect(isStoreAddress("2 Player Games")).toBe(false);
+    expect(isStoreAddress("Todoist: To-Do List")).toBe(false);
+    expect(isStoreAddress("AC/DC Fan")).toBe(false);
   });
 });
 
