@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { AppSetup } from '@prisma/client';
 import {
   PortfolioApp,
   PortfolioGroup,
   PortfolioSummary,
+  setupSummary,
 } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -16,6 +18,7 @@ import {
   windowVisibility,
 } from './analytics.support';
 import { countChangeDays } from './change-days';
+import { defaultSetup, toSetupState } from '../apps/apps.mapper';
 import { HOME_EVENTS, LATEST_HOME_LISTING } from '../apps/listing';
 
 const CHANGES_WINDOW_DAYS = 7;
@@ -41,13 +44,17 @@ export class PortfolioService {
           ...LATEST_HOME_LISTING,
           select: { capturedAt: true },
         },
+        appSetup: true,
       },
     });
 
-    const [members, changes7d] = await Promise.all([
-      Promise.all(apps.map((app) => this.portfolioMember(app))),
+    const [homeKeywords, changes7d] = await Promise.all([
+      this.activeHomeKeywords(apps),
       this.workspaceChanges(CHANGES_WINDOW_DAYS),
     ]);
+    const members = await Promise.all(
+      apps.map((app) => this.portfolioMember(app, homeKeywords.get(app.id))),
+    );
 
     const portfolioApps = members.map((member) => member.app);
     portfolioApps.sort(
@@ -77,18 +84,22 @@ export class PortfolioService {
     };
   }
 
-  private async portfolioMember(app: {
-    id: string;
-    store: PortfolioApp['store'];
-    storeAppId: string;
-    country: string;
-    name: string | null;
-    iconUrl: string | null;
-    groupId: string | null;
-    group: { name: string } | null;
-    _count: { competitors: number };
-    snapshots: { capturedAt: Date }[];
-  }): Promise<GroupMember & { app: PortfolioApp }> {
+  private async portfolioMember(
+    app: {
+      id: string;
+      store: PortfolioApp['store'];
+      storeAppId: string;
+      country: string;
+      name: string | null;
+      iconUrl: string | null;
+      groupId: string | null;
+      group: { name: string } | null;
+      _count: { competitors: number };
+      snapshots: { capturedAt: Date }[];
+      appSetup: AppSetup | null;
+    },
+    homeKeywords = 0,
+  ): Promise<GroupMember & { app: PortfolioApp }> {
     const { rows, referenceDate: reference } = await sparklineRows(
       this.prisma,
       app.id,
@@ -116,8 +127,29 @@ export class PortfolioService {
         trackedKeywords: rows.length,
         competitors: app._count.competitors,
         lastCapturedAt: app.snapshots[0]?.capturedAt.toISOString() ?? null,
+        setup: setupSummary(
+          app.appSetup ? toSetupState(app.appSetup) : defaultSetup(app),
+          { competitors: app._count.competitors, keywords: homeKeywords },
+        ),
       },
     };
+  }
+
+  private async activeHomeKeywords(
+    apps: { id: string; country: string }[],
+  ): Promise<Map<string, number>> {
+    const counts = await this.prisma.trackedKeyword.groupBy({
+      by: ['appId'],
+      where: {
+        active: true,
+        OR: apps.map((app) => ({
+          appId: app.id,
+          keyword: { country: app.country },
+        })),
+      },
+      _count: { _all: true },
+    });
+    return new Map(counts.map((row) => [row.appId, row._count._all]));
   }
 
   private async workspaceChanges(days: number): Promise<number> {

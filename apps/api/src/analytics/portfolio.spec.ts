@@ -7,12 +7,14 @@ describe('PortfolioService.portfolio', () => {
   const appFindMany = jest.fn();
   const rankingFindFirst = jest.fn();
   const trackedFindMany = jest.fn();
+  const trackedGroupBy = jest.fn();
   const changeEventFindMany = jest.fn();
 
   beforeEach(async () => {
     appFindMany.mockReset();
     rankingFindFirst.mockReset();
     trackedFindMany.mockReset();
+    trackedGroupBy.mockReset().mockResolvedValue([]);
     changeEventFindMany.mockReset();
 
     const moduleRef = await Test.createTestingModule({
@@ -23,7 +25,10 @@ describe('PortfolioService.portfolio', () => {
           useValue: {
             app: { findMany: appFindMany },
             keywordRanking: { findFirst: rankingFindFirst },
-            trackedKeyword: { findMany: trackedFindMany },
+            trackedKeyword: {
+              findMany: trackedFindMany,
+              groupBy: trackedGroupBy,
+            },
             changeEvent: { findMany: changeEventFindMany },
           },
         },
@@ -71,6 +76,13 @@ describe('PortfolioService.portfolio', () => {
         trackedKeywords: 0,
         competitors: 0,
         lastCapturedAt: null,
+        setup: {
+          status: 'not_started',
+          updatedAt: null,
+          done: 0,
+          total: 3,
+          next: 'competitors',
+        },
       },
     ]);
     expect(result.groups).toEqual([]);
@@ -210,6 +222,60 @@ describe('PortfolioService.portfolio', () => {
     const ios = result.apps.find((app) => app.id === 'ios')!;
     expect(result.groups[0].visibility.current).toBe(ios.visibility.current);
     expect(result.groups[0].memberAppIds).toEqual(['ios', 'android']);
+  });
+
+  it('summarises the setup of each app from its row and its active home keywords', async () => {
+    appFindMany.mockImplementation(
+      (args: { where?: { isCompetitor?: boolean } }) =>
+        args.where?.isCompetitor === false
+          ? [
+              {
+                id: 'app_1',
+                store: 'APP_STORE',
+                country: 'de',
+                name: 'Started',
+                iconUrl: null,
+                groupId: null,
+                group: null,
+                _count: { competitors: 1 },
+                snapshots: [],
+                appSetup: {
+                  appId: 'app_1',
+                  workspaceId: 'ws_1',
+                  status: 'in_progress',
+                  skipped: [],
+                  countriesReviewed: true,
+                  selectedMarkets: ['de'],
+                  completedAt: null,
+                  createdAt: new Date('2026-10-14T08:00:00.000Z'),
+                  updatedAt: new Date('2026-10-14T09:00:00.000Z'),
+                },
+              },
+            ]
+          : [{ id: 'app_1' }],
+    );
+    rankingFindFirst.mockResolvedValue(null);
+    trackedFindMany.mockResolvedValue([]);
+    trackedGroupBy.mockResolvedValue([{ appId: 'app_1', _count: { _all: 9 } }]);
+    changeEventFindMany.mockResolvedValue([]);
+
+    const result = await service.portfolio();
+
+    expect(result.apps[0].setup).toEqual({
+      status: 'in_progress',
+      updatedAt: '2026-10-14T09:00:00.000Z',
+      done: 2,
+      total: 3,
+      next: 'keywords',
+    });
+    expect(trackedGroupBy).toHaveBeenCalledWith({
+      by: ['appId'],
+      where: {
+        active: true,
+        OR: [{ appId: 'app_1', keyword: { country: 'de' } }],
+      },
+      _count: { _all: true },
+    });
   });
 });
 

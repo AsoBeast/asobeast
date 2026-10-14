@@ -4,6 +4,7 @@ import type {
   RankDistribution,
 } from './analytics';
 import type { Store } from '../index';
+import type { AppSetupSummary } from './setup';
 
 export interface PortfolioApp {
   id: string;
@@ -19,6 +20,7 @@ export interface PortfolioApp {
   trackedKeywords: number;
   competitors: number;
   lastCapturedAt: string | null;
+  setup?: AppSetupSummary;
 }
 
 export interface PortfolioGroup {

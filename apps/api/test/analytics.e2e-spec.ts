@@ -13,6 +13,7 @@ import {
   RankDistributionHistory,
   RatingsHistory,
   VisibilityHistory,
+  setupSummary,
 } from '@asobeast/shared';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
@@ -493,6 +494,13 @@ describe('AnalyticsController (e2e)', () => {
       '2026-06-30',
     ]);
     expect(entry.lastCapturedAt).toBe(D0.toISOString());
+    expect(entry.setup).toEqual({
+      status: 'not_started',
+      updatedAt: null,
+      done: 0,
+      total: 3,
+      next: 'competitors',
+    });
 
     expect(portfolio.groups).toEqual([]);
     expect(portfolio.totals).toEqual({
@@ -501,6 +509,68 @@ describe('AnalyticsController (e2e)', () => {
       trackedKeywords: summary.trackedKeywords,
       changes7d: 0,
     });
+  });
+
+  it('summarises the setup from its row and the live home counts', async () => {
+    const id = await seed();
+    const updatedAt = new Date('2026-10-14T09:00:00.000Z');
+    await prisma.appSetup.create({
+      data: {
+        appId: id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        status: 'in_progress',
+        skipped: ['keywords'],
+        selectedMarkets: ['us'],
+        updatedAt,
+      },
+    });
+    await prisma.app.create({
+      data: {
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        store: Store.APP_STORE,
+        storeAppId: '999000222',
+        country: 'us',
+        isCompetitor: true,
+        primaryAppId: id,
+      },
+    });
+    const elsewhere = await prisma.keyword.create({
+      data: { text: 'habit tracker', store: Store.APP_STORE, country: 'de' },
+    });
+    await prisma.trackedKeyword.create({
+      data: { appId: id, keywordId: elsewhere.id, source: 'MANUAL' },
+    });
+    const paused = await prisma.keyword.create({
+      data: { text: 'paused phrase', store: Store.APP_STORE, country: 'us' },
+    });
+    await prisma.trackedKeyword.create({
+      data: {
+        appId: id,
+        keywordId: paused.id,
+        source: 'MANUAL',
+        active: false,
+      },
+    });
+
+    const portfolio = (await api.get('/portfolio').expect(200))
+      .body as PortfolioSummary;
+    const [entry] = portfolio.apps;
+
+    expect(entry.setup).toEqual(
+      setupSummary(
+        {
+          appId: id,
+          status: 'in_progress',
+          skipped: ['keywords'],
+          countriesReviewed: false,
+          selectedMarkets: ['us'],
+          completedAt: null,
+          updatedAt: updatedAt.toISOString(),
+        },
+        { competitors: 1, keywords: 4 },
+      ),
+    );
+    expect(entry.setup).toMatchObject({ done: 2, next: 'countries' });
   });
 
   it('reports portfolio insight bands that match the app summary', async () => {
