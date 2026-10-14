@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Check, Loader2, Plus, RotateCw } from "lucide-react";
 import type {
   KeywordSuggestion,
@@ -7,6 +8,8 @@ import type {
 } from "@asobeast/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api";
 import { EMPTY_COPY, USED_BY_NOUN } from "./suggestion-strategies";
@@ -33,12 +36,57 @@ function SuggestionMeta({ suggestion }: { suggestion: KeywordSuggestion }) {
   );
 }
 
+export type SuggestionAction =
+  | {
+      kind: "track";
+      pendingText: string | undefined;
+      onTrack: (text: string) => void;
+    }
+  | {
+      kind: "select";
+      selected: ReadonlySet<string>;
+      onToggle: (text: string, selected: boolean) => void;
+    };
+
+function TrackAction({
+  text,
+  already,
+  pendingText,
+  onTrack,
+}: Extract<SuggestionAction, { kind: "track" }> & {
+  text: string;
+  already: boolean;
+}) {
+  const pending = pendingText === text;
+  return (
+    <Button
+      variant={already ? "ghost" : "outline"}
+      size="sm"
+      disabled={already || pending}
+      onClick={() => onTrack(text)}
+    >
+      {already ? (
+        <>
+          <Check />
+          Tracked
+        </>
+      ) : pending ? (
+        <Loader2 className="animate-spin" />
+      ) : (
+        <>
+          <Plus />
+          Track
+        </>
+      )}
+    </Button>
+  );
+}
+
 export function SuggestionList({
   strategy,
   state,
   trackedTexts,
-  pendingText,
-  onTrack,
+  action,
   onRetry,
 }: {
   strategy: KeywordSuggestionStrategy;
@@ -46,11 +94,12 @@ export function SuggestionList({
     | { status: "pending" }
     | { status: "error"; error: unknown }
     | { status: "ready"; suggestions: KeywordSuggestion[] };
-  trackedTexts: Set<string>;
-  pendingText: string | undefined;
-  onTrack: (text: string) => void;
+  trackedTexts: ReadonlySet<string>;
+  action: SuggestionAction;
   onRetry: () => void;
 }) {
+  const idPrefix = useId();
+
   if (state.status === "pending") {
     return (
       <div className="flex flex-col gap-2">
@@ -88,9 +137,33 @@ export function SuggestionList({
 
   return (
     <ul className="flex flex-col divide-y">
-      {state.suggestions.map((suggestion) => {
+      {state.suggestions.map((suggestion, index) => {
         const already = trackedTexts.has(suggestion.text);
-        const pending = pendingText === suggestion.text;
+        if (action.kind === "select") {
+          const checkboxId = `${idPrefix}-${index}`;
+          return (
+            <li key={suggestion.text} className="flex items-center gap-3 py-2">
+              <Checkbox
+                id={checkboxId}
+                checked={already || action.selected.has(suggestion.text)}
+                disabled={already}
+                onCheckedChange={(checked) =>
+                  action.onToggle(suggestion.text, checked === true)
+                }
+              />
+              <Label
+                htmlFor={checkboxId}
+                className="flex min-w-0 flex-1 flex-col items-start gap-0.5 font-normal"
+              >
+                <span className="truncate text-body font-medium">
+                  {suggestion.text}
+                </span>
+                <SuggestionMeta suggestion={suggestion} />
+              </Label>
+              {already ? <Badge variant="outline">Tracked</Badge> : null}
+            </li>
+          );
+        }
         return (
           <li
             key={suggestion.text}
@@ -102,26 +175,7 @@ export function SuggestionList({
               </span>
               <SuggestionMeta suggestion={suggestion} />
             </div>
-            <Button
-              variant={already ? "ghost" : "outline"}
-              size="sm"
-              disabled={already || pending}
-              onClick={() => onTrack(suggestion.text)}
-            >
-              {already ? (
-                <>
-                  <Check />
-                  Tracked
-                </>
-              ) : pending ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <>
-                  <Plus />
-                  Track
-                </>
-              )}
-            </Button>
+            <TrackAction {...action} text={suggestion.text} already={already} />
           </li>
         );
       })}

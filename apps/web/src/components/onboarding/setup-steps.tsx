@@ -3,7 +3,11 @@
 import { Suspense, useState, type FormEvent, type ReactNode } from "react";
 import { ExternalLink, Plus, X } from "lucide-react";
 import Link from "next/link";
-import type { CompetitorItem, MarketSuggestionsResult } from "@asobeast/shared";
+import type {
+  CompetitorItem,
+  MarketSuggestionsResult,
+  TrackedKeywordItem,
+} from "@asobeast/shared";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
 import { formatCountry, formatList } from "@/lib/format";
 import {
@@ -25,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
+import { KeywordPicker } from "./KeywordPicker";
 import { SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
@@ -160,16 +165,29 @@ export interface MarketKeywordCount {
   error: boolean;
 }
 
+function homeKeywordsLine(
+  tracked: TrackedKeywordItem[] | null,
+  error: boolean,
+  homeMarket: string,
+): string {
+  if (error) return "Keywords are temporarily unavailable.";
+  if (tracked === null) return "Loading keywords…";
+  const active = tracked.filter((keyword) => keyword.active).length;
+  return `${active} of ${SETUP_KEYWORD_TARGET} tracked in ${formatCountry(homeMarket)}`;
+}
+
 export function KeywordsStep({
   appId,
   homeMarket,
-  homeCount,
+  tracked,
+  error,
   counts,
   ...step
 }: StepProps & {
   appId: string;
   homeMarket: string;
-  homeCount: number | null;
+  tracked: TrackedKeywordItem[] | null;
+  error: boolean;
   counts: MarketKeywordCount[];
 }) {
   return (
@@ -180,31 +198,33 @@ export function KeywordsStep({
       {...step}
     >
       <p className="text-sm text-muted-foreground">
-        {homeCount === null
-          ? "Loading keywords…"
-          : `${homeCount} of ${SETUP_KEYWORD_TARGET} tracked`}
+        {homeKeywordsLine(tracked, error, homeMarket)}
       </p>
-      <ul className="grid gap-2 sm:grid-cols-2">
-        {counts.map(({ market, active, error }) => (
-          <li
-            key={market}
-            className="flex items-center justify-between rounded-lg border p-3"
-          >
-            <span>{formatCountry(market)}</span>
-            <span className="text-muted-foreground">
-              {error
-                ? "Unavailable"
-                : active === null
-                  ? "Loading…"
-                  : `${active} active`}
-            </span>
-          </li>
-        ))}
-      </ul>
-      <Button asChild variant="outline" className="w-fit">
+      {tracked ? (
+        <KeywordPicker appId={appId} country={homeMarket} tracked={tracked} />
+      ) : null}
+      {counts.length > 1 ? (
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {counts.map(({ market, active, error: failed }) => (
+            <li
+              key={market}
+              className="flex items-center justify-between rounded-lg border p-3"
+            >
+              <span>{formatCountry(market)}</span>
+              <span className="text-muted-foreground">
+                {failed
+                  ? "Unavailable"
+                  : active === null
+                    ? "Loading…"
+                    : `${active} active`}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <Button asChild variant="link" className="h-auto w-fit px-0">
         <Link href={`/apps/${appId}/keywords?country=${homeMarket}`}>
           Review keywords
-          <ExternalLink />
         </Link>
       </Button>
     </StepCard>

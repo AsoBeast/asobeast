@@ -151,7 +151,8 @@ function ActiveSetup({
         {...step("keywords")}
         appId={app.id}
         homeMarket={app.country}
-        homeCount={counts.keywords}
+        tracked={homeKeywords.data ?? null}
+        error={homeKeywords.isError}
         counts={keywordCounts}
       />
       <CountriesStep

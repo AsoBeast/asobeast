@@ -542,6 +542,16 @@ export const suggestionsOptions = (
     queryFn: () => getSuggestions(id, strategy, undefined, country),
   });
 
+export const pickerSuggestionsOptions = (
+  id: string,
+  strategy: KeywordSuggestionStrategy,
+  country: string,
+) =>
+  queryOptions({
+    ...suggestionsOptions(id, strategy, country),
+    staleTime: ONE_DAY_MS,
+  });
+
 export const spiderOptions = (id: string, term: string, country?: string) =>
   queryOptions({
     queryKey: appKeys.spider(id, term, country),

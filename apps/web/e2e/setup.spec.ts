@@ -19,6 +19,14 @@ const resetSeed = (request: APIRequestContext, country: string) =>
 const resetCompetitors = (request: APIRequestContext, appId: string) =>
   request.post(`${MOCK_API_URL}/__reset/competitors/${appId}`);
 
+const resetKeywords = (request: APIRequestContext, appId: string) =>
+  request.post(`${MOCK_API_URL}/__reset/keywords/${appId}`);
+
+const suggestionRow = (page: Page, text: string) =>
+  stepCard(page, "Track keywords")
+    .getByRole("listitem")
+    .filter({ has: page.getByText(text, { exact: true }) });
+
 const storedMarkets = async (page: Page): Promise<string[]> => {
   const stored = await page.evaluate(
     (key) => localStorage.getItem(key),
@@ -120,8 +128,9 @@ test("direct setup is resumable and completes after live checks", async ({
   await expect(
     stepCard(page, "Pick competitors").getByText("Done", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("4 of 10 tracked")).toBeVisible();
-  await expect(page.getByText("4 active")).toBeVisible();
+  await expect(
+    page.getByText("4 of 10 tracked in United States"),
+  ).toBeVisible();
   const complete = page.getByRole("button", { name: "Complete setup" });
   await expect(complete).toBeDisabled();
 
@@ -179,6 +188,7 @@ test("direct setup is resumable and completes after live checks", async ({
     page.getByRole("link", { name: "Review PL keywords" }),
   ).toHaveAttribute("href", "/apps/app-1/keywords?country=pl");
   await expect(page.getByText("0 active")).toBeVisible();
+  await expect(page.getByText("4 active")).toBeVisible();
 
   await expect(complete).toBeEnabled();
   await complete.click();
@@ -326,6 +336,122 @@ test.describe("picking competitors inside the step", () => {
     await expect(
       discovered.getByRole("listitem").filter({ hasText: "Tomato Clock" }),
     ).toBeVisible();
+  });
+});
+
+test.describe("picking keywords inside the step", () => {
+  test.afterEach(async ({ request }) => {
+    await resetKeywords(request, "app-1");
+    await resetKeywords(request, "app-new");
+  });
+
+  test("keywords are tracked from the listing suggestions inside the step", async ({
+    page,
+    request,
+  }) => {
+    await resetKeywords(request, "app-1");
+    await startSetup(page, "app-1");
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(
+      keywords.getByText("4 of 10 tracked in United States"),
+    ).toBeVisible();
+    await expect(
+      keywords.getByRole("tab", { name: "From your listing" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      suggestionRow(page, "focus timer").getByText("Tracked"),
+    ).toBeVisible();
+    await expect(
+      suggestionRow(page, "focus timer").getByRole("checkbox"),
+    ).toBeDisabled();
+
+    await keywords.getByLabel("deep focus").check();
+    await keywords.getByLabel("pomodoro timer").check();
+    await keywords.getByRole("button", { name: "Track 2 selected" }).click();
+
+    await expect(
+      page.getByText("Tracking 2 keywords. Positions arrive within minutes."),
+    ).toBeVisible();
+    await expect(
+      keywords.getByText("6 of 10 tracked in United States"),
+    ).toBeVisible();
+    await expect(keywords.getByText("4 more to reach 10")).toBeVisible();
+    for (const text of ["deep focus", "pomodoro timer"]) {
+      await expect(
+        suggestionRow(page, text).getByText("Tracked"),
+      ).toBeVisible();
+    }
+    await expect(
+      keywords.getByRole("button", { name: "Track selected" }),
+    ).toBeDisabled();
+  });
+
+  test("the autocomplete tab loads only when opened", async ({ page }) => {
+    const strategies: string[] = [];
+    page.on("request", (sent) => {
+      const url = new URL(sent.url());
+      if (url.pathname.endsWith("/keywords/suggestions")) {
+        strategies.push(url.searchParams.get("strategy") ?? "");
+      }
+    });
+    await startSetup(page, "app-1");
+    const keywords = stepCard(page, "Track keywords");
+    await expect(keywords.getByLabel("deep focus")).toBeVisible();
+    expect(strategies.filter((strategy) => strategy === "search")).toEqual([]);
+
+    await keywords.getByRole("tab", { name: "Store autocomplete" }).click();
+    await expect(keywords.getByLabel("focus timer app")).toBeVisible();
+    await keywords.getByRole("tab", { name: "From your listing" }).click();
+    await keywords.getByRole("tab", { name: "Store autocomplete" }).click();
+    await expect(keywords.getByLabel("focus music")).toBeVisible();
+
+    expect(strategies.filter((strategy) => strategy === "search")).toEqual([
+      "search",
+    ]);
+  });
+
+  test("a failed suggestion load offers a retry", async ({ page }) => {
+    await page.context().addCookies([
+      {
+        name: "e2e_suggestions_fail",
+        value: "1",
+        domain: "localhost",
+        path: "/",
+      },
+    ]);
+    await startSetup(page, "app-1");
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(keywords.getByRole("button", { name: "Retry" })).toBeVisible({
+      timeout: 20_000,
+    });
+
+    await page.context().clearCookies({ name: "e2e_suggestions_fail" });
+    await keywords.getByRole("button", { name: "Retry" }).click();
+
+    await expect(keywords.getByLabel("deep focus")).toBeVisible();
+  });
+
+  test("reaching ten keywords marks the step done", async ({
+    page,
+    request,
+  }) => {
+    await resetKeywords(request, "app-new");
+    await startSetup(page, "app-new");
+
+    const keywords = stepCard(page, "Track keywords");
+    await expect(keywords.getByText("10 more to reach 10")).toBeVisible();
+    for (const checkbox of await keywords.getByRole("checkbox").all()) {
+      await checkbox.check();
+    }
+    await keywords.getByRole("button", { name: "Track 10 selected" }).click();
+
+    await expect(
+      keywords.getByText("10 of 10 tracked in United States"),
+    ).toBeVisible();
+    await expect(keywords.getByText("Done", { exact: true })).toBeVisible();
+    await expect(keywords.getByText(/more to reach/)).toHaveCount(0);
   });
 });
 

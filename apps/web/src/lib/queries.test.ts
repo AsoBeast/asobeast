@@ -80,6 +80,7 @@ import {
   screenshotsOptions,
   serpOptions,
   spiderOptions,
+  pickerSuggestionsOptions,
   suggestionsOptions,
   visibilityOptions,
   webhookKeys,
@@ -132,6 +133,11 @@ const APP_SCOPED_OPTIONS = [
     "suggestions",
     suggestionsOptions(APP, "metadata", "us"),
     appKeys.suggestions(APP, "metadata", "us"),
+  ],
+  [
+    "picker suggestions",
+    pickerSuggestionsOptions(APP, "search", "us"),
+    appKeys.suggestions(APP, "search", "us"),
   ],
   [
     "spider",

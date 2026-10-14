@@ -132,8 +132,11 @@ export function SuggestionsPanel({
             strategy={strategy}
             state={state}
             trackedTexts={trackedTexts}
-            pendingText={track.isPending ? track.variables : undefined}
-            onTrack={(text) => track.mutate(text)}
+            action={{
+              kind: "track",
+              pendingText: track.isPending ? track.variables : undefined,
+              onTrack: (text) => track.mutate(text),
+            }}
             onRetry={() => void suggestions.refetch()}
           />
         </CardContent>

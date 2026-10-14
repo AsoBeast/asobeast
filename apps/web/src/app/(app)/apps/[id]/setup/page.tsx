@@ -8,6 +8,7 @@ import {
   discoveryOptions,
   keywordsOptions,
   marketSuggestionsOptions,
+  pickerSuggestionsOptions,
 } from "@/lib/queries";
 
 export default async function SetupPage({
@@ -23,6 +24,9 @@ export default async function SetupPage({
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(discoveryOptions(id, DISCOVERY_WINDOW_DAYS)),
     queryClient.prefetchQuery(keywordsOptions(id, app.country)),
+    queryClient.prefetchQuery(
+      pickerSuggestionsOptions(id, "metadata", app.country),
+    ),
   ]);
 
   return (
