@@ -123,6 +123,17 @@ export const rankingsTracked = (status: FirstRunStatus): boolean =>
 export const rankingsCollecting = (status: FirstRunStatus | undefined) =>
   status ? rankingsStage(status)?.complete === false : false;
 
+export function rankingsFinished(
+  previous: FirstRunStatus | undefined,
+  next: FirstRunStatus | undefined,
+): boolean {
+  return (
+    rankingsCollecting(previous) &&
+    next !== undefined &&
+    !rankingsCollecting(next)
+  );
+}
+
 export function rankingsAdvanced(
   previous: FirstRunStatus | undefined,
   next: FirstRunStatus | undefined,

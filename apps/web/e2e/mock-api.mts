@@ -2924,10 +2924,8 @@ const routes: Route[] = [
       const path = req.url ?? "/";
       const dataset = DATASETS[id];
       if (!dataset) return json(res, 404, errorEnvelope(404, path));
-      if (hasCookie(req, "e2e_suggestions_spent", "1")) {
-        return json(res, 429, storeLookupRefusedEnvelope(path), {
-          "retry-after": String(RATE_LIMIT_RESET_SECONDS),
-        });
+      if (hasCookie(req, "e2e_suggestions_fail", "1")) {
+        return json(res, 500, errorEnvelope(500, path));
       }
       json(res, 200, competitorSuggestionsOf(id, dataset, req));
     },

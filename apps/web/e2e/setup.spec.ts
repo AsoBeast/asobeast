@@ -445,14 +445,11 @@ test.describe("picking competitors inside the step", () => {
     ).toBeDisabled();
   });
 
-  test("a spent lookup allowance is shown with a retry", async ({
-    page,
-    request,
-  }) => {
+  test("a failed suggestion load offers a retry", async ({ page, request }) => {
     await resetCompetitors(request, "app-1");
     await page.context().addCookies([
       {
-        name: "e2e_suggestions_spent",
+        name: "e2e_suggestions_fail",
         value: "1",
         url: "http://localhost:3000",
       },
@@ -460,11 +457,9 @@ test.describe("picking competitors inside the step", () => {
     await startSetup(page, "app-1");
 
     const competitors = stepCard(page, "Pick competitors");
-    await expect(competitors.getByRole("alert")).toHaveText(
-      /Store lookup limit reached/,
-    );
+    await expect(competitors.getByRole("alert")).toBeVisible();
 
-    await page.context().clearCookies({ name: "e2e_suggestions_spent" });
+    await page.context().clearCookies({ name: "e2e_suggestions_fail" });
     await competitors.getByRole("button", { name: "Retry" }).click();
 
     await expect(

@@ -161,7 +161,7 @@ export const appKeys = {
   competitors: (id: string) => [...appKeys.detail(id), "competitors"] as const,
   discoveryRoot: (id: string) => [...appKeys.detail(id), "discovery"] as const,
   competitorSuggestions: (id: string) =>
-    [...appKeys.detail(id), "competitor-suggestions"] as const,
+    ["competitor-suggestions", id] as const,
   discovery: (id: string, days: number) =>
     [...appKeys.detail(id), "discovery", { days }] as const,
   changesRoot: (id: string) => [...appKeys.detail(id), "changes"] as const,
@@ -901,6 +901,9 @@ export function invalidateCompetitorMutation(
 ): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: appKeys.discoveryRoot(id) });
+  void client.invalidateQueries({
+    queryKey: appKeys.competitorSuggestions(id),
+  });
   void client.invalidateQueries({ queryKey: appKeys.serpMoversRoot(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.firstRun(id) });

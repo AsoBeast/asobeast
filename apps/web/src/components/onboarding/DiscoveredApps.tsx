@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus, RefreshCw } from "lucide-react";
 import type { CompetitorSuggestion, Store } from "@asobeast/shared";
 import { AppIcon } from "@/components/AppIcon";
-import { searchErrorText } from "@/components/apps/store-search";
+import { apiErrorMessage } from "@/components/localizations/api-error-message";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -107,7 +107,12 @@ export function DiscoveredApps({
       </h4>
       {suggestions.isError ? (
         <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <span role="alert">{searchErrorText(suggestions.error)}</span>
+          <span role="alert">
+            {apiErrorMessage(
+              suggestions.error,
+              "Could not load suggested competitors.",
+            )}
+          </span>
           <Button
             size="sm"
             variant="outline"
