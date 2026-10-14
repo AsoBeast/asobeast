@@ -11,12 +11,16 @@ afterEach(() => {
 });
 
 describe("competitor tools", () => {
-  it("registers the competitor list and analysis as read only tools", () => {
+  it("registers the competitor list, analysis and suggestions as read only tools", () => {
     const { server, tools } = createHarness();
     const { client } = stubFetch(() => ({ status: 200, body: [] }));
     registerCatalogTools(server, client, COMPETITOR_TOOLS);
 
-    for (const name of ["list_competitors", "competitor_analysis"]) {
+    for (const name of [
+      "list_competitors",
+      "competitor_analysis",
+      "competitor_suggestions",
+    ]) {
       expect(tools.get(name)?.config.annotations?.readOnlyHint).toBe(true);
     }
   });
@@ -28,10 +32,12 @@ describe("competitor tools", () => {
 
     await tools.get("list_competitors")!.handler({ appId: "app-1" });
     await tools.get("competitor_analysis")!.handler({ appId: "app-1" });
+    await tools.get("competitor_suggestions")!.handler({ appId: "app-1" });
 
     expect(calls.map((call) => new URL(call.url).pathname)).toEqual([
       "/apps/app-1/competitors",
       "/apps/app-1/competitors/analysis",
+      "/apps/app-1/competitors/suggestions",
     ]);
   });
 });
