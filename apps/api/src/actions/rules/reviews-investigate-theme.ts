@@ -2,6 +2,7 @@ import { ReviewsInvestigateThemeEvidence } from '@asobeast/shared';
 import {
   mineReviewPhrases,
   REVIEW_THEME_MIN_MENTIONS,
+  reviewPhrases,
 } from '../../keywords/review-mining';
 import { listingLanguages } from '../../keywords/listing-languages';
 import type {
@@ -44,6 +45,18 @@ function mentionsByPhrase(
   return new Map(
     mined.map((suggestion) => [suggestion.text, suggestion.usedByCount ?? 0]),
   );
+}
+
+function sampleIds(
+  reviews: ActionReview[],
+  theme: string,
+  app: ActionContextApp,
+): string[] {
+  const languages = listingLanguages(app.store, app.country);
+  return reviews
+    .filter((review) => reviewPhrases(review, languages).has(theme))
+    .slice(0, REVIEW_THEME_MAX_SAMPLES)
+    .map((review) => review.id);
 }
 
 function averageScore(reviews: ActionReview[]): number | null {
@@ -124,14 +137,7 @@ function detectForApp(
         negativeReviews: negative.length,
         totalReviews: forVersion.length,
         ratingAvgDelta,
-        sampleReviewIds: negative
-          .filter((review) =>
-            `${review.title ?? ''} ${review.text}`
-              .toLowerCase()
-              .includes(theme),
-          )
-          .slice(0, REVIEW_THEME_MAX_SAMPLES)
-          .map((review) => review.id),
+        sampleReviewIds: sampleIds(negative, theme, app),
       };
 
       const ratingDropTerm = clamp(

@@ -44,14 +44,24 @@ function phrasesOf(review: MinableReview, isUsable: TokenTest): Set<string> {
   return phrases;
 }
 
+function usableFor(languages: readonly string[]): TokenTest {
+  const usable = usableIn(functionWordTest(languages));
+  return (token) => usable(token) && !REVIEW_FILLERS.has(token);
+}
+
+export function reviewPhrases(
+  review: MinableReview,
+  languages: readonly string[],
+): Set<string> {
+  return phrasesOf(review, usableFor(languages));
+}
+
 export function mineReviewPhrases(
   reviews: MinableReview[],
   tracked: Set<string>,
   languages: readonly string[],
 ): KeywordSuggestion[] {
-  const usable = usableIn(functionWordTest(languages));
-  const isUsable: TokenTest = (token) =>
-    usable(token) && !REVIEW_FILLERS.has(token);
+  const isUsable = usableFor(languages);
   const counts = new Map<string, number>();
   for (const review of reviews) {
     for (const phrase of phrasesOf(review, isUsable)) {
