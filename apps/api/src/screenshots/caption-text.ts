@@ -26,7 +26,8 @@ export const MAX_CAPTION_CHARS = 400;
 const HAS_TEXT = /[\p{L}\p{N}]/u;
 const LETTER_OR_DIGIT = /[\p{L}\p{N}]/gu;
 const WHITESPACE = /\s/gu;
-const EDGE_NOISE = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}.!?)\]'"%]+$/gu;
+const EDGE_NOISE =
+  /^[^\p{L}\p{N}]+|(?<![^\p{L}\p{N}.!?)\]'"%])[^\p{L}\p{N}.!?)\]'"%]+$/gu;
 
 export function joinSpacelessRuns(text: string): string {
   const words = text.split(/\s+/).filter((word) => word.length > 0);

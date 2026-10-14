@@ -1,4 +1,5 @@
-const LINE_BREAK = /<br\b[^>]*>|\r\n?/gi;
+const LINE_BREAK_TAG = /<br\b[^>]*>/gi;
+const CARRIAGE_RETURN = /\r\n?/g;
 const NEWLINE = /\r\n?|\n/;
 const TAG = /<\/?[a-z][^>]*>/gi;
 const CUT_TAG = /<\/?[a-z][^<>]*?(…?)$/i;
@@ -33,12 +34,21 @@ function decodeEntity(match: string, body: string): string {
   return isCharacter(codePoint) ? String.fromCodePoint(codePoint) : match;
 }
 
+function replaceUpToLastClose(
+  value: string,
+  pattern: RegExp,
+  replacement: string,
+): string {
+  const end = value.lastIndexOf('>') + 1;
+  return value.slice(0, end).replace(pattern, replacement) + value.slice(end);
+}
+
 function stripTags(value: string): string {
   let previous: string;
   let stripped = value;
   do {
     previous = stripped;
-    stripped = previous.replace(TAG, '');
+    stripped = replaceUpToLastClose(previous, TAG, '');
   } while (stripped !== previous);
   return stripped;
 }
@@ -52,9 +62,12 @@ export function releaseNotesLines(value: string): string {
 }
 
 export function releaseNotesText(value: string): string {
+  const withLines = replaceUpToLastClose(
+    value.replace(CARRIAGE_RETURN, '\n'),
+    LINE_BREAK_TAG,
+    '\n',
+  );
   return releaseNotesLines(
-    stripTags(value.replace(LINE_BREAK, '\n'))
-      .replace(CUT_TAG, '$1')
-      .replace(ENTITY, decodeEntity),
+    stripTags(withLines).replace(CUT_TAG, '$1').replace(ENTITY, decodeEntity),
   );
 }
