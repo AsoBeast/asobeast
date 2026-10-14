@@ -53,11 +53,11 @@ When you track keywords in more than one market, a **Listing market** control si
 
 When the market has a native localization, a **Localization** control next to it shows that localization's fields and captions, and the URL keeps it as `?localization=`. A keyword covered only by a native localization says which one, for example in Title (Polish). See [Countries and markets](/concepts/countries#what-about-storefronts-that-default-to-english).
 
-Each keyword is judged against the listing of its own market, and against the home listing until its market has one. The keyword field and the AI drafts stay on the home market, because the keyword field is private and you paste it once, for the home storefront. The API takes the same choice as the `country` parameter of `GET /apps/{id}/metadata/audit`. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
+Each keyword is judged against the listing of its own market, and against the home listing until its market has one. The keyword field card shows the field you saved for the localization on screen, linted against that localization's title and subtitle, and the suggestion below the coverage table names the localization it is for. The AI drafts stay on the home market. The API takes the same choice as the `country` parameter of `GET /apps/{id}/metadata/audit`. See [What is a market listing?](/concepts/countries#what-is-a-market-listing)
 
 ## Paste the iOS keyword field
 
-The 100 character field is private and cannot be collected, so paste it here. asobeast splits it, tracks the keywords with the source `KEYWORD_FIELD` and lints the field against its limit.
+The 100 character field is private and cannot be collected, so you paste it on the keywords page, once per localization. The **Edit this keyword field** link on a suggestion opens the field it suggests for. See [Paste the iOS keyword field](/guides/track-keywords#paste-the-ios-keyword-field).
 
 Come back to the page and the field shows what asobeast tracks rather than the string you pasted. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field).
 
@@ -86,7 +86,7 @@ Every draft is linted again on the server and clamped to the field limit, so a d
 
 With no key the card is hidden entirely. See [Enable the optional AI features](/guides/ai-features).
 
-On an App Store app the drafts card has a **Localization** menu. **Primary listing** drafts the listing asobeast reads, as before. An additional language of one of your storefronts drafts that localization instead: its title, subtitle and keyword field, written in that language from the meaning of your tracked keywords rather than copied from them, preferring words your current listing does not use. The keyword field is held to its 100 character limit, and a Chinese, Japanese or Korean character counts once. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field)
+On an App Store app the drafts card has a **Localization** menu. **Primary listing** drafts the listing asobeast reads, as before. An additional language of one of your storefronts drafts that localization instead: its title, subtitle and keyword field, written in that language from the meaning of your tracked keywords rather than copied from them, preferring words your current listing does not use. A draft for a localization is told the keyword field you saved for it. The keyword field is held to its 100 character limit, and a Chinese, Japanese or Korean character counts once. See [How do you read and write the keyword field?](/concepts/stores#how-do-you-read-and-write-the-keyword-field)
 
 Each additional language on the storefront card has a button that picks it in the menu and moves the focus there. To fill a localization's keyword field with keywords in another language, a common tactic for Spanish (Mexico) in the United States, say so in the instructions. Which storefronts read which localization is explained in [Which localizations does a storefront read?](/concepts/countries#which-localizations-does-a-storefront-read)
 

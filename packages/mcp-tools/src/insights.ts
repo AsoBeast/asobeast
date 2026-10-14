@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  APP_STORE_LOCALIZATION_IDS,
   CHANGE_IMPACT_WINDOWS,
   COUNTRY_PATTERN,
   QUERY_BOUNDS,
@@ -144,7 +145,7 @@ export const INSIGHT_TOOLS: ReadTool[] = [
     name: "metadata_audit",
     title: "Metadata audit",
     description:
-      "Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings. Each keyword is judged against the listing of its own market when one was captured. Pass country to audit one market's listing and only its keywords; the Apple keyword field is private, so a market other than the home one is judged on title and subtitle.",
+      "Metadata lint and keyword-coverage audit for one app: title, subtitle (Apple), short description (Play) and keyword-field checks with character-limit warnings. Each keyword is judged against the listing of its own market when one was captured, and on the App Store against the keyword field of every localization that market's storefront reads; a coverage cell with a localization names the localization that covers it. Pass country to audit one market's listing and only its keywords, and localization to audit one captured localization of that market instead of its default listing. The keyword field card shows the saved field of the viewed localization; use keyword_fields to see every saved field.",
     inputSchema: z.object({
       appId,
       country: z
@@ -152,10 +153,16 @@ export const INSIGHT_TOOLS: ReadTool[] = [
         .regex(COUNTRY_PATTERN)
         .optional()
         .describe("Two-letter storefront code of the listing to audit."),
+      localization: z
+        .enum(APP_STORE_LOCALIZATION_IDS)
+        .optional()
+        .describe(
+          "App Store localization of the market to audit, such as pl in Poland. Only localizations the store served are captured; others answer not found.",
+        ),
     }),
-    request: ({ appId, country }) => ({
+    request: ({ appId, country, localization }) => ({
       path: `/apps/${seg(appId)}/metadata/audit`,
-      params: { country },
+      params: { country, localization },
     }),
   }),
 

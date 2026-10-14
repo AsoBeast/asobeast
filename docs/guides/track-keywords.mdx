@@ -98,18 +98,21 @@ Both answers carry the same fields. `summary` and `results` describe the plan, r
 
 ## Paste the iOS keyword field
 
-The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. Paste it yourself.
+The 100 character iOS keyword field never appears on the public listing, so asobeast cannot read it. Paste it yourself, once for each localization you filled in App Store Connect.
 
 <Steps>
-  <Step title="Copy the field from App Store Connect">
-    Take the comma separated value exactly as you entered it there.
+  <Step title="Open the market">
+    On the keywords page, choose the market whose storefront reads the localization. The keyword field card is at the bottom.
   </Step>
-  <Step title="Paste it in the metadata workbench">
-    asobeast splits it, tracks the keywords with the source `KEYWORD_FIELD` and lints the field against its 100 character limit.
+  <Step title="Choose the localization">
+    The **Localization** menu lists what that storefront reads, default first, and marks the ones you saved. The URL keeps the choice as `?fieldLocale=`.
+  </Step>
+  <Step title="Paste the field and save">
+    asobeast splits it, tracks the keywords in that market with the source `KEYWORD_FIELD` and lints the field against its 100 character limit. The card names the other markets of the app that read the same field, and the phrases not tracked in the market on screen.
   </Step>
 </Steps>
 
-The keyword field belongs to the home market, and it is App Store only. Google Play has no keyword field. See [App Store and Google Play](/concepts/stores).
+The keyword field is App Store only. Google Play has no keyword field. See [How does asobeast keep a keyword field per localization?](/concepts/countries#how-does-asobeast-keep-a-keyword-field-per-localization)
 
 Leaving it empty makes coverage report the field as uncovered, because asobeast has no evidence about what is in it.
 

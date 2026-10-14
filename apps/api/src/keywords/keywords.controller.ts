@@ -16,6 +16,7 @@ import {
   KeywordComparison,
   KeywordCountrySummary,
   KeywordFieldResult,
+  KeywordFieldSummary,
   KeywordImportResult,
   KeywordSuggestion,
   SpiderEnqueueResult,
@@ -29,11 +30,13 @@ import { ReadOnlyEndpoint } from '../auth/read-access';
 import { AddKeywordsDto } from './dto/add-keywords.dto';
 import { CompareQueryDto } from './dto/compare-query.dto';
 import { KeywordFieldDto } from './dto/keyword-field.dto';
+import { KeywordFieldQueryDto } from './dto/keyword-field-query.dto';
 import { KeywordImportDto } from './dto/keyword-import.dto';
 import { ListKeywordsQueryDto } from './dto/list-keywords-query.dto';
 import { SpiderQueryDto, SpiderStartDto } from './dto/spider.dto';
 import { SuggestionsQueryDto } from './dto/suggestions-query.dto';
 import { UpdateKeywordDto } from './dto/update-keyword.dto';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordImportService } from './keyword-import.service';
 import { KeywordSuggestionService } from './keyword-suggestion.service';
 import { KeywordsService } from './keywords.service';
@@ -45,6 +48,7 @@ import { StoreDeadlineInterceptor } from '../store-providers/store-deadline.inte
 export class KeywordsController {
   constructor(
     private readonly keywords: KeywordsService,
+    private readonly fields: KeywordFieldService,
     private readonly keywordSuggestions: KeywordSuggestionService,
     private readonly spider: SpiderService,
     private readonly limiter: OnDemandLimiter,
@@ -177,24 +181,38 @@ export class KeywordsController {
 
   @Get('keyword-field')
   @ApiOperation({
-    summary: 'Read the stored iOS keyword field',
+    summary: 'Read a stored iOS keyword field',
     description:
-      'Returns the normalized phrases tracked from the last submission in the home market, in the order they were submitted, not the string that was submitted, so spacing and casing may differ. duplicatesRemoved is always 0 because a read discards nothing.',
+      "Returns the keyword field of one App Store localization: phrases is the field as saved, in order, and tracked is those of its phrases tracked and active in country. Without a query it reads the home storefront's default localization. duplicatesRemoved is always 0 because a read discards nothing.",
   })
-  keywordField(@Param('id') id: string): Promise<KeywordFieldResult> {
-    return this.keywords.getKeywordField(id);
+  keywordField(
+    @Param('id') id: string,
+    @Query() query: KeywordFieldQueryDto,
+  ): Promise<KeywordFieldResult> {
+    return this.fields.getKeywordField(id, query);
+  }
+
+  @Get('keyword-fields')
+  @ApiOperation({
+    summary: 'List the stored iOS keyword fields',
+    description:
+      'Returns every saved keyword field of the app, one per App Store localization, with the markets of the app that read it.',
+  })
+  keywordFields(@Param('id') id: string): Promise<KeywordFieldSummary[]> {
+    return this.fields.list(id);
   }
 
   @Put('keyword-field')
   @ApiOperation({
-    summary: 'Set the manual iOS keyword field',
+    summary: 'Set an iOS keyword field',
     description:
-      'Replaces the field with the normalized, deduplicated phrases of text and returns the stored field. Answers 400 when those phrases joined with commas run past 100 characters, the way App Store Connect counts the field, so a letter such as ą or a Chinese, Japanese or Korean character counts once. Saves to one app are written one at a time, so the last save wins.',
+      "Replaces the keyword field of one App Store localization with the normalized, deduplicated phrases of text, tracks them in country, and returns the stored field. Without a query it sets the home storefront's default localization. Answers 400 when the storefront does not read the localization, or when the phrases joined with commas run past 100 characters, the way App Store Connect counts the field. A phrase removed from the field stops being tracked as a keyword field phrase in every market that reads the localization. Saves to one app are written one at a time, so the last save wins.",
   })
   setKeywordField(
     @Param('id') id: string,
+    @Query() query: KeywordFieldQueryDto,
     @Body() dto: KeywordFieldDto,
   ): Promise<KeywordFieldResult> {
-    return this.keywords.setKeywordField(id, dto.text);
+    return this.fields.setKeywordField(id, dto.text, query);
   }
 }

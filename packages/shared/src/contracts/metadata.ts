@@ -38,6 +38,7 @@ export interface KeywordFieldSuggestion {
   charactersUsed: number;
   charactersLimit: number;
   addedTerms: string[];
+  localization?: AppStoreLocalization;
 }
 
 export interface MetadataAuditResult {

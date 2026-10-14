@@ -396,3 +396,5 @@ export const localizationParser = parseAsStringLiteral(
 );
 
 export const draftLocaleParser = localizationParser;
+
+export const fieldLocaleParser = localizationParser;

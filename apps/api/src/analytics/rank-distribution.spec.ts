@@ -7,7 +7,6 @@ const EARLIER = new Date('2026-07-12T00:00:00.000Z');
 const row = (rankings: Ranking[]): TrackedRow => ({
   keywordId: 'kw_1',
   source: 'TITLE',
-  fieldOrder: null,
   relevance: null,
   keyword: { text: 'focus timer', country: 'us', metrics: [], rankings },
 });

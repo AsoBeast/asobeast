@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { QuotaService } from '../src/auth/quota.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
+import { KeywordFieldService } from '../src/keywords/keyword-field.service';
 import { KeywordsService } from '../src/keywords/keywords.service';
 import { asWorkspace } from './helpers/tenancy';
 import { testDb } from './helpers/test-db';
@@ -32,6 +33,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
   let keywords: KeywordsService;
+  let fields: KeywordFieldService;
 
   beforeAll(async () => {
     execSync('pnpm prisma migrate deploy', {
@@ -48,6 +50,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     await app.init();
     await pauseQueues(app);
     keywords = app.get(KeywordsService);
+    fields = app.get(KeywordFieldService);
 
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -150,7 +153,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const blocked = await prisma.$transaction(async (tx) => {
       await tx.keyword.create({ data: keyword('alpha') });
       const save = asWorkspace(app, () =>
-        keywords.setKeywordField(appId, 'bravo,alpha'),
+        fields.setKeywordField(appId, 'bravo,alpha'),
       );
       save.catch(() => undefined);
       await waitForBlockedKeywordInsert();
@@ -182,8 +185,8 @@ describe('Keyword writes under concurrency (e2e)', () => {
 
     const settled = await asWorkspace(app, () =>
       Promise.allSettled([
-        keywords.setKeywordField(appId, FIELD),
-        keywords.setKeywordField(appId, FIELD),
+        fields.setKeywordField(appId, FIELD),
+        fields.setKeywordField(appId, FIELD),
       ]),
     );
 
@@ -200,8 +203,8 @@ describe('Keyword writes under concurrency (e2e)', () => {
 
     const settled = await asWorkspace(app, () =>
       Promise.allSettled([
-        keywords.setKeywordField(appId, ALPHA_SET.join(',')),
-        keywords.setKeywordField(appId, DELTA_SET.join(',')),
+        fields.setKeywordField(appId, ALPHA_SET.join(',')),
+        fields.setKeywordField(appId, DELTA_SET.join(',')),
       ]),
     );
 
@@ -210,9 +213,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const active = await activeTexts(appId);
     expect([ALPHA_SET, DELTA_SET]).toContainEqual(active);
 
-    const stored = await asWorkspace(app, () =>
-      keywords.getKeywordField(appId),
-    );
+    const stored = await asWorkspace(app, () => fields.getKeywordField(appId));
     expect(stored.tracked.map((item) => item.text).sort()).toEqual(active);
     expect(stored.charactersUsed).toBeLessThanOrEqual(stored.charactersLimit);
 
@@ -229,7 +230,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const appId = await seedApp();
     await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
 
-    await asWorkspace(app, () => keywords.setKeywordField(appId, 'deep work'));
+    await asWorkspace(app, () => fields.setKeywordField(appId, 'deep work'));
 
     expect(await trackedRows(appId)).toContainEqual(
       expect.objectContaining({
@@ -242,9 +243,9 @@ describe('Keyword writes under concurrency (e2e)', () => {
 
   it('deactivates every keyword field phrase when the field is cleared', async () => {
     const appId = await seedApp();
-    await asWorkspace(app, () => keywords.setKeywordField(appId, FIELD));
+    await asWorkspace(app, () => fields.setKeywordField(appId, FIELD));
 
-    await asWorkspace(app, () => keywords.setKeywordField(appId, ''));
+    await asWorkspace(app, () => fields.setKeywordField(appId, ''));
 
     const rows = await trackedRows(appId);
     expect(rows).toHaveLength(FIELD.split(',').length);
@@ -256,9 +257,9 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const hold = holdNextKeywordWrite();
 
     await asWorkspace(app, async () => {
-      const first = keywords.setKeywordField(appId, ALPHA_SET.join(','));
+      const first = fields.setKeywordField(appId, ALPHA_SET.join(','));
       await hold.inside;
-      const second = keywords.setKeywordField(appId, DELTA_SET.join(','));
+      const second = fields.setKeywordField(appId, DELTA_SET.join(','));
 
       expect(await settlesWithin(second, 300)).toBe(false);
       hold.release();
@@ -276,9 +277,9 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const hold = holdNextKeywordWrite();
 
     await asWorkspace(app, async () => {
-      const first = keywords.setKeywordField(firstId, ALPHA_SET.join(','));
+      const first = fields.setKeywordField(firstId, ALPHA_SET.join(','));
       await hold.inside;
-      const second = keywords.setKeywordField(secondId, DELTA_SET.join(','));
+      const second = fields.setKeywordField(secondId, DELTA_SET.join(','));
 
       expect(await settlesWithin(second, 2_000)).toBe(true);
       hold.release();
@@ -295,10 +296,8 @@ describe('Keyword writes under concurrency (e2e)', () => {
       seedApp('second'),
     ]);
 
-    await asWorkspace(app, () => keywords.setKeywordField(firstId, FIELD));
-    await asWorkspace(app, () =>
-      keywords.setKeywordField(secondId, 'deep work'),
-    );
+    await asWorkspace(app, () => fields.setKeywordField(firstId, FIELD));
+    await asWorkspace(app, () => fields.setKeywordField(secondId, 'deep work'));
 
     expect(await activeTexts(firstId)).toEqual(FIELD.split(',').sort());
   });
@@ -307,7 +306,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     const appId = await seedApp();
 
     const result = await asWorkspace(app, () =>
-      keywords.setKeywordField(appId, FIELD),
+      fields.setKeywordField(appId, FIELD),
     );
 
     expect(result.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
@@ -316,13 +315,13 @@ describe('Keyword writes under concurrency (e2e)', () => {
   it('reads a saved keyword field back in the order of the latest save', async () => {
     const appId = await seedApp();
     await asWorkspace(app, () =>
-      keywords.setKeywordField(appId, 'pomodoro,deep work,focus timer'),
+      fields.setKeywordField(appId, 'pomodoro,deep work,focus timer'),
     );
 
     const saved = await asWorkspace(app, () =>
-      keywords.setKeywordField(appId, FIELD),
+      fields.setKeywordField(appId, FIELD),
     );
-    const read = await asWorkspace(app, () => keywords.getKeywordField(appId));
+    const read = await asWorkspace(app, () => fields.getKeywordField(appId));
 
     expect(saved.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
     expect(read.tracked.map((item) => item.text)).toEqual(FIELD.split(','));
@@ -349,7 +348,7 @@ describe('Keyword writes under concurrency (e2e)', () => {
     await asWorkspace(app, () => keywords.addManual(appId, [PHRASE]));
 
     const saved = await asWorkspace(app, () =>
-      keywords.setKeywordField(appId, PHRASE),
+      fields.setKeywordField(appId, PHRASE),
     );
 
     expect(saved.tracked).toEqual([

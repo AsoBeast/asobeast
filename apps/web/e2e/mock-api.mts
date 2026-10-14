@@ -109,6 +109,7 @@ import type {
   KeywordFieldRequest,
   KeywordAddRequest,
   KeywordFieldResult,
+  KeywordFieldSummary,
   KeywordImportRequest,
   MetadataAssistantRequest,
   MetadataAssistantResult,
@@ -136,6 +137,12 @@ import {
   normalizeKeywordTags,
   keywordFieldChars,
   parseKeywordField,
+  readLocalizations,
+  readsLocalization,
+  storefrontsReading,
+  APP_STORE_LOCALIZATIONS,
+  type AppStoreLocalization,
+  isAppStoreLocalization,
   SESSION_COOKIE,
   SELF_HOSTED_LIMITS,
   UPGRADE_PATH,
@@ -231,7 +238,11 @@ const UNSUBSCRIBED_ALERT: EmailAlertItem = {
   unsubscribed: true,
   createdAt: "2026-07-01T00:00:00.000Z",
 };
-const keywordFields = new Map<string, string>();
+const keywordFields = new Map<string, string[]>();
+const keywordFieldTracked = new Map<string, Set<string>>();
+const fieldKey = (id: string, localization: string) => `${id}:${localization}`;
+const trackedKey = (id: string, country: string) => `${id}:${country}`;
+const KEYWORD_FIELD_UPDATED_AT = "2026-10-12T00:00:00.000Z";
 const AUTH_USER: AuthUser = {
   id: "u1",
   email: "owner@example.com",
@@ -689,15 +700,141 @@ function trackedFromKeywordField(
   };
 }
 
-function keywordFieldResult(text: string, country: string): KeywordFieldResult {
-  const { phrases, duplicatesRemoved } = parseKeywordField(text);
+interface KeywordFieldTarget {
+  country: string;
+  localization: AppStoreLocalization;
+}
+
+function keywordFieldResult(
+  id: string,
+  target: KeywordFieldTarget,
+  duplicatesRemoved: number,
+): KeywordFieldResult {
+  const phrases = keywordFields.get(fieldKey(id, target.localization)) ?? [];
+  const tracked =
+    keywordFieldTracked.get(trackedKey(id, target.country)) ?? new Set();
 
   return {
-    tracked: phrases.map((value) => trackedFromKeywordField(value, country)),
+    tracked: phrases
+      .filter((phrase) => tracked.has(phrase))
+      .map((phrase) => trackedFromKeywordField(phrase, target.country)),
     charactersUsed: keywordFieldChars(phrases),
     charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
     duplicatesRemoved,
+    country: target.country,
+    localization: target.localization,
+    phrases,
   };
+}
+
+function keywordFieldTarget(
+  dataset: (typeof DATASETS)[string],
+  req: IncomingMessage,
+  res: ServerResponse,
+): KeywordFieldTarget | undefined {
+  const path = req.url ?? "/";
+  const query = new URL(path, "http://localhost").searchParams;
+  const country = query.get("country") ?? dataset.detail.country;
+  if (!isStorefront("APP_STORE", country)) {
+    json(
+      res,
+      400,
+      errorEnvelope(400, path, `${country} is not an App Store storefront`),
+    );
+    return undefined;
+  }
+  const read = readLocalizations(country);
+  const requested = query.get("localization") ?? read[0];
+  const localization = read.find((tag) => tag === requested);
+  if (!localization) {
+    const names = read.map((tag) => APP_STORE_LOCALIZATIONS[tag]).join(", ");
+    json(
+      res,
+      400,
+      errorEnvelope(
+        400,
+        path,
+        `The ${country.toUpperCase()} storefront reads ${names}, not ${
+          isAppStoreLocalization(requested)
+            ? APP_STORE_LOCALIZATIONS[requested]
+            : requested
+        }`,
+      ),
+    );
+    return undefined;
+  }
+  return { country, localization };
+}
+
+function trackedMarketsOf(id: string): string[] {
+  return [...keywordFieldTracked.keys()]
+    .filter((key) => key.startsWith(`${id}:`))
+    .map((key) => key.slice(id.length + 1));
+}
+
+function heldByAnotherField(
+  id: string,
+  country: string,
+  phrase: string,
+): boolean {
+  return readLocalizations(country).some((tag) =>
+    keywordFields.get(fieldKey(id, tag))?.includes(phrase),
+  );
+}
+
+function saveKeywordField(
+  id: string,
+  target: KeywordFieldTarget,
+  phrases: string[],
+): void {
+  const key = fieldKey(id, target.localization);
+  const dropped = (keywordFields.get(key) ?? []).filter(
+    (phrase) => !phrases.includes(phrase),
+  );
+  if (phrases.length === 0) keywordFields.delete(key);
+  else keywordFields.set(key, phrases);
+  const tracked =
+    keywordFieldTracked.get(trackedKey(id, target.country)) ?? new Set();
+  for (const phrase of phrases) tracked.add(phrase);
+  keywordFieldTracked.set(trackedKey(id, target.country), tracked);
+  for (const country of trackedMarketsOf(id)) {
+    if (!readsLocalization(country, target.localization)) continue;
+    for (const phrase of dropped) {
+      if (!heldByAnotherField(id, country, phrase)) {
+        keywordFieldTracked.get(trackedKey(id, country))?.delete(phrase);
+      }
+    }
+  }
+}
+
+function keywordFieldSummaries(
+  id: string,
+  home: string,
+): KeywordFieldSummary[] {
+  const markets = [...new Set([home, ...trackedMarketsOf(id)])];
+  const homeDefault = readLocalizations(home)[0];
+  return [...keywordFields.entries()]
+    .filter(([key]) => key.startsWith(`${id}:`))
+    .flatMap(([key, phrases]) => {
+      const localization = key.slice(id.length + 1);
+      return isAppStoreLocalization(localization)
+        ? [{ localization, phrases }]
+        : [];
+    })
+    .sort(
+      (left, right) =>
+        Number(left.localization !== homeDefault) -
+          Number(right.localization !== homeDefault) ||
+        left.localization.localeCompare(right.localization),
+    )
+    .map(({ localization, phrases }) => ({
+      localization,
+      phrases,
+      charactersUsed: keywordFieldChars(phrases),
+      charactersLimit: KEYWORD_FIELD_CHAR_LIMIT,
+      markets: storefrontsReading(localization, markets),
+      updatedAt: KEYWORD_FIELD_UPDATED_AT,
+    }));
 }
 
 function keywordFieldDataset(
@@ -2220,11 +2357,18 @@ const routes: Route[] = [
     handler: ([id], req, res) => {
       const dataset = keywordFieldDataset(id, req, res);
       if (!dataset) return;
-      json(
-        res,
-        200,
-        keywordFieldResult(keywordFields.get(id) ?? "", dataset.detail.country),
-      );
+      const target = keywordFieldTarget(dataset, req, res);
+      if (!target) return;
+      json(res, 200, keywordFieldResult(id, target, 0));
+    },
+  },
+  {
+    method: "GET",
+    pattern: /^\/apps\/([^/]+)\/keyword-fields$/,
+    handler: ([id], req, res) => {
+      const dataset = keywordFieldDataset(id, req, res);
+      if (!dataset) return;
+      json(res, 200, keywordFieldSummaries(id, dataset.detail.country));
     },
   },
   {
@@ -2234,15 +2378,13 @@ const routes: Route[] = [
       withBody<KeywordFieldRequest>(req, res, (body) => {
         const dataset = keywordFieldDataset(id, req, res);
         if (!dataset) return;
-        const result = keywordFieldResult(
+        const target = keywordFieldTarget(dataset, req, res);
+        if (!target) return;
+        const { phrases, duplicatesRemoved } = parseKeywordField(
           body.text ?? "",
-          dataset.detail.country,
         );
-        keywordFields.set(
-          id,
-          result.tracked.map((keyword) => keyword.text).join(","),
-        );
-        json(res, 200, result);
+        saveKeywordField(id, target, phrases);
+        json(res, 200, keywordFieldResult(id, target, duplicatesRemoved));
       });
     },
   },

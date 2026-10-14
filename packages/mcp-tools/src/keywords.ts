@@ -79,4 +79,19 @@ export const KEYWORD_TOOLS: ReadTool[] = [
       params: { onlyGaps },
     }),
   }),
+
+  defineReadTool({
+    name: "keyword_fields",
+    title: "List saved keyword fields",
+    description:
+      "The private App Store keyword fields the owner saved for one app, one per App Store localization: the phrases in submission order, the characters used against the 100 character limit, and the markets of the app whose storefront reads that localization. A storefront reads its default localization and a fixed list of additional ones (the United States also reads Spanish (Mexico), Germany also reads English (U.K.)), and a keyword is covered by the field of any localization its market reads. An empty list means the owner has saved no keyword field yet, so coverage cannot count one. Google Play has no keyword field and answers an error.",
+    inputSchema: z.object({
+      appId: z.string().describe("The app id from list_apps."),
+    }),
+    request: ({ appId }) => ({
+      path: `/apps/${seg(appId)}/keyword-fields`,
+    }),
+    unavailableOn404:
+      "Keyword fields per localization are not available on this instance; it needs a newer asobeast API.",
+  }),
 ];

@@ -11,9 +11,11 @@ import {
   MetadataAssistantResult,
   MetadataAssistantStatus,
   MetadataField,
+  storefrontsReading,
   tokenize,
 } from '@asobeast/shared';
 import { AiGateway } from '../ai/ai-gateway.service';
+import { storedKeywordFields } from '../keywords/keyword-field-index';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MetadataAssistantDto } from './dto/metadata-assistant.dto';
@@ -23,10 +25,10 @@ import {
   DRAFT_MAX_OUTPUT_TOKENS,
   draftSchema,
   LocalizationTarget,
-  storefrontsReading,
   SYSTEM_PROMPT,
   validateDrafts,
 } from './metadata-drafts';
+import { fieldPhrases, keywordFieldOf } from './listing-surfaces';
 import { MetadataService } from './metadata.service';
 import { LATEST_HOME_LISTING } from '../apps/listing';
 
@@ -157,13 +159,17 @@ export class MetadataAssistantService {
         `${app.store} does not support drafting a localization. Send the request without localization.`,
       );
     }
-    const markets = await this.keywords.keywordCountries(app.id);
+    const [markets, stored] = await Promise.all([
+      this.keywords.keywordCountries(app.id),
+      storedKeywordFields(this.prisma, app.id),
+    ]);
     return {
       localization,
       storefronts: storefrontsReading(
         localization,
         markets.map((market) => market.country),
       ),
+      keywordField: keywordFieldOf(fieldPhrases(stored), localization),
     };
   }
 

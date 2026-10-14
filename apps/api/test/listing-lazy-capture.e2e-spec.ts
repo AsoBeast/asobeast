@@ -125,6 +125,34 @@ describe('listing capture on the first keyword of a market (e2e)', () => {
     expect(jobs.every((data) => data.country === 'de')).toBe(true);
   });
 
+  it('asks for the listing of a market on its first keyword field save', async () => {
+    const { primary, rival } = await seed();
+
+    await api
+      .put(`/apps/${primary.id}/keyword-field`)
+      .query({ country: 'de' })
+      .send({ text: 'gewohnheit' })
+      .expect(200);
+
+    const jobs = await marketRefreshes();
+    expect(jobs.map((data) => data.appId).sort()).toEqual(
+      [primary.id, rival.id].sort(),
+    );
+    expect(jobs.every((data) => data.country === 'de')).toBe(true);
+  });
+
+  it('asks for nothing when a keyword field save tracks no phrase', async () => {
+    const { primary } = await seed();
+
+    await api
+      .put(`/apps/${primary.id}/keyword-field`)
+      .query({ country: 'de' })
+      .send({ text: '' })
+      .expect(200);
+
+    await expect(marketRefreshes()).resolves.toEqual([]);
+  });
+
   it('asks only once for a second keyword in the same market', async () => {
     const { primary } = await seed();
 

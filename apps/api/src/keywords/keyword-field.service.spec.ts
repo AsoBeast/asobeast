@@ -5,45 +5,44 @@ import { QuotaService } from '../auth/quota.service';
 import { WorkspaceContext } from '../common/tenancy/workspace-context';
 import { Env } from '../config/env';
 import { PrismaService } from '../prisma/prisma.service';
+import { KeywordFieldService } from './keyword-field.service';
 import { KeywordTracker } from './keyword-tracker';
-import { KeywordsService } from './keywords.service';
 import { MarketListingRequests } from './market-listing.requests';
 
 interface TrackedRow {
   keywordId: string;
   source: string;
   active: boolean;
-  fieldOrder: number | null;
 }
 
 interface CreateManyArgs<T> {
   data: T[];
 }
 
+interface KeywordFilter {
+  keyword?: { is: { text?: { in: string[] } } };
+}
+
 interface FindManyArgs {
-  where: { active?: boolean; fieldOrder?: { not: null } };
+  where: KeywordFilter & { active?: boolean; source?: string };
 }
 
 interface UpdateManyArgs {
-  where: {
+  where: KeywordFilter & {
     source?: string;
     active?: boolean;
-    fieldOrder?: { not: null };
-    keywordId: string | { in: string[] } | { notIn: string[] };
+    keywordId?: string | { in: string[] };
   };
-  data: { active?: boolean; source?: string; fieldOrder?: number | null };
+  data: { active?: boolean; source?: string };
 }
-
-const matchesMembership = (row: TrackedRow, filter?: { not: null }) =>
-  filter === undefined || row.fieldOrder !== null;
 
 const matchesKeywordId = (
   keywordId: string,
   filter: UpdateManyArgs['where']['keywordId'],
 ) => {
+  if (filter === undefined) return true;
   if (typeof filter === 'string') return keywordId === filter;
-  if ('in' in filter) return filter.in.includes(keywordId);
-  return !filter.notIn.includes(keywordId);
+  return filter.in.includes(keywordId);
 };
 
 const APP = {
@@ -60,18 +59,44 @@ function buildPrisma() {
   const textOf = (keywordId: string) =>
     [...keywordIds].find(([, id]) => id === keywordId)?.[0] ?? '';
 
+  const matchesText = (keywordId: string, filter: KeywordFilter) =>
+    filter.keyword?.is.text === undefined ||
+    filter.keyword.is.text.in.includes(textOf(keywordId));
+
+  const field = { phrases: null as string[] | null };
   const insertedTexts: string[][] = [];
   const client = {
     rows,
     textOf,
     insertedTexts,
     $executeRaw: jest.fn<Promise<number>, unknown[]>(() => Promise.resolve(1)),
-    app: { findFirst: () => Promise.resolve(APP) },
+    app: {
+      findFirst: () => Promise.resolve(APP),
+    },
     appSnapshot: { findFirst: () => Promise.resolve(null) },
     keywordMetric: { findFirst: () => Promise.resolve(null) },
     serpEntry: {
       findFirst: () => Promise.resolve(null),
       findMany: () => Promise.resolve([]),
+    },
+    keywordField: {
+      findMany: () =>
+        Promise.resolve(
+          field.phrases
+            ? [{ localization: 'en-US', phrases: field.phrases }]
+            : [],
+        ),
+      findUnique: () =>
+        Promise.resolve(field.phrases ? { phrases: field.phrases } : null),
+      upsert: ({ update }: { update: { phrases: string[] } }) => {
+        field.phrases = update.phrases;
+        return Promise.resolve(field);
+      },
+      deleteMany: () => {
+        const count = field.phrases ? 1 : 0;
+        field.phrases = null;
+        return Promise.resolve({ count });
+      },
     },
     keyword: {
       createMany: ({ data }: CreateManyArgs<{ text: string }>) => {
@@ -90,21 +115,16 @@ function buildPrisma() {
         ),
     },
     trackedKeyword: {
-      createMany: ({
-        data,
-      }: CreateManyArgs<
-        Omit<TrackedRow, 'fieldOrder'> & { fieldOrder?: number }
-      >) => {
+      createMany: ({ data }: CreateManyArgs<TrackedRow>) => {
         const created = data.filter(
           (row) =>
             !rows.some((existing) => existing.keywordId === row.keywordId),
         );
         rows.push(
-          ...created.map(({ keywordId, source, active, fieldOrder }) => ({
+          ...created.map(({ keywordId, source, active }) => ({
             keywordId,
             source,
             active,
-            fieldOrder: fieldOrder ?? null,
           })),
         );
         return Promise.resolve({ count: created.length });
@@ -112,14 +132,14 @@ function buildPrisma() {
       findMany: ({ where }: FindManyArgs) => {
         const matching = rows.filter(
           (row) =>
-            matchesMembership(row, where.fieldOrder) &&
+            matchesText(row.keywordId, where) &&
+            (where.source === undefined || row.source === where.source) &&
             (where.active === undefined || row.active === where.active),
         );
         return Promise.resolve(
           matching.map((row) => ({
             keywordId: row.keywordId,
             source: row.source,
-            fieldOrder: row.fieldOrder,
             active: row.active,
             relevance: null,
             keyword: {
@@ -136,13 +156,12 @@ function buildPrisma() {
           (row) =>
             (where.source === undefined || row.source === where.source) &&
             (where.active === undefined || row.active === where.active) &&
-            matchesMembership(row, where.fieldOrder) &&
+            matchesText(row.keywordId, where) &&
             matchesKeywordId(row.keywordId, where.keywordId),
         );
         for (const row of matching) {
           row.active = data.active ?? row.active;
           row.source = data.source ?? row.source;
-          if ('fieldOrder' in data) row.fieldOrder = data.fieldOrder ?? null;
         }
         return Promise.resolve({ count: matching.length });
       },
@@ -163,7 +182,7 @@ function buildPrisma() {
 
 function buildService(prisma: ReturnType<typeof buildPrisma>) {
   const queue = { add: jest.fn() } as unknown as Queue;
-  return new KeywordsService(
+  return new KeywordFieldService(
     prisma as unknown as PrismaService,
     new KeywordTracker(
       prisma as unknown as PrismaService,
@@ -178,6 +197,7 @@ function buildService(prisma: ReturnType<typeof buildPrisma>) {
         get: (key: string) => (key === 'BILLING_ENABLED' ? false : null),
       } as unknown as ConfigService<Env, true>,
     ),
+    { require: () => APP.workspaceId } as unknown as WorkspaceContext,
     { request: jest.fn() } as unknown as MarketListingRequests,
   );
 }
@@ -188,7 +208,7 @@ const deactivatedTexts = (prisma: ReturnType<typeof buildPrisma>) =>
     .map((row) => prisma.textOf(row.keywordId))
     .sort();
 
-describe('KeywordsService.setKeywordField deactivation', () => {
+describe('KeywordFieldService.setKeywordField deactivation', () => {
   it('deactivates exactly the phrases the shorter field dropped', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma);
@@ -228,7 +248,27 @@ describe('KeywordsService.setKeywordField deactivation', () => {
   });
 });
 
-describe('KeywordsService.setKeywordField writes', () => {
+describe('KeywordFieldService.setKeywordField writes', () => {
+  it('leaves a dropped phrase another write claimed while the save ran', async () => {
+    const prisma = buildPrisma();
+    const service = buildService(prisma);
+    await service.setKeywordField(APP.id, 'a,b');
+    const findMany = prisma.trackedKeyword.findMany;
+    jest
+      .spyOn(prisma.trackedKeyword, 'findMany')
+      .mockImplementation(async (args: FindManyArgs) => {
+        const rows = await findMany(args);
+        if (args.where.source === 'KEYWORD_FIELD') {
+          for (const row of prisma.rows) row.source = 'MANUAL';
+        }
+        return rows;
+      });
+
+    await service.setKeywordField(APP.id, 'a');
+
+    expect(deactivatedTexts(prisma)).toEqual([]);
+  });
+
   it('locks the app inside the transaction before it writes a tracked keyword', async () => {
     const prisma = buildPrisma();
     const service = buildService(prisma);

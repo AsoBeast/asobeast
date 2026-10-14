@@ -20,9 +20,11 @@ The home storefront drives everything that asobeast stores once per app.
 | --- | --- |
 | Category ranks | Tracked keywords |
 | Reviews and ratings history | Positions and SERP snapshots |
-| The iOS keyword field | Popularity and difficulty scores |
-| Auto tracked keywords from the listing | Market comparison in the Action Center |
+| Auto tracked keywords from the listing | Popularity and difficulty scores |
+|  | Market comparison in the Action Center |
 |  | Listings: metadata snapshots and their changes |
+
+The iOS keyword field is kept once per App Store localization rather than per app or per market. See [Which localizations does a storefront read?](#which-localizations-does-a-storefront-read)
 
 A keyword is judged against the listing its own storefront serves. See [What is a market listing?](#what-is-a-market-listing)
 
@@ -73,13 +75,13 @@ A localization the app does not have is answered by the store with the default t
 
 The native localizations are captured with the listing they belong to: when you import an app, when you refresh a listing and in the daily run. Each one costs one more listing read, and `GET /jobs/budget` reports them as `localizations`, a part of `apps`. India reads eleven localizations, so a market there costs the most.
 
-Coverage judges a keyword within each localization, because the words of one localization combine into phrases only with each other: a keyword in the Polish title is covered even when the English title does not contain it, and the metadata page names the localization that covers it. Auto tracked keywords take phrases from every localization of the home storefront in turn, native first, up to the same limit. The iOS keyword field still belongs to the home default listing. Changes to a native localization are recorded in that localization only and send no alert.
+Coverage judges a keyword within each localization, because the words of one localization combine into phrases only with each other: a keyword in the Polish title is covered even when the English title does not contain it, and the metadata page names the localization that covers it. Auto tracked keywords take phrases from every localization of the home storefront in turn, native first, up to the same limit. The keyword field you saved for a localization is judged with that localization too. Changes to a native localization are recorded in that localization only and send no alert.
 
 A market listing carries its own screenshots. On the App Store their captions are read with that storefront's language, and the Screenshot text column of a keyword reads the captions of the same listing that judged the keyword. See [Read screenshot captions](/guides/screenshot-captions#how-do-market-listings-read-their-screenshots).
 
-Some things are still read once, from the home storefront, because they need more than the listing: category ranks, reviews and the ratings history, the iOS keyword field, the ASO audit and the keywords asobeast tracks for you from your listing. The Action Center rules that judge coverage, lint and staleness also read the home listing. See [Action Center](/guides/action-center).
+Some things are still read once, from the home storefront, because they need more than the listing: category ranks, reviews and the ratings history, the ASO audit and the keywords asobeast tracks for you from your listing. The Action Center rules that judge coverage, lint and staleness also read the home listing. See [Action Center](/guides/action-center).
 
-The Apple keyword field is private and belongs to the home storefront, so a keyword judged against a market listing is covered by its title and subtitle only. A keyword whose market has no listing yet is judged against the whole home listing, keyword field included.
+A keyword judged against a market listing is covered by the title and subtitle of every localization that storefront reads, and by the keyword field of each of those localizations you saved. A keyword whose market has no listing yet is judged against the whole home listing, keyword field included.
 
 A market whose keywords you all removed keeps its last listing readable in the switcher, but asobeast stops refreshing it, and the Refresh button says why instead of refreshing.
 
@@ -126,6 +128,19 @@ Apple publishes, for every App Store storefront, a default language and the addi
 Many ASO guides still name only Spanish (Mexico) for the United States. asobeast follows Apple's table.
 
 Apple's page lists languages; it does not describe search. In practice, App Store search in a storefront reads the title, subtitle and keyword field of every localization on that storefront's list, and the words of one localization combine into phrases only with each other. Each additional language is therefore extra room: its own 30 character title, 30 character subtitle and 100 character keyword field.
+
+### How does asobeast keep a keyword field per localization?
+
+App Store Connect has one private keyword field per localization, and a new localization starts with it empty. asobeast keeps one keyword field per localization too, and a storefront counts the fields of every localization it reads. The German field counts in Germany, Austria, Switzerland and Luxembourg, and the Spanish (Mexico) field counts in Mexico and in the United States.
+
+| What you do | What asobeast does |
+| --- | --- |
+| Save a field from a market | Tracks its phrases in that market, with the source `KEYWORD_FIELD`, and starts capturing that market's listing if it was not captured yet |
+| Track a keyword in another market that reads the localization | Reports it as `KEYWORD_FIELD` while the field holds it |
+| Remove a phrase from the field | Stops tracking it as `KEYWORD_FIELD` in every market that reads the localization, unless another field read there still holds it |
+| Stop tracking a keyword | Leaves the field as you saved it, and shows the phrase as not tracked in that market |
+
+A market offers only the localizations its storefront reads, default first. The field you saved before keyword fields were kept per localization is the field of your home storefront's default localization, English (U.S.) for an app whose home storefront is the United States. If your home storefront defaults to English and you had pasted the field of its native localization, such as Polish in Poland, paste it again under that localization and empty the default one. See [Paste the iOS keyword field](/guides/track-keywords#paste-the-ios-keyword-field).
 
 asobeast reads the default listing of every storefront and the native localizations of the storefronts that default to English (see [What about storefronts that default to English?](#what-about-storefronts-that-default-to-english)). It does not ask for the other localizations, such as Spanish (Mexico) in the United States or English (U.K.) in Germany, so for those it cannot tell what your listing fills. App Store Connect is private and a store page shows one localization per request, so the metadata workbench lists what each storefront reads without guessing what you have. See [Optimize listing metadata](/guides/metadata-workbench#see-which-localizations-each-storefront-reads).
 

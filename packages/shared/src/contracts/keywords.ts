@@ -8,6 +8,7 @@ import {
   Store,
   SuggestReachStatus,
 } from '../index';
+import type { AppStoreLocalization } from '../storefronts/app-store-localizations';
 import type { PaidPlanName, QuotaUsage } from './plans';
 
 export interface ScoreSignals {
@@ -73,6 +74,23 @@ export interface KeywordFieldResult {
   charactersUsed: number;
   charactersLimit: number;
   duplicatesRemoved: number;
+  country?: string;
+  localization?: AppStoreLocalization;
+  phrases?: string[];
+}
+
+export interface KeywordFieldQuery {
+  country?: string;
+  localization?: AppStoreLocalization;
+}
+
+export interface KeywordFieldSummary {
+  localization: AppStoreLocalization;
+  phrases: string[];
+  charactersUsed: number;
+  charactersLimit: number;
+  markets: string[];
+  updatedAt: string;
 }
 
 export interface KeywordComparisonCompetitor {

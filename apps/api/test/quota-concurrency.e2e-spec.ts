@@ -9,6 +9,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { AppsService } from '../src/apps/apps.service';
 import { CompetitorsService } from '../src/competitors/competitors.service';
+import { KeywordFieldService } from '../src/keywords/keyword-field.service';
 import { KeywordsService } from '../src/keywords/keywords.service';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
 import { QuotaExceededError } from '../src/auth/quota.errors';
@@ -75,6 +76,7 @@ describe('Quota admission under concurrency (e2e)', () => {
   let apps: AppsService;
   let competitors: CompetitorsService;
   let keywords: KeywordsService;
+  let fields: KeywordFieldService;
 
   const appUrl = (id: string) =>
     `https://apps.apple.com/us/app/fixture/id${id}`;
@@ -100,6 +102,7 @@ describe('Quota admission under concurrency (e2e)', () => {
     apps = app.get(AppsService);
     competitors = app.get(CompetitorsService);
     keywords = app.get(KeywordsService);
+    fields = app.get(KeywordFieldService);
 
     prisma = testDb();
     await prisma.workspace.upsert({
@@ -298,11 +301,11 @@ describe('Quota admission under concurrency (e2e)', () => {
   it('counts a keyword field write against the same limit as a bulk add', async () => {
     const limit = PLAN_LIMITS.indie.keywordMarkets;
     const appId = await seedFieldedApp('fielded', limit - 2);
-    await asWorkspace(app, () => keywords.setKeywordField(appId, 'kept'));
+    await asWorkspace(app, () => fields.setKeywordField(appId, 'kept'));
 
     await expect(
       asWorkspace(app, () =>
-        keywords.setKeywordField(appId, 'phrase one,phrase two,phrase three'),
+        fields.setKeywordField(appId, 'phrase one,phrase two,phrase three'),
       ),
     ).rejects.toBeInstanceOf(QuotaExceededError);
 
@@ -322,8 +325,8 @@ describe('Quota admission under concurrency (e2e)', () => {
 
     const outcome = await asWorkspace(app, () =>
       settledOf([
-        keywords.setKeywordField(appId, phrases('alpha').join(',')),
-        keywords.setKeywordField(appId, phrases('delta').join(',')),
+        fields.setKeywordField(appId, phrases('alpha').join(',')),
+        fields.setKeywordField(appId, phrases('delta').join(',')),
       ]),
     );
 

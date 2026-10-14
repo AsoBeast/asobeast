@@ -8,9 +8,11 @@ import {
 } from "@tanstack/react-query";
 import { Loader2, Lock } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryState } from "nuqs";
 import {
   KEYWORD_FIELD_CHAR_LIMIT,
   keywordFieldChars,
+  type KeywordFieldQuery,
   type KeywordFieldResult,
   parseKeywordField,
 } from "@asobeast/shared";
@@ -26,12 +28,17 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, setKeywordField } from "@/lib/api";
 import { formatCountry } from "@/lib/format";
+import { fieldLocalization, keywordFieldQuery } from "@/lib/keyword-field";
+import { localizationName } from "@/lib/localizations";
 import {
   appKeys,
-  invalidateKeywordMutation,
+  invalidateKeywordFieldMutation,
   keywordFieldOptions,
 } from "@/lib/queries";
+import { fieldLocaleParser } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
+import { KeywordFieldLocalizationSelect } from "./KeywordFieldLocalizationSelect";
+import { KeywordFieldReach } from "./KeywordFieldReach";
 import { KeywordFieldSkeleton } from "./skeletons";
 
 function ResultView({ result }: { result: KeywordFieldResult }) {
@@ -140,29 +147,47 @@ function KeywordFieldUsage({
   );
 }
 
-function KeywordFieldForm({ id }: { id: string }) {
+function untrackedPhrases(result: KeywordFieldResult): string[] {
+  const tracked = new Set(result.tracked.map((keyword) => keyword.text));
+  return (result.phrases ?? []).filter((phrase) => !tracked.has(phrase));
+}
+
+function KeywordFieldForm({
+  id,
+  home,
+  market,
+  query,
+}: {
+  id: string;
+  home: string;
+  market: string;
+  query: KeywordFieldQuery;
+}) {
   const queryClient = useQueryClient();
-  const { data: stored } = useSuspenseQuery(keywordFieldOptions(id));
+  const { data: stored } = useSuspenseQuery(keywordFieldOptions(id, query));
   const [draft, setDraft] = useState<string | null>(null);
   const [saved, setSaved] = useState<KeywordFieldResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const storedText = stored.tracked.map((keyword) => keyword.text).join(",");
+  const storedText = (
+    stored.phrases ?? stored.tracked.map((keyword) => keyword.text)
+  ).join(",");
   const text = draft ?? storedText;
   const { phrases } = parseKeywordField(text);
   const used = keywordFieldChars(phrases);
   const over = used > KEYWORD_FIELD_CHAR_LIMIT;
   const nothingToSave = text.trim() === "" && storedText === "";
   const result = saved ?? stored;
+  const untracked = untrackedPhrases(stored);
 
   const mutation = useMutation({
-    mutationFn: () => setKeywordField(id, text),
+    mutationFn: () => setKeywordField(id, text, query),
     onSuccess: (data) => {
       setSaved(data);
       setDraft(null);
       setError(null);
-      queryClient.setQueryData(appKeys.keywordField(id), data);
-      invalidateKeywordMutation(queryClient, id);
+      queryClient.setQueryData(appKeys.keywordField(id, query), data);
+      invalidateKeywordFieldMutation(queryClient, id);
       toast.success("Saved keyword field", {
         description: `${data.tracked.length} tracked · ${data.duplicatesRemoved} duplicate${
           data.duplicatesRemoved === 1 ? "" : "s"
@@ -179,6 +204,7 @@ function KeywordFieldForm({ id }: { id: string }) {
 
   return (
     <CardContent className="flex flex-col gap-3">
+      <KeywordFieldLocalizationSelect id={id} home={home} market={market} />
       <Textarea
         value={text}
         onChange={(event) => {
@@ -193,11 +219,20 @@ function KeywordFieldForm({ id }: { id: string }) {
         aria-describedby="keyword-field-count"
       />
       <KeywordFieldUsage text={text} phrases={phrases} used={used} />
+      <KeywordFieldReach
+        id={id}
+        market={market}
+        localization={stored.localization}
+        untracked={untracked}
+      />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       <div>
         <Button
           disabled={
-            mutation.isPending || over || nothingToSave || text === storedText
+            mutation.isPending ||
+            over ||
+            nothingToSave ||
+            (text === storedText && untracked.length === 0)
           }
           onClick={() => mutation.mutate()}
         >
@@ -219,30 +254,35 @@ export function KeywordFieldEditor({
   homeCountry: string;
   activeMarket: string;
 }) {
-  const homeMarket = activeMarket === homeCountry;
+  const [requested] = useQueryState("fieldLocale", fieldLocaleParser);
+  const localization = fieldLocalization(homeCountry, activeMarket, requested);
+  const query = keywordFieldQuery(homeCountry, activeMarket, requested);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Lock className="size-4" />
-          App Store keyword field · {formatCountry(homeCountry)}
+          App Store keyword field ·{" "}
+          {localization
+            ? localizationName(localization)
+            : formatCountry(activeMarket)}
         </CardTitle>
         <CardDescription>
           This {KEYWORD_FIELD_CHAR_LIMIT}-character field is private — Apple
           never shows it and it cannot be scraped. Paste exactly what you
-          submitted in App Store Connect. It applies to your home market only.
-          The field shows the phrases AsoBeast tracks in the order you pasted
-          them. Spacing and casing can differ, and a repeated phrase is kept
-          once, where it first appeared.
+          submitted in App Store Connect. Each App Store localization has its
+          own field, and every storefront reads the fields of the localizations
+          it supports. The field shows the phrases AsoBeast tracks in the order
+          you pasted them. Spacing and casing can differ, and a repeated phrase
+          is kept once, where it first appeared.
         </CardDescription>
       </CardHeader>
-      {!homeMarket ? (
+      {localization === undefined ? (
         <CardContent>
           <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
-            The keyword field is tracked for your home market (
-            {formatCountry(homeCountry)}) only. Switch to that market to edit
-            it.
+            {formatCountry(activeMarket)} is not an App Store storefront, so it
+            has no keyword field.
           </p>
         </CardContent>
       ) : (
@@ -253,7 +293,13 @@ export function KeywordFieldEditor({
             </CardContent>
           }
         >
-          <KeywordFieldForm id={id} />
+          <KeywordFieldForm
+            key={`${activeMarket}:${localization}`}
+            id={id}
+            home={homeCountry}
+            market={activeMarket}
+            query={query}
+          />
         </Suspense>
       )}
     </Card>

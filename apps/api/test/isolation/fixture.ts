@@ -250,6 +250,14 @@ async function seedWorkspace(
       readAt: new Date(),
     },
   });
+  await db.keywordField.create({
+    data: {
+      appId: apple.id,
+      workspaceId: id,
+      localization: 'en-US',
+      phrases: [`${id} field`],
+    },
+  });
 
   const keyword = await db.keyword.upsert({
     where: {

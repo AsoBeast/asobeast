@@ -11,10 +11,6 @@ export interface LocalizedSurfaces {
   surfaces: readonly Surface[];
 }
 
-const LOCALIZED_FIELD_EXCLUDED: ReadonlySet<MetadataField> = new Set([
-  'keywordField',
-]);
-
 export function judgeFields(
   text: string,
   surfaces: readonly Surface[],
@@ -22,7 +18,6 @@ export function judgeFields(
 ): CoverageFieldStatus[] {
   return surfaces.map(({ field, value }) => {
     if (coversKeyword(value, text)) return { field, covered: true };
-    if (LOCALIZED_FIELD_EXCLUDED.has(field)) return { field, covered: false };
     const found = localized.find((listing) =>
       listing.surfaces.some(
         (surface) =>

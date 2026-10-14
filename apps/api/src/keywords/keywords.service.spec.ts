@@ -493,10 +493,11 @@ describe('KeywordsService.listTracked serp volatility', () => {
     source: 'MANUAL',
     active: true,
     relevance: null,
-    keyword: { text, rankings: [], metrics: [] },
+    keyword: { text, country: 'us', rankings: [], metrics: [] },
   });
 
   const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
@@ -578,6 +579,7 @@ describe('KeywordsService country tracking', () => {
     const queue = { add: jest.fn() };
     const keywordCreateMany = jest.fn().mockResolvedValue({ count: 1 });
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',
@@ -616,6 +618,7 @@ describe('KeywordsService country tracking', () => {
 
   it('summarizes tracked markets home-first with counts including an empty home', async () => {
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',

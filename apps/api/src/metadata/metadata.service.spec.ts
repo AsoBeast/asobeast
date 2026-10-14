@@ -109,6 +109,7 @@ const build = (
     },
     appSnapshot,
     snapshotScreenshot,
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
   } as unknown as PrismaService;
   const keywords = {
     listTracked: jest
@@ -178,7 +179,7 @@ describe('MetadataService.audit', () => {
     });
   });
 
-  it('suggests no keyword field while a localization is read', async () => {
+  it('suggests a keyword field for the localization being read', async () => {
     const { service } = build(Store.APP_STORE, {
       listings: {
         home: listing('snap_us', 'Where Am I? GeoGuess Map Quiz'),
@@ -192,7 +193,9 @@ describe('MetadataService.audit', () => {
 
     expect(result.localization).toBe('pl');
 
-    expect(result.keywordFieldSuggestion).toBeNull();
+    expect(result.keywordFieldSuggestion).toMatchObject({
+      localization: 'pl',
+    });
   });
 
   it('never reads screenshots for a google play audit', async () => {

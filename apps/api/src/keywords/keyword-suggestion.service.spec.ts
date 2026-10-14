@@ -19,6 +19,7 @@ describe('KeywordSuggestionService.suggest competitors', () => {
 
   it('counts overlapping competitor terms and drops tracked ones', async () => {
     const prisma = {
+      keywordField: { findMany: jest.fn().mockResolvedValue([]) },
       app: {
         findFirst: jest.fn().mockResolvedValue({
           id: 'app1',
@@ -65,6 +66,7 @@ describe('KeywordSuggestionService.suggest developer', () => {
     );
 
   const buildPrisma = (raw: unknown) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
@@ -117,6 +119,7 @@ describe('KeywordSuggestionService.suggest developer', () => {
 
 describe('KeywordSuggestionService.suggest egress', () => {
   const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
@@ -187,6 +190,7 @@ describe('KeywordSuggestionService.suggest egress', () => {
 
 describe('KeywordSuggestionService.suggest in a spanish market', () => {
   const buildPrisma = (store: Store) => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
     app: {
       findFirst: jest.fn().mockResolvedValue({
         id: 'app1',
@@ -316,6 +320,7 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
   const buildService = (country: string, store: Store) =>
     new KeywordSuggestionService(
       {
+        keywordField: { findMany: jest.fn().mockResolvedValue([]) },
         app: {
           findFirst: jest.fn().mockResolvedValue({
             id: 'app1',

@@ -14,7 +14,11 @@ import {
   VisibilitySummary,
 } from '@asobeast/shared';
 import { coversKeyword } from '../keywords/keyword-coverage';
-import { reportedSource } from '../keywords/keyword-field-membership';
+import {
+  KeywordFieldIndex,
+  loadKeywordFieldIndex,
+  reportedSource,
+} from '../keywords/keyword-field-index';
 import { PrismaService } from '../prisma/prisma.service';
 import { AppOpportunity, appOpportunity } from '../scoring/keyword-opportunity';
 import {
@@ -51,6 +55,7 @@ const HISTORY_MAX_DAYS = 180;
 
 interface CoverageApp {
   snapshotText: string;
+  inKeywordField: KeywordFieldIndex;
 }
 
 const CURRENT_VERSIONS = new Set<string>(
@@ -75,7 +80,10 @@ const rowOpportunity = (
     ? rankingAt(row.keyword.rankings, referenceDate)
     : null;
   return appOpportunity({
-    source: reportedSource(row),
+    source: reportedSource(
+      row.source,
+      app.inKeywordField(row.keyword.country, row.keyword.text),
+    ),
     keywordText: row.keyword.text,
     snapshotText: app.snapshotText,
     relevanceOverride: row.relevance,
@@ -102,30 +110,37 @@ export class AnalyticsService {
   async summary(appId: string, country?: string): Promise<AppSummary> {
     await this.ensureApp(appId);
 
-    const [market, everyMarket, snapshot, competitors] = await Promise.all([
-      keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
-      country
-        ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
-        : null,
-      this.prisma.appSnapshot.findFirst({
-        where: { appId, ...HOME_LISTING },
-        orderBy: NEWEST_FIRST,
-        select: {
-          title: true,
-          subtitle: true,
-          description: true,
-          capturedAt: true,
-        },
-      }),
-      this.prisma.app.count({ where: { primaryAppId: appId } }),
-    ]);
+    const [market, everyMarket, snapshot, competitors, inKeywordField] =
+      await Promise.all([
+        keywordWindow(this.prisma, { appId, country }, SUMMARY_WINDOW_DAYS),
+        country
+          ? keywordWindow(this.prisma, { appId }, SUMMARY_WINDOW_DAYS)
+          : null,
+        this.prisma.appSnapshot.findFirst({
+          where: { appId, ...HOME_LISTING },
+          orderBy: NEWEST_FIRST,
+          select: {
+            title: true,
+            subtitle: true,
+            description: true,
+            capturedAt: true,
+          },
+        }),
+        this.prisma.app.count({ where: { primaryAppId: appId } }),
+        loadKeywordFieldIndex(this.prisma, appId),
+      ]);
     const covered = everyMarket ?? market;
 
     return {
       visibility: this.visibilitySummary(market.rows, market.referenceDate),
       rankDistribution: rankDistributionAt(market.rows, market.referenceDate),
       movers: movers(market.rows, market.referenceDate),
-      coverage: this.coverage(covered.rows, covered.referenceDate, snapshot),
+      coverage: this.coverage(
+        covered.rows,
+        covered.referenceDate,
+        snapshot,
+        inKeywordField,
+      ),
       lastRefreshAt: snapshot?.capturedAt.toISOString() ?? null,
       trackedKeywords: market.rows.length,
       competitors,
@@ -259,6 +274,7 @@ export class AnalyticsService {
       subtitle: string | null;
       description: string;
     } | null,
+    inKeywordField: KeywordFieldIndex,
   ): CoverageSummary {
     const fields = {
       title: snapshot?.title ?? '',
@@ -269,6 +285,7 @@ export class AnalyticsService {
       snapshotText: [fields.title, fields.subtitle, fields.description].join(
         ' ',
       ),
+      inKeywordField,
     };
 
     const hits = rows.map((row) => ({

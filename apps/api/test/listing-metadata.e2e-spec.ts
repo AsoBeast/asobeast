@@ -153,9 +153,13 @@ describe('metadata audit per market (e2e)', () => {
   it('judges a fallback keyword against the whole home listing', async () => {
     const mine = await seed();
     await track(mine.id, Store.APP_STORE, 'kopfhoerer', 'us');
-    await prisma.trackedKeyword.updateMany({
-      where: { keyword: { text: 'kopfhoerer', country: 'us' } },
-      data: { source: 'KEYWORD_FIELD' },
+    await prisma.keywordField.create({
+      data: {
+        appId: mine.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'en-US',
+        phrases: ['kopfhoerer'],
+      },
     });
 
     const result = await audit(`/apps/${mine.id}/metadata/audit`);
@@ -182,7 +186,7 @@ describe('metadata audit per market (e2e)', () => {
     expect(result.fields.map((field) => field.field)).not.toContain(
       'keywordField',
     );
-    expect(result.keywordFieldSuggestion).toBeNull();
+    expect(result.keywordFieldSuggestion).toMatchObject({ localization: 'de' });
     expect(result.coverage.map((row) => row.text).sort()).toEqual([
       'gewohnheits tracker',
       'schlaf',
@@ -194,6 +198,59 @@ describe('metadata audit per market (e2e)', () => {
         'subtitle',
       ]);
     }
+  });
+
+  it('covers a keyword through the spanish (mexico) field of the united states', async () => {
+    const mine = await seed();
+    await track(mine.id, Store.APP_STORE, 'rastreador', 'us');
+    await prisma.keywordField.create({
+      data: {
+        appId: mine.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'es-MX',
+        phrases: ['rastreador'],
+      },
+    });
+
+    const row = rowOf(
+      await audit(`/apps/${mine.id}/metadata/audit`),
+      'rastreador',
+    );
+
+    expect(row.uncovered).toBe(false);
+    expect(row.fields).toContainEqual({
+      field: 'keywordField',
+      covered: true,
+      localization: 'es-MX',
+    });
+  });
+
+  it('judges a market against the field of its own default localization', async () => {
+    const mine = await seed();
+    await prisma.keywordField.create({
+      data: {
+        appId: mine.id,
+        workspaceId: DEFAULT_WORKSPACE_ID,
+        localization: 'de',
+        phrases: ['schlaf'],
+      },
+    });
+
+    const result = await audit(`/apps/${mine.id}/metadata/audit?country=de`);
+
+    expect(rowOf(result, 'schlaf')).toMatchObject({ uncovered: false });
+    expect(
+      result.fields.find((field) => field.field === 'keywordField')?.value,
+    ).toBe('schlaf');
+  });
+
+  it('suggests a keyword field for a market and names its localization', async () => {
+    const mine = await seed();
+
+    const result = await audit(`/apps/${mine.id}/metadata/audit?country=de`);
+
+    expect(result.keywordFieldSuggestion).toMatchObject({ localization: 'de' });
+    expect(result.keywordFieldSuggestion?.addedTerms).toContain('schlaf');
   });
 
   it('answers 404 for a market with no listing', async () => {

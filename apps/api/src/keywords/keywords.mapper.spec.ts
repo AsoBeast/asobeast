@@ -5,7 +5,6 @@ const row = (
 ): TrackedKeywordRow => ({
   keywordId: 'k1',
   source: 'COMPETITOR',
-  fieldOrder: null,
   active: true,
   relevance: null,
   tags: [],
@@ -86,10 +85,10 @@ describe('toTrackedKeywordItem', () => {
   });
 
   it('reports a keyword field member as the keyword field whatever else tracks it', () => {
-    const member = toTrackedKeywordItem(
-      row({ source: 'MANUAL', fieldOrder: 0 }),
-      facts('daily habit tracker'),
-    );
+    const member = toTrackedKeywordItem(row({ source: 'MANUAL' }), {
+      ...facts('daily habit tracker'),
+      inKeywordField: () => true,
+    });
     const field = toTrackedKeywordItem(
       row({ source: 'KEYWORD_FIELD' }),
       facts('daily habit tracker'),

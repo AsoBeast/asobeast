@@ -45,7 +45,7 @@ describe('judgeFields', () => {
     ).toEqual({ field: 'title', covered: true, localization: 'fr' });
   });
 
-  it('never covers the keyword field through a localization', () => {
+  it('covers the keyword field through the field of another localization', () => {
     const withField = [
       ...english,
       { field: 'keywordField' as const, value: 'atlas' },
@@ -54,12 +54,14 @@ describe('judgeFields', () => {
       localization: 'pl',
       surfaces: [
         ...polish.surfaces,
-        { field: 'keywordField' as const, value: 'quiz geograficzny' },
+        { field: 'keywordField' as const, value: 'zgadnij,mapa' },
       ],
     };
 
-    expect(
-      judgeFields('quiz geograficzny', withField, [withLocalizedField])[2],
-    ).toEqual({ field: 'keywordField', covered: false });
+    expect(judgeFields('zgadnij', withField, [withLocalizedField])[2]).toEqual({
+      field: 'keywordField',
+      covered: true,
+      localization: 'pl',
+    });
   });
 });

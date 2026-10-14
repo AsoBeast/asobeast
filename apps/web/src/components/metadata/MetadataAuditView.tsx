@@ -5,6 +5,7 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { useLocalization } from "@/components/app-detail/use-localization";
 import { useMarket } from "@/components/app-detail/use-market";
 import { KeywordFieldSuggestionCard } from "@/components/KeywordFieldSuggestionCard";
+import { keywordFieldHref } from "@/lib/keyword-field";
 import { MetadataFieldCard } from "@/components/MetadataFieldCard";
 import { queryMarket } from "@/lib/market";
 import { metadataAuditOptions } from "@/lib/queries";
@@ -90,6 +91,12 @@ export function MetadataAuditView({
           <h2 className="text-lg font-medium">Suggestion</h2>
           <KeywordFieldSuggestionCard
             suggestion={result.keywordFieldSuggestion}
+            editHref={keywordFieldHref(
+              id,
+              home,
+              market,
+              result.keywordFieldSuggestion.localization,
+            )}
           />
         </section>
       ) : null}

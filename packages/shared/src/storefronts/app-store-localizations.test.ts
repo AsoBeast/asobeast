@@ -7,7 +7,11 @@ import {
   APP_STORE_STOREFRONTS,
   isAppStoreLocalization,
   nativeLocalizations,
+  keywordFieldLocalizations,
+  readLocalizations,
+  readsLocalization,
   storefrontLocalizations,
+  storefrontsReading,
 } from './index';
 
 const rows = Object.entries(APP_STORE_STOREFRONT_LOCALIZATIONS);
@@ -164,4 +168,58 @@ describe('nativeLocalizations', () => {
       }
     }
   });
+});
+
+describe('readLocalizations', () => {
+  it('lists the default localization first and then the additional ones', () => {
+    expect(readLocalizations('de')).toEqual(['de', 'en-GB']);
+    expect(readLocalizations('ch')).toEqual(['de', 'en-GB', 'fr', 'it']);
+    expect(readLocalizations('us')[0]).toBe('en-US');
+    expect(readLocalizations('us')).toContain('es-MX');
+  });
+
+  it('reads nothing for a code that is not a storefront', () => {
+    expect(readLocalizations('zz')).toEqual([]);
+  });
+
+  it('reads at least the default localization in every storefront', () => {
+    for (const country of APP_STORE_STOREFRONTS) {
+      expect(readLocalizations(country).length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('keywordFieldLocalizations', () => {
+  it('reads the localizations of a storefront', () => {
+    expect(keywordFieldLocalizations('de')).toEqual(readLocalizations('de'));
+  });
+
+  it('keeps an english (u.k.) field for a code that is no storefront', () => {
+    expect(keywordFieldLocalizations('uk')).toEqual(['en-GB']);
+  });
+});
+
+describe('readsLocalization', () => {
+  it.each([
+    ['at', 'de', true],
+    ['jp', 'en-US', true],
+    ['us', 'de', false],
+    ['us', 'not-a-tag', false],
+  ] as const)('%s reads %s: %s', (country, localization, expected) => {
+    expect(readsLocalization(country, localization)).toBe(expected);
+  });
+});
+
+describe('storefrontsReading', () => {
+  it.each([
+    ['es-MX', ['us', 'gb', 'mx'], ['us', 'mx']],
+    ['en-US', ['jp', 'us', 'gb'], ['jp', 'us']],
+    ['ja', ['us', 'pl'], []],
+    ['pl', ['zz', 'pl'], ['pl']],
+  ] as const)(
+    'finds where %s is read among %j',
+    (localization, countries, expected) => {
+      expect(storefrontsReading(localization, countries)).toEqual(expected);
+    },
+  );
 });

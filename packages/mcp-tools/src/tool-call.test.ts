@@ -81,6 +81,26 @@ describe("requestOf", () => {
     });
   });
 
+  it("reads the saved keyword fields of an app", () => {
+    expect(
+      requestOf(toolByName("keyword_fields")!, { appId: "app_1" }),
+    ).toEqual({ method: "GET", path: "/apps/app_1/keyword-fields" });
+  });
+
+  it("audits one localization of a market", () => {
+    expect(
+      requestOf(toolByName("metadata_audit")!, {
+        appId: "app_1",
+        country: "pl",
+        localization: "pl",
+      }),
+    ).toMatchObject({
+      method: "GET",
+      path: "/apps/app_1/metadata/audit",
+      params: { country: "pl", localization: "pl" },
+    });
+  });
+
   it("resolves a write tool with its own method and body", () => {
     expect(
       requestOf(track, { appId: "app-1", keywords: ["habit"] }),

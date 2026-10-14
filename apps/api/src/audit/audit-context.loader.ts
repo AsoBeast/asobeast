@@ -4,6 +4,7 @@ import { Store } from '@prisma/client';
 import { tokenize, TrackedKeywordItem } from '@asobeast/shared';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { Env } from '../config/env';
+import { KeywordFieldService } from '../keywords/keyword-field.service';
 import { KeywordsService } from '../keywords/keywords.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ScreenshotsService } from '../screenshots/screenshots.service';
@@ -58,6 +59,7 @@ export class AuditContextLoader {
   constructor(
     private readonly prisma: PrismaService,
     private readonly keywords: KeywordsService,
+    private readonly keywordFields: KeywordFieldService,
     private readonly auditAi: AuditAiService,
     private readonly analytics: AnalyticsService,
     private readonly config: ConfigService<Env, true>,
@@ -85,8 +87,8 @@ export class AuditContextLoader {
     if (app.store !== Store.APP_STORE) {
       return null;
     }
-    const { tracked } = await this.keywords.getKeywordField(app.id);
-    return tracked.map((item) => item.text).join(',') || null;
+    const { phrases } = await this.keywordFields.getKeywordField(app.id);
+    return phrases.join(',') || null;
   }
 
   private async screenshotCaptions(app: AuditApp): Promise<string[] | null> {
