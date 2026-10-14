@@ -232,6 +232,30 @@ test("direct setup is resumable and completes after live checks", async ({
   expect(await storedSkipped(page)).toEqual(["keywords"]);
 });
 
+test("a country whose keyword count fails never blocks completion", async ({
+  page,
+}) => {
+  await page.route(
+    (url) =>
+      url.pathname.endsWith("/apps/app-1/keywords") &&
+      url.searchParams.get("country") === "de",
+    (route) => route.fulfill({ status: 500, json: { statusCode: 500 } }),
+  );
+  await startSetup(page, "app-1");
+
+  await stepCard(page, "Track keywords")
+    .getByRole("button", { name: "Skip this step" })
+    .click();
+  await page.getByRole("combobox", { name: "Country to add" }).click();
+  await page.getByRole("option", { name: "DE · Germany" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+
+  await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Complete setup" }),
+  ).toBeEnabled();
+});
+
 test("a skipped step turns done once its target is reached", async ({
   page,
   request,

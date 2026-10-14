@@ -121,8 +121,8 @@ function ActiveSetup({
     active: activeCount(keywordQueries[index]?.data),
     error: keywordQueries[index]?.isError ?? false,
   }));
-  const ready = liveQueries.every((query) => query.data !== undefined);
-  const failed = liveQueries.some((query) => query.isError);
+  const ready = countQueries.every((query) => query.data !== undefined);
+  const failed = countQueries.some((query) => query.isError);
   const retry = () => {
     for (const query of liveQueries) {
       if (query.isError) void query.refetch();

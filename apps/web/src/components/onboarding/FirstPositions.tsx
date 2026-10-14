@@ -16,7 +16,10 @@ export function FirstPositions({
   country: string;
 }) {
   const headingId = useId();
-  const { data: keywords } = useQuery(keywordsOptions(id, country));
+  const { data: keywords } = useQuery({
+    ...keywordsOptions(id, country),
+    refetchOnMount: "always",
+  });
   const summary = keywords ? firstPositions(keywords) : null;
 
   return (
