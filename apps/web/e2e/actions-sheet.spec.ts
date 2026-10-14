@@ -56,6 +56,16 @@ test("the sheet links to the workspace that fixes the action", async ({
   ).toHaveAttribute("href", "/apps/app-1/metadata?keyword=kw-1");
 });
 
+test("the sheet says a keyword that was never checked is not checked yet", async ({
+  page,
+}) => {
+  await page.goto("/actions?action=act-uncovered");
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByText("Not checked yet")).toBeVisible();
+  await expect(dialog.getByText(">200")).toHaveCount(0);
+});
+
 test("the sheet writes out the steps and ends with the confirmation", async ({
   page,
 }) => {
