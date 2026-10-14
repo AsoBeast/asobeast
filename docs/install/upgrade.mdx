@@ -35,7 +35,7 @@ docker compose ps
 docker compose logs --no-color --tail=200 api web
 ```
 
-The API applies every pending migration on boot, so `--wait` returning success means the schema is current and both services are healthy.
+The API applies every pending migration on boot, so `--wait` returning success means the schema is current and both services are healthy. When it fails instead, see [If a migration fails](/operations/upgrades#if-a-migration-fails).
 
 When you run pinned images instead of building from source, upgrade with `docker-compose.pull.yml`. Set the new tag from the [releases page](https://github.com/AsoBeast/asobeast/releases) and bring the stack up; the API applies every pending migration on boot exactly as it does from source.
 
@@ -63,17 +63,19 @@ docker compose exec -T postgres psql --username asobeast --dbname asobeast --com
 
 A migration can make older application code incompatible with the migrated schema. Restoring only the previous image is therefore not a rollback. Restore both.
 
+On published images, run every Compose command below and in the restore block with `-f docker-compose.pull.yml`. Plain `docker compose` in a clone reads `docker-compose.yml` instead and starts the checked out source rather than the tag you set.
+
 <Steps>
   <Step title="Stop the applications">
     ```bash
     docker compose stop web api
     ```
   </Step>
-  <Step title="Restore the pre upgrade archive">
-    Drop and recreate the database, then restore the archive you took before the upgrade. See [Restore PostgreSQL](/operations/restore).
+  <Step title="Switch to the previous version">
+    Check out the previous code revision and run `docker compose build`, or set the previous `ASOBEAST_IMAGE_TAG` in the root `.env`. Do this before the restore, because the restore starts the stack with whatever image is current, and the newer one would apply its migrations to the restored data again.
   </Step>
-  <Step title="Start the previous revision">
-    Check out the previous code revision, or set the previous pinned image tag, then bring the stack back up and verify both health URLs.
+  <Step title="Restore the pre upgrade archive">
+    Drop and recreate the database, restore the archive you took before the upgrade and verify both health URLs. See [Restore PostgreSQL](/operations/restore).
   </Step>
 </Steps>
 
