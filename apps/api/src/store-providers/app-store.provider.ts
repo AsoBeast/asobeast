@@ -248,6 +248,7 @@ export class AppStoreProvider implements StoreProvider {
       storeAppId: String(item.trackId ?? item.id),
       title: item.title,
       developer: item.developer,
+      ...(item.icon ? { iconUrl: item.icon } : {}),
       ratingAvg: item.score,
       ratingCount: item.reviews ?? item.currentVersionReviews,
       ...(item.primaryGenreId === undefined
