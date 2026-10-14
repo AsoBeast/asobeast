@@ -16,6 +16,10 @@ import { ListingReadService } from './listing-read.service';
 import { LocalizationDetectionController } from './localization-detection.controller';
 import { LocalizationDetection } from './localization-detection.service';
 import { LocalizedListingCapture } from './localized-listing-capture.service';
+import { MarketSeedController } from './market-seed.controller';
+import { MarketSeedService } from './market-seed.service';
+import { MarketSuggestionsController } from './market-suggestions.controller';
+import { MarketSuggestionsService } from './market-suggestions.service';
 import { SubtitleBackfill } from './subtitle-backfill.service';
 
 @Module({
@@ -32,7 +36,12 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     ),
     BullModule.registerFlowProducer({ name: FLOW_PRODUCERS.FIRST_RUN }),
   ],
-  controllers: [AppsController, LocalizationDetectionController],
+  controllers: [
+    AppsController,
+    LocalizationDetectionController,
+    MarketSeedController,
+    MarketSuggestionsController,
+  ],
   providers: [
     AppsService,
     AppCaptureService,
@@ -42,6 +51,8 @@ import { SubtitleBackfill } from './subtitle-backfill.service';
     ListingReadService,
     LocalizationDetection,
     LocalizedListingCapture,
+    MarketSeedService,
+    MarketSuggestionsService,
     SubtitleBackfill,
   ],
   exports: [

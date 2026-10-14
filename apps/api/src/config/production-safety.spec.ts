@@ -53,6 +53,12 @@ describe('production safety', () => {
       );
     });
 
+    it('tells the operator to keep the cookie secure instead of turning it off', () => {
+      expect(() => production({ AUTH_COOKIE_SECURE: 'false' })).toThrow(
+        /^(?!.*AUTH_COOKIE_SECURE=false).*Keep it true and serve the web app over HTTPS\.$/,
+      );
+    });
+
     it('boots with a secure cookie in production', () => {
       expect(
         production({ AUTH_COOKIE_SECURE: 'true' }).AUTH_COOKIE_SECURE,

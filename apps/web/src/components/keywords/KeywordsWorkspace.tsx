@@ -20,10 +20,12 @@ export function KeywordsWorkspace({
   id,
   homeCountry,
   store,
+  keywordFields,
 }: {
   id: string;
   homeCountry: string;
   store: Store;
+  keywordFields: boolean;
 }) {
   const [country] = useQueryState("country", countryParser);
   const market = country || homeCountry;
@@ -79,7 +81,7 @@ export function KeywordsWorkspace({
         homeCountry={homeCountry}
         market={market}
       />
-      {store === "APP_STORE" ? (
+      {keywordFields ? (
         <MarketSearchReadsCard
           id={id}
           homeCountry={homeCountry}

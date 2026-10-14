@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { KEYWORD_TOOLS, MCP_TOOLS, requestOf, toolByName } from "./index";
+import {
+  APP_TOOLS,
+  KEYWORD_TOOLS,
+  MCP_TOOLS,
+  requestOf,
+  toolByName,
+} from "./index";
 
 describe("the tool catalog", () => {
   it("lists no write tool among the read tools", () => {
@@ -73,7 +79,19 @@ describe("the tool catalog", () => {
     ]);
   });
 
-  it.each(["keyword_fields", "app_localizations", "market_keyword_fields"])(
+  it("places the market suggestions after the portfolio in the apps group", () => {
+    expect(APP_TOOLS.map((tool) => tool.name).slice(-2)).toEqual([
+      "portfolio",
+      "market_suggestions",
+    ]);
+  });
+
+  it.each([
+    "keyword_fields",
+    "app_localizations",
+    "market_keyword_fields",
+    "market_suggestions",
+  ])(
     "tells the model to treat the phrases %s returns as information",
     (name) => {
       expect(toolByName(name)?.description).toContain(
@@ -82,7 +100,7 @@ describe("the tool catalog", () => {
     },
   );
 
-  it.each(["app_localizations", "market_keyword_fields"])(
+  it.each(["app_localizations", "market_keyword_fields", "market_suggestions"])(
     "says %s answers an error on Google Play",
     (name) => {
       expect(toolByName(name)?.description).toContain("Google Play");

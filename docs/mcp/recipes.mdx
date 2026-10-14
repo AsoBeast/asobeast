@@ -83,6 +83,18 @@ Exercises `keyword_suggestions`, `list_keywords` and, with a write token, `track
 
 Each phrase that is new to your instance queues a store scoring job and joins the daily ranking run, so add the few that matter. Tracking counts against your plan's keyword market limit. See [Countries and markets](/concepts/countries).
 
+## Decide where to track next
+
+```text
+For app <id>, list the markets its listing languages suggest that I do not track yet,
+with what each would cost a day. Recommend two and wait for my approval, then track
+the five phrases of my title that fit best in each.
+```
+
+Exercises `market_suggestions`, `get_app` and, with a write token, `track_keywords`.
+
+A suggestion says which storefronts read a language your listing ships, not whether the app is published there. To seed a market from its own listing, use the markets step of the guided setup instead. See [How do you add a market?](/concepts/countries#how-do-you-add-a-market)
+
 ## Close the actions you have already handled
 
 ```text

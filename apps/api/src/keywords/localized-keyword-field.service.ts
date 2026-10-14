@@ -24,7 +24,7 @@ import { parseFieldText } from './keyword-field-text';
 import { KeywordFieldWriter } from './keyword-field-writer';
 import { keywordQuotaOf } from './keyword-quota';
 import { loadTrackingStates } from './keyword-tracking-state';
-import { ensureKeywordFieldApp } from './keywords.support';
+import { ensureLocalizedFieldApp } from './keywords.support';
 import { readersOf, trackInError } from './localization-markets';
 
 @Injectable()
@@ -41,7 +41,7 @@ export class LocalizedKeywordFieldService {
     localization: AppStoreLocalization,
     request: LocalizedKeywordFieldRequest,
   ): Promise<LocalizedKeywordFieldResult> {
-    const app = await ensureKeywordFieldApp(this.prisma, appId);
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
     const { phrases, duplicatesRemoved } = parseFieldText(request.text);
     const refusal = trackInError(
       localization,
@@ -69,7 +69,7 @@ export class LocalizedKeywordFieldService {
     localization: AppStoreLocalization,
     request: KeywordFieldPreviewRequest,
   ): Promise<KeywordFieldSavePreview> {
-    const app = await ensureKeywordFieldApp(this.prisma, appId);
+    const app = await ensureLocalizedFieldApp(this.prisma, appId);
     const { phrases, duplicatesRemoved } = parseFieldText(request.text);
     const [markets, stored, usage] = await Promise.all([
       loadAppMarkets(this.prisma, app),

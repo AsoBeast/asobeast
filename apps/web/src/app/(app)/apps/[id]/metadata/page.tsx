@@ -7,6 +7,7 @@ import { MarketSwitcherSkeleton } from "@/components/app-detail/skeletons";
 import { MetadataAuditView } from "@/components/metadata/MetadataAuditView";
 import { MetadataAuditSkeleton } from "@/components/metadata/skeletons";
 import { ApiError, getMetadataAssistantStatus } from "@/lib/api";
+import { ownsKeywordFields } from "@/lib/app-localizations";
 import { getQueryClient } from "@/lib/get-query-client";
 import { queryMarket, resolveLocalization, resolveMarket } from "@/lib/market";
 import {
@@ -14,6 +15,7 @@ import {
   appLocalizationsOptions,
   keywordCountriesOptions,
   listingMarketsOptions,
+  marketSuggestionsOptions,
   metadataAuditOptions,
   screenshotsOptions,
 } from "@/lib/queries";
@@ -62,6 +64,7 @@ export default async function MetadataPage({
     );
   }
   const isAppStore = result.store === "APP_STORE";
+  const keywordFields = ownsKeywordFields(app);
   if (isAppStore) {
     void queryClient.prefetchQuery(
       screenshotsOptions(id, queryMarket(market, app.country), localization),
@@ -72,7 +75,12 @@ export default async function MetadataPage({
       ? queryClient.fetchQuery(keywordCountriesOptions(id)).catch(() => null)
       : null,
     getMetadataAssistantStatus().catch(() => null),
-    isAppStore ? queryClient.prefetchQuery(appLocalizationsOptions(id)) : null,
+    keywordFields
+      ? queryClient.prefetchQuery(appLocalizationsOptions(id))
+      : null,
+    keywordFields
+      ? queryClient.prefetchQuery(marketSuggestionsOptions(id))
+      : null,
   ]);
 
   return (
@@ -89,6 +97,7 @@ export default async function MetadataPage({
             id={id}
             canDraft={assistant?.configured === true}
             hasLocalizations={keywordMarkets !== null}
+            keywordFields={keywordFields}
           />
         </Suspense>
       </div>

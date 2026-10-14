@@ -69,6 +69,7 @@ const build = (options: {
   getApp: jest.Mock;
   previous?: AppSnapshot | null;
   created?: AppSnapshot;
+  shipped?: string[];
 }) => {
   const create = jest
     .fn()
@@ -79,8 +80,14 @@ const build = (options: {
   const withTransaction = jest.fn((work: (client: typeof tx) => unknown) =>
     work(tx),
   );
+  const shippedRows = jest
+    .fn()
+    .mockResolvedValue(
+      (options.shipped ?? []).map((localization) => ({ localization })),
+    );
   const prisma = {
     appSnapshot: { findFirst },
+    appLocalization: { findMany: shippedRows },
     withTransaction,
   } as unknown as PrismaService;
   const registry = {
@@ -108,6 +115,7 @@ const build = (options: {
     recordMarketRefresh,
     record,
     request,
+    shippedRows,
     withTransaction,
   };
 };
@@ -318,6 +326,55 @@ describe('LocalizedListingCapture', () => {
     await capture.capture({ ...APP, country: 'de' }, 'de', fallback);
 
     expect(getApp).not.toHaveBeenCalled();
+  });
+
+  it('captures a shipped localization the market reads beside its default', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+    const { capture, shippedRows } = build({
+      getApp,
+      shipped: ['fr', 'de', 'ja'],
+    });
+
+    await capture.capture({ ...APP, country: 'us' }, 'ch', fallback);
+
+    expect(getApp.mock.calls).toEqual([['6657987209', 'ch', 'fr']]);
+    expect(shippedRows).toHaveBeenCalledWith({
+      where: { appId: APP.id },
+      select: { localization: true },
+    });
+  });
+
+  it('captures the home localization where another market reads it beside its default', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+    const { capture } = build({ getApp });
+
+    await capture.capture({ ...APP, country: 'mx' }, 'us', fallback);
+
+    expect(getApp.mock.calls).toEqual([['6657987209', 'us', 'es-MX']]);
+  });
+
+  it('reads no shipped localization for a storefront that reads only its default', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+    const { capture, shippedRows } = build({ getApp, shipped: ['fr'] });
+
+    await capture.capture({ ...APP, country: 'us' }, 'za', fallback);
+
+    expect(shippedRows).not.toHaveBeenCalled();
+    expect(getApp).not.toHaveBeenCalled();
+  });
+
+  it('captures no shipped localization for a competitor', async () => {
+    const getApp = jest.fn().mockResolvedValue(normalized(ENGLISH));
+    const { capture, shippedRows } = build({ getApp, shipped: ['fr'] });
+
+    await capture.capture(
+      { ...APP, country: 'us', isCompetitor: true },
+      'ch',
+      fallback,
+    );
+
+    expect(getApp).not.toHaveBeenCalled();
+    expect(shippedRows).not.toHaveBeenCalled();
   });
 
   describe('recording the localization the store proves', () => {

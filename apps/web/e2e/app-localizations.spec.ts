@@ -1,7 +1,7 @@
 import type { Page } from "@playwright/test";
 import type { AppLocalizationsResult } from "@asobeast/shared";
 import { contrastViolations, THEMES } from "./contrast-check.mts";
-import type { LocalizationSeed } from "./fixtures.mts";
+import { APP_RIVAL_ID, type LocalizationSeed } from "./fixtures.mts";
 import { expectContains, expectFitsViewport } from "./dialog.mts";
 import {
   fieldRequests,
@@ -281,6 +281,32 @@ test.describe("on the locale lab", () => {
     ).toBeVisible();
     await expect(page.getByRole("region", { name: SECTION })).toHaveCount(0);
     expect(await fieldRequests(page.request, "app-gp")).toEqual([]);
+    expect(requested).toEqual([]);
+  });
+
+  test("a competitor app gets no section and asks for no localization or keyword field", async ({
+    page,
+  }) => {
+    const requested: string[] = [];
+    page.on("request", (request) => {
+      const { pathname } = new URL(request.url());
+      if (
+        pathname.includes("/localizations") ||
+        pathname.includes("/keyword-fields")
+      ) {
+        requested.push(pathname);
+      }
+    });
+    await page.goto(`/apps/${APP_RIVAL_ID}/metadata`);
+
+    await expect(
+      page.getByRole("heading", { name: "Keyword coverage" }),
+    ).toBeVisible();
+    await expect(page.getByRole("region", { name: SECTION })).toHaveCount(0);
+    await expect(
+      page.getByText("Localizations could not be loaded"),
+    ).toHaveCount(0);
+    expect(await fieldRequests(page.request, APP_RIVAL_ID)).toEqual([]);
     expect(requested).toEqual([]);
   });
 
@@ -1176,6 +1202,34 @@ test.describe("on the locale lab", () => {
 
       await expect(page.getByText("Removed Spanish (Mexico)")).toBeVisible();
       expect(deletes).toBe(1);
+    });
+
+    test("cannot be closed while the removal runs", async ({ page }) => {
+      await seedLocalizations(page.request, LOCALES_APP, MX_SEED);
+      let release!: () => void;
+      const held = new Promise<void>((resolve) => (release = resolve));
+      await page.route("**/localizations/es-MX", async (route) => {
+        await held;
+        await route.continue();
+      });
+      await page.goto(`${LOCALES_METADATA}?fieldLocale=es-MX`);
+
+      await page.getByRole("button", { name: "Remove localization" }).click();
+      const confirm = page.getByRole("alertdialog", {
+        name: "Remove Spanish (Mexico)?",
+      });
+      await confirm
+        .getByRole("button", { name: "Remove", exact: true })
+        .click();
+      const cancel = confirm.getByRole("button", { name: "Cancel" });
+      await expect(cancel).toBeDisabled();
+      await page.keyboard.press("Escape");
+      await expect(confirm).toHaveAttribute("data-state", "open");
+      await expect(cancel).toBeDisabled();
+
+      release();
+      await expect(confirm).toHaveCount(0);
+      await expect(page.getByText("Removed Spanish (Mexico)")).toBeVisible();
     });
 
     for (const viewport of [

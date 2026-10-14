@@ -1,14 +1,16 @@
 import { Store } from '@prisma/client';
-import { nativeLocalizations } from '@asobeast/shared';
+import { capturedLocalizations } from '../apps/market-localizations';
 
 export function localizationReads(
-  targets: readonly { store: Store; country: string }[],
+  targets: readonly { id: string; store: Store; country: string }[],
+  shipped: ReadonlyMap<string, readonly string[]>,
 ): number {
   return targets.reduce(
     (total, target) =>
       total +
       (target.store === Store.APP_STORE
-        ? nativeLocalizations(target.country).length
+        ? capturedLocalizations(target.country, shipped.get(target.id) ?? [])
+            .length
         : 0),
     0,
   );

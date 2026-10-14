@@ -140,6 +140,7 @@ describe('the cron variables', () => {
     'CRON_RETENTION',
     'CRON_DIGEST',
     'CRON_AUDIT',
+    'CRON_LOCALIZATION_SWEEP',
     'CRON_BILLING_RECONCILE',
     'CRON_TRIAL_NOTICES',
     'CRON_APPLE_POPULARITY',
@@ -149,12 +150,14 @@ describe('the cron variables', () => {
 
   it('accepts every default schedule', () => {
     expect(validateEnv(safe).CRON_DAILY).toBe('0 3 * * *');
+    expect(validateEnv(safe).CRON_LOCALIZATION_SWEEP).toBe('0 7 * * 1');
   });
 
-  it.each(['CRON_STORE_CANARY', 'CRON_STORE_STATUS'])(
-    'still accepts an empty %s, which removes its schedule',
-    (name) => {
-      expect(validateEnv({ ...safe, [name]: '' })[name]).toBe('');
-    },
-  );
+  it.each([
+    'CRON_STORE_CANARY',
+    'CRON_STORE_STATUS',
+    'CRON_LOCALIZATION_SWEEP',
+  ])('still accepts an empty %s, which removes its schedule', (name) => {
+    expect(validateEnv({ ...safe, [name]: '' })[name]).toBe('');
+  });
 });

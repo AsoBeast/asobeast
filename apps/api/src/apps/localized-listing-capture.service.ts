@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { App, AppSnapshot, Store } from '@prisma/client';
 import {
   AppStoreLocalization,
-  nativeLocalizations,
+  readLocalizations,
   SnapshotChange,
 } from '@asobeast/shared';
 import { ChangesService } from '../changes/changes.service';
@@ -19,6 +19,8 @@ import { toChangeSnapshot } from './change-snapshot';
 import { withKnownSubtitle } from './known-subtitle';
 import { listingIn, NEWEST_FIRST, storedMarket } from './listing';
 import { ComparableListing, servesLocalization } from './localization-served';
+import { capturedLocalizations } from './market-localizations';
+import { shippedLocalizations } from './shipped-localizations';
 import { diffSnapshots, withRecordedChanges } from './snapshot-diff';
 
 type ListedApp = Pick<
@@ -53,8 +55,12 @@ export class LocalizedListingCapture {
     fallback: ComparableListing,
   ): Promise<SnapshotChange[]> {
     if (app.store !== Store.APP_STORE) return [];
+    const shipped =
+      app.isCompetitor || readLocalizations(market).length < 2
+        ? []
+        : await shippedLocalizations(this.prisma, app);
     const changes: SnapshotChange[] = [];
-    for (const localization of nativeLocalizations(market)) {
+    for (const localization of capturedLocalizations(market, shipped)) {
       try {
         changes.push(
           ...(await this.captureOne(app, market, localization, fallback)),

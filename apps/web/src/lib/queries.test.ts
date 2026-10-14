@@ -50,6 +50,7 @@ import {
   invalidateKeywordFieldMutation,
   invalidateLocalizationMutation,
   invalidateKeywordMutation,
+  invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
   invalidateWebhookMutation,
@@ -63,6 +64,7 @@ import {
   appListingOptions,
   listingMarketsOptions,
   marketAvailabilityOptions,
+  marketSuggestionsOptions,
   metadataAuditOptions,
   portfolioInsightsKey,
   portfolioInsightsOptions,
@@ -198,6 +200,11 @@ const APP_SCOPED_OPTIONS = [
     "marketAvailability",
     marketAvailabilityOptions(APP, "us"),
     appKeys.marketAvailability(APP, "us"),
+  ],
+  [
+    "marketSuggestions",
+    marketSuggestionsOptions(APP),
+    appKeys.marketSuggestions(APP),
   ],
   ["listingMarkets", listingMarketsOptions(APP), appKeys.listingMarkets(APP)],
   ["listing", appListingOptions(APP, "de"), appKeys.listing(APP, "de")],
@@ -512,6 +519,28 @@ describe("invalidation sets", () => {
       portfolioInsightsKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.marketSuggestions(APP),
+    ]);
+  });
+
+  it("refreshes the listing markets and the budget after a market seed", () => {
+    expect(
+      invalidatedKeys((client) => {
+        void invalidateMarketSeed(client, APP);
+      }),
+    ).toEqual([
+      appKeys.audit(APP),
+      appKeys.keywordsRoot(APP),
+      appKeys.keywordCountries(APP),
+      appKeys.keywordFieldRoot(APP),
+      appKeys.summary(APP),
+      appKeys.compareRoot(APP),
+      portfolioInsightsKey,
+      appKeys.localizations(APP),
+      appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.marketSuggestions(APP),
+      appKeys.listingMarkets(APP),
+      budgetKey,
     ]);
   });
 
@@ -528,6 +557,7 @@ describe("invalidation sets", () => {
       portfolioInsightsKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.marketSuggestions(APP),
       appKeys.metadataAuditRoot(APP),
     ]);
   });
@@ -545,6 +575,7 @@ describe("invalidation sets", () => {
       portfolioInsightsKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.marketSuggestions(APP),
       appKeys.metadataAuditRoot(APP),
       accountPlanKey,
     ]);
@@ -563,6 +594,7 @@ describe("invalidation sets", () => {
       portfolioInsightsKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
+      appKeys.marketSuggestions(APP),
       appKeys.importPreviewRoot(APP),
     ]);
   });

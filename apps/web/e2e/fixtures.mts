@@ -19,6 +19,8 @@ import type {
   KeywordCountrySummary,
   KeywordSource,
   MarketKeywordFields,
+  MarketSuggestion,
+  MarketSuggestionsResult,
   ChangeImpactReport,
   ChangeImpactWindow,
   ChangeImpactWindowDays,
@@ -2101,6 +2103,8 @@ export const APP_REPRICED_FREE_ID = "app-repriced-free";
 export const APP_REPRICED_PAID_ID = "app-repriced-paid";
 export const APP_FREE_AGAIN_ID = "app-free-again";
 export const APP_LOCALES_ID = "app-locales";
+export const APP_SUGGESTED_LOCALES_ID = "app-suggested-locales";
+export const APP_RIVAL_ID = "app-rival";
 
 export interface LocalizationSeed {
   markets?: string[];
@@ -2125,6 +2129,15 @@ function localesDataset(id: string, name: string): AppDataset {
 }
 
 DATASETS[APP_LOCALES_ID] = localesDataset(APP_LOCALES_ID, "Locale Lab");
+DATASETS[APP_SUGGESTED_LOCALES_ID] = localesDataset(
+  APP_SUGGESTED_LOCALES_ID,
+  "Market Lab",
+);
+const rivalDataset = localesDataset(APP_RIVAL_ID, "Rival Lab");
+DATASETS[APP_RIVAL_ID] = {
+  ...rivalDataset,
+  detail: { ...rivalDataset.detail, isCompetitor: true },
+};
 
 DATASETS[APP_PAID_TOP_CHART_ID] = categoryDataset(
   APP_PAID_TOP_CHART_ID,
@@ -2291,6 +2304,45 @@ export const APP_1_KEYWORD_COUNTRIES: KeywordCountrySummary[] = [
   { country: "pl", keywordCount: 0 },
   { country: "gb", keywordCount: 0 },
 ];
+
+const suggestedMarket = (
+  country: string,
+  localization: AppStoreLocalization,
+  role: MarketSuggestion["role"],
+  listing = 2,
+): MarketSuggestion => ({
+  country,
+  localization,
+  language: localization.split("-")[0],
+  role,
+  tracked: false,
+  dailyRequests: { listing, perKeyword: 1 },
+});
+
+export const MARKET_SUGGESTIONS: Record<string, MarketSuggestionsResult> = {
+  "app-1": {
+    home: "us",
+    languages: ["en", "de", "fr", "ja", "pl"],
+    suggestions: [
+      suggestedMarket("at", "de", "default"),
+      suggestedMarket("ch", "de", "default"),
+      suggestedMarket("de", "de", "default"),
+      suggestedMarket("fr", "fr", "default"),
+      suggestedMarket("jp", "ja", "default"),
+      suggestedMarket("ca", "fr-CA", "additional"),
+      suggestedMarket("pl", "pl", "additional", 4),
+    ],
+  },
+  "app-suggested-locales": {
+    home: "us",
+    languages: ["en", "fr", "pt"],
+    suggestions: [
+      suggestedMarket("fr", "fr", "default", 1),
+      suggestedMarket("br", "pt-BR", "default", 1),
+      suggestedMarket("ca", "fr-CA", "additional", 1),
+    ],
+  },
+};
 
 export const BUDGET: DailyBudget = {
   apps: 3,
@@ -3836,6 +3888,17 @@ export const DETECTABLE_LOCALIZATIONS: Record<string, AppStoreLocalization[]> =
     [APP_LOCALES_ID]: ["fr", "pt-BR"],
   };
 
+export const SEED_REFUSED_MESSAGE =
+  "Refresh limit reached: the indie plan allows 20 requests per day. Try again in 3 hours.";
+
+export const SEED_UNLISTED_MARKET = "jp";
+
+export const SEED_TEXTS: Record<string, string[]> = {
+  at: ["fokus timer", "gewohnheiten"],
+};
+
+export const DEFAULT_SEED_TEXTS = ["focus timer", "habits"];
+
 export const DETECT_REFUSED_MESSAGE =
   "Refresh limit reached: the trial plan allows 5 requests per day. Try again in 3 hours.";
 
@@ -3909,6 +3972,8 @@ export const METADATA_AUDITS: Record<string, MetadataAuditResult> = {
 };
 
 METADATA_AUDITS[APP_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_SUGGESTED_LOCALES_ID] = METADATA_AUDIT;
+METADATA_AUDITS[APP_RIVAL_ID] = METADATA_AUDIT;
 
 export const APP_READS_ID = "app-reads";
 

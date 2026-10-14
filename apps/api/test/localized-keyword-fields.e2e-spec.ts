@@ -22,6 +22,9 @@ import {
 
 const NUL = '\u0000';
 
+const COMPETITOR_REFUSAL =
+  'A competitor app has no localizations or keyword fields; use its primary app';
+
 const OVERSIZED = Array.from(
   { length: 12 },
   (_, index) => `phrase ${String(index).padStart(2, '0')}`,
@@ -38,6 +41,21 @@ describe('Localized keyword fields (e2e)', () => {
     (
       await harness.prisma.app.create({
         data: { workspaceId: WORKSPACE, store, storeAppId, country },
+        select: { id: true },
+      })
+    ).id;
+
+  const seedCompetitor = async (primaryAppId: string): Promise<string> =>
+    (
+      await harness.prisma.app.create({
+        data: {
+          workspaceId: WORKSPACE,
+          store: Store.APP_STORE,
+          storeAppId: 'rival',
+          country: 'us',
+          isCompetitor: true,
+          primaryAppId,
+        },
         select: { id: true },
       })
     ).id;
@@ -444,6 +462,22 @@ describe('Localized keyword fields (e2e)', () => {
       expect(keywordIds).toHaveLength(4);
       expect(scores).toHaveLength(4);
     });
+
+    it('E-SAV-19 refuses a competitor app and writes nothing', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await save(rival, 'en-US', {
+        text: 'uno,dos',
+        trackIn: ['us'],
+      }).expect(400);
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
+      await expect(written()).resolves.toEqual({
+        fields: 0,
+        localizations: 0,
+        tracked: 0,
+      });
+    });
   });
 
   describe('preview', () => {
@@ -645,6 +679,16 @@ describe('Localized keyword fields (e2e)', () => {
       }).expect(400);
 
       expect(messageOf(response)).toBe('text must not contain a NUL character');
+    });
+
+    it('E-PRV-13 refuses a competitor app', async () => {
+      const rival = await seedCompetitor(await seedApp());
+
+      const response = await preview(rival, 'en-US', { text: 'uno' }).expect(
+        400,
+      );
+
+      expect(messageOf(response)).toBe(COMPETITOR_REFUSAL);
     });
   });
 });

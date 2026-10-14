@@ -59,6 +59,7 @@ import {
   getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
+  getMarketSuggestions,
   getMetadataAudit,
   getPortfolio,
   getPortfolioInsights,
@@ -171,6 +172,8 @@ export const appKeys = {
     [...appKeys.detail(id), "ratings-histogram"] as const,
   marketAvailability: (id: string, country: string) =>
     [...appKeys.detail(id), "market-availability", { country }] as const,
+  marketSuggestions: (id: string) =>
+    [...appKeys.detail(id), "market-suggestions"] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
   screenshots: (id: string, market?: string, localization?: string) =>
     [
@@ -697,6 +700,13 @@ export const marketAvailabilityOptions = (id: string, country: string) =>
       query.state.data?.status === "unknown" ? 0 : ONE_DAY_MS,
   });
 
+export const marketSuggestionsOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.marketSuggestions(id),
+    queryFn: () => getMarketSuggestions(id),
+    staleTime: ONE_DAY_MS,
+  });
+
 export const serpOptions = (keywordId: string) =>
   queryOptions({
     queryKey: appKeys.serp(keywordId),
@@ -789,6 +799,18 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({
     queryKey: appKeys.marketKeywordFieldsRoot(id),
   });
+  void client.invalidateQueries({ queryKey: appKeys.marketSuggestions(id) });
+}
+
+export function invalidateMarketSeed(
+  client: QueryClient,
+  id: string,
+): Promise<void> {
+  invalidateKeywordMutation(client, id);
+  return Promise.all([
+    client.invalidateQueries({ queryKey: appKeys.listingMarkets(id) }),
+    client.invalidateQueries({ queryKey: budgetKey }),
+  ]).then(() => undefined);
 }
 
 export function invalidateKeywordFieldMutation(

@@ -59,22 +59,51 @@ export function normalizeKeyword(raw: string): string {
   return check.text;
 }
 
+const KEYWORD_APP_SELECT = {
+  id: true,
+  workspaceId: true,
+  store: true,
+  country: true,
+  storeAppId: true,
+} as const;
+
 export async function ensureApp(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordApp> {
   const app = await prisma.app.findFirst({
     where: { id: appId },
-    select: {
-      id: true,
-      workspaceId: true,
-      store: true,
-      country: true,
-      storeAppId: true,
-    },
+    select: KEYWORD_APP_SELECT,
   });
   if (!app) {
     throw new NotFoundException(`App ${appId} not found`);
+  }
+  return app;
+}
+
+export async function ensurePrimaryApp(
+  prisma: PrismaService,
+  appId: string,
+  refusal: string,
+): Promise<KeywordApp> {
+  const app = await prisma.app.findFirst({
+    where: { id: appId },
+    select: { ...KEYWORD_APP_SELECT, isCompetitor: true },
+  });
+  if (!app) {
+    throw new NotFoundException(`App ${appId} not found`);
+  }
+  if (app.isCompetitor) {
+    throw new BadRequestException(refusal);
+  }
+  return app;
+}
+
+function requireAppStore(app: KeywordApp): KeywordApp {
+  if (app.store !== Store.APP_STORE) {
+    throw new BadRequestException(
+      'The keyword field is only available for App Store apps',
+    );
   }
   return app;
 }
@@ -83,13 +112,20 @@ export async function ensureKeywordFieldApp(
   prisma: PrismaService,
   appId: string,
 ): Promise<KeywordApp> {
-  const app = await ensureApp(prisma, appId);
-  if (app.store !== Store.APP_STORE) {
-    throw new BadRequestException(
-      'The keyword field is only available for App Store apps',
-    );
-  }
-  return app;
+  return requireAppStore(await ensureApp(prisma, appId));
+}
+
+export async function ensureLocalizedFieldApp(
+  prisma: PrismaService,
+  appId: string,
+): Promise<KeywordApp> {
+  return requireAppStore(
+    await ensurePrimaryApp(
+      prisma,
+      appId,
+      'A competitor app has no localizations or keyword fields; use its primary app',
+    ),
+  );
 }
 
 export async function trackedTexts(

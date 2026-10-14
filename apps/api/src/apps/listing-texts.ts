@@ -1,6 +1,7 @@
-import { nativeLocalizations } from '@asobeast/shared';
 import { PrismaService } from '../prisma/prisma.service';
 import { listingIn, NEWEST_FIRST } from './listing';
+import { capturedLocalizations } from './market-localizations';
+import { shippedLocalizations } from './shipped-localizations';
 
 export interface ListingTexts {
   id: string;
@@ -48,10 +49,14 @@ export async function latestLocalizedTexts(
   home: string,
   markets: readonly string[],
 ): Promise<Map<string, LocalizedTexts[]>> {
+  const shipped = await shippedLocalizations(prisma, {
+    id: appId,
+    country: home,
+  });
   const entries = await Promise.all(
     [...new Set(markets)].map(
       async (market): Promise<[string, LocalizedTexts[]]> => {
-        const tags = nativeLocalizations(market);
+        const tags = capturedLocalizations(market, shipped);
         if (tags.length === 0) return [market, []];
         const rows = await prisma.appSnapshot.findMany({
           where: {

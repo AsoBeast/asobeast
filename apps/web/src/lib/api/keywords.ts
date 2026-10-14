@@ -10,6 +10,8 @@ import type {
   KeywordSuggestion,
   KeywordSuggestionStrategy,
   KeywordUpdateRequest,
+  MarketSeedRequest,
+  MarketSeedResult,
   ScoreEnqueueResult,
   SpiderEnqueueResult,
   SpiderStartRequest,
@@ -152,5 +154,15 @@ export function getKeywordField(
 export function scoreKeyword(keywordId: string): Promise<ScoreEnqueueResult> {
   return apiFetch<ScoreEnqueueResult>(`/keywords/${keywordId}/score`, {
     method: "POST",
+  });
+}
+
+export function seedMarket(
+  appId: string,
+  country: string,
+): Promise<MarketSeedResult> {
+  return apiFetch<MarketSeedResult>(`/apps/${appId}/market-seed`, {
+    method: "POST",
+    body: JSON.stringify({ country } satisfies MarketSeedRequest),
   });
 }

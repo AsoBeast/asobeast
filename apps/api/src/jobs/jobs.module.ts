@@ -26,6 +26,7 @@ import { AppStoreWorker } from './app-store.worker';
 import { DigestDispatcher } from './digest.dispatcher';
 import { GplayWorker } from './gplay.worker';
 import { ActiveWorkspaces } from './active-workspaces';
+import { LocalizationSweep } from './localization-sweep.service';
 import { JobTargetCountry } from './job-target-country';
 import { OverLimitRegistry } from './over-limit.registry';
 import {
@@ -115,6 +116,7 @@ const bullBoardModules: DynamicModule[] =
   ],
   providers: [
     ActiveWorkspaces,
+    LocalizationSweep,
     CapacityService,
     DailyBudgetService,
     DailyCapacity,

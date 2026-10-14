@@ -27,6 +27,20 @@ You need an imported app. See [Import an app](/guides/import-an-app).
 
 Every added keyword carries a source, which sets its starting relevance. A keyword you type is `MANUAL`. See [Popularity, difficulty and opportunity](/concepts/scoring).
 
+## Seed a market from its listing
+
+The markets step of the guided setup suggests storefronts that read a language your listing ships. Tick one, leave **Seed with its listing** on and press the add button: asobeast captures that storefront's listing and tracks up to 15 phrases from its title and subtitle, with the sources `TITLE` and `SUBTITLE`, so the market starts with keywords from its own text.
+
+Each storefront reports its outcome on its row. The same seed is one request, `POST /apps/{id}/market-seed` with a `country`, and it answers:
+
+| Field | Meaning |
+| --- | --- |
+| `seeded` | Keywords this request started tracking in that market |
+| `skipped` | Phrases the keyword limit of your plan could not hold |
+| `status` | `seeded`, or `unavailable` when the app is not published in that storefront and nothing was stored |
+
+A seed spends one refresh from your on demand allowance. See [How do you add a market?](/concepts/countries#how-do-you-add-a-market)
+
 ## Track the same keyword in a second market
 
 Switch the country filter and add the phrase again. That creates a second keyword row, checked by a second search.
@@ -229,7 +243,7 @@ The **Tags** column shows up to three tags and how many more a keyword carries. 
 
 ## Watch your request budget
 
-Every keyword and every market adds daily requests against a fixed capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`.
+Every keyword and every market adds daily requests against a fixed capacity set by `SCRAPE_ITUNES_RPM` and `SCRAPE_GPLAY_RPM`. The suggested markets in the guided setup show what each market would add before you track it.
 
 The [platform operator](/security/admin-surfaces#who-the-platform-operator-is) sees a daily request budget card in the **Capacity** section of the settings page, with the estimate broken down by kind, the capacity and a utilization meter, and the dashboard warns them at 85 percent of capacity. `GET /jobs/budget` returns the same numbers.
 

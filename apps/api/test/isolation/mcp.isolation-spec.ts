@@ -65,7 +65,7 @@ describe('Remote MCP boundaries between workspaces', () => {
     expect(decode(response.text).result?.isError).toBe(true);
   });
 
-  it.each(['app_localizations', 'market_keyword_fields'])(
+  it.each(['app_localizations', 'market_keyword_fields', 'market_suggestions'])(
     'reads its own app and not another workspace app through %s',
     async (name) => {
       const own = await callTool(fixture.a.token, name, {

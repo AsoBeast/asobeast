@@ -21,6 +21,7 @@ import { WorkspaceFanOut } from '../common/tenancy/workspace-fanout';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisOutageLog } from '../redis/redis-outage-log';
 import { PublishedStatusService } from '../store-providers/canary/published-status.service';
+import { LocalizationSweep } from './localization-sweep.service';
 import { StoreCanaryService } from '../store-providers/canary/store-canary.service';
 import { ProxyPoolMaintenance } from '../store-providers/egress/proxy-pool.maintenance';
 import { PipelineService } from './pipeline.service';
@@ -60,6 +61,7 @@ describe('PipelineWorker', () => {
     statusEnabled = false,
     popularityEnabled = false,
     statusCron = '17 * * * *',
+    sweepCron = '0 7 * * 1',
   ) => {
     const client = { set: jest.fn().mockResolvedValue('OK') };
     const pipelineQueue = {
@@ -76,7 +78,11 @@ describe('PipelineWorker', () => {
     };
     const config = {
       get: jest.fn((key: string) =>
-        key === 'CRON_STORE_CANARY' ? canaryCron : `value:${key}`,
+        key === 'CRON_STORE_CANARY'
+          ? canaryCron
+          : key === 'CRON_LOCALIZATION_SWEEP'
+            ? sweepCron
+            : `value:${key}`,
       ),
     };
     const pipeline = {
@@ -120,6 +126,7 @@ describe('PipelineWorker', () => {
       enabled: popularityEnabled,
       run: jest.fn().mockResolvedValue({ countries: 1, rows: 2, week: 'w' }),
     };
+    const sweep = { run: jest.fn().mockResolvedValue(3) };
     const worker = new PipelineWorker(
       pipelineQueue as unknown as Queue,
       config as unknown as ConfigService<Env, true>,
@@ -143,6 +150,7 @@ describe('PipelineWorker', () => {
       tracking as unknown as ErrorTracking,
       popularity as unknown as ApplePopularitySync,
       new RedisOutageLog(),
+      sweep as unknown as LocalizationSweep,
     );
     return {
       worker,
@@ -161,6 +169,7 @@ describe('PipelineWorker', () => {
       publishedStatus,
       tracking,
       popularity,
+      sweep,
     };
   };
 
@@ -231,6 +240,7 @@ describe('PipelineWorker', () => {
       'digest',
       'audit',
       'store-canary',
+      'localization-sweep',
     ]);
     expect(
       pipelineQueue.upsertJobScheduler.mock.calls.map(
@@ -243,6 +253,7 @@ describe('PipelineWorker', () => {
       JOBS.DIGEST,
       JOBS.AUDIT_SNAPSHOT,
       JOBS.STORE_CANARY,
+      JOBS.LOCALIZATION_SWEEP,
     ]);
   });
 
@@ -328,6 +339,57 @@ describe('PipelineWorker', () => {
     expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
       'store-canary',
     );
+  });
+
+  describe('the weekly localization sweep', () => {
+    it('schedules the sweep with its pattern in utc', async () => {
+      const { worker, pipelineQueue } = build();
+
+      await worker.registerSchedules();
+
+      expect(pipelineQueue.upsertJobScheduler).toHaveBeenCalledWith(
+        'localization-sweep',
+        { pattern: '0 7 * * 1', tz: 'UTC' },
+        { name: JOBS.LOCALIZATION_SWEEP },
+      );
+    });
+
+    it('removes the sweep scheduler when its pattern is emptied', async () => {
+      const { worker, pipelineQueue } = build(
+        false,
+        '0 2,8,14,20 * * *',
+        false,
+        false,
+        '17 * * * *',
+        '',
+      );
+
+      await worker.registerSchedules();
+
+      expect(
+        pipelineQueue.upsertJobScheduler.mock.calls.map(([key]) => key),
+      ).not.toContain('localization-sweep');
+      expect(pipelineQueue.removeJobScheduler).toHaveBeenCalledWith(
+        'localization-sweep',
+      );
+    });
+
+    it('runs the sweep across tenants for its job', async () => {
+      const { worker, sweep } = build();
+      const crossTenant = jest.spyOn(
+        CrossTenantAccess.prototype,
+        'becauseThisWorkIsNotOwnedByOneWorkspace',
+      );
+
+      try {
+        await worker.process(job(JOBS.LOCALIZATION_SWEEP));
+
+        expect(sweep.run).toHaveBeenCalledTimes(1);
+        expect(crossTenant).toHaveBeenCalledTimes(1);
+      } finally {
+        crossTenant.mockRestore();
+      }
+    });
   });
 
   it('probes the stores when the canary job runs', async () => {

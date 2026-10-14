@@ -1,17 +1,21 @@
 import { Store } from '@prisma/client';
-import { localizationLanguage, nativeLocalizations } from '@asobeast/shared';
+import {
+  AppStoreLocalization,
+  localizationLanguage,
+  nativeLocalizations,
+} from '@asobeast/shared';
 import { listingIn, NEWEST_FIRST } from '../apps/listing';
 import { PrismaService } from '../prisma/prisma.service';
 import { listingLanguages } from './listing-languages';
 
-export interface HomeListingText {
+export interface ListingText {
   title: string;
   subtitle: string | null;
   summary: string | null;
   languages: readonly string[];
 }
 
-interface HomeApp {
+interface ListedApp {
   id: string;
   store: Store;
   country: string;
@@ -19,27 +23,29 @@ interface HomeApp {
 
 const latestListing = (
   prisma: PrismaService,
-  app: HomeApp,
+  app: ListedApp,
+  market: string,
   localization: string | null,
 ) =>
   prisma.appSnapshot.findFirst({
     where: {
       appId: app.id,
-      ...listingIn(app.country, app.country, localization),
+      ...listingIn(app.country, market, localization),
     },
     orderBy: NEWEST_FIRST,
     select: { title: true, subtitle: true, summary: true },
   });
 
-export async function homeListingTexts(
+export async function listingTexts(
   prisma: PrismaService,
-  app: HomeApp,
-): Promise<HomeListingText[]> {
-  const localizations =
-    app.store === Store.APP_STORE ? nativeLocalizations(app.country) : [];
+  app: ListedApp,
+  market: string = app.country,
+  read: readonly AppStoreLocalization[] = nativeLocalizations(market),
+): Promise<ListingText[]> {
+  const localizations = app.store === Store.APP_STORE ? read : [];
   const rows = await Promise.all(
     [...localizations, null].map((localization) =>
-      latestListing(prisma, app, localization),
+      latestListing(prisma, app, market, localization),
     ),
   );
   const localized = localizations.flatMap((localization, index) => {
@@ -53,7 +59,7 @@ export async function homeListingTexts(
     return localized;
   }
   const ownLanguages = new Set(localized.flatMap((row) => row.languages));
-  const languages = listingLanguages(app.store, app.country).filter(
+  const languages = listingLanguages(app.store, market).filter(
     (language) => !ownLanguages.has(language),
   );
   return [...localized, { ...fallback, languages }];

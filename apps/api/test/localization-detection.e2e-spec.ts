@@ -1,10 +1,11 @@
 import { execSync } from 'child_process';
 import { join } from 'path';
+import { getQueueToken } from '@nestjs/bullmq';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
 import { AppDetail, AppStoreLocalization } from '@asobeast/shared';
-import { Job } from 'bullmq';
+import { Job, Queue } from 'bullmq';
 import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { DEFAULT_WORKSPACE_ID } from '../src/common/tenancy/default-workspace';
@@ -12,7 +13,9 @@ import {
   DetectLocalizationPayload,
   JOBS,
   QUEUES,
+  RefreshAppPayload,
 } from '../src/jobs/jobs.types';
+import { LocalizationSweep } from '../src/jobs/localization-sweep.service';
 import { StoreJobsHandler } from '../src/jobs/store-jobs.handler';
 import { StoreProviderRegistry } from '../src/store-providers/store-provider.registry';
 import {
@@ -94,6 +97,15 @@ describe('Localization detection probe (e2e)', () => {
       } satisfies DetectLocalizationPayload,
     } as Job);
 
+  const detectionJobs = async () =>
+    (
+      await app
+        .get<Queue>(getQueueToken(QUEUES.APP_STORE), { strict: false })
+        .getJobs(['prioritized'])
+    )
+      .filter((job) => job.name === JOBS.DETECT_LOCALIZATION)
+      .map((job) => job.data as DetectLocalizationPayload);
+
   const localizationsOf = (appId: string) =>
     prisma.appLocalization.findMany({
       where: { appId },
@@ -154,5 +166,85 @@ describe('Localization detection probe (e2e)', () => {
       'lookup failed for es-MX',
     );
     await expect(localizationsOf(appId)).resolves.toEqual([]);
+  });
+
+  describe('after the first listing capture of a market', () => {
+    const captureListing = (appId: string, country: string) =>
+      app.get(StoreJobsHandler).handle({
+        name: JOBS.REFRESH_APP,
+        id: `refresh-${country}`,
+        queueName: QUEUES.APP_STORE,
+        data: {
+          appId,
+          country,
+          workspaceId: DEFAULT_WORKSPACE_ID,
+        } satisfies RefreshAppPayload,
+      } as Job);
+
+    beforeEach(async () => {
+      await obliterateQueues(app);
+      await pauseQueues(app);
+    });
+
+    it('queues the probes of the localizations that market reads', async () => {
+      const appId = await importApp();
+
+      await captureListing(appId, 'ch');
+
+      const probes = await detectionJobs();
+      expect(
+        probes
+          .filter((probe) => probe.country === 'ch')
+          .map((probe) => probe.localization)
+          .sort(),
+      ).toEqual(['en-GB', 'it']);
+      expect(probes.every((probe) => probe.appId === appId)).toBe(true);
+    });
+
+    it('queues nothing more on a later capture of the same market', async () => {
+      const appId = await importApp();
+      await captureListing(appId, 'ch');
+      const before = (await detectionJobs()).length;
+
+      await captureListing(appId, 'ch');
+
+      await expect(detectionJobs()).resolves.toHaveLength(before);
+    });
+  });
+
+  describe('the weekly sweep', () => {
+    beforeEach(async () => {
+      await obliterateQueues(app);
+      await pauseQueues(app);
+    });
+
+    it('queues one probe per candidate of every primary app store app', async () => {
+      const appId = await importApp();
+      await prisma.app.create({
+        data: {
+          workspaceId: DEFAULT_WORKSPACE_ID,
+          store: 'GOOGLE_PLAY',
+          storeAppId: 'com.example.sweep',
+          country: 'us',
+          name: 'Play app',
+        },
+      });
+
+      const queued = await app.get(LocalizationSweep).run();
+
+      const probes = await detectionJobs();
+      expect(queued).toBeGreaterThan(0);
+      expect(probes).toHaveLength(queued);
+      expect(probes.every((probe) => probe.appId === appId)).toBe(true);
+    });
+
+    it('queues nothing more when it runs twice the same day', async () => {
+      await importApp();
+      await app.get(LocalizationSweep).run();
+      const before = (await detectionJobs()).length;
+
+      await expect(app.get(LocalizationSweep).run()).resolves.toBe(0);
+      await expect(detectionJobs()).resolves.toHaveLength(before);
+    });
   });
 });

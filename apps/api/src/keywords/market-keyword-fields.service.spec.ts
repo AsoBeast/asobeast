@@ -25,6 +25,7 @@ const listed = (home: string): AppLocalizationsResult => ({
 
 const prisma = {
   trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+  appLocalization: { findMany: jest.fn().mockResolvedValue([]) },
   appSnapshot: {
     findFirst: jest.fn().mockResolvedValue(null),
     findMany: jest.fn().mockResolvedValue([]),

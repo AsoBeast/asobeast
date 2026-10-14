@@ -55,7 +55,11 @@ describe("notFoundText", () => {
   });
 });
 
-describe.each(["app_localizations", "market_keyword_fields"])("%s", (name) => {
+describe.each([
+  "app_localizations",
+  "market_keyword_fields",
+  "market_suggestions",
+])("%s", (name) => {
   const tool = catalogTool(name);
 
   it("reports a newer api when the route does not exist", () => {

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Store } from '@asobeast/shared';
 import { CategoryBucket } from '../category-ranks/category-ranks.service';
+import { withHomeLocalization } from '../apps/shipped-localizations';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketRow, trackedMarkets } from './tracked-markets';
 
@@ -79,6 +80,26 @@ export class DailyTargetsCollector {
         .map(({ id, store, country }) => ({ id, store, country })),
       marketListings: marketListingTargets(apps, markets),
     };
+  }
+
+  async shipped(): Promise<Map<string, string[]>> {
+    const apps = await this.prisma.app.findMany({
+      where: { store: 'APP_STORE', isCompetitor: false },
+      select: {
+        id: true,
+        country: true,
+        appLocalizations: { select: { localization: true } },
+      },
+    });
+    return new Map(
+      apps.map(({ id, country, appLocalizations }) => [
+        id,
+        withHomeLocalization(
+          country,
+          appLocalizations.map(({ localization }) => localization),
+        ),
+      ]),
+    );
   }
 }
 

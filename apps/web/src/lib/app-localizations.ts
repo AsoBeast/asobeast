@@ -9,6 +9,7 @@ import {
   tokenize,
   parseKeywordField,
   storefrontsReading,
+  type AppDetail,
   type AppLocalizationItem,
   type AppLocalizationOrigin,
   type AppLocalizationsResult,
@@ -18,6 +19,7 @@ import {
   type LocalizationReadRole,
   type LocalizedKeywordFieldResult,
   type MarketLocalizationRead,
+  type MarketSuggestionsResult,
 } from "@asobeast/shared";
 import {
   formatCountry,
@@ -36,6 +38,8 @@ export const READ_ROLE_LABELS: Record<LocalizationReadRole, string> = {
 
 const STOREFRONT_SUGGESTIONS = 5;
 
+export const SUGGESTED_COLUMNS = 3;
+
 export interface LocalizationGridRow {
   localization: AppStoreLocalization;
   origin: AppLocalizationOrigin;
@@ -44,25 +48,83 @@ export interface LocalizationGridRow {
 
 export interface LocalizationGrid {
   markets: string[];
+  suggested: string[];
   rows: LocalizationGridRow[];
+}
+
+export interface SuggestedMarketHint {
+  text: string;
+  link: string;
+  href: string;
+}
+
+function readRole(
+  country: string,
+  localization: AppStoreLocalization,
+): LocalizationReadRole | null {
+  const index = keywordFieldLocalizations(country).indexOf(localization);
+  if (index < 0) return null;
+  return index === 0 ? "default" : "additional";
+}
+
+export function suggestedColumns(
+  result: AppLocalizationsResult,
+  suggestions: MarketSuggestionsResult | null,
+): string[] {
+  const shipped = new Set(
+    result.localizations.map((item) => item.localization),
+  );
+  return (suggestions?.suggestions ?? [])
+    .filter(
+      (suggestion) =>
+        suggestion.role === "default" &&
+        !suggestion.tracked &&
+        shipped.has(suggestion.localization) &&
+        !result.markets.includes(suggestion.country),
+    )
+    .slice(0, SUGGESTED_COLUMNS)
+    .map((suggestion) => suggestion.country);
 }
 
 export function localizationMatrix(
   result: AppLocalizationsResult,
+  suggestions: MarketSuggestionsResult | null = null,
 ): LocalizationGrid | null {
   if (result.markets.length < 2 && result.localizations.length < 2) {
     return null;
   }
+  const suggested = suggestedColumns(result, suggestions);
   return {
     markets: result.markets,
+    suggested,
     rows: result.localizations.map((item) => ({
       localization: item.localization,
       origin: item.origin,
-      cells: result.markets.map(
-        (market) =>
-          item.readBy.find((reader) => reader.country === market)?.role ?? null,
-      ),
+      cells: [
+        ...result.markets.map(
+          (market) =>
+            item.readBy.find((reader) => reader.country === market)?.role ??
+            null,
+        ),
+        ...suggested.map((country) => readRole(country, item.localization)),
+      ],
     })),
+  };
+}
+
+export function suggestedHint(
+  id: string,
+  suggested: readonly string[],
+): SuggestedMarketHint | null {
+  const [country] = suggested;
+  if (country === undefined) return null;
+  const languages = keywordFieldLocalizations(country)
+    .filter((localization) => !localization.startsWith("en"))
+    .map((localization) => APP_STORE_LOCALIZATIONS[localization]);
+  return {
+    text: `${formatCountry(country)} reads ${formatList(languages)}.`,
+    link: `Add ${country.toUpperCase()} as a market`,
+    href: `/apps/${id}/keywords?country=${country}`,
   };
 }
 
@@ -85,6 +147,12 @@ export function unshippedReads(
   reads: readonly MarketLocalizationRead[],
 ): MarketLocalizationRead[] {
   return reads.filter((read) => !read.shipped);
+}
+
+export function ownsKeywordFields(
+  app: Pick<AppDetail, "store" | "isCompetitor">,
+): boolean {
+  return app.store === "APP_STORE" && app.isCompetitor !== true;
 }
 
 export function hasMarketReads(home: string, market: string): boolean {

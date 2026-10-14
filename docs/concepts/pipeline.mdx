@@ -18,6 +18,7 @@ Every schedule is a cron expression evaluated in UTC. The defaults below come fr
 | `CRON_SCORING` | `0 4 * * 0` | Sunday 04:00 | Recomputes popularity and difficulty for tracked keywords |
 | `CRON_RETENTION` | `0 5 * * *` | Daily 05:00 | Prunes rows past their retention window |
 | `CRON_AUDIT` | `0 6 * * *` | Daily 06:00 | Writes the daily audit score snapshot |
+| `CRON_LOCALIZATION_SWEEP` | `0 7 * * 1` | Monday 07:00 | Queues the lookups that detect the App Store localizations every app ships. An empty value removes it |
 | `CRON_DIGEST` | `0 8 * * 1` | Monday 08:00 | Sends the weekly digest webhook |
 
 Batched alerts do not have their own schedule. They send once the daily pipeline reports every child job settled, so the delivery time depends on workload and retries rather than on a fixed clock.
@@ -53,6 +54,7 @@ Daily request volume is roughly tracked keywords multiplied by tracked markets, 
 | Google Play score job | 12 to 20 requests |
 | Category ranks per app | Two charts, the grossing chart plus its free or paid chart |
 | Market listing refresh | One job per app and market, the same weight as an app refresh |
+| Localization read | One more listing read per native localization of a storefront and per localization your app ships that the storefront reads besides its default |
 
 `GET /jobs/budget` returns an estimate broken down by kind, and the settings page renders it as a budget card with a utilization meter. The dashboard warns when the daily pipeline would exceed 85 percent of capacity. Both are [shown only to the platform operator](/security/admin-surfaces#views-only-the-operator-sees).
 
