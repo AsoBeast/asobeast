@@ -83,16 +83,16 @@ export class KeywordsController {
   @SpendsStoreCapacity()
   @UseInterceptors(StoreDeadlineInterceptor)
   @ApiOperation({ summary: 'Suggest keywords via metadata, search or similar' })
-  async suggestions(
+  suggestions(
     @Param('id') id: string,
     @Query() query: SuggestionsQueryDto,
   ): Promise<KeywordSuggestion[]> {
-    await this.limiter.consume('suggestions');
     return this.keywordSuggestions.suggest(
       id,
       query.strategy,
       query.limit,
       query.country,
+      () => this.limiter.consume('suggestions'),
     );
   }
 

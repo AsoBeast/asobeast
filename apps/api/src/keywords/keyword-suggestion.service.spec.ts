@@ -380,3 +380,62 @@ describe('KeywordSuggestionService.suggest seasonal', () => {
     );
   });
 });
+
+describe('KeywordSuggestionService.suggest allowance', () => {
+  const buildPrisma = () => ({
+    keywordField: { findMany: jest.fn().mockResolvedValue([]) },
+    app: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: 'app1',
+        store: Store.APP_STORE,
+        country: 'us',
+        storeAppId: 'store1',
+      }),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+    appSnapshot: {
+      findFirst: jest.fn().mockResolvedValue({ raw: {}, title: 'Habit' }),
+    },
+    trackedKeyword: { findMany: jest.fn().mockResolvedValue([]) },
+  });
+
+  const buildService = (order: string[]) => {
+    const through = jest.fn(
+      <T>(_store: unknown, _country: unknown, work: () => Promise<T>) => {
+        order.push('store');
+        return work();
+      },
+    );
+    const service = new KeywordSuggestionService(
+      buildPrisma() as unknown as PrismaService,
+      {
+        get: () => ({ similar: jest.fn().mockResolvedValue([]) }),
+      } as unknown as StoreProviderRegistry,
+      { through } as unknown as ProxyEgress,
+    );
+    return { service, through };
+  };
+
+  it('calls spend before a store strategy reaches the provider', async () => {
+    const order: string[] = [];
+    const { service } = buildService(order);
+    const spend = jest.fn(() => {
+      order.push('spend');
+      return Promise.resolve();
+    });
+
+    await service.suggest('app1', 'similar', 30, undefined, spend);
+
+    expect(order).toEqual(['spend', 'store']);
+  });
+
+  it('never calls spend for a database strategy', async () => {
+    const { service, through } = buildService([]);
+    const spend = jest.fn().mockResolvedValue(undefined);
+
+    await service.suggest('app1', 'competitors', 30, undefined, spend);
+
+    expect(spend).not.toHaveBeenCalled();
+    expect(through).not.toHaveBeenCalled();
+  });
+});
