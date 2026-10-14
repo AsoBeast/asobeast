@@ -123,7 +123,7 @@ export async function ensureLocalizedFieldApp(
     await ensurePrimaryApp(
       prisma,
       appId,
-      'A competitor app has no localizations or keyword fields; edit its primary app',
+      'A competitor app has no localizations or keyword fields; use its primary app',
     ),
   );
 }

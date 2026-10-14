@@ -23,7 +23,7 @@ import {
 const NUL = '\u0000';
 
 const COMPETITOR_REFUSAL =
-  'A competitor app has no localizations or keyword fields; edit its primary app';
+  'A competitor app has no localizations or keyword fields; use its primary app';
 
 const OVERSIZED = Array.from(
   { length: 12 },

@@ -259,7 +259,7 @@ describe('Market keyword fields (e2e)', () => {
     const response = await read(rival).expect(400);
 
     expect((response.body as ApiErrorEnvelope).message).toBe(
-      'A competitor app has no localizations or keyword fields; edit its primary app',
+      'A competitor app has no localizations or keyword fields; use its primary app',
     );
   });
 
