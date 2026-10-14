@@ -158,6 +158,7 @@ function ActiveSetup({
       <CountriesStep
         {...step("countries")}
         appId={app.id}
+        store={app.store}
         homeMarket={app.country}
         markets={state.selectedMarkets}
         suggestions={suggestions.data ?? null}

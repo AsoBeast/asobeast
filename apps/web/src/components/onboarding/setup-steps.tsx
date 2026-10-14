@@ -6,9 +6,12 @@ import Link from "next/link";
 import type {
   CompetitorItem,
   MarketSuggestionsResult,
+  Store,
   TrackedKeywordItem,
 } from "@asobeast/shared";
+import { CountrySelect } from "@/components/CountrySelect";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
+import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
 import { formatCountry, formatList } from "@/lib/format";
 import {
   SETUP_KEYWORD_TARGET,
@@ -25,12 +28,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
-import { SuggestedMarkets } from "./SuggestedMarkets";
+import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {
   competitors:
@@ -54,7 +56,7 @@ function StepCard({
 }: StepProps & {
   step: SetupStep;
   title: string;
-  description: string;
+  description: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -231,8 +233,12 @@ export function KeywordsStep({
   );
 }
 
+const nextCountry = (markets: readonly string[]): string =>
+  COUNTRY_OPTIONS.find((code) => !markets.includes(code)) ?? "";
+
 export function CountriesStep({
   appId,
+  store,
   homeMarket,
   markets,
   suggestions,
@@ -241,6 +247,7 @@ export function CountriesStep({
   ...step
 }: StepProps & {
   appId: string;
+  store: Store;
   homeMarket: string;
   markets: string[];
   suggestions: MarketSuggestionsResult | null;
@@ -251,25 +258,26 @@ export function CountriesStep({
     suggestions !== null && suggestions.suggestions.length > 0
       ? suggestions
       : null;
-  const [value, setValue] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [value, setValue] = useState(() => nextCountry(markets));
+  const addable =
+    marketError(store, value) === null && !markets.includes(value);
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const market = value.trim().toLowerCase();
-    if (!/^[a-z]{2}$/.test(market)) {
-      setError("Enter a two-letter country code.");
-      return;
-    }
-    onSelect(market, true);
-    setValue("");
-    setError(null);
+    if (!addable) return;
+    onSelect(value, true);
+    setValue(nextCountry([...markets, value]));
   };
 
   return (
     <StepCard
       step="countries"
       title="Add countries"
-      description="Add the storefronts you sell in. Your home storefront is selected."
+      description={
+        <>
+          Your home country is selected. Add the countries you sell in; each one
+          adds daily requests. {suggested ? null : <MarketCostTip />}
+        </>
+      }
       {...step}
     >
       {suggested ? (
@@ -280,7 +288,7 @@ export function CountriesStep({
           onSelect={onSelect}
         />
       ) : null}
-      <ul aria-label="Selected markets" className="flex flex-wrap gap-2">
+      <ul aria-label="Selected countries" className="flex flex-wrap gap-2">
         {markets.map((market) => (
           <li key={market}>
             <Badge variant="secondary" className="h-7 gap-1 pl-2.5">
@@ -299,32 +307,23 @@ export function CountriesStep({
           </li>
         ))}
       </ul>
-      <form onSubmit={submit} className="flex max-w-sm items-start gap-2">
-        <div className="flex flex-1 flex-col gap-1">
-          <Label htmlFor="setup-market">
-            {suggested
-              ? "Another storefront? Add a country code"
-              : "Add a country code"}
-          </Label>
-          <Input
-            id="setup-market"
+      <form onSubmit={submit} className="flex flex-col gap-1">
+        <Label htmlFor="setup-country">
+          {suggested ? "Add another country" : "Add a country"}
+        </Label>
+        <div className="flex flex-wrap items-start gap-2">
+          <CountrySelect
+            id="setup-country"
+            store={store}
             value={value}
-            maxLength={2}
-            placeholder="gb"
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? "setup-market-error" : undefined}
-            onChange={(event) => setValue(event.target.value)}
+            onChange={setValue}
+            ariaLabel="Country to add"
           />
-          {error ? (
-            <span id="setup-market-error" className="text-xs text-destructive">
-              {error}
-            </span>
-          ) : null}
+          <Button type="submit" variant="outline" disabled={!addable}>
+            <Plus />
+            Add
+          </Button>
         </div>
-        <Button type="submit" variant="outline" className="mt-4">
-          <Plus />
-          Add
-        </Button>
       </form>
       <div className="flex flex-wrap gap-2">
         {markets.map((market) => (

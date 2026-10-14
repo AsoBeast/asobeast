@@ -36,7 +36,7 @@ const storedMarkets = async (page: Page): Promise<string[]> => {
 };
 
 const selectedMarkets = (page: Page) =>
-  page.getByRole("list", { name: "Selected markets" });
+  page.getByRole("list", { name: "Selected countries" });
 
 const stepCard = (page: Page, title: string) =>
   page
@@ -167,7 +167,9 @@ test("direct setup is resumable and completes after live checks", async ({
   ).toBeVisible();
   await page.getByLabel("Germany (DE)").check();
   await page.getByLabel("Seed with its listing for Germany").uncheck();
-  await page.getByRole("button", { name: "Add 1 market", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Add 1 country", exact: true })
+    .click();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Review DE keywords" }),
@@ -181,8 +183,20 @@ test("direct setup is resumable and completes after live checks", async ({
   await page.getByLabel("Germany (DE)").uncheck();
   await expect(selectedMarkets(page).getByText("Germany (DE)")).toHaveCount(0);
 
-  await page.getByLabel("Another storefront? Add a country code").fill("PL");
-  await page.getByRole("button", { name: "Add", exact: true }).click();
+  const add = page.getByRole("button", { name: "Add", exact: true });
+  await expect(page.getByText("Add another country")).toBeVisible();
+  await page.getByRole("combobox", { name: "Country to add" }).click();
+  await page.getByRole("option", { name: "Other…" }).click();
+  await page.getByLabel("Storefront country code").fill("xx");
+  await expect(
+    page.getByText("xx is not an App Store storefront"),
+  ).toBeVisible();
+  await expect(add).toBeDisabled();
+  await page.getByLabel("Storefront country code").fill("se");
+  await expect(add).toBeEnabled();
+  await page.getByRole("combobox", { name: "Country to add" }).click();
+  await page.getByRole("option", { name: "PL · Poland" }).click();
+  await add.click();
   await expect(selectedMarkets(page).getByText("Poland (PL)")).toBeVisible();
   await expect(
     page.getByRole("link", { name: "Review PL keywords" }),
@@ -491,14 +505,16 @@ test("corrupt state resets and setup can be dismissed on a narrow dark layout", 
   ).toBeVisible();
 });
 
-test("an app with no suggested markets keeps the plain country input", async ({
+test("an app with no suggested markets keeps the country select", async ({
   page,
 }) => {
   await startSetup(page, "app-2");
 
+  await expect(page.getByText("Add a country", { exact: true })).toBeVisible();
   await expect(
-    page.getByLabel("Add a country code", { exact: true }),
+    page.getByRole("combobox", { name: "Country to add" }),
   ).toBeVisible();
+  await expect(page.getByLabel("Storefront country code")).toHaveCount(0);
   await expect(page.getByText("Your listing ships")).toHaveCount(0);
   await expect(page.locator("legend")).toHaveCount(0);
 });
@@ -531,7 +547,7 @@ test.describe("seeding suggested markets", () => {
       page.getByLabel("Seed with its listing for Japan"),
     ).toBeChecked();
     await page
-      .getByRole("button", { name: "Add 2 markets and seed 2", exact: true })
+      .getByRole("button", { name: "Add 2 countries and seed 2", exact: true })
       .click();
 
     await expect(
@@ -567,7 +583,7 @@ test.describe("seeding suggested markets", () => {
       page.getByLabel("Seed with its listing for Canada"),
     ).not.toBeChecked();
     await page
-      .getByRole("button", { name: "Add 1 market", exact: true })
+      .getByRole("button", { name: "Add 1 country", exact: true })
       .click();
 
     await expect(selectedMarkets(page).getByText("Canada (CA)")).toBeVisible();
@@ -582,7 +598,7 @@ test.describe("seeding suggested markets", () => {
 
     await page.getByLabel("Japan (JP)").check();
     await page
-      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .getByRole("button", { name: "Add 1 country and seed 1", exact: true })
       .click();
     const unavailable = page.getByText(
       "Not published on this storefront, so it was not added",
@@ -592,7 +608,7 @@ test.describe("seeding suggested markets", () => {
     await page.getByLabel("Japan (JP)").check();
     await page.getByLabel("Seed with its listing for Japan").uncheck();
     await page
-      .getByRole("button", { name: "Add 1 market", exact: true })
+      .getByRole("button", { name: "Add 1 country", exact: true })
       .click();
 
     await expect(selectedMarkets(page).getByText("Japan (JP)")).toBeVisible();
@@ -612,7 +628,7 @@ test.describe("seeding suggested markets", () => {
 
     await page.getByLabel("France (FR)").check();
     await page
-      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .getByRole("button", { name: "Add 1 country and seed 1", exact: true })
       .click();
 
     await expect(
@@ -632,7 +648,7 @@ test.describe("seeding suggested markets", () => {
 
     await page.getByLabel("Switzerland (CH)").check();
     await page
-      .getByRole("button", { name: "Add 1 market and seed 1", exact: true })
+      .getByRole("button", { name: "Add 1 country and seed 1", exact: true })
       .click();
 
     await expect(

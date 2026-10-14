@@ -29,8 +29,8 @@ export function withoutOutcomes(
 }
 
 export function seedButtonLabel(markets: number, seeds: number): string {
-  if (markets === 0) return "Add markets";
-  const add = `Add ${pluralize(markets, "market")}`;
+  if (markets === 0) return "Add countries";
+  const add = `Add ${pluralize(markets, "country", "countries")}`;
   return seeds === 0 ? add : `${add} and seed ${seeds}`;
 }
 
