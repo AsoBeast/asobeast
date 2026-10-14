@@ -59,6 +59,7 @@ import {
   getMarketKeywordFields,
   getListingMarkets,
   getMarketAvailability,
+  getAppSetup,
   getMarketSuggestions,
   getMetadataAudit,
   getPortfolio,
@@ -175,6 +176,7 @@ export const appKeys = {
   marketSuggestions: (id: string) =>
     [...appKeys.detail(id), "market-suggestions"] as const,
   firstRun: (id: string) => [...appKeys.detail(id), "first-run"] as const,
+  setup: (id: string) => [...appKeys.detail(id), "setup"] as const,
   screenshots: (id: string, market?: string, localization?: string) =>
     [
       ...appKeys.detail(id),
@@ -717,6 +719,12 @@ export const marketSuggestionsOptions = (id: string) =>
     staleTime: ONE_DAY_MS,
   });
 
+export const setupOptions = (id: string) =>
+  queryOptions({
+    queryKey: appKeys.setup(id),
+    queryFn: () => getAppSetup(id),
+  });
+
 export const serpOptions = (keywordId: string) =>
   queryOptions({
     queryKey: appKeys.serp(keywordId),
@@ -804,7 +812,7 @@ export function invalidateKeywordMutation(
   void client.invalidateQueries({ queryKey: appKeys.keywordFieldRoot(id) });
   void client.invalidateQueries({ queryKey: appKeys.summary(id) });
   void client.invalidateQueries({ queryKey: appKeys.compareRoot(id) });
-  void client.invalidateQueries({ queryKey: portfolioInsightsKey });
+  void client.invalidateQueries({ queryKey: portfolioKey });
   void client.invalidateQueries({ queryKey: appKeys.localizations(id) });
   void client.invalidateQueries({
     queryKey: appKeys.marketKeywordFieldsRoot(id),
@@ -848,6 +856,16 @@ export function invalidateKeywordImport(client: QueryClient, id: string): void {
 export function invalidateAppListing(client: QueryClient, id: string): void {
   void client.invalidateQueries({ queryKey: appKeys.detail(id) });
   void client.invalidateQueries({ queryKey: portfolioKey });
+}
+
+export function invalidateSetupMutation(
+  client: QueryClient,
+  id: string,
+): Promise<void> {
+  return Promise.all([
+    client.invalidateQueries({ queryKey: appKeys.setup(id) }),
+    client.invalidateQueries({ queryKey: portfolioKey }),
+  ]).then(() => undefined);
 }
 
 export function invalidateCompetitorMutation(

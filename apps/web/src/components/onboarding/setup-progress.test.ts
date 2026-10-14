@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeKeywordCount,
   loadingSentence,
   nextLabel,
   progressPercent,
   progressSentence,
   setupSentence,
+  stepLabel,
 } from "./setup-progress";
 
 describe("progressSentence", () => {
@@ -39,5 +41,25 @@ describe("progressPercent", () => {
   it("measures the settled share of the steps", () => {
     expect(progressPercent({ done: 0, total: 3, next: "competitors" })).toBe(0);
     expect(progressPercent({ done: 3, total: 3, next: null })).toBe(100);
+  });
+});
+
+describe("stepLabel", () => {
+  it("numbers a step among three", () => {
+    expect(stepLabel("competitors")).toBe("Step 1 of 3");
+    expect(stepLabel("keywords")).toBe("Step 2 of 3");
+    expect(stepLabel("countries")).toBe("Step 3 of 3");
+  });
+});
+
+describe("activeKeywordCount", () => {
+  it("counts only active keywords", () => {
+    expect(
+      activeKeywordCount([
+        { active: true },
+        { active: false },
+        { active: true },
+      ]),
+    ).toBe(2);
   });
 });

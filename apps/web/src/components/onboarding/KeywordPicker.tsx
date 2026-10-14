@@ -16,12 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { addKeywords, ApiError } from "@/lib/api";
 import { pluralize } from "@/lib/format";
-import { activeKeywordCount } from "@/lib/onboarding";
 import {
   invalidateKeywordMutation,
   pickerSuggestionsOptions,
 } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
+import { activeKeywordCount } from "./setup-progress";
 import {
   isPickerStrategy,
   PICKER_LABELS,

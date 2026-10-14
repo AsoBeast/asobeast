@@ -7,7 +7,6 @@ import { Info, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { parseStoreUrl, type Store } from "@asobeast/shared";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/components/auth/use-auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,10 +31,6 @@ import {
 import { ApiError, importApp } from "@/lib/api";
 import { COUNTRY_OPTIONS, OTHER, marketError } from "@/lib/countries";
 import { formatCountry } from "@/lib/format";
-import {
-  navigateToOnboarding,
-  startOnboardingAfterImport,
-} from "@/lib/onboarding";
 import { appKeys, portfolioKey } from "@/lib/queries";
 import { useSingleFlight } from "@/lib/single-flight";
 
@@ -96,7 +91,6 @@ export function ImportAppDialog({
 }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const account = useAuth().user?.id;
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const open = openProp ?? uncontrolledOpen;
   const setOpen = onOpenChangeProp ?? setUncontrolledOpen;
@@ -115,11 +109,7 @@ export function ImportAppDialog({
       setOpen(false);
       toast.success(`Imported ${app.name ?? "app"}`);
       try {
-        const guided =
-          account !== undefined &&
-          (!startOnboardingAfterImport(account, app.id, app.country) ||
-            navigateToOnboarding(app.id, (path) => router.push(path)));
-        if (!guided) toast.info(SETUP_HINT);
+        router.push(`/apps/${app.id}/setup`);
       } catch {
         toast.info(SETUP_HINT);
       }

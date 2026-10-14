@@ -16,7 +16,6 @@ import { CountrySelect } from "@/components/CountrySelect";
 import { AddCompetitorForm } from "@/components/competitors/AddCompetitorForm";
 import { COUNTRY_OPTIONS, marketError } from "@/lib/countries";
 import { formatCountry, formatList } from "@/lib/format";
-import { activeKeywordCount, stepLabel } from "@/lib/onboarding";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +29,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DiscoveredApps } from "./DiscoveredApps";
 import { KeywordPicker } from "./KeywordPicker";
-import { STEP_TITLES } from "./setup-progress";
+import { activeKeywordCount, STEP_TITLES, stepLabel } from "./setup-progress";
 import { MarketCostTip, SuggestedMarkets } from "./SuggestedMarkets";
 
 const SKIP_REASON: Record<SetupStep, string> = {

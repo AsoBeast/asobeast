@@ -10,6 +10,7 @@ import {
   keywordsOptions,
   marketSuggestionsOptions,
   pickerSuggestionsOptions,
+  setupOptions,
 } from "@/lib/queries";
 
 export default async function SetupPage({
@@ -21,6 +22,7 @@ export default async function SetupPage({
   const queryClient = getQueryClient();
   const app = await queryClient.fetchQuery(appDetailOptions(id));
   await Promise.all([
+    queryClient.prefetchQuery(setupOptions(id)),
     queryClient.prefetchQuery(marketSuggestionsOptions(id)),
     queryClient.prefetchQuery(competitorsOptions(id)),
     queryClient.prefetchQuery(firstRunOptions(id)),

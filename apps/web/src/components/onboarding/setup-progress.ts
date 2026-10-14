@@ -1,4 +1,8 @@
-import type { SetupStep, SetupStepProgress } from "@asobeast/shared";
+import {
+  SETUP_STEPS,
+  type SetupStep,
+  type SetupStepProgress,
+} from "@asobeast/shared";
 
 export const STEP_TITLES: Record<SetupStep, string> = {
   competitors: "Pick competitors",
@@ -28,3 +32,11 @@ export const loadingSentence = (name: string | null): string =>
 
 export const progressPercent = ({ done, total }: SetupStepProgress): number =>
   total === 0 ? 0 : (done / total) * 100;
+
+export function stepLabel(step: SetupStep): string {
+  return `Step ${SETUP_STEPS.indexOf(step) + 1} of ${SETUP_STEPS.length}`;
+}
+
+export const activeKeywordCount = (
+  keywords: readonly { active: boolean }[],
+): number => keywords.filter((keyword) => keyword.active).length;

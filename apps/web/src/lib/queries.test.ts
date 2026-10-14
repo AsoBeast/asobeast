@@ -53,6 +53,7 @@ import {
   invalidateMarketSeed,
   invalidateKeywords,
   invalidateLinkMutation,
+  invalidateSetupMutation,
   invalidateWebhookMutation,
   seedEmailAlert,
   seedWebhook,
@@ -79,6 +80,7 @@ import {
   serpMoversOptions,
   screenshotsOptions,
   serpOptions,
+  setupOptions,
   spiderOptions,
   pickerSuggestionsOptions,
   suggestionsOptions,
@@ -212,6 +214,7 @@ const APP_SCOPED_OPTIONS = [
     marketSuggestionsOptions(APP),
     appKeys.marketSuggestions(APP),
   ],
+  ["setup", setupOptions(APP), appKeys.setup(APP)],
   ["listingMarkets", listingMarketsOptions(APP), appKeys.listingMarkets(APP)],
   ["listing", appListingOptions(APP, "de"), appKeys.listing(APP, "de")],
   [
@@ -522,7 +525,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -542,7 +545,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -562,7 +565,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -581,7 +584,7 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
@@ -601,13 +604,21 @@ describe("invalidation sets", () => {
       appKeys.keywordFieldRoot(APP),
       appKeys.summary(APP),
       appKeys.compareRoot(APP),
-      portfolioInsightsKey,
+      portfolioKey,
       appKeys.localizations(APP),
       appKeys.marketKeywordFieldsRoot(APP),
       appKeys.marketSuggestions(APP),
       appKeys.firstRun(APP),
       appKeys.importPreviewRoot(APP),
     ]);
+  });
+
+  it("refreshes the setup and the portfolio after a setup mutation", () => {
+    expect(
+      invalidatedKeys((client) => {
+        void invalidateSetupMutation(client, APP);
+      }),
+    ).toEqual([appKeys.setup(APP), portfolioKey]);
   });
 
   it("invalidates everything a competitor mutation changes", () => {
